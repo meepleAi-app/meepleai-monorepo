@@ -1,19 +1,15 @@
 'use client';
 
-import Link from 'next/link';
-
-import { navItemsToConnections } from '../adapters/navItemsToConnections';
 import { useConnectionSource } from '../hooks/useConnectionSource';
 import { AccentBorder } from '../parts/AccentBorder';
 import { ConnectionChipStrip } from '../parts/ConnectionChipStrip';
 import { Cover } from '../parts/Cover';
 import { MetaChips } from '../parts/MetaChips';
 import { Rating } from '../parts/Rating';
-import { entityHsl } from '../tokens';
 
 import type { MeepleCardProps } from '../types';
 
-/** Full-width entity header card. NavItems render as horizontal chips. */
+/** Full-width entity header card. Connections render as horizontal chips. */
 export function FocusCard(props: MeepleCardProps) {
   const {
     entity,
@@ -23,7 +19,6 @@ export function FocusCard(props: MeepleCardProps) {
     rating,
     ratingMax,
     metadata = [],
-    navItems = [],
     onClick,
     className = '',
   } = props;
@@ -34,19 +29,6 @@ export function FocusCard(props: MeepleCardProps) {
     ...props,
     connectionsVariant: 'inline',
   });
-
-  const useConnectionsRenderer =
-    source === 'connections' || (source === 'navItems' && props.__useConnectionsForNavItems);
-
-  const connectionsForRender =
-    source === 'connections'
-      ? csItems
-      : source === 'navItems' && props.__useConnectionsForNavItems
-        ? navItemsToConnections(navItems)
-        : [];
-
-  const renderLegacyNavItems =
-    source === 'navItems' && !props.__useConnectionsForNavItems && navItems.length > 0;
 
   return (
     <div
@@ -73,76 +55,10 @@ export function FocusCard(props: MeepleCardProps) {
         </div>
       </div>
 
-      {/* Connections path — ConnectionChipStrip inline variant inside the
-          border-top container so it matches the legacy NavItem chip row */}
-      {useConnectionsRenderer && connectionsForRender.length > 0 && (
+      {/* Connections chip row — inline ConnectionChipStrip below the hero */}
+      {source === 'connections' && csItems.length > 0 && (
         <div className="border-t border-[var(--mc-border-light)] px-4 py-3">
-          <ConnectionChipStrip connections={connectionsForRender} variant="inline" />
-        </div>
-      )}
-
-      {/* Legacy NavItem chip row (default) */}
-      {renderLegacyNavItems && (
-        <div className="flex flex-wrap gap-2 border-t border-[var(--mc-border-light)] px-4 py-3">
-          {navItems.map((item, i) => {
-            const color = entityHsl(item.entity);
-            const chipContent = (
-              <>
-                <span className="text-[13px] leading-none">{item.icon}</span>
-                <span className="text-xs font-semibold">{item.label}</span>
-                {item.count !== undefined && item.count > 0 && (
-                  <span
-                    className="ml-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold text-white"
-                    style={{ background: color }}
-                  >
-                    {item.count}
-                  </span>
-                )}
-              </>
-            );
-
-            const chipClass =
-              'flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[var(--mc-text-primary)] transition-all duration-200 hover:scale-[1.03] active:scale-95';
-            const chipStyle = {
-              borderColor: entityHsl(item.entity, 0.3),
-              background: entityHsl(item.entity, 0.06),
-            };
-
-            if (item.href && !item.disabled) {
-              return (
-                <Link
-                  key={i}
-                  href={item.href}
-                  className={chipClass}
-                  style={chipStyle}
-                  onClick={e => {
-                    e.stopPropagation();
-                    item.onClick?.();
-                  }}
-                  aria-label={item.label}
-                >
-                  {chipContent}
-                </Link>
-              );
-            }
-
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={e => {
-                  e.stopPropagation();
-                  if (!item.disabled) item.onClick?.();
-                }}
-                disabled={item.disabled}
-                className={`${chipClass} ${item.disabled ? 'cursor-not-allowed opacity-40' : ''}`}
-                style={chipStyle}
-                aria-label={item.label}
-              >
-                {chipContent}
-              </button>
-            );
-          })}
+          <ConnectionChipStrip connections={csItems} variant="inline" />
         </div>
       )}
     </div>

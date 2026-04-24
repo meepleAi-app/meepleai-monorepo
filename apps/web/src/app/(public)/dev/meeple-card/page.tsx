@@ -28,10 +28,7 @@ import {
   buildToolConnections,
   buildToolkitConnections,
 } from '@/components/ui/data-display/meeple-card/nav-items';
-import type {
-  ConnectionChipProps,
-  NavFooterItem,
-} from '@/components/ui/data-display/meeple-card/types';
+import type { ConnectionChipProps } from '@/components/ui/data-display/meeple-card/types';
 
 import { STEP_2_AUDIT_ROWS } from './step-2-audit-fixtures';
 
@@ -84,61 +81,31 @@ export default function MeepleCardDevPage() {
       </div>
 
       <div className="px-6 py-10 space-y-16 max-w-7xl mx-auto">
-        {/* Manual QA gate: row heights of Demo A and Demo B footers must match. Screenshot to PR. */}
+        {/* Step 1.6 connection source comparison removed in Step 2 cleanup —
+            navItems channel deleted. Connections prop is now the only channel. */}
+
+        {/* Canonical connections demo (replaces Step 1.6 Demo A/B comparison) */}
         <Section
-          title="Step 1.6 — Connection Source Renderer Integration"
-          description="Side-by-side comparison: connections prop (canonical) vs navItems prop with adapter (__useConnectionsForNavItems)."
+          title="Connection Channel (canonical)"
+          description="Game card with the canonical 4-slot connections strip: KB, Agent, Chat, Sessioni."
         >
-          <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
-            Both cards render the canonical 4-slot game nav (KB, Agent, Chat, Sessioni) with
-            identical counts. Demo A uses the canonical <code>connections</code> prop; Demo B uses
-            the legacy <code>navItems</code> prop adapted via{' '}
-            <code>__useConnectionsForNavItems</code>. They MUST produce the same chip order, labels,
-            counts and footer row height.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
-            <div>
-              <Label>Demo A — connections + connectionsVariant=&quot;footer&quot;</Label>
-              <MeepleCard
-                entity="game"
-                variant="grid"
-                title="Wingspan"
-                subtitle="Stonemaier Games"
-                imageUrl={GAME_IMAGE}
-                connectionsVariant="footer"
-                connections={
-                  [
-                    { entityType: 'kb', count: 1, label: 'KB' },
-                    { entityType: 'agent', count: 2, label: 'Agent' },
-                    { entityType: 'chat', label: 'Chat', onCreate: () => alert('Chat plus') },
-                    { entityType: 'session', count: 5, label: 'Sessioni' },
-                  ] satisfies ConnectionChipProps[]
-                }
-              />
-            </div>
-            <div>
-              <Label>Demo B — navItems + __useConnectionsForNavItems={'{true}'}</Label>
-              <MeepleCard
-                entity="game"
-                variant="grid"
-                title="Wingspan"
-                subtitle="Stonemaier Games"
-                imageUrl={GAME_IMAGE}
-                __useConnectionsForNavItems
-                // TODO(task-8): remove cast when Demo B switches navItems= → connections= in the cleanup commit
-                navItems={
-                  buildGameConnections(
-                    { kbCount: 1, agentCount: 2, chatCount: 0, sessionCount: 5 },
-                    {
-                      onKbClick: () => alert('KB'),
-                      onAgentClick: () => alert('Agent'),
-                      onSessionClick: () => alert('Session'),
-                      onChatPlus: () => alert('Chat plus'),
-                    }
-                  ) as unknown as NavFooterItem[]
-                }
-              />
-            </div>
+          <div className="max-w-sm">
+            <MeepleCard
+              entity="game"
+              variant="grid"
+              title="Wingspan"
+              subtitle="Stonemaier Games"
+              imageUrl={GAME_IMAGE}
+              connectionsVariant="footer"
+              connections={
+                [
+                  { entityType: 'kb', count: 1, label: 'KB' },
+                  { entityType: 'agent', count: 2, label: 'Agent' },
+                  { entityType: 'chat', label: 'Chat', onCreate: () => alert('Chat plus') },
+                  { entityType: 'session', count: 5, label: 'Sessioni' },
+                ] satisfies ConnectionChipProps[]
+              }
+            />
           </div>
         </Section>
 
@@ -359,7 +326,7 @@ export default function MeepleCardDevPage() {
         {/* Showcase Completo — tutte le feature combinate (match mockup summary Section 2) */}
         <Section
           title="Showcase Completo — Tutte le Feature"
-          description="Una card per ogni entity con image + badge + rating + metadata + status + tags + navItems + quickActions combinati. Mirrors admin-mockups/meeple-card-summary-render.html Section 2."
+          description="Una card per ogni entity con image + badge + rating + metadata + status + tags + connections + quickActions combinati. Mirrors admin-mockups/meeple-card-summary-render.html Section 2."
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <MeepleCard
@@ -652,10 +619,10 @@ export default function MeepleCardDevPage() {
           </CardRow>
         </Section>
 
-        {/* NavFooter showcase */}
+        {/* Connections showcase */}
         <Section
-          title="NavFooter — tutti gli stati"
-          description="Esempi di navItems per ogni entity con count, plus indicator e disabled."
+          title="Connections — tutti gli stati"
+          description="Esempi di connections per ogni entity con count, plus indicator e disabled."
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
@@ -852,7 +819,7 @@ export default function MeepleCardDevPage() {
         {/* Flip Card — 8 entity-specific back contents */}
         <EntityFlipShowcase />
         <NavClickBehaviorSection />
-        <DisabledNavItemsSection />
+        <DisabledConnectionsSection />
         <FeatureMatrixSection />
 
         {/* 3D Carousel — match visual-test Section 5 */}
@@ -1129,9 +1096,9 @@ export default function MeepleCardDevPage() {
         <section className="mt-12 border-t pt-8">
           <h2 className="text-2xl font-bold mb-2">Step 2 Audit — Migration Coverage</h2>
           <p className="text-sm text-[var(--mc-text-muted)] mb-4">
-            Per-call-site visual diff station. Reviewer verifies each row matches the production
-            call-site in spec §3.1. Toggle between <code>connections=</code> (post-migration) and
-            <code>navItems=</code> (legacy via adapter) to confirm parity.
+            Per-call-site audit table from spec §3.1. Reviewer verifies each row matches the
+            production call-site post-migration. The legacy <code>navItems=</code> channel was
+            removed in Step 2 cleanup; only <code>connections=</code> remains.
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
@@ -1644,14 +1611,14 @@ function BehaviorCard({
 }
 
 /**
- * DisabledNavItemsSection — demonstrates NavFooter with disabled items and
- * tooltips explaining why (per-entity limits, license, etc).
+ * DisabledConnectionsSection — demonstrates connections with disabled items
+ * and tooltips explaining why (per-entity limits, license, etc).
  */
-function DisabledNavItemsSection() {
+function DisabledConnectionsSection() {
   return (
     <Section
-      title="NavItems Disabled + Tooltip"
-      description="Nav items con stato disabled (45% opacity + cursor not-allowed). Hover mostra tooltip con la ragione. Da meeple-card-nav-buttons-mockup.html Section 5."
+      title="Connections Disabled + Tooltip"
+      description="Connection chips con stato disabled (45% opacity + cursor not-allowed). Hover mostra tooltip con la ragione. Da meeple-card-nav-buttons-mockup.html Section 5."
     >
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <div>
@@ -1745,8 +1712,8 @@ function FeatureMatrixSection() {
       '12 CardStatus values (owned/wishlist/active/idle/archived/processing/indexed/failed/inprogress/setup/completed/paused)',
     ],
     [
-      'Navigation Footer',
-      'Entity-aware nav items · count badges · plus indicators · disabled + tooltip',
+      'Connections Channel',
+      'Entity-aware connection chips · count badges · plus indicators · disabled + tooltip',
     ],
     [
       'Click Behavior',

@@ -13,10 +13,6 @@ export interface ToolConnectionsHandlers {
  * Slots: Usa (action) | Modifica (action) | Duplica (action) | Storico
  *
  * Tools are pure action containers — no counts.
- *
- * Step 2 (2026-04-24): renamed from buildToolNavItems to buildToolConnections.
- * Return shape changed from NavFooterItem[] to ConnectionChipProps[].
- * Old name retained as deprecated re-export until cleanup commit 8.
  */
 export function buildToolConnections(handlers: ToolConnectionsHandlers): ConnectionChipProps[] {
   return [
@@ -46,12 +42,3 @@ export function buildToolConnections(handlers: ToolConnectionsHandlers): Connect
     },
   ];
 }
-
-/**
- * @deprecated Use `buildToolConnections` instead. Will be removed in commit 8
- * of the Step 2 migration PR.
- */
-export const buildToolNavItems = buildToolConnections;
-
-/** @deprecated Use `ToolConnectionsHandlers` instead. Removed in commit 8. */
-export type ToolNavHandlers = ToolConnectionsHandlers;

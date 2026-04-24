@@ -57,7 +57,7 @@ export function MeepleUserLibraryCard({
   onClick,
   className,
 }: MeepleUserLibraryCardProps) {
-  // Drawer states — opened via navItems click handlers
+  // Drawer states — opened via connections click handlers
   const [kbDrawerOpen, setKbDrawerOpen] = useState(false);
   const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
@@ -120,7 +120,7 @@ export function MeepleUserLibraryCard({
         data-testid={`library-game-card-${game.id}`}
       />
 
-      {/* Drawer sheets — wired to navItems click handlers */}
+      {/* Drawer sheets — wired to connections click handlers */}
       <KbDrawerSheet
         open={kbDrawerOpen}
         onOpenChange={setKbDrawerOpen}

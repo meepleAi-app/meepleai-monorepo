@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildToolConnections, buildToolNavItems } from '../buildToolNavItems';
+import { buildToolConnections } from '../buildToolConnections';
 
 describe('buildToolConnections', () => {
   const handlers = {
@@ -43,9 +43,5 @@ describe('buildToolConnections', () => {
   it('returns ConnectionChipProps shape with entityType (not entity)', () => {
     const items = buildToolConnections(handlers);
     items.forEach(item => expect(item.entityType).toBe('tool'));
-  });
-
-  it('deprecated alias buildToolNavItems still works', () => {
-    expect(buildToolNavItems).toBe(buildToolConnections);
   });
 });

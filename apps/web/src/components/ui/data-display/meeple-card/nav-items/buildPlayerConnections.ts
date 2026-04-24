@@ -20,10 +20,6 @@ export interface PlayerConnectionsHandlers {
  * Build the 4-slot connection channel for player entity cards.
  *
  * Slots: Vittorie | Partite | Preferiti (v1 disabled) | Trofei (v1 disabled)
- *
- * Step 2 (2026-04-24): renamed from buildPlayerNavItems to buildPlayerConnections.
- * Return shape changed from NavFooterItem[] to ConnectionChipProps[].
- * Old name retained as deprecated re-export until cleanup commit 8.
  */
 export function buildPlayerConnections(
   counts: PlayerConnectionsCounts,
@@ -60,15 +56,3 @@ export function buildPlayerConnections(
     },
   ];
 }
-
-/**
- * @deprecated Use `buildPlayerConnections` instead. Will be removed in commit 8
- * of the Step 2 migration PR.
- */
-export const buildPlayerNavItems = buildPlayerConnections;
-
-/** @deprecated Use `PlayerConnectionsCounts` instead. */
-export type PlayerNavCounts = PlayerConnectionsCounts;
-
-/** @deprecated Use `PlayerConnectionsHandlers` instead. */
-export type PlayerNavHandlers = PlayerConnectionsHandlers;

@@ -1,10 +1,8 @@
 'use client';
 
-import { navItemsToConnections } from '../adapters/navItemsToConnections';
 import { useConnectionSource } from '../hooks/useConnectionSource';
 import { ConnectionChipStrip } from '../parts/ConnectionChipStrip';
 import { MetaChips } from '../parts/MetaChips';
-import { NavFooter } from '../parts/NavFooter';
 import { Rating } from '../parts/Rating';
 import { entityHsl, entityIcon } from '../tokens';
 
@@ -20,7 +18,6 @@ export function ListCard(props: MeepleCardProps) {
     ratingMax,
     metadata = [],
     badge,
-    navItems = [],
     onClick,
     className = '',
   } = props;
@@ -82,16 +79,6 @@ export function ListCard(props: MeepleCardProps) {
       {source === 'connections' && csItems.length > 0 && (
         <div className="flex-shrink-0">
           <ConnectionChipStrip connections={csItems} variant="inline" />
-        </div>
-      )}
-      {source === 'navItems' && !props.__useConnectionsForNavItems && navItems.length > 0 && (
-        <div className="flex-shrink-0">
-          <NavFooter items={navItems} size="sm" />
-        </div>
-      )}
-      {source === 'navItems' && props.__useConnectionsForNavItems && navItems.length > 0 && (
-        <div className="flex-shrink-0">
-          <ConnectionChipStrip connections={navItemsToConnections(navItems)} variant="inline" />
         </div>
       )}
     </div>

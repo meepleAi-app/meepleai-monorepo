@@ -20,10 +20,6 @@ export interface ChatConnectionsHandlers {
  *   1 = Sources (v1 disabled — no sources count in chat schema)
  *   2 = Agente (link to source agent)
  *   3 = Archivia (action)
- *
- * Step 2 (2026-04-24): renamed from buildChatNavItems to buildChatConnections.
- * Return shape changed from NavFooterItem[] to ConnectionChipProps[].
- * Old name retained as deprecated re-export until cleanup commit 8.
  */
 export function buildChatConnections(
   counts: ChatConnectionsCounts,
@@ -58,15 +54,3 @@ export function buildChatConnections(
     },
   ];
 }
-
-/**
- * @deprecated Use `buildChatConnections` instead. Will be removed in commit 8 of
- * the Step 2 migration PR.
- */
-export const buildChatNavItems = buildChatConnections;
-
-/** @deprecated Use `ChatConnectionsCounts` instead. */
-export type ChatNavCounts = ChatConnectionsCounts;
-
-/** @deprecated Use `ChatConnectionsHandlers` instead. */
-export type ChatNavHandlers = ChatConnectionsHandlers;

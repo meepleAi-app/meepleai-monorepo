@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildGameConnections } from '@/components/ui/data-display/meeple-card/nav-items/buildGameNavItems';
+import { buildGameConnections } from '@/components/ui/data-display/meeple-card/nav-items/buildGameConnections';
 
 const counts = { kbCount: 3, agentCount: 1, chatCount: 0, sessionCount: 5 };
 const handlers = {};

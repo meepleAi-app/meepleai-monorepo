@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildAgentConnections } from '../buildAgentNavItems';
+import { buildAgentConnections } from '../buildAgentConnections';
 
 describe('buildAgentConnections', () => {
   const handlers = {

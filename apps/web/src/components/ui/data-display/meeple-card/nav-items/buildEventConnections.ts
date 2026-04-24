@@ -16,10 +16,6 @@ export interface EventConnectionsHandlers {
  * Build the 4-slot connection channel for event (game night) entity cards.
  *
  * Slots: Partecipanti | Luogo (link) | Giochi | Data (link)
- *
- * Step 2 (2026-04-24): renamed from buildEventNavItems to buildEventConnections.
- * Return shape changed from NavFooterItem[] to ConnectionChipProps[].
- * Old name retained as deprecated re-export until cleanup commit 8.
  */
 export function buildEventConnections(
   counts: EventConnectionsCounts,
@@ -54,15 +50,3 @@ export function buildEventConnections(
     },
   ];
 }
-
-/**
- * @deprecated Use `buildEventConnections` instead. Will be removed in commit 8
- * of the Step 2 migration PR.
- */
-export const buildEventNavItems = buildEventConnections;
-
-/** @deprecated Use `EventConnectionsCounts` instead. Removed in commit 8. */
-export type EventNavCounts = EventConnectionsCounts;
-
-/** @deprecated Use `EventConnectionsHandlers` instead. Removed in commit 8. */
-export type EventNavHandlers = EventConnectionsHandlers;

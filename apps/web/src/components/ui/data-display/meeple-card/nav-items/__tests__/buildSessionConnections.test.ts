@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildSessionConnections } from '../buildSessionNavItems';
+import { buildSessionConnections } from '../buildSessionConnections';
 
 describe('buildSessionConnections', () => {
   const handlers = {

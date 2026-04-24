@@ -2,7 +2,7 @@
  * MeepleSessionCard Tests
  *
  * Current scope (v1): basic rendering, onClick handling, status badge,
- * subtitle composition, and navItems wiring via buildSessionNavItems.
+ * subtitle composition, and connections wiring via buildSessionConnections.
  *
  * Action-visibility matrix (Configura / Avvia / Pausa / Riprendi / Partecipa /
  * Lascia / Esporta) is a deferred v2 deliverable — see Issue #5003. The

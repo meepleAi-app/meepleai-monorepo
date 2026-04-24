@@ -2,73 +2,42 @@ export { navIcons, type NavIconKey } from './icons';
 
 export {
   buildGameConnections,
-  buildGameNavItems,
   type GameConnectionsCounts,
   type GameConnectionsHandlers,
-  type GameNavCounts,
-  type GameNavHandlers,
-} from './buildGameNavItems';
+} from './buildGameConnections';
 export {
   buildPlayerConnections,
-  buildPlayerNavItems,
   type PlayerConnectionsCounts,
   type PlayerConnectionsHandlers,
-  type PlayerNavCounts,
-  type PlayerNavHandlers,
-} from './buildPlayerNavItems';
+} from './buildPlayerConnections';
 export {
   buildSessionConnections,
-  buildSessionNavItems,
   type SessionConnectionsCounts,
   type SessionConnectionsHandlers,
-  type SessionNavCounts,
-  type SessionNavHandlers,
-} from './buildSessionNavItems';
+} from './buildSessionConnections';
 export {
   buildAgentConnections,
-  buildAgentNavItems,
   type AgentConnectionsCounts,
   type AgentConnectionsHandlers,
-  type AgentNavCounts,
-  type AgentNavHandlers,
-} from './buildAgentNavItems';
+} from './buildAgentConnections';
 export {
   buildKbConnections,
-  buildKbNavItems,
   type KbConnectionsCounts,
   type KbConnectionsHandlers,
-  type KbNavCounts,
-  type KbNavHandlers,
-} from './buildKbNavItems';
+} from './buildKbConnections';
 export {
   buildChatConnections,
-  buildChatNavItems,
   type ChatConnectionsCounts,
   type ChatConnectionsHandlers,
-  type ChatNavCounts,
-  type ChatNavHandlers,
-} from './buildChatNavItems';
+} from './buildChatConnections';
 export {
   buildEventConnections,
-  buildEventNavItems,
   type EventConnectionsCounts,
   type EventConnectionsHandlers,
-  type EventNavCounts,
-  type EventNavHandlers,
-} from './buildEventNavItems';
+} from './buildEventConnections';
 export {
   buildToolkitConnections,
-  buildToolkitNavItems,
   type ToolkitConnectionsCounts,
   type ToolkitConnectionsHandlers,
-  type ToolkitNavCounts,
-  type ToolkitNavHandlers,
-} from './buildToolkitNavItems';
-// NOTE: buildToolNavItems has no Counts parameter — tools are pure action
-// containers. Only the Handlers type is exported.
-export {
-  buildToolConnections,
-  buildToolNavItems,
-  type ToolConnectionsHandlers,
-  type ToolNavHandlers,
-} from './buildToolNavItems';
+} from './buildToolkitConnections';
+export { buildToolConnections, type ToolConnectionsHandlers } from './buildToolConnections';

@@ -27,11 +27,10 @@ export interface GameConnectionsHandlers {
  * - count === 0 → plus indicator wired via onCreate (fires onXxxPlus handler)
  * - missing click handler AND no gameId → slot rendered disabled
  *
- * Step 2 (2026-04-24): renamed from buildGameNavItems to buildGameConnections.
- * Return shape changed from NavFooterItem[] to ConnectionChipProps[].
- * This is the only builder that legitimately emits BOTH `href` AND `onClick`
- * on the same entry (see spec §1.1 + commit 0 which enabled the combo on
- * ConnectionChip). Old name retained as deprecated re-export until commit 8.
+ * Note: this is the only builder that legitimately emits BOTH `href` AND
+ * `onClick` on the same entry (see spec §1.1) — ConnectionChip renders as a
+ * Link and onClick fires on left-click while href preserves middle-click
+ * semantics.
  */
 export function buildGameConnections(
   counts: GameConnectionsCounts,
@@ -77,15 +76,3 @@ export function buildGameConnections(
     },
   ];
 }
-
-/**
- * @deprecated Use `buildGameConnections` instead. Will be removed in commit 8 of
- * the Step 2 migration PR.
- */
-export const buildGameNavItems = buildGameConnections;
-
-/** @deprecated Use `GameConnectionsCounts` instead. */
-export type GameNavCounts = GameConnectionsCounts;
-
-/** @deprecated Use `GameConnectionsHandlers` instead. */
-export type GameNavHandlers = GameConnectionsHandlers;

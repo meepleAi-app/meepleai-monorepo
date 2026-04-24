@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildGameConnections } from '../buildGameNavItems';
+import { buildGameConnections } from '../buildGameConnections';
 
 describe('buildGameConnections', () => {
   const handlers = {

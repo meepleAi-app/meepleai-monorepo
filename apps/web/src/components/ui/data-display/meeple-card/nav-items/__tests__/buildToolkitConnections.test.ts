@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildToolkitConnections, buildToolkitNavItems } from '../buildToolkitNavItems';
+import { buildToolkitConnections } from '../buildToolkitConnections';
 
 describe('buildToolkitConnections', () => {
   const handlers = {
@@ -46,9 +46,5 @@ describe('buildToolkitConnections', () => {
     expect(items[1].entityType).toBe('toolkit');
     expect(items[2].entityType).toBe('toolkit');
     expect(items[3].entityType).toBe('session');
-  });
-
-  it('deprecated alias buildToolkitNavItems still works', () => {
-    expect(buildToolkitNavItems).toBe(buildToolkitConnections);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildEventConnections, buildEventNavItems } from '../buildEventNavItems';
+import { buildEventConnections } from '../buildEventConnections';
 
 describe('buildEventConnections', () => {
   const handlers = {
@@ -33,9 +33,5 @@ describe('buildEventConnections', () => {
     expect(items[1].entityType).toBe('event');
     expect(items[2].entityType).toBe('game');
     expect(items[3].entityType).toBe('event');
-  });
-
-  it('deprecated alias buildEventNavItems still works', () => {
-    expect(buildEventNavItems).toBe(buildEventConnections);
   });
 });

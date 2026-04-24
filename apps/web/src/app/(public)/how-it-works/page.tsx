@@ -1,143 +1,86 @@
-/**
- * How It Works Page
- *
- * Explains how MeepleAI works with:
- * - Step-by-step guide
- * - Feature highlights
- * - Visual flow explanation
- * - Bilingual support (IT/EN) via i18n
- *
- * @see Issue for legal pages implementation
- */
-
+// apps/web/src/app/(public)/how-it-works/page.tsx
 'use client';
 
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Separator } from '@/components/ui/navigation/separator';
-import { Button } from '@/components/ui/primitives/button';
+import { Btn } from '@/components/ui/v2/btn';
+import { Divider } from '@/components/ui/v2/divider';
+import { HeroGradient } from '@/components/ui/v2/hero-gradient';
 import { useTranslation } from '@/hooks/useTranslation';
 
-// Step keys for the steps section
-const STEP_KEYS = ['step1', 'step2', 'step3'] as const;
-
-// Feature keys for the features section
-const FEATURE_KEYS = ['rag', 'multilingual', 'pdfUpload', 'gameLibrary'] as const;
-
-// Icons for each step
-const STEP_ICONS: Record<(typeof STEP_KEYS)[number], string> = {
-  step1: '🎮',
-  step2: '❓',
-  step3: '✅',
+const STEPS = ['step1', 'step2', 'step3'] as const;
+const STEP_EMOJI: Record<(typeof STEPS)[number], string> = {
+  step1: '📚',
+  step2: '💬',
+  step3: '🎯',
 };
 
-// Icons for each feature
-const FEATURE_ICONS: Record<(typeof FEATURE_KEYS)[number], string> = {
-  rag: '🧠',
-  multilingual: '🌍',
+const FEATURES = ['rag', 'multilingual', 'pdfUpload', 'gameLibrary'] as const;
+const FEATURE_EMOJI: Record<(typeof FEATURES)[number], string> = {
+  rag: '🔎',
+  multilingual: '🌐',
   pdfUpload: '📄',
-  gameLibrary: '📚',
+  gameLibrary: '🎲',
 };
 
 export default function HowItWorksPage() {
-  const router = useRouter();
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
 
   return (
-    <div className="min-h-dvh bg-background py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-foreground" data-testid="how-it-works-heading">
-            {t('pages.howItWorks.title')}
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-2xl mx-auto">
-            {t('pages.howItWorks.description')}
-          </p>
-        </div>
+    <main>
+      <HeroGradient
+        title={t('pages.howItWorks.title')}
+        subtitle={t('pages.howItWorks.subtitle')}
+        primaryCta={{ label: t('pages.howItWorks.ctaRegister'), href: '/register' }}
+      />
 
-        {/* Steps Section */}
-        <div className="mb-12">
-          <div className="space-y-6">
-            {STEP_KEYS.map((key, index) => (
-              <div key={key} className="flex gap-4 items-start">
-                <div className="flex-shrink-0 w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-3xl">
-                  {STEP_ICONS[key]}
-                </div>
-                <Card className="flex-grow">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">
-                      {t(`pages.howItWorks.steps.${key}.title`)}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-slate-600 dark:text-slate-400">
-                      {t(`pages.howItWorks.steps.${key}.description`)}
-                    </p>
-                  </CardContent>
-                </Card>
-                {index < STEP_KEYS.length - 1 && (
-                  <div className="hidden md:block absolute left-8 mt-16 h-8 w-0.5 bg-blue-200 dark:bg-blue-800" />
-                )}
+      <section className="max-w-5xl mx-auto py-12 px-4">
+        <h2 className="text-2xl font-bold text-center">{t('pages.howItWorks.stepsHeading')}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+          {STEPS.map((s, idx) => (
+            <div key={s} className="text-center">
+              <div className="text-5xl mb-3" aria-hidden="true">
+                {STEP_EMOJI[s]}
               </div>
-            ))}
-          </div>
+              <div className="text-sm font-mono text-muted-foreground mb-1">
+                {String(idx + 1).padStart(2, '0')}
+              </div>
+              <h3 className="text-lg font-semibold mb-2">{t(`pages.howItWorks.${s}.title`)}</h3>
+              <p className="text-muted-foreground">{t(`pages.howItWorks.${s}.description`)}</p>
+            </div>
+          ))}
         </div>
+      </section>
 
-        <Separator className="my-8" />
+      <Divider />
 
-        {/* Features Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-foreground text-center mb-6">
-            {t('pages.howItWorks.features.title')}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {FEATURE_KEYS.map(key => (
-              <Card key={key} className="bg-card">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <span className="text-2xl">{FEATURE_ICONS[key]}</span>
-                    {t(`pages.howItWorks.features.${key}.title`)}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {t(`pages.howItWorks.features.${key}.description`)}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+      <section className="max-w-5xl mx-auto py-12 px-4">
+        <h2 className="text-2xl font-bold text-center">{t('pages.howItWorks.featuresHeading')}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+          {FEATURES.map(f => (
+            <div key={f} className="p-4">
+              <div className="text-4xl mb-2" aria-hidden="true">
+                {FEATURE_EMOJI[f]}
+              </div>
+              <h3 className="text-lg font-semibold mb-1">
+                {t(`pages.howItWorks.features.${f}.title`)}
+              </h3>
+              <p className="text-muted-foreground">
+                {t(`pages.howItWorks.features.${f}.description`)}
+              </p>
+            </div>
+          ))}
         </div>
+      </section>
 
-        {/* CTA Section */}
-        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-          <CardContent className="pt-6 text-center">
-            <h3 className="text-xl font-semibold text-foreground mb-2">
-              {locale === 'it' ? 'Pronto a iniziare?' : 'Ready to get started?'}
-            </h3>
-            <p className="text-slate-600 dark:text-slate-400 mb-4">
-              {locale === 'it'
-                ? 'Prova MeepleAI gratuitamente e scopri quanto può essere semplice capire le regole.'
-                : 'Try MeepleAI for free and discover how easy understanding rules can be.'}
-            </p>
-            <Button onClick={() => router.push('/register')}>
-              {locale === 'it' ? 'Inizia Ora' : 'Start Now'}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Footer Navigation */}
-        <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4 pt-8 border-t border-slate-200 dark:border-slate-700">
-          <Button variant="ghost" onClick={() => router.push('/about')}>
-            ← {locale === 'it' ? 'Chi Siamo' : 'About Us'}
-          </Button>
-          <Button variant="outline" onClick={() => router.push('/faq')}>
-            {locale === 'it' ? 'Domande Frequenti' : 'FAQ'} →
-          </Button>
-        </div>
-      </div>
-    </div>
+      <section className="flex flex-col sm:flex-row gap-3 justify-center items-center py-8">
+        <Btn variant="primary" asChild>
+          <Link href="/about">{t('pages.howItWorks.aboutCta')}</Link>
+        </Btn>
+        <Btn variant="ghost" asChild>
+          <Link href="/faq">{t('pages.howItWorks.faqCta')}</Link>
+        </Btn>
+      </section>
+    </main>
   );
 }

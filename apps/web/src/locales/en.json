@@ -945,23 +945,23 @@
     },
     "howItWorks": {
       "title": "How It Works",
-      "description": "Discover how MeepleAI helps you with board game rules",
-      "steps": {
-        "step1": {
-          "title": "1. Choose Your Game",
-          "description": "Select a game from our catalog or upload your own rulebook PDF. We support hundreds of popular games."
-        },
-        "step2": {
-          "title": "2. Ask a Question",
-          "description": "Write your question in natural language: 'Can I move two characters on the same turn?', 'How does scoring work at the end?'"
-        },
-        "step3": {
-          "title": "3. Get the Answer",
-          "description": "Receive a precise answer with direct references to the rulebook. You can always verify the source of the response."
-        }
+      "subtitle": "Three simple steps to stop arguing about rules",
+      "ctaRegister": "Start Now",
+      "stepsHeading": "How it works",
+      "step1": {
+        "title": "1. Choose Your Game",
+        "description": "Select a game from our catalog or upload your own rulebook PDF. We support hundreds of popular games."
       },
+      "step2": {
+        "title": "2. Ask a Question",
+        "description": "Write your question in natural language: 'Can I move two characters on the same turn?', 'How does scoring work at the end?'"
+      },
+      "step3": {
+        "title": "3. Get the Answer",
+        "description": "Receive a precise answer with direct references to the rulebook. You can always verify the source of the response."
+      },
+      "featuresHeading": "Main features",
       "features": {
-        "title": "Main Features",
         "rag": {
           "title": "Intelligent RAG",
           "description": "Our Retrieval-Augmented Generation system finds the most relevant sections in the rulebook to answer your question."
@@ -979,8 +979,6 @@
           "description": "Save your games and access them quickly. Track your collection and preferences."
         }
       },
-      "stepsHeading": "How it works",
-      "featuresHeading": "Main features",
       "aboutCta": "Learn more about MeepleAI",
       "faqCta": "Browse the FAQ"
     },

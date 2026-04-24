@@ -993,46 +993,39 @@
     "howItWorks": {
       "title": "Come Funziona",
       "subtitle": "Tre semplici passaggi per non litigare più sulle regole",
-      "description": "Scopri come MeepleAI può trasformare le tue serate di gioco",
-      "steps": {
-        "upload": {
-          "title": "1. Carica il Regolamento",
-          "content": "Carica il PDF del regolamento del tuo gioco da tavolo. Il nostro sistema lo analizza e lo indicizza utilizzando tecnologie avanzate di elaborazione del linguaggio naturale."
-        },
-        "ask": {
-          "title": "2. Fai una Domanda",
-          "content": "Scrivi la tua domanda in linguaggio naturale, come faresti con un amico esperto. Ad esempio: 'Posso muovere il cavaliere dopo aver lanciato i dadi?' oppure 'Come funziona il commercio tra giocatori?'"
-        },
-        "answer": {
-          "title": "3. Ottieni la Risposta",
-          "content": "L'AI analizza il regolamento e ti fornisce una risposta precisa, sempre con il riferimento alla pagina e sezione del manuale originale, così puoi verificare tu stesso."
-        }
+      "ctaRegister": "Inizia Ora",
+      "stepsHeading": "Come funziona",
+      "step1": {
+        "title": "1. Carica il Regolamento",
+        "description": "Carica il PDF del regolamento del tuo gioco da tavolo. Il nostro sistema lo analizza e lo indicizza utilizzando tecnologie avanzate di elaborazione del linguaggio naturale."
       },
+      "step2": {
+        "title": "2. Fai una Domanda",
+        "description": "Scrivi la tua domanda in linguaggio naturale, come faresti con un amico esperto. Ad esempio: 'Posso muovere il cavaliere dopo aver lanciato i dadi?' oppure 'Come funziona il commercio tra giocatori?'"
+      },
+      "step3": {
+        "title": "3. Ottieni la Risposta",
+        "description": "L'AI analizza il regolamento e ti fornisce una risposta precisa, sempre con il riferimento alla pagina e sezione del manuale originale, così puoi verificare tu stesso."
+      },
+      "featuresHeading": "Funzionalità principali",
       "features": {
-        "title": "Caratteristiche Principali",
         "rag": {
           "title": "Ricerca Semantica RAG",
-          "content": "Tecnologia avanzata che comprende il significato delle tue domande, non solo le parole chiave"
+          "description": "Tecnologia avanzata che comprende il significato delle tue domande, non solo le parole chiave"
         },
         "multilingual": {
           "title": "Supporto Multilingua",
-          "content": "Carica regolamenti in qualsiasi lingua e fai domande nella tua lingua preferita"
+          "description": "Carica regolamenti in qualsiasi lingua e fai domande nella tua lingua preferita"
         },
-        "citations": {
-          "title": "Citazioni Precise",
-          "content": "Ogni risposta include il riferimento esatto alla fonte nel regolamento"
+        "pdfUpload": {
+          "title": "Upload PDF",
+          "description": "Carica il regolamento del tuo gioco e la nostra AI lo analizzerà per rispondere alle tue domande."
         },
-        "library": {
+        "gameLibrary": {
           "title": "Libreria Personale",
-          "content": "Gestisci la tua collezione di giochi e accedi rapidamente ai regolamenti"
+          "description": "Gestisci la tua collezione di giochi e accedi rapidamente ai regolamenti"
         }
       },
-      "cta": {
-        "title": "Pronto a Iniziare?",
-        "content": "Registrati gratuitamente e scopri quanto può essere semplice capire le regole"
-      },
-      "stepsHeading": "Come funziona",
-      "featuresHeading": "Funzionalità principali",
       "aboutCta": "Scopri di più su MeepleAI",
       "faqCta": "Consulta le FAQ"
     },

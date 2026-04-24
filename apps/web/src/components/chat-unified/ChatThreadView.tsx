@@ -367,7 +367,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           content: '',
           timestamp: new Date().toISOString(),
         };
-        setMessages(prev => [...prev, assistantMessage]);
+        setMessages(prev => {
+          const next = [...prev, assistantMessage];
+          // Phase 1 Task 6 — dual-write: mirror QA assistant placeholder into useThreadMessages.
+          replaceMessagesInHook(next);
+          return next;
+        });
 
         const abortController = new AbortController();
         qaAbortRef.current = abortController;
@@ -396,24 +401,30 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
               case QA_EVENT_TYPES.INLINE_CITATION: {
                 const data = event.data as { citations: InlineCitationMatch[] };
                 if (data.citations) {
-                  setMessages(prev =>
-                    prev.map(m =>
+                  setMessages(prev => {
+                    const next = prev.map(m =>
                       m.id === assistantMsgId ? { ...m, inlineCitations: data.citations } : m
-                    )
-                  );
+                    );
+                    // Phase 1 Task 6 — dual-write: mirror inline-citation patch.
+                    replaceMessagesInHook(next);
+                    return next;
+                  });
                 }
                 break;
               }
               case QA_EVENT_TYPES.CONTINUATION_AVAILABLE: {
                 const data = event.data as ContinuationData;
                 if (data.continuationToken) {
-                  setMessages(prev =>
-                    prev.map(m =>
+                  setMessages(prev => {
+                    const next = prev.map(m =>
                       m.id === assistantMsgId
                         ? { ...m, continuationToken: data.continuationToken }
                         : m
-                    )
-                  );
+                    );
+                    // Phase 1 Task 6 — dual-write: mirror continuation-available patch.
+                    replaceMessagesInHook(next);
+                    return next;
+                  });
                 }
                 break;
               }
@@ -428,11 +439,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                   }>;
                 };
                 if (data.citations) {
-                  setMessages(prev =>
-                    prev.map(m =>
+                  setMessages(prev => {
+                    const next = prev.map(m =>
                       m.id === assistantMsgId ? { ...m, snippets: data.citations } : m
-                    )
-                  );
+                    );
+                    // Phase 1 Task 6 — dual-write: mirror citations-snippets patch.
+                    replaceMessagesInHook(next);
+                    return next;
+                  });
                 }
                 break;
               }
@@ -445,9 +459,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 if (token) {
                   finalAnswer += token;
                   const currentContent = finalAnswer;
-                  setMessages(prev =>
-                    prev.map(m => (m.id === assistantMsgId ? { ...m, content: currentContent } : m))
-                  );
+                  setMessages(prev => {
+                    const next = prev.map(m =>
+                      m.id === assistantMsgId ? { ...m, content: currentContent } : m
+                    );
+                    // Phase 1 Task 6 — dual-write: mirror token-accumulator patch.
+                    replaceMessagesInHook(next);
+                    return next;
+                  });
                 }
                 break;
               }
@@ -478,8 +497,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           }
 
           // Update assistant message with final data (citations + followUpQuestions)
-          setMessages(prev =>
-            prev.map(m =>
+          setMessages(prev => {
+            const next = prev.map(m =>
               m.id === assistantMsgId
                 ? {
                     ...m,
@@ -488,8 +507,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                     followUpQuestions,
                   }
                 : m
-            )
-          );
+            );
+            // Phase 1 Task 6 — dual-write: mirror final QA complete patch.
+            replaceMessagesInHook(next);
+            return next;
+          });
 
           // Persist assistant message to backend
           if (finalAnswer) {
@@ -508,7 +530,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           if ((err as Error).name !== 'AbortError') {
             setError("Errore nell'invio del messaggio");
             // Remove optimistic assistant message on error
-            setMessages(prev => prev.filter(m => m.id !== assistantMsgId));
+            setMessages(prev => {
+              const next = prev.filter(m => m.id !== assistantMsgId);
+              // Phase 1 Task 6 — dual-write: mirror QA assistant rollback.
+              replaceMessagesInHook(next);
+              return next;
+            });
           }
         } finally {
           setIsSending(false);

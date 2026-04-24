@@ -21,6 +21,7 @@ public sealed class CertificationThresholdsConfig
 
     public void Update(CertificationThresholds thresholds, Guid updatedByUserId)
     {
+        ArgumentNullException.ThrowIfNull(thresholds);
         Thresholds = thresholds;
         UpdatedAt = DateTimeOffset.UtcNow;
         UpdatedByUserId = updatedByUserId;

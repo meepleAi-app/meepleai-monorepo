@@ -169,9 +169,10 @@ export function ConnectionChip({
   const rootStyle = { ['--tw-ring-color' as string]: tokens.solid } as CSSProperties;
 
   // Render as <Link> when href is provided, no popover, no create handler, and not disabled.
-  // onCreate has precedence over href. onClick combined with href renders as <Link> with
-  // e.preventDefault() so left-click invokes onClick while middle-click/⌘-click preserve
-  // the browser's "open in new tab" semantics.
+  // onCreate has precedence over href. onClick combined with href renders as <Link> and
+  // short-circuits preventDefault() on modifier keys (Cmd/Ctrl/Shift) so the browser can
+  // still open the href in a new tab/window. Middle-click does not emit a React `click`
+  // event, so it is preserved naturally without explicit handling.
   if (href && !hasItems && !hasCreate && !disabled) {
     if (hasOnClick) {
       return (
@@ -181,6 +182,9 @@ export function ConnectionChip({
           className={rootClassName}
           style={rootStyle}
           onClick={e => {
+            // Preserve open-in-new-tab (Cmd/Ctrl) and open-in-new-window (Shift)
+            // by delegating the navigation to the browser.
+            if (e.metaKey || e.ctrlKey || e.shiftKey) return;
             e.preventDefault();
             onClick?.();
           }}

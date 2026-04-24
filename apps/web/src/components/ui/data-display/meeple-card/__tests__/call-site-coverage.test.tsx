@@ -44,9 +44,13 @@ interface Hit {
  *     it. Once Task 8 deletes `navItems` from `MeepleCardProps`, carriage
  *     becomes mechanically impossible.
  *
- * We therefore allowlist the 8 known spread files below. Unknown spreads
- * on `Meeple*Card` components still throw — this catches regressions
- * where a new contributor adds a spread site without auditing it.
+ * The allowlist below is keyed by file path (not line), so it contains 6
+ * entries covering 8 audited spread sites — `DashboardClient.tsx` and
+ * `entity-list-view.tsx` each contain two spread sites in the same file
+ * and are therefore deduplicated to a single allowlist entry. Unknown
+ * spreads on `Meeple*Card` components still throw — this catches
+ * regressions where a new contributor adds a spread site without auditing
+ * it.
  *
  * Keyed by file only (not line) so edits that shift line numbers don't
  * break the gate.

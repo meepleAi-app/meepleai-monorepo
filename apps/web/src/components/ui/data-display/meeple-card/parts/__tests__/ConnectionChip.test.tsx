@@ -158,6 +158,24 @@ describe('ConnectionChip', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  it('does NOT call onClick on Cmd/Ctrl/Shift+click so the browser can open the href in a new tab/window', () => {
+    // Regression guard: when href+onClick coexist on a <Link>, a blanket
+    // e.preventDefault() would swallow Cmd/Ctrl+click (open in new tab) and
+    // Shift+click (open in new window). The handler must short-circuit on
+    // modifier keys and let the browser process the navigation natively.
+    const onClick = vi.fn();
+    render(<ConnectionChip entityType="kb" count={3} href="/kb/123" onClick={onClick} />);
+    const link = screen.getByRole('link');
+
+    for (const modifier of [{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }] as const) {
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true, ...modifier });
+      link.dispatchEvent(event);
+      // Browser default (navigation / open-in-new-tab) must remain enabled:
+      expect(event.defaultPrevented).toBe(false);
+    }
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
   it('renders as <button> (not <a>) when onClick is provided without href', () => {
     render(<ConnectionChip entityType="kb" count={3} onClick={() => {}} />);
     expect(screen.getByRole('button')).toBeInTheDocument();

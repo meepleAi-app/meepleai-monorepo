@@ -142,10 +142,10 @@ describe('MeepleSessionCard', () => {
   });
 
   // --------------------------------------------------------------------------
-  // NavFooter — shows player count from session.playerCount
+  // Connections — shows player count from session.playerCount
   // --------------------------------------------------------------------------
 
-  it('renders NavFooter with player count from session data', () => {
+  it('renders connection chip with player count from session data', () => {
     render(<MeepleSessionCard session={mockSetupSession} />);
     // The Giocatori nav slot should appear with count badge 3
     expect(screen.getByText('Giocatori')).toBeInTheDocument();

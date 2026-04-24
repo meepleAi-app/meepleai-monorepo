@@ -12,7 +12,7 @@ import {
   buildChatConnections,
   buildGameConnections,
   buildKbConnections,
-  buildSessionNavItems,
+  buildSessionConnections,
 } from '@/components/ui/data-display/meeple-card/nav-items';
 import type {
   ConnectionChipProps,
@@ -70,8 +70,9 @@ function buildNavItems(
       items = gameConnections as unknown as NavFooterItem[];
       break;
     }
-    case 'session':
-      items = buildSessionNavItems(
+    case 'session': {
+      // TODO(task-8): remove cast when showcase switches navItems= → connections= in the cleanup commit
+      const sessionConnections: ConnectionChipProps[] = buildSessionConnections(
         {
           playerCount: counts.playerCount,
           hasNotes: showCounts,
@@ -87,7 +88,9 @@ function buildNavItems(
               onPhotosClick: noop,
             }
       );
+      items = sessionConnections as unknown as NavFooterItem[];
       break;
+    }
     case 'kb': {
       // TODO(task-8): remove cast when showcase switches navItems= → connections= in the cleanup commit
       const kbConnections: ConnectionChipProps[] = buildKbConnections(

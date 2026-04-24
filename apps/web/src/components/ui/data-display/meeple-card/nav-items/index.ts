@@ -9,12 +9,18 @@ export {
   type GameNavHandlers,
 } from './buildGameNavItems';
 export {
+  buildPlayerConnections,
   buildPlayerNavItems,
+  type PlayerConnectionsCounts,
+  type PlayerConnectionsHandlers,
   type PlayerNavCounts,
   type PlayerNavHandlers,
 } from './buildPlayerNavItems';
 export {
+  buildSessionConnections,
   buildSessionNavItems,
+  type SessionConnectionsCounts,
+  type SessionConnectionsHandlers,
   type SessionNavCounts,
   type SessionNavHandlers,
 } from './buildSessionNavItems';

@@ -23,8 +23,8 @@ import {
   buildEventNavItems,
   buildGameConnections,
   buildKbConnections,
-  buildPlayerNavItems,
-  buildSessionNavItems,
+  buildPlayerConnections,
+  buildSessionConnections,
   buildToolNavItems,
   buildToolkitNavItems,
 } from '@/components/ui/data-display/meeple-card/nav-items';
@@ -398,7 +398,7 @@ export default function MeepleCardDevPage() {
               badge="Top 5%"
               status="active"
               metadata={[{ label: '142 plays' }, { label: '68% win' }]}
-              navItems={buildPlayerNavItems(
+              connections={buildPlayerConnections(
                 { totalWins: 96, totalSessions: 142 },
                 {
                   onWinsClick: () => alert('Wins'),
@@ -414,7 +414,7 @@ export default function MeepleCardDevPage() {
               status="inprogress"
               badge="Live"
               metadata={[{ label: '4 giocatori' }, { label: '45 min' }]}
-              navItems={buildSessionNavItems(
+              connections={buildSessionConnections(
                 { playerCount: 4, hasNotes: true, toolCount: 2, photoCount: 6 },
                 {
                   onPlayersClick: () => alert('Players'),
@@ -710,7 +710,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="Alice Rossi"
                 subtitle="Giocatrice attiva"
-                navItems={buildPlayerNavItems(
+                connections={buildPlayerConnections(
                   { totalWins: 18, totalSessions: 42 },
                   {
                     onWinsClick: () => alert('Wins!'),
@@ -727,7 +727,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="Game Night #42"
                 subtitle="Catan · 2h 15min"
-                navItems={buildSessionNavItems(
+                connections={buildSessionConnections(
                   { playerCount: 4, hasNotes: true, toolCount: 6, photoCount: 12 },
                   {
                     onPlayersClick: () => alert('Players!'),
@@ -956,7 +956,7 @@ export default function MeepleCardDevPage() {
               title="Marco R."
               subtitle="12 sessioni · 5 vittorie"
               metadata={[{ label: '12 sessioni' }, { label: '42% win' }]}
-              navItems={buildPlayerNavItems(
+              connections={buildPlayerConnections(
                 { totalWins: 5, totalSessions: 12 },
                 {
                   onWinsClick: () => alert('Wins'),
@@ -1022,7 +1022,7 @@ export default function MeepleCardDevPage() {
                 subtitle: '15 Feb 2026',
                 status: 'completed',
                 metadata: [{ label: 'Catan' }, { label: '4 giocatori' }],
-                navItems: buildSessionNavItems(
+                connections: buildSessionConnections(
                   { playerCount: 4, hasNotes: false, toolCount: 0, photoCount: 0 },
                   { onPlayersClick: () => alert('Players') }
                 ),
@@ -1084,7 +1084,7 @@ export default function MeepleCardDevPage() {
                 subtitle: '@marco_games',
                 status: 'active',
                 metadata: [{ label: '142 plays' }, { label: '68% win' }],
-                navItems: buildPlayerNavItems(
+                connections: buildPlayerConnections(
                   { totalWins: 96, totalSessions: 142 },
                   {
                     onWinsClick: () => alert('Wins'),

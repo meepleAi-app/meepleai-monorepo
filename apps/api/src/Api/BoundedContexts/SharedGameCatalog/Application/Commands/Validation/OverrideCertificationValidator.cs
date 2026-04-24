@@ -21,6 +21,8 @@ internal sealed class OverrideCertificationValidator
 
         RuleFor(x => x.Reason)
             .NotEmpty().WithMessage("Reason is required")
+            .Must(r => !string.IsNullOrWhiteSpace(r))
+                .WithMessage("Reason cannot be whitespace-only")
             .Length(20, 500).WithMessage("Reason must be between 20 and 500 characters");
 
         RuleFor(x => x.UserId)

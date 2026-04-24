@@ -191,6 +191,7 @@ public class OverrideCertificationHandlerTests
 
         // Persistence order: Update then SaveChanges (single UoW commit).
         sequence.Should().Equal("analysis.Update", "uow.Save");
+        _analysisRepoMock.Verify(r => r.Update(analysis), Times.Once);
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);

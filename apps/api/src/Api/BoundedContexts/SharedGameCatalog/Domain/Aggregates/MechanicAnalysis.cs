@@ -753,12 +753,20 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
                 $"current CertificationStatus is {CertificationStatus}, expected Certified.");
         }
 
+        if (CertifiedByUserId is null)
+        {
+            throw new InvalidOperationException(
+                $"Cannot raise override certification event on MechanicAnalysis {Id}: " +
+                $"CertifiedByUserId is null. Override path requires a real actor id — " +
+                $"call CertifyViaOverride(reason, userId, utcNow) first.");
+        }
+
         AddDomainEvent(new MechanicAnalysisCertifiedEvent(
             AnalysisId: Id,
             SharedGameId: SharedGameId,
             WasOverride: true,
             OverrideReason: CertificationOverrideReason,
-            CertifiedByUserId: CertifiedByUserId ?? Guid.Empty,
+            CertifiedByUserId: CertifiedByUserId.Value,
             CertifiedAt: certifiedAt));
     }
 

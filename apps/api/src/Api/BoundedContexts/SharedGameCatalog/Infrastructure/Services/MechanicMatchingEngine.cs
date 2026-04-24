@@ -81,6 +81,11 @@ internal sealed class MechanicMatchingEngine : IMechanicMatchingEngine
 
     private static double Jaccard(string[] a, string[] b)
     {
+        // Domain rule (not mathematical Jaccard): return 0 when both sides are empty.
+        // Empty-keyword claims must not pass the Jaccard threshold — golden claims are
+        // curator-provided and always have keywords in practice, and analysis claims
+        // with no keywords should not satisfy the keyword path. The embedding/cosine
+        // path is the fallback match route when keywords are unavailable.
         if (a.Length == 0 && b.Length == 0)
         {
             return 0;

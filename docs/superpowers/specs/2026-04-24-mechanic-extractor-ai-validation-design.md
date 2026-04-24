@@ -3,8 +3,9 @@
 **Date**: 2026-04-24
 **Status**: Design approved, pending implementation plan
 **Author**: Brainstorming session (`/sc:spec-panel` + `superpowers:brainstorming`)
-**Bounded Contexts**: KnowledgeBase (primary), SystemConfiguration (thresholds)
-**Depends on**: M1.2 Mechanic Extractor (ISSUE-524 / ADR-051) — already shipped
+**Bounded Contexts**: SharedGameCatalog (primary — golden claims + validation extend M1.2), SystemConfiguration (certification thresholds)
+**Depends on**: M1.2 Mechanic Extractor (ISSUE-524 / ADR-051) — already shipped in `SharedGameCatalog` BC
+**Note**: All FKs use `SharedGameId` (not `GameId`) to match existing `MechanicAnalysis.SharedGameId` pattern.
 
 ## 1. Purpose & Scope
 

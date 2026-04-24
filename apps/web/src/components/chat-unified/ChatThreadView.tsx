@@ -309,11 +309,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
               if (token) {
                 appendedContent += token;
                 const content = appendedContent;
-                setMessages(prev =>
-                  prev.map(m =>
+                setMessages(prev => {
+                  const next = prev.map(m =>
                     m.id === lastAssistant.id ? { ...m, content, continuationToken: undefined } : m
-                  )
-                );
+                  );
+                  // Phase 1 Task 5 — dual-write: mirror continuation token patch into useThreadMessages.
+                  replaceMessagesInHook(next);
+                  return next;
+                });
               }
             }
           }
@@ -325,7 +328,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         }
       })();
     },
-    [messages, thread?.gameId]
+    [messages, thread?.gameId, replaceMessagesInHook]
   );
 
   // Send message - SSE streaming when agentId available, REST fallback otherwise

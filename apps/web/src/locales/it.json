@@ -1030,7 +1030,11 @@
       "cta": {
         "title": "Pronto a Iniziare?",
         "content": "Registrati gratuitamente e scopri quanto può essere semplice capire le regole"
-      }
+      },
+      "stepsHeading": "Come funziona",
+      "featuresHeading": "Funzionalità principali",
+      "aboutCta": "Scopri di più su MeepleAI",
+      "faqCta": "Consulta le FAQ"
     },
     "blog": {
       "title": "Blog",
@@ -1170,6 +1174,63 @@
         "content": "Non hai trovato quello che cercavi? Contattaci e saremo felici di aiutarti.",
         "cta": "Contattaci"
       }
+    },
+    "errors": {
+      "notFound": {
+        "eyebrow": "404",
+        "title": "Pagina non trovata",
+        "subtitle": "La pagina che stai cercando non esiste o è stata spostata.",
+        "homeCta": "Torna alla home",
+        "exploreCta": "Esplora i giochi"
+      },
+      "serverError": {
+        "eyebrow": "500",
+        "title": "Qualcosa è andato storto",
+        "subtitle": "Si è verificato un errore imprevisto. Riprova o torna alla home.",
+        "retryCta": "Riprova",
+        "homeCta": "Torna alla home",
+        "digestLabel": "ID errore"
+      },
+      "offline": {
+        "title": "Sei offline",
+        "subtitle": "Non preoccuparti, puoi ancora accedere ai contenuti salvati in cache.",
+        "retryCta": "Riprova connessione",
+        "homeCta": "Torna alla home",
+        "statsTitle": "Contenuti disponibili offline",
+        "sessionsLabel": "Sessioni",
+        "cachedGamesLabel": "Giochi in cache",
+        "pendingLabel": "Azioni in attesa",
+        "onlineStatus": "Connessione ripristinata",
+        "offlineStatus": "Connessione assente"
+      }
+    },
+    "cookieSettings": {
+      "title": "Preferenze cookie",
+      "subtitle": "Gestisci il tuo consenso ai cookie. Puoi modificare queste impostazioni in qualsiasi momento.",
+      "categories": {
+        "essential": {
+          "label": "Cookie essenziali",
+          "description": "Necessari per il funzionamento del sito (sessione, preferenze di base). Non possono essere disattivati."
+        },
+        "analytics": {
+          "label": "Cookie analitici",
+          "description": "Ci aiutano a capire come usi il sito in forma aggregata e anonima."
+        },
+        "functional": {
+          "label": "Cookie funzionali",
+          "description": "Migliorano l'esperienza ricordando le tue scelte (tema, lingua)."
+        }
+      },
+      "actions": {
+        "save": "Salva preferenze",
+        "acceptAll": "Accetta tutti",
+        "rejectAll": "Rifiuta opzionali"
+      },
+      "savedToast": "Preferenze salvate",
+      "policyLink": "Leggi la cookie policy completa"
+    },
+    "cookies": {
+      "managePreferencesCta": "Gestisci preferenze"
     }
   }
 }

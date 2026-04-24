@@ -40,10 +40,19 @@ describe('Step 2 — call-site migration coverage (Gate 1)', () => {
     // path is wrong (e.g. package moved, or '..' segment count off), the
     // glob below would return nothing and the loop would run 0 iterations,
     // making the test pass vacuously. Verify root really points to apps/web
-    // by checking package.json exists there.
-    if (!existsSync(resolve(root, 'package.json'))) {
+    // by reading package.json and asserting the package name — checking
+    // existence alone would silently pass if root resolved to the monorepo
+    // root or a sibling Next.js package which also have a package.json.
+    const pkgJsonPath = resolve(root, 'package.json');
+    if (!existsSync(pkgJsonPath)) {
       throw new Error(
         `Gate 1 path drift: resolved root ${root} does not contain package.json. The __dirname-relative path is wrong; fix the number of '..' segments.`
+      );
+    }
+    const pkgName = (JSON.parse(readFileSync(pkgJsonPath, 'utf8')) as { name?: string }).name;
+    if (pkgName !== '@meepleai/web') {
+      throw new Error(
+        `Gate 1 path drift: resolved root ${root} is package "${pkgName ?? '(unnamed)'}", expected "@meepleai/web". The __dirname-relative path lands in the wrong package.`
       );
     }
 

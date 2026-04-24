@@ -82,6 +82,6 @@ internal sealed class MechanicGoldenClaimEntityConfiguration : IEntityTypeConfig
             .OnDelete(DeleteBehavior.Restrict);
 
         // === Soft delete global query filter ===
-        builder.HasQueryFilter(c => c.DeletedAt == null);
+        builder.HasQueryFilter(c => !c.IsDeleted);
     }
 }

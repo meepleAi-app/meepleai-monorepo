@@ -7,10 +7,6 @@ import { cn } from '@/lib/utils';
 
 import { CitationExpander } from './CitationExpander';
 
-// Re-export for backward compatibility with `import type { ChatMessageRole } from './ChatMessageBubble'`.
-// Canonical definition lives in `@/components/chat/shared/types.ts`.
-export type { ChatMessageRole };
-
 interface ChatMessageBubbleProps {
   role: ChatMessageRole;
   content: string;

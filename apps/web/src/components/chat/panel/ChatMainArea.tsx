@@ -1,7 +1,9 @@
 'use client';
 
+import type { ChatMessageRole } from '@/components/chat/shared';
+
 import { ChatInputBar } from './ChatInputBar';
-import { ChatMessageBubble, type ChatMessageRole } from './ChatMessageBubble';
+import { ChatMessageBubble } from './ChatMessageBubble';
 
 export interface ChatMessage {
   id: string;

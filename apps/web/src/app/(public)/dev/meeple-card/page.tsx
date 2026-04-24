@@ -30,6 +30,8 @@ import {
 } from '@/components/ui/data-display/meeple-card/nav-items';
 import type { ConnectionChipProps } from '@/components/ui/data-display/meeple-card/types';
 
+import { STEP_2_AUDIT_ROWS } from './step-2-audit-fixtures';
+
 const GAME_IMAGE = 'https://picsum.photos/seed/catan/400/300';
 
 function Section({
@@ -1117,6 +1119,43 @@ export default function MeepleCardDevPage() {
             <MeepleCardSkeleton variant="grid" />
           </CardRow>
         </Section>
+
+        <section className="mt-12 border-t pt-8">
+          <h2 className="text-2xl font-bold mb-2">Step 2 Audit — Migration Coverage</h2>
+          <p className="text-sm text-[var(--mc-text-muted)] mb-4">
+            Per-call-site visual diff station. Reviewer verifies each row matches the production
+            call-site in spec §3.1. Toggle between <code>connections=</code> (post-migration) and
+            <code>navItems=</code> (legacy via adapter) to confirm parity.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">#</th>
+                  <th className="text-left p-2">Component</th>
+                  <th className="text-left p-2">Bounded Context</th>
+                  <th className="text-left p-2">Path</th>
+                </tr>
+              </thead>
+              <tbody>
+                {STEP_2_AUDIT_ROWS.map((row, i) => (
+                  <tr key={row.componentName} className="border-b">
+                    <td className="p-2 align-top text-[var(--mc-text-muted)]">{i + 1}</td>
+                    <td className="p-2 align-top font-mono text-xs">{row.componentName}</td>
+                    <td className="p-2 align-top text-[var(--mc-text-muted)]">{row.bc}</td>
+                    <td className="p-2 align-top font-mono text-xs">{row.path}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-[var(--mc-text-muted)] mt-4">
+            Note: This audit table lists the 17 call-sites; per-component live preview cards with
+            before/after toggles are deferred to a follow-up because they would require importing 17
+            production components into a public dev page (server/client boundary risk). The PR
+            checklist (spec §5.2) is the binding QA gate.
+          </p>
+        </section>
       </div>
     </div>
   );

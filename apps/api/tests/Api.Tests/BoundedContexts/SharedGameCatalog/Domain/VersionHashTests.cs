@@ -31,4 +31,28 @@ public class VersionHashTests
         var b = VersionHash.Compute(new[] { (Guid.Empty, "y", 1) }, Array.Empty<string>());
         a.Should().NotBe(b);
     }
+
+    [Fact]
+    public void Compute_is_deterministic_and_order_independent_for_claims()
+    {
+        var id1 = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var id2 = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var claimsAsc = new[] { (id1, "s1", 1), (id2, "s2", 2) };
+        var claimsDesc = new[] { (id2, "s2", 2), (id1, "s1", 1) };
+        var tags = new[] { "t1" };
+
+        var h1 = VersionHash.Compute(claimsAsc, tags).Value;
+        var h2 = VersionHash.Compute(claimsDesc, tags).Value;
+
+        Assert.Equal(h1, h2);
+    }
+
+    [Fact]
+    public void Compute_changes_when_expected_page_changes()
+    {
+        var id = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var a = VersionHash.Compute(new[] { (id, "statement", 5) }, Array.Empty<string>()).Value;
+        var b = VersionHash.Compute(new[] { (id, "statement", 6) }, Array.Empty<string>()).Value;
+        Assert.NotEqual(a, b);
+    }
 }

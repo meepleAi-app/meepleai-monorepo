@@ -165,7 +165,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         timestamp: new Date().toISOString(),
         followUpQuestions: metadata.followUpQuestions,
       };
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages(prev => {
+        const next = [...prev, assistantMessage];
+        // Phase 1 Task 4 — dual-write: mirror SSE-complete append into useThreadMessages.
+        replaceMessagesInHook(next);
+        return next;
+      });
       // TTS: auto-speak response when last message was voice-initiated
       if (voicePrefs.ttsEnabled && lastMessageWasVoiceRef.current) {
         speak(answer);
@@ -340,7 +345,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         content: messageContent,
         timestamp: new Date().toISOString(),
       };
-      setMessages(prev => [...prev, userMessage]);
+      setMessages(prev => {
+        const next = [...prev, userMessage];
+        // Phase 1 Task 4 — dual-write: mirror optimistic user append into useThreadMessages.
+        replaceMessagesInHook(next);
+        return next;
+      });
 
       // QA stream path: game context available → use RAG QA streaming (#415)
       // Priority: gameId check FIRST because POST /agents/{id}/chat does not exist
@@ -522,21 +532,27 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         });
 
         if (response?.messages) {
-          setMessages(
-            response.messages.map(
-              (m): ChatMessageItem => ({
-                id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
-                role: m.role as 'user' | 'assistant',
-                content: m.content,
-                timestamp: m.timestamp,
-              })
-            )
+          const mapped: ChatMessageItem[] = response.messages.map(
+            (m): ChatMessageItem => ({
+              id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+              timestamp: m.timestamp,
+            })
           );
+          setMessages(mapped);
+          // Phase 1 Task 4 — dual-write: mirror REST-fallback list replace into useThreadMessages.
+          replaceMessagesInHook(mapped);
         }
       } catch {
         setError("Errore nell'invio del messaggio");
         // Remove optimistic message on error
-        setMessages(prev => prev.filter(m => m.id !== userMessage.id));
+        setMessages(prev => {
+          const next = prev.filter(m => m.id !== userMessage.id);
+          // Phase 1 Task 4 — dual-write: mirror optimistic rollback into useThreadMessages.
+          replaceMessagesInHook(next);
+          return next;
+        });
       } finally {
         setIsSending(false);
       }
@@ -552,6 +568,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       sendViaSSE,
       voicePrefs.ttsEnabled,
       speak,
+      replaceMessagesInHook,
     ]
   );
 

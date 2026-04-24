@@ -19,6 +19,18 @@ After this PR ships, the codebase will have:
 - **No** transitional adapter (`navItemsToConnections` deleted).
 - **No** dual-source ESLint guard (rule unnecessary once dual is impossible by API shape).
 
+### 1.1 ConnectionChip API extension prerequisite
+
+True parity requires extending `ConnectionChip` with an optional `onClick?: () => void` prop **before** any call-site migration begins. Rationale:
+
+- 8 of 9 navigation builders (`buildAgentNavItems`, `buildChatNavItems`, `buildEventNavItems`, `buildKbNavItems`, `buildPlayerNavItems`, `buildSessionNavItems`, `buildToolkitNavItems`, `buildToolNavItems`) emit items with `onClick` callbacks and **no `href`** (only `buildGameNavItems` emits both).
+- `ConnectionChip` Step 1.6 API supports navigation only via `href` (rendered as `<Link>`); the `navItemsToConnections` adapter explicitly drops `onClick` and emits a W2 dev-warn (see `adapters/navItemsToConnections.ts:20-24`).
+- Without this extension, mechanical migration would silently break navigation on **13 of 17 call-sites** — worst case `MeepleAgentCard` chips routing to `/chat`, `/agents/:id/sources`, `/agents/:id/settings` would become inert; `MeepleKbCard` actions like reindex/preview/download and `ToolboxKitCard` actions like duplicate/edit would lose their handlers.
+- Extension scope is minimal (~30 LoC + tests): add `onClick?: () => void` to `ConnectionChipProps`, wire into existing `handleActivate` precedence (`items` → `onCreate` → `onClick` → `href`-via-Link).
+- **Render strategy** (mitigates §9 middle-click risk): when `onClick` is present, prefer rendering as `<Link href={href ?? '#'}>` with `onClick={(e) => { e.preventDefault(); onClick(); }}` to preserve middle-click open-in-tab semantics where `href` is meaningful. When `onClick` is present without `href`, render as `<button>`. Precedence: if both `onClick` and `href` exist, `onClick` wins on left-click but `href` remains on the rendered `<a>` element so middle-click/⌘-click still opens the destination in a new tab.
+
+This extension is committed as **commit 0** of the mega-PR, before any BC migration commits.
+
 ## 2. Non-goals
 
 | Non-goal | Rationale |
@@ -66,34 +78,40 @@ After this PR ships, the codebase will have:
 | ESLint `no-dual-connection-source` rule | `eslint-rules/no-dual-connection-source.js` | Static guard preventing co-presence; deleted in cleanup commit (impossible by API shape after `navItems` prop removal). |
 | `__useConnectionsForNavItems` internal flag | `components/ui/data-display/meeple-card/types.ts` | Retained for test infrastructure (programmatic before/after rendering). |
 | Dev playground | `app/(public)/dev/meeple-card/page.tsx` | Extended with Step 2 audit section (Gate 2). |
+| Builders `buildXxxNavItems` (9 files in `nav-items/`) | `components/ui/data-display/meeple-card/nav-items/` | Per-BC migration commits update each builder's return-type from `NavFooterItem[]` to `ConnectionChipProps[]` and rename to `buildXxxConnections`; old name retained as deprecated re-export until cleanup commit 8. |
+| `ConnectionChip` primitive | `components/ui/data-display/meeple-card/parts/ConnectionChip.tsx` | Extended in commit 0 with `onClick?: () => void` prop (see §1.1). |
 
 ## 4. Architecture
 
 ### 4.1 Migration mechanics — per call-site
 
-Each migration is a 1:1 mechanical replacement of the prop name and entry shape:
+Each migration is a 1:1 mechanical replacement of the prop name and entry shape. Call-sites in production almost always use a builder helper (e.g. `buildSessionNavItems(counts, handlers)`) rather than inline literals; the entry-shape transformation is encapsulated inside the renamed builder, so the call-site change is purely the prop rename + builder rename.
 
-**Before**:
+**Call-site (builder-based, the common case)**:
 ```tsx
-<MeepleSessionCard
-  // ...
-  navItems={[
-    { label: '5 sessioni', entity: 'session', count: 5, href: '/sessions/...' },
-    { label: '3 partecipanti', entity: 'player', count: 3, href: '/sessions/.../players' },
-  ]}
-/>
+// Before
+<MeepleSessionCard navItems={buildSessionNavItems(counts, handlers)} />
+
+// After
+<MeepleSessionCard connections={buildSessionConnections(counts, handlers)} />
 ```
 
-**After**:
+**Entry-shape transformation (inside the builder)**:
 ```tsx
-<MeepleSessionCard
-  // ...
-  connections={[
-    { label: '5 sessioni', entityType: 'session', count: 5, href: '/sessions/...' },
-    { label: '3 partecipanti', entityType: 'player', count: 3, href: '/sessions/.../players' },
-  ]}
-/>
+// Before — buildSessionNavItems returns NavFooterItem[]
+[
+  { label: '5 sessioni', entity: 'session', count: 5, href: '/sessions/...' },
+  { label: '3 partecipanti', entity: 'player', count: 3, href: '/sessions/.../players', onClick: handlers.onPlayersClick },
+]
+
+// After — buildSessionConnections returns ConnectionChipProps[]
+[
+  { label: '5 sessioni', entityType: 'session', count: 5, href: '/sessions/...' },
+  { label: '3 partecipanti', entityType: 'player', count: 3, href: '/sessions/.../players', onClick: handlers.onPlayersClick },
+]
 ```
+
+**Inline-literal call-sites** (rare): if a call-site exists that passes `navItems` as an inline array (no builder), it is updated in the same commit as the corresponding builder, applying the same field renames. The plan grep step verifies whether any inline-literal call-sites exist.
 
 **Mapping rules** (codified by existing adapter, applied by hand in Step 2):
 | `NavFooterItem` field | `ConnectionChipProps` field | Notes |
@@ -103,7 +121,14 @@ Each migration is a 1:1 mechanical replacement of the prop name and entry shape:
 | `count` | `count` | identical |
 | `href` | `href` | identical |
 | `icon` | `iconOverride` | (only if call-site passes custom icon — most don't) |
+| `onClick` | `onClick` | identical (requires commit 0 ConnectionChip extension — see §1.1). When both `onClick` and `href` are present, `onClick` takes precedence (matches NavFooter behavior). |
+| `disabled` | `disabled` | identical |
 | `onPlusClick` + `showPlus` | `onCreate` (when `count === 0`) | none of the current 17 call-sites use this; if discovered during migration, treat as edge case (see §6) |
+
+**Migration unit per BC commit** = call-site files + their corresponding builder file(s). Each per-BC commit:
+1. Renames `buildXxxNavItems` → `buildXxxConnections` (return type changes from `NavFooterItem[]` to `ConnectionChipProps[]`, field renames applied internally).
+2. Updates call-sites in that BC to pass `connections={buildXxxConnections(...)}` instead of `navItems={buildXxxNavItems(...)}`.
+3. Old builder name retained as a thin deprecated re-export (`@deprecated use buildXxxConnections`) — purged in commit 8. This keeps each per-BC commit self-contained: typecheck stays green even though Gate 1 still fails on remaining unmigrated BCs.
 
 ### 4.2 Hook simplification (cleanup commit)
 
@@ -173,22 +198,24 @@ New section "**Step 2 Audit — Migration Coverage**":
 
 ## 6. Mega-PR commit structure
 
-Single PR, 8 atomic commits, reviewable commit-by-commit.
+Single PR, 9 atomic commits, reviewable commit-by-commit.
 
 | # | Commit message | Scope | Files | Gate 1 status after |
 |---|---|---|---|---|
+| 0 | `feat(meeple-card): add optional onClick to ConnectionChip` | API extension prerequisite (see §1.1) | ConnectionChip.tsx (~30 LoC), ConnectionChip.test.tsx (~5 new test cases) | ❌ FAIL (17 remain) |
 | 1 | `test(meeple-card): add programmatic call-site coverage gate` | Add Gate 1 test infra | +1 test file | ❌ FAIL (17 call-sites remain) |
 | 2 | `feat(dev): add Step 2 migration audit section to dev playground` | Add Gate 2 dev tooling | dev/meeple-card/page.tsx + fixtures | ❌ FAIL (still 17) |
-| 3 | `refactor(knowledge-base): migrate KbCard, ChatCard to connections` | KnowledgeBase BC | 2 files | ❌ FAIL (15 remain) |
-| 4 | `refactor(games): migrate Catalog, Library, Collection, Playlist game cards` | GameManagement BC | 4 files | ❌ FAIL (11 remain) |
-| 5 | `refactor(sessions): migrate Session, ResumeSession, Participant, PausedSession, PlayHistory` | SessionTracking BC | 5 files | ❌ FAIL (6 remain) |
-| 6 | `refactor(agents): migrate AgentCard to connections` | AgentMemory BC | 1 file | ❌ FAIL (5 remain) |
-| 7 | `refactor(misc): migrate Event, GameNight, Toolbox, Contributor, UserLibrary cards` | GameNight + GameToolbox + SharedGameCatalog + UserLibrary | 5 files | ✅ PASS (0 remain) |
-| 8 | `chore(meeple-card): remove legacy navItems channel` | Cleanup deletes + internal forwarder edits | -NavFooter.tsx, -adapter, -prop, -ESLint rule, -devWarn branch, +edits to GridCard/FeaturedCard/FocusCard/ListCard/EntityTable to drop `navItems` rendering, +MeepleCard.tsx dedup/warn removal | ✅ PASS |
+| 3 | `refactor(knowledge-base): migrate KbCard, ChatCard to connections` | KnowledgeBase BC: 2 call-sites + buildKbNavItems + buildChatNavItems renamed to buildKbConnections/buildChatConnections | 4 files | ❌ FAIL (15 remain) |
+| 4 | `refactor(games): migrate Catalog, Library, Collection, Playlist game cards` | GameManagement BC: 4 call-sites + buildGameNavItems renamed to buildGameConnections | 5 files | ❌ FAIL (11 remain) |
+| 5 | `refactor(sessions): migrate Session, ResumeSession, Participant, PausedSession, PlayHistory` | SessionTracking BC: 5 call-sites + buildSessionNavItems + buildPlayerNavItems renamed | 7 files | ❌ FAIL (6 remain) |
+| 6 | `refactor(agents): migrate AgentCard to connections` | AgentMemory BC: 1 call-site + buildAgentNavItems renamed | 2 files | ❌ FAIL (5 remain) |
+| 7 | `refactor(misc): migrate Event, GameNight, Toolbox, Contributor, UserLibrary cards` | GameNight + GameToolbox + SharedGameCatalog + UserLibrary: 5 call-sites + buildEventNavItems + buildToolkitNavItems + buildToolNavItems renamed | 8 files | ✅ PASS (0 remain) |
+| 8 | `chore(meeple-card): remove legacy navItems channel` | Cleanup deletes + internal forwarder edits | -NavFooter.tsx, -adapter, -prop, -ESLint rule, -devWarn branch, -deprecated builder re-exports, +edits to GridCard/FeaturedCard/FocusCard/ListCard/EntityTable to drop `navItems` rendering, +MeepleCard.tsx dedup/warn removal | ✅ PASS |
 
 **Reviewability rationale**:
-- Each commit 3-7 has a uniform diff shape (rename `navItems` → `connections`, rename `entity` → `entityType` per entry). Reviewer pattern-matches once, applies mentally to all files in the commit.
-- Commit 1 + 2 land first so Gate 1 fails for a clear, expected reason (lock-in).
+- Commit 0 is small and isolated (ConnectionChip API extension) — reviewer focuses on API design + precedence semantics + a11y before any migration commit.
+- Each commit 3-7 has a uniform diff shape (rename `navItems` → `connections`, rename `buildXxxNavItems` → `buildXxxConnections`, rename `entity` → `entityType` per entry). Reviewer pattern-matches once, applies mentally to all files in the commit.
+- Commit 1 + 2 land after commit 0 so Gate 1 fails for a clear, expected reason (lock-in).
 - Commit 8 is pure deletion — reviewer verifies no live reference to deleted symbols (grep-driven review).
 - Squash on merge produces a single clean entry on `main-dev` with a complete summary.
 
@@ -196,6 +223,8 @@ Single PR, 8 atomic commits, reviewable commit-by-commit.
 
 | Path | Action | Verification |
 |---|---|---|
+| `nav-items/buildXxx*.ts` (9 builder files) | Edit — files keep `buildXxxConnections` (renamed in per-BC commits); remove the deprecated `buildXxxNavItems` re-export added during per-BC commits. Files **renamed on disk** to `buildXxxConnections.ts` for consistency. | `grep -rE "buildAgentNavItems\|buildChatNavItems\|buildEventNavItems\|buildGameNavItems\|buildKbNavItems\|buildPlayerNavItems\|buildSessionNavItems\|buildToolkitNavItems\|buildToolNavItems" src/` → 0 hits |
+| `nav-items/index.ts` | Edit — remove deprecated `buildXxxNavItems` re-exports + `XxxNavItemsHandlers` interface re-exports if no longer consumed; rename interface exports to `XxxConnectionsHandlers` if kept | typecheck passes |
 | `parts/NavFooter.tsx` | Delete | `grep -r "NavFooter" src/` → 0 hits |
 | `parts/index.ts` | Edit — remove `NavFooter` export | typecheck passes |
 | `adapters/navItemsToConnections.ts` | Delete | `grep -r "navItemsToConnections" src/` → 0 hits |
@@ -248,12 +277,14 @@ Single PR, 8 atomic commits, reviewable commit-by-commit.
 | Risk | Likelihood | Mitigation |
 |---|---|---|
 | Visual regression on a low-traffic surface (e.g. PausedSessionCard) escapes both Gate 1 (DOM equality holds but pixels differ) and Gate 2 (reviewer skims past) | Medium | Gate 2 enforces side-by-side rendering at the same viewport; toggle requires conscious comparison per row. PR template forces explicit ✅ per call-site. |
+| ConnectionChip `onClick` + `href` precedence ambiguity — middle-click open-in-tab might not work if rendered as `<button>` | Low-medium | Plan picks one of two render strategies and codifies in commit 0: (A) render `<button>` when `onClick` present, document loss of middle-click; or (B) render `<a href>` with `e.preventDefault() + onClick()` to keep middle-click semantics. Recommend (B) for parity with NavFooter behavior. Decision documented in commit 0 message. |
 | A call-site uses `onPlusClick`/`showPlus` (lossy adapter path noted in Step 1.6 spec §3.3) | Low | Pre-migration grep `grep -rE "onPlusClick\|showPlus" src/components` to confirm zero occurrences before starting. Result documented in plan. |
 | A call-site passes a custom `icon: ReactNode` that needs `iconOverride` mapping | Low-medium | Same pre-migration grep for `icon:` within `navItems=` arrays. Edge cases listed in plan. |
 | Cleanup commit 8 misses a transitive reference (e.g. a story file, docs example, type re-export) | Medium | Cleanup commit includes a final repo-wide grep for each deleted symbol; CI typecheck catches the rest. Plan includes verification step. |
 | `__useConnectionsForNavItems` flag becomes dead but isn't removed | Low | Explicit verification in plan post-cleanup. |
 | Bundle size CI gate fails because reduction is smaller than expected (or unexpected increase) | Low | Bundle size baseline updated atomically in commit 8; if CI gate has hard floor, plan addresses with explicit baseline override. |
 | Mega-PR sits open due to reviewer fatigue | Medium | Commit-per-BC structure makes review chunked; PR description leads with summary of mechanical changes; visual QA checklist makes reviewer's job concrete (✅ per row). |
+| Builder rename creates merge-conflict pain on long-lived parallel branches | Low | Mega-PR is intended to ship in a single review cycle; long-lived branches should rebase early. Deprecated re-exports retained until commit 8 minimize the conflict surface. |
 
 ## 10. Out-of-band considerations
 

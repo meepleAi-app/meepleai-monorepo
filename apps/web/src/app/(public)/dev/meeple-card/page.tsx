@@ -28,6 +28,7 @@ import {
   buildToolNavItems,
   buildToolkitNavItems,
 } from '@/components/ui/data-display/meeple-card/nav-items';
+import type { ConnectionChipProps } from '@/components/ui/data-display/meeple-card/types';
 
 const GAME_IMAGE = 'https://picsum.photos/seed/catan/400/300';
 
@@ -78,6 +79,61 @@ export default function MeepleCardDevPage() {
       </div>
 
       <div className="px-6 py-10 space-y-16 max-w-7xl mx-auto">
+        {/* Manual QA gate: row heights of Demo A and Demo B footers must match. Screenshot to PR. */}
+        <Section
+          title="Step 1.6 — Connection Source Renderer Integration"
+          description="Side-by-side comparison: connections prop (canonical) vs navItems prop with adapter (__useConnectionsForNavItems)."
+        >
+          <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+            Both cards render the canonical 4-slot game nav (KB, Agent, Chat, Sessioni) with
+            identical counts. Demo A uses the canonical <code>connections</code> prop; Demo B uses
+            the legacy <code>navItems</code> prop adapted via{' '}
+            <code>__useConnectionsForNavItems</code>. They MUST produce the same chip order, labels,
+            counts and footer row height.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
+            <div>
+              <Label>Demo A — connections + connectionsVariant=&quot;footer&quot;</Label>
+              <MeepleCard
+                entity="game"
+                variant="grid"
+                title="Wingspan"
+                subtitle="Stonemaier Games"
+                imageUrl={GAME_IMAGE}
+                connectionsVariant="footer"
+                connections={
+                  [
+                    { entityType: 'kb', count: 1, label: 'KB' },
+                    { entityType: 'agent', count: 2, label: 'Agent' },
+                    { entityType: 'chat', label: 'Chat', onCreate: () => alert('Chat plus') },
+                    { entityType: 'session', count: 5, label: 'Sessioni' },
+                  ] satisfies ConnectionChipProps[]
+                }
+              />
+            </div>
+            <div>
+              <Label>Demo B — navItems + __useConnectionsForNavItems={'{true}'}</Label>
+              <MeepleCard
+                entity="game"
+                variant="grid"
+                title="Wingspan"
+                subtitle="Stonemaier Games"
+                imageUrl={GAME_IMAGE}
+                __useConnectionsForNavItems
+                navItems={buildGameNavItems(
+                  { kbCount: 1, agentCount: 2, chatCount: 0, sessionCount: 5 },
+                  {
+                    onKbClick: () => alert('KB'),
+                    onAgentClick: () => alert('Agent'),
+                    onSessionClick: () => alert('Session'),
+                    onChatPlus: () => alert('Chat plus'),
+                  }
+                )}
+              />
+            </div>
+          </div>
+        </Section>
+
         {/* Entity Types */}
         <Section title="Entity Types" description="9 entity types with distinct color tokens.">
           <CardRow>

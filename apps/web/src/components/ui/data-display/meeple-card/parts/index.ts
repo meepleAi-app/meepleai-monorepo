@@ -7,3 +7,8 @@ export { Rating } from './Rating';
 export { MetaChips } from './MetaChips';
 export { NavFooter } from './NavFooter';
 export { TagStrip } from './TagStrip';
+export { ConnectionChip } from './ConnectionChip';
+export { ConnectionChipPopover, type ConnectionChipPopoverProps } from './ConnectionChipPopover';
+export { ConnectionChipStrip, type ConnectionChipStripVariant } from './ConnectionChipStrip';
+export { LifecycleStateBadge } from './LifecycleStateBadge';
+export { OwnershipBadge } from './OwnershipBadge';

@@ -35,7 +35,10 @@ export function Carousel3D({
       >
         ‹
       </button>
-      <div className="relative flex items-center justify-center" style={{ perspective: '1200px' }}>
+      <div
+        className="relative flex w-[700px] min-h-[490px] items-center justify-center"
+        style={{ perspective: '1200px' }}
+      >
         {cards.map((card, i) => {
           const offset = i - activeIndex;
           const isActive = offset === 0;
@@ -44,11 +47,15 @@ export function Carousel3D({
           return (
             <div
               key={card.id ?? i}
-              className="absolute transition-all duration-[400ms] ease-out"
+              // Fixed width container so GridCard's aspect-[7/10] cover renders
+              // at correct dimensions inside the absolute-positioned slot.
+              // Without this, the card collapses to its content's intrinsic
+              // width and the cover becomes a thin strip.
+              className="absolute w-[260px] transition-all duration-[400ms] ease-out"
               style={{
                 transform: isActive
                   ? 'translateX(0) rotateY(0deg) scale(1)'
-                  : `translateX(${offset * 35}%) rotateY(${offset * -5}deg) scale(0.85)`,
+                  : `translateX(${offset * 110}%) rotateY(${offset * -5}deg) scale(0.85)`,
                 zIndex: isActive ? 10 : 5,
                 filter: isActive ? 'none' : 'blur(2px)',
                 opacity: isActive ? 1 : 0.6,

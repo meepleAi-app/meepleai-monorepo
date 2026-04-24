@@ -111,4 +111,23 @@ describe('ConnectionChipPopover', () => {
     await userEvent.keyboard('{Escape}');
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it('renders iconOverride in the popover header and item rows when provided', () => {
+    const Custom = () => <svg data-testid="popover-icon-override" />;
+    render(
+      <ConnectionChipPopover
+        open
+        onOpenChange={() => {}}
+        items={items}
+        entityType="session"
+        iconOverride={<Custom />}
+      >
+        <button>trigger</button>
+      </ConnectionChipPopover>
+    );
+    // Radix renders content in a Portal — query via document.
+    // Expect exactly 1 header + N item rows = 1 + items.length overrides.
+    const overrides = document.querySelectorAll('[data-testid="popover-icon-override"]');
+    expect(overrides.length).toBe(1 + items.length);
+  });
 });

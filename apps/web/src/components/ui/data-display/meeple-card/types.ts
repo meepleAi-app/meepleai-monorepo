@@ -76,6 +76,11 @@ export interface ConnectionChipProps {
   colorOverride?: string;
   disabled?: boolean;
   loading?: boolean;
+  /**
+   * Optional icon node to render instead of the default Lucide icon for `entityType`.
+   * Used by the `navItems → connections` adapter to preserve custom icons.
+   */
+  iconOverride?: import('react').ReactNode;
 }
 
 export type OwnershipBadge = 'owned' | 'wishlist' | 'archived';
@@ -102,7 +107,15 @@ export interface MeepleCardProps {
   badge?: string;
   coverLabels?: CoverLabel[];
   actions?: MeepleCardAction[];
+  /**
+   * @deprecated Use `connections` instead. Migrate by 2026-07-15.
+   * See docs/superpowers/specs/2026-04-23-connectionchip-step-1.6-renderer-integration.md
+   */
   navItems?: NavFooterItem[];
+  /**
+   * @deprecated Use `connections` instead. Runtime migration deferred to Step 1.7.
+   * Runtime rendering is unchanged in Step 1.6; this JSDoc raises awareness only.
+   */
   manaPips?: ManaPip[];
   connections?: ConnectionChipProps[];
   connectionsVariant?: 'footer' | 'inline' | 'auto';
@@ -121,6 +134,8 @@ export interface MeepleCardProps {
   customColor?: string;
   /** Optional test id forwarded to the root wrapper element. */
   'data-testid'?: string;
+  /** @internal Opt-in: use ConnectionChipStrip for navItems-source rendering (A/B in tests). Remove in Step 2. */
+  __useConnectionsForNavItems?: boolean;
 }
 
 export interface Carousel3DProps {

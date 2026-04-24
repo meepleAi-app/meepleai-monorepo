@@ -10,7 +10,7 @@
 import { useMemo, useState } from 'react';
 
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
-import { buildGameNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildGameConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 import type { UserGameDto } from '@/lib/api/dashboard-client';
 
 import { AgentDrawerSheet } from './AgentDrawerSheet';
@@ -74,12 +74,12 @@ export function MeepleUserLibraryCard({
 
   const badge = game.isOwned ? 'Owned' : game.inWishlist ? 'Wishlist' : undefined;
 
-  // Build navItems. UserGameDto only has playCount; other counts default to 0
+  // Build connections. UserGameDto only has playCount; other counts default to 0
   // (drawers expose the actual data when opened).
   // TODO: deferred Task 5/6 in plan — wire real KB/agent/chat counts via batch endpoint.
-  const navItems = useMemo(
+  const connections = useMemo(
     () =>
-      buildGameNavItems(
+      buildGameConnections(
         {
           kbCount: 0,
           agentCount: 0,
@@ -114,7 +114,7 @@ export function MeepleUserLibraryCard({
         metadata={metadata}
         badge={badge}
         status="owned"
-        navItems={navItems}
+        connections={connections}
         onClick={onClick ? () => onClick(game.id) : undefined}
         className={className}
         data-testid={`library-game-card-${game.id}`}

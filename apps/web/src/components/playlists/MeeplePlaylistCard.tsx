@@ -11,7 +11,7 @@ import Link from 'next/link';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
-import { buildGameNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildGameConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 import type { GameNightPlaylistDto } from '@/lib/api/schemas/playlists.schemas';
 
 // ============================================================================
@@ -62,7 +62,7 @@ export function MeeplePlaylistCard({ playlist }: MeeplePlaylistCardProps) {
         subtitle={playlist.isShared ? 'Condivisa' : undefined}
         metadata={metadata}
         badge={playlist.isShared ? 'Condivisa' : undefined}
-        navItems={buildGameNavItems(
+        connections={buildGameConnections(
           {
             kbCount: 0,
             agentCount: 0,

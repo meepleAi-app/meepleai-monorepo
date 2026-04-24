@@ -1,6 +1,13 @@
 export { navIcons, type NavIconKey } from './icons';
 
-export { buildGameNavItems, type GameNavCounts, type GameNavHandlers } from './buildGameNavItems';
+export {
+  buildGameConnections,
+  buildGameNavItems,
+  type GameConnectionsCounts,
+  type GameConnectionsHandlers,
+  type GameNavCounts,
+  type GameNavHandlers,
+} from './buildGameNavItems';
 export {
   buildPlayerNavItems,
   type PlayerNavCounts,

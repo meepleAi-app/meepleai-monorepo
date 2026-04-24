@@ -10,7 +10,7 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import {
   buildAgentNavItems,
   buildChatConnections,
-  buildGameNavItems,
+  buildGameConnections,
   buildKbConnections,
   buildSessionNavItems,
 } from '@/components/ui/data-display/meeple-card/nav-items';
@@ -56,8 +56,9 @@ function buildNavItems(
 
   let items: NavFooterItem[];
   switch (preset) {
-    case 'game':
-      items = buildGameNavItems(
+    case 'game': {
+      // TODO(task-8): remove cast when showcase switches navItems= → connections= in the cleanup commit
+      const gameConnections: ConnectionChipProps[] = buildGameConnections(
         {
           kbCount: counts.kbCount,
           agentCount: counts.agentCount,
@@ -66,7 +67,9 @@ function buildNavItems(
         },
         handlers
       );
+      items = gameConnections as unknown as NavFooterItem[];
       break;
+    }
     case 'session':
       items = buildSessionNavItems(
         {

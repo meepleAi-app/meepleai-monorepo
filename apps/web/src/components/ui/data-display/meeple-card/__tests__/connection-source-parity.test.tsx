@@ -2,9 +2,8 @@ import { render, within } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
 import { MeepleCard } from '../MeepleCard';
-import { buildGameNavItems } from '../nav-items';
 
-import type { ConnectionChipProps } from '../types';
+import type { ConnectionChipProps, NavFooterItem } from '../types';
 
 /**
  * Parity guard between the canonical `connections` rendering path and the
@@ -13,12 +12,34 @@ import type { ConnectionChipProps } from '../types';
  * If this test fails, the adapter has drifted from the canonical renderer.
  * The two demos in /dev/meeple-card (Step 1.6 section) must continue to look
  * visually equivalent.
+ *
+ * Note (Task 4 migration): Demo B now uses a hand-built `NavFooterItem[]`
+ * instead of `buildGameNavItems()` because the game builder now produces
+ * `ConnectionChipProps[]` directly. The adapter path is still exercised by
+ * other builders (session, agent) until Task 5/6 migrations.
  */
 describe('ConnectionSource renderer parity (Demo A ≡ Demo B)', () => {
   const sharedConnections: ConnectionChipProps[] = [
     { entityType: 'session', count: 5, label: 'Sessioni' },
     { entityType: 'agent', count: 2, label: 'Agenti' },
     { entityType: 'kb', count: 1, label: 'KB' },
+  ];
+
+  // Legacy NavFooterItem[] shape — exercises the adapter path intentionally.
+  // Icons are deliberately null (adapter preserves them via iconOverride; render
+  // path falls back to default Lucide icons for each entityType).
+  const legacyNavItems: NavFooterItem[] = [
+    { icon: null, label: 'KB', entity: 'kb', count: 1 },
+    { icon: null, label: 'Agent', entity: 'agent', count: 2 },
+    {
+      icon: null,
+      label: 'Chat',
+      entity: 'chat',
+      count: 0,
+      showPlus: true,
+      onPlusClick: () => {},
+    },
+    { icon: null, label: 'Sessioni', entity: 'session', count: 5 },
   ];
 
   function renderDemoA() {
@@ -42,15 +63,7 @@ describe('ConnectionSource renderer parity (Demo A ≡ Demo B)', () => {
         title="Wingspan"
         subtitle="Stonemaier Games"
         __useConnectionsForNavItems
-        navItems={buildGameNavItems(
-          { kbCount: 1, agentCount: 2, chatCount: 0, sessionCount: 5 },
-          {
-            onKbClick: () => {},
-            onAgentClick: () => {},
-            onSessionClick: () => {},
-            onChatPlus: () => {},
-          }
-        )}
+        navItems={legacyNavItems}
       />
     );
   }
@@ -68,7 +81,7 @@ describe('ConnectionSource renderer parity (Demo A ≡ Demo B)', () => {
     const b = renderDemoB();
 
     // Demo A: 3 chips with count > 0 (5, 2, 1)
-    // Demo B: 3 chips with count > 0 from buildGameNavItems (sessions=5, agents=2, kb=1)
+    // Demo B: 3 chips with count > 0 via adapter (kb=1, agent=2, session=5)
     //         + 1 chat chip with count=0 (renders plus, no badge)
     const aBadges = within(a.container).queryAllByTestId('connection-chip-badge');
     const bBadges = within(b.container).queryAllByTestId('connection-chip-badge');

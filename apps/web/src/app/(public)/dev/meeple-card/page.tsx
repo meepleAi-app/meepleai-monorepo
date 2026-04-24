@@ -21,14 +21,17 @@ import {
   buildAgentNavItems,
   buildChatConnections,
   buildEventNavItems,
-  buildGameNavItems,
+  buildGameConnections,
   buildKbConnections,
   buildPlayerNavItems,
   buildSessionNavItems,
   buildToolNavItems,
   buildToolkitNavItems,
 } from '@/components/ui/data-display/meeple-card/nav-items';
-import type { ConnectionChipProps } from '@/components/ui/data-display/meeple-card/types';
+import type {
+  ConnectionChipProps,
+  NavFooterItem,
+} from '@/components/ui/data-display/meeple-card/types';
 
 import { STEP_2_AUDIT_ROWS } from './step-2-audit-fixtures';
 
@@ -122,15 +125,18 @@ export default function MeepleCardDevPage() {
                 subtitle="Stonemaier Games"
                 imageUrl={GAME_IMAGE}
                 __useConnectionsForNavItems
-                navItems={buildGameNavItems(
-                  { kbCount: 1, agentCount: 2, chatCount: 0, sessionCount: 5 },
-                  {
-                    onKbClick: () => alert('KB'),
-                    onAgentClick: () => alert('Agent'),
-                    onSessionClick: () => alert('Session'),
-                    onChatPlus: () => alert('Chat plus'),
-                  }
-                )}
+                // TODO(task-8): remove cast when Demo B switches navItems= → connections= in the cleanup commit
+                navItems={
+                  buildGameConnections(
+                    { kbCount: 1, agentCount: 2, chatCount: 0, sessionCount: 5 },
+                    {
+                      onKbClick: () => alert('KB'),
+                      onAgentClick: () => alert('Agent'),
+                      onSessionClick: () => alert('Session'),
+                      onChatPlus: () => alert('Chat plus'),
+                    }
+                  ) as unknown as NavFooterItem[]
+                }
               />
             </div>
           </div>
@@ -374,7 +380,7 @@ export default function MeepleCardDevPage() {
                 { icon: '📚', label: 'Library', onClick: () => alert('Library') },
                 { icon: '🤖', label: 'Crea agent', onClick: () => alert('Agent') },
               ]}
-              navItems={buildGameNavItems(
+              connections={buildGameConnections(
                 { kbCount: 3, agentCount: 1, chatCount: 5, sessionCount: 12 },
                 {
                   onKbClick: () => alert('KB'),
@@ -663,7 +669,7 @@ export default function MeepleCardDevPage() {
                 rating={4.2}
                 ratingMax={5}
                 metadata={[{ label: '3-4' }, { label: '60min' }]}
-                navItems={buildGameNavItems(
+                connections={buildGameConnections(
                   { kbCount: 3, agentCount: 1, chatCount: 5, sessionCount: 12 },
                   {
                     onKbClick: () => alert('KB!'),
@@ -685,7 +691,7 @@ export default function MeepleCardDevPage() {
                 imageUrl="https://picsum.photos/seed/azul/400/300"
                 rating={4.0}
                 ratingMax={5}
-                navItems={buildGameNavItems(
+                connections={buildGameConnections(
                   { kbCount: 0, agentCount: 0, chatCount: 0, sessionCount: 0 },
                   {
                     onKbPlus: () => alert('Add KB!'),
@@ -999,7 +1005,7 @@ export default function MeepleCardDevPage() {
                 ratingMax: 10,
                 status: 'owned',
                 metadata: [{ label: '3-4' }, { label: '60-120m' }],
-                navItems: buildGameNavItems(
+                connections: buildGameConnections(
                   { kbCount: 3, agentCount: 1, chatCount: 2, sessionCount: 5 },
                   {
                     onKbClick: () => alert('KB'),
@@ -1095,7 +1101,7 @@ export default function MeepleCardDevPage() {
                 ratingMax: 10,
                 status: 'wishlist',
                 metadata: [{ label: '2-4' }, { label: '30-45m' }],
-                navItems: buildGameNavItems(
+                connections: buildGameConnections(
                   { kbCount: 0, agentCount: 0, chatCount: 0, sessionCount: 0 },
                   {
                     onKbPlus: () => alert('Add KB'),
@@ -1660,7 +1666,7 @@ function DisabledNavItemsSection() {
             ratingMax={10}
             status="owned"
             metadata={[{ label: '1-4' }, { label: '60-120m' }]}
-            navItems={buildGameNavItems(
+            connections={buildGameConnections(
               { kbCount: 2, agentCount: 0, chatCount: 0, sessionCount: 0 },
               {
                 onKbClick: () => alert('KB'),
@@ -1683,7 +1689,7 @@ function DisabledNavItemsSection() {
             rating={8.3}
             ratingMax={10}
             metadata={[{ label: '1-4' }, { label: '90-120m' }]}
-            navItems={buildGameNavItems(
+            connections={buildGameConnections(
               { kbCount: 0, agentCount: 0, chatCount: 0, sessionCount: 0 },
               { onChatPlus: () => alert('Chat'), onSessionPlus: () => alert('Session') }
             ).map((item, i) => (i <= 1 ? { ...item, disabled: true } : item))}

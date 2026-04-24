@@ -19,7 +19,7 @@ import {
   type MeepleCardMetadata,
   type CardStatus,
 } from '@/components/ui/data-display/meeple-card';
-import { buildGameNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildGameConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 import { AddToWishlistDialog } from '@/components/wishlist/AddToWishlistDialog';
 import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
 import { libraryKeys } from '@/hooks/queries/useLibrary';
@@ -203,9 +203,9 @@ export function MeepleLibraryGameCard({
   const mappedStatus = mapGameStateToStatus(game.currentState);
   const badge = game.isFavorite ? '❤️ Preferito' : undefined;
 
-  const navItems = useMemo(
+  const connections = useMemo(
     () =>
-      buildGameNavItems(
+      buildGameConnections(
         {
           kbCount: game.kbCardCount ?? 0,
           agentCount: agentConfigured ? 1 : 0,
@@ -244,7 +244,7 @@ export function MeepleLibraryGameCard({
         metadata={metadata}
         badge={badge}
         status={mappedStatus}
-        navItems={navItems}
+        connections={connections}
         onClick={
           selectionMode
             ? undefined

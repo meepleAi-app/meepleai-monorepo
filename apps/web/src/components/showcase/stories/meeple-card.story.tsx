@@ -14,10 +14,7 @@ import {
   buildKbConnections,
   buildSessionConnections,
 } from '@/components/ui/data-display/meeple-card/nav-items';
-import type {
-  ConnectionChipProps,
-  NavFooterItem,
-} from '@/components/ui/data-display/meeple-card/types';
+import type { ConnectionChipProps } from '@/components/ui/data-display/meeple-card/types';
 
 import type { ShowcaseStory } from '../types';
 
@@ -40,10 +37,10 @@ type MeepleCardShowcaseProps = {
 
 const noop = () => undefined;
 
-function buildNavItems(
+function buildConnections(
   preset: NavPreset,
   { showCounts, disabled }: { showCounts: boolean; disabled: boolean }
-): NavFooterItem[] | undefined {
+): ConnectionChipProps[] | undefined {
   if (preset === 'none') return undefined;
 
   const counts = showCounts
@@ -54,11 +51,10 @@ function buildNavItems(
     ? {}
     : { onKbClick: noop, onAgentClick: noop, onChatClick: noop, onSessionClick: noop };
 
-  let items: NavFooterItem[];
+  let items: ConnectionChipProps[];
   switch (preset) {
     case 'game': {
-      // TODO(task-8): remove cast when showcase switches navItems= → connections= in the cleanup commit
-      const gameConnections: ConnectionChipProps[] = buildGameConnections(
+      items = buildGameConnections(
         {
           kbCount: counts.kbCount,
           agentCount: counts.agentCount,
@@ -67,12 +63,10 @@ function buildNavItems(
         },
         handlers
       );
-      items = gameConnections as unknown as NavFooterItem[];
       break;
     }
     case 'session': {
-      // TODO(task-8): remove cast when showcase switches navItems= → connections= in the cleanup commit
-      const sessionConnections: ConnectionChipProps[] = buildSessionConnections(
+      items = buildSessionConnections(
         {
           playerCount: counts.playerCount,
           hasNotes: showCounts,
@@ -88,12 +82,10 @@ function buildNavItems(
               onPhotosClick: noop,
             }
       );
-      items = sessionConnections as unknown as NavFooterItem[];
       break;
     }
     case 'kb': {
-      // TODO(task-8): remove cast when showcase switches navItems= → connections= in the cleanup commit
-      const kbConnections: ConnectionChipProps[] = buildKbConnections(
+      items = buildKbConnections(
         { chunkCount: counts.chunkCount },
         disabled
           ? {}
@@ -104,12 +96,10 @@ function buildNavItems(
               onDownloadClick: noop,
             }
       );
-      items = kbConnections as unknown as NavFooterItem[];
       break;
     }
     case 'chat': {
-      // TODO(task-8): remove cast when showcase switches navItems= → connections= in the cleanup commit
-      const chatConnections: ConnectionChipProps[] = buildChatConnections(
+      items = buildChatConnections(
         { messageCount: showCounts ? 24 : 0 },
         disabled
           ? {}
@@ -120,12 +110,10 @@ function buildNavItems(
               onArchiveClick: noop,
             }
       );
-      items = chatConnections as unknown as NavFooterItem[];
       break;
     }
     case 'agent': {
-      // TODO(task-8): remove cast when showcase switches navItems= → connections= in the cleanup commit
-      const agentConnections: ConnectionChipProps[] = buildAgentConnections(
+      items = buildAgentConnections(
         { chatCount: counts.chatCount, kbCount: counts.kbCount },
         disabled
           ? {}
@@ -136,7 +124,6 @@ function buildNavItems(
               onConfigClick: noop,
             }
       );
-      items = agentConnections as unknown as NavFooterItem[];
       break;
     }
     default:
@@ -172,7 +159,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
     navDisabled,
     navShowCounts,
   }: MeepleCardShowcaseProps) {
-    const navItems = buildNavItems(navPreset as NavPreset, {
+    const connections = buildConnections(navPreset as NavPreset, {
       showCounts: navShowCounts,
       disabled: navDisabled,
     });
@@ -187,7 +174,7 @@ export const meepleCardStory: ShowcaseStory<MeepleCardShowcaseProps> = {
           rating={rating > 0 ? rating : undefined}
           ratingMax={10}
           badge={badge || undefined}
-          navItems={navItems}
+          connections={connections}
           imageUrl={
             entity === 'game'
               ? 'https://cf.geekdo-images.com/WPKk3MeT3EKhKnhFLB8OoA__itemrep/img/yJB95GXRb10MKzqxKOXGKjgMrPQ=/fit-in/246x300/filters:strip_icc()/pic3490053.jpg'

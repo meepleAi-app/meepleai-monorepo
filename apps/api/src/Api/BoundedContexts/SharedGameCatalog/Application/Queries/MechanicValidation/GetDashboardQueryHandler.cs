@@ -33,6 +33,8 @@ internal sealed class GetDashboardQueryHandler
     /// </summary>
     internal sealed record CachedDashboardResult(IReadOnlyList<DashboardGameRow> Rows);
 
+    private static readonly string[] CacheTags = ["mechanic-golden", "mechanic-validation-dashboard"];
+
     private readonly IMechanicAnalysisMetricsRepository _metricsRepository;
     private readonly IHybridCacheService _cache;
     private readonly ILogger<GetDashboardQueryHandler> _logger;
@@ -56,7 +58,6 @@ internal sealed class GetDashboardQueryHandler
         _logger.LogDebug("Loading mechanic validation dashboard summary");
 
         const string cacheKey = "meepleai:mechanic-validation:dashboard";
-        var cacheTags = new[] { "mechanic-golden", "mechanic-validation-dashboard" };
 
         try
         {
@@ -67,7 +68,7 @@ internal sealed class GetDashboardQueryHandler
                     var rows = await LoadDashboardAsync(ct).ConfigureAwait(false);
                     return new CachedDashboardResult(rows);
                 },
-                cacheTags,
+                CacheTags,
                 TimeSpan.FromMinutes(5),
                 cancellationToken).ConfigureAwait(false);
 

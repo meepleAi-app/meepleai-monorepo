@@ -55,9 +55,26 @@ export function GridCard(props: MeepleCardProps) {
       <AccentBorder entity={entity} />
       <div className="relative">
         <Cover entity={entity} variant="grid" imageUrl={imageUrl} alt={title} />
-        <EntityBadge entity={entity} />
-        {status && <StatusBadge status={status} />}
-        {tags.length > 0 && <TagStrip tags={tags} entity={entity} />}
+        {/* Top-left badge stack: EntityBadge always, StatusBadge optional.
+            Stacked in a single absolute flex column (gap-1) so they never overlap
+            and TagStrip can position itself below them deterministically. */}
+        <div
+          className="absolute left-2.5 top-2 z-10 flex flex-col items-start gap-1"
+          data-slot="badge-stack"
+        >
+          <EntityBadge entity={entity} stacked />
+          {status && <StatusBadge status={status} stacked />}
+        </div>
+        {tags.length > 0 && (
+          <TagStrip
+            tags={tags}
+            entity={entity}
+            // Shift TagStrip down based on number of badges in the stack:
+            // 1 badge (entity only) ≈ 22px → top-9 (36px)
+            // 2 badges (entity + status) ≈ 42px → top-14 (56px)
+            topClass={status ? 'top-14' : 'top-9'}
+          />
+        )}
         {showQuickActions && actions.length > 0 && <QuickActions actions={actions} />}
       </div>
       <div className="flex flex-1 flex-col gap-[3px] px-3.5 py-2.5 pb-2">

@@ -49,8 +49,14 @@ export function FeaturedCard(props: MeepleCardProps) {
       <AccentBorder entity={entity} />
       <div className="relative">
         <Cover entity={entity} variant="featured" imageUrl={imageUrl} alt={title} />
-        <EntityBadge entity={entity} />
-        {status && <StatusBadge status={status} />}
+        {/* Top-left badge stack — see GridCard for rationale */}
+        <div
+          className="absolute left-2.5 top-2 z-10 flex flex-col items-start gap-1"
+          data-slot="badge-stack"
+        >
+          <EntityBadge entity={entity} stacked />
+          {status && <StatusBadge status={status} stacked />}
+        </div>
         {showQuickActions && actions.length > 0 && <QuickActions actions={actions} />}
       </div>
       <div className="flex flex-1 flex-col gap-1 px-4 py-3">

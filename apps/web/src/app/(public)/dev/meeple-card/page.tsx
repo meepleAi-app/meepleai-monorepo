@@ -19,10 +19,10 @@ import {
 } from '@/components/ui/data-display/meeple-card';
 import {
   buildAgentNavItems,
-  buildChatNavItems,
+  buildChatConnections,
   buildEventNavItems,
   buildGameNavItems,
-  buildKbNavItems,
+  buildKbConnections,
   buildPlayerNavItems,
   buildSessionNavItems,
   buildToolNavItems,
@@ -453,7 +453,7 @@ export default function MeepleCardDevPage() {
                 { icon: '👁', label: 'Anteprima', onClick: () => alert('Preview') },
                 { icon: '⬇', label: 'Download', onClick: () => alert('Download') },
               ]}
-              navItems={buildKbNavItems(
+              connections={buildKbConnections(
                 { chunkCount: 124 },
                 {
                   onChunksClick: () => alert('Chunks'),
@@ -471,7 +471,7 @@ export default function MeepleCardDevPage() {
               status="active"
               badge="12 nuovi"
               metadata={[{ label: '12 messaggi' }]}
-              navItems={buildChatNavItems(
+              connections={buildChatConnections(
                 { messageCount: 12 },
                 {
                   onMessagesClick: () => alert('Messages'),
@@ -758,7 +758,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="Manuale Catan"
                 subtitle="48 pagine"
-                navItems={buildKbNavItems(
+                connections={buildKbConnections(
                   { chunkCount: 124 },
                   {
                     onChunksClick: () => alert('Chunks!'),
@@ -777,7 +777,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="Chat Catan"
                 subtitle="ieri"
-                navItems={buildChatNavItems(
+                connections={buildChatConnections(
                   { messageCount: 18 },
                   {
                     onMessagesClick: () => alert('Messages!'),
@@ -936,7 +936,7 @@ export default function MeepleCardDevPage() {
               subtitle="12 messaggi · Oggi"
               badge="12"
               metadata={[{ label: '12 msg' }]}
-              navItems={buildChatNavItems(
+              connections={buildChatConnections(
                 { messageCount: 12 },
                 {
                   onMessagesClick: () => alert('Messages'),
@@ -965,7 +965,7 @@ export default function MeepleCardDevPage() {
               subtitle="PDF · 32 pagine · 200 chunks"
               status="indexed"
               metadata={[{ label: '32 pg' }, { label: '200 chunks' }]}
-              navItems={buildKbNavItems(
+              connections={buildKbConnections(
                 { chunkCount: 200 },
                 {
                   onChunksClick: () => alert('Chunks'),
@@ -1046,7 +1046,7 @@ export default function MeepleCardDevPage() {
                 ratingMax: 10,
                 status: 'indexed',
                 metadata: [{ label: '200 chunks' }, { label: '2.4 MB' }],
-                navItems: buildKbNavItems(
+                connections: buildKbConnections(
                   { chunkCount: 200 },
                   {
                     onChunksClick: () => alert('Chunks'),
@@ -1063,7 +1063,7 @@ export default function MeepleCardDevPage() {
                 subtitle: 'Oggi · 12:45',
                 status: 'active',
                 metadata: [{ label: '12 messaggi' }],
-                navItems: buildChatNavItems(
+                connections: buildChatConnections(
                   { messageCount: 12 },
                   {
                     onMessagesClick: () => alert('Messages'),

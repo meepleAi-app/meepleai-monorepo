@@ -16,8 +16,22 @@ export {
   type AgentNavCounts,
   type AgentNavHandlers,
 } from './buildAgentNavItems';
-export { buildKbNavItems, type KbNavCounts, type KbNavHandlers } from './buildKbNavItems';
-export { buildChatNavItems, type ChatNavCounts, type ChatNavHandlers } from './buildChatNavItems';
+export {
+  buildKbConnections,
+  buildKbNavItems,
+  type KbConnectionsCounts,
+  type KbConnectionsHandlers,
+  type KbNavCounts,
+  type KbNavHandlers,
+} from './buildKbNavItems';
+export {
+  buildChatConnections,
+  buildChatNavItems,
+  type ChatConnectionsCounts,
+  type ChatConnectionsHandlers,
+  type ChatNavCounts,
+  type ChatNavHandlers,
+} from './buildChatNavItems';
 export {
   buildEventNavItems,
   type EventNavCounts,

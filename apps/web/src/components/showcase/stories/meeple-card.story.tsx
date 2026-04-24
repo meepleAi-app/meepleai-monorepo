@@ -10,10 +10,13 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import {
   buildAgentNavItems,
   buildGameNavItems,
-  buildKbNavItems,
+  buildKbConnections,
   buildSessionNavItems,
 } from '@/components/ui/data-display/meeple-card/nav-items';
-import type { NavFooterItem } from '@/components/ui/data-display/meeple-card/types';
+import type {
+  ConnectionChipProps,
+  NavFooterItem,
+} from '@/components/ui/data-display/meeple-card/types';
 
 import type { ShowcaseStory } from '../types';
 
@@ -81,8 +84,12 @@ function buildNavItems(
             }
       );
       break;
-    case 'kb':
-      items = buildKbNavItems(
+    case 'kb': {
+      // Step 2 (2026-04-24): buildKbConnections returns ConnectionChipProps[].
+      // The showcase still drives the legacy NavFooter rendering path, so
+      // cast through unknown to bridge the transitional shape until the
+      // showcase is migrated to connections= alongside the cleanup commit.
+      const kbConnections: ConnectionChipProps[] = buildKbConnections(
         { chunkCount: counts.chunkCount },
         disabled
           ? {}
@@ -93,7 +100,9 @@ function buildNavItems(
               onDownloadClick: noop,
             }
       );
+      items = kbConnections as unknown as NavFooterItem[];
       break;
+    }
     case 'agent':
       items = buildAgentNavItems(
         { chatCount: counts.chatCount, kbCount: counts.kbCount },

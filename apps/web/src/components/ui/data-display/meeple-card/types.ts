@@ -72,6 +72,8 @@ export interface ConnectionChipProps {
   label?: string;
   onCreate?: () => void;
   createLabel?: string;
+  /** Click handler for chip activation. Lower precedence than items (popover) and onCreate; higher precedence than href. When both `onClick` and `href` are provided, the chip renders as a Link and onClick fires on left-click while href preserves middle-click semantics. */
+  onClick?: () => void;
   href?: string;
   colorOverride?: string;
   disabled?: boolean;

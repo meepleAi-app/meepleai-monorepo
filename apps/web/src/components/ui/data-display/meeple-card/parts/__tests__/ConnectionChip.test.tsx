@@ -134,4 +134,67 @@ describe('ConnectionChip', () => {
     );
     expect(container.querySelector('[data-testid="custom-icon"]')).toBeTruthy();
   });
+
+  it('invokes onClick when clicked with onClick provided and no href, no items, no onCreate', async () => {
+    const onClick = vi.fn();
+    render(<ConnectionChip entityType="kb" count={3} onClick={onClick} />);
+    await userEvent.click(screen.getByRole('button'));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders as <a> Link when both onClick and href are provided (preserves middle-click)', () => {
+    const onClick = vi.fn();
+    render(<ConnectionChip entityType="kb" count={3} href="/kb/123" onClick={onClick} />);
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/kb/123');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('calls onClick and prevents default navigation on left-click when both onClick and href are provided', async () => {
+    const onClick = vi.fn();
+    render(<ConnectionChip entityType="kb" count={3} href="/kb/123" onClick={onClick} />);
+    const link = screen.getByRole('link');
+    await userEvent.click(link);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders as <button> (not <a>) when onClick is provided without href', () => {
+    render(<ConnectionChip entityType="kb" count={3} onClick={() => {}} />);
+    expect(screen.getByRole('button')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('does not invoke onClick when disabled', async () => {
+    const onClick = vi.fn();
+    render(<ConnectionChip entityType="kb" count={3} onClick={onClick} disabled />);
+    await userEvent.click(screen.getByRole('button'));
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('items (popover) take precedence over onClick when both are provided', async () => {
+    const onClick = vi.fn();
+    render(
+      <ConnectionChip
+        entityType="session"
+        count={2}
+        onClick={onClick}
+        items={[
+          { id: '1', label: 'First', href: '/sessions/1' },
+          { id: '2', label: 'Second', href: '/sessions/2' },
+        ]}
+      />
+    );
+    await userEvent.click(screen.getByRole('button'));
+    expect(onClick).not.toHaveBeenCalled();
+    expect(await screen.findByText('First')).toBeInTheDocument();
+  });
+
+  it('onCreate takes precedence over onClick when count=0 and both are provided', async () => {
+    const onCreate = vi.fn();
+    const onClick = vi.fn();
+    render(<ConnectionChip entityType="player" count={0} onCreate={onCreate} onClick={onClick} />);
+    await userEvent.click(screen.getByRole('button'));
+    expect(onCreate).toHaveBeenCalledTimes(1);
+    expect(onClick).not.toHaveBeenCalled();
+  });
 });

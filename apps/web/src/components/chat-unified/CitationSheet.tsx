@@ -1,15 +1,11 @@
 'use client';
 
+import type { CitationData } from '@/components/chat/shared';
 import { BottomSheet } from '@/components/ui/overlays/BottomSheet';
 
-export interface CitationData {
-  documentId: string;
-  pageNumber: number;
-  snippet: string;
-  relevanceScore: number;
-  copyrightTier: 'full' | 'protected';
-  paraphrasedSnippet?: string;
-}
+// Re-export for backward compatibility with `import type { CitationData } from './CitationSheet'`.
+// Canonical definition lives in `@/components/chat/shared/types.ts`.
+export type { CitationData };
 
 interface CitationSheetProps {
   open: boolean;

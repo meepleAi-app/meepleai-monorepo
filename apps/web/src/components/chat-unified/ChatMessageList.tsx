@@ -15,9 +15,9 @@
 
 import React, { useCallback, useState } from 'react';
 
+import type { ChatMessageItem, StreamStateForMessages } from '@/components/chat/shared';
 import { ChatMessage } from '@/components/ui/meeple/chat-message';
 import type { FeedbackValue } from '@/components/ui/meeple/feedback-buttons';
-import type { AgentChatStreamState } from '@/hooks/useAgentChatStream';
 import { api } from '@/lib/api';
 
 import { CitationBlock } from './CitationBlock';
@@ -34,28 +34,10 @@ import { toChatMessageProps } from './utils/toChatMessageProps';
 // Types
 // ============================================================================
 
-export interface ChatMessageItem {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp?: string;
-  citations?: import('@/types').Citation[];
-  followUpQuestions?: string[];
-  inlineCitations?: import('@/lib/api/clients/chatClient').InlineCitationMatch[];
-  snippets?: Array<{ text: string; source: string; page: number; line: number; score: number }>;
-  continuationToken?: string;
-}
-
-export type StreamStateForMessages = Pick<
-  AgentChatStreamState,
-  | 'isStreaming'
-  | 'currentAnswer'
-  | 'statusMessage'
-  | 'strategyTier'
-  | 'executionId'
-  | 'debugSteps'
-  | 'modelDowngrade'
->;
+// Re-export for backward compatibility with existing relative imports
+// (`./ChatMessageList`). Canonical definitions live in
+// `@/components/chat/shared/types.ts` (Phase 0 Strangler Fig).
+export type { ChatMessageItem, StreamStateForMessages };
 
 export interface ChatMessageListProps {
   messages: ChatMessageItem[];
@@ -220,15 +202,17 @@ export function ChatMessageList({
                 )}
 
                 {/* Inline citation text overlay — replaces plain text when inline citations exist */}
-                {msg.role === 'assistant' && msg.inlineCitations && msg.inlineCitations.length > 0 && (
-                  <div className="mt-1">
-                    <InlineCitationText
-                      text={msg.content}
-                      citations={msg.inlineCitations}
-                      snippets={msg.snippets ?? []}
-                    />
-                  </div>
-                )}
+                {msg.role === 'assistant' &&
+                  msg.inlineCitations &&
+                  msg.inlineCitations.length > 0 && (
+                    <div className="mt-1">
+                      <InlineCitationText
+                        text={msg.content}
+                        citations={msg.inlineCitations}
+                        snippets={msg.snippets ?? []}
+                      />
+                    </div>
+                  )}
 
                 {/* Citation block for non-inline snippets */}
                 {msg.role === 'assistant' && msg.snippets && msg.snippets.length > 0 && (

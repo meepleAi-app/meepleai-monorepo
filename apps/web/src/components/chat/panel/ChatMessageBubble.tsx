@@ -2,11 +2,14 @@
 
 import { type ReactNode } from 'react';
 
+import type { ChatMessageRole } from '@/components/chat/shared';
 import { cn } from '@/lib/utils';
 
 import { CitationExpander } from './CitationExpander';
 
-export type ChatMessageRole = 'user' | 'assistant';
+// Re-export for backward compatibility with `import type { ChatMessageRole } from './ChatMessageBubble'`.
+// Canonical definition lives in `@/components/chat/shared/types.ts`.
+export type { ChatMessageRole };
 
 interface ChatMessageBubbleProps {
   role: ChatMessageRole;

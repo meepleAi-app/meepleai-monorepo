@@ -252,27 +252,36 @@ export default function CookieSettingsPage() {
           <SettingsRow
             label={t('pages.cookieSettings.categories.essential.label')}
             description={t('pages.cookieSettings.categories.essential.description')}
-            control={<ToggleSwitch checked={true} disabled onChange={() => {}} />}
+            trailing={
+              <ToggleSwitch
+                checked={true}
+                disabled
+                onCheckedChange={() => {}}
+                ariaLabel={t('pages.cookieSettings.categories.essential.label')}
+              />
+            }
           />
           <SettingsRow
             label={t('pages.cookieSettings.categories.analytics.label')}
             description={t('pages.cookieSettings.categories.analytics.description')}
-            control={
+            trailing={
               <ToggleSwitch
                 checked={analytics}
-                onChange={setAnalytics}
+                onCheckedChange={setAnalytics}
                 disabled={!hydrated}
+                ariaLabel={t('pages.cookieSettings.categories.analytics.label')}
               />
             }
           />
           <SettingsRow
             label={t('pages.cookieSettings.categories.functional.label')}
             description={t('pages.cookieSettings.categories.functional.description')}
-            control={
+            trailing={
               <ToggleSwitch
                 checked={functional}
-                onChange={setFunctional}
+                onCheckedChange={setFunctional}
                 disabled={!hydrated}
+                ariaLabel={t('pages.cookieSettings.categories.functional.label')}
               />
             }
           />
@@ -516,6 +525,14 @@ export function clearStoredConsent(): void {
 `CONSENT_VERSION`, `getStoredConsent`, and `setStoredConsent` from this
 module. Its public component contract (props, exported types, rendered DOM)
 is unchanged — all existing `CookieConsentBanner` tests must pass unchanged.
+
+The existing `useCookieConsent()` hook (exported from the banner file and
+re-exported by `components/legal/index.ts`) MUST be preserved. Although no
+external consumers exist today, the re-export is a public surface. The hook
+can either remain in the banner file (delegating internally to the lib) or
+move to the lib with a re-export from the banner — implementer's choice,
+provided the import paths and return shape `{ consent, updateConsent,
+resetConsent, hasConsented }` remain unchanged.
 
 ## i18n Keys
 

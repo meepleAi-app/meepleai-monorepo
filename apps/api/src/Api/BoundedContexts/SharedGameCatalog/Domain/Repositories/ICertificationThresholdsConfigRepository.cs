@@ -12,11 +12,11 @@ public interface ICertificationThresholdsConfigRepository
     /// Returns the current certification thresholds configuration.
     /// Implementations must guarantee a non-null result (seed a default row on first access if needed).
     /// </summary>
-    Task<CertificationThresholdsConfig> GetAsync(CancellationToken ct);
+    Task<CertificationThresholdsConfig> GetAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Persists an updated <see cref="CertificationThresholdsConfig"/>.
     /// Persistence occurs at <c>SaveChangesAsync</c>.
     /// </summary>
-    Task UpdateAsync(CertificationThresholdsConfig config, CancellationToken ct);
+    Task UpdateAsync(CertificationThresholdsConfig config, CancellationToken cancellationToken = default);
 }

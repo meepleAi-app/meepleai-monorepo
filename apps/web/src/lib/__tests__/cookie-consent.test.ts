@@ -70,7 +70,7 @@ describe('lib/cookie-consent', () => {
 
   describe('setStoredConsent', () => {
     it('writes a consent payload with version, essential=true, and ISO timestamp', () => {
-      setStoredConsent({ analytics: true, functional: false });
+      const result = setStoredConsent({ analytics: true, functional: false });
 
       const raw = localStorage.getItem(CONSENT_KEY);
       expect(raw).not.toBeNull();
@@ -81,23 +81,30 @@ describe('lib/cookie-consent', () => {
       expect(parsed.functional).toBe(false);
       expect(() => new Date(parsed.timestamp)).not.toThrow();
       expect(new Date(parsed.timestamp).toISOString()).toBe(parsed.timestamp);
+
+      // Return value must match what was persisted — same object, single timestamp
+      expect(result).not.toBeNull();
+      expect(result).toEqual(parsed);
     });
 
     it('overwrites previous consent on repeated calls', () => {
       setStoredConsent({ analytics: true, functional: true });
-      setStoredConsent({ analytics: false, functional: false });
+      const result = setStoredConsent({ analytics: false, functional: false });
 
       const parsed = JSON.parse(localStorage.getItem(CONSENT_KEY)!) as CookieConsent;
       expect(parsed.analytics).toBe(false);
       expect(parsed.functional).toBe(false);
+
+      // Return value must match what was persisted
+      expect(result).toEqual(parsed);
     });
 
-    it('is a no-op when window is undefined (SSR safety)', () => {
+    it('returns null when window is undefined (SSR safety)', () => {
       const originalWindow = globalThis.window;
       // @ts-expect-error intentional SSR simulation
       delete globalThis.window;
       try {
-        expect(() => setStoredConsent({ analytics: true, functional: true })).not.toThrow();
+        expect(setStoredConsent({ analytics: true, functional: true })).toBeNull();
       } finally {
         globalThis.window = originalWindow;
       }

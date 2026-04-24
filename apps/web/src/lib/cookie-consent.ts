@@ -29,8 +29,11 @@ export function getStoredConsent(): CookieConsent | null {
   }
 }
 
-export function setStoredConsent(next: { analytics: boolean; functional: boolean }): void {
-  if (typeof window === 'undefined') return;
+export function setStoredConsent(next: {
+  analytics: boolean;
+  functional: boolean;
+}): CookieConsent | null {
+  if (typeof window === 'undefined') return null;
   const consent: CookieConsent = {
     version: CONSENT_VERSION,
     essential: true,
@@ -40,8 +43,10 @@ export function setStoredConsent(next: { analytics: boolean; functional: boolean
   };
   try {
     localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
+    return consent;
   } catch {
-    // Storage quota exceeded or unavailable — matches banner's existing behavior.
+    // Storage quota exceeded or unavailable — record not persisted.
+    return null;
   }
 }
 

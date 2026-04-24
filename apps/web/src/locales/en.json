@@ -1035,77 +1035,73 @@
     },
     "faq": {
       "title": "Frequently Asked Questions",
-      "description": "Answers to the most common questions about MeepleAI",
+      "subtitle": "Find answers to the most common questions",
       "categories": {
+        "general": "General",
+        "usage": "How to Use",
+        "technical": "Technical Questions",
+        "account": "Account and Billing"
+      },
+      "items": {
         "general": {
-          "title": "General",
-          "questions": {
-            "q1": {
-              "question": "What is MeepleAI?",
-              "answer": "MeepleAI is an intelligent assistant that helps you understand board game rules. Using artificial intelligence, it analyzes rulebooks and answers your questions in a precise and sourced way."
-            },
-            "q2": {
-              "question": "Is MeepleAI free?",
-              "answer": "MeepleAI offers a free plan with limited functionality and a premium plan with advanced features. Check the pricing page for details."
-            },
-            "q3": {
-              "question": "Which games are supported?",
-              "answer": "We support hundreds of popular games and continuously add new ones. You can also upload your own rulebook PDF for games not in our catalog."
-            }
+          "q1": {
+            "question": "What is MeepleAI?",
+            "answer": "MeepleAI is an intelligent assistant that helps you understand board game rules. Using artificial intelligence, it analyzes rulebooks and answers your questions in a precise and sourced way."
+          },
+          "q2": {
+            "question": "Is MeepleAI free?",
+            "answer": "MeepleAI offers a free plan with limited functionality and a premium plan with advanced features. Check the pricing page for details."
+          },
+          "q3": {
+            "question": "Which games are supported?",
+            "answer": "We support hundreds of popular games and continuously add new ones. You can also upload your own rulebook PDF for games not in our catalog."
           }
         },
         "usage": {
-          "title": "How to Use",
-          "questions": {
-            "q1": {
-              "question": "How do I ask a question?",
-              "answer": "Select a game, then type your question in the chat. You can ask in natural language, as if you were asking a friend who knows the rules well."
-            },
-            "q2": {
-              "question": "Can I upload my rulebook PDF?",
-              "answer": "Yes! With the free plan you can upload 1 PDF per month, while with the premium plan you have unlimited uploads."
-            },
-            "q3": {
-              "question": "In which languages can I ask questions?",
-              "answer": "Currently we support Italian and English. The AI can understand your question regardless of the rulebook language."
-            }
+          "q1": {
+            "question": "How do I ask a question?",
+            "answer": "Select a game, then type your question in the chat. You can ask in natural language, as if you were asking a friend who knows the rules well."
+          },
+          "q2": {
+            "question": "Can I upload my rulebook PDF?",
+            "answer": "Yes! With the free plan you can upload 1 PDF per month, while with the premium plan you have unlimited uploads."
+          },
+          "q3": {
+            "question": "In which languages can I ask questions?",
+            "answer": "Currently we support Italian and English. The AI can understand your question regardless of the rulebook language."
           }
         },
         "technical": {
-          "title": "Technical Questions",
-          "questions": {
-            "q1": {
-              "question": "How accurate is the AI?",
-              "answer": "Our RAG system is designed to provide answers based directly on the rulebook text. Each answer includes the reference to the original source for verification."
-            },
-            "q2": {
-              "question": "Is my data safe?",
-              "answer": "Yes, we take your privacy seriously. Uploaded PDFs are processed and deleted within 30 days. See our Privacy Policy for more details."
-            },
-            "q3": {
-              "question": "Does it work on mobile?",
-              "answer": "Yes, MeepleAI is fully responsive and works on any device: smartphone, tablet, or desktop."
-            }
+          "q1": {
+            "question": "How accurate is the AI?",
+            "answer": "Our RAG system is designed to provide answers based directly on the rulebook text. Each answer includes the reference to the original source for verification."
+          },
+          "q2": {
+            "question": "Is my data safe?",
+            "answer": "Yes, we take your privacy seriously. Uploaded PDFs are processed and deleted within 30 days. See our Privacy Policy for more details."
+          },
+          "q3": {
+            "question": "Does it work on mobile?",
+            "answer": "Yes, MeepleAI is fully responsive and works on any device: smartphone, tablet, or desktop."
           }
         },
         "account": {
-          "title": "Account and Billing",
-          "questions": {
-            "q1": {
-              "question": "How do I create an account?",
-              "answer": "Click 'Sign Up' in the upper right corner and follow the instructions. You can register with email or through Google/Discord."
-            },
-            "q2": {
-              "question": "Can I cancel my subscription?",
-              "answer": "Yes, you can cancel anytime from your profile settings. You'll continue to have access to premium features until the end of the already paid period."
-            },
-            "q3": {
-              "question": "How do I delete my account?",
-              "answer": "You can request account deletion from your privacy settings. We will delete all your data within 30 days of your request."
-            }
+          "q1": {
+            "question": "How do I create an account?",
+            "answer": "Click 'Sign Up' in the upper right corner and follow the instructions. You can register with email or through Google/Discord."
+          },
+          "q2": {
+            "question": "Can I cancel my subscription?",
+            "answer": "Yes, you can cancel anytime from your profile settings. You'll continue to have access to premium features until the end of the already paid period."
+          },
+          "q3": {
+            "question": "How do I delete my account?",
+            "answer": "You can request account deletion from your privacy settings. We will delete all your data within 30 days of your request."
           }
         }
-      }
+      },
+      "contactCta": "Contact us",
+      "howItWorksCta": "How It Works"
     }
   },
   "privateGames": {

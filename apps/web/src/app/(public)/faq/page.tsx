@@ -1,17 +1,8 @@
-/**
- * FAQ Page
- *
- * Frequently asked questions page with:
- * - Categorized questions with accordion
- * - Search functionality (future)
- * - Bilingual support (IT/EN) via i18n
- *
- * @see Issue for legal pages implementation
- */
-
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { Fragment } from 'react';
+
+import Link from 'next/link';
 
 import {
   Accordion,
@@ -19,103 +10,57 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/data-display/accordion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { Separator } from '@/components/ui/navigation/separator';
-import { Button } from '@/components/ui/primitives/button';
+import { Btn } from '@/components/ui/v2/btn';
+import { Divider } from '@/components/ui/v2/divider';
+import { HeroGradient } from '@/components/ui/v2/hero-gradient';
 import { useTranslation } from '@/hooks/useTranslation';
 
-// FAQ category keys
-const CATEGORY_KEYS = ['general', 'usage', 'technical', 'account'] as const;
-
-// Questions per category (must match i18n keys q1/q2/q3)
-const QUESTIONS_PER_CATEGORY = ['q1', 'q2', 'q3'] as const;
-
-// Icons for each category
-const CATEGORY_ICONS: Record<(typeof CATEGORY_KEYS)[number], string> = {
-  general: '📋',
-  usage: '🎮',
+const CATEGORIES = ['general', 'usage', 'technical', 'account'] as const;
+const QUESTIONS = ['q1', 'q2', 'q3'] as const;
+const CATEGORY_EMOJI: Record<(typeof CATEGORIES)[number], string> = {
+  general: '💡',
+  usage: '🎲',
   technical: '⚙️',
   account: '👤',
 };
 
 export default function FaqPage() {
-  const router = useRouter();
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
 
   return (
-    <div className="min-h-dvh bg-background py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-foreground" data-testid="faq-heading">
-            {t('pages.faq.title')}
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-2xl mx-auto">
-            {t('pages.faq.description')}
-          </p>
-        </div>
+    <main>
+      <HeroGradient title={t('pages.faq.title')} subtitle={t('pages.faq.subtitle')} />
 
-        {/* FAQ Categories */}
-        <div className="space-y-8">
-          {CATEGORY_KEYS.map(categoryKey => (
-            <Card key={categoryKey} className="overflow-hidden">
-              <CardHeader className="bg-muted dark:bg-card">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <span className="text-xl">{CATEGORY_ICONS[categoryKey]}</span>
-                  {t(`pages.faq.categories.${categoryKey}.title`)}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Accordion type="single" collapsible className="w-full">
-                  {QUESTIONS_PER_CATEGORY.map(questionKey => (
-                    <AccordionItem
-                      key={`${categoryKey}-${questionKey}`}
-                      value={`${categoryKey}-${questionKey}`}
-                      className="border-b last:border-b-0 px-6"
-                    >
-                      <AccordionTrigger className="text-left font-medium text-foreground hover:no-underline py-4">
-                        {t(`pages.faq.categories.${categoryKey}.questions.${questionKey}.question`)}
-                      </AccordionTrigger>
-                      <AccordionContent className="text-slate-600 dark:text-slate-300 pb-4">
-                        {t(`pages.faq.categories.${categoryKey}.questions.${questionKey}.answer`)}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      {CATEGORIES.map((cat, idx) => (
+        <Fragment key={cat}>
+          {idx > 0 && <Divider />}
+          <section className="max-w-3xl mx-auto py-8 px-4">
+            <h2 className="text-2xl font-bold mb-6">
+              <span aria-hidden="true" className="mr-2">
+                {CATEGORY_EMOJI[cat]}
+              </span>
+              {t(`pages.faq.categories.${cat}`)}
+            </h2>
+            <Accordion type="single" collapsible>
+              {QUESTIONS.map(q => (
+                <AccordionItem key={q} value={`${cat}-${q}`}>
+                  <AccordionTrigger>{t(`pages.faq.items.${cat}.${q}.question`)}</AccordionTrigger>
+                  <AccordionContent>{t(`pages.faq.items.${cat}.${q}.answer`)}</AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </section>
+        </Fragment>
+      ))}
 
-        <Separator className="my-8" />
-
-        {/* Still have questions? */}
-        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-          <CardContent className="pt-6 text-center">
-            <h3 className="text-xl font-semibold text-foreground mb-2">
-              {locale === 'it' ? 'Non hai trovato la risposta?' : "Didn't find your answer?"}
-            </h3>
-            <p className="text-slate-600 dark:text-slate-400 mb-4">
-              {locale === 'it'
-                ? 'Contattaci direttamente, siamo qui per aiutarti.'
-                : "Contact us directly, we're here to help."}
-            </p>
-            <Button onClick={() => router.push('/contact')}>
-              {locale === 'it' ? 'Contattaci' : 'Contact Us'}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Footer Navigation */}
-        <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4 pt-8 border-t border-slate-200 dark:border-slate-700">
-          <Button variant="ghost" onClick={() => router.push('/')}>
-            ← {locale === 'it' ? 'Torna alla Home' : 'Back to Home'}
-          </Button>
-          <Button variant="outline" onClick={() => router.push('/how-it-works')}>
-            {locale === 'it' ? 'Come Funziona' : 'How It Works'} →
-          </Button>
-        </div>
-      </div>
-    </div>
+      <section className="max-w-3xl mx-auto py-12 flex flex-col sm:flex-row gap-3 justify-center items-center">
+        <Btn variant="primary" asChild>
+          <Link href="/contact">{t('pages.faq.contactCta')}</Link>
+        </Btn>
+        <Btn variant="ghost" asChild>
+          <Link href="/how-it-works">{t('pages.faq.howItWorksCta')}</Link>
+        </Btn>
+      </section>
+    </main>
   );
 }

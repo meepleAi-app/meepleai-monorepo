@@ -10,12 +10,20 @@ namespace Api.Infrastructure.Migrations
     ///
     /// Creates <c>mechanic_recalc_jobs</c> — one row per background recalc run triggered by
     /// an admin. The status column uses integer codes: 0=Pending, 1=Running, 2=Completed,
-    /// 3=Failed, 4=Cancelled. A partial index on (status, created_at) WHERE status IN (0,1)
-    /// supports the FOR-UPDATE-SKIP-LOCKED worker claim query added in Task 7.
+    /// 3=Failed, 4=Cancelled.
+    ///
+    /// Two indexes are created:
+    /// <list type="bullet">
+    ///   <item>Partial index on (status, created_at) WHERE status IN (0,1) — supports the
+    ///   FOR-UPDATE-SKIP-LOCKED worker claim query added in Task 7.</item>
+    ///   <item>FK index on triggered_by_user_id — EF Core auto-generates this index in the
+    ///   model snapshot for every FK column; the raw SQL DDL must match to keep the snapshot
+    ///   truthful about actual DB schema.</item>
+    /// </list>
     ///
     /// The domain aggregate (<c>MechanicRecalcJob</c>), EF entity, DbSet registration, and
     /// repository are introduced in Tasks 6–7. This migration is forward-only via raw SQL.
-    /// Down() drops the table.
+    /// Down() drops the table (cascades both indexes automatically).
     /// </remarks>
     public partial class M2_1_MechanicRecalcJobs : Migration
     {
@@ -43,6 +51,8 @@ namespace Api.Infrastructure.Migrations
         CREATE INDEX ix_mechanic_recalc_jobs_status_created
             ON mechanic_recalc_jobs(status, created_at)
             WHERE status IN (0, 1);
+        CREATE INDEX ""IX_mechanic_recalc_jobs_triggered_by_user_id""
+            ON mechanic_recalc_jobs(triggered_by_user_id);
     ");
         }
 

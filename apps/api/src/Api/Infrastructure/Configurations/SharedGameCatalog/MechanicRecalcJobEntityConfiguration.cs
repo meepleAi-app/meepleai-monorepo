@@ -15,8 +15,10 @@ namespace Api.Infrastructure.Configurations.SharedGameCatalog;
 /// index on <c>(status, created_at) WHERE status IN (0,1)</c> was created by the migration and is
 /// declared here so EF does not emit a phantom migration on <c>dotnet ef migrations add</c>.
 ///
-/// There is intentionally no <c>HasIndex</c> on <c>triggered_by_user_id</c> alone — the migration
-/// DDL did not create one and adding it here would cause EF to emit a spurious migration.
+/// EF Core auto-generates an FK index entry for <c>triggered_by_user_id</c> in the model snapshot
+/// (named <c>IX_mechanic_recalc_jobs_triggered_by_user_id</c>). The corresponding
+/// <c>CREATE INDEX</c> DDL is present in the Task 5 migration so the snapshot accurately reflects
+/// the actual DB schema. No explicit <c>HasIndex</c> is needed here — EF infers it from the FK.
 /// </remarks>
 internal sealed class MechanicRecalcJobEntityConfiguration : IEntityTypeConfiguration<MechanicRecalcJobEntity>
 {
@@ -98,9 +100,9 @@ internal sealed class MechanicRecalcJobEntityConfiguration : IEntityTypeConfigur
             .HasFilter("status IN (0, 1)");
 
         // === FK to users (ON DELETE RESTRICT — job row is an audit record) ===
-        // Note: We explicitly suppress the EF-auto-generated FK index on triggered_by_user_id
-        // because the DDL in M2_1_MechanicRecalcJobs did not create one; adding it here would
-        // cause EF to emit a phantom migration.
+        // EF auto-generates IX_mechanic_recalc_jobs_triggered_by_user_id in the model snapshot.
+        // The matching CREATE INDEX DDL is present in M2_1_MechanicRecalcJobs so the snapshot
+        // accurately reflects the actual DB schema. No explicit HasIndex call needed here.
         builder.HasOne(j => j.TriggeredByUser)
             .WithMany()
             .HasForeignKey(j => j.TriggeredByUserId)

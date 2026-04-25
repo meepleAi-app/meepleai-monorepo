@@ -993,44 +993,41 @@
     "howItWorks": {
       "title": "Come Funziona",
       "subtitle": "Tre semplici passaggi per non litigare più sulle regole",
-      "description": "Scopri come MeepleAI può trasformare le tue serate di gioco",
-      "steps": {
-        "upload": {
-          "title": "1. Carica il Regolamento",
-          "content": "Carica il PDF del regolamento del tuo gioco da tavolo. Il nostro sistema lo analizza e lo indicizza utilizzando tecnologie avanzate di elaborazione del linguaggio naturale."
-        },
-        "ask": {
-          "title": "2. Fai una Domanda",
-          "content": "Scrivi la tua domanda in linguaggio naturale, come faresti con un amico esperto. Ad esempio: 'Posso muovere il cavaliere dopo aver lanciato i dadi?' oppure 'Come funziona il commercio tra giocatori?'"
-        },
-        "answer": {
-          "title": "3. Ottieni la Risposta",
-          "content": "L'AI analizza il regolamento e ti fornisce una risposta precisa, sempre con il riferimento alla pagina e sezione del manuale originale, così puoi verificare tu stesso."
-        }
+      "ctaRegister": "Inizia Ora",
+      "stepsHeading": "Come funziona",
+      "step1": {
+        "title": "1. Carica il Regolamento",
+        "description": "Carica il PDF del regolamento del tuo gioco da tavolo. Il nostro sistema lo analizza e lo indicizza utilizzando tecnologie avanzate di elaborazione del linguaggio naturale."
       },
+      "step2": {
+        "title": "2. Fai una Domanda",
+        "description": "Scrivi la tua domanda in linguaggio naturale, come faresti con un amico esperto. Ad esempio: 'Posso muovere il cavaliere dopo aver lanciato i dadi?' oppure 'Come funziona il commercio tra giocatori?'"
+      },
+      "step3": {
+        "title": "3. Ottieni la Risposta",
+        "description": "L'AI analizza il regolamento e ti fornisce una risposta precisa, sempre con il riferimento alla pagina e sezione del manuale originale, così puoi verificare tu stesso."
+      },
+      "featuresHeading": "Funzionalità principali",
       "features": {
-        "title": "Caratteristiche Principali",
         "rag": {
           "title": "Ricerca Semantica RAG",
-          "content": "Tecnologia avanzata che comprende il significato delle tue domande, non solo le parole chiave"
+          "description": "Tecnologia avanzata che comprende il significato delle tue domande, non solo le parole chiave"
         },
         "multilingual": {
           "title": "Supporto Multilingua",
-          "content": "Carica regolamenti in qualsiasi lingua e fai domande nella tua lingua preferita"
+          "description": "Carica regolamenti in qualsiasi lingua e fai domande nella tua lingua preferita"
         },
-        "citations": {
-          "title": "Citazioni Precise",
-          "content": "Ogni risposta include il riferimento esatto alla fonte nel regolamento"
+        "pdfUpload": {
+          "title": "Upload PDF",
+          "description": "Carica il regolamento del tuo gioco e la nostra AI lo analizzerà per rispondere alle tue domande."
         },
-        "library": {
+        "gameLibrary": {
           "title": "Libreria Personale",
-          "content": "Gestisci la tua collezione di giochi e accedi rapidamente ai regolamenti"
+          "description": "Gestisci la tua collezione di giochi e accedi rapidamente ai regolamenti"
         }
       },
-      "cta": {
-        "title": "Pronto a Iniziare?",
-        "content": "Registrati gratuitamente e scopri quanto può essere semplice capire le regole"
-      }
+      "aboutCta": "Scopri di più su MeepleAI",
+      "faqCta": "Consulta le FAQ"
     },
     "blog": {
       "title": "Blog",
@@ -1069,107 +1066,147 @@
       },
       "info": {
         "title": "Altre modalità di contatto",
-        "email": {
-          "title": "Email",
-          "value": "support@meepleai.com"
-        },
-        "social": {
-          "title": "Social",
-          "content": "Seguici sui social per aggiornamenti e novità"
-        },
-        "response": {
-          "title": "Tempi di Risposta",
-          "content": "Rispondiamo solitamente entro 24-48 ore lavorative"
-        }
+        "email": "Email",
+        "emailValue": "support@meepleai.com",
+        "social": "Social",
+        "response": "Tempi di Risposta",
+        "responseValue": "Rispondiamo solitamente entro 24-48 ore lavorative"
       },
       "subjects": {
         "general": "Domanda generale",
         "support": "Supporto tecnico",
         "feedback": "Feedback e suggerimenti",
-        "bug": "Segnalazione bug",
         "partnership": "Partnership e collaborazioni",
+        "press": "Stampa e Media",
         "other": "Altro"
       }
     },
     "faq": {
       "title": "Domande Frequenti",
       "subtitle": "Trova risposte alle domande più comuni",
-      "description": "Tutto quello che devi sapere su MeepleAI",
       "categories": {
+        "general": "Generale",
+        "usage": "Utilizzo",
+        "technical": "Tecnico",
+        "account": "Account"
+      },
+      "items": {
         "general": {
-          "title": "Generale",
-          "questions": {
-            "q1": {
-              "question": "Cos'è MeepleAI?",
-              "answer": "MeepleAI è un assistente basato su intelligenza artificiale che ti aiuta a comprendere le regole dei giochi da tavolo. Puoi caricare i PDF dei regolamenti e fare domande in linguaggio naturale, ricevendo risposte precise con citazione della fonte."
-            },
-            "q2": {
-              "question": "MeepleAI è gratuito?",
-              "answer": "MeepleAI offre un piano gratuito con funzionalità base, incluso un numero limitato di query giornaliere. Per funzionalità avanzate e query illimitate, sono disponibili piani premium."
-            },
-            "q3": {
-              "question": "Quali lingue sono supportate?",
-              "answer": "Puoi caricare regolamenti in qualsiasi lingua e fare domande in italiano o inglese. L'interfaccia è disponibile in italiano e inglese."
-            }
+          "q1": {
+            "question": "Cos'è MeepleAI?",
+            "answer": "MeepleAI è un assistente basato su intelligenza artificiale che ti aiuta a comprendere le regole dei giochi da tavolo. Puoi caricare i PDF dei regolamenti e fare domande in linguaggio naturale, ricevendo risposte precise con citazione della fonte."
+          },
+          "q2": {
+            "question": "MeepleAI è gratuito?",
+            "answer": "MeepleAI offre un piano gratuito con funzionalità base, incluso un numero limitato di query giornaliere. Per funzionalità avanzate e query illimitate, sono disponibili piani premium."
+          },
+          "q3": {
+            "question": "Quali lingue sono supportate?",
+            "answer": "Puoi caricare regolamenti in qualsiasi lingua e fare domande in italiano o inglese. L'interfaccia è disponibile in italiano e inglese."
           }
         },
         "usage": {
-          "title": "Utilizzo",
-          "questions": {
-            "q1": {
-              "question": "Come carico un regolamento?",
-              "answer": "Dalla sezione 'Carica' puoi trascinare o selezionare un file PDF del regolamento. Il sistema lo elaborerà automaticamente e sarà disponibile per le tue domande in pochi minuti."
-            },
-            "q2": {
-              "question": "Quanto sono accurate le risposte?",
-              "answer": "Le risposte sono generate analizzando il regolamento ufficiale e includono sempre il riferimento alla fonte. Tuttavia, consigliamo sempre di verificare con il regolamento originale per decisioni importanti durante le partite."
-            },
-            "q3": {
-              "question": "Ci sono limiti alle domande?",
-              "answer": "Il piano gratuito ha un limite giornaliero di query. I piani premium offrono query illimitate e funzionalità aggiuntive."
-            }
+          "q1": {
+            "question": "Come carico un regolamento?",
+            "answer": "Dalla sezione 'Carica' puoi trascinare o selezionare un file PDF del regolamento. Il sistema lo elaborerà automaticamente e sarà disponibile per le tue domande in pochi minuti."
+          },
+          "q2": {
+            "question": "Quanto sono accurate le risposte?",
+            "answer": "Le risposte sono generate analizzando il regolamento ufficiale e includono sempre il riferimento alla fonte. Tuttavia, consigliamo sempre di verificare con il regolamento originale per decisioni importanti durante le partite."
+          },
+          "q3": {
+            "question": "Ci sono limiti alle domande?",
+            "answer": "Il piano gratuito ha un limite giornaliero di query. I piani premium offrono query illimitate e funzionalità aggiuntive."
           }
         },
         "technical": {
-          "title": "Tecnico",
-          "questions": {
-            "q1": {
-              "question": "Quali formati PDF sono supportati?",
-              "answer": "Supportiamo PDF con testo selezionabile (non scansioni di immagini). Per risultati ottimali, usa PDF di alta qualità con testo nativo."
-            },
-            "q2": {
-              "question": "I miei dati sono al sicuro?",
-              "answer": "Sì, la sicurezza dei tuoi dati è la nostra priorità. I PDF caricati vengono elaborati e non condivisi con altri utenti. Consulta la nostra Privacy Policy per maggiori dettagli."
-            },
-            "q3": {
-              "question": "Posso usare MeepleAI offline?",
-              "answer": "MeepleAI richiede una connessione internet per funzionare, poiché l'elaborazione avviene sui nostri server cloud."
-            }
+          "q1": {
+            "question": "Quali formati PDF sono supportati?",
+            "answer": "Supportiamo PDF con testo selezionabile (non scansioni di immagini). Per risultati ottimali, usa PDF di alta qualità con testo nativo."
+          },
+          "q2": {
+            "question": "I miei dati sono al sicuro?",
+            "answer": "Sì, la sicurezza dei tuoi dati è la nostra priorità. I PDF caricati vengono elaborati e non condivisi con altri utenti. Consulta la nostra Privacy Policy per maggiori dettagli."
+          },
+          "q3": {
+            "question": "Posso usare MeepleAI offline?",
+            "answer": "MeepleAI richiede una connessione internet per funzionare, poiché l'elaborazione avviene sui nostri server cloud."
           }
         },
         "account": {
-          "title": "Account",
-          "questions": {
-            "q1": {
-              "question": "Come cancello il mio account?",
-              "answer": "Puoi richiedere la cancellazione del tuo account dalle Impostazioni > Avanzate > Elimina Account, oppure contattando il supporto."
-            },
-            "q2": {
-              "question": "Posso cambiare la mia email?",
-              "answer": "Al momento il cambio email non è supportato direttamente. Contatta il supporto per assistenza."
-            },
-            "q3": {
-              "question": "Come attivo l'autenticazione a due fattori?",
-              "answer": "Vai in Impostazioni > Privacy e Sicurezza > Autenticazione a due fattori e segui le istruzioni per configurare la 2FA con un'app authenticator."
-            }
+          "q1": {
+            "question": "Come cancello il mio account?",
+            "answer": "Puoi richiedere la cancellazione del tuo account dalle Impostazioni > Avanzate > Elimina Account, oppure contattando il supporto."
+          },
+          "q2": {
+            "question": "Posso cambiare la mia email?",
+            "answer": "Al momento il cambio email non è supportato direttamente. Contatta il supporto per assistenza."
+          },
+          "q3": {
+            "question": "Come attivo l'autenticazione a due fattori?",
+            "answer": "Vai in Impostazioni > Privacy e Sicurezza > Autenticazione a due fattori e segui le istruzioni per configurare la 2FA con un'app authenticator."
           }
         }
       },
-      "stillHaveQuestions": {
-        "title": "Hai ancora domande?",
-        "content": "Non hai trovato quello che cercavi? Contattaci e saremo felici di aiutarti.",
-        "cta": "Contattaci"
+      "contactCta": "Contattaci",
+      "howItWorksCta": "Come Funziona"
+    },
+    "errors": {
+      "notFound": {
+        "eyebrow": "404",
+        "title": "Pagina non trovata",
+        "subtitle": "La pagina che stai cercando non esiste o è stata spostata.",
+        "homeCta": "Torna alla home",
+        "exploreCta": "Esplora i giochi"
+      },
+      "serverError": {
+        "eyebrow": "500",
+        "title": "Qualcosa è andato storto",
+        "subtitle": "Si è verificato un errore imprevisto. Riprova o torna alla home.",
+        "retryCta": "Riprova",
+        "homeCta": "Torna alla home",
+        "digestLabel": "ID errore"
+      },
+      "offline": {
+        "title": "Sei offline",
+        "subtitle": "Non preoccuparti, puoi ancora accedere ai contenuti salvati in cache.",
+        "retryCta": "Riprova connessione",
+        "homeCta": "Torna alla home",
+        "statsTitle": "Contenuti disponibili offline",
+        "sessionsLabel": "Sessioni",
+        "cachedGamesLabel": "Giochi in cache",
+        "pendingLabel": "Azioni in attesa",
+        "onlineStatus": "Connessione ripristinata",
+        "offlineStatus": "Connessione assente"
       }
+    },
+    "cookieSettings": {
+      "title": "Preferenze cookie",
+      "subtitle": "Gestisci il tuo consenso ai cookie. Puoi modificare queste impostazioni in qualsiasi momento.",
+      "categories": {
+        "essential": {
+          "label": "Cookie essenziali",
+          "description": "Necessari per il funzionamento del sito (sessione, preferenze di base). Non possono essere disattivati."
+        },
+        "analytics": {
+          "label": "Cookie analitici",
+          "description": "Ci aiutano a capire come usi il sito in forma aggregata e anonima."
+        },
+        "functional": {
+          "label": "Cookie funzionali",
+          "description": "Migliorano l'esperienza ricordando le tue scelte (tema, lingua)."
+        }
+      },
+      "actions": {
+        "save": "Salva preferenze",
+        "acceptAll": "Accetta tutti",
+        "rejectAll": "Rifiuta opzionali"
+      },
+      "savedToast": "Preferenze salvate",
+      "policyLink": "Leggi la cookie policy completa"
+    },
+    "cookies": {
+      "managePreferencesCta": "Gestisci preferenze"
     }
   }
 }

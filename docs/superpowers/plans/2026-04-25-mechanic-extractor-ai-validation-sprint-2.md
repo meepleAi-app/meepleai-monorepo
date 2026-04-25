@@ -652,24 +652,42 @@ Sprint 1 shipped `UpdateCertificationThresholdsCommand` and `PUT /thresholds`. V
 - [x] **Step 2: Implement component** with React Hook Form + Zod schema (4 fields: `minCoveragePct`/`minBggMatchPct`/`minOverallScore` 0–100, `maxPageTolerance` integer ≥ 0). Save+Reset both gated on `formState.isDirty`. On success the hook invalidates `thresholds.all` + `dashboard.all` + `trend.all` query keys and emits a success toast via Sonner; the form `reset(data)` rebases the dirty baseline.
 - [ ] **Step 3 (deferred): Audit display** `Last updated by {updatedByEmail} on {updatedAt}` — **NOT IMPLEMENTED**. The plan's premise that this data is "from existing `GET /thresholds`" is wrong: `GetCertificationThresholdsQueryHandler` returns only the four-field `CertificationThresholds` value object, while `UpdatedByUserId`/`UpdatedAt` live on the `CertificationThresholdsConfig` aggregate and are never serialized. Surfacing them would require a new DTO + handler change, scope-creep for Task 15. Documented as a future enhancement in `ThresholdsConfigForm.tsx`'s file header.
 - [x] **Step 4: Verify all tests pass** — `pnpm vitest run …/ThresholdsConfigForm.test.tsx` → 6/6 passed in 1.09s. `pnpm typecheck` clean (after dropping Zod v3-only `invalid_type_error` options — project is on Zod v4).
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit** — `7cf37bea0` `feat(mechanic-validation): ThresholdsConfigForm admin component (Task 15)`
 
 ---
 
 ### Task 16: Mount on dashboard page (admin gate)
 
-- [ ] **Step 1: Modify** `apps/web/src/app/admin/(dashboard)/knowledge-base/mechanic-extractor/page.tsx`:
+- [x] **Step 1: Modify** `apps/web/src/app/admin/(dashboard)/knowledge-base/mechanic-extractor/dashboard/page.tsx`:
+
+> **Plan deviation (from literal `mechanic-extractor/page.tsx`)**: the literal path is the
+> Variant C human+AI workflow editor (PDF viewer + section tabs + AI assist), NOT a validation
+> surface. The validation dashboard already lives at the `dashboard/` subroute and is gated by
+> `process.env.NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED === 'true'` via `notFound()`. Mounting
+> the form there keeps both threshold-related surfaces (per-game scores + the bounds those
+> scores are evaluated against) under the same flag, single page, single load.
+>
+> The admin gate is enforced at the parent `/admin/(dashboard)/` layout level via session
+> middleware — no per-component `session.user.role === 'Admin'` check needed (consistent with
+> how `useValidationDashboard` is mounted).
 
 ```tsx
-{isMechanicValidationEnabled() && session.user.role === 'Admin' && (
-  <Card>
-    <CardHeader><CardTitle>Certification Thresholds</CardTitle></CardHeader>
-    <CardContent><ThresholdsConfigForm initial={thresholds} /></CardContent>
-  </Card>
-)}
+// dashboard/page.tsx — wraps form in Card after existing summary + table
+<Card data-testid="thresholds-card">
+  <CardHeader><CardTitle>Certification Thresholds</CardTitle></CardHeader>
+  <CardContent>
+    {isThresholdsLoading && <Skeleton className="h-48 w-full" />}
+    {thresholdsError && <ErrorBanner message={...} />}
+    {thresholds && <ThresholdsConfigForm initial={thresholds} />}
+  </CardContent>
+</Card>
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 1.5 (added): Create** `apps/web/src/hooks/admin/useThresholds.ts` — query hook
+  wrapping `api.admin.getThresholds()` with key `mechanicValidationKeys.thresholds.all`,
+  60s staleTime mirroring `useValidationDashboard`. Symmetric with the invalidation list in
+  `useUpdateThresholds` so PUT → GET refetches automatically.
+- [x] **Step 2: Commit**
 
 ---
 

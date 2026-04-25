@@ -13,7 +13,10 @@ import { notFound } from 'next/navigation';
 
 import { DashboardSummaryCards } from '@/components/admin/mechanic-extractor/validation/DashboardSummaryCards';
 import { DashboardTable } from '@/components/admin/mechanic-extractor/validation/DashboardTable';
+import { ThresholdsConfigForm } from '@/components/admin/mechanic-extractor/validation/ThresholdsConfigForm';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { useThresholds } from '@/hooks/admin/useThresholds';
 import { useValidationDashboard } from '@/hooks/admin/useValidationDashboard';
 
 const FEATURE_FLAG = 'true';
@@ -24,6 +27,11 @@ export default function MechanicValidationDashboardPage() {
   }
 
   const { data, isLoading, error } = useValidationDashboard();
+  const {
+    data: thresholds,
+    isLoading: isThresholdsLoading,
+    error: thresholdsError,
+  } = useThresholds();
 
   return (
     <div className="mx-auto max-w-[1100px] space-y-6">
@@ -68,6 +76,33 @@ export default function MechanicValidationDashboardPage() {
           <DashboardTable rows={data} />
         </div>
       )}
+
+      <Card data-testid="thresholds-card">
+        <CardHeader>
+          <CardTitle className="font-quicksand text-lg">Certification Thresholds</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isThresholdsLoading && (
+            <div data-testid="thresholds-loading" role="status" aria-label="Loading thresholds">
+              <Skeleton className="h-48 w-full" />
+            </div>
+          )}
+
+          {thresholdsError && !isThresholdsLoading && (
+            <div
+              data-testid="thresholds-error"
+              className="rounded-md border border-rose-300 bg-rose-50/70 p-4 text-sm text-rose-800 dark:border-rose-800/60 dark:bg-rose-950/20 dark:text-rose-300"
+            >
+              Failed to load thresholds:{' '}
+              {thresholdsError instanceof Error ? thresholdsError.message : 'unknown error'}
+            </div>
+          )}
+
+          {!isThresholdsLoading && !thresholdsError && thresholds && (
+            <ThresholdsConfigForm initial={thresholds} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

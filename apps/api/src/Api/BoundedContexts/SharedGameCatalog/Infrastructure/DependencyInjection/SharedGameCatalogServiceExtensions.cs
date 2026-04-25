@@ -89,6 +89,12 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IKeywordExtractor, BagOfWordsKeywordExtractor>();
         services.AddScoped<IMechanicMatchingEngine, MechanicMatchingEngine>();
 
+        // ADR-051 Sprint 1: Bounded-context embedding adapter.
+        // Wraps Api.Services.IEmbeddingService to satisfy the narrow domain abstraction
+        // consumed by the golden-claim CRUD handlers and CalculateMechanicAnalysisMetricsHandler.
+        // CLAUDE.md pitfall #2565: register both the interface and the implementation.
+        services.AddScoped<IEmbeddingService, EmbeddingServiceAdapter>();
+
         // Issue #2729: Review lock configuration service with caching (Singleton for cache sharing)
         services.AddSingleton<IReviewLockConfigService, ReviewLockConfigService>();
 

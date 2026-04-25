@@ -1,6 +1,6 @@
 {
   "description": "Baseline JS bundle size for prod build (no mock). Update manually in dedicated PRs.",
-  "updatedAt": "2026-04-24",
-  "totalBytes": 13082890,
+  "updatedAt": "2026-04-25",
+  "totalBytes": 13112191,
   "toleranceBytes": 10240
 }

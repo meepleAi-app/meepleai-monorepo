@@ -507,7 +507,7 @@ internal sealed class MechanicRecalcBackgroundService : BackgroundService
 ```
 
 - [ ] **Step 2: Register in `Program.cs`:** `builder.Services.AddHostedService<MechanicRecalcBackgroundService>();`
-- [ ] **Step 3: Integration test** — enqueue job, run service one tick, assert progresses; cancel mid-flight, assert `Cancelled`.
+- [ ] **Step 3: Integration test** — enqueue job, run service one tick, assert progresses; cancel mid-flight, assert terminal `Completed` with `CancellationRequested == true` (cancellation is a flag, not a status — see Task 6 aggregate lifecycle).
 - [ ] **Step 4: Stale recovery** — on startup, mark jobs in `Running` with `HeartbeatAt < now-5min` as `Failed("StaleHeartbeat")`. Add `RecoverStaleJobsAsync` called in `ExecuteAsync` before main loop.
 - [ ] **Step 5: Commit**
 

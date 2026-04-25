@@ -10322,7 +10322,8 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TriggeredByUserId");
+                    b.HasIndex("TriggeredByUserId")
+                        .HasDatabaseName("IX_mechanic_recalc_jobs_triggered_by_user_id");
 
                     b.HasIndex("Status", "CreatedAt")
                         .HasDatabaseName("ix_mechanic_recalc_jobs_status_created")

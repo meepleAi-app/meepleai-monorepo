@@ -106,8 +106,5 @@ internal sealed class MechanicRecalcJobEntityConfiguration : IEntityTypeConfigur
             .HasForeignKey(j => j.TriggeredByUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(j => j.TriggeredByUserId)
-            .HasDatabaseName("IX_mechanic_recalc_jobs_triggered_by_user_id");
-
     }
 }

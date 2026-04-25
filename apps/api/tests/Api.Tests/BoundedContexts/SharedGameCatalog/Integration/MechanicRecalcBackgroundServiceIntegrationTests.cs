@@ -1,4 +1,5 @@
 using System.Reflection;
+using Api.BoundedContexts.SharedGameCatalog.Application.EventHandlers;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -7,12 +8,15 @@ using Api.Infrastructure;
 using Api.Infrastructure.BackgroundServices;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
@@ -390,6 +394,65 @@ public sealed class MechanicRecalcBackgroundServiceIntegrationTests : IAsyncLife
         reloaded.Status.Should().Be(RecalcJobStatus.Completed);
         reloaded.LastError.Should().BeNull();
         reloaded.CompletedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ProcessNextJobAsync_OnCompletion_InvalidatesDashboardAndTrendCacheTags()
+    {
+        // ADR-051 Sprint 2 / Task 13: terminal transition publishes
+        // MechanicMetricsRecalculatedEvent → MechanicMetricsRecalculatedCacheInvalidationHandler
+        // evicts both dashboard + trend tags via IHybridCacheService.RemoveByTagAsync.
+        // We capture a singleton mock and override the default per-scope Mock.Of registration so
+        // calls aggregate across all DI scopes the worker opens during the tick.
+
+        // Arrange — build a dedicated DI provider where IHybridCacheService is a captured mock.
+        var capturedCache = new Mock<IHybridCacheService>();
+        capturedCache.Setup(c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_connectionString);
+        services.AddScoped<IMechanicRecalcJobRepository, MechanicRecalcJobRepository>();
+        services.AddScoped<IMechanicAnalysisRepository, MechanicAnalysisRepository>();
+        services.RemoveAll<IHybridCacheService>();
+        services.AddSingleton(capturedCache.Object);
+
+        await using var scopedProvider = services.BuildServiceProvider();
+
+        // Enqueue one Pending job; no analyses → empty per-id loop → terminal Complete.
+        var job = MechanicRecalcJob.Enqueue(_testUserId);
+        var repo = new MechanicRecalcJobRepository(_dbContext, CreateNoOpEventCollector());
+        await repo.AddAsync(job);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var scopeFactory = scopedProvider.GetRequiredService<IServiceScopeFactory>();
+        var worker = new MechanicRecalcBackgroundService(
+            scopeFactory,
+            NullLogger<MechanicRecalcBackgroundService>.Instance);
+
+        // Act
+        await InvokeProcessNextJobAsync(worker);
+
+        // Assert — terminal transition reached.
+        await using var verifyCtx = _fixture.CreateDbContext(_connectionString);
+        var reloaded = await verifyCtx.MechanicRecalcJobs
+            .AsNoTracking()
+            .SingleAsync(j => j.Id == job.Id);
+        reloaded.Status.Should().Be(RecalcJobStatus.Completed);
+
+        // Assert — both cache tags evicted exactly once.
+        capturedCache.Verify(
+            c => c.RemoveByTagAsync(
+                MechanicMetricsRecalculatedCacheInvalidationHandler.DashboardTag,
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the dashboard projection cache must be invalidated so admin sees fresh metrics on the next reload");
+        capturedCache.Verify(
+            c => c.RemoveByTagAsync(
+                MechanicMetricsRecalculatedCacheInvalidationHandler.TrendTag,
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the trend chart cache must be invalidated so the historical view reflects the recalc");
     }
 
     private static async Task InvokeProcessNextJobAsync(MechanicRecalcBackgroundService worker)

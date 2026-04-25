@@ -2,6 +2,7 @@ using System.Globalization;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.Validation;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Observability;
@@ -261,6 +262,12 @@ internal sealed class MechanicRecalcBackgroundService : BackgroundService
         // by AuditService itself so an audit-DB blip never poisons the worker pool.
         await WriteCompletionAuditAsync(job, ct).ConfigureAwait(false);
 
+        // ADR-051 Sprint 2 / Task 13: publish a domain event so dashboard/trend cache entries are
+        // evicted before the next admin pull. IPublisher is scoped → resolve via the scope factory.
+        // The handler swallows its own cache failures; we still wrap publish in a guard so an
+        // unrelated handler crash never escalates into a worker outage.
+        await PublishCompletionEventAsync(job, ct).ConfigureAwait(false);
+
         _logger.LogInformation(
             "MechanicRecalcJob {JobId} finished with status {Status} (processed={Processed}, failed={Failed}, skipped={Skipped})",
             job.Id, job.Status, job.Processed, job.Failed, job.Skipped);
@@ -346,6 +353,68 @@ internal sealed class MechanicRecalcBackgroundService : BackgroundService
             result: job.Status == RecalcJobStatus.Completed ? "Success" : "Failure",
             details: details,
             cancellationToken: ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Publishes <see cref="MechanicMetricsRecalculatedEvent"/> on terminal transition so handlers
+    /// (notably the dashboard / trend cache invalidation handler) can react before the next admin
+    /// pull (ADR-051 Sprint 2 / Task 13).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Uses <see cref="IPublisher"/> rather than <see cref="IMediator"/>: the worker has nothing
+    /// to do with handler results — publish-only semantics document that intent and let MediatR
+    /// fan-out to every <c>INotificationHandler</c> without coupling the worker to a request/response
+    /// shape.
+    /// </para>
+    /// <para>
+    /// Resolves <c>IPublisher</c> from a fresh DI scope: the worker singleton outlives any scoped
+    /// service and the surrounding loop already opens per-iteration scopes for persistence /
+    /// audit, so we mirror that pattern. A brand-new scope also guarantees handlers see a clean
+    /// scoped state (no leaked DbContext tracker, no half-disposed cache reference).
+    /// </para>
+    /// <para>
+    /// Wrapped in a guard: cache invalidation is best-effort and the dashboard's 5 min TTL bounds
+    /// staleness if a handler crashes; under no circumstance should a misbehaving notification
+    /// handler escalate into a worker outage.
+    /// </para>
+    /// </remarks>
+    private async Task PublishCompletionEventAsync(MechanicRecalcJob job, CancellationToken ct)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var publisher = scope.ServiceProvider.GetRequiredService<IPublisher>();
+
+            var evt = new MechanicMetricsRecalculatedEvent(
+                JobId: job.Id,
+                TriggeredByUserId: job.TriggeredByUserId,
+                Status: job.Status,
+                Processed: job.Processed,
+                Failed: job.Failed,
+                Skipped: job.Skipped,
+                Total: job.Total,
+                CompletedAt: job.CompletedAt ?? DateTimeOffset.UtcNow);
+
+            await publisher.Publish(evt, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw; // Honour cancellation; outer handler logs and exits cleanly.
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // BACKGROUND SERVICE: a notification-handler failure must never poison the worker pool.
+        // The cache invalidation handler swallows its own failures internally; this guard covers
+        // any other handler we might wire onto this event in the future.
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Failed to publish MechanicMetricsRecalculatedEvent for job {JobId} ({Status}). "
+                + "Cached projections will refresh on next TTL expiry.",
+                job.Id, job.Status);
+        }
+#pragma warning restore CA1031
     }
 
     /// <summary>

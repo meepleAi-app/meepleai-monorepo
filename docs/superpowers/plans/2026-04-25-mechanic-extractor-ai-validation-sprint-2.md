@@ -615,8 +615,13 @@ Use existing audit infrastructure (`IAuditLogger` or equivalent — `grep -rn "A
 
 Background service publishes `MechanicMetricsRecalculatedEvent` via existing event handler infrastructure → handler calls `IHybridCacheService.RemoveByTagAsync("mechanic-dashboard")` (mirror Sprint 1 pattern, see issue #2620 in CLAUDE.md).
 
-- [ ] **Step 1: Add event + handler**
-- [ ] **Step 2: Test cache key invalidated after recalc**
+- [x] **Step 1: Add event + handler**
+  - Created `MechanicMetricsRecalculatedEvent` (sealed record `IDomainEvent`) carrying `JobId`, `TriggeredByUserId`, `Status`, counters, and `CompletedAt`.
+  - Created `MechanicMetricsRecalculatedCacheInvalidationHandler` (`INotificationHandler<...>`) — invalidates **two** tags (per real `GetDashboardQueryHandler` / `GetTrendQueryHandler` registrations, not the single `mechanic-dashboard` placeholder originally written in this plan): `mechanic-validation-dashboard` and `mechanic-validation-trend`. Per-tag try/catch isolation so a transient outage on one bucket does not skip the other; failures logged at warning, dashboard 5 min TTL self-heals.
+  - Wired the worker: `MechanicRecalcBackgroundService` resolves `IPublisher` from a fresh DI scope (mirroring its audit-write scope hop) and publishes the event after `WriteCompletionAuditAsync`. The publish call is wrapped in a guard so a misbehaving handler never escalates into a worker outage.
+- [x] **Step 2: Test cache key invalidated after recalc**
+  - Unit tests: `MechanicMetricsRecalculatedCacheInvalidationHandlerTests` (5 cases — both tags evicted, Failed status still evicts, first-tag throw isolation, both-tags throw still swallows, null-notification guard).
+  - Integration test: `MechanicRecalcBackgroundServiceIntegrationTests.ProcessNextJobAsync_OnCompletion_InvalidatesDashboardAndTrendCacheTags` — overrides the default `Mock.Of<IHybridCacheService>()` with a captured singleton, runs a real Pending → Completed tick, and verifies `RemoveByTagAsync` was called once per tag.
 - [ ] **Step 3: Commit**
 
 ---

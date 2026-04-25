@@ -1066,25 +1066,18 @@
       },
       "info": {
         "title": "Altre modalità di contatto",
-        "email": {
-          "title": "Email",
-          "value": "support@meepleai.com"
-        },
-        "social": {
-          "title": "Social",
-          "content": "Seguici sui social per aggiornamenti e novità"
-        },
-        "response": {
-          "title": "Tempi di Risposta",
-          "content": "Rispondiamo solitamente entro 24-48 ore lavorative"
-        }
+        "email": "Email",
+        "emailValue": "support@meepleai.com",
+        "social": "Social",
+        "response": "Tempi di Risposta",
+        "responseValue": "Rispondiamo solitamente entro 24-48 ore lavorative"
       },
       "subjects": {
         "general": "Domanda generale",
         "support": "Supporto tecnico",
         "feedback": "Feedback e suggerimenti",
-        "bug": "Segnalazione bug",
         "partnership": "Partnership e collaborazioni",
+        "press": "Stampa e Media",
         "other": "Altro"
       }
     },

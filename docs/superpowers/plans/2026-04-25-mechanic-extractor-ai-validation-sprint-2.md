@@ -993,15 +993,17 @@ Assert drawer renders progress bar transitions and final success toast.
 
 ## Self-Review Checklist (run after final task, before handoff)
 
-- [ ] **Spec coverage:** Every §9 Sprint 2 item appears in a task: Puerto Rico seed (T1–4) ✓ thresholds UI (T15–16) ✓ override UI (already shipped — verify, no new task) ✓ mass recalc (T5–13, T20–22) ✓ BGG importer UI (T17–19) ✓ spike calibration (T23–24) ✓ feature flag (T25–26)
-- [ ] **Placeholder scan:** grep for `TODO`, `TBD`, `implement later`, `add appropriate` in plan file
-- [ ] **Type consistency:** `RecalcJobStatus` enum values used identically in domain, EF mapping, DTO, frontend type
-- [ ] **Migration safety:** `M2_1_MechanicRecalcJobs.Down()` drops table cleanly
-- [ ] **Background service safety:** stale-heartbeat recovery present (Task 8 Step 4), circuit breaker present (Task 8), cancellation respected (Task 8 + Task 9.3)
-- [ ] **Decision documentation:** §14 resolutions section preserved in plan header
+- [x] **Spec coverage:** Every §9 Sprint 2 item maps 1:1 to a task: Puerto Rico seed (T1–4), thresholds UI (T14–16), override UI (already shipped, verified — no new task), mass recalc backend (T5–13) + UI (T20–22), BGG importer UI (T17–19), spike calibration (T23–24 — operator-pending, see handoff), feature flag (T25–26), Playwright (T27–29).
+- [x] **Placeholder scan:** Only `TBD-fill-after-pdf-ingest` at L117 is a code example showing the seed JSON template; the actual `data/rulebook/golden/puerto-rico/golden-claims.json` carries a real SHA256 (`d55058bde864…afa697`). No real `TODO`/`TBD`/`implement later`/`add appropriate` left in plan body.
+- [x] **Type consistency:** Backend `RecalcJobStatus` (Pending=0, Running=1, Completed=2, Failed=3, Cancelled=4) ↔ frontend `RecalcJobStatusSchema = z.enum(['Pending','Running','Completed','Failed','Cancelled'])` ↔ wire format PascalCase string via globally-registered `JsonStringEnumConverter` (`Program.cs:416`). EF mapping stores int with `HasDefaultValue(RecalcJobStatus.Pending)`.
+- [x] **Migration safety:** `M2_1_MechanicRecalcJobs.Down()` (L67-72) issues a single `DROP TABLE IF EXISTS mechanic_recalc_jobs` — indexes (`IX_*_status_created`, `IX_*_triggered_by`, `IX_*_status_heartbeat`) cascade with the table; no orphan FK or sequence cleanup needed.
+- [x] **Background service safety:** `MechanicRecalcBackgroundService` enforces all three required invariants — `StaleHeartbeatThreshold = 5min` at L53 with `RecoverStaleJobsAsync()` at L82 (startup) + L105 (per-iteration), failing stale jobs with reason `"StaleHeartbeat"` (L463); `CircuitBreakerThreshold = 5` at L52 enforced at L177 (failing with reason `"EmbeddingCircuitBreakerOpen"`); cancellation respected via `job.CancellationRequested` (L168) and `stoppingToken.IsCancellationRequested` (L85, L91, L113, L197).
+- [x] **Decision documentation:** §14.1–§14.4 resolutions preserved in plan header (L11-15) — manual recalibration only, fail-on-error embedding with circuit breaker, hardcoded scoring formula, Project A out of scope.
 
 ---
 
 ## Execution Handoff
 
 After all tasks complete, run `superpowers:finishing-a-development-branch` to merge to parent branch (`main-dev`).
+
+**Operator gate before handoff:** Tasks 23 (calibration CSV) and 24 (spike report) require an admin to (a) run the AI extractor over Catan + Puerto Rico via the dashboard `Recalculate all` flow with real fixtures loaded, then (b) hand-label 20 rows for `humanLabel ∈ {match, partial-match, no-match}` to commit `tests/fixtures/calibration-2026-04-XX.csv` and the spike write-up at `docs/research/mechanic-validation-calibration-spike-2026-04-XX.md`. These cannot be auto-generated without invalidating calibration integrity, which feeds Sprint 3 ADR-052 if telemetry shows the threshold weights need tuning.

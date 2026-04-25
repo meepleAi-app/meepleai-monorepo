@@ -79,7 +79,7 @@ namespace Api.Infrastructure.Migrations
         ALTER TABLE mechanic_analyses
         ADD CONSTRAINT fk_mechanic_analyses_last_metrics
         FOREIGN KEY (last_metrics_id) REFERENCES mechanic_analysis_metrics(id)
-        DEFERRABLE INITIALLY DEFERRED ON DELETE SET NULL;
+        ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED;
     ");
         }
 

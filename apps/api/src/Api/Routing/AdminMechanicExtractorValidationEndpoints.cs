@@ -81,7 +81,7 @@ internal static class AdminMechanicExtractorValidationEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var curatorId = session!.User!.Id;
+            var curatorId = session.User!.Id;
 
             logger.LogInformation(
                 "Admin {AdminId} creating golden claim for shared game {SharedGameId} (section {Section})",
@@ -163,10 +163,10 @@ internal static class AdminMechanicExtractorValidationEndpoints
         {
             logger.LogInformation(
                 "Admin importing {TagCount} BGG tags for shared game {SharedGameId}",
-                body.Tags?.Count ?? 0,
+                body.Tags.Count,
                 sharedGameId);
 
-            var tags = (body.Tags ?? Array.Empty<BggTagInput>())
+            var tags = body.Tags
                 .Select(t => new GoldenBggTagDto(t.Name, t.Category))
                 .ToList();
 
@@ -222,7 +222,7 @@ internal static class AdminMechanicExtractorValidationEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var actorId = session!.User!.Id;
+            var actorId = session.User!.Id;
 
             logger.LogInformation(
                 "Admin {AdminId} overriding certification for mechanic analysis {AnalysisId}",
@@ -336,7 +336,7 @@ internal static class AdminMechanicExtractorValidationEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var actorId = session!.User!.Id;
+            var actorId = session.User!.Id;
 
             logger.LogInformation(
                 "Admin {AdminId} updating certification thresholds (coverage={Coverage}, pageTol={PageTol}, bgg={Bgg}, overall={Overall})",

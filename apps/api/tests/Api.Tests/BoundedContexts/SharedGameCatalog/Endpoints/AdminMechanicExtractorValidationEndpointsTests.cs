@@ -229,7 +229,7 @@ public sealed class AdminMechanicExtractorValidationEndpointsTests : IAsyncLifet
     }
 
     [Fact]
-    public async Task DeleteGolden_AlreadyDeactivated_Returns409()
+    public async Task DeleteGolden_AlreadyDeactivated_EfQueryFilterReturns404()
     {
         var sharedGameId = await SeedSharedGameAsync();
         var claimId = await SeedGoldenClaimAsync(sharedGameId, isDeleted: true);

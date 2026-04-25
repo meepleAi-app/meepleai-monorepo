@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
@@ -125,6 +126,24 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             .ConfigureAwait(false);
 
         return entities.Select(e => MapToDomain(e, e.Claims)).ToList();
+    }
+
+    public async Task<IReadOnlyList<Guid>> GetIdsByStatusAsync(
+        MechanicAnalysisStatus status,
+        CancellationToken cancellationToken = default)
+    {
+        // Id-only projection — no claim/citation graph hydration. Suppressed rows are included
+        // (IgnoreQueryFilters) because suppression is orthogonal to status: a Published analysis
+        // under takedown is still a candidate for metrics recalculation.
+        var ids = await DbContext.MechanicAnalyses
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(a => a.Status == (int)status)
+            .Select(a => a.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return ids;
     }
 
     public async Task<MechanicAnalysis?> FindByPromptVersionAsync(
@@ -264,6 +283,11 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
                 ? null
                 : (SuppressionRequestSource)entity.SuppressionRequestSource.Value,
             claims: domainClaims,
+            certificationStatus: (CertificationStatus)entity.CertificationStatus,
+            certifiedAt: entity.CertifiedAt,
+            certifiedByUserId: entity.CertifiedByUserId,
+            certificationOverrideReason: entity.CertificationOverrideReason,
+            lastMetricsId: entity.LastMetricsId,
             xminVersion: entity.Xmin);
     }
 
@@ -325,6 +349,11 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             SuppressionRequestSource = analysis.SuppressionRequestSource is null
                 ? null
                 : (int)analysis.SuppressionRequestSource.Value,
+            CertificationStatus = (int)analysis.CertificationStatus,
+            CertifiedAt = analysis.CertifiedAt,
+            CertifiedByUserId = analysis.CertifiedByUserId,
+            CertificationOverrideReason = analysis.CertificationOverrideReason,
+            LastMetricsId = analysis.LastMetricsId,
             Xmin = analysis.XminVersion,
             Claims = analysis.Claims.Select(MapClaimToEntity).ToList()
         };

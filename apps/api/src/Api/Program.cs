@@ -874,6 +874,7 @@ if (!isAlphaMode)
     v1Api.MapRagExecutionAdminEndpoints(); // RAG Execution replay & compare (Issue #4459)
     v1Api.MapAdminMechanicExtractorEndpoints(); // Mechanic Extractor: Variant C copyright-compliant analysis
     v1Api.MapAdminMechanicAnalysesEndpoints();  // ISSUE-524 / M1.2: AI-generated mechanic analyses (async pipeline)
+    v1Api.MapAdminMechanicExtractorValidationEndpoints(); // ADR-051 Sprint 1 / Task 32: Mechanic validation admin surface
     v1Api.MapReportingEndpoints();         // ISSUE-916: Report generation & scheduling
     v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
     v1Api.MapBggImportQueueEndpoints(); // Issue #3541: BGG import queue management (admin-only)

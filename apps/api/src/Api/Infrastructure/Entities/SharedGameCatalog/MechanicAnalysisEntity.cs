@@ -44,6 +44,15 @@ public class MechanicAnalysisEntity
     /// <summary>0=Publisher, 1=Legal, 2=Community, 3=Internal.</summary>
     public int? SuppressionRequestSource { get; set; }
 
+    // === AI comprehension certification (ADR-051 M2) ===
+    /// <summary>0=NotEvaluated, 1=Certified, 2=NotCertified.
+    /// Mirrors <c>Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects.CertificationStatus</c>.</summary>
+    public int CertificationStatus { get; set; }
+    public DateTimeOffset? CertifiedAt { get; set; }
+    public Guid? CertifiedByUserId { get; set; }
+    public string? CertificationOverrideReason { get; set; }
+    public Guid? LastMetricsId { get; set; }
+
     // === Optimistic concurrency ===
     /// <summary>
     /// PostgreSQL system column <c>xmin</c> mapped as <see cref="uint"/> (xid).

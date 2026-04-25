@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
@@ -88,6 +89,14 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
     // === Children ===
 
     public IReadOnlyList<MechanicClaim> Claims => _claims.AsReadOnly();
+
+    // === AI comprehension certification (ADR-051 M2) ===
+
+    public CertificationStatus CertificationStatus { get; private set; } = CertificationStatus.NotEvaluated;
+    public DateTimeOffset? CertifiedAt { get; private set; }
+    public Guid? CertifiedByUserId { get; private set; }
+    public string? CertificationOverrideReason { get; private set; }
+    public Guid? LastMetricsId { get; private set; }
 
     /// <summary>
     /// Optimistic concurrency token — PostgreSQL's system <c>xmin</c> column value as seen at
@@ -240,6 +249,11 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
         DateTime? suppressionRequestedAt,
         SuppressionRequestSource? suppressionRequestSource,
         IEnumerable<MechanicClaim> claims,
+        CertificationStatus certificationStatus = CertificationStatus.NotEvaluated,
+        DateTimeOffset? certifiedAt = null,
+        Guid? certifiedByUserId = null,
+        string? certificationOverrideReason = null,
+        Guid? lastMetricsId = null,
         uint xminVersion = 0)
     {
         ArgumentNullException.ThrowIfNull(claims);
@@ -271,7 +285,12 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
             SuppressedBy = suppressedBy,
             SuppressionReason = suppressionReason,
             SuppressionRequestedAt = suppressionRequestedAt,
-            SuppressionRequestSource = suppressionRequestSource
+            SuppressionRequestSource = suppressionRequestSource,
+            CertificationStatus = certificationStatus,
+            CertifiedAt = certifiedAt,
+            CertifiedByUserId = certifiedByUserId,
+            CertificationOverrideReason = certificationOverrideReason,
+            LastMetricsId = lastMetricsId
         };
 
         foreach (var claim in claims)
@@ -619,6 +638,136 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
             previous,
             newCapUsd,
             CostCapOverrideReason));
+    }
+
+    // === AI comprehension certification methods (ADR-051 M2) ===
+
+    /// <summary>
+    /// Syncs certification state from a freshly computed <see cref="MechanicAnalysisMetrics"/>
+    /// snapshot. Should be called by the application layer after each metrics computation run.
+    /// </summary>
+    public void ApplyMetricsResult(MechanicAnalysisMetrics metrics)
+    {
+        ArgumentNullException.ThrowIfNull(metrics);
+        if (metrics.MechanicAnalysisId != Id) throw new ArgumentException("Metrics do not belong to this analysis.", nameof(metrics));
+        LastMetricsId = metrics.Id;
+        CertificationStatus = metrics.CertificationStatus;
+        CertifiedAt = metrics.CertificationStatus == CertificationStatus.Certified ? metrics.ComputedAt : null;
+        CertifiedByUserId = null;
+        CertificationOverrideReason = null;
+    }
+
+    /// <summary>
+    /// Raises <see cref="MechanicAnalysisCertifiedEvent"/> for the automatic (non-override)
+    /// certification path (ADR-051 M2). Must be called only after <see cref="ApplyMetricsResult"/>
+    /// has synced <see cref="CertificationStatus"/> to <see cref="CertificationStatus.Certified"/>
+    /// from a metrics computation that passed the configured thresholds.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This overload exists because <see cref="AggregateRoot{TId}.AddDomainEvent"/> is
+    /// <c>protected</c>: the application handler cannot raise the event directly, so the
+    /// aggregate exposes a narrow method that encodes the automatic path's invariants
+    /// (<c>WasOverride=false</c>, no override reason, no human actor) and delegates the
+    /// event dispatch to the aggregate.
+    /// </para>
+    /// <para>
+    /// <see cref="CertifiedByUserId"/> is <see cref="Guid.Empty"/> for the automatic path — there
+    /// is no human actor. The override path (<see cref="CertifyViaOverride"/>) carries a real user id.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if the aggregate is not currently <see cref="CertificationStatus.Certified"/> —
+    /// the caller must apply metrics first and only invoke this method when the metrics produced
+    /// a passing score.
+    /// </exception>
+    public void RaiseAutomaticCertificationEvent(DateTimeOffset certifiedAt)
+    {
+        if (CertificationStatus != CertificationStatus.Certified)
+        {
+            throw new InvalidOperationException(
+                $"Cannot raise automatic certification event on MechanicAnalysis {Id}: " +
+                $"current CertificationStatus is {CertificationStatus}, expected Certified.");
+        }
+
+        AddDomainEvent(new MechanicAnalysisCertifiedEvent(
+            AnalysisId: Id,
+            SharedGameId: SharedGameId,
+            WasOverride: false,
+            OverrideReason: null,
+            CertifiedByUserId: Guid.Empty,
+            CertifiedAt: certifiedAt));
+    }
+
+    /// <summary>
+    /// Admin escalation path: certifies the analysis despite failing automated thresholds.
+    /// Requires a justification of 20..500 characters and prior metrics to have been applied.
+    /// </summary>
+    public void CertifyViaOverride(string reason, Guid userId, DateTimeOffset utcNow)
+    {
+        if (string.IsNullOrWhiteSpace(reason) || reason.Length is < 20 or > 500)
+            throw new ArgumentException("Reason must be 20..500 chars.", nameof(reason));
+        if (LastMetricsId is null)
+            throw new InvalidOperationException("Cannot override without prior metrics.");
+        if (CertificationStatus == CertificationStatus.Certified)
+            throw new InvalidOperationException("Already certified.");
+
+        CertificationStatus = CertificationStatus.Certified;
+        CertifiedAt = utcNow;
+        CertifiedByUserId = userId;
+        CertificationOverrideReason = reason;
+    }
+
+    /// <summary>
+    /// Raises <see cref="MechanicAnalysisCertifiedEvent"/> for the admin-override certification
+    /// path (ADR-051 Sprint 1 / Task 24). Must be called only after <see cref="CertifyViaOverride"/>
+    /// has mutated <see cref="CertificationStatus"/> to <see cref="CertificationStatus.Certified"/>
+    /// and populated <see cref="CertifiedByUserId"/> + <see cref="CertificationOverrideReason"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Symmetric with <see cref="RaiseAutomaticCertificationEvent"/>: the event is dispatched from
+    /// the handler rather than inside <see cref="CertifyViaOverride"/> itself because the caller
+    /// owns the <c>IUnitOfWork</c> boundary — state mutation and event raise share the same
+    /// <c>SaveChangesAsync</c> commit, so either both happen or neither does.
+    /// </para>
+    /// <para>
+    /// <see cref="AggregateRoot{TId}.AddDomainEvent"/> is <c>protected</c>, so the application
+    /// handler cannot raise the event directly; this narrow method encodes the override path's
+    /// invariants (<c>WasOverride=true</c>, reason + actor id carried forward) and delegates
+    /// dispatch to the aggregate.
+    /// </para>
+    /// </remarks>
+    /// <param name="certifiedAt">Timestamp stamped on the event; the handler passes the same value
+    /// it used for <see cref="CertifyViaOverride"/> so the aggregate state and the event agree.</param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown if the aggregate is not currently <see cref="CertificationStatus.Certified"/> —
+    /// the caller must invoke <see cref="CertifyViaOverride"/> first.
+    /// </exception>
+    public void RaiseOverrideCertificationEvent(DateTimeOffset certifiedAt)
+    {
+        if (CertificationStatus != CertificationStatus.Certified)
+        {
+            throw new InvalidOperationException(
+                $"Cannot raise override certification event on MechanicAnalysis {Id}: " +
+                $"current CertificationStatus is {CertificationStatus}, expected Certified.");
+        }
+
+        if (CertifiedByUserId is null)
+        {
+            throw new InvalidOperationException(
+                $"Cannot raise override certification event on MechanicAnalysis {Id}: " +
+                $"CertifiedByUserId is null. Override path requires a real actor id — " +
+                $"call CertifyViaOverride(reason, userId, utcNow) first.");
+        }
+
+        AddDomainEvent(new MechanicAnalysisCertifiedEvent(
+            AnalysisId: Id,
+            SharedGameId: SharedGameId,
+            WasOverride: true,
+            OverrideReason: CertificationOverrideReason,
+            CertifiedByUserId: CertifiedByUserId.Value,
+            CertifiedAt: certifiedAt));
     }
 
     // === Helpers ===

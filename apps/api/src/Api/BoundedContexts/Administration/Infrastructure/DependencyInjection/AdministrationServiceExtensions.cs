@@ -170,6 +170,8 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<ISeedLayer, LivedInSeedLayer>();
         // ADR-051 Sprint 1 / Task 40: MechanicValidation golden seed (Catan ~40 claims + ~15 BGG tags)
         services.AddScoped<ISeedLayer, MechanicGoldenSeedLayer>();
+        // ADR-051 Sprint 2 / Task 3: Puerto Rico golden claims (75 claims) — BGG tags follow in Task 4.
+        services.AddScoped<ISeedLayer, BoundedContexts.SharedGameCatalog.Infrastructure.Seeding.PuertoRicoGoldenSeeder>();
         services.AddScoped<SeedOrchestrator>();
 
         // Issue #3916: AI insights service for personalized dashboard recommendations

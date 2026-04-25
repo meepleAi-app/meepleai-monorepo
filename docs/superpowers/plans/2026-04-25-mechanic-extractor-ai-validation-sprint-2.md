@@ -948,7 +948,18 @@ test('admin updates thresholds and persists', async ({ page }) => {
 
 Scenario: open dialog, paste 3 valid + 1 duplicate row, preview shows duplicate highlighted, click Insert, success toast shows "2 inserted, 1 skipped".
 
-- [ ] **Step 1: Author + commit**
+- [x] **Step 1: Author + commit**
+  - Spec authored at `apps/web/e2e/admin-mechanic-extractor-validation/bgg-import.spec.ts` with three scenarios:
+    1. **Happy path with server-reported duplicate** — paste 3 unique TSV rows, click `Insert 3 tag(s)`, server returns `{ inserted: 2, skipped: 1 }`, sonner toast surfaces both counts via `formatSuccessMessage` (`Imported 2 BGG tag(s) (1 skipped as duplicate)`), dialog closes, asserts client posted exactly the 3 parsed rows.
+    2. **In-paste duplicate folding** — paste 3 unique rows + 1 in-paste duplicate, parser folds silently (`bgg-tsv.ts` dedupe HashSet), preview shows 3 rows, POST body carries 3 rows. Confirms client-side dedupe semantics match the server's `seenInBatch` HashSet so duplicate-against-self is silent and only duplicate-against-existing surfaces in the toast.
+    3. **Malformed-line tolerance** — paste mixes valid rows with TAB-less and empty-category lines; error list surfaces "2 line(s) skipped" while the 2 well-formed rows still parse and the Insert button activates with `Insert 2 tag(s)`. Locks in the parser's permissive contract.
+  - Plan-vs-reality reconciliation: original scenario said "preview shows duplicate highlighted" — the dialog actually folds in-paste duplicates silently (per `bgg-tsv.ts` design), so the duplicate-aware path is exercised via the **server**'s `BggImportResult.Skipped` count instead. Both behaviors are now covered (scenarios 1 and 2).
+  - Stable UUID `11111111-2222-3333-4444-555555555555` used as `sharedGameId` because `sharedGamesClient.getById()` short-circuits to `null` for non-UUID inputs.
+  - `mockBggImporterRoutes(page)` stubs three endpoints: `GET /shared-games/{id}` (minimal valid `SharedGameDetail`), `GET /admin/mechanic-extractor/golden/{id}` (empty bundle), `POST /admin/mechanic-extractor/golden/{id}/bgg-tags` (`{ inserted: 2, skipped: 1 }` + captures submitted body for client-side assertions).
+  - Auth via existing `setupMockAuth(page, 'Admin', 'admin@meepleai.dev')`.
+  - `pnpm typecheck` → exit 0; `pnpm exec eslint --max-warnings 0 e2e/admin-mechanic-extractor-validation/bgg-import.spec.ts` → exit 0.
+  - Live `pnpm test:e2e` skipped per project pattern — E2E execution lives in CI; spec relies only on mocked routes so it has no infra dependency.
+  - Commit: `feat(mechanic-validation): Sprint 2 Task 28 — Playwright spec for BGG bulk import`.
 
 ---
 

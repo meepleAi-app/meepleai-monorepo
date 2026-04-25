@@ -622,7 +622,7 @@ Background service publishes `MechanicMetricsRecalculatedEvent` via existing eve
 - [x] **Step 2: Test cache key invalidated after recalc**
   - Unit tests: `MechanicMetricsRecalculatedCacheInvalidationHandlerTests` (5 cases — both tags evicted, Failed status still evicts, first-tag throw isolation, both-tags throw still swallows, null-notification guard).
   - Integration test: `MechanicRecalcBackgroundServiceIntegrationTests.ProcessNextJobAsync_OnCompletion_InvalidatesDashboardAndTrendCacheTags` — overrides the default `Mock.Of<IHybridCacheService>()` with a captured singleton, runs a real Pending → Completed tick, and verifies `RemoveByTagAsync` was called once per tag.
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit** — `be054885e` `feat(mechanic-validation): invalidate dashboard cache on recalc completion (Task 13)`
 
 ---
 
@@ -632,8 +632,11 @@ Background service publishes `MechanicMetricsRecalculatedEvent` via existing eve
 
 Sprint 1 shipped `UpdateCertificationThresholdsCommand` and `PUT /thresholds`. Verify:
 
-- [ ] **Step 1: Read** `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Commands/Validation/UpdateCertificationThresholdsHandler.cs` — confirm validation + audit trail present.
-- [ ] **Step 2: Add missing test if any**
+- [x] **Step 1: Read** `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Commands/Validation/UpdateCertificationThresholdsHandler.cs` — confirm validation + audit trail present.
+  - Handler resolves singleton via `ICertificationThresholdsConfigRepository`, builds new `CertificationThresholds` value object via factory (defense-in-depth bounds re-check), calls `config.Update(thresholds, userId)` — which mutates `Thresholds`, `UpdatedAt`, `UpdatedByUserId` on the aggregate — then `UpdateAsync` + `SaveChangesAsync`. Logs `MinCoverage/MaxPageTol/MinBgg/MinOverall + UserId` at Information.
+  - `UpdateCertificationThresholdsValidator` enforces 0..100 on three percent fields, `>= 0` on `MaxPageTolerance`, `NotEmpty` on `UserId`. Existing tests: `UpdateCertificationThresholdsHandlerTests` (constructor null guards × 3 + null-request guard + happy-path persistence ordering + out-of-bounds ArgumentException → no persist).
+- [x] **Step 2: Add missing test if any**
+  - Validator surface had no dedicated test class. Added `UpdateCertificationThresholdsValidatorTests` (12 cases: valid baseline + range violations / boundaries for `MinCoveragePct`, `MaxPageTolerance`, `MinBggMatchPct`, `MinOverallScore`, plus `UserId` empty-guard). Run: `dotnet test --filter "FullyQualifiedName~UpdateCertificationThresholdsValidatorTests"` → 12/12 passed.
 
 ---
 

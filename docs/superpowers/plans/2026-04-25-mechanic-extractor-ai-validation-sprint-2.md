@@ -693,14 +693,27 @@ Sprint 1 shipped `UpdateCertificationThresholdsCommand` and `PUT /thresholds`. V
 
 ## Phase 4 — BGG Importer UI
 
-### Task 17: Backend bulk insert command
+### Task 17: Backend bulk insert command ✅
 
 The existing `POST /golden/{sharedGameId:guid}/bgg-tags` endpoint (line 157) handles single + bulk. Verify:
 
-- [ ] **Step 1: Read existing handler** — confirm accepts `IReadOnlyList<{Category, Name}>` and returns inserted/skipped counts.
-- [ ] **Step 2: Add missing duplicate-detection** if not present (existing unique constraint `(SharedGameId, Name)` raises; handler should swallow and report skipped).
-- [ ] **Step 3: Test idempotency**
-- [ ] **Step 4: Commit**
+- [x] **Step 1: Read existing handler** — `ImportBggTagsHandler` accepts `IReadOnlyList<BggTagDto>` but returned `Tags.Count` regardless of dedup outcome (contract gap discovered). Repository `MechanicGoldenBggTagRepository.UpsertBatchAsync` already silently dedups on `(SharedGameId, Name)` and within the same batch via `seenInBatch` HashSet, but discarded the count.
+- [x] **Step 2: Plumb the count through the stack** — refactored to surface inserted/skipped split:
+  - `IMechanicGoldenBggTagRepository.UpsertBatchAsync` signature: `Task` → `Task<int>` (returns count of rows newly added to change tracker).
+  - New `BggImportResult(int Inserted, int Skipped)` record alongside `ImportBggTagsCommand`.
+  - `ImportBggTagsCommand : ICommand<int>` → `ICommand<BggImportResult>`.
+  - Handler computes `Skipped = requestedCount - insertedCount`; empty submissions short-circuit to `(0, 0)` with no repo/UoW/cache touch.
+  - Endpoint (`AdminMechanicExtractorValidationEndpoints.cs:173`) returns `Results.Ok(new { result.Inserted, result.Skipped })`.
+  - Frontend `ImportBggTagsResponseSchema` (`admin-mechanic-extractor-validation.schemas.ts`) updated from `{ upserted }` to `{ inserted, skipped }`.
+- [x] **Step 3: Test idempotency** — 9/9 `ImportBggTagsHandlerTests` green:
+  - `Handle_HappyPath_UpsertsBatchAndInvalidatesCache` — 3 new tags → `Inserted=3, Skipped=0`, cache invalidated.
+  - `Handle_PartialDuplicates_SplitsInsertedAndSkipped` (new) — 4 submitted, repo reports 2 inserted → `Inserted=2, Skipped=2`.
+  - `Handle_EmptyTagList_ReturnsZeroAndSkipsPersistence` — `(0, 0)` w/o touching repo/UoW/cache.
+  - `Handle_PersistsBeforeCacheInvalidation` — sequence `upsert → save → cache` enforced.
+  - `Handle_DuplicateNamesInInput_PassesAllToRepo` — handler passes all 3 tuples to repo (dedup is repo's responsibility); repo reports 2 inserted → `Inserted=2, Skipped=1`.
+  - 4 constructor null-guard + 1 null-command test.
+  - Integration tests: amended `UpsertBatchAsync_InsertsNewTags_AndReadsThemBack` to assert `insertedCount.Should().Be(3)`; amended `UpsertBatchAsync_IsIdempotent_OnDuplicateTagName` to assert `firstInserted=2, secondInserted=1`.
+- [x] **Step 4: Commit**
 
 ---
 

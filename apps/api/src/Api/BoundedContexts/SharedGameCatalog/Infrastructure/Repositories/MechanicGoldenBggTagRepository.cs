@@ -39,7 +39,7 @@ internal sealed class MechanicGoldenBggTagRepository : RepositoryBase, IMechanic
         return entities.Select(MapToDomain).ToList();
     }
 
-    public async Task UpsertBatchAsync(
+    public async Task<int> UpsertBatchAsync(
         Guid sharedGameId,
         IReadOnlyList<(string Name, string Category)> tags,
         CancellationToken cancellationToken = default)
@@ -48,7 +48,7 @@ internal sealed class MechanicGoldenBggTagRepository : RepositoryBase, IMechanic
 
         if (tags.Count == 0)
         {
-            return;
+            return 0;
         }
 
         // Load existing (game, name) pairs so we only insert the truly new ones.
@@ -98,6 +98,8 @@ internal sealed class MechanicGoldenBggTagRepository : RepositoryBase, IMechanic
                 .AddRangeAsync(toInsert, cancellationToken)
                 .ConfigureAwait(false);
         }
+
+        return toInsert.Count;
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)

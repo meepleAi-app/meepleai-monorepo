@@ -70,13 +70,14 @@ public sealed class MechanicGoldenBggTagRepositoryIntegrationTests : IAsyncLifet
         };
 
         // Act
-        await _repository.UpsertBatchAsync(sharedGameId, batch);
+        var insertedCount = await _repository.UpsertBatchAsync(sharedGameId, batch);
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
 
         var tags = await _repository.GetByGameAsync(sharedGameId);
 
         // Assert
+        insertedCount.Should().Be(3, "all 3 tags are new — none collide on (SharedGameId, Name)");
         tags.Should().HaveCount(3);
         tags.Select(t => t.Name).Should().BeEquivalentTo(new[]
         {
@@ -94,7 +95,7 @@ public sealed class MechanicGoldenBggTagRepositoryIntegrationTests : IAsyncLifet
     {
         // Arrange: first pass inserts 2 tags.
         var sharedGameId = await SeedSharedGameAsync();
-        await _repository.UpsertBatchAsync(sharedGameId, new[]
+        var firstInserted = await _repository.UpsertBatchAsync(sharedGameId, new[]
         {
             ("Deck Building", "Mechanism"),
             ("Fantasy", "Category"),
@@ -102,19 +103,24 @@ public sealed class MechanicGoldenBggTagRepositoryIntegrationTests : IAsyncLifet
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
 
+        firstInserted.Should().Be(2);
+
         var existingAll = await _dbContext.MechanicGoldenBggTags.AsNoTracking()
             .Where(t => t.SharedGameId == sharedGameId).ToListAsync();
         var originalIds = existingAll.Select(t => t.Id).OrderBy(x => x).ToList();
         originalIds.Should().HaveCount(2);
 
         // Act: second pass overlaps on "Deck Building" and adds a new tag.
-        await _repository.UpsertBatchAsync(sharedGameId, new[]
+        var secondInserted = await _repository.UpsertBatchAsync(sharedGameId, new[]
         {
             ("Deck Building", "Mechanism"),   // duplicate — must be skipped, not raise unique violation
             ("Area Control", "Mechanism"),    // new
         });
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
+
+        // Assert: only the new tag was added; the duplicate was skipped silently.
+        secondInserted.Should().Be(1, "second pass had 1 new tag and 1 duplicate of an existing row");
 
         // Assert: tag count is 3 (2 original + 1 new), original rows untouched.
         var afterAll = await _dbContext.MechanicGoldenBggTags.AsNoTracking()

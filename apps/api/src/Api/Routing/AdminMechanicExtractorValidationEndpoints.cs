@@ -170,11 +170,11 @@ internal static class AdminMechanicExtractorValidationEndpoints
                 .Select(t => new GoldenBggTagDto(t.Name, t.Category))
                 .ToList();
 
-            var upserted = await mediator
+            var result = await mediator
                 .Send(new ImportBggTagsCommand(sharedGameId, tags), ct)
                 .ConfigureAwait(false);
 
-            return Results.Ok(new { Upserted = upserted });
+            return Results.Ok(new { result.Inserted, result.Skipped });
         })
         .WithName("AdminImportBggTagsForGolden")
         .WithSummary("Bulk-import BoardGameGeek mechanic tags (upsert)")

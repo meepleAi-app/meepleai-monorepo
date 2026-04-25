@@ -13,20 +13,36 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.Golden;
 internal sealed record BggTagDto(string Name, string Category);
 
 /// <summary>
+/// Result of <see cref="ImportBggTagsCommand"/> (ADR-051 Sprint 2 / Task 17). Splits the
+/// submitted batch into newly inserted rows and rows skipped due to either an existing
+/// <c>(shared_game_id, name)</c> pair or a within-batch duplicate.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <see cref="Inserted"/> + <see cref="Skipped"/> equals <c>command.Tags.Count</c> for every
+/// non-empty batch — the BGG importer UI uses this split to render "Imported N tags
+/// (M skipped as duplicates)" telemetry without round-tripping back to the server.
+/// </para>
+/// <para>
+/// Empty submissions return <c>(0, 0)</c>.
+/// </para>
+/// </remarks>
+internal sealed record BggImportResult(int Inserted, int Skipped);
+
+/// <summary>
 /// Command to bulk-import BoardGameGeek mechanic tags for a shared game
-/// (ADR-051 Sprint 1 / Task 22). Tags feed golden-claim seeding and scoring.
+/// (ADR-051 Sprint 1 / Task 22, refined in Sprint 2 / Task 17 to surface
+/// inserted/skipped counts). Tags feed golden-claim seeding and scoring.
 /// </summary>
 /// <remarks>
 /// <para>
 /// Semantics are additive/upsert: existing tags not present in <see cref="Tags"/> are left
 /// untouched, and new tags are appended. Duplicate (shared_game_id, name) pairs are deduped
-/// at the repository layer.
+/// at the repository layer — both against existing rows and within the same batch.
 /// </para>
 /// <para>
-/// The return value is the number of tags submitted by the caller (i.e. <c>Tags.Count</c>)
-/// rather than an insert delta — the underlying repository does not surface a count of newly
-/// inserted rows vs pre-existing ones, so the command contract reports "how many tags were
-/// requested for upsert".
+/// The result is a <see cref="BggImportResult"/> splitting the submitted batch into new
+/// inserts and skipped duplicates, so the importer UI can render meaningful feedback.
 /// </para>
 /// </remarks>
 /// <param name="SharedGameId">The shared game the tag batch belongs to.</param>
@@ -34,4 +50,4 @@ internal sealed record BggTagDto(string Name, string Category);
 internal sealed record ImportBggTagsCommand(
     Guid SharedGameId,
     IReadOnlyList<BggTagDto> Tags
-) : ICommand<int>;
+) : ICommand<BggImportResult>;

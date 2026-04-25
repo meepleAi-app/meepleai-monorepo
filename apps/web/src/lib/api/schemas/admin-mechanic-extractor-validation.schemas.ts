@@ -141,9 +141,15 @@ export const CreateGoldenClaimResponseSchema = z.object({
 });
 export type CreateGoldenClaimResponse = z.infer<typeof CreateGoldenClaimResponseSchema>;
 
-/** Response for `POST /golden/{sharedGameId}/bgg-tags` — `{ Upserted: int }`. */
+/**
+ * Response for `POST /golden/{sharedGameId}/bgg-tags` — `{ Inserted, Skipped }`
+ * (Sprint 2 / Task 17). `Inserted + Skipped == request.Tags.length` for non-empty
+ * batches; empty submissions return `{ Inserted: 0, Skipped: 0 }`. The importer UI
+ * surfaces both counts so duplicates are not silently lost.
+ */
 export const ImportBggTagsResponseSchema = z.object({
-  upserted: z.number().int(),
+  inserted: z.number().int(),
+  skipped: z.number().int(),
 });
 export type ImportBggTagsResponse = z.infer<typeof ImportBggTagsResponseSchema>;
 

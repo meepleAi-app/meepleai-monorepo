@@ -756,10 +756,15 @@ Then errors = ["Line 1: expected TAB separator"]
 
 ---
 
-### Task 19: Mount on golden detail page
+### Task 19: Mount on golden detail page ✅
 
-- [ ] **Step 1: Modify** `apps/web/src/app/admin/(dashboard)/knowledge-base/mechanic-extractor/golden/[gameId]/page.tsx` — add "Import BGG tags" trigger button next to existing claim list.
-- [ ] **Step 2: Commit**
+- [x] **Step 1: Modify** `apps/web/src/app/admin/(dashboard)/knowledge-base/mechanic-extractor/golden/[gameId]/page.tsx`
+  - Added "Import BGG tags" outline `Button` with `ClipboardPasteIcon`, sitting next to "New claim" in a flex action group at the top-right of the header.
+  - Renders `<BggImporterPasteDialog>` controlled by local `bggImporterOpen` state outside the header (so the dialog portal isn't tied to the action group's flex layout).
+  - Trigger `data-testid="bgg-importer-trigger"` for the Phase 8 E2E.
+  - Feature-flag gate already in place at the top of the page (`NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED === 'true'` → `notFound()` otherwise) — no extra guard needed for the new button.
+  - Typecheck clean (0 errors), no pre-existing-test regressions.
+- [x] **Step 2: Commit**
 
 ---
 

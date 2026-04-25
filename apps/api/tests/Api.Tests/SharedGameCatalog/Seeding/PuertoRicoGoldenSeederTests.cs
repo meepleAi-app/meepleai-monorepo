@@ -1,10 +1,14 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.Golden;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Seeding;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Seeders;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -200,10 +204,7 @@ public sealed class PuertoRicoGoldenSeederTests : IAsyncLifetime
                 return id;
             });
 
-        var services = new ServiceCollection()
-            .AddSingleton<IConfiguration>(new ConfigurationBuilder().Build())
-            .AddSingleton<IMediator>(mediator.Object)
-            .BuildServiceProvider();
+        var services = BuildServices(mediator.Object, _dbContext);
 
         var context = new SeedContext(
             Profile: SeedProfile.Dev,
@@ -272,10 +273,7 @@ public sealed class PuertoRicoGoldenSeederTests : IAsyncLifetime
                 return Guid.NewGuid();
             });
 
-        var services = new ServiceCollection()
-            .AddSingleton<IConfiguration>(new ConfigurationBuilder().Build())
-            .AddSingleton<IMediator>(mediator.Object)
-            .BuildServiceProvider();
+        var services = BuildServices(mediator.Object, _dbContext);
 
         var context = new SeedContext(
             Profile: SeedProfile.Dev,
@@ -351,5 +349,186 @@ public sealed class PuertoRicoGoldenSeederTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
         return sharedGameId;
+    }
+
+    /// <summary>
+    /// Builds the DI container the seeder consumes via <c>SeedContext.Services</c>.
+    /// Registers the real <see cref="MechanicGoldenBggTagRepository"/> (Task 4) so the
+    /// BGG-tags phase can persist against the integration-test Postgres.
+    /// </summary>
+    private static IServiceProvider BuildServices(IMediator mediator, MeepleAiDbContext dbContext)
+    {
+        var eventCollector = new Mock<IDomainEventCollector>();
+        eventCollector
+            .Setup(e => e.GetAndClearEvents())
+            .Returns(new List<IDomainEvent>().AsReadOnly());
+
+        return new ServiceCollection()
+            .AddSingleton<IConfiguration>(new ConfigurationBuilder().Build())
+            .AddSingleton(mediator)
+            .AddSingleton(dbContext)
+            .AddSingleton(eventCollector.Object)
+            .AddSingleton<IMechanicGoldenBggTagRepository, MechanicGoldenBggTagRepository>()
+            .BuildServiceProvider();
+    }
+
+    // ============================================================
+    // Task 4: BGG tags seeder
+    // ============================================================
+
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    public void LoadEmbeddedBggTagsForTest_ReturnsParsedFixture()
+    {
+        var tags = PuertoRicoGoldenSeeder.LoadEmbeddedBggTagsForTest();
+
+        tags.Should().NotBeNull();
+        tags.Count.Should().BeGreaterThanOrEqualTo(
+            10,
+            "Sprint 2 Task 4 fixture must contain at least 10 BGG tags for Puerto Rico");
+
+        tags.Should().AllSatisfy(t =>
+        {
+            t.Name.Should().NotBeNullOrWhiteSpace();
+            t.Category.Should().NotBeNullOrWhiteSpace();
+        });
+    }
+
+    [Fact]
+    [Trait("Category", TestCategories.Integration)]
+    public async Task SeedAsync_PopulatesBggTagsTable()
+    {
+        // Arrange.
+        var prSharedGameId = await SeedPuertoRicoSharedGameAsync();
+        var systemUserId = Guid.NewGuid();
+        await SeedSystemUserAsync(systemUserId);
+
+        // Wire a mediator stub that persists claims directly so the claims phase
+        // succeeds end-to-end (mirrors SeedAsync_PopulatesAllClaims_AndIsIdempotent).
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(
+                It.IsAny<CreateMechanicGoldenClaimCommand>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<CreateMechanicGoldenClaimCommand, CancellationToken>(async (cmd, ct) =>
+            {
+                var id = Guid.NewGuid();
+                _dbContext.Set<MechanicGoldenClaimEntity>().Add(new MechanicGoldenClaimEntity
+                {
+                    Id = id,
+                    SharedGameId = cmd.SharedGameId,
+                    Section = (int)cmd.Section,
+                    Statement = cmd.Statement,
+                    ExpectedPage = cmd.ExpectedPage,
+                    SourceQuote = cmd.SourceQuote,
+                    KeywordsJson = "[]",
+                    CuratorUserId = cmd.CuratorUserId,
+                    CreatedAt = DateTime.UtcNow,
+                });
+                await _dbContext.SaveChangesAsync(ct);
+                return id;
+            });
+
+        var services = BuildServices(mediator.Object, _dbContext);
+
+        var context = new SeedContext(
+            Profile: SeedProfile.Dev,
+            DbContext: _dbContext,
+            Services: services,
+            Logger: NullLogger.Instance,
+            SystemUserId: systemUserId);
+
+        var seeder = new PuertoRicoGoldenSeeder();
+
+        // Act.
+        await seeder.SeedAsync(context, default);
+
+        // Assert: Verify tags persisted via a fresh query (clear tracker so any
+        // unflushed state is excluded).
+        _dbContext.ChangeTracker.Clear();
+
+        var tagCount = await _dbContext.MechanicGoldenBggTags
+            .AsNoTracking()
+            .CountAsync(t => t.SharedGameId == prSharedGameId);
+
+        var fixtureSize = PuertoRicoGoldenSeeder.LoadEmbeddedBggTagsForTest().Count;
+        tagCount.Should().Be(fixtureSize, "all fixture tags should land in the DB on first run");
+        tagCount.Should().BeGreaterThanOrEqualTo(10, "Task 4 spec requires ≥10 BGG tags");
+
+        // Spot-check a known mechanism + category + family tag (from bgg-tags.json).
+        var allTags = await _dbContext.MechanicGoldenBggTags
+            .AsNoTracking()
+            .Where(t => t.SharedGameId == prSharedGameId)
+            .ToListAsync();
+
+        allTags.Should().Contain(t => t.Name == "Worker Placement" && t.Category == "Mechanism");
+        allTags.Should().Contain(t => t.Name == "Economic" && t.Category == "Category");
+        allTags.Should().Contain(t => t.Name == "Country: Puerto Rico" && t.Category == "Family");
+    }
+
+    [Fact]
+    [Trait("Category", TestCategories.Integration)]
+    public async Task SeedAsync_BggTagsAreIdempotent()
+    {
+        // Arrange.
+        var prSharedGameId = await SeedPuertoRicoSharedGameAsync();
+        var systemUserId = Guid.NewGuid();
+        await SeedSystemUserAsync(systemUserId);
+
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(
+                It.IsAny<CreateMechanicGoldenClaimCommand>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<CreateMechanicGoldenClaimCommand, CancellationToken>(async (cmd, ct) =>
+            {
+                var id = Guid.NewGuid();
+                _dbContext.Set<MechanicGoldenClaimEntity>().Add(new MechanicGoldenClaimEntity
+                {
+                    Id = id,
+                    SharedGameId = cmd.SharedGameId,
+                    Section = (int)cmd.Section,
+                    Statement = cmd.Statement,
+                    ExpectedPage = cmd.ExpectedPage,
+                    SourceQuote = cmd.SourceQuote,
+                    KeywordsJson = "[]",
+                    CuratorUserId = cmd.CuratorUserId,
+                    CreatedAt = DateTime.UtcNow,
+                });
+                await _dbContext.SaveChangesAsync(ct);
+                return id;
+            });
+
+        var services = BuildServices(mediator.Object, _dbContext);
+
+        var context = new SeedContext(
+            Profile: SeedProfile.Dev,
+            DbContext: _dbContext,
+            Services: services,
+            Logger: NullLogger.Instance,
+            SystemUserId: systemUserId);
+
+        var seeder = new PuertoRicoGoldenSeeder();
+
+        // Act: first run.
+        await seeder.SeedAsync(context, default);
+        _dbContext.ChangeTracker.Clear();
+
+        var firstCount = await _dbContext.MechanicGoldenBggTags
+            .AsNoTracking()
+            .CountAsync(t => t.SharedGameId == prSharedGameId);
+
+        var fixtureSize = PuertoRicoGoldenSeeder.LoadEmbeddedBggTagsForTest().Count;
+        firstCount.Should().Be(fixtureSize, "first run should insert the entire fixture");
+
+        // Act: second run — must be a no-op for tags (UpsertBatchAsync skips existing names).
+        await seeder.SeedAsync(context, default);
+        _dbContext.ChangeTracker.Clear();
+
+        var secondCount = await _dbContext.MechanicGoldenBggTags
+            .AsNoTracking()
+            .CountAsync(t => t.SharedGameId == prSharedGameId);
+
+        secondCount.Should().Be(firstCount, "second run must not duplicate BGG tags");
     }
 }

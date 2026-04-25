@@ -110,6 +110,9 @@
     <!-- ADR-051 Sprint 2 / Task 3: Puerto Rico golden claims fixture (lives at repo root data/) -->
     <EmbeddedResource Include="..\..\..\..\data\rulebook\golden\puerto-rico\golden-claims.json"
                       LogicalName="Api.BoundedContexts.SharedGameCatalog.Infrastructure.Seeding.Data.puerto-rico-golden-claims.json" />
+    <!-- ADR-051 Sprint 2 / Task 4: Puerto Rico BGG tags fixture (lives at repo root data/) -->
+    <EmbeddedResource Include="..\..\..\..\data\rulebook\golden\puerto-rico\bgg-tags.json"
+                      LogicalName="Api.BoundedContexts.SharedGameCatalog.Infrastructure.Seeding.Data.puerto-rico-bgg-tags.json" />
   </ItemGroup>
   <!-- MeepleDev: exclude dev tools from Release builds -->
   <ItemGroup Condition="'$(Configuration)' == 'Release'">

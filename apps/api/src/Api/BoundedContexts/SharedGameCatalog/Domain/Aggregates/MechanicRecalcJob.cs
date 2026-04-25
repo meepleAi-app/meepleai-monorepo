@@ -99,6 +99,54 @@ public sealed class MechanicRecalcJob : AggregateRoot<Guid>
             createdAt: DateTimeOffset.UtcNow);
     }
 
+    /// <summary>
+    /// Rebuilds an aggregate instance from persisted state without invoking any lifecycle
+    /// transitions. Intended for repository hydration only — the runtime invariants are
+    /// presumed to have been validated when the aggregate was first persisted.
+    /// </summary>
+    /// <remarks>
+    /// Mirrors the <c>MechanicAnalysis.Reconstitute</c> pattern used by sibling repositories.
+    /// Does NOT raise domain events.
+    /// </remarks>
+    public static MechanicRecalcJob Reconstitute(
+        Guid id,
+        RecalcJobStatus status,
+        Guid triggeredByUserId,
+        int total,
+        int processed,
+        int failed,
+        int skipped,
+        int consecutiveFailures,
+        string? lastError,
+        Guid? lastProcessedAnalysisId,
+        bool cancellationRequested,
+        DateTimeOffset createdAt,
+        DateTimeOffset? startedAt,
+        DateTimeOffset? completedAt,
+        DateTimeOffset? heartbeatAt)
+    {
+        var job = new MechanicRecalcJob
+        {
+            // Base Entity<Guid>.Id has a protected setter, accessible from this derived type.
+            Id = id,
+            Status = status,
+            TriggeredByUserId = triggeredByUserId,
+            Total = total,
+            Processed = processed,
+            Failed = failed,
+            Skipped = skipped,
+            ConsecutiveFailures = consecutiveFailures,
+            LastError = lastError,
+            LastProcessedAnalysisId = lastProcessedAnalysisId,
+            CancellationRequested = cancellationRequested,
+            CreatedAt = createdAt,
+            StartedAt = startedAt,
+            CompletedAt = completedAt,
+            HeartbeatAt = heartbeatAt,
+        };
+        return job;
+    }
+
     // ===================================================
     // Lifecycle transitions
     // ===================================================

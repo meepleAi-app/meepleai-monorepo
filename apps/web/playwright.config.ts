@@ -291,6 +291,13 @@ export default defineConfig({
             // Only active in development (guarded by NODE_ENV !== 'production' in proxy).
             env: {
               PLAYWRIGHT_AUTH_BYPASS: 'true',
+              // ADR-051 M2.1 — Mechanic Extractor AI Validation surfaces are gated by
+              // this Next.js public flag and 404 via `notFound()` when off. E2E specs
+              // under `e2e/admin-mechanic-extractor-validation/` exercise those surfaces
+              // and need the flag enabled for both `next dev` (read at runtime) and
+              // `next start` (inlined at build time — flag must be present when CI runs
+              // `pnpm build` ahead of `next start`).
+              NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED: 'true',
             },
           },
 });

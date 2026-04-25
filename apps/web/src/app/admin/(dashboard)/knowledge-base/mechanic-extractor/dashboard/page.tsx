@@ -9,10 +9,14 @@
 
 'use client';
 
+import { useState } from 'react';
+
 import { notFound } from 'next/navigation';
 
 import { DashboardSummaryCards } from '@/components/admin/mechanic-extractor/validation/DashboardSummaryCards';
 import { DashboardTable } from '@/components/admin/mechanic-extractor/validation/DashboardTable';
+import { RecalcAllButton } from '@/components/admin/mechanic-extractor/validation/RecalcAllButton';
+import { RecalcProgressDrawer } from '@/components/admin/mechanic-extractor/validation/RecalcProgressDrawer';
 import { ThresholdsConfigForm } from '@/components/admin/mechanic-extractor/validation/ThresholdsConfigForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
@@ -33,17 +37,29 @@ export default function MechanicValidationDashboardPage() {
     error: thresholdsError,
   } = useThresholds();
 
+  // Active mass-recalc job id (Sprint 2 Task 22). When non-null, the
+  // RecalcProgressDrawer is mounted and polls /admin/mechanic-validation/
+  // recalc-jobs/{id} every 2s until the worker reports a terminal status.
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+
   return (
     <div className="mx-auto max-w-[1100px] space-y-6">
-      <div>
-        <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-          AI Comprehension Validation — Dashboard
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Certification status across all shared games. Scores are computed from the latest metrics
-          snapshot per game.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
+            AI Comprehension Validation — Dashboard
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Certification status across all shared games. Scores are computed from the latest
+            metrics snapshot per game.
+          </p>
+        </div>
+        <RecalcAllButton onJobStarted={id => setActiveJobId(id)} />
       </div>
+
+      {activeJobId && (
+        <RecalcProgressDrawer jobId={activeJobId} onClose={() => setActiveJobId(null)} />
+      )}
 
       {isLoading && (
         <div

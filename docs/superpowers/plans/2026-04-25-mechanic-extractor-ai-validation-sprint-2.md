@@ -818,16 +818,14 @@ Drawer behavior:
 
 ### Task 22: Mount on dashboard page
 
-- [ ] **Step 1: Modify** `apps/web/src/app/admin/(dashboard)/knowledge-base/mechanic-extractor/dashboard/page.tsx`:
-
-```tsx
-{isMechanicValidationEnabled() && session.user.role === 'Admin' && (
-  <RecalcAllButton onJobStarted={(id) => setActiveJobId(id)} />
-)}
-{activeJobId && <RecalcProgressDrawer jobId={activeJobId} onClose={() => setActiveJobId(null)} />}
-```
-
-- [ ] **Step 2: Commit**
+- [x] **Step 1: Modify** `apps/web/src/app/admin/(dashboard)/knowledge-base/mechanic-extractor/dashboard/page.tsx`:
+  - Imported `useState`, `RecalcAllButton`, `RecalcProgressDrawer`.
+  - Added `const [activeJobId, setActiveJobId] = useState<string | null>(null);`.
+  - Wrapped the page header in `<div className="flex items-start justify-between gap-4">` so the button anchors to the top-right of the title block.
+  - Mounted `<RecalcAllButton onJobStarted={id => setActiveJobId(id)} />` next to the heading; the drawer renders below the header when `activeJobId !== null`: `{activeJobId && <RecalcProgressDrawer jobId={activeJobId} onClose={() => setActiveJobId(null)} />}`.
+  - Admin gate is **not** duplicated on the page — `apps/web/src/app/admin/(dashboard)/layout.tsx:36` already wraps the entire route group in `<RequireRole allowedRoles={['Admin']}>`. The feature flag is also already gated at the top of the page (`if (process.env.NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED !== FEATURE_FLAG) notFound()`), so the plan's `isMechanicValidationEnabled() && session.user.role === 'Admin'` guard is implicitly satisfied — if the page renders at all, both checks pass.
+  - Typecheck clean.
+- [x] **Step 2: Commit**
 
 ---
 

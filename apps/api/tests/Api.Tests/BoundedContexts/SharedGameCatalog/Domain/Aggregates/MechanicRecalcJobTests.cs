@@ -76,6 +76,30 @@ public sealed class MechanicRecalcJobTests
             .Which.CurrentStatus.Should().Be(RecalcJobStatus.Running);
     }
 
+    [Fact]
+    public void MarkRunning_FromCompleted_Throws()
+    {
+        var job = RunningJob();
+        job.Complete();
+
+        var act = () => job.MarkRunning(total: 5);
+
+        act.Should().Throw<InvalidMechanicRecalcJobTransitionException>()
+            .Which.CurrentStatus.Should().Be(RecalcJobStatus.Completed);
+    }
+
+    [Fact]
+    public void MarkRunning_FromFailed_Throws()
+    {
+        var job = RunningJob();
+        job.Fail("reason");
+
+        var act = () => job.MarkRunning(total: 5);
+
+        act.Should().Throw<InvalidMechanicRecalcJobTransitionException>()
+            .Which.CurrentStatus.Should().Be(RecalcJobStatus.Failed);
+    }
+
     // ============================================================
     // 3. RecordSuccess: increments Processed, resets ConsecutiveFailures
     // ============================================================

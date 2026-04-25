@@ -21,6 +21,12 @@ namespace Api.Infrastructure.Migrations
     ///   truthful about actual DB schema.</item>
     /// </list>
     ///
+    /// A check constraint <c>ck_mechanic_recalc_jobs_status_range</c> enforces
+    /// <c>status BETWEEN 0 AND 4</c> at the database level. The EF entity configuration
+    /// declares this constraint and the model snapshot records it; the raw SQL DDL must
+    /// emit it inline so the live schema matches the snapshot (otherwise EF reports
+    /// phantom drift on the next <c>migrations add</c>).
+    ///
     /// The domain aggregate (<c>MechanicRecalcJob</c>), EF entity, DbSet registration, and
     /// repository are introduced in Tasks 6–7. This migration is forward-only via raw SQL.
     /// Down() drops the table (cascades both indexes automatically).
@@ -46,7 +52,8 @@ namespace Api.Infrastructure.Migrations
             created_at timestamptz NOT NULL DEFAULT now(),
             started_at timestamptz NULL,
             completed_at timestamptz NULL,
-            heartbeat_at timestamptz NULL
+            heartbeat_at timestamptz NULL,
+            CONSTRAINT ck_mechanic_recalc_jobs_status_range CHECK (status BETWEEN 0 AND 4)
         );
         CREATE INDEX ix_mechanic_recalc_jobs_status_created
             ON mechanic_recalc_jobs(status, created_at)

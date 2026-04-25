@@ -14,7 +14,7 @@ namespace Api.Infrastructure.Migrations
         ALTER TABLE mechanic_analyses
         ADD COLUMN certification_status integer NOT NULL DEFAULT 0,
         ADD COLUMN certified_at timestamptz NULL,
-        ADD COLUMN certified_by_user_id uuid NULL REFERENCES ""Users""(""Id"") ON DELETE SET NULL,
+        ADD COLUMN certified_by_user_id uuid NULL REFERENCES users(""Id"") ON DELETE SET NULL,
         ADD COLUMN certification_override_reason text NULL,
         ADD COLUMN last_metrics_id uuid NULL;
 
@@ -27,7 +27,7 @@ namespace Api.Infrastructure.Migrations
             source_quote text NOT NULL CHECK (length(source_quote) BETWEEN 1 AND 1000),
             keywords text[] NOT NULL DEFAULT '{}',
             embedding vector(768) NULL,
-            curator_user_id uuid NOT NULL REFERENCES ""Users""(""Id"") ON DELETE RESTRICT,
+            curator_user_id uuid NOT NULL REFERENCES users(""Id"") ON DELETE RESTRICT,
             created_at timestamptz NOT NULL DEFAULT now(),
             updated_at timestamptz NOT NULL DEFAULT now(),
             deleted_at timestamptz NULL
@@ -71,7 +71,7 @@ namespace Api.Infrastructure.Migrations
             min_bgg_match_pct numeric(5,2) NOT NULL,
             min_overall_score numeric(5,2) NOT NULL,
             updated_at timestamptz NOT NULL DEFAULT now(),
-            updated_by_user_id uuid NULL REFERENCES ""Users""(""Id"") ON DELETE SET NULL
+            updated_by_user_id uuid NULL REFERENCES users(""Id"") ON DELETE SET NULL
         );
         INSERT INTO certification_thresholds_config (id, min_coverage_pct, max_page_tolerance, min_bgg_match_pct, min_overall_score)
         VALUES (1, 70, 10, 80, 60) ON CONFLICT DO NOTHING;

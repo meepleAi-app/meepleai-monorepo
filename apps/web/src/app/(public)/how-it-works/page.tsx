@@ -73,7 +73,7 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-      <section className="flex flex-col sm:flex-row gap-3 justify-center items-center py-8">
+      <section className="max-w-5xl mx-auto px-4 py-8 flex flex-col sm:flex-row gap-3 justify-center items-center">
         <Btn variant="primary" asChild>
           <Link href="/about">{t('pages.howItWorks.aboutCta')}</Link>
         </Btn>

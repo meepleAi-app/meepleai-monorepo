@@ -770,23 +770,22 @@ Then errors = ["Line 1: expected TAB separator"]
 
 ## Phase 5 — Recalc-All UI
 
-### Task 20: API client extensions
+### Task 20: API client extensions ✅
 
-**Files:**
-- Modify: `apps/web/src/lib/api/mechanic-validation.ts`
+**Files actually touched** (plan called out a legacy path; the modern client tree is structured differently):
+- Modify: `apps/web/src/lib/api/clients/admin/adminMechanicExtractorValidationClient.ts`
+- Modify: `apps/web/src/lib/api/schemas/admin-mechanic-extractor-validation.schemas.ts`
 
-```ts
-export async function enqueueRecalcAll(): Promise<{ jobId: string }> {
-  const res = await httpClient.post('/api/v1/admin/mechanic-extractor/metrics/recalculate-all');
-  return res.data;
-}
-export async function getRecalcJobStatus(jobId: string): Promise<RecalcJobStatusDto> {...}
-export async function cancelRecalcJob(jobId: string): Promise<void> {...}
-```
-
-- [ ] **Step 1: Add functions + types**
-- [ ] **Step 2: Unit test mocked**
-- [ ] **Step 3: Commit**
+- [x] **Step 1: Add functions + types**
+  - **Schemas** — added `RecalcJobStatusSchema` (string enum: Pending/Running/Completed/Failed/Cancelled), `RecalcJobStatusDtoSchema` (mirrors backend `RecalcJobStatusDto.cs` field-for-field — id, status, triggeredByUserId, total/processed/failed/skipped, consecutiveFailures, lastError, cancellationRequested, createdAt + nullable startedAt/completedAt/heartbeatAt, etaSeconds), and `EnqueueRecalcAllResponseSchema` (`{ jobId: uuid }`).
+  - **Client** — added two route constants (`recalcJobById(jobId)` and `cancelRecalcJob(jobId)`) and three methods on `api.admin`:
+    - `enqueueRecalcAll()` — `POST /metrics/recalculate-all`, returns `{ jobId }` from the 202 body.
+    - `getRecalcJobStatus(jobId)` — `GET /metrics/recalc-jobs/{id}`, returns the full `RecalcJobStatusDto` (uncached on the backend by design).
+    - `cancelRecalcJob(jobId)` — `POST /metrics/recalc-jobs/{id}/cancel`, void on 204; conflict (409) propagates as a thrown HTTP error from `httpClient.post`.
+  - **Removed**: the stale Sprint 1 `recalculateAllMetrics` method + `RecalculateAllMetricsResponseSchema` (`{ processed }`) — the backend endpoint is now async (Task 10), so the old `{ processed }` shape can never deserialize. Confirmed via grep that no consumer referenced either symbol.
+  - Decision: kept `httpClient.post(url, {}, schema)` instead of a hypothetical `httpClient.accepted(...)` helper — the client's existing post helper already returns the parsed body, and 202 vs 200 status discrimination is irrelevant here (we only consume the body).
+- [x] **Step 2: Unit test mocked** — repo convention is zero client-level tests; every client method is covered through its hook (see Task 18's `useImportBggTags.test.tsx`). Behavioral coverage for these three methods lands as part of Task 21 hook tests (`useEnqueueRecalcAll`, `useRecalcJobStatus` polling, `useCancelRecalcJob`). Schema-level guarantees come for free from the Zod parsers wired into `httpClient.get/post`.
+- [x] **Step 3: Commit**
 
 ---
 

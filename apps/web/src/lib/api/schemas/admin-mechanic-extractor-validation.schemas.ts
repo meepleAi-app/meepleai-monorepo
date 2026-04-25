@@ -169,11 +169,72 @@ export const OverrideCertificationRequestSchema = z.object({
 });
 export type OverrideCertificationRequest = z.infer<typeof OverrideCertificationRequestSchema>;
 
-/** Response for `POST /metrics/recalculate-all` — `{ Processed: int }`. */
-export const RecalculateAllMetricsResponseSchema = z.object({
-  processed: z.number().int(),
+// ──────────────────────────────────────────────────────────────────────────
+// Recalc-all async job (Sprint 2 / Task 10 — async upgrade of Sprint 1 sync dispatcher)
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * Lifecycle status of a `MechanicRecalcJob` aggregate. Mirrors the
+ * `RecalcJobStatus` enum (Domain/Enums/RecalcJobStatus.cs).
+ *
+ * State machine:
+ *  - Pending → Running → Completed
+ *  - Pending → Failed
+ *  - Running → Failed
+ *  - `Cancelled` is reserved (currently unused — workers honour the
+ *    `cancellationRequested` flag and still terminate via Completed/Failed).
+ */
+export const RecalcJobStatusSchema = z.enum([
+  'Pending',
+  'Running',
+  'Completed',
+  'Failed',
+  'Cancelled',
+]);
+export type RecalcJobStatus = z.infer<typeof RecalcJobStatusSchema>;
+
+/**
+ * Response for `POST /metrics/recalculate-all` — 202 Accepted body
+ * `{ JobId: Guid }`. The endpoint also sets a `Location:` header pointing at
+ * the `GET /metrics/recalc-jobs/{id}` status URL, but the client wrapper only
+ * surfaces the body. Pollers should hit the status endpoint with this id.
+ */
+export const EnqueueRecalcAllResponseSchema = z.object({
+  jobId: z.string().uuid(),
 });
-export type RecalculateAllMetricsResponse = z.infer<typeof RecalculateAllMetricsResponseSchema>;
+export type EnqueueRecalcAllResponse = z.infer<typeof EnqueueRecalcAllResponseSchema>;
+
+/**
+ * Live status snapshot of a `MechanicRecalcJob`. Mirrors `RecalcJobStatusDto`
+ * (Application/Queries/MechanicValidation/RecalcJobStatusDto.cs). Counters
+ * are exposed raw so the client can render progress bars / per-bucket
+ * breakdowns without additional round-trips.
+ *
+ * `etaSeconds` is a server-side projection — non-null only when the job is
+ * `Running`, has at least one processed item, and has a populated
+ * `startedAt`. Treat as advisory; it is recomputed on every fetch.
+ *
+ * `lastError` carries the truncated last failure message (server caps it),
+ * paired with `consecutiveFailures` for circuit-breaker visibility.
+ */
+export const RecalcJobStatusDtoSchema = z.object({
+  id: z.string().uuid(),
+  status: RecalcJobStatusSchema,
+  triggeredByUserId: z.string().uuid(),
+  total: z.number().int(),
+  processed: z.number().int(),
+  failed: z.number().int(),
+  skipped: z.number().int(),
+  consecutiveFailures: z.number().int(),
+  lastError: z.string().nullable(),
+  cancellationRequested: z.boolean(),
+  createdAt: z.string().datetime({ offset: true }),
+  startedAt: z.string().datetime({ offset: true }).nullable(),
+  completedAt: z.string().datetime({ offset: true }).nullable(),
+  heartbeatAt: z.string().datetime({ offset: true }).nullable(),
+  etaSeconds: z.number().nullable(),
+});
+export type RecalcJobStatusDto = z.infer<typeof RecalcJobStatusDtoSchema>;
 
 // ──────────────────────────────────────────────────────────────────────────
 // Dashboard + trend

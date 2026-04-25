@@ -1,11 +1,23 @@
-// ADR-051 Sprint 2 / Task 8: Mechanic-recalc background worker metrics.
+// ADR-051 Sprint 2 / Task 8 + Task 11: Mechanic-recalc background worker metrics.
 using System.Diagnostics.Metrics;
 
 namespace Api.Observability;
 
 internal static partial class MeepleAiMetrics
 {
-    #region MechanicRecalc Metrics (ADR-051 Sprint 2 / Task 8)
+    #region MechanicRecalc Metrics (ADR-051 Sprint 2 / Task 8 + Task 11)
+
+    /// <summary>
+    /// Counter for <see cref="BoundedContexts.SharedGameCatalog.Domain.Aggregates.MechanicRecalcJob"/>
+    /// instances that have been enqueued via
+    /// <see cref="BoundedContexts.SharedGameCatalog.Application.Commands.Validation.EnqueueRecalculateAllMechanicMetricsCommand"/>.
+    /// Incremented from the command handler immediately after <c>SaveChangesAsync</c>; this counter
+    /// crossed with <see cref="JobsCompleted"/> reveals queue backlog and orphaned-job rate.
+    /// </summary>
+    public static readonly Counter<long> JobsEnqueued = Meter.CreateCounter<long>(
+        name: "meepleai.mechanic_recalc.jobs_enqueued",
+        unit: "events",
+        description: "Total mechanic-recalc jobs that have been persisted in Pending status.");
 
     /// <summary>
     /// Counter for total <see cref="BoundedContexts.SharedGameCatalog.Domain.Aggregates.MechanicRecalcJob"/>
@@ -45,6 +57,16 @@ internal static partial class MeepleAiMetrics
         name: "meepleai.mechanic_recalc.circuit_breaker_opens",
         unit: "events",
         description: "Recalc-worker circuit-breaker trips (consecutive failures >= 5).");
+
+    /// <summary>
+    /// Histogram for total wall-clock duration (in seconds) of a recalc job — measured from
+    /// <c>StartedAt</c> (set by <c>ClaimNextPendingAsync</c>) to the moment the worker records the
+    /// terminal transition. Tagged with <c>status</c> for slicing by outcome.
+    /// </summary>
+    public static readonly Histogram<double> JobDuration = Meter.CreateHistogram<double>(
+        name: "meepleai.mechanic_recalc.job_duration",
+        unit: "s",
+        description: "Wall-clock duration of a recalc job from claim to terminal transition.");
 
     #endregion
 }

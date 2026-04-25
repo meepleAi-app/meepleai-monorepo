@@ -33,7 +33,9 @@ namespace Api.Infrastructure.BackgroundServices;
 /// <para>
 /// Metrics: emits <see cref="MeepleAiMetrics.JobsCompleted"/> with a <c>status</c> tag,
 /// <see cref="MeepleAiMetrics.AnalysesProcessed"/>, <see cref="MeepleAiMetrics.AnalysesFailed"/>,
-/// and <see cref="MeepleAiMetrics.CircuitBreakerOpens"/>. All counters are static — no DI
+/// <see cref="MeepleAiMetrics.CircuitBreakerOpens"/>, and the
+/// <see cref="MeepleAiMetrics.JobDuration"/> histogram (also <c>status</c>-tagged). All counters
+/// are static — no DI
 /// injection of the metrics façade, mirroring the rest of the observability layer.
 /// </para>
 /// </remarks>
@@ -240,9 +242,17 @@ internal sealed class MechanicRecalcBackgroundService : BackgroundService
 
         await PersistAsync(job, ct).ConfigureAwait(false);
 
-        MeepleAiMetrics.JobsCompleted.Add(
-            1,
-            new KeyValuePair<string, object?>("status", job.Status.ToString()));
+        var statusTag = new KeyValuePair<string, object?>("status", job.Status.ToString());
+        MeepleAiMetrics.JobsCompleted.Add(1, statusTag);
+
+        // ADR-051 Sprint 2 / Task 11: wall-clock duration histogram from claim → terminal.
+        // StartedAt is stamped by ClaimNextPendingAsync; DateTimeOffset.UtcNow matches the
+        // aggregate's own timestamp source, so the delta reflects true worker latency.
+        if (job.StartedAt is { } startedAt)
+        {
+            var durationSeconds = (DateTimeOffset.UtcNow - startedAt).TotalSeconds;
+            MeepleAiMetrics.JobDuration.Record(durationSeconds, statusTag);
+        }
 
         _logger.LogInformation(
             "MechanicRecalcJob {JobId} finished with status {Status} (processed={Processed}, failed={Failed}, skipped={Skipped})",

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -51,6 +52,9 @@ internal sealed class EnqueueRecalculateAllMechanicMetricsHandler
 
         await _jobRepository.AddAsync(job, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // ADR-051 Sprint 2 / Task 11: track enqueue/complete crossover for backlog dashboards.
+        MeepleAiMetrics.JobsEnqueued.Add(1);
 
         _logger.LogInformation(
             "Enqueued MechanicRecalcJob {JobId} (triggered by user {UserId}).",

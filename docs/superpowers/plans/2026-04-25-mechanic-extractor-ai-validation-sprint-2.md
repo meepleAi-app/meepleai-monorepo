@@ -590,7 +590,11 @@ public partial class MeepleAiMetrics
 }
 ```
 
-- [ ] **Step 1: Create file**, verify scrape `/metrics` shows new series.
+- [x] **Step 1: Create file**, verify scrape `/metrics` shows new series.
+  - Extended existing `apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.MechanicRecalc.cs` (Task 8 file) with `JobsEnqueued` Counter + `JobDuration` Histogram (status-tagged).
+  - Wired `JobsEnqueued.Add(1)` after `SaveChangesAsync` in `EnqueueRecalculateAllMechanicMetricsHandler`.
+  - Wired `JobDuration.Record(seconds, statusTag)` in `MechanicRecalcBackgroundService` terminal-transition block, computed from `job.StartedAt → DateTimeOffset.UtcNow`.
+  - 12/12 affected tests passed (`EnqueueRecalculate*` + `MechanicRecalcBackgroundService*`); build clean.
 - [ ] **Step 2: Commit**
 
 ---

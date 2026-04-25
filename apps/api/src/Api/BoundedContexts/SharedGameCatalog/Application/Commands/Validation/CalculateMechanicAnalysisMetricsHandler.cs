@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Text.Json;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -6,6 +8,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -147,12 +150,15 @@ internal sealed class CalculateMechanicAnalysisMetricsHandler
         // Sprint 1 MVP: analysis-side mechanic-tag extraction deferred to Sprint 2.
         var analysisTags = Array.Empty<AnalysisMechanicTag>();
 
+        var matchingStart = Stopwatch.GetTimestamp();
         var matchResult = _matchingEngine.Match(
             analysisClaims,
             goldenClaims,
             bggTags,
             analysisTags,
             thresholdsConfig.Thresholds);
+        MeepleAiMetrics.MatchingDuration.Record(
+            Stopwatch.GetElapsedTime(matchingStart).TotalMilliseconds);
 
         var matchDetailsJson = JsonSerializer.Serialize(matchResult.Matches);
 
@@ -181,6 +187,18 @@ internal sealed class CalculateMechanicAnalysisMetricsHandler
         _analysisRepository.Update(analysis);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        var statusTag = new TagList
+        {
+            { "certification_status", metrics.CertificationStatus.ToString().ToLowerInvariant() }
+        };
+        MeepleAiMetrics.MetricsComputed.Add(1, statusTag);
+        MeepleAiMetrics.OverallScore.Record((double)metrics.OverallScore);
+
+        if (metrics.CertificationStatus == CertificationStatus.Certified)
+        {
+            MeepleAiMetrics.CertificationsGranted.Add(1);
+        }
 
         _logger.LogInformation(
             "Computed MechanicAnalysisMetrics {MetricsId} for MechanicAnalysis {AnalysisId} " +

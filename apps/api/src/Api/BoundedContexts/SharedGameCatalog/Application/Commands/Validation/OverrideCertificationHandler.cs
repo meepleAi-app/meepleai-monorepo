@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -78,6 +79,8 @@ internal sealed class OverrideCertificationHandler
         _analysisRepository.Update(analysis);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        MeepleAiMetrics.Overrides.Add(1);
 
         _logger.LogInformation(
             "Admin override certification applied to MechanicAnalysis {AnalysisId} " +

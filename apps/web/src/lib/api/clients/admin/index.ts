@@ -9,3 +9,8 @@ export {
   type AdminConfigClient,
   type ConfigurationDto,
 } from './adminConfigClient';
+export {
+  createAdminMechanicExtractorValidationClient,
+  type AdminMechanicExtractorValidationClient,
+  ADMIN_MECHANIC_EXTRACTOR_VALIDATION_ROUTES,
+} from './adminMechanicExtractorValidationClient';

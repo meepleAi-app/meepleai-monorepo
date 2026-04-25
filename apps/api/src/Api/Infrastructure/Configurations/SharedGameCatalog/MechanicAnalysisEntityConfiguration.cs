@@ -91,6 +91,18 @@ internal sealed class MechanicAnalysisEntityConfiguration : IEntityTypeConfigura
         builder.Property(a => a.SuppressionRequestedAt).HasColumnName("suppression_requested_at");
         builder.Property(a => a.SuppressionRequestSource).HasColumnName("suppression_request_source");
 
+        // === AI comprehension certification (ADR-051 M2) ===
+        builder.Property(a => a.CertificationStatus)
+            .HasColumnName("certification_status")
+            .HasDefaultValue(0)
+            .IsRequired();
+        builder.Property(a => a.CertifiedAt).HasColumnName("certified_at");
+        builder.Property(a => a.CertifiedByUserId).HasColumnName("certified_by_user_id");
+        builder.Property(a => a.CertificationOverrideReason)
+            .HasColumnName("certification_override_reason")
+            .HasMaxLength(500);
+        builder.Property(a => a.LastMetricsId).HasColumnName("last_metrics_id");
+
         // Optimistic concurrency via PostgreSQL's system `xmin` column, mapped to an explicit
         // property on the entity so the repository can round-trip its value through the aggregate
         // (preserving the original token on detached Update).
@@ -108,6 +120,9 @@ internal sealed class MechanicAnalysisEntityConfiguration : IEntityTypeConfigura
         builder.HasIndex(a => a.IsSuppressed)
             .HasDatabaseName("ix_mechanic_analyses_is_suppressed")
             .HasFilter("is_suppressed = true");
+
+        builder.HasIndex(a => a.CertificationStatus)
+            .HasDatabaseName("ix_mechanic_analyses_certification_status");
 
         // One Published, non-suppressed analysis per shared game (plan §2.2.1).
         builder.HasIndex(a => a.SharedGameId)

@@ -141,6 +141,10 @@ public class MeepleAiDbContext : DbContext
     public DbSet<MechanicStatusAuditEntity> MechanicStatusAudits => Set<MechanicStatusAuditEntity>(); // ISSUE-523: T6 audit trail for lifecycle transitions
     public DbSet<MechanicSuppressionAuditEntity> MechanicSuppressionAudits => Set<MechanicSuppressionAuditEntity>(); // ISSUE-523: T5 audit trail for suppressions
     public DbSet<MechanicAnalysisSectionRunEntity> MechanicAnalysisSectionRuns => Set<MechanicAnalysisSectionRunEntity>(); // ISSUE-524: M1.2 per-section provider/token tracking (B6=C)
+    public DbSet<MechanicGoldenClaimEntity> MechanicGoldenClaims => Set<MechanicGoldenClaimEntity>(); // ADR-051 Sprint 1 / M2.0: golden-set claims
+    public DbSet<MechanicGoldenBggTagEntity> MechanicGoldenBggTags => Set<MechanicGoldenBggTagEntity>(); // ADR-051 Sprint 1 / M2.0: BGG mechanic tags
+    public DbSet<MechanicAnalysisMetricsEntity> MechanicAnalysisMetrics => Set<MechanicAnalysisMetricsEntity>(); // ADR-051 Sprint 1 / M2.0: per-run scoring snapshot
+    public DbSet<CertificationThresholdsConfigEntity> CertificationThresholdsConfigs => Set<CertificationThresholdsConfigEntity>(); // ADR-051 Sprint 1 / M2.0: singleton thresholds config
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
     public DbSet<WishlistItemEntity> WishlistItems => Set<WishlistItemEntity>(); // ISSUE-3917: Wishlist management
@@ -301,6 +305,7 @@ public class MeepleAiDbContext : DbContext
             modelBuilder.Entity<ConversationMemoryEntity>().Ignore(e => e.Embedding);
             modelBuilder.Entity<StrategyPatternEntity>().Ignore(e => e.Embedding);
             modelBuilder.Entity<PgVectorEmbeddingEntity>().Ignore(e => e.Vector);
+            modelBuilder.Entity<Api.Infrastructure.Entities.SharedGameCatalog.MechanicGoldenClaimEntity>().Ignore(e => e.Embedding);
         }
 
         // Ignore domain aggregate roots - EF Core should only map persistence entities

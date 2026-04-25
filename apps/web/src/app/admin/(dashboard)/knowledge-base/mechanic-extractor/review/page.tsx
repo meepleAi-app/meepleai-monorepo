@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeftIcon,
   BookOpenIcon,
@@ -16,10 +16,22 @@ import {
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
+import { EvaluateButton } from '@/components/admin/mechanic-extractor/validation/EvaluateButton';
+import { MetricsCard } from '@/components/admin/mechanic-extractor/validation/MetricsCard';
+import { OverrideCertificationDialog } from '@/components/admin/mechanic-extractor/validation/OverrideCertificationDialog';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
+import { mechanicValidationKeys } from '@/hooks/admin/mechanicValidationKeys';
+import { useGoldenForGame } from '@/hooks/admin/useGoldenForGame';
+import { useLatestMetrics } from '@/hooks/admin/useLatestMetrics';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 
@@ -270,6 +282,11 @@ function ReviewContent() {
         )}
       </div>
 
+      {/* AI Comprehension Validation (feature-flagged — ADR-051 Sprint 1 / Task 37) */}
+      {process.env.NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED === 'true' && (
+        <ValidationSection sharedGameId={sharedGameId} />
+      )}
+
       {/* Action Bar */}
       <div className="flex items-center justify-between border-t pt-4 print:hidden">
         <Button variant="outline" asChild>
@@ -286,6 +303,80 @@ function ReviewContent() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ValidationSection({ sharedGameId }: { sharedGameId: string }) {
+  const queryClient = useQueryClient();
+  const [overrideOpen, setOverrideOpen] = useState(false);
+
+  const latestMetricsQuery = useLatestMetrics(sharedGameId || null);
+  const goldenQuery = useGoldenForGame(sharedGameId || null);
+
+  if (!sharedGameId) {
+    return null;
+  }
+
+  const metrics = latestMetricsQuery.data ?? null;
+  const currentGoldenVersionHash = goldenQuery.data?.versionHash;
+  const analysisId = metrics?.mechanicAnalysisId ?? null;
+
+  const refetchAll = () => {
+    queryClient.invalidateQueries({
+      queryKey: mechanicValidationKeys.trend.byGame(sharedGameId, 1),
+    });
+    queryClient.invalidateQueries({
+      queryKey: mechanicValidationKeys.golden.byGame(sharedGameId),
+    });
+  };
+
+  return (
+    <Card className="bg-white/70 backdrop-blur-md border-slate-200/60 dark:bg-zinc-800/70 dark:border-zinc-700/60 print:hidden">
+      <CardHeader className="pb-3">
+        <CardTitle className="font-quicksand text-base">AI Comprehension Validation</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {latestMetricsQuery.isLoading ? (
+          <Skeleton className="h-32 w-full" />
+        ) : metrics ? (
+          <MetricsCard metrics={metrics} currentGoldenVersionHash={currentGoldenVersionHash} />
+        ) : (
+          <div className="rounded-md border border-dashed border-slate-300 bg-white/40 p-4 text-sm text-muted-foreground dark:border-zinc-700 dark:bg-zinc-900/40">
+            No prior metrics for this game. Run an evaluation to compute the first snapshot.
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          {analysisId && <EvaluateButton analysisId={analysisId} onSuccess={refetchAll} />}
+          <TooltipProvider delayDuration={250}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setOverrideOpen(true)}
+                    disabled={!analysisId}
+                  >
+                    Override certification
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {!analysisId && <TooltipContent>Run Evaluate first</TooltipContent>}
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        {analysisId && (
+          <OverrideCertificationDialog
+            analysisId={analysisId}
+            open={overrideOpen}
+            onOpenChange={setOverrideOpen}
+            onSuccess={refetchAll}
+          />
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

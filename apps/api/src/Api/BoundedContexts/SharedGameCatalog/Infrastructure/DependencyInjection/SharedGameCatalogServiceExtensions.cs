@@ -44,6 +44,10 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IRulebookAnalysisRepository, RulebookAnalysisRepository>(); // Issue #2402 Sprint 3
         services.AddScoped<IMechanicDraftRepository, MechanicDraftRepository>(); // Mechanic Extractor: Variant C drafts
         services.AddScoped<IMechanicAnalysisRepository, MechanicAnalysisRepository>(); // Issue #523: M1.1 Mechanic Analysis persistence
+        services.AddScoped<IMechanicGoldenClaimRepository, MechanicGoldenClaimRepository>(); // ADR-051 Sprint 1 / Task 15: golden claims
+        services.AddScoped<IMechanicGoldenBggTagRepository, MechanicGoldenBggTagRepository>(); // ADR-051 Sprint 1 / Task 15: BGG mechanic tags
+        services.AddScoped<IMechanicAnalysisMetricsRepository, MechanicAnalysisMetricsRepository>(); // ADR-051 Sprint 1 / Task 15: metrics snapshots
+        services.AddScoped<ICertificationThresholdsConfigRepository, CertificationThresholdsConfigRepository>(); // ADR-051 Sprint 1 / Task 15: thresholds config
         services.AddScoped<IShareRequestRepository, ShareRequestRepository>(); // Issue #2724: CreateShareRequest
         services.AddScoped<IBadgeRepository, BadgeRepository>(); // Issue #2731: Badge gamification system
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>(); // Issue #2731: User badge awards
@@ -78,6 +82,18 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IAnalysisCostEstimator, AnalysisCostEstimator>();
         services.AddScoped<IMechanicAnalysisPipeline, MechanicAnalysisPipeline>();
         services.AddScoped<IMechanicAnalysisExecutor, MechanicAnalysisExecutor>();
+
+        // ADR-051 Sprint 1 / Task 18: AI comprehension validation - matching engine + keyword extractor.
+        // Consumed by CalculateMechanicAnalysisMetricsCommand to compute coverage/page-accuracy/BGG-match
+        // percentages by comparing analysis claims against curated golden claims + BGG mechanic tags.
+        services.AddScoped<IKeywordExtractor, BagOfWordsKeywordExtractor>();
+        services.AddScoped<IMechanicMatchingEngine, MechanicMatchingEngine>();
+
+        // ADR-051 Sprint 1: Bounded-context embedding adapter.
+        // Wraps Api.Services.IEmbeddingService to satisfy the narrow domain abstraction
+        // consumed by the golden-claim CRUD handlers and CalculateMechanicAnalysisMetricsHandler.
+        // CLAUDE.md pitfall #2565: register both the interface and the implementation.
+        services.AddScoped<IEmbeddingService, EmbeddingServiceAdapter>();
 
         // Issue #2729: Review lock configuration service with caching (Singleton for cache sharing)
         services.AddSingleton<IReviewLockConfigService, ReviewLockConfigService>();

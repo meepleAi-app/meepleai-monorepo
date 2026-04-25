@@ -14,6 +14,7 @@ using Api.Infrastructure.Seeders;
 using Api.Infrastructure.Seeders.Catalog;
 using Api.Infrastructure.Seeders.Core;
 using Api.Infrastructure.Seeders.LivedIn;
+using Api.Infrastructure.Seeders.MechanicValidation;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -167,6 +168,8 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<ISeedLayer, CoreSeedLayer>();
         services.AddScoped<ISeedLayer, CatalogSeedLayer>();
         services.AddScoped<ISeedLayer, LivedInSeedLayer>();
+        // ADR-051 Sprint 1 / Task 40: MechanicValidation golden seed (Catan ~40 claims + ~15 BGG tags)
+        services.AddScoped<ISeedLayer, MechanicGoldenSeedLayer>();
         services.AddScoped<SeedOrchestrator>();
 
         // Issue #3916: AI insights service for personalized dashboard recommendations

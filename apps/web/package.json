@@ -3,7 +3,6 @@
   "private": true,
   "scripts": {
     "dev": "node ./node_modules/next/dist/bin/next dev -p 3000",
-    "dev:mock": "cross-env NEXT_PUBLIC_MOCK_MODE=true NEXT_PUBLIC_API_BASE=http://localhost:3000 node ./node_modules/next/dist/bin/next dev -p 3000",
     "dev:visual-docs": "cross-env NODE_OPTIONS=\"--max-old-space-size=16384\" node ./node_modules/next/dist/bin/next dev -p 3000",
     "build": "cross-env NODE_OPTIONS=\"--require ./scripts/dommatrix-polyfill.js --max-old-space-size=4096\" node ./node_modules/next/dist/bin/next build",
     "build:analyze": "cross-env NODE_OPTIONS=\"--require ./scripts/dommatrix-polyfill.js --max-old-space-size=4096\" ANALYZE=true node ./node_modules/next/dist/bin/next build",
@@ -244,7 +243,6 @@
     "jsdom": "^29.0.1",
     "lint-staged": "^16.3.2",
     "mailosaur": "^11.1.0",
-    "msw": "^2.12.10",
     "npm-run-all": "^4.1.5",
     "openapi-zod-client": "^1.18.3",
     "playwright-lighthouse": "^4.0.0",
@@ -286,10 +284,5 @@
       "rollup": ">=4.59.0",
       "basic-ftp": ">=5.2.0"
     }
-  },
-  "msw": {
-    "workerDirectory": [
-      "public"
-    ]
   }
 }

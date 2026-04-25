@@ -897,13 +897,14 @@ export function FeatureFlagGate({ children }: { children: ReactNode }) {
 ### Task 26: Compose flag wiring
 
 **Files:**
-- Modify: `infra/.env.development`
-- Modify: `infra/docker-compose.staging.yml`
-- Modify: `infra/secrets/api-staging.secret.example`
+- Modify: `apps/web/.env.development.example` (project uses Next.js per-app env files; `infra/.env.development` does not exist)
+- Modify: `infra/compose.staging.yml` (project uses `compose.<env>.yml` naming, not `docker-compose.staging.yml`)
+- Modify: `docs/operations/operations-manual.md`
+- (Plan originally listed `infra/secrets/api-staging.secret.example` — N/A: `NEXT_PUBLIC_*` is a Next.js build-time public flag, not an API secret, and that file does not exist in `infra/secrets/`.)
 
-- [ ] **Step 1: Add to `.env.development`:** `NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED=true`
-- [ ] **Step 2: Pass `NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED` as build arg + runtime env to web service in staging compose**
-- [ ] **Step 3: Document in `docs/operations/operations-manual.md`** under "Feature flags"
+- [x] **Step 1: Add to dev env example** — flipped `apps/web/.env.development.example` from `NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED=false` (Sprint 1 opt-in) to `=true`, with refreshed comment block referencing Sprint 1+2 surfaces and explaining strict literal-`'true'` semantics. Devs now get the feature on by default after `cp apps/web/.env.development.example apps/web/.env.local`.
+- [x] **Step 2: Staging compose wiring** — added `NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED: "${NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED:-false}"` to `infra/compose.staging.yml` web service under both `build.args` (Next.js inlines `NEXT_PUBLIC_*` at build time) and `environment` (SSR/runtime parity). Default-off until calibration spike (Tasks 23-24) clears; operators flip via host-shell export before `make staging`.
+- [x] **Step 3: Operations manual** — appended a "Feature flags" subsection to Appendix B (after Integration Tests) documenting the dual-channel build-arg + runtime-env requirement, a table of all three `NEXT_PUBLIC_*` flags (`ALPHA_MODE`, `MOCK_MODE`, `MECHANIC_VALIDATION_ENABLED`) with defaults / purpose / owner, and the host-export workflow for enabling in staging without editing compose.
 - [ ] **Step 4: Commit**
 
 ---

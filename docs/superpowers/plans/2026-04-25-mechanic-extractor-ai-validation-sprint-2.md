@@ -717,12 +717,15 @@ The existing `POST /golden/{sharedGameId:guid}/bgg-tags` endpoint (line 157) han
 
 ---
 
-### Task 18: BggImporterPasteDialog component
+### Task 18: BggImporterPasteDialog component ✅
 
 **Files:**
 - Create: `apps/web/src/components/admin/mechanic-extractor/validation/BggImporterPasteDialog.tsx`
 - Create: `apps/web/src/lib/parsers/bgg-tsv.ts` — `parseBggTsv(text: string): { rows: BggTagRow[]; errors: string[] }`
 - Create: `apps/web/src/lib/parsers/__tests__/bgg-tsv.test.ts`
+- Create: `apps/web/src/hooks/admin/useImportBggTags.ts`
+- Create: `apps/web/src/hooks/admin/__tests__/useImportBggTags.test.tsx`
+- Create: `apps/web/src/components/admin/mechanic-extractor/validation/__tests__/BggImporterPasteDialog.test.tsx`
 
 Spec by example (Adzic):
 
@@ -741,10 +744,15 @@ When parser runs
 Then errors = ["Line 1: expected TAB separator"]
 ```
 
-- [ ] **Step 1: Write parser tests, then parser, then dialog tests, then dialog**
-- [ ] **Step 2: Dialog flow:** open → paste textarea → live preview table → highlight duplicates (red text "already exists") → "Insert N tags" button → on success close + toast
-- [ ] **Step 3: Test fixture inputs end-to-end**
-- [ ] **Step 4: Commit**
+- [x] **Step 1: Write parser tests, then parser, then dialog tests, then dialog**
+  - Parser: 12 Vitest cases covering happy path, missing TAB, mixed valid+errors, blank-line skip, whitespace trim, Windows CRLF, empty category/name, in-paste dedup, ordinal case-sensitivity (Mechanism ≠ mechanism, mirrors server's `seenInBatch` HashSet w/ `StringComparer.Ordinal`), empty input variants, multi-error stable line numbers.
+  - Hook `useImportBggTags`: 6 tests asserting `api.admin.importBggTags(sharedGameId, tags)` call shape, `mechanicValidationKeys.golden.byGame` invalidation, three pluralization variants of the success toast (skipped===0 / skipped===1 / skipped>1) — wired to the Task 17 `BggImportResult { Inserted, Skipped }` contract — and the failure-toast prefix.
+  - Dialog: 8 tests covering disabled-by-default CTA, live preview render after paste, parser errors next to textarea, CTA stays disabled on whitespace-only / errors-only paste, `mutate` receives parsed rows (not raw text), close on success, stay open on error, disabled while pending.
+- [x] **Step 2: Dialog flow:** open → paste textarea → live preview table → parser-error chips next to textarea (red) → "Insert N tag(s)" CTA disabled until at least one well-formed row → on success close + hook fires toast (`Imported N BGG tag(s) (M skipped as duplicate(s))`) → on error stay open + hook fires error toast.
+  - Decision: in-paste duplicates are folded silently by the parser (so the live preview row count matches what the importer will actually send); duplicates against existing server rows surface only post-insert via `BggImportResult.Skipped` in the toast. Avoided a synchronous client-side "already exists" lookup against `golden.byGame` because (a) it would race the server, (b) the toast already names the count, (c) keeps the dialog stateless w.r.t. existing data.
+  - Pending-state lockout: dialog refuses to close (Esc / outside-click / X) while `mutation.isPending`, mirroring `OverrideCertificationDialog`. Submit button label flips to "Importing…" with spinner.
+- [x] **Step 3: Test fixture inputs end-to-end** — covered via the 26 unit tests above (TDD); E2E browser scenario lands in Phase 8.
+- [x] **Step 4: Commit**
 
 ---
 

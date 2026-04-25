@@ -91,6 +91,14 @@ internal sealed class MechanicRecalcJobRepository : RepositoryBase, IMechanicRec
         return entity is null ? null : MapToDomain(entity);
     }
 
+    /// <summary>
+    /// Persists changes to a <see cref="MechanicRecalcJob"/>. Assumes the aggregate was loaded via
+    /// <see cref="GetByIdAsync"/> or <see cref="ClaimNextPendingAsync"/> in this same scoped DbContext;
+    /// both paths use raw SQL or AsNoTracking, so no change-tracker entry exists for the row when this
+    /// method runs. <see cref="DbSet{TEntity}.Update"/> would throw a duplicate-tracking exception if a
+    /// future caller introduces a tracked load path against the same scope — keep the no-tracking
+    /// invariant or this method must be reworked to detach existing entries first.
+    /// </summary>
     public Task UpdateAsync(MechanicRecalcJob job, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(job);

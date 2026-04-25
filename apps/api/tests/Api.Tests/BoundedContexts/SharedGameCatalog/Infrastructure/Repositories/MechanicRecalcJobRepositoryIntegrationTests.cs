@@ -118,6 +118,12 @@ public sealed class MechanicRecalcJobRepositoryIntegrationTests : IAsyncLifetime
         // Act — fire both claims concurrently.
         var task1 = repo1.ClaimNextPendingAsync();
         var task2 = repo2.ClaimNextPendingAsync();
+        // NOTE: Task.WhenAll does not guarantee true concurrent lock overlap — the two UPDATE
+        // statements may execute sequentially because each transaction is microseconds long.
+        // This test verifies (a) correct SQL syntax, (b) row mapping round-trip, and (c) that
+        // two distinct Pending rows are each claimed exactly once. True SKIP LOCKED contention
+        // requires a held-open transaction barrier (e.g., TaskCompletionSource), which is
+        // impractical at this layer. Concurrency safety is asserted by the SQL pattern itself.
         var results = await Task.WhenAll(task1, task2);
 
         // Assert — both succeeded, ids differ, both Running with StartedAt stamped.

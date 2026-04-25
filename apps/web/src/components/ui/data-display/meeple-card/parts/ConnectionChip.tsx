@@ -34,6 +34,7 @@ export function ConnectionChip({
   label,
   onCreate,
   createLabel,
+  onClick,
   href,
   colorOverride,
   disabled = false,
@@ -55,7 +56,8 @@ export function ConnectionChip({
   const isEmpty = count === 0;
   const hasCreate = onCreate !== undefined;
   const hasItems = (items?.length ?? 0) > 0;
-  const isInteractive = !disabled && !loading && (hasItems || hasCreate || !!href);
+  const hasOnClick = onClick !== undefined;
+  const isInteractive = !disabled && !loading && (hasItems || hasCreate || hasOnClick || !!href);
 
   if (loading) {
     return (
@@ -149,8 +151,10 @@ export function ConnectionChip({
       setPopoverOpen(true);
     } else if (hasCreate) {
       onCreate?.();
+    } else if (hasOnClick) {
+      onClick?.();
     }
-    // href without items/create is rendered as <Link>, no click handler needed here.
+    // href without items/create/onClick is rendered as <Link>, no click handler needed here.
   };
 
   const ariaLabel = hasCount
@@ -165,8 +169,31 @@ export function ConnectionChip({
   const rootStyle = { ['--tw-ring-color' as string]: tokens.solid } as CSSProperties;
 
   // Render as <Link> when href is provided, no popover, no create handler, and not disabled.
-  // onCreate has precedence over href: when count=0 with onCreate, we render a button to invoke create.
+  // onCreate has precedence over href. onClick combined with href renders as <Link> and
+  // short-circuits preventDefault() on modifier keys (Cmd/Ctrl/Shift) so the browser can
+  // still open the href in a new tab/window. Middle-click does not emit a React `click`
+  // event, so it is preserved naturally without explicit handling.
   if (href && !hasItems && !hasCreate && !disabled) {
+    if (hasOnClick) {
+      return (
+        <Link
+          href={href}
+          aria-label={ariaLabel}
+          className={rootClassName}
+          style={rootStyle}
+          onClick={e => {
+            // Preserve open-in-new-tab (Cmd/Ctrl) and open-in-new-window (Shift)
+            // by delegating the navigation to the browser.
+            if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+            e.preventDefault();
+            onClick?.();
+          }}
+        >
+          {chipInner}
+          {labelEl}
+        </Link>
+      );
+    }
     return (
       <Link href={href} aria-label={ariaLabel} className={rootClassName} style={rootStyle}>
         {chipInner}

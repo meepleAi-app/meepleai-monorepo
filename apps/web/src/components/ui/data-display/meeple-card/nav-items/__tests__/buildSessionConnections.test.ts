@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildSessionNavItems } from '../buildSessionNavItems';
+import { buildSessionConnections } from '../buildSessionConnections';
 
-describe('buildSessionNavItems', () => {
+describe('buildSessionConnections', () => {
   const handlers = {
     onPlayersClick: vi.fn(),
     onNotesClick: vi.fn(),
@@ -10,8 +10,8 @@ describe('buildSessionNavItems', () => {
     onPhotosClick: vi.fn(),
   };
 
-  it('returns 4 nav items in canonical order: Giocatori, Note, Tools, Foto', () => {
-    const items = buildSessionNavItems(
+  it('returns 4 connection items in canonical order: Giocatori, Note, Tools, Foto', () => {
+    const items = buildSessionConnections(
       { playerCount: 4, hasNotes: true, toolCount: 2, photoCount: 3 },
       handlers
     );
@@ -19,8 +19,16 @@ describe('buildSessionNavItems', () => {
     expect(items.map(i => i.label)).toEqual(['Giocatori', 'Note', 'Tools', 'Foto']);
   });
 
+  it('emits the canonical entityType per slot (player/session/tool/session)', () => {
+    const items = buildSessionConnections(
+      { playerCount: 4, hasNotes: true, toolCount: 2, photoCount: 3 },
+      handlers
+    );
+    expect(items.map(i => i.entityType)).toEqual(['player', 'session', 'tool', 'session']);
+  });
+
   it('shows player count when greater than 0', () => {
-    const items = buildSessionNavItems(
+    const items = buildSessionConnections(
       { playerCount: 4, hasNotes: false, toolCount: 0, photoCount: 0 },
       handlers
     );
@@ -28,7 +36,7 @@ describe('buildSessionNavItems', () => {
   });
 
   it('uses presence indicator (1) for hasNotes', () => {
-    const items = buildSessionNavItems(
+    const items = buildSessionConnections(
       { playerCount: 0, hasNotes: true, toolCount: 0, photoCount: 0 },
       handlers
     );
@@ -36,7 +44,7 @@ describe('buildSessionNavItems', () => {
   });
 
   it('hides notes count when hasNotes is false', () => {
-    const items = buildSessionNavItems(
+    const items = buildSessionConnections(
       { playerCount: 0, hasNotes: false, toolCount: 0, photoCount: 0 },
       handlers
     );
@@ -44,7 +52,7 @@ describe('buildSessionNavItems', () => {
   });
 
   it('shows photoCount when greater than 0', () => {
-    const items = buildSessionNavItems(
+    const items = buildSessionConnections(
       { playerCount: 0, hasNotes: false, toolCount: 0, photoCount: 12 },
       handlers
     );

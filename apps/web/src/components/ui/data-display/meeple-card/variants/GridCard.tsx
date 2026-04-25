@@ -1,6 +1,5 @@
 'use client';
 
-import { navItemsToConnections } from '../adapters/navItemsToConnections';
 import { useConnectionSource } from '../hooks/useConnectionSource';
 import { AccentBorder } from '../parts/AccentBorder';
 import { ConnectionChipStrip } from '../parts/ConnectionChipStrip';
@@ -8,7 +7,6 @@ import { Cover } from '../parts/Cover';
 import { EntityBadge } from '../parts/EntityBadge';
 import { ManaPips } from '../parts/ManaPips';
 import { MetaChips } from '../parts/MetaChips';
-import { NavFooter } from '../parts/NavFooter';
 import { QuickActions } from '../parts/QuickActions';
 import { Rating } from '../parts/Rating';
 import { StatusBadge } from '../parts/StatusBadge';
@@ -30,7 +28,6 @@ export function GridCard(props: MeepleCardProps) {
     status,
     badge,
     actions = [],
-    navItems = [],
     manaPips,
     showQuickActions,
     onClick,
@@ -100,12 +97,6 @@ export function GridCard(props: MeepleCardProps) {
       {manaPips && manaPips.length > 0 && <ManaPips pips={manaPips} size="md" />}
       {source === 'connections' && csItems.length > 0 && (
         <ConnectionChipStrip connections={csItems} variant={csVariant} />
-      )}
-      {source === 'navItems' && !props.__useConnectionsForNavItems && navItems.length > 0 && (
-        <NavFooter items={navItems} />
-      )}
-      {source === 'navItems' && props.__useConnectionsForNavItems && navItems.length > 0 && (
-        <ConnectionChipStrip connections={navItemsToConnections(navItems)} variant={csVariant} />
       )}
     </div>
   );

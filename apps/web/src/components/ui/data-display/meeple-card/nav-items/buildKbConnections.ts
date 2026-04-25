@@ -1,12 +1,10 @@
-import { navIcons } from './icons';
+import type { ConnectionChipProps } from '../types';
 
-import type { NavFooterItem } from '../types';
-
-export interface KbNavCounts {
+export interface KbConnectionsCounts {
   chunkCount?: number;
 }
 
-export interface KbNavHandlers {
+export interface KbConnectionsHandlers {
   onChunksClick?: () => void;
   onReindexClick?: () => void;
   onPreviewClick?: () => void;
@@ -14,39 +12,38 @@ export interface KbNavHandlers {
 }
 
 /**
- * Build the 4-slot nav-footer for KB document entity cards.
+ * Build the 4-slot connection channel for KB document entity cards.
  *
  * Slots: Chunks | Reindex (action) | Anteprima (action) | Download (action)
  */
-export function buildKbNavItems(counts: KbNavCounts, handlers: KbNavHandlers): NavFooterItem[] {
+export function buildKbConnections(
+  counts: KbConnectionsCounts,
+  handlers: KbConnectionsHandlers
+): ConnectionChipProps[] {
   return [
     {
-      icon: navIcons.chunks,
       label: 'Chunks',
-      entity: 'kb',
+      entityType: 'kb',
       count:
         counts.chunkCount !== undefined && counts.chunkCount > 0 ? counts.chunkCount : undefined,
       disabled: counts.chunkCount === undefined || !handlers.onChunksClick,
       onClick: handlers.onChunksClick,
     },
     {
-      icon: navIcons.reindex,
       label: 'Reindex',
-      entity: 'kb',
+      entityType: 'kb',
       disabled: !handlers.onReindexClick,
       onClick: handlers.onReindexClick,
     },
     {
-      icon: navIcons.preview,
       label: 'Anteprima',
-      entity: 'kb',
+      entityType: 'kb',
       disabled: !handlers.onPreviewClick,
       onClick: handlers.onPreviewClick,
     },
     {
-      icon: navIcons.download,
       label: 'Download',
-      entity: 'kb',
+      entityType: 'kb',
       disabled: !handlers.onDownloadClick,
       onClick: handlers.onDownloadClick,
     },

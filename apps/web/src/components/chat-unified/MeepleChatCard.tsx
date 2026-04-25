@@ -13,7 +13,7 @@ import { it } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
 
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
-import { buildChatNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildChatConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 
 // ============================================================================
 // Types
@@ -62,9 +62,9 @@ export function MeepleChatCard({
     }
   }, [chat.lastMessageAt]);
 
-  const navItems = useMemo(
+  const connections = useMemo(
     () =>
-      buildChatNavItems(
+      buildChatConnections(
         { messageCount: chat.messageCount },
         {
           onMessagesClick: () => router.push(`/chat/${chat.id}`),
@@ -82,7 +82,7 @@ export function MeepleChatCard({
       variant={variant}
       title={chat.title}
       subtitle={subtitle}
-      navItems={navItems}
+      connections={connections}
       onClick={onClick ? () => onClick(chat.id) : undefined}
       className={className}
       data-testid={`chat-card-${chat.id}`}

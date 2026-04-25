@@ -18,17 +18,19 @@ import {
   EntityTable,
 } from '@/components/ui/data-display/meeple-card';
 import {
-  buildAgentNavItems,
-  buildChatNavItems,
-  buildEventNavItems,
-  buildGameNavItems,
-  buildKbNavItems,
-  buildPlayerNavItems,
-  buildSessionNavItems,
-  buildToolNavItems,
-  buildToolkitNavItems,
+  buildAgentConnections,
+  buildChatConnections,
+  buildEventConnections,
+  buildGameConnections,
+  buildKbConnections,
+  buildPlayerConnections,
+  buildSessionConnections,
+  buildToolConnections,
+  buildToolkitConnections,
 } from '@/components/ui/data-display/meeple-card/nav-items';
 import type { ConnectionChipProps } from '@/components/ui/data-display/meeple-card/types';
+
+import { STEP_2_AUDIT_ROWS } from './step-2-audit-fixtures';
 
 const GAME_IMAGE = 'https://picsum.photos/seed/catan/400/300';
 
@@ -79,58 +81,31 @@ export default function MeepleCardDevPage() {
       </div>
 
       <div className="px-6 py-10 space-y-16 max-w-7xl mx-auto">
-        {/* Manual QA gate: row heights of Demo A and Demo B footers must match. Screenshot to PR. */}
+        {/* Step 1.6 connection source comparison removed in Step 2 cleanup —
+            navItems channel deleted. Connections prop is now the only channel. */}
+
+        {/* Canonical connections demo (replaces Step 1.6 Demo A/B comparison) */}
         <Section
-          title="Step 1.6 — Connection Source Renderer Integration"
-          description="Side-by-side comparison: connections prop (canonical) vs navItems prop with adapter (__useConnectionsForNavItems)."
+          title="Connection Channel (canonical)"
+          description="Game card with the canonical 4-slot connections strip: KB, Agent, Chat, Sessioni."
         >
-          <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
-            Both cards render the canonical 4-slot game nav (KB, Agent, Chat, Sessioni) with
-            identical counts. Demo A uses the canonical <code>connections</code> prop; Demo B uses
-            the legacy <code>navItems</code> prop adapted via{' '}
-            <code>__useConnectionsForNavItems</code>. They MUST produce the same chip order, labels,
-            counts and footer row height.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
-            <div>
-              <Label>Demo A — connections + connectionsVariant=&quot;footer&quot;</Label>
-              <MeepleCard
-                entity="game"
-                variant="grid"
-                title="Wingspan"
-                subtitle="Stonemaier Games"
-                imageUrl={GAME_IMAGE}
-                connectionsVariant="footer"
-                connections={
-                  [
-                    { entityType: 'kb', count: 1, label: 'KB' },
-                    { entityType: 'agent', count: 2, label: 'Agent' },
-                    { entityType: 'chat', label: 'Chat', onCreate: () => alert('Chat plus') },
-                    { entityType: 'session', count: 5, label: 'Sessioni' },
-                  ] satisfies ConnectionChipProps[]
-                }
-              />
-            </div>
-            <div>
-              <Label>Demo B — navItems + __useConnectionsForNavItems={'{true}'}</Label>
-              <MeepleCard
-                entity="game"
-                variant="grid"
-                title="Wingspan"
-                subtitle="Stonemaier Games"
-                imageUrl={GAME_IMAGE}
-                __useConnectionsForNavItems
-                navItems={buildGameNavItems(
-                  { kbCount: 1, agentCount: 2, chatCount: 0, sessionCount: 5 },
-                  {
-                    onKbClick: () => alert('KB'),
-                    onAgentClick: () => alert('Agent'),
-                    onSessionClick: () => alert('Session'),
-                    onChatPlus: () => alert('Chat plus'),
-                  }
-                )}
-              />
-            </div>
+          <div className="max-w-sm">
+            <MeepleCard
+              entity="game"
+              variant="grid"
+              title="Wingspan"
+              subtitle="Stonemaier Games"
+              imageUrl={GAME_IMAGE}
+              connectionsVariant="footer"
+              connections={
+                [
+                  { entityType: 'kb', count: 1, label: 'KB' },
+                  { entityType: 'agent', count: 2, label: 'Agent' },
+                  { entityType: 'chat', label: 'Chat', onCreate: () => alert('Chat plus') },
+                  { entityType: 'session', count: 5, label: 'Sessioni' },
+                ] satisfies ConnectionChipProps[]
+              }
+            />
           </div>
         </Section>
 
@@ -351,7 +326,7 @@ export default function MeepleCardDevPage() {
         {/* Showcase Completo — tutte le feature combinate (match mockup summary Section 2) */}
         <Section
           title="Showcase Completo — Tutte le Feature"
-          description="Una card per ogni entity con image + badge + rating + metadata + status + tags + navItems + quickActions combinati. Mirrors admin-mockups/meeple-card-summary-render.html Section 2."
+          description="Una card per ogni entity con image + badge + rating + metadata + status + tags + connections + quickActions combinati. Mirrors admin-mockups/meeple-card-summary-render.html Section 2."
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <MeepleCard
@@ -372,7 +347,7 @@ export default function MeepleCardDevPage() {
                 { icon: '📚', label: 'Library', onClick: () => alert('Library') },
                 { icon: '🤖', label: 'Crea agent', onClick: () => alert('Agent') },
               ]}
-              navItems={buildGameNavItems(
+              connections={buildGameConnections(
                 { kbCount: 3, agentCount: 1, chatCount: 5, sessionCount: 12 },
                 {
                   onKbClick: () => alert('KB'),
@@ -390,7 +365,7 @@ export default function MeepleCardDevPage() {
               badge="Top 5%"
               status="active"
               metadata={[{ label: '142 plays' }, { label: '68% win' }]}
-              navItems={buildPlayerNavItems(
+              connections={buildPlayerConnections(
                 { totalWins: 96, totalSessions: 142 },
                 {
                   onWinsClick: () => alert('Wins'),
@@ -406,7 +381,7 @@ export default function MeepleCardDevPage() {
               status="inprogress"
               badge="Live"
               metadata={[{ label: '4 giocatori' }, { label: '45 min' }]}
-              navItems={buildSessionNavItems(
+              connections={buildSessionConnections(
                 { playerCount: 4, hasNotes: true, toolCount: 2, photoCount: 6 },
                 {
                   onPlayersClick: () => alert('Players'),
@@ -429,7 +404,7 @@ export default function MeepleCardDevPage() {
                 { icon: '💬', label: 'Chat', onClick: () => alert('Chat') },
                 { icon: '⚙️', label: 'Config', onClick: () => alert('Config') },
               ]}
-              navItems={buildAgentNavItems(
+              connections={buildAgentConnections(
                 { chatCount: 18, kbCount: 12 },
                 {
                   onChatClick: () => alert('Chat'),
@@ -451,7 +426,7 @@ export default function MeepleCardDevPage() {
                 { icon: '👁', label: 'Anteprima', onClick: () => alert('Preview') },
                 { icon: '⬇', label: 'Download', onClick: () => alert('Download') },
               ]}
-              navItems={buildKbNavItems(
+              connections={buildKbConnections(
                 { chunkCount: 124 },
                 {
                   onChunksClick: () => alert('Chunks'),
@@ -469,7 +444,7 @@ export default function MeepleCardDevPage() {
               status="active"
               badge="12 nuovi"
               metadata={[{ label: '12 messaggi' }]}
-              navItems={buildChatNavItems(
+              connections={buildChatConnections(
                 { messageCount: 12 },
                 {
                   onMessagesClick: () => alert('Messages'),
@@ -485,7 +460,7 @@ export default function MeepleCardDevPage() {
               badge="Finals"
               status="setup"
               metadata={[{ label: '32 team' }, { label: '15 Mar' }]}
-              navItems={buildEventNavItems(
+              connections={buildEventConnections(
                 { participantCount: 32, gameCount: 4 },
                 {
                   onParticipantsClick: () => alert('Participants'),
@@ -504,7 +479,7 @@ export default function MeepleCardDevPage() {
               status="active"
               tags={['Official', 'Stats', 'Dice']}
               metadata={[{ label: '6 strumenti' }, { label: '124 uso' }]}
-              navItems={buildToolkitNavItems(
+              connections={buildToolkitConnections(
                 { toolCount: 6, deckCount: 2, phaseCount: 4, useCount: 124 },
                 {
                   onToolsClick: () => alert('Tools'),
@@ -526,7 +501,7 @@ export default function MeepleCardDevPage() {
                 { icon: '🎲', label: 'Lancia', onClick: () => alert('Roll') },
                 { icon: '📋', label: 'Duplica', onClick: () => alert('Duplicate') },
               ]}
-              navItems={buildToolNavItems({
+              connections={buildToolConnections({
                 onUseClick: () => alert('Use'),
                 onEditClick: () => alert('Edit'),
                 onDuplicateClick: () => alert('Duplicate'),
@@ -644,10 +619,10 @@ export default function MeepleCardDevPage() {
           </CardRow>
         </Section>
 
-        {/* NavFooter showcase */}
+        {/* Connections showcase */}
         <Section
-          title="NavFooter — tutti gli stati"
-          description="Esempi di navItems per ogni entity con count, plus indicator e disabled."
+          title="Connections — tutti gli stati"
+          description="Esempi di connections per ogni entity con count, plus indicator e disabled."
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
@@ -661,7 +636,7 @@ export default function MeepleCardDevPage() {
                 rating={4.2}
                 ratingMax={5}
                 metadata={[{ label: '3-4' }, { label: '60min' }]}
-                navItems={buildGameNavItems(
+                connections={buildGameConnections(
                   { kbCount: 3, agentCount: 1, chatCount: 5, sessionCount: 12 },
                   {
                     onKbClick: () => alert('KB!'),
@@ -683,7 +658,7 @@ export default function MeepleCardDevPage() {
                 imageUrl="https://picsum.photos/seed/azul/400/300"
                 rating={4.0}
                 ratingMax={5}
-                navItems={buildGameNavItems(
+                connections={buildGameConnections(
                   { kbCount: 0, agentCount: 0, chatCount: 0, sessionCount: 0 },
                   {
                     onKbPlus: () => alert('Add KB!'),
@@ -702,7 +677,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="Alice Rossi"
                 subtitle="Giocatrice attiva"
-                navItems={buildPlayerNavItems(
+                connections={buildPlayerConnections(
                   { totalWins: 18, totalSessions: 42 },
                   {
                     onWinsClick: () => alert('Wins!'),
@@ -719,7 +694,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="Game Night #42"
                 subtitle="Catan · 2h 15min"
-                navItems={buildSessionNavItems(
+                connections={buildSessionConnections(
                   { playerCount: 4, hasNotes: true, toolCount: 6, photoCount: 12 },
                   {
                     onPlayersClick: () => alert('Players!'),
@@ -738,7 +713,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="RulesBot Pro"
                 subtitle="RAG · 12 fonti"
-                navItems={buildAgentNavItems(
+                connections={buildAgentConnections(
                   { chatCount: 3, kbCount: 12 },
                   {
                     onChatClick: () => alert('Chat!'),
@@ -756,7 +731,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="Manuale Catan"
                 subtitle="48 pagine"
-                navItems={buildKbNavItems(
+                connections={buildKbConnections(
                   { chunkCount: 124 },
                   {
                     onChunksClick: () => alert('Chunks!'),
@@ -775,7 +750,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="Chat Catan"
                 subtitle="ieri"
-                navItems={buildChatNavItems(
+                connections={buildChatConnections(
                   { messageCount: 18 },
                   {
                     onMessagesClick: () => alert('Messages!'),
@@ -792,7 +767,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="Serata Lupus"
                 subtitle="Sabato 12 Apr"
-                navItems={buildEventNavItems(
+                connections={buildEventConnections(
                   { participantCount: 8, gameCount: 3 },
                   {
                     onParticipantsClick: () => alert('Participants!'),
@@ -811,7 +786,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="Catan Tools"
                 subtitle="6 strumenti"
-                navItems={buildToolkitNavItems(
+                connections={buildToolkitConnections(
                   { toolCount: 6, deckCount: 2, phaseCount: 4, useCount: 18 },
                   {
                     onToolsClick: () => alert('Tools!'),
@@ -830,7 +805,7 @@ export default function MeepleCardDevPage() {
                 variant="grid"
                 title="Dice Roller"
                 subtitle="6d6"
-                navItems={buildToolNavItems({
+                connections={buildToolConnections({
                   onUseClick: () => alert('Use!'),
                   onEditClick: () => alert('Edit!'),
                   onDuplicateClick: () => alert('Duplicate!'),
@@ -844,7 +819,7 @@ export default function MeepleCardDevPage() {
         {/* Flip Card — 8 entity-specific back contents */}
         <EntityFlipShowcase />
         <NavClickBehaviorSection />
-        <DisabledNavItemsSection />
+        <DisabledConnectionsSection />
         <FeatureMatrixSection />
 
         {/* 3D Carousel — match visual-test Section 5 */}
@@ -934,7 +909,7 @@ export default function MeepleCardDevPage() {
               subtitle="12 messaggi · Oggi"
               badge="12"
               metadata={[{ label: '12 msg' }]}
-              navItems={buildChatNavItems(
+              connections={buildChatConnections(
                 { messageCount: 12 },
                 {
                   onMessagesClick: () => alert('Messages'),
@@ -948,7 +923,7 @@ export default function MeepleCardDevPage() {
               title="Marco R."
               subtitle="12 sessioni · 5 vittorie"
               metadata={[{ label: '12 sessioni' }, { label: '42% win' }]}
-              navItems={buildPlayerNavItems(
+              connections={buildPlayerConnections(
                 { totalWins: 5, totalSessions: 12 },
                 {
                   onWinsClick: () => alert('Wins'),
@@ -963,7 +938,7 @@ export default function MeepleCardDevPage() {
               subtitle="PDF · 32 pagine · 200 chunks"
               status="indexed"
               metadata={[{ label: '32 pg' }, { label: '200 chunks' }]}
-              navItems={buildKbNavItems(
+              connections={buildKbConnections(
                 { chunkCount: 200 },
                 {
                   onChunksClick: () => alert('Chunks'),
@@ -997,7 +972,7 @@ export default function MeepleCardDevPage() {
                 ratingMax: 10,
                 status: 'owned',
                 metadata: [{ label: '3-4' }, { label: '60-120m' }],
-                navItems: buildGameNavItems(
+                connections: buildGameConnections(
                   { kbCount: 3, agentCount: 1, chatCount: 2, sessionCount: 5 },
                   {
                     onKbClick: () => alert('KB'),
@@ -1014,7 +989,7 @@ export default function MeepleCardDevPage() {
                 subtitle: '15 Feb 2026',
                 status: 'completed',
                 metadata: [{ label: 'Catan' }, { label: '4 giocatori' }],
-                navItems: buildSessionNavItems(
+                connections: buildSessionConnections(
                   { playerCount: 4, hasNotes: false, toolCount: 0, photoCount: 0 },
                   { onPlayersClick: () => alert('Players') }
                 ),
@@ -1026,7 +1001,7 @@ export default function MeepleCardDevPage() {
                 subtitle: 'GPT-4o · Hybrid RAG',
                 status: 'active',
                 metadata: [{ label: 'Catan' }, { label: '450 chunks' }],
-                navItems: buildAgentNavItems(
+                connections: buildAgentConnections(
                   { chatCount: 2, kbCount: 3 },
                   {
                     onChatClick: () => alert('Chat'),
@@ -1044,7 +1019,7 @@ export default function MeepleCardDevPage() {
                 ratingMax: 10,
                 status: 'indexed',
                 metadata: [{ label: '200 chunks' }, { label: '2.4 MB' }],
-                navItems: buildKbNavItems(
+                connections: buildKbConnections(
                   { chunkCount: 200 },
                   {
                     onChunksClick: () => alert('Chunks'),
@@ -1061,7 +1036,7 @@ export default function MeepleCardDevPage() {
                 subtitle: 'Oggi · 12:45',
                 status: 'active',
                 metadata: [{ label: '12 messaggi' }],
-                navItems: buildChatNavItems(
+                connections: buildChatConnections(
                   { messageCount: 12 },
                   {
                     onMessagesClick: () => alert('Messages'),
@@ -1076,7 +1051,7 @@ export default function MeepleCardDevPage() {
                 subtitle: '@marco_games',
                 status: 'active',
                 metadata: [{ label: '142 plays' }, { label: '68% win' }],
-                navItems: buildPlayerNavItems(
+                connections: buildPlayerConnections(
                   { totalWins: 96, totalSessions: 142 },
                   {
                     onWinsClick: () => alert('Wins'),
@@ -1093,7 +1068,7 @@ export default function MeepleCardDevPage() {
                 ratingMax: 10,
                 status: 'wishlist',
                 metadata: [{ label: '2-4' }, { label: '30-45m' }],
-                navItems: buildGameNavItems(
+                connections: buildGameConnections(
                   { kbCount: 0, agentCount: 0, chatCount: 0, sessionCount: 0 },
                   {
                     onKbPlus: () => alert('Add KB'),
@@ -1117,6 +1092,43 @@ export default function MeepleCardDevPage() {
             <MeepleCardSkeleton variant="grid" />
           </CardRow>
         </Section>
+
+        <section className="mt-12 border-t pt-8">
+          <h2 className="text-2xl font-bold mb-2">Step 2 Audit — Migration Coverage</h2>
+          <p className="text-sm text-[var(--mc-text-muted)] mb-4">
+            Per-call-site audit table from spec §3.1. Reviewer verifies each row matches the
+            production call-site post-migration. The legacy <code>navItems=</code> channel was
+            removed in Step 2 cleanup; only <code>connections=</code> remains.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">#</th>
+                  <th className="text-left p-2">Component</th>
+                  <th className="text-left p-2">Bounded Context</th>
+                  <th className="text-left p-2">Path</th>
+                </tr>
+              </thead>
+              <tbody>
+                {STEP_2_AUDIT_ROWS.map((row, i) => (
+                  <tr key={row.componentName} className="border-b">
+                    <td className="p-2 align-top text-[var(--mc-text-muted)]">{i + 1}</td>
+                    <td className="p-2 align-top font-mono text-xs">{row.componentName}</td>
+                    <td className="p-2 align-top text-[var(--mc-text-muted)]">{row.bc}</td>
+                    <td className="p-2 align-top font-mono text-xs">{row.path}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-[var(--mc-text-muted)] mt-4">
+            Note: This audit table lists the 17 call-sites; per-component live preview cards with
+            before/after toggles are deferred to a follow-up because they would require importing 17
+            production components into a public dev page (server/client boundary risk). The PR
+            checklist (spec §5.2) is the binding QA gate.
+          </p>
+        </section>
       </div>
     </div>
   );
@@ -1599,14 +1611,14 @@ function BehaviorCard({
 }
 
 /**
- * DisabledNavItemsSection — demonstrates NavFooter with disabled items and
- * tooltips explaining why (per-entity limits, license, etc).
+ * DisabledConnectionsSection — demonstrates connections with disabled items
+ * and tooltips explaining why (per-entity limits, license, etc).
  */
-function DisabledNavItemsSection() {
+function DisabledConnectionsSection() {
   return (
     <Section
-      title="NavItems Disabled + Tooltip"
-      description="Nav items con stato disabled (45% opacity + cursor not-allowed). Hover mostra tooltip con la ragione. Da meeple-card-nav-buttons-mockup.html Section 5."
+      title="Connections Disabled + Tooltip"
+      description="Connection chips con stato disabled (45% opacity + cursor not-allowed). Hover mostra tooltip con la ragione. Da meeple-card-nav-buttons-mockup.html Section 5."
     >
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <div>
@@ -1621,7 +1633,7 @@ function DisabledNavItemsSection() {
             ratingMax={10}
             status="owned"
             metadata={[{ label: '1-4' }, { label: '60-120m' }]}
-            navItems={buildGameNavItems(
+            connections={buildGameConnections(
               { kbCount: 2, agentCount: 0, chatCount: 0, sessionCount: 0 },
               {
                 onKbClick: () => alert('KB'),
@@ -1644,7 +1656,7 @@ function DisabledNavItemsSection() {
             rating={8.3}
             ratingMax={10}
             metadata={[{ label: '1-4' }, { label: '90-120m' }]}
-            navItems={buildGameNavItems(
+            connections={buildGameConnections(
               { kbCount: 0, agentCount: 0, chatCount: 0, sessionCount: 0 },
               { onChatPlus: () => alert('Chat'), onSessionPlus: () => alert('Session') }
             ).map((item, i) => (i <= 1 ? { ...item, disabled: true } : item))}
@@ -1660,7 +1672,7 @@ function DisabledNavItemsSection() {
             status="archived"
             badge="v1"
             metadata={[{ label: '0 invoc.' }]}
-            navItems={buildAgentNavItems(
+            connections={buildAgentConnections(
               { chatCount: 0, kbCount: 3 },
               { onKbClick: () => alert('KB') }
             ).map((item, i) => (i !== 1 ? { ...item, disabled: true } : item))}
@@ -1700,8 +1712,8 @@ function FeatureMatrixSection() {
       '12 CardStatus values (owned/wishlist/active/idle/archived/processing/indexed/failed/inprogress/setup/completed/paused)',
     ],
     [
-      'Navigation Footer',
-      'Entity-aware nav items · count badges · plus indicators · disabled + tooltip',
+      'Connections Channel',
+      'Entity-aware connection chips · count badges · plus indicators · disabled + tooltip',
     ],
     [
       'Click Behavior',

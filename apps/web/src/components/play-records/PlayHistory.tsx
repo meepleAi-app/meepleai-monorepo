@@ -16,7 +16,7 @@ import { Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { buildSessionNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildSessionConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 import type { PlayRecordStatus } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayHistory } from '@/lib/domain-hooks/usePlayRecords';
 import {
@@ -280,7 +280,7 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
                   subtitle={dateStr}
                   metadata={metaParts.map(label => ({ label }))}
                   badge={record.status}
-                  navItems={buildSessionNavItems(
+                  connections={buildSessionConnections(
                     {
                       playerCount: record.playerCount,
                       hasNotes: false,

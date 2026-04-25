@@ -603,11 +603,11 @@ public partial class MeepleAiMetrics
 
 Use existing audit infrastructure (`IAuditLogger` or equivalent — `grep -rn "AuditLogger\|IAuditService" apps/api/src/Api/`).
 
-- [ ] **Step 1: Emit audit entry on each `EnqueueRecalculateAllMechanicMetricsCommand`** (action=`mechanic_recalc.enqueued`, actor=user, payload={jobId}).
-- [ ] **Step 2: On `CancelRecalcJobCommand`** (action=`mechanic_recalc.cancelled`).
-- [ ] **Step 3: On `BackgroundService` job completion** (action=`mechanic_recalc.completed`, payload={jobId, processed, failed, skipped, status}).
-- [ ] **Step 4: Audit logger tests**
-- [ ] **Step 5: Commit**
+- [x] **Step 1: Emit audit entry on each `EnqueueRecalculateAllMechanicMetricsCommand`** (action=`mechanic_recalc.enqueued`, actor=user, payload={jobId}).
+- [x] **Step 2: On `CancelRecalcJobCommand`** (action=`mechanic_recalc.cancelled`).
+- [x] **Step 3: On `BackgroundService` job completion** (action=`mechanic_recalc.completed`, payload={jobId, processed, failed, skipped, status}).
+- [x] **Step 4: Audit logger tests**
+- [x] **Step 5: Commit**
 
 ---
 

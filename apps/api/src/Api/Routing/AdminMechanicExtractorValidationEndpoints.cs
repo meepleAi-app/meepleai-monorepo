@@ -321,7 +321,7 @@ internal static class AdminMechanicExtractorValidationEndpoints
                 id);
 
             await mediator
-                .Send(new CancelRecalcJobCommand(id), ct)
+                .Send(new CancelRecalcJobCommand(id, actorId), ct)
                 .ConfigureAwait(false);
             return Results.NoContent();
         })

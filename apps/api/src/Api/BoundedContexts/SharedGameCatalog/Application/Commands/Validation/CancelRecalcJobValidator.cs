@@ -17,5 +17,10 @@ internal sealed class CancelRecalcJobValidator
         RuleFor(x => x.JobId)
             .NotEmpty()
             .WithMessage("JobId is required.");
+
+        // ADR-051 Sprint 2 / Task 12: actor must be present so the audit log entry is meaningful.
+        RuleFor(x => x.CancelledByUserId)
+            .NotEmpty()
+            .WithMessage("CancelledByUserId is required.");
     }
 }

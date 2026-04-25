@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands.Validation;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -17,6 +18,14 @@ public class EnqueueRecalculateAllMechanicMetricsHandlerTests
 {
     private readonly Mock<IMechanicRecalcJobRepository> _jobRepoMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
+    // AuditService.LogAsync is virtual; we mock the class directly. The DB context arg is unused
+    // by the production handler path because we override LogAsync via the mock — passing null! is
+    // safe because the constructor only stores references.
+    private readonly Mock<AuditService> _auditServiceMock = new(
+        MockBehavior.Loose,
+        null!,
+        Mock.Of<ILogger<AuditService>>(),
+        null!);
     private readonly Mock<ILogger<EnqueueRecalculateAllMechanicMetricsHandler>> _loggerMock = new();
 
     private readonly EnqueueRecalculateAllMechanicMetricsHandler _handler;
@@ -26,6 +35,7 @@ public class EnqueueRecalculateAllMechanicMetricsHandlerTests
         _handler = new EnqueueRecalculateAllMechanicMetricsHandler(
             _jobRepoMock.Object,
             _unitOfWorkMock.Object,
+            _auditServiceMock.Object,
             _loggerMock.Object);
     }
 
@@ -35,6 +45,7 @@ public class EnqueueRecalculateAllMechanicMetricsHandlerTests
         var act = () => new EnqueueRecalculateAllMechanicMetricsHandler(
             jobRepository: null!,
             _unitOfWorkMock.Object,
+            _auditServiceMock.Object,
             _loggerMock.Object);
         act.Should().Throw<ArgumentNullException>().WithParameterName("jobRepository");
     }
@@ -45,8 +56,20 @@ public class EnqueueRecalculateAllMechanicMetricsHandlerTests
         var act = () => new EnqueueRecalculateAllMechanicMetricsHandler(
             _jobRepoMock.Object,
             unitOfWork: null!,
+            _auditServiceMock.Object,
             _loggerMock.Object);
         act.Should().Throw<ArgumentNullException>().WithParameterName("unitOfWork");
+    }
+
+    [Fact]
+    public void Constructor_WithNullAuditService_Throws()
+    {
+        var act = () => new EnqueueRecalculateAllMechanicMetricsHandler(
+            _jobRepoMock.Object,
+            _unitOfWorkMock.Object,
+            auditService: null!,
+            _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>().WithParameterName("auditService");
     }
 
     [Fact]
@@ -55,6 +78,7 @@ public class EnqueueRecalculateAllMechanicMetricsHandlerTests
         var act = () => new EnqueueRecalculateAllMechanicMetricsHandler(
             _jobRepoMock.Object,
             _unitOfWorkMock.Object,
+            _auditServiceMock.Object,
             logger: null!);
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }
@@ -88,6 +112,20 @@ public class EnqueueRecalculateAllMechanicMetricsHandlerTests
             .Callback(() => sequence.Add("uow.Save"))
             .ReturnsAsync(1);
 
+        _auditServiceMock
+            .Setup(a => a.LogAsync(
+                It.IsAny<string?>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string?>(),
+                It.IsAny<string>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => sequence.Add("audit.LogAsync"))
+            .Returns(Task.CompletedTask);
+
         var before = DateTimeOffset.UtcNow;
 
         // Act
@@ -118,9 +156,22 @@ public class EnqueueRecalculateAllMechanicMetricsHandlerTests
         captured.HeartbeatAt.Should().BeNull();
         captured.CreatedAt.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
 
-        // Persistence order: AddAsync then SaveChanges (single UoW commit).
-        sequence.Should().Equal("repo.AddAsync", "uow.Save");
+        // Persistence order: AddAsync → SaveChanges → audit (audit happens after primary commit
+        // so it never aborts the command on failure).
+        sequence.Should().Equal("repo.AddAsync", "uow.Save", "audit.LogAsync");
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+
+        // Audit entry — verifies ADR-051 Sprint 2 / Task 12 acceptance criteria.
+        _auditServiceMock.Verify(a => a.LogAsync(
+            userId.ToString(),
+            "mechanic_recalc.enqueued",
+            "MechanicRecalcJob",
+            captured.Id.ToString(),
+            "Success",
+            It.Is<string?>(d => d != null && d.Contains(captured.Id.ToString())),
+            null,
+            null,
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -141,5 +192,15 @@ public class EnqueueRecalculateAllMechanicMetricsHandlerTests
         _unitOfWorkMock.Verify(
             u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Never);
+        _auditServiceMock.Verify(a => a.LogAsync(
+            It.IsAny<string?>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string?>(),
+            It.IsAny<string>(),
+            It.IsAny<string?>(),
+            It.IsAny<string?>(),
+            It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 }

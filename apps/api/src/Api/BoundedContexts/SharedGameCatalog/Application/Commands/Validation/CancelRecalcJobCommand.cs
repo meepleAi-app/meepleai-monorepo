@@ -25,4 +25,9 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.Validation;
 /// <see cref="Api.Middleware.Exceptions.ConflictException"/> (HTTP 409).
 /// </para>
 /// </remarks>
-internal sealed record CancelRecalcJobCommand(Guid JobId) : ICommand<Unit>;
+/// <param name="JobId">Identifier of the <see cref="Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.MechanicRecalcJob"/> to cancel.</param>
+/// <param name="CancelledByUserId">
+/// Identifier of the admin requesting the cancellation. Persisted to the audit log as the actor of
+/// the <c>mechanic_recalc.cancelled</c> entry (ADR-051 M2.1, Sprint 2 / Task 12).
+/// </param>
+internal sealed record CancelRecalcJobCommand(Guid JobId, Guid CancelledByUserId) : ICommand<Unit>;

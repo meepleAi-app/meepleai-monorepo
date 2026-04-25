@@ -113,6 +113,17 @@ public sealed class MechanicRecalcBackgroundServiceIntegrationTests : IAsyncLife
         reloaded.Total.Should().Be(0);
         reloaded.Processed.Should().Be(0);
         reloaded.Failed.Should().Be(0);
+
+        // ADR-051 Sprint 2 / Task 12: worker emits audit entry on terminal completion.
+        var auditEntry = await verifyCtx.AuditLogs
+            .AsNoTracking()
+            .Where(a => a.Resource == "MechanicRecalcJob" && a.ResourceId == job.Id.ToString())
+            .SingleAsync();
+        auditEntry.Action.Should().Be("mechanic_recalc.completed");
+        auditEntry.Result.Should().Be("Success", "Status is Completed → audit result mirrors success");
+        auditEntry.UserId.Should().Be(_testUserId, "actor is the user who triggered the job");
+        auditEntry.Details.Should().NotBeNullOrWhiteSpace();
+        auditEntry.Details.Should().Contain("status=Completed");
     }
 
     [Fact]

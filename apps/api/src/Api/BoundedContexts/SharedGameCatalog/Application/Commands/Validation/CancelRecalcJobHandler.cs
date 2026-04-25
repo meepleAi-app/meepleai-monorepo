@@ -1,6 +1,8 @@
+using System.Globalization;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -30,15 +32,18 @@ internal sealed class CancelRecalcJobHandler
 {
     private readonly IMechanicRecalcJobRepository _jobRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly AuditService _auditService;
     private readonly ILogger<CancelRecalcJobHandler> _logger;
 
     public CancelRecalcJobHandler(
         IMechanicRecalcJobRepository jobRepository,
         IUnitOfWork unitOfWork,
+        AuditService auditService,
         ILogger<CancelRecalcJobHandler> logger)
     {
         _jobRepository = jobRepository ?? throw new ArgumentNullException(nameof(jobRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -68,6 +73,21 @@ internal sealed class CancelRecalcJobHandler
 
         await _jobRepository.UpdateAsync(job, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // ADR-051 Sprint 2 / Task 12: persistent audit trail for who cancelled and when. Captures
+        // the job's current Status because cancellation is a flag — the worker performs the actual
+        // terminal transition asynchronously.
+        await _auditService.LogAsync(
+            request.CancelledByUserId.ToString(),
+            action: "mechanic_recalc.cancelled",
+            resource: "MechanicRecalcJob",
+            resourceId: job.Id.ToString(),
+            result: "Success",
+            details: string.Format(
+                CultureInfo.InvariantCulture,
+                "Cancellation requested while job in {0} status.",
+                job.Status),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Cancellation requested for MechanicRecalcJob {JobId} (current status {Status}).",

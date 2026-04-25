@@ -1,6 +1,8 @@
+using System.Globalization;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Observability;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -30,15 +32,18 @@ internal sealed class EnqueueRecalculateAllMechanicMetricsHandler
 {
     private readonly IMechanicRecalcJobRepository _jobRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly AuditService _auditService;
     private readonly ILogger<EnqueueRecalculateAllMechanicMetricsHandler> _logger;
 
     public EnqueueRecalculateAllMechanicMetricsHandler(
         IMechanicRecalcJobRepository jobRepository,
         IUnitOfWork unitOfWork,
+        AuditService auditService,
         ILogger<EnqueueRecalculateAllMechanicMetricsHandler> logger)
     {
         _jobRepository = jobRepository ?? throw new ArgumentNullException(nameof(jobRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -55,6 +60,21 @@ internal sealed class EnqueueRecalculateAllMechanicMetricsHandler
 
         // ADR-051 Sprint 2 / Task 11: track enqueue/complete crossover for backlog dashboards.
         MeepleAiMetrics.JobsEnqueued.Add(1);
+
+        // ADR-051 Sprint 2 / Task 12: persistent audit trail for who enqueued the job and when.
+        // Resilient: AuditService swallows persistence failures so a flaky audit DB never aborts
+        // the primary command (the job is already saved at this point).
+        await _auditService.LogAsync(
+            request.TriggeredByUserId.ToString(),
+            action: "mechanic_recalc.enqueued",
+            resource: "MechanicRecalcJob",
+            resourceId: job.Id.ToString(),
+            result: "Success",
+            details: string.Format(
+                CultureInfo.InvariantCulture,
+                "Enqueued recalc job {0} (Pending).",
+                job.Id),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Enqueued MechanicRecalcJob {JobId} (triggered by user {UserId}).",

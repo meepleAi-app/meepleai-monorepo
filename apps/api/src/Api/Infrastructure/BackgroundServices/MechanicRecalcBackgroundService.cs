@@ -1,9 +1,11 @@
+using System.Globalization;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.Validation;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Observability;
+using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -254,6 +256,11 @@ internal sealed class MechanicRecalcBackgroundService : BackgroundService
             MeepleAiMetrics.JobDuration.Record(durationSeconds, statusTag);
         }
 
+        // ADR-051 Sprint 2 / Task 12: persistent audit trail for who/what completed and the run
+        // counters. AuditService is scoped → resolve via the scope factory; failures are swallowed
+        // by AuditService itself so an audit-DB blip never poisons the worker pool.
+        await WriteCompletionAuditAsync(job, ct).ConfigureAwait(false);
+
         _logger.LogInformation(
             "MechanicRecalcJob {JobId} finished with status {Status} (processed={Processed}, failed={Failed}, skipped={Skipped})",
             job.Id, job.Status, job.Processed, job.Failed, job.Skipped);
@@ -304,6 +311,41 @@ internal sealed class MechanicRecalcBackgroundService : BackgroundService
 
         await repo.UpdateAsync(job, ct).ConfigureAwait(false);
         await unitOfWork.SaveChangesAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Writes the <c>mechanic_recalc.completed</c> audit entry on terminal transition. Actor is
+    /// the original requester (<see cref="MechanicRecalcJob.TriggeredByUserId"/>); details carry
+    /// the run counters and final status so the entry is self-contained for compliance review.
+    /// </summary>
+    /// <remarks>
+    /// AuditService is scoped → opens its own scope. Audit failures are swallowed inside
+    /// <see cref="AuditService.LogAsync"/> by design (resilience pattern), so the worker never
+    /// fails on audit-side issues.
+    /// </remarks>
+    private async Task WriteCompletionAuditAsync(MechanicRecalcJob job, CancellationToken ct)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var auditService = scope.ServiceProvider.GetRequiredService<AuditService>();
+
+        var details = string.Format(
+            CultureInfo.InvariantCulture,
+            "Recalc job finished. status={0} processed={1} failed={2} skipped={3} total={4} cancellationRequested={5}",
+            job.Status,
+            job.Processed,
+            job.Failed,
+            job.Skipped,
+            job.Total,
+            job.CancellationRequested);
+
+        await auditService.LogAsync(
+            job.TriggeredByUserId.ToString(),
+            action: "mechanic_recalc.completed",
+            resource: "MechanicRecalcJob",
+            resourceId: job.Id.ToString(),
+            result: job.Status == RecalcJobStatus.Completed ? "Success" : "Failure",
+            details: details,
+            cancellationToken: ct).ConfigureAwait(false);
     }
 
     /// <summary>

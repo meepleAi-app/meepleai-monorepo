@@ -85,6 +85,12 @@ internal static class IntegrationServiceCollectionBuilder
         // TimeProvider — required by handlers like SubmitValidationFeedbackCommandHandler
         services.AddSingleton(TimeProvider.System);
 
+        // AuditService — required by handlers/workers that emit audit log entries
+        // (e.g. MechanicRecalcBackgroundService.WriteCompletionAuditAsync — ADR-051 Sprint 2 / Task 12).
+        // The service writes to the AuditLogs table which already exists via migrations, so the
+        // real implementation is safe and gives us realistic FK/serialization coverage.
+        services.AddScoped<Api.Services.AuditService>();
+
         return services;
     }
 }

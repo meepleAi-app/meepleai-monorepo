@@ -221,11 +221,179 @@ public sealed class MechanicRecalcBackgroundServiceIntegrationTests : IAsyncLife
         finalCount.Should().Be(0);
     }
 
+    [Fact]
+    public async Task RecoverStaleJobsAsync_RunningJobWithStaleHeartbeat_TransitionsToFailedWithStaleHeartbeatReason()
+    {
+        // Arrange — insert a Running job whose heartbeat is older than the 5-minute liveness
+        // threshold. Per Task 8 Step 4 contract: such a job is presumed orphaned (worker host
+        // crashed mid-flight) and must be recovered as Failed("StaleHeartbeat") so the queue
+        // isn't blocked indefinitely. Reconstitute bypasses lifecycle guards so we can stage
+        // a state that the public lifecycle would otherwise require many transitions to reach.
+        var jobId = Guid.NewGuid();
+        var staleAt = DateTimeOffset.UtcNow - TimeSpan.FromMinutes(10);
+        var staleJob = MechanicRecalcJob.Reconstitute(
+            id: jobId,
+            status: RecalcJobStatus.Running,
+            triggeredByUserId: _testUserId,
+            total: 5,
+            processed: 2,
+            failed: 0,
+            skipped: 0,
+            consecutiveFailures: 0,
+            lastError: null,
+            lastProcessedAnalysisId: null,
+            cancellationRequested: false,
+            createdAt: staleAt,
+            startedAt: staleAt,
+            completedAt: null,
+            heartbeatAt: staleAt);
+
+        var repo = new MechanicRecalcJobRepository(
+            _dbContext,
+            CreateNoOpEventCollector());
+        await repo.AddAsync(staleJob);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
+        var worker = new MechanicRecalcBackgroundService(
+            scopeFactory,
+            NullLogger<MechanicRecalcBackgroundService>.Instance);
+
+        // Act
+        await InvokeRecoverStaleJobsAsync(worker);
+
+        // Assert — terminal Failed transition with the canonical reason string.
+        await using var verifyCtx = _fixture.CreateDbContext(_connectionString);
+        var reloaded = await verifyCtx.MechanicRecalcJobs
+            .AsNoTracking()
+            .SingleAsync(j => j.Id == jobId);
+
+        reloaded.Status.Should().Be(RecalcJobStatus.Failed);
+        reloaded.LastError.Should().Be("StaleHeartbeat", "the recovery sweep tags failures with this exact reason so admin tooling can filter them");
+        reloaded.CompletedAt.Should().NotBeNull("Fail() stamps CompletedAt on the Running → Failed transition");
+        reloaded.HeartbeatAt.Should().BeCloseTo(staleAt, TimeSpan.FromMicroseconds(1), "the stale heartbeat timestamp is preserved as historical evidence of when the worker last checked in (PostgreSQL stores microsecond precision; .NET ticks are 100ns so a sub-microsecond round-trip drift is expected)");
+        reloaded.Processed.Should().Be(2, "progress counters captured before the crash are preserved through recovery");
+    }
+
+    [Fact]
+    public async Task RecoverStaleJobsAsync_RunningJobWithFreshHeartbeat_LeavesJobUntouched()
+    {
+        // Arrange — Running job whose heartbeat is well within the 5min liveness window.
+        // The recovery sweep must NOT touch it; doing so would race against the live worker
+        // and mark a healthy in-flight job as Failed.
+        var jobId = Guid.NewGuid();
+        var freshAt = DateTimeOffset.UtcNow - TimeSpan.FromSeconds(30);
+        var freshJob = MechanicRecalcJob.Reconstitute(
+            id: jobId,
+            status: RecalcJobStatus.Running,
+            triggeredByUserId: _testUserId,
+            total: 5,
+            processed: 2,
+            failed: 0,
+            skipped: 0,
+            consecutiveFailures: 0,
+            lastError: null,
+            lastProcessedAnalysisId: null,
+            cancellationRequested: false,
+            createdAt: freshAt,
+            startedAt: freshAt,
+            completedAt: null,
+            heartbeatAt: freshAt);
+
+        var repo = new MechanicRecalcJobRepository(
+            _dbContext,
+            CreateNoOpEventCollector());
+        await repo.AddAsync(freshJob);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
+        var worker = new MechanicRecalcBackgroundService(
+            scopeFactory,
+            NullLogger<MechanicRecalcBackgroundService>.Instance);
+
+        // Act
+        await InvokeRecoverStaleJobsAsync(worker);
+
+        // Assert — still Running, no fields mutated.
+        await using var verifyCtx = _fixture.CreateDbContext(_connectionString);
+        var reloaded = await verifyCtx.MechanicRecalcJobs
+            .AsNoTracking()
+            .SingleAsync(j => j.Id == jobId);
+
+        reloaded.Status.Should().Be(RecalcJobStatus.Running);
+        reloaded.LastError.Should().BeNull();
+        reloaded.CompletedAt.Should().BeNull();
+        reloaded.HeartbeatAt.Should().BeCloseTo(freshAt, TimeSpan.FromMicroseconds(1));
+    }
+
+    [Fact]
+    public async Task RecoverStaleJobsAsync_TerminalJobWithStaleHeartbeat_LeavesJobUntouched()
+    {
+        // Arrange — a Completed job that happens to carry a stale heartbeat (the worker stopped
+        // calling Heartbeat after the terminal transition; the column was never cleared). The
+        // sweep filters by Status = Running, so this row is invisible to the recovery query
+        // and must remain Completed. Defends the invariant that recovery never re-fails terminal
+        // jobs (which would also throw `Fail` on a non-Pending/Running aggregate).
+        var jobId = Guid.NewGuid();
+        var staleAt = DateTimeOffset.UtcNow - TimeSpan.FromMinutes(10);
+        var completedJob = MechanicRecalcJob.Reconstitute(
+            id: jobId,
+            status: RecalcJobStatus.Completed,
+            triggeredByUserId: _testUserId,
+            total: 3,
+            processed: 3,
+            failed: 0,
+            skipped: 0,
+            consecutiveFailures: 0,
+            lastError: null,
+            lastProcessedAnalysisId: null,
+            cancellationRequested: false,
+            createdAt: staleAt,
+            startedAt: staleAt,
+            completedAt: staleAt + TimeSpan.FromMinutes(1),
+            heartbeatAt: staleAt);
+
+        var repo = new MechanicRecalcJobRepository(
+            _dbContext,
+            CreateNoOpEventCollector());
+        await repo.AddAsync(completedJob);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
+        var worker = new MechanicRecalcBackgroundService(
+            scopeFactory,
+            NullLogger<MechanicRecalcBackgroundService>.Instance);
+
+        // Act
+        await InvokeRecoverStaleJobsAsync(worker);
+
+        // Assert — terminal status and audit fields preserved verbatim.
+        await using var verifyCtx = _fixture.CreateDbContext(_connectionString);
+        var reloaded = await verifyCtx.MechanicRecalcJobs
+            .AsNoTracking()
+            .SingleAsync(j => j.Id == jobId);
+
+        reloaded.Status.Should().Be(RecalcJobStatus.Completed);
+        reloaded.LastError.Should().BeNull();
+        reloaded.CompletedAt.Should().NotBeNull();
+    }
+
     private static async Task InvokeProcessNextJobAsync(MechanicRecalcBackgroundService worker)
     {
         var method = typeof(MechanicRecalcBackgroundService)
             .GetMethod("ProcessNextJobAsync", BindingFlags.NonPublic | BindingFlags.Instance);
         method.Should().NotBeNull("ProcessNextJobAsync is the canonical reflective entry point for testing the worker tick");
+        await (Task)method!.Invoke(worker, new object[] { CancellationToken.None })!;
+    }
+
+    private static async Task InvokeRecoverStaleJobsAsync(MechanicRecalcBackgroundService worker)
+    {
+        var method = typeof(MechanicRecalcBackgroundService)
+            .GetMethod("RecoverStaleJobsAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+        method.Should().NotBeNull("RecoverStaleJobsAsync is the canonical reflective entry point for testing the stale-heartbeat recovery sweep");
         await (Task)method!.Invoke(worker, new object[] { CancellationToken.None })!;
     }
 

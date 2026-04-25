@@ -29,6 +29,11 @@ export function useCalculateMetrics(): UseMutationResult<CalculateMetricsRespons
       queryClient.invalidateQueries({
         queryKey: mechanicValidationKeys.mechanicAnalysis.detail(analysisId),
       });
+      // Trend / latest-metrics queries are scoped per sharedGameId; the mutation
+      // doesn't know the game id from the analysisId alone, so invalidate all.
+      queryClient.invalidateQueries({
+        queryKey: mechanicValidationKeys.trend.all,
+      });
 
       toast.success('Metrics calculated successfully');
     },

@@ -39,6 +39,9 @@ export function useOverrideCertification(): UseMutationResult<
       queryClient.invalidateQueries({
         queryKey: mechanicValidationKeys.mechanicAnalysis.detail(variables.analysisId),
       });
+      queryClient.invalidateQueries({
+        queryKey: mechanicValidationKeys.trend.all,
+      });
 
       toast.success('Certification overridden successfully');
     },

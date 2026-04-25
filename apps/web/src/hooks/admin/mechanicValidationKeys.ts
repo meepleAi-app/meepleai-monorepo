@@ -19,4 +19,11 @@ export const mechanicValidationKeys = {
     all: ['mechanic-analysis'] as const,
     detail: (id: string) => ['mechanic-analysis', id] as const,
   },
+  trend: {
+    all: ['mechanic-validation-trend'] as const,
+    byGame: (sharedGameId: string, take?: number) =>
+      take === undefined
+        ? (['mechanic-validation-trend', sharedGameId] as const)
+        : (['mechanic-validation-trend', sharedGameId, take] as const),
+  },
 } as const;

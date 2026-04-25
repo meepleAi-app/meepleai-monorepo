@@ -116,7 +116,7 @@ public class GetTrendQueryHandlerTests
         var sharedGameId = Guid.NewGuid();
 
         _metricsRepoMock
-            .Setup(r => r.GetTrendAsync(sharedGameId, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetTrendAsync(sharedGameId, 20, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<MechanicAnalysisMetrics>());
 
         SetupCacheToInvokeFactory();
@@ -127,6 +127,10 @@ public class GetTrendQueryHandlerTests
 
         result.Should().NotBeNull();
         result.Should().BeEmpty();
+
+        _metricsRepoMock.Verify(
+            r => r.GetTrendAsync(sharedGameId, 20, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     // ============================================================================================

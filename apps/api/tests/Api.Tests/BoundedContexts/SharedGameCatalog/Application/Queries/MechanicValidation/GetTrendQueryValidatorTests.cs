@@ -34,6 +34,17 @@ public class GetTrendQueryValidatorTests
     }
 
     [Fact]
+    public void Validate_WithNegativeTake_HasError()
+    {
+        var query = new GetTrendQuery(Guid.NewGuid(), Take: -1);
+
+        var result = _validator.TestValidate(query);
+
+        result.ShouldHaveValidationErrorFor(x => x.Take)
+            .WithErrorMessage("Take must be between 1 and 100");
+    }
+
+    [Fact]
     public void Validate_WithTakeAbove100_HasError()
     {
         var query = new GetTrendQuery(Guid.NewGuid(), Take: 101);

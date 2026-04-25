@@ -23,32 +23,34 @@ namespace Api.Infrastructure.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql(@"
-    CREATE TABLE mechanic_recalc_jobs (
-        id uuid PRIMARY KEY,
-        status integer NOT NULL DEFAULT 0,                    -- 0=Pending,1=Running,2=Completed,3=Failed,4=Cancelled
-        triggered_by_user_id uuid NOT NULL REFERENCES users(""Id"") ON DELETE RESTRICT,
-        total integer NOT NULL DEFAULT 0,
-        processed integer NOT NULL DEFAULT 0,
-        failed integer NOT NULL DEFAULT 0,
-        skipped integer NOT NULL DEFAULT 0,
-        consecutive_failures integer NOT NULL DEFAULT 0,
-        last_error text NULL,
-        last_processed_analysis_id uuid NULL,
-        cancellation_requested boolean NOT NULL DEFAULT false,
-        created_at timestamptz NOT NULL DEFAULT now(),
-        started_at timestamptz NULL,
-        completed_at timestamptz NULL,
-        heartbeat_at timestamptz NULL
-    );
-    CREATE INDEX ix_mechanic_recalc_jobs_status_created
-        ON mechanic_recalc_jobs(status, created_at)
-        WHERE status IN (0, 1);
-");
+        CREATE TABLE mechanic_recalc_jobs (
+            id uuid PRIMARY KEY,
+            status integer NOT NULL DEFAULT 0,                    -- 0=Pending, 1=Running, 2=Completed, 3=Failed, 4=Cancelled
+            triggered_by_user_id uuid NOT NULL REFERENCES users(""Id"") ON DELETE RESTRICT,
+            total integer NOT NULL DEFAULT 0,
+            processed integer NOT NULL DEFAULT 0,
+            failed integer NOT NULL DEFAULT 0,
+            skipped integer NOT NULL DEFAULT 0,
+            consecutive_failures integer NOT NULL DEFAULT 0,
+            last_error text NULL,
+            last_processed_analysis_id uuid NULL,
+            cancellation_requested boolean NOT NULL DEFAULT false,
+            created_at timestamptz NOT NULL DEFAULT now(),
+            started_at timestamptz NULL,
+            completed_at timestamptz NULL,
+            heartbeat_at timestamptz NULL
+        );
+        CREATE INDEX ix_mechanic_recalc_jobs_status_created
+            ON mechanic_recalc_jobs(status, created_at)
+            WHERE status IN (0, 1);
+    ");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            // Drop the table; roll back Tasks 6-8 first if their migrations have been applied
+            // (entity, repository, and worker do not yet exist at this migration step).
             migrationBuilder.Sql(@"DROP TABLE IF EXISTS mechanic_recalc_jobs;");
         }
     }

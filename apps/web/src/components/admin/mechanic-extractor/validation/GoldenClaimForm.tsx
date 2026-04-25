@@ -42,8 +42,8 @@ import {
 } from '@/lib/api/schemas/admin-mechanic-extractor-validation.schemas';
 
 // ──────────────────────────────────────────────────────────────────────────
-// Form schema (UI-only — wider than backend DTO so we can carry displayOrder
-// even though the API contract does not currently expose it on create/update).
+// Form schema (mirrors backend create/update DTOs — section/statement/
+// expectedPage/sourceQuote only).
 // ──────────────────────────────────────────────────────────────────────────
 
 export const GoldenClaimFormSchema = z.object({
@@ -60,7 +60,6 @@ export const GoldenClaimFormSchema = z.object({
     .string()
     .min(10, 'Source quote must be at least 10 characters')
     .max(2000, 'Source quote must be at most 2000 characters'),
-  displayOrder: z.coerce.number().int('Display order must be an integer').optional().default(0),
 });
 
 export type GoldenClaimFormData = z.infer<typeof GoldenClaimFormSchema>;
@@ -113,14 +112,12 @@ export function GoldenClaimForm({
           statement: initialClaim.statement,
           expectedPage: initialClaim.expectedPage,
           sourceQuote: initialClaim.sourceQuote,
-          displayOrder: 0,
         }
       : {
           section: 'Mechanics' as MechanicSection,
           statement: '',
           expectedPage: 1,
           sourceQuote: '',
-          displayOrder: 0,
         },
   });
 
@@ -166,7 +163,6 @@ export function GoldenClaimForm({
             statement: '',
             expectedPage: 1,
             sourceQuote: '',
-            displayOrder: 0,
           });
         },
       }
@@ -275,29 +271,6 @@ export function GoldenClaimForm({
             </FormItem>
           )}
         />
-
-        {/* Display order (create mode only — edit endpoint does not accept it) */}
-        {mode === 'create' && (
-          <FormField
-            control={form.control}
-            name="displayOrder"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel htmlFor="golden-claim-display-order">Display order</FormLabel>
-                <FormControl>
-                  <Input
-                    id="golden-claim-display-order"
-                    type="number"
-                    step={1}
-                    {...field}
-                    value={field.value ?? 0}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-2 pt-2">

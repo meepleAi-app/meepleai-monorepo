@@ -130,7 +130,6 @@ export function GoldenClaimsList({ sharedGameId, claims }: GoldenClaimsListProps
                   <TableHead className="w-[120px]">Section</TableHead>
                   <TableHead>Statement</TableHead>
                   <TableHead className="w-[110px]">Expected page</TableHead>
-                  <TableHead className="w-[120px]">Display order</TableHead>
                   <TableHead className="w-[110px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -151,7 +150,6 @@ export function GoldenClaimsList({ sharedGameId, claims }: GoldenClaimsListProps
                       </TooltipProvider>
                     </TableCell>
                     <TableCell>{claim.expectedPage}</TableCell>
-                    <TableCell className="text-muted-foreground">—</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button

@@ -55,7 +55,7 @@ describe('GoldenClaimForm', () => {
     expect(screen.getByLabelText(/Statement/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Expected page/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Source quote/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Display order/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Display order/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Create claim/i })).toBeInTheDocument();
   });
 

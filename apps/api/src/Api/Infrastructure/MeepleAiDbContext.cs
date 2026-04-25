@@ -305,6 +305,7 @@ public class MeepleAiDbContext : DbContext
             modelBuilder.Entity<ConversationMemoryEntity>().Ignore(e => e.Embedding);
             modelBuilder.Entity<StrategyPatternEntity>().Ignore(e => e.Embedding);
             modelBuilder.Entity<PgVectorEmbeddingEntity>().Ignore(e => e.Vector);
+            modelBuilder.Entity<Api.Infrastructure.Entities.SharedGameCatalog.MechanicGoldenClaimEntity>().Ignore(e => e.Embedding);
         }
 
         // Ignore domain aggregate roots - EF Core should only map persistence entities

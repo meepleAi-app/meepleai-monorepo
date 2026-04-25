@@ -8,6 +8,7 @@ using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Pgvector;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 
@@ -115,7 +116,7 @@ internal sealed class MechanicGoldenClaimRepository : RepositoryBase, IMechanicG
             expectedPage: entity.ExpectedPage,
             sourceQuote: entity.SourceQuote,
             keywords: keywords,
-            embedding: entity.Embedding,
+            embedding: entity.Embedding?.ToArray(),
             curatorUserId: entity.CuratorUserId,
             createdAt: entity.CreatedAt,
             updatedAt: entity.UpdatedAt,
@@ -133,7 +134,7 @@ internal sealed class MechanicGoldenClaimRepository : RepositoryBase, IMechanicG
             ExpectedPage = claim.ExpectedPage,
             SourceQuote = claim.SourceQuote,
             KeywordsJson = JsonSerializer.Serialize(claim.Keywords),
-            Embedding = claim.Embedding,
+            Embedding = claim.Embedding is null ? null : new Vector(claim.Embedding),
             CuratorUserId = claim.CuratorUserId,
             CreatedAt = claim.CreatedAt,
             UpdatedAt = claim.UpdatedAt,

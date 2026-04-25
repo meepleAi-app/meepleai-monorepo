@@ -1,3 +1,5 @@
+using Pgvector;
+
 namespace Api.Infrastructure.Entities.SharedGameCatalog;
 
 /// <summary>
@@ -20,8 +22,10 @@ public class MechanicGoldenClaimEntity
     /// <summary>Stored as JSON array (jsonb column).</summary>
     public string KeywordsJson { get; set; } = "[]";
 
-    /// <summary>768-dimensional sentence-transformer vector; null until embedded.</summary>
-    public float[]? Embedding { get; set; }
+    /// <summary>768-dimensional sentence-transformer vector; null until embedded.
+    /// Uses <see cref="Pgvector.Vector"/> so EF Core (with <c>UseVector()</c>) can map it to <c>vector(768)</c>.
+    /// Domain layer exposes this as <c>float[]?</c>; the repository converts at the boundary.</summary>
+    public Vector? Embedding { get; set; }
 
     public Guid CuratorUserId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

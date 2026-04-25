@@ -1,27 +1,29 @@
-/**
- * Custom 404 Not Found Page
- *
- * Uses force-dynamic to prevent static prerendering which fails
- * due to DOMMatrix not being available in Node.js build workers.
- */
+'use client';
+
+// NOTE: `export const dynamic = 'force-dynamic'` is retained per spec risk #1
+// (known Next.js 16 DOMMatrix bug with client imports in not-found.tsx). If
+// `pnpm build` succeeds without it, remove in a follow-up — not in this task.
 export const dynamic = 'force-dynamic';
 
-import Link from 'next/link';
+import { HeroGradient } from '@/components/ui/v2/hero-gradient';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function NotFound() {
+  const { t } = useTranslation();
+
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
-      <h1 className="font-quicksand text-6xl font-bold text-amber-600">404</h1>
-      <h2 className="text-xl font-semibold text-foreground">Page not found</h2>
-      <p className="max-w-md text-muted-foreground">
-        The page you&apos;re looking for doesn&apos;t exist or has been moved.
-      </p>
-      <Link
-        href="/"
-        className="mt-4 rounded-lg bg-amber-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-700"
-      >
-        Go Home
-      </Link>
-    </div>
+    <main>
+      <HeroGradient
+        title={
+          <>
+            <span className="block text-xl font-mono text-muted-foreground mb-2">404</span>
+            {t('pages.errors.notFound.title')}
+          </>
+        }
+        subtitle={t('pages.errors.notFound.subtitle')}
+        primaryCta={{ label: t('pages.errors.notFound.homeCta'), href: '/' }}
+        secondaryCta={{ label: t('pages.errors.notFound.exploreCta'), href: '/games' }}
+      />
+    </main>
   );
 }

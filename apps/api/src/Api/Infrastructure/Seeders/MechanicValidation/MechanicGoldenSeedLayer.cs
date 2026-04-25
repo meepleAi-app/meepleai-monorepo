@@ -16,6 +16,14 @@ namespace Api.Infrastructure.Seeders.MechanicValidation;
 /// review page, and metrics flow have realistic data on a fresh dev/staging DB.
 /// Runs in Staging+Dev profiles, after CatalogSeedLayer (which seeds Catan as a SharedGame).
 /// </summary>
+/// <remarks>
+/// Idempotency is checked at the SharedGame level: if ANY golden claim exists for Catan,
+/// the layer assumes the seed has already run and skips. Consequently, a crash mid-loop
+/// (e.g., on claim 17 of 40) leaves a partial seed that subsequent runs will not retry.
+/// On partial failure, manually delete the partial Catan golden claims and re-run the seed.
+/// The per-claim exception thrown by this layer includes the failing claim's section + index
+/// to help operators identify the recovery point.
+/// </remarks>
 internal sealed class MechanicGoldenSeedLayer : ISeedLayer
 {
     private const int CatanBggId = 13;
@@ -44,6 +52,7 @@ internal sealed class MechanicGoldenSeedLayer : ISeedLayer
         }
 
         // 1. Look up Catan SharedGame by BggId. If missing, log and return (idempotent on partial seeds).
+        // FirstOrDefaultAsync on a Guid value type returns Guid.Empty (not null) when no row matches.
         var catanId = await context.DbContext.SharedGames
             .Where(g => g.BggId == CatanBggId)
             .Select(g => g.Id)
@@ -75,24 +84,49 @@ internal sealed class MechanicGoldenSeedLayer : ISeedLayer
         // 3. Load curated JSON from embedded resource.
         var data = LoadGoldenData();
 
+        if (data.Claims is null || data.Claims.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "Mechanic golden seed JSON contained no claims; refusing to seed an empty golden set.");
+        }
+
+        if (data.BggTags is null)
+        {
+            throw new InvalidOperationException(
+                "Mechanic golden seed JSON had a null bggTags array.");
+        }
+
         // 4. Dispatch CreateMechanicGoldenClaimCommand for each claim, sequentially.
         var mediator = context.Services.GetRequiredService<IMediator>();
 
         try
         {
-            foreach (var claim in data.Claims)
+            for (var i = 0; i < data.Claims.Count; i++)
             {
-                var section = ParseSection(claim.Section);
+                var claim = data.Claims[i];
+                cancellationToken.ThrowIfCancellationRequested();
 
-                var command = new CreateMechanicGoldenClaimCommand(
-                    SharedGameId: catanId,
-                    Section: section,
-                    Statement: claim.Statement,
-                    ExpectedPage: claim.ExpectedPage,
-                    SourceQuote: claim.SourceQuote,
-                    CuratorUserId: context.SystemUserId);
+                try
+                {
+                    var section = ParseSection(claim.Section);
 
-                await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+                    var command = new CreateMechanicGoldenClaimCommand(
+                        SharedGameId: catanId,
+                        Section: section,
+                        Statement: claim.Statement,
+                        ExpectedPage: claim.ExpectedPage,
+                        SourceQuote: claim.SourceQuote,
+                        CuratorUserId: context.SystemUserId);
+
+                    await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to seed Catan golden claim at index {i} (section={claim.Section}, page={claim.ExpectedPage}). " +
+                        $"Partial seed may exist; manual cleanup required before retry.",
+                        ex);
+                }
             }
 
             // 5. Bulk-import BGG tags.

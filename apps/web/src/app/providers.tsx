@@ -143,16 +143,7 @@ function AppContent({ children }: { children: ReactNode }) {
  * - Accessibility features
  */
 export function AppProviders({ children }: AppProvidersProps) {
-  // Lazy require inside function body: ensures tree-shaking eliminates MockProvider
-  // from non-mock production builds regardless of @types/node availability.
-  const MockProvider =
-    process.env.NEXT_PUBLIC_MOCK_MODE === 'true'
-      ? (require('./mock-provider').MockProvider as React.ComponentType<{
-          children: React.ReactNode;
-        }>)
-      : null;
-
-  const providers = (
+  return (
     <IntlProvider>
       <ThemeProvider>
         <QueryProvider>
@@ -174,10 +165,4 @@ export function AppProviders({ children }: AppProvidersProps) {
       </ThemeProvider>
     </IntlProvider>
   );
-
-  if (MockProvider) {
-    return <MockProvider>{providers}</MockProvider>;
-  }
-
-  return providers;
 }

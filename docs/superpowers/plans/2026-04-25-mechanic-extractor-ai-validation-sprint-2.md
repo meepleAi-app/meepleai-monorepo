@@ -643,31 +643,15 @@ Sprint 1 shipped `UpdateCertificationThresholdsCommand` and `PUT /thresholds`. V
 ### Task 15: ThresholdsConfigForm component
 
 **Files:**
-- Create: `apps/web/src/components/admin/mechanic-extractor/validation/ThresholdsConfigForm.tsx`
-- Modify: `apps/web/src/lib/api/mechanic-validation.ts` (add `updateThresholds` client)
-- Create: `apps/web/src/components/admin/mechanic-extractor/validation/__tests__/ThresholdsConfigForm.test.tsx`
+- Create: `apps/web/src/components/admin/mechanic-extractor/validation/ThresholdsConfigForm.tsx` ✅
+- Create: `apps/web/src/hooks/admin/useUpdateThresholds.ts` ✅ (TanStack mutation hook; replaces the plan's "Modify `lib/api/mechanic-validation.ts`" — that file does not exist; the typed client `api.admin.updateThresholds` already lives in `adminMechanicExtractorValidationClient.ts` from Sprint 1 / Task 34)
+- Modify: `apps/web/src/hooks/admin/mechanicValidationKeys.ts` ✅ (add `thresholds.all` query key for invalidation)
+- Create: `apps/web/src/components/admin/mechanic-extractor/validation/__tests__/ThresholdsConfigForm.test.tsx` ✅
 
-- [ ] **Step 1: Write failing test (Vitest + RTL)**
-
-```tsx
-it('disables save when no field changed', () => {
-  render(<ThresholdsConfigForm initial={{minCoverage:70,maxPageTolerance:10,minBgg:80,minOverall:60}} />);
-  expect(screen.getByRole('button', {name:/save/i})).toBeDisabled();
-});
-
-it('blocks save when minCoverage > 100', async () => {
-  render(<ThresholdsConfigForm initial={...} />);
-  await userEvent.clear(screen.getByLabelText(/minimum coverage/i));
-  await userEvent.type(screen.getByLabelText(/minimum coverage/i), '150');
-  expect(screen.getByText(/must be between 0 and 100/i)).toBeInTheDocument();
-});
-
-it('calls updateThresholds on save and shows success toast', async () => {...});
-```
-
-- [ ] **Step 2: Implement component** with React Hook Form + Zod schema (4 fields, 0–100 + integer pageTolerance)
-- [ ] **Step 3: Show audit display:** `Last updated by {updatedByEmail} on {updatedAt}` (data from existing `GET /thresholds`)
-- [ ] **Step 4: Verify all tests pass**
+- [x] **Step 1: Write failing test (Vitest + RTL)** — 6 tests covering: prefill from initial DTO, save disabled when pristine, blocks `minCoveragePct > 100` with "must be between 0 and 100", blocks `maxPageTolerance` negative with "must be at least 0", calls `updateThresholds` with dirty form state, accepts boundary values 0/100. Used the same `vi.hoisted` + `QueryClientProvider` pattern as `GoldenClaimForm.test.tsx`.
+- [x] **Step 2: Implement component** with React Hook Form + Zod schema (4 fields: `minCoveragePct`/`minBggMatchPct`/`minOverallScore` 0–100, `maxPageTolerance` integer ≥ 0). Save+Reset both gated on `formState.isDirty`. On success the hook invalidates `thresholds.all` + `dashboard.all` + `trend.all` query keys and emits a success toast via Sonner; the form `reset(data)` rebases the dirty baseline.
+- [ ] **Step 3 (deferred): Audit display** `Last updated by {updatedByEmail} on {updatedAt}` — **NOT IMPLEMENTED**. The plan's premise that this data is "from existing `GET /thresholds`" is wrong: `GetCertificationThresholdsQueryHandler` returns only the four-field `CertificationThresholds` value object, while `UpdatedByUserId`/`UpdatedAt` live on the `CertificationThresholdsConfig` aggregate and are never serialized. Surfacing them would require a new DTO + handler change, scope-creep for Task 15. Documented as a future enhancement in `ThresholdsConfigForm.tsx`'s file header.
+- [x] **Step 4: Verify all tests pass** — `pnpm vitest run …/ThresholdsConfigForm.test.tsx` → 6/6 passed in 1.09s. `pnpm typecheck` clean (after dropping Zod v3-only `invalid_type_error` options — project is on Zod v4).
 - [ ] **Step 5: Commit**
 
 ---

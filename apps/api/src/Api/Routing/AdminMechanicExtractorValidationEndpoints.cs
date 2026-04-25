@@ -248,26 +248,93 @@ internal static class AdminMechanicExtractorValidationEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status409Conflict);
 
-        // POST /api/v1/admin/mechanic-extractor/metrics/recalculate-all
+        // POST /api/v1/admin/mechanic-extractor/metrics/recalculate-all (Sprint 2 / Task 10)
+        // Async upgrade of the Sprint 1 sync dispatcher: persists a Pending MechanicRecalcJob
+        // and returns 202 Accepted + Location header pointing at the GET status endpoint.
+        // The actual work is performed by MechanicRecalcBackgroundService (Task 8).
         group.MapPost("/metrics/recalculate-all", async (
+            HttpContext httpContext,
             IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            logger.LogInformation("Admin triggering mass recalculation of mechanic analysis metrics");
-            var processed = await mediator
-                .Send(new RecalculateAllMechanicMetricsCommand(), ct)
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+            var actorId = session.User!.Id;
+
+            logger.LogInformation(
+                "Admin {AdminId} enqueueing mass recalculation of mechanic analysis metrics",
+                actorId);
+
+            var jobId = await mediator
+                .Send(new EnqueueRecalculateAllMechanicMetricsCommand(actorId), ct)
                 .ConfigureAwait(false);
-            return Results.Ok(new { Processed = processed });
+
+            var statusUrl = $"/api/v1/admin/mechanic-extractor/metrics/recalc-jobs/{jobId}";
+            return Results.Accepted(statusUrl, new { JobId = jobId });
         })
-        .WithName("AdminRecalculateAllMechanicMetrics")
-        .WithSummary("Recalculate metrics for every published mechanic analysis")
+        .WithName("AdminEnqueueRecalculateAllMechanicMetrics")
+        .WithSummary("Enqueue an async mass-recalculation job for mechanic analysis metrics")
         .WithDescription(
-            "Synchronous batch dispatcher: iterates every Published MechanicAnalysis (suppressed " +
-            "rows included — suppression is orthogonal) and dispatches one CalculateMechanicAnalysisMetricsCommand " +
-            "per id. Returns the count of analyses for which metrics were successfully recomputed. " +
-            "Per-id NotFound/Conflict errors are logged and skipped.")
-        .Produces(StatusCodes.Status200OK);
+            "Persists a Pending MechanicRecalcJob and returns 202 Accepted with a Location " +
+            "header pointing at the status endpoint. The MechanicRecalcBackgroundService worker " +
+            "claims the job, iterates every Published MechanicAnalysis, and calls " +
+            "CalculateMechanicAnalysisMetricsCommand per id with circuit-breaker + heartbeat " +
+            "semantics (ADR-051 M2.1). Poll the returned URL to observe progress.")
+        .Produces(StatusCodes.Status202Accepted);
+
+        // GET /api/v1/admin/mechanic-extractor/metrics/recalc-jobs/{id} (Sprint 2 / Task 10)
+        group.MapGet("/metrics/recalc-jobs/{id:guid}", async (
+            Guid id,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var dto = await mediator
+                .Send(new GetRecalcJobStatusQuery(id), ct)
+                .ConfigureAwait(false);
+            return Results.Ok(dto);
+        })
+        .WithName("AdminGetMechanicRecalcJobStatus")
+        .WithSummary("Read the live status of a mass-recalculation job")
+        .WithDescription(
+            "Returns the current snapshot of a MechanicRecalcJob: status, progress counters " +
+            "(total/processed/failed/skipped), consecutive-failure count, last error, " +
+            "cancellation flag, lifecycle timestamps, and (for Running jobs with progress) " +
+            "an extrapolated etaSeconds. Intentionally uncached because the underlying " +
+            "aggregate mutates every worker iteration.")
+        .Produces<RecalcJobStatusDto>()
+        .Produces(StatusCodes.Status404NotFound);
+
+        // POST /api/v1/admin/mechanic-extractor/metrics/recalc-jobs/{id}/cancel (Sprint 2 / Task 10)
+        group.MapPost("/metrics/recalc-jobs/{id:guid}/cancel", async (
+            Guid id,
+            HttpContext httpContext,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+            var actorId = session.User!.Id;
+
+            logger.LogInformation(
+                "Admin {AdminId} requesting cancellation of MechanicRecalcJob {JobId}",
+                actorId,
+                id);
+
+            await mediator
+                .Send(new CancelRecalcJobCommand(id), ct)
+                .ConfigureAwait(false);
+            return Results.NoContent();
+        })
+        .WithName("AdminCancelMechanicRecalcJob")
+        .WithSummary("Request cooperative cancellation of a mass-recalculation job")
+        .WithDescription(
+            "Sets the CancellationRequested flag on the aggregate (cancellation is a flag, not " +
+            "a status — the job remains Pending/Running until the worker observes the flag and " +
+            "transitions it to Completed). Idempotent on jobs whose flag is already set. " +
+            "Returns 409 if the job is in a terminal status (Completed or Failed).")
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status409Conflict);
 
         // ──────────────────────────────────────────────────────────────────
         // Dashboard + trend

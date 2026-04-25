@@ -562,9 +562,9 @@ group.MapPost("/metrics/recalc-jobs/{id:guid}/cancel", async (Guid id, IMediator
     .Produces(StatusCodes.Status204NoContent);
 ```
 
-- [ ] **Step 1: Apply edit**
-- [ ] **Step 2: Endpoint tests** (3 tests: 202 returns location header, GET returns status, cancel sets `CancellationRequested`)
-- [ ] **Step 3: Update OpenAPI/Scalar doc strings**
+- [x] **Step 1: Apply edit** — replaced sync 200 dispatcher with three endpoints (202/200/204). Used `(SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!` (locally consistent pattern) instead of `RequireAdminSession()` proposed in plan.
+- [x] **Step 2: Endpoint tests** — 5 tests added to `AdminMechanicExtractorValidationEndpointsTests`: enqueue 202+Location+JobId+aggregate persisted Pending, GET 200 with DTO, GET unknown 404, cancel 204 sets `CancellationRequested`, cancel unknown 404. Plus 2 new `[InlineData]` rows on the auth Theory (15/15 pass).
+- [x] **Step 3: Update OpenAPI/Scalar doc strings** — folded into Step 1 via `WithSummary`/`WithDescription` on each route.
 - [ ] **Step 4: Commit**
 
 ---

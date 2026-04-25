@@ -29,4 +29,8 @@ export const mechanicValidationKeys = {
   thresholds: {
     all: ['mechanic-validation-thresholds'] as const,
   },
+  recalcJob: {
+    all: ['mechanic-recalc-job'] as const,
+    byId: (jobId: string) => ['mechanic-recalc-job', jobId] as const,
+  },
 } as const;

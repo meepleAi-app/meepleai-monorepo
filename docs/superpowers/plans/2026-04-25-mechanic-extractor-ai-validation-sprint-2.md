@@ -803,10 +803,16 @@ Drawer behavior:
 - Shows last 5 completed jobs (from a future `GET /metrics/recalc-jobs` list endpoint — for Sprint 2 a single in-memory state of "current job" is sufficient)
 - On `status === 'Completed'`: green toast "Recalculated N analyses"; on `Failed`: red toast with `lastError`
 
-- [ ] **Step 1: Write component tests for each behavior**
-- [ ] **Step 2: Implement**
-- [ ] **Step 3: Verify tests pass**
-- [ ] **Step 4: Commit**
+- [x] **Step 1: Write component tests for each behavior** — TDD trio for hooks (`useEnqueueRecalcAll.test.tsx` 4 tests, `useRecalcJobStatus.test.tsx` 4 tests, `useCancelRecalcJob.test.tsx` 5 tests = 13 hook tests) + components (`RecalcAllButton.test.tsx` 4 tests covering idle label, mutate-with-undefined, `onJobStarted` jobId forwarding, pending-state disable+spinner; `RecalcProgressDrawer.test.tsx` 10 tests covering loading, progress fraction, ETA, Cancel-fires-mutate, Cancelling-disabled-when-`cancellationRequested`, no-Cancel-when-terminal, exactly-once toast on each terminal transition Completed/Failed/Cancelled, null-jobId render). Hook tests document the polling stop-on-terminal contract via `refetchInterval` callback inspection (full timer-driven test deferred — exercised in drawer integration).
+- [x] **Step 2: Implement** — Three hooks colocated under `apps/web/src/hooks/admin/`:
+  - `useEnqueueRecalcAll` (mutation; no success toast — drawer owns terminal toasts; error toast `Failed to enqueue recalc: …`).
+  - `useRecalcJobStatus` (query polling at 2s; `refetchInterval` callback returns `false` once `data.status` ∈ `{Completed, Failed, Cancelled}`; key factory `mechanicValidationKeys.recalcJob.byId(jobId)` extended in `mechanicValidationKeys.ts`).
+  - `useCancelRecalcJob` (mutation; `toast.info('Cancellation requested — worker will stop on its next iteration')` since cancel is cooperative; invalidates the job-status query for snappy UI feedback).
+  - Two components colocated under `apps/web/src/components/admin/mechanic-extractor/validation/`:
+  - `RecalcAllButton.tsx` — disabled while `mutation.isPending`; idle label "Recalculate all", pending label "Enqueueing…"; calls `onJobStarted(response.jobId)` from the success callback.
+  - `RecalcProgressDrawer.tsx` — inline panel (not a portal Sheet — Sprint 2 ships inline; future sprints can swap to `Sheet`); renders progress fraction `processed / total`, `<Progress>` bar, counters in `<dl>` (failed / skipped / consecutive failures / ETA in `<dt>/<dd>` pairs), `lastError` block, Cancel button while non-terminal, Close (X) button only once terminal. Cancel UX has three states: enabled "Cancel" (idle, running), disabled spinner "Cancel" (mutation in flight), disabled spinner "Cancelling…" (worker hasn't honored the flag yet — `cancellationRequested === true`). Terminal toasts fired exactly once per status transition via a `useRef<TerminalStatus | null>(null)` latch — re-poll cycles returning the same Completed snapshot do NOT re-toast (latch resets to null when the status flips back to non-terminal so a future Sprint 3 slot reuse works correctly).
+- [x] **Step 3: Verify tests pass** — `pnpm vitest run` over both component files: 14/14 green. `pnpm typecheck` clean.
+- [x] **Step 4: Commit**
 
 ---
 

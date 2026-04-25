@@ -434,7 +434,7 @@ public interface IMechanicRecalcJobRepository
 
 Read `apps/api/src/Api/Infrastructure/BackgroundServices/BggImportQueueBackgroundService.cs` as the canonical template.
 
-- [ ] **Step 1: Skeleton**
+- [x] **Step 1: Skeleton**
 
 ```csharp
 internal sealed class MechanicRecalcBackgroundService : BackgroundService
@@ -506,10 +506,10 @@ internal sealed class MechanicRecalcBackgroundService : BackgroundService
 }
 ```
 
-- [ ] **Step 2: Register in `Program.cs`:** `builder.Services.AddHostedService<MechanicRecalcBackgroundService>();`
-- [ ] **Step 3: Integration test** — enqueue job, run service one tick, assert progresses; cancel mid-flight, assert terminal `Completed` with `CancellationRequested == true` (cancellation is a flag, not a status — see Task 6 aggregate lifecycle).
-- [ ] **Step 4: Stale recovery** — on startup, mark jobs in `Running` with `HeartbeatAt < now-5min` as `Failed("StaleHeartbeat")`. Add `RecoverStaleJobsAsync` called in `ExecuteAsync` before main loop.
-- [ ] **Step 5: Commit**
+- [x] **Step 2: Register in `Program.cs`:** `builder.Services.AddHostedService<MechanicRecalcBackgroundService>();`
+- [x] **Step 3: Integration test** — enqueue job, run service one tick, assert progresses; cancel mid-flight, assert terminal `Completed` with `CancellationRequested == true` (cancellation is a flag, not a status — see Task 6 aggregate lifecycle). _(commits `800e61483`, `698725ef5`)_
+- [x] **Step 4: Stale recovery** — on startup, mark jobs in `Running` with `HeartbeatAt < now-5min` as `Failed("StaleHeartbeat")`. Add `RecoverStaleJobsAsync` called in `ExecuteAsync` before main loop. _(implementation in `800e61483`; integration tests in `9841651e6`)_
+- [x] **Step 5: Commit**
 
 ---
 
@@ -517,12 +517,12 @@ internal sealed class MechanicRecalcBackgroundService : BackgroundService
 
 **Files:** see "File Structure" above.
 
-- [ ] **Step 1: `EnqueueRecalculateAllMechanicMetricsCommand(Guid TriggeredByUserId) : ICommand<Guid>`** — handler creates job, calls repo, returns id.
-- [ ] **Step 2: `GetRecalcJobStatusQuery(Guid JobId) : IQuery<RecalcJobStatusDto>`** — handler maps domain → DTO with `etaSeconds = (Total-Processed) * avgPerItem` if Running.
-- [ ] **Step 3: `CancelRecalcJobCommand(Guid JobId) : ICommand`** — handler loads, calls `RequestCancellation()`, persists.
-- [ ] **Step 4: Validators (FluentValidation)**
-- [ ] **Step 5: Unit + integration tests**
-- [ ] **Step 6: Commit**
+- [x] **Step 1: `EnqueueRecalculateAllMechanicMetricsCommand(Guid TriggeredByUserId) : ICommand<Guid>`** — handler creates job, calls repo, returns id.
+- [x] **Step 2: `GetRecalcJobStatusQuery(Guid JobId) : IQuery<RecalcJobStatusDto>`** — handler maps domain → DTO with `etaSeconds = (Total-Processed) * avgPerItem` if Running.
+- [x] **Step 3: `CancelRecalcJobCommand(Guid JobId) : ICommand`** — handler loads, calls `RequestCancellation()`, persists.
+- [x] **Step 4: Validators (FluentValidation)**
+- [x] **Step 5: Unit tests** (28 tests across 3 handler classes — Enqueue 6, Cancel 9, GetStatus 11; integration tests for the worker cycle live in Task 8 since the cycle is driven by `MechanicRecalcBackgroundService`).
+- [x] **Step 6: Commit**
 
 ---
 

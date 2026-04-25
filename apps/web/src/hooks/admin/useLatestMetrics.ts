@@ -29,6 +29,6 @@ export function useLatestMetrics(
       return trend.length > 0 ? trend[0] : null;
     },
     enabled: !!sharedGameId,
-    staleTime: 30_000,
+    staleTime: 60_000,
   });
 }

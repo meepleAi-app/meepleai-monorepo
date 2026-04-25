@@ -19,7 +19,7 @@ import { useEffect } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2Icon } from 'lucide-react';
-import { useForm, type Resolver } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import {
@@ -55,6 +55,8 @@ export const OverrideCertificationFormSchema = z.object({
 
 export type OverrideCertificationFormData = z.infer<typeof OverrideCertificationFormSchema>;
 
+const overrideCertResolver = zodResolver(OverrideCertificationFormSchema);
+
 // ──────────────────────────────────────────────────────────────────────────
 // Component
 // ──────────────────────────────────────────────────────────────────────────
@@ -79,9 +81,7 @@ export function OverrideCertificationDialog({
   const mutation = useOverrideCertification();
 
   const form = useForm<OverrideCertificationFormData>({
-    resolver: zodResolver(
-      OverrideCertificationFormSchema
-    ) as Resolver<OverrideCertificationFormData>,
+    resolver: overrideCertResolver,
     mode: 'onChange',
     defaultValues: { reason: '' },
   });
@@ -116,7 +116,13 @@ export function OverrideCertificationDialog({
   const submitDisabled = mutation.isPending || !form.formState.isValid;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={next => {
+        if (!next && mutation.isPending) return;
+        onOpenChange(next);
+      }}
+    >
       <DialogContent
         className="max-w-lg"
         data-testid="override-certification-dialog"

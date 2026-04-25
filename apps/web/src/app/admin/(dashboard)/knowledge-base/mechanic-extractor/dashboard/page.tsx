@@ -38,7 +38,12 @@ export default function MechanicValidationDashboardPage() {
       </div>
 
       {isLoading && (
-        <div className="space-y-4" data-testid="dashboard-loading">
+        <div
+          className="space-y-4"
+          data-testid="dashboard-loading"
+          role="status"
+          aria-label="Loading dashboard"
+        >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-24 w-full" />

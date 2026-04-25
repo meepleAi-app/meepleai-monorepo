@@ -8,6 +8,8 @@
 
 'use client';
 
+import { useMemo } from 'react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import type {
   CertificationStatus,
@@ -65,7 +67,7 @@ export interface DashboardSummaryCardsProps {
 }
 
 export function DashboardSummaryCards({ rows }: DashboardSummaryCardsProps) {
-  const counts = computeCounts(rows);
+  const counts = useMemo(() => computeCounts(rows), [rows]);
   const statuses: CertificationStatus[] = ['Certified', 'NotCertified', 'NotEvaluated'];
 
   return (

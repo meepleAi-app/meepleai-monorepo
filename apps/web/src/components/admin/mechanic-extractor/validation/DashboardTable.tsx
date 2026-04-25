@@ -161,7 +161,11 @@ export function DashboardTable({ rows }: DashboardTableProps) {
                   variant="link"
                   className="h-auto p-0 text-amber-600 dark:text-amber-400"
                 >
-                  <Link data-testid="dashboard-row-view-link" href={reviewHref(row.sharedGameId)}>
+                  <Link
+                    data-testid="dashboard-row-view-link"
+                    href={reviewHref(row.sharedGameId)}
+                    aria-label={`View ${row.name}`}
+                  >
                     View
                   </Link>
                 </Button>

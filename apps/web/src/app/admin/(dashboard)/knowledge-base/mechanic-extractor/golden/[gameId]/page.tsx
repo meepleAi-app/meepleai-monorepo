@@ -34,15 +34,14 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { useGoldenForGame } from '@/hooks/admin/useGoldenForGame';
 import { api } from '@/lib/api';
-
-const FEATURE_FLAG = 'true';
+import { isMechanicValidationEnabled } from '@/lib/feature-flags/mechanic-validation';
 
 interface GoldenForGamePageProps {
   params: Promise<{ gameId: string }>;
 }
 
 export default function GoldenForGamePage({ params }: GoldenForGamePageProps) {
-  if (process.env.NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED !== FEATURE_FLAG) {
+  if (!isMechanicValidationEnabled()) {
     notFound();
   }
 

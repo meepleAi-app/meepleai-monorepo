@@ -17,6 +17,7 @@ import {
 import { useSearchParams } from 'next/navigation';
 
 import { EvaluateButton } from '@/components/admin/mechanic-extractor/validation/EvaluateButton';
+import { FeatureFlagGate } from '@/components/admin/mechanic-extractor/validation/FeatureFlagGate';
 import { MetricsCard } from '@/components/admin/mechanic-extractor/validation/MetricsCard';
 import { OverrideCertificationDialog } from '@/components/admin/mechanic-extractor/validation/OverrideCertificationDialog';
 import { Badge } from '@/components/ui/data-display/badge';
@@ -283,9 +284,9 @@ function ReviewContent() {
       </div>
 
       {/* AI Comprehension Validation (feature-flagged — ADR-051 Sprint 1 / Task 37) */}
-      {process.env.NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED === 'true' && (
+      <FeatureFlagGate>
         <ValidationSection sharedGameId={sharedGameId} />
-      )}
+      </FeatureFlagGate>
 
       {/* Action Bar */}
       <div className="flex items-center justify-between border-t pt-4 print:hidden">

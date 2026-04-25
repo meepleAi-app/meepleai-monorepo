@@ -887,10 +887,10 @@ export function FeatureFlagGate({ children }: { children: ReactNode }) {
 }
 ```
 
-- [ ] **Step 1: Add files**
-- [ ] **Step 2: Unit tests** (env stub on / off)
-- [ ] **Step 3: Wrap each Sprint 2 admin section** in `<FeatureFlagGate>`
-- [ ] **Step 4: Commit**
+- [x] **Step 1: Add files** — created `apps/web/src/lib/feature-flags/mechanic-validation.ts` (`isMechanicValidationEnabled()` returns strict `===' 'true'` — no truthy coercion) and `apps/web/src/components/admin/mechanic-extractor/validation/FeatureFlagGate.tsx` (`'use client'` component returning `null` or an optional `fallback` when off).
+- [x] **Step 2: Unit tests** — `mechanic-validation.test.ts` (5 tests: `'true'`/`'false'`/non-canonical truthy/unset/empty) + `FeatureFlagGate.test.tsx` (4 tests: renders children when on, null when unset/false, custom fallback). Both pinned to `@vitest-environment jsdom` to share the project's browser-polyfill setup.
+- [x] **Step 3: Wrap each Sprint 2 admin section** — refactored the four call sites that used to inline `process.env.NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED === 'true'`: dashboard/page.tsx, golden/page.tsx, golden/[gameId]/page.tsx now call `if (!isMechanicValidationEnabled()) notFound()`; review/page.tsx swaps the inline ternary for `<FeatureFlagGate><ValidationSection ... /></FeatureFlagGate>`. Verified zero `process.env.NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED` references remain in non-helper/non-test code.
+- [x] **Step 4: Commit**
 
 ---
 

@@ -22,11 +22,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-d
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useThresholds } from '@/hooks/admin/useThresholds';
 import { useValidationDashboard } from '@/hooks/admin/useValidationDashboard';
-
-const FEATURE_FLAG = 'true';
+import { isMechanicValidationEnabled } from '@/lib/feature-flags/mechanic-validation';
 
 export default function MechanicValidationDashboardPage() {
-  if (process.env.NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED !== FEATURE_FLAG) {
+  if (!isMechanicValidationEnabled()) {
     notFound();
   }
 

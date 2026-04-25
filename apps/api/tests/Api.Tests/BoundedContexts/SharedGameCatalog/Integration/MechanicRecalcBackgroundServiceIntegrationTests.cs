@@ -6,6 +6,7 @@ using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundServices;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -112,6 +113,90 @@ public sealed class MechanicRecalcBackgroundServiceIntegrationTests : IAsyncLife
         reloaded.Total.Should().Be(0);
         reloaded.Processed.Should().Be(0);
         reloaded.Failed.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ProcessNextJobAsync_CancellationRequested_HonorsFlagAndCompletesWithoutProcessing()
+    {
+        // Arrange — seed a SharedGame + one Published MechanicAnalysis so the worker's
+        // GetIdsByStatusAsync(Published) returns exactly one id and the per-id loop has at
+        // least one iteration to encounter the cancellation flag at line ~163 of the worker.
+        var sharedGameId = Guid.NewGuid();
+        _dbContext.Set<SharedGameEntity>().Add(new SharedGameEntity
+        {
+            Id = sharedGameId,
+            Title = $"CancelTest Game {Guid.NewGuid():N}",
+            Description = "Cancel-mid-flight integration test fixture",
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            YearPublished = 2024,
+            MinAge = 10,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = _testUserId,
+        });
+
+        var analysisId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        _dbContext.Set<MechanicAnalysisEntity>().Add(new MechanicAnalysisEntity
+        {
+            Id = analysisId,
+            SharedGameId = sharedGameId,
+            PdfDocumentId = Guid.NewGuid(), // synthetic — no FK in scope for this worker test
+            PromptVersion = "mechanic-extractor-v1",
+            Status = 2, // Published — matches MechanicAnalysisStatus.Published cast in GetIdsByStatusAsync
+            CreatedBy = _testUserId,
+            CreatedAt = now,
+            ReviewedBy = _testUserId,
+            ReviewedAt = now,
+            TotalTokensUsed = 1234,
+            EstimatedCostUsd = 0.05m,
+            ModelUsed = "test-model",
+            Provider = "test-provider",
+            CostCapUsd = 1.00m,
+            IsSuppressed = false,
+        });
+
+        // Enqueue a Pending job and request cancellation BEFORE save so the persisted row
+        // carries cancellation_requested=true. ClaimNextPendingAsync's RETURNING * projection
+        // will then bring the flag back into the reconstituted aggregate, and the worker's
+        // per-id loop will short-circuit on iteration 1 (line ~163: `if (job.CancellationRequested)`).
+        var job = MechanicRecalcJob.Enqueue(_testUserId);
+        job.RequestCancellation(); // allowed from Pending per the aggregate's transition contract
+        var repo = new MechanicRecalcJobRepository(
+            _dbContext,
+            CreateNoOpEventCollector());
+        await repo.AddAsync(job);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
+        var worker = new MechanicRecalcBackgroundService(
+            scopeFactory,
+            NullLogger<MechanicRecalcBackgroundService>.Instance);
+
+        // Act — single tick: ClaimNext (Pending→Running, flag preserved) → enumerate ids (count=1)
+        // → ReconstituteWithTotal(1) → loop iter 1 sees flag → job.Complete() (Running→Completed)
+        // → break → terminal persist. Per Task 6 lifecycle: cancellation is a flag, not a status.
+        await InvokeProcessNextJobAsync(worker);
+
+        // Assert — reload from a fresh context (mirroring the happy-path test pattern).
+        await using var verifyCtx = _fixture.CreateDbContext(_connectionString);
+        var reloaded = await verifyCtx.MechanicRecalcJobs
+            .AsNoTracking()
+            .SingleAsync(j => j.Id == job.Id);
+
+        // Option A (snippet governs): worker calls job.Complete() on the cancel-honour branch,
+        // so the terminal status is Completed — NOT Cancelled (the aggregate has no public path
+        // to RecalcJobStatus.Cancelled; only the flag exists).
+        reloaded.Status.Should().Be(RecalcJobStatus.Completed);
+        reloaded.CancellationRequested.Should().BeTrue("the flag is preserved through the round-trip and persists alongside the terminal status");
+        reloaded.StartedAt.Should().NotBeNull("ClaimNextPendingAsync stamps StartedAt on the Pending→Running claim");
+        reloaded.CompletedAt.Should().NotBeNull("job.Complete() stamps CompletedAt on the Running→Completed transition");
+        reloaded.Total.Should().Be(1, "ReconstituteWithTotalAsync set Total to the candidate count (1 Published analysis) before the per-id loop");
+        reloaded.Processed.Should().Be(0, "the loop short-circuited on iteration 1 before sending the MediatR command, so RecordSuccess was never called");
+        reloaded.Failed.Should().Be(0);
+        reloaded.Skipped.Should().Be(0);
     }
 
     [Fact]

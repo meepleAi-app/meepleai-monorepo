@@ -974,7 +974,20 @@ Use `page.context().route()` to mock:
 
 Assert drawer renders progress bar transitions and final success toast.
 
-- [ ] **Step 1: Author + commit**
+- [x] **Step 1: Author + commit**
+  - Spec: `apps/web/e2e/admin-mechanic-extractor-validation/recalc-all.spec.ts` — 1 scenario covering Pending → Running (50%) → Completed transitions plus the latched success toast `Recalculated 100 analyses`.
+  - Mocks at `page.context().route()`:
+    - `GET /api/v1/admin/mechanic-extractor/dashboard` → `[]` (page renders past loading skeleton)
+    - `GET /api/v1/admin/mechanic-extractor/thresholds` → minimal valid `CertificationThresholdsDto` (so the thresholds card renders past its own skeleton)
+    - `POST /api/v1/admin/mechanic-extractor/metrics/recalculate-all` → 202 + `{ jobId }` with `Location:` header (matching backend convention)
+    - `GET /api/v1/admin/mechanic-extractor/metrics/recalc-jobs/{jobId}` → stateful counter drives Pending (call 1) → Running 50/100 (call 2) → Completed 100/100 (call 3+); each payload is full `RecalcJobStatusDtoSchema` shape (id, status, triggeredByUserId, counters, timestamps, etaSeconds — ~6s wall-clock for the test given `POLL_INTERVAL_MS=2000`).
+  - Auth: `setupMockAuth(page, 'Admin', 'admin@meepleai.dev')` from `e2e/fixtures/auth.ts` (`PLAYWRIGHT_AUTH_BYPASS=true` injected by webServer config).
+  - Test ID coverage: asserts `recalc-all-button`, `recalc-progress-drawer`, `recalc-progress-drawer-close` (only rendered on terminal status — defense-in-depth that we hit the terminal path).
+  - Polling-stop guard: asserts `getStatusCallCount()` is in `[3, 5]` so a regression where `useRecalcJobStatus.refetchInterval` fails to return `false` on terminal status surfaces immediately.
+  - Stable UUIDs throughout — `JOB_ID = '99999999-aaaa-bbbb-cccc-111122223333'`, `TRIGGERED_BY = '00000000-0000-0000-0000-000000000001'` — both required by `EnqueueRecalcAllResponseSchema.jobId.uuid()` and `RecalcJobStatusDtoSchema.{id,triggeredByUserId}.uuid()`.
+  - Quality: `pnpm typecheck` → exit 0; `pnpm lint` → no new errors/warnings (only pre-existing warnings unrelated to this file).
+  - Live `pnpm test:e2e` skipped per project pattern — E2E execution lives in CI; spec relies only on mocked routes so it has no infra dependency.
+  - Commit: `feat(mechanic-validation): Sprint 2 Task 29 — Playwright spec for recalc-all flow`.
 
 ---
 

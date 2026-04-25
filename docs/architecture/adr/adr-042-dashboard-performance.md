@@ -68,7 +68,7 @@ Real-time dashboard updates use Server-Sent Events (SSE) via `/api/v1/dashboard/
 
 ### Frontend Tests
 - **Unit**: `dashboard-client.test.tsx` (render performance, loading/error states)
-- **Integration**: `dashboard-api-integration.test.tsx` (MSW mocks, TanStack Query behavior, polling)
+- **Integration**: `dashboard-api-integration.test.tsx` (TanStack Query behavior, polling)
 - **E2E**: 7+ Playwright test files covering performance, accessibility, security, user journeys
 
 ### Lighthouse CI

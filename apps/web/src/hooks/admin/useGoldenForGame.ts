@@ -26,5 +26,6 @@ export function useGoldenForGame(
     // sharedGameId is guaranteed non-null by the `enabled` guard below.
     queryFn: () => api.admin.getGolden(sharedGameId as string),
     enabled: !!sharedGameId,
+    staleTime: 60_000,
   });
 }

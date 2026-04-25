@@ -12,7 +12,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2Icon } from 'lucide-react';
-import { useForm, Controller, type Resolver } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
 
 import {
@@ -180,28 +180,22 @@ export function GoldenClaimForm({
             <FormItem>
               <FormLabel htmlFor="golden-claim-section">Section *</FormLabel>
               <FormControl>
-                <Controller
-                  control={form.control}
-                  name="section"
-                  render={({ field: ctrl }) => (
-                    <Select
-                      value={ctrl.value}
-                      onValueChange={ctrl.onChange}
-                      disabled={mode === 'edit'}
-                    >
-                      <SelectTrigger id="golden-claim-section">
-                        <SelectValue placeholder="Select a section" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SECTION_OPTIONS.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={mode === 'edit'}
+                >
+                  <SelectTrigger id="golden-claim-section">
+                    <SelectValue placeholder="Select a section" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SECTION_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </FormControl>
               <FormMessage />
               {mode === 'edit' && (
@@ -209,8 +203,6 @@ export function GoldenClaimForm({
                   Section is immutable after creation.
                 </p>
               )}
-              {/* keep field.name referenced so RHF wires aria-* correctly */}
-              <input type="hidden" name={field.name} value={field.value} />
             </FormItem>
           )}
         />

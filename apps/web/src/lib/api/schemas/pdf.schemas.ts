@@ -16,8 +16,8 @@ export const PdfDocumentDtoSchema = z.object({
   filePath: z.string().min(1),
   fileSizeBytes: z.number().int().nonnegative(),
   processingStatus: z.string().min(1),
-  uploadedAt: z.string().datetime(),
-  processedAt: z.string().datetime().nullable(),
+  uploadedAt: z.string().datetime({ offset: true }),
+  processedAt: z.string().datetime({ offset: true }).nullable(),
   pageCount: z.number().int().positive().nullable(),
   documentType: z.enum(['base', 'expansion', 'errata', 'homerule']).default('base'), // Issue #2051
   isPublic: z.boolean().default(false), // Admin Wizard: Public library visibility
@@ -56,7 +56,7 @@ export const GamePdfDtoSchema = z.object({
   name: z.string(),
   pageCount: z.number().int().nonnegative(),
   fileSizeBytes: z.number().nonnegative(),
-  uploadedAt: z.string().datetime(),
+  uploadedAt: z.string().datetime({ offset: true }),
   source: z.string(), // "Custom" or "Catalog"
   language: z.string().nullable().optional(),
 });
@@ -104,9 +104,9 @@ export const ProcessingProgressSchema = z.object({
   /** Total number of pages in the PDF */
   totalPages: z.number().int().nonnegative(),
   /** When processing started (UTC ISO 8601) */
-  startedAt: z.string().datetime(),
+  startedAt: z.string().datetime({ offset: true }),
   /** When processing completed (UTC ISO 8601), null if still in progress */
-  completedAt: z.string().datetime().nullable(),
+  completedAt: z.string().datetime({ offset: true }).nullable(),
   /** Error message if processing failed */
   errorMessage: z.string().nullable().optional(),
 });

@@ -18,8 +18,8 @@ export const AlertDtoSchema = z.object({
   severity: AlertSeveritySchema,
   message: z.string(),
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
-  triggeredAt: z.string().datetime(),
-  resolvedAt: z.string().datetime().nullable().optional(),
+  triggeredAt: z.string().datetime({ offset: true }),
+  resolvedAt: z.string().datetime({ offset: true }).nullable().optional(),
   isActive: z.boolean(),
   channelSent: z.record(z.string(), z.boolean()).nullable().optional(),
 });

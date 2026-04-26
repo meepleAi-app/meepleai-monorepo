@@ -18,8 +18,8 @@ export const AgentDtoSchema = z.object({
   strategyName: z.string(),
   strategyParameters: z.record(z.string(), z.any()),
   isActive: z.boolean(),
-  createdAt: z.string().datetime(),
-  lastInvokedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  lastInvokedAt: z.string().datetime({ offset: true }).nullable(),
   invocationCount: z.number().int().nonnegative(),
   isRecentlyUsed: z.boolean(),
   isIdle: z.boolean(),
@@ -44,7 +44,7 @@ export const AgentResponseDtoSchema = z.object({
   confidence: z.number(),
   resultCount: z.number().int().nonnegative(),
   processingTimeMs: z.number().int().nonnegative(),
-  timestamp: z.string().datetime(),
+  timestamp: z.string().datetime({ offset: true }),
   searchResults: z.array(
     z.object({
       documentId: z.string().uuid(),
@@ -295,7 +295,7 @@ export const SSEEventSchema = z.object({
     'setupStep',
   ]),
   data: z.unknown(),
-  timestamp: z.string().datetime(),
+  timestamp: z.string().datetime({ offset: true }),
 });
 
 export type SSEEvent = z.infer<typeof SSEEventSchema>;

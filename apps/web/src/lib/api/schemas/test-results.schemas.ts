@@ -17,7 +17,7 @@ export const testResultSchema = z.object({
   costEstimate: z.number().min(0),
   latencyMs: z.number().int().min(0),
   citationsJson: z.string().optional().nullable(),
-  executedAt: z.string().datetime(),
+  executedAt: z.string().datetime({ offset: true }),
   executedBy: z.string().uuid(),
   notes: z.string().optional().nullable(),
   isSaved: z.boolean(),
@@ -48,8 +48,8 @@ export const saveTestResultRequestSchema = z.object({
 // Query parameters for filtering test results
 export const testResultsQuerySchema = z.object({
   agentDefinitionId: z.string().uuid().optional(),
-  from: z.string().datetime().optional(),
-  to: z.string().datetime().optional(),
+  from: z.string().datetime({ offset: true }).optional(),
+  to: z.string().datetime({ offset: true }).optional(),
   savedOnly: z.boolean().optional(),
   skip: z.number().int().min(0).optional().default(0),
   take: z.number().int().min(1).max(100).optional().default(50),

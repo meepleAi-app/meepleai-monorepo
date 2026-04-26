@@ -43,7 +43,7 @@ export type AdminOverviewStats = z.infer<typeof AdminOverviewStatsSchema>;
  * Matches TimeSeriesDataPoint from backend Contracts
  */
 export const TimeSeriesDataPointSchema = z.object({
-  date: z.string().datetime(),
+  date: z.string().datetime({ offset: true }),
   count: z.number().int().nonnegative(),
   averageValue: z.number().nullable().optional(),
 });
@@ -95,7 +95,7 @@ export const DashboardStatsSchema = z.object({
   apiRequestTrend: z.array(TimeSeriesDataPointSchema),
   pdfUploadTrend: z.array(TimeSeriesDataPointSchema),
   chatMessageTrend: z.array(TimeSeriesDataPointSchema),
-  generatedAt: z.string().datetime(),
+  generatedAt: z.string().datetime({ offset: true }),
 });
 
 export type DashboardStats = z.infer<typeof DashboardStatsSchema>;
@@ -129,7 +129,7 @@ export const ActivityEventSchema = z.object({
   userEmail: z.string().nullable().optional(),
   entityId: z.string().nullable().optional(),
   entityType: z.string().nullable().optional(),
-  timestamp: z.string().datetime(),
+  timestamp: z.string().datetime({ offset: true }),
   severity: ActivitySeveritySchema.optional().default('Info'),
 });
 
@@ -138,7 +138,7 @@ export type ActivityEvent = z.infer<typeof ActivityEventSchema>;
 export const RecentActivityDtoSchema = z.object({
   events: z.array(ActivityEventSchema),
   totalCount: z.number().int().nonnegative(),
-  generatedAt: z.string().datetime(),
+  generatedAt: z.string().datetime({ offset: true }),
 });
 
 export type RecentActivityDto = z.infer<typeof RecentActivityDtoSchema>;
@@ -154,7 +154,7 @@ export const TokenBalanceSchema = z.object({
   currency: z.string().default('EUR'),
   usagePercent: z.number().min(0).max(100),
   projectedDaysUntilDepletion: z.number().nullable(),
-  lastUpdated: z.string().datetime(),
+  lastUpdated: z.string().datetime({ offset: true }),
 });
 export type TokenBalance = z.infer<typeof TokenBalanceSchema>;
 

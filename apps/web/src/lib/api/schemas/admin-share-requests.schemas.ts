@@ -44,7 +44,7 @@ export const BadgeDtoSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   iconUrl: z.string().nullable(),
-  awardedAt: z.string().datetime(),
+  awardedAt: z.string().datetime({ offset: true }),
 });
 
 export type BadgeDto = z.infer<typeof BadgeDtoSchema>;
@@ -54,7 +54,7 @@ export const ContributorProfileDtoSchema = z.object({
   userId: z.string().uuid(),
   userName: z.string(),
   avatarUrl: z.string().nullable(),
-  joinedAt: z.string().datetime(),
+  joinedAt: z.string().datetime({ offset: true }),
   totalContributions: z.number().int().nonnegative(),
   approvedContributions: z.number().int().nonnegative(),
   approvalRate: z.number().min(0).max(1),
@@ -98,14 +98,14 @@ export const LockStatusDtoSchema = z.object({
   isLockedByCurrentAdmin: z.boolean(),
   lockedByAdminId: z.string().uuid().nullable(),
   lockedByAdminName: z.string().nullable(),
-  lockExpiresAt: z.string().datetime().nullable(),
+  lockExpiresAt: z.string().datetime({ offset: true }).nullable(),
 });
 
 export type LockStatusDto = z.infer<typeof LockStatusDtoSchema>;
 
 // Share Request History Entry DTO
 export const ShareRequestHistoryEntryDtoSchema = z.object({
-  timestamp: z.string().datetime(),
+  timestamp: z.string().datetime({ offset: true }),
   action: ShareRequestHistoryActionSchema,
   actorId: z.string().uuid().nullable(),
   actorName: z.string().nullable(),
@@ -135,13 +135,13 @@ export const AdminShareRequestDtoSchema = z.object({
   // Request details
   userNotes: z.string().nullable(),
   attachedDocumentCount: z.number().int().nonnegative(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
 
   // Lock info
   isInReview: z.boolean(),
   reviewingAdminId: z.string().uuid().nullable(),
   reviewingAdminName: z.string().nullable(),
-  reviewStartedAt: z.string().datetime().nullable(),
+  reviewStartedAt: z.string().datetime({ offset: true }).nullable(),
 
   // For additional content
   targetSharedGameId: z.string().uuid().nullable(),
@@ -176,8 +176,8 @@ export const ShareRequestDetailsDtoSchema = z.object({
   lockStatus: LockStatusDtoSchema,
 
   // Timestamps
-  createdAt: z.string().datetime(),
-  resolvedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  resolvedAt: z.string().datetime({ offset: true }).nullable(),
 });
 
 export type ShareRequestDetailsDto = z.infer<typeof ShareRequestDetailsDtoSchema>;
@@ -189,8 +189,8 @@ export const ActiveReviewDtoSchema = z.object({
   gameTitle: z.string(),
   contributorId: z.string().uuid(),
   contributorName: z.string(),
-  reviewStartedAt: z.string().datetime(),
-  reviewLockExpiresAt: z.string().datetime(),
+  reviewStartedAt: z.string().datetime({ offset: true }),
+  reviewLockExpiresAt: z.string().datetime({ offset: true }),
   status: ShareRequestStatusSchema,
 });
 
@@ -212,7 +212,7 @@ export type PaginatedAdminShareRequestsResponse = z.infer<
 // Start Review Response
 export const StartReviewResponseSchema = z.object({
   shareRequestId: z.string().uuid(),
-  lockExpiresAt: z.string().datetime(),
+  lockExpiresAt: z.string().datetime({ offset: true }),
   requestDetails: ShareRequestDetailsDtoSchema,
 });
 

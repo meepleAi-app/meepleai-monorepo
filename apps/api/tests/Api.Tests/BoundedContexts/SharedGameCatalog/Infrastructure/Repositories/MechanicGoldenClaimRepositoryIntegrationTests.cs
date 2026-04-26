@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
@@ -28,6 +29,7 @@ public sealed class MechanicGoldenClaimRepositoryIntegrationTests : IAsyncLifeti
     private MechanicGoldenBggTagRepository _tagRepository = null!;
     private string _databaseName = null!;
     private string _connectionString = null!;
+    private Guid _curatorUserId;
 
     public MechanicGoldenClaimRepositoryIntegrationTests(SharedTestcontainersFixture fixture)
     {
@@ -41,6 +43,20 @@ public sealed class MechanicGoldenClaimRepositoryIntegrationTests : IAsyncLifeti
 
         _dbContext = _fixture.CreateDbContext(_connectionString);
         await _dbContext.Database.MigrateAsync();
+
+        // Seed a user row so the FK on curator_user_id is satisfiable
+        // (FK was added in Sprint 1 migration 20260424094641 with ON DELETE RESTRICT).
+        _curatorUserId = Guid.NewGuid();
+        _dbContext.Users.Add(new UserEntity
+        {
+            Id = _curatorUserId,
+            Email = $"curator-{Guid.NewGuid():N}@meepleai.test",
+            Role = "Admin",
+            Tier = "Free",
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
 
         var mockCollector = new Mock<IDomainEventCollector>();
         mockCollector
@@ -197,7 +213,7 @@ public sealed class MechanicGoldenClaimRepositoryIntegrationTests : IAsyncLifeti
         return sharedGameId;
     }
 
-    private static Task<Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.MechanicGoldenClaim> BuildClaimAsync(
+    private Task<Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.MechanicGoldenClaim> BuildClaimAsync(
         Guid sharedGameId, MechanicSection section, string statement, int page)
     {
         var embedding = new StubEmbeddingService();
@@ -208,7 +224,7 @@ public sealed class MechanicGoldenClaimRepositoryIntegrationTests : IAsyncLifeti
             statement: statement,
             expectedPage: page,
             sourceQuote: "Rulebook p." + page + ": " + statement,
-            curatorUserId: Guid.NewGuid(),
+            curatorUserId: _curatorUserId,
             embedding: embedding,
             keywords: keywords,
             ct: CancellationToken.None);

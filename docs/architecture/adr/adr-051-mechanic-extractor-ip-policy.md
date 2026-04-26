@@ -159,3 +159,110 @@ Driver della decisione:
 | **Mage Knight Board Game** | `8a9f8a90-594a-4316-a32e-daa43a4356fb` | ⚠️ **0 PDF Ready** | Gioco complesso (~100 pagine), stress test prompt + chunking. **Richiede upload PDF prima di M1.2** |
 
 **Gate M1**: per procedere al test su Mage Knight, occorre prima caricare un PDF Ready del manuale (responsabilità operatore, parte del setup M1.2).
+
+---
+
+## Addendum 2026-04-26 — Sprint 2: rilassamento dell'invariante di atomicità "abort = scarto totale"
+
+**Status**: Accepted
+**Driver**: T23/T24 calibration spike (Carcassonne + 7 Wonders, 2026-04-26)
+**Implementing commits**: `42bf5b21f` (P1' partial-recovery checkpoint), `2969c773f` (P0 LlmCostCalculator alias)
+**Sprint plan**: `docs/superpowers/plans/2026-04-25-mechanic-extractor-ai-validation-sprint-2.md`
+
+### Contesto
+
+Il design originale dell'esecutore della pipeline M1.2 (`MechanicAnalysisExecutor`) trattava ogni run come **all-or-nothing**:
+- Se tutte e 6 le sezioni (Summary, Mechanics, Victory, Resources, Phases, Faq) producevano output validato, l'analisi transitava a `Draft` con i claim aggregati e poi a `InReview` via `SubmitForReview`.
+- Se *una qualunque* sezione abortiva (cost cap superato, hard-failure LLM dopo fallback provider, validator reject oltre retry), `ApplyAbort` invocava direttamente `MechanicAnalysis.AutoRejectFromDraft(reason, …)` **scartando tutti i claim parsati dalle sezioni precedenti**.
+
+Il calibration spike T23 (vedi `docs/research/mechanic-validation-calibration-spike-2026-04-26.md`) ha mostrato due problemi operativi causati da questa rigidità:
+
+1. **Costo sprecato**: in T23 (Carcassonne) la sezione `Faq` ha sforato il cost cap dopo che 5 sezioni avevano già parsato correttamente — ~80k token già spesi sono stati buttati assieme ai ~30 claim validi.
+2. **Triage impossibile**: l'admin riceve un'analisi `Rejected` con `RejectionReason="cost_cap_exceeded"` ma **nessun claim**, quindi non può valutare *cosa* è effettivamente sopravvissuto né decidere se rilanciare la pipeline (rischio: ri-pagare i token già spesi su sezioni già pronte) o accettare la salvezza parziale.
+
+### Decisione
+
+**Rilassare l'invariante di atomicità**: un abort della pipeline non scarta più automaticamente i claim parsati dalle sezioni precedenti. Se almeno un claim sopravvive al parser difensivo (`MechanicOutputParser.Parse`), l'analisi viene **checkpoint-ata** in un nuovo stato `PartiallyExtracted` invece di essere rigettata.
+
+#### Nuovo stato
+
+| Status | Valore | Origine | Significato |
+|--------|--------|---------|-------------|
+| `Draft` | 0 | Esistente | Pipeline completata con successo, in attesa di `SubmitForReview` |
+| `InReview` | 1 | Esistente | Admin sta revisionando i claim |
+| `Published` | 2 | Esistente | Tutti i claim approvati, card pubbliche |
+| `Rejected` | 3 | Esistente | Pipeline abortita **e** zero claim salvabili, oppure admin ha rejectato dopo review |
+| **`PartiallyExtracted`** | **4** | **Sprint 2** | **Pipeline abortita ma ≥ 1 claim parsato dalle sezioni successe — admin deve triage** |
+
+`Suppressed` rimane ortogonale (`IsSuppressed: bool`), non è uno status.
+
+#### Nuove transizioni di stato
+
+Aggiunte (delta vs ADR-051 originale):
+
+```
+Draft (0) → PartiallyExtracted (4)     : MarkAsPartiallyExtracted (system, abort con salvage)
+PartiallyExtracted (4) → InReview (1)  : SubmitForReview (admin promuove la salvezza al review flow)
+PartiallyExtracted (4) → Rejected (3)  : Reject (admin scarta la salvezza — equivalente al pre-Sprint-2)
+```
+
+`SubmitForReview` da `PartiallyExtracted` cancella il `RejectionReason` (era un abort marker, non un giudizio umano) — i claim salvati erano già `Pending`, mai revisionati.
+
+#### Invariante T23 preservata
+
+Il telemetry di costo (`TotalTokensUsed`, `EstimatedCostUsd`) viene **comunque** registrato via `MechanicAnalysis.RecordUsage(...)` **prima** della transizione terminale, sia nel ramo "salvage" sia nel ramo "full reject". Questo garantisce che il fix P0 di `LlmCostCalculator` (alias `deepseek-chat` → pricing OpenRouter) non venga vanificato da un percorso che salta la registrazione.
+
+#### Effetto sui vincoli T1-T8
+
+Nessuno dei vincoli tecnici originari (T1 quote cap, T2 anti-letterale, T3 citation obbligatoria, T4 page reference, T5 kill switch, T6 audit log, T7 prompt versioning, T8 cost cap) cambia semantica:
+- I claim sopravvissuti sono passati comunque attraverso il parser difensivo, che applica T1/T3/T4 prima dell'`AddClaim`.
+- T2 e T8 sono enforced **dentro** la pipeline (pre-aggregate); il checkpoint avviene **dopo** l'enforcement, quindi i claim salvati hanno già superato i guardrail.
+- T6 emette un `MechanicAnalysisStatusChangedEvent(Draft → PartiallyExtracted)` consumato dal `MediatorSaveChangesInterceptor` esattamente come per le altre transizioni.
+
+### Conseguenze
+
+#### Positive
+
+- ✅ **Costo non sprecato**: i token già spesi su sezioni success producono valore tangibile (claim triagibili) anche in caso di abort tardivo.
+- ✅ **Triage informato**: l'admin vede `Status=PartiallyExtracted`, `RejectionReason=cost_cap_exceeded` (o equivalente), `Claims.Count > 0` e decide consapevolmente: promuovere a review (`SubmitForReview`), scartare (`Reject`), o lanciare un nuovo run completo.
+- ✅ **Audit trail invariato**: ogni transizione produce sempre un `MechanicAnalysisStatusChangedEvent`; nessun gap nell'audit log.
+- ✅ **Backwards compatibility totale**: nessuna riga esistente `mechanic_analyses` cambia stato (la tabella ha 0 righe in produzione, ma anche se non lo fosse, lo schema `int` accetta il nuovo valore senza migration).
+
+#### Negative
+
+- ❌ **Stato in più da gestire in UI**: `PartiallyExtracted` richiede un'icona/colore distinto e un'azione "Promote to Review" oltre a "Reject". *Mitigazione*: copertura nel sprint UI M1.2 (PR #547).
+- ❌ **Possibile confusione in metriche**: dashboard "% analisi pubblicate" deve distinguere `PartiallyExtracted` come una categoria intermedia, non confonderla con `Rejected`. *Mitigazione*: aggiornare le query delle metriche operative.
+- ❌ **Cost cap "soft"**: un admin che promuove una `PartiallyExtracted` ottiene 5/6 sezioni ad un costo ≤ cap; se poi rilancia la pipeline per recuperare la sezione mancante, il costo totale supera il cap originale. *Mitigazione*: documentare esplicitamente che il cap è **per-run**, non **per-analisi-end-to-end**, e che la responsabilità di non rilanciare è dell'admin.
+
+#### Rischi residui
+
+- 🟡 **Aspettativa "tutto-o-niente"**: alcuni admin potrebbero leggere "abort" come segnale di "buttare via tutto" e rejectare meccanicamente le `PartiallyExtracted` senza valutare. *Mitigazione*: copy UI esplicito ("X sezioni hanno prodotto Y claim validi prima dell'abort — valuta se promuovere o scartare").
+
+### Alternative considerate
+
+#### A. Mantenere atomicità totale (status quo pre-Sprint-2)
+
+**Pro**: Modello mentale semplice, nessuno stato nuovo.
+**Contro**: Spreca i token già pagati e non offre triage.
+**Reject**: il cost overhead documentato in T23 è sufficiente da solo a giustificare il refactor.
+
+#### B. Salvare i claim ma mantenere `Status=Draft` (no nuovo status)
+
+**Pro**: Riduce stati.
+**Contro**: `Draft` significa "completata, in attesa di review umano del *full set*"; mischiarci dentro analisi parziali offusca il significato. L'admin non distingue più "ready to review" da "abort recovery".
+**Reject**: confusione semantica > risparmio di un enum value.
+
+#### C. Salvare i claim e auto-rilanciare le sezioni mancanti
+
+**Pro**: Massima resilienza, no admin-in-the-loop.
+**Contro**: Un cost cap exceeded *deve* fermare la spesa — un retry automatico viola la garanzia di cost ceiling. Inoltre, una validation failure dopo retry cap non ha motivo di succedere al secondo tentativo immediato.
+**Reject**: viola l'intent del cost cap (T8) e non risolve i fallimenti hard-LLM.
+
+### Codice di riferimento
+
+- `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Domain/Enums/MechanicAnalysisStatus.cs:31` — enum value
+- `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Domain/Aggregates/MechanicAnalysis.cs` — `MarkAsPartiallyExtracted`, `ValidTransitions`, estensione `SubmitForReview`
+- `apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Services/MechanicExtractor/MechanicAnalysisExecutor.cs:263` — `ApplyAbort` con recovery summary
+- Test domain: `apps/api/tests/Api.Tests/BoundedContexts/SharedGameCatalog/Domain/Aggregates/MechanicAnalysisTests.cs` (7 nuovi test)
+- Test executor: `apps/api/tests/Api.Tests/BoundedContexts/SharedGameCatalog/Application/Services/MechanicExtractor/MechanicAnalysisExecutorApplyAbortTests.cs` (6 nuovi test)
+- Suite Mechanic unit: 277 test, tutti passanti.

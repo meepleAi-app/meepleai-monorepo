@@ -29,6 +29,39 @@ Per ogni detail page decidi esplicitamente:
 
 Connection bar (pip delle entità collegate) **sempre presente** sotto l'hero/header, entro 80px dal top.
 
+### Componenti già stabili — NON ridisegnare
+
+Questi componenti v2 sono **già implementati e mergiati su `main-dev`**. Riusali pixel-perfect, non reinventare:
+
+| Componente | Path codice | Stato | Mockup riferimento |
+|------------|-------------|-------|---------------------|
+| `ConnectionBar` | `apps/web/src/components/ui/data-display/connection-bar/ConnectionBar.tsx` | ✅ in produzione (PR #549, #552) — applicata su `GameDetailDesktop`, `AgentCharacterSheet` | layout pip rounded-full, icona + count + label, entity color, isEmpty → "+" |
+| `ConnectionChip` / `ConnectionChipPopover` / `ConnectionChipStrip` | `apps/web/src/components/ui/data-display/meeple-card/parts/` | ✅ in produzione (PR #542, #545, #549, #552) — usata in MeepleCard footer | strip orizzontale per card |
+| `MeepleCard` | `apps/web/src/components/ui/data-display/meeple-card/` | ✅ in produzione | tutte le varianti (grid/list/compact/featured/hero) e i 9 entity types |
+| `RecentsBar` | `apps/web/src/components/ui/navigation/recents-bar/` | ✅ in produzione (M5) | pill recent entities |
+| `MobileBottomBar` + `MiniNavSlot` | `apps/web/src/components/layout/` | ✅ in produzione (M5) | 5-tab nav mobile |
+| Drawer stack (`useCascadeNavigationStore`) | `apps/web/src/stores/cascadeNavigationStore.ts` | ✅ in produzione (M5) | side-panel desktop / bottom-sheet mobile, max 3 stack |
+
+**Per SP4 il tuo lavoro è**: estendere l'uso di questi componenti alle entity che ancora non li hanno (KB, Toolkit, Player, Game Nights), NON ridefinire il pattern. Se senti il bisogno di deviare dal pattern stabile, **flagga esplicitamente con motivazione** — il default è riuso.
+
+### Connection bar — input concreto per ogni entity
+
+Per ogni detail produrre, definisci esplicitamente la lista pip da mostrare nella connection-bar (entityType + count + icon + label). Esempio già in produzione:
+
+```tsx
+// Game detail desktop (riferimento implementazione attuale)
+const connections: ConnectionPip[] = [
+  { entityType: 'agent',   count: 2, label: 'Agenti',    icon: Bot,        isEmpty: false },
+  { entityType: 'kb',      count: 5, label: 'Documenti', icon: FileText,   isEmpty: false },
+  { entityType: 'toolkit', count: 1, label: 'Toolkit',   icon: ToolboxIcon,isEmpty: false },
+  { entityType: 'session', count: 12,label: 'Partite',   icon: Target,     isEmpty: false },
+  { entityType: 'player',  count: 4, label: 'Giocatori', icon: User,       isEmpty: false },
+  { entityType: 'chat',    count: 0, label: 'Chat',      icon: MessageCircle, isEmpty: true },
+];
+```
+
+Riusa identica struttura per tutte le entity SP4. Vedi `apps/web/src/components/ui/data-display/connection-bar/build-connections.ts` per i builder esistenti (`buildGameConnections`, `buildAgentConnections`, `buildSessionConnections`).
+
 ## Schermate da produrre (16, raggruppate per entity)
 
 ### A. Game (`--c-game`, 🎲)

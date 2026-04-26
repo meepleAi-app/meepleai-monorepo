@@ -67,6 +67,21 @@ internal class LlmCostCalculator : ILlmCostCalculator
             OutputCostPer1M = 1.10m
         },
 
+        // DeepSeek native API (provider-direct, no OpenRouter prefix).
+        // The DeepSeekLlmClient reports modelId as "deepseek-chat" (the provider's native id),
+        // not the OpenRouter-style "deepseek/deepseek-chat". Without this alias the registry
+        // lookup misses, GetModelPricing returns null, and CalculateCost silently treats the
+        // model as free — which corrupted the M1.2 calibration cost telemetry (T23 spike,
+        // 80,583 tokens reported as $0.000000). Pricing is intentionally identical to the
+        // OpenRouter entry above; if DeepSeek's direct pricing ever diverges, split this entry.
+        ["deepseek-chat"] = new()
+        {
+            ModelId = "deepseek-chat",
+            Provider = "DeepSeek",
+            InputCostPer1M = 0.27m,
+            OutputCostPer1M = 1.10m
+        },
+
         // Local Ollama Models (self-hosted, zero cost)
         ["llama3:8b"] = new()
         {

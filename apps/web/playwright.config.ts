@@ -238,6 +238,48 @@ export default defineConfig({
       timeout: 180_000,
     },
 
+    // V2 Design Migration — Visual Regression Baseline (Issue #571)
+    // Captures snapshots of Claude Design mockups in `admin-mockups/design_files/`
+    // as the design contract for Phase 1+2 page migrations.
+    // Uses dedicated static server on port 5174 (see scripts/serve-mockups.cjs).
+    {
+      name: 'mockup-baseline-desktop',
+      testDir: './e2e/visual-mockups',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: process.env.MOCKUP_BASE_URL ?? 'http://localhost:5174',
+        viewport: { width: 1440, height: 900 },
+      },
+      expect: {
+        toHaveScreenshot: {
+          maxDiffPixelRatio: 0.001,
+          threshold: 0.2,
+          animations: 'disabled',
+          // Note: `fullPage: true` is set per-call in baseline.spec.ts (project-level
+          // ScreenshotAssertionsOptions does not accept fullPage in @playwright/test types).
+        },
+      },
+      fullyParallel: true,
+    },
+    {
+      name: 'mockup-baseline-mobile',
+      testDir: './e2e/visual-mockups',
+      use: {
+        ...devices['Pixel 5'],
+        baseURL: process.env.MOCKUP_BASE_URL ?? 'http://localhost:5174',
+        viewport: { width: 375, height: 812 },
+      },
+      expect: {
+        toHaveScreenshot: {
+          maxDiffPixelRatio: 0.001,
+          threshold: 0.2,
+          animations: 'disabled',
+          // Note: `fullPage: true` is set per-call in baseline.spec.ts.
+        },
+      },
+      fullyParallel: true,
+    },
+
     // Admin Embedding Flow — local dev and integration environments
     {
       name: 'embedding-flow-local',
@@ -268,29 +310,51 @@ export default defineConfig({
   // Issue #2008: Disable webServer in parallel mode to prevent port conflicts
   // When PARALLEL_E2E=true, the server is started once by scripts/run-parallel-e2e.js
   // and all shards reuse it
+  // Issue #571: webServer is an array — Next.js + mockup static server (port 5174).
+  // MOCKUP_ONLY_WEBSERVER=1 skips Next.js (saves ~3min build in mockup-only CI runs;
+  // mockup-baseline-* projects never navigate to :3000).
   webServer:
     process.env.PLAYWRIGHT_SKIP_WEB_SERVER === '1'
       ? undefined
       : process.env.PARALLEL_E2E === 'true'
         ? undefined
-        : {
-            // Issue #2007 Phase 2: Use production server in CI for stability
-            // Dev server crashes after ~48 minutes under sustained test load
-            // Production build is already created by CI workflow (pnpm build)
-            // Issue #2247: Heap increase LOCAL ONLY (dev server memory leak mitigation)
-            // Issue #2261: Force production server for error state tests (FORCE_PRODUCTION_SERVER=true)
-            command:
-              process.env.CI === 'true' || process.env.FORCE_PRODUCTION_SERVER === 'true'
-                ? 'node ./node_modules/next/dist/bin/next start -p 3000'
-                : 'node --max-old-space-size=8192 ./node_modules/next/dist/bin/next dev -p 3000',
-            url: 'http://localhost:3000',
-            reuseExistingServer: !process.env.CI,
-            timeout: 180 * 1000, // 3min for server startup
-            // E2E test auth bypass: allows Playwright tests to mock auth via page.route()
-            // without needing a running backend for session validation.
-            // Only active in development (guarded by NODE_ENV !== 'production' in proxy).
-            env: {
-              PLAYWRIGHT_AUTH_BYPASS: 'true',
-            },
-          },
+        : (() => {
+            const mockupServer = {
+              // Issue #571: static server for Claude Design mockups (visual baseline source).
+              // Used only by `mockup-baseline-*` projects. Lightweight Node http server, no deps.
+              command: 'node ./scripts/serve-mockups.cjs',
+              url: 'http://localhost:5174/sp4-games-index.html',
+              reuseExistingServer: !process.env.CI,
+              timeout: 30 * 1000,
+              env: {
+                MOCKUP_PORT: '5174',
+              },
+            };
+            if (process.env.MOCKUP_ONLY_WEBSERVER === '1') {
+              return [mockupServer];
+            }
+            return [
+              {
+                // Issue #2007 Phase 2: Use production server in CI for stability
+                // Dev server crashes after ~48 minutes under sustained test load
+                // Production build is already created by CI workflow (pnpm build)
+                // Issue #2247: Heap increase LOCAL ONLY (dev server memory leak mitigation)
+                // Issue #2261: Force production server for error state tests (FORCE_PRODUCTION_SERVER=true)
+                command:
+                  process.env.CI === 'true' || process.env.FORCE_PRODUCTION_SERVER === 'true'
+                    ? 'node ./node_modules/next/dist/bin/next start -p 3000'
+                    : 'node --max-old-space-size=8192 ./node_modules/next/dist/bin/next dev -p 3000',
+                url: 'http://localhost:3000',
+                reuseExistingServer: !process.env.CI,
+                timeout: 180 * 1000, // 3min for server startup
+                // E2E test auth bypass: allows Playwright tests to mock auth via page.route()
+                // without needing a running backend for session validation.
+                // Only active in development (guarded by NODE_ENV !== 'production' in proxy).
+                env: {
+                  PLAYWRIGHT_AUTH_BYPASS: 'true',
+                },
+              },
+              mockupServer,
+            ];
+          })(),
 });

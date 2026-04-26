@@ -51,6 +51,20 @@ public sealed class MechanicClaim : Entity<Guid>
     /// <summary>Attribution citations (minimum 1 — ADR-051 T3).</summary>
     public IReadOnlyList<MechanicCitation> Citations => _citations.AsReadOnly();
 
+    /// <summary>
+    /// True when the claim was instantiated via <see cref="Create"/> and is not yet persisted;
+    /// false when rehydrated from storage via <see cref="Reconstitute"/>.
+    /// </summary>
+    /// <remarks>
+    /// Consumed by <see cref="Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories.MechanicAnalysisRepository.Update(Aggregates.MechanicAnalysis)"/>
+    /// to disambiguate <c>EntityState.Added</c> vs <c>EntityState.Modified</c> when reattaching the
+    /// aggregate graph. Without this flag, EF Core's <c>DbSet.Update</c> graph traversal marks every
+    /// reachable child with a non-default <see cref="Guid"/> key as <c>Modified</c>, which causes
+    /// UPDATEs against non-existent rows when new claims are appended to an aggregate loaded with
+    /// <c>AsNoTracking</c> (e.g., the M1.2 executor pipeline).
+    /// </remarks>
+    public bool IsNew { get; private set; } = true;
+
     /// <summary>EF Core constructor. Do not use directly.</summary>
     private MechanicClaim() : base()
     {
@@ -147,7 +161,8 @@ public sealed class MechanicClaim : Entity<Guid>
             Status = status,
             ReviewedBy = reviewedBy,
             ReviewedAt = reviewedAt,
-            RejectionNote = rejectionNote
+            RejectionNote = rejectionNote,
+            IsNew = false
         };
 
         claim._citations.AddRange(citations);

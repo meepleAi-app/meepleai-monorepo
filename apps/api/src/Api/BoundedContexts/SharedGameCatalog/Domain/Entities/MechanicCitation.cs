@@ -47,6 +47,13 @@ public sealed class MechanicCitation : Entity<Guid>
     public int DisplayOrder { get; private set; }
 
     /// <summary>
+    /// True when the citation was instantiated via <see cref="Create"/> and is not yet persisted;
+    /// false when rehydrated from storage via <see cref="Reconstitute"/>. Mirrors
+    /// <see cref="MechanicClaim.IsNew"/> — see that field's remarks for rationale.
+    /// </summary>
+    public bool IsNew { get; private set; } = true;
+
+    /// <summary>
     /// EF Core constructor. Do not use directly.
     /// </summary>
     private MechanicCitation() : base()
@@ -149,7 +156,10 @@ public sealed class MechanicCitation : Entity<Guid>
             pdfPage: pdfPage,
             quote: quote,
             chunkId: chunkId,
-            displayOrder: displayOrder);
+            displayOrder: displayOrder)
+        {
+            IsNew = false
+        };
     }
 
     private static readonly char[] WhitespaceSeparators =

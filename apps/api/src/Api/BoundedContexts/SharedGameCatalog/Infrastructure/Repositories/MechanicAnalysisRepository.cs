@@ -182,7 +182,40 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
         ArgumentNullException.ThrowIfNull(analysis);
 
         var entity = MapToEntity(analysis);
-        DbContext.MechanicAnalyses.Update(entity);
+
+        // We can't use DbSet.Update(entity) here because EF's graph traversal would mark every
+        // reachable child with a non-default Guid key as Modified, which produces UPDATE statements
+        // against non-existent rows for any newly-minted MechanicClaim/MechanicCitation (their Ids
+        // come from Guid.NewGuid() in the domain factory, so EF's IsKeySet check returns true).
+        // The first such UPDATE returns 0 affected rows and trips DbUpdateConcurrencyException on
+        // the entity-tracker reconciliation pass — exactly the failure mode observed in the M1.2
+        // executor pipeline (load Draft AsNoTracking → AddClaim × N → Update → SaveChanges 💥).
+        //
+        // Instead: attach the root Modified, attach each child with state derived from the domain
+        // model's IsNew flag (set by Create, cleared by Reconstitute).
+        DbContext.MechanicAnalyses.Attach(entity);
+        DbContext.Entry(entity).State = EntityState.Modified;
+
+        // Don't dirty the xmin column ourselves — the concurrency token is server-managed and EF
+        // compares the value loaded with WHERE xmin = @value during the UPDATE.
+        DbContext.Entry(entity).Property(e => e.Xmin).IsModified = false;
+
+        var claimNewMap = analysis.Claims.ToDictionary(c => c.Id, c => c.IsNew);
+        var citationNewMap = analysis.Claims
+            .SelectMany(c => c.Citations)
+            .ToDictionary(c => c.Id, c => c.IsNew);
+
+        foreach (var claimEntity in entity.Claims)
+        {
+            var claimIsNew = claimNewMap.TryGetValue(claimEntity.Id, out var cn) && cn;
+            DbContext.Entry(claimEntity).State = claimIsNew ? EntityState.Added : EntityState.Modified;
+
+            foreach (var citationEntity in claimEntity.Citations)
+            {
+                var citationIsNew = citationNewMap.TryGetValue(citationEntity.Id, out var n) && n;
+                DbContext.Entry(citationEntity).State = citationIsNew ? EntityState.Added : EntityState.Modified;
+            }
+        }
 
         SynthesizeAuditRows(analysis);
         CollectDomainEvents(analysis);

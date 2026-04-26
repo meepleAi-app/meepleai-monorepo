@@ -188,7 +188,13 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
         }
         else
         {
-            ApplyAbort(analysis, result, now);
+            var recovery = ApplyAbort(analysis, result, now);
+            if (recovery.PartialClaimCount > 0)
+            {
+                _logger.LogWarning(
+                    "Mechanic analysis {AnalysisId} aborted ({Outcome}) but {ClaimCount} claim(s) survived parsing — checkpointing as PartiallyExtracted.",
+                    analysis.Id, result.Outcome, recovery.PartialClaimCount);
+            }
         }
 
         _analysisRepository.Update(analysis);
@@ -199,8 +205,8 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
         await _unitOfWork.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
 
         _logger.LogInformation(
-            "Mechanic analysis {AnalysisId} finished: outcome={Outcome}, claims={Claims}, tokens={Tokens}, cost={Cost:F4} USD.",
-            analysis.Id, result.Outcome, analysis.Claims.Count, result.TotalPromptTokens + result.TotalCompletionTokens, result.TotalCostUsd);
+            "Mechanic analysis {AnalysisId} finished: outcome={Outcome}, status={Status}, claims={Claims}, tokens={Tokens}, cost={Cost:F4} USD.",
+            analysis.Id, result.Outcome, analysis.Status, analysis.Claims.Count, result.TotalPromptTokens + result.TotalCompletionTokens, result.TotalCostUsd);
     }
 
     private async Task ApplySuccessAsync(MechanicAnalysis analysis, MechanicPipelineResult result, DateTime utcNow)
@@ -237,7 +243,27 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
         await Task.CompletedTask.ConfigureAwait(false);
     }
 
-    private static void ApplyAbort(MechanicAnalysis analysis, MechanicPipelineResult result, DateTime utcNow)
+    /// <summary>
+    /// Applies a pipeline-aborted outcome to the aggregate. ADR-051 Sprint 2 relaxes the original
+    /// all-or-nothing atomicity invariant: if the parser can recover at least one well-formed
+    /// claim from the partial section outputs the abort produced, the aggregate transitions to
+    /// <see cref="MechanicAnalysisStatus.PartiallyExtracted"/> with surviving claims attached,
+    /// instead of <see cref="MechanicAnalysisStatus.Rejected"/> with everything discarded.
+    /// </summary>
+    /// <returns>
+    /// A summary describing whether partial claims survived and how many. Used by the caller to
+    /// log the recovery decision.
+    /// </returns>
+    /// <remarks>
+    /// <see cref="MechanicAnalysis.RecordUsage(int, decimal)"/> must be called <i>before</i> the
+    /// terminal transition because it requires the aggregate to still be in
+    /// <see cref="MechanicAnalysisStatus.Draft"/>. Same for
+    /// <see cref="MechanicAnalysis.AddClaim(MechanicClaim)"/>.
+    /// </remarks>
+    internal static MechanicAbortRecoverySummary ApplyAbort(
+        MechanicAnalysis analysis,
+        MechanicPipelineResult result,
+        DateTime utcNow)
     {
         var reason = result.Outcome switch
         {
@@ -247,11 +273,42 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
             _ => MechanicAnalysis.AutoRejectionReasons.LlmGenerationFailed
         };
 
+        // Attempt partial recovery: parse whatever sections did land before the abort and salvage
+        // any well-formed claims. The parser is defensive — malformed JSON / missing citations are
+        // dropped silently, so this is safe to call on partial output.
+        var salvaged = result.SectionOutputs.Count > 0
+            ? MechanicOutputParser.Parse(analysis.Id, result.SectionOutputs)
+            : Array.Empty<MechanicClaim>();
+
+        if (salvaged.Count > 0)
+        {
+            foreach (var claim in salvaged)
+            {
+                analysis.AddClaim(claim);
+            }
+
+            analysis.RecordUsage(
+                result.TotalPromptTokens + result.TotalCompletionTokens,
+                result.TotalCostUsd);
+
+            analysis.MarkAsPartiallyExtracted(reason, analysis.CreatedBy, utcNow);
+
+            return new MechanicAbortRecoverySummary(reason, salvaged.Count, IsPartialCheckpoint: true);
+        }
+
+        // Nothing parseable survived → preserve the original full-abort behaviour.
         analysis.RecordUsage(
             result.TotalPromptTokens + result.TotalCompletionTokens,
             result.TotalCostUsd);
         analysis.AutoRejectFromDraft(reason, analysis.CreatedBy, utcNow);
+
+        return new MechanicAbortRecoverySummary(reason, PartialClaimCount: 0, IsPartialCheckpoint: false);
     }
+
+    internal readonly record struct MechanicAbortRecoverySummary(
+        string Reason,
+        int PartialClaimCount,
+        bool IsPartialCheckpoint);
 
     private async Task HandleCancellationAsync(Guid analysisId)
     {

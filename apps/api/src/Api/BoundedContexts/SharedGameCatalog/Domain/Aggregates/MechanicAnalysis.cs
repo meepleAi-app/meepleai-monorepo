@@ -33,6 +33,7 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
         [MechanicAnalysisStatus.Draft] = new[] { MechanicAnalysisStatus.InReview },
         [MechanicAnalysisStatus.InReview] = new[] { MechanicAnalysisStatus.Published, MechanicAnalysisStatus.Rejected },
         [MechanicAnalysisStatus.Rejected] = new[] { MechanicAnalysisStatus.InReview },
+        [MechanicAnalysisStatus.PartiallyExtracted] = new[] { MechanicAnalysisStatus.InReview, MechanicAnalysisStatus.Rejected },
         [MechanicAnalysisStatus.Published] = Array.Empty<MechanicAnalysisStatus>()
     };
 
@@ -388,6 +389,14 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
             RejectionReason = null;
         }
 
+        // Promotion from a system-initiated partial-extraction checkpoint: claims are already Pending
+        // (they were never reviewed), so we only clear the abort marker. The admin is now taking
+        // ownership of the salvaged claims and putting them through the normal review flow.
+        if (Status == MechanicAnalysisStatus.PartiallyExtracted)
+        {
+            RejectionReason = null;
+        }
+
         var previous = Status;
         Status = MechanicAnalysisStatus.InReview;
         ReviewedBy = null;
@@ -494,6 +503,51 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
 
         var previous = Status;
         Status = MechanicAnalysisStatus.Rejected;
+        ReviewedBy = actorId;
+        ReviewedAt = utcNow;
+        RejectionReason = reason.Trim();
+
+        AddDomainEvent(new MechanicAnalysisStatusChangedEvent(Id, previous, Status, actorId, RejectionReason));
+    }
+
+    /// <summary>
+    /// System-initiated checkpoint from <see cref="MechanicAnalysisStatus.Draft"/> when the M1.2
+    /// generation pipeline aborts mid-run but at least one section was successfully parsed before
+    /// the abort. Distinct from <see cref="AutoRejectFromDraft"/>: surviving claims are preserved
+    /// so admins can triage what was extracted instead of having to re-run the whole pipeline.
+    /// Added in ADR-051 Sprint 2 — relaxes the executor's original all-or-nothing atomicity invariant.
+    /// </summary>
+    /// <param name="reason">One of <see cref="AutoRejectionReasons"/> constants; the same vocabulary
+    /// as <see cref="AutoRejectFromDraft"/> is reused since the failure modes are identical.</param>
+    /// <param name="actorId">The admin who initiated the generation run; recorded as reviewer for
+    /// audit consistency (T6).</param>
+    /// <param name="utcNow">Timestamp for the checkpoint event.</param>
+    /// <exception cref="InvalidMechanicAnalysisStateException">
+    /// Thrown if the aggregate is not currently in <see cref="MechanicAnalysisStatus.Draft"/>.
+    /// </exception>
+    public void MarkAsPartiallyExtracted(string reason, Guid actorId, DateTime utcNow)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new ArgumentException("Partial-extraction reason is required.", nameof(reason));
+        }
+
+        if (actorId == Guid.Empty)
+        {
+            throw new ArgumentException("ActorId cannot be empty.", nameof(actorId));
+        }
+
+        if (Status != MechanicAnalysisStatus.Draft)
+        {
+            throw new InvalidMechanicAnalysisStateException(
+                Id,
+                Status,
+                "mark as partially extracted",
+                MechanicAnalysisStatus.Draft);
+        }
+
+        var previous = Status;
+        Status = MechanicAnalysisStatus.PartiallyExtracted;
         ReviewedBy = actorId;
         ReviewedAt = utcNow;
         RejectionReason = reason.Trim();

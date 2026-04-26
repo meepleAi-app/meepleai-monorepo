@@ -322,6 +322,121 @@ public sealed class MechanicAnalysisRepositoryIntegrationTests : IAsyncLifetime
     }
 
     // ============================================================
+    // Regression: Update() with fresh (IsNew=true) claims minted via
+    // MechanicClaim.Create(). Pre-fix, EF graph traversal in DbSet.Update()
+    // marked these as Modified (because Guid.NewGuid() is non-default → IsKeySet=true),
+    // emitted UPDATE against non-existent rows, and threw DbUpdateConcurrencyException.
+    // Post-fix: repository inspects each claim's IsNew flag and explicitly sets
+    // EntityState.Added for fresh claims, EntityState.Modified for rehydrated ones.
+    // This mirrors the production executor flow:
+    //   load Draft AsNoTracking → AddClaim x N (Create factory) → Update → SaveChanges.
+    // ============================================================
+
+    [Fact]
+    public async Task Update_AggregateWithFreshClaimsCreatedViaFactory_PersistsThemAsAdded()
+    {
+        // Arrange: persist an empty Draft, then reload AsNoTracking (mirrors executor flow).
+        var sharedGameId = await SeedSharedGameAsync();
+        var emptyDraft = MechanicAnalysis.Create(
+            sharedGameId: sharedGameId,
+            pdfDocumentId: Guid.NewGuid(),
+            promptVersion: "v1",
+            createdBy: Guid.NewGuid(),
+            createdAt: DateTime.UtcNow,
+            modelUsed: "deepseek-chat",
+            provider: "deepseek",
+            costCapUsd: 1m);
+
+        await _repository.AddAsync(emptyDraft);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var reloaded = await _repository.GetByIdWithClaimsAsync(emptyDraft.Id);
+        reloaded.Should().NotBeNull();
+        reloaded!.Claims.Should().BeEmpty();
+
+        // Act: add 3 fresh claims via the Create factory (each with Guid.NewGuid() Id and
+        // a citation pre-bound to that Id), exactly as the executor does after parsing
+        // an LLM section response.
+        for (var i = 0; i < 3; i++)
+        {
+            var tempClaimId = Guid.NewGuid();
+            var citation = MechanicCitation.Create(
+                claimId: tempClaimId,
+                pdfPage: i + 1,
+                quote: $"Citation quote {i}.",
+                chunkId: null,
+                displayOrder: 0);
+
+            var claim = MechanicClaim.Create(
+                analysisId: reloaded.Id,
+                section: MechanicSection.Mechanics,
+                text: $"Fresh claim text {i}.",
+                displayOrder: i,
+                citations: new[] { citation });
+
+            // Sanity: factory-minted claims must report IsNew=true.
+            claim.IsNew.Should().BeTrue();
+            claim.Citations[0].IsNew.Should().BeTrue();
+
+            reloaded.AddClaim(claim);
+        }
+
+        _repository.Update(reloaded);
+
+        // Assert: SaveChanges must NOT throw DbUpdateConcurrencyException.
+        // Pre-fix, this line was the throw site.
+        var act = async () => await _dbContext.SaveChangesAsync();
+        await act.Should().NotThrowAsync<DbUpdateConcurrencyException>();
+
+        // Verify the claims actually landed and their FKs match the parent analysis.
+        _dbContext.ChangeTracker.Clear();
+        var verify = await _repository.GetByIdWithClaimsAsync(emptyDraft.Id);
+        verify.Should().NotBeNull();
+        verify!.Claims.Should().HaveCount(3);
+        verify.Claims.Should().OnlyContain(c => c.AnalysisId == emptyDraft.Id);
+        verify.Claims.SelectMany(c => c.Citations).Should().HaveCount(3);
+
+        // Rehydrated claims now report IsNew=false (the round-trip flips the flag).
+        verify.Claims.Should().OnlyContain(c => !c.IsNew);
+    }
+
+    [Fact]
+    public async Task Update_AggregateWithRehydratedClaims_AppliesUpdatesWithoutDuplicating()
+    {
+        // Arrange: persist an analysis with 1 claim, reload, mutate the claim's review state.
+        // This is the IsNew=false path — must remain Modified, not Added (otherwise we'd get
+        // a duplicate-PK insert).
+        var sharedGameId = await SeedSharedGameAsync();
+        var analysis = BuildDraftAnalysisWithClaim(sharedGameId);
+        await _repository.AddAsync(analysis);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var reloaded = await _repository.GetByIdWithClaimsAsync(analysis.Id);
+        reloaded.Should().NotBeNull();
+        reloaded!.Claims.Should().HaveCount(1);
+        reloaded.Claims[0].IsNew.Should().BeFalse();
+        reloaded.Claims[0].Citations[0].IsNew.Should().BeFalse();
+
+        // Act: move through the lifecycle that flips claim status (mutates an existing row).
+        var reviewer = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        reloaded.SubmitForReview(reviewer, now);
+        reloaded.ApproveClaim(reloaded.Claims[0].Id, reviewer, now);
+
+        _repository.Update(reloaded);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        // Assert: still exactly one claim row (no Added duplicate), with the new status.
+        var verify = await _repository.GetByIdWithClaimsAsync(analysis.Id);
+        verify!.Claims.Should().HaveCount(1);
+        verify.Claims[0].Status.Should().Be(MechanicClaimStatus.Approved);
+        verify.Claims[0].Citations.Should().HaveCount(1);
+    }
+
+    // ============================================================
     // Helpers
     // ============================================================
 

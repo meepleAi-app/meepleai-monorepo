@@ -35,16 +35,13 @@ if (!fs.existsSync(ROOT)) {
 const server = http.createServer((req, res) => {
   // Strip query string + decode
   const urlPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
-  // Reject path traversal (.. components)
-  if (urlPath.includes('..')) {
-    res.writeHead(400, { 'content-type': 'text/plain' });
-    res.end('Bad Request');
-    return;
-  }
   const relative = urlPath === '/' ? '/index.html' : urlPath;
+  // path.join + startsWith(ROOT) is the authoritative guard against traversal:
+  // it resolves `..`, `%2E%2E`, and any encoding combination before checking
+  // containment. A separate string-level `..` check would be redundant and
+  // could mislead readers about which layer enforces safety.
   const filePath = path.join(ROOT, relative);
-  // Containment check — must remain inside ROOT
-  if (!filePath.startsWith(ROOT)) {
+  if (!filePath.startsWith(ROOT + path.sep) && filePath !== ROOT) {
     res.writeHead(403, { 'content-type': 'text/plain' });
     res.end('Forbidden');
     return;

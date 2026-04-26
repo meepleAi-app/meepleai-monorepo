@@ -168,12 +168,13 @@ test.describe('V2 Visual Regression — Claude Design mockup baseline', () => {
     test(`[${mockup.group}] ${mockup.label}`, async ({ page }, testInfo) => {
       const mobile = isMobileProject(testInfo.project.name);
 
-      if (mockup.skipReason) {
-        test.skip(true, `${mockup.slug}: ${mockup.skipReason}`);
-      }
-
+      // Note: test.skip() throws to abort the test, so subsequent skip() calls
+      // would be dead code. Use else-if to ensure each guard reports its own
+      // reason when the corresponding condition is the one matched.
       if (mobile && mockup.desktopOnly) {
         test.skip(true, `${mockup.slug} is desktop-only; skipping mobile snapshot.`);
+      } else if (mockup.skipReason) {
+        test.skip(true, `${mockup.slug}: ${mockup.skipReason}`);
       }
 
       const url = `/${mockup.slug}.html`;

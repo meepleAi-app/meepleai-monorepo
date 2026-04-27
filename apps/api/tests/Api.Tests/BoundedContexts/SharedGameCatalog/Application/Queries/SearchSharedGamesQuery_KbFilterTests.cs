@@ -7,6 +7,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -52,6 +53,12 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
         return services.BuildServiceProvider().GetRequiredService<HybridCache>();
     }
 
+    /// <summary>
+    /// Empty IConfiguration — handler falls back to <c>DefaultTopRatedThreshold</c> (4.5m).
+    /// Tests that need a different threshold can override via in-memory collection.
+    /// </summary>
+    private static IConfiguration CreateConfiguration() => new ConfigurationBuilder().Build();
+
     private static SearchSharedGamesQuery BuildQuery(bool? hasKnowledgeBase) =>
         new(
             SearchTerm: null,
@@ -79,7 +86,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
             CreateGame("Without KB", hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         // Act
         var result = await handler.Handle(BuildQuery(hasKnowledgeBase: null), CancellationToken.None);
@@ -99,7 +106,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
             CreateGame("Monopoly", hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         // Act
         var result = await handler.Handle(BuildQuery(hasKnowledgeBase: true), CancellationToken.None);
@@ -121,7 +128,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
             CreateGame("Risk", hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         // Act
         var result = await handler.Handle(BuildQuery(hasKnowledgeBase: false), CancellationToken.None);
@@ -139,7 +146,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
         db.SharedGames.Add(CreateGame("Azul", hasKb: true));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(), _logger.Object);
 
         // Act
         var result = await handler.Handle(BuildQuery(hasKnowledgeBase: null), CancellationToken.None);

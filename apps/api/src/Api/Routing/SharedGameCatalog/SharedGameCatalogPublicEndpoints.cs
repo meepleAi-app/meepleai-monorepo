@@ -90,6 +90,10 @@ internal static class SharedGameCatalogPublicEndpoints
         [FromQuery] string sortBy = "Title",
         [FromQuery] bool sortDescending = false,
         [FromQuery] bool? hasKb = null, // S2 (library-to-game epic) — filter for AI-ready games
+        // Issue #593 (Wave A.3a) — chip filters from `sp3-shared-games.jsx` mockup:
+        [FromQuery] bool? hasToolkit = null,
+        [FromQuery] bool? hasAgent = null,
+        [FromQuery] bool? isTopRated = null,
         CancellationToken ct = default)
     {
         var query = new SearchSharedGamesQuery(
@@ -106,7 +110,10 @@ internal static class SharedGameCatalogPublicEndpoints
             pageSize,
             sortBy,
             sortDescending,
-            HasKnowledgeBase: hasKb);
+            HasKnowledgeBase: hasKb,
+            HasToolkit: hasToolkit,
+            HasAgent: hasAgent,
+            IsTopRated: isTopRated);
 
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);

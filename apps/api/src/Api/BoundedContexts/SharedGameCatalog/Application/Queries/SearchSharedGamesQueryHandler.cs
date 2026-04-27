@@ -8,6 +8,7 @@ using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Configuration;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 
@@ -19,18 +20,32 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 /// </summary>
 internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchSharedGamesQuery, PagedResult<SharedGameDto>>
 {
+    /// <summary>
+    /// Default IsTopRated threshold when <c>SharedGameCatalog:TopRatedThreshold</c>
+    /// is missing from configuration. Spec §9 decision 1 (Issue #593).
+    /// </summary>
+    private const decimal DefaultTopRatedThreshold = 4.5m;
+
     private readonly MeepleAiDbContext _context;
     private readonly HybridCache _cache;
     private readonly ILogger<SearchSharedGamesQueryHandler> _logger;
+    private readonly decimal _topRatedThreshold;
 
     public SearchSharedGamesQueryHandler(
         MeepleAiDbContext context,
         HybridCache cache,
+        IConfiguration configuration,
         ILogger<SearchSharedGamesQueryHandler> logger)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        ArgumentNullException.ThrowIfNull(configuration);
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+        // Issue #593: top-rated threshold is runtime-tunable via IConfiguration.
+        // Resolved once at construction (handler is a transient/scoped service per
+        // MediatR conventions, so re-reading per request would just be wasteful).
+        _topRatedThreshold = configuration.GetValue("SharedGameCatalog:TopRatedThreshold", DefaultTopRatedThreshold);
     }
 
     public async Task<PagedResult<SharedGameDto>> Handle(SearchSharedGamesQuery query, CancellationToken cancellationToken)
@@ -152,6 +167,71 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             dbQuery = dbQuery.Where(g => g.HasKnowledgeBase == query.HasKnowledgeBase.Value);
         }
 
+        // Issue #593 (Wave A.3a) — chip filters from `sp3-shared-games.jsx`.
+        // ApprovalStatus.Approved == 2 (matches projection block constants below).
+        // Cross-BC sub-queries via Game intermediate (Toolkits/AgentDefinitions
+        // both link to GameEntity, not directly to SharedGame).
+        const int ApprovedStatus = 2;
+
+        if (query.HasToolkit.HasValue)
+        {
+            // chip "with-toolkit": at least one *non-default* Toolkit (BR-02 from
+            // Issue #5144 — exclude the read-only system default) tied to any
+            // approved Game of this SharedGame.
+            if (query.HasToolkit.Value)
+            {
+                dbQuery = dbQuery.Where(g => _context.Toolkits.Any(t =>
+                    !t.IsDefault &&
+                    _context.Games.Any(game =>
+                        game.Id == t.GameId &&
+                        game.SharedGameId == g.Id &&
+                        game.ApprovalStatus == ApprovedStatus)));
+            }
+            else
+            {
+                dbQuery = dbQuery.Where(g => !_context.Toolkits.Any(t =>
+                    !t.IsDefault &&
+                    _context.Games.Any(game =>
+                        game.Id == t.GameId &&
+                        game.SharedGameId == g.Id &&
+                        game.ApprovalStatus == ApprovedStatus)));
+            }
+        }
+
+        if (query.HasAgent.HasValue)
+        {
+            // chip "with-agent": at least one AgentDefinition tied to any approved
+            // Game of this SharedGame.
+            if (query.HasAgent.Value)
+            {
+                dbQuery = dbQuery.Where(g => _context.AgentDefinitions.Any(a =>
+                    a.GameId.HasValue &&
+                    _context.Games.Any(game =>
+                        game.Id == a.GameId &&
+                        game.SharedGameId == g.Id &&
+                        game.ApprovalStatus == ApprovedStatus)));
+            }
+            else
+            {
+                dbQuery = dbQuery.Where(g => !_context.AgentDefinitions.Any(a =>
+                    a.GameId.HasValue &&
+                    _context.Games.Any(game =>
+                        game.Id == a.GameId &&
+                        game.SharedGameId == g.Id &&
+                        game.ApprovalStatus == ApprovedStatus)));
+            }
+        }
+
+        if (query.IsTopRated.HasValue)
+        {
+            // chip "top-rated": AverageRating >= threshold (configured, default 4.5).
+            // Local capture so EF Core can parameterize the constant.
+            var threshold = _topRatedThreshold;
+            dbQuery = query.IsTopRated.Value
+                ? dbQuery.Where(g => g.AverageRating != null && g.AverageRating >= threshold)
+                : dbQuery.Where(g => g.AverageRating == null || g.AverageRating < threshold);
+        }
+
         // Apply sorting
         dbQuery = query.SortBy switch
         {
@@ -189,6 +269,7 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         var ctxToolkits = _context.Toolkits;
         var ctxAgents = _context.AgentDefinitions;
         var ctxVectors = _context.VectorDocuments;
+        var topRatedThreshold = _topRatedThreshold;
 
         var games = await dbQuery
             .Skip((query.PageNumber - 1) * query.PageSize)
@@ -234,10 +315,10 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 // within the same PR (#593) — see spec §6.1, §10.
                 0,    // NewThisWeekCount  (follow-up)
                 0,    // ContributorsCount (follow-up)
-                // IsTopRated: AverageRating >= 4.5 threshold (spec §9 decision 1).
-                // Threshold will be moved to IConfiguration `SharedGameCatalog:TopRatedThreshold`
-                // in Commit 2 alongside the IsTopRated filter param.
-                g.AverageRating != null && g.AverageRating >= 4.5m,
+                // IsTopRated: AverageRating >= configured threshold (spec §9 decision 1).
+                // Threshold sourced from `SharedGameCatalog:TopRatedThreshold` in
+                // appsettings.json (default 4.5m). Captured locally so EF parametrizes it.
+                g.AverageRating != null && g.AverageRating >= topRatedThreshold,
                 false  // IsNew (follow-up)
             ))
             .ToListAsync(cancellationToken)
@@ -271,10 +352,12 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         var statusStr = query.Status?.ToString() ?? "null";
 
         // Create compact hash for long parameter combinations.
-        // The `v` prefix is the projection schema version — bump when SharedGameDto fields
-        // change so that pre-existing cached entries (with the old schema) are invalidated
-        // automatically without a separate cache flush. v2 = Issue #593 aggregate counts.
-        var keyComponents = $"v2|{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{query.MinComplexity}|{query.MaxComplexity}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}|{query.HasKnowledgeBase?.ToString() ?? "null"}";
+        // The `v` prefix is the projection/query-shape schema version — bump when
+        // SharedGameDto fields OR query params change so pre-existing cached entries
+        // (with the old shape) are invalidated automatically without a separate flush.
+        //   v2 = Issue #593 aggregate counts (Commit 1)
+        //   v3 = Issue #593 chip filters: HasToolkit / HasAgent / IsTopRated (Commit 2)
+        var keyComponents = $"v3|{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{query.MinComplexity}|{query.MaxComplexity}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}|{query.HasKnowledgeBase?.ToString() ?? "null"}|{query.HasToolkit?.ToString() ?? "null"}|{query.HasAgent?.ToString() ?? "null"}|{query.IsTopRated?.ToString() ?? "null"}";
 
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(keyComponents)));
 

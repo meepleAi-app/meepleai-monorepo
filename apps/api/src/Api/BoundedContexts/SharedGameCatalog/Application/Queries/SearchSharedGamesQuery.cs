@@ -8,6 +8,10 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 /// <summary>
 /// Query to search shared games with filters and pagination.
 /// Uses PostgreSQL full-text search for SearchTerm parameter.
+/// Issue #593 (Wave A.3a): Extended with HasToolkit/HasAgent/IsTopRated filters
+/// for the v2 /shared-games mockup chip filters (mockup `sp3-shared-games.jsx`).
+/// IsNew filter + Contrib/New sort options land in follow-up commit alongside
+/// NewThisWeekCount / ContributorsCount projections.
 /// </summary>
 internal record SearchSharedGamesQuery(
     string? SearchTerm,
@@ -23,5 +27,9 @@ internal record SearchSharedGamesQuery(
     int PageSize = 20,
     string SortBy = "Title",
     bool SortDescending = false,
-    bool? HasKnowledgeBase = null // S2 (library-to-game epic) — filter for AI-ready games
+    bool? HasKnowledgeBase = null, // S2 (library-to-game epic) — filter for AI-ready games
+    // Issue #593 (Wave A.3a) — chip filters from `sp3-shared-games.jsx`:
+    bool? HasToolkit = null,       // chip "with-toolkit" — at least one non-default Toolkit
+    bool? HasAgent = null,         // chip "with-agent" — at least one AgentDefinition
+    bool? IsTopRated = null        // chip "top-rated" — AverageRating >= configured threshold
 ) : IQuery<PagedResult<SharedGameDto>>;

@@ -22,8 +22,8 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExt
 /// <item><description>Claim Ids are pre-allocated so each <see cref="MechanicCitation.ClaimId"/>
 /// equals the real <c>MechanicClaim.Id</c> at persistence time — matching the explicit FK
 /// wiring in <c>MechanicClaimEntityConfiguration</c>. Because of this constraint we build claims
-/// via <see cref="MechanicClaim.Reconstitute"/> with the pre-allocated Id, and enforce the
-/// non-blank text and ≥1 citation invariants here in the parser.</description></item>
+/// via <see cref="MechanicClaim.CreateWithId"/> with the pre-allocated Id (preserving
+/// <c>IsNew = true</c> so the repository persists them as INSERT, not UPDATE).</description></item>
 /// </list>
 /// </remarks>
 internal static class MechanicOutputParser
@@ -484,10 +484,11 @@ internal static class MechanicOutputParser
     }
 
     /// <summary>
-    /// Assembles a <see cref="MechanicClaim"/> via <see cref="MechanicClaim.Reconstitute"/> with
-    /// the pre-allocated <paramref name="claimId"/>. Reconstitute is used (not <c>Create</c>) so
-    /// citation FKs resolve at persistence time; text/displayOrder invariants are enforced by the
-    /// caller's trimming + the non-empty text guard above.
+    /// Assembles a brand-new <see cref="MechanicClaim"/> via <see cref="MechanicClaim.CreateWithId"/>
+    /// with the pre-allocated <paramref name="claimId"/>. Using <c>CreateWithId</c> (not
+    /// <c>Reconstitute</c>) preserves <c>IsNew = true</c> so the repository's reattachment logic
+    /// emits INSERT for the claim — without that flag, EF would mark the detached claim as
+    /// <c>Modified</c> and child citation INSERTs would fail FK against a non-existent parent row.
     /// </summary>
     private static MechanicClaim BuildClaim(
         Guid claimId,
@@ -497,16 +498,12 @@ internal static class MechanicOutputParser
         int displayOrder,
         IReadOnlyList<MechanicCitation> citations)
     {
-        return MechanicClaim.Reconstitute(
+        return MechanicClaim.CreateWithId(
             id: claimId,
             analysisId: analysisId,
             section: section,
             text: text.Trim(),
             displayOrder: displayOrder,
-            status: MechanicClaimStatus.Pending,
-            reviewedBy: null,
-            reviewedAt: null,
-            rejectionNote: null,
             citations: citations);
     }
 

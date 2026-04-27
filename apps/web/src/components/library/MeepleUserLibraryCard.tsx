@@ -9,14 +9,28 @@
 
 import { useMemo, useState } from 'react';
 
+import dynamic from 'next/dynamic';
+
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
 import { buildGameConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 import type { UserGameDto } from '@/lib/api/dashboard-client';
 
-import { AgentDrawerSheet } from './AgentDrawerSheet';
-import { ChatDrawerSheet } from './ChatDrawerSheet';
-import { KbDrawerSheet } from './KbDrawerSheet';
-import { SessionDrawerSheet } from './SessionDrawerSheet';
+// Dynamic imports to avoid pulling pdfjs-dist (via KbDrawerSheet → PdfViewerModal)
+// into static dependency graphs of consumers like AdminShell. SSR disabled because
+// drawer sheets are interactive client-only surfaces.
+const KbDrawerSheet = dynamic(() => import('./KbDrawerSheet').then(m => m.KbDrawerSheet), {
+  ssr: false,
+});
+const AgentDrawerSheet = dynamic(() => import('./AgentDrawerSheet').then(m => m.AgentDrawerSheet), {
+  ssr: false,
+});
+const ChatDrawerSheet = dynamic(() => import('./ChatDrawerSheet').then(m => m.ChatDrawerSheet), {
+  ssr: false,
+});
+const SessionDrawerSheet = dynamic(
+  () => import('./SessionDrawerSheet').then(m => m.SessionDrawerSheet),
+  { ssr: false }
+);
 
 // ============================================================================
 // Types

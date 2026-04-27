@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260427144235_M2_2_ExpandMechanicAnalysisStatusRange")]
+    partial class M2_2_ExpandMechanicAnalysisStatusRange
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3130,63 +3133,6 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_used_totp_codes_user_code_unique");
 
                     b.ToTable("used_totp_codes", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.WaitlistEntryEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime?>("ContactedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("contacted_at");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(254)
-                        .HasColumnType("character varying(254)")
-                        .HasColumnName("email");
-
-                    b.Property<string>("GamePreferenceId")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("game_preference_id");
-
-                    b.Property<string>("GamePreferenceOther")
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)")
-                        .HasColumnName("game_preference_other");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)")
-                        .HasColumnName("name");
-
-                    b.Property<bool>("NewsletterOptIn")
-                        .HasColumnType("boolean")
-                        .HasColumnName("newsletter_opt_in");
-
-                    b.Property<int>("Position")
-                        .HasColumnType("integer")
-                        .HasColumnName("position");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("Email")
-                        .IsUnique();
-
-                    b.HasIndex("Position");
-
-                    b.ToTable("waitlist_entries", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.BggImportQueueEntity", b =>

@@ -58,8 +58,18 @@ internal class OllamaLlmClient : ILlmClient
     public bool SupportsModel(string modelId)
     {
         // Ollama models don't have provider prefix (e.g., "llama3:8b", not "ollama/llama3:8b")
-        // Check if model ID doesn't contain provider prefix
-        return !modelId.Contains('/');
+        // Exclude IDs with explicit provider prefix ("openai/...", etc.) and known native IDs of
+        // other providers (e.g., "deepseek-chat") so the FirstOrDefault routing in
+        // HybridLlmService / LlmProviderFactory does not misroute to Ollama.
+        if (modelId.Contains('/'))
+        {
+            return false;
+        }
+        if (modelId.StartsWith("deepseek-", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        return true;
     }
 
     /// <inheritdoc/>

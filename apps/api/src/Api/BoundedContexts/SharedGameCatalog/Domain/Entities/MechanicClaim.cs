@@ -134,6 +134,64 @@ public sealed class MechanicClaim : Entity<Guid>
     }
 
     /// <summary>
+    /// Factory that creates a new pending claim with a pre-allocated <paramref name="id"/>.
+    /// Used by the M1.2 pipeline parser, where citation FKs are wired before the claim entity
+    /// exists, so the claim Id must be known up front. Preserves <see cref="IsNew"/> = <c>true</c>
+    /// so the repository's reattachment logic emits INSERT (not UPDATE) for the new graph.
+    /// </summary>
+    /// <exception cref="ArgumentException">If <paramref name="id"/> or <paramref name="analysisId"/> is empty,
+    /// <paramref name="text"/> is blank, or citations is empty.</exception>
+    public static MechanicClaim CreateWithId(
+        Guid id,
+        Guid analysisId,
+        MechanicSection section,
+        string text,
+        int displayOrder,
+        IEnumerable<MechanicCitation> citations)
+    {
+        if (id == Guid.Empty)
+        {
+            throw new ArgumentException("Id cannot be empty.", nameof(id));
+        }
+
+        if (analysisId == Guid.Empty)
+        {
+            throw new ArgumentException("AnalysisId cannot be empty.", nameof(analysisId));
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            throw new ArgumentException("Claim text cannot be empty.", nameof(text));
+        }
+
+        if (displayOrder < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(displayOrder),
+                displayOrder,
+                "DisplayOrder must be non-negative.");
+        }
+
+        var citationList = citations?.ToList() ?? new List<MechanicCitation>();
+        if (citationList.Count == 0)
+        {
+            throw new ArgumentException(
+                "At least one citation is required (ADR-051 T3).",
+                nameof(citations));
+        }
+
+        var claim = new MechanicClaim(
+            id: id,
+            analysisId: analysisId,
+            section: section,
+            text: text.Trim(),
+            displayOrder: displayOrder);
+
+        claim._citations.AddRange(citationList);
+        return claim;
+    }
+
+    /// <summary>
     /// Rehydrates a claim from persistence. Used exclusively by the repository's
     /// <c>MapToDomain</c>; bypasses validation because invariants were enforced at creation time.
     /// </summary>

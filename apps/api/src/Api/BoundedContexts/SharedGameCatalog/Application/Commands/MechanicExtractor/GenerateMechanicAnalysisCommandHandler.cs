@@ -183,8 +183,8 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         var hasOverride = request.CostCapOverride is not null;
         var effectiveCostCap = hasOverride ? request.CostCapOverride!.NewCapUsd : request.CostCapUsd;
 
-        // B2=A: hard cap × 1.0. Projected cost must fit under the effective cap up-front;
-        // we do not authorise any overshoot at planning time.
+        // B2=A: hard cap with no overshoot. Projected cost must fit under the effective
+        // cap up-front; planning rejects any analysis that would exceed it.
         if (estimate.ProjectedCostUsd > effectiveCostCap)
         {
             _logger.LogWarning(

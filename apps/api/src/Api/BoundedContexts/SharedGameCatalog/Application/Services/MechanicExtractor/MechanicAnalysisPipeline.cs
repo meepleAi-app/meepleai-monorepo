@@ -19,9 +19,16 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExt
 internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
 {
     private const int MaxValidationRetries = 1;
-    // NOTE: Temperature (target 0.2) and per-section MaxOutputTokens (target 1500) will be
-    // threaded through via ILlmClient strict-mode in M1.3; the current ILlmService surface
-    // does not expose these knobs.
+
+    // Per-section max_tokens cap. ADR-051 originally targeted 1500, but live runs on
+    // dense rulebooks (e.g. Dune: Imperium Setup section) truncate at the 1500 boundary
+    // — the validator catches it via the well_formed rule ("Expected depth to be zero")
+    // and the section ends up PartiallyExtracted. Bumping to 4000 preserves headroom for
+    // long Setup/MechanicDetails JSON without materially affecting cost (DeepSeek pricing
+    // scales linearly and most sections still complete well under the cap).
+    private const int SectionMaxTokens = 4000;
+    // NOTE: Temperature (target 0.2) is still threaded through ILlmService defaults.
+    // We will switch to explicit JSON schema strict mode via ILlmClient in M1.3.
 
     private readonly ILlmService _llmService;
     private readonly IMechanicPromptProvider _promptProvider;
@@ -136,6 +143,7 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
                 systemPrompt: systemPrompt,
                 userPrompt: userPrompt,
                 source: RequestSource.Manual,
+                maxTokens: SectionMaxTokens,
                 ct: cancellationToken).ConfigureAwait(false);
 
             if (!result.Success)

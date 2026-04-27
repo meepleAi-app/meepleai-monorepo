@@ -211,9 +211,83 @@ ADR-044 documenta che il rendering font/subpixel differisce tra x86-64 e ARM64. 
   - `onboarding` — bootstrap >30s su Windows locale (possibile errore JS runtime o state machine pesante). Follow-up: console-error investigation.
   Entrambi tracciati in issue follow-up; rimuovere `skipReason` dopo fix per riattivare il baseline.
 
+## Phase 1+ — Visual Migrated + V2 States
+
+> Issue umbrella **#578** (V2 Migration Phase 1 — Big-Bang in-place) — primo wave A.1 = `/faq` (#583)
+
+Una volta che la baseline mockup è stabile (Phase 0 ✅), Phase 1 introduce due nuovi project Playwright per validare ogni route migrata contro il design contract:
+
+| Project | Cosa fa | Snapshot dir |
+|---|---|---|
+| `visual-migrated-{desktop,mobile}` | Naviga la **route prod Next.js** (`:3000`) e confronta con la PNG **mockup baseline** | riusa `e2e/visual-mockups/baseline.spec.ts-snapshots/` |
+| `v2-states-{desktop,mobile}` | Cattura 4 stati per route (`default`/`empty`/`loading`/`error`) | `e2e/v2-states/<route>.spec.ts-snapshots/` |
+
+### Architettura testing 3-layer
+
+```
+Layer 1 — Visual contract  → visual-migrated-* (route prod ≡ mockup PNG)
+Layer 2 — State coverage   → v2-states-*       (default/empty/loading/error)
+Layer 3 — Behavioral       → desktop-chrome    (interazioni utente, navigazione)
+```
+
+Ogni PR di migrazione (Wave A→D) deve far passare tutti e 3 i layer prima del merge.
+
+### TDD red→green per route migrata
+
+1. **Red**: scrivi `e2e/visual-migrated/<slug>.spec.ts` referenziando la PNG mockup esistente. Test fallisce su feature branch (route ancora v1).
+2. **Green**: implementa la route v2 (componenti, i18n, dati stub equivalenti al `data.js` del mockup). Snapshot ora matcha.
+3. **State coverage**: aggiungi `e2e/v2-states/<slug>.spec.ts` con 4 stati stubbati via `page.route()`.
+
+### Hybrid masking — zone dinamiche
+
+Per timestamp relativi, contatori live, foto utente, search input value, ecc., marca l'elemento HTML con `data-dynamic` e maschera nello screenshot:
+
+```tsx
+<input data-dynamic value={query} onChange={...} />
+```
+
+```ts
+await expect(page).toHaveScreenshot(`faq-default-${viewport}.png`, {
+  fullPage: true,
+  mask: [page.locator('[data-dynamic]')],
+});
+```
+
+Il mask sostituisce l'elemento con un blocco rosa solido nel diff, neutralizzando il rumore senza richiedere fixed seed.
+
+### Comandi sviluppo
+
+```bash
+# Visual contract (route ≡ mockup baseline)
+pnpm test:visual:migrated          # desktop + mobile
+pnpm test:visual:migrated:desktop  # solo desktop
+pnpm test:visual:migrated:mobile   # solo mobile
+pnpm test:visual:migrated:update   # aggiorna snapshot (raro — solo se mockup baseline cambia)
+
+# State coverage (default/empty/loading/error)
+pnpm test:v2-states                # desktop + mobile
+pnpm test:v2-states:desktop
+pnpm test:v2-states:mobile
+```
+
+### Differenza vs `mockup-baseline-*`
+
+| Aspetto | `mockup-baseline-*` (Phase 0) | `visual-migrated-*` (Phase 1) |
+|---|---|---|
+| Target | `localhost:5174/<slug>.html` (mockup statico) | `localhost:3000/<route>` (Next.js prod) |
+| Sorgente HTML | React UMD + Babel standalone | Componenti compilati + design tokens |
+| webServer richiesto | `serve-mockups.cjs` | Next.js (build prod o dev) |
+| Snapshot scope | "Il design contract" | "L'implementazione matcha il contract" |
+| Update frequency | Solo se mockup cambia | Solo se baseline mockup cambia (regenerate from mockup) |
+
+> ⚠️ **Mai** rigenerare `visual-migrated-*` snapshot per "fixare" un diff — significa che la route si è discostata dal contract. Indaga il root cause prima.
+
 ## Riferimenti
 
-- Issue parent: meepleai/meepleai#571
+- Issue parent (Phase 0): meepleai/meepleai#571
+- Issue umbrella (Phase 1): meepleai/meepleai#578
+- Spec esecuzione Phase 1: `docs/superpowers/specs/2026-04-27-v2-migration-phase1-execution.md`
+- Spec Wave A.1 FAQ: `docs/superpowers/specs/2026-04-27-v2-migration-wave-a-1-faq.md`
 - Pattern brief mockup: `admin-mockups/briefs/_common.md`
 - ADR-044 (architecture drift): `docs/architecture/adr/adr-044-self-hosted-arm64-runner.md`
 - Playwright docs: https://playwright.dev/docs/test-snapshots

@@ -1146,6 +1146,86 @@
       },
       "contactCta": "Contact us",
       "howItWorksCta": "How It Works"
+    },
+    "join": {
+      "metadata": {
+        "title": "Join the Alpha — MeepleAI",
+        "description": "Sign up for the MeepleAI private waitlist: AI agents for your board games, smart library and live sessions."
+      },
+      "hero": {
+        "alphaPill": "Private alpha",
+        "tagline": "Your AI assistant for board games",
+        "subTagline": "Join the waitlist — you'll get an invite as soon as we open the next group."
+      },
+      "form": {
+        "emailLabel": "Email",
+        "emailPlaceholder": "you@email.com",
+        "emailErrorInvalid": "Invalid email",
+        "nameLabel": "Name",
+        "nameOptional": "(optional)",
+        "namePlaceholder": "What's your name?",
+        "nameHint": "If you tell us, we'll address you by name in emails",
+        "gameLabel": "Which game would you like an agent for?",
+        "gamePlaceholder": "Pick a game…",
+        "gameOtherPlaceholder": "E.g. Terraforming Mars",
+        "gameErrorRequired": "Select a game",
+        "gameErrorOtherTooShort": "Specify the game (min. 2 characters)",
+        "newsletterLabel": "I want to receive email updates about MeepleAI (you can unsubscribe at any time).",
+        "submitDefault": "Join the waitlist →",
+        "submitting": "Sending…",
+        "alreadyHaveInvite": "Already have an invite?",
+        "loginLink": "Sign in"
+      },
+      "banners": {
+        "alreadyOnList": "This email is already on the list — you're at position #{position}. Estimated entry: {weeks, plural, one {1 week} other {# weeks}}.",
+        "errorGeneric": "Something went wrong. Check your connection and try again in a few seconds.",
+        "errorEmailField": "Network error",
+        "alreadyEmailField": "Already registered"
+      },
+      "success": {
+        "heading": "You're on the list!",
+        "subText": "We'll get in touch within 2–3 weeks.",
+        "subTextSecond": "In the meantime, check your email for the confirmation.",
+        "positionLabel": "Your position",
+        "positionEstimate": "estimate {weeks, plural, one {1 week} other {# weeks}}",
+        "resetCta": "Sign up another email"
+      },
+      "features": {
+        "kb": {
+          "title": "Smart library",
+          "desc": "Add a game and AI indexes the manual in 60 seconds."
+        },
+        "agent": {
+          "title": "AI agents",
+          "desc": "A dedicated expert for every game. Cites the PDF page."
+        },
+        "session": {
+          "title": "Live sessions",
+          "desc": "Timer, score, history — all during the game."
+        }
+      },
+      "games": {
+        "azul": "Azul",
+        "catan": "Settlers of Catan",
+        "wingspan": "Wingspan",
+        "brass": "Brass: Birmingham",
+        "gloomhaven": "Gloomhaven",
+        "arknova": "Ark Nova",
+        "spirit": "Spirit Island",
+        "sevenWonders": "7 Wonders Duel",
+        "carcassonne": "Carcassonne",
+        "ticket": "Ticket to Ride",
+        "other": "Other…"
+      },
+      "select": {
+        "listboxAriaLabel": "Available games",
+        "otherInputAriaLabel": "Specify the game"
+      },
+      "stats": {
+        "inWaitlist": "on the list",
+        "estimatedWait": "weeks of waiting",
+        "free": "free during alpha"
+      }
     }
   },
   "privateGames": {

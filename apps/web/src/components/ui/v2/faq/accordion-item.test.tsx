@@ -46,16 +46,15 @@ describe('AccordionItem (v2)', () => {
     expect(region).toHaveAttribute('aria-labelledby', button.id);
   });
 
-  it('panel hidden attribute is true when closed', () => {
+  it('panel aria-hidden is true when closed', () => {
     render(<AccordionItem {...defaults} isOpen={false} />);
-    // Looking up by querying directly since hidden region is not exposed via role.
-    const region = document.querySelector('[role="region"]');
-    expect(region).toHaveAttribute('hidden');
+    const region = screen.getByRole('region', { hidden: true });
+    expect(region).toHaveAttribute('aria-hidden', 'true');
   });
 
-  it('panel hidden attribute is absent when open', () => {
+  it('panel aria-hidden is false when open', () => {
     render(<AccordionItem {...defaults} isOpen={true} />);
-    expect(screen.getByRole('region')).not.toHaveAttribute('hidden');
+    expect(screen.getByRole('region')).toHaveAttribute('aria-hidden', 'false');
   });
 
   it('renders the answer node when open', () => {

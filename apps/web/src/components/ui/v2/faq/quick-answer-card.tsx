@@ -20,7 +20,7 @@ export interface QuickAnswerCardProps {
   readonly categoryIcon: string;
   readonly popularRank: number;
   readonly onClick: () => void;
-  readonly readMoreLabel?: string;
+  readonly readMoreLabel: string;
   readonly className?: string;
 }
 
@@ -31,7 +31,7 @@ export function QuickAnswerCard({
   categoryIcon,
   popularRank,
   onClick,
-  readMoreLabel = 'Read more →',
+  readMoreLabel,
   className,
 }: QuickAnswerCardProps): JSX.Element {
   return (

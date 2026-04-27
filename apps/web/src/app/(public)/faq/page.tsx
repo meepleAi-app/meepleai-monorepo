@@ -256,6 +256,7 @@ function FaqPageBody(): JSX.Element {
                     categoryIcon={cat.icon}
                     popularRank={faq.popularRank ?? 0}
                     onClick={() => handleQuickAnswerClick(faq)}
+                    readMoreLabel={t('pages.faq.popularSection.readMoreLabel')}
                   />
                 );
               })}

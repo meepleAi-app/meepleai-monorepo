@@ -11,6 +11,7 @@ describe('QuickAnswerCard', () => {
     categoryIcon: '🎲',
     popularRank: 2,
     onClick: vi.fn(),
+    readMoreLabel: 'Read more →',
   };
 
   it('renders the question and short summary', () => {
@@ -37,7 +38,7 @@ describe('QuickAnswerCard', () => {
     expect(screen.getByText('Leggi tutto →')).toBeInTheDocument();
   });
 
-  it('falls back to default readMoreLabel', () => {
+  it('renders the readMoreLabel prop verbatim (no hardcoded fallback)', () => {
     render(<QuickAnswerCard {...defaults} />);
     expect(screen.getByText('Read more →')).toBeInTheDocument();
   });

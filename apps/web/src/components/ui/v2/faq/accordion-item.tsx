@@ -89,7 +89,7 @@ export function AccordionItem({
         id={panelId}
         role="region"
         aria-labelledby={buttonId}
-        hidden={!isOpen}
+        aria-hidden={!isOpen}
         className={clsx(
           'overflow-hidden transition-[max-height] ease-[cubic-bezier(0.4,0,0.2,1)]',
           isOpen ? 'max-h-[800px] duration-300' : 'max-h-0 duration-200'

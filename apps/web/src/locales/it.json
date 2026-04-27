@@ -1102,7 +1102,8 @@
       },
       "popularSection": {
         "title": "Risposte rapide",
-        "subtitle": "top 4 più cercate"
+        "subtitle": "top 4 più cercate",
+        "readMoreLabel": "Leggi di più →"
       },
       "emptyState": {
         "title": "Nessuna FAQ corrisponde alla tua ricerca",

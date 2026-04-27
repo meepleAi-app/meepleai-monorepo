@@ -1052,7 +1052,8 @@
       },
       "popularSection": {
         "title": "Quick answers",
-        "subtitle": "top 4 most searched"
+        "subtitle": "top 4 most searched",
+        "readMoreLabel": "Read more →"
       },
       "emptyState": {
         "title": "No FAQ matches your search",

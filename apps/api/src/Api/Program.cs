@@ -674,6 +674,7 @@ if (isAlphaMode)
 // Authentication (core only)
 v1Api.MapAuthEndpoints();
 v1Api.MapAccessRequestEndpoints(); // Invite-only registration: access requests + registration mode
+v1Api.MapWaitlistEndpoints(); // ISSUE-589: Public Alpha waitlist (Wave A.2)
 v1Api.MapUserProfileEndpoints();
 v1Api.MapOnboardingEndpoints(); // First-time user onboarding endpoints
 v1Api.MapUserAccountEndpoints(); // GDPR Art. 17: Self-service account deletion

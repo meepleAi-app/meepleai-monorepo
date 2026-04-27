@@ -18,46 +18,16 @@ import Link from 'next/link';
 
 import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
+import {
+  type CookieConsent,
+  clearStoredConsent,
+  getStoredConsent,
+  setStoredConsent,
+} from '@/lib/cookie-consent';
 import { cn } from '@/lib/utils';
 
-const CONSENT_KEY = 'meepleai-cookie-consent';
-const CONSENT_VERSION = '1.0';
-
-export interface CookieConsent {
-  version: string;
-  essential: true; // Always true
-  analytics: boolean;
-  functional: boolean;
-  timestamp: string;
-}
-
-/**
- * Read stored cookie consent
- */
-function getStoredConsent(): CookieConsent | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const stored = localStorage.getItem(CONSENT_KEY);
-    if (!stored) return null;
-    const consent = JSON.parse(stored) as CookieConsent;
-    // Invalidate if version changed
-    if (consent.version !== CONSENT_VERSION) return null;
-    return consent;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Save cookie consent
- */
-function saveConsent(consent: CookieConsent) {
-  try {
-    localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
-  } catch {
-    // localStorage not available
-  }
-}
+// Re-export the type so `import { CookieConsent } from '@/components/legal'` keeps working.
+export type { CookieConsent };
 
 /**
  * Hook to access cookie consent state
@@ -70,27 +40,20 @@ export function useCookieConsent() {
   }, []);
 
   const updateConsent = useCallback(
-    (partial: Partial<Omit<CookieConsent, 'version' | 'essential' | 'timestamp'>>) => {
-      const newConsent: CookieConsent = {
-        version: CONSENT_VERSION,
-        essential: true,
-        analytics: partial.analytics ?? consent?.analytics ?? false,
-        functional: partial.functional ?? consent?.functional ?? false,
-        timestamp: new Date().toISOString(),
-      };
-      saveConsent(newConsent);
-      setConsent(newConsent);
+    (partial: { analytics?: boolean; functional?: boolean }) => {
+      const analytics = partial.analytics ?? consent?.analytics ?? false;
+      const functional = partial.functional ?? consent?.functional ?? false;
+      const newConsent = setStoredConsent({ analytics, functional });
+      if (newConsent !== null) {
+        setConsent(newConsent);
+      }
       return newConsent;
     },
     [consent]
   );
 
   const resetConsent = useCallback(() => {
-    try {
-      localStorage.removeItem(CONSENT_KEY);
-    } catch {
-      // localStorage not available
-    }
+    clearStoredConsent();
     setConsent(null);
   }, []);
 

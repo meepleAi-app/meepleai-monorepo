@@ -167,7 +167,6 @@ export const DarkTheme: Story = {
 | **Themes** | Light/dark theme switching | Theme button in toolbar |
 | **Viewport** | Responsive testing | Viewport dropdown in toolbar |
 | **Chromatic** | Visual regression testing | Run `pnpm chromatic` |
-| **MSW** | API mocking | See MSW section below |
 
 ## Viewport Testing
 
@@ -189,54 +188,6 @@ export const MobileView: Story = {
   parameters: {
     viewport: {
       defaultViewport: 'mobile',
-    },
-  },
-};
-```
-
-## API Mocking with MSW
-
-Mock API calls in stories:
-
-```tsx
-import { http, HttpResponse } from 'msw';
-
-export const WithData: Story = {
-  parameters: {
-    msw: {
-      handlers: [
-        http.get('/api/v1/games', () => {
-          return HttpResponse.json([
-            { id: 1, name: 'Chess' },
-            { id: 2, name: 'Catan' },
-          ]);
-        }),
-      ],
-    },
-  },
-};
-
-export const Loading: Story = {
-  parameters: {
-    msw: {
-      handlers: [
-        http.get('/api/v1/games', async () => {
-          await new Promise(r => setTimeout(r, 2000));
-          return HttpResponse.json([]);
-        }),
-      ],
-    },
-  },
-};
-
-export const Error: Story = {
-  parameters: {
-    msw: {
-      handlers: [
-        http.get('/api/v1/games', () => {
-          return new HttpResponse(null, { status: 500 });
-        }),
-      ],
     },
   },
 };
@@ -362,7 +313,6 @@ export const AllVariants: Story = {
 - [Storybook Docs](https://storybook.js.org/docs)
 - [shadcn/ui Components](https://ui.shadcn.com)
 - [Chromatic Docs](https://www.chromatic.com/docs/)
-- [MSW Storybook Addon](https://github.com/mswjs/msw-storybook-addon)
 
 ---
 

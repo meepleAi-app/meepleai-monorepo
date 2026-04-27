@@ -17,7 +17,7 @@ export const GameDocumentSchema = z.object({
   title: z.string(),
   status: z.enum(['indexed', 'processing', 'failed']),
   pageCount: z.number().int().nonnegative(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
   category: DocumentCategorySchema,
   versionLabel: z.string().nullable(),
 });

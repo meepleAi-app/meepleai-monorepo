@@ -2,23 +2,42 @@
 
 import { useEffect } from 'react';
 
-export default function Error({
+import { HeroGradient } from '@/components/ui/v2/hero-gradient';
+import { useTranslation } from '@/hooks/useTranslation';
+
+export default function GlobalError({
   error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     console.error(error);
   }, [error]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-      <h2 className="text-xl font-semibold">Something went wrong</h2>
-      <button type="button" onClick={reset} className="rounded bg-primary px-4 py-2 text-white">
-        Try again
-      </button>
-    </div>
+    <main>
+      <HeroGradient
+        title={
+          <>
+            <span aria-hidden="true" className="block text-xl font-mono text-muted-foreground mb-2">
+              500
+            </span>
+            {t('pages.errors.serverError.title')}
+          </>
+        }
+        subtitle={t('pages.errors.serverError.subtitle')}
+        primaryCta={{ label: t('pages.errors.serverError.retryCta'), onClick: reset }}
+        secondaryCta={{ label: t('pages.errors.serverError.homeCta'), href: '/' }}
+      />
+      {process.env.NODE_ENV !== 'production' && error.digest && (
+        <div className="text-center text-xs text-muted-foreground mt-4">
+          {t('pages.errors.serverError.digestLabel')}: {error.digest}
+        </div>
+      )}
+    </main>
   );
 }

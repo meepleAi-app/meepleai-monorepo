@@ -19,7 +19,7 @@ export const GameSchema = z.object({
   minPlayTimeMinutes: z.number().int().positive().nullable(),
   maxPlayTimeMinutes: z.number().int().positive().nullable(),
   bggId: z.number().int().positive().nullable(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
   // Issue #1830: UI-003 GameCard enhancements
   imageUrl: z.string().url().nullable().optional(),
   // Admin Wizard: Game icon URL
@@ -67,8 +67,8 @@ export const GameSessionDtoSchema = z.object({
   id: z.string().uuid(),
   gameId: z.string().uuid(),
   status: z.string().min(1),
-  startedAt: z.string().datetime(),
-  completedAt: z.string().datetime().nullable(),
+  startedAt: z.string().datetime({ offset: true }),
+  completedAt: z.string().datetime({ offset: true }).nullable(),
   playerCount: z.number().int().positive(),
   players: z.array(SessionPlayerDtoSchema),
   winnerName: z.string().nullable(),
@@ -95,8 +95,8 @@ export const GameFAQSchema = z.object({
   question: z.string().min(1).max(500),
   answer: z.string().min(1).max(5000),
   upvotes: z.number().int().nonnegative(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }).nullable(),
 });
 
 export type GameFAQ = z.infer<typeof GameFAQSchema>;
@@ -192,7 +192,7 @@ export const RuleSpecSchema = z.object({
   id: z.string().uuid(),
   gameId: z.string().uuid(),
   version: z.string(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
   createdByUserId: z.string().uuid().nullable(),
   parentVersionId: z.string().uuid().nullable(),
   atoms: z.array(RuleAtomSchema),
@@ -206,7 +206,7 @@ export type RuleSpec = z.infer<typeof RuleSpecSchema>;
  */
 export const RuleSpecVersionSchema = z.object({
   version: z.string(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
   atomCount: z.number().int().nonnegative(),
   createdByUserName: z.string().nullable(),
 });
@@ -231,7 +231,7 @@ export type RuleSpecHistory = z.infer<typeof RuleSpecHistorySchema>;
  */
 export const VersionNodeSchema = z.object({
   version: z.string(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
   parentVersion: z.string().nullable(),
   createdByUserName: z.string().nullable(),
   atomCount: z.number().int().nonnegative(),
@@ -309,8 +309,8 @@ export const RuleSpecDiffSchema = z.object({
   gameId: z.string().uuid(),
   fromVersion: z.string(),
   toVersion: z.string(),
-  fromCreatedAt: z.string().datetime(),
-  toCreatedAt: z.string().datetime(),
+  fromCreatedAt: z.string().datetime({ offset: true }),
+  toCreatedAt: z.string().datetime({ offset: true }),
   summary: DiffSummarySchema,
   changes: z.array(RuleAtomChangeSchema),
 });
@@ -332,7 +332,7 @@ export const QuickQuestionSchema = z.object({
   category: z.number().int().min(0).max(5),
   displayOrder: z.number().int().nonnegative(),
   isGenerated: z.boolean(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
   isActive: z.boolean(),
 });
 
@@ -355,8 +355,8 @@ export const EditorLockSchema = z.object({
   gameId: z.string().uuid(),
   lockedByUserId: z.string().uuid().nullable(),
   lockedByUserEmail: z.string().nullable(),
-  lockedAt: z.string().datetime().nullable(),
-  expiresAt: z.string().datetime().nullable(),
+  lockedAt: z.string().datetime({ offset: true }).nullable(),
+  expiresAt: z.string().datetime({ offset: true }).nullable(),
   isLocked: z.boolean(),
   isCurrentUserLock: z.boolean(),
 });
@@ -440,7 +440,7 @@ export const GameStrategyDtoSchema = z.object({
   author: z.string(),
   upvotes: z.number().int().nonnegative(),
   tags: z.array(z.string()),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
 });
 
 export type GameStrategyDto = z.infer<typeof GameStrategyDtoSchema>;
@@ -462,8 +462,8 @@ export const GameReviewDtoSchema = z.object({
   authorName: z.string(),
   rating: z.number().int().min(1).max(10),
   content: z.string(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }).nullable(),
 });
 
 export type GameReviewDto = z.infer<typeof GameReviewDtoSchema>;

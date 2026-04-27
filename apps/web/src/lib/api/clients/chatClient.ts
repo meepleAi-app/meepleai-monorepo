@@ -10,12 +10,10 @@ import type { FeedbackOutcome } from '@/lib/constants/feedback';
 import { downloadFile, getApiBase } from '../core/httpClient';
 import {
   ChatThreadDtoSchema,
-  ChatMessageResponseSchema,
   RuleSpecCommentsResponseSchema,
   RuleSpecCommentSchema,
   CacheStatsSchema,
   type ChatThreadDto,
-  type ChatMessageResponse,
   type RuleSpecCommentsResponse,
   type RuleSpecComment,
   type CacheStats,
@@ -79,7 +77,8 @@ export interface ChatClient {
   switchThreadAgent(threadId: string, agentType: string): Promise<ChatThreadDto>;
 
   // Chat Messages
-  updateMessage(chatId: string, messageId: string, content: string): Promise<ChatMessageResponse>;
+  // Returns the full updated thread DTO (handler returns ChatThreadDto)
+  updateMessage(chatId: string, messageId: string, content: string): Promise<ChatThreadDto>;
   deleteMessage(chatId: string, messageId: string): Promise<void>;
 
   // Chat Export
@@ -201,11 +200,11 @@ export function createChatClient({ httpClient }: CreateChatClientParams): ChatCl
       chatId: string,
       messageId: string,
       content: string
-    ): Promise<ChatMessageResponse> {
+    ): Promise<ChatThreadDto> {
       return httpClient.put(
         `/api/v1/chat-threads/${chatId}/messages/${messageId}`,
         { content },
-        ChatMessageResponseSchema
+        ChatThreadDtoSchema
       );
     },
 

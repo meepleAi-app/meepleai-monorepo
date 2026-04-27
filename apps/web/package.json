@@ -3,7 +3,6 @@
   "private": true,
   "scripts": {
     "dev": "node ./node_modules/next/dist/bin/next dev -p 3000",
-    "dev:mock": "cross-env NEXT_PUBLIC_MOCK_MODE=true NEXT_PUBLIC_API_BASE=http://localhost:3000 node ./node_modules/next/dist/bin/next dev -p 3000",
     "dev:visual-docs": "cross-env NODE_OPTIONS=\"--max-old-space-size=16384\" node ./node_modules/next/dist/bin/next dev -p 3000",
     "build": "cross-env NODE_OPTIONS=\"--require ./scripts/dommatrix-polyfill.js --max-old-space-size=4096\" node ./node_modules/next/dist/bin/next build",
     "build:analyze": "cross-env NODE_OPTIONS=\"--require ./scripts/dommatrix-polyfill.js --max-old-space-size=4096\" ANALYZE=true node ./node_modules/next/dist/bin/next build",
@@ -13,6 +12,7 @@
     "cleanup:all": "node -e \"try { require('child_process').execSync('powershell.exe -ExecutionPolicy Bypass -File ../../tools/cleanup/cleanup-test-processes.ps1', { stdio: 'inherit' }); } catch (e) { console.log('Cleanup skipped (Windows-only)'); }\"",
     "cleanup:dry-run": "node -e \"try { require('child_process').execSync('powershell.exe -ExecutionPolicy Bypass -File ../../tools/cleanup/cleanup-test-processes.ps1 -DryRun -Verbose', { stdio: 'inherit' }); } catch (e) { console.log('Cleanup skipped (Windows-only)'); }\"",
     "test": "vitest run",
+    "test:eslint-rules": "node eslint-rules/no-hardcoded-hex.test.js",
     "test:ui": "vitest --ui",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -27,6 +27,18 @@
     "test:e2e:visual:update": "dotenv -e .env.test -- playwright test e2e/visual --project=desktop-chrome --update-snapshots",
     "test:e2e:visual:ui": "dotenv -e .env.test -- playwright test e2e/visual --project=desktop-chrome --ui",
     "test:e2e:visual:all": "dotenv -e .env.test -- playwright test e2e/visual",
+    "mockups:serve": "node ./scripts/serve-mockups.cjs",
+    "test:visual:mockups": "dotenv -e .env.test -- playwright test --project=mockup-baseline-desktop --project=mockup-baseline-mobile",
+    "test:visual:mockups:update": "dotenv -e .env.test -- playwright test --project=mockup-baseline-desktop --project=mockup-baseline-mobile --update-snapshots",
+    "test:visual:mockups:desktop": "dotenv -e .env.test -- playwright test --project=mockup-baseline-desktop",
+    "test:visual:mockups:mobile": "dotenv -e .env.test -- playwright test --project=mockup-baseline-mobile",
+    "test:visual:migrated": "dotenv -e .env.test -- playwright test --project=visual-migrated-desktop --project=visual-migrated-mobile",
+    "test:visual:migrated:update": "dotenv -e .env.test -- playwright test --project=visual-migrated-desktop --project=visual-migrated-mobile --update-snapshots",
+    "test:visual:migrated:desktop": "dotenv -e .env.test -- playwright test --project=visual-migrated-desktop",
+    "test:visual:migrated:mobile": "dotenv -e .env.test -- playwright test --project=visual-migrated-mobile",
+    "test:v2-states": "dotenv -e .env.test -- playwright test --project=v2-states-desktop --project=v2-states-mobile",
+    "test:v2-states:desktop": "dotenv -e .env.test -- playwright test --project=v2-states-desktop",
+    "test:v2-states:mobile": "dotenv -e .env.test -- playwright test --project=v2-states-mobile",
     "test:e2e:visual:admin": "dotenv -e .env.test -- playwright test e2e/visual/admin-dashboard-visual.spec.ts --project=desktop-chrome",
     "test:e2e:visual:admin:update": "dotenv -e .env.test -- playwright test e2e/visual/admin-dashboard-visual.spec.ts --project=desktop-chrome --update-snapshots",
     "test:e2e:visual:admin:ui": "dotenv -e .env.test -- playwright test e2e/visual/admin-dashboard-visual.spec.ts --project=desktop-chrome --ui",
@@ -286,10 +298,5 @@
       "rollup": ">=4.59.0",
       "basic-ftp": ">=5.2.0"
     }
-  },
-  "msw": {
-    "workerDirectory": [
-      "public"
-    ]
   }
 }

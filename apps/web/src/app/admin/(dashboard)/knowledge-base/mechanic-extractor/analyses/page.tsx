@@ -18,7 +18,7 @@
  *      InReview → approve; any state → suppress via AlertDialog).
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -32,7 +32,10 @@ import {
   ShieldAlertIcon,
   SparklesIcon,
 } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
+import { MechanicAnalysesListCard } from '@/components/admin/mechanic-extractor/analyses/MechanicAnalysesListCard';
+import { ClaimsSection } from '@/components/admin/mechanic-extractor/claims/ClaimsSection';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
 import {
@@ -54,7 +57,6 @@ import {
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
-import { createSharedGamesClient } from '@/lib/api/clients/sharedGamesClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 import {
   MECHANIC_ANALYSIS_STATUS_LABELS,
@@ -69,13 +71,13 @@ import {
 
 const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
-const gamesClient = createSharedGamesClient({ httpClient });
 
 const STATUS_BADGE_CLASS: Record<number, string> = {
   [MechanicAnalysisStatus.Draft]: 'bg-slate-100 text-slate-700 border-slate-300',
   [MechanicAnalysisStatus.InReview]: 'bg-amber-100 text-amber-800 border-amber-300',
   [MechanicAnalysisStatus.Published]: 'bg-green-100 text-green-800 border-green-300',
   [MechanicAnalysisStatus.Rejected]: 'bg-rose-100 text-rose-800 border-rose-300',
+  [MechanicAnalysisStatus.PartiallyExtracted]: 'bg-yellow-100 text-yellow-800 border-yellow-400',
 };
 
 const RUN_STATUS_BADGE_CLASS: Record<number, string> = {
@@ -99,7 +101,9 @@ function formatDate(iso: string | null | undefined): string {
 function isPipelineRunning(status: MechanicAnalysisStatusDto | null | undefined): boolean {
   if (!status) return false;
   // Draft + 0 section runs = queued; Draft + incomplete runs = running.
-  // Once any terminal status is reached (InReview/Published/Rejected) we stop polling.
+  // Once any terminal status is reached we stop polling:
+  //   - InReview / Published / Rejected: standard terminal states
+  //   - PartiallyExtracted: ADR-051 Sprint 2 salvage state (also terminal)
   if (status.status !== MechanicAnalysisStatus.Draft) return false;
   if (status.sectionRuns.length === 0) return true;
   // All 6 sections should complete; stop when each has a completedAt.
@@ -108,6 +112,16 @@ function isPipelineRunning(status: MechanicAnalysisStatusDto | null | undefined)
 
 export default function MechanicAnalysesPage() {
   const queryClient = useQueryClient();
+
+  // ========== Deep-link via query param (spec-panel gap #1) ==========
+  // We intentionally chose `?analysisId=…` over a path param (`[analysisId]/page.tsx`)
+  // to avoid splitting this single-file route — the page already hosts both the
+  // generation form, the discovery list, and the analysis detail view. A query
+  // param keeps the URL shareable while letting the same component render either
+  // "no analysis selected" or "viewing analysis X" depending on the URL state.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // ========== Form state ==========
   const [selectedGameId, setSelectedGameId] = useState('');
@@ -119,7 +133,12 @@ export default function MechanicAnalysesPage() {
   const [generateError, setGenerateError] = useState<string | null>(null);
 
   // The analysis id becomes the source of truth for all polling and lifecycle actions.
-  const [analysisId, setAnalysisId] = useState<string | null>(null);
+  // Lazy-initialize from URL so a refresh / shared link re-opens the same analysis.
+  const [analysisId, setAnalysisId] = useState<string | null>(
+    () => searchParams?.get('analysisId') ?? null
+  );
+  // Free-text input used to load an existing analysis by id (review existing claims).
+  const [loadIdInput, setLoadIdInput] = useState<string>('');
 
   // ========== Suppress dialog state ==========
   const [suppressOpen, setSuppressOpen] = useState(false);
@@ -129,13 +148,31 @@ export default function MechanicAnalysesPage() {
   );
   const [lifecycleError, setLifecycleError] = useState<string | null>(null);
 
-  // ========== Queries: games + PDFs ==========
-  const { data: gamesData, isLoading: isGamesLoading } = useQuery({
-    queryKey: ['shared-games', 'all'],
-    queryFn: () => gamesClient.getAll({ page: 1, pageSize: 100 }),
-    staleTime: 60_000,
-  });
+  // ========== URL sync (spec-panel gap #1) ==========
+  // Mirror analysisId into ?analysisId=… so admins can copy/share the link for
+  // a specific analysis. `router.replace` keeps the page from accumulating
+  // history entries on every selection change; `scroll: false` preserves
+  // current scroll position when the URL updates.
+  useEffect(() => {
+    if (!searchParams || !pathname) return;
+    const current = searchParams.get('analysisId');
+    if (analysisId === current) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (analysisId) {
+      params.set('analysisId', analysisId);
+    } else {
+      params.delete('analysisId');
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [analysisId, searchParams, router, pathname]);
 
+  // ========== Queries: PDFs Ready ==========
+  // Derive the dropdown of "games with at least one Ready PDF" directly from the
+  // Ready-PDFs payload (which already carries gameId + gameTitle). Avoids a
+  // second admin endpoint call: /api/v1/admin/shared-games caps PageSize at 100,
+  // which would silently truncate games beyond rank 100 (e.g. "7 Wonders" was
+  // at rank 156 of 162) and exclude them from the dropdown.
   const { data: readyPdfsData, isLoading: isReadyPdfsLoading } = useQuery({
     queryKey: ['admin', 'pdfs', 'ready-all'],
     queryFn: () =>
@@ -147,16 +184,16 @@ export default function MechanicAnalysesPage() {
     staleTime: 60_000,
   });
 
-  const gameIdsWithPdf = useMemo(
-    () =>
-      new Set((readyPdfsData?.items ?? []).map(p => p.gameId).filter((id): id is string => !!id)),
-    [readyPdfsData]
-  );
-
-  const gamesWithPdf = useMemo(
-    () => (gamesData?.items ?? []).filter((g: { id: string }) => gameIdsWithPdf.has(g.id)),
-    [gamesData, gameIdsWithPdf]
-  );
+  const gamesWithPdf = useMemo(() => {
+    const dedup = new Map<string, { id: string; title: string }>();
+    for (const p of readyPdfsData?.items ?? []) {
+      if (!p.gameId || !p.gameTitle) continue;
+      if (!dedup.has(p.gameId)) {
+        dedup.set(p.gameId, { id: p.gameId, title: p.gameTitle });
+      }
+    }
+    return Array.from(dedup.values()).sort((a, b) => a.title.localeCompare(b.title));
+  }, [readyPdfsData]);
 
   const { data: pdfsData } = useQuery({
     queryKey: ['admin', 'pdfs', { gameId: selectedGameId }],
@@ -276,22 +313,71 @@ export default function MechanicAnalysesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header — spec-panel gap #4: user-facing language, no internal refs.
+          Internal references (ISSUE-524 / ADR-051 / M1.2) live in code comments
+          and the file header above; admins navigating this page just need to
+          know what it does, not which ticket spawned it. */}
       <div>
         <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-          Mechanic Analyses (M1.2)
+          Mechanic Extraction
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Enqueue the asynchronous AI pipeline over a rulebook PDF and monitor its lifecycle.
+          Run the AI extraction pipeline over a rulebook PDF and review the resulting mechanics.
         </p>
         <Badge
           variant="outline"
           className="mt-2 border-sky-300 bg-sky-50 text-sky-800 dark:bg-sky-950/30 dark:text-sky-300"
         >
-          <SparklesIcon className="mr-1 h-3 w-3" />
-          ISSUE-524 / ADR-051 — 6 sections, cost-cap enforced
+          <SparklesIcon className="mr-1 h-3 w-3" />6 sections · cost-cap enforced
         </Badge>
       </div>
+
+      {/* Discovery list (spec-panel gap #2) — reviewers can pick from recent
+          analyses without having to know the UUID up-front. */}
+      <MechanicAnalysesListCard
+        onSelect={id => {
+          setLifecycleError(null);
+          setGenerateError(null);
+          setLoadIdInput(id);
+          setAnalysisId(id);
+        }}
+        selectedId={analysisId}
+      />
+
+      {/* Load existing analysis by id (review claims, suppression, etc.) — kept
+          as a fallback for direct deep-linking when the UUID is already known. */}
+      <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/60">
+        <CardContent className="pt-6 space-y-2">
+          <h2 className="text-lg font-medium font-quicksand">Load existing analysis</h2>
+          <p className="text-xs text-muted-foreground">
+            Paste an analysis id (UUID) to review its status, claims and lifecycle.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              type="text"
+              value={loadIdInput}
+              onChange={e => setLoadIdInput(e.target.value)}
+              placeholder="00000000-0000-0000-0000-000000000000"
+              className="flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+              data-testid="load-analysis-id-input"
+            />
+            <Button
+              variant="outline"
+              onClick={() => {
+                const trimmed = loadIdInput.trim();
+                if (!trimmed) return;
+                setLifecycleError(null);
+                setGenerateError(null);
+                setAnalysisId(trimmed);
+              }}
+              disabled={!loadIdInput.trim()}
+              data-testid="load-analysis-id-button"
+            >
+              Load
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Generation form */}
       <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/60">
@@ -310,10 +396,10 @@ export default function MechanicAnalysesPage() {
                   setSelectedPdfId('');
                 }}
               >
-                <SelectTrigger disabled={isGamesLoading || isReadyPdfsLoading}>
+                <SelectTrigger disabled={isReadyPdfsLoading}>
                   <SelectValue
                     placeholder={
-                      isGamesLoading || isReadyPdfsLoading
+                      isReadyPdfsLoading
                         ? 'Loading…'
                         : gamesWithPdf.length === 0
                           ? 'No games with Ready PDFs'
@@ -602,6 +688,17 @@ export default function MechanicAnalysesPage() {
                   </table>
                 </div>
               </div>
+            )}
+
+            {/* Claims viewer (ISSUE-584) */}
+            {analysisId && status && status.claimsCount > 0 && (
+              <ClaimsSection
+                analysisId={analysisId}
+                isClaimsActionable={
+                  // Approve/Reject only allowed while parent is InReview (server-enforced).
+                  status.status === MechanicAnalysisStatus.InReview && !status.isSuppressed
+                }
+              />
             )}
 
             {lifecycleError && (

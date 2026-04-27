@@ -17,6 +17,8 @@ const mockGetMechanicAnalysisStatus = vi.hoisted(() => vi.fn());
 const mockSubmitMechanicAnalysisForReview = vi.hoisted(() => vi.fn());
 const mockApproveMechanicAnalysis = vi.hoisted(() => vi.fn());
 const mockSuppressMechanicAnalysis = vi.hoisted(() => vi.fn());
+const mockListMechanicAnalyses = vi.hoisted(() => vi.fn());
+const mockGetMechanicAnalysisClaims = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api/clients/adminClient', () => ({
   createAdminClient: () => ({
@@ -26,6 +28,8 @@ vi.mock('@/lib/api/clients/adminClient', () => ({
     submitMechanicAnalysisForReview: mockSubmitMechanicAnalysisForReview,
     approveMechanicAnalysis: mockApproveMechanicAnalysis,
     suppressMechanicAnalysis: mockSuppressMechanicAnalysis,
+    listMechanicAnalyses: mockListMechanicAnalyses,
+    getMechanicAnalysisClaims: mockGetMechanicAnalysisClaims,
   }),
 }));
 
@@ -37,6 +41,21 @@ vi.mock('@/lib/api/clients/sharedGamesClient', () => ({
 
 vi.mock('@/lib/api/core/httpClient', () => ({
   HttpClient: vi.fn(() => ({})),
+}));
+
+// next/navigation: minimal hoisted mocks for the deep-link query-param sync
+// (spec-panel gap #1). The page reads `?analysisId=…` on mount and pushes
+// changes via router.replace — tests don't need real navigation, just stable
+// stubs. `mockSearchParams` is mutable so individual tests can simulate the
+// page being loaded with a pre-existing `?analysisId=…` query string.
+const mockRouterReplace = vi.hoisted(() => vi.fn());
+const mockSearchParamsRef = vi.hoisted(() => ({
+  current: new URLSearchParams() as URLSearchParams,
+}));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: mockRouterReplace, push: vi.fn(), back: vi.fn() }),
+  usePathname: () => '/admin/knowledge-base/mechanic-extractor/analyses',
+  useSearchParams: () => mockSearchParamsRef.current,
 }));
 
 import MechanicAnalysesPage from '../page';
@@ -101,6 +120,9 @@ const SAMPLE_STATUS_IN_REVIEW = {
 describe('MechanicAnalysesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: empty query string. Individual tests reassign mockSearchParamsRef
+    // before rendering when they need to simulate `?analysisId=…` deep-link.
+    mockSearchParamsRef.current = new URLSearchParams();
     mockGetAll.mockResolvedValue({
       items: [{ id: '22222222-2222-2222-2222-222222222222', title: 'Catan' }],
       totalCount: 1,
@@ -116,17 +138,92 @@ describe('MechanicAnalysesPage', () => {
       totalCount: 1,
     });
     mockGetMechanicAnalysisStatus.mockResolvedValue(null);
+    mockListMechanicAnalyses.mockResolvedValue({
+      items: [],
+      page: 1,
+      pageSize: 20,
+      totalCount: 0,
+    });
   });
 
   describe('header', () => {
     it('renders page title', () => {
       renderWithQuery(<MechanicAnalysesPage />);
-      expect(screen.getByText('Mechanic Analyses (M1.2)')).toBeInTheDocument();
+      // Spec-panel gap #4: heading is user-facing, no internal refs.
+      expect(
+        screen.getByRole('heading', { level: 1, name: 'Mechanic Extraction' })
+      ).toBeInTheDocument();
     });
 
-    it('renders ADR-051 badge', () => {
+    it('renders pipeline summary badge', () => {
       renderWithQuery(<MechanicAnalysesPage />);
-      expect(screen.getByText(/ISSUE-524 \/ ADR-051/)).toBeInTheDocument();
+      // Internal IDs (ISSUE-524 / ADR-051 / M1.2) intentionally not in the UI.
+      expect(screen.getByText(/6 sections · cost-cap enforced/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('deep-link URL sync (spec-panel gap #1)', () => {
+    it('does not push a URL when no analysis is selected on initial mount', () => {
+      // No URL update is needed when analysisId starts as null and the URL has
+      // no `?analysisId=` — the effect short-circuits via the equality guard.
+      renderWithQuery(<MechanicAnalysesPage />);
+      expect(mockRouterReplace).not.toHaveBeenCalled();
+    });
+
+    it('hydrates analysisId from URL on mount (deep-link entry)', async () => {
+      const seededId = '11111111-1111-1111-1111-111111111111';
+      mockSearchParamsRef.current = new URLSearchParams(`analysisId=${seededId}`);
+      mockGetMechanicAnalysisStatus.mockResolvedValue({
+        ...SAMPLE_STATUS_DRAFT_EMPTY,
+        id: seededId,
+      });
+
+      renderWithQuery(<MechanicAnalysesPage />);
+
+      // Page issues the status fetch with the seeded id → confirms the lazy
+      // initializer read the URL on first render.
+      await waitFor(() => {
+        expect(mockGetMechanicAnalysisStatus).toHaveBeenCalledWith(seededId);
+      });
+    });
+
+    it('pushes ?analysisId=… when an analysis is selected from the discovery list', async () => {
+      mockListMechanicAnalyses.mockResolvedValue({
+        items: [
+          {
+            id: '11111111-1111-1111-1111-111111111111',
+            sharedGameId: '22222222-2222-2222-2222-222222222222',
+            gameTitle: 'Catan',
+            pdfDocumentId: '33333333-3333-3333-3333-333333333333',
+            promptVersion: 'v1.0.0',
+            status: 0,
+            claimsCount: 0,
+            totalTokensUsed: 0,
+            estimatedCostUsd: 0,
+            certificationStatus: 0,
+            isSuppressed: false,
+            createdAt: '2026-04-25T10:00:00Z',
+          },
+        ],
+        page: 1,
+        pageSize: 20,
+        totalCount: 1,
+      });
+      mockGetMechanicAnalysisStatus.mockResolvedValue(SAMPLE_STATUS_DRAFT_EMPTY);
+
+      renderWithQuery(<MechanicAnalysesPage />);
+
+      const row = await screen.findByTestId(
+        'mechanic-analyses-list-row-11111111-1111-1111-1111-111111111111'
+      );
+      fireEvent.click(row);
+
+      await waitFor(() => {
+        expect(mockRouterReplace).toHaveBeenCalledWith(
+          expect.stringContaining('analysisId=11111111-1111-1111-1111-111111111111'),
+          expect.objectContaining({ scroll: false })
+        );
+      });
     });
   });
 
@@ -184,8 +281,10 @@ describe('MechanicAnalysesPage', () => {
 
       renderWithQuery(<MechanicAnalysesPage />);
 
-      // Wait for games to load
-      await waitFor(() => expect(mockGetAll).toHaveBeenCalled());
+      // Wait for the Ready-PDFs query to fire (page derives the games dropdown
+      // from this payload now, see page.tsx:143-163 — sharedGamesClient was
+      // dropped because it capped pageSize at 100 and silently truncated 7W).
+      await waitFor(() => expect(mockGetAllPdfs).toHaveBeenCalled());
     });
 
     it('isPipelineRunning logic: Draft + 0 runs = running (indirectly via badge)', async () => {
@@ -215,7 +314,9 @@ describe('status rendering — Published and Suppressed flags', () => {
   it('renders the section runs table header labels when not polling', () => {
     // Sanity: ensure page boots without an active analysisId
     renderWithQuery(<MechanicAnalysesPage />);
-    expect(screen.getByText('Mechanic Analyses (M1.2)')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Mechanic Extraction' })
+    ).toBeInTheDocument();
     // Section runs table only mounts after analysisId is set; it should not be here.
     expect(screen.queryByText('Section runs')).not.toBeInTheDocument();
   });

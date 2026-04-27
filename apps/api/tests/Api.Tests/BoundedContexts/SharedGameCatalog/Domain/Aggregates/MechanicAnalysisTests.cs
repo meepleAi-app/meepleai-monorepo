@@ -343,6 +343,176 @@ public sealed class MechanicAnalysisTests
     }
 
     // ============================================================
+    // P1' (ADR-051 Sprint 2) — PartiallyExtracted status & checkpoint
+    // ============================================================
+    //
+    // Context: the executor's ApplyAbort path historically called AutoRejectFromDraft for any
+    // mid-pipeline failure (cost cap, LLM failure, validation beyond retry). That discarded any
+    // claims successfully parsed from earlier sections — a bad bargain when sections 1-3 of 6
+    // produced clean claims but section 4 ran into the cost cap. The relaxed atomicity invariant
+    // (see ADR-051 addendum 2026-04-26) lets the executor checkpoint partial work into a new
+    // PartiallyExtracted state, distinct from Rejected so admins can triage what survived.
+    //
+    // Transitions added:
+    //   Draft → PartiallyExtracted        : MarkAsPartiallyExtracted (system-initiated, claims
+    //                                       already parsed and added)
+    //   PartiallyExtracted → InReview     : SubmitForReview (admin promotes partial set to review)
+    //   PartiallyExtracted → Rejected     : Reject (admin discards the salvage)
+    //
+    // The reason string mirrors AutoRejectFromDraft's vocabulary (cost_cap_exceeded etc.) and is
+    // stored in RejectionReason for audit; SubmitForReview clears it on promotion the same way it
+    // does for the Rejected → InReview resubmission path.
+
+    [Fact]
+    public void MarkAsPartiallyExtracted_FromDraft_TransitionsAndPreservesClaims_AndRaisesEvent()
+    {
+        var analysis = NewAnalysisWithClaim();
+        var claimsBefore = analysis.Claims.Select(c => c.Id).ToArray();
+        var actor = analysis.CreatedBy; // executor records the run initiator as actor (T6 audit)
+        var now = DateTime.UtcNow;
+
+        analysis.MarkAsPartiallyExtracted(
+            MechanicAnalysis.AutoRejectionReasons.CostCapExceeded,
+            actor,
+            now);
+
+        analysis.Status.Should().Be(MechanicAnalysisStatus.PartiallyExtracted);
+        analysis.Claims.Select(c => c.Id).Should().BeEquivalentTo(claimsBefore);
+        analysis.RejectionReason.Should().Be(MechanicAnalysis.AutoRejectionReasons.CostCapExceeded);
+        analysis.ReviewedBy.Should().Be(actor);
+        analysis.ReviewedAt.Should().Be(now);
+        analysis.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<MechanicAnalysisStatusChangedEvent>()
+            .Which.ToStatus.Should().Be(MechanicAnalysisStatus.PartiallyExtracted);
+    }
+
+    [Theory]
+    [InlineData(MechanicAnalysisStatus.InReview)]
+    [InlineData(MechanicAnalysisStatus.Published)]
+    [InlineData(MechanicAnalysisStatus.Rejected)]
+    public void MarkAsPartiallyExtracted_FromNonDraft_Throws(MechanicAnalysisStatus startingStatus)
+    {
+        var analysis = NewAnalysisWithClaim();
+        var actor = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        // Drive to the requested state via the public state machine.
+        switch (startingStatus)
+        {
+            case MechanicAnalysisStatus.InReview:
+                analysis.SubmitForReview(actor, now);
+                break;
+            case MechanicAnalysisStatus.Published:
+                analysis.SubmitForReview(actor, now);
+                analysis.ApproveClaim(analysis.Claims[0].Id, actor, now);
+                analysis.Approve(actor, now);
+                break;
+            case MechanicAnalysisStatus.Rejected:
+                analysis.SubmitForReview(actor, now);
+                analysis.Reject(actor, "human reject", now);
+                break;
+        }
+
+        var act = () => analysis.MarkAsPartiallyExtracted(
+            MechanicAnalysis.AutoRejectionReasons.CostCapExceeded,
+            actor,
+            now);
+
+        act.Should().Throw<InvalidMechanicAnalysisStateException>();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void MarkAsPartiallyExtracted_WithBlankReason_Throws(string reason)
+    {
+        var analysis = NewAnalysisWithClaim();
+        var act = () => analysis.MarkAsPartiallyExtracted(reason, Guid.NewGuid(), DateTime.UtcNow);
+        act.Should().Throw<ArgumentException>().WithMessage("*reason*");
+    }
+
+    [Fact]
+    public void MarkAsPartiallyExtracted_WithEmptyActor_Throws()
+    {
+        var analysis = NewAnalysisWithClaim();
+        var act = () => analysis.MarkAsPartiallyExtracted(
+            MechanicAnalysis.AutoRejectionReasons.CostCapExceeded,
+            Guid.Empty,
+            DateTime.UtcNow);
+        act.Should().Throw<ArgumentException>().WithMessage("*ActorId*");
+    }
+
+    [Fact]
+    public void SubmitForReview_FromPartiallyExtracted_TransitionsToInReview_AndClearsRejectionReason()
+    {
+        var analysis = NewAnalysisWithClaim();
+        var actor = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        analysis.MarkAsPartiallyExtracted(
+            MechanicAnalysis.AutoRejectionReasons.CostCapExceeded,
+            analysis.CreatedBy,
+            now);
+        // Claims are still Pending — MarkAsPartiallyExtracted leaves the per-claim status alone
+        // (unlike Rejected → SubmitForReview, which has to re-pend Approved/Rejected claims).
+        analysis.Claims[0].Status.Should().Be(MechanicClaimStatus.Pending);
+        analysis.ClearDomainEvents();
+
+        analysis.SubmitForReview(actor, now);
+
+        analysis.Status.Should().Be(MechanicAnalysisStatus.InReview);
+        analysis.RejectionReason.Should().BeNull(
+            "the abort reason was a system-initiated marker, not a human review verdict — it must be cleared on promotion to review");
+        analysis.Claims[0].Status.Should().Be(MechanicClaimStatus.Pending);
+        analysis.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<MechanicAnalysisStatusChangedEvent>();
+    }
+
+    [Fact]
+    public void Reject_FromPartiallyExtracted_TransitionsToRejected_WithReason()
+    {
+        var analysis = NewAnalysisWithClaim();
+        var actor = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        analysis.MarkAsPartiallyExtracted(
+            MechanicAnalysis.AutoRejectionReasons.CostCapExceeded,
+            analysis.CreatedBy,
+            now);
+        analysis.ClearDomainEvents();
+
+        analysis.Reject(actor, "salvage not worth keeping", now);
+
+        analysis.Status.Should().Be(MechanicAnalysisStatus.Rejected);
+        analysis.RejectionReason.Should().Be("salvage not worth keeping");
+        analysis.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<MechanicAnalysisStatusChangedEvent>();
+    }
+
+    [Fact]
+    public void AddClaim_AfterMarkAsPartiallyExtracted_Throws()
+    {
+        // The executor's contract is "extract all sections, then checkpoint". Once partial, the
+        // aggregate must reject further claim additions just like any non-Draft state.
+        var analysis = NewAnalysisWithClaim();
+        analysis.MarkAsPartiallyExtracted(
+            MechanicAnalysis.AutoRejectionReasons.CostCapExceeded,
+            analysis.CreatedBy,
+            DateTime.UtcNow);
+
+        var stranded = MechanicClaim.Create(
+            analysisId: analysis.Id,
+            section: MechanicSection.Faq,
+            text: "Stranded claim",
+            displayOrder: 99,
+            citations: new[]
+            {
+                MechanicCitation.Create(analysis.Id, 1, "Quote.", null, 0)
+            });
+
+        var act = () => analysis.AddClaim(stranded);
+        act.Should().Throw<InvalidMechanicAnalysisStateException>();
+    }
+
+    // ============================================================
     // Helpers
     // ============================================================
 

@@ -16,11 +16,10 @@ import { notFound } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { api } from '@/lib/api';
-
-const FEATURE_FLAG = 'true';
+import { isMechanicValidationEnabled } from '@/lib/feature-flags/mechanic-validation';
 
 export default function GoldenSetGamePickerPage() {
-  if (process.env.NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED !== FEATURE_FLAG) {
+  if (!isMechanicValidationEnabled()) {
     notFound();
   }
 

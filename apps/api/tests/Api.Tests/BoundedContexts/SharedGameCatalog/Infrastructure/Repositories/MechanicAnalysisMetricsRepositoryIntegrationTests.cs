@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -97,7 +98,18 @@ public sealed class MechanicAnalysisMetricsRepositoryIntegrationTests : IAsyncLi
         byAnalysis.BggMatchPct.Should().Be(82.5m);
         byAnalysis.CertificationStatus.Should().Be(CertificationStatus.Certified);
         byAnalysis.GoldenVersionHash.Should().HaveLength(64);
-        byAnalysis.MatchDetailsJson.Should().Be("{\"hits\":3}");
+        // PostgreSQL canonicalizes jsonb on read (e.g. inserts a space after the colon),
+        // so byte-for-byte equality is fragile across server versions. Compare structurally.
+        AssertJsonEquivalent(byAnalysis.MatchDetailsJson, "{\"hits\":3}");
+    }
+
+    private static void AssertJsonEquivalent(string actual, string expected)
+    {
+        using var actualDoc = JsonDocument.Parse(actual);
+        using var expectedDoc = JsonDocument.Parse(expected);
+        var actualNormalized = JsonSerializer.Serialize(actualDoc.RootElement);
+        var expectedNormalized = JsonSerializer.Serialize(expectedDoc.RootElement);
+        actualNormalized.Should().Be(expectedNormalized);
     }
 
     // ============================================================

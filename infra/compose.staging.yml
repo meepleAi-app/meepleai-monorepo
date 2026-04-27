@@ -101,6 +101,12 @@ services:
         NEXT_PUBLIC_API_BASE: "https://meepleai.app"
         NEXT_PUBLIC_APP_URL: "https://meepleai.app"
         NEXT_PUBLIC_GRAFANA_URL: /grafana
+        # ADR-051 M2.1 — Mechanic Extractor AI Comprehension Validation.
+        # NEXT_PUBLIC_* are inlined at build time by Next.js, so the flag
+        # must be set both as a build arg AND a runtime env (below) for
+        # SSR/server-rendered pages to read the same value. Default off
+        # in staging until the calibration spike (Tasks 23-24) clears.
+        NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED: "${NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED:-false}"
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_BASE: "https://meepleai.app"
@@ -108,6 +114,7 @@ services:
       API_BASE_URL: http://api:8080
       LOKI_URL: http://loki:3100
       NEXT_PUBLIC_GRAFANA_URL: /grafana
+      NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED: "${NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED:-false}"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.web.rule=Host(`meepleai.app`)"

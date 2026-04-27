@@ -27,12 +27,14 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.Golden;
 /// shared game, so we rely on the DB to reject orphaned inserts.
 /// </para>
 /// <para>
-/// Returns the count of tags submitted by the caller (i.e. <c>Tags.Count</c>). The underlying
-/// repository does not distinguish between newly inserted rows and duplicates skipped — this
-/// is documented on <see cref="ImportBggTagsCommand"/>.
+/// Returns a <see cref="BggImportResult"/> with the split between newly inserted rows
+/// (<see cref="BggImportResult.Inserted"/>) and rows skipped because they already existed
+/// or duplicated another entry within the same batch (<see cref="BggImportResult.Skipped"/>).
+/// The BGG importer UI surfaces both counts back to the operator so duplicates are not
+/// silently lost.
 /// </para>
 /// </remarks>
-internal sealed class ImportBggTagsHandler : ICommandHandler<ImportBggTagsCommand, int>
+internal sealed class ImportBggTagsHandler : ICommandHandler<ImportBggTagsCommand, BggImportResult>
 {
     private readonly IMechanicGoldenBggTagRepository _repository;
     private readonly IHybridCacheService _cache;
@@ -56,7 +58,7 @@ internal sealed class ImportBggTagsHandler : ICommandHandler<ImportBggTagsComman
         _logger = logger;
     }
 
-    public async Task<int> Handle(ImportBggTagsCommand command, CancellationToken cancellationToken)
+    public async Task<BggImportResult> Handle(ImportBggTagsCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -67,7 +69,7 @@ internal sealed class ImportBggTagsHandler : ICommandHandler<ImportBggTagsComman
             _logger.LogInformation(
                 "ImportBggTags no-op: empty tag list for SharedGameId={SharedGameId}",
                 command.SharedGameId);
-            return 0;
+            return new BggImportResult(Inserted: 0, Skipped: 0);
         }
 
         _logger.LogInformation(
@@ -78,16 +80,20 @@ internal sealed class ImportBggTagsHandler : ICommandHandler<ImportBggTagsComman
             .Select(t => (t.Name, t.Category))
             .ToList();
 
-        await _repository.UpsertBatchAsync(command.SharedGameId, tuples, cancellationToken).ConfigureAwait(false);
+        var insertedCount = await _repository
+            .UpsertBatchAsync(command.SharedGameId, tuples, cancellationToken)
+            .ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        var skippedCount = requestedCount - insertedCount;
 
         var cacheKey = $"golden:{command.SharedGameId}";
         await _cache.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
-            "Imported {TagCount} BGG tag(s) for SharedGameId={SharedGameId}; invalidated cache key {CacheKey}",
-            requestedCount, command.SharedGameId, cacheKey);
+            "Imported {InsertedCount}/{TagCount} BGG tag(s) for SharedGameId={SharedGameId} ({SkippedCount} skipped); invalidated cache key {CacheKey}",
+            insertedCount, requestedCount, command.SharedGameId, skippedCount, cacheKey);
 
-        return requestedCount;
+        return new BggImportResult(Inserted: insertedCount, Skipped: skippedCount);
     }
 }

@@ -2,7 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.MechanicValidation;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
@@ -90,6 +93,8 @@ public sealed class AdminMechanicExtractorValidationEndpointsTests : IAsyncLifet
     [InlineData("POST", "/analyses/00000000-0000-0000-0000-000000000003/metrics")]
     [InlineData("POST", "/analyses/00000000-0000-0000-0000-000000000003/override-certification")]
     [InlineData("POST", "/metrics/recalculate-all")]
+    [InlineData("GET", "/metrics/recalc-jobs/00000000-0000-0000-0000-000000000004")]
+    [InlineData("POST", "/metrics/recalc-jobs/00000000-0000-0000-0000-000000000004/cancel")]
     [InlineData("GET", "/dashboard")]
     [InlineData("GET", "/dashboard/00000000-0000-0000-0000-000000000001/trend")]
     [InlineData("GET", "/thresholds")]
@@ -341,15 +346,108 @@ public sealed class AdminMechanicExtractorValidationEndpointsTests : IAsyncLifet
     }
 
     // ────────────────────────────────────────────────────────────────────
-    // POST /metrics/recalculate-all
+    // POST /metrics/recalculate-all (Sprint 2 / Task 10 — async upgrade)
     // ────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task RecalculateAll_NoPublishedAnalyses_Returns200WithZero()
+    public async Task RecalculateAll_Enqueue_Returns202WithLocationHeaderAndJobId()
     {
+        // Sprint 2 changed this from synchronous (200 OK) to async (202 Accepted).
+        // The handler persists a Pending MechanicRecalcJob and returns the id;
+        // the background worker (not exercised here) is what actually iterates analyses.
         var response = await SendAsync(HttpMethod.Post, "/metrics/recalculate-all");
 
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+
+        // Location header must point at the GET status endpoint.
+        response.Headers.Location.Should().NotBeNull();
+        var location = response.Headers.Location!.ToString();
+        location.Should().StartWith("/api/v1/admin/mechanic-extractor/metrics/recalc-jobs/");
+
+        // Body should carry the JobId (case-insensitive JSON).
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(
+            JsonOptions, TestContext.Current.CancellationToken);
+        body.TryGetProperty("jobId", out var jobIdProp).Should().BeTrue();
+        var jobId = jobIdProp.GetGuid();
+        jobId.Should().NotBeEmpty();
+        location.Should().EndWith(jobId.ToString());
+
+        // Aggregate must exist and be Pending (worker has not run yet).
+        using var scope = _factory.Services.CreateScope();
+        var jobRepo = scope.ServiceProvider.GetRequiredService<IMechanicRecalcJobRepository>();
+        var persisted = await jobRepo.GetByIdAsync(jobId, TestContext.Current.CancellationToken);
+        persisted.Should().NotBeNull();
+        persisted!.Status.Should().Be(RecalcJobStatus.Pending);
+        persisted.TriggeredByUserId.Should().Be(TestAdminId);
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // GET /metrics/recalc-jobs/{id}
+    // ────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetRecalcJobStatus_ExistingJob_Returns200WithDto()
+    {
+        // Enqueue, then read it back through the public surface.
+        var enqueueResponse = await SendAsync(HttpMethod.Post, "/metrics/recalculate-all");
+        enqueueResponse.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        var enqueueBody = await enqueueResponse.Content.ReadFromJsonAsync<JsonElement>(
+            JsonOptions, TestContext.Current.CancellationToken);
+        var jobId = enqueueBody.GetProperty("jobId").GetGuid();
+
+        var response = await SendAsync(HttpMethod.Get, $"/metrics/recalc-jobs/{jobId}");
+
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await response.Content.ReadFromJsonAsync<RecalcJobStatusDto>(
+            JsonOptions, TestContext.Current.CancellationToken);
+        dto.Should().NotBeNull();
+        dto!.Id.Should().Be(jobId);
+        dto.Status.Should().Be(RecalcJobStatus.Pending);
+        dto.TriggeredByUserId.Should().Be(TestAdminId);
+        dto.EtaSeconds.Should().BeNull("ETA is only computed for Running jobs with progress");
+    }
+
+    [Fact]
+    public async Task GetRecalcJobStatus_UnknownId_Returns404()
+    {
+        var response = await SendAsync(HttpMethod.Get, $"/metrics/recalc-jobs/{Guid.NewGuid()}");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // POST /metrics/recalc-jobs/{id}/cancel
+    // ────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CancelRecalcJob_PendingJob_Returns204AndSetsCancellationFlag()
+    {
+        // Enqueue first, then cancel. Aggregate must surface CancellationRequested=true.
+        var enqueueResponse = await SendAsync(HttpMethod.Post, "/metrics/recalculate-all");
+        enqueueResponse.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        var enqueueBody = await enqueueResponse.Content.ReadFromJsonAsync<JsonElement>(
+            JsonOptions, TestContext.Current.CancellationToken);
+        var jobId = enqueueBody.GetProperty("jobId").GetGuid();
+
+        var response = await SendAsync(HttpMethod.Post, $"/metrics/recalc-jobs/{jobId}/cancel");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using var scope = _factory.Services.CreateScope();
+        var jobRepo = scope.ServiceProvider.GetRequiredService<IMechanicRecalcJobRepository>();
+        var persisted = await jobRepo.GetByIdAsync(jobId, TestContext.Current.CancellationToken);
+        persisted.Should().NotBeNull();
+        persisted!.CancellationRequested.Should().BeTrue();
+        // Cancellation is a flag, not a status — Pending stays Pending until the worker reacts.
+        persisted.Status.Should().Be(RecalcJobStatus.Pending);
+    }
+
+    [Fact]
+    public async Task CancelRecalcJob_UnknownId_Returns404()
+    {
+        var response = await SendAsync(
+            HttpMethod.Post,
+            $"/metrics/recalc-jobs/{Guid.NewGuid()}/cancel");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     // ────────────────────────────────────────────────────────────────────

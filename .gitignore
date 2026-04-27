@@ -230,7 +230,11 @@ docs/pages/manifest.json
 
 # Rulebook PDFs — managed via S3/blob storage, not git
 # These are seed data for RAG embedding pipeline only
-data/rulebook/
+# Note: data/rulebook/golden/ is explicitly tracked (mechanic extractor validation fixtures)
+data/rulebook/*.pdf
+data/rulebook/*.sh
+data/rulebook/manifest.json
+data/rulebook/rag-test-results.md
 data/pdfDocs/
 
 # MeepleDev fast dev loop

@@ -292,6 +292,9 @@ builder.Services.AddHostedService<Api.Infrastructure.BackgroundTasks.UsedTotpCod
 // RAG backup: Weekly full snapshot on Sunday 03:00 UTC with retention pruning
 builder.Services.AddHostedService<Api.Infrastructure.BackgroundServices.RagBackupSchedulerService>();
 
+// ADR-051 Sprint 2 / Task 8: Mechanic-recalc async pipeline worker (Pending → Running → terminal).
+builder.Services.AddHostedService<Api.Infrastructure.BackgroundServices.MechanicRecalcBackgroundService>();
+
 // Issue #1449: FluentValidation for CQRS pipeline
 builder.Services.AddFluentValidation();
 

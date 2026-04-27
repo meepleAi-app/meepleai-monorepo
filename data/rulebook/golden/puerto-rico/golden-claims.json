@@ -1,0 +1,532 @@
+{
+  "sharedGameSlug": "puerto-rico",
+  "edition": "1st edition (Alea 2002, Rio Grande Games EN reprint)",
+  "rulebookPdfSha256": "d55058bde864f4216eecd14e2d3fabd244955972f3176e1b3bf64e5ed7afa697",
+  "claims": [
+    {
+      "section": 0,
+      "statement": "Puerto Rico is designed by Andreas Seyfarth and published by Alea / Rio Grande Games for 3-5 players.",
+      "expectedPage": 1,
+      "sourceQuote": "Andreas Seyfarth Prospector, captain, mayor, trader, settler, craftsman, or builder? Which roles will you play in the new world? Will you own the most prosperous plantations? Will you build the most valuable buildings?",
+      "keywords": ["designer_seyfarth", "publisher_alea", "player_count", "role_selection"]
+    },
+    {
+      "section": 0,
+      "statement": "The goal of Puerto Rico is to earn the most victory points. Victory points are accumulated by shipping goods and constructing buildings.",
+      "expectedPage": 1,
+      "sourceQuote": "You have but one goal: achieve the greatest prosperity and highest respect! This goal is attained by the player who earns the most victory points!",
+      "keywords": ["victory_points", "game_goal", "shipping", "buildings"]
+    },
+    {
+      "section": 0,
+      "statement": "Each round, every player selects one of seven role placards and triggers that role's action for all players in clockwise order. The player who chose the role also receives a special privilege.",
+      "expectedPage": 1,
+      "sourceQuote": "The game is played over several rounds. In each round, each player chooses one of seven different roles and, thereby, offers all players, in clockwise order, the action associated with that role.",
+      "keywords": ["round_structure", "role_selection", "clockwise_order", "privilege"]
+    },
+    {
+      "section": 0,
+      "statement": "The basic game components include 5 player boards, 1 game board, 1 governor placard, 8 role placards, 49 buildings, 58 island tiles, 1 colony ship, 5 cargo ships, 1 trading house, 100 colonists, 50 goods tokens, 50 VP chips, and 54 doubloons.",
+      "expectedPage": 1,
+      "sourceQuote": "basic game: 5 player boards 1 game board 1 Governor placard 8 roll placards 49 buildings 58 island tiles 1 colony ship 5 cargo ships 1 trading house 100 colonists 50 goods tokens 50 VP chips 54 doubloons",
+      "keywords": ["components", "player_boards", "buildings", "colonists", "vp_chips", "doubloons"]
+    },
+    {
+      "section": 0,
+      "statement": "There are five types of goods: corn (yellow), indigo (blue), sugar (white), tobacco (light brown), and coffee (dark brown). Corn is special as it requires no production building.",
+      "expectedPage": 1,
+      "sourceQuote": "9 of coffee (dark brown) and tobacco (light brown), 10 of corn (yellow), 11 of sugar (white) and indigo (blue)",
+      "keywords": ["goods_types", "corn", "indigo", "sugar", "tobacco", "coffee", "goods_tokens"]
+    },
+    {
+      "section": 0,
+      "statement": "The game lasts approximately 15 rounds. The player with the most total victory points at game end wins.",
+      "expectedPage": 3,
+      "sourceQuote": "The game is played over several rounds (about 15). Each round is played in the same way.",
+      "keywords": ["round_count", "game_length", "winner_determination"]
+    },
+    {
+      "section": 0,
+      "statement": "Setup requires each player to receive a player board, starting doubloons (2 for 3 players, 3 for 4 players, 4 for 5 players), and a starting plantation tile.",
+      "expectedPage": 2,
+      "sourceQuote": "Each player takes: 1 player board (placed before them on the table - their play area) money: - with 3 players: 2 doubloons - with 4 players: 3 doubloons - with 5 players: 4 doubloons",
+      "keywords": ["setup", "starting_doubloons", "player_board", "player_count"]
+    },
+    {
+      "section": 0,
+      "statement": "The first player takes the governor placard and a small indigo plantation. Subsequent players receive indigo or corn plantations depending on player count.",
+      "expectedPage": 2,
+      "sourceQuote": "The players choose a starting player using any method they choose. This player takes the governor placard and a small indigo tile. The other players take the following in clockwise order: - with 3 players: 2nd player: 1 indigo tile / 3rd player: 1 corn tile",
+      "keywords": ["governor_placard", "starting_plantation", "indigo_tile", "corn_tile", "setup"]
+    },
+    {
+      "section": 4,
+      "statement": "The player holding the governor placard begins each round by selecting a role placard. Then each subsequent player selects a role in clockwise order.",
+      "expectedPage": 3,
+      "sourceQuote": "The player with the governor placard begins. They take one of the role placards, place it face-up next to their player board, and take the action allowed by the role placard. Then, the player on their left takes the action allowed by that role placard, and so on around the table, in clockwise order, until every player has taken this action once.",
+      "keywords": ["governor_placard", "role_selection_order", "clockwise_order", "round_start"]
+    },
+    {
+      "section": 4,
+      "statement": "At the end of each round, one doubloon is placed on each of the three role placards that were not selected during that round, making them more attractive in future rounds.",
+      "expectedPage": 3,
+      "sourceQuote": "Next, place one doubloon on each of the three role placards that were not taken by a player during the round. Then, place the used role placards back on the table next to the unused placards.",
+      "keywords": ["unchosen_roles", "doubloon_accumulation", "end_of_round", "role_placards"]
+    },
+    {
+      "section": 4,
+      "statement": "After each round ends, the governor placard passes to the left neighbor of the current governor, who then starts the next round.",
+      "expectedPage": 3,
+      "sourceQuote": "The left neighbor of the player with the governor placard takes the governor placard, becoming the governor for the next round.",
+      "keywords": ["governor_rotation", "clockwise_order", "round_transition", "governor_placard"]
+    },
+    {
+      "section": 1,
+      "statement": "Each role grants the player who takes the placard both a special privilege (exclusive to that player) and an action that all players may take in clockwise order.",
+      "expectedPage": 3,
+      "sourceQuote": "Each role grants the player who takes the placard a special privilege, and also, a specific action that can be taken by each player, in clockwise order, starting with the player who took the role (exception: prospector).",
+      "keywords": ["role_privilege", "role_action", "clockwise_order", "prospector_exception"]
+    },
+    {
+      "section": 1,
+      "statement": "If a role placard has doubloons on it when selected, the choosing player takes those doubloons in addition to the role's privilege and action.",
+      "expectedPage": 3,
+      "sourceQuote": "If a placard has one or more doubloons on it, the player who takes it also takes the doubloons in addition to the privilege and action associated with it.",
+      "keywords": ["doubloon_accumulation", "role_selection", "unchosen_roles", "bonus_doubloons"]
+    },
+    {
+      "section": 1,
+      "statement": "Players must always select a role placard on their turn, but using the role's action or privilege is optional (with the exception of the captain, whose loading action is mandatory).",
+      "expectedPage": 3,
+      "sourceQuote": "Players must always take a role placard when it is their turn to do so, but they may choose not to use the action or privilege of the placard chosen. The action of a role placard is optional (exception: captain).",
+      "keywords": ["mandatory_role_selection", "optional_action", "captain_exception", "role_rules"]
+    },
+    {
+      "section": 1,
+      "statement": "The Settler role allows the choosing player (privilege) to take a quarry tile instead of a plantation, while all other players each take one face-up plantation tile.",
+      "expectedPage": 3,
+      "sourceQuote": "The player who chooses this role may take either a quarry tile as the privilege or one of the face-up plantation tiles and place it on any empty island space on their player board. Afterwards, each other player, in clockwise order, may take one of the face-up plantation tiles (not a quarry tile!) and place it on any empty island space on their player board.",
+      "keywords": ["role_settler", "quarry_tile", "plantation_tile", "settler_privilege", "island_space"]
+    },
+    {
+      "section": 1,
+      "statement": "After the settler phase, the settler player discards untaken plantation tiles and draws new ones from the face-down stacks, placing one more tile than the number of players face-up.",
+      "expectedPage": 3,
+      "sourceQuote": "Finally, the settler player puts the untaken plantation tiles face-up on a plantation discard stack and draws new plantation tiles from the face-down stacks, placing them face-up next to the quarry stack. The player draws one more than the number of players.",
+      "keywords": ["role_settler", "plantation_tile", "refill_plantation_row", "settler_phase_end"]
+    },
+    {
+      "section": 1,
+      "statement": "The Mayor role allows all players to receive new colonists from the colonist ship one at a time in clockwise order. The mayor takes one extra colonist from the supply as their privilege.",
+      "expectedPage": 4,
+      "sourceQuote": "The player who chooses this role may first take one colonist from the colonist supply (not from the colonist ship!) as the privilege. Next, the players take the colonists from the colonist ship one at a time, starting with the mayor.",
+      "keywords": ["role_mayor", "colonist_ship", "colonist_supply", "mayor_privilege", "colonist_distribution"]
+    },
+    {
+      "section": 1,
+      "statement": "Colonists may only be placed on circles on tiles during the mayor phase. If a player cannot place all colonists, the excess must be stored on the windrose until a future mayor phase.",
+      "expectedPage": 4,
+      "sourceQuote": "Players may place their new colonist(s), together with all the colonists acquired from earlier rounds, on any empty circles on the tiles on their player boards. If a player cannot place all their colonists, they must \"store\" them on their windrose on their player board.",
+      "keywords": ["colonist_placement", "windrose", "mayor_phase", "colonist_storage", "empty_circles"]
+    },
+    {
+      "section": 1,
+      "statement": "At the end of the mayor phase, the mayor refills the colonist ship: one colonist per empty circle on all players' buildings (not plantations or quarries), with a minimum equal to the number of players.",
+      "expectedPage": 4,
+      "sourceQuote": "As their last duty, the mayor puts new colonists on the colonist ship to be used in the next mayor phase. For each empty circle on the buildings on the player boards of all players (empty circles on plantations and quarries do not count!), the mayor takes one colonist from the colonist supply and places it on the colonist ship. However, as a minimum, the mayor should always place at least as many colonists on the ship as there are players in the game.",
+      "keywords": ["colonist_ship_refill", "empty_building_circles", "mayor_duty", "minimum_colonists"]
+    },
+    {
+      "section": 1,
+      "statement": "The Builder role allows the choosing player to build one building for one doubloon less than normal cost. Other players may build at normal cost.",
+      "expectedPage": 4,
+      "sourceQuote": "The player who chooses this role can immediately build one building for one doubloon less than the normal cost as the privilege. The player pays the money to the bank, takes the building from the supply, and places it on any name empty space in the city on their player board.",
+      "keywords": ["role_builder", "builder_privilege", "building_cost", "cost_reduction", "city_space"]
+    },
+    {
+      "section": 1,
+      "statement": "Each occupied quarry a player owns reduces their building cost by 1 doubloon, with column-based maximums: column 1 allows max 1 quarry reduction, column 2 allows max 2, column 3 allows max 3, column 4 allows max 4.",
+      "expectedPage": 4,
+      "sourceQuote": "Each occupied quarry that a player owns may reduce the player's cost for building a building by 1 doubloon. The limit for such reductions is shown on the game board: players building buildings in the first column can reduce their cost by at most 1 doubloon (1 occupied quarry), in the second column by 2 doubloons (2 occupied quarries), in the third column by 3 doubloons (3 occupied quarries), and in the fourth column by 4 doubloons (4 occupied quarries).",
+      "keywords": ["quarry_reduction", "building_cost", "column_limit", "occupied_quarry", "role_builder"]
+    },
+    {
+      "section": 1,
+      "statement": "No player may build more than one building per round, and a player with no empty city spaces cannot build any further buildings.",
+      "expectedPage": 4,
+      "sourceQuote": "Note: No player may build more than one building per round. It is not possible to build on more than 12 city spaces. A player who has no empty city spaces may not build more buildings.",
+      "keywords": ["building_limit", "city_spaces", "one_building_per_round", "role_builder"]
+    },
+    {
+      "section": 1,
+      "statement": "The Craftsman role lets all players take goods from the supply according to their production ability. The craftsman takes one additional good of their choice as privilege.",
+      "expectedPage": 4,
+      "sourceQuote": "The player who chooses this role takes goods from the supply according to their production ability and places them on the windrose on their player board. Next, the other players take goods from the supply according to their abilities, in clockwise order from the craftsman. As his last duty, the craftsman takes one additional good (of those the player produced this turn) from the supply as the privilege.",
+      "keywords": ["role_craftsman", "production", "goods_supply", "craftsman_privilege", "windrose"]
+    },
+    {
+      "section": 1,
+      "statement": "The Trader role allows each player to sell at most one good to the trading house for its listed price. The trader earns one extra doubloon as privilege.",
+      "expectedPage": 5,
+      "sourceQuote": "The player who chooses this role, may immediately sell one good to the trading house. The player places the sold good on any empty space on the trading house and takes from the bank the price associated with the good sold (0-4 doubloons) plus 1 doubloon as the privilege.",
+      "keywords": ["role_trader", "trading_house", "sell_goods", "trader_privilege", "goods_price"]
+    },
+    {
+      "section": 1,
+      "statement": "The trading house can hold at most four goods and accepts only different types of goods. Once full with four goods, no further selling is possible that phase. The trader empties the trading house only if it is completely full.",
+      "expectedPage": 5,
+      "sourceQuote": "The trading house has room for just four goods. When it is full, no other players may sell goods in this trading phase. The trading house buys only different kinds of goods. If a good of one type is in the trading house, no more of that good can be sold to the trading house until the trading house is emptied. As his last duty, the trader empties the trading house if it is full with four goods, placing them in their separate supply piles.",
+      "keywords": ["trading_house", "four_goods_limit", "different_goods", "trader_duty", "trading_house_full"]
+    },
+    {
+      "section": 1,
+      "statement": "The Captain role requires players to load goods onto cargo ships. Each player must load if they can; loading is mandatory (not optional) unlike other roles.",
+      "expectedPage": 6,
+      "sourceQuote": "The captain is in charge of shipping goods to the old world. This means that the captain is the first to load goods on the cargo ships. Then, the other players follow, in clockwise order from the captain. Note: in the captain phase, each player may get several turns to load goods on the cargo ships. When it is a player's turn to load goods on a cargo ship, they must load if they can.",
+      "keywords": ["role_captain", "cargo_ships", "mandatory_loading", "shipping_phase", "captain_phase"]
+    },
+    {
+      "section": 1,
+      "statement": "Each cargo ship carries only one kind of good, and players cannot load goods onto a ship if that same kind is already on another cargo ship.",
+      "expectedPage": 6,
+      "sourceQuote": "Each cargo ship will carry goods of only one kind. Players may not load goods on a cargo ship if goods of that same kind are on one of the other two cargo ships.",
+      "keywords": ["cargo_ship", "one_good_type", "loading_rules", "captain_phase", "shipping"]
+    },
+    {
+      "section": 1,
+      "statement": "When a player has multiple goods they can load, they must load as many of that kind as possible. If a good can go on multiple empty ships, the player must choose the ship where they can load all of their goods of that kind.",
+      "expectedPage": 6,
+      "sourceQuote": "When players load goods of a kind, they must load as many of that kind as they can. Players cannot hold back goods when there is space on a ship carrying the kind of goods they have. If players have a kind of good that can be loaded on several empty ships, they must choose the ship where they can load the most goods, leaving none behind, if possible.",
+      "keywords": ["loading_rules", "mandatory_maximum_loading", "cargo_ship_choice", "captain_phase"]
+    },
+    {
+      "section": 1,
+      "statement": "The captain earns 1 extra VP as privilege when loading the first kind of goods in a captain phase. This extra VP is only earned once per captain phase regardless of how many kinds of goods the captain loads.",
+      "expectedPage": 6,
+      "sourceQuote": "When loading the first kind of goods, the captain takes as the privilege 1 extra VP. The captain does not get this extra VP for the goods loaded in subsequent turns in this captain phase. The captain earns only one extra VP as the privilege, regardless of how many kinds of goods the captain loads. If the captain loads no goods, the captain earns no extra privilege VP.",
+      "keywords": ["captain_privilege", "vp_chip", "first_loading", "one_extra_vp", "captain_phase"]
+    },
+    {
+      "section": 1,
+      "statement": "The Prospector role provides no action for other players. The prospector simply takes 1 doubloon from the bank as their privilege.",
+      "expectedPage": 7,
+      "sourceQuote": "The player who chooses this role initiates no action for the players, but receives as their privilege 1 doubloon from the bank.",
+      "keywords": ["role_prospector", "prospector_privilege", "no_action", "doubloon_income"]
+    },
+    {
+      "section": 3,
+      "statement": "Production requires both an occupied plantation of the appropriate type and an occupied production building (except for corn, which produces directly from occupied corn plantations without any processing building).",
+      "expectedPage": 8,
+      "sourceQuote": "Note: there is no production facility needed for the corn. Corn (yellow goods) come directly from the plantation without any need for processing. That means that, in the craftsman phase, occupied corn plantations produce corn directly.",
+      "keywords": ["corn_production", "no_production_building", "corn_plantation", "craftsman_phase", "goods_production"]
+    },
+    {
+      "section": 3,
+      "statement": "The five goods in Puerto Rico are indigo (processed in indigo plants), sugar (processed in sugar mills), tobacco (processed in tobacco storage), coffee (processed in coffee roasters), and corn (no processing needed).",
+      "expectedPage": 8,
+      "sourceQuote": "In the indigo processing plants, the indigo plants are processed to produce indigo dye (blue goods). In the sugar mills, sugar cane is processed into sugar (white goods). In the tobacco storage, the tobacco leaves are shredded into tobacco (light brown goods). In the coffee roasters, the coffee beans are roasted into coffee (dark brown goods).",
+      "keywords": ["goods_types", "production_buildings", "indigo", "sugar", "tobacco", "coffee"]
+    },
+    {
+      "section": 3,
+      "statement": "Production buildings have circles; the number of colonist-filled circles determines the maximum number of goods produced, provided there are sufficient occupied plantations of the correct type.",
+      "expectedPage": 8,
+      "sourceQuote": "The number of circles on the production buildings indicates the maximum number of goods the building can produce when the circles have colonists on them. Of course, the player must also have sufficient occupied plantations of the appropriate kind to produce the raw materials needed to produce the goods in the production buildings.",
+      "keywords": ["production_building_circles", "colonist_circles", "production_capacity", "plantation_requirement"]
+    },
+    {
+      "section": 3,
+      "statement": "A tile (plantation, quarry, or building) is only considered occupied if at least one colonist is on it. Only occupied tiles may use their functions.",
+      "expectedPage": 4,
+      "sourceQuote": "The tiles (plantation, quarry, or building) have 1 to 3 circles. Players may place one colonist on each circle on the tiles on their player boards. If there is at least one colonist on a tile, it is considered occupied. Only occupied tiles may use their functions; unoccupied tiles never function!",
+      "keywords": ["occupied_tile", "colonist_required", "tile_function", "unoccupied_tiles"]
+    },
+    {
+      "section": 3,
+      "statement": "Doubloons are the currency of Puerto Rico and are stored visibly on the windrose of each player board so all players can see how much money each player has.",
+      "expectedPage": 2,
+      "sourceQuote": "The players store their doubloons on the windrose on their player boards, so that all players can see how much money each has.",
+      "keywords": ["doubloons", "windrose", "money_visibility", "player_board"]
+    },
+    {
+      "section": 3,
+      "statement": "The quarry tile, when occupied, reduces building costs. It is a special island tile that can only be taken by the settler (as their privilege) or by a player who owns an occupied construction hut.",
+      "expectedPage": 3,
+      "sourceQuote": "The player who chooses this role may take either a quarry tile as the privilege or one of the face-up plantation tiles and place it on any empty island space on their player board. Afterwards, each other player, in clockwise order, may take one of the face-up plantation tiles (not a quarry tile! - exception: construction hut) and place it on any empty island space on their player board.",
+      "keywords": ["quarry_tile", "settler_privilege", "construction_hut_exception", "island_tile"]
+    },
+    {
+      "section": 3,
+      "statement": "The colonist supply starts at 55 colonists for 3 players, 75 for 4 players, and 95 for 5 players. The colonist ship starts with colonists equal to the number of players.",
+      "expectedPage": 2,
+      "sourceQuote": "the colonist ship: with 3, 4, or 5 colonists, depending on and equal to the number of players the colonists (as a supply) - with 3 players: 55 colonists - with 4 players: 75 colonists - with 5 players: 95 colonists",
+      "keywords": ["colonist_supply", "colonist_ship", "player_count", "setup"]
+    },
+    {
+      "section": 3,
+      "statement": "Goods tokens stored on a player's windrose represent their current inventory. VP chips are also stored on the windrose but must be kept face-down to remain secret.",
+      "expectedPage": 6,
+      "sourceQuote": "Players keep VP secret from the others, unlike their money and goods. Players put their VP chips face-down on their windroses. From time to time, players should convert 5 value 1 chips for a single value 5 chip.",
+      "keywords": ["vp_secret", "windrose", "vp_chips", "goods_storage", "vp_conversion"]
+    },
+    {
+      "section": 3,
+      "statement": "Cargo ships have fixed sizes. For 3 players: ships with 4, 5, and 6 spaces. For 4 players: ships with 5, 6, and 7 spaces. For 5 players: ships with 6, 7, and 8 spaces.",
+      "expectedPage": 2,
+      "sourceQuote": "three cargo ships - with 3 players: the ships with 4, 5, and 6 cargo spaces - with 4 players: the ships with 5, 6, and 7 cargo spaces - with 5 players: the ships with 6, 7, and 8 cargo spaces",
+      "keywords": ["cargo_ships", "ship_sizes", "player_count", "setup", "shipping"]
+    },
+    {
+      "section": 3,
+      "statement": "At the end of the captain phase, players may keep only one good token on their windrose. Additional goods must be stored in warehouses, or they are returned to the supply.",
+      "expectedPage": 6,
+      "sourceQuote": "When no more goods can be loaded on the cargo ships, the players must store the goods left on their windroses. Each player may store one good (one token) on their windrose. For all other remaining goods, each player must find room in one of their warehouses (small or large). Players who do not have sufficient warehouse space must place all extra goods back in the goods supplies.",
+      "keywords": ["goods_storage", "windrose", "warehouse", "captain_phase_end", "goods_loss"]
+    },
+    {
+      "section": 3,
+      "statement": "The captain phase ends when no players can load any more goods onto cargo ships. After that, the captain unloads only fully loaded ships; partially full ships remain for the next captain phase.",
+      "expectedPage": 6,
+      "sourceQuote": "As the last duty, the captain unloads all full ships by placing those goods back in their separate supply piles. Partially full and empty ships remain as they are until the next captain phase.",
+      "keywords": ["captain_phase_end", "full_ship_unloading", "partial_ships", "cargo_ships"]
+    },
+    {
+      "section": 2,
+      "statement": "Each good loaded onto a cargo ship earns 1 VP chip, regardless of the good type. All goods have equal shipping value of 1 VP per token.",
+      "expectedPage": 6,
+      "sourceQuote": "For each good (each good, not each kind of good) players load, they earn 1 VP in the form of value 1 VP chips. When loading goods onto the cargo ships, all kinds of goods have the same value: 1 VP per good loaded!",
+      "keywords": ["vp_per_good", "shipping_vp", "vp_chip", "cargo_loading", "equal_goods_value"]
+    },
+    {
+      "section": 2,
+      "statement": "Buildings score their red-brown VP value at game end whether they are occupied or not. The five large buildings score 4 VP each when unoccupied.",
+      "expectedPage": 7,
+      "sourceQuote": "Note: A building scores its VP even when it is not occupied. Thus, for example, the five large buildings score 4 VP each when they are not occupied.",
+      "keywords": ["building_vp", "unoccupied_building", "large_buildings", "end_game_scoring", "vp"]
+    },
+    {
+      "section": 2,
+      "statement": "At game end, each player totals: VP chips + VP value of all buildings + extra VP scored by occupied large buildings.",
+      "expectedPage": 7,
+      "sourceQuote": "The players' VP are now summed with pencil and paper. Each player adds: - the value of their VP chips (including those noted on pencil and paper) + - the VP value of their buildings (red-brown number in upper right corner) + - the extra VP scored by their occupied large buildings",
+      "keywords": ["end_game_scoring", "vp_chips", "building_vp", "large_building_bonus", "final_score"]
+    },
+    {
+      "section": 2,
+      "statement": "When two or more players tie for the most VP, the player with the most combined doubloons and goods (1 good = 1 doubloon) wins the tiebreaker.",
+      "expectedPage": 7,
+      "sourceQuote": "If two or more players tie with the most VP, the player with the most doubloons and goods counted together (1 good = 1 doubloon) is the winner.",
+      "keywords": ["tiebreaker", "doubloons", "goods", "vp_tie", "winner"]
+    },
+    {
+      "section": 2,
+      "statement": "The Guild Hall large building scores 1 extra VP per small production building and 2 extra VP per large production building in its owner's city at game end.",
+      "expectedPage": 10,
+      "sourceQuote": "The owner of the occupied guild hall earns, at game end, an additional 1 VP for each small production building (occupied or unoccupied) in their city (= small indigo plant and small sugar mill), and an additional 2 VP for each large production building (occupied or unoccupied) in their city (= indigo plant, sugar mill, tobacco storage, and coffee roaster).",
+      "keywords": ["guild_hall", "large_building", "production_building_bonus", "end_game_vp", "scoring"]
+    },
+    {
+      "section": 2,
+      "statement": "The Residence large building scores 4 VP for up to 9 filled island spaces, 5 VP for 10 spaces, 6 VP for 11 spaces, and 7 VP for all 12 spaces filled at game end.",
+      "expectedPage": 10,
+      "sourceQuote": "The owner of the occupied residence earns, at game end, additional VP for the plantations and quarries they have placed on their island. For up to nine filled island spaces, they earn 4 VP, for ten filled island spaces, they earn 5 VP, for eleven filled island spaces, they earn 6 VP, and for all twelve spaces filled, they earn 7 VP.",
+      "keywords": ["residence", "large_building", "island_spaces", "end_game_vp", "plantation_bonus"]
+    },
+    {
+      "section": 2,
+      "statement": "The Fortress large building scores 1 extra VP per 3 colonists on its owner's player board (including plantations, quarries, buildings, and windrose) at game end.",
+      "expectedPage": 10,
+      "sourceQuote": "The owner of the occupied fortress earns, at game end, one additional VP for every three colonists on their player board.",
+      "keywords": ["fortress", "large_building", "colonist_bonus", "end_game_vp", "scoring"]
+    },
+    {
+      "section": 2,
+      "statement": "The Customs House large building scores 1 extra VP per 4 VP chips accumulated during the game (not counting building VPs) at game end.",
+      "expectedPage": 10,
+      "sourceQuote": "The owner of the occupied customs house earns, at game end, one additional VP for every four VP they acquired during the game. The player should count only their VP chips (and any extra VP recorded on paper after the chip supply was exhausted, but before game end). They do not count VP earned for their buildings at game end.",
+      "keywords": ["customs_house", "large_building", "vp_chip_bonus", "end_game_vp", "scoring"]
+    },
+    {
+      "section": 2,
+      "statement": "The City Hall large building scores 1 extra VP per beige building (occupied or unoccupied, including city hall itself) in its owner's city at game end.",
+      "expectedPage": 11,
+      "sourceQuote": "The owner of the occupied city hall earns, at game end, one additional VP for each beige building (occupied or unoccupied) in their city (city hall counts!).",
+      "keywords": ["city_hall", "large_building", "beige_building_bonus", "end_game_vp", "scoring"]
+    },
+    {
+      "section": 4,
+      "statement": "Game end is triggered at the end of the round in which: the colonist supply cannot fill the colonist ship; a player builds their 12th city space during the builder phase; or the last VP chip is taken.",
+      "expectedPage": 7,
+      "sourceQuote": "The game ends at the end of the round, in which at least one of the following conditions is satisfied: - at the end of the mayor phase there are not enough colonists to fill the colonist ship as required; - during the builder phase, at least one player builds on their 12th city space; - during the captain phase, the last of the VP chips is taken.",
+      "keywords": ["game_end", "end_trigger", "colonist_ship_empty", "twelfth_city_space", "vp_chips_exhausted"]
+    },
+    {
+      "section": 4,
+      "statement": "VP chips use two denominations: 1-point (hexagonal silver) and 5-point (hexagonal gold). Players should regularly convert five 1-point chips into one 5-point chip.",
+      "expectedPage": 1,
+      "sourceQuote": "hexagonal: 31 x 1 and 19 x 5 tokens 46 x 1 (silver) and 8 x 5 (golden)",
+      "keywords": ["vp_chips", "denominations", "vp_conversion", "components"]
+    },
+    {
+      "section": 4,
+      "statement": "Role placards return to the available pool at the end of each round after players have taken their actions, and all used role placards are placed back next to the game board.",
+      "expectedPage": 7,
+      "sourceQuote": "Finally, the players return the role placards they selected to the area next to the game board and the governor gives the governor placard to their left neighbor.",
+      "keywords": ["role_placards", "end_of_round", "placard_return", "governor_rotation"]
+    },
+    {
+      "section": 4,
+      "statement": "The number of role placards in play depends on player count: 6 placards for 3 players (no prospectors), 7 for 4 players (one prospector), and all 8 for 5 players.",
+      "expectedPage": 2,
+      "sourceQuote": "the role placards - with 3 players: all placards except both Prospectors (6 placards) - with 4 players: all placards except one Prospector (7 placards) - with 5 players: all 8 placards",
+      "keywords": ["role_placards", "player_count", "prospector", "setup", "placard_count"]
+    },
+    {
+      "section": 4,
+      "statement": "Three doubloons are placed on unchosen role placards at the end of each round (one per unchosen placard), regardless of how many doubloons are already on that placard.",
+      "expectedPage": 7,
+      "sourceQuote": "Now, the governor takes three doubloons from the bank, placing one each on the three role placards that were not selected during the round. The doubloons are placed regardless of the number of doubloons already on the placards.",
+      "keywords": ["unchosen_roles", "doubloon_accumulation", "three_doubloons", "end_of_round", "role_placards"]
+    },
+    {
+      "section": 5,
+      "statement": "The construction hut allows its owner to take a quarry tile in the settler phase instead of a face-up plantation tile (same as the settler privilege).",
+      "expectedPage": 9,
+      "sourceQuote": "In the settler phase, the owner of an occupied construction hut can place a quarry on their island instead of one of the face-up plantation tiles. Note: if the settler owns a construction hut they may, of course, only take one quarry.",
+      "keywords": ["construction_hut", "quarry_tile", "settler_phase", "beige_building", "special_function"]
+    },
+    {
+      "section": 5,
+      "statement": "The small warehouse allows its owner to store all goods of one chosen kind (in addition to the one free token) at the end of the captain phase, protecting those goods from being discarded.",
+      "expectedPage": 9,
+      "sourceQuote": "Owners of an occupied small warehouse may store, at the end of the captain phase, in addition to the single good they are allowed to store on their windrose, all the goods of one kind that they choose. The warehouse protects the player from returning goods to the supply. It does not protect the player from being required to load the goods onto the cargo ships.",
+      "keywords": ["small_warehouse", "goods_storage", "captain_phase", "beige_building", "goods_protection"]
+    },
+    {
+      "section": 5,
+      "statement": "The harbor building grants its owner 1 extra VP each time they load goods onto a cargo ship during the captain phase (each loading turn, not just once).",
+      "expectedPage": 10,
+      "sourceQuote": "Each time, during the captain phase, owners of an occupied harbor load goods on a cargo ship, they earn one extra VP.",
+      "keywords": ["harbor", "extra_vp", "captain_phase", "loading_bonus", "beige_building"]
+    },
+    {
+      "section": 5,
+      "statement": "The wharf allows its owner, during the captain phase on their turn, to ship all goods of one kind directly to the supply (as if loading an imaginary unlimited ship) and score 1 VP per good. The wharf can only be used once per captain phase.",
+      "expectedPage": 10,
+      "sourceQuote": "During the captain phase, when a player with an occupied wharf must load goods, instead of loading them on a cargo ship, they may place all goods of one kind in the goods supply and score the appropriate VP as though they had loaded them on a cargo ship. The wharf can only be used once per captain phase by its owner, but the player may choose when to use it, if at all.",
+      "keywords": ["wharf", "imaginary_ship", "captain_phase", "beige_building", "goods_shipping"]
+    },
+    {
+      "section": 5,
+      "statement": "The office allows its owner to sell a good to the trading house even if that type of good is already present in the trading house. The trading house must still have space for it.",
+      "expectedPage": 9,
+      "sourceQuote": "When the owner of an occupied office sells a good to the trading house in the trader phase, it need not be different than the goods already there. If the trading house is full, the player cannot sell a good there!",
+      "keywords": ["office", "trading_house", "duplicate_goods", "trader_phase", "beige_building"]
+    },
+    {
+      "section": 5,
+      "statement": "The hospice allows its owner to take one free colonist from the supply (or colonist ship if supply is empty) and place it on a newly acquired plantation or quarry during the settler phase.",
+      "expectedPage": 9,
+      "sourceQuote": "During the settler phase, when the owner of an occupied hospice places a plantation or quarry tile on their island, they may take a colonist from the colonist supply and place it on the newly acquired plantation or quarry tile.",
+      "keywords": ["hospice", "free_colonist", "settler_phase", "beige_building", "colonist_placement"]
+    },
+    {
+      "section": 5,
+      "statement": "If a player cannot afford a building during the builder phase, they simply cannot build. There is no partial payment or debt mechanism.",
+      "expectedPage": 4,
+      "sourceQuote": "If the builder does not build a building, the player takes no doubloon for the privilege!",
+      "keywords": ["cannot_afford_building", "builder_phase", "no_building", "privilege_rule"]
+    },
+    {
+      "section": 5,
+      "statement": "When the VP chip supply is exhausted, play continues and players track additional VP with pencil and paper. Exhaustion of VP chips triggers game end at the end of that round.",
+      "expectedPage": 7,
+      "sourceQuote": "When the VP chips are exhausted, players earning VP thereafter should track them with pencil and paper.",
+      "keywords": ["vp_chips_exhausted", "game_end_trigger", "pencil_and_paper", "scoring_tracking"]
+    },
+    {
+      "section": 5,
+      "statement": "When the colonist supply is exhausted, the mayor cannot use their privilege and does not refill the colonist ship. This will eventually trigger game end.",
+      "expectedPage": 4,
+      "sourceQuote": "When the colonist supply runs out, the mayor may not use this privilege and, of course, does not refill the colonist ship.",
+      "keywords": ["colonist_supply_exhausted", "mayor_privilege", "game_end_trigger", "colonist_ship"]
+    },
+    {
+      "section": 5,
+      "statement": "The hacienda building allows its owner to take one additional face-down plantation tile (from any face-down stack) before taking their normal turn in the settler phase.",
+      "expectedPage": 9,
+      "sourceQuote": "On their turn in the settler phase, the owner of an occupied hacienda may, before they take a face-up plantation tile, take an additional plantation tile from any facedown stack (the top-most) and place it on an empty space on their island. The player may then take their normal turn in the phase.",
+      "keywords": ["hacienda", "extra_plantation", "face_down_tile", "settler_phase", "beige_building"]
+    },
+    {
+      "section": 2,
+      "statement": "The five large buildings each occupy two adjacent city spaces, are unique (one per game), and score 4 VP each even when unoccupied; their special extra-VP bonuses only apply when they are occupied at game end.",
+      "expectedPage": 10,
+      "sourceQuote": "The following five large buildings occur just once each in the game. Each needs two adjacent city spaces to be built, but it counts as one building. The five large buildings score the extra VP only when they are occupied!",
+      "keywords": ["large_buildings", "two_city_spaces", "unique_buildings", "occupied_bonus", "end_game_vp"]
+    },
+    {
+      "section": 3,
+      "statement": "The factory building earns its owner doubloons from the bank based on how many different kinds of goods they produce in the craftsman phase: 1 kind = 0 doubloons, 2 kinds = 1 doubloon, 3 kinds = 2 doubloons, 4 kinds = 3 doubloons, 5 kinds = 5 doubloons.",
+      "expectedPage": 10,
+      "sourceQuote": "Owners of an occupied factory producing goods of more than one kind in the craftsman phase earn money from the bank: for two kinds of goods, they earn 1 doubloon, for three kinds of goods, they earn 2 doubloons, for four kinds of goods, they earn 3 doubloons, and for all five kinds of goods, they earn 5 doubloons.",
+      "keywords": ["factory", "production_diversity", "doubloon_bonus", "craftsman_phase", "beige_building"]
+    },
+    {
+      "section": 3,
+      "statement": "The large warehouse allows its owner to store all goods of two chosen kinds (plus the one free token) at the end of the captain phase.",
+      "expectedPage": 10,
+      "sourceQuote": "The owner of an occupied large warehouse may store, at the end of the captain phase, in addition to the single goods token they are allowed to store on their windrose, all the tokens of two kinds of goods that they choose.",
+      "keywords": ["large_warehouse", "goods_storage", "captain_phase", "two_good_types", "beige_building"]
+    },
+    {
+      "section": 0,
+      "statement": "The two-player game follows all basic game rules except players alternate selecting roles (6 roles each round), VP is 65 total, colonist supply is 40, cargo ships have 4 and 6 spaces, and 3 tiles of each plantation type are removed.",
+      "expectedPage": 12,
+      "sourceQuote": "All rules for the basic game apply with for the following exceptions: Each player takes 1 player board, 3 doubloons, and 1 plantation tile Remove three of each of the plantation tiles (corn, indigo, sugar, tobacco, coffee, and quarry) from the game and return them to the box. For the VP, place 65 total VP in the two denominations as a supply.",
+      "keywords": ["two_player_variant", "setup", "reduced_vp", "plantation_removal", "player_count"]
+    },
+    {
+      "section": 4,
+      "statement": "In the two-player game, each player selects three role placards per round (6 total), then 1 doubloon is placed on the remaining seventh placard and the governor passes to the other player.",
+      "expectedPage": 12,
+      "sourceQuote": "The governor begins and chooses one role placard, which is executed by both players as in the basic game. The players take turns choosing role placards until each has taken three and all six of these have been executed as in the basic rules. The governor places 1 doubloon on the remaining (seventh) placard, the players return those they chose, the governor gives the governor placard to the other player and the game continues as in the basic game.",
+      "keywords": ["two_player_variant", "role_selection", "six_roles_per_round", "governor_rotation", "doubloon_accumulation"]
+    },
+    {
+      "section": 5,
+      "statement": "Expansion 1 introduces new beige buildings with special abilities. Players draft which 12 small and 5 large beige buildings will be available by choosing in clockwise order from all available options before the game starts.",
+      "expectedPage": 13,
+      "sourceQuote": "From the 24 small and 7 large different beige buildings, the players choose, in clockwise order, which 12 small and 5 large different beige buildings will be available in the game.",
+      "keywords": ["expansion_1", "building_draft", "new_buildings", "setup", "beige_buildings"]
+    },
+    {
+      "section": 5,
+      "statement": "The University building (Expansion 1) allows its owner to take one free colonist from the supply and place it on a newly built production building during the builder phase.",
+      "expectedPage": 10,
+      "sourceQuote": "During the builder phase, when the owner of an occupied university builds a building in his city, they may take a colonist from the colonist supply and place it on the newly acquired tile. Note: if a player builds a production building with more than one circle, they get only one colonist.",
+      "keywords": ["university", "free_colonist", "builder_phase", "beige_building", "colonist_placement"]
+    },
+    {
+      "section": 5,
+      "statement": "The Library building (Expansion 1) doubles the privilege the owner receives when they take any role: the craftsman may take two different goods, and the settler may take an extra plantation after all others have chosen.",
+      "expectedPage": 14,
+      "sourceQuote": "Owners of an occupied library double the privilege they get when they take a role. The settler may first take either a plantation or a quarry. Then, after all other players have chosen their plantations, the settler may take a plantation from those remaining face up. They may not take a quarry as their doubled privilege. The craftsman may take two different goods.",
+      "keywords": ["library", "double_privilege", "expansion_1", "beige_building", "role_privilege"]
+    },
+    {
+      "section": 2,
+      "statement": "In Expansion 2 (The Nobles), each noble is worth 1 VP at game end. Nobles can be placed anywhere colonists can be placed and function as colonists for building occupancy.",
+      "expectedPage": 15,
+      "sourceQuote": "Each noble is worth 1 VP at the end of the game. Players can place nobles anywhere and anytime they would place colonists and they act just as colonists for occupying buildings.",
+      "keywords": ["expansion_2", "nobles", "noble_vp", "colonist_equivalent", "end_game_scoring"]
+    },
+    {
+      "section": 4,
+      "statement": "In Expansion 2, exhausting the colonist supply does NOT trigger game end (unlike the basic game). At the start and after each mayor phase, one noble is placed on the colonist ship instead of one colonist.",
+      "expectedPage": 15,
+      "sourceQuote": "With this expansion, exhausting the colonist supply does not signal the end of the game (and neither does exhausting the noble supply). At the beginning of the game and at the end of each mayor phase, place one noble on the colonist ship instead of one of the colonists that were to be placed there.",
+      "keywords": ["expansion_2", "nobles", "colonist_supply", "game_end_rule", "colonist_ship"]
+    }
+  ]
+}

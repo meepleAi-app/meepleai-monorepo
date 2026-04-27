@@ -10300,6 +10300,98 @@ namespace Api.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicRecalcJobEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("CancellationRequested")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("cancellation_requested");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<int>("ConsecutiveFailures")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("consecutive_failures");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Failed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("failed");
+
+                    b.Property<DateTimeOffset?>("HeartbeatAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("heartbeat_at");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text")
+                        .HasColumnName("last_error");
+
+                    b.Property<Guid?>("LastProcessedAnalysisId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_processed_analysis_id");
+
+                    b.Property<int>("Processed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("processed");
+
+                    b.Property<int>("Skipped")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("skipped");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("status");
+
+                    b.Property<int>("Total")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("total");
+
+                    b.Property<Guid>("TriggeredByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("triggered_by_user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TriggeredByUserId")
+                        .HasDatabaseName("IX_mechanic_recalc_jobs_triggered_by_user_id");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("ix_mechanic_recalc_jobs_status_created")
+                        .HasFilter("status IN (0, 1)");
+
+                    b.ToTable("mechanic_recalc_jobs", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mechanic_recalc_jobs_status_range", "status BETWEEN 0 AND 4");
+                        });
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicStatusAuditEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -15070,6 +15162,17 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("SharedGame");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicRecalcJobEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "TriggeredByUser")
+                        .WithMany()
+                        .HasForeignKey("TriggeredByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("TriggeredByUser");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicStatusAuditEntity", b =>

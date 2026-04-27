@@ -63,13 +63,36 @@ internal sealed class MechanicGoldenClaimRepository : RepositoryBase, IMechanicG
         await DbContext.MechanicGoldenClaims.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
-    public Task UpdateAsync(MechanicGoldenClaim claim, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(MechanicGoldenClaim claim, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(claim);
 
-        var entity = MapToEntity(claim);
-        DbContext.MechanicGoldenClaims.Update(entity);
-        return Task.CompletedTask;
+        // Load the tracked entity so EF preserves the server-managed `xmin` concurrency token
+        // (loaded original value drives the WHERE clause). A fresh entity built via MapToEntity
+        // has Xmin=0 — Postgres' actual xmin is non-zero, so DbSet.Update(entity) would emit
+        // UPDATE … WHERE xmin=0, return 0 affected rows and trip DbUpdateConcurrencyException
+        // (mirrors the MechanicAnalysisRepository graph-state bug fixed in commit cd708babc).
+        // IgnoreQueryFilters lets us hydrate a soft-deleted row in case of a re-deactivation
+        // retry (the global filter is `!IsDeleted`).
+        var entity = await DbContext.MechanicGoldenClaims
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(e => e.Id == claim.Id, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (entity is null)
+        {
+            throw new InvalidOperationException(
+                $"MechanicGoldenClaim {claim.Id} not found for update — caller should load via GetByIdAsync first.");
+        }
+
+        entity.Statement = claim.Statement;
+        entity.ExpectedPage = claim.ExpectedPage;
+        entity.SourceQuote = claim.SourceQuote;
+        entity.KeywordsJson = JsonSerializer.Serialize(claim.Keywords);
+        entity.Embedding = claim.Embedding is null ? null : new Vector(claim.Embedding);
+        entity.UpdatedAt = claim.UpdatedAt;
+        entity.IsDeleted = claim.DeletedAt.HasValue;
+        entity.DeletedAt = claim.DeletedAt;
     }
 
     public async Task<VersionHash?> GetVersionHashAsync(

@@ -26,4 +26,11 @@ export const mechanicValidationKeys = {
         ? (['mechanic-validation-trend', sharedGameId] as const)
         : (['mechanic-validation-trend', sharedGameId, take] as const),
   },
+  thresholds: {
+    all: ['mechanic-validation-thresholds'] as const,
+  },
+  recalcJob: {
+    all: ['mechanic-recalc-job'] as const,
+    byId: (jobId: string) => ['mechanic-recalc-job', jobId] as const,
+  },
 } as const;

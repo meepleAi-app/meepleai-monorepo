@@ -16,21 +16,23 @@ import {
   CalculateMetricsResponseSchema,
   CertificationThresholdsDtoSchema,
   CreateGoldenClaimResponseSchema,
+  EnqueueRecalcAllResponseSchema,
   GoldenForGameDtoSchema,
   ImportBggTagsResponseSchema,
   MechanicValidationTrendDtoSchema,
-  RecalculateAllMetricsResponseSchema,
+  RecalcJobStatusDtoSchema,
   ValidationDashboardDtoSchema,
   type CalculateMetricsResponse,
   type CertificationThresholdsDto,
   type CreateGoldenClaimRequest,
   type CreateGoldenClaimResponse,
+  type EnqueueRecalcAllResponse,
   type GoldenForGameDto,
   type ImportBggTagsRequest,
   type ImportBggTagsResponse,
   type MechanicValidationTrendDto,
   type OverrideCertificationRequest,
-  type RecalculateAllMetricsResponse,
+  type RecalcJobStatusDto,
   type UpdateCertificationThresholdsRequest,
   type UpdateGoldenClaimRequest,
   type ValidationDashboardDto,
@@ -56,6 +58,10 @@ export const ADMIN_MECHANIC_EXTRACTOR_VALIDATION_ROUTES = {
   overrideCertification: (analysisId: string) =>
     `${BASE}/analyses/${encodeURIComponent(analysisId)}/override-certification` as const,
   recalculateAll: `${BASE}/metrics/recalculate-all`,
+  recalcJobById: (jobId: string) =>
+    `${BASE}/metrics/recalc-jobs/${encodeURIComponent(jobId)}` as const,
+  cancelRecalcJob: (jobId: string) =>
+    `${BASE}/metrics/recalc-jobs/${encodeURIComponent(jobId)}/cancel` as const,
   dashboard: `${BASE}/dashboard`,
   trend: (sharedGameId: string) =>
     `${BASE}/dashboard/${encodeURIComponent(sharedGameId)}/trend` as const,
@@ -148,17 +154,49 @@ export function createAdminMechanicExtractorValidationClient(http: HttpClient) {
       );
     },
 
+    // ─── Recalc-all async job (Sprint 2 / Task 10) ────────────────────────
+
     /**
-     * `POST /metrics/recalculate-all` — synchronous batch recompute over every
-     * Published mechanic analysis. Included for completeness even though the
-     * Sprint 1 UI may not surface it.
+     * `POST /metrics/recalculate-all` — enqueue a `MechanicRecalcJob` over
+     * every Published mechanic analysis. The endpoint returns 202 Accepted
+     * with body `{ jobId }`; the actual work is performed asynchronously by
+     * `MechanicRecalcBackgroundService`. Poll `getRecalcJobStatus` to track
+     * progress.
      */
-    async recalculateAllMetrics(): Promise<RecalculateAllMetricsResponse> {
+    async enqueueRecalcAll(): Promise<EnqueueRecalcAllResponse> {
       return http.post(
         ADMIN_MECHANIC_EXTRACTOR_VALIDATION_ROUTES.recalculateAll,
         {},
-        RecalculateAllMetricsResponseSchema
+        EnqueueRecalcAllResponseSchema
       );
+    },
+
+    /**
+     * `GET /metrics/recalc-jobs/{id}` — uncached live snapshot of a recalc
+     * job. Pollers should call this every ~2s while `status ∈ {Pending,
+     * Running}`; the response carries progress counters, ETA, last error,
+     * and the cancellation flag for drawer/UI rendering.
+     */
+    async getRecalcJobStatus(jobId: string): Promise<RecalcJobStatusDto> {
+      const result = await http.get(
+        ADMIN_MECHANIC_EXTRACTOR_VALIDATION_ROUTES.recalcJobById(jobId),
+        RecalcJobStatusDtoSchema
+      );
+      if (!result) {
+        throw new Error(`Failed to load recalc job status for ${jobId}`);
+      }
+      return result;
+    },
+
+    /**
+     * `POST /metrics/recalc-jobs/{id}/cancel` — request cooperative
+     * cancellation. Sets `cancellationRequested=true` on the aggregate;
+     * the worker observes the flag on its next iteration. Idempotent on
+     * jobs whose flag is already set; returns 409 if the job is already in
+     * a terminal status (Completed / Failed). 204 on success — no body.
+     */
+    async cancelRecalcJob(jobId: string): Promise<void> {
+      await http.post(ADMIN_MECHANIC_EXTRACTOR_VALIDATION_ROUTES.cancelRecalcJob(jobId), {});
     },
 
     // ─── Dashboard + trend ────────────────────────────────────────────────

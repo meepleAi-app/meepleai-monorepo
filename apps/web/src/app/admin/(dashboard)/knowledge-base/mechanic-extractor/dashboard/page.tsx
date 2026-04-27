@@ -9,33 +9,56 @@
 
 'use client';
 
+import { useState } from 'react';
+
 import { notFound } from 'next/navigation';
 
 import { DashboardSummaryCards } from '@/components/admin/mechanic-extractor/validation/DashboardSummaryCards';
 import { DashboardTable } from '@/components/admin/mechanic-extractor/validation/DashboardTable';
+import { RecalcAllButton } from '@/components/admin/mechanic-extractor/validation/RecalcAllButton';
+import { RecalcProgressDrawer } from '@/components/admin/mechanic-extractor/validation/RecalcProgressDrawer';
+import { ThresholdsConfigForm } from '@/components/admin/mechanic-extractor/validation/ThresholdsConfigForm';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { useThresholds } from '@/hooks/admin/useThresholds';
 import { useValidationDashboard } from '@/hooks/admin/useValidationDashboard';
-
-const FEATURE_FLAG = 'true';
+import { isMechanicValidationEnabled } from '@/lib/feature-flags/mechanic-validation';
 
 export default function MechanicValidationDashboardPage() {
-  if (process.env.NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED !== FEATURE_FLAG) {
+  if (!isMechanicValidationEnabled()) {
     notFound();
   }
 
   const { data, isLoading, error } = useValidationDashboard();
+  const {
+    data: thresholds,
+    isLoading: isThresholdsLoading,
+    error: thresholdsError,
+  } = useThresholds();
+
+  // Active mass-recalc job id (Sprint 2 Task 22). When non-null, the
+  // RecalcProgressDrawer is mounted and polls /admin/mechanic-validation/
+  // recalc-jobs/{id} every 2s until the worker reports a terminal status.
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
 
   return (
     <div className="mx-auto max-w-[1100px] space-y-6">
-      <div>
-        <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-          AI Comprehension Validation — Dashboard
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Certification status across all shared games. Scores are computed from the latest metrics
-          snapshot per game.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
+            AI Comprehension Validation — Dashboard
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Certification status across all shared games. Scores are computed from the latest
+            metrics snapshot per game.
+          </p>
+        </div>
+        <RecalcAllButton onJobStarted={id => setActiveJobId(id)} />
       </div>
+
+      {activeJobId && (
+        <RecalcProgressDrawer jobId={activeJobId} onClose={() => setActiveJobId(null)} />
+      )}
 
       {isLoading && (
         <div
@@ -68,6 +91,33 @@ export default function MechanicValidationDashboardPage() {
           <DashboardTable rows={data} />
         </div>
       )}
+
+      <Card data-testid="thresholds-card">
+        <CardHeader>
+          <CardTitle className="font-quicksand text-lg">Certification Thresholds</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isThresholdsLoading && (
+            <div data-testid="thresholds-loading" role="status" aria-label="Loading thresholds">
+              <Skeleton className="h-48 w-full" />
+            </div>
+          )}
+
+          {thresholdsError && !isThresholdsLoading && (
+            <div
+              data-testid="thresholds-error"
+              className="rounded-md border border-rose-300 bg-rose-50/70 p-4 text-sm text-rose-800 dark:border-rose-800/60 dark:bg-rose-950/20 dark:text-rose-300"
+            >
+              Failed to load thresholds:{' '}
+              {thresholdsError instanceof Error ? thresholdsError.message : 'unknown error'}
+            </div>
+          )}
+
+          {!isThresholdsLoading && !thresholdsError && thresholds && (
+            <ThresholdsConfigForm initial={thresholds} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -17,7 +17,12 @@ public interface IMechanicGoldenBggTagRepository
     /// Inserts or updates the full tag batch for the specified shared game in a single operation.
     /// Existing tags not present in <paramref name="tags"/> are left untouched.
     /// </summary>
-    Task UpsertBatchAsync(Guid sharedGameId, IReadOnlyList<(string Name, string Category)> tags, CancellationToken cancellationToken = default);
+    /// <returns>
+    /// The count of rows newly added to the change tracker (i.e. tags whose <c>(SharedGameId, Name)</c>
+    /// pair did not already exist in the database AND that did not duplicate another entry within
+    /// the same batch). Tags skipped due to existing rows or in-batch duplicates are NOT included.
+    /// </returns>
+    Task<int> UpsertBatchAsync(Guid sharedGameId, IReadOnlyList<(string Name, string Category)> tags, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Removes the <see cref="MechanicGoldenBggTag"/> with the specified primary key.

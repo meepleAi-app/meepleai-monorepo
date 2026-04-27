@@ -14,10 +14,11 @@
 import { use, useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeftIcon, PlusIcon } from 'lucide-react';
+import { ArrowLeftIcon, ClipboardPasteIcon, PlusIcon } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { BggImporterPasteDialog } from '@/components/admin/mechanic-extractor/validation/BggImporterPasteDialog';
 import { GoldenClaimForm } from '@/components/admin/mechanic-extractor/validation/GoldenClaimForm';
 import { GoldenClaimsList } from '@/components/admin/mechanic-extractor/validation/GoldenClaimsList';
 import { GoldenVersionHashBadge } from '@/components/admin/mechanic-extractor/validation/GoldenVersionHashBadge';
@@ -33,20 +34,20 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { useGoldenForGame } from '@/hooks/admin/useGoldenForGame';
 import { api } from '@/lib/api';
-
-const FEATURE_FLAG = 'true';
+import { isMechanicValidationEnabled } from '@/lib/feature-flags/mechanic-validation';
 
 interface GoldenForGamePageProps {
   params: Promise<{ gameId: string }>;
 }
 
 export default function GoldenForGamePage({ params }: GoldenForGamePageProps) {
-  if (process.env.NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED !== FEATURE_FLAG) {
+  if (!isMechanicValidationEnabled()) {
     notFound();
   }
 
   const { gameId } = use(params);
   const [createOpen, setCreateOpen] = useState(false);
+  const [bggImporterOpen, setBggImporterOpen] = useState(false);
 
   const goldenQuery = useGoldenForGame(gameId);
   const gameQuery = useQuery({
@@ -82,25 +83,42 @@ export default function GoldenForGamePage({ params }: GoldenForGamePageProps) {
           </p>
         </div>
 
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusIcon className="mr-1 h-4 w-4" />
-              New claim
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>New golden claim</DialogTitle>
-            </DialogHeader>
-            <GoldenClaimForm
-              sharedGameId={gameId}
-              mode="create"
-              onClose={() => setCreateOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setBggImporterOpen(true)}
+            data-testid="bgg-importer-trigger"
+          >
+            <ClipboardPasteIcon className="mr-1 h-4 w-4" />
+            Import BGG tags
+          </Button>
+
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusIcon className="mr-1 h-4 w-4" />
+                New claim
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>New golden claim</DialogTitle>
+              </DialogHeader>
+              <GoldenClaimForm
+                sharedGameId={gameId}
+                mode="create"
+                onClose={() => setCreateOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      <BggImporterPasteDialog
+        sharedGameId={gameId}
+        open={bggImporterOpen}
+        onOpenChange={setBggImporterOpen}
+      />
 
       <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/60">
         <CardContent className="pt-6">

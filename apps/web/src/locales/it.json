@@ -1197,6 +1197,87 @@
       "contactCta": "Contattaci",
       "howItWorksCta": "Come Funziona"
     },
+    "join": {
+      "metadata": {
+        "title": "Entra nell'Alpha — MeepleAI",
+        "description": "Iscriviti alla waitlist privata di MeepleAI: agenti AI per i tuoi giochi da tavolo, library smart e session live."
+      },
+      "hero": {
+        "alphaPill": "Alpha privata",
+        "tagline": "Il tuo assistente AI per i giochi da tavolo",
+        "subTagline": "Entra nella waitlist — riceverai un invito appena apriamo il prossimo gruppo."
+      },
+      "form": {
+        "emailLabel": "Email",
+        "emailPlaceholder": "tu@email.com",
+        "emailErrorInvalid": "Email non valida",
+        "nameLabel": "Nome",
+        "nameOptional": "(opzionale)",
+        "namePlaceholder": "Come ti chiami?",
+        "nameHint": "Se ce lo dici, ti chiamiamo per nome nelle email",
+        "gameLabel": "Quale gioco vorresti un agente per?",
+        "gamePlaceholder": "Scegli un gioco…",
+        "gameOtherPlaceholder": "Es. Terraforming Mars",
+        "gameErrorRequired": "Seleziona un gioco",
+        "gameErrorOtherTooShort": "Specifica il gioco (min. 2 caratteri)",
+        "newsletterLabel": "Voglio ricevere aggiornamenti via email su MeepleAI (puoi annullare in qualsiasi momento).",
+        "submitDefault": "Entra in waitlist →",
+        "submitting": "Invio in corso…",
+        "alreadyHaveInvite": "Hai già un invito?",
+        "loginLink": "Accedi"
+      },
+      "banners": {
+        "alreadyOnList": "Questa email è già in lista — sei alla posizione #{position}. Stima ingresso: {weeks, plural, one {1 settimana} other {# settimane}}.",
+        "errorGeneric": "Qualcosa è andato storto. Controlla la connessione e riprova fra qualche secondo.",
+        "errorEmailField": "Errore di rete",
+        "alreadyEmailField": "Già registrata"
+      },
+      "success": {
+        "heading": "Sei in lista!",
+        "subText": "Ti contattiamo entro 2–3 settimane.",
+        "subTextSecond": "Intanto controlla la mail per la conferma.",
+        "positionLabel": "La tua posizione",
+        "positionEstimate": "stima {weeks, plural, one {1 settimana} other {# settimane}}",
+        "resetCta": "Iscrivi un'altra email"
+      },
+      "features": {
+        "kb": {
+          "title": "Library smart",
+          "desc": "Aggiungi un gioco e l'AI indicizza il manuale in 60 secondi."
+        },
+        "agent": {
+          "title": "Agenti AI",
+          "desc": "Un esperto dedicato per ogni gioco. Cita la pagina del PDF."
+        },
+        "session": {
+          "title": "Session live",
+          "desc": "Timer, punteggio, storico — tutto durante la partita."
+        }
+      },
+      "games": {
+        "azul": "Azul",
+        "catan": "I Coloni di Catan",
+        "wingspan": "Wingspan",
+        "brass": "Brass: Birmingham",
+        "gloomhaven": "Gloomhaven",
+        "arknova": "Ark Nova",
+        "spirit": "Spirit Island",
+        "sevenWonders": "7 Wonders Duel",
+        "carcassonne": "Carcassonne",
+        "ticket": "Ticket to Ride",
+        "other": "Altro…"
+      },
+      "select": {
+        "buttonLabel": "Seleziona gioco preferito",
+        "listboxAriaLabel": "Giochi disponibili",
+        "otherInputAriaLabel": "Specifica il gioco"
+      },
+      "stats": {
+        "inWaitlist": "in lista",
+        "estimatedWait": "settimane di attesa",
+        "free": "gratis durante l'alpha"
+      }
+    },
     "errors": {
       "notFound": {
         "eyebrow": "404",

@@ -10,15 +10,16 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 /// numeric ranges — to surface FE typos at the boundary instead of silently
 /// degrading to "Title ASC" or returning empty pages on bad complexity ranges.
 ///
-/// SortBy whitelist intentionally omits "Contrib" / "New" — those land in the
-/// follow-up commit alongside the ContributorsCount / NewThisWeekCount projections.
+/// SortBy whitelist includes "Contrib" / "New" (Issue #593 Commit 1b) —
+/// these sort by ContributorsCount / NewThisWeekCount aggregates from the
+/// projection introduced in the same commit.
 /// </summary>
 internal sealed class SearchSharedGamesQueryValidator : AbstractValidator<SearchSharedGamesQuery>
 {
     /// <summary>
     /// SortBy values accepted by the handler today. Adding here without a
     /// matching `switch` arm in the handler is a programming error — keep these
-    /// two lists in sync. Contrib/New deferred (see class summary).
+    /// two lists in sync.
     /// </summary>
     private static readonly string[] AllowedSortBy =
     {
@@ -26,7 +27,10 @@ internal sealed class SearchSharedGamesQueryValidator : AbstractValidator<Search
         "YearPublished",
         "AverageRating",
         "CreatedAt",
-        "ComplexityRating"
+        "ComplexityRating",
+        // Issue #593 Commit 1b — sort by computed aggregates.
+        "Contrib",
+        "New"
     };
 
     public SearchSharedGamesQueryValidator()

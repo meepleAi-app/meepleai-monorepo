@@ -128,6 +128,8 @@ public sealed class SearchSharedGamesQueryValidatorTests
     [InlineData("AverageRating")]
     [InlineData("CreatedAt")]
     [InlineData("ComplexityRating")]
+    [InlineData("Contrib")] // Issue #593 Commit 1b
+    [InlineData("New")]     // Issue #593 Commit 1b
     public void Validate_SortByOnWhitelist_Passes(string sortBy)
     {
         var result = _validator.Validate(BuildValidQuery(sortBy: sortBy));
@@ -140,11 +142,8 @@ public sealed class SearchSharedGamesQueryValidatorTests
     [InlineData("title")]      // case-sensitive whitelist
     [InlineData("DROP TABLE")]
     [InlineData("")]
-    // Issue #593: Contrib/New sort options are deferred to the follow-up
-    // commit that adds ContributorsCount / NewThisWeekCount projections,
-    // so they are NOT yet on the whitelist.
-    [InlineData("Contrib")]
-    [InlineData("New")]
+    [InlineData("contrib")]    // Issue #593 Commit 1b: case-sensitive — "Contrib" is on whitelist, "contrib" is not
+    [InlineData("new")]        // Issue #593 Commit 1b: case-sensitive — "New" is on whitelist, "new" is not
     public void Validate_SortByOffWhitelist_Fails(string sortBy)
     {
         var result = _validator.Validate(BuildValidQuery(sortBy: sortBy));

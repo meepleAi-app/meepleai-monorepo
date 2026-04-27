@@ -94,6 +94,7 @@ internal static class SharedGameCatalogPublicEndpoints
         [FromQuery] bool? hasToolkit = null,
         [FromQuery] bool? hasAgent = null,
         [FromQuery] bool? isTopRated = null,
+        [FromQuery] bool? isNew = null,
         CancellationToken ct = default)
     {
         var query = new SearchSharedGamesQuery(
@@ -113,7 +114,8 @@ internal static class SharedGameCatalogPublicEndpoints
             HasKnowledgeBase: hasKb,
             HasToolkit: hasToolkit,
             HasAgent: hasAgent,
-            IsTopRated: isTopRated);
+            IsTopRated: isTopRated,
+            IsNew: isNew);
 
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);

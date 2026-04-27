@@ -1032,71 +1032,116 @@
       }
     },
     "faq": {
-      "title": "Frequently Asked Questions",
-      "subtitle": "Find answers to the most common questions",
+      "title": "Frequently asked questions",
+      "subtitle": "Quick answers about MeepleAI — accounts, games, AI, privacy and more.",
+      "eyebrow": "Help center",
+      "search": {
+        "placeholder": "Search the FAQ…",
+        "clearLabel": "Clear search",
+        "label": "Search the FAQ",
+        "resultsLabel": "{count, plural, =0 {No results} one {1 result} other {# results}} for \"{query}\"",
+        "totalLabel": "{count, plural, one {1 question total} other {# questions total}}"
+      },
       "categories": {
-        "general": "General",
-        "usage": "How to Use",
-        "technical": "Technical Questions",
-        "account": "Account and Billing"
+        "all": { "label": "All" },
+        "account": { "label": "Account & Login" },
+        "games": { "label": "Games & Library" },
+        "ai": { "label": "AI & Chat" },
+        "privacy": { "label": "Privacy & Data" },
+        "billing": { "label": "Billing & Alpha" }
+      },
+      "popularSection": {
+        "title": "Quick answers",
+        "subtitle": "top 4 most searched"
+      },
+      "emptyState": {
+        "title": "No FAQ matches your search",
+        "subtitle": "Try different terms or contact us directly.",
+        "contactCta": "Contact support"
+      },
+      "loadingState": {
+        "label": "Loading FAQ…"
+      },
+      "errorState": {
+        "title": "Could not load the FAQ",
+        "subtitle": "Something went wrong. Please retry in a moment.",
+        "retryCta": "Retry"
       },
       "items": {
-        "general": {
-          "q1": {
-            "question": "What is MeepleAI?",
-            "answer": "MeepleAI is an intelligent assistant that helps you understand board game rules. Using artificial intelligence, it analyzes rulebooks and answers your questions in a precise and sourced way."
-          },
-          "q2": {
-            "question": "Is MeepleAI free?",
-            "answer": "MeepleAI offers a free plan with limited functionality and a premium plan with advanced features. Check the pricing page for details."
-          },
-          "q3": {
-            "question": "Which games are supported?",
-            "answer": "We support hundreds of popular games and continuously add new ones. You can also upload your own rulebook PDF for games not in our catalog."
-          }
+        "q1": {
+          "question": "How do I create a MeepleAI account?",
+          "short": "During the private alpha, sign in via the email invite or join the waitlist on /join.",
+          "long": "During the **private alpha** (running through Q2 2026), MeepleAI is invite-only.\n\nThere are two ways:\n\n1. **Direct invites**: if you know an alpha member, they can share an `/accept-invite/{token}` link. Each user has 5 invites.\n2. **Waitlist**: register on `/join` indicating your favourite game. We send out new invites weekly based on your position.\n\nAfter the public go-live (post-alpha), registration will open for everyone."
         },
-        "usage": {
-          "q1": {
-            "question": "How do I ask a question?",
-            "answer": "Select a game, then type your question in the chat. You can ask in natural language, as if you were asking a friend who knows the rules well."
-          },
-          "q2": {
-            "question": "Can I upload my rulebook PDF?",
-            "answer": "Yes! With the free plan you can upload 1 PDF per month, while with the premium plan you have unlimited uploads."
-          },
-          "q3": {
-            "question": "In which languages can I ask questions?",
-            "answer": "Currently we support Italian and English. The AI can understand your question regardless of the rulebook language."
-          }
+        "q2": {
+          "question": "I forgot my password — how do I reset it?",
+          "short": "Go to /login and click \"Forgot password?\". You'll receive a reset link by email within 5 minutes.",
+          "long": "From the `/login` page click **\"Forgot password?\"**. Enter your registered email.\n\nWithin 5 minutes you will receive an email with a reset link (valid 1 hour). If you don't see the email, check **spam/promotions**.\n\nIf the issue persists, contact us via `/contact`."
         },
-        "technical": {
-          "q1": {
-            "question": "How accurate is the AI?",
-            "answer": "Our RAG system is designed to provide answers based directly on the rulebook text. Each answer includes the reference to the original source for verification."
-          },
-          "q2": {
-            "question": "Is my data safe?",
-            "answer": "Yes, we take your privacy seriously. Uploaded PDFs are processed and deleted within 30 days. See our Privacy Policy for more details."
-          },
-          "q3": {
-            "question": "Does it work on mobile?",
-            "answer": "Yes, MeepleAI is fully responsive and works on any device: smartphone, tablet, or desktop."
-          }
+        "q3": {
+          "question": "Can I change my email address?",
+          "short": "Yes, from Settings → Account → Email. You'll receive a verification at the new address before the change is applied.",
+          "long": "Go to **Settings → Account → Email**. Enter the new address and your current password.\n\nWe will send a **verification link to the new address**: the change becomes effective only after confirmation."
         },
-        "account": {
-          "q1": {
-            "question": "How do I create an account?",
-            "answer": "Click 'Sign Up' in the upper right corner and follow the instructions. You can register with email or through Google/Discord."
-          },
-          "q2": {
-            "question": "Can I cancel my subscription?",
-            "answer": "Yes, you can cancel anytime from your profile settings. You'll continue to have access to premium features until the end of the already paid period."
-          },
-          "q3": {
-            "question": "How do I delete my account?",
-            "answer": "You can request account deletion from your privacy settings. We will delete all your data within 30 days of your request."
-          }
+        "q4": {
+          "question": "How do I install a toolkit for a game?",
+          "short": "Open the game from the catalog → Toolkit tab → click \"Install\" on the desired toolkit. It activates within 30 seconds.",
+          "long": "To **install a toolkit**:\n\n1. Go to the **Game Catalog** (`/games`)\n2. Open the desired game (e.g., Wingspan)\n3. **Toolkit** tab → choose a toolkit (Official or Community)\n4. Click **\"Install\"**\n\nThe toolkit activates within 30 seconds. You will find it under **\"My toolkits\"** in the side panel of the game. To uninstall, right-click → Remove."
+        },
+        "q5": {
+          "question": "Can I add a game that is not in the catalog?",
+          "short": "During the alpha only admins can add games. Suggest new games via /contact.",
+          "long": "During the **private alpha**, adding new games to the catalog is restricted to admins to ensure KB quality.\n\nYou can **suggest a game** via `/contact`: send title, publisher, year and BoardGameGeek link. We review requests weekly. Post-alpha, users will be able to propose games self-service with moderated approval."
+        },
+        "q6": {
+          "question": "How does my personal library work?",
+          "short": "The library tracks the games you own or follow. Add games from the catalog with the \"Owned\" button.",
+          "long": "The **Library** (`/library`) tracks the games you own or want to follow.\n\nFrom the catalog, click **\"Owned\"** to add it, **\"Wishlist\"** to follow it. From the library you can:\n\n- View statistics about your matches\n- Quickly access toolkits and KBs\n- Receive notifications about new community content"
+        },
+        "q7": {
+          "question": "How do MeepleAI's AI agents work?",
+          "short": "Each agent specializes in a single game. It answers questions about rules, strategy and setup citing the official KB.",
+          "long": "**AI agents** are specialized per game. Each agent:\n\n- Uses an **indexed KB** (rulebooks, official FAQ, errata)\n- Always cites the source (manual page or URL)\n- Supports **multiple models**: Claude Sonnet, GPT-4o, Gemini Pro\n\nOpen an agent from a game page → **Agents** tab → \"Try\". The conversation is private by default; you can share it post-fact via link."
+        },
+        "q8": {
+          "question": "Are my AI conversations private?",
+          "short": "Yes. Chats are private by default. You can share them via a public link if you choose to help the community.",
+          "long": "**Yes, your conversations are private** by default and are not used for training.\n\nYou may optionally **make a conversation public** (toggle \"Share\") to help other players. Only chats marked public are visible in the `/shared-chats` catalog."
+        },
+        "q9": {
+          "question": "Can I choose which AI model to use?",
+          "short": "Yes. Each agent exposes the supported models (Claude, GPT-4o, Gemini). Switch from the chat menu at the top.",
+          "long": "Yes. Each agent declares the **supported models**. From the chat menu (top right during a conversation) you can switch between:\n\n- **Claude Sonnet** (default, top quality)\n- **GPT-4o** (fast, cheap)\n- **Gemini Pro** (long-context for large rulebooks)\n\nDuring the alpha all models are **free** with a 100 msg/day limit."
+        },
+        "q10": {
+          "question": "What data does MeepleAI collect?",
+          "short": "Email, nickname, gameplay activity and AI conversations. No payment data during alpha. Details on /privacy.",
+          "long": "We collect:\n\n- **Account**: email, nickname, password (bcrypt hash)\n- **Gameplay**: owned games, sessions, statistics\n- **AI**: conversations with agents (private by default)\n\nWe do not collect **payment data** during the alpha (free). Data is hosted on EU servers (Frankfurt).\n\nFull policy: `/privacy`."
+        },
+        "q11": {
+          "question": "Can I export my data?",
+          "short": "Yes. From Settings → Privacy → Export data. You receive a .zip with JSON and markdown within 24h.",
+          "long": "Yes, in compliance with **GDPR Art. 20**.\n\nFrom **Settings → Privacy → Export my data**, request an export. Within 24h you'll receive a `.zip` containing:\n\n- `account.json` — profile and settings\n- `library.json` — owned games, statistics\n- `conversations/*.md` — all chats in markdown\n\nThe export is available for download for 7 days."
+        },
+        "q12": {
+          "question": "How do I delete my account?",
+          "short": "From Settings → Account → Delete account. Deletion is final after a 30-day grace period.",
+          "long": "From **Settings → Account → Delete account**.\n\nAfter the request you have a **30-day grace period** to reconsider (just log in). After that, **all your data is permanently deleted**: account, conversations and public contributions (toolkits/agents) get anonymized."
+        },
+        "q13": {
+          "question": "Is MeepleAI free?",
+          "short": "During the alpha yes, fully free. Post-alpha we'll have a free tier and a paid Pro plan.",
+          "long": "During the **private alpha** MeepleAI is **fully free** for invited members.\n\nPost-alpha (Q2 2026 estimated) we will offer:\n\n- **Free tier**: public catalog, 50 AI msg/day, 1 toolkit installed\n- **Pro** (~ €5/month): unlimited AI, unlimited toolkits, private agents, priority support\n\nAlpha members will receive **3 months Pro free** as a thank-you."
+        },
+        "q14": {
+          "question": "How long will the alpha last?",
+          "short": "The alpha started Jan 2026. We estimate public go-live in Q2 2026 (Apr–Jun).",
+          "long": "The **private alpha** started in **January 2026** with the first 100 invites.\n\nWe estimate public go-live for **Q2 2026** (April–June), depending on:\n\n- Infrastructure stability\n- Game catalog (target 100+ indexed games)\n- Alpha members feedback\n\nRegular updates on our changelog `/changelog`."
         }
+      },
+      "footer": {
+        "title": "Didn't find an answer?",
+        "subtitle": "Our team responds within 24 hours. Reach out for requests, bugs or feedback on the platform."
       },
       "contactCta": "Contact us",
       "howItWorksCta": "How It Works"

@@ -122,6 +122,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<InvitationGameSuggestionEntity> InvitationGameSuggestions => Set<InvitationGameSuggestionEntity>(); // Admin Invitation Flow: game suggestions on invitations
     public DbSet<GameSuggestionEntity> GameSuggestions => Set<GameSuggestionEntity>(); // Admin Invitation Flow: user game suggestions
     public DbSet<AccessRequestEntity> AccessRequests => Set<AccessRequestEntity>(); // ISSUE-124: Access request management
+    public DbSet<WaitlistEntryEntity> WaitlistEntries => Set<WaitlistEntryEntity>(); // ISSUE-589: Public Alpha waitlist (Wave A.2)
     public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>(); // ISSUE-2053: User notifications
     public DbSet<SharedGameEntity> SharedGames => Set<SharedGameEntity>(); // ISSUE-2370: Shared game catalog
     public DbSet<GameDesignerEntity> GameDesigners => Set<GameDesignerEntity>(); // ISSUE-2370: Game designers
@@ -314,6 +315,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.Session>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ShareLink>(); // ISSUE-2052
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.AccessRequest>(); // ISSUE-124: Access request domain entity
+        modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.WaitlistEntry>(); // ISSUE-589: Public Alpha waitlist (Wave A.2)
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.InvitationToken>(); // Admin Invitation Flow: domain aggregate
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.InvitationGameSuggestion>(); // Admin Invitation Flow: domain entity
         modelBuilder.Ignore<BoundedContexts.UserLibrary.Domain.Entities.GameSuggestion>(); // Admin Invitation Flow: domain aggregate

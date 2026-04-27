@@ -1,0 +1,197 @@
+name: Visual Regression — Migrated Routes
+
+# Issue #583 (Wave A.1 FAQ pilot) — V2 Phase 1+ visual regression for migrated routes.
+# Compares Playwright screenshots of migrated Next.js routes (port 3000) against:
+#   - `visual-migrated-*` projects: PNG mockup baselines (design contract from PR #575)
+#   - `v2-states-*` projects: per-state PNG baselines (default/empty/loading/error)
+#
+# Triggers only on changes to:
+#   - apps/web/src/**                          (page/component source)
+#   - apps/web/e2e/visual-migrated/**         (visual contract specs + snapshots)
+#   - apps/web/e2e/v2-states/**               (state coverage specs + snapshots)
+#   - apps/web/playwright.config.ts           (project config)
+#   - this workflow file
+#
+# Failure indicates a route render diff vs the design contract — the developer must either
+#   (a) intentionally update via `pnpm test:visual:migrated:update` / `pnpm test:v2-states:update`
+#       (executed via `workflow_dispatch mode=bootstrap`) and commit the new PNGs, or
+#   (b) revert the change to match the contract.
+
+on:
+  pull_request:
+    branches: [main, main-dev, main-staging, frontend-dev]
+    paths:
+      - 'apps/web/src/**'
+      - 'apps/web/e2e/visual-migrated/**'
+      - 'apps/web/e2e/v2-states/**'
+      - 'apps/web/playwright.config.ts'
+      # NOTA: il workflow file NON è incluso nei path filters per evitare
+      # che PR di sola manutenzione del workflow triggerino la verify mode
+      # quando i test files / pnpm scripts non sono ancora disponibili sul
+      # branch base. Per testare modifiche al workflow stesso, usare
+      # workflow_dispatch.
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'verify (compare against baseline) | bootstrap (regenerate baselines and upload as artifact)'
+        required: true
+        default: 'verify'
+        type: choice
+        options:
+          - verify
+          - bootstrap
+      project_filter:
+        description: 'Limit to a specific project family (visual-migrated | v2-states | both)'
+        required: false
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - visual-migrated
+          - v2-states
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+concurrency:
+  group: visual-migrated-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual-regression-migrated:
+    name: Migrated Routes Baseline (Desktop + Mobile)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Setup Playwright
+        uses: ./.github/actions/setup-playwright
+        with:
+          working-directory: apps/web
+
+      - name: Setup Test Environment
+        run: cp .env.test.example .env.test
+
+      # `visual-migrated-*` and `v2-states-*` projects navigate to Next.js prod (:3000),
+      # so a production build IS required (unlike `visual-regression-mockups.yml`).
+      - name: Build Next.js (production)
+        run: pnpm build
+        env:
+          NODE_ENV: production
+
+      # ---------- VERIFY MODE (default for PRs) ----------
+
+      - name: Run visual-migrated (verify)
+        if: |
+          (github.event_name != 'workflow_dispatch' || inputs.mode == 'verify') &&
+          (github.event_name != 'workflow_dispatch' || inputs.project_filter == 'both' || inputs.project_filter == 'visual-migrated')
+        run: pnpm test:visual:migrated
+        env:
+          CI: true
+
+      - name: Run v2-states (verify)
+        if: |
+          (github.event_name != 'workflow_dispatch' || inputs.mode == 'verify') &&
+          (github.event_name != 'workflow_dispatch' || inputs.project_filter == 'both' || inputs.project_filter == 'v2-states')
+        run: pnpm test:v2-states
+        env:
+          CI: true
+
+      # ---------- BOOTSTRAP MODE (manual baseline regen) ----------
+
+      - name: Bootstrap visual-migrated baselines
+        if: |
+          github.event_name == 'workflow_dispatch' && inputs.mode == 'bootstrap' &&
+          (inputs.project_filter == 'both' || inputs.project_filter == 'visual-migrated')
+        run: pnpm test:visual:migrated:update
+        env:
+          CI: true
+
+      - name: Bootstrap v2-states baselines
+        if: |
+          github.event_name == 'workflow_dispatch' && inputs.mode == 'bootstrap' &&
+          (inputs.project_filter == 'both' || inputs.project_filter == 'v2-states')
+        run: pnpm exec playwright test --project=v2-states-desktop --project=v2-states-mobile --update-snapshots
+        env:
+          CI: true
+
+      - name: Upload visual-migrated bootstrapped baselines
+        if: |
+          github.event_name == 'workflow_dispatch' && inputs.mode == 'bootstrap' &&
+          (inputs.project_filter == 'both' || inputs.project_filter == 'visual-migrated')
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-migrated-baselines-${{ github.run_number }}
+          path: apps/web/e2e/visual-migrated/**/*-snapshots/
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload v2-states bootstrapped baselines
+        if: |
+          github.event_name == 'workflow_dispatch' && inputs.mode == 'bootstrap' &&
+          (inputs.project_filter == 'both' || inputs.project_filter == 'v2-states')
+        uses: actions/upload-artifact@v7
+        with:
+          name: v2-states-baselines-${{ github.run_number }}
+          path: apps/web/e2e/v2-states/**/*-snapshots/
+          retention-days: 14
+          if-no-files-found: error
+
+      # ---------- DIAGNOSTIC ARTIFACTS ----------
+
+      - name: Upload Playwright Report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-migrated-report-${{ github.run_number }}
+          path: apps/web/playwright-report/
+          retention-days: 14
+
+      - name: Upload Diff Snapshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-migrated-diffs-${{ github.run_number }}
+          path: apps/web/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Comment on PR (failure)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const body = `## Visual Regression — Migrated Routes failed
+
+            One or more migrated route screenshots differ from the committed baseline.
+
+            **What to do**:
+            1. Download the \`visual-migrated-report-${{ github.run_number }}\` artifact and inspect the diffs.
+            2. If the change is **intentional** (you updated the route or design), regenerate the baseline:
+               - Trigger this workflow via **Actions → Visual Regression — Migrated Routes → Run workflow** with \`mode=bootstrap\`.
+               - Download the artifact (\`visual-migrated-baselines-<run>\` or \`v2-states-baselines-<run>\`).
+               - Copy PNGs into the matching \`*-snapshots/\` dirs and commit.
+            3. If the change is **unintentional**, revert the change and investigate.
+
+            See \`docs/frontend/visual-regression.md\` for full workflow.
+            `;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });

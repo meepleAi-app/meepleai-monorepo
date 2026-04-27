@@ -42,8 +42,8 @@ export const ToolkitDashboardDtoSchema = z.object({
   ownerUserId: z.string().uuid().nullable(),
   isDefault: z.boolean(),
   displayName: z.string().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
   widgets: z.array(ToolkitWidgetDtoSchema),
 });
 
@@ -58,8 +58,8 @@ export const ToolkitSessionStateDtoSchema = z.object({
   sessionId: z.string().uuid(),
   toolkitId: z.string().uuid(),
   widgetStates: z.record(z.string(), z.string()),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
 });
 
 export type ToolkitSessionStateDto = z.infer<typeof ToolkitSessionStateDtoSchema>;

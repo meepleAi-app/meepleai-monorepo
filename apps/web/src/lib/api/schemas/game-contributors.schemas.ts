@@ -28,7 +28,7 @@ export const GameContributorDtoSchema = z.object({
   avatarUrl: z.string().nullable(),
   isPrimaryContributor: z.boolean(),
   contributionCount: z.number().int().nonnegative(),
-  firstContributionAt: z.string().datetime(),
+  firstContributionAt: z.string().datetime({ offset: true }),
   topBadges: z.array(BadgeSummaryDtoSchema).max(3), // Max 3 badges displayed
 });
 

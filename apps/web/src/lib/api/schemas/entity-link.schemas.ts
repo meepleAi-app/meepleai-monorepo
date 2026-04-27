@@ -52,8 +52,8 @@ export const EntityLinkDtoSchema = z.object({
   metadata: z.string().nullable().optional(),
   isAdminApproved: z.boolean(),
   isBggImported: z.boolean(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
   isOwner: z.boolean().optional().default(false),
   // Issue #5188: KbCard status enrichment (only present when targetEntityType=KbCard)
   kbCardStatus: z

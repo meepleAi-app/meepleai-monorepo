@@ -70,7 +70,7 @@ export const ConfigurationHistoryDtoSchema = z.object({
   oldValue: z.string(),
   newValue: z.string(),
   version: z.number().int().positive(),
-  changedAt: z.string().datetime(),
+  changedAt: z.string().datetime({ offset: true }),
   changedByUserId: z.string().uuid(),
   changeReason: z.string().min(1),
 });
@@ -90,7 +90,7 @@ export type ConfigurationValidationResult = z.infer<typeof ConfigurationValidati
 
 export const ConfigurationExportDtoSchema = z.object({
   configurations: z.array(SystemConfigurationDtoSchema),
-  exportedAt: z.string().datetime(),
+  exportedAt: z.string().datetime({ offset: true }),
   environment: z.string().min(1),
 });
 
@@ -102,7 +102,7 @@ export const GameLibraryLimitsDtoSchema = z.object({
   freeTierLimit: z.number().int().min(1).max(1000),
   normalTierLimit: z.number().int().min(1).max(1000),
   premiumTierLimit: z.number().int().min(1).max(1000),
-  lastUpdatedAt: z.string().datetime(),
+  lastUpdatedAt: z.string().datetime({ offset: true }),
   lastUpdatedByUserId: z.string().uuid().nullable(),
 });
 
@@ -123,7 +123,7 @@ export const PdfUploadLimitsDtoSchema = z.object({
   maxPagesPerDocument: z.number().int().min(1).max(10000),
   maxDocumentsPerGame: z.number().int().min(1).max(1000),
   allowedMimeTypes: z.array(z.string().min(1)),
-  lastUpdatedAt: z.string().datetime(),
+  lastUpdatedAt: z.string().datetime({ offset: true }),
   lastUpdatedByUserId: z.string().uuid().nullable(),
 });
 
@@ -147,7 +147,7 @@ export const PdfTierUploadLimitsDtoSchema = z.object({
   normalWeeklyLimit: z.number().int().min(1).max(5000),
   premiumDailyLimit: z.number().int().min(1).max(1000),
   premiumWeeklyLimit: z.number().int().min(1).max(5000),
-  lastUpdatedAt: z.string().datetime(),
+  lastUpdatedAt: z.string().datetime({ offset: true }),
   lastUpdatedByUserId: z.string().uuid().nullable(),
 });
 
@@ -172,7 +172,7 @@ export const ChatHistoryLimitsDtoSchema = z.object({
   freeTierLimit: z.number().int().min(1),
   normalTierLimit: z.number().int().min(1),
   premiumTierLimit: z.number().int().min(1),
-  lastUpdatedAt: z.string().datetime(),
+  lastUpdatedAt: z.string().datetime({ offset: true }),
   lastUpdatedByUserId: z.string().uuid().nullable(),
 });
 

@@ -69,8 +69,8 @@ export const AgentConfigDtoSchema = z.object({
   personality: AgentPersonalitySchema,
   detailLevel: DetailLevelSchema,
   customInstructions: z.string().nullable().optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().nullable().optional(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 export type AgentConfigDto = z.infer<typeof AgentConfigDtoSchema>;

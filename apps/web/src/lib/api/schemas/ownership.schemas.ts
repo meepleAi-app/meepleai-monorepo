@@ -14,7 +14,7 @@ import { z } from 'zod';
  */
 export const OwnershipResultSchema = z.object({
   gameState: z.string(),
-  ownershipDeclaredAt: z.string().datetime().nullable(),
+  ownershipDeclaredAt: z.string().datetime({ offset: true }).nullable(),
   hasRagAccess: z.boolean(),
   kbCardCount: z.number().int().nonnegative(),
   isRagPublic: z.boolean(),

@@ -33,7 +33,7 @@ export const PublishGameResponseSchema = z.object({
   title: z.string(),
   isPublished: z.boolean(),
   approvalStatus: ApprovalStatusSchema,
-  publishedAt: z.string().datetime().nullable(),
+  publishedAt: z.string().datetime({ offset: true }).nullable(),
 });
 export type PublishGameResponse = z.infer<typeof PublishGameResponseSchema>;
 
@@ -46,8 +46,8 @@ export const PromptTemplateSchema = z.object({
   description: z.string().nullable().optional(),
   isActive: z.boolean(),
   activeVersionId: z.string().uuid().nullable().optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().nullable().optional(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 export type PromptTemplate = z.infer<typeof PromptTemplateSchema>;
@@ -92,9 +92,9 @@ export const PromptVersionSchema = z.object({
   versionNumber: z.number(),
   content: z.string(),
   isActive: z.boolean(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
   createdBy: z.string().uuid().nullable().optional(),
-  activatedAt: z.string().datetime().nullable().optional(),
+  activatedAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 export type PromptVersion = z.infer<typeof PromptVersionSchema>;
@@ -111,7 +111,7 @@ export const PromptAuditLogSchema = z.object({
   versionNumber: z.number(),
   action: z.string(),
   performedBy: z.string().uuid().nullable().optional(),
-  performedAt: z.string().datetime(),
+  performedAt: z.string().datetime({ offset: true }),
   details: z.string().nullable().optional(),
 });
 

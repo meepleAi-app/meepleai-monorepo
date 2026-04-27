@@ -16,7 +16,7 @@ export const ServiceHealthStatusSchema = z.object({
   serviceName: z.string(),
   state: HealthStateSchema,
   errorMessage: z.string().nullable().optional(),
-  checkedAt: z.string().datetime(),
+  checkedAt: z.string().datetime({ offset: true }),
   responseTimeMs: z.number().nonnegative(), // Response time in milliseconds
 });
 
@@ -28,7 +28,7 @@ export const OverallHealthStatusSchema = z.object({
   healthyServices: z.number().int().nonnegative(),
   degradedServices: z.number().int().nonnegative(),
   unhealthyServices: z.number().int().nonnegative(),
-  checkedAt: z.string().datetime(),
+  checkedAt: z.string().datetime({ offset: true }),
 });
 
 export type OverallHealthStatus = z.infer<typeof OverallHealthStatusSchema>;
@@ -67,13 +67,13 @@ export const EnhancedServiceHealthSchema = z.object({
   serviceName: z.string(),
   state: HealthStateSchema,
   errorMessage: z.string().nullable().optional(),
-  checkedAt: z.string().datetime(),
+  checkedAt: z.string().datetime({ offset: true }),
   responseTimeMs: z.number().nonnegative(),
   category: ServiceCategorySchema,
   uptimePercent24h: z.number().min(0).max(100),
   responseTimeTrend: ResponseTimeTrendSchema,
   previousResponseTimeMs: z.number().nonnegative().optional(),
-  lastIncidentAt: z.string().datetime().nullable().optional(),
+  lastIncidentAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 export type EnhancedServiceHealth = z.infer<typeof EnhancedServiceHealthSchema>;
 
@@ -91,7 +91,7 @@ export type EnhancedServiceDashboard = z.infer<typeof EnhancedServiceDashboardSc
  * Issue #901: Replaces mock chart data with real metrics.
  */
 export const MetricsTimeSeriesDataPointSchema = z.object({
-  timestamp: z.string().datetime(),
+  timestamp: z.string().datetime({ offset: true }),
   value: z.number(),
 });
 
@@ -121,7 +121,7 @@ export const DatabaseMetricsSchema = z.object({
   maxConnections: z.number(),
   transactionsCommitted: z.number(),
   transactionsRolledBack: z.number(),
-  measuredAt: z.string().datetime(),
+  measuredAt: z.string().datetime({ offset: true }),
 });
 export type DatabaseMetrics = z.infer<typeof DatabaseMetricsSchema>;
 
@@ -137,7 +137,7 @@ export const CacheMetricsSchema = z.object({
   hitRate: z.number(),
   evictedKeys: z.number(),
   expiredKeys: z.number(),
-  measuredAt: z.string().datetime(),
+  measuredAt: z.string().datetime({ offset: true }),
 });
 export type CacheMetrics = z.infer<typeof CacheMetricsSchema>;
 
@@ -172,6 +172,6 @@ export const VectorStoreMetricsSchema = z.object({
   memoryBytes: z.number(),
   memoryFormatted: z.string(),
   collections: z.array(VectorCollectionMetricsSchema),
-  measuredAt: z.string().datetime(),
+  measuredAt: z.string().datetime({ offset: true }),
 });
 export type VectorStoreMetrics = z.infer<typeof VectorStoreMetricsSchema>;

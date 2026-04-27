@@ -178,6 +178,18 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
 
         // Pagination
         var total = await dbQuery.CountAsync(cancellationToken).ConfigureAwait(false);
+
+        // Issue #593 (Wave A.3a): aggregate counts via cross-BC LINQ sub-queries.
+        // We capture the DbContext set references locally so the projection lambda can
+        // close over them without re-evaluating `_context` for every row (EF Core
+        // translates the whole expression tree, but explicit locals keep intent clear).
+        // ApprovalStatus.Approved == 2 (see GameEntity.ApprovalStatus comment).
+        const int ApprovedStatus = 2;
+        var ctxGames = _context.Games;
+        var ctxToolkits = _context.Toolkits;
+        var ctxAgents = _context.AgentDefinitions;
+        var ctxVectors = _context.VectorDocuments;
+
         var games = await dbQuery
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
@@ -199,7 +211,35 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 g.CreatedAt,
                 g.ModifiedAt,
                 g.IsRagPublic,
-                g.HasKnowledgeBase))
+                g.HasKnowledgeBase,
+                // ToolkitsCount: per-user custom toolkits (excludes the read-only default
+                // BR-02 from Issue #5144) for any approved Game linked to this SharedGame.
+                ctxToolkits.Count(t =>
+                    !t.IsDefault &&
+                    ctxGames.Any(game =>
+                        game.Id == t.GameId &&
+                        game.SharedGameId == g.Id &&
+                        game.ApprovalStatus == ApprovedStatus)),
+                // AgentsCount: AgentDefinitions linked to any approved Game of this SharedGame.
+                ctxAgents.Count(a =>
+                    a.GameId.HasValue &&
+                    ctxGames.Any(game =>
+                        game.Id == a.GameId &&
+                        game.SharedGameId == g.Id &&
+                        game.ApprovalStatus == ApprovedStatus)),
+                // KbsCount: VectorDocuments have a direct SharedGameId FK (Issue #5185 history),
+                // no join through GameEntity is required.
+                ctxVectors.Count(vd => vd.SharedGameId == g.Id),
+                // NewThisWeekCount / ContributorsCount / IsNew: deferred to follow-up commit
+                // within the same PR (#593) — see spec §6.1, §10.
+                0,    // NewThisWeekCount  (follow-up)
+                0,    // ContributorsCount (follow-up)
+                // IsTopRated: AverageRating >= 4.5 threshold (spec §9 decision 1).
+                // Threshold will be moved to IConfiguration `SharedGameCatalog:TopRatedThreshold`
+                // in Commit 2 alongside the IsTopRated filter param.
+                g.AverageRating != null && g.AverageRating >= 4.5m,
+                false  // IsNew (follow-up)
+            ))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -230,8 +270,11 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         var searchTerm = query.SearchTerm ?? "none";
         var statusStr = query.Status?.ToString() ?? "null";
 
-        // Create compact hash for long parameter combinations
-        var keyComponents = $"{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{query.MinComplexity}|{query.MaxComplexity}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}|{query.HasKnowledgeBase?.ToString() ?? "null"}";
+        // Create compact hash for long parameter combinations.
+        // The `v` prefix is the projection schema version — bump when SharedGameDto fields
+        // change so that pre-existing cached entries (with the old schema) are invalidated
+        // automatically without a separate cache flush. v2 = Issue #593 aggregate counts.
+        var keyComponents = $"v2|{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{query.MinComplexity}|{query.MaxComplexity}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}|{query.HasKnowledgeBase?.ToString() ?? "null"}";
 
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(keyComponents)));
 

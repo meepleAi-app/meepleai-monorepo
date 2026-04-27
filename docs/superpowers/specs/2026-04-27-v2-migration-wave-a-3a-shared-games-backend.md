@@ -54,7 +54,7 @@ SharedGame (SharedGameCatalog BC)              ← MASTER catalog
   ↑ FK SharedGameId
 Game (GameManagement BC)                        ← per-instance, has ApprovalStatus
   ↑ FK GameId
-  ├── Toolbox       (GameToolbox BC)            ← Toolbox.GameId
+  ├── Toolkit       (GameToolkit BC, ISSUE-5144) ← Toolkit.GameId
   ├── AgentDefinition (KnowledgeBase BC)        ← AgentDefinition.GameId
   └── Session       (SessionTracking BC)        ← Session.GameId, Session.WinnerId
 
@@ -79,7 +79,7 @@ public sealed record SharedGameDto(
     bool IsRagPublic = false,
     bool HasKnowledgeBase = false,
     // NEW (A.3a):
-    int ToolkitsCount = 0,        // count of Toolbox via Game.SharedGameId
+    int ToolkitsCount = 0,        // count of Toolkit (GameToolkit BC) via Game.SharedGameId, !IsDefault
     int AgentsCount = 0,          // count of AgentDefinition via Game.SharedGameId
     int KbsCount = 0,             // count of VectorDocument.SharedGameId == sg.Id
     int NewThisWeekCount = 0,     // count of (toolkits+agents+KBs) created in last 7 days
@@ -173,8 +173,8 @@ var query = _dbContext.SharedGames
     .Where(/* status filter */)
     .Select(sg => new {
         Game = sg,
-        ToolkitsCount = _dbContext.Toolboxes
-            .Where(t => !t.IsDeleted)
+        ToolkitsCount = _dbContext.Toolkits
+            .Where(t => !t.IsDefault)
             .Join(_dbContext.Games, t => t.GameId, g => g.Id, (t, g) => g.SharedGameId)
             .Count(sgId => sgId == sg.Id),
         AgentsCount = /* analogous join Games × AgentDefinitions */,
@@ -193,7 +193,7 @@ Adds migration overhead and refresh-strategy decision. Defer to A.3b+ if perf de
 ### 6.3 `NewThisWeekCount` semantics
 
 Sum of:
-- Toolboxes where `CreatedAt >= NOW() - INTERVAL 7 DAY` AND `Game.SharedGameId = sg.Id`
+- Toolkits (non-default) where `CreatedAt >= NOW() - INTERVAL 7 DAY` AND `Game.SharedGameId = sg.Id`
 - AgentDefinitions where same time predicate via `Game.SharedGameId`
 - VectorDocuments where same time predicate via `SharedGameId`
 
@@ -202,7 +202,7 @@ Sum of:
 ### 6.4 `ContributorsCount` semantics
 
 Distinct count of `UserId` (or `CreatedBy`) across:
-- Toolboxes joined to Games where `SharedGameId = sg.Id`
+- Toolkits (non-default) joined to Games where `SharedGameId = sg.Id`
 - AgentDefinitions joined analogously
 - VectorDocuments where `SharedGameId = sg.Id`
 
@@ -212,11 +212,11 @@ Distinct count of `UserId` (or `CreatedBy`) across:
 
 Existing `VectorDocumentIndexedForKbFlagHandler` already invalidates tag `search-games` when a
 KB is indexed. Audit needed for:
-- New event handlers when `Toolbox` / `AgentDefinition` change → invalidate `search-games`
+- New event handlers when `Toolkit` / `AgentDefinition` change → invalidate `search-games`
 - `Session` finalization (winner declared) → invalidate `top-contributors`
 
 Implementation: 3 new domain event handlers in `SharedGameCatalog/Application/EventHandlers/`:
-- `ToolboxChangedForCatalogAggregatesHandler` (listens to `ToolboxCreatedEvent`, `ToolboxDeletedEvent`)
+- `ToolkitChangedForCatalogAggregatesHandler` (listens to `ToolkitCreatedEvent`, `ToolkitDeletedEvent`)
 - `AgentDefinitionChangedForCatalogAggregatesHandler`
 - `SessionCompletedForContributorsHandler`
 
@@ -237,7 +237,7 @@ All thin: `await _hybridCache.RemoveByTagAsync("search-games", ct)` etc.
 
 - `SharedGame` with 0 linked Games → all counts = 0, no NULL in projection.
 - `SharedGame` with `Status != Published` → must NOT appear in public search (existing behavior, preserved).
-- Toolbox/Agent linked to a `Game` whose `ApprovalStatus != Approved` → catalog counts EXCLUDE
+- Toolkit/Agent linked to a `Game` whose `ApprovalStatus != Approved` → catalog counts EXCLUDE
   these (`ToolkitsCount`/`AgentsCount`/`KbsCount`/`NewThisWeekCount`/`ContributorsCount`).
   *Rationale: catalog counts must reflect what an unauthenticated user could actually access.*
 - **`TopContributorDto.TotalSessions`/`TotalWins` count ALL sessions** including unpublished games

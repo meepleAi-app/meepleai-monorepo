@@ -12,6 +12,8 @@ import importPlugin from "eslint-plugin-import";
 
 // Custom security rules
 import noIncompleteSanitization from "./eslint-rules/no-incomplete-sanitization.js";
+// V2 design system rule (Issue #572)
+import noHardcodedHex from "./eslint-rules/no-hardcoded-hex.js";
 
 export default [
   {
@@ -91,6 +93,7 @@ export default [
       "local": {
         rules: {
           "no-incomplete-sanitization": noIncompleteSanitization,
+          "no-hardcoded-hex": noHardcodedHex,
         },
       },
     },
@@ -509,6 +512,18 @@ export default [
           ],
         },
       ],
+    },
+  },
+  // V2 design system: forbid hardcoded color literals in v2 components.
+  // V2 components must consume design tokens via entityHsl() or hsl(var(--c-*)).
+  // Issue #572 — see docs/frontend/token-audit-2026-04-26.md.
+  // The rule does not apply outside src/components/ui/v2/ — V1 components,
+  // app routes, and admin pages may still contain hex/hsl literals pending
+  // Phase 1+ migrations.
+  {
+    files: ["src/components/ui/v2/**/*.{ts,tsx}"],
+    rules: {
+      "local/no-hardcoded-hex": "error",
     },
   },
   // Configuration for components rendering user-uploaded images.

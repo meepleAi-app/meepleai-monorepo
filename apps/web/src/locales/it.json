@@ -1268,7 +1268,6 @@
         "other": "Altro…"
       },
       "select": {
-        "buttonLabel": "Seleziona gioco preferito",
         "listboxAriaLabel": "Giochi disponibili",
         "otherInputAriaLabel": "Specifica il gioco"
       },

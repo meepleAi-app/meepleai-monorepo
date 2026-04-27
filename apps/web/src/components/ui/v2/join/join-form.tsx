@@ -177,11 +177,17 @@ export function JoinForm({
   };
 
   // ── Success branch (full-card replacement) ─────────────────────────────────
-  if (effectiveState === 'success' && waitlist.result) {
+  // In real submissions, `waitlist.result` is populated by the FSM. In NODE_ENV
+  // dev/test, `?state=success` triggers the override path with a null result —
+  // fall back to deterministic placeholders so the card still renders for
+  // visual-test coverage. Production constant-folds the override branch out.
+  if (effectiveState === 'success') {
+    const successPosition = waitlist.result?.position ?? 1247;
+    const successWeeks = waitlist.result?.estimatedWeeks ?? 2;
     return (
       <JoinSuccessCard
-        position={waitlist.result.position}
-        estimatedWeeks={waitlist.result.estimatedWeeks}
+        position={successPosition}
+        estimatedWeeks={successWeeks}
         onResetClick={handleResetSuccess}
         labels={labels.success}
         className={className}

@@ -99,7 +99,6 @@ export function JoinPageClient(): JSX.Element {
       bannerErrorEmailField: t('pages.join.banners.errorEmailField'),
       bannerAlreadyEmailField: t('pages.join.banners.alreadyEmailField'),
       select: {
-        buttonLabel: t('pages.join.select.buttonLabel'),
         placeholder: t('pages.join.form.gamePlaceholder'),
         otherPlaceholder: t('pages.join.form.gameOtherPlaceholder'),
         listboxAriaLabel: t('pages.join.select.listboxAriaLabel'),
@@ -134,7 +133,10 @@ export function JoinPageClient(): JSX.Element {
         <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
           {/* Left: hero + features (centered on mobile, left-aligned on desktop) */}
           <div className="lg:pt-3">
-            {/* Mobile hero (stacked, centered) */}
+            {/* Two hero variants share the slot via CSS responsive utilities.
+                Tailwind `hidden`/`lg:hidden` resolve to `display:none`, which
+                modern browsers exclude from the accessibility tree — only ONE
+                <h1> is exposed to AT at any breakpoint. */}
             <div className="lg:hidden">
               <JoinHero
                 compact={false}
@@ -145,8 +147,6 @@ export function JoinPageClient(): JSX.Element {
                 features={features}
               />
             </div>
-
-            {/* Desktop hero (compact = left-aligned, 3-col features grid) */}
             <div className="hidden lg:block">
               <JoinHero
                 compact

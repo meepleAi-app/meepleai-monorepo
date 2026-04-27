@@ -29,7 +29,6 @@ import type { GamePreference } from '@/lib/join/games';
 import { GAME_OTHER_ID } from '@/lib/join/games';
 
 export interface GamePreferenceSelectLabels {
-  readonly buttonLabel: string;
   readonly placeholder: string;
   readonly otherPlaceholder: string;
   readonly listboxAriaLabel: string;
@@ -156,8 +155,10 @@ export function GamePreferenceSelect({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={listboxId}
+          // `aria-labelledby` points to the visible <label> — `aria-label` would
+          // override it (per ARIA spec) and shadow the visible field label for
+          // assistive tech. Rely on the visible label only.
           aria-labelledby={labelId}
-          aria-label={labels.buttonLabel}
           aria-describedby={error ? errorId : undefined}
           aria-activedescendant={open ? optionId(activeIdx) : undefined}
           aria-invalid={Boolean(error)}

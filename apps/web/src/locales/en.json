@@ -1218,7 +1218,6 @@
         "other": "Other…"
       },
       "select": {
-        "buttonLabel": "Select preferred game",
         "listboxAriaLabel": "Available games",
         "otherInputAriaLabel": "Specify the game"
       },

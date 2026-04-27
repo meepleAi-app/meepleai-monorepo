@@ -25,7 +25,11 @@ on:
       - 'apps/web/e2e/visual-migrated/**'
       - 'apps/web/e2e/v2-states/**'
       - 'apps/web/playwright.config.ts'
-      - '.github/workflows/visual-regression-migrated.yml'
+      # NOTA: il workflow file NON è incluso nei path filters per evitare
+      # che PR di sola manutenzione del workflow triggerino la verify mode
+      # quando i test files / pnpm scripts non sono ancora disponibili sul
+      # branch base. Per testare modifiche al workflow stesso, usare
+      # workflow_dispatch.
   workflow_dispatch:
     inputs:
       mode:

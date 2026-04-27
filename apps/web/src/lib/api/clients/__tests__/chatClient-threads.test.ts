@@ -262,7 +262,7 @@ describe('ChatClient - Threads & Messages', () => {
   describe('Chat Messages', () => {
     describe('updateMessage', () => {
       it('should update message content', async () => {
-        const mockResponse = createMockMessage({ content: 'Updated content' });
+        const mockResponse = createMockThread();
         mockHttpClient.put.mockResolvedValueOnce(mockResponse);
 
         const result = await chatClient.updateMessage('chat-1', 'msg-123', 'Updated content');
@@ -276,7 +276,7 @@ describe('ChatClient - Threads & Messages', () => {
       });
 
       it('should handle empty content update', async () => {
-        mockHttpClient.put.mockResolvedValueOnce({ id: 'msg-123', content: '' });
+        mockHttpClient.put.mockResolvedValueOnce(createMockThread());
         await chatClient.updateMessage('chat-1', 'msg-123', '');
 
         expect(mockHttpClient.put).toHaveBeenCalledWith(
@@ -287,7 +287,7 @@ describe('ChatClient - Threads & Messages', () => {
       });
 
       it('should handle special characters in IDs', async () => {
-        mockHttpClient.put.mockResolvedValueOnce({ id: 'msg' });
+        mockHttpClient.put.mockResolvedValueOnce(createMockThread());
         await chatClient.updateMessage('chat/1', 'msg#123', 'Content');
 
         expect(mockHttpClient.put).toHaveBeenCalled();

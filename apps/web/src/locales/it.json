@@ -1082,71 +1082,117 @@
       }
     },
     "faq": {
-      "title": "Domande Frequenti",
-      "subtitle": "Trova risposte alle domande più comuni",
+      "title": "Domande frequenti",
+      "subtitle": "Trova risposte rapide su MeepleAI — account, giochi, AI, privacy e altro.",
+      "eyebrow": "Centro assistenza",
+      "search": {
+        "placeholder": "Cerca tra le FAQ…",
+        "clearLabel": "Cancella ricerca",
+        "label": "Cerca tra le FAQ",
+        "resultsLabel": "{count, plural, =0 {Nessun risultato} one {1 risultato} other {# risultati}} per \"{query}\"",
+        "totalLabel": "{count, plural, one {1 domanda totale} other {# domande totali}}"
+      },
       "categories": {
-        "general": "Generale",
-        "usage": "Utilizzo",
-        "technical": "Tecnico",
-        "account": "Account"
+        "all": { "label": "Tutte" },
+        "account": { "label": "Account & Login" },
+        "games": { "label": "Giochi & Library" },
+        "ai": { "label": "AI & Chat" },
+        "privacy": { "label": "Privacy & Dati" },
+        "billing": { "label": "Billing & Alpha" }
+      },
+      "popularSection": {
+        "title": "Risposte rapide",
+        "subtitle": "top 4 più cercate",
+        "readMoreLabel": "Leggi di più →"
+      },
+      "emptyState": {
+        "title": "Nessuna FAQ corrisponde alla tua ricerca",
+        "subtitle": "Prova con termini diversi o contattaci direttamente.",
+        "contactCta": "Contatta supporto"
+      },
+      "loadingState": {
+        "label": "Caricamento FAQ…"
+      },
+      "errorState": {
+        "title": "Impossibile caricare le FAQ",
+        "subtitle": "Si è verificato un errore. Riprova fra qualche istante.",
+        "retryCta": "Riprova"
       },
       "items": {
-        "general": {
-          "q1": {
-            "question": "Cos'è MeepleAI?",
-            "answer": "MeepleAI è un assistente basato su intelligenza artificiale che ti aiuta a comprendere le regole dei giochi da tavolo. Puoi caricare i PDF dei regolamenti e fare domande in linguaggio naturale, ricevendo risposte precise con citazione della fonte."
-          },
-          "q2": {
-            "question": "MeepleAI è gratuito?",
-            "answer": "MeepleAI offre un piano gratuito con funzionalità base, incluso un numero limitato di query giornaliere. Per funzionalità avanzate e query illimitate, sono disponibili piani premium."
-          },
-          "q3": {
-            "question": "Quali lingue sono supportate?",
-            "answer": "Puoi caricare regolamenti in qualsiasi lingua e fare domande in italiano o inglese. L'interfaccia è disponibile in italiano e inglese."
-          }
+        "q1": {
+          "question": "Come creo un account su MeepleAI?",
+          "short": "Durante l'alpha privata, accedi tramite invito ricevuto via email o iscriviti alla waitlist su /join.",
+          "long": "Durante l'**alpha privata** (in corso fino a Q2 2026), MeepleAI è accessibile solo tramite invito.\n\nCi sono due modi:\n\n1. **Inviti diretti**: se conosci un membro alpha, puoi chiedergli un link `/accept-invite/{token}`. Ogni utente ha 5 inviti.\n2. **Waitlist**: registrati su `/join` indicando il tuo gioco preferito. Inviamo nuovi inviti settimanalmente in base alla posizione.\n\nDopo il go-live pubblico (post-alpha), la registrazione sarà aperta a tutti."
         },
-        "usage": {
-          "q1": {
-            "question": "Come carico un regolamento?",
-            "answer": "Dalla sezione 'Carica' puoi trascinare o selezionare un file PDF del regolamento. Il sistema lo elaborerà automaticamente e sarà disponibile per le tue domande in pochi minuti."
-          },
-          "q2": {
-            "question": "Quanto sono accurate le risposte?",
-            "answer": "Le risposte sono generate analizzando il regolamento ufficiale e includono sempre il riferimento alla fonte. Tuttavia, consigliamo sempre di verificare con il regolamento originale per decisioni importanti durante le partite."
-          },
-          "q3": {
-            "question": "Ci sono limiti alle domande?",
-            "answer": "Il piano gratuito ha un limite giornaliero di query. I piani premium offrono query illimitate e funzionalità aggiuntive."
-          }
+        "q2": {
+          "question": "Ho dimenticato la password, come la recupero?",
+          "short": "Vai su /login e clicca \"Password dimenticata?\". Riceverai un'email con il link di reset entro 5 minuti.",
+          "long": "Dalla pagina `/login` clicca **\"Password dimenticata?\"**. Inserisci la tua email registrata.\n\nRiceverai entro 5 minuti un'email con un link di reset (valido 1 ora). Se non vedi l'email, controlla **spam/promozioni**.\n\nSe il problema persiste, contattaci via `/contact`."
         },
-        "technical": {
-          "q1": {
-            "question": "Quali formati PDF sono supportati?",
-            "answer": "Supportiamo PDF con testo selezionabile (non scansioni di immagini). Per risultati ottimali, usa PDF di alta qualità con testo nativo."
-          },
-          "q2": {
-            "question": "I miei dati sono al sicuro?",
-            "answer": "Sì, la sicurezza dei tuoi dati è la nostra priorità. I PDF caricati vengono elaborati e non condivisi con altri utenti. Consulta la nostra Privacy Policy per maggiori dettagli."
-          },
-          "q3": {
-            "question": "Posso usare MeepleAI offline?",
-            "answer": "MeepleAI richiede una connessione internet per funzionare, poiché l'elaborazione avviene sui nostri server cloud."
-          }
+        "q3": {
+          "question": "Posso cambiare la mia email?",
+          "short": "Sì, da Impostazioni → Account → Email. Riceverai una verifica al nuovo indirizzo prima del cambio.",
+          "long": "Vai in **Impostazioni → Account → Email**. Inserisci la nuova email e la password attuale.\n\nTi invieremo un link di **verifica al nuovo indirizzo**: il cambio diventa effettivo solo dopo la conferma."
         },
-        "account": {
-          "q1": {
-            "question": "Come cancello il mio account?",
-            "answer": "Puoi richiedere la cancellazione del tuo account dalle Impostazioni > Avanzate > Elimina Account, oppure contattando il supporto."
-          },
-          "q2": {
-            "question": "Posso cambiare la mia email?",
-            "answer": "Al momento il cambio email non è supportato direttamente. Contatta il supporto per assistenza."
-          },
-          "q3": {
-            "question": "Come attivo l'autenticazione a due fattori?",
-            "answer": "Vai in Impostazioni > Privacy e Sicurezza > Autenticazione a due fattori e segui le istruzioni per configurare la 2FA con un'app authenticator."
-          }
+        "q4": {
+          "question": "Come installo un toolkit per un gioco?",
+          "short": "Apri il gioco dal catalogo → tab Toolkit → clicca \"Installa\" sul toolkit desiderato. Si attiva entro 30 secondi.",
+          "long": "Per **installare un toolkit**:\n\n1. Vai al **Catalogo Giochi** (`/games`)\n2. Apri il gioco desiderato (es. Wingspan)\n3. Tab **Toolkit** → scegli un toolkit (Official o Community)\n4. Clicca **\"Installa\"**\n\nIl toolkit si attiva entro 30 secondi. Lo trovi sotto **\"I miei toolkit\"** nel pannello laterale del gioco. Per disinstallare, click destro → Rimuovi."
+        },
+        "q5": {
+          "question": "Posso aggiungere un gioco non presente nel catalogo?",
+          "short": "Durante l'alpha solo gli admin possono aggiungere giochi. Suggerisci nuovi giochi via /contact.",
+          "long": "Durante l'**alpha privata**, l'aggiunta di nuovi giochi al catalogo è ristretta agli admin per garantire qualità delle KB.\n\nPuoi **suggerire un gioco** via `/contact`: indicaci titolo, editore, anno e link BoardGameGeek. Valutiamo le richieste settimanalmente. Post-alpha, gli utenti potranno proporre giochi self-service con approvazione moderata."
+        },
+        "q6": {
+          "question": "Come funziona la mia libreria personale?",
+          "short": "La libreria contiene i giochi che possiedi o segui. Aggiungi giochi dal catalogo con il pulsante \"Possiedo\".",
+          "long": "La **Libreria** (`/library`) traccia i giochi che possiedi o vuoi seguire.\n\nDal catalogo, clicca **\"Possiedo\"** per aggiungerlo, **\"Wishlist\"** per seguirlo. Dalla libreria puoi:\n\n- Vedere statistiche delle tue partite\n- Accedere rapidamente a toolkit e KB\n- Ricevere notifiche su nuovi contenuti community"
+        },
+        "q7": {
+          "question": "Come funzionano gli agenti AI di MeepleAI?",
+          "short": "Ogni agente è specializzato per un gioco. Risponde a domande di regole, strategia e setup citando la KB ufficiale.",
+          "long": "Gli **agenti AI** sono specializzati per gioco. Ogni agente:\n\n- Usa una **KB indicizzata** (regolamenti, FAQ ufficiali, errata)\n- Cita sempre la fonte (pagina del manuale o URL)\n- Supporta **modelli diversi**: Claude Sonnet, GPT-4o, Gemini Pro\n\nApri un agente da una pagina gioco → tab **Agenti** → \"Prova\". La conversazione è privata di default; puoi condividerla post-fact con un link."
+        },
+        "q8": {
+          "question": "Le mie conversazioni con l'AI sono private?",
+          "short": "Sì. Le chat sono private per default. Puoi condividerle con un link pubblico se decidi di aiutare la community.",
+          "long": "**Sì, le tue conversazioni sono private** per default e non vengono usate per training.\n\nPuoi opzionalmente **rendere pubblica** una conversazione (toggle \"Condividi\") per aiutare altri giocatori. Solo le chat marcate come pubbliche sono visibili nel catalogo `/shared-chats`."
+        },
+        "q9": {
+          "question": "Posso scegliere quale modello AI usare?",
+          "short": "Sì. Ogni agente espone i modelli supportati (Claude, GPT-4o, Gemini). Cambialo dal menu chat in alto.",
+          "long": "Sì. Ogni agente dichiara i **modelli supportati**. Dal menu chat (in alto a destra durante una conversazione) puoi switchare tra:\n\n- **Claude Sonnet** (default, qualità top)\n- **GPT-4o** (veloce, economico)\n- **Gemini Pro** (long-context per regolamenti grossi)\n\nDurante l'alpha tutti i modelli sono **gratis** con limite 100 msg/giorno."
+        },
+        "q10": {
+          "question": "Quali dati raccoglie MeepleAI?",
+          "short": "Email, nickname, attività di gioco e conversazioni AI. Nessun dato di pagamento durante alpha. Dettagli su /privacy.",
+          "long": "Raccogliamo:\n\n- **Account**: email, nickname, password (hash bcrypt)\n- **Gameplay**: giochi posseduti, sessioni, statistiche\n- **AI**: conversazioni con gli agenti (private per default)\n\nNon raccogliamo **dati di pagamento** durante l'alpha (gratis). I dati sono ospitati su server EU (Frankfurt).\n\nPolicy completa: `/privacy`."
+        },
+        "q11": {
+          "question": "Posso esportare i miei dati?",
+          "short": "Sì. Da Impostazioni → Privacy → Esporta dati. Ricevi un .zip con JSON e markdown entro 24h.",
+          "long": "Sì, conformemente al **GDPR Art. 20**.\n\nDa **Impostazioni → Privacy → Esporta i miei dati**, richiedi un export. Riceverai entro 24h un `.zip` contenente:\n\n- `account.json` — profilo e impostazioni\n- `library.json` — giochi posseduti, statistiche\n- `conversations/*.md` — tutte le chat in markdown\n\nL'export è disponibile per il download per 7 giorni."
+        },
+        "q12": {
+          "question": "Come elimino il mio account?",
+          "short": "Da Impostazioni → Account → Elimina account. La cancellazione è definitiva dopo 30 giorni di grace period.",
+          "long": "Da **Impostazioni → Account → Elimina account**.\n\nDopo la richiesta hai **30 giorni di grace period** per ripensarci (basta fare login). Trascorso il periodo, **tutti i tuoi dati sono cancellati** in modo definitivo: account, conversazioni, contributi pubblici (toolkit/agenti) vengono anonymizzati."
+        },
+        "q13": {
+          "question": "MeepleAI è gratuito?",
+          "short": "Durante l'alpha sì, completamente gratuito. Post-alpha avremo un free tier + piano Pro a pagamento.",
+          "long": "Durante l'**alpha privata** MeepleAI è **completamente gratuito** per i membri invitati.\n\nPost-alpha (Q2 2026 stimato) avremo:\n\n- **Free tier**: catalogo pubblico, 50 msg AI/giorno, 1 toolkit installato\n- **Pro** (~ €5/mese): AI illimitata, toolkit illimitati, agenti privati, priorità support\n\nI membri alpha riceveranno **3 mesi Pro gratis** come ringraziamento."
+        },
+        "q14": {
+          "question": "Quanto durerà l'alpha?",
+          "short": "L'alpha è iniziata Gen 2026. Stimiamo go-live pubblico in Q2 2026 (Apr-Giu).",
+          "long": "L'**alpha privata** è partita a **Gennaio 2026** con i primi 100 inviti.\n\nStimiamo il go-live pubblico per **Q2 2026** (Aprile-Giugno), in funzione di:\n\n- Stabilità infrastruttura\n- Catalogo giochi (target 100+ giochi indicizzati)\n- Feedback alpha members\n\nAggiornamenti regolari sul nostro changelog `/changelog`."
         }
+      },
+      "footer": {
+        "title": "Non hai trovato risposta?",
+        "subtitle": "Il nostro team risponde entro 24 ore. Scrivici per richieste, bug o feedback sulla piattaforma."
       },
       "contactCta": "Contattaci",
       "howItWorksCta": "Come Funziona"

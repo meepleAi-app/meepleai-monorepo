@@ -280,6 +280,86 @@ export default defineConfig({
       fullyParallel: true,
     },
 
+    // V2 Design Migration — Visual Migrated (Phase 1, Wave A.1+)
+    // Validates that production routes match the mockup PNG baselines committed
+    // in `e2e/visual-mockups/baseline.spec.ts-snapshots/`. Each migrated route
+    // navigates to Next.js prod (:3000) with deterministic stub data and asserts
+    // the PNG matches the corresponding `<slug>-{desktop,mobile}.png` mockup baseline.
+    // Use `mask: [page.locator('[data-dynamic]')]` for dynamic zones.
+    {
+      name: 'visual-migrated-desktop',
+      testDir: './e2e/visual-migrated',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:3000',
+        viewport: { width: 1440, height: 900 },
+      },
+      expect: {
+        toHaveScreenshot: {
+          maxDiffPixelRatio: 0.001,
+          threshold: 0.2,
+          animations: 'disabled',
+        },
+      },
+      fullyParallel: true,
+    },
+    {
+      name: 'visual-migrated-mobile',
+      testDir: './e2e/visual-migrated',
+      use: {
+        ...devices['Pixel 5'],
+        baseURL: 'http://localhost:3000',
+        viewport: { width: 375, height: 812 },
+      },
+      expect: {
+        toHaveScreenshot: {
+          maxDiffPixelRatio: 0.001,
+          threshold: 0.2,
+          animations: 'disabled',
+        },
+      },
+      fullyParallel: true,
+    },
+
+    // V2 Design Migration — V2 States (Phase 1, Wave A.1+)
+    // Per-route state coverage: default / empty / loading / error.
+    // Each migrated route ships 4 state specs that exercise the route at
+    // production parity (Next.js :3000) using `page.route()` to stub backend.
+    {
+      name: 'v2-states-desktop',
+      testDir: './e2e/v2-states',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:3000',
+        viewport: { width: 1440, height: 900 },
+      },
+      expect: {
+        toHaveScreenshot: {
+          maxDiffPixelRatio: 0.001,
+          threshold: 0.2,
+          animations: 'disabled',
+        },
+      },
+      fullyParallel: true,
+    },
+    {
+      name: 'v2-states-mobile',
+      testDir: './e2e/v2-states',
+      use: {
+        ...devices['Pixel 5'],
+        baseURL: 'http://localhost:3000',
+        viewport: { width: 375, height: 812 },
+      },
+      expect: {
+        toHaveScreenshot: {
+          maxDiffPixelRatio: 0.001,
+          threshold: 0.2,
+          animations: 'disabled',
+        },
+      },
+      fullyParallel: true,
+    },
+
     // Admin Embedding Flow — local dev and integration environments
     {
       name: 'embedding-flow-local',

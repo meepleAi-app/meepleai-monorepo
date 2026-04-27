@@ -20,22 +20,6 @@ import {
 
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 
-/**
- * Local copy of HandCard shape — kept for PLACEHOLDER_ACTION_CARDS and
- * ALL_DEFAULT_CARDS until those are removed in the Task 5/6 cleanup.
- * @deprecated Will be removed when the card-hand UI is deleted.
- */
-interface HandCard {
-  id: string;
-  entity: MeepleEntityType;
-  title: string;
-  href: string;
-  subtitle?: string;
-  imageUrl?: string;
-  isPlaceholder?: boolean;
-  placeholderAction?: string;
-}
-
 import type { LucideIcon } from 'lucide-react';
 
 /**
@@ -139,48 +123,3 @@ export const DEFAULT_PINNED_CARDS = DEFAULT_ACTIONS.filter(a => a.drawCard).map(
   title: a.label,
   href: a.drawCard!.href,
 }));
-
-/**
- * Placeholder action cards — special cards that open action sheets instead
- * of navigating to a page. They are protected from FIFO eviction.
- */
-export const PLACEHOLDER_ACTION_CARDS: HandCard[] = [
-  {
-    id: 'action-search-agent',
-    entity: 'agent',
-    title: 'Cerca Agente',
-    href: '#action-search-agent',
-    isPlaceholder: true,
-    placeholderAction: 'search-agent',
-  },
-  {
-    id: 'action-search-game',
-    entity: 'game',
-    title: 'Cerca Gioco',
-    href: '#action-search-game',
-    isPlaceholder: true,
-    placeholderAction: 'search-game',
-  },
-  {
-    id: 'action-start-session',
-    entity: 'session',
-    title: 'Avvia Sessione',
-    href: '#action-start-session',
-    isPlaceholder: true,
-    placeholderAction: 'start-session',
-  },
-  {
-    id: 'action-toolkit',
-    entity: 'toolkit',
-    title: 'Toolkit',
-    href: '#action-toolkit',
-    isPlaceholder: true,
-    placeholderAction: 'toolkit',
-  },
-];
-
-/**
- * Combined default cards: pinned navigation cards + placeholder action cards.
- * Use this as the initial hand contents on first app load.
- */
-export const ALL_DEFAULT_CARDS: HandCard[] = [...DEFAULT_PINNED_CARDS, ...PLACEHOLDER_ACTION_CARDS];

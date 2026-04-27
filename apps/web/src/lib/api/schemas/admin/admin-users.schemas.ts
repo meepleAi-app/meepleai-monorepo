@@ -72,7 +72,7 @@ export const UserActivityDtoSchema = z.object({
   resourceId: z.string().nullable().optional(),
   result: z.string().min(1),
   details: z.string().nullable().optional(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
   ipAddress: z.string().nullable().optional(),
 });
 
@@ -99,10 +99,10 @@ export const AdminSessionInfoSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
   userEmail: z.string().email(),
-  createdAt: z.string().datetime(),
-  expiresAt: z.string().datetime(),
-  lastSeenAt: z.string().datetime().nullable().optional(),
-  revokedAt: z.string().datetime().nullable().optional(),
+  createdAt: z.string().datetime({ offset: true }),
+  expiresAt: z.string().datetime({ offset: true }),
+  lastSeenAt: z.string().datetime({ offset: true }).nullable().optional(),
+  revokedAt: z.string().datetime({ offset: true }).nullable().optional(),
   ipAddress: z.string().nullable().optional(),
   userAgent: z.string().nullable().optional(),
 });
@@ -123,7 +123,7 @@ export { ApiKeyDtoSchema } from '../auth.schemas';
 export const ApiKeyUsageStatsDtoSchema = z.object({
   keyId: z.string().uuid(),
   totalUsageCount: z.number().int().nonnegative(),
-  lastUsedAt: z.string().datetime().nullable().optional(),
+  lastUsedAt: z.string().datetime({ offset: true }).nullable().optional(),
   usageCountLast24Hours: z.number().int().nonnegative(),
   usageCountLast7Days: z.number().int().nonnegative(),
   usageCountLast30Days: z.number().int().nonnegative(),
@@ -146,7 +146,7 @@ export { CreateApiKeyRequestSchema, CreateApiKeyResponseSchema } from '../auth.s
 export const UpdateApiKeyRequestSchema = z.object({
   keyName: z.string().min(1).optional(),
   scopes: z.string().min(1).optional(),
-  expiresAt: z.string().datetime().nullable().optional(),
+  expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 export type UpdateApiKeyRequest = z.infer<typeof UpdateApiKeyRequestSchema>;

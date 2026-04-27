@@ -38,17 +38,17 @@ export const UserLibraryEntrySchema = z.object({
   gameYearPublished: z.number().nullable().optional(),
   gameIconUrl: z.string().nullable().optional(),
   gameImageUrl: z.string().nullable().optional(),
-  addedAt: z.string().datetime(),
+  addedAt: z.string().datetime({ offset: true }),
   notes: z.string().nullable().optional(),
   isFavorite: z.boolean(),
   currentState: GameStateTypeWithFallbackSchema,
-  stateChangedAt: z.string().datetime().nullable().optional(),
+  stateChangedAt: z.string().datetime({ offset: true }).nullable().optional(),
   stateNotes: z.string().nullable().optional(),
   hasKb: z.boolean().default(false), // true if >= 1 PDF fully indexed in RAG
   kbCardCount: z.number().int().nonnegative().default(0), // total PDF documents linked
   kbIndexedCount: z.number().int().nonnegative().default(0), // PDFs with ProcessingState.Ready
   kbProcessingCount: z.number().int().nonnegative().default(0), // PDFs currently in pipeline
-  ownershipDeclaredAt: z.string().datetime().nullable().optional(), // when user declared ownership
+  ownershipDeclaredAt: z.string().datetime({ offset: true }).nullable().optional(), // when user declared ownership
   hasRagAccess: z.boolean().default(false), // whether user has RAG access for this game
   agentIsOwned: z.boolean().default(true), // always true in library context
   minPlayers: z.number().int().nullable().optional(),
@@ -69,8 +69,8 @@ export const UserLibraryStatsSchema = z.object({
   totalGames: z.number().int().nonnegative(),
   favoriteGames: z.number().int().nonnegative(),
   privatePdfs: z.number().int().nonnegative().default(0),
-  oldestAddedAt: z.string().datetime().nullable().optional(),
-  newestAddedAt: z.string().datetime().nullable().optional(),
+  oldestAddedAt: z.string().datetime({ offset: true }).nullable().optional(),
+  newestAddedAt: z.string().datetime({ offset: true }).nullable().optional(),
   nuovoCount: z.number().int().nonnegative().default(0),
   inPrestitoCount: z.number().int().nonnegative().default(0),
   wishlistCount: z.number().int().nonnegative().default(0),
@@ -186,11 +186,11 @@ export const LibraryShareLinkSchema = z.object({
   shareUrl: z.string().url(),
   privacyLevel: z.enum(['public', 'unlisted']),
   includeNotes: z.boolean(),
-  createdAt: z.string().datetime(),
-  expiresAt: z.string().datetime().nullable(),
-  revokedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  expiresAt: z.string().datetime({ offset: true }).nullable(),
+  revokedAt: z.string().datetime({ offset: true }).nullable(),
   viewCount: z.number().int().nonnegative(),
-  lastAccessedAt: z.string().datetime().nullable(),
+  lastAccessedAt: z.string().datetime({ offset: true }).nullable(),
   isActive: z.boolean(),
 });
 
@@ -200,7 +200,7 @@ export type LibraryShareLink = z.infer<typeof LibraryShareLinkSchema>;
 export const CreateLibraryShareLinkRequestSchema = z.object({
   privacyLevel: z.enum(['public', 'unlisted']).default('unlisted'),
   includeNotes: z.boolean().default(false),
-  expiresAt: z.string().datetime().nullable().optional(),
+  expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 export type CreateLibraryShareLinkRequest = z.infer<typeof CreateLibraryShareLinkRequestSchema>;
@@ -209,7 +209,7 @@ export type CreateLibraryShareLinkRequest = z.infer<typeof CreateLibraryShareLin
 export const UpdateLibraryShareLinkRequestSchema = z.object({
   privacyLevel: z.enum(['public', 'unlisted']).optional(),
   includeNotes: z.boolean().optional(),
-  expiresAt: z.string().datetime().nullable().optional(),
+  expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 export type UpdateLibraryShareLinkRequest = z.infer<typeof UpdateLibraryShareLinkRequestSchema>;
@@ -224,7 +224,7 @@ export const SharedLibraryGameSchema = z.object({
   imageUrl: z.string().nullable(),
   isFavorite: z.boolean(),
   notes: z.string().nullable(),
-  addedAt: z.string().datetime(),
+  addedAt: z.string().datetime({ offset: true }),
 });
 
 export type SharedLibraryGame = z.infer<typeof SharedLibraryGameSchema>;
@@ -235,7 +235,7 @@ export const SharedLibrarySchema = z.object({
   totalGames: z.number().int().nonnegative(),
   favoritesCount: z.number().int().nonnegative(),
   privacyLevel: z.enum(['public', 'unlisted']),
-  sharedAt: z.string().datetime(),
+  sharedAt: z.string().datetime({ offset: true }),
 });
 
 export type SharedLibrary = z.infer<typeof SharedLibrarySchema>;
@@ -247,7 +247,7 @@ export type SharedLibrary = z.infer<typeof SharedLibrarySchema>;
 // Library game session DTO for recent sessions (distinct from games.schemas GameSessionDto)
 export const LibraryGameSessionSchema = z.object({
   id: z.string().uuid(),
-  playedAt: z.string().datetime(),
+  playedAt: z.string().datetime({ offset: true }),
   durationMinutes: z.number().int().nonnegative(),
   durationFormatted: z.string(),
   didWin: z.boolean().nullable(),
@@ -274,7 +274,7 @@ export const LibraryCustomPdfSchema = z.object({
   pdfUrl: z.string(),
   originalFileName: z.string(),
   fileSizeBytes: z.number(),
-  uploadedAt: z.string().datetime(),
+  uploadedAt: z.string().datetime({ offset: true }),
 });
 
 export type LibraryCustomPdf = z.infer<typeof LibraryCustomPdfSchema>;
@@ -299,19 +299,19 @@ export const GameDetailDtoSchema = z.object({
   averageRating: z.number().nullable(),
 
   // Library metadata
-  addedAt: z.string().datetime(),
+  addedAt: z.string().datetime({ offset: true }),
   notes: z.string().nullable(),
   isFavorite: z.boolean(),
 
   // Game state
   currentState: GameStateTypeWithFallbackSchema,
-  stateChangedAt: z.string().datetime().nullable(),
+  stateChangedAt: z.string().datetime({ offset: true }).nullable(),
   stateNotes: z.string().nullable(),
   isAvailableForPlay: z.boolean(),
 
   // Statistics
   timesPlayed: z.number().int().nonnegative(),
-  lastPlayed: z.string().datetime().nullable(),
+  lastPlayed: z.string().datetime({ offset: true }).nullable(),
   winRate: z.string().nullable(),
   avgDuration: z.string().nullable(),
 
@@ -340,7 +340,7 @@ export const LabelDtoSchema = z.object({
   name: z.string().max(50),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Must be valid hex color'),
   isPredefined: z.boolean(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
 });
 
 export type LabelDto = z.infer<typeof LabelDtoSchema>;

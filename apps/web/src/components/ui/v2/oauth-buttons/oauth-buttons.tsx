@@ -20,6 +20,8 @@ const DEFAULT_LABELS: Record<OAuthProvider, string> = {
   github: 'Continua con GitHub',
 };
 
+// Google brand colors — hex literals required for brand fidelity (Google Identity guidelines)
+/* eslint-disable local/no-hardcoded-hex */
 function GoogleIcon(): JSX.Element {
   return (
     <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -42,7 +44,10 @@ function GoogleIcon(): JSX.Element {
     </svg>
   );
 }
+/* eslint-enable local/no-hardcoded-hex */
 
+// Discord Blurple — hex literal required for brand fidelity (Discord Brand Resources)
+/* eslint-disable local/no-hardcoded-hex */
 function DiscordIcon(): JSX.Element {
   return (
     <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="#5865F2">
@@ -50,6 +55,7 @@ function DiscordIcon(): JSX.Element {
     </svg>
   );
 }
+/* eslint-enable local/no-hardcoded-hex */
 
 function GitHubIcon(): JSX.Element {
   return (

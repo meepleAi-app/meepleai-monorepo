@@ -263,8 +263,7 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         // We capture the DbContext set references locally so the projection lambda can
         // close over them without re-evaluating `_context` for every row (EF Core
         // translates the whole expression tree, but explicit locals keep intent clear).
-        // ApprovalStatus.Approved == 2 (see GameEntity.ApprovalStatus comment).
-        const int ApprovedStatus = 2;
+        // ApprovalStatus.Approved == 2 (reuses `ApprovedStatus` const declared above).
         var ctxGames = _context.Games;
         var ctxToolkits = _context.Toolkits;
         var ctxAgents = _context.AgentDefinitions;

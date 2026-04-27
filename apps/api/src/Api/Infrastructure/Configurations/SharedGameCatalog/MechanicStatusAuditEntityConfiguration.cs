@@ -16,7 +16,9 @@ internal sealed class MechanicStatusAuditEntityConfiguration : IEntityTypeConfig
         {
             t.HasCheckConstraint(
                 "ck_mechanic_status_audit_status_range",
-                "from_status BETWEEN 0 AND 3 AND to_status BETWEEN 0 AND 3");
+                // PartiallyExtracted=4 was added in M1.2 (T22 salvage path); the upper bound must
+                // match `MechanicAnalysisStatus` to allow checkpoints that flip Draft→PartiallyExtracted.
+                "from_status BETWEEN 0 AND 4 AND to_status BETWEEN 0 AND 4");
 
             t.HasCheckConstraint(
                 "ck_mechanic_status_audit_distinct_states",

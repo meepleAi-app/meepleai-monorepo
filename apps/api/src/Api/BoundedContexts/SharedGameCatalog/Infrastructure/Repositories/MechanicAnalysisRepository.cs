@@ -273,9 +273,6 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
                         OccurredAt = unsuppressedEvt.OccurredAt
                     });
                     break;
-
-                // MechanicAnalysisCostCapOverriddenEvent: no dedicated audit table in M1.1;
-                // the event is still dispatched by the base class for downstream handlers (admin UI, logs).
             }
         }
     }

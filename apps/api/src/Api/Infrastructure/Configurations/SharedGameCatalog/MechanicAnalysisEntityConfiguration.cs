@@ -36,7 +36,7 @@ internal sealed class MechanicAnalysisEntityConfiguration : IEntityTypeConfigura
 
             t.HasCheckConstraint(
                 "ck_mechanic_analyses_status_range",
-                "status BETWEEN 0 AND 3");
+                "status BETWEEN 0 AND 4");
 
             t.HasCheckConstraint(
                 "ck_mechanic_analyses_cost_cap_positive",

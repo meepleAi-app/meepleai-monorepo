@@ -69,26 +69,35 @@ internal sealed class MechanicRecalcJobRepository : RepositoryBase, IMechanicRec
             )
             RETURNING *;";
 
-        var tx = await DbContext.Database
-            .BeginTransactionAsync(cancellationToken)
-            .ConfigureAwait(false);
-        await using var _ = tx.ConfigureAwait(false);
+        // Issue #2648 pattern: NpgsqlRetryingExecutionStrategy does not support user-initiated
+        // transactions. Wrap the BeginTransaction + FromSqlRaw + Commit sequence in
+        // CreateExecutionStrategy().ExecuteAsync so the whole unit retries atomically. Without
+        // this, the background worker fires InvalidOperationException on every poll and never
+        // drains pending recalc jobs (analyses stay in Draft with empty aggregates).
+        var strategy = DbContext.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async ct =>
+        {
+            var tx = await DbContext.Database
+                .BeginTransactionAsync(ct)
+                .ConfigureAwait(false);
+            await using var _ = tx.ConfigureAwait(false);
 
-        // FromSqlRaw on a non-composable statement (UPDATE ... RETURNING) cannot have any
-        // additional LINQ operator applied (EF would try to wrap it as a subquery and throw
-        // 'non-composable SQL ... composing over it'). ToListAsync executes the SQL as-is and
-        // yields the materialized rows; the statement returns at most one row.
-        var rows = await DbContext.MechanicRecalcJobs
-            .FromSqlRaw(sql)
-            .AsNoTracking()
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            // FromSqlRaw on a non-composable statement (UPDATE ... RETURNING) cannot have any
+            // additional LINQ operator applied (EF would try to wrap it as a subquery and throw
+            // 'non-composable SQL ... composing over it'). ToListAsync executes the SQL as-is and
+            // yields the materialized rows; the statement returns at most one row.
+            var rows = await DbContext.MechanicRecalcJobs
+                .FromSqlRaw(sql)
+                .AsNoTracking()
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
 
-        var entity = rows.FirstOrDefault();
+            var entity = rows.FirstOrDefault();
 
-        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+            await tx.CommitAsync(ct).ConfigureAwait(false);
 
-        return entity is null ? null : MapToDomain(entity);
+            return entity is null ? null : MapToDomain(entity);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

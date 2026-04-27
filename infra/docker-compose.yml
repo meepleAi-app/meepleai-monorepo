@@ -59,8 +59,8 @@ services:
 
   api:
     build:
-      context: ../apps/api
-      dockerfile: ./src/Api/Dockerfile
+      context: ..
+      dockerfile: ./apps/api/src/Api/Dockerfile
     image: ${API_IMAGE:-meepleai-api}
     container_name: meepleai-api
     restart: unless-stopped

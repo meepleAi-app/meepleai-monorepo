@@ -156,7 +156,11 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
                     Abort: MechanicPipelineOutcome.AbortedLlmFailed);
             }
 
-            var validation = _validator.Validate(section, result.Response);
+            // DeepSeek (and some other chat models) wrap JSON in markdown code fences
+            // (```json ... ``` or ``` ... ```). The validator and downstream parser expect
+            // raw JSON, so strip fences before validation and persist the cleaned output.
+            var cleanedResponse = StripCodeFences(result.Response);
+            var validation = _validator.Validate(section, cleanedResponse);
             if (validation.IsValid)
             {
                 stopwatch.Stop();
@@ -179,7 +183,7 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
                     StartedAt = startedAt,
                     CompletedAt = completedAt
                 };
-                return (run, result.Response, Abort: null);
+                return (run, cleanedResponse, Abort: null);
             }
 
             lastValidationError = string.Join("; ",
@@ -269,5 +273,47 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
         }
 
         return $"{sectionPrompt}\n\n## Retrieved rulebook chunks\n\n{retrievedContext}\n";
+    }
+
+    /// <summary>
+    /// Strips markdown code fences (```json ... ``` or ``` ... ```) commonly added by
+    /// chat-style LLMs (DeepSeek, GPT-4 chat, Claude, etc.) when asked for JSON output.
+    /// Returns the inner content trimmed of whitespace. If no fences are present, returns
+    /// the input trimmed.
+    /// </summary>
+    private static string StripCodeFences(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return raw ?? string.Empty;
+        }
+
+        var trimmed = raw.Trim();
+
+        // Must start with a triple backtick to be a fenced block
+        if (!trimmed.StartsWith("```", StringComparison.Ordinal))
+        {
+            return trimmed;
+        }
+
+        // Skip the opening fence + optional language tag (e.g. ```json\n)
+        var firstNewline = trimmed.IndexOf('\n');
+        if (firstNewline < 0)
+        {
+            // Single-line fenced output is malformed; return as-is trimmed
+            return trimmed;
+        }
+
+        var afterOpeningFence = trimmed.Substring(firstNewline + 1);
+
+        // Find the closing fence
+        var closingFenceIndex = afterOpeningFence.LastIndexOf("```", StringComparison.Ordinal);
+        if (closingFenceIndex < 0)
+        {
+            // No closing fence; return what we have after the opener
+            return afterOpeningFence.Trim();
+        }
+
+        return afterOpeningFence.Substring(0, closingFenceIndex).Trim();
     }
 }

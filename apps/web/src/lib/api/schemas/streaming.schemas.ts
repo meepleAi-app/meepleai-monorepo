@@ -147,7 +147,7 @@ export type StreamingSetupStep = z.infer<typeof StreamingSetupStepSchema>;
 export const RagStreamingEventSchema = z.object({
   type: z.nativeEnum(StreamingEventType),
   data: z.unknown(), // Validated based on type in parser
-  timestamp: z.string().datetime(),
+  timestamp: z.string().datetime({ offset: true }),
 });
 
 export type RagStreamingEvent = z.infer<typeof RagStreamingEventSchema>;

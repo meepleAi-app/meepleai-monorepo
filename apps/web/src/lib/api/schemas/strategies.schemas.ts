@@ -25,8 +25,8 @@ export const strategyDtoSchema = z.object({
   name: z.string(),
   description: z.string(),
   steps: z.array(strategyStepSchema),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }).nullable(),
 });
 
 // Types

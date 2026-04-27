@@ -17,8 +17,8 @@ export const EmailTemplateDtoSchema = z.object({
   version: z.number().int(),
   isActive: z.boolean(),
   lastModifiedBy: z.string().uuid().nullable().optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().nullable().optional(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 export type EmailTemplateDto = z.infer<typeof EmailTemplateDtoSchema>;
 

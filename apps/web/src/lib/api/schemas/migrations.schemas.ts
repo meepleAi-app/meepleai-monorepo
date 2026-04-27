@@ -19,8 +19,8 @@ export const PendingMigrationDtoSchema = z.object({
   privateGameId: z.string().uuid(),
   sharedGameId: z.string().uuid(),
   gameTitle: z.string(),
-  approvedAt: z.string().datetime(),
-  expiresAt: z.string().datetime(),
+  approvedAt: z.string().datetime({ offset: true }),
+  expiresAt: z.string().datetime({ offset: true }),
   sharedGameUrl: z.string().url().nullable().optional(),
 });
 

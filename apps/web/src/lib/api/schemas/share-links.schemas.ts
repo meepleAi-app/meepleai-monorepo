@@ -16,11 +16,11 @@ export const ChatMessageDtoSchema = z.object({
   id: z.string().uuid(),
   content: z.string(),
   role: z.string(),
-  timestamp: z.string().datetime(),
+  timestamp: z.string().datetime({ offset: true }),
   sequenceNumber: z.number().int().nonnegative(),
-  updatedAt: z.string().datetime().nullable(),
+  updatedAt: z.string().datetime({ offset: true }).nullable(),
   isDeleted: z.boolean(),
-  deletedAt: z.string().datetime().nullable(),
+  deletedAt: z.string().datetime({ offset: true }).nullable(),
   deletedByUserId: z.string().uuid().nullable(),
   isInvalidated: z.boolean(),
 });
@@ -36,7 +36,7 @@ export const CreateShareLinkResponseSchema = z.object({
   shareLinkId: z.string().uuid(),
   token: z.string().min(1),
   shareableUrl: z.string().url(),
-  expiresAt: z.string().datetime(),
+  expiresAt: z.string().datetime({ offset: true }),
   role: z.enum(['view', 'comment']),
 });
 
@@ -62,8 +62,8 @@ export const GetSharedThreadResponseSchema = z.object({
   messages: z.array(ChatMessageDtoSchema),
   role: z.enum(['view', 'comment']),
   gameId: z.string().uuid().nullable(),
-  createdAt: z.string().datetime(),
-  lastMessageAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  lastMessageAt: z.string().datetime({ offset: true }).nullable(),
 });
 
 export type GetSharedThreadResponse = z.infer<typeof GetSharedThreadResponseSchema>;
@@ -73,7 +73,7 @@ export type GetSharedThreadResponse = z.infer<typeof GetSharedThreadResponseSche
  */
 export const AddCommentToSharedThreadResponseSchema = z.object({
   messageId: z.string().uuid(),
-  timestamp: z.string().datetime(),
+  timestamp: z.string().datetime({ offset: true }),
 });
 
 export type AddCommentToSharedThreadResponse = z.infer<

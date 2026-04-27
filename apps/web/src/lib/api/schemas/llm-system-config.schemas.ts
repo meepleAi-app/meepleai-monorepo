@@ -18,7 +18,7 @@ export const LlmSystemConfigDtoSchema = z.object({
   monthlyBudgetUsd: z.number().min(0),
   fallbackChainJson: z.string(),
   source: z.enum(['database', 'appsettings']),
-  lastUpdatedAt: z.string().datetime().nullable(),
+  lastUpdatedAt: z.string().datetime({ offset: true }).nullable(),
   lastUpdatedByUserId: z.string().uuid().nullable(),
 });
 

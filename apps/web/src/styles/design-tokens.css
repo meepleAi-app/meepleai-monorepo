@@ -370,6 +370,27 @@
     --e-event: 350 89% 60%;
 
     /* ============================================================================
+     * V2 Entity & Semantic Colors (Issue #572 — V2 Phase 0)
+     * Aligned with admin-mockups/design_files/tokens.css (design system source of truth).
+     * Consumed by `entityHsl(entity, alpha?)` helper from src/lib/color-utils.ts.
+     * Dark-mode overrides under `.dark` block below.
+     * ============================================================================ */
+    --c-game:    25 95% 45%;     /* Orange */
+    --c-player:  262 83% 58%;    /* Purple */
+    --c-session: 240 60% 55%;    /* Indigo */
+    --c-agent:   38 92% 50%;     /* Amber */
+    --c-kb:      174 60% 40%;    /* Teal — replaces V1 --color-entity-document Slate */
+    --c-chat:    220 80% 55%;    /* Blue */
+    --c-event:   350 89% 60%;    /* Rose */
+    --c-toolkit: 142 70% 45%;    /* Green — Wave 1 SP4 (new entity) */
+    --c-tool:    195 80% 50%;    /* Sky Blue */
+
+    --c-success: 142 70% 45%;
+    --c-warning: 38 92% 50%;
+    --c-danger:  350 89% 60%;
+    --c-info:    220 80% 55%;
+
+    /* ============================================================================
      * ENVIRONMENT THEMES — Defaults (Hub style)
      * Overridden by .env-tavolo / .env-hub utility classes below
      * MeepleCard reads these vars for shadow/lift without conditional logic
@@ -545,6 +566,18 @@
     --shadow-warm-lg: 0 10px 30px rgb(0 0 0 / 0.4);
     --shadow-warm-xl: 0 20px 50px rgb(0 0 0 / 0.5);
     --shadow-warm-2xl: 0 25px 60px rgb(0 0 0 / 0.6);
+
+    /* V2 Entity Colors — dark mode overrides (Issue #572)
+       Lighter HSLs for contrast on dark bg, mirror admin-mockups/design_files/tokens.css */
+    --c-game:    28 95% 58%;
+    --c-player:  262 75% 70%;
+    --c-session: 235 70% 70%;
+    --c-agent:   38 92% 62%;
+    --c-kb:      174 60% 55%;
+    --c-chat:    218 80% 68%;
+    --c-event:   350 85% 70%;
+    --c-toolkit: 142 60% 58%;
+    --c-tool:    195 75% 62%;
 
     /* ============================================================================
      * DARK MODE ENHANCEMENTS (Issue #2965 Wave 8)

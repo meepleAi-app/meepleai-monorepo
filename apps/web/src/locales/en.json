@@ -1147,6 +1147,86 @@
       "contactCta": "Contact us",
       "howItWorksCta": "How It Works"
     },
+    "invites": {
+      "metadata": {
+        "title": "Game night invitation — MeepleAI",
+        "description": "You've been invited to a game night. Confirm or decline your attendance."
+      },
+      "states": {
+        "default": {
+          "ariaRegion": "Invitation details"
+        },
+        "loggedIn": {
+          "preFillBadge": "We'll respond as {name}"
+        },
+        "acceptedSuccess": {
+          "heading": "You're in!",
+          "subText": "{hostName} has been notified.",
+          "addToCalendarCta": "Add to calendar",
+          "shareCta": "Share with others",
+          "rosterCount": "{accepted} of {expected} confirmed"
+        },
+        "declined": {
+          "heading": "You declined the invitation",
+          "subText": "{hostName} has been notified. No hard feelings!",
+          "changeMyMindCta": "Changed my mind, I'll come"
+        },
+        "tokenExpired": {
+          "heading": "Invitation expired",
+          "subText": "This invitation is no longer valid. Ask {hostName} to send it again.",
+          "ctaContactHost": "Contact the host"
+        },
+        "tokenInvalid": {
+          "heading": "Invitation not found",
+          "subText": "The link you opened doesn't match any invitation. Make sure it's complete.",
+          "ctaHome": "Go to home"
+        },
+        "alreadyAccepted": {
+          "heading": "Response already sent",
+          "subTextAccepted": "You accepted this invitation.",
+          "subTextDeclined": "You declined this invitation.",
+          "rosterCount": "{accepted} of {expected} confirmed",
+          "switchToDeclineCta": "Switch to: decline",
+          "switchToAcceptCta": "Switch to: accept"
+        }
+      },
+      "form": {
+        "acceptCta": "Accept, I'll be there →",
+        "declineCta": "I can't make it",
+        "submittingAccept": "Sending response…",
+        "submittingDecline": "Sending response…"
+      },
+      "session": {
+        "dateLabel": "Date",
+        "timeLabel": "Time",
+        "durationLabel": "Duration",
+        "durationValue": "{minutes, plural, one {1 minute} other {# minutes}}",
+        "locationLabel": "Location",
+        "locationMissing": "Location TBD",
+        "playersLabel": "Seats",
+        "playersValue": "{accepted} / {expected}",
+        "primaryGameLabel": "Primary game"
+      },
+      "host": {
+        "welcomeMessageLabel": "Message from the host",
+        "ariaAvatarFallback": "Avatar of {name}"
+      },
+      "banners": {
+        "errorGeneric": "Response not sent. Check your connection and try again.",
+        "stateSwitchConflict": "You've already responded: {currentResponse}. To change, use the dedicated button.",
+        "goneExpired": "The invitation expired while you were responding.",
+        "goneCancelled": "The host has cancelled the game night."
+      },
+      "telemetry": {
+        "events": {
+          "viewed": "invite.viewed",
+          "acceptClicked": "invite.accept_clicked",
+          "declineClicked": "invite.decline_clicked",
+          "respondSucceeded": "invite.respond_succeeded",
+          "respondFailed": "invite.respond_failed"
+        }
+      }
+    },
     "join": {
       "metadata": {
         "title": "Join the Alpha — MeepleAI",

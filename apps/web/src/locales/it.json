@@ -1197,6 +1197,86 @@
       "contactCta": "Contattaci",
       "howItWorksCta": "Come Funziona"
     },
+    "invites": {
+      "metadata": {
+        "title": "Invito serata gioco — MeepleAI",
+        "description": "Hai ricevuto un invito per una serata di gioco. Conferma o declina la tua presenza."
+      },
+      "states": {
+        "default": {
+          "ariaRegion": "Dettagli invito"
+        },
+        "loggedIn": {
+          "preFillBadge": "Risponderemo a nome di {name}"
+        },
+        "acceptedSuccess": {
+          "heading": "Sei dei nostri!",
+          "subText": "{hostName} ha ricevuto la tua conferma.",
+          "addToCalendarCta": "Aggiungi al calendario",
+          "shareCta": "Condividi con altri",
+          "rosterCount": "{accepted} di {expected} confermati"
+        },
+        "declined": {
+          "heading": "Hai declinato l'invito",
+          "subText": "{hostName} è stato avvisato. Niente di personale!",
+          "changeMyMindCta": "Ho cambiato idea, accetto"
+        },
+        "tokenExpired": {
+          "heading": "Invito scaduto",
+          "subText": "Questo invito non è più valido. Chiedi a {hostName} di rimandartelo.",
+          "ctaContactHost": "Contatta l'organizzatore"
+        },
+        "tokenInvalid": {
+          "heading": "Invito non trovato",
+          "subText": "Il link che hai aperto non corrisponde a nessun invito. Verifica che sia completo.",
+          "ctaHome": "Vai alla home"
+        },
+        "alreadyAccepted": {
+          "heading": "Risposta già inviata",
+          "subTextAccepted": "Hai accettato questo invito.",
+          "subTextDeclined": "Hai declinato questo invito.",
+          "rosterCount": "{accepted} di {expected} confermati",
+          "switchToDeclineCta": "Cambia in: declino",
+          "switchToAcceptCta": "Cambia in: accetto"
+        }
+      },
+      "form": {
+        "acceptCta": "Accetto, ci sarò →",
+        "declineCta": "Non posso venire",
+        "submittingAccept": "Invio risposta…",
+        "submittingDecline": "Invio risposta…"
+      },
+      "session": {
+        "dateLabel": "Data",
+        "timeLabel": "Ora",
+        "durationLabel": "Durata",
+        "durationValue": "{minutes, plural, one {1 minuto} other {# minuti}}",
+        "locationLabel": "Luogo",
+        "locationMissing": "Luogo da definire",
+        "playersLabel": "Posti",
+        "playersValue": "{accepted} / {expected}",
+        "primaryGameLabel": "Gioco principale"
+      },
+      "host": {
+        "welcomeMessageLabel": "Messaggio dall'organizzatore",
+        "ariaAvatarFallback": "Avatar di {name}"
+      },
+      "banners": {
+        "errorGeneric": "Risposta non inviata. Controlla la connessione e riprova.",
+        "stateSwitchConflict": "Hai già risposto: {currentResponse}. Per cambiare, usa il pulsante dedicato.",
+        "goneExpired": "L'invito è scaduto mentre stavi rispondendo.",
+        "goneCancelled": "L'organizzatore ha annullato la serata."
+      },
+      "telemetry": {
+        "events": {
+          "viewed": "invite.viewed",
+          "acceptClicked": "invite.accept_clicked",
+          "declineClicked": "invite.decline_clicked",
+          "respondSucceeded": "invite.respond_succeeded",
+          "respondFailed": "invite.respond_failed"
+        }
+      }
+    },
     "join": {
       "metadata": {
         "title": "Entra nell'Alpha — MeepleAI",

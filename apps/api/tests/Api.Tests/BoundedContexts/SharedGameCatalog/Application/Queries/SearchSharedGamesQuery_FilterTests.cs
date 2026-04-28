@@ -118,7 +118,8 @@ public sealed class SearchSharedGamesQuery_FilterTests
     /// <summary>
     /// Builds an in-memory <see cref="IConfiguration"/> seeded with the
     /// supplied <c>SharedGameCatalog:TopRatedThreshold</c> value, or empty
-    /// for default-threshold tests (handler falls back to 4.5m).
+    /// for default-threshold tests (handler falls back to 4.0m since Wave A.3b /
+    /// Issue #596; previously 4.5m).
     /// </summary>
     private static IConfiguration CreateConfiguration(decimal? topRatedThreshold = null)
     {
@@ -328,13 +329,16 @@ public sealed class SearchSharedGamesQuery_FilterTests
     // ---------------------------------------------------------------
 
     [Fact(Skip = "EF Core InMemory provider cannot translate cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
-    public async Task Handle_IsTopRatedTrue_UsesDefaultThresholdOf4_5()
+    public async Task Handle_IsTopRatedTrue_UsesDefaultThresholdOf4_0()
     {
+        // Default threshold lowered from 4.5m → 4.0m in Wave A.3b (Issue #596)
+        // to match mockup `sp3-shared-games.jsx:126` filter `(g.rating || 0) >= 8`
+        // (0..10 backend scale, equivalent to ≥4.0 on entity 0..5 scale).
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         db.SharedGames.AddRange(
             CreateSharedGame("Top", averageRating: 4.6m),
-            CreateSharedGame("AtThreshold", averageRating: 4.5m),
-            CreateSharedGame("Below", averageRating: 4.4m),
+            CreateSharedGame("AtThreshold", averageRating: 4.0m),
+            CreateSharedGame("Below", averageRating: 3.9m),
             CreateSharedGame("Unrated", averageRating: null));
         await db.SaveChangesAsync();
 
@@ -342,7 +346,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
 
         var result = await handler.Handle(BuildQuery(isTopRated: true), CancellationToken.None);
 
-        // 4.5 boundary is INCLUSIVE (>=), null AverageRating is excluded.
+        // 4.0 boundary is INCLUSIVE (>=), null AverageRating is excluded.
         result.Total.Should().Be(2);
         result.Items.Select(g => g.Title).Should().BeEquivalentTo(new[] { "Top", "AtThreshold" });
     }
@@ -353,7 +357,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         db.SharedGames.AddRange(
             CreateSharedGame("Top", averageRating: 4.6m),
-            CreateSharedGame("Below", averageRating: 4.4m),
+            CreateSharedGame("Below", averageRating: 3.9m),
             CreateSharedGame("Unrated", averageRating: null));
         await db.SaveChangesAsync();
 
@@ -369,21 +373,21 @@ public sealed class SearchSharedGamesQuery_FilterTests
     public async Task Handle_IsTopRatedTrue_RespectsConfiguredThresholdOverride()
     {
         // Verifies SharedGameCatalog:TopRatedThreshold from IConfiguration
-        // overrides the default 4.5m. With threshold = 4.0m, the 4.4 game
-        // qualifies whereas under default it wouldn't.
+        // overrides the default (4.0m post-Wave A.3b). With override = 4.5m,
+        // the 4.2 game does NOT qualify whereas under default it would.
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         db.SharedGames.AddRange(
             CreateSharedGame("Top", averageRating: 4.6m),
-            CreateSharedGame("Mid", averageRating: 4.0m),
+            CreateSharedGame("Mid", averageRating: 4.2m),
             CreateSharedGame("Low", averageRating: 3.9m));
         await db.SaveChangesAsync();
 
-        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(topRatedThreshold: 4.0m), _logger.Object);
+        var handler = new SearchSharedGamesQueryHandler(db, CreateHybridCache(), CreateConfiguration(topRatedThreshold: 4.5m), _logger.Object);
 
         var result = await handler.Handle(BuildQuery(isTopRated: true), CancellationToken.None);
 
-        result.Total.Should().Be(2);
-        result.Items.Select(g => g.Title).Should().BeEquivalentTo(new[] { "Mid", "Top" });
+        result.Total.Should().Be(1);
+        result.Items.Select(g => g.Title).Should().BeEquivalentTo(new[] { "Top" });
     }
 
     [Fact(Skip = "EF Core InMemory provider cannot translate cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]

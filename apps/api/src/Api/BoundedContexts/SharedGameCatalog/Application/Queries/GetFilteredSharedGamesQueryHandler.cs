@@ -98,7 +98,17 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
                 g.CreatedAt,
                 g.ModifiedAt,
                 g.IsRagPublic,
-                g.HasKnowledgeBase))
+                g.HasKnowledgeBase,
+                // Issue #593 (Wave A.3a) — aggregate fields not computed by this handler.
+                // Explicit zero/false values required: EF Core expression trees forbid
+                // default-argument elision (CS0854).
+                0,      // ToolkitsCount
+                0,      // AgentsCount
+                0,      // KbsCount
+                0,      // NewThisWeekCount
+                0,      // ContributorsCount
+                false,  // IsTopRated
+                false)) // IsNew
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 

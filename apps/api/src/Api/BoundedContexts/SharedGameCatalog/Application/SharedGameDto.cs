@@ -15,6 +15,9 @@ internal sealed record DeleteRequestDto(
 
 /// <summary>
 /// Data transfer object for shared game basic information.
+/// Issue #593 (Wave A.3a): Extended with aggregate counts and flags for V2 /shared-games mockup.
+/// New fields are defaulted to preserve backwards compatibility with existing callers that
+/// don't need aggregates (e.g. internal admin queries, legacy API consumers).
 /// </summary>
 public sealed record SharedGameDto(
     Guid Id,
@@ -34,7 +37,14 @@ public sealed record SharedGameDto(
     DateTime CreatedAt,
     DateTime? ModifiedAt,
     bool IsRagPublic = false,
-    bool HasKnowledgeBase = false);
+    bool HasKnowledgeBase = false,
+    int ToolkitsCount = 0,
+    int AgentsCount = 0,
+    int KbsCount = 0,
+    int NewThisWeekCount = 0,
+    int ContributorsCount = 0,
+    bool IsTopRated = false,
+    bool IsNew = false);
 
 /// <summary>
 /// Data transfer object for game rules.

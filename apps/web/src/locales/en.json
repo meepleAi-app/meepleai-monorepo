@@ -1226,6 +1226,81 @@
         "estimatedWait": "weeks of waiting",
         "free": "free during alpha"
       }
+    },
+    "sharedGames": {
+      "metadata": {
+        "title": "Community catalog — MeepleAI",
+        "description": "Explore games shared by the community: toolkits, AI agents and knowledge bases crafted for every title."
+      },
+      "hero": {
+        "badge": "Community catalog",
+        "headingLead": "Discover ",
+        "headingHighlight": "shared games",
+        "headingTail": " from the community",
+        "subtitle": "Toolkits, AI agents and knowledge bases for every game. Filter by genre, meet top contributors and find inspiration."
+      },
+      "filters": {
+        "searchPlaceholder": "Search a game…",
+        "searchAriaLabel": "Search games in the catalog",
+        "clearSearchAriaLabel": "Clear the search",
+        "genreAriaLabel": "Filter by genre",
+        "sortAriaLabel": "Sort results",
+        "resultCounter": "{shown, plural, =1 {1 result} other {# results}} of {total}",
+        "totalCounter": "{total, plural, =1 {1 game in the catalog} other {# games in the catalog}}"
+      },
+      "chips": {
+        "withToolkit": "With toolkit",
+        "withAgent": "With agent",
+        "topRated": "Top rated",
+        "new": "New"
+      },
+      "sort": {
+        "rating": "Top rated",
+        "contrib": "Most contributed",
+        "new": "Newest",
+        "title": "Title A→Z"
+      },
+      "genres": {
+        "all": "All genres",
+        "strategy": "Strategy",
+        "family": "Family",
+        "party": "Party",
+        "cooperative": "Cooperative",
+        "thematic": "Thematic",
+        "wargame": "Wargame"
+      },
+      "card": {
+        "ratingAriaLabel": "Rating",
+        "toolkitLabel": "tk",
+        "agentLabel": "ag",
+        "newWeekAriaLabel": "{count, plural, =1 {1 new this week} other {# new this week}}"
+      },
+      "sidebar": {
+        "title": "Top contributors",
+        "emptyTitle": "No contributors yet",
+        "toolkitsLabel": "Toolkits",
+        "agentsLabel": "Agents",
+        "statsHeading": "Community stats",
+        "meta": "{sessions, plural, =1 {1 session} other {# sessions}} · {wins, plural, =1 {1 win} other {# wins}}",
+        "rankAriaLabel": "Rank {rank}"
+      },
+      "states": {
+        "emptySearch": {
+          "title": "No games found",
+          "description": "We couldn't find any games matching your search. Try different keywords or remove some filters.",
+          "resetLabel": "Clear filters"
+        },
+        "filteredEmpty": {
+          "title": "No results with these filters",
+          "description": "Try removing a filter to widen the search.",
+          "resetLabel": "Clear filters"
+        },
+        "error": {
+          "title": "Loading error",
+          "description": "We couldn't load the catalog. Please try again in a moment.",
+          "retryLabel": "Retry"
+        }
+      }
     }
   },
   "privateGames": {

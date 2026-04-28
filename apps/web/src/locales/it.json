@@ -1277,6 +1277,81 @@
         "free": "gratis durante l'alpha"
       }
     },
+    "sharedGames": {
+      "metadata": {
+        "title": "Catalogo community — MeepleAI",
+        "description": "Esplora i giochi condivisi dalla community: toolkit, agenti AI e knowledge base creati per ogni titolo."
+      },
+      "hero": {
+        "badge": "Catalogo community",
+        "headingLead": "Scopri i ",
+        "headingHighlight": "giochi condivisi",
+        "headingTail": " dalla community",
+        "subtitle": "Toolkit, agenti AI e knowledge base per ogni gioco. Filtra per genere, scopri i top contributor e trova ispirazione."
+      },
+      "filters": {
+        "searchPlaceholder": "Cerca un gioco…",
+        "searchAriaLabel": "Cerca giochi nel catalogo",
+        "clearSearchAriaLabel": "Cancella la ricerca",
+        "genreAriaLabel": "Filtra per genere",
+        "sortAriaLabel": "Ordina i risultati",
+        "resultCounter": "{shown, plural, =1 {1 risultato} other {# risultati}} su {total}",
+        "totalCounter": "{total, plural, =1 {1 gioco nel catalogo} other {# giochi nel catalogo}}"
+      },
+      "chips": {
+        "withToolkit": "Con toolkit",
+        "withAgent": "Con agente",
+        "topRated": "Top rated",
+        "new": "Nuovi"
+      },
+      "sort": {
+        "rating": "Più votati",
+        "contrib": "Più contribuiti",
+        "new": "Più recenti",
+        "title": "Titolo A→Z"
+      },
+      "genres": {
+        "all": "Tutti i generi",
+        "strategy": "Strategia",
+        "family": "Famiglia",
+        "party": "Party",
+        "cooperative": "Cooperativi",
+        "thematic": "Thematic",
+        "wargame": "Wargame"
+      },
+      "card": {
+        "ratingAriaLabel": "Voto",
+        "toolkitLabel": "tk",
+        "agentLabel": "ag",
+        "newWeekAriaLabel": "{count, plural, =1 {1 nuovo questa settimana} other {# nuovi questa settimana}}"
+      },
+      "sidebar": {
+        "title": "Top contributor",
+        "emptyTitle": "Nessun contributor",
+        "toolkitsLabel": "Toolkit",
+        "agentsLabel": "Agenti",
+        "statsHeading": "Statistiche community",
+        "meta": "{sessions, plural, =1 {1 sessione} other {# sessioni}} · {wins, plural, =1 {1 vittoria} other {# vittorie}}",
+        "rankAriaLabel": "Posizione {rank}"
+      },
+      "states": {
+        "emptySearch": {
+          "title": "Nessun gioco trovato",
+          "description": "Non abbiamo trovato giochi che corrispondono alla tua ricerca. Prova a modificare i termini o a rimuovere i filtri.",
+          "resetLabel": "Cancella filtri"
+        },
+        "filteredEmpty": {
+          "title": "Nessun risultato con questi filtri",
+          "description": "Prova a rimuovere qualche filtro per allargare la ricerca.",
+          "resetLabel": "Cancella filtri"
+        },
+        "error": {
+          "title": "Errore di caricamento",
+          "description": "Non siamo riusciti a caricare il catalogo. Riprova fra un momento.",
+          "retryLabel": "Riprova"
+        }
+      }
+    },
     "errors": {
       "notFound": {
         "eyebrow": "404",

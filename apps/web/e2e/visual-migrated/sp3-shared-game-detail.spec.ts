@@ -32,6 +32,31 @@ import { VISUAL_TEST_FIXTURE_ID } from '../../src/lib/shared-games/visual-test-f
 
 const SLUG = 'sp3-shared-game-detail';
 
+/**
+ * Seed cookie-consent localStorage entry BEFORE the page loads so the
+ * GDPR banner (`CookieConsentBanner`) never mounts. Mirror of the
+ * helper in `e2e/v2-states/shared-game-detail.spec.ts` — the banner is
+ * a known visual-flake source on mobile fullPage screenshots.
+ */
+async function seedCookieConsent(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem(
+        'meepleai-cookie-consent',
+        JSON.stringify({
+          version: '1.0',
+          essential: true,
+          analytics: false,
+          functional: false,
+          timestamp: '2026-01-01T00:00:00.000Z',
+        })
+      );
+    } catch {
+      // localStorage unavailable — banner may render, accept the risk.
+    }
+  });
+}
+
 async function waitForDetailReady(page: Page): Promise<void> {
   await page.waitForSelector('[data-testid="shared-game-detail-page"]', { timeout: 30_000 });
 
@@ -53,6 +78,7 @@ test.describe('V2 Visual Migrated — /shared-games/[id] matches mockup baseline
   test.describe.configure({ retries: 0 });
 
   test('Shared game detail default tab matches sp3-shared-game-detail mockup', async ({ page }) => {
+    await seedCookieConsent(page);
     await page.goto(`/shared-games/${VISUAL_TEST_FIXTURE_ID}`, { waitUntil: 'networkidle' });
     await waitForDetailReady(page);
 

@@ -23,6 +23,37 @@ import { test, expect, type Page } from '@playwright/test';
 
 import { VISUAL_TEST_FIXTURE_ID } from '../../src/lib/shared-games/visual-test-fixture';
 
+/**
+ * Seed cookie-consent localStorage entry BEFORE the page loads so the
+ * GDPR banner (`CookieConsentBanner`) never mounts. The banner is a
+ * known visual-flake source on mobile fullPage screenshots: its
+ * mount/animation can occur between Playwright's two consecutive
+ * stability captures, blowing the diff threshold even with
+ * `animations: 'disabled'`.
+ *
+ * Contract mirrors `apps/web/src/lib/cookie-consent.ts`:
+ *   key     = 'meepleai-cookie-consent'
+ *   version = '1.0'
+ */
+async function seedCookieConsent(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem(
+        'meepleai-cookie-consent',
+        JSON.stringify({
+          version: '1.0',
+          essential: true,
+          analytics: false,
+          functional: false,
+          timestamp: '2026-01-01T00:00:00.000Z',
+        })
+      );
+    } catch {
+      // localStorage unavailable — banner may render, accept the risk.
+    }
+  });
+}
+
 async function waitForDetailReady(page: Page): Promise<void> {
   await page.waitForSelector('[data-testid="shared-game-detail-page"]', { timeout: 30_000 });
 
@@ -44,6 +75,7 @@ test.describe('Shared game detail — state coverage', () => {
   test.describe.configure({ retries: 0 });
 
   test('default state', async ({ page }) => {
+    await seedCookieConsent(page);
     await page.goto(`/shared-games/${VISUAL_TEST_FIXTURE_ID}`, { waitUntil: 'networkidle' });
     await waitForDetailReady(page);
     await expect(page).toHaveScreenshot('shared-game-detail-default.png', {
@@ -54,6 +86,7 @@ test.describe('Shared game detail — state coverage', () => {
   });
 
   test('loading state', async ({ page }) => {
+    await seedCookieConsent(page);
     await page.goto(`/shared-games/${VISUAL_TEST_FIXTURE_ID}?state=loading`, {
       waitUntil: 'networkidle',
     });
@@ -67,6 +100,7 @@ test.describe('Shared game detail — state coverage', () => {
   });
 
   test('error state', async ({ page }) => {
+    await seedCookieConsent(page);
     await page.goto(`/shared-games/${VISUAL_TEST_FIXTURE_ID}?state=error`, {
       waitUntil: 'networkidle',
     });
@@ -79,6 +113,7 @@ test.describe('Shared game detail — state coverage', () => {
   });
 
   test('empty-tab state (no toolkits/agents/kbs)', async ({ page }) => {
+    await seedCookieConsent(page);
     await page.goto(`/shared-games/${VISUAL_TEST_FIXTURE_ID}?state=empty-tab`, {
       waitUntil: 'networkidle',
     });

@@ -251,18 +251,18 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             if (query.HasAgent.Value)
             {
                 dbQuery = dbQuery.Where(g => _context.AgentDefinitions.Any(a =>
-                    a.GameId.HasValue &&
+                    EF.Property<Guid?>(a, "_gameId") != null &&
                     _context.Games.Any(game =>
-                        game.Id == a.GameId &&
+                        game.Id == EF.Property<Guid?>(a, "_gameId") &&
                         game.SharedGameId == g.Id &&
                         game.ApprovalStatus == ApprovedStatus)));
             }
             else
             {
                 dbQuery = dbQuery.Where(g => !_context.AgentDefinitions.Any(a =>
-                    a.GameId.HasValue &&
+                    EF.Property<Guid?>(a, "_gameId") != null &&
                     _context.Games.Any(game =>
-                        game.Id == a.GameId &&
+                        game.Id == EF.Property<Guid?>(a, "_gameId") &&
                         game.SharedGameId == g.Id &&
                         game.ApprovalStatus == ApprovedStatus)));
             }
@@ -295,10 +295,10 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                             game.SharedGameId == g.Id &&
                             game.ApprovalStatus == ApprovedStatus)) +
                      ctxAgents.Count(a =>
-                        a.GameId.HasValue &&
+                        EF.Property<Guid?>(a, "_gameId") != null &&
                         a.CreatedAt >= newCutoff &&
                         ctxGames.Any(game =>
-                            game.Id == a.GameId &&
+                            game.Id == EF.Property<Guid?>(a, "_gameId") &&
                             game.SharedGameId == g.Id &&
                             game.ApprovalStatus == ApprovedStatus)) +
                      ctxVectors.Count(vd =>
@@ -317,10 +317,10 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                             game.SharedGameId == g.Id &&
                             game.ApprovalStatus == ApprovedStatus)) +
                      ctxAgents.Count(a =>
-                        a.GameId.HasValue &&
+                        EF.Property<Guid?>(a, "_gameId") != null &&
                         a.CreatedAt >= newCutoff &&
                         ctxGames.Any(game =>
-                            game.Id == a.GameId &&
+                            game.Id == EF.Property<Guid?>(a, "_gameId") &&
                             game.SharedGameId == g.Id &&
                             game.ApprovalStatus == ApprovedStatus)) +
                      ctxVectors.Count(vd =>
@@ -352,9 +352,9 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                     game.ApprovalStatus == ApprovedStatus)),
             // AgentsCount: AgentDefinitions linked to any approved Game of this SharedGame.
             AgentsCount = ctxAgents.Count(a =>
-                a.GameId.HasValue &&
+                EF.Property<Guid?>(a, "_gameId") != null &&
                 ctxGames.Any(game =>
-                    game.Id == a.GameId &&
+                    game.Id == EF.Property<Guid?>(a, "_gameId") &&
                     game.SharedGameId == g.Id &&
                     game.ApprovalStatus == ApprovedStatus)),
             // KbsCount: VectorDocuments have a direct SharedGameId FK (Issue #5185 history),
@@ -373,10 +373,10 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                         game.SharedGameId == g.Id &&
                         game.ApprovalStatus == ApprovedStatus)) +
                 ctxAgents.Count(a =>
-                    a.GameId.HasValue &&
+                    EF.Property<Guid?>(a, "_gameId") != null &&
                     a.CreatedAt >= newCutoff &&
                     ctxGames.Any(game =>
-                        game.Id == a.GameId &&
+                        game.Id == EF.Property<Guid?>(a, "_gameId") &&
                         game.SharedGameId == g.Id &&
                         game.ApprovalStatus == ApprovedStatus)) +
                 ctxVectors.Count(vd =>

@@ -89,6 +89,12 @@ internal sealed class VectorDocumentIndexedForKbFlagHandler
         // event that each instance subscribes to for L1 cleanup.
         await _cache.RemoveByTagAsync("search-games", cancellationToken).ConfigureAwait(false);
 
+        // Issue #603 (Wave A.4): also evict the per-game detail cache so the
+        // next /shared-games/{id} read sees the new HasKnowledgeBase flag and
+        // refreshed KbsCount/Kbs preview list.
+        await _cache.RemoveByTagAsync($"shared-game:{sharedGameId.Value}", cancellationToken)
+            .ConfigureAwait(false);
+
         _logger.LogInformation(
             "Set HasKnowledgeBase=true for SharedGame {SharedGameId} triggered by VectorDocument {DocumentId}",
             sharedGameId.Value,

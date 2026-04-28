@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Application.EventHandlers;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -35,26 +36,37 @@ public sealed class AgentDefinitionChangedForCatalogAggregatesHandlerTests
         return services.BuildServiceProvider().GetRequiredService<HybridCache>();
     }
 
-    private AgentDefinitionChangedForCatalogAggregatesHandler CreateHandler(HybridCache cache) =>
-        new(cache, _loggerMock.Object);
+    private AgentDefinitionChangedForCatalogAggregatesHandler CreateHandler(
+        Api.Infrastructure.MeepleAiDbContext db,
+        HybridCache cache) => new(db, cache, _loggerMock.Object);
+
+    [Fact]
+    public void Constructor_WithNullDbContext_Throws()
+    {
+        var act = () => new AgentDefinitionChangedForCatalogAggregatesHandler(null!, CreateHybridCache(), _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
+    }
 
     [Fact]
     public void Constructor_WithNullCache_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new AgentDefinitionChangedForCatalogAggregatesHandler(null!, _loggerMock.Object));
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var act = () => new AgentDefinitionChangedForCatalogAggregatesHandler(db, null!, _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new AgentDefinitionChangedForCatalogAggregatesHandler(CreateHybridCache(), null!));
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var act = () => new AgentDefinitionChangedForCatalogAggregatesHandler(db, CreateHybridCache(), null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public async Task Handle_AgentDefinitionCreatedEvent_InvalidatesSearchGamesTag()
     {
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         var cache = CreateHybridCache();
 
         // Pre-populate cache entry tagged "search-games" so we can verify eviction.
@@ -69,7 +81,7 @@ public sealed class AgentDefinitionChangedForCatalogAggregatesHandlerTests
             agentDefinitionId: Guid.NewGuid(),
             name: "Rules Agent");
 
-        var act = async () => await CreateHandler(cache).Handle(notification, CancellationToken.None);
+        var act = async () => await CreateHandler(db, cache).Handle(notification, CancellationToken.None);
 
         await act.Should().NotThrowAsync();
 
@@ -89,36 +101,39 @@ public sealed class AgentDefinitionChangedForCatalogAggregatesHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AgentDefinitionUpdatedEvent_InvalidatesSearchGamesTag()
+    public async Task Handle_AgentDefinitionUpdatedEvent_DoesNotThrow()
     {
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         var cache = CreateHybridCache();
         var notification = new AgentDefinitionUpdatedEvent(
             agentDefinitionId: Guid.NewGuid(),
             changeDescription: "Prompt updated");
 
-        var act = async () => await CreateHandler(cache).Handle(notification, CancellationToken.None);
+        var act = async () => await CreateHandler(db, cache).Handle(notification, CancellationToken.None);
 
         await act.Should().NotThrowAsync();
     }
 
     [Fact]
-    public async Task Handle_AgentDefinitionActivatedEvent_InvalidatesSearchGamesTag()
+    public async Task Handle_AgentDefinitionActivatedEvent_DoesNotThrow()
     {
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         var cache = CreateHybridCache();
         var notification = new AgentDefinitionActivatedEvent(agentDefinitionId: Guid.NewGuid());
 
-        var act = async () => await CreateHandler(cache).Handle(notification, CancellationToken.None);
+        var act = async () => await CreateHandler(db, cache).Handle(notification, CancellationToken.None);
 
         await act.Should().NotThrowAsync();
     }
 
     [Fact]
-    public async Task Handle_AgentDefinitionDeactivatedEvent_InvalidatesSearchGamesTag()
+    public async Task Handle_AgentDefinitionDeactivatedEvent_DoesNotThrow()
     {
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         var cache = CreateHybridCache();
         var notification = new AgentDefinitionDeactivatedEvent(agentDefinitionId: Guid.NewGuid());
 
-        var act = async () => await CreateHandler(cache).Handle(notification, CancellationToken.None);
+        var act = async () => await CreateHandler(db, cache).Handle(notification, CancellationToken.None);
 
         await act.Should().NotThrowAsync();
     }
@@ -126,28 +141,32 @@ public sealed class AgentDefinitionChangedForCatalogAggregatesHandlerTests
     [Fact]
     public async Task Handle_NullAgentDefinitionCreatedEvent_Throws()
     {
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            CreateHandler(CreateHybridCache()).Handle((AgentDefinitionCreatedEvent)null!, CancellationToken.None));
+            CreateHandler(db, CreateHybridCache()).Handle((AgentDefinitionCreatedEvent)null!, CancellationToken.None));
     }
 
     [Fact]
     public async Task Handle_NullAgentDefinitionUpdatedEvent_Throws()
     {
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            CreateHandler(CreateHybridCache()).Handle((AgentDefinitionUpdatedEvent)null!, CancellationToken.None));
+            CreateHandler(db, CreateHybridCache()).Handle((AgentDefinitionUpdatedEvent)null!, CancellationToken.None));
     }
 
     [Fact]
     public async Task Handle_NullAgentDefinitionActivatedEvent_Throws()
     {
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            CreateHandler(CreateHybridCache()).Handle((AgentDefinitionActivatedEvent)null!, CancellationToken.None));
+            CreateHandler(db, CreateHybridCache()).Handle((AgentDefinitionActivatedEvent)null!, CancellationToken.None));
     }
 
     [Fact]
     public async Task Handle_NullAgentDefinitionDeactivatedEvent_Throws()
     {
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            CreateHandler(CreateHybridCache()).Handle((AgentDefinitionDeactivatedEvent)null!, CancellationToken.None));
+            CreateHandler(db, CreateHybridCache()).Handle((AgentDefinitionDeactivatedEvent)null!, CancellationToken.None));
     }
 }

@@ -5,7 +5,10 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Query to perform vector/hybrid search.
-/// Issue #2051: Supports document filtering via DocumentIds
+/// Issue #2051: Supports document filtering via DocumentIds.
+/// Issue #563: Optional <see cref="QueryVector"/> lets callers pass a pre-computed
+/// embedding to skip the duplicate embedding call inside <c>SearchQueryHandler</c>.
+/// When null, the handler computes the embedding itself (legacy/default path).
 /// </summary>
 internal record SearchQuery(
     Guid GameId,
@@ -16,5 +19,9 @@ internal record SearchQuery(
     string Language = "en",
     IReadOnlyList<Guid>? DocumentIds = null, // Issue #2051: Filter by document IDs (null = all)
     Guid? UserId = null,
-    string? UserRole = null
+    string? UserRole = null,
+    // Issue #563: Pre-computed query embedding to avoid duplicate generation.
+    // Caller is responsible for ensuring the vector matches Query + Language and was produced
+    // by the same embedding model the search handler would use. Null = handler computes its own.
+    IReadOnlyList<float>? QueryVector = null
 ) : IQuery<List<SearchResultDto>>;

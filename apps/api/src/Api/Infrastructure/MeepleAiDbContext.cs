@@ -218,6 +218,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameNightEventEntity> GameNightEvents => Set<GameNightEventEntity>(); // ISSUE-42: Game Night Event
     public DbSet<GameNightRsvpEntity> GameNightRsvps => Set<GameNightRsvpEntity>(); // ISSUE-42: Game Night RSVP
     public DbSet<GameNightSessionEntity> GameNightSessions => Set<GameNightSessionEntity>(); // Game Night Sessions
+    public DbSet<GameNightInvitationEntity> GameNightInvitations => Set<GameNightInvitationEntity>(); // ISSUE-607: Token-based public RSVP invitations
     public DbSet<RuleDisputeEntity> RuleDisputes => Set<RuleDisputeEntity>(); // Structured rule dispute persistence
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity> GameMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity>(); // AgentMemory: per-game memory
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity> GroupMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity>(); // AgentMemory: play group memory

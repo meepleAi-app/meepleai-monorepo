@@ -113,6 +113,41 @@ internal static class GameNightEndpoints
             .WithSummary("Respond to a game night invitation")
             .WithDescription("Submits an RSVP response (Accepted, Declined, Maybe) to a game night invitation.");
 
+        // ── Public Token-Based RSVP Endpoints (Issue #607) ──────────────────
+
+        gameNights.MapGet("/invitations/{token}", HandleGetGameNightInvitationByToken)
+            .AllowAnonymous()
+            .Produces<PublicGameNightInvitationDto>(200)
+            .Produces(404)
+            .Produces(410)
+            .WithName("GetGameNightInvitationByToken")
+            .WithSummary("Get a game night invitation by token")
+            .WithDescription("Public endpoint to retrieve a game night invitation by its opaque token. Returns 410 Gone for terminal states (Expired, Cancelled).");
+
+        gameNights.MapPost("/invitations/{token}/respond", HandleRespondToGameNightInvitationByToken)
+            .AllowAnonymous()
+            .Produces<PublicGameNightInvitationDto>(200)
+            .Produces(400)
+            .Produces(404)
+            .Produces(409)
+            .Produces(410)
+            .WithName("RespondToGameNightInvitationByToken")
+            .WithSummary("Respond to a game night invitation by token")
+            .WithDescription("Public endpoint to submit an Accepted or Declined response. Optional auth: authenticated callers have their UserId attached. Idempotent on same-state; conflicts on switching across statuses.");
+
+        gameNights.MapPost("/{gameNightId:guid}/invitations", HandleCreateGameNightInvitationByEmail)
+            .RequireAuthenticatedUser()
+            .Produces<GameNightInvitationDto>(201)
+            .Produces(400)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .Produces(422)
+            .WithName("CreateGameNightInvitationByEmail")
+            .WithSummary("Create a token-addressable invitation by email")
+            .WithDescription("Organizer-only endpoint to issue an opaque-token invitation to a non-platform email. Returns 409 if a pending invitation for the same email already exists.");
+
         // ── Game Night Experience v2 Endpoints ──────────────────────────────
 
         gameNights.MapPost("/{id:guid}/sessions", HandleStartGameNightSession)
@@ -262,6 +297,53 @@ internal static class GameNightEndpoints
         return Results.NoContent();
     }
 
+    private static async Task<IResult> HandleCreateGameNightInvitationByEmail(
+        Guid gameNightId,
+        [FromBody] CreateInvitationByEmailRequest request,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+
+        var command = new CreateGameNightInvitationByEmailCommand(
+            GameNightId: gameNightId,
+            Email: request.Email,
+            OrganizerUserId: userId);
+
+        var dto = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.Created($"/api/v1/game-nights/{gameNightId}/invitations/{dto.Id}", dto);
+    }
+
+    private static async Task<IResult> HandleRespondToGameNightInvitationByToken(
+        string token,
+        [FromBody] RespondToInvitationByTokenRequest request,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        if (!Enum.TryParse<GameNightInvitationStatus>(request.Response, ignoreCase: true, out var status)
+            || (status != GameNightInvitationStatus.Accepted && status != GameNightInvitationStatus.Declined))
+        {
+            return Results.BadRequest(new { error = "Invalid response. Must be Accepted or Declined." });
+        }
+
+        var rawUserId = httpContext.User.GetUserId();
+        var responderUserId = rawUserId == Guid.Empty ? (Guid?)null : rawUserId;
+
+        var command = new RespondToGameNightInvitationByTokenCommand(
+            Token: token,
+            Response: status,
+            ResponderUserId: responderUserId);
+
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+
+        var updated = await mediator.Send(
+            new GetGameNightInvitationByTokenQuery(token), cancellationToken).ConfigureAwait(false);
+
+        return updated is null ? Results.NotFound() : Results.Ok(updated);
+    }
+
     private static async Task<IResult> HandleStartGameNightSession(
         Guid id,
         [FromBody] StartGameNightSessionRequest request,
@@ -360,6 +442,17 @@ internal static class GameNightEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleGetGameNightInvitationByToken(
+        string token,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new GetGameNightInvitationByTokenQuery(token), cancellationToken).ConfigureAwait(false);
+
+        return result is null ? Results.NotFound() : Results.Ok(result);
+    }
+
     #endregion
 
     #region Request Records
@@ -384,6 +477,10 @@ internal static class GameNightEndpoints
     private sealed record InviteToGameNightRequest(List<Guid> UserIds);
 
     private sealed record RespondToGameNightRequest(string Response);
+
+    // Public token-based RSVP request records (Issue #607)
+    private sealed record CreateInvitationByEmailRequest(string Email);
+    private sealed record RespondToInvitationByTokenRequest(string Response);
 
     // Game Night Experience v2 request records
     private sealed record StartGameNightSessionRequest(Guid GameId, string GameTitle);

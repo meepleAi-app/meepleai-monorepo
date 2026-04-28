@@ -686,6 +686,7 @@ v1Api.MapBggEndpoints(); // ISSUE-3120: BoardGameGeek integration
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapPrivateGameEndpoints();       // Private games (Issue #3663)
 v1Api.MapRuleSpecEndpoints();
+v1Api.MapGameNightEndpoints(); // Issue #46/#607: Game Night Event + public token-based RSVP (Wave A.5)
 
 // Document Processing
 v1Api.MapPdfEndpoints();
@@ -745,7 +746,6 @@ if (!isAlphaMode)
     v1Api.MapWhiteboardEndpoints(); // Issue #4971: Whiteboard base toolkit endpoints
     v1Api.MapSessionSnapshotEndpoints(); // Issue #4755: Session snapshot endpoints
     v1Api.MapPlaylistEndpoints(); // Issue #5582: Game Night Playlist endpoints
-    v1Api.MapGameNightEndpoints(); // Issue #46: Game Night Event endpoints
     v1Api.MapGameNightImprovvisataEndpoints(); // Game Night Improvvisata: E1-2 BGG import
     v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
     v1Api.MapVisionSnapshotEndpoints(); // Session Vision AI: board photo snapshots + game state extraction

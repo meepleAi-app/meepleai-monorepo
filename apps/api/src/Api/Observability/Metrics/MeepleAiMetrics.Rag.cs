@@ -70,6 +70,48 @@ internal static partial class MeepleAiMetrics
         unit: "fallbacks",
         description: "RAG retrieval fallback events by type");
 
+    /// <summary>
+    /// Stable identifiers for RAG retrieval fallback types.
+    /// Bounded set to prevent Prometheus label cardinality explosion.
+    /// </summary>
+    public static class RagFallbackTypes
+    {
+        public const string Reranker = "reranker";
+        public const string HybridSearch = "hybrid_search";
+        public const string SentenceWindow = "sentence_window";
+        public const string QueryExpansion = "query_expansion";
+        public const string GraphTraversal = "graph_traversal";
+        public const string Raptor = "raptor";
+        public const string Unknown = "unknown";
+    }
+
+    /// <summary>
+    /// Severity levels for RAG retrieval fallbacks.
+    /// graceful = system continues degraded but functional.
+    /// partial_loss = downstream context is incomplete or empty.
+    /// </summary>
+    public static class RagFallbackSeverity
+    {
+        public const string Graceful = "graceful";
+        public const string PartialLoss = "partial_loss";
+    }
+
+    /// <summary>
+    /// Records a RAG retrieval fallback event.
+    /// Tags: fallback_type (bounded set, see RagFallbackTypes), severity (RagFallbackSeverity).
+    /// </summary>
+    public static void RecordRetrievalFallback(
+        string fallbackType,
+        string severity = RagFallbackSeverity.Graceful)
+    {
+        var tags = new TagList
+        {
+            { "fallback_type", fallbackType },
+            { "severity", severity }
+        };
+        RagRetrievalFallbacks.Add(1, tags);
+    }
+
     public static readonly Counter<long> RagCragVerdicts = Meter.CreateCounter<long>(
         name: "meepleai.rag.crag.verdicts",
         unit: "evaluations",

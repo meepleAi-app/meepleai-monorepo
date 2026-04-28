@@ -23,6 +23,7 @@ import {
   type SharedGameDetailV2,
   type TopContributor,
 } from '@/lib/api/shared-games';
+import { tryLoadVisualTestFixture } from '@/lib/shared-games/visual-test-fixture';
 
 import { SharedGameDetailPageClient } from './page-client';
 
@@ -44,6 +45,17 @@ interface SsrInitialData {
 }
 
 async function loadInitialData(id: string): Promise<SsrInitialData> {
+  // Visual-regression bootstrap escape hatch (Wave A.4, Issue #603).
+  // Active only when the build was produced with
+  // `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1` (set by
+  // `.github/workflows/visual-regression-migrated.yml`). In production
+  // deploys the constant evaluates to `false` and this branch is
+  // dead-code-eliminated by the bundler.
+  const fixture = tryLoadVisualTestFixture(id);
+  if (fixture) {
+    return { detail: fixture.detail, contributors: fixture.contributors };
+  }
+
   let detail: SharedGameDetailV2 | null = null;
   let contributors: readonly TopContributor[] = [];
 
@@ -69,11 +81,16 @@ async function loadInitialData(id: string): Promise<SsrInitialData> {
 export async function generateMetadata({ params }: SharedGameDetailPageProps): Promise<Metadata> {
   const { id } = await params;
 
-  let detail: SharedGameDetailV2 | null = null;
-  try {
-    detail = await getSharedGameDetail(id, { next: { revalidate: 60 } });
-  } catch {
-    // Fall through: page will render notFound() if detail is null.
+  // Same fixture short-circuit as `loadInitialData` — keeps SEO metadata
+  // in sync during visual-regression bootstrap (and dead in production).
+  const fixture = tryLoadVisualTestFixture(id);
+  let detail: SharedGameDetailV2 | null = fixture?.detail ?? null;
+  if (!detail) {
+    try {
+      detail = await getSharedGameDetail(id, { next: { revalidate: 60 } });
+    } catch {
+      // Fall through: page will render notFound() if detail is null.
+    }
   }
 
   const baseTitle = detail?.title ?? 'Gioco condiviso';

@@ -12,29 +12,25 @@
  * Bootstrap baseline (one-time, post-migration):
  *   `gh workflow run 266963272 --ref feature/issue-603-shared-game-detail-fe-v2 \
  *     -f mode=bootstrap -f project_filter=both`
- *   Il runner Linux genera PNG canonical viewport reali (375×812 mobile,
- *   1440×900 desktop) e le carica come artifact.
+ *   Il workflow setta `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1` prima del
+ *   build, così il fixture statico (`VISUAL_TEST_FIXTURE_ID`) viene servito
+ *   da `loadInitialData()` senza richiedere il backend API.
  *
- * Strategia ID:
- *   - Fetch index `/api/v1/shared-games?pageSize=1` per ottenere primo ID
- *     seeded (stable cross-snapshot grazie a sort default).
- *   - Naviga a `/shared-games/{id}` con tab default "overview".
+ * Strategia ID (visual-test fixture, NOT a backend fetch):
+ *   - Importa `VISUAL_TEST_FIXTURE_ID` dal modulo
+ *     `@/lib/shared-games/visual-test-fixture`.
+ *   - Naviga a `/shared-games/<fixture>` con tab default "overview".
+ *   - In production deploy il fixture è dead code (constant-fold) — NON
+ *     espone alcun shape pubblico.
  *
  * Hybrid masking:
- *   Le zone marcate `data-dynamic` (rating live, contatori, contributors
- *   strip) sono mascherate per evitare flake.
+ *   Le zone marcate `data-dynamic` sono mascherate per evitare flake.
  */
-import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+import { VISUAL_TEST_FIXTURE_ID } from '../../src/lib/shared-games/visual-test-fixture';
 
 const SLUG = 'sp3-shared-game-detail';
-
-async function fetchFirstSharedGameId(request: APIRequestContext): Promise<string> {
-  const res = await request.get('/api/v1/shared-games?pageSize=1');
-  expect(res.ok()).toBeTruthy();
-  const body = (await res.json()) as { items: ReadonlyArray<{ id: string }> };
-  expect(body.items.length).toBeGreaterThan(0);
-  return body.items[0].id;
-}
 
 async function waitForDetailReady(page: Page): Promise<void> {
   await page.waitForSelector('[data-testid="shared-game-detail-page"]', { timeout: 30_000 });
@@ -56,12 +52,8 @@ async function waitForDetailReady(page: Page): Promise<void> {
 test.describe('V2 Visual Migrated — /shared-games/[id] matches mockup baseline', () => {
   test.describe.configure({ retries: 0 });
 
-  test('Shared game detail default tab matches sp3-shared-game-detail mockup', async ({
-    page,
-    request,
-  }) => {
-    const id = await fetchFirstSharedGameId(request);
-    await page.goto(`/shared-games/${id}`, { waitUntil: 'networkidle' });
+  test('Shared game detail default tab matches sp3-shared-game-detail mockup', async ({ page }) => {
+    await page.goto(`/shared-games/${VISUAL_TEST_FIXTURE_ID}`, { waitUntil: 'networkidle' });
     await waitForDetailReady(page);
 
     await expect(page).toHaveScreenshot(`${SLUG}.png`, {

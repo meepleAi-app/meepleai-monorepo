@@ -10,19 +10,18 @@
  * server-side via Next.js `notFound()`, so it lives in a separate
  * `not-found.tsx` and is out of scope for this client-state suite.
  *
+ * Test ID strategy:
+ *   - Imports `VISUAL_TEST_FIXTURE_ID` — the SSR fetch is short-circuited
+ *     by `loadInitialData()` so visual tests don't depend on a live
+ *     backend API. See `src/lib/shared-games/visual-test-fixture.ts`.
+ *
  * Snapshots written to `apps/web/e2e/v2-states/shared-game-detail.spec.ts-snapshots/`.
  * Run via CI bootstrap workflow (Linux x86-64 canonical baselines):
  *   `gh workflow run 266963272 --ref <branch> -f mode=bootstrap -f project_filter=both`
  */
-import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
-async function fetchFirstSharedGameId(request: APIRequestContext): Promise<string> {
-  const res = await request.get('/api/v1/shared-games?pageSize=1');
-  expect(res.ok()).toBeTruthy();
-  const body = (await res.json()) as { items: ReadonlyArray<{ id: string }> };
-  expect(body.items.length).toBeGreaterThan(0);
-  return body.items[0].id;
-}
+import { VISUAL_TEST_FIXTURE_ID } from '../../src/lib/shared-games/visual-test-fixture';
 
 async function waitForDetailReady(page: Page): Promise<void> {
   await page.waitForSelector('[data-testid="shared-game-detail-page"]', { timeout: 30_000 });
@@ -44,9 +43,8 @@ async function waitForDetailReady(page: Page): Promise<void> {
 test.describe('Shared game detail — state coverage', () => {
   test.describe.configure({ retries: 0 });
 
-  test('default state', async ({ page, request }) => {
-    const id = await fetchFirstSharedGameId(request);
-    await page.goto(`/shared-games/${id}`, { waitUntil: 'networkidle' });
+  test('default state', async ({ page }) => {
+    await page.goto(`/shared-games/${VISUAL_TEST_FIXTURE_ID}`, { waitUntil: 'networkidle' });
     await waitForDetailReady(page);
     await expect(page).toHaveScreenshot('shared-game-detail-default.png', {
       fullPage: true,
@@ -54,9 +52,10 @@ test.describe('Shared game detail — state coverage', () => {
     });
   });
 
-  test('loading state', async ({ page, request }) => {
-    const id = await fetchFirstSharedGameId(request);
-    await page.goto(`/shared-games/${id}?state=loading`, { waitUntil: 'networkidle' });
+  test('loading state', async ({ page }) => {
+    await page.goto(`/shared-games/${VISUAL_TEST_FIXTURE_ID}?state=loading`, {
+      waitUntil: 'networkidle',
+    });
     await waitForDetailReady(page);
     await expect(page).toHaveScreenshot('shared-game-detail-loading.png', {
       fullPage: true,
@@ -65,9 +64,10 @@ test.describe('Shared game detail — state coverage', () => {
     });
   });
 
-  test('error state', async ({ page, request }) => {
-    const id = await fetchFirstSharedGameId(request);
-    await page.goto(`/shared-games/${id}?state=error`, { waitUntil: 'networkidle' });
+  test('error state', async ({ page }) => {
+    await page.goto(`/shared-games/${VISUAL_TEST_FIXTURE_ID}?state=error`, {
+      waitUntil: 'networkidle',
+    });
     await waitForDetailReady(page);
     await expect(page).toHaveScreenshot('shared-game-detail-error.png', {
       fullPage: true,
@@ -75,9 +75,10 @@ test.describe('Shared game detail — state coverage', () => {
     });
   });
 
-  test('empty-tab state (no toolkits/agents/kbs)', async ({ page, request }) => {
-    const id = await fetchFirstSharedGameId(request);
-    await page.goto(`/shared-games/${id}?state=empty-tab`, { waitUntil: 'networkidle' });
+  test('empty-tab state (no toolkits/agents/kbs)', async ({ page }) => {
+    await page.goto(`/shared-games/${VISUAL_TEST_FIXTURE_ID}?state=empty-tab`, {
+      waitUntil: 'networkidle',
+    });
     await waitForDetailReady(page);
     // EmptyState renders by default in toolkits tab when override active.
     // Click toolkits tab to make the empty state visible (default tab is

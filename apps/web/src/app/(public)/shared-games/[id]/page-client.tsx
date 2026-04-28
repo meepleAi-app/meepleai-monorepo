@@ -62,6 +62,12 @@ function tabSerialize(value: TabKey): string | null {
 type DetailStateOverride = 'default' | 'loading' | 'error' | 'empty-tab';
 
 const IS_NON_PROD = process.env.NODE_ENV !== 'production';
+// Visual-regression CI sets this to '1' before `pnpm build` so the bootstrap
+// workflow (which runs against a prod build) can still drive the `?state=`
+// surface coverage. In real production deploys the env var is unset →
+// constant-fold removes both the override branch and the fixture short-circuit.
+const IS_VISUAL_TEST_BUILD = process.env.NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1';
+const STATE_OVERRIDE_ENABLED = IS_NON_PROD || IS_VISUAL_TEST_BUILD;
 const VALID_STATE_OVERRIDES: ReadonlySet<DetailStateOverride> = new Set([
   'default',
   'loading',
@@ -70,7 +76,7 @@ const VALID_STATE_OVERRIDES: ReadonlySet<DetailStateOverride> = new Set([
 ]);
 
 function parseStateOverride(raw: string | null): DetailStateOverride | undefined {
-  if (!IS_NON_PROD || !raw) return undefined;
+  if (!STATE_OVERRIDE_ENABLED || !raw) return undefined;
   return VALID_STATE_OVERRIDES.has(raw as DetailStateOverride)
     ? (raw as DetailStateOverride)
     : undefined;

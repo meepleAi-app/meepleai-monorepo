@@ -99,7 +99,13 @@ test.describe('Shared game detail — state coverage', () => {
     // Without this, mobile screenshots flake because the React commit that
     // renders the new tabpanel content can complete *after* aria-selected
     // flips, causing layout shift between consecutive raw stability captures.
-    await expect(page.locator('[data-slot="shared-game-detail-empty-state"]')).toBeVisible({
+    //
+    // Scope to `data-kind="no-toolkits"` (unique): when `?state=empty-tab` is
+    // active, all three tabpanels (toolkits/agents/kbs) render an EmptyState,
+    // so `[data-slot="shared-game-detail-empty-state"]` would match 3 elements
+    // and trigger Playwright strict-mode violation. The toolkits EmptyState is
+    // the only visible one (others are inside `hidden` tabpanels).
+    await expect(page.locator('[data-kind="no-toolkits"]')).toBeVisible({
       timeout: 5000,
     });
     // Quad-RAF settle: 2 frames to commit DOM updates, 2 more to paint and

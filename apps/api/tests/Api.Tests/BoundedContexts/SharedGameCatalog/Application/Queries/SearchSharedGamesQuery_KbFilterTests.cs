@@ -54,8 +54,9 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
     }
 
     /// <summary>
-    /// Empty IConfiguration — handler falls back to <c>DefaultTopRatedThreshold</c> (4.5m).
-    /// Tests that need a different threshold can override via in-memory collection.
+    /// Empty IConfiguration — handler falls back to <c>DefaultTopRatedThreshold</c> (4.0m
+    /// since Wave A.3b / Issue #596; previously 4.5m). Tests that need a different
+    /// threshold can override via in-memory collection.
     /// </summary>
     private static IConfiguration CreateConfiguration() => new ConfigurationBuilder().Build();
 

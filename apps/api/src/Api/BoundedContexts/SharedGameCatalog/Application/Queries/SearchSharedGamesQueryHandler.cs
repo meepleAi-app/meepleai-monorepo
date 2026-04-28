@@ -23,8 +23,11 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
     /// <summary>
     /// Default IsTopRated threshold when <c>SharedGameCatalog:TopRatedThreshold</c>
     /// is missing from configuration. Spec §9 decision 1 (Issue #593).
+    /// Adjusted from 4.5 → 4.0 in Wave A.3b (Issue #596) to match mockup
+    /// `sp3-shared-games.jsx:126` filter `(g.rating || 0) >= 8` (0..10 scale,
+    /// equivalent to ≥4.0 on the entity's 0..5 scale).
     /// </summary>
-    private const decimal DefaultTopRatedThreshold = 4.5m;
+    private const decimal DefaultTopRatedThreshold = 4.0m;
 
     /// <summary>
     /// Default rolling window (days) for <c>NewThisWeekCount</c> when

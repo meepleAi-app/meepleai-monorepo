@@ -1,120 +1,122 @@
 /**
- * Shared Game Detail Page
- * Issue #2746: Frontend - Contributor Display su SharedGame
- * Epic #2718: Game Sharing from User Library to Shared Catalog
+ * /shared-games/[id] — public detail page (V2, Wave A.4, Issue #603).
  *
- * Public page showing full details of a shared game from the community catalog.
- * Uses MeepleCard (hero, flippable) + MeepleInfoCard (readOnly) + ContributorsSection.
+ * Server component shell:
+ *   - ISR `revalidate = 60` (aligned with backend HybridCache TTL — Wave A.3a §3.6)
+ *   - Dynamic SEO metadata via `generateMetadata({ params })`
+ *   - SSR seed via 2-way `Promise.allSettled` (detail + global top contributors)
+ *   - 404 via `notFound()` when detail fetch fails (typically 404 from backend)
+ *
+ * Client orchestration delegated to `./page-client.tsx`.
+ *
+ * Mockup parity: `admin-mockups/design_files/sp3-shared-game-detail.jsx`
+ * Spec: `docs/superpowers/specs/2026-04-28-v2-migration-wave-a-4-shared-game-detail.md`
  */
 
-'use client';
+import { Suspense, type JSX } from 'react';
 
-import { use, useMemo } from 'react';
+import { notFound } from 'next/navigation';
 
-import { AlertCircle } from 'lucide-react';
+import {
+  getSharedGameDetail,
+  getTopContributors,
+  type SharedGameDetailV2,
+  type TopContributor,
+} from '@/lib/api/shared-games';
 
-import { GameRelationships } from '@/components/game-detail/GameRelationships';
-import { ContributorsSection } from '@/components/shared-games/ContributorsSection';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { MeepleInfoCard } from '@/components/ui/data-display/meeple-info-card';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { useSharedGame } from '@/hooks/queries';
+import { SharedGameDetailPageClient } from './page-client';
 
-interface SharedGamePageProps {
-  params: Promise<{
-    id: string;
-  }>;
+import type { Metadata } from 'next';
+
+export const revalidate = 60;
+
+interface SharedGameDetailRouteParams {
+  readonly id: string;
 }
 
-export default function SharedGamePage({ params }: SharedGamePageProps) {
-  const { id } = use(params);
-  const { data: game, isLoading, error } = useSharedGame(id);
+interface SharedGameDetailPageProps {
+  readonly params: Promise<SharedGameDetailRouteParams>;
+}
 
-  // Build metadata for MeepleCard
-  const metadata = useMemo(() => {
-    if (!game) return [];
-    const items: Array<{ label: string }> = [];
+interface SsrInitialData {
+  readonly detail: SharedGameDetailV2 | null;
+  readonly contributors: readonly TopContributor[];
+}
 
-    if (game.minPlayers && game.maxPlayers) {
-      const players =
-        game.minPlayers === game.maxPlayers
-          ? `${game.minPlayers}`
-          : `${game.minPlayers}-${game.maxPlayers}`;
-      items.push({ label: players });
+async function loadInitialData(id: string): Promise<SsrInitialData> {
+  let detail: SharedGameDetailV2 | null = null;
+  let contributors: readonly TopContributor[] = [];
+
+  try {
+    const [detailResult, contributorsResult] = await Promise.allSettled([
+      getSharedGameDetail(id, { next: { revalidate: 60 } }),
+      getTopContributors(8, { next: { revalidate: 60 } }),
+    ]);
+
+    if (detailResult.status === 'fulfilled') {
+      detail = detailResult.value;
     }
-
-    if (game.playingTimeMinutes) {
-      items.push({ label: `${game.playingTimeMinutes} min` });
+    if (contributorsResult.status === 'fulfilled') {
+      contributors = contributorsResult.value;
     }
-
-    if (game.complexityRating) {
-      items.push({ label: `${game.complexityRating.toFixed(1)}/5` });
-    }
-
-    return items;
-  }, [game]);
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-start lg:justify-center">
-          <Skeleton className="h-[560px] w-full max-w-[420px]" />
-          <Skeleton className="h-[560px] w-full max-w-[420px]" />
-        </div>
-      </div>
-    );
+  } catch {
+    // Defense in depth — Promise.allSettled doesn't reject. Fall through with defaults.
   }
 
-  // Error state
-  if (error || !game) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {error?.message || 'Failed to load game details. Please try again.'}
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
+  return { detail, contributors };
+}
+
+export async function generateMetadata({ params }: SharedGameDetailPageProps): Promise<Metadata> {
+  const { id } = await params;
+
+  let detail: SharedGameDetailV2 | null = null;
+  try {
+    detail = await getSharedGameDetail(id, { next: { revalidate: 60 } });
+  } catch {
+    // Fall through: page will render notFound() if detail is null.
+  }
+
+  const baseTitle = detail?.title ?? 'Gioco condiviso';
+  const description =
+    detail?.description && detail.description.length > 0
+      ? detail.description.slice(0, 200)
+      : 'Dettagli del gioco condiviso dalla community: toolkit, agenti AI e knowledge base.';
+
+  return {
+    title: `${baseTitle} — MeepleAI`,
+    description,
+    robots: { index: true, follow: true },
+    openGraph: {
+      title: `${baseTitle} — MeepleAI`,
+      description,
+      type: 'website',
+      images:
+        detail?.imageUrl && detail.imageUrl.length > 0 ? [{ url: detail.imageUrl }] : undefined,
+    },
+  };
+}
+
+export default async function SharedGameDetailPage({
+  params,
+}: SharedGameDetailPageProps): Promise<JSX.Element> {
+  const { id } = await params;
+  const { detail, contributors } = await loadInitialData(id);
+
+  if (!detail) {
+    notFound();
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Cards Section - MeepleCard (hero, flippable) + MeepleInfoCard */}
-      <section className="mb-8 flex flex-col items-center justify-center gap-6 lg:flex-row lg:items-start">
-        {/* Flippable Game Card */}
-        <MeepleCard
-          entity="game"
-          variant="hero"
-          title={game.title}
-          subtitle={
-            (game.publishers && game.publishers.length > 0 ? game.publishers[0].name : '') +
-            (game.yearPublished ? ` (${game.yearPublished})` : '')
-          }
-          imageUrl={game.imageUrl || undefined}
-          rating={game.averageRating ?? undefined}
-          ratingMax={10}
-          metadata={metadata}
-        />
+    <Suspense fallback={<SharedGameDetailFallback />}>
+      <SharedGameDetailPageClient id={id} detail={detail} contributors={contributors} />
+    </Suspense>
+  );
+}
 
-        {/* Info Card - KB & Social (readOnly for public page) */}
-        <div className="w-full max-w-[420px] flex-shrink-0 space-y-6">
-          <MeepleInfoCard gameId={id} gameTitle={game.title} readOnly />
-        </div>
-      </section>
-
-      {/* Game Relationships (returns null if none) */}
-      <div className="mx-auto max-w-4xl">
-        <GameRelationships gameId={id} gameName={game.title} />
-      </div>
-
-      {/* Contributors Section */}
-      <div className="mx-auto max-w-4xl">
-        <ContributorsSection gameId={id} />
-      </div>
-    </div>
+function SharedGameDetailFallback(): JSX.Element {
+  return (
+    <main aria-busy="true" aria-live="polite" className="min-h-screen bg-background">
+      <div className="mx-auto max-w-[1280px] px-4 py-12 sm:px-8" />
+    </main>
   );
 }

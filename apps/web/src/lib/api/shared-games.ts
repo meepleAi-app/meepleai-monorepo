@@ -84,6 +84,87 @@ export const GameCategoryV2Schema = z.object({
 
 export type GameCategoryV2 = z.infer<typeof GameCategoryV2Schema>;
 
+// ========== Detail (Wave A.4 — Issue #603) ==========
+
+/**
+ * Mirrors backend `PublishedToolkitPreviewDto` (Issue #603 §3.2).
+ * Simplified shape: spec's `version`/`downloadCount` deferred until domain model
+ * exposes them — frontend renders sensible fallbacks via i18n.
+ */
+export const PublishedToolkitPreviewSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+  ownerId: z.string().uuid(),
+  ownerName: z.string(),
+  lastUpdatedAt: z.string(),
+});
+
+export type PublishedToolkitPreview = z.infer<typeof PublishedToolkitPreviewSchema>;
+
+/**
+ * Mirrors backend `PublishedAgentPreviewDto`. `invocationCount` is the real
+ * popularity proxy from runtime telemetry; rating system not implemented yet.
+ */
+export const PublishedAgentPreviewSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+  invocationCount: z.number().int().nonnegative(),
+  lastUpdatedAt: z.string(),
+});
+
+export type PublishedAgentPreview = z.infer<typeof PublishedAgentPreviewSchema>;
+
+/**
+ * Mirrors backend `PublishedKbPreviewDto`. `totalChunks` is a coarse "size"
+ * indicator until PdfDocument metadata (filename/title/pages) is wired through
+ * to KB queries.
+ */
+export const PublishedKbPreviewSchema = z.object({
+  id: z.string().uuid(),
+  language: z.string(),
+  totalChunks: z.number().int().nonnegative(),
+  indexedAt: z.string(),
+});
+
+export type PublishedKbPreview = z.infer<typeof PublishedKbPreviewSchema>;
+
+/**
+ * Mirrors backend `SharedGameDetailDto` post-Wave A.4 extension.
+ * Nested toolkit/agent/kb arrays are nullable on the wire — schema normalises
+ * to empty arrays so consumers don't need to null-check.
+ */
+export const SharedGameDetailV2Schema = z.object({
+  id: z.string().uuid(),
+  bggId: z.number().int().nullable(),
+  title: z.string().min(1),
+  yearPublished: z.number().int(),
+  description: z.string(),
+  minPlayers: z.number().int().nonnegative(),
+  maxPlayers: z.number().int().nonnegative(),
+  playingTimeMinutes: z.number().int().nonnegative(),
+  minAge: z.number().int().nonnegative(),
+  complexityRating: z.number().nullable(),
+  averageRating: z.number().nullable(),
+  imageUrl: z.string().catch(''),
+  thumbnailUrl: z.string().catch(''),
+  status: z.string(),
+  createdAt: z.string(),
+  modifiedAt: z.string().nullable(),
+  // Wave A.4 extension fields:
+  toolkits: z.array(PublishedToolkitPreviewSchema).nullable().default([]),
+  agents: z.array(PublishedAgentPreviewSchema).nullable().default([]),
+  kbs: z.array(PublishedKbPreviewSchema).nullable().default([]),
+  toolkitsCount: z.number().int().nonnegative().default(0),
+  agentsCount: z.number().int().nonnegative().default(0),
+  kbsCount: z.number().int().nonnegative().default(0),
+  contributorsCount: z.number().int().nonnegative().default(0),
+  hasKnowledgeBase: z.boolean().default(false),
+  isTopRated: z.boolean().default(false),
+  isNew: z.boolean().default(false),
+});
+
+export type SharedGameDetailV2 = z.infer<typeof SharedGameDetailV2Schema>;
+
 // ========== Search args ==========
 
 export interface SearchSharedGamesArgs {
@@ -165,4 +246,22 @@ export async function getTopContributors(
 export async function getCategories(init?: RequestInit): Promise<readonly GameCategoryV2[]> {
   const url = `${getApiBase()}/api/v1/shared-games/categories`;
   return getJson(url, z.array(GameCategoryV2Schema), init);
+}
+
+/**
+ * Fetch detail of a single shared game.
+ *
+ * Wave A.4 (Issue #603). Public, unauthenticated endpoint. Backend
+ * exposes nested previews (toolkits/agents/kbs) eagerly to avoid
+ * N+1 client calls on the detail page.
+ *
+ * Throws on non-OK response — caller must handle 404 / 500 explicitly
+ * (typically via TanStack Query's `error` channel).
+ */
+export async function getSharedGameDetail(
+  id: string,
+  init?: RequestInit
+): Promise<SharedGameDetailV2> {
+  const url = `${getApiBase()}/api/v1/shared-games/${encodeURIComponent(id)}`;
+  return getJson(url, SharedGameDetailV2Schema, init);
 }

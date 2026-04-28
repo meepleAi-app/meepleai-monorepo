@@ -1352,6 +1352,91 @@
         }
       }
     },
+    "sharedGameDetail": {
+      "metadata": {
+        "titleSuffix": " — MeepleAI",
+        "descriptionFallback": "Dettagli del gioco condiviso dalla community: toolkit, agenti AI e knowledge base."
+      },
+      "hero": {
+        "entityLabel": "Gioco",
+        "ratingAriaLabel": "Voto",
+        "ratingOf": "su",
+        "metaPlayers": "giocatori",
+        "metaMinutes": "min",
+        "metaComplexity": "complessità",
+        "metaAuthor": "di",
+        "toolkitsLabel": "Toolkit",
+        "agentsLabel": "Agenti",
+        "kbsLabel": "Knowledge base"
+      },
+      "tabs": {
+        "tablistAriaLabel": "Sezioni del gioco",
+        "overview": "Panoramica",
+        "toolkits": "Toolkit",
+        "agents": "Agenti",
+        "knowledge": "Conoscenza",
+        "community": "Community"
+      },
+      "overview": {
+        "descriptionHeading": "Descrizione",
+        "noDescription": "Nessuna descrizione disponibile."
+      },
+      "toolkits": {
+        "sectionTitle": "Toolkit pubblicati",
+        "authorPrefix": "di",
+        "updatedPrefix": "aggiornato",
+        "previewLabel": "Anteprima",
+        "previewAriaLabel": "Anteprima del toolkit {name}",
+        "emptyTitle": "Nessun toolkit ancora",
+        "emptyDescription": "La community non ha ancora pubblicato toolkit per questo gioco. Sii il primo a contribuire!"
+      },
+      "agents": {
+        "sectionTitle": "Agenti AI disponibili",
+        "updatedPrefix": "aggiornato",
+        "invocationsLabel": "{count, plural, =1 {1 invocazione} other {# invocazioni}}",
+        "tryLabel": "Prova",
+        "tryAriaLabel": "Prova l'agente {name}",
+        "emptyTitle": "Nessun agente disponibile",
+        "emptyDescription": "Non ci sono ancora agenti AI configurati per questo gioco."
+      },
+      "knowledge": {
+        "sectionTitle": "Knowledge base",
+        "indexedPrefix": "indicizzato",
+        "chunksLabel": "{count, plural, =1 {1 sezione} other {# sezioni}}",
+        "openLabel": "Apri",
+        "openAriaLabel": "Apri il documento {title}",
+        "documentTitleFallback": "Documento",
+        "emptyTitle": "Nessuna knowledge base",
+        "emptyDescription": "Non sono ancora stati indicizzati documenti per questo gioco."
+      },
+      "community": {
+        "sectionTitle": "Community",
+        "contributorsTitle": "Contributor",
+        "playersLabel": "{count, plural, =1 {1 giocatore} other {# giocatori}}",
+        "overflowAriaLabel": "{count, plural, =1 {1 altro contributor} other {# altri contributor}}"
+      },
+      "stickyCta": {
+        "regionAriaLabel": "Accesso richiesto",
+        "mobileLabel": "Accedi per installare",
+        "desktopHint": "Per installare questi contenuti…",
+        "desktopCtaLabel": "Accedi"
+      },
+      "states": {
+        "loading": {
+          "ariaLabel": "Caricamento dettagli del gioco…"
+        },
+        "error": {
+          "title": "Errore di caricamento",
+          "description": "Non siamo riusciti a caricare il dettaglio del gioco. Riprova fra un momento.",
+          "retryLabel": "Riprova"
+        },
+        "notFound": {
+          "title": "Gioco non trovato",
+          "description": "Il gioco richiesto non esiste o non è più disponibile nel catalogo community.",
+          "backLabel": "Torna al catalogo"
+        }
+      }
+    },
     "errors": {
       "notFound": {
         "eyebrow": "404",

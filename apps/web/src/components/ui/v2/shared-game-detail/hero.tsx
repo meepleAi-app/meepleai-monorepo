@@ -195,11 +195,7 @@ export function Hero({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
         ) : (
-          <span
-            aria-hidden="true"
-            className={clsx(emojiSize, 'drop-shadow-md')}
-            style={{ filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.18))' }}
-          >
+          <span aria-hidden="true" className={clsx(emojiSize, 'drop-shadow-lg')}>
             {emoji}
           </span>
         )}

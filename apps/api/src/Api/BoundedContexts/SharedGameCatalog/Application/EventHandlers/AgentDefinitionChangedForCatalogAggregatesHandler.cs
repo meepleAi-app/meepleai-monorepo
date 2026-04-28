@@ -1,6 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
-using Api.Services;
 using MediatR;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.EventHandlers;
 
@@ -32,11 +32,11 @@ internal sealed class AgentDefinitionChangedForCatalogAggregatesHandler
 {
     private const string SearchGamesTag = "search-games";
 
-    private readonly IHybridCacheService _cache;
+    private readonly HybridCache _cache;
     private readonly ILogger<AgentDefinitionChangedForCatalogAggregatesHandler> _logger;
 
     public AgentDefinitionChangedForCatalogAggregatesHandler(
-        IHybridCacheService cache,
+        HybridCache cache,
         ILogger<AgentDefinitionChangedForCatalogAggregatesHandler> logger)
     {
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
@@ -69,10 +69,9 @@ internal sealed class AgentDefinitionChangedForCatalogAggregatesHandler
 
     private async Task InvalidateAsync(string eventName, Guid agentDefinitionId, CancellationToken ct)
     {
-        var removed = await _cache.RemoveByTagAsync(SearchGamesTag, ct).ConfigureAwait(false);
+        await _cache.RemoveByTagAsync(SearchGamesTag, ct).ConfigureAwait(false);
         _logger.LogInformation(
-            "Invalidated {Removed} search-games cache entries after {Event} ({AgentDefinitionId})",
-            removed,
+            "Invalidated search-games cache entries after {Event} ({AgentDefinitionId})",
             eventName,
             agentDefinitionId);
     }

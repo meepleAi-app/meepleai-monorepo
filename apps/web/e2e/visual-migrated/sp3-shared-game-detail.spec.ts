@@ -58,6 +58,7 @@ test.describe('V2 Visual Migrated — /shared-games/[id] matches mockup baseline
 
     await expect(page).toHaveScreenshot(`${SLUG}.png`, {
       fullPage: true,
+      animations: 'disabled',
       mask: [page.locator('[data-dynamic]')],
     });
   });

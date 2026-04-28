@@ -48,6 +48,7 @@ test.describe('Shared game detail — state coverage', () => {
     await waitForDetailReady(page);
     await expect(page).toHaveScreenshot('shared-game-detail-default.png', {
       fullPage: true,
+      animations: 'disabled',
       mask: [page.locator('[data-dynamic]')],
     });
   });
@@ -59,6 +60,7 @@ test.describe('Shared game detail — state coverage', () => {
     await waitForDetailReady(page);
     await expect(page).toHaveScreenshot('shared-game-detail-loading.png', {
       fullPage: true,
+      animations: 'disabled',
       // Skeleton pulse animations — mask to avoid flake.
       mask: [page.locator('[data-dynamic]'), page.locator('.animate-pulse')],
     });
@@ -71,6 +73,7 @@ test.describe('Shared game detail — state coverage', () => {
     await waitForDetailReady(page);
     await expect(page).toHaveScreenshot('shared-game-detail-error.png', {
       fullPage: true,
+      animations: 'disabled',
       mask: [page.locator('[data-dynamic]')],
     });
   });
@@ -88,7 +91,9 @@ test.describe('Shared game detail — state coverage', () => {
     await toolkitsTab.click();
     // Wait for activation contract before screenshot — avoids flake on mobile
     // where tab click can trigger scroll-into-view and aria-selected flip
-    // separately.
+    // separately. `animations: 'disabled'` below freezes the residual 200ms
+    // CSS transition on the tab `color/background-color`, which otherwise
+    // cycles pixels during Playwright's pre-mask stability checks.
     await expect(toolkitsTab).toHaveAttribute('aria-selected', 'true');
     await page.evaluate(
       () =>
@@ -98,6 +103,7 @@ test.describe('Shared game detail — state coverage', () => {
     );
     await expect(page).toHaveScreenshot('shared-game-detail-empty-tab.png', {
       fullPage: true,
+      animations: 'disabled',
       mask: [page.locator('[data-dynamic]')],
     });
   });

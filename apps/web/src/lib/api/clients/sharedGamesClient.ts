@@ -34,6 +34,7 @@ import {
   BggSearchResultSchema,
   BggDuplicateCheckResultSchema,
   RulebookAnalysisDtoSchema,
+  TopContributorsListSchema,
   type SharedGameDetail,
   type PagedSharedGames,
   type GameCategory,
@@ -61,6 +62,7 @@ import {
   type UpdateFromBggRequest,
   type BatchApprovalResult,
   type RulebookAnalysisDto,
+  type TopContributor,
 } from '../schemas/shared-games.schemas';
 
 // ========== Recently Processed Documents ==========
@@ -248,12 +250,34 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
       // S2 — filter for AI-ready games (matches backend hasKb query parameter)
       if (params.hasKnowledgeBase !== undefined)
         queryParams.set('hasKb', params.hasKnowledgeBase.toString());
+      // Wave A.3a chip filters
+      if (params.hasToolkit !== undefined)
+        queryParams.set('hasToolkit', params.hasToolkit.toString());
+      if (params.hasAgent !== undefined) queryParams.set('hasAgent', params.hasAgent.toString());
+      if (params.isTopRated !== undefined)
+        queryParams.set('isTopRated', params.isTopRated.toString());
+      if (params.isNew !== undefined) queryParams.set('isNew', params.isNew.toString());
 
       const queryString = queryParams.toString();
       const path = `/api/v1/shared-games${queryString ? `?${queryString}` : ''}`;
 
       const result = await httpClient.get(path, PagedSharedGamesSchema);
       return result ?? { items: [], total: 0, page: 1, pageSize: 20 };
+    },
+
+    /**
+     * Get top contributors for shared games (PUBLIC, Wave A.3a)
+     * GET /api/v1/shared-games/top-contributors?limit=N
+     *
+     * @param limit - Max number of contributors (default 5, range 1-20)
+     * @returns List of top contributors ranked by aggregate score
+     */
+    async getTopContributors(limit = 5): Promise<TopContributor[]> {
+      const result = await httpClient.get(
+        `/api/v1/shared-games/top-contributors?limit=${limit}`,
+        TopContributorsListSchema
+      );
+      return result ?? [];
     },
 
     /**

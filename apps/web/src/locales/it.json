@@ -1333,6 +1333,51 @@
     },
     "cookies": {
       "managePreferencesCta": "Gestisci preferenze"
+    },
+    "sharedGames": {
+      "metaTitle": "Catalogo giochi della community — MeepleAI",
+      "metaDescription": "Scopri i giochi con toolkit AI, agenti dedicati e i contributi più recenti dei membri della community MeepleAI.",
+      "header": {
+        "title": "Catalogo della community",
+        "subtitle": "Scopri i giochi con toolkit AI, agenti dedicati e i contributi più recenti dei membri della community MeepleAI."
+      },
+      "filters": {
+        "searchLabel": "Cerca un gioco",
+        "searchPlaceholder": "Cerca per titolo, designer, editore…",
+        "chipToolkit": "Toolkit",
+        "chipAgent": "Agenti",
+        "chipTopRated": "Top rated",
+        "chipNew": "Nuovi",
+        "genreLabel": "Genere",
+        "genreAll": "Tutti i generi",
+        "sortLabel": "Ordina",
+        "sortRating": "Valutazione",
+        "sortContrib": "Contributi",
+        "sortNew": "Più recenti",
+        "sortTitle": "Titolo (A→Z)"
+      },
+      "genres": {
+        "strategy": "Strategia",
+        "family": "Famiglia",
+        "party": "Party",
+        "thematic": "Tematici",
+        "wargame": "Wargame",
+        "abstract": "Astratti"
+      },
+      "grid": {
+        "emptySearchTitle": "Nessun gioco trovato",
+        "emptySearchDescription": "Prova con un altro titolo, designer o editore. Stiamo aggiungendo nuovi giochi ogni settimana.",
+        "filteredEmptyTitle": "Nessun risultato per i filtri attivi",
+        "filteredEmptyDescription": "Prova a togliere uno dei filtri o ad ampliare la ricerca per vedere più giochi.",
+        "filteredEmptyAction": "Cancella i filtri",
+        "errorTitle": "Errore di caricamento",
+        "errorDescription": "Non siamo riusciti a recuperare il catalogo. Verifica la connessione e riprova tra un istante.",
+        "errorAction": "Riprova"
+      },
+      "contributors": {
+        "title": "Top contributor",
+        "empty": "Nessun contributor da mostrare al momento."
+      }
     }
   }
 }

@@ -1226,6 +1226,51 @@
         "estimatedWait": "weeks of waiting",
         "free": "free during alpha"
       }
+    },
+    "sharedGames": {
+      "metaTitle": "Community Game Catalog — MeepleAI",
+      "metaDescription": "Discover games with AI toolkits, dedicated agents, and the latest contributions from the MeepleAI community.",
+      "header": {
+        "title": "Community catalog",
+        "subtitle": "Discover games with AI toolkits, dedicated agents, and the latest contributions from the MeepleAI community."
+      },
+      "filters": {
+        "searchLabel": "Search a game",
+        "searchPlaceholder": "Search by title, designer, publisher…",
+        "chipToolkit": "Toolkit",
+        "chipAgent": "Agents",
+        "chipTopRated": "Top rated",
+        "chipNew": "New",
+        "genreLabel": "Genre",
+        "genreAll": "All genres",
+        "sortLabel": "Sort",
+        "sortRating": "Rating",
+        "sortContrib": "Contributions",
+        "sortNew": "Most recent",
+        "sortTitle": "Title (A→Z)"
+      },
+      "genres": {
+        "strategy": "Strategy",
+        "family": "Family",
+        "party": "Party",
+        "thematic": "Thematic",
+        "wargame": "Wargame",
+        "abstract": "Abstract"
+      },
+      "grid": {
+        "emptySearchTitle": "No games found",
+        "emptySearchDescription": "Try a different title, designer, or publisher. We add new games every week.",
+        "filteredEmptyTitle": "No results for the active filters",
+        "filteredEmptyDescription": "Try removing one of the filters or broadening the search to see more games.",
+        "filteredEmptyAction": "Clear filters",
+        "errorTitle": "Loading error",
+        "errorDescription": "We couldn't fetch the catalog. Check your connection and try again in a moment.",
+        "errorAction": "Retry"
+      },
+      "contributors": {
+        "title": "Top contributors",
+        "empty": "No contributors to show right now."
+      }
     }
   },
   "privateGames": {

@@ -161,7 +161,10 @@ export type GamePublisher = z.infer<typeof GamePublisherSchema>;
 // ========== Shared Game DTOs ==========
 
 /**
- * Shared game basic DTO (list view)
+ * Shared game basic DTO (list view).
+ * Issue #593 (Wave A.3a): Extended with aggregate counts and flags for V2 /shared-games.
+ * All aggregate fields default to safe zero/false to preserve backwards compatibility
+ * with admin endpoints that don't populate them.
  */
 export const SharedGameSchema = z.object({
   id: z.string().uuid(),
@@ -182,9 +185,35 @@ export const SharedGameSchema = z.object({
   hasKnowledgeBase: z.boolean().default(false), // S2 — true when game has indexed KB (AI-ready)
   createdAt: z.string(), // Accept any datetime format from .NET serialization
   modifiedAt: z.string().nullable(),
+  // Wave A.3a aggregate fields (Issue #593) — populated by /shared-games public search
+  toolkitsCount: z.number().int().nonnegative().default(0),
+  agentsCount: z.number().int().nonnegative().default(0),
+  kbsCount: z.number().int().nonnegative().default(0),
+  newThisWeekCount: z.number().int().nonnegative().default(0),
+  contributorsCount: z.number().int().nonnegative().default(0),
+  isTopRated: z.boolean().default(false),
+  isNew: z.boolean().default(false),
 });
 
 export type SharedGame = z.infer<typeof SharedGameSchema>;
+
+/**
+ * Top global contributor DTO (Issue #593 Wave A.3a).
+ * Powers the public /shared-games sidebar widget.
+ * Score = TotalSessions + TotalWins * 2.
+ */
+export const TopContributorSchema = z.object({
+  userId: z.string().uuid(),
+  displayName: z.string(),
+  avatarUrl: z.string().nullable(),
+  totalSessions: z.number().int().nonnegative(),
+  totalWins: z.number().int().nonnegative(),
+  score: z.number().int().nonnegative(),
+});
+
+export type TopContributor = z.infer<typeof TopContributorSchema>;
+
+export const TopContributorsListSchema = z.array(TopContributorSchema);
 
 /**
  * Shared game detail DTO (single game view with full info)
@@ -424,6 +453,14 @@ export type AddDocumentRequest = z.infer<typeof AddDocumentRequestSchema>;
 // ========== Search Params ==========
 
 /**
+ * Sort options accepted by GET /shared-games (sortBy query param).
+ * Issue #593 (Wave A.3a): adds Contrib (ContributorsCount desc) and New
+ * (CreatedAt desc) on top of legacy Title/Rating/Year.
+ */
+export const SharedGamesSortBySchema = z.enum(['Title', 'Rating', 'Year', 'Contrib', 'New']);
+export type SharedGamesSortBy = z.infer<typeof SharedGamesSortBySchema>;
+
+/**
  * Search shared games query parameters
  */
 export const SearchSharedGamesParamsSchema = z.object({
@@ -436,10 +473,17 @@ export const SearchSharedGamesParamsSchema = z.object({
   status: GameStatusNumericSchema.optional(),
   page: z.number().int().positive().optional(),
   pageSize: z.number().int().positive().optional(),
+  // Permissive: legacy carousel callers pass backend column names (e.g. 'averageRating',
+  // 'modifiedAt'); V2 /shared-games components use SharedGamesSortBy enum values instead.
   sortBy: z.string().optional(),
   sortDescending: z.boolean().optional(),
   // S2 (library-to-game epic) — filter for AI-ready games
   hasKnowledgeBase: z.boolean().optional(),
+  // Wave A.3a (Issue #593) — chip filters for V2 /shared-games
+  hasToolkit: z.boolean().optional(),
+  hasAgent: z.boolean().optional(),
+  isTopRated: z.boolean().optional(),
+  isNew: z.boolean().optional(),
 });
 
 export type SearchSharedGamesParams = z.infer<typeof SearchSharedGamesParamsSchema>;

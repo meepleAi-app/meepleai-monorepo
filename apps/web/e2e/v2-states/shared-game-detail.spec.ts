@@ -83,8 +83,19 @@ test.describe('Shared game detail — state coverage', () => {
     // EmptyState renders by default in toolkits tab when override active.
     // Click toolkits tab to make the empty state visible (default tab is
     // overview which always renders description).
-    await page.locator('[role="tab"]').nth(1).click();
-    await page.waitForTimeout(150);
+    const toolkitsTab = page.locator('[role="tab"]').nth(1);
+    await toolkitsTab.scrollIntoViewIfNeeded();
+    await toolkitsTab.click();
+    // Wait for activation contract before screenshot — avoids flake on mobile
+    // where tab click can trigger scroll-into-view and aria-selected flip
+    // separately.
+    await expect(toolkitsTab).toHaveAttribute('aria-selected', 'true');
+    await page.evaluate(
+      () =>
+        new Promise<void>(resolve => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        })
+    );
     await expect(page).toHaveScreenshot('shared-game-detail-empty-tab.png', {
       fullPage: true,
       mask: [page.locator('[data-dynamic]')],

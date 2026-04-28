@@ -70,8 +70,14 @@ services:
   web:
     env_file: [./env/web.env.dev]
     ports: ["127.0.0.1:3000:3000"]
+    build:
+      args:
+        NEXT_PUBLIC_API_BASE: http://localhost:8080
+        NEXT_PUBLIC_ALPHA_MODE: "true"
+        NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED: "true"
     environment:
       API_BASE_URL: http://api:8080
+      NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED: "true"
 
   # ===========================================================================
   # AI Services (profile: ai) — ports only

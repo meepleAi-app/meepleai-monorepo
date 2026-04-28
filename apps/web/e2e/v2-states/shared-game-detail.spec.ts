@@ -95,10 +95,24 @@ test.describe('Shared game detail — state coverage', () => {
     // CSS transition on the tab `color/background-color`, which otherwise
     // cycles pixels during Playwright's pre-mask stability checks.
     await expect(toolkitsTab).toHaveAttribute('aria-selected', 'true');
+    // Wait for the tabpanel content (EmptyState) to actually mount + paint.
+    // Without this, mobile screenshots flake because the React commit that
+    // renders the new tabpanel content can complete *after* aria-selected
+    // flips, causing layout shift between consecutive raw stability captures.
+    await expect(page.locator('[data-slot="shared-game-detail-empty-state"]')).toBeVisible({
+      timeout: 5000,
+    });
+    // Quad-RAF settle: 2 frames to commit DOM updates, 2 more to paint and
+    // settle compositor. Single double-RAF was insufficient on mobile under
+    // CI virtualization where a render cycle can span 2-3 frames.
     await page.evaluate(
       () =>
         new Promise<void>(resolve => {
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() =>
+              requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+            )
+          );
         })
     );
     await expect(page).toHaveScreenshot('shared-game-detail-empty-tab.png', {

@@ -15,6 +15,8 @@
 
 import { useMemo, type JSX } from 'react';
 
+import { useSearchParams } from 'next/navigation';
+
 import {
   ContributorsSidebar,
   EmptyState,
@@ -56,6 +58,29 @@ const VALID_CHIP_KEYS: ReadonlySet<ChipKey> = new Set([
 ]);
 const VALID_SORT_KEYS: ReadonlySet<SortKey> = new Set(['rating', 'contrib', 'new', 'title']);
 
+/**
+ * NODE_ENV-guarded `?state=...` visual-test escape hatch.
+ *
+ * Constant-folded at production build time so the override branches
+ * are dead-code-eliminated from the prod bundle. Used by Playwright
+ * v2-states specs to force the 5 grid surfaces deterministically.
+ */
+const IS_NON_PROD = process.env.NODE_ENV !== 'production';
+const VALID_STATE_OVERRIDES: ReadonlySet<SharedGamesGridState> = new Set([
+  'default',
+  'loading',
+  'error',
+  'empty-search',
+  'filtered-empty',
+]);
+
+function parseStateOverride(raw: string | null): SharedGamesGridState | undefined {
+  if (!IS_NON_PROD || !raw) return undefined;
+  return VALID_STATE_OVERRIDES.has(raw as SharedGamesGridState)
+    ? (raw as SharedGamesGridState)
+    : undefined;
+}
+
 export interface SharedGamesPageClientProps {
   readonly initial: PagedSharedGamesV2 | null;
   readonly contributors: readonly TopContributor[];
@@ -92,6 +117,9 @@ export function SharedGamesPageClient({
   categories,
 }: SharedGamesPageClientProps): JSX.Element {
   const { t, formatMessage } = useTranslation();
+
+  const searchParams = useSearchParams();
+  const stateOverride = parseStateOverride(searchParams?.get('state') ?? null);
 
   // URL hash state — deep-link friendly, SSR-safe (defaults on first paint).
   const [query, setQuery] = useUrlHashState<string>('q', '');
@@ -193,7 +221,7 @@ export function SharedGamesPageClient({
 
   // --- Derive display state ---
 
-  const games = useMemo<readonly SharedGamesGridGame[]>(() => {
+  const allGames = useMemo<readonly SharedGamesGridGame[]>(() => {
     const items = data?.items ?? [];
     return items.map(g => ({
       id: g.id,
@@ -209,10 +237,14 @@ export function SharedGamesPageClient({
     }));
   }, [data]);
 
+  // When an override forces a non-`default` grid surface, suppress the cards
+  // so EmptyState/ErrorState/loading skeleton render unobstructed.
+  const games = stateOverride && stateOverride !== 'default' ? [] : allGames;
+
   const total = data?.total ?? games.length;
   const shown = games.length;
 
-  const gridState: SharedGamesGridState = (() => {
+  const computedGridState: SharedGamesGridState = (() => {
     if (isError) return 'error';
     if (isLoading && shown === 0) return 'loading';
     if (shown === 0 && debouncedQuery.length > 0) return 'empty-search';
@@ -220,6 +252,8 @@ export function SharedGamesPageClient({
     if (shown === 0) return 'empty-search';
     return 'default';
   })();
+
+  const gridState: SharedGamesGridState = stateOverride ?? computedGridState;
 
   const sidebarItems = useMemo<readonly ContributorsSidebarItem[]>(
     () =>

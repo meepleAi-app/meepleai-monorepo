@@ -88,10 +88,17 @@ jobs:
 
       # `visual-migrated-*` and `v2-states-*` projects navigate to Next.js prod (:3000),
       # so a production build IS required (unlike `visual-regression-mockups.yml`).
+      #
+      # `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1` activates the static fixture
+      # short-circuit in `loadInitialData()` for `/shared-games/[id]` (Wave A.4,
+      # Issue #603), so visual tests can render the detail surface without
+      # requiring a backend API in CI. In real production deploys the env var
+      # is unset and the fixture is dead-code-eliminated by the bundler.
       - name: Build Next.js (production)
         run: pnpm build
         env:
           NODE_ENV: production
+          NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED: '1'
 
       # ---------- VERIFY MODE (default for PRs) ----------
 

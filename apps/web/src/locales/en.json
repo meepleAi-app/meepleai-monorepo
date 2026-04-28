@@ -1301,6 +1301,91 @@
           "retryLabel": "Retry"
         }
       }
+    },
+    "sharedGameDetail": {
+      "metadata": {
+        "titleSuffix": " — MeepleAI",
+        "descriptionFallback": "Details of a community-shared game: toolkits, AI agents and knowledge bases."
+      },
+      "hero": {
+        "entityLabel": "Game",
+        "ratingAriaLabel": "Rating",
+        "ratingOf": "of",
+        "metaPlayers": "players",
+        "metaMinutes": "min",
+        "metaComplexity": "complexity",
+        "metaAuthor": "by",
+        "toolkitsLabel": "Toolkits",
+        "agentsLabel": "Agents",
+        "kbsLabel": "Knowledge bases"
+      },
+      "tabs": {
+        "tablistAriaLabel": "Game sections",
+        "overview": "Overview",
+        "toolkits": "Toolkits",
+        "agents": "Agents",
+        "knowledge": "Knowledge",
+        "community": "Community"
+      },
+      "overview": {
+        "descriptionHeading": "Description",
+        "noDescription": "No description available."
+      },
+      "toolkits": {
+        "sectionTitle": "Published toolkits",
+        "authorPrefix": "by",
+        "updatedPrefix": "updated",
+        "previewLabel": "Preview",
+        "previewAriaLabel": "Preview the {name} toolkit",
+        "emptyTitle": "No toolkits yet",
+        "emptyDescription": "The community hasn't published any toolkit for this game yet. Be the first to contribute!"
+      },
+      "agents": {
+        "sectionTitle": "Available AI agents",
+        "updatedPrefix": "updated",
+        "invocationsLabel": "{count, plural, =1 {1 invocation} other {# invocations}}",
+        "tryLabel": "Try",
+        "tryAriaLabel": "Try the {name} agent",
+        "emptyTitle": "No agents available",
+        "emptyDescription": "No AI agents have been configured for this game yet."
+      },
+      "knowledge": {
+        "sectionTitle": "Knowledge base",
+        "indexedPrefix": "indexed",
+        "chunksLabel": "{count, plural, =1 {1 chunk} other {# chunks}}",
+        "openLabel": "Open",
+        "openAriaLabel": "Open the {title} document",
+        "documentTitleFallback": "Document",
+        "emptyTitle": "No knowledge base",
+        "emptyDescription": "No documents have been indexed for this game yet."
+      },
+      "community": {
+        "sectionTitle": "Community",
+        "contributorsTitle": "Contributors",
+        "playersLabel": "{count, plural, =1 {1 player} other {# players}}",
+        "overflowAriaLabel": "{count, plural, =1 {1 other contributor} other {# other contributors}}"
+      },
+      "stickyCta": {
+        "regionAriaLabel": "Sign-in required",
+        "mobileLabel": "Sign in to install",
+        "desktopHint": "To install this content…",
+        "desktopCtaLabel": "Sign in"
+      },
+      "states": {
+        "loading": {
+          "ariaLabel": "Loading game details…"
+        },
+        "error": {
+          "title": "Loading error",
+          "description": "We couldn't load the game details. Please try again in a moment.",
+          "retryLabel": "Retry"
+        },
+        "notFound": {
+          "title": "Game not found",
+          "description": "The requested game does not exist or is no longer available in the community catalog.",
+          "backLabel": "Back to catalog"
+        }
+      }
     }
   },
   "privateGames": {

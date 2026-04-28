@@ -124,8 +124,53 @@ public sealed record GameMechanicSimpleDto(
     string Slug);
 
 /// <summary>
+/// Preview DTO for a published toolkit linked to a SharedGame via Game intermediate.
+/// Issue #603 (Wave A.4): nested in SharedGameDetailDto for /shared-games/[id] V2 mockup.
+/// Excludes default toolkits (Toolkit.IsDefault == true) per BR-02 Issue #5144.
+/// Shape mirrors what `Toolkit` aggregate exposes today; mockup fields without
+/// entity backing (Version, DownloadCount, rating) are deferred to future waves
+/// once the underlying domain model adopts them — frontend renders sensible
+/// defaults in the meantime (mirrors A.3a's ContributorsCount approximation).
+/// </summary>
+public sealed record PublishedToolkitPreviewDto(
+    Guid Id,
+    string Name,
+    Guid OwnerId,
+    string OwnerName,
+    DateTime LastUpdatedAt);
+
+/// <summary>
+/// Preview DTO for a published agent definition linked to a SharedGame via Game intermediate.
+/// Issue #603 (Wave A.4): nested in SharedGameDetailDto for /shared-games/[id] V2 mockup.
+/// `InvocationCount` is the real popularity proxy from `AgentDefinition.InvocationCount`
+/// (sourced from runtime telemetry). Owner/rating fields are deferred — `AgentDefinition`
+/// has no `CreatedBy` column today, and rating system isn't implemented.
+/// </summary>
+public sealed record PublishedAgentPreviewDto(
+    Guid Id,
+    string Name,
+    int InvocationCount,
+    DateTime LastUpdatedAt);
+
+/// <summary>
+/// Preview DTO for an indexed knowledge-base document linked directly to a SharedGame.
+/// Issue #603 (Wave A.4): nested in SharedGameDetailDto for /shared-games/[id] V2 mockup.
+/// VectorDocument has direct SharedGameId FK (Issue #5185), no Game intermediate join.
+/// `TotalChunks` is exposed as a coarse "size" indicator until PdfDocument metadata
+/// (filename/title/page count) is wired through to KB queries.
+/// </summary>
+public sealed record PublishedKbPreviewDto(
+    Guid Id,
+    string Language,
+    int TotalChunks,
+    DateTime IndexedAt);
+
+/// <summary>
 /// Data transfer object for detailed shared game information.
 /// Issue #2373 Phase 4: Extended with FAQs, Errata, Designers, Publishers, Categories, Mechanics.
+/// Issue #603 (Wave A.4): Extended with published toolkits/agents/KB previews + aggregate
+/// counts/flags for V2 /shared-games/[id] mockup. New fields are defaulted to preserve
+/// backwards compatibility with existing callers (admin endpoints, legacy consumers).
 /// </summary>
 public sealed record SharedGameDetailDto(
     Guid Id,
@@ -152,7 +197,18 @@ public sealed record SharedGameDetailDto(
     IReadOnlyList<GameDesignerDto> Designers,
     IReadOnlyList<GamePublisherDto> Publishers,
     IReadOnlyList<GameCategorySimpleDto> Categories,
-    IReadOnlyList<GameMechanicSimpleDto> Mechanics);
+    IReadOnlyList<GameMechanicSimpleDto> Mechanics,
+    // === A.4 extension (defaulted) ===
+    IReadOnlyList<PublishedToolkitPreviewDto>? Toolkits = null,
+    IReadOnlyList<PublishedAgentPreviewDto>? Agents = null,
+    IReadOnlyList<PublishedKbPreviewDto>? Kbs = null,
+    int ToolkitsCount = 0,
+    int AgentsCount = 0,
+    int KbsCount = 0,
+    int ContributorsCount = 0,
+    bool HasKnowledgeBase = false,
+    bool IsTopRated = false,
+    bool IsNew = false);
 
 /// <summary>
 /// Data transfer object for approval queue items.

@@ -11,7 +11,9 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExt
 /// <item><description>System prompt (IP policy): ~700 tokens, shared by every section.</description></item>
 /// <item><description>Section user prompt (schema + instructions): ~350 tokens/section.</description></item>
 /// <item><description>Retrieved context: supplied by caller via <see cref="AnalysisCostEstimateInput.TotalRetrievedPromptTokens"/>.</description></item>
-/// <item><description>Output budget: 800 tokens for structured sections, 1400 for FAQ (5-10 Q&amp;A pairs).</description></item>
+/// <item><description>Output budget: aligned to <c>MechanicAnalysisPipeline.SectionMaxTokens = 4000</c> so the
+/// pre-flight projection matches the runtime ceiling and admins do not see surprise mid-run aborts
+/// when sections legitimately use the full token budget on dense rulebooks (e.g. Dune: Imperium).</description></item>
 /// </list>
 /// The estimator purposely over-projects so that cost caps bite early rather than mid-run.
 /// </remarks>
@@ -19,8 +21,9 @@ internal sealed class AnalysisCostEstimator : IAnalysisCostEstimator
 {
     private const int SystemPromptTokens = 700;
     private const int SectionInstructionTokens = 350;
-    private const int DefaultSectionOutputTokens = 800;
-    private const int FaqOutputTokens = 1400;
+    // Aligned to MechanicAnalysisPipeline.SectionMaxTokens so estimator does not under-quote the runtime cap.
+    private const int DefaultSectionOutputTokens = 4000;
+    private const int FaqOutputTokens = 4000;
 
     public AnalysisCostEstimate Estimate(AnalysisCostEstimateInput input)
     {

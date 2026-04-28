@@ -1,6 +1,15 @@
 /**
  * SharedGameDetailModal Component (Issue #2373: Phase 4)
  *
+ * @deprecated Wave A.4 (Issue #603) — superseded by the dedicated
+ * `/shared-games/[id]` route at `apps/web/src/app/(public)/shared-games/[id]/page-client.tsx`.
+ * The new page provides a richer hero + 5-tab surface (overview, toolkits,
+ * agents, knowledge bases, community) with SSR seed, ISR `revalidate=60`,
+ * full WAI-ARIA tablist a11y, and shareable URLs. Prefer linking to the
+ * route instead of mounting this modal. This file is retained for the
+ * legacy admin/library entry points pending their own migration; do not
+ * use in new code.
+ *
  * Enhanced game detail modal with tabs for Rules, FAQ, and Errata.
  * Displays community-curated content from SharedGameCatalog.
  *
@@ -74,6 +83,10 @@ export interface SharedGameDetailModalProps {
 // Component
 // ============================================================================
 
+/**
+ * @deprecated Use the `/shared-games/[id]` route (Issue #603, Wave A.4).
+ * See file-level JSDoc for migration details.
+ */
 export function SharedGameDetailModal({
   gameId,
   open,

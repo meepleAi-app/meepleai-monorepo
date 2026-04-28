@@ -358,29 +358,44 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             // === RAPTOR: Multi-granularity retrieval ===
             if (activeEnhancements.HasFlag(RagEnhancement.RaptorRetrieval))
             {
-                var raptorChunks = await _textSearch.SearchRaptorSummariesAsync(
-                    gameId, userQuestion, topK: 3, ct).ConfigureAwait(false);
-
-                if (raptorChunks.Count > 0)
+                try
                 {
-                    foreach (var rc in raptorChunks)
+                    var raptorChunks = await _textSearch.SearchRaptorSummariesAsync(
+                        gameId, userQuestion, topK: 3, ct).ConfigureAwait(false);
+
+                    if (raptorChunks.Count > 0)
                     {
-                        filteredChunks.Add(new SearchResultItem
+                        foreach (var rc in raptorChunks)
                         {
-                            Score = rc.Rank * 1.1f, // Slight boost for RAPTOR summaries
-                            Text = rc.Content,
-                            PdfId = rc.PdfDocumentId.ToString(),
-                            Page = rc.PageNumber ?? 0,
-                            ChunkIndex = rc.ChunkIndex
-                        });
+                            filteredChunks.Add(new SearchResultItem
+                            {
+                                Score = rc.Rank * 1.1f, // Slight boost for RAPTOR summaries
+                                Text = rc.Content,
+                                PdfId = rc.PdfDocumentId.ToString(),
+                                Page = rc.PageNumber ?? 0,
+                                ChunkIndex = rc.ChunkIndex
+                            });
+                        }
+
+                        filteredChunks = filteredChunks
+                            .OrderByDescending(c => c.Score)
+                            .Take(profile.TopK + 2) // Allow slightly more chunks when RAPTOR active
+                            .ToList();
+
+                        _logger.LogInformation("RAPTOR: added {Count} summary chunks to context", raptorChunks.Count);
                     }
-
-                    filteredChunks = filteredChunks
-                        .OrderByDescending(c => c.Score)
-                        .Take(profile.TopK + 2) // Allow slightly more chunks when RAPTOR active
-                        .ToList();
-
-                    _logger.LogInformation("RAPTOR: added {Count} summary chunks to context", raptorChunks.Count);
+                    else
+                    {
+                        // Empty result is a partial-loss fallback: enhancement was active but produced no context.
+                        MeepleAiMetrics.RecordRetrievalFallback(
+                            MeepleAiMetrics.RagFallbackTypes.Raptor,
+                            MeepleAiMetrics.RagFallbackSeverity.PartialLoss);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "RAPTOR summary retrieval failed for game {GameId}", gameId);
+                    MeepleAiMetrics.RecordRetrievalFallback(MeepleAiMetrics.RagFallbackTypes.Raptor);
                 }
             }
 
@@ -409,14 +424,29 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             // === Graph RAG: Inject entity context ===
             if (activeEnhancements.HasFlag(RagEnhancement.GraphTraversal))
             {
-                var graphContext = await _graphRetrievalService
-                    .GetEntityContextAsync(gameId, maxRelations: 15, ct).ConfigureAwait(false);
-
-                if (!string.IsNullOrEmpty(graphContext))
+                try
                 {
-                    ragContext = string.Concat(ragContext, "\n", graphContext);
-                    _logger.LogInformation("Graph RAG: injected {Length} chars of entity context for game {GameId}",
-                        graphContext.Length, gameId);
+                    var graphContext = await _graphRetrievalService
+                        .GetEntityContextAsync(gameId, maxRelations: 15, ct).ConfigureAwait(false);
+
+                    if (!string.IsNullOrEmpty(graphContext))
+                    {
+                        ragContext = string.Concat(ragContext, "\n", graphContext);
+                        _logger.LogInformation("Graph RAG: injected {Length} chars of entity context for game {GameId}",
+                            graphContext.Length, gameId);
+                    }
+                    else
+                    {
+                        // Empty graph context with enhancement active = partial-loss fallback.
+                        MeepleAiMetrics.RecordRetrievalFallback(
+                            MeepleAiMetrics.RagFallbackTypes.GraphTraversal,
+                            MeepleAiMetrics.RagFallbackSeverity.PartialLoss);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Graph RAG entity context retrieval failed for game {GameId}", gameId);
+                    MeepleAiMetrics.RecordRetrievalFallback(MeepleAiMetrics.RagFallbackTypes.GraphTraversal);
                 }
             }
 
@@ -425,6 +455,11 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         catch (Exception ex)
         {
             _logger.LogError(ex, "RAG retrieval failed for game {GameId}", gameId);
+            // Outer catch-all flattens any uncaught fallback path; tag with `unknown`
+            // to avoid losing visibility on regressions in nested catch blocks.
+            MeepleAiMetrics.RecordRetrievalFallback(
+                MeepleAiMetrics.RagFallbackTypes.Unknown,
+                MeepleAiMetrics.RagFallbackSeverity.PartialLoss);
             return (string.Empty, citations);
         }
     }
@@ -454,6 +489,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Query expansion failed, using original query only");
+            MeepleAiMetrics.RecordRetrievalFallback(MeepleAiMetrics.RagFallbackTypes.QueryExpansion);
         }
 
         return queries;
@@ -488,6 +524,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Reranker failed, using raw scores (top {TopK})", profile.TopK);
+            MeepleAiMetrics.RecordRetrievalFallback(MeepleAiMetrics.RagFallbackTypes.Reranker);
             return chunks.Take(profile.TopK).ToList();
         }
     }
@@ -556,6 +593,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Hybrid search failed, using vector-only results");
+            MeepleAiMetrics.RecordRetrievalFallback(MeepleAiMetrics.RagFallbackTypes.HybridSearch);
             return vectorChunks;
         }
     }
@@ -616,6 +654,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Sentence window expansion failed, using original chunks");
+            MeepleAiMetrics.RecordRetrievalFallback(MeepleAiMetrics.RagFallbackTypes.SentenceWindow);
             return chunks;
         }
     }

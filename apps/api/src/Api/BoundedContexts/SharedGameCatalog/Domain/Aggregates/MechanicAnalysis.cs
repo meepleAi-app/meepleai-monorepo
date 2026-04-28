@@ -42,11 +42,19 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
     /// Distinguishes automated failures (cost cap, LLM catastrophic) from human-initiated
     /// rejections during review.
     /// </summary>
+    /// <remarks>
+    /// <see cref="PipelineCrashed"/> is reserved for unexpected exceptions that escape the
+    /// pipeline's own error handling (DB error, OOM, network timeout, validation crash, etc.).
+    /// LLM-specific failures are surfaced by the pipeline as
+    /// <c>MechanicPipelineOutcome.AbortedLlmFailed</c> and mapped to <see cref="LlmGenerationFailed"/>
+    /// — they never reach the unexpected-failure path. Issue #597.
+    /// </remarks>
     public static class AutoRejectionReasons
     {
         public const string CostCapExceeded = "cost_cap_exceeded";
         public const string LlmGenerationFailed = "llm_generation_failed";
         public const string ValidationFailedBeyondRetry = "validation_failed_beyond_retry";
+        public const string PipelineCrashed = "pipeline_crashed";
     }
 
     // === Core identity / lineage ===

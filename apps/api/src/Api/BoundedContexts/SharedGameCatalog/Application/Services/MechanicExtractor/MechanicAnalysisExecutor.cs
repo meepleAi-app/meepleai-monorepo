@@ -349,6 +349,8 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
 
     private async Task HandleUnexpectedFailureAsync(Guid analysisId, Exception originalException)
     {
+        var rejectionReason = ClassifyUnexpectedFailureReason(originalException);
+
         try
         {
             // Same rationale as HandleCancellationAsync: a pipeline crash may leave half-staged
@@ -366,7 +368,7 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
             }
 
             analysis.AutoRejectFromDraft(
-                MechanicAnalysis.AutoRejectionReasons.LlmGenerationFailed,
+                rejectionReason,
                 analysis.CreatedBy,
                 _timeProvider.GetUtcNow().UtcDateTime);
             _analysisRepository.Update(analysis);
@@ -377,9 +379,33 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
             _logger.LogError(
                 cleanupEx,
                 "Mechanic analysis {AnalysisId} failed to transition to Rejected after pipeline crash. " +
-                "Original exception: {OriginalMessage}",
-                analysisId, originalException.Message);
+                "Intended rejection reason: {RejectionReason}. Original exception: {OriginalExceptionType} - {OriginalMessage}",
+                analysisId,
+                rejectionReason,
+                originalException.GetType().FullName,
+                originalException.Message);
         }
+    }
+
+    /// <summary>
+    /// Classifies an unexpected exception escaping the pipeline into the appropriate
+    /// <see cref="MechanicAnalysis.AutoRejectionReasons"/> value. Issue #597.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="MechanicAnalysisPipeline"/> never throws on LLM errors — those are
+    /// surfaced as <c>MechanicPipelineOutcome.AbortedLlmFailed</c> via the result envelope. So
+    /// any exception caught at the executor's outer boundary is, by definition, a non-LLM
+    /// failure (DB transient, OOM, network bug, validation crash, etc.) and maps to
+    /// <see cref="MechanicAnalysis.AutoRejectionReasons.PipelineCrashed"/>.
+    /// <para>
+    /// Static + internal so unit tests can pin the mapping without needing the full executor
+    /// dependency graph (DbContext, repositories, pipeline).
+    /// </para>
+    /// </remarks>
+    internal static string ClassifyUnexpectedFailureReason(Exception originalException)
+    {
+        ArgumentNullException.ThrowIfNull(originalException);
+        return MechanicAnalysis.AutoRejectionReasons.PipelineCrashed;
     }
 
     private async Task<string> LoadRetrievalContextAsync(Guid pdfDocumentId, CancellationToken cancellationToken)

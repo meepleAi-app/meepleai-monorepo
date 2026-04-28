@@ -7,6 +7,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -151,6 +152,7 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         // Create game entity first to avoid FK violation
         var game = new GameEntity { Id = gameId, Name = "Max Docs Test Game" };
         _dbContext!.Games.Add(game);
+        _dbContext.SharedGames.Add(BuildSharedGame(gameId, "Max Docs Test Game"));
 
         var docs = new List<InitialDocumentRequest>();
         var pdfIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
@@ -193,6 +195,7 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         // Create game entity first to avoid FK violation
         var game = new GameEntity { Id = gameId, Name = "Duplicate Collection Test Game" };
         _dbContext!.Games.Add(game);
+        _dbContext.SharedGames.Add(BuildSharedGame(gameId, "Duplicate Collection Test Game"));
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var cmd1 = new CreateDocumentCollectionCommand(
@@ -216,6 +219,7 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         // Create game entity first to avoid FK violation
         var game = new GameEntity { Id = gameId, Name = "Too Many Docs Test Game" };
         _dbContext!.Games.Add(game);
+        _dbContext.SharedGames.Add(BuildSharedGame(gameId, "Too Many Docs Test Game"));
 
         var docs = new List<InitialDocumentRequest>();
         for (int i = 0; i < 6; i++)
@@ -288,6 +292,7 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         // Create game entity first to avoid FK violation
         var differentGame = new GameEntity { Id = differentGameId, Name = "Different Game" };
         _dbContext!.Games.Add(differentGame);
+        _dbContext.SharedGames.Add(BuildSharedGame(differentGameId, "Different Game"));
 
         var pdfForOtherGame = new PdfDocumentEntity
         {
@@ -321,6 +326,7 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         // Create game entity first to avoid FK violation
         var game = new GameEntity { Id = gameId, Name = "Rollback Test Game" };
         _dbContext!.Games.Add(game);
+        _dbContext.SharedGames.Add(BuildSharedGame(gameId, "Rollback Test Game"));
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var command = new CreateDocumentCollectionCommand(
@@ -354,6 +360,10 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         };
         _dbContext.Games.Add(testGame);
 
+        // Issue #519: PdfDocumentEntity.SharedGameId FK targets shared_games (post-PR#480),
+        // so a SharedGameEntity row with the same Id is required to avoid 23503.
+        _dbContext.SharedGames.Add(BuildSharedGame(TestGameId, "Test Game"));
+
         foreach (var pdfId in new[] { TestPdfId1, TestPdfId2, TestPdfId5, TestPdfId6 })
         {
             var pdf = new PdfDocumentEntity
@@ -372,4 +382,26 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
+
+    /// <summary>
+    /// Issue #519: Builds a minimal valid SharedGameEntity for tests that seed a
+    /// PdfDocumentEntity. PdfDocument.SharedGameId FKs to shared_games (post-PR#480),
+    /// so the per-test gameId must exist in that table to satisfy the constraint.
+    /// </summary>
+    private static SharedGameEntity BuildSharedGame(Guid id, string title) => new()
+    {
+        Id = id,
+        Title = title,
+        Description = "Integration test game",
+        ImageUrl = string.Empty,
+        ThumbnailUrl = string.Empty,
+        YearPublished = 2024,
+        MinPlayers = 2,
+        MaxPlayers = 4,
+        PlayingTimeMinutes = 60,
+        MinAge = 10,
+        Status = 1,
+        CreatedBy = TestUserId,
+        CreatedAt = DateTime.UtcNow
+    };
 }

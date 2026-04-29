@@ -1308,6 +1308,70 @@
         "free": "free during alpha"
       }
     },
+    "games": {
+      "library": {
+        "metadata": {
+          "title": "My games — MeepleAI",
+          "description": "Browse your game library: owned, wishlist and associated knowledge bases."
+        },
+        "hero": {
+          "title": "Your library",
+          "subtitle": "All your games, organized and ready to play with AI.",
+          "cta": {
+            "add": "Add game"
+          },
+          "stats": {
+            "owned": "Owned",
+            "wishlist": "Wishlist",
+            "totalEntries": "Total",
+            "kbDocs": "KB docs"
+          }
+        },
+        "filters": {
+          "search": {
+            "placeholder": "Search by title, publisher or year…",
+            "ariaLabel": "Search the library",
+            "clearAriaLabel": "Clear search"
+          },
+          "status": {
+            "label": "Status",
+            "all": "All",
+            "owned": "Owned",
+            "wishlist": "Wishlist",
+            "played": "Played"
+          },
+          "sort": {
+            "label": "Sort by",
+            "lastPlayed": "Recently added",
+            "rating": "Rating",
+            "title": "Title",
+            "year": "Year"
+          },
+          "view": {
+            "label": "View",
+            "grid": "Grid",
+            "list": "List"
+          }
+        },
+        "empty": {
+          "library": {
+            "title": "Your library is empty",
+            "subtitle": "Add your first game to start building your collection.",
+            "cta": "Add game"
+          },
+          "filteredEmpty": {
+            "title": "No results",
+            "subtitle": "Try adjusting your filters or search.",
+            "cta": "Clear filters"
+          },
+          "error": {
+            "title": "Unable to load library",
+            "subtitle": "Something went wrong. Please try again.",
+            "cta": "Retry"
+          }
+        }
+      }
+    },
     "sharedGames": {
       "metadata": {
         "title": "Community catalog — MeepleAI",

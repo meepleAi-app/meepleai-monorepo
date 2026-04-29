@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.Infrastructure;
+using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -44,15 +45,18 @@ internal sealed class AgentDefinitionChangedForCatalogAggregatesHandler
 
     private readonly MeepleAiDbContext _context;
     private readonly HybridCache _cache;
+    private readonly ICacheInvalidationRetryPolicy _retryPolicy;
     private readonly ILogger<AgentDefinitionChangedForCatalogAggregatesHandler> _logger;
 
     public AgentDefinitionChangedForCatalogAggregatesHandler(
         MeepleAiDbContext context,
         HybridCache cache,
+        ICacheInvalidationRetryPolicy retryPolicy,
         ILogger<AgentDefinitionChangedForCatalogAggregatesHandler> logger)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _retryPolicy = retryPolicy ?? throw new ArgumentNullException(nameof(retryPolicy));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -82,8 +86,11 @@ internal sealed class AgentDefinitionChangedForCatalogAggregatesHandler
 
     private async Task InvalidateAsync(string eventName, Guid agentDefinitionId, CancellationToken ct)
     {
-        // Always invalidate the catalog list cache.
-        await _cache.RemoveByTagAsync(SearchGamesTag, ct).ConfigureAwait(false);
+        // Always invalidate the catalog list cache (Issue #613: bounded retry).
+        await _retryPolicy.ExecuteAsync(
+            token => _cache.RemoveByTagAsync(SearchGamesTag, token),
+            "shared-games.list",
+            ct).ConfigureAwait(false);
 
         // Look up the SharedGameId via the Game intermediate so we can scope
         // the per-game detail invalidation. AgentDefinition.GameId is exposed
@@ -101,7 +108,10 @@ internal sealed class AgentDefinitionChangedForCatalogAggregatesHandler
 
         if (sharedGameId is { } sgId && sgId != Guid.Empty)
         {
-            await _cache.RemoveByTagAsync($"shared-game:{sgId}", ct).ConfigureAwait(false);
+            await _retryPolicy.ExecuteAsync(
+                token => _cache.RemoveByTagAsync($"shared-game:{sgId}", token),
+                "shared-games.detail",
+                ct).ConfigureAwait(false);
             _logger.LogInformation(
                 "Invalidated search-games + shared-game:{SharedGameId} after {Event} ({AgentDefinitionId})",
                 sgId,

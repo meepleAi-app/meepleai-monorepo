@@ -208,6 +208,10 @@ internal static class InfrastructureServiceExtensions
         services.AddSingleton<IDynamicTtlStrategy, DynamicTtlStrategy>();
         services.AddSingleton<IRedisFrequencyTracker, RedisFrequencyTracker>();
 
+        // Issue #613: Polly v8 retry policy wrapping HybridCache.RemoveByTagAsync
+        // calls in SharedGameCatalog event handlers. Stateless + thread-safe.
+        services.AddSingleton<ICacheInvalidationRetryPolicy, CacheInvalidationRetryPolicy>();
+
         // Issue #4275: BGG API tier-based rate limiting configuration
         services.Configure<Api.Middleware.BggRateLimitOptions>(
             configuration.GetSection("BggRateLimit"));

@@ -38,12 +38,12 @@ public sealed class AgentDefinitionChangedForCatalogAggregatesHandlerTests
 
     private AgentDefinitionChangedForCatalogAggregatesHandler CreateHandler(
         Api.Infrastructure.MeepleAiDbContext db,
-        HybridCache cache) => new(db, cache, _loggerMock.Object);
+        HybridCache cache) => new(db, cache, new PassthroughRetryPolicy(), _loggerMock.Object);
 
     [Fact]
     public void Constructor_WithNullDbContext_Throws()
     {
-        var act = () => new AgentDefinitionChangedForCatalogAggregatesHandler(null!, CreateHybridCache(), _loggerMock.Object);
+        var act = () => new AgentDefinitionChangedForCatalogAggregatesHandler(null!, CreateHybridCache(), new PassthroughRetryPolicy(), _loggerMock.Object);
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -51,7 +51,15 @@ public sealed class AgentDefinitionChangedForCatalogAggregatesHandlerTests
     public void Constructor_WithNullCache_Throws()
     {
         using var db = TestDbContextFactory.CreateInMemoryDbContext();
-        var act = () => new AgentDefinitionChangedForCatalogAggregatesHandler(db, null!, _loggerMock.Object);
+        var act = () => new AgentDefinitionChangedForCatalogAggregatesHandler(db, null!, new PassthroughRetryPolicy(), _loggerMock.Object);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullRetryPolicy_Throws()
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var act = () => new AgentDefinitionChangedForCatalogAggregatesHandler(db, CreateHybridCache(), null!, _loggerMock.Object);
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -59,7 +67,7 @@ public sealed class AgentDefinitionChangedForCatalogAggregatesHandlerTests
     public void Constructor_WithNullLogger_Throws()
     {
         using var db = TestDbContextFactory.CreateInMemoryDbContext();
-        var act = () => new AgentDefinitionChangedForCatalogAggregatesHandler(db, CreateHybridCache(), null!);
+        var act = () => new AgentDefinitionChangedForCatalogAggregatesHandler(db, CreateHybridCache(), new PassthroughRetryPolicy(), null!);
         act.Should().Throw<ArgumentNullException>();
     }
 

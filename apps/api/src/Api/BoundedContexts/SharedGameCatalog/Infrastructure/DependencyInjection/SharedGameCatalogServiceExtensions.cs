@@ -145,6 +145,20 @@ internal static class SharedGameCatalogServiceExtensions
                 .WithIdentity("calculate-trending-trigger", "shared-game-catalog")
                 .WithCronSchedule("0 0 3 * * ?")
                 .WithDescription("Runs daily at 03:00 UTC to pre-compute trending game scores"));
+
+            // Issue #613: Register scheduled bulk invalidation job — defensive
+            // safety net catching any cache staleness left behind by a permanent
+            // event-handler retry exhaustion (e.g. multi-minute Redis outage).
+            q.AddJob<ScheduledBulkInvalidationJob>(opts => opts
+                .WithIdentity("scheduled-bulk-invalidation-job", "shared-game-catalog")
+                .StoreDurably(true));
+
+            // Trigger: Run every 15 minutes
+            q.AddTrigger(opts => opts
+                .ForJob("scheduled-bulk-invalidation-job", "shared-game-catalog")
+                .WithIdentity("scheduled-bulk-invalidation-trigger", "shared-game-catalog")
+                .WithCronSchedule("0 */15 * * * ?")
+                .WithDescription("Runs every 15 min to evict shared-game detail tags for top-N most-viewed games and the search-games list tag"));
         });
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs

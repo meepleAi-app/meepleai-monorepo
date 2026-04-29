@@ -71,7 +71,7 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
         db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), new PassthroughRetryPolicy(), _logger.Object);
         var evt = new VectorDocumentIndexedEvent(documentId, gameId, chunkCount: 42, sharedGameId: sharedGameId);
 
         // Act
@@ -95,7 +95,7 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
         db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), new PassthroughRetryPolicy(), _logger.Object);
         var evt = new VectorDocumentIndexedEvent(documentId, gameId, chunkCount: 42, sharedGameId: null);
 
         // Act
@@ -111,7 +111,7 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
     {
         // Arrange
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), new PassthroughRetryPolicy(), _logger.Object);
         var evt = new VectorDocumentIndexedEvent(
             documentId: Guid.NewGuid(),
             gameId: Guid.NewGuid(),
@@ -137,7 +137,7 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
         db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: true));
         await db.SaveChangesAsync();
 
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), new PassthroughRetryPolicy(), _logger.Object);
         var evt = new VectorDocumentIndexedEvent(documentId, gameId, chunkCount: 42, sharedGameId: sharedGameId);
 
         // Act
@@ -153,7 +153,7 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
     {
         // Arrange
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), new PassthroughRetryPolicy(), _logger.Object);
 
         // Act
         var act = async () => await handler.Handle(null!, CancellationToken.None);
@@ -176,7 +176,7 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
         db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, cache, _logger.Object);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, cache, new PassthroughRetryPolicy(), _logger.Object);
         var evt = new VectorDocumentIndexedEvent(
             documentId: Guid.NewGuid(),
             gameId: Guid.NewGuid(),
@@ -222,7 +222,7 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
         db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, cache, _logger.Object);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, cache, new PassthroughRetryPolicy(), _logger.Object);
         var evt = new VectorDocumentIndexedEvent(
             documentId: Guid.NewGuid(),
             gameId: Guid.NewGuid(),

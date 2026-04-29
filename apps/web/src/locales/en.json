@@ -1351,7 +1351,8 @@
             "label": "View",
             "grid": "Grid",
             "list": "List"
-          }
+          },
+          "resultCount": "{count, plural, =0 {No results} =1 {1 result} other {# results}}"
         },
         "empty": {
           "library": {

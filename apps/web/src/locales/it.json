@@ -1401,7 +1401,8 @@
             "label": "Visualizzazione",
             "grid": "Griglia",
             "list": "Lista"
-          }
+          },
+          "resultCount": "{count, plural, =0 {Nessun risultato} =1 {1 risultato} other {# risultati}}"
         },
         "empty": {
           "library": {

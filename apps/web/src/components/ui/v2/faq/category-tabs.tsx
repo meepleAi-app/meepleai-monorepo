@@ -22,11 +22,12 @@
 
 'use client';
 
-import type { JSX, KeyboardEvent } from 'react';
-import { useCallback, useRef } from 'react';
+import type { JSX } from 'react';
+import { useMemo } from 'react';
 
 import clsx from 'clsx';
 
+import { useTablistKeyboardNav } from '@/hooks/useTablistKeyboardNav';
 import type { CategoryId, FAQCategory } from '@/lib/faq/data';
 
 export interface CategoryTabsProps {
@@ -50,41 +51,11 @@ export function CategoryTabs({
   ariaLabel = 'FAQ categories',
   className,
 }: CategoryTabsProps): JSX.Element {
-  const tabRefs = useRef<Map<CategoryId, HTMLButtonElement>>(new Map());
-
-  const focusTab = useCallback((id: CategoryId) => {
-    tabRefs.current.get(id)?.focus();
-  }, []);
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLButtonElement>, currentId: CategoryId) => {
-      const orderedIds = categories.map(c => c.id);
-      const idx = orderedIds.indexOf(currentId);
-      if (idx === -1) return;
-      let nextIdx: number | null = null;
-      switch (e.key) {
-        case 'ArrowLeft':
-          nextIdx = (idx - 1 + orderedIds.length) % orderedIds.length;
-          break;
-        case 'ArrowRight':
-          nextIdx = (idx + 1) % orderedIds.length;
-          break;
-        case 'Home':
-          nextIdx = 0;
-          break;
-        case 'End':
-          nextIdx = orderedIds.length - 1;
-          break;
-        default:
-          return;
-      }
-      e.preventDefault();
-      const nextId = orderedIds[nextIdx];
-      onChange(nextId);
-      focusTab(nextId);
-    },
-    [categories, onChange, focusTab]
-  );
+  const orderedIds = useMemo(() => categories.map(c => c.id), [categories]);
+  const { tabRefs, handleKeyDown } = useTablistKeyboardNav<CategoryId>({
+    orderedKeys: orderedIds,
+    onChange,
+  });
 
   return (
     <div

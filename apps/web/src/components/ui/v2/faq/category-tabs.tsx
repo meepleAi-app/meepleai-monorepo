@@ -107,7 +107,7 @@ export function CategoryTabs({
                   'min-w-4 text-center font-mono text-[9px] font-extrabold tabular-nums',
                   'rounded-full px-1.5 py-px',
                   isActive
-                    ? 'bg-[hsl(var(--c-game)/0.25)] text-[hsl(var(--c-game))]'
+                    ? 'bg-[hsl(var(--c-game)/0.25)] text-[hsl(var(--c-game))] dark:bg-[hsl(var(--c-game)/0.4)] dark:text-foreground'
                     : 'bg-[hsl(var(--bg-muted))] text-[hsl(var(--text-muted))]'
                 )}
               >

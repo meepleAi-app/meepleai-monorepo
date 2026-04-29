@@ -1,25 +1,31 @@
 /**
- * useTablistKeyboardNav — WAI-ARIA APG horizontal tablist keyboard contract.
+ * useTablistKeyboardNav — WAI-ARIA APG tablist keyboard contract.
  *
- * Wave A.6 Tier 1 (Issue #622). Extracted from inline implementations in:
+ * Wave A.6 Tier 1 (Issue #622) — initial horizontal-only extraction.
+ * Wave A.6 Tier 1.5 (Issue #625) — orientation extension (vertical / both).
+ *
+ * Extracted from inline implementations in:
  *   - components/ui/v2/faq/category-tabs.tsx (Issue #588 hotfix, PR #620)
  *   - components/ui/v2/shared-game-detail/tabs.tsx (Wave A.4)
+ *   - components/session/ToolRail.tsx (Tier 1.5, orientation: 'both')
  *
  * Provides a reusable hook so future tablist surfaces don't reinvent the
- * keyboard contract. Closes the governance gap where 5 sites maintain near-
- * identical inline switch handlers.
+ * keyboard contract. Closes the governance gap where multiple sites maintain
+ * near-identical inline switch handlers.
  *
- * Keyboard contract (WAI-ARIA APG horizontal tablist):
- *   - ArrowLeft  → previous key (wraps first → last)
- *   - ArrowRight → next key (wraps last → first)
- *   - Home       → first key
- *   - End        → last key
+ * Keyboard contract (WAI-ARIA APG tablist):
+ *   - ArrowLeft  → previous key (wraps first → last) — horizontal | both
+ *   - ArrowRight → next key (wraps last → first)     — horizontal | both
+ *   - ArrowUp    → previous key (wraps first → last) — vertical   | both
+ *   - ArrowDown  → next key (wraps last → first)     — vertical   | both
+ *   - Home       → first key (all orientations)
+ *   - End        → last key  (all orientations)
  *   - Activation is automatic: focus = onChange same tick. Consumers that
  *     need lazy-mount panel guards must manage that themselves; this hook
  *     assumes statically-rendered panels (FAQ-style) or amortized cost.
- *   - Other keys (ArrowUp/Down, character keys, Enter/Space/Escape/Tab) are
- *     intentional no-ops — preventDefault is NOT called so default browser
- *     behavior (e.g. Tab moves focus out of the tablist) is preserved.
+ *   - Off-axis arrow keys (e.g. ArrowUp in horizontal mode) and other keys
+ *     (character keys, Enter/Space/Escape/Tab) are intentional no-ops —
+ *     preventDefault is NOT called so default browser behavior is preserved.
  *
  * Defensive behavior:
  *   - Unknown `currentKey` (not in `orderedKeys`) → no-op, no preventDefault
@@ -62,9 +68,22 @@
 
 import { useCallback, useRef, type KeyboardEvent, type MutableRefObject } from 'react';
 
+/**
+ * Tablist orientation following the WAI-ARIA APG model.
+ *
+ * - `'horizontal'` (default): ArrowLeft/Right navigate; ArrowUp/Down ignored.
+ *   Mirrors `aria-orientation="horizontal"` (the ARIA default for tablists).
+ * - `'vertical'`: ArrowUp/Down navigate; ArrowLeft/Right ignored. Pair with
+ *   `aria-orientation="vertical"` on the tablist container.
+ * - `'both'`: all four arrow keys map to the same linear order (Up≡Left,
+ *   Down≡Right). Useful when a tablist visually wraps to two axes (e.g.
+ *   rail/list components) and consumers want either axis to advance.
+ */
+export type TablistOrientation = 'horizontal' | 'vertical' | 'both';
+
 export interface UseTablistKeyboardNavArgs<T extends string> {
   /**
-   * Ordered list of tab keys defining navigation order. ArrowLeft/Right wrap
+   * Ordered list of tab keys defining navigation order. Arrow keys wrap
    * around the bounds of this array; Home/End jump to first/last.
    */
   readonly orderedKeys: ReadonlyArray<T>;
@@ -74,6 +93,11 @@ export interface UseTablistKeyboardNavArgs<T extends string> {
    * WAI-ARIA APG (focus = activation same tick).
    */
   readonly onChange: (key: T) => void;
+  /**
+   * Which arrow keys participate in navigation. Defaults to `'horizontal'`
+   * to preserve the original Wave A.6 Tier 1 contract for existing consumers.
+   */
+  readonly orientation?: TablistOrientation;
 }
 
 export interface UseTablistKeyboardNavReturn<T extends string> {
@@ -93,6 +117,7 @@ export interface UseTablistKeyboardNavReturn<T extends string> {
 export function useTablistKeyboardNav<T extends string>({
   orderedKeys,
   onChange,
+  orientation = 'horizontal',
 }: UseTablistKeyboardNavArgs<T>): UseTablistKeyboardNavReturn<T> {
   const tabRefs = useRef<Map<T, HTMLButtonElement>>(new Map());
 
@@ -101,12 +126,25 @@ export function useTablistKeyboardNav<T extends string>({
       const idx = orderedKeys.indexOf(currentKey);
       if (idx === -1) return;
 
+      const horizontalActive = orientation === 'horizontal' || orientation === 'both';
+      const verticalActive = orientation === 'vertical' || orientation === 'both';
+
       let nextIdx: number | null = null;
       switch (e.key) {
         case 'ArrowLeft':
+          if (!horizontalActive) return;
           nextIdx = (idx - 1 + orderedKeys.length) % orderedKeys.length;
           break;
         case 'ArrowRight':
+          if (!horizontalActive) return;
+          nextIdx = (idx + 1) % orderedKeys.length;
+          break;
+        case 'ArrowUp':
+          if (!verticalActive) return;
+          nextIdx = (idx - 1 + orderedKeys.length) % orderedKeys.length;
+          break;
+        case 'ArrowDown':
+          if (!verticalActive) return;
           nextIdx = (idx + 1) % orderedKeys.length;
           break;
         case 'Home':
@@ -124,7 +162,7 @@ export function useTablistKeyboardNav<T extends string>({
       onChange(nextKey);
       tabRefs.current.get(nextKey)?.focus();
     },
-    [orderedKeys, onChange]
+    [orderedKeys, onChange, orientation]
   );
 
   return { tabRefs, handleKeyDown };

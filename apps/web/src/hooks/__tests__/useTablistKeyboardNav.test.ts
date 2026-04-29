@@ -269,4 +269,195 @@ describe('useTablistKeyboardNav (Wave A.6 Tier 1)', () => {
       expect(onChange).toHaveBeenCalledWith('history');
     });
   });
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // Wave A.6 Tier 1.5 (Issue #625) — orientation extension
+  // ═════════════════════════════════════════════════════════════════════════
+
+  describe('orientation: default (backward-compat)', () => {
+    it('treats omitted orientation as horizontal — ArrowUp ignored', () => {
+      const onChange = vi.fn();
+      const { result } = renderHook(() =>
+        useTablistKeyboardNav<Key>({ orderedKeys: ['a', 'b', 'c'], onChange })
+      );
+      const e = makeEvent({ key: 'ArrowUp' });
+      result.current.handleKeyDown(e, 'b');
+      expect(onChange).not.toHaveBeenCalled();
+      expect(e.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it('treats omitted orientation as horizontal — ArrowDown ignored', () => {
+      const onChange = vi.fn();
+      const { result } = renderHook(() =>
+        useTablistKeyboardNav<Key>({ orderedKeys: ['a', 'b', 'c'], onChange })
+      );
+      const e = makeEvent({ key: 'ArrowDown' });
+      result.current.handleKeyDown(e, 'b');
+      expect(onChange).not.toHaveBeenCalled();
+      expect(e.preventDefault).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("orientation: 'vertical'", () => {
+    function setupVertical<T extends string>({
+      orderedKeys,
+    }: {
+      readonly orderedKeys: ReadonlyArray<T>;
+    }) {
+      const onChange = vi.fn();
+      const { result } = renderHook(() =>
+        useTablistKeyboardNav<T>({ orderedKeys, onChange, orientation: 'vertical' })
+      );
+      const buttons = new Map<
+        T,
+        HTMLButtonElement & { readonly focus: ReturnType<typeof vi.fn> }
+      >();
+      for (const key of orderedKeys) {
+        const btn = makeButtonStub();
+        buttons.set(key, btn);
+        result.current.tabRefs.current.set(key, btn);
+      }
+      return { result, onChange, buttons };
+    }
+
+    it('ArrowDown advances to next key', () => {
+      const { result, onChange, buttons } = setupVertical<Key>({ orderedKeys: ['a', 'b', 'c'] });
+      result.current.handleKeyDown(makeEvent({ key: 'ArrowDown' }), 'a');
+      expect(onChange).toHaveBeenCalledWith('b');
+      expect(buttons.get('b')!.focus).toHaveBeenCalledOnce();
+    });
+
+    it('ArrowDown wraps last → first', () => {
+      const { result, onChange, buttons } = setupVertical<Key>({ orderedKeys: ['a', 'b', 'c'] });
+      result.current.handleKeyDown(makeEvent({ key: 'ArrowDown' }), 'c');
+      expect(onChange).toHaveBeenCalledWith('a');
+      expect(buttons.get('a')!.focus).toHaveBeenCalledOnce();
+    });
+
+    it('ArrowUp retreats to previous key', () => {
+      const { result, onChange, buttons } = setupVertical<Key>({ orderedKeys: ['a', 'b', 'c'] });
+      result.current.handleKeyDown(makeEvent({ key: 'ArrowUp' }), 'b');
+      expect(onChange).toHaveBeenCalledWith('a');
+      expect(buttons.get('a')!.focus).toHaveBeenCalledOnce();
+    });
+
+    it('ArrowUp wraps first → last', () => {
+      const { result, onChange, buttons } = setupVertical<Key>({ orderedKeys: ['a', 'b', 'c'] });
+      result.current.handleKeyDown(makeEvent({ key: 'ArrowUp' }), 'a');
+      expect(onChange).toHaveBeenCalledWith('c');
+      expect(buttons.get('c')!.focus).toHaveBeenCalledOnce();
+    });
+
+    it('calls preventDefault on ArrowDown/ArrowUp to suppress page scroll', () => {
+      const { result } = setupVertical<Key>({ orderedKeys: ['a', 'b'] });
+      const eDown = makeEvent({ key: 'ArrowDown' });
+      const eUp = makeEvent({ key: 'ArrowUp' });
+      result.current.handleKeyDown(eDown, 'a');
+      result.current.handleKeyDown(eUp, 'b');
+      expect(eDown.preventDefault).toHaveBeenCalledOnce();
+      expect(eUp.preventDefault).toHaveBeenCalledOnce();
+    });
+
+    it('ignores ArrowLeft/ArrowRight (horizontal-only keys)', () => {
+      const { result, onChange } = setupVertical<Key>({ orderedKeys: ['a', 'b', 'c'] });
+      const eLeft = makeEvent({ key: 'ArrowLeft' });
+      const eRight = makeEvent({ key: 'ArrowRight' });
+      result.current.handleKeyDown(eLeft, 'b');
+      result.current.handleKeyDown(eRight, 'b');
+      expect(onChange).not.toHaveBeenCalled();
+      expect(eLeft.preventDefault).not.toHaveBeenCalled();
+      expect(eRight.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it('Home/End still work in vertical orientation', () => {
+      const { result, onChange } = setupVertical<Key>({ orderedKeys: ['a', 'b', 'c', 'd'] });
+      result.current.handleKeyDown(makeEvent({ key: 'Home' }), 'c');
+      expect(onChange).toHaveBeenLastCalledWith('a');
+      result.current.handleKeyDown(makeEvent({ key: 'End' }), 'a');
+      expect(onChange).toHaveBeenLastCalledWith('d');
+    });
+  });
+
+  describe("orientation: 'both'", () => {
+    function setupBoth<T extends string>({
+      orderedKeys,
+    }: {
+      readonly orderedKeys: ReadonlyArray<T>;
+    }) {
+      const onChange = vi.fn();
+      const { result } = renderHook(() =>
+        useTablistKeyboardNav<T>({ orderedKeys, onChange, orientation: 'both' })
+      );
+      const buttons = new Map<
+        T,
+        HTMLButtonElement & { readonly focus: ReturnType<typeof vi.fn> }
+      >();
+      for (const key of orderedKeys) {
+        const btn = makeButtonStub();
+        buttons.set(key, btn);
+        result.current.tabRefs.current.set(key, btn);
+      }
+      return { result, onChange, buttons };
+    }
+
+    it.each([
+      ['ArrowRight', 'a', 'b'],
+      ['ArrowDown', 'a', 'b'],
+      ['ArrowLeft', 'b', 'a'],
+      ['ArrowUp', 'b', 'a'],
+    ] as const)('%s from %s navigates to %s', (key, from, expected) => {
+      const { result, onChange, buttons } = setupBoth<Key>({ orderedKeys: ['a', 'b', 'c'] });
+      result.current.handleKeyDown(makeEvent({ key }), from);
+      expect(onChange).toHaveBeenCalledWith(expected);
+      expect(buttons.get(expected as Key)!.focus).toHaveBeenCalledOnce();
+    });
+
+    it('ArrowDown wraps last → first (same axis as ArrowRight)', () => {
+      const { result, onChange } = setupBoth<Key>({ orderedKeys: ['a', 'b', 'c'] });
+      result.current.handleKeyDown(makeEvent({ key: 'ArrowDown' }), 'c');
+      expect(onChange).toHaveBeenCalledWith('a');
+    });
+
+    it('ArrowUp wraps first → last (same axis as ArrowLeft)', () => {
+      const { result, onChange } = setupBoth<Key>({ orderedKeys: ['a', 'b', 'c'] });
+      result.current.handleKeyDown(makeEvent({ key: 'ArrowUp' }), 'a');
+      expect(onChange).toHaveBeenCalledWith('c');
+    });
+
+    it('Home/End still work in both orientation', () => {
+      const { result, onChange } = setupBoth<Key>({ orderedKeys: ['a', 'b', 'c', 'd'] });
+      result.current.handleKeyDown(makeEvent({ key: 'Home' }), 'c');
+      expect(onChange).toHaveBeenLastCalledWith('a');
+      result.current.handleKeyDown(makeEvent({ key: 'End' }), 'a');
+      expect(onChange).toHaveBeenLastCalledWith('d');
+    });
+
+    it('still ignores non-arrow/Home/End keys', () => {
+      const { result, onChange } = setupBoth<Key>({ orderedKeys: ['a', 'b', 'c'] });
+      const e = makeEvent({ key: 'Enter' });
+      result.current.handleKeyDown(e, 'a');
+      expect(onChange).not.toHaveBeenCalled();
+      expect(e.preventDefault).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("orientation: 'horizontal' explicit (parity with default)", () => {
+    it('explicit horizontal behaves identically to omitted orientation', () => {
+      const onChange = vi.fn();
+      const { result } = renderHook(() =>
+        useTablistKeyboardNav<Key>({
+          orderedKeys: ['a', 'b', 'c'],
+          onChange,
+          orientation: 'horizontal',
+        })
+      );
+      // ArrowUp ignored
+      const eUp = makeEvent({ key: 'ArrowUp' });
+      result.current.handleKeyDown(eUp, 'b');
+      expect(onChange).not.toHaveBeenCalled();
+      // ArrowRight works
+      result.current.handleKeyDown(makeEvent({ key: 'ArrowRight' }), 'a');
+      expect(onChange).toHaveBeenCalledWith('b');
+    });
+  });
 });

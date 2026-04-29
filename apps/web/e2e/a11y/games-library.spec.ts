@@ -28,7 +28,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, type Page } from '@playwright/test';
 
-import { seedAuthSession } from '../_helpers/seedAuthSession';
+import { mockAuthEndpoints, seedAuthSession } from '../_helpers/seedAuthSession';
 import { seedCookieConsent } from '../_helpers/seedCookieConsent';
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
@@ -36,6 +36,7 @@ const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 async function gotoLibraryReady(page: Page, search = '?tab=library'): Promise<void> {
   await seedAuthSession(page);
   await seedCookieConsent(page);
+  await mockAuthEndpoints(page);
   await page.goto(`/games${search}`, { waitUntil: 'networkidle' });
   await page.waitForSelector('[data-slot="games-library-view"]', { timeout: 30_000 });
 }

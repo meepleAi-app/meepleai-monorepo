@@ -41,7 +41,7 @@
  * For most `(authenticated)` specs, call BOTH helpers in sequence.
  */
 
-import type { Page } from '@playwright/test';
+import type { Page, Route } from '@playwright/test';
 
 const SESSION_COOKIE_NAME = 'meepleai_session';
 const USER_ROLE_COOKIE = 'meepleai_user_role';
@@ -77,4 +77,81 @@ export async function seedAuthSession(
       sameSite: 'Lax',
     },
   ]);
+}
+
+/**
+ * Mocks client-side auth endpoints required to bypass `RequireRole` (and any
+ * provider that calls `api.auth.getMe()` / `api.auth.getSessionStatus()`) in
+ * the visual-test prod build where the backend at `:8080` is unreachable.
+ *
+ * **Why this is needed beyond `seedAuthSession`** (Wave B.1 lesson learned,
+ * Issue #633):
+ *   `seedAuthSession` only seeds cookies that satisfy the `proxy.ts` middleware
+ *   gate (server-side redirect). It does NOT satisfy the React-side
+ *   `RequireRole` / `AuthProvider` flows that issue `GET /api/v1/auth/me` on
+ *   mount via `useEffect`. In the migrated visual-test build there is no
+ *   backend; the request 401s (or hangs), and the React tree gets stuck on
+ *   the "Verifica autorizzazioni…" spinner inside `<main>` — even though no
+ *   direct grep on the route's component tree finds an explicit guard import.
+ *
+ * **Routes mocked**:
+ *   - `GET /api/v1/auth/me` — returns a synthetic user DTO matching the shape
+ *     consumed by `AuthProvider` (`{ user: {...} }`)
+ *   - `GET /api/v1/auth/session/status` — returns a far-future expiry so the
+ *     `useSessionCheck` 5-min polling hook does not auto-logout
+ *
+ * **Pattern**: same as `admin-mechanic-extractor-validation/load-existing-analysis.spec.ts`
+ * which solved the identical "Verifica autorizzazioni…" hang when added.
+ *
+ * Regex (not glob `**`) is used because Playwright's `**` glob anchored to
+ * scheme is unreliable across mixed absolute/relative request URLs. The `httpClient`
+ * issues relative URLs in the browser, which go through Next.js proxy at
+ * `localhost:3000`, NOT to `localhost:8080`. The host-agnostic regex matches both.
+ */
+export async function mockAuthEndpoints(
+  page: Page,
+  options: { role?: AuthSessionRole; userId?: string; email?: string } = {}
+): Promise<void> {
+  const role = options.role ?? 'user';
+  const userId = options.userId ?? '00000000-0000-4000-8000-000000000fff';
+  const email = options.email ?? 'fixture-user@meepleai.test';
+
+  const authMeDto = {
+    user: {
+      id: userId,
+      email,
+      role: role === 'admin' ? 'Admin' : 'User',
+      displayName: 'Fixture User',
+      onboardingCompleted: true,
+      onboardingSkipped: false,
+    },
+  };
+
+  await page.context().route(/\/api\/v1\/auth\/me(\?.*)?$/, async (route: Route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(authMeDto),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.context().route(/\/api\/v1\/auth\/session\/status(\?.*)?$/, async (route: Route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          expiresAt: '2099-12-31T23:59:59Z',
+          lastSeenAt: '2026-04-30T12:00:00Z',
+          remainingMinutes: 60,
+        }),
+      });
+      return;
+    }
+    await route.continue();
+  });
 }

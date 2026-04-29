@@ -6,11 +6,24 @@
  * Spec §3.2: `role="tablist"` + per-button `role="tab"` + `aria-selected`.
  * Sticky default ON; opt-out via `sticky={false}` when used inside scroll
  * container that already handles stickiness.
+ *
+ * Closes Issue #588 (a11y: WAI-ARIA tablist Arrow-key navigation).
+ * Wave A.4 absorbed #588 in `shared-game-detail/tabs.tsx` but the original
+ * FAQ CategoryTabs site was missed — this restores the contract here.
+ *
+ * Keyboard contract (mirrors `shared-game-detail/tabs.tsx`):
+ *   - ArrowLeft  → previous tab (wraps first → last)
+ *   - ArrowRight → next tab (wraps last → first)
+ *   - Home       → first tab
+ *   - End        → last tab
+ *   - Activation is automatic (focus = onChange same tick) — FAQ panels are
+ *     statically rendered, no lazy-mount cost to amortize.
  */
 
 'use client';
 
-import type { JSX } from 'react';
+import type { JSX, KeyboardEvent } from 'react';
+import { useCallback, useRef } from 'react';
 
 import clsx from 'clsx';
 
@@ -37,6 +50,42 @@ export function CategoryTabs({
   ariaLabel = 'FAQ categories',
   className,
 }: CategoryTabsProps): JSX.Element {
+  const tabRefs = useRef<Map<CategoryId, HTMLButtonElement>>(new Map());
+
+  const focusTab = useCallback((id: CategoryId) => {
+    tabRefs.current.get(id)?.focus();
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLButtonElement>, currentId: CategoryId) => {
+      const orderedIds = categories.map(c => c.id);
+      const idx = orderedIds.indexOf(currentId);
+      if (idx === -1) return;
+      let nextIdx: number | null = null;
+      switch (e.key) {
+        case 'ArrowLeft':
+          nextIdx = (idx - 1 + orderedIds.length) % orderedIds.length;
+          break;
+        case 'ArrowRight':
+          nextIdx = (idx + 1) % orderedIds.length;
+          break;
+        case 'Home':
+          nextIdx = 0;
+          break;
+        case 'End':
+          nextIdx = orderedIds.length - 1;
+          break;
+        default:
+          return;
+      }
+      e.preventDefault();
+      const nextId = orderedIds[nextIdx];
+      onChange(nextId);
+      focusTab(nextId);
+    },
+    [categories, onChange, focusTab]
+  );
+
   return (
     <div
       data-slot="category-tabs"
@@ -57,6 +106,10 @@ export function CategoryTabs({
           return (
             <button
               key={cat.id}
+              ref={node => {
+                if (node) tabRefs.current.set(cat.id, node);
+                else tabRefs.current.delete(cat.id);
+              }}
               type="button"
               role="tab"
               aria-selected={isActive}
@@ -64,6 +117,7 @@ export function CategoryTabs({
               id={`faq-tab-${cat.id}`}
               tabIndex={isActive ? 0 : -1}
               onClick={() => onChange(cat.id)}
+              onKeyDown={e => handleKeyDown(e, cat.id)}
               className={clsx(
                 'inline-flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap',
                 'px-[13px] py-2 rounded-full cursor-pointer',

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { FAQ_CATEGORIES, type CategoryId } from '@/lib/faq/data';
@@ -152,5 +153,113 @@ describe('CategoryTabs', () => {
     expect(container.querySelector('[data-slot="category-tabs"]')?.className).not.toContain(
       'sticky'
     );
+  });
+});
+
+/**
+ * Keyboard navigation — closes Issue #588 (WAI-ARIA tablist Arrow-key).
+ *
+ * Wave A.4 absorbed #588 in `shared-game-detail/tabs.tsx` but missed the
+ * original CategoryTabs site. This block mirrors the contract from
+ * `tabs.test.tsx` (Wave A.4 §3.4):
+ *   - ArrowLeft / ArrowRight wrap (last↔first)
+ *   - Home / End jump
+ *   - Activation is automatic (focus + onChange same tick)
+ *   - Other keys (ArrowUp, character keys) are no-ops
+ *
+ * Pattern: `ControlledCategoryTabs` wraps the component in stateful host so
+ * onChange actually flips the active tab → roving tabindex updates → next
+ * keyDown lands on the new active tab (mirrors real page-client usage).
+ */
+function ControlledCategoryTabs({
+  initial = 'all',
+  onChangeSpy,
+}: {
+  readonly initial?: CategoryId;
+  readonly onChangeSpy?: (id: CategoryId) => void;
+}) {
+  const [active, setActive] = useState<CategoryId>(initial);
+  return (
+    <CategoryTabs
+      categories={FAQ_CATEGORIES}
+      active={active}
+      onChange={id => {
+        setActive(id);
+        onChangeSpy?.(id);
+      }}
+      counts={COUNTS}
+      resolveLabel={cat => RESOLVE_LABEL_MAP[cat.id]}
+    />
+  );
+}
+
+describe('CategoryTabs — keyboard navigation (closes #588)', () => {
+  it('ArrowRight advances to next category and wraps to first', () => {
+    const spy = vi.fn();
+    render(<ControlledCategoryTabs initial="all" onChangeSpy={spy} />);
+    fireEvent.keyDown(screen.getByRole('tab', { name: /All/ }), { key: 'ArrowRight' });
+    expect(spy).toHaveBeenLastCalledWith('account');
+
+    spy.mockClear();
+    render(<ControlledCategoryTabs initial="billing" onChangeSpy={spy} />);
+    const billingTabs = screen.getAllByRole('tab', { name: /Billing/ });
+    fireEvent.keyDown(billingTabs[billingTabs.length - 1], { key: 'ArrowRight' });
+    expect(spy).toHaveBeenLastCalledWith('all');
+  });
+
+  it('ArrowLeft retreats to previous category and wraps to last', () => {
+    const spy = vi.fn();
+    render(<ControlledCategoryTabs initial="account" onChangeSpy={spy} />);
+    fireEvent.keyDown(screen.getByRole('tab', { name: /Account/ }), { key: 'ArrowLeft' });
+    expect(spy).toHaveBeenLastCalledWith('all');
+
+    spy.mockClear();
+    render(<ControlledCategoryTabs initial="all" onChangeSpy={spy} />);
+    const allTabs = screen.getAllByRole('tab', { name: /All/ });
+    fireEvent.keyDown(allTabs[allTabs.length - 1], { key: 'ArrowLeft' });
+    expect(spy).toHaveBeenLastCalledWith('billing');
+  });
+
+  it('Home jumps to first category', () => {
+    const spy = vi.fn();
+    render(<ControlledCategoryTabs initial="privacy" onChangeSpy={spy} />);
+    fireEvent.keyDown(screen.getByRole('tab', { name: /Privacy/ }), { key: 'Home' });
+    expect(spy).toHaveBeenLastCalledWith('all');
+  });
+
+  it('End jumps to last category', () => {
+    const spy = vi.fn();
+    render(<ControlledCategoryTabs initial="all" onChangeSpy={spy} />);
+    fireEvent.keyDown(screen.getByRole('tab', { name: /All/ }), { key: 'End' });
+    expect(spy).toHaveBeenLastCalledWith('billing');
+  });
+
+  it('ignores ArrowUp / ArrowDown / character keys (horizontal tablist)', () => {
+    const spy = vi.fn();
+    render(<ControlledCategoryTabs onChangeSpy={spy} />);
+    const all = screen.getByRole('tab', { name: /All/ });
+    fireEvent.keyDown(all, { key: 'ArrowUp' });
+    fireEvent.keyDown(all, { key: 'ArrowDown' });
+    fireEvent.keyDown(all, { key: 'a' });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('roving tabindex updates after Arrow navigation', () => {
+    render(<ControlledCategoryTabs initial="all" />);
+    expect(screen.getByRole('tab', { name: /All/ })).toHaveAttribute('tabindex', '0');
+    fireEvent.keyDown(screen.getByRole('tab', { name: /All/ }), { key: 'ArrowRight' });
+    // After re-render: Account is active → tabindex=0, All → -1
+    expect(screen.getByRole('tab', { name: /Account/ })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: /All/ })).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('preventDefault is implicit — onChange fires synchronously with key event', () => {
+    // Asserts the activation contract: focus = activation (no separate Enter
+    // press needed). Implementation MUST call onChange in the same handler tick.
+    const spy = vi.fn();
+    render(<ControlledCategoryTabs initial="all" onChangeSpy={spy} />);
+    fireEvent.keyDown(screen.getByRole('tab', { name: /All/ }), { key: 'ArrowRight' });
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith('account');
   });
 });

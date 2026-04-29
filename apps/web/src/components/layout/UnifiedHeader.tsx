@@ -57,7 +57,10 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
       )}
       data-testid="unified-header"
     >
-      <div className="container mx-auto flex h-12 items-center justify-between px-4">
+      <nav
+        aria-label="Primary"
+        className="container mx-auto flex h-12 items-center justify-between px-4"
+      >
         {/* Left: Logo (icon only) */}
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center" aria-label="MeepleAI Home">
@@ -70,7 +73,7 @@ export function UnifiedHeader({ className }: UnifiedHeaderProps) {
           {isAuthenticated && !isAuthLoading && <NotificationBell />}
           <UserMenuDropdown />
         </div>
-      </div>
+      </nav>
     </header>
   );
 }

@@ -47,6 +47,9 @@ jobs:
               - 'apps/web/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/setup-frontend/**'
+              - '.github/actions/setup-playwright/**'
             backend:
               - 'apps/api/**'
               - 'global.json'

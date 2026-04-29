@@ -20,6 +20,7 @@ import { notFound } from 'next/navigation';
 import {
   getSharedGameDetail,
   getTopContributors,
+  SharedGamesApiError,
   type SharedGameDetailV2,
   type TopContributor,
 } from '@/lib/api/shared-games';
@@ -59,21 +60,37 @@ async function loadInitialData(id: string): Promise<SsrInitialData> {
   let detail: SharedGameDetailV2 | null = null;
   let contributors: readonly TopContributor[] = [];
 
-  try {
-    const [detailResult, contributorsResult] = await Promise.allSettled([
-      getSharedGameDetail(id, { next: { revalidate: 60 } }),
-      getTopContributors(8, { next: { revalidate: 60 } }),
-    ]);
+  // SSR timeout cap: the public page must not hang the Next.js render
+  // when the backend is degraded. 2000ms aligns with the SLO p95 target
+  // (200ms) plus a 10x safety margin — beyond that we fail open with
+  // the visual fallback states. Issue #615.
+  const [detailResult, contributorsResult] = await Promise.allSettled([
+    getSharedGameDetail(id, { next: { revalidate: 60 }, timeoutMs: 2000 }),
+    getTopContributors(8, { next: { revalidate: 60 }, timeoutMs: 2000 }),
+  ]);
 
-    if (detailResult.status === 'fulfilled') {
-      detail = detailResult.value;
+  if (detailResult.status === 'fulfilled') {
+    detail = detailResult.value;
+  } else {
+    // Distinguish 404 (legitimate "no such game" → notFound()) from
+    // 5xx / network / timeout / parse failures (→ error.tsx). Re-throwing
+    // here lets Next.js bubble the error up to the nearest error boundary.
+    // Issue #615.
+    const reason = detailResult.reason;
+    const isHttp404 =
+      reason instanceof SharedGamesApiError && reason.kind === 'http' && reason.httpStatus === 404;
+    if (!isHttp404) {
+      throw reason instanceof Error
+        ? reason
+        : new Error('Unknown SSR failure loading shared game detail');
     }
-    if (contributorsResult.status === 'fulfilled') {
-      contributors = contributorsResult.value;
-    }
-  } catch {
-    // Defense in depth — Promise.allSettled doesn't reject. Fall through with defaults.
+    // 404: fall through with detail = null; page() calls notFound().
   }
+
+  if (contributorsResult.status === 'fulfilled') {
+    contributors = contributorsResult.value;
+  }
+  // Contributors failure is non-fatal — the carousel just renders empty.
 
   return { detail, contributors };
 }
@@ -87,7 +104,10 @@ export async function generateMetadata({ params }: SharedGameDetailPageProps): P
   let detail: SharedGameDetailV2 | null = fixture?.detail ?? null;
   if (!detail) {
     try {
-      detail = await getSharedGameDetail(id, { next: { revalidate: 60 } });
+      detail = await getSharedGameDetail(id, {
+        next: { revalidate: 60 },
+        timeoutMs: 2000,
+      });
     } catch {
       // Fall through: page will render notFound() if detail is null.
     }

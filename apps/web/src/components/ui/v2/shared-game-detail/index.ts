@@ -18,11 +18,17 @@ export type {
 export { EmptyState } from './empty-state';
 export type { EmptyStateKind, EmptyStateLabels, EmptyStateProps } from './empty-state';
 
+export { ErrorState } from './error-state';
+export type { ErrorStateLabels, ErrorStateProps } from './error-state';
+
 export { Hero } from './hero';
 export type { HeroLabels, HeroProps } from './hero';
 
 export { KbDocItem } from './kb-doc-item';
 export type { KbDocItemLabels, KbDocItemProps, KbDocKind } from './kb-doc-item';
+
+export { NotFoundState } from './not-found-state';
+export type { NotFoundStateLabels, NotFoundStateProps } from './not-found-state';
 
 export { StickyCta } from './sticky-cta';
 export type { StickyCtaLabels, StickyCtaProps } from './sticky-cta';

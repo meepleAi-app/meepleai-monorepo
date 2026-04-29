@@ -27,7 +27,7 @@ vi.mock('@/lib/api/shared-games', async orig => {
   };
 });
 
-import { getSharedGameDetail } from '@/lib/api/shared-games';
+import { getSharedGameDetail, SharedGamesApiError } from '@/lib/api/shared-games';
 import { useSharedGameDetail } from './useSharedGameDetail';
 
 const mockGet = getSharedGameDetail as ReturnType<typeof vi.fn>;
@@ -130,5 +130,105 @@ describe('useSharedGameDetail (Wave A.4)', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBe(err);
     expect(result.current.data).toBeUndefined();
+  });
+
+  // --- Issue #615 — FSM status derivation ---
+
+  describe('FSM status (Issue #615)', () => {
+    it('derives status="default" when data has nested entities', () => {
+      const populated: SharedGameDetailV2 = {
+        ...SAMPLE_DETAIL,
+        toolkitsCount: 2,
+        agentsCount: 0,
+        kbsCount: 1,
+      };
+      const { result } = renderHook(
+        () => useSharedGameDetail({ id: SAMPLE_ID, initialData: populated }),
+        { wrapper: createWrapper() }
+      );
+      expect(result.current.status).toBe('default');
+    });
+
+    it('derives status="empty" when all nested counts are zero', () => {
+      // SAMPLE_DETAIL has toolkitsCount=0, agentsCount=0, kbsCount=0
+      const { result } = renderHook(
+        () => useSharedGameDetail({ id: SAMPLE_ID, initialData: SAMPLE_DETAIL }),
+        { wrapper: createWrapper() }
+      );
+      expect(result.current.status).toBe('empty');
+    });
+
+    it('derives status="not-found" on SharedGamesApiError with httpStatus=404', async () => {
+      const err = new SharedGamesApiError('Not found', 'http', { httpStatus: 404 });
+      mockGet.mockRejectedValue(err);
+      const { result } = renderHook(() => useSharedGameDetail({ id: SAMPLE_ID }), {
+        wrapper: createWrapper(),
+      });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.status).toBe('not-found');
+    });
+
+    it('derives status="error" on non-404 SharedGamesApiError (e.g. 5xx)', async () => {
+      const err = new SharedGamesApiError('Server error', 'http', { httpStatus: 500 });
+      mockGet.mockRejectedValue(err);
+      const { result } = renderHook(() => useSharedGameDetail({ id: SAMPLE_ID }), {
+        wrapper: createWrapper(),
+      });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.status).toBe('error');
+    });
+
+    it('derives status="error" on timeout / network failure', async () => {
+      const err = new SharedGamesApiError('Timeout', 'timeout');
+      mockGet.mockRejectedValue(err);
+      const { result } = renderHook(() => useSharedGameDetail({ id: SAMPLE_ID }), {
+        wrapper: createWrapper(),
+      });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.status).toBe('error');
+    });
+
+    it('derives status="error" on non-typed Error (defensive default)', async () => {
+      mockGet.mockRejectedValue(new Error('boom'));
+      const { result } = renderHook(() => useSharedGameDetail({ id: SAMPLE_ID }), {
+        wrapper: createWrapper(),
+      });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.status).toBe('error');
+    });
+
+    it('derives status="loading" when no data + no error + first fetch in flight', async () => {
+      // Slow promise so loading state is observable
+      let resolveFn: (v: SharedGameDetailV2) => void = () => {};
+      mockGet.mockReturnValue(
+        new Promise<SharedGameDetailV2>(resolve => {
+          resolveFn = resolve;
+        })
+      );
+      const { result } = renderHook(() => useSharedGameDetail({ id: SAMPLE_ID }), {
+        wrapper: createWrapper(),
+      });
+      expect(result.current.status).toBe('loading');
+      // Cleanup so the promise doesn't leak
+      resolveFn(SAMPLE_DETAIL);
+      await waitFor(() => expect(result.current.data).toBeDefined());
+    });
+
+    it('keeps status="error" priority over stale data during refetch failure', async () => {
+      // First call resolves; second call rejects with 5xx — the FSM contract says
+      // an error during refetch over stale data must surface "error", not "default".
+      mockGet
+        .mockResolvedValueOnce(SAMPLE_DETAIL)
+        .mockRejectedValueOnce(new SharedGamesApiError('Boom', 'http', { httpStatus: 500 }));
+      const { result } = renderHook(() => useSharedGameDetail({ id: SAMPLE_ID }), {
+        wrapper: createWrapper(),
+      });
+      await waitFor(() => expect(result.current.data).toBeDefined());
+      expect(result.current.status).toBe('empty'); // SAMPLE_DETAIL has zero counts
+
+      await result.current.refetch();
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.status).toBe('error');
+    });
   });
 });

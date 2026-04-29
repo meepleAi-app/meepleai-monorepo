@@ -26,8 +26,10 @@ import {
   AgentListItem,
   ContributorsStrip,
   EmptyState,
+  ErrorState,
   Hero,
   KbDocItem,
+  NotFoundState,
   StickyCta,
   TAB_KEYS,
   Tabs,
@@ -52,14 +54,18 @@ function tabSerialize(value: TabKey): string | null {
 }
 
 /**
- * 5-state surface for visual-test escape hatch. Mirror Wave A.3b pattern.
+ * 6-state surface for visual-test escape hatch. Mirror Wave A.3b pattern.
  *  - default     → real data renders
  *  - loading     → mounted skeleton, suppress data
  *  - error       → ErrorState card, suppress data
- *  - not-found   → handled server-side via notFound(); kept for symmetry
+ *  - not-found   → NotFoundState card; visual-regression coverage of post-mount 404
  *  - empty-tab   → forces `toolkits=[], agents=[], kbs=[]` to exercise EmptyState
+ *
+ * Issue #615: `not-found` was previously handled exclusively server-side via
+ * `notFound()`. Wave A.4 follow-up adds the post-mount client surface so
+ * visual tests can exercise it without forcing an actual 404 round-trip.
  */
-type DetailStateOverride = 'default' | 'loading' | 'error' | 'empty-tab';
+type DetailStateOverride = 'default' | 'loading' | 'error' | 'not-found' | 'empty-tab';
 
 const IS_NON_PROD = process.env.NODE_ENV !== 'production';
 // Visual-regression CI sets this to '1' before `pnpm build` so the bootstrap
@@ -72,6 +78,7 @@ const VALID_STATE_OVERRIDES: ReadonlySet<DetailStateOverride> = new Set([
   'default',
   'loading',
   'error',
+  'not-found',
   'empty-tab',
 ]);
 
@@ -103,7 +110,10 @@ export function SharedGameDetailPageClient({
     deserialize: tabDeserialize,
   });
 
-  const { data, isError, isLoading } = useSharedGameDetail({ id, initialData: detail });
+  const { data, status, isFetching, refetch } = useSharedGameDetail({
+    id,
+    initialData: detail,
+  });
 
   // SSR seed guarantees `data` is defined on first paint, but TanStack Query
   // can briefly undefine it during refetch. Fall back to the SSR `detail` prop.
@@ -114,8 +124,13 @@ export function SharedGameDetailPageClient({
   const agents = stateOverride === 'empty-tab' ? [] : (game.agents ?? []);
   const kbs = stateOverride === 'empty-tab' ? [] : (game.kbs ?? []);
 
-  const showError = stateOverride === 'error' || isError;
-  const showLoading = stateOverride === 'loading' || (isLoading && !data);
+  // FSM status from the hook (Issue #615). `stateOverride` short-circuits for
+  // visual-regression coverage; otherwise the hook's derived `status` drives
+  // the surface choice.
+  const effectiveStatus = stateOverride ?? status;
+  const showLoading = effectiveStatus === 'loading';
+  const showError = effectiveStatus === 'error';
+  const showNotFound = effectiveStatus === 'not-found';
 
   // --- Resolve labels (single useMemo per surface to keep child components pure) ---
 
@@ -260,18 +275,37 @@ export function SharedGameDetailPageClient({
     );
   }
 
+  if (showNotFound) {
+    return (
+      <main data-testid="shared-game-detail-page" className="min-h-screen bg-background">
+        <div className="mx-auto max-w-[1024px] px-4 py-8 sm:px-6 lg:px-8">
+          <NotFoundState
+            labels={{
+              title: t('pages.sharedGameDetail.states.notFound.title'),
+              description: t('pages.sharedGameDetail.states.notFound.description'),
+              backLabel: t('pages.sharedGameDetail.states.notFound.backLabel'),
+            }}
+          />
+        </div>
+      </main>
+    );
+  }
+
   if (showError) {
     return (
       <main data-testid="shared-game-detail-page" className="min-h-screen bg-background">
         <div className="mx-auto max-w-[1024px] px-4 py-8 sm:px-6 lg:px-8">
-          <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-6 text-center">
-            <h1 className="font-display text-xl font-semibold text-foreground">
-              {t('pages.sharedGameDetail.states.error.title')}
-            </h1>
-            <p className="mt-2 text-sm text-[hsl(var(--text-muted))]">
-              {t('pages.sharedGameDetail.states.error.description')}
-            </p>
-          </div>
+          <ErrorState
+            labels={{
+              title: t('pages.sharedGameDetail.states.error.title'),
+              description: t('pages.sharedGameDetail.states.error.description'),
+              retryLabel: t('pages.sharedGameDetail.states.error.retryLabel'),
+            }}
+            onRetry={() => {
+              void refetch();
+            }}
+            isRetrying={isFetching}
+          />
         </div>
       </main>
     );

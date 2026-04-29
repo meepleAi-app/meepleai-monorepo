@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.Infrastructure;
+using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -33,15 +34,18 @@ internal sealed class VectorDocumentIndexedForKbFlagHandler
 {
     private readonly MeepleAiDbContext _context;
     private readonly HybridCache _cache;
+    private readonly ICacheInvalidationRetryPolicy _retryPolicy;
     private readonly ILogger<VectorDocumentIndexedForKbFlagHandler> _logger;
 
     public VectorDocumentIndexedForKbFlagHandler(
         MeepleAiDbContext context,
         HybridCache cache,
+        ICacheInvalidationRetryPolicy retryPolicy,
         ILogger<VectorDocumentIndexedForKbFlagHandler> logger)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _retryPolicy = retryPolicy ?? throw new ArgumentNullException(nameof(retryPolicy));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -87,13 +91,20 @@ internal sealed class VectorDocumentIndexedForKbFlagHandler
         // Acceptable for staging (single node); for multi-replica prod consider
         // either shortening LocalCacheExpiration or publishing an integration
         // event that each instance subscribes to for L1 cleanup.
-        await _cache.RemoveByTagAsync("search-games", cancellationToken).ConfigureAwait(false);
+        // Issue #613: bounded retry guards against transient Redis failures
+        // that would otherwise leave the read-model serving a stale flag.
+        await _retryPolicy.ExecuteAsync(
+            token => _cache.RemoveByTagAsync("search-games", token),
+            "shared-games.list",
+            cancellationToken).ConfigureAwait(false);
 
         // Issue #603 (Wave A.4): also evict the per-game detail cache so the
         // next /shared-games/{id} read sees the new HasKnowledgeBase flag and
         // refreshed KbsCount/Kbs preview list.
-        await _cache.RemoveByTagAsync($"shared-game:{sharedGameId.Value}", cancellationToken)
-            .ConfigureAwait(false);
+        await _retryPolicy.ExecuteAsync(
+            token => _cache.RemoveByTagAsync($"shared-game:{sharedGameId.Value}", token),
+            "shared-games.detail",
+            cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Set HasKnowledgeBase=true for SharedGame {SharedGameId} triggered by VectorDocument {DocumentId}",

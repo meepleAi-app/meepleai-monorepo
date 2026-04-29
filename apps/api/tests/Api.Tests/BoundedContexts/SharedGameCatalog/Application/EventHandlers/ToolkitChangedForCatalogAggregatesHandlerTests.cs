@@ -44,13 +44,13 @@ public sealed class ToolkitChangedForCatalogAggregatesHandlerTests
 
     private ToolkitChangedForCatalogAggregatesHandler CreateHandler(
         MeepleAiDbContext db,
-        HybridCache cache) => new(db, cache, _loggerMock.Object);
+        HybridCache cache) => new(db, cache, new PassthroughRetryPolicy(), _loggerMock.Object);
 
     [Fact]
     public void Constructor_WithNullDbContext_Throws()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new ToolkitChangedForCatalogAggregatesHandler(null!, CreateHybridCache(), _loggerMock.Object));
+            new ToolkitChangedForCatalogAggregatesHandler(null!, CreateHybridCache(), new PassthroughRetryPolicy(), _loggerMock.Object));
     }
 
     [Fact]
@@ -58,7 +58,15 @@ public sealed class ToolkitChangedForCatalogAggregatesHandlerTests
     {
         using var db = TestDbContextFactory.CreateInMemoryDbContext();
         Assert.Throws<ArgumentNullException>(() =>
-            new ToolkitChangedForCatalogAggregatesHandler(db, null!, _loggerMock.Object));
+            new ToolkitChangedForCatalogAggregatesHandler(db, null!, new PassthroughRetryPolicy(), _loggerMock.Object));
+    }
+
+    [Fact]
+    public void Constructor_WithNullRetryPolicy_Throws()
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        Assert.Throws<ArgumentNullException>(() =>
+            new ToolkitChangedForCatalogAggregatesHandler(db, CreateHybridCache(), null!, _loggerMock.Object));
     }
 
     [Fact]
@@ -66,7 +74,7 @@ public sealed class ToolkitChangedForCatalogAggregatesHandlerTests
     {
         using var db = TestDbContextFactory.CreateInMemoryDbContext();
         Assert.Throws<ArgumentNullException>(() =>
-            new ToolkitChangedForCatalogAggregatesHandler(db, CreateHybridCache(), null!));
+            new ToolkitChangedForCatalogAggregatesHandler(db, CreateHybridCache(), new PassthroughRetryPolicy(), null!));
     }
 
     [Fact]

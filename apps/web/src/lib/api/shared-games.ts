@@ -151,9 +151,21 @@ export const SharedGameDetailV2Schema = z.object({
   createdAt: z.string(),
   modifiedAt: z.string().nullable(),
   // Wave A.4 extension fields:
-  toolkits: z.array(PublishedToolkitPreviewSchema).nullable().default([]),
-  agents: z.array(PublishedAgentPreviewSchema).nullable().default([]),
-  kbs: z.array(PublishedKbPreviewSchema).nullable().default([]),
+  toolkits: z
+    .array(PublishedToolkitPreviewSchema)
+    .nullable()
+    .default([])
+    .transform(v => v ?? []),
+  agents: z
+    .array(PublishedAgentPreviewSchema)
+    .nullable()
+    .default([])
+    .transform(v => v ?? []),
+  kbs: z
+    .array(PublishedKbPreviewSchema)
+    .nullable()
+    .default([])
+    .transform(v => v ?? []),
   toolkitsCount: z.number().int().nonnegative().default(0),
   agentsCount: z.number().int().nonnegative().default(0),
   kbsCount: z.number().int().nonnegative().default(0),

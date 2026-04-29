@@ -320,17 +320,29 @@ export async function proxy(request: NextRequest) {
   let isAuthenticated = false;
 
   // ============================================================================
-  // E2E Test Auth Bypass (development only)
+  // E2E Test Auth Bypass (development + visual-regression CI builds)
   // ============================================================================
-  // When PLAYWRIGHT_AUTH_BYPASS=true (dev only), trust session cookies without
-  // server-side backend validation. This allows Playwright E2E tests to mock
-  // auth at the browser level via page.route() without needing a running backend.
-  // Safety: Guarded by NODE_ENV !== 'production' - cannot activate in production.
-  if (
-    process.env.NODE_ENV !== 'production' &&
-    process.env.PLAYWRIGHT_AUTH_BYPASS === 'true' &&
-    sessionCookieValue
-  ) {
+  // When PLAYWRIGHT_AUTH_BYPASS=true, trust session cookies without server-side
+  // backend validation. Allows Playwright E2E tests to mock auth at the browser
+  // level via page.route() without needing a running backend.
+  //
+  // Safety guards (any one MUST pass to engage the bypass):
+  //   1. NODE_ENV !== 'production' — local dev / CI verify against dev server.
+  //   2. NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1' — set by the
+  //      `visual-regression-migrated.yml` workflow before `pnpm build`. This
+  //      env var is inlined at build time; production deploys never set it,
+  //      so the bypass branch is dead-code-eliminated by the bundler in real
+  //      production builds. (Wave B.1 lesson learned, Issue #633: brownfield
+  //      `(authenticated)` routes need the bypass to engage even in prod-mode
+  //      visual regression builds.)
+  //
+  // The bypass also requires PLAYWRIGHT_AUTH_BYPASS=true (set by playwright.config.ts
+  // webServer at line 434) AND a session cookie present (seeded by spec helper
+  // `seedAuthSession.ts`). Cannot activate in real production deploys because
+  // PLAYWRIGHT_AUTH_BYPASS is never set there.
+  const isVisualTestBuild = process.env.NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1';
+  const isAuthBypassAllowed = process.env.NODE_ENV !== 'production' || isVisualTestBuild;
+  if (isAuthBypassAllowed && process.env.PLAYWRIGHT_AUTH_BYPASS === 'true' && sessionCookieValue) {
     isAuthenticated = true;
   } else if (sessionCookieValue) {
     isAuthenticated = await isSessionCookieValid(request, sessionCookieValue);

@@ -22,13 +22,18 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SharedGameDetailV2, TopContributor } from '@/lib/api/shared-games';
-import itMessages from '@/locales/it.json';
+import { t } from '@/test-utils/test-i18n';
 
 // Single source of truth for SSR metadata fallbacks (Wave A.4 / Issue #617).
 // Tests assert against the same locale catalogue that `page.tsx` consumes
-// in `generateMetadata`. If a future translator edits `it.json`, these
-// assertions stay in sync automatically.
-const META = itMessages.pages.sharedGameDetail.metadata;
+// in `generateMetadata`, but routed through `@/test-utils/test-i18n` (the
+// canonical project pattern — see its file-level JSDoc) so a future
+// `TEST_LANG=en` run resolves the same keys against the EN catalogue.
+const META = {
+  titleFallback: t('pages.sharedGameDetail.metadata.titleFallback'),
+  titleSuffix: t('pages.sharedGameDetail.metadata.titleSuffix'),
+  descriptionFallback: t('pages.sharedGameDetail.metadata.descriptionFallback'),
+};
 
 // ============================================================================
 // Mocks

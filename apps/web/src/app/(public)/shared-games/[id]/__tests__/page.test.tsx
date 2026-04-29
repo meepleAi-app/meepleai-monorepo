@@ -22,6 +22,18 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SharedGameDetailV2, TopContributor } from '@/lib/api/shared-games';
+import { t } from '@/test-utils/test-i18n';
+
+// Single source of truth for SSR metadata fallbacks (Wave A.4 / Issue #617).
+// Tests assert against the same locale catalogue that `page.tsx` consumes
+// in `generateMetadata`, but routed through `@/test-utils/test-i18n` (the
+// canonical project pattern — see its file-level JSDoc) so a future
+// `TEST_LANG=en` run resolves the same keys against the EN catalogue.
+const META = {
+  titleFallback: t('pages.sharedGameDetail.metadata.titleFallback'),
+  titleSuffix: t('pages.sharedGameDetail.metadata.titleSuffix'),
+  descriptionFallback: t('pages.sharedGameDetail.metadata.descriptionFallback'),
+};
 
 // ============================================================================
 // Mocks
@@ -230,11 +242,11 @@ describe('SharedGameDetailPage (Wave A.4 — Issue #616)', () => {
         params: Promise.resolve({ id: SAMPLE_ID }),
       });
 
-      expect(meta.title).toBe('Catan — MeepleAI');
+      expect(meta.title).toBe(`Catan${META.titleSuffix}`);
       expect(meta.description).toBe('Settlers strategy game');
       expect(meta.robots).toEqual({ index: true, follow: true });
       expect(meta.openGraph).toMatchObject({
-        title: 'Catan — MeepleAI',
+        title: `Catan${META.titleSuffix}`,
         description: 'Settlers strategy game',
         type: 'website',
       });
@@ -260,7 +272,7 @@ describe('SharedGameDetailPage (Wave A.4 — Issue #616)', () => {
         params: Promise.resolve({ id: SAMPLE_ID }),
       });
 
-      expect(meta.description).toContain('Dettagli del gioco condiviso');
+      expect(meta.description).toBe(META.descriptionFallback);
     });
 
     it('omits OG images when detail.imageUrl is empty string', async () => {
@@ -282,8 +294,8 @@ describe('SharedGameDetailPage (Wave A.4 — Issue #616)', () => {
         params: Promise.resolve({ id: SAMPLE_ID }),
       });
 
-      expect(meta.title).toBe('Gioco condiviso — MeepleAI');
-      expect(meta.description).toContain('Dettagli del gioco condiviso');
+      expect(meta.title).toBe(`${META.titleFallback}${META.titleSuffix}`);
+      expect(meta.description).toBe(META.descriptionFallback);
       expect(meta.openGraph?.images).toBeUndefined();
     });
 
@@ -294,7 +306,7 @@ describe('SharedGameDetailPage (Wave A.4 — Issue #616)', () => {
         params: Promise.resolve({ id: SAMPLE_ID }),
       });
 
-      expect(meta.title).toBe('Gioco condiviso — MeepleAI');
+      expect(meta.title).toBe(`${META.titleFallback}${META.titleSuffix}`);
     });
   });
 });

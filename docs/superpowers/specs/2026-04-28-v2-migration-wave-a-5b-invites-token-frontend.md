@@ -48,10 +48,9 @@
 | Component | `apps/web/src/components/ui/v2/invites/declined-shell.tsx` | **Create** (neutral non-shame + undo link) |
 | Component | `apps/web/src/components/ui/v2/invites/confetti.tsx` | **Create** (CSS-only 14 particles, useMemo) |
 | Component | `apps/web/src/components/ui/v2/invites/error-banner.tsx` | **Create** (variant: token-expired \| token-invalid, riusa pattern Banner A.2) |
-| Component | `apps/web/src/components/ui/v2/invites/meeple-card-game-compact.tsx` | **Create** (variant compact di MeepleCardGame, 56×56 cover) |
-| Component | `apps/web/src/components/ui/v2/invites/auth-card-shell.tsx` | **Create** (wrapper card 380px max-width, riusabile) |
-| Component | `apps/web/src/components/ui/v2/invites/desktop-split-layout.tsx` | **Create** (grid 1.1fr/1fr, LEFT context + RIGHT auth-card) |
-| Component index | `apps/web/src/components/ui/v2/invites/index.ts` | **Create** (barrel) |
+| **Reuse A.4** | `apps/web/src/components/ui/data-display/meeple-card.tsx` | **Reuse** con `variant="compact"` (56×56 cover, consistente con A.3b/A.4 grid/list/featured pattern — NO new component) |
+| Component index | `apps/web/src/components/ui/v2/invites/index.ts` | **Create** (barrel — 8 component, NO meeple-card/auth-card-shell/desktop-split) |
+| Inline page-client | `auth-card-shell` + `desktop-split-layout` | **Inline** in `page-client.tsx` (single-use, defer abstraction per YAGNI — promote a `ui/v2/shared/*` solo se A.6+ ne hanno bisogno) |
 | Override hook | `apps/web/src/hooks/useStateOverride.ts` (se non esistente) o reuse A.4 pattern | **Reuse o Create** |
 | **Reuse Phase 0** | `apps/web/src/lib/utils/entity-hsl.ts` | **Reuse** (helper per host avatar tinta dinamica) |
 | **Reuse A.3b** | `apps/web/src/hooks/useUrlHashState.ts` | **Reuse** (potenziale URL persistence per state, opzionale) |
@@ -87,15 +86,17 @@ export default async function InvitesTokenPage({ params, searchParams }) {
     return <InvitesPageClient initialData={fixture} stateOverride={sp.state} token={token} />;
   }
 
-  // SSR fetch — fault-tolerant: NotFound/Gone surface non sono error, sono UX states
+  // SSR fetch — fault-tolerant: NotFound surface non è error, è UX state.
+  // NOTA: A.5a backend GET ritorna 200 con `status: "Expired"|"Cancelled"` nel payload (NON 410).
+  // 410 è esclusivo del POST .../respond endpoint. Solo 404 va catchato come UX state qui.
   const result = await getInvitation(token).catch(err => ({ kind: 'error' as const, error: err }));
 
   if (result.kind === 'error') {
     if (result.error.status === 404) return <InvitesPageClient initialState="token-invalid" token={token} />;
-    if (result.error.status === 410) return <InvitesPageClient initialState="token-expired" token={token} />;
-    throw result.error;  // 500 surface via Next.js error.tsx boundary
+    throw result.error;  // 5xx/network → 500 surface via Next.js error.tsx boundary
   }
 
+  // Expired/Cancelled detection avviene in deriveState() via data.status (no early return necessario)
   return <InvitesPageClient initialData={result.data} stateOverride={sp.state} token={token} />;
 }
 ```
@@ -105,26 +106,52 @@ export default async function InvitesTokenPage({ params, searchParams }) {
 ```typescript
 type InviteState =
   | 'default'           // token valido, !session.user
-  | 'logged-in'         // token valido, session.user
-  | 'accepted-success'  // POST 200, just accepted
-  | 'declined'          // POST 200, just declined
-  | 'token-expired'     // GET 410 o status in {Expired, Cancelled} o pending-past-expiry
+  | 'logged-in'         // token valido, session.user (CTA copy + display name pre-fill)
+  | 'accepted-success'  // POST 200, just accepted (confetti one-shot)
+  | 'declined'          // POST 200 OR alreadyRespondedAs='Declined'
+  | 'token-expired'     // status in {Expired, Cancelled} o POST 410 Gone
   | 'token-invalid'     // GET 404
-  | 'already-accepted'; // GET 200 + AlreadyRespondedAs="Accepted"
+  | 'already-accepted'; // GET 200 + alreadyRespondedAs='Accepted' (no recent mutation)
 
-function deriveState(data: PublicGameNightInvitationDto | null, session, mutationResult): InviteState {
-  // Override (production: dead-code via NODE_ENV constant-fold)
+// Contract: data is NEVER null when this function runs. Null cases (404/5xx) are handled
+// by page.tsx via initialState parameter and short-circuit before page-client mount.
+function deriveState(
+  data: PublicGameNightInvitation,
+  session: Session | null,
+  mutationResult: RespondToInvitationResult | null,
+  initialState: InviteState | null,
+  stateOverride: string | null,
+): InviteState {
+  // 1. Server-side initial state (404 → token-invalid; 5xx already threw to error.tsx)
+  if (initialState) return initialState;
+
+  // 2. Test override (production: dead-code via NODE_ENV constant-fold)
   if (process.env.NODE_ENV !== 'production' && stateOverride) return stateOverride as InviteState;
 
-  if (!data) return data === null && status === 404 ? 'token-invalid' : 'token-expired';
-  if (mutationResult?.kind === 'success' && mutationResult.action === 'accepted') return 'accepted-success';
-  if (mutationResult?.kind === 'success' && mutationResult.action === 'declined') return 'declined';
+  // 3. Recent mutation outcomes (precedenza su entity status — l'utente ha appena cliccato)
+  if (mutationResult?.kind === 'success' && mutationResult.action === 'Accepted') return 'accepted-success';
+  if (mutationResult?.kind === 'success' && mutationResult.action === 'Declined') return 'declined';
+  if (mutationResult?.kind === 'gone') return 'token-expired';
+  // 409 conflict: handled by re-fetch + fall-through to alreadyRespondedAs branch below
+
+  // 4. Entity status from GET (terminal states)
+  if (data.status === 'Expired' || data.status === 'Cancelled') return 'token-expired';
+
+  // 5. Pre-existing response (alreadyRespondedAs from server, no recent mutation)
   if (data.alreadyRespondedAs === 'Accepted') return 'already-accepted';
   if (data.alreadyRespondedAs === 'Declined') return 'declined';
-  if (data.status === 'Expired' || data.status === 'Cancelled') return 'token-expired';
-  return session.user ? 'logged-in' : 'default';
+
+  // 6. Pending invitation (default vs logged-in differs by CTA copy + pre-fill)
+  return session?.user ? 'logged-in' : 'default';
 }
 ```
+
+**Logged-in delta UX** (rispetto a `default`):
+| Aspect | `default` (anonymous) | `logged-in` (authenticated) |
+|---|---|---|
+| CTA Accept copy | "Accetto, ci sarò →" | "Accetto, ci sarò → (come {displayName})" |
+| Display name | not shown | pre-fill nella confirmation card |
+| Step skip | nessuno (click esplicito sempre richiesto) | nessuno (idempotency contract) |
 
 ### 3.4 Idempotency contract D2(b) — UX mapping
 
@@ -187,7 +214,8 @@ git commit -m "test(invites): bootstrap A.5b visual baselines (16 PNG Linux x86-
 
 ## 7. Acceptance Criteria
 
-- [ ] Route `/invites/[token]` accessible su Alpha mode (backend già fuori da Alpha gate per A.5a)
+- [ ] `GET /invites/{validToken}` ritorna 200 + render `<InvitesPageClient>` con `data.status="Pending"` quando `ALPHA_MODE=true`. Verificato via E2E `e2e/v2-states/invites-token.spec.ts` test `default mobile` + `default desktop`.
+- [ ] `GET /invites/{unknownToken}` ritorna 200 + render `token-invalid` state (NOT 404 page Next.js) — verificato via E2E test `token-invalid` × 2 viewport.
 - [ ] 7 stati v2 implementati con visual test (mobile 375 + desktop 1440)
 - [ ] Hook `useGameNightInvitation` SSR seed + `useRespondToInvitation` con FSM 5-stati
 - [ ] Override `?state=...` guardato da `NODE_ENV !== 'production'` (dead-code-eliminated in prod)

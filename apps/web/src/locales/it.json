@@ -1242,6 +1242,7 @@
       },
       "form": {
         "acceptCta": "Accetto, ci sarò →",
+        "acceptCtaLoggedIn": "Accetto, ci sarò → (come {displayName})",
         "declineCta": "Non posso venire",
         "submittingAccept": "Invio risposta…",
         "submittingDecline": "Invio risposta…"

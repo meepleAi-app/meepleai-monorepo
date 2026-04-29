@@ -40,85 +40,15 @@ import { useGameNightInvitation } from '@/hooks/useGameNightInvitation';
 import { useRespondToInvitation } from '@/hooks/useRespondToInvitation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { type PublicGameNightInvitation, type RsvpAction } from '@/lib/api/game-night-invitations';
+import { deriveState, parseStateOverride } from '@/lib/invites/derive-state';
 
 // --------------------------------------------------------------------------
-// FSM
+// FSM override gate (env-derived)
 // --------------------------------------------------------------------------
-
-type InviteState =
-  | 'default'
-  | 'logged-in'
-  | 'accepted-success'
-  | 'declined'
-  | 'token-expired'
-  | 'token-invalid'
-  | 'already-accepted';
-
-const VALID_STATE_OVERRIDES: ReadonlySet<InviteState> = new Set([
-  'default',
-  'logged-in',
-  'accepted-success',
-  'declined',
-  'token-expired',
-  'token-invalid',
-  'already-accepted',
-]);
 
 const IS_NON_PROD = process.env.NODE_ENV !== 'production';
 const IS_VISUAL_TEST_BUILD = process.env.NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1';
 const STATE_OVERRIDE_ENABLED = IS_NON_PROD || IS_VISUAL_TEST_BUILD;
-
-function parseStateOverride(raw: string | null): InviteState | undefined {
-  if (!STATE_OVERRIDE_ENABLED || !raw) return undefined;
-  return VALID_STATE_OVERRIDES.has(raw as InviteState) ? (raw as InviteState) : undefined;
-}
-
-interface DeriveStateArgs {
-  readonly data: PublicGameNightInvitation | undefined;
-  readonly hasSession: boolean;
-  readonly mutationKind: 'success' | 'conflict-state-switch' | 'gone' | null;
-  readonly mutationAction: RsvpAction | null;
-  readonly initialBannerState: 'token-invalid' | undefined;
-  readonly stateOverride: InviteState | undefined;
-}
-
-function deriveState({
-  data,
-  hasSession,
-  mutationKind,
-  mutationAction,
-  initialBannerState,
-  stateOverride,
-}: DeriveStateArgs): InviteState {
-  // 1. Visual-test override (dev/CI only).
-  if (stateOverride) return stateOverride;
-
-  // 2. SSR-provided structural error.
-  if (initialBannerState === 'token-invalid') return 'token-invalid';
-
-  // 3. Mutation-driven transitions outrank stale GET data — they reflect the
-  //    user's last interaction.
-  if (mutationKind === 'success' && mutationAction === 'Accepted') return 'accepted-success';
-  if (mutationKind === 'success' && mutationAction === 'Declined') return 'declined';
-  if (mutationKind === 'gone') return 'token-expired';
-  // (Conflict surfaces as a banner overlaid on the existing surface; it does
-  //  not transition the FSM. Caller derives the banner separately.)
-
-  // 4. Server-side status snapshots (SSR seed or refetch).
-  if (!data) {
-    // No SSR data, no token-invalid signal — render the default surface and
-    // let the client query retry. The hook surfaces a generic error banner
-    // if it also fails.
-    return hasSession ? 'logged-in' : 'default';
-  }
-  if (data.status === 'Expired' || data.status === 'Cancelled') return 'token-expired';
-  if (data.alreadyRespondedAs === 'Accepted' || data.alreadyRespondedAs === 'Declined') {
-    return 'already-accepted';
-  }
-
-  // 5. Pending invitation. Distinguish anonymous vs logged-in for pre-fill UX.
-  return hasSession ? 'logged-in' : 'default';
-}
 
 // --------------------------------------------------------------------------
 // Avatar helpers (deterministic, derived from server fields).
@@ -164,7 +94,9 @@ export function InvitesTokenPageClient({
 }: InvitesTokenPageClientProps): JSX.Element {
   const { t, formatDate, formatTime, formatMessage } = useTranslation();
   const searchParams = useSearchParams();
-  const stateOverride = parseStateOverride(searchParams?.get('state') ?? null);
+  const stateOverride = parseStateOverride(searchParams?.get('state') ?? null, {
+    enabled: STATE_OVERRIDE_ENABLED,
+  });
 
   // Auth detection (client-side; no SSR session reuse for guest-by-default
   // invite UX).

@@ -1192,6 +1192,7 @@
       },
       "form": {
         "acceptCta": "Accept, I'll be there →",
+        "acceptCtaLoggedIn": "Accept, I'll be there → (as {displayName})",
         "declineCta": "I can't make it",
         "submittingAccept": "Sending response…",
         "submittingDecline": "Sending response…"

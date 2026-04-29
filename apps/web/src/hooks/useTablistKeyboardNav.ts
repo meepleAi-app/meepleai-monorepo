@@ -108,10 +108,13 @@ export interface UseTablistKeyboardNavReturn<T extends string> {
    */
   readonly tabRefs: MutableRefObject<Map<T, HTMLButtonElement>>;
   /**
-   * Stable keydown handler. Bind to each tab button as
-   * `onKeyDown={e => handleKeyDown(e, thisTabKey)}`.
+   * Stable keydown handler. Bind per-button as
+   * `onKeyDown={e => handleKeyDown(e, thisTabKey)}` (preferred), or on the
+   * tablist container as `onKeyDown={e => handleKeyDown(e, activeKey)}` for
+   * surfaces that prefer container-level event delegation. The event type is
+   * widened to `HTMLElement` so both patterns satisfy TypeScript.
    */
-  readonly handleKeyDown: (e: KeyboardEvent<HTMLButtonElement>, currentKey: T) => void;
+  readonly handleKeyDown: (e: KeyboardEvent<HTMLElement>, currentKey: T) => void;
 }
 
 export function useTablistKeyboardNav<T extends string>({
@@ -122,7 +125,7 @@ export function useTablistKeyboardNav<T extends string>({
   const tabRefs = useRef<Map<T, HTMLButtonElement>>(new Map());
 
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLButtonElement>, currentKey: T) => {
+    (e: KeyboardEvent<HTMLElement>, currentKey: T) => {
       const idx = orderedKeys.indexOf(currentKey);
       if (idx === -1) return;
 

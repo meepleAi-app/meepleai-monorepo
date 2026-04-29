@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import {
   Camera,
@@ -12,6 +12,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 
+import { useTablistKeyboardNav } from '@/hooks/useTablistKeyboardNav';
 import { cn } from '@/lib/utils';
 
 export interface ToolItem {
@@ -155,19 +156,18 @@ export function ToolRail({
   const baseTools = tools.filter(t => t.type === 'base');
   const customTools = tools.filter(t => t.type === 'custom');
 
-  // Keyboard navigation: cycle through all tools using activeTool as anchor
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
-    const currentIndex = tools.findIndex(t => t.id === activeTool);
-    if (currentIndex === -1) return;
-
-    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      onToolChange(tools[(currentIndex + 1) % tools.length].id);
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-      e.preventDefault();
-      onToolChange(tools[(currentIndex - 1 + tools.length) % tools.length].id);
-    }
-  };
+  // Wave A.6 Tier 1.5 (Issue #625): unified keyboard navigation across all
+  // tools using the shared tablist hook. `orientation: 'both'` mirrors the
+  // legacy contract where ArrowUp≡ArrowLeft and ArrowDown≡ArrowRight, so
+  // either axis advances regardless of which sub-tablist (vertical desktop
+  // rail / horizontal mobile bar / custom-tools section) currently has focus.
+  // Bonus a11y: Home/End now jump to first/last (not in original handler).
+  const orderedToolIds = useMemo(() => tools.map(t => t.id), [tools]);
+  const { handleKeyDown } = useTablistKeyboardNav<string>({
+    orderedKeys: orderedToolIds,
+    onChange: onToolChange,
+    orientation: 'both',
+  });
 
   return (
     <>
@@ -209,7 +209,7 @@ export function ToolRail({
           aria-label="Strumenti base"
           aria-orientation="vertical"
           className="flex flex-col gap-1 px-1"
-          onKeyDown={handleKeyDown}
+          onKeyDown={e => handleKeyDown(e, activeTool)}
         >
           {baseTools.map(tool => (
             <ToolButton
@@ -240,7 +240,7 @@ export function ToolRail({
               aria-label="Strumenti custom"
               aria-orientation="vertical"
               className="flex flex-col gap-1 px-1"
-              onKeyDown={handleKeyDown}
+              onKeyDown={e => handleKeyDown(e, activeTool)}
             >
               {customTools.map(tool => (
                 <ToolButton
@@ -270,7 +270,7 @@ export function ToolRail({
           aria-label="Strumenti sessione"
           aria-orientation="horizontal"
           className="flex items-center justify-around px-2 py-1.5 overflow-x-auto"
-          onKeyDown={handleKeyDown}
+          onKeyDown={e => handleKeyDown(e, activeTool)}
         >
           {tools.slice(0, 5).map(tool => (
             <button

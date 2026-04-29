@@ -625,6 +625,11 @@ jobs:
         run: pnpm build
         env:
           NEXT_PUBLIC_API_BASE: http://localhost:8080
+          # Wave B.1 (#633): enable visual-test fixture so e2e/a11y/games-library.spec.ts
+          # can scan /games?tab=library default + filtered-empty surfaces without a backend.
+          # Constant-folded at build time; STATE_OVERRIDE_ENABLED also unlocks `?state=...`
+          # URL hatch under prod NODE_ENV. Pre-existing accessibility.spec.ts is unaffected.
+          NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED: '1'
 
       - name: Setup Test Environment
         run: cp .env.test.example .env.test

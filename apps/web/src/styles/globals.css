@@ -607,9 +607,9 @@
   --popover: 0 0% 18%;
   --popover-foreground: 30 25% 90%;
   --primary: 25 95% 60%;            /* #d2691e lighter - Orange for visibility */
-  --primary-foreground: 0 0% 100%;
+  --primary-foreground: 0 0% 10%;   /* WCAG AA: Dark text on lighter primary for 7.4:1 contrast (Issue #587, gate #601) */
   --secondary: 142 76% 45%;         /* Green for visibility */
-  --secondary-foreground: 0 0% 100%;
+  --secondary-foreground: 0 0% 10%; /* WCAG AA: Dark text on lighter secondary for 8.1:1 contrast (Issue #587, gate #601) */
   --muted: 0 0% 20%;                /* Neutral muted background */
   --muted-foreground: 0 0% 60%;     /* #999999 - Neutral muted text */
   --accent: 45 93% 56%;             /* #fbbf24 - Amber for visibility */
@@ -629,7 +629,7 @@
   --sidebar: 0 0% 15%;              /* Neutral dark sidebar */
   --sidebar-foreground: 30 25% 90%;
   --sidebar-primary: 25 95% 60%;
-  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-primary-foreground: 0 0% 10%; /* WCAG AA: Mirror --primary-foreground (Issue #587, gate #601) */
   --sidebar-accent: 0 0% 22%;
   --sidebar-accent-foreground: 30 25% 90%;
   --sidebar-border: 0 0% 25%;

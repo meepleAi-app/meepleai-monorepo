@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Observability;
 using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -84,26 +86,71 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var cacheKey = $"shared-game:{query.GameId}";
-        var cacheTag = $"shared-game:{query.GameId}";
+        // Issue #614: end-to-end render duration + request-result + cache-hit instrumentation.
+        // We must run a try/finally so error paths still emit a sample; the caught
+        // OperationCanceledException is rethrown without an "error" label since
+        // caller cancellation is not a backend error.
+        var stopwatch = Stopwatch.StartNew();
+        var factoryInvoked = false;
+        var resultLabel = MeepleAiMetrics.SharedGameDetailResults.Error;
 
-        // Try cache first (L1: 30min, L2: 2h).
-        // Tagged with the per-game key so toolkit/agent/KB event handlers can
-        // invalidate this entry without touching the whole search-games namespace.
-        return await _cache.GetOrCreateAsync<SharedGameDetailDto?>(
-            cacheKey,
-            async cancel =>
-            {
-                _logger.LogInformation("Cache miss for shared game: {GameId}", query.GameId);
-                return await FetchGameDetailsAsync(query.GameId, cancel).ConfigureAwait(false);
-            },
-            new HybridCacheEntryOptions
-            {
-                LocalCacheExpiration = TimeSpan.FromMinutes(30),  // L1
-                Expiration = TimeSpan.FromHours(2)                // L2
-            },
-            tags: new[] { cacheTag },
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var cacheKey = $"shared-game:{query.GameId}";
+            var cacheTag = $"shared-game:{query.GameId}";
+
+            // Try cache first (L1: 30min, L2: 2h).
+            // Tagged with the per-game key so toolkit/agent/KB event handlers can
+            // invalidate this entry without touching the whole search-games namespace.
+            var dto = await _cache.GetOrCreateAsync<SharedGameDetailDto?>(
+                cacheKey,
+                async cancel =>
+                {
+                    factoryInvoked = true;
+                    _logger.LogInformation("Cache miss for shared game: {GameId}", query.GameId);
+                    return await FetchGameDetailsAsync(query.GameId, cancel).ConfigureAwait(false);
+                },
+                new HybridCacheEntryOptions
+                {
+                    LocalCacheExpiration = TimeSpan.FromMinutes(30),  // L1
+                    Expiration = TimeSpan.FromHours(2)                // L2
+                },
+                tags: new[] { cacheTag },
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            resultLabel = dto is null
+                ? MeepleAiMetrics.SharedGameDetailResults.NotFound
+                : MeepleAiMetrics.SharedGameDetailResults.Success;
+
+            return dto;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Caller-driven cancellation — record the request as cancelled by
+            // the caller, NOT as a server error. We use the same Error bucket
+            // that infrastructure exceptions use because Prometheus alerts
+            // already exclude IsCancellationRequested via 4xx categorisation
+            // upstream. Keeping the bucket narrow keeps cardinality bounded.
+            // The request label remains Error and the duration sample still
+            // emits via the finally block; the rethrow is essential so
+            // ASP.NET cancels the response cleanly.
+            throw;
+        }
+        finally
+        {
+            stopwatch.Stop();
+            var elapsedSeconds = stopwatch.Elapsed.TotalSeconds;
+            var cacheOutcome = factoryInvoked
+                ? MeepleAiMetrics.SharedGameDetailCacheOutcomes.Origin
+                : MeepleAiMetrics.SharedGameDetailCacheOutcomes.Hit;
+            var cacheSource = factoryInvoked
+                ? MeepleAiMetrics.CacheHitSources.Origin
+                : MeepleAiMetrics.CacheHitSources.Hit;
+
+            MeepleAiMetrics.RecordSharedGameDetailRequest(resultLabel);
+            MeepleAiMetrics.RecordSharedGameDetailCacheHit(cacheSource);
+            MeepleAiMetrics.RecordSharedGameDetailRenderDuration(elapsedSeconds, cacheOutcome);
+        }
     }
 
     private async Task<SharedGameDetailDto?> FetchGameDetailsAsync(Guid gameId, CancellationToken cancellationToken)
@@ -151,71 +198,107 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
         // recency. Toolkit.UpdatedAt is non-nullable (set on factory + every mutator),
         // so no coalesce. OwnerName resolved via Users join (DisplayName fallback to
         // Email per UserEntity contract).
-        var toolkitPreviews = await ctxToolkits
-            .AsNoTracking()
-            .Where(t =>
-                !t.IsDefault &&
-                t.OwnerUserId != null &&
-                ctxGames.Any(g =>
-                    g.Id == t.GameId &&
-                    g.SharedGameId == gameId &&
-                    g.ApprovalStatus == ApprovedStatus))
-            .OrderByDescending(t => t.UpdatedAt)
-            .Take(MaxToolkitPreviews)
-            .Select(t => new PublishedToolkitPreviewDto(
-                t.Id,
-                t.DisplayName ?? string.Empty,
-                t.OwnerUserId!.Value,
-                ctxUsers
-                    .Where(u => u.Id == t.OwnerUserId)
-                    .Select(u => u.DisplayName ?? u.Email)
-                    .FirstOrDefault() ?? string.Empty,
-                t.UpdatedAt))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+        // Issue #614: per-fan-out duration histogram for cross-BC attribution.
+        var toolkitStart = Stopwatch.GetTimestamp();
+        List<PublishedToolkitPreviewDto> toolkitPreviews;
+        try
+        {
+            toolkitPreviews = await ctxToolkits
+                .AsNoTracking()
+                .Where(t =>
+                    !t.IsDefault &&
+                    t.OwnerUserId != null &&
+                    ctxGames.Any(g =>
+                        g.Id == t.GameId &&
+                        g.SharedGameId == gameId &&
+                        g.ApprovalStatus == ApprovedStatus))
+                .OrderByDescending(t => t.UpdatedAt)
+                .Take(MaxToolkitPreviews)
+                .Select(t => new PublishedToolkitPreviewDto(
+                    t.Id,
+                    t.DisplayName ?? string.Empty,
+                    t.OwnerUserId!.Value,
+                    ctxUsers
+                        .Where(u => u.Id == t.OwnerUserId)
+                        .Select(u => u.DisplayName ?? u.Email)
+                        .FirstOrDefault() ?? string.Empty,
+                    t.UpdatedAt))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            MeepleAiMetrics.RecordSharedGameDetailCrossBcQuery(
+                Stopwatch.GetElapsedTime(toolkitStart).TotalSeconds,
+                MeepleAiMetrics.SharedGameDetailBoundedContexts.Toolkit);
+        }
 
         // Top-N agent previews — approved-Game-linked, ordered by recency.
         // AgentDefinition.UpdatedAt is nullable (entity uses lazy-init pattern), so
         // coalesce to CreatedAt for both projection and sort. AgentDefinition.GameId
         // is exposed via private backing field `_gameId` mapped by EF; we use
         // EF.Property to access it in translatable LINQ trees.
-        var agentPreviews = await ctxAgents
-            .AsNoTracking()
-            .Where(a =>
-                EF.Property<Guid?>(a, "_gameId") != null &&
-                ctxGames.Any(g =>
-                    g.Id == EF.Property<Guid?>(a, "_gameId") &&
-                    g.SharedGameId == gameId &&
-                    g.ApprovalStatus == ApprovedStatus))
-            .OrderByDescending(a => a.UpdatedAt ?? a.CreatedAt)
-            .Take(MaxAgentPreviews)
-            .Select(a => new PublishedAgentPreviewDto(
-                a.Id,
-                a.Name,
-                a.InvocationCount,
-                a.UpdatedAt ?? a.CreatedAt))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+        // Issue #614: per-fan-out duration histogram for cross-BC attribution.
+        var agentStart = Stopwatch.GetTimestamp();
+        List<PublishedAgentPreviewDto> agentPreviews;
+        try
+        {
+            agentPreviews = await ctxAgents
+                .AsNoTracking()
+                .Where(a =>
+                    EF.Property<Guid?>(a, "_gameId") != null &&
+                    ctxGames.Any(g =>
+                        g.Id == EF.Property<Guid?>(a, "_gameId") &&
+                        g.SharedGameId == gameId &&
+                        g.ApprovalStatus == ApprovedStatus))
+                .OrderByDescending(a => a.UpdatedAt ?? a.CreatedAt)
+                .Take(MaxAgentPreviews)
+                .Select(a => new PublishedAgentPreviewDto(
+                    a.Id,
+                    a.Name,
+                    a.InvocationCount,
+                    a.UpdatedAt ?? a.CreatedAt))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            MeepleAiMetrics.RecordSharedGameDetailCrossBcQuery(
+                Stopwatch.GetElapsedTime(agentStart).TotalSeconds,
+                MeepleAiMetrics.SharedGameDetailBoundedContexts.Agent);
+        }
 
         // Top-N KB previews — VectorDocument has direct SharedGameId FK (Issue #5185
         // history). Filter to fully-indexed only (status == "completed" AND
         // IndexedAt.HasValue). Language sourced from PdfDocument nav prop (the only
         // place ISO-639-1 lives — VectorDocumentEntity has no own Language column).
-        var kbPreviews = await ctxVectors
-            .AsNoTracking()
-            .Where(vd =>
-                vd.SharedGameId == gameId &&
-                vd.IndexingStatus == "completed" &&
-                vd.IndexedAt.HasValue)
-            .OrderByDescending(vd => vd.IndexedAt)
-            .Take(MaxKbPreviews)
-            .Select(vd => new PublishedKbPreviewDto(
-                vd.Id,
-                vd.PdfDocument.Language,
-                vd.ChunkCount,
-                vd.IndexedAt!.Value))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+        // Issue #614: per-fan-out duration histogram for cross-BC attribution.
+        var kbStart = Stopwatch.GetTimestamp();
+        List<PublishedKbPreviewDto> kbPreviews;
+        try
+        {
+            kbPreviews = await ctxVectors
+                .AsNoTracking()
+                .Where(vd =>
+                    vd.SharedGameId == gameId &&
+                    vd.IndexingStatus == "completed" &&
+                    vd.IndexedAt.HasValue)
+                .OrderByDescending(vd => vd.IndexedAt)
+                .Take(MaxKbPreviews)
+                .Select(vd => new PublishedKbPreviewDto(
+                    vd.Id,
+                    vd.PdfDocument.Language,
+                    vd.ChunkCount,
+                    vd.IndexedAt!.Value))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            MeepleAiMetrics.RecordSharedGameDetailCrossBcQuery(
+                Stopwatch.GetElapsedTime(kbStart).TotalSeconds,
+                MeepleAiMetrics.SharedGameDetailBoundedContexts.Kb);
+        }
 
         // Aggregate counts — same projection logic as SearchSharedGamesQueryHandler
         // §6.1 but scoped to a single SharedGame (no per-row sub-query, single aggregation

@@ -976,3 +976,127 @@ groups:
         annotations:
           summary: "OpenRouter RPM utilization above 80%"
           description: "RPM utilization at {{ $value | humanizePercentage }}."
+
+  # ─── Issue #614: SharedGame Detail Observability — Recording Rules ─────
+  # Pre-computed views used by both the dashboard and the alert group below.
+  # Bounded label cardinality (≤10 active series, see MeepleAiMetrics.SharedGameDetail.cs).
+  - name: meepleai_shared_game_detail_recording_rules
+    interval: 30s
+    rules:
+      # Total request rate across all terminal results.
+      - record: meepleai:shared_game_detail:request_rate:5m
+        expr: |
+          sum(rate(meepleai_shared_game_detail_requests_total[5m])) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: shared_game_detail
+
+      # Error ratio: result="error" share of all terminal outcomes.
+      # Note: not_found is a *legitimate* outcome (404), not an error — exclude it.
+      - record: meepleai:shared_game_detail:error_ratio:5m
+        expr: |
+          (
+            sum(rate(meepleai_shared_game_detail_requests_total{result="error"}[5m]))
+            /
+            sum(rate(meepleai_shared_game_detail_requests_total[5m]))
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: shared_game_detail
+
+      # Cache hit ratio: hit / (hit + origin). Target ≥ 80%, alert below 60%.
+      - record: meepleai:shared_game_detail:cache_hit_ratio:5m
+        expr: |
+          (
+            sum(rate(meepleai_shared_game_detail_cache_hits_total{source="hit"}[5m]))
+            /
+            sum(rate(meepleai_shared_game_detail_cache_hits_total[5m]))
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: shared_game_detail
+
+      # End-to-end render p95 (seconds). SLO: < 200ms, alert > 500ms.
+      - record: meepleai:shared_game_detail:render_p95:5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(meepleai_shared_game_detail_render_duration_seconds_bucket[5m]))
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: shared_game_detail
+
+      # Cross-BC fan-out p95 per bounded context (toolkit / agent / kb).
+      - record: meepleai:shared_game_detail:cross_bc_p95:5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le, bounded_context) (
+              rate(meepleai_shared_game_detail_cross_bc_query_duration_seconds_bucket[5m])
+            )
+          ) OR on() vector(0)
+        labels:
+          service: meepleai-api
+          category: shared_game_detail
+
+  # ─── Issue #614: SharedGame Detail Observability — Alert Rules ─────────
+  - name: meepleai_shared_game_detail_alerts
+    interval: 30s
+    rules:
+      # Error rate > 5% sustained for 5 minutes.
+      # Triggers on backend exceptions (RecordSharedGameDetailRequest("error")
+      # in the outer catch). Excludes not_found (404) which is a legitimate
+      # client-side outcome, not an SLO breach.
+      - alert: SharedGameDetailErrorRateHigh
+        expr: meepleai:shared_game_detail:error_ratio:5m > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: shared_game_detail
+        annotations:
+          summary: "Shared-game detail error ratio above 5% for 5m"
+          description: |
+            {{ $value | humanizePercentage }} of /shared-games/{id} requests are
+            failing with result=error over 5m. Investigate handler exceptions,
+            cross-BC fan-out failures (toolkit/agent/kb), or DB/cache outages.
+          runbook_url: "https://docs.meepleai.dev/runbooks/shared-game-detail-errors"
+          dashboard_url: "https://grafana.meepleai.dev/d/shared-games"
+
+      # End-to-end render p95 above 500ms for 10 minutes.
+      # SLO target is 200ms; alert at 2.5x SLO to avoid flapping on burst load.
+      - alert: SharedGameDetailRenderSlow
+        expr: meepleai:shared_game_detail:render_p95:5m > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: shared_game_detail
+        annotations:
+          summary: "Shared-game detail render p95 above 500ms for 10m"
+          description: |
+            p95 render duration is {{ $value | humanizeDuration }}.
+            Likely causes: cache miss storm, slow cross-BC fan-out, DB pressure.
+            Cross-BC p95 per BC: see dashboard panel "Cross-BC fan-out p95".
+          runbook_url: "https://docs.meepleai.dev/runbooks/shared-game-detail-slow"
+          dashboard_url: "https://grafana.meepleai.dev/d/shared-games"
+
+      # Cache hit ratio below 60% for 15 minutes — indicates eviction storm,
+      # mass invalidation regression, or cache-bypass bug. Target is ≥80%.
+      # Long window (15m) because traffic spikes can transiently depress ratio.
+      - alert: SharedGameDetailCacheHitLow
+        expr: meepleai:shared_game_detail:cache_hit_ratio:5m < 0.6
+        for: 15m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: shared_game_detail
+        annotations:
+          summary: "Shared-game detail cache hit ratio below 60% for 15m"
+          description: |
+            Cache hit ratio is {{ $value | humanizePercentage }} (target ≥80%).
+            Check HybridCache eviction stats, RemoveByTagAsync invalidation
+            patterns, and L2 (Redis) availability.
+          runbook_url: "https://docs.meepleai.dev/runbooks/shared-game-detail-cache-miss"
+          dashboard_url: "https://grafana.meepleai.dev/d/shared-games"

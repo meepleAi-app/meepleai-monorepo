@@ -375,7 +375,7 @@
      * Consumed by `entityHsl(entity, alpha?)` helper from src/lib/color-utils.ts.
      * Dark-mode overrides under `.dark` block below.
      * ============================================================================ */
-    --c-game:    25 95% 45%;     /* Orange */
+    --c-game:    25 95% 38%;     /* Orange — WCAG AA: Darkened from 45% for 4.5:1 contrast with white text (Issue #587, gate #601) */
     --c-player:  262 83% 58%;    /* Purple */
     --c-session: 240 60% 55%;    /* Indigo */
     --c-agent:   38 92% 50%;     /* Amber */

@@ -114,7 +114,7 @@ export function RegisterPageContent() {
   if (registrationMode === 'loading') {
     return (
       <div
-        className="min-h-dvh flex items-center justify-center bg-background text-muted-foreground"
+        className="min-h-dvh flex items-center justify-center bg-background text-foreground"
         data-testid="register-loading"
       >
         <div className="animate-pulse">{t('auth.register.loadingMessage')}</div>

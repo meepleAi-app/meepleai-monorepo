@@ -188,6 +188,12 @@ Entity types: `game` (orange) · `player` (purple) · `collection` (teal) · `ev
 Variants: `grid` (default) · `list` · `compact` · `featured` · `hero`
 Docs: [docs/frontend/meeple-card-design-tokens.md](./docs/frontend/meeple-card-design-tokens.md)
 
+### V2 Migration Components
+
+Phase 0 of the v2 design migration — see [docs/superpowers/specs/2026-04-26-v2-design-migration.md](./docs/superpowers/specs/2026-04-26-v2-design-migration.md) — pre-stubs the 46 feature components introduced by SP4 wave 1+2 mockups under `apps/web/src/components/v2/<feature>/`. The single source of truth for the mapping `<Mockup, Component, Path, Route, AcceptanceCriteria, Status, PR>` is [docs/frontend/v2-migration-matrix.md](./docs/frontend/v2-migration-matrix.md). Pick `pending` rows from there before implementing v2 features; update `Status` and `PR` in the same PR that lands the implementation.
+
+Path discipline: existing v2 *primitives* live under `apps/web/src/components/ui/v2/` (auth-card, btn, drawer, …); new SP4 *feature compositions* live under `apps/web/src/components/v2/`. Do not collapse the two trees.
+
 ## Testing
 
 ### Backend (Target: 90%+) — 930+ classes | 13,134+ tests

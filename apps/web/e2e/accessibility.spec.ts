@@ -184,7 +184,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const results = await new AxeBuilder({ page }).withTags(['cat.color']).analyze();
+    const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
@@ -194,7 +194,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const results = await new AxeBuilder({ page }).withTags(['cat.color']).analyze();
+    const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
@@ -204,7 +204,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
     await page.goto('/board-game-ai/games');
     await page.waitForLoadState('networkidle');
 
-    const results = await new AxeBuilder({ page }).withTags(['cat.color']).analyze();
+    const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
@@ -215,7 +215,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(500);
 
-    const results = await new AxeBuilder({ page }).withTags(['cat.color']).analyze();
+    const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
 
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });

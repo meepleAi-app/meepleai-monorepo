@@ -282,32 +282,58 @@ function FaqPageBody(): JSX.Element {
           </div>
         )}
 
-        {/* Accordion list */}
-        {!showEmptyState && filteredFaqs.length > 0 && (
-          <div
-            data-dynamic="faq-list"
-            className="mt-1 rounded-lg border border-border bg-card px-4"
-          >
-            {filteredFaqs.map(faq => {
-              const cat = FAQ_CATEGORIES.find(c => c.id === faq.cat);
-              if (!cat) return null;
-              const r = resolve(faq);
-              const isOpen = openIds.has(faq.id);
+        {/* Tabpanels — WAI-ARIA tablist pattern (controlled by CategoryTabs).
+            All 6 panels mounted for aria-controls validity; only active visible. */}
+        {!showEmptyState &&
+          FAQ_CATEGORIES.map(cat => {
+            const isActive = cat.id === activeCat;
+            if (!isActive) {
               return (
-                <AccordionItem
-                  key={faq.id}
-                  id={faq.id}
-                  question={highlight(r.q, query)}
-                  answer={isOpen ? renderLong(r.long, query) : renderInline(r.short, query)}
-                  categoryLabel={resolveCategoryLabel(faq.cat)}
-                  categoryIcon={cat.icon}
-                  isOpen={isOpen}
-                  onToggle={() => toggleOpen(faq.id)}
+                <div
+                  key={cat.id}
+                  role="tabpanel"
+                  id={`faq-panel-${cat.id}`}
+                  aria-labelledby={`faq-tab-${cat.id}`}
+                  hidden
                 />
               );
-            })}
-          </div>
-        )}
+            }
+            return (
+              <div
+                key={cat.id}
+                role="tabpanel"
+                id={`faq-panel-${cat.id}`}
+                aria-labelledby={`faq-tab-${cat.id}`}
+                tabIndex={0}
+              >
+                {filteredFaqs.length > 0 && (
+                  <div
+                    data-dynamic="faq-list"
+                    className="mt-1 rounded-lg border border-border bg-card px-4"
+                  >
+                    {filteredFaqs.map(faq => {
+                      const faqCat = FAQ_CATEGORIES.find(c => c.id === faq.cat);
+                      if (!faqCat) return null;
+                      const r = resolve(faq);
+                      const isOpen = openIds.has(faq.id);
+                      return (
+                        <AccordionItem
+                          key={faq.id}
+                          id={faq.id}
+                          question={highlight(r.q, query)}
+                          answer={isOpen ? renderLong(r.long, query) : renderInline(r.short, query)}
+                          categoryLabel={resolveCategoryLabel(faq.cat)}
+                          categoryIcon={faqCat.icon}
+                          isOpen={isOpen}
+                          onToggle={() => toggleOpen(faq.id)}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
         {/* Footer CTA */}
         <section className="mt-8">

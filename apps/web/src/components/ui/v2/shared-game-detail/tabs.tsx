@@ -26,12 +26,13 @@
 
 'use client';
 
-import type { JSX, KeyboardEvent } from 'react';
-import { useCallback, useRef } from 'react';
+import type { JSX } from 'react';
+import { useMemo } from 'react';
 
 import clsx from 'clsx';
 
 import { entityHsl } from '@/components/ui/data-display/meeple-card/tokens';
+import { useTablistKeyboardNav } from '@/hooks/useTablistKeyboardNav';
 
 export const TAB_KEYS = ['overview', 'toolkits', 'agents', 'knowledge', 'community'] as const;
 
@@ -79,43 +80,11 @@ export function Tabs({
   className,
   idBase = DEFAULT_ID_BASE,
 }: TabsProps): JSX.Element {
-  const tabRefs = useRef<Map<TabKey, HTMLButtonElement>>(new Map());
-
-  const focusTab = useCallback((key: TabKey) => {
-    tabRefs.current.get(key)?.focus();
-  }, []);
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLButtonElement>, currentKey: TabKey) => {
-      const orderedKeys = tabs.map(t => t.key);
-      const idx = orderedKeys.indexOf(currentKey);
-      if (idx === -1) return;
-
-      let nextIdx: number | null = null;
-      switch (e.key) {
-        case 'ArrowLeft':
-          nextIdx = (idx - 1 + orderedKeys.length) % orderedKeys.length;
-          break;
-        case 'ArrowRight':
-          nextIdx = (idx + 1) % orderedKeys.length;
-          break;
-        case 'Home':
-          nextIdx = 0;
-          break;
-        case 'End':
-          nextIdx = orderedKeys.length - 1;
-          break;
-        default:
-          return;
-      }
-
-      e.preventDefault();
-      const nextKey = orderedKeys[nextIdx];
-      onChange(nextKey);
-      focusTab(nextKey);
-    },
-    [tabs, onChange, focusTab]
-  );
+  const orderedKeys = useMemo(() => tabs.map(t => t.key), [tabs]);
+  const { tabRefs, handleKeyDown } = useTablistKeyboardNav<TabKey>({
+    orderedKeys,
+    onChange,
+  });
 
   return (
     <div

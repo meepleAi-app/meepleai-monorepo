@@ -1435,6 +1435,7 @@
     },
     "sharedGameDetail": {
       "metadata": {
+        "titleFallback": "Gioco condiviso",
         "titleSuffix": " — MeepleAI",
         "descriptionFallback": "Dettagli del gioco condiviso dalla community: toolkit, agenti AI e knowledge base."
       },

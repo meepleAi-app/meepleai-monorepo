@@ -87,6 +87,13 @@ export interface SharedGameDetailModalProps {
  * @deprecated Use the `/shared-games/[id]` route (Issue #603, Wave A.4).
  * See file-level JSDoc for migration details.
  */
+// One-time runtime deprecation marker. The dev-only `console.warn` makes
+// the JSDoc `@deprecated` tag visible to engineers who skim the rendered
+// app instead of the source. Production builds short-circuit (no log,
+// no flag mutation). Removal target: 2026-06-01 (Wave A.4 follow-up,
+// Issue #617). See ADR-053 for the V2 migration rationale.
+let __sharedGameDetailModalDeprecationWarned = false;
+
 export function SharedGameDetailModal({
   gameId,
   open,
@@ -98,6 +105,17 @@ export function SharedGameDetailModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production' && !__sharedGameDetailModalDeprecationWarned) {
+      __sharedGameDetailModalDeprecationWarned = true;
+
+      console.warn(
+        '[Deprecated] SharedGameDetailModal is deprecated and will be removed on 2026-06-01. ' +
+          'Migrate callers to the /shared-games/[id] route. See ADR-053 and Issue #603.'
+      );
+    }
+  }, []);
 
   // ============================================================================
   // Fetch Game Details

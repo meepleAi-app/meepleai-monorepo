@@ -25,12 +25,21 @@ import {
   type TopContributor,
 } from '@/lib/api/shared-games';
 import { tryLoadVisualTestFixture } from '@/lib/shared-games/visual-test-fixture';
+import itMessages from '@/locales/it.json';
 
 import { SharedGameDetailPageClient } from './page-client';
 
 import type { Metadata } from 'next';
 
 export const revalidate = 60;
+
+/**
+ * SSR-safe i18n metadata source. The `IntlProvider` only runs in the
+ * client tree, so `generateMetadata` cannot use `useTranslations`.
+ * We import the IT catalogue (project default — see `locales/index.ts`
+ * `DEFAULT_LOCALE = LOCALES.IT`) directly. Wave A.4 follow-up — Issue #617.
+ */
+const SSR_METADATA = itMessages.pages.sharedGameDetail.metadata;
 
 interface SharedGameDetailRouteParams {
   readonly id: string;
@@ -113,18 +122,19 @@ export async function generateMetadata({ params }: SharedGameDetailPageProps): P
     }
   }
 
-  const baseTitle = detail?.title ?? 'Gioco condiviso';
+  const baseTitle = detail?.title ?? SSR_METADATA.titleFallback;
+  const fullTitle = `${baseTitle}${SSR_METADATA.titleSuffix}`;
   const description =
     detail?.description && detail.description.length > 0
       ? detail.description.slice(0, 200)
-      : 'Dettagli del gioco condiviso dalla community: toolkit, agenti AI e knowledge base.';
+      : SSR_METADATA.descriptionFallback;
 
   return {
-    title: `${baseTitle} — MeepleAI`,
+    title: fullTitle,
     description,
     robots: { index: true, follow: true },
     openGraph: {
-      title: `${baseTitle} — MeepleAI`,
+      title: fullTitle,
       description,
       type: 'website',
       images:

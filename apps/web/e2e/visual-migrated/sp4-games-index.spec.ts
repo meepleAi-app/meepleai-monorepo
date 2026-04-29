@@ -35,6 +35,7 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 
+import { seedAuthSession } from '../_helpers/seedAuthSession';
 import { seedCookieConsent } from '../_helpers/seedCookieConsent';
 
 const SLUG = 'sp4-games-index';
@@ -64,6 +65,7 @@ test.describe('V2 Visual Migrated — /games?tab=library matches mockup baseline
   test.describe.configure({ retries: 0 });
 
   test('Games library default tab matches sp4-games-index mockup', async ({ page }) => {
+    await seedAuthSession(page);
     await seedCookieConsent(page);
     await page.goto('/games?tab=library', { waitUntil: 'networkidle' });
     await waitForLibraryReady(page);

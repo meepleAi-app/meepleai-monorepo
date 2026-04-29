@@ -28,6 +28,7 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 
+import { seedAuthSession } from '../_helpers/seedAuthSession';
 import { seedCookieConsent } from '../_helpers/seedCookieConsent';
 
 async function waitForViewReady(page: Page): Promise<void> {
@@ -51,6 +52,7 @@ test.describe('Games library — state coverage', () => {
   test.describe.configure({ retries: 0 });
 
   test('default state', async ({ page }) => {
+    await seedAuthSession(page);
     await seedCookieConsent(page);
     await page.goto('/games?tab=library', { waitUntil: 'networkidle' });
     await waitForViewReady(page);
@@ -64,6 +66,7 @@ test.describe('Games library — state coverage', () => {
   });
 
   test('loading state', async ({ page }) => {
+    await seedAuthSession(page);
     await seedCookieConsent(page);
     await page.goto('/games?tab=library&state=loading', {
       waitUntil: 'networkidle',
@@ -82,6 +85,7 @@ test.describe('Games library — state coverage', () => {
   });
 
   test('empty state (no library entries)', async ({ page }) => {
+    await seedAuthSession(page);
     await seedCookieConsent(page);
     await page.goto('/games?tab=library&state=empty', {
       waitUntil: 'networkidle',
@@ -98,6 +102,7 @@ test.describe('Games library — state coverage', () => {
   });
 
   test('filtered-empty state (filters yield no results)', async ({ page }) => {
+    await seedAuthSession(page);
     await seedCookieConsent(page);
     await page.goto('/games?tab=library&state=filtered-empty', {
       waitUntil: 'networkidle',

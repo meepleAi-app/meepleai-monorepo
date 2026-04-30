@@ -17,6 +17,7 @@ export function EntityBadge({ entity, className = '', stacked = false }: EntityB
   const positioning = stacked ? 'self-start' : 'absolute left-2.5 top-2 z-10';
   return (
     <span
+      data-slot="meeple-card-entity-badge"
       className={`${positioning} rounded-md px-2 py-0.5 font-[var(--font-quicksand)] text-[9px] font-extrabold uppercase tracking-wide text-white shadow-sm ${className}`}
       style={{ background: entityHsl(entity) }}
     >

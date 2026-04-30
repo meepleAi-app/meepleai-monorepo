@@ -9,15 +9,11 @@ import { HubLayout, type FilterChip } from '@/components/layout/HubLayout';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useGames } from '@/hooks/queries/useGames';
-import { useLibrary } from '@/hooks/queries/useLibrary';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 
-// ========== Filter chip sets per tab ==========
+import { GamesLibraryView } from './_components/GamesLibraryView';
 
-const LIBRARY_FILTERS: FilterChip[] = [
-  { id: 'all', label: 'Tutti' },
-  { id: 'recent', label: 'Recenti' },
-];
+// ========== Filter chip sets per tab (library handled by GamesLibraryView) ==========
 
 const CATALOG_FILTERS: FilterChip[] = [
   { id: 'all', label: 'Tutti' },
@@ -39,17 +35,7 @@ function LoadingSkeleton() {
   );
 }
 
-// ========== Empty states per tab ==========
-
-function EmptyLibrary() {
-  return (
-    <div className="flex flex-col items-center gap-3 py-16 px-4 text-center text-[var(--nh-text-muted,#94a3b8)]">
-      <span className="text-5xl">🎲</span>
-      <p className="font-medium">Nessun gioco in libreria.</p>
-      <p className="text-sm">Aggiungi i tuoi giochi preferiti per trovarli qui.</p>
-    </div>
-  );
-}
+// ========== Empty states per tab (library handled by GamesLibraryView) ==========
 
 function EmptyCatalog() {
   return (
@@ -81,7 +67,6 @@ function GamesHubContent() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'carousel'>('grid');
 
-  const { data: libraryData, isLoading: libraryLoading } = useLibrary({ page: 1, pageSize: 20 });
   const { data: catalogData, isLoading: catalogLoading } = useGames(undefined, undefined, 1, 20);
 
   useMiniNavConfig({
@@ -93,30 +78,6 @@ function GamesHubContent() {
     ],
     activeTabId: activeTab,
   });
-
-  // ---- Library items ----
-  const libraryItems = useMemo(() => {
-    const entries = libraryData?.items ?? [];
-    const q = search.toLowerCase();
-    // For "recent", sort by addedAt descending and take the first 10
-    const sorted =
-      activeFilter === 'recent'
-        ? [...entries]
-            .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime())
-            .slice(0, 10)
-        : entries;
-    return sorted
-      .filter(entry => !q || entry.gameTitle.toLowerCase().includes(q))
-      .map(entry => ({
-        entity: 'game' as const,
-        id: entry.id,
-        title: entry.gameTitle,
-        subtitle: entry.gamePublisher ?? undefined,
-        imageUrl: entry.gameImageUrl ?? undefined,
-        rating: entry.averageRating ?? undefined,
-        variant: 'grid' as const,
-      }));
-  }, [libraryData, search, activeFilter]);
 
   // ---- Catalog items ----
   const catalogItems = useMemo(() => {
@@ -144,19 +105,17 @@ function GamesHubContent() {
       }));
   }, [catalogData, search, activeFilter]);
 
-  // ---- Determine active tab state ----
-  const isLoading =
-    activeTab === 'library' ? libraryLoading : activeTab === 'catalog' ? catalogLoading : false;
+  // ---- Library tab uses dedicated v2 orchestrator (Wave B.1 Issue #633) ----
+  if (activeTab === 'library') {
+    return <GamesLibraryView />;
+  }
 
-  const items =
-    activeTab === 'library' ? libraryItems : activeTab === 'catalog' ? catalogItems : [];
+  // ---- Determine active tab state (library handled by early return above) ----
+  const isLoading = activeTab === 'catalog' ? catalogLoading : false;
 
-  const currentFilters =
-    activeTab === 'library'
-      ? LIBRARY_FILTERS
-      : activeTab === 'catalog'
-        ? CATALOG_FILTERS
-        : KB_FILTERS;
+  const items = activeTab === 'catalog' ? catalogItems : [];
+
+  const currentFilters = activeTab === 'catalog' ? CATALOG_FILTERS : KB_FILTERS;
 
   const topActions = (
     <Link
@@ -183,9 +142,7 @@ function GamesHubContent() {
       {isLoading ? (
         <LoadingSkeleton />
       ) : items.length === 0 ? (
-        activeTab === 'library' ? (
-          <EmptyLibrary />
-        ) : activeTab === 'catalog' ? (
+        activeTab === 'catalog' ? (
           <EmptyCatalog />
         ) : (
           <EmptyKB />

@@ -257,9 +257,9 @@ const nextConfig = {
       },
       { source: '/games/:id/agents', destination: '/library/:id?tab=agent', permanent: true },
       { source: '/games/:id/chats', destination: '/chat', permanent: true },
-      { source: '/games', destination: '/library?tab=public', permanent: true },
-      { source: '/games/catalog', destination: '/library?tab=public', permanent: true },
-      { source: '/games/add', destination: '/library', permanent: true },
+      // NOTE (Wave B.1, Issue #633): Removed legacy redirects for /games, /games/catalog, /games/add
+      // — superseded by the V2 GamesLibraryView at apps/web/src/app/(authenticated)/games/page.tsx
+      // which handles tab=library|catalog|kb internally and links to /games/new for adding.
 
       // Catch-all for any other /settings sub-paths
       { source: '/settings/:path*', destination: '/profile?tab=settings', permanent: true },

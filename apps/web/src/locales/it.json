@@ -1358,6 +1358,71 @@
         "free": "gratis durante l'alpha"
       }
     },
+    "games": {
+      "library": {
+        "metadata": {
+          "title": "I miei giochi — MeepleAI",
+          "description": "Sfoglia la tua libreria di giochi: posseduti, wishlist e knowledge base associate."
+        },
+        "hero": {
+          "title": "La tua libreria",
+          "subtitle": "Tutti i tuoi giochi, organizzati e pronti per giocare con l'AI.",
+          "cta": {
+            "add": "Aggiungi gioco"
+          },
+          "stats": {
+            "owned": "Posseduti",
+            "wishlist": "Wishlist",
+            "totalEntries": "Totali",
+            "kbDocs": "Documenti KB"
+          }
+        },
+        "filters": {
+          "search": {
+            "placeholder": "Cerca per titolo, editore o anno…",
+            "ariaLabel": "Cerca nella libreria",
+            "clearAriaLabel": "Cancella la ricerca"
+          },
+          "status": {
+            "label": "Stato",
+            "all": "Tutti",
+            "owned": "Posseduti",
+            "wishlist": "Wishlist",
+            "played": "Giocati"
+          },
+          "sort": {
+            "label": "Ordina per",
+            "lastPlayed": "Aggiunti di recente",
+            "rating": "Valutazione",
+            "title": "Titolo",
+            "year": "Anno"
+          },
+          "view": {
+            "label": "Visualizzazione",
+            "grid": "Griglia",
+            "list": "Lista"
+          },
+          "resultCount": "{count, plural, =0 {Nessun risultato} =1 {1 risultato} other {# risultati}}"
+        },
+        "empty": {
+          "library": {
+            "title": "La tua libreria è vuota",
+            "subtitle": "Aggiungi il tuo primo gioco per iniziare a costruire la collezione.",
+            "cta": "Aggiungi gioco"
+          },
+          "filteredEmpty": {
+            "title": "Nessun risultato",
+            "subtitle": "Prova a modificare i filtri o la ricerca.",
+            "cta": "Cancella filtri"
+          },
+          "error": {
+            "title": "Impossibile caricare la libreria",
+            "subtitle": "Si è verificato un errore. Riprova tra qualche istante.",
+            "cta": "Riprova"
+          }
+        }
+      }
+    },
     "sharedGames": {
       "metadata": {
         "title": "Catalogo community — MeepleAI",

@@ -1308,6 +1308,80 @@
         "free": "free during alpha"
       }
     },
+    "agents": {
+      "metadata": {
+        "title": "AI Agents — MeepleAI",
+        "description": "Agent studio: create, manage and refine your AI agents specialized for each game."
+      },
+      "hero": {
+        "eyebrow": "Your AI agents",
+        "title": "Agent studio",
+        "subtitle": "Create, manage and refine your AI agents specialized for each game.",
+        "cta": {
+          "create": "Create agent"
+        },
+        "stats": {
+          "attivo": "Active",
+          "inSetup": "In setup",
+          "archiviato": "Archived",
+          "totalInvocations": "Total invocations"
+        }
+      },
+      "filters": {
+        "search": {
+          "placeholder": "Search by name, type or strategy…",
+          "ariaLabel": "Search agents",
+          "clearAriaLabel": "Clear search"
+        },
+        "status": {
+          "label": "Status",
+          "all": "All",
+          "attivo": "Active",
+          "in-setup": "In setup",
+          "archiviato": "Archived"
+        },
+        "sort": {
+          "label": "Sort by",
+          "recent": "Recent",
+          "alpha": "A-Z",
+          "used": "Most used"
+        },
+        "resultCount": "{count, plural, =0 {No results} =1 {1 agent} other {# agents}}"
+      },
+      "grid": {
+        "ariaLabel": "Agents list",
+        "card": {
+          "status": {
+            "attivo": "Active",
+            "in-setup": "In setup",
+            "archiviato": "Archived"
+          },
+          "lastUsed": {
+            "never": "Never used",
+            "label": "Last used"
+          },
+          "invocations": "{count, plural, =0 {Never invoked} =1 {1 invocation} other {# invocations}}",
+          "openLabel": "Open agent"
+        }
+      },
+      "empty": {
+        "default": {
+          "title": "No agents yet",
+          "subtitle": "Create your first AI agent to start playing with the assistant.",
+          "cta": "Create agent"
+        },
+        "filtered": {
+          "title": "No agents found",
+          "subtitle": "Try adjusting the filters or your search query.",
+          "cta": "Clear filters"
+        },
+        "error": {
+          "title": "Couldn't load agents",
+          "subtitle": "Something went wrong. Please try again in a moment.",
+          "cta": "Retry"
+        }
+      }
+    },
     "games": {
       "library": {
         "metadata": {

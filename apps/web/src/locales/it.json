@@ -1358,6 +1358,80 @@
         "free": "gratis durante l'alpha"
       }
     },
+    "agents": {
+      "metadata": {
+        "title": "Agenti AI — MeepleAI",
+        "description": "Studio agenti: crea, gestisci e affina i tuoi agenti AI specializzati per ogni gioco."
+      },
+      "hero": {
+        "eyebrow": "I tuoi agenti AI",
+        "title": "Studio agenti",
+        "subtitle": "Crea, gestisci e affina i tuoi agenti AI specializzati per ogni gioco.",
+        "cta": {
+          "create": "Crea agente"
+        },
+        "stats": {
+          "attivo": "Attivi",
+          "inSetup": "In setup",
+          "archiviato": "Archiviati",
+          "totalInvocations": "Invocazioni totali"
+        }
+      },
+      "filters": {
+        "search": {
+          "placeholder": "Cerca per nome, tipo o strategia…",
+          "ariaLabel": "Cerca tra gli agenti",
+          "clearAriaLabel": "Cancella la ricerca"
+        },
+        "status": {
+          "label": "Stato",
+          "all": "Tutti",
+          "attivo": "Attivi",
+          "in-setup": "In setup",
+          "archiviato": "Archiviati"
+        },
+        "sort": {
+          "label": "Ordina per",
+          "recent": "Più recenti",
+          "alpha": "A-Z",
+          "used": "Più usati"
+        },
+        "resultCount": "{count, plural, =0 {Nessun risultato} =1 {1 agente} other {# agenti}}"
+      },
+      "grid": {
+        "ariaLabel": "Lista agenti",
+        "card": {
+          "status": {
+            "attivo": "Attivo",
+            "in-setup": "In setup",
+            "archiviato": "Archiviato"
+          },
+          "lastUsed": {
+            "never": "Mai utilizzato",
+            "label": "Ultimo utilizzo"
+          },
+          "invocations": "{count, plural, =0 {Mai invocato} =1 {1 invocazione} other {# invocazioni}}",
+          "openLabel": "Apri agente"
+        }
+      },
+      "empty": {
+        "default": {
+          "title": "Nessun agente ancora",
+          "subtitle": "Crea il tuo primo agente AI per iniziare a giocare con l'assistente.",
+          "cta": "Crea agente"
+        },
+        "filtered": {
+          "title": "Nessun agente trovato",
+          "subtitle": "Prova a modificare i filtri o la ricerca.",
+          "cta": "Cancella filtri"
+        },
+        "error": {
+          "title": "Impossibile caricare gli agenti",
+          "subtitle": "Si è verificato un errore. Riprova tra qualche istante.",
+          "cta": "Riprova"
+        }
+      }
+    },
     "games": {
       "library": {
         "metadata": {

@@ -37,7 +37,7 @@ async function gotoLibraryReady(page: Page, search = '?tab=library'): Promise<vo
   await seedAuthSession(page);
   await seedCookieConsent(page);
   await mockAuthEndpoints(page);
-  await page.goto(`/games${search}`, { waitUntil: 'networkidle' });
+  await page.goto(`/games${search}`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('[data-slot="games-library-view"]', { timeout: 30_000 });
 }
 

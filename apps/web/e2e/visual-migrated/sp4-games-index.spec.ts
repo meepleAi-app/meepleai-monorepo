@@ -68,7 +68,7 @@ test.describe('V2 Visual Migrated — /games?tab=library matches mockup baseline
     await seedAuthSession(page);
     await seedCookieConsent(page);
     await mockAuthEndpoints(page);
-    await page.goto('/games?tab=library', { waitUntil: 'networkidle' });
+    await page.goto('/games?tab=library', { waitUntil: 'domcontentloaded' });
     await waitForLibraryReady(page);
 
     await expect(page).toHaveScreenshot(`${SLUG}.png`, {

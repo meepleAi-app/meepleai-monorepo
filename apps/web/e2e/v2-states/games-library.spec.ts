@@ -55,7 +55,7 @@ test.describe('Games library — state coverage', () => {
     await seedAuthSession(page);
     await seedCookieConsent(page);
     await mockAuthEndpoints(page);
-    await page.goto('/games?tab=library', { waitUntil: 'networkidle' });
+    await page.goto('/games?tab=library', { waitUntil: 'domcontentloaded' });
     await waitForViewReady(page);
     // Default state expects results grid populato (5 entries dal fixture).
     await expect(page.locator('[data-slot="games-results-grid"]')).toBeVisible();
@@ -71,7 +71,7 @@ test.describe('Games library — state coverage', () => {
     await seedCookieConsent(page);
     await mockAuthEndpoints(page);
     await page.goto('/games?tab=library&state=loading', {
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',
     });
     await waitForViewReady(page);
     // Loading kind: GamesEmptyState rendere skeleton con `data-kind="loading"`.
@@ -91,7 +91,7 @@ test.describe('Games library — state coverage', () => {
     await seedCookieConsent(page);
     await mockAuthEndpoints(page);
     await page.goto('/games?tab=library&state=empty', {
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',
     });
     await waitForViewReady(page);
     // `?state=empty` triggera `tryLoadVisualTestFixture('empty')` → 0 entries.
@@ -109,7 +109,7 @@ test.describe('Games library — state coverage', () => {
     await seedCookieConsent(page);
     await mockAuthEndpoints(page);
     await page.goto('/games?tab=library&state=filtered-empty', {
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',
     });
     await waitForViewReady(page);
     // 5 entries underlying ma effectiveKind override → filtered-empty surface

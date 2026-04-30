@@ -3,11 +3,17 @@
 > Wave A closeout — Step 5 (Issue #573).
 > Pre-requisite for Phase 1+2 of the v2 design migration ([spec](../superpowers/specs/2026-04-26-v2-design-migration.md), section 3.3).
 
-This matrix is the **single source of truth** for the ~46 v2 feature components that the
+This matrix is the **single source of truth** for the ~45 v2 feature components that the
 SP4 wave 1 + 2 mockups introduced and that do not yet exist in the codebase. Each row
 binds a mockup definition to a target component path, route, and acceptance criteria so
 that downstream PRs can pick up an entry and turn it from `pending` → `done` without
 ambiguity.
+
+> **Updated 2026-04-30** (Wave B.2 spec-panel review): count refined 46 → 45.
+> `AgentsSidebarList` + `AgentDetailPanel` removed from `/agents` row set (mockup
+> `sp4-agents-index.jsx` is grid-pattern only, not master-detail). `AgentsResultsGrid`
+> added (mirror B.1 `GamesResultsGrid` pattern, riusa `MeepleCard` con
+> `entity="agent"`). `AgentsFiltersStrip` renamed `AgentFilters` to match mockup naming.
 
 ## Scope and ground rules
 
@@ -21,11 +27,13 @@ ambiguity.
 - **Path divergence is intentional** (per spec §3.3): primitives stay under
   `components/ui/v2/`; *feature* compositions for SP4 routes live under
   `components/v2/<feature>/`. Do not collapse the two trees.
-- **Component count**: refined from the spec Appendix A (52 entries) to **46** by
+- **Component count**: refined from the spec Appendix A (52 entries) to **45** by
   deferring six entries that are better served by v2 *primitives* once those exist
   (`PauseOverlay`, `EndgameDialog`, `ConnectionLostBanner` → v2 dialog/banner primitives;
-  `ChatHighlights`, `SessionShareCard`, `PlayAgainCta` → composed inline from primitives).
-  These are tracked in the [Deferred entries](#deferred-entries) section below.
+  `ChatHighlights`, `SessionShareCard`, `PlayAgainCta` → composed inline from primitives)
+  and by Wave B.2 spec-panel review (`AgentsSidebarList` + `AgentDetailPanel` removed,
+  `AgentsResultsGrid` added — net −1). These are tracked in the
+  [Deferred entries](#deferred-entries) section below.
 
 ## How to use
 
@@ -58,7 +66,7 @@ Used in the **AC** column to keep the table compact.
 A "done" component must satisfy all four (`T`, `A`, `M`, `V`) unless explicitly waived in
 the PR review.
 
-## Wave 1 — 30 components
+## Wave 1 — 29 components
 
 ### Games index — `/games` — 5 components
 
@@ -83,14 +91,24 @@ the PR review.
 | `sp4-game-detail.jsx` | `GameDetailAgentsList` | `apps/web/src/components/v2/game-detail/GameDetailAgentsList.tsx` | `/games/[id]` | pending | — | T A V |
 | `sp4-game-detail.jsx` | `GameDetailKbDocList` | `apps/web/src/components/v2/game-detail/GameDetailKbDocList.tsx` | `/games/[id]` | pending | — | T A V |
 
-### Agents index — `/agents` — 5 components
+### Agents index — `/agents` — 4 components
+
+> **Updated 2026-04-30** (Wave B.2 spec-panel review): mockup `sp4-agents-index.jsx`
+> implementa pattern grid (3-col 1280 desktop), NON master-detail. `AgentsSidebarList`
+> + `AgentDetailPanel` rimossi da scope `/agents` (stub files restano on disk come
+> placeholder senza consumer — eventual cleanup follow-up post-Wave B). Ratio dietro
+> rimozione: nessun mockup SP4 wave 1+2 referenzia un layout master-detail per
+> `/agents`; quei componenti erano artefatti di una pianificazione iniziale che il
+> design finale non ha confermato. `AgentsFiltersStrip` rinominato `AgentFilters`
+> (allineamento mockup naming). `AgentsResultsGrid` aggiunto (mirror B.1
+> `GamesResultsGrid`: CSS Grid 3-col `auto-fit minmax(320px, 1fr)`, riusa `MeepleCard`
+> con `entity="agent"` `variant="grid"` — NO fork).
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
 | `sp4-agents-index.jsx` | `AgentsHero` | `apps/web/src/components/v2/agents/AgentsHero.tsx` | `/agents` | pending | — | T A M V |
-| `sp4-agents-index.jsx` | `AgentsSidebarList` | `apps/web/src/components/v2/agents/AgentsSidebarList.tsx` | `/agents` | pending | — | T A V |
-| `sp4-agents-index.jsx` | `AgentDetailPanel` | `apps/web/src/components/v2/agents/AgentDetailPanel.tsx` | `/agents` | pending | — | T A V |
-| `sp4-agents-index.jsx` | `AgentsFiltersStrip` | `apps/web/src/components/v2/agents/AgentsFiltersStrip.tsx` | `/agents` | pending | — | T A V |
+| `sp4-agents-index.jsx` | `AgentFilters` | `apps/web/src/components/v2/agents/AgentFilters.tsx` | `/agents` | pending | — | T A V |
+| `sp4-agents-index.jsx` | `AgentsResultsGrid` | `apps/web/src/components/v2/agents/AgentsResultsGrid.tsx` | `/agents` | pending | — | T A V |
 | `sp4-agents-index.jsx` | `EmptyAgents` | `apps/web/src/components/v2/agents/EmptyAgents.tsx` | `/agents` | pending | — | T A V |
 
 ### Agent detail — `/agents/[id]` — 7 components

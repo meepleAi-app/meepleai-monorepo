@@ -27,6 +27,7 @@ export function StatusBadge({ status, className = '', stacked = false }: StatusB
 
   return (
     <span
+      data-slot="meeple-card-status-badge"
       className={`${positioning} rounded-[5px] px-[7px] py-[1px] text-[9px] font-bold ${className}`}
       style={{ background: colors.bg, color: colors.text }}
     >

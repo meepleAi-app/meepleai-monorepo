@@ -1447,6 +1447,106 @@
         }
       }
     },
+    "library": {
+      "metadata": {
+        "title": "My library — MeepleAI",
+        "description": "Your game collection: knowledge bases, loans, wishlist and recent activity."
+      },
+      "hero": {
+        "title": "My library",
+        "subtitle": "Your entire collection, AI agents and recent plays at a glance.",
+        "stats": {
+          "totalGames": "Total games",
+          "kbReady": "Knowledge bases",
+          "wishlist": "Wishlist",
+          "loaned": "On loan"
+        },
+        "cta": {
+          "add": "Add game",
+          "addAriaLabel": "Add a new game to your library"
+        }
+      },
+      "tabs": {
+        "ariaLabel": "Library category filter",
+        "all": "All",
+        "kb": "Knowledge bases",
+        "loaned": "On loan",
+        "count": "{count, plural, =0 {none} =1 {1} other {#}}"
+      },
+      "selectionMode": {
+        "enter": "Select",
+        "enterAriaLabel": "Enter multi-select mode",
+        "exit": "Cancel",
+        "exitAriaLabel": "Exit selection mode",
+        "selectedCount": "{count, plural, =0 {Nothing selected} =1 {1 item selected} other {# items selected}}"
+      },
+      "filters": {
+        "search": {
+          "placeholder": "Search by title, publisher or year…",
+          "ariaLabel": "Search the library",
+          "clearAriaLabel": "Clear search"
+        }
+      },
+      "sort": {
+        "label": "Sort by",
+        "ariaLabel": "Change sort order",
+        "recent": "Recently added",
+        "title": "Title (A–Z)",
+        "rating": "Rating",
+        "state": "Status"
+      },
+      "view": {
+        "label": "View",
+        "ariaLabel": "Change view mode",
+        "grid": "Grid",
+        "list": "List",
+        "compact": "Compact"
+      },
+      "bulk": {
+        "actions": {
+          "delete": "Delete",
+          "deleteAriaLabel": "Delete the selected items",
+          "favorite": "Mark favorite",
+          "favoriteAriaLabel": "Mark the selected items as favorite",
+          "export": "Export",
+          "exportAriaLabel": "Export the selected items",
+          "loan": "Mark on loan",
+          "loanAriaLabel": "Mark the selected items as on loan"
+        },
+        "confirm": {
+          "deleteTitle": "Delete {count, plural, =1 {1 game} other {# games}}?",
+          "deleteMessage": "This will remove the selected items from your library. This action cannot be undone.",
+          "confirmCta": "Delete",
+          "cancelCta": "Cancel"
+        },
+        "clearSelection": "Clear selection",
+        "clearSelectionAriaLabel": "Deselect all items"
+      },
+      "activityRail": {
+        "title": "Recent activity",
+        "subtitle": "Latest additions and changes to your library.",
+        "empty": "No recent activity.",
+        "viewAll": "View all",
+        "viewAllAriaLabel": "Open the full activity history"
+      },
+      "emptyState": {
+        "default": {
+          "title": "Your library is empty",
+          "subtitle": "Add your first game to start building your collection.",
+          "cta": "Add game"
+        },
+        "filteredEmpty": {
+          "title": "No results",
+          "subtitle": "Try adjusting your filters or search.",
+          "cta": "Clear filters"
+        },
+        "error": {
+          "title": "Unable to load library",
+          "subtitle": "Something went wrong. Please try again in a moment.",
+          "cta": "Retry"
+        }
+      }
+    },
     "sharedGames": {
       "metadata": {
         "title": "Community catalog — MeepleAI",

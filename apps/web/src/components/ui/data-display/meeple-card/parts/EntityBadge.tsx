@@ -18,7 +18,6 @@ export function EntityBadge({ entity, className = '', stacked = false }: EntityB
   return (
     <span
       data-slot="meeple-card-entity-badge"
-      data-entity={entity}
       className={`${positioning} rounded-md px-2 py-0.5 font-[var(--font-quicksand)] text-[9px] font-extrabold uppercase tracking-wide text-white shadow-sm ${className}`}
       style={{ background: entityHsl(entity) }}
     >

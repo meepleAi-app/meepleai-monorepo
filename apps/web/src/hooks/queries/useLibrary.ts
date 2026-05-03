@@ -14,6 +14,7 @@ import {
 
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { api } from '@/lib/api';
+import type { LibraryActivityItem } from '@/lib/api/schemas/library-activity.schemas';
 import type {
   PaginatedLibraryResponse,
   UserLibraryStats,
@@ -45,6 +46,7 @@ export const libraryKeys = {
   list: (params?: GetUserLibraryParams) => [...libraryKeys.lists(), { params }] as const,
   stats: () => [...libraryKeys.all, 'stats'] as const,
   quota: () => [...libraryKeys.all, 'quota'] as const,
+  activity: (limit: number) => [...libraryKeys.all, 'activity', { limit }] as const,
   gameStatus: (gameId: string) => [...libraryKeys.all, 'status', gameId] as const,
   // Game detail key (Issue #3513)
   gameDetail: (gameId: string) => [...libraryKeys.all, 'detail', gameId] as const,
@@ -117,6 +119,30 @@ export function useLibraryQuota(
     },
     enabled: enabled && isAuthenticated,
     staleTime: 5 * 60 * 1000, // Quota unlikely to change frequently (5min)
+  });
+}
+
+/**
+ * Hook to fetch the user's library activity feed (Issue #642 — Wave B.3 followup).
+ *
+ * Powers the `RecentActivityRail` sidebar on `/library`. Server-side limit is
+ * clamped to 1–50; default 20.
+ *
+ * @param limit - Number of recent events to fetch (default: 20)
+ * @param enabled - Whether to run the query (default: true)
+ * @returns UseQueryResult with the activity feed
+ */
+export function useLibraryActivity(
+  limit: number = 20,
+  enabled: boolean = true
+): UseQueryResult<LibraryActivityItem[], Error> {
+  return useQuery({
+    queryKey: libraryKeys.activity(limit),
+    queryFn: async (): Promise<LibraryActivityItem[]> => {
+      return api.library.getActivity(limit);
+    },
+    enabled,
+    staleTime: 1 * 60 * 1000, // Activity feed refreshes every minute
   });
 }
 

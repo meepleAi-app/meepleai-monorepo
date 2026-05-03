@@ -61,7 +61,7 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/library',
 }));
 
-// ─── useLibrary + useRemoveGameFromLibrary mocks ──────────────────────────
+// ─── useLibrary + useRemoveGameFromLibrary + useLibraryActivity mocks ─────
 
 type MockLibraryReturn = {
   data?: PaginatedLibraryResponse;
@@ -76,12 +76,26 @@ type MockMutationReturn = {
   isPending: boolean;
 };
 
+type MockActivityReturn = {
+  data: ReadonlyArray<unknown> | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  error: Error | null;
+};
+
 const useLibraryMock = vi.fn<[], MockLibraryReturn>();
 const useRemoveGameFromLibraryMock = vi.fn<[], MockMutationReturn>();
+const useLibraryActivityMock = vi.fn<[], MockActivityReturn>(() => ({
+  data: [],
+  isLoading: false,
+  isError: false,
+  error: null,
+}));
 
 vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibrary: () => useLibraryMock(),
   useRemoveGameFromLibrary: () => useRemoveGameFromLibraryMock(),
+  useLibraryActivity: () => useLibraryActivityMock(),
 }));
 
 // ─── useMiniNavConfig mock (verify invocation) ────────────────────────────

@@ -472,7 +472,16 @@ export function LibraryHubV2(): ReactElement {
           )}
         </div>
 
-        <RecentActivityRail items={activityItems} isLoading={activityQuery.isLoading} />
+        {/*
+         * Sidebar visual contract preservation (Issue #642):
+         * forwarding `activityQuery.isLoading` here surfaces the skeleton
+         * variant during the brief moment before the activity response
+         * arrives, breaking the migrated `library-loading.png` baseline that
+         * was captured against the empty placeholder. Until the baseline is
+         * regenerated to include the skeleton sidebar, only surface the
+         * populated state once data is available.
+         */}
+        <RecentActivityRail items={activityItems} />
       </div>
 
       {selectionMode === 'select' ? (

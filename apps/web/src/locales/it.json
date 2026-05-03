@@ -1497,6 +1497,106 @@
         }
       }
     },
+    "library": {
+      "metadata": {
+        "title": "La mia libreria — MeepleAI",
+        "description": "La tua collezione di giochi: knowledge base, prestiti, wishlist e attività recenti."
+      },
+      "hero": {
+        "title": "La mia libreria",
+        "subtitle": "Tutta la tua collezione, gli agenti AI e le partite recenti in un colpo d'occhio.",
+        "stats": {
+          "totalGames": "Giochi totali",
+          "kbReady": "Knowledge base",
+          "wishlist": "Wishlist",
+          "loaned": "In prestito"
+        },
+        "cta": {
+          "add": "Aggiungi gioco",
+          "addAriaLabel": "Aggiungi un nuovo gioco alla libreria"
+        }
+      },
+      "tabs": {
+        "ariaLabel": "Filtro libreria per categoria",
+        "all": "Tutti",
+        "kb": "Knowledge base",
+        "loaned": "In prestito",
+        "count": "{count, plural, =0 {nessuno} =1 {1} other {#}}"
+      },
+      "selectionMode": {
+        "enter": "Seleziona",
+        "enterAriaLabel": "Attiva la modalità selezione multipla",
+        "exit": "Annulla",
+        "exitAriaLabel": "Esci dalla modalità selezione",
+        "selectedCount": "{count, plural, =0 {Nessun elemento selezionato} =1 {1 elemento selezionato} other {# elementi selezionati}}"
+      },
+      "filters": {
+        "search": {
+          "placeholder": "Cerca per titolo, editore o anno…",
+          "ariaLabel": "Cerca nella libreria",
+          "clearAriaLabel": "Cancella la ricerca"
+        }
+      },
+      "sort": {
+        "label": "Ordina per",
+        "ariaLabel": "Cambia ordinamento",
+        "recent": "Aggiunti di recente",
+        "title": "Titolo (A–Z)",
+        "rating": "Valutazione",
+        "state": "Stato"
+      },
+      "view": {
+        "label": "Visualizzazione",
+        "ariaLabel": "Cambia visualizzazione",
+        "grid": "Griglia",
+        "list": "Lista",
+        "compact": "Compatta"
+      },
+      "bulk": {
+        "actions": {
+          "delete": "Elimina",
+          "deleteAriaLabel": "Elimina gli elementi selezionati",
+          "favorite": "Aggiungi ai preferiti",
+          "favoriteAriaLabel": "Segna come preferiti gli elementi selezionati",
+          "export": "Esporta",
+          "exportAriaLabel": "Esporta gli elementi selezionati",
+          "loan": "Segna come prestato",
+          "loanAriaLabel": "Segna come prestati gli elementi selezionati"
+        },
+        "confirm": {
+          "deleteTitle": "Eliminare {count, plural, =1 {1 gioco} other {# giochi}}?",
+          "deleteMessage": "Questa azione rimuoverà gli elementi selezionati dalla tua libreria. Non è reversibile.",
+          "confirmCta": "Elimina",
+          "cancelCta": "Annulla"
+        },
+        "clearSelection": "Deseleziona tutto",
+        "clearSelectionAriaLabel": "Deseleziona tutti gli elementi"
+      },
+      "activityRail": {
+        "title": "Attività recente",
+        "subtitle": "Le ultime aggiunte e modifiche alla tua libreria.",
+        "empty": "Nessuna attività recente.",
+        "viewAll": "Vedi tutto",
+        "viewAllAriaLabel": "Vai allo storico completo dell'attività"
+      },
+      "emptyState": {
+        "default": {
+          "title": "La tua libreria è vuota",
+          "subtitle": "Aggiungi il tuo primo gioco per iniziare a costruire la collezione.",
+          "cta": "Aggiungi gioco"
+        },
+        "filteredEmpty": {
+          "title": "Nessun risultato",
+          "subtitle": "Prova a modificare i filtri o la ricerca.",
+          "cta": "Cancella filtri"
+        },
+        "error": {
+          "title": "Impossibile caricare la libreria",
+          "subtitle": "Si è verificato un errore. Riprova tra qualche istante.",
+          "cta": "Riprova"
+        }
+      }
+    },
     "sharedGames": {
       "metadata": {
         "title": "Catalogo community — MeepleAI",

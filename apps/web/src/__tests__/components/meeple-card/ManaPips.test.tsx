@@ -76,8 +76,10 @@ describe('ManaPips', () => {
     const { container } = render(<ManaPips pips={pips} size="sm" />);
     const dot = container.querySelector('.rounded-full');
     expect(dot).not.toBeNull();
-    // Default KB color hsl(210, 40%, 55%) => rgb(94, 140, 186) in jsdom
-    expect((dot as HTMLElement).style.background).toBe('rgb(94, 140, 186)');
+    // Default KB color hsl(210, 40%, 48%) => rgb(73, 122, 171) in jsdom
+    // (lightness lowered from 55% to 48% by issue #636 to meet WCAG AA
+    // contrast for white text on the EntityBadge surface)
+    expect((dot as HTMLElement).style.background).toBe('rgb(73, 122, 171)');
   });
 
   it('uses different color for colorOverride vs default', () => {

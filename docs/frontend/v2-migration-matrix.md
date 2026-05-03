@@ -127,11 +127,11 @@ the PR review.
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
-| `sp4-library-desktop.jsx` | `LibraryHeroDesktop` | `apps/web/src/components/v2/library/LibraryHeroDesktop.tsx` | `/library` | pending | — | T A M V |
-| `sp4-library-desktop.jsx` | `LibraryTabs` | `apps/web/src/components/v2/library/LibraryTabs.tsx` | `/library` | pending | — | T A M V |
-| `sp4-library-desktop.jsx` | `LibraryHybridGrid` | `apps/web/src/components/v2/library/LibraryHybridGrid.tsx` | `/library` | pending | — | T A V |
-| `sp4-library-desktop.jsx` | `BulkSelectionBar` | `apps/web/src/components/v2/library/BulkSelectionBar.tsx` | `/library` | pending | — | T A M V |
-| `sp4-library-desktop.jsx` | `RecentActivityRail` | `apps/web/src/components/v2/library/RecentActivityRail.tsx` | `/library` | pending | — | T A V |
+| `sp4-library-desktop.jsx` | `LibraryHeroDesktop` | `apps/web/src/components/v2/library/LibraryHeroDesktop.tsx` | `/library` | done | #574 | T A M V |
+| `sp4-library-desktop.jsx` | `LibraryTabs` | `apps/web/src/components/v2/library/LibraryTabs.tsx` | `/library` | done | #574 | T A M V |
+| `sp4-library-desktop.jsx` | `LibraryHybridGrid` | `apps/web/src/components/v2/library/LibraryHybridGrid.tsx` | `/library` | done | #574 | T A V |
+| `sp4-library-desktop.jsx` | `BulkSelectionBar` | `apps/web/src/components/v2/library/BulkSelectionBar.tsx` | `/library` | done | #574 | T A M V |
+| `sp4-library-desktop.jsx` | `RecentActivityRail` | `apps/web/src/components/v2/library/RecentActivityRail.tsx` | `/library` | done | #574 | T A V |
 
 ## Wave 2 — 16 components
 

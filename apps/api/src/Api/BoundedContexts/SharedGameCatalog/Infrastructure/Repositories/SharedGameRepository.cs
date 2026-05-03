@@ -83,6 +83,25 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             e => MapToDomain(e));
     }
 
+    public async Task<IReadOnlyDictionary<Guid, string>> GetNamesByIdsAsync(
+        IReadOnlyCollection<Guid> ids,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+
+        if (ids.Count == 0)
+            return new Dictionary<Guid, string>();
+
+        var rows = await DbContext.Set<SharedGameEntity>()
+            .AsNoTracking()
+            .Where(g => ids.Contains(g.Id) && !g.IsDeleted)
+            .Select(g => new { g.Id, g.Title })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rows.ToDictionary(r => r.Id, r => r.Title);
+    }
+
     // Mapping methods
 
     private static SharedGame MapToDomain(SharedGameEntity entity)

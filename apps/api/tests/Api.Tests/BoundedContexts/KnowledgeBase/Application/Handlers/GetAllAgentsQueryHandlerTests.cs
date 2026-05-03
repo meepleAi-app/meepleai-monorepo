@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Moq;
@@ -18,12 +19,18 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 public sealed class GetAllAgentsQueryHandlerTests
 {
     private readonly Mock<IAgentDefinitionRepository> _mockRepository;
+    private readonly Mock<ISharedGameRepository> _mockSharedGameRepository;
     private readonly GetAllAgentsQueryHandler _handler;
 
     public GetAllAgentsQueryHandlerTests()
     {
         _mockRepository = new Mock<IAgentDefinitionRepository>();
-        _handler = new GetAllAgentsQueryHandler(_mockRepository.Object);
+        _mockSharedGameRepository = new Mock<ISharedGameRepository>();
+        // Default: no agents have a GameId, so handler should not call GetNamesByIdsAsync at all.
+        // Tests that exercise the GameName population path override this setup explicitly.
+        _handler = new GetAllAgentsQueryHandler(
+            _mockRepository.Object,
+            _mockSharedGameRepository.Object);
     }
 
     [Fact]
@@ -107,6 +114,61 @@ public sealed class GetAllAgentsQueryHandlerTests
 
         // Assert
         result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_AgentLinkedToGame_PopulatesGameNameFromBulkLookup()
+    {
+        // Arrange (Issue #660): one agent linked to a game, repository returns matching name.
+        var gameId = Guid.NewGuid();
+        var agent = CreateAgent("Catan Helper");
+        agent.SetGameId(gameId);
+
+        _mockRepository
+            .Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AgentDefinitionEntity> { agent });
+
+        _mockSharedGameRepository
+            .Setup(r => r.GetNamesByIdsAsync(
+                It.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 1 && ids.Contains(gameId)),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, string> { [gameId] = "Catan" });
+
+        var query = new GetAllAgentsQuery(ActiveOnly: true);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().ContainSingle();
+        result[0].GameId.Should().Be(gameId);
+        result[0].GameName.Should().Be("Catan");
+        _mockSharedGameRepository.Verify(
+            r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_NoAgentsLinkedToGame_SkipsBulkNameLookup()
+    {
+        // Arrange (Issue #660): zero agents have GameId, so handler must NOT call GetNamesByIdsAsync.
+        var agent = CreateAgent("Standalone Agent"); // no SetGameId call
+        _mockRepository
+            .Setup(r => r.GetAllActiveAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AgentDefinitionEntity> { agent });
+
+        var query = new GetAllAgentsQuery(ActiveOnly: true);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().ContainSingle();
+        result[0].GameId.Should().BeNull();
+        result[0].GameName.Should().BeNull();
+        _mockSharedGameRepository.Verify(
+            r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     private static AgentDefinitionEntity CreateAgent(string name)

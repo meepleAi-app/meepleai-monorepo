@@ -113,6 +113,41 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
         body.Agents.Should().OnlyContain(a => a.IsActive);
         body.Count.Should().Be(2);
     }
+
+    [Fact]
+    public async Task GetAgents_WithSeededAgentLinkedToGame_PopulatesGameName()
+    {
+        // Arrange: authenticated user, seed a SharedGame, then seed 1 active agent linked to it.
+        // Issue #660: Asserts that AgentDto.GameName is populated via bulk SharedGame lookup
+        // when an agent definition has a non-null GameId.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var gameId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Catan");
+        await TestSessionHelper.SeedAgentDefinitionsAsync(
+            dbContext,
+            activeCount: 1,
+            inactiveCount: 0,
+            gameId: gameId);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            "/api/v1/agents",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<GetAllAgentsResponse>();
+        body.Should().NotBeNull();
+        body!.Success.Should().BeTrue();
+        body.Agents.Should().HaveCount(1);
+        body.Agents[0].GameId.Should().Be(gameId);
+        body.Agents[0].GameName.Should().Be("Catan");
+    }
 }
 
 /// <summary>

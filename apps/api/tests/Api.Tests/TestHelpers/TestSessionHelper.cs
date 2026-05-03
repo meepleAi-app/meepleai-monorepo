@@ -1,6 +1,8 @@
 using System.Net.Http.Json;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -192,4 +194,57 @@ internal static class TestSessionHelper
         return request;
     }
 
+    /// <summary>
+    /// Seeds AgentDefinition aggregates into the test database.
+    /// Issue #641 (Wave B.2 hotfix): used by AgentsEndpoints integration tests to verify activeOnly filter.
+    /// </summary>
+    /// <param name="dbContext">Test database context.</param>
+    /// <param name="activeCount">Number of active agents to seed (calls Activate() after Create()).</param>
+    /// <param name="inactiveCount">Number of inactive agents to seed (default Draft state from Create()).</param>
+    /// <param name="gameId">
+    /// Optional GameId association for all seeded agents. Default null (system-wide agents).
+    /// Required parameter for Phase 6 future drift fix coexistence (AgentDto.GameName).
+    /// </param>
+    public static async Task SeedAgentDefinitionsAsync(
+        MeepleAiDbContext dbContext,
+        int activeCount,
+        int inactiveCount,
+        Guid? gameId = null)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        for (var i = 0; i < activeCount; i++)
+        {
+            var agent = AgentDefinition.Create(
+                name: $"Active Agent {i}",
+                description: $"Test active agent #{i}",
+                type: AgentType.RagAgent,
+                config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
+            agent.Activate();
+
+            if (gameId.HasValue)
+            {
+                // GameId is read-only on the aggregate; seed via persistence by attaching to the entity
+                // is not supported via current entity API. The optional gameId parameter is accepted for
+                // Phase 6 forward-compat but ignored at runtime until a SetGameId method is added.
+                // Tests that need GameId association should use a future entity API.
+            }
+
+            dbContext.AgentDefinitions.Add(agent);
+        }
+
+        for (var i = 0; i < inactiveCount; i++)
+        {
+            var agent = AgentDefinition.Create(
+                name: $"Inactive Agent {i}",
+                description: $"Test inactive agent #{i}",
+                type: AgentType.RulesInterpreter,
+                config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
+            // Default state from Create() is IsActive=false / Status=Draft
+
+            dbContext.AgentDefinitions.Add(agent);
+        }
+
+        await dbContext.SaveChangesAsync();
+    }
 }

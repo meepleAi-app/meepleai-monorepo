@@ -6,13 +6,6 @@ import type { ComponentType } from 'react';
 
 // ─── Data Display ─────────────────────────────────────────────────────────────
 
-import { CatalogCarouselSection } from '@/app/(authenticated)/library/sections/CatalogCarouselSection';
-import { ContinuePlayingSection } from '@/app/(authenticated)/library/sections/ContinuePlayingSection';
-import { LibraryFilterBar } from '@/app/(authenticated)/library/sections/LibraryFilterBar';
-import { LibraryHeader } from '@/app/(authenticated)/library/sections/LibraryHeader';
-import { LibraryHubCarousel } from '@/app/(authenticated)/library/sections/LibraryHubCarousel';
-import { PersonalLibrarySection } from '@/app/(authenticated)/library/sections/PersonalLibrarySection';
-import { WishlistCarouselSection } from '@/app/(authenticated)/library/sections/WishlistCarouselSection';
 import { ActivityFeed } from '@/components/admin/ActivityFeed';
 import { ActivityFeed as ActivityTimeline } from '@/components/admin/ActivityFeed';
 import { AgentBuilderHeader } from '@/components/admin/agent-builder/AgentBuilderHeader';
@@ -524,15 +517,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'top-bar-logo': TopBarLogo,
   'top-bar-search-pill': TopBarSearchPill,
   'top-bar-chat-button': TopBarChatButton,
-
-  // Desktop UX Redesign — Library Hub sections
-  'library-header': LibraryHeader,
-  'library-filter-bar': LibraryFilterBar,
-  'library-hub-carousel': LibraryHubCarousel,
-  'personal-library-section': PersonalLibrarySection,
-  'catalog-carousel-section': CatalogCarouselSection,
-  'wishlist-carousel-section': WishlistCarouselSection,
-  'continue-playing-section': ContinuePlayingSection,
 
   // Desktop UX Redesign — Chat slide-over panel
   'chat-panel-header': ChatPanelHeader,

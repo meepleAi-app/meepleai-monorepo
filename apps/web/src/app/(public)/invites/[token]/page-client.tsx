@@ -553,7 +553,7 @@ interface TokenExpiredShellProps {
 
 function TokenExpiredShell({ t, hostName }: TokenExpiredShellProps): JSX.Element {
   return (
-    <div className="flex flex-col items-center px-5 py-8 text-center">
+    <div data-slot="invite-expired" className="flex flex-col items-center px-5 py-8 text-center">
       <div
         aria-hidden="true"
         className="mb-3.5 flex h-[60px] w-[60px] items-center justify-center rounded-full border bg-[hsl(var(--bg-muted))] text-[26px]"
@@ -580,7 +580,7 @@ function TokenExpiredShell({ t, hostName }: TokenExpiredShellProps): JSX.Element
 
 function TokenInvalidShell({ t }: { readonly t: T }): JSX.Element {
   return (
-    <div className="flex flex-col items-center px-5 py-8 text-center">
+    <div data-slot="invite-not-found" className="flex flex-col items-center px-5 py-8 text-center">
       <div
         aria-hidden="true"
         className="mb-3.5 flex h-[60px] w-[60px] items-center justify-center rounded-full border bg-[hsl(var(--bg-muted))] text-[26px]"

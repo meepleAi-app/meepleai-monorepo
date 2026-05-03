@@ -1,9 +1,11 @@
 /**
  * Real-backend auth helper for smoke tests.
  *
- * Differs from visual-test fixtures: makes a REAL POST /api/v1/auth/register
- * (idempotent — ignores 409) + POST /api/v1/auth/login against backend at :8080
- * with a known smoke user. Cookie returned applies to subsequent page nav.
+ * The CI workflow seeds an initial admin user via API container env vars
+ * INITIAL_ADMIN_EMAIL / INITIAL_ADMIN_PASSWORD matching the SMOKE_USER_*
+ * env vars below. We login directly with those credentials — no register
+ * step needed (registration is fail-closed gated by Registration:PublicEnabled
+ * config and we don't enable it in CI).
  *
  * Used by smoke-real-backend specs to detect endpoint binding regressions
  * (404, schema mismatch) that visual-test fixtures hide.
@@ -14,22 +16,7 @@ const API_BASE = process.env.SMOKE_API_BASE ?? 'http://localhost:8080';
 const SEED_EMAIL = process.env.SMOKE_USER_EMAIL ?? 'smoke-user@meepleai.test';
 const SEED_PASSWORD = process.env.SMOKE_USER_PASSWORD ?? 'SmokeUser1!';
 
-/**
- * Idempotent register — returns regardless of whether user exists.
- */
-async function ensureUser(request: APIRequestContext): Promise<void> {
-  const res = await request.post(`${API_BASE}/api/v1/auth/register`, {
-    data: { email: SEED_EMAIL, password: SEED_PASSWORD, displayName: 'Smoke User' },
-    failOnStatusCode: false,
-  });
-  // 200/201 OK or 409/422 already-exists — both acceptable.
-  if (res.status() >= 500) {
-    throw new Error(`smoke ensureUser failed ${res.status()} for ${SEED_EMAIL}`);
-  }
-}
-
 export async function smokeLogin(request: APIRequestContext): Promise<{ cookieHeader: string }> {
-  await ensureUser(request);
   const res = await request.post(`${API_BASE}/api/v1/auth/login`, {
     data: { email: SEED_EMAIL, password: SEED_PASSWORD },
   });

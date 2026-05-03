@@ -1,0 +1,98 @@
+name: Backend Missing Gate
+
+on:
+  pull_request:
+    branches: [main, main-dev, frontend-dev]
+    paths:
+      - 'apps/web/src/**/*.ts'
+      - 'apps/web/src/**/*.tsx'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  detect-backend-missing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Determine changed files
+        id: changes
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+          changed=$(git diff --name-only --diff-filter=AM origin/${{ github.event.pull_request.base.ref }}...HEAD -- 'apps/web/src/**/*.ts' 'apps/web/src/**/*.tsx' || true)
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$changed" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Scan for new BACKEND MISSING annotations
+        id: scan
+        run: |
+          set +e
+          NEW_HITS=""
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            [ ! -f "$f" ] && continue
+            HITS=$(grep -nE 'BACKEND MISSING' "$f" || true)
+            if [ -n "$HITS" ]; then
+              BASE_HITS=$(git show "origin/${{ github.event.pull_request.base.ref }}:$f" 2>/dev/null | grep -cE 'BACKEND MISSING' || echo 0)
+              CURRENT_HITS=$(echo "$HITS" | wc -l)
+              if [ "$CURRENT_HITS" -gt "$BASE_HITS" ]; then
+                NEW_HITS+="$f:\n$HITS\n\n"
+              fi
+            fi
+          done <<< "${{ steps.changes.outputs.files }}"
+
+          if [ -n "$NEW_HITS" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            {
+              echo "hits<<HITSEOF"
+              echo -e "$NEW_HITS"
+              echo "HITSEOF"
+            } >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on PR if violations found
+        if: steps.scan.outputs.found == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const hits = `${{ steps.scan.outputs.hits }}`;
+            const body = [
+              '## Backend Missing Gate — violation detected',
+              '',
+              'This PR introduces NEW `BACKEND MISSING` annotations:',
+              '',
+              '```',
+              hits,
+              '```',
+              '',
+              '**Action required**: either',
+              '- Implement the backend route before merging, OR',
+              '- File a tracking issue and link it in the JSDoc with `Tracked: #N` instead of `BACKEND MISSING`',
+              '',
+              'Refs: `docs/audit/agents-backend-audit-2026-05-03.md` for context on existing 14 missing endpoints.',
+            ].join('\n');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
+
+      - name: Fail if new violations
+        if: steps.scan.outputs.found == 'true'
+        run: |
+          echo "New BACKEND MISSING annotations detected. See PR comment."
+          exit 1
+
+      - name: Pass
+        if: steps.scan.outputs.found == 'false'
+        run: echo "No new BACKEND MISSING annotations introduced."

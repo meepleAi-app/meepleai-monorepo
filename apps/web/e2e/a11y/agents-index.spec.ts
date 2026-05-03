@@ -50,17 +50,6 @@ test.describe('Agents library — accessibility @a11y', () => {
     const results = await new AxeBuilder({ page })
       .withTags(WCAG_TAGS)
       .exclude('#webpack-dev-server-client-overlay')
-      // EntityBadge color-contrast (HSL 38,92%,50% on white ≈ 2.1:1) è
-      // pre-existing debt nella shared MeepleCard family (tokens.ts:7,
-      // entityColors.agent), fuori scope Wave B.2 brownfield migration.
-      // Tracked in #636 (audit cross-entity colors + token fix).
-      .exclude('[data-slot="meeple-card-entity-badge"]')
-      // StatusBadge color-contrast (slate-500 #64748b on slate-100 #f1f5f9 ≈ 4.34:1)
-      // è pre-existing debt nella shared MeepleCard family (tokens.ts statusColors),
-      // 9px bold font con 4.34:1 fail WCAG 4.5:1 AA SC 1.4.3. Stessa cross-app
-      // concern di EntityBadge — fuori scope Wave B.2 brownfield migration.
-      // Tracked in #636 (esteso per coprire entrambi i badge debt).
-      .exclude('[data-slot="meeple-card-status-badge"]')
       .analyze();
 
     if (results.violations.length > 0) {
@@ -82,17 +71,6 @@ test.describe('Agents library — accessibility @a11y', () => {
     const results = await new AxeBuilder({ page })
       .withTags(WCAG_TAGS)
       .exclude('#webpack-dev-server-client-overlay')
-      // EntityBadge color-contrast (HSL 38,92%,50% on white ≈ 2.1:1) è
-      // pre-existing debt nella shared MeepleCard family (tokens.ts:7,
-      // entityColors.agent), fuori scope Wave B.2 brownfield migration.
-      // Tracked in #636 (audit cross-entity colors + token fix).
-      .exclude('[data-slot="meeple-card-entity-badge"]')
-      // StatusBadge color-contrast (slate-500 #64748b on slate-100 #f1f5f9 ≈ 4.34:1)
-      // è pre-existing debt nella shared MeepleCard family (tokens.ts statusColors),
-      // 9px bold font con 4.34:1 fail WCAG 4.5:1 AA SC 1.4.3. Stessa cross-app
-      // concern di EntityBadge — fuori scope Wave B.2 brownfield migration.
-      // Tracked in #636 (esteso per coprire entrambi i badge debt).
-      .exclude('[data-slot="meeple-card-status-badge"]')
       .analyze();
 
     if (results.violations.length > 0) {

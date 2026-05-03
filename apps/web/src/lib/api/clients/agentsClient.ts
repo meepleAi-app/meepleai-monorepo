@@ -62,7 +62,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Implements GetAllAgentsQuery from backend
      * @param activeOnly If true, only return active agents
      * @param type Optional agent type filter
-     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents. Returns empty array via fallback. See: endpoint audit 2026-04-15
+     * Resolved by Wave B.2 hotfix #641 (2026-05-03) — route registered in AgentsEndpoints.cs.
      */
     async getAll(activeOnly?: boolean, type?: string): Promise<AgentDto[]> {
       const params = new URLSearchParams();

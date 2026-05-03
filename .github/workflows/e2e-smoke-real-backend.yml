@@ -1,0 +1,84 @@
+name: E2E Smoke Real Backend (nightly)
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Boot dev stack (postgres + redis + api)
+        working-directory: infra
+        run: |
+          make dev-core
+          for i in {1..40}; do
+            if curl -fs http://localhost:8080/health 2>/dev/null; then
+              echo "API up"
+              break
+            fi
+            sleep 5
+          done
+
+      - name: Setup pnpm + Node
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Install web deps
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: apps/web
+        run: pnpm playwright install --with-deps chromium
+
+      - name: Build web
+        working-directory: apps/web
+        run: pnpm build
+
+      - name: Run smoke specs
+        working-directory: apps/web
+        env:
+          SMOKE_API_BASE: http://localhost:8080
+          SMOKE_USER_EMAIL: smoke-user@meepleai.test
+          SMOKE_USER_PASSWORD: SmokeUser1!
+        run: pnpm playwright test smoke-real-backend/ --project=desktop-chrome
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-smoke
+          path: apps/web/playwright-report
+          retention-days: 7
+
+      - name: Open issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toISOString().slice(0, 10);
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[SMOKE FAILURE] Nightly E2E smoke real backend — ${today}`,
+              labels: ['bug', 'P0', 'smoke-failure'],
+              body: `Nightly smoke run failed. See [run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).\n\nCheck attached \`playwright-report-smoke\` artifact.`
+            });

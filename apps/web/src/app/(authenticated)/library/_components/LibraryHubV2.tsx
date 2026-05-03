@@ -30,10 +30,13 @@
  *   library bulk action is semantically "delete" per i18n
  *   (`pages.library.bulk.actions.delete`).
  *
- * RecentActivityRail Phase 1 contract (AC-7):
- *   No backend `GET /api/v1/library/activity` endpoint exists yet, so we ALWAYS
- *   pass `items={[]}`. The component renders the placeholder copy. The space is
- *   reserved on lg+ to avoid layout shift if/when the endpoint lands.
+ * RecentActivityRail wired (Issue #642 — Wave B.3 followup):
+ *   Hooks `useLibraryActivity` to fetch recent `added` / `state-changed`
+ *   events from `GET /api/v1/library/activity`. Backend events are mapped onto
+ *   the 4-kind `ActivityItem` contract (`added → add`, `state-changed →
+ *   rating-changed`). The space is still reserved on lg+ to avoid layout shift
+ *   while the query is loading; empty libraries still render the placeholder
+ *   copy provided by `RecentActivityRail` itself.
  *
  * MiniNav config replication (R7 — preserve global shell behaviour):
  *   Replicates the v1 `LibraryHub` mini-nav registration so the global shell
@@ -54,6 +57,8 @@ import {
   LibraryHybridGrid,
   LibraryTabs,
   RecentActivityRail,
+  type ActivityItem,
+  type ActivityKind,
   type BulkSelectionBarLabels,
   type EmptyLibraryLabels,
   type LibraryEntityKey,
@@ -63,7 +68,11 @@ import {
   type LibraryTabConfig,
   type LibraryViewMode,
 } from '@/components/v2/library';
-import { useLibrary, useRemoveGameFromLibrary } from '@/hooks/queries/useLibrary';
+import {
+  useLibrary,
+  useLibraryActivity,
+  useRemoveGameFromLibrary,
+} from '@/hooks/queries/useLibrary';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
@@ -116,6 +125,45 @@ export function LibraryHubV2(): ReactElement {
     sortDescending: true,
   });
   const removeMutation = useRemoveGameFromLibrary();
+
+  // Activity feed (Issue #642 — Wave B.3 followup):
+  // Powers the RecentActivityRail sidebar. Server emits 'added' and
+  // 'state-changed' events from UserLibraryEntries; we map them onto the
+  // 4-kind RecentActivityRail contract (other kinds remain wire-ready for
+  // future event types). Unknown kinds are dropped to keep the contract tight.
+  const activityQuery = useLibraryActivity(20);
+  const activityItems = useMemo<readonly ActivityItem[]>(() => {
+    const raw = activityQuery.data ?? [];
+    const mapped: ActivityItem[] = [];
+    for (const event of raw) {
+      let kind: ActivityKind | null;
+      switch (event.type) {
+        case 'added':
+          kind = 'add';
+          break;
+        case 'state-changed':
+          kind = 'rating-changed';
+          break;
+        case 'session-recorded':
+          kind = 'play';
+          break;
+        case 'removed':
+          kind = null; // Not surfaced today; backend doesn't emit yet.
+          break;
+        default:
+          kind = null;
+          break;
+      }
+      if (!kind) continue;
+      mapped.push({
+        id: `${event.id}:${event.type}`,
+        kind,
+        entityTitle: event.gameTitle,
+        timestamp: event.timestamp,
+      });
+    }
+    return mapped;
+  }, [activityQuery.data]);
 
   const fixtureItems = useMemo(() => {
     if (!IS_VISUAL_TEST_BUILD) return null;
@@ -424,7 +472,16 @@ export function LibraryHubV2(): ReactElement {
           )}
         </div>
 
-        <RecentActivityRail items={[]} />
+        {/*
+         * Sidebar visual contract preservation (Issue #642):
+         * forwarding `activityQuery.isLoading` here surfaces the skeleton
+         * variant during the brief moment before the activity response
+         * arrives, breaking the migrated `library-loading.png` baseline that
+         * was captured against the empty placeholder. Until the baseline is
+         * regenerated to include the skeleton sidebar, only surface the
+         * populated state once data is available.
+         */}
+        <RecentActivityRail items={activityItems} />
       </div>
 
       {selectionMode === 'select' ? (

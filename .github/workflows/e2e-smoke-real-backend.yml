@@ -19,6 +19,10 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Generate placeholder secrets (CI cannot secrets-sync — no SSH key)
+        working-directory: infra
+        run: make secrets-setup
+
       - name: Boot dev stack (postgres + redis + api)
         working-directory: infra
         run: |
@@ -30,6 +34,11 @@ jobs:
             fi
             sleep 5
           done
+
+      - name: Dump API logs on stack-up failure
+        if: failure()
+        working-directory: infra
+        run: docker compose -f docker-compose.yml -f compose.dev.yml logs --tail=200 api postgres redis || true
 
       - name: Setup pnpm + Node
         uses: pnpm/action-setup@v3

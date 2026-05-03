@@ -30,6 +30,9 @@ internal static class UserLibraryCoreEndpoints
         MapGetUserLibraryEndpoint(group);
         MapGetLibraryStatsEndpoint(group);
         MapGetLibraryQuotaEndpoint(group);
+
+        // Library activity feed (Issue #642 — Wave B.3 followup)
+        MapGetLibraryActivityEndpoint(group);
         MapAddGameToLibraryEndpoint(group);
         MapRemoveGameFromLibraryEndpoint(group);
         MapUpdateLibraryEntryEndpoint(group);
@@ -181,6 +184,39 @@ internal static class UserLibraryCoreEndpoints
         .WithTags("Library")
         .WithSummary("Get library quota")
         .WithDescription("Returns quota information for user's library including games in library, max allowed, remaining slots, and tier.")
+        .WithOpenApi();
+    }
+
+    private static void MapGetLibraryActivityEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/library/activity", async (
+            [FromQuery] int? limit,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetLibraryActivityQuery(
+                UserId: userId,
+                Limit: Math.Clamp(limit ?? 20, 1, 50)
+            );
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(result);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<IReadOnlyList<LibraryActivityItemDto>>(200)
+        .Produces(401)
+        .WithTags("Library")
+        .WithSummary("Get library activity feed")
+        .WithDescription("Returns recent activity events (added/state-changed) for the user's library. Limit clamped to 1–50 (default 20). Issue #642 — Wave B.3 followup.")
         .WithOpenApi();
     }
 

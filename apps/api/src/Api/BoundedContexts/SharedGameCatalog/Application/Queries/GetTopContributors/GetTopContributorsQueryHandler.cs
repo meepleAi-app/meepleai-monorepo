@@ -138,11 +138,12 @@ internal sealed class GetTopContributorsQueryHandler
             .ToList();
 
         // Step 4: fetch user profile details and apply privacy guards.
-        //   - !IsSuspended  → don't surface suspended accounts on public widget.
-        //   - Status == "Active" → exclude banned/deleted (Epic #4068).
-        //   - DisplayName != null → spec §5.4 requires non-null DisplayName;
-        //     users who never set a display name shouldn't leak email-derived
-        //     identifiers on a public leaderboard.
+        // Privacy guards applied below: skip suspended accounts (don't surface
+        // them on the public widget), require Active status (exclude banned and
+        // deleted users per Epic 4068), require a non-null DisplayName (spec
+        // section 5.4 requires non-null DisplayName so that users who never set
+        // a display name don't leak email-derived identifiers on a public
+        // leaderboard).
         var candidateIds = ranked.Select(r => r.UserId).ToList();
         var users = await _context.Users
             .AsNoTracking()

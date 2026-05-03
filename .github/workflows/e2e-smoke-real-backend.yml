@@ -36,6 +36,8 @@ jobs:
           NEXT_PUBLIC_HYPERDX_API_KEY=demo
           WEBENV
           # api.env.dev — backend container env
+          # Seed initial admin matching SMOKE_USER_* in workflow env so smoke
+          # specs can login without registering (gated by Registration:PublicEnabled).
           cat > api.env.dev <<'APIENV'
           POSTGRES_HOST=postgres
           POSTGRES_PORT=5432
@@ -50,6 +52,9 @@ jobs:
           Email__EnableSsl=false
           HYPERDX_OTLP_ENDPOINT=http://meepleai-hyperdx:4317
           HYPERDX_API_KEY=demo
+          INITIAL_ADMIN_EMAIL=smoke-user@meepleai.test
+          INITIAL_ADMIN_PASSWORD=SmokeUser1!
+          INITIAL_ADMIN_DISPLAY_NAME=Smoke User
           APIENV
           # n8n.env.dev — minimal (n8n unused by smoke specs but referenced by compose)
           cat > n8n.env.dev <<'N8NENV'
@@ -110,6 +115,7 @@ jobs:
             fi
             sleep 5
           done
+
 
       - name: Run smoke specs
         working-directory: apps/web

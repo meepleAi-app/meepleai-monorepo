@@ -101,12 +101,25 @@ jobs:
         working-directory: apps/web
         run: pnpm build
 
+      - name: Wait for web container ready
+        run: |
+          for i in {1..30}; do
+            if curl -fs http://localhost:3000 2>/dev/null; then
+              echo "Web up on :3000"
+              break
+            fi
+            sleep 5
+          done
+
       - name: Run smoke specs
         working-directory: apps/web
         env:
           SMOKE_API_BASE: http://localhost:8080
           SMOKE_USER_EMAIL: smoke-user@meepleai.test
           SMOKE_USER_PASSWORD: SmokeUser1!
+          # docker compose already provides web on :3000 (see infra/compose.dev.yml:72)
+          # — skip Playwright's own webServer to avoid port collision
+          PLAYWRIGHT_SKIP_WEB_SERVER: '1'
         run: pnpm playwright test smoke-real-backend/ --project=desktop-chrome
 
       - name: Upload report on failure

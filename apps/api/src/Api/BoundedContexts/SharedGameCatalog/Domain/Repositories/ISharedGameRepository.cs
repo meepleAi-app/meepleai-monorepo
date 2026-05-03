@@ -33,6 +33,18 @@ public interface ISharedGameRepository
     Task<IReadOnlyDictionary<Guid, SharedGame>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets a lightweight title-only lookup for the given game IDs.
+    /// Issue #660: Used by GetAllAgentsQueryHandler to populate AgentDto.GameName without
+    /// hydrating full SharedGame aggregates (avoids unnecessary domain reconstitution overhead).
+    /// </summary>
+    /// <param name="ids">The game IDs to retrieve names for</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Dictionary mapping game ID to title (only includes found, non-deleted games)</returns>
+    Task<IReadOnlyDictionary<Guid, string>> GetNamesByIdsAsync(
+        IReadOnlyCollection<Guid> ids,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets a shared game by its BoardGameGeek ID.
     /// </summary>
     /// <param name="bggId">The BGG ID</param>

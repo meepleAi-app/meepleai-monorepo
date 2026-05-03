@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Tests.TestHelpers;
@@ -224,10 +225,8 @@ internal static class TestSessionHelper
 
             if (gameId.HasValue)
             {
-                // GameId is read-only on the aggregate; seed via persistence by attaching to the entity
-                // is not supported via current entity API. The optional gameId parameter is accepted for
-                // Phase 6 forward-compat but ignored at runtime until a SetGameId method is added.
-                // Tests that need GameId association should use a future entity API.
+                // Issue #660: Use SetGameId domain method to associate seeded agents with a SharedGame.
+                agent.SetGameId(gameId.Value);
             }
 
             dbContext.AgentDefinitions.Add(agent);
@@ -242,9 +241,52 @@ internal static class TestSessionHelper
                 config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
             // Default state from Create() is IsActive=false / Status=Draft
 
+            if (gameId.HasValue)
+            {
+                agent.SetGameId(gameId.Value);
+            }
+
             dbContext.AgentDefinitions.Add(agent);
         }
 
         await dbContext.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Seeds a SharedGame entity with the given title for integration tests.
+    /// Issue #660: Used by AgentsEndpointsIntegrationTests to assert AgentDto.GameName population
+    /// when an agent definition is linked to a game in the SharedGame catalog.
+    /// </summary>
+    /// <param name="dbContext">Test database context.</param>
+    /// <param name="title">SharedGame title (e.g. "Catan").</param>
+    /// <returns>The newly seeded SharedGame ID.</returns>
+    public static async Task<Guid> SeedSharedGameAsync(
+        MeepleAiDbContext dbContext,
+        string title)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        if (string.IsNullOrWhiteSpace(title))
+            throw new ArgumentException("Title cannot be empty", nameof(title));
+
+        var sharedGameId = Guid.NewGuid();
+        dbContext.SharedGames.Add(new SharedGameEntity
+        {
+            Id = sharedGameId,
+            Title = title,
+            Description = "Integration test game",
+            ImageUrl = string.Empty,
+            ThumbnailUrl = string.Empty,
+            YearPublished = 2024,
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 45,
+            MinAge = 8,
+            Status = 1, // Approved — queryable in default ISharedGameRepository.GetByIds/Names paths
+            CreatedBy = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow,
+        });
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+        return sharedGameId;
     }
 }

@@ -16,5 +16,6 @@ internal record AgentDto(
     bool IsRecentlyUsed,
     bool IsIdle,
     Guid? GameId = null,
+    string? GameName = null,
     Guid? CreatedByUserId = null
 );

@@ -113,6 +113,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<LlmCostLogEntity> LlmCostLogs => Set<LlmCostLogEntity>(); // ISSUE-960: BGAI-018
     public DbSet<LlmRequestLogEntity> LlmRequestLogs => Set<LlmRequestLogEntity>(); // ISSUE-5072: Detailed request logging with 30-day retention
     public DbSet<ChunkedUploadSessionEntity> ChunkedUploadSessions => Set<ChunkedUploadSessionEntity>(); // Chunked PDF upload
+    public DbSet<BoundedContexts.DocumentProcessing.Domain.Entities.PhotoBatchUpload> PhotoBatchUploads => Set<BoundedContexts.DocumentProcessing.Domain.Entities.PhotoBatchUpload>(); // Libro Game AI Assistant MVP Phase 1
+    public DbSet<BoundedContexts.DocumentProcessing.Domain.Entities.PhotoBatchPage> PhotoBatchPages => Set<BoundedContexts.DocumentProcessing.Domain.Entities.PhotoBatchPage>(); // Libro Game AI Assistant MVP Phase 1
     public DbSet<AdminReportEntity> AdminReports => Set<AdminReportEntity>(); // ISSUE-916: Report generation + scheduling
     public DbSet<ReportExecutionEntity> ReportExecutions => Set<ReportExecutionEntity>(); // ISSUE-916: Report execution history
     public DbSet<DocumentCollectionEntity> DocumentCollections => Set<DocumentCollectionEntity>(); // ISSUE-2051: Multi-document collections

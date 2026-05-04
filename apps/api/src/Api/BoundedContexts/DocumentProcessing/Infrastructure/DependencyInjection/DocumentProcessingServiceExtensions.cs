@@ -45,6 +45,7 @@ internal static class DocumentProcessingServiceExtensions
 
         // Domain Layer
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+        services.AddScoped<IPhotoBatchUploadRepository, PhotoBatchUploadRepository>(); // Libro Game AI Assistant MVP Phase 1
         services.AddScoped<IProcessingJobRepository, ProcessingJobRepository>(); // Issue #4731: Queue commands
         services.AddScoped<IProcessingQueueConfigRepository, ProcessingQueueConfigRepository>(); // Issue #5455: Queue config
         services.AddScoped<IChunkedUploadSessionRepository, ChunkedUploadSessionRepository>();

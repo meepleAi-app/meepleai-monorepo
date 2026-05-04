@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs.AgentDefinition;
 using Api.Infrastructure;
 using Api.Tests.Constants;
@@ -30,6 +32,16 @@ public sealed class AgentTypologiesEndpointTests : IAsyncLifetime
     private readonly string _testDbName;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
+
+    /// <summary>
+    /// JsonSerializerOptions that mirror the API's ConfigureHttpJsonOptions configuration
+    /// (Program.cs line 416 registers JsonStringEnumConverter globally).
+    /// Required because AgentDefinitionDto.Status is an enum serialized as a string.
+    /// </summary>
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() }
+    };
 
     public AgentTypologiesEndpointTests(SharedTestcontainersFixture fixture)
     {
@@ -83,7 +95,7 @@ public sealed class AgentTypologiesEndpointTests : IAsyncLifetime
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<GetAgentTypologiesResponse>();
+        var body = await response.Content.ReadFromJsonAsync<GetAgentTypologiesResponse>(JsonOptions);
         body.Should().NotBeNull();
         body!.Success.Should().BeTrue();
         body.Typologies.Should().BeEmpty();
@@ -112,7 +124,7 @@ public sealed class AgentTypologiesEndpointTests : IAsyncLifetime
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<GetAgentTypologiesResponse>();
+        var body = await response.Content.ReadFromJsonAsync<GetAgentTypologiesResponse>(JsonOptions);
         body.Should().NotBeNull();
         body!.Success.Should().BeTrue();
         body.Typologies.Should().HaveCount(2);

@@ -3,10 +3,10 @@
 > Wave A closeout — Step 5 (Issue #573).
 > Pre-requisite for Phase 1+2 of the v2 design migration ([spec](../superpowers/specs/2026-04-26-v2-design-migration.md), section 3.3).
 
-This matrix is the **single source of truth** for the ~45 v2 feature components that the
-SP4 wave 1 + 2 mockups introduced and that do not yet exist in the codebase. Each row
-binds a mockup definition to a target component path, route, and acceptance criteria so
-that downstream PRs can pick up an entry and turn it from `pending` → `done` without
+This matrix is the **single source of truth** for the ~80 v2 feature components that the
+SP4 wave 1 + 2 + 3 + 4 mockups introduced and that do not yet exist in the codebase. Each
+row binds a mockup definition to a target component path, route, and acceptance criteria
+so that downstream PRs can pick up an entry and turn it from `pending` → `done` without
 ambiguity.
 
 > **Updated 2026-04-30** (Wave B.2 spec-panel review): count refined 46 → 45.
@@ -15,10 +15,20 @@ ambiguity.
 > added (mirror B.1 `GamesResultsGrid` pattern, riusa `MeepleCard` con
 > `entity="agent"`). `AgentsFiltersStrip` renamed `AgentFilters` to match mockup naming.
 
+> **Updated 2026-05-04** (Wave 3 + Wave 4 partial mockups merged via PR #640): added
+> 35 new components across 6 routes — Wave 3 (5 routes, 31 components: `/players/[id]`
+> · `/toolkits/[id]` · `/kb/[id]` · `/game-nights` · `/discover`) and Wave 4 partial
+> (1 route, 4 components: `/players`). Total grew 45 → 80. Stubs live under
+> `apps/web/src/components/v2/{player-detail,toolkit-detail,kb-detail,game-nights,discover,players}/`
+> and `pnpm typecheck` stays green. Wave 4 remaining (E1 toolkits-index · F1 kb-index
+> · G2 game-night-detail) and SP5 admin batch tracked separately — pending Claude Design
+> production resumption (post 2026-05-10).
+
 ## Scope and ground rules
 
-- **In scope**: 46 feature components extracted from `admin-mockups/design_files/sp4-*.jsx`
-  wave 1 + 2 (10 mockups). Stubs live under `apps/web/src/components/v2/<feature>/`.
+- **In scope**: 80 feature components extracted from `admin-mockups/design_files/sp4-*.jsx`
+  wave 1 + 2 + 3 + 4 partial (16 mockups). Stubs live under
+  `apps/web/src/components/v2/<feature>/`.
 - **Out of scope**: existing v2 primitives at `apps/web/src/components/ui/v2/` (auth-card,
   btn, divider, drawer, entity-card, entity-chip, entity-pip, faq, hero-gradient,
   input-field, invites, join, notification-card, oauth-buttons, pricing-card, pwd-input,
@@ -165,6 +175,82 @@ the PR review.
 | `sp4-session-summary.jsx` | `SessionDiaryTimeline` | `apps/web/src/components/v2/session-summary/SessionDiaryTimeline.tsx` | `/sessions/[id]/summary` | pending | — | T A V |
 | `sp4-session-summary.jsx` | `PhotosGallery` | `apps/web/src/components/v2/session-summary/PhotosGallery.tsx` | `/sessions/[id]/summary` | pending | — | T A V |
 | `sp4-session-summary.jsx` | `SessionShareCard` | `apps/web/src/components/v2/session-summary/SessionShareCard.tsx` | `/sessions/[id]/summary` | pending | — | T A V |
+
+## Wave 3 — 31 components
+
+> **Mockup PR**: #640 (merged 2026-05-03). Stubs added in same PR series.
+> Mirror Wave B.1/B.2/B.3 implementation pattern (5-commit TDD: foundation → components → orchestrator → E2E → cleanup).
+
+### Player detail — `/players/[id]` — 5 components
+
+| Mockup | Component | Path | Route | Status | PR | AC |
+|--------|-----------|------|-------|--------|----|----|
+| `sp4-player-detail.jsx` | `PlayerHero` | `apps/web/src/components/v2/player-detail/PlayerHero.tsx` | `/players/[id]` | pending | — | T A M V |
+| `sp4-player-detail.jsx` | `PlayerStatsGrid` | `apps/web/src/components/v2/player-detail/PlayerStatsGrid.tsx` | `/players/[id]` | pending | — | T A V |
+| `sp4-player-detail.jsx` | `PlayerLeaderboardCard` | `apps/web/src/components/v2/player-detail/PlayerLeaderboardCard.tsx` | `/players/[id]` | pending | — | T A V |
+| `sp4-player-detail.jsx` | `FavoriteAgentCard` | `apps/web/src/components/v2/player-detail/FavoriteAgentCard.tsx` | `/players/[id]` | pending | — | T A V |
+| `sp4-player-detail.jsx` | `AchievementBadgeGrid` | `apps/web/src/components/v2/player-detail/AchievementBadgeGrid.tsx` | `/players/[id]` | pending | — | T A V |
+
+### Toolkit detail — `/toolkits/[id]` — 6 components
+
+| Mockup | Component | Path | Route | Status | PR | AC |
+|--------|-----------|------|-------|--------|----|----|
+| `sp4-toolkit-detail.jsx` | `ToolkitSummaryPanel` | `apps/web/src/components/v2/toolkit-detail/ToolkitSummaryPanel.tsx` | `/toolkits/[id]` | pending | — | T A V |
+| `sp4-toolkit-detail.jsx` | `ToolkitIncludesGrid` | `apps/web/src/components/v2/toolkit-detail/ToolkitIncludesGrid.tsx` | `/toolkits/[id]` | pending | — | T A V |
+| `sp4-toolkit-detail.jsx` | `VersionTimeline` | `apps/web/src/components/v2/toolkit-detail/VersionTimeline.tsx` | `/toolkits/[id]` | pending | — | T A V |
+| `sp4-toolkit-detail.jsx` | `RatingBreakdown` | `apps/web/src/components/v2/toolkit-detail/RatingBreakdown.tsx` | `/toolkits/[id]` | pending | — | T A V |
+| `sp4-toolkit-detail.jsx` | `PromptPreviewBlock` | `apps/web/src/components/v2/toolkit-detail/PromptPreviewBlock.tsx` | `/toolkits/[id]` | pending | — | T A V |
+| `sp4-toolkit-detail.jsx` | `Stars` | `apps/web/src/components/v2/toolkit-detail/Stars.tsx` | `/toolkits/[id]` | pending | — | T A V |
+
+### KB detail — `/kb/[id]` — 6 components
+
+| Mockup | Component | Path | Route | Status | PR | AC |
+|--------|-----------|------|-------|--------|----|----|
+| `sp4-kb-detail.jsx` | `KbHeader` | `apps/web/src/components/v2/kb-detail/KbHeader.tsx` | `/kb/[id]` | pending | — | T A V |
+| `sp4-kb-detail.jsx` | `KbChunkListPanel` | `apps/web/src/components/v2/kb-detail/KbChunkListPanel.tsx` | `/kb/[id]` | pending | — | T A V |
+| `sp4-kb-detail.jsx` | `KbChunkPreview` | `apps/web/src/components/v2/kb-detail/KbChunkPreview.tsx` | `/kb/[id]` | pending | — | T A V |
+| `sp4-kb-detail.jsx` | `ChunkSearchBox` | `apps/web/src/components/v2/kb-detail/ChunkSearchBox.tsx` | `/kb/[id]` | pending | — | T A V |
+| `sp4-kb-detail.jsx` | `MarkdownRenderBlock` | `apps/web/src/components/v2/kb-detail/MarkdownRenderBlock.tsx` | `/kb/[id]` | pending | — | T A V |
+| `sp4-kb-detail.jsx` | `KbProcessingState` | `apps/web/src/components/v2/kb-detail/KbProcessingState.tsx` | `/kb/[id]` | pending | — | T A V |
+
+### Game nights index — `/game-nights` — 8 components
+
+| Mockup | Component | Path | Route | Status | PR | AC |
+|--------|-----------|------|-------|--------|----|----|
+| `sp4-game-nights-index.jsx` | `GameNightsHeader` | `apps/web/src/components/v2/game-nights/GameNightsHeader.tsx` | `/game-nights` | pending | — | T A V |
+| `sp4-game-nights-index.jsx` | `CalendarMonthGrid` | `apps/web/src/components/v2/game-nights/CalendarMonthGrid.tsx` | `/game-nights` | pending | — | T A V |
+| `sp4-game-nights-index.jsx` | `CalendarDayCell` | `apps/web/src/components/v2/game-nights/CalendarDayCell.tsx` | `/game-nights` | pending | — | T A V |
+| `sp4-game-nights-index.jsx` | `GameNightListCard` | `apps/web/src/components/v2/game-nights/GameNightListCard.tsx` | `/game-nights` | pending | — | T A V |
+| `sp4-game-nights-index.jsx` | `DayDetailDrawer` | `apps/web/src/components/v2/game-nights/DayDetailDrawer.tsx` | `/game-nights` | pending | — | T A M V |
+| `sp4-game-nights-index.jsx` | `FilterPillBar` | `apps/web/src/components/v2/game-nights/FilterPillBar.tsx` | `/game-nights` | pending | — | T A V |
+| `sp4-game-nights-index.jsx` | `StatusPill` | `apps/web/src/components/v2/game-nights/StatusPill.tsx` | `/game-nights` | pending | — | T A V |
+| `sp4-game-nights-index.jsx` | `PlayerAvatars` | `apps/web/src/components/v2/game-nights/PlayerAvatars.tsx` | `/game-nights` | pending | — | T A V |
+
+### Discover — `/discover` — 6 components
+
+| Mockup | Component | Path | Route | Status | PR | AC |
+|--------|-----------|------|-------|--------|----|----|
+| `sp4-discover.jsx` | `DiscoverHero` | `apps/web/src/components/v2/discover/DiscoverHero.tsx` | `/discover` | pending | — | T A M V |
+| `sp4-discover.jsx` | `DiscoverSearchBox` | `apps/web/src/components/v2/discover/DiscoverSearchBox.tsx` | `/discover` | pending | — | T A V |
+| `sp4-discover.jsx` | `EntityFilterPillBar` | `apps/web/src/components/v2/discover/EntityFilterPillBar.tsx` | `/discover` | pending | — | T A V |
+| `sp4-discover.jsx` | `HorizontalRow` | `apps/web/src/components/v2/discover/HorizontalRow.tsx` | `/discover` | pending | — | T A M V |
+| `sp4-discover.jsx` | `RowScroller` | `apps/web/src/components/v2/discover/RowScroller.tsx` | `/discover` | pending | — | T A V |
+| `sp4-discover.jsx` | `FooterCTA` | `apps/web/src/components/v2/discover/FooterCTA.tsx` | `/discover` | pending | — | T A V |
+
+## Wave 4 — 4 components (partial — 1/4 routes)
+
+> **Status**: D1 players-index landed via PR #640 mockup batch (2026-05-03).
+> Remaining routes (E1 toolkits-index, F1 kb-index, G2 game-night-detail) blocked
+> until Claude Design production resumes (post 2026-05-10).
+
+### Players index — `/players` — 4 components
+
+| Mockup | Component | Path | Route | Status | PR | AC |
+|--------|-----------|------|-------|--------|----|----|
+| `sp4-players-index.jsx` | `PlayersHero` | `apps/web/src/components/v2/players/PlayersHero.tsx` | `/players` | pending | — | T A M V |
+| `sp4-players-index.jsx` | `PlayersFiltersInline` | `apps/web/src/components/v2/players/PlayersFiltersInline.tsx` | `/players` | pending | — | T A V |
+| `sp4-players-index.jsx` | `PlayersResultsGrid` | `apps/web/src/components/v2/players/PlayersResultsGrid.tsx` | `/players` | pending | — | T A V |
+| `sp4-players-index.jsx` | `EmptyPlayers` | `apps/web/src/components/v2/players/EmptyPlayers.tsx` | `/players` | pending | — | T A V |
 
 ## Stub format (informational)
 

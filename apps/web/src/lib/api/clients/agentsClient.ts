@@ -154,7 +154,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Get approved agent typologies (authenticated endpoint)
      * Issue #3186 (AGT-012): Agent Config Modal
      * @param status Filter by status (default: 'Approved')
-     * @todo BACKEND MISSING: No route registered for GET /api/v1/agent-typologies. Returns empty array via fallback. See: endpoint audit 2026-04-15
+     * Resolved by #649 (2026-05-04) — route registered in AgentTypologiesEndpoints.cs.
      */
     async getTypologies(status: 'Approved' = 'Approved'): Promise<Typology[]> {
       const params = new URLSearchParams();

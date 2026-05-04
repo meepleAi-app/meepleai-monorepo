@@ -253,6 +253,50 @@ internal static class TestSessionHelper
     }
 
     /// <summary>
+    /// Seeds AgentDefinition aggregates by Status for integration tests.
+    /// Issue #649: used by AgentTypologiesEndpoints integration tests to verify PublishedOnly filter.
+    /// Published path: Create() → StartTesting() → Publish() (auto-sets IsActive=true).
+    /// Draft path: Create() only (default state IsActive=false / Status=Draft).
+    /// </summary>
+    /// <param name="dbContext">Test database context.</param>
+    /// <param name="publishedCount">Number of Published agents to seed.</param>
+    /// <param name="draftCount">Number of Draft agents to seed.</param>
+    public static async Task SeedAgentDefinitionsByStatusAsync(
+        MeepleAiDbContext dbContext,
+        int publishedCount,
+        int draftCount)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        for (var i = 0; i < publishedCount; i++)
+        {
+            var agent = AgentDefinition.Create(
+                name: $"Published Agent {i}",
+                description: $"Test published agent #{i}",
+                type: AgentType.RagAgent,
+                config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
+            agent.StartTesting();
+            agent.Publish();
+
+            dbContext.AgentDefinitions.Add(agent);
+        }
+
+        for (var i = 0; i < draftCount; i++)
+        {
+            var agent = AgentDefinition.Create(
+                name: $"Draft Agent {i}",
+                description: $"Test draft agent #{i}",
+                type: AgentType.RulesInterpreter,
+                config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
+            // Default state from Create() is IsActive=false / Status=Draft
+
+            dbContext.AgentDefinitions.Add(agent);
+        }
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    /// <summary>
     /// Seeds a SharedGame entity with the given title for integration tests.
     /// Issue #660: Used by AgentsEndpointsIntegrationTests to assert AgentDto.GameName population
     /// when an agent definition is linked to a game in the SharedGame catalog.

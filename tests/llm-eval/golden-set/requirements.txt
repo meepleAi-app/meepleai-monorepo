@@ -1,0 +1,2 @@
+# Golden Set CSV-to-JSONL converter
+# No external dependencies — uses Python stdlib only (csv, json, sys, pathlib)

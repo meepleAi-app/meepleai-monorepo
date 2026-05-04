@@ -1,42 +1,62 @@
 # 📊 Implementation Status — Libro Game AI Assistant MVP Phase 1
 
-> **Sprint corrente**: Sprint 0 — Foundation code-only (avviato 2026-05-04)
+> **Sprint corrente**: Sprint 0 ✅ COMPLETO (2026-05-04) — pending PR review + Aaron procurement
 > **Plan riferimento**: `docs/superpowers/plans/2026-05-04-libro-game-assistant-mvp-phase1-v2.md`
+> **Branch**: `feature/libro-game-mvp-phase1` (parent: `main-dev`)
 
 ## Legenda status
 
 - ⚪ **Not started** — non iniziato
 - 🟡 **In progress** — in lavorazione
 - 🔵 **Blocked** — blocked su human/external dependency (vedi BLOCKERS.md)
-- ✅ **Done** — task completato + PR mergiato
+- ✅ **Done** — task completato (commit su feature branch); PR/merge separato
 - ⏸️ **Deferred** — fuori scope sprint corrente
 
-## Sprint 0 — Foundation code-only (weeks 1-2)
+## Sprint 0 — Foundation code-only ✅ COMPLETO
+
+**Commit history** (12 commit, 51 files, 19068 insertions):
+
+| Commit | Task | Description |
+|--------|------|-------------|
+| `2cac3bf5a` | Kickoff | Feature tracking docs + prompt cleanup |
+| `1506e25e2` | 0.7 | SharedGameCatalog audit doc |
+| `9c962b43b` | 0.7 fix | Scope correction + new game flow + drift docs |
+| `2cb547ae5` | 0.4 | Hetzner CAX31 + observability stack |
+| `7aa52cce0` | 0.4 fix | Secrets block + age preflight + volume paths + provisioner |
+| `0edb90ae8` | 0.1 step 3 | OCR validation Python script |
+| `3ec3262ae` | 0.1 fix | JSON decode robustness + gitignore |
+| `3667401ad` | 0.2 step 2-3 | Golden test set schemas + CSV-to-JSONL |
+| `90cf5bd98` | 1.1 | PhotoBatchUpload aggregate + domain events (TDD 3/3) |
+| `2bac5c617` | 1.2 | Repository + EF migration |
+| `158e9e258` | 1.3 | UploadPhotoBatchCommand + Validator (TDD 7/7) |
+| `32f5cadd5` | 1.4a | smoldocling /preprocess endpoint + IPhotoPreprocessor |
+| `0c458eb3c` | Final fix | snake_case migration + state guards + validator order + 5 polish |
 
 ### Phase 0 (code subset)
 
-| Task | Status | Issue | PR | Note |
-|------|--------|-------|-----|------|
-| 0.4 step 2-7 — Bootstrap script + observability + backup configs | ⚪ Not started | – | – | File artifacts only, NO actual provisioning |
-| 0.7 — SharedGameCatalog integration verification | ⚪ Not started | – | – | Read-only audit, output report |
-| 0.1 step 3 — OCR validation Python script | ⚪ Not started | – | – | Artifact prepared, run blocked su manuali Aaron |
-| 0.2 step 2-3 — Golden set JSONL schema + CSV-to-JSONL converter | ⚪ Not started | – | – | Schema + utility, data creation contractor-blocked |
+| Task | Status | Commit | Note |
+|------|--------|--------|------|
+| 0.4 step 2-7 — Bootstrap script + observability + backup configs | ✅ | `2cb547ae5` + `7aa52cce0` | File artifacts only |
+| 0.7 — SharedGameCatalog integration verification | ✅ | `1506e25e2` + `9c962b43b` | `docs/development/libro-game-architecture.md` |
+| 0.1 step 3 — OCR validation Python script | ✅ | `0edb90ae8` + `3ec3262ae` | `tests/llm-eval/ocr-validation/` |
+| 0.2 step 2-3 — Golden set JSONL schema + CSV-to-JSONL converter | ✅ | `3667401ad` | `tests/llm-eval/golden-set/` |
 
 ### Phase 1 (backend up to smoldocling endpoint)
 
-| Task | Status | Issue | PR | Note |
-|------|--------|-------|-----|------|
-| 1.1 — PhotoBatchUpload aggregate + VOs (PageOrientation, ConfidenceLevel) + events | ⚪ Not started | – | – | TDD: domain logic first |
-| 1.2 — IPhotoBatchUploadRepository + EF migration | ⚪ Not started | – | – | Schema: `document_processing` |
-| 1.3 — UploadPhotoBatchCommand + FluentValidation Validator | ⚪ Not started | – | – | – |
-| 1.4a — IPhotoPreprocessor interface + smoldocling `/preprocess` endpoint (Python) | ⚪ Not started | – | – | smoldocling-service extension |
+| Task | Status | Commit | Tests | Note |
+|------|--------|--------|-------|------|
+| 1.1 — PhotoBatchUpload aggregate + VOs + events | ✅ | `90cf5bd98` + `0c458eb3c` | 4/4 pass | Plan errors fixed during spike |
+| 1.2 — IPhotoBatchUploadRepository + EF migration | ✅ | `2bac5c617` + `0c458eb3c` | – | Schema: public + snake_case |
+| 1.3 — UploadPhotoBatchCommand + FluentValidation | ✅ | `158e9e258` + `0c458eb3c` | 7/7 pass | Validator order DoS-safe |
+| 1.4a — IPhotoPreprocessor + smoldocling /preprocess endpoint | ✅ | `32f5cadd5` + `0c458eb3c` | 4 pytest pass + 1 skip | Endpoint `/api/v1/preprocess` |
 
 ### Acceptance Sprint 0
 
-- [ ] Tutti i task code Sprint 0 mergiati su `feature/libro-game-mvp-phase1`
-- [ ] Test pass (unit + integration)
-- [ ] Pattern compliance verificata (audit checklist plan v2)
-- [ ] OCR validation script eseguibile (anche se non runnable senza manuali)
+- [x] Tutti i task code Sprint 0 mergiati su `feature/libro-game-mvp-phase1` (13 commit)
+- [x] Test pass (4 + 7 unit C# + 4 pytest Python)
+- [x] Pattern compliance verificata (audit fixed 4 plan v2 errors)
+- [x] OCR validation script eseguibile (run blocked su manuali Aaron)
+- [ ] PR aperto + code review + merge in `main-dev` ← **NEXT**
 
 ## Sprint 1 — Risk gate (week 3, blocked Aaron procurement)
 

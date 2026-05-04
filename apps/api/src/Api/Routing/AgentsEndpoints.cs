@@ -43,6 +43,7 @@ internal static class AgentsEndpoints
         MapCreateUserAgentEndpoint(group);
         MapCreateAgentWithSetupEndpoint(group);
         MapQuickCreateAgentEndpoint(group);
+        MapUpdateUserAgentEndpoint(group);
         return group;
     }
 
@@ -83,6 +84,18 @@ internal static class AgentsEndpoints
     private sealed record QuickCreateAgentRequest(
         Guid GameId,
         Guid? SharedGameId = null
+    );
+
+    /// <summary>
+    /// Frontend <c>agentsClient.updateUserAgent</c> request body shape.
+    /// Mirrors <c>UpdateUserAgentRequest</c> in
+    /// <c>apps/web/src/lib/api/clients/agentsClient.ts</c>. Issue #656.
+    /// All fields optional — handler treats missing/blank values as no-op for that field.
+    /// </summary>
+    private sealed record UpdateUserAgentRequest(
+        string? Name = null,
+        string? StrategyName = null,
+        Dictionary<string, object>? StrategyParameters = null
     );
 
     private static void MapGetAgentsEndpoint(RouteGroupBuilder group)
@@ -326,6 +339,48 @@ internal static class AgentsEndpoints
         .WithTags("Agents")
         .WithSummary("Quick-create a Tutor agent")
         .WithDescription("Fast 1-click Tutor onboarding: creates AgentDefinition with type=Tutor and HybridSearch strategy. Auto-derived name 'Tutor for {GameName}'. ChatThreadId placeholder (chat-thread BC integration deferred — same as PR #693) and KbCardCount=0 (KB query deferred). Issue #659 (Phase δ.1).")
+        .WithOpenApi();
+    }
+
+    private static void MapUpdateUserAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPut("/agents/{id:guid}/user", async (
+            Guid id,
+            [FromBody] UpdateUserAgentRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+            if (!UserLibraryCoreEndpoints.TryGetUserId(context, session, out var userId))
+                return Results.Unauthorized();
+
+            try
+            {
+                var command = new UpdateUserAgentCommand(
+                    UserId: userId,
+                    AgentId: id,
+                    Name: request.Name,
+                    StrategyName: request.StrategyName,
+                    StrategyParameters: request.StrategyParameters);
+
+                var dto = await mediator.Send(command, ct).ConfigureAwait(false);
+                return dto is null ? Results.NotFound() : Results.Ok(dto);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<AgentDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Agents")
+        .WithSummary("Update user-owned agent")
+        .WithDescription("Updates name and/or strategy of a user-owned agent. Returns 404 if agent not found, AgentDto with GameName resolved on success. All request fields optional; missing/blank values are no-ops for that field. Issue #656.")
         .WithOpenApi();
     }
 }

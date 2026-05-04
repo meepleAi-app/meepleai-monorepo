@@ -282,6 +282,73 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
         body!.Should().HaveCount(2);
         body.Should().OnlyContain(a => a.IsActive);
     }
+
+    // Issue #648: Phase γ.2 — GET /api/v1/agents/{id}/status useAgentStatus widget route.
+    [Fact]
+    public async Task GetAgentStatus_WithoutAuth_ReturnsUnauthorized()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/agents/{Guid.NewGuid()}/status");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetAgentStatus_WithUnknownId_ReturnsNotFound()
+    {
+        // Arrange: authenticated user, no agents seeded.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/agents/{Guid.NewGuid()}/status",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetAgentStatus_WithActiveSeededAgent_ReturnsReady()
+    {
+        // Arrange: seed 1 active agent. Issue #648 MVP readiness derives IsReady from
+        // IsActive AND HasConfiguration (Strategy.Name presence). HasDocuments precise count
+        // deferred (would require SelectedDocuments query repository).
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        await TestSessionHelper.SeedAgentDefinitionsAsync(dbContext, activeCount: 1, inactiveCount: 0);
+        var seededId = await dbContext.AgentDefinitions
+            .AsNoTracking()
+            .Select(a => a.Id)
+            .FirstAsync();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/agents/{seededId}/status",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await response.Content.ReadFromJsonAsync<AgentStatusDto>();
+        dto.Should().NotBeNull();
+        dto!.AgentId.Should().Be(seededId);
+        dto.IsActive.Should().BeTrue();
+        dto.IsReady.Should().BeTrue();
+        dto.HasConfiguration.Should().BeTrue();
+        dto.RagStatus.Should().Be("ready");
+        dto.BlockingReason.Should().BeNull();
+    }
 }
 
 /// <summary>

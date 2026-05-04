@@ -118,7 +118,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Get agent chat readiness status
      * Validates KB populated and RAG initialized
      * @param id Agent ID (GUID format)
-     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents/{id}/status. Throws on null response. See: endpoint audit 2026-04-15
+     * Resolved by #648 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async getStatus(id: string): Promise<{
       agentId: string;

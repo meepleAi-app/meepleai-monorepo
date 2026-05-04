@@ -223,6 +223,11 @@ apps/api/src/Api/Properties/launchSettings.json
 # BGG fetch tool logs
 tools/bgg-fetcher/logs/
 
+# Libro Game OCR validation outputs (copyrighted content)
+tests/llm-eval/ocr-validation/results.json
+tests/llm-eval/ocr-validation/manuals/*
+!tests/llm-eval/ocr-validation/manuals/.gitkeep
+
 # Page catalog (generated screenshots and static site)
 docs/pages/screenshots/
 docs/pages/dist/

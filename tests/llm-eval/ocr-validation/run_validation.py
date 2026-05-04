@@ -16,6 +16,7 @@ MANUALS_DIR = Path(__file__).parent / "manuals"
 
 def validate_page(img_path: Path) -> dict:
     """POST a smoldocling-service /preprocess endpoint (Task 1.4 dependency)."""
+    print(f"  processing {img_path.name}...", flush=True)
     with open(img_path, "rb") as f:
         files = {"image": (img_path.name, f, "image/jpeg")}
         data = {"preprocessing_mode": "photo-camera"}
@@ -24,13 +25,15 @@ def validate_page(img_path: Path) -> dict:
                 f"{SMOLDOCLING_URL}/preprocess", files=files, data=data, timeout=30
             )
             response.raise_for_status()
+            payload = response.json()
         except requests.RequestException as e:
             return {"page": img_path.stem, "confidence": 0.0, "error": str(e)}
+        except (json.JSONDecodeError, ValueError) as e:
+            return {"page": img_path.stem, "confidence": 0.0, "error": f"invalid JSON: {e}"}
 
-    payload = response.json()
     return {
         "page": img_path.stem,
-        "confidence": payload.get("confidence", 0.0),
+        "confidence": float(payload.get("confidence") or 0.0),
         "char_count": len(payload.get("extracted_text", "")),
         "warnings": payload.get("warnings", []),
         "is_blank": payload.get("is_blank", False),

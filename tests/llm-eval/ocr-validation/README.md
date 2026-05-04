@@ -28,6 +28,14 @@ Validate OCR confidence on real gamebook layouts BEFORE committing to Phase 1 in
 
 ## Run
 
+First-time setup:
+
+```bash
+python -m pip install requests
+```
+
+Then:
+
 ```bash
 cd tests/llm-eval/ocr-validation
 SMOLDOCLING_URL=http://localhost:8500 python run_validation.py

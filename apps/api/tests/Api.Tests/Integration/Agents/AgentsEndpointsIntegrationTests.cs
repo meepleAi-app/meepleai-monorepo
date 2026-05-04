@@ -498,7 +498,7 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
             {
                 gameId,
                 addToCollection = true,
-                agentType = "Tutor"
+                agentType = "Narrator"
             });
 
         // Act

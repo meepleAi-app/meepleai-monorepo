@@ -20,6 +20,10 @@ namespace Api.Routing;
 /// Issue #654 (Phase β.2): expose <c>POST /api/v1/agents/user</c> for the
 /// frontend <c>agentsClient.createUserAgent</c> helper. MVP defers documentIds
 /// linking and tier/quota validation.
+/// Issue #655 (Phase β.3): expose <c>POST /api/v1/agents/create-with-setup</c>
+/// orchestration route consumed by the AgentCreationSheet wizard. Optional
+/// addToCollection step + agent creation (β.2 reuse). Placeholder threadId
+/// (chat-thread BC integration deferred) + slotUsed=0 (Issue #4771 deferred).
 /// </summary>
 internal static class AgentsEndpoints
 {
@@ -33,6 +37,7 @@ internal static class AgentsEndpoints
         MapGetAgentByIdEndpoint(group);
         MapGetAgentStatusEndpoint(group);
         MapCreateUserAgentEndpoint(group);
+        MapCreateAgentWithSetupEndpoint(group);
         return group;
     }
 
@@ -44,6 +49,21 @@ internal static class AgentsEndpoints
         Guid GameId,
         string AgentType,
         string? Name = null,
+        string? StrategyName = null,
+        Dictionary<string, object>? StrategyParameters = null,
+        List<Guid>? DocumentIds = null
+    );
+
+    /// <summary>
+    /// Frontend <c>agentsClient.createWithSetup</c> request body shape.
+    /// Mirrors <c>CreateAgentWithSetupRequest</c> in
+    /// <c>apps/web/src/lib/api/clients/agentsClient.ts</c>. Issue #655 (Phase β.3).
+    /// </summary>
+    private sealed record CreateAgentWithSetupRequest(
+        Guid GameId,
+        bool AddToCollection,
+        string AgentType,
+        string? AgentName = null,
         string? StrategyName = null,
         Dictionary<string, object>? StrategyParameters = null,
         List<Guid>? DocumentIds = null
@@ -202,6 +222,53 @@ internal static class AgentsEndpoints
         .WithTags("Agents")
         .WithSummary("Create a user-owned agent")
         .WithDescription("Creates a custom agent linked to a SharedGame, returning AgentDto with GameName resolved. MVP: documentIds parameter accepted but not linked (deferred); tier/quota validation deferred (Issue #4771). Issue #654 (Phase β.2).")
+        .WithOpenApi();
+    }
+
+    private static void MapCreateAgentWithSetupEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/create-with-setup", async (
+            [FromBody] CreateAgentWithSetupRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+            if (!UserLibraryCoreEndpoints.TryGetUserId(context, session, out var userId))
+                return Results.Unauthorized();
+
+            try
+            {
+                var command = new CreateAgentWithSetupCommand(
+                    UserId: userId,
+                    GameId: request.GameId,
+                    AddToCollection: request.AddToCollection,
+                    AgentType: request.AgentType,
+                    AgentName: request.AgentName,
+                    StrategyName: request.StrategyName,
+                    StrategyParameters: request.StrategyParameters,
+                    DocumentIds: request.DocumentIds);
+
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Created($"/api/v1/agents/{result.AgentId}", result);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<CreateAgentWithSetupResult>(201)
+        .Produces(400)
+        .Produces(401)
+        .WithTags("Agents")
+        .WithSummary("Create agent with optional library add + thread")
+        .WithDescription("Orchestrates: optional addToCollection → AddGameToLibraryCommand (idempotent: 'already in' counts as success) → CreateUserAgentCommand → result with placeholder threadId (chat-thread BC integration deferred) and slotUsed=0 (tier/quota Issue #4771 deferred). Issue #655 (Phase β.3).")
         .WithOpenApi();
     }
 }

@@ -139,6 +139,13 @@ namespace Api.Infrastructure.Migrations
                 type: "text",
                 nullable: true);
 
+            migrationBuilder.AddColumn<int>(
+                name: "low_confidence_page_count",
+                table: "photo_batch_uploads",
+                type: "integer",
+                nullable: false,
+                defaultValue: 0);
+
             migrationBuilder.AddForeignKey(
                 name: "FK_photo_batch_pages_photo_batch_uploads_photo_batch_upload_id",
                 table: "photo_batch_pages",
@@ -169,6 +176,10 @@ namespace Api.Infrastructure.Migrations
 
             migrationBuilder.DropColumn(
                 name: "failure_reason",
+                table: "photo_batch_uploads");
+
+            migrationBuilder.DropColumn(
+                name: "low_confidence_page_count",
                 table: "photo_batch_uploads");
 
             migrationBuilder.RenameColumn(

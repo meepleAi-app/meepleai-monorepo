@@ -59,4 +59,37 @@ public class PhotoBatchUploadTests
         batch.Status.Should().Be(PhotoBatchStatus.Completed);
         batch.DomainEvents.Should().ContainSingle(e => e is PhotoBatchCompletedEvent);
     }
+
+    [Fact]
+    public void RecordPageIndexed_WithLowConfidencePages_ReportsCorrectCountInEvent()
+    {
+        // Arrange: 3-page batch; pages 2 and 3 are below the 0.7 threshold.
+        // The accumulator must work from the confidence parameter, not from _pages,
+        // so the count is correct even when _pages is empty (no .Include on load).
+        var batch = PhotoBatchUpload.Create(Guid.NewGuid(), Guid.NewGuid(), "en", 3);
+        batch.StartProcessing();
+
+        // Act
+        batch.RecordPageIndexed(pageNumber: 1, confidence: 0.9, warnings: Array.Empty<string>());  // high
+        batch.RecordPageIndexed(pageNumber: 2, confidence: 0.5, warnings: Array.Empty<string>());  // low
+        batch.RecordPageIndexed(pageNumber: 3, confidence: 0.6, warnings: Array.Empty<string>());  // low
+
+        // Assert
+        var evt = batch.DomainEvents.OfType<PhotoBatchCompletedEvent>().Single();
+        evt.LowConfidencePages.Should().Be(2);
+    }
+
+    [Fact]
+    public void Fail_WhenAlreadyCompleted_ThrowsInvalidOperationException()
+    {
+        // Arrange: complete the batch first
+        var batch = PhotoBatchUpload.Create(Guid.NewGuid(), Guid.NewGuid(), "en", 1);
+        batch.StartProcessing();
+        batch.RecordPageIndexed(pageNumber: 1, confidence: 0.9, warnings: Array.Empty<string>());
+        batch.Status.Should().Be(PhotoBatchStatus.Completed);
+
+        // Act & Assert: Fail on a terminal aggregate must throw to protect the audit invariant
+        Action act = () => batch.Fail("late timeout");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*terminal*");
+    }
 }

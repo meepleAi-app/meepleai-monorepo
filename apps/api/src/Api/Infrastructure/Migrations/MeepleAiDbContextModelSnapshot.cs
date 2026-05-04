@@ -1075,6 +1075,11 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("failure_reason");
 
+                    b.Property<int>("_lowConfidencePageCount")
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("low_confidence_page_count");
+
                     b.Property<Guid>("GameId")
                         .HasColumnType("uuid")
                         .HasColumnName("game_id");

@@ -88,6 +88,18 @@ internal sealed class PhotoBatchUploadEntityConfiguration
         builder.HasIndex(b => new { b.GameId, b.Status })
             .HasDatabaseName("ix_photo_batch_uploads_game_id_status");
 
+        // Persist the low-confidence page accumulator via its private backing field.
+        // This field is updated in RecordPageIndexed from the confidence parameter so
+        // it stays accurate even when _pages is not included (GetByIdAsync without .Include).
+        // Persistence is required because the Sprint 1 handler may reload the aggregate
+        // mid-processing after an API restart.
+        builder.Property<int>("_lowConfidencePageCount")
+            .HasField("_lowConfidencePageCount")
+            .UsePropertyAccessMode(PropertyAccessMode.Field)
+            .HasColumnName("low_confidence_page_count")
+            .HasDefaultValue(0)
+            .IsRequired();
+
         // Ignore DomainEvents — it is a transient collection managed by AggregateRoot<T>,
         // not a column that should be persisted.
         builder.Ignore(b => b.DomainEvents);

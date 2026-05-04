@@ -51,6 +51,15 @@ public sealed class PhotoBatchUpload : AggregateRoot<Guid>
 
     private readonly List<PhotoBatchPage> _pages = [];
 
+    /// <summary>
+    /// Accumulated count of pages whose OCR confidence fell below 0.7.
+    /// Updated in <see cref="RecordPageIndexed"/> from the <c>confidence</c> parameter
+    /// so that the count is correct even when <c>_pages</c> is not eagerly loaded.
+    /// Persisted to <c>low_confidence_page_count</c> so the value survives an API
+    /// restart mid-batch (Sprint 1 handler uses <c>GetByIdAsync</c> without <c>.Include</c>).
+    /// </summary>
+    private int _lowConfidencePageCount;
+
     /// <summary>Gets the pages that have been attached to this batch.</summary>
     public IReadOnlyCollection<PhotoBatchPage> Pages => _pages.AsReadOnly();
 
@@ -118,14 +127,14 @@ public sealed class PhotoBatchUpload : AggregateRoot<Guid>
             throw new InvalidOperationException("All pages already indexed");
 
         IndexedPages++;
+        if (confidence < 0.7)
+            _lowConfidencePageCount++;
 
         if (IndexedPages >= TotalPages)
         {
             Status = PhotoBatchStatus.Completed;
             CompletedAt = DateTime.UtcNow;
-
-            var lowConfidenceCount = _pages.Count(p => p.Confidence < 0.7);
-            AddDomainEvent(new PhotoBatchCompletedEvent(Id, UserId, GameId, TotalPages, lowConfidenceCount));
+            AddDomainEvent(new PhotoBatchCompletedEvent(Id, UserId, GameId, TotalPages, _lowConfidencePageCount));
         }
     }
 
@@ -148,8 +157,15 @@ public sealed class PhotoBatchUpload : AggregateRoot<Guid>
     /// Marks the batch as failed with a human-readable reason.
     /// </summary>
     /// <param name="reason">Human-readable failure reason.</param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the batch is already in a terminal state (<see cref="PhotoBatchStatus.Completed"/>
+    /// or <see cref="PhotoBatchStatus.Failed"/>), protecting the audit invariant.
+    /// </exception>
     public void Fail(string reason)
     {
+        if (Status is PhotoBatchStatus.Completed or PhotoBatchStatus.Failed)
+            throw new InvalidOperationException($"Cannot fail batch from terminal status {Status}");
+
         Status = PhotoBatchStatus.Failed;
         CompletedAt = DateTime.UtcNow;
         FailureReason = reason;

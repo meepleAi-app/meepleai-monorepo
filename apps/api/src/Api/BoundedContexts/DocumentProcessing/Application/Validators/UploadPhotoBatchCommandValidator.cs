@@ -51,6 +51,7 @@ internal sealed class UploadPhotoBatchCommandValidator : AbstractValidator<Uploa
                 .WithMessage("Photo filename is required.");
 
             photo.RuleFor(p => p.Base64Content)
+                .Cascade(CascadeMode.Stop)
                 .NotEmpty()
                 .WithMessage("Photo base64 content is required.")
                 .Must(s => s.Length <= MaxBase64SizeBytes)

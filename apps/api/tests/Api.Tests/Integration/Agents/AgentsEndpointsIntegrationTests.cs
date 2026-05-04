@@ -148,6 +148,79 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
         body.Agents[0].GameId.Should().Be(gameId);
         body.Agents[0].GameName.Should().Be("Catan");
     }
+
+    // Issue #647: Phase γ.1 — GET /api/v1/agents/{id} user-facing route.
+    [Fact]
+    public async Task GetAgentById_WithoutAuth_ReturnsUnauthorized()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/agents/{Guid.NewGuid()}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetAgentById_WithUnknownId_ReturnsNotFound()
+    {
+        // Arrange: authenticated user, no agents seeded.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/agents/{Guid.NewGuid()}",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetAgentById_WithSeededAgent_ReturnsAgentDto()
+    {
+        // Arrange: seed 1 active agent linked to a SharedGame, retrieve its id from DbContext.
+        // Issue #647: verifies the route returns AgentDto with GameName drift-fix lookup
+        // (PR #662 pattern) when the agent has a non-null GameId.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var gameId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Wingspan");
+        await TestSessionHelper.SeedAgentDefinitionsAsync(
+            dbContext,
+            activeCount: 1,
+            inactiveCount: 0,
+            gameId: gameId);
+
+        // SeedAgentDefinitionsAsync doesn't return ids, so we query the DbContext for the seeded agent.
+        // GameId is mapped via shadow property "_gameId" (see AgentDefinitionConfiguration), so we
+        // resolve it via EF.Property to keep the query translatable to SQL.
+        var seededAgent = await dbContext.AgentDefinitions
+            .AsNoTracking()
+            .FirstAsync(a => EF.Property<Guid?>(a, "_gameId") == gameId);
+        var agentId = seededAgent.Id;
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/agents/{agentId}",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await response.Content.ReadFromJsonAsync<AgentDto>();
+        dto.Should().NotBeNull();
+        dto!.Id.Should().Be(agentId);
+        dto.GameId.Should().Be(gameId);
+        dto.GameName.Should().Be("Wingspan");
+    }
 }
 
 /// <summary>

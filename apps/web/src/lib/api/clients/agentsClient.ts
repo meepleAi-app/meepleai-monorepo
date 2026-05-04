@@ -108,7 +108,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Get agent by ID
      * Implements GetAgentByIdQuery from backend
      * @param id Agent ID (GUID format)
-     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents/{id}. Returns null via fallback. See: endpoint audit 2026-04-15
+     * Resolved by #647 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async getById(id: string): Promise<AgentDto | null> {
       return httpClient.get(`/api/v1/agents/${encodeURIComponent(id)}`, AgentDtoSchema);

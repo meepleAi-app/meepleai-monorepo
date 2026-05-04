@@ -11,6 +11,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Domain.Entities;
 /// Libro Game AI Assistant MVP Phase 1 — Task 1.1.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "DocumentProcessing")]
 public class PhotoBatchUploadTests
 {
     [Fact]
@@ -32,6 +33,16 @@ public class PhotoBatchUploadTests
     {
         Action act = () => PhotoBatchUpload.Create(Guid.NewGuid(), Guid.NewGuid(), "en", 0);
         act.Should().Throw<ArgumentException>().WithMessage("*positive*");
+    }
+
+    [Fact]
+    public void RecordPageIndexed_WhenStatusPending_ThrowsInvalidOperationException()
+    {
+        var batch = PhotoBatchUpload.Create(Guid.NewGuid(), Guid.NewGuid(), "en", 2);
+        // Did NOT call StartProcessing()
+
+        Action act = () => batch.RecordPageIndexed(1, 0.9, Array.Empty<string>());
+        act.Should().Throw<InvalidOperationException>().WithMessage("*Pending*");
     }
 
     [Fact]

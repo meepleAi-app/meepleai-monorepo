@@ -22,7 +22,7 @@ def validate_page(img_path: Path) -> dict:
         data = {"preprocessing_mode": "photo-camera"}
         try:
             response = requests.post(
-                f"{SMOLDOCLING_URL}/preprocess", files=files, data=data, timeout=30
+                f"{SMOLDOCLING_URL}/api/v1/preprocess", files=files, data=data, timeout=30
             )
             response.raise_for_status()
             payload = response.json()

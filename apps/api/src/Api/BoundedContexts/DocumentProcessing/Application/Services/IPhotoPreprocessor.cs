@@ -7,7 +7,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 /// Libro Game AI Assistant MVP Phase 1 — Task 1.4a.
 /// Implementation (SmoldoclingPhotoPreprocessor) is deferred to Task 1.4b.
 /// </summary>
-public interface IPhotoPreprocessor
+internal interface IPhotoPreprocessor
 {
     Task<PhotoPreprocessResult> PreprocessAsync(byte[] imageData, CancellationToken ct = default);
 }
@@ -22,7 +22,7 @@ public interface IPhotoPreprocessor
 /// <param name="DetectedOrientation">Physical orientation inferred from image dimensions + EXIF.</param>
 /// <param name="IsBlankPage">True when pixel intensity std-dev is below the blank-page threshold.</param>
 /// <param name="Warnings">Non-fatal diagnostics (e.g., low-confidence, blurry image, blank page).</param>
-public sealed record PhotoPreprocessResult(
+internal sealed record PhotoPreprocessResult(
     byte[] ProcessedImage,
     string ExtractedText,
     double ConfidenceScore,

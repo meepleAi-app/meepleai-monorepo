@@ -42,6 +42,9 @@ public sealed class PhotoBatchUpload : AggregateRoot<Guid>
     /// <summary>Gets the UTC timestamp of soft deletion, if applicable.</summary>
     public DateTime? DeletedAt { get; private set; }
 
+    /// <summary>Gets the human-readable reason for failure, if the batch failed.</summary>
+    public string? FailureReason { get; private set; }
+
     /// <summary>EF Core optimistic concurrency token.</summary>
     [Timestamp]
     public byte[] RowVersion { get; private set; } = null!;
@@ -109,6 +112,11 @@ public sealed class PhotoBatchUpload : AggregateRoot<Guid>
     /// <param name="warnings">Any OCR warnings produced for this page.</param>
     public void RecordPageIndexed(int pageNumber, double confidence, string[] warnings)
     {
+        if (Status != PhotoBatchStatus.Processing)
+            throw new InvalidOperationException($"Cannot record indexed page from status {Status}");
+        if (IndexedPages >= TotalPages)
+            throw new InvalidOperationException("All pages already indexed");
+
         IndexedPages++;
 
         if (IndexedPages >= TotalPages)
@@ -137,13 +145,14 @@ public sealed class PhotoBatchUpload : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Marks the batch as failed with an optional reason.
+    /// Marks the batch as failed with a human-readable reason.
     /// </summary>
     /// <param name="reason">Human-readable failure reason.</param>
     public void Fail(string reason)
     {
         Status = PhotoBatchStatus.Failed;
         CompletedAt = DateTime.UtcNow;
+        FailureReason = reason;
     }
 
     /// <summary>

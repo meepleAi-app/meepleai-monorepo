@@ -21,6 +21,7 @@ App companion per giocatori casual italiani che vogliono giocare gamebook in lin
 | [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) | Task-by-task status (Phase 0-4) |
 | [DECISIONS.md](./DECISIONS.md) | Implementation decisions log (workspace, sprint strategy, scope adjustments) |
 | [BLOCKERS.md](./BLOCKERS.md) | External/human blockers (procurement, legal, accounts) — Aaron-track |
+| [IMPLEMENTATION_PROMPT.md](./IMPLEMENTATION_PROMPT.md) | Original kickoff prompt (historical reference) |
 
 ## Strategia esecuzione
 

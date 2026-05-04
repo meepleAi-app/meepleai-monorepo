@@ -23,8 +23,6 @@
  */
 import { test, expect } from '@playwright/test';
 
-const _API_BASE = process.env.SMOKE_API_BASE ?? 'http://localhost:8080';
-
 /**
  * Deterministic UUID that NEVER exists in any environment — drives the
  * frontend not-found shell without needing a seeded game.

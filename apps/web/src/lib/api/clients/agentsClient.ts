@@ -180,7 +180,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     /**
      * Get recent agents for dashboard widget
      * Issue #4126: API Integration
-     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents/recent. Returns empty array via fallback. See: endpoint audit 2026-04-15
+     * Resolved by #650 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async getRecent(limit: number = 10): Promise<AgentDto[]> {
       const response = await httpClient.get<AgentDto[]>(

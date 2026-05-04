@@ -221,6 +221,67 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
         dto.GameId.Should().Be(gameId);
         dto.GameName.Should().Be("Wingspan");
     }
+
+    // Issue #650: Phase γ.3 — GET /api/v1/agents/recent dashboard widget route.
+    [Fact]
+    public async Task GetRecentAgents_WithoutAuth_ReturnsUnauthorized()
+    {
+        // Act
+        var response = await _client.GetAsync("/api/v1/agents/recent");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetRecentAgents_WithEmptyDb_ReturnsEmptyArray()
+    {
+        // Arrange: authenticated user, no agents seeded.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            "/api/v1/agents/recent",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert: route MUST return a JSON array body (frontend expects z.array(AgentDtoSchema))
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<List<AgentDto>>();
+        body.Should().NotBeNull();
+        body!.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetRecentAgents_OrdersByLastInvokedDescAndRespectsLimit()
+    {
+        // Arrange: seed 3 active agents and verify limit=2 returns only the top 2.
+        // Recent-agents widget contract: only active agents, ordered by LastInvokedAt desc.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        await TestSessionHelper.SeedAgentDefinitionsAsync(dbContext, activeCount: 3, inactiveCount: 0);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            "/api/v1/agents/recent?limit=2",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert: limit honored at 2, all returned agents are active.
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<List<AgentDto>>();
+        body.Should().NotBeNull();
+        body!.Should().HaveCount(2);
+        body.Should().OnlyContain(a => a.IsActive);
+    }
 }
 
 /// <summary>

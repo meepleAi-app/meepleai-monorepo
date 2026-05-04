@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export DEBIAN_FRONTEND=noninteractive
+
 echo "==> System update"
 apt-get update && apt-get upgrade -y
 
@@ -8,7 +10,7 @@ echo "==> Install essential tools"
 apt-get install -y \
   curl wget git ca-certificates gnupg lsb-release \
   cifs-utils ufw fail2ban htop ncdu jq \
-  postgresql-client-common
+  postgresql-client-common age
 
 echo "==> Install Docker (ARM64)"
 curl -fsSL https://get.docker.com | sh

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+command -v age >/dev/null 2>&1 || { echo "ERROR: age not found. Install age for encryption."; exit 1; }
+[ -f /etc/age.pub ] || { echo "ERROR: /etc/age.pub missing. Cannot encrypt backups."; exit 1; }
+
 BACKUP_DIR="/mnt/storagebox/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 RETENTION_DAYS=30
@@ -17,9 +20,13 @@ echo "==> Backing up Redis"
 docker exec meepleai-redis redis-cli --rdb /tmp/dump.rdb
 docker cp meepleai-redis:/tmp/dump.rdb "$BACKUP_DIR/redis/redis_${TIMESTAMP}.rdb"
 
-# Blob storage backup (rsync to box)
+# Blob storage backup (rsync to box) — actual path depends on STORAGE_PROVIDER config
 echo "==> Backing up blob storage"
-rsync -av --delete /var/lib/meepleai/blob/ "$BACKUP_DIR/blob/"
+if [ -d "/var/lib/meepleai/blob" ]; then
+  rsync -av --delete /var/lib/meepleai/blob/ "$BACKUP_DIR/blob/"
+else
+  echo "WARNING: blob path /var/lib/meepleai/blob/ not found — skipping (check STORAGE_PROVIDER config; if S3/R2, blob is already offsite)"
+fi
 
 # Encrypt with age (recipient public key in /etc/age.pub)
 echo "==> Encrypting backups"

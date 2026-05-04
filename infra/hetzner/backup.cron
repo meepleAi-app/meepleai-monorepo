@@ -1,4 +1,4 @@
 # Daily at 03:00 UTC
 0 3 * * * /usr/local/bin/backup.sh >> /var/log/meepleai-backup.log 2>&1
-# Weekly full to Cloudflare R2 (Sunday 04:00)
-0 4 * * 0 /usr/local/bin/backup-to-r2.sh >> /var/log/meepleai-backup-r2.log 2>&1
+# TODO: Weekly full to Cloudflare R2 (Sunday 04:00) — script not yet implemented
+# 0 4 * * 0 /usr/local/bin/backup-to-r2.sh >> /var/log/meepleai-backup-r2.log 2>&1

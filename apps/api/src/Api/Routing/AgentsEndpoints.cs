@@ -44,6 +44,8 @@ internal static class AgentsEndpoints
         MapCreateAgentWithSetupEndpoint(group);
         MapQuickCreateAgentEndpoint(group);
         MapUpdateUserAgentEndpoint(group);
+        MapGetAgentConfigurationEndpoint(group);
+        MapUpdateAgentConfigurationEndpoint(group);
         return group;
     }
 
@@ -96,6 +98,18 @@ internal static class AgentsEndpoints
         string? Name = null,
         string? StrategyName = null,
         Dictionary<string, object>? StrategyParameters = null
+    );
+
+    /// <summary>
+    /// Frontend <c>agentsClient.updateAgentConfiguration</c> request body shape.
+    /// Mirrors <c>UpdateAgentConfigurationRequest</c> in
+    /// <c>apps/web/src/lib/api/clients/agentsClient.ts</c>. Issue #658.
+    /// </summary>
+    private sealed record UpdateAgentConfigurationRequest(
+        string? ModelId = null,
+        decimal? Temperature = null,
+        int? MaxTokens = null,
+        List<Guid>? SelectedDocumentIds = null
     );
 
     private static void MapGetAgentsEndpoint(RouteGroupBuilder group)
@@ -381,6 +395,71 @@ internal static class AgentsEndpoints
         .WithTags("Agents")
         .WithSummary("Update user-owned agent")
         .WithDescription("Updates name and/or strategy of a user-owned agent. Returns 404 if agent not found, AgentDto with GameName resolved on success. All request fields optional; missing/blank values are no-ops for that field. Issue #656.")
+        .WithOpenApi();
+    }
+
+    private static void MapGetAgentConfigurationEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/agents/{id:guid}/configuration", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, _, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            var query = new GetAgentConfigurationQuery(id);
+            var dto = await mediator.Send(query, ct).ConfigureAwait(false);
+            return dto is null ? Results.NotFound() : Results.Ok(dto);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<AgentConfigurationDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Agents")
+        .WithSummary("Get agent LLM configuration")
+        .WithDescription("Returns the current LLM configuration view (model, provider, temperature, maxTokens, selectedDocumentIds). LlmProvider is heuristically inferred from the model name; SelectedDocumentIds is empty in MVP (KB linking deferred). Issue #657.")
+        .WithOpenApi();
+    }
+
+    private static void MapUpdateAgentConfigurationEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPatch("/agents/{id:guid}/configuration", async (
+            Guid id,
+            [FromBody] UpdateAgentConfigurationRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, _, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            try
+            {
+                var command = new UpdateAgentConfigurationCommand(
+                    AgentId: id,
+                    ModelId: request.ModelId,
+                    Temperature: request.Temperature,
+                    MaxTokens: request.MaxTokens,
+                    SelectedDocumentIds: request.SelectedDocumentIds);
+
+                var dto = await mediator.Send(command, ct).ConfigureAwait(false);
+                return dto is null ? Results.NotFound() : Results.Ok(dto);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<AgentConfigurationDto>(200)
+        .Produces(400)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Agents")
+        .WithSummary("Update agent LLM configuration")
+        .WithDescription("Partial update (PATCH) of agent LLM configuration: modelId, temperature, maxTokens. Range validation delegated to AgentDefinitionConfig.Create (temperature 0.0-2.0, maxTokens 100-32000). SelectedDocumentIds accepted but not persisted (KB linking deferred). Issue #658.")
         .WithOpenApi();
     }
 }

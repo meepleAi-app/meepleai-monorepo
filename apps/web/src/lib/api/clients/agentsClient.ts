@@ -637,7 +637,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
 
     /**
      * Get current LLM configuration for an agent
-     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents/{id}/configuration. Throws on null response. See: endpoint audit 2026-04-15
+     * Resolved by #657 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async getAgentConfiguration(agentId: string): Promise<BackendAgentConfigurationDto> {
       const response = await httpClient.get<BackendAgentConfigurationDto>(
@@ -651,7 +651,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
 
     /**
      * Patch LLM configuration for an agent (partial update)
-     * @todo BACKEND MISSING: No route registered for PATCH /api/v1/agents/{id}/configuration. Throws on null response. See: endpoint audit 2026-04-15
+     * Resolved by #658 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async updateAgentConfiguration(
       agentId: string,

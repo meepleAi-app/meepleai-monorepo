@@ -648,6 +648,139 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
         dto!.Id.Should().Be(seededId);
         dto.Name.Should().Be("Renamed Agent");
     }
+
+    // -------------------------------------------------------------------------
+    // GET /api/v1/agents/{id}/configuration — Issue #657
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task GetAgentConfiguration_WithoutAuth_ReturnsUnauthorized()
+    {
+        // Act
+        var response = await _client.GetAsync($"/api/v1/agents/{Guid.NewGuid()}/configuration");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetAgentConfiguration_WithUnknownId_ReturnsNotFound()
+    {
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/agents/{Guid.NewGuid()}/configuration",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetAgentConfiguration_WithSeededAgent_ReturnsConfigurationView()
+    {
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        await TestSessionHelper.SeedAgentDefinitionsAsync(dbContext, activeCount: 1, inactiveCount: 0);
+        var seededId = await dbContext.AgentDefinitions.AsNoTracking().Select(a => a.Id).FirstAsync();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/agents/{seededId}/configuration",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await response.Content.ReadFromJsonAsync<AgentConfigurationDto>();
+        dto.Should().NotBeNull();
+        dto!.AgentId.Should().Be(seededId);
+        dto.LlmModel.Should().Be("gpt-4");
+        dto.LlmProvider.Should().Be("openai");
+        dto.MaxTokens.Should().Be(1000);
+        dto.Temperature.Should().BeApproximately(0.7m, 0.001m);
+        dto.IsCurrent.Should().BeTrue();
+        dto.SelectedDocumentIds.Should().BeEmpty();
+    }
+
+    // -------------------------------------------------------------------------
+    // PATCH /api/v1/agents/{id}/configuration — Issue #658
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task UpdateAgentConfiguration_WithoutAuth_ReturnsUnauthorized()
+    {
+        // Act
+        var response = await _client.PatchAsJsonAsync(
+            $"/api/v1/agents/{Guid.NewGuid()}/configuration",
+            new { temperature = 0.5m });
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task UpdateAgentConfiguration_WithUnknownId_ReturnsNotFound()
+    {
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Patch,
+            $"/api/v1/agents/{Guid.NewGuid()}/configuration",
+            sessionToken,
+            new { temperature = 0.5m });
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdateAgentConfiguration_WithValidPatch_ReturnsUpdatedView()
+    {
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        await TestSessionHelper.SeedAgentDefinitionsAsync(dbContext, activeCount: 1, inactiveCount: 0);
+        var seededId = await dbContext.AgentDefinitions.AsNoTracking().Select(a => a.Id).FirstAsync();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Patch,
+            $"/api/v1/agents/{seededId}/configuration",
+            sessionToken,
+            new { temperature = 0.42m, maxTokens = 1234 });
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await response.Content.ReadFromJsonAsync<AgentConfigurationDto>();
+        dto.Should().NotBeNull();
+        dto!.AgentId.Should().Be(seededId);
+        dto.Temperature.Should().BeApproximately(0.42m, 0.001m);
+        dto.MaxTokens.Should().Be(1234);
+        dto.LlmModel.Should().Be("gpt-4"); // unchanged
+    }
 }
 
 /// <summary>

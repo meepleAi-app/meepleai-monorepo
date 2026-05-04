@@ -1641,7 +1641,7 @@
         "emptySubtitle": "Create an AI agent to chat about this game's rules.",
         "createCta": "+ Create agent",
         "openAriaLabel": "Open agent {name}",
-        "indexedLabel": "{count, plural, =0 {0 KB} =1 {1 KB} other {# KB}}",
+        "indexedLabel": "{count} KB",
         "invocationsLabel": "{count} invocations"
       },
       "documents": {

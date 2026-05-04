@@ -15,11 +15,15 @@ Photo upload flow leverages `SharedGameCatalog` BC for game matching and dedupli
   - `ApproveAsVariant` — fuzzy title match found, create as variant
   - `ApproveAsNew` — no duplicates, safe to create new game entry
 
+- **New game flow**: when `CheckDuplicateGameQuery` returns `ProposalApprovalAction.ApproveAsNew` (no match found), the app uses `CreateSharedGameCommand` or `CreateSharedGameFromPdfCommand` to create the catalog entry. (Plan referenced `CreateGameCommand` — naming drift, see Audit Verdict.)
+
 ## Content Hash Deduplication
 
 Photo-derived manual content deduplication via existing `DocumentProcessing` BC:
 
 - **Interface**: `IPdfDocumentRepository.FindByContentHashAsync` (line 15, `BoundedContexts/DocumentProcessing/Domain/Repositories/IPdfDocumentRepository.cs`)
+
+> **Note**: `IPdfDocumentRepository` is `internal` — it must be consumed within the `DocumentProcessing` BC; cross-BC access goes through MediatR commands (`UploadPdfCommand`, etc.).
   
 - **Implementation**: SHA-256 hash lookup at line 152-161 (`BoundedContexts/DocumentProcessing/Infrastructure/Persistence/PdfDocumentRepository.cs`). Query pattern:
   ```csharp
@@ -30,7 +34,7 @@ Photo-derived manual content deduplication via existing `DocumentProcessing` BC:
       .FirstOrDefaultAsync(cancellationToken);
   ```
   
-- **Scope**: Matches across `PrivateGameId` and `SharedGameId` contexts (see line 40-46 of `FindByGameIdAsync` comment: "PDF -> SharedGame migration").
+- **Scope**: Global lookup — `FindByContentHashAsync` does not filter by game context. For scoped dedup (per-game), the sibling `ExistsByContentHashAsync(contentHash, gameId, privateGameId)` at line 163 accepts optional context parameters. Task 1.2 should determine which method fits the libro-game dedup requirement.
 
 - **Cost savings**: Prevents re-indexing of identical PDF content; if hash exists, reuse existing `PdfDocument.Id` and skip embedding pipeline.
 
@@ -42,8 +46,10 @@ Photo-derived manual content deduplication via existing `DocumentProcessing` BC:
 - Plan v2 assumption ✅ verified: `IPdfDocumentRepository` exists (not `IBlobStorage`)
 - Pattern audit reference ✅ verified: All expected services located at specified paths
 - No extensions required: All needed repository methods already implemented
+- **Naming drift**: Plan `FindByNameQuery`/`FindByBggIdQuery` → actual `CheckDuplicateGameQuery`/`GetByBggIdAsync`
+- **Naming drift**: Plan `CreateGameCommand` → actual `CreateSharedGameCommand` / `CreateSharedGameFromPdfCommand`
 
 **Integration readiness for Phase 1**:
 - Task 1.2 can directly use `IPdfDocumentRepository.FindByContentHashAsync` for dedup check
 - Task 1.3 can route `UploadPhotoBatchCommand` result through `CheckDuplicateGameQuery` for game matching
-- Task 1.5 can wire results to `DocumentProcessing.AddDocumentAsync` (existing API)
+- Task 1.5 (`UploadPhotoBatchCommandHandler`) will create a new ingestion path alongside existing `UploadPdfCommand` / `UploadPrivatePdfCommand` — no existing "AddDocumentAsync" hook exists; the handler must store results via `IPhotoBatchUploadRepository` (to be created in Task 1.2).

@@ -83,7 +83,7 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 | `/agents` | **S** | useAgentList single hook, grid pattern | ✅ done (B.2, PR #637) |
 | `/library` | **S** | useLibrary single hook, hybrid grid | ✅ done (B.3, PR #638) |
 | `/players` | **S** | useUsersList single hook, grid pattern (Wave 4 D1) | pending |
-| `/games/[id]` | **L** | useGame + useAgents/Faqs/KbDocs by gameId — Wave C.1 fail PR #697 | **pending — Phase 0.5 required** |
+| `/games/[id]` | **L** | useGame + useAgents/Faqs/KbDocs by gameId — Wave C.1 fail PR #697 | pending — Phase 0.5 contract draft: [`docs/frontend/contracts/games-id-hooks.md`](contracts/games-id-hooks.md) |
 | `/agents/[id]` | **L** | useAgent + chat history + KB docs cross-resource | pending — Phase 0.5 required |
 | `/sessions/[id]/live` | **L+** | Real-time SSE + multi-hook + dialog states | pending — Phase 0.5 + sub-PR split |
 | `/discover` | **L** | Multiple horizontal-row hooks | pending — Phase 0.5 required |

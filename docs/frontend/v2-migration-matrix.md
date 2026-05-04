@@ -2,12 +2,13 @@
 
 > Wave A closeout — Step 5 (Issue #573).
 > Pre-requisite for Phase 1+2 of the v2 design migration ([spec](../superpowers/specs/2026-04-26-v2-design-migration.md), section 3.3).
+> **Tier classification added 2026-05-04** post spec-panel critique Wave C.1 fail RCA — see [Tier classification](#tier-classification) section.
 
 This matrix is the **single source of truth** for the ~80 v2 feature components that the
 SP4 wave 1 + 2 + 3 + 4 mockups introduced and that do not yet exist in the codebase. Each
 row binds a mockup definition to a target component path, route, and acceptance criteria
 so that downstream PRs can pick up an entry and turn it from `pending` → `done` without
-ambiguity.
+ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch strategy.
 
 > **Updated 2026-04-30** (Wave B.2 spec-panel review): count refined 46 → 45.
 > `AgentsSidebarList` + `AgentDetailPanel` removed from `/agents` row set (mockup
@@ -62,6 +63,39 @@ ambiguity.
 | `in-progress` | A PR is open against the component |
 | `done` | Implementation merged; PR linked |
 
+## Tier classification
+
+> Added 2026-05-04 post spec-panel critique Wave C.1 fail (PR #697 closed). See [v2 spec section 3.4](../superpowers/specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only) for Phase 0.5 sub-hook contract gate.
+
+Each route is classified by **Tier** (S/M/L) which gates implementation strategy:
+
+| Tier | Hook count | FSM complexity | Strategy | Bundle budget per PR |
+|------|-----------|----------------|----------|----------------------|
+| **S** | 1 hook | 5-state lineare | Single-shot subagent dispatch (Wave B pattern) | < +50 KB |
+| **M** | 2 hook indipendenti | 5-state per hook + composition | Single-shot subagent OK; review extra-careful FSM | < +80 KB |
+| **L** | ≥3 hook indipendenti / cross-resource | Cartesian FSM (≥16 celle) | **Phase 0.5 sub-hook contract OBBLIGATORIA** + multi-iter subagent OR coexistence flag | < +120 KB |
+
+### Route Tier mapping
+
+| Route | Tier | Rationale | Status |
+|-------|------|-----------|--------|
+| `/games?tab=library` | **S** | useLibraryGames single hook, 5-state lineare | ✅ done (B.1, PR #635) |
+| `/agents` | **S** | useAgentList single hook, grid pattern | ✅ done (B.2, PR #637) |
+| `/library` | **S** | useLibrary single hook, hybrid grid | ✅ done (B.3, PR #638) |
+| `/players` | **S** | useUsersList single hook, grid pattern (Wave 4 D1) | pending |
+| `/games/[id]` | **L** | useGame + useAgents/Faqs/KbDocs by gameId — Wave C.1 fail PR #697 | **pending — Phase 0.5 required** |
+| `/agents/[id]` | **L** | useAgent + chat history + KB docs cross-resource | pending — Phase 0.5 required |
+| `/sessions/[id]/live` | **L+** | Real-time SSE + multi-hook + dialog states | pending — Phase 0.5 + sub-PR split |
+| `/discover` | **L** | Multiple horizontal-row hooks | pending — Phase 0.5 required |
+| `/game-nights` | **L** | Calendar + day-detail drawer + filters | pending — Phase 0.5 required |
+| `/sessions` | **M** | Sessions list + filters composition | pending |
+| `/sessions/[id]/summary` | **M** | Summary KPI + diary + photos | pending |
+| `/players/[id]` | **M** | Player profile + stats + leaderboard | pending |
+| `/toolkits/[id]` | **M** | Toolkit summary + version timeline | pending |
+| `/kb/[id]` | **M** | KB header + chunks + search | pending |
+
+**Anti-pattern**: dispatchare implementation subagent senza Phase 0.5 per route Tier L. Wave C.1 PR #697 ha esattamente questo come root cause (vedi [post-mortem](../superpowers/specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only)).
+
 ## Acceptance criteria abbreviations
 
 Used in the **AC** column to keep the table compact.
@@ -78,7 +112,7 @@ the PR review.
 
 ## Wave 1 — 29 components
 
-### Games index — `/games` — 5 components
+### Games index — `/games` — 5 components — **Tier S**
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
@@ -88,7 +122,7 @@ the PR review.
 | `sp4-games-index.jsx` | `GamesResultsGrid` | `apps/web/src/components/v2/games/GamesResultsGrid.tsx` | `/games` | pending | — | T A V |
 | `sp4-games-index.jsx` | `GamesEmptyState` | `apps/web/src/components/v2/games/GamesEmptyState.tsx` | `/games` | pending | — | T A V |
 
-### Game detail — `/games/[id]` — 8 components
+### Game detail — `/games/[id]` — 8 components — **Tier L** ⚠️ Phase 0.5 required
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
@@ -101,7 +135,7 @@ the PR review.
 | `sp4-game-detail.jsx` | `GameDetailAgentsList` | `apps/web/src/components/v2/game-detail/GameDetailAgentsList.tsx` | `/games/[id]` | pending | — | T A V |
 | `sp4-game-detail.jsx` | `GameDetailKbDocList` | `apps/web/src/components/v2/game-detail/GameDetailKbDocList.tsx` | `/games/[id]` | pending | — | T A V |
 
-### Agents index — `/agents` — 4 components
+### Agents index — `/agents` — 4 components — **Tier S**
 
 > **Updated 2026-04-30** (Wave B.2 spec-panel review): mockup `sp4-agents-index.jsx`
 > implementa pattern grid (3-col 1280 desktop), NON master-detail. `AgentsSidebarList`
@@ -121,7 +155,7 @@ the PR review.
 | `sp4-agents-index.jsx` | `AgentsResultsGrid` | `apps/web/src/components/v2/agents/AgentsResultsGrid.tsx` | `/agents` | pending | — | T A V |
 | `sp4-agents-index.jsx` | `EmptyAgents` | `apps/web/src/components/v2/agents/EmptyAgents.tsx` | `/agents` | pending | — | T A V |
 
-### Agent detail — `/agents/[id]` — 7 components
+### Agent detail — `/agents/[id]` — 7 components — **Tier L** ⚠️ Phase 0.5 required
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
@@ -133,7 +167,7 @@ the PR review.
 | `sp4-agent-detail.jsx` | `AgentSettingsForm` | `apps/web/src/components/v2/agent-detail/AgentSettingsForm.tsx` | `/agents/[id]` | pending | — | T A V |
 | `sp4-agent-detail.jsx` | `AgentDangerZone` | `apps/web/src/components/v2/agent-detail/AgentDangerZone.tsx` | `/agents/[id]` | pending | — | T A V |
 
-### Library — `/library` — 5 components
+### Library — `/library` — 5 components — **Tier S**
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
@@ -145,7 +179,7 @@ the PR review.
 
 ## Wave 2 — 16 components
 
-### Sessions index — `/sessions` — 3 components
+### Sessions index — `/sessions` — 3 components — **Tier M**
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
@@ -153,7 +187,7 @@ the PR review.
 | `sp4-sessions-index.jsx` | `SessionsFilters` | `apps/web/src/components/v2/sessions/SessionsFilters.tsx` | `/sessions` | pending | — | T A V |
 | `sp4-sessions-index.jsx` | `ConnectionChipStripFooter` | `apps/web/src/components/v2/sessions/ConnectionChipStripFooter.tsx` | `/sessions` | pending | — | T A V |
 
-### Session live — `/sessions/[id]` — 7 components
+### Session live — `/sessions/[id]` — 7 components — **Tier L+** ⚠️ Phase 0.5 + sub-PR split required
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
@@ -165,7 +199,7 @@ the PR review.
 | `sp4-session-live.jsx` | `SessionToolsRail` | `apps/web/src/components/v2/session-live/SessionToolsRail.tsx` | `/sessions/[id]` | pending | — | T A V |
 | `sp4-session-live.jsx` | `LiveAgentChat` | `apps/web/src/components/v2/session-live/LiveAgentChat.tsx` | `/sessions/[id]` | pending | — | T A V |
 
-### Session summary — `/sessions/[id]/summary` — 6 components
+### Session summary — `/sessions/[id]/summary` — 6 components — **Tier M**
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
@@ -181,7 +215,7 @@ the PR review.
 > **Mockup PR**: #640 (merged 2026-05-03). Stubs added in same PR series.
 > Mirror Wave B.1/B.2/B.3 implementation pattern (5-commit TDD: foundation → components → orchestrator → E2E → cleanup).
 
-### Player detail — `/players/[id]` — 5 components
+### Player detail — `/players/[id]` — 5 components — **Tier M**
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
@@ -191,7 +225,7 @@ the PR review.
 | `sp4-player-detail.jsx` | `FavoriteAgentCard` | `apps/web/src/components/v2/player-detail/FavoriteAgentCard.tsx` | `/players/[id]` | pending | — | T A V |
 | `sp4-player-detail.jsx` | `AchievementBadgeGrid` | `apps/web/src/components/v2/player-detail/AchievementBadgeGrid.tsx` | `/players/[id]` | pending | — | T A V |
 
-### Toolkit detail — `/toolkits/[id]` — 6 components
+### Toolkit detail — `/toolkits/[id]` — 6 components — **Tier M**
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
@@ -202,7 +236,7 @@ the PR review.
 | `sp4-toolkit-detail.jsx` | `PromptPreviewBlock` | `apps/web/src/components/v2/toolkit-detail/PromptPreviewBlock.tsx` | `/toolkits/[id]` | pending | — | T A V |
 | `sp4-toolkit-detail.jsx` | `Stars` | `apps/web/src/components/v2/toolkit-detail/Stars.tsx` | `/toolkits/[id]` | pending | — | T A V |
 
-### KB detail — `/kb/[id]` — 6 components
+### KB detail — `/kb/[id]` — 6 components — **Tier M**
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
@@ -213,7 +247,7 @@ the PR review.
 | `sp4-kb-detail.jsx` | `MarkdownRenderBlock` | `apps/web/src/components/v2/kb-detail/MarkdownRenderBlock.tsx` | `/kb/[id]` | pending | — | T A V |
 | `sp4-kb-detail.jsx` | `KbProcessingState` | `apps/web/src/components/v2/kb-detail/KbProcessingState.tsx` | `/kb/[id]` | pending | — | T A V |
 
-### Game nights index — `/game-nights` — 8 components
+### Game nights index — `/game-nights` — 8 components — **Tier L** ⚠️ Phase 0.5 required
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
@@ -226,7 +260,7 @@ the PR review.
 | `sp4-game-nights-index.jsx` | `StatusPill` | `apps/web/src/components/v2/game-nights/StatusPill.tsx` | `/game-nights` | pending | — | T A V |
 | `sp4-game-nights-index.jsx` | `PlayerAvatars` | `apps/web/src/components/v2/game-nights/PlayerAvatars.tsx` | `/game-nights` | pending | — | T A V |
 
-### Discover — `/discover` — 6 components
+### Discover — `/discover` — 6 components — **Tier L** ⚠️ Phase 0.5 required
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
@@ -243,7 +277,7 @@ the PR review.
 > Remaining routes (E1 toolkits-index, F1 kb-index, G2 game-night-detail) blocked
 > until Claude Design production resumes (post 2026-05-10).
 
-### Players index — `/players` — 4 components
+### Players index — `/players` — 4 components — **Tier S**
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|

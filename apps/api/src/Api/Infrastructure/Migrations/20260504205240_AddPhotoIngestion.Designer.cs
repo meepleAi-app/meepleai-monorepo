@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260504205240_AddPhotoIngestion")]
+    partial class AddPhotoIngestion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1074,11 +1077,6 @@ namespace Api.Infrastructure.Migrations
                     b.Property<string>("FailureReason")
                         .HasColumnType("text")
                         .HasColumnName("failure_reason");
-
-                    b.Property<int>("_lowConfidencePageCount")
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("low_confidence_page_count");
 
                     b.Property<Guid>("GameId")
                         .HasColumnType("uuid")

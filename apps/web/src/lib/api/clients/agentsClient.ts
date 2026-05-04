@@ -393,7 +393,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Create a user-owned agent with tier-aware configuration
      * Issue #4683: User Agent CRUD Endpoints
      * @param request Agent creation params (gameId, agentType, name, etc.)
-     * @todo BACKEND MISSING: No route registered for POST /api/v1/agents/user. Throws on null response. See: endpoint audit 2026-04-15
+     * Resolved by #654 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async createUserAgent(request: {
       gameId: string;

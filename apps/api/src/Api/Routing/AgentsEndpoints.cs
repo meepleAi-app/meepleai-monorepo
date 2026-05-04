@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
@@ -16,6 +17,9 @@ namespace Api.Routing;
 /// recent-agents widget consumed by the frontend <c>useRecentAgents</c> hook.
 /// Issue #648 (Phase γ.2): expose <c>GET /api/v1/agents/{id}/status</c> for the
 /// readiness widget consumed by the frontend <c>useAgentStatus</c> hook.
+/// Issue #654 (Phase β.2): expose <c>POST /api/v1/agents/user</c> for the
+/// frontend <c>agentsClient.createUserAgent</c> helper. MVP defers documentIds
+/// linking and tier/quota validation.
 /// </summary>
 internal static class AgentsEndpoints
 {
@@ -28,8 +32,22 @@ internal static class AgentsEndpoints
         MapGetRecentAgentsEndpoint(group);
         MapGetAgentByIdEndpoint(group);
         MapGetAgentStatusEndpoint(group);
+        MapCreateUserAgentEndpoint(group);
         return group;
     }
+
+    /// <summary>
+    /// Frontend <c>agentsClient.createUserAgent</c> request body shape.
+    /// Mirrors <c>CreateUserAgentRequest</c> in <c>apps/web/src/lib/api/clients/agentsClient.ts</c>.
+    /// </summary>
+    private sealed record CreateUserAgentRequest(
+        Guid GameId,
+        string AgentType,
+        string? Name = null,
+        string? StrategyName = null,
+        Dictionary<string, object>? StrategyParameters = null,
+        List<Guid>? DocumentIds = null
+    );
 
     private static void MapGetAgentsEndpoint(RouteGroupBuilder group)
     {
@@ -137,6 +155,53 @@ internal static class AgentsEndpoints
         .WithTags("Agents")
         .WithSummary("Get agent readiness status")
         .WithDescription("Returns readiness derived from AgentDefinition flags (IsActive AND Strategy.Name presence). HasDocuments precise count is deferred to a follow-up if needed. Issue #648 — useAgentStatus widget.")
+        .WithOpenApi();
+    }
+
+    private static void MapCreateUserAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/user", async (
+            [FromBody] CreateUserAgentRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+            if (!UserLibraryCoreEndpoints.TryGetUserId(context, session, out var userId))
+                return Results.Unauthorized();
+
+            try
+            {
+                var command = new CreateUserAgentCommand(
+                    UserId: userId,
+                    GameId: request.GameId,
+                    AgentType: request.AgentType,
+                    Name: request.Name,
+                    StrategyName: request.StrategyName,
+                    StrategyParameters: request.StrategyParameters,
+                    DocumentIds: request.DocumentIds
+                );
+
+                var dto = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Created($"/api/v1/agents/{dto.Id}", dto);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<AgentDto>(201)
+        .Produces(400)
+        .Produces(401)
+        .WithTags("Agents")
+        .WithSummary("Create a user-owned agent")
+        .WithDescription("Creates a custom agent linked to a SharedGame, returning AgentDto with GameName resolved. MVP: documentIds parameter accepted but not linked (deferred); tier/quota validation deferred (Issue #4771). Issue #654 (Phase β.2).")
         .WithOpenApi();
     }
 }

@@ -7,17 +7,23 @@ using Microsoft.AspNetCore.Mvc;
 namespace Api.Routing;
 
 /// <summary>
-/// User-facing Agents endpoints (read-only listing + by-id lookup).
+/// User-facing Agents endpoints (read-only listing + by-id lookup + recent widget).
 /// Issue #641 (Wave B.2 hotfix): expose existing GetAllAgentsQuery handler over HTTP
 /// so the frontend <c>useAgents</c> hook can resolve agents at <c>GET /api/v1/agents</c>.
 /// Issue #647 (Phase γ.1): expose <c>GET /api/v1/agents/{id}</c> for the single-agent
 /// detail surface consumed by the frontend <c>agentsClient.getById</c> helper.
+/// Issue #650 (Phase γ.3): expose <c>GET /api/v1/agents/recent</c> for the dashboard
+/// recent-agents widget consumed by the frontend <c>useRecentAgents</c> hook.
 /// </summary>
 internal static class AgentsEndpoints
 {
     public static RouteGroupBuilder MapAgentsEndpoints(this RouteGroupBuilder group)
     {
         MapGetAgentsEndpoint(group);
+        // Recent must be registered before the {id:guid} route so that the literal "recent"
+        // segment never reaches the GUID-constrained handler. The :guid constraint already
+        // disambiguates at the matcher level, but explicit ordering keeps intent obvious.
+        MapGetRecentAgentsEndpoint(group);
         MapGetAgentByIdEndpoint(group);
         return group;
     }
@@ -79,6 +85,30 @@ internal static class AgentsEndpoints
         .WithTags("Agents")
         .WithSummary("Get agent by ID")
         .WithDescription("Returns a single agent definition by id, mapped to AgentDto with GameName resolved via SharedGame catalog (PR #662 drift-fix). Issue #647 (Phase γ.1).")
+        .WithOpenApi();
+    }
+
+    private static void MapGetRecentAgentsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/agents/recent", async (
+            [FromQuery] int? limit,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, _, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            var query = new GetRecentAgentsQuery(Limit: limit ?? 10);
+            var agents = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(agents);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<IReadOnlyList<AgentDto>>(200)
+        .Produces(401)
+        .WithTags("Agents")
+        .WithSummary("Get recently used agents")
+        .WithDescription("Returns active agents ordered by LastInvokedAt desc (limit clamped 1..50, default 10). Powers the dashboard recent-agents widget (frontend useRecentAgents hook). Issue #650 (Phase γ.3).")
         .WithOpenApi();
     }
 }

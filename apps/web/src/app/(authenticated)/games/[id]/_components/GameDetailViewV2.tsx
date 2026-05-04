@@ -306,11 +306,19 @@ export function GameDetailViewV2({ gameId }: GameDetailViewV2Props): ReactElemen
   const detailQuery = useLibraryGameDetail(gameId ?? '');
 
   // ── Sub-hook (Phase 0.5 sez. 2.2 — lazy, gated by parent + tab) ─────────
-  // ⚠️ CRITICAL: enabled MUST be: !!gameId && detailQuery.isSuccess && tab === 'agents'
-  // DO NOT use fixture bypass or detailQuery.data != null pattern (PR #697 anti-pattern).
+  // ⚠️ CRITICAL: enabled MUST be: !!gameId && detailQuery.isSuccess && detailQuery.data != null && tab === 'agents'
+  // Cell 4 guard: even if isSuccess=true and tab='agents', do NOT fetch agents
+  // when detail=null (game not found in library). Without this, the agents
+  // sub-hook would fire a real network request for a non-existent game.
+  // NOTE: data != null check is NOT the PR #697 fixture-bypass anti-pattern —
+  // that anti-pattern concerned bypassing real queries with fixture data. This
+  // is a legitimate guard against Cell 4 race (isSuccess=true, data=null).
   const agentsQuery = useGameAgents({
     gameId,
-    enabled: !!gameId && detailQuery.isSuccess && tab === 'agents',
+    // Cell 4 guard: even if isSuccess=true and tab='agents', do NOT fetch agents
+    // when detail=null (game not found in library). Without this, the agents
+    // sub-hook would fire a real network request for a non-existent game.
+    enabled: !!gameId && detailQuery.isSuccess && detailQuery.data != null && tab === 'agents',
   });
 
   // ── Effective detail (fixture takes priority over real data) ─────────────

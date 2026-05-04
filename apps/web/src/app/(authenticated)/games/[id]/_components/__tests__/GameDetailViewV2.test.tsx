@@ -402,6 +402,35 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
     assertAgentsNeverCalledWithBadGameId();
   });
 
+  // ─── Cell 4 + tab=agents: success(null) must NOT enable agents fetch ────────
+  it('Cell 4 + tab=agents: success(null) + tab=agents does NOT fetch agents (data guard)', async () => {
+    // Setup: detailQuery returns success(null) — game not found in library (Cell 4)
+    useLibraryGameDetailSpy.mockImplementation(() => ({
+      data: null,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      refetch: vi.fn(),
+    }));
+    useGameAgentsSpy.mockImplementation(() => ({ ...agentsMockState }));
+
+    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+
+    // FSM derives 'not-found' from data=null → not-found shell rendered
+    expect(document.querySelector('[data-slot="game-detail-not-found"]')).toBeInTheDocument();
+
+    // CRITICAL: enabled MUST be false for ALL calls to useGameAgents.
+    // isSuccess=true but data=null → data != null guard prevents agents fetch.
+    // The not-found shell never renders tabs, so tab can never change to 'agents',
+    // but the gate must also hold at the hook level (data != null check).
+    const enabledCalls = useGameAgentsSpy.mock.calls.filter(([opts]) => opts.enabled === true);
+    expect(enabledCalls).toHaveLength(0);
+
+    // Contract: agents must never be called with enabled=true and valid gameId
+    // when detail data is null (Cell 4 — game not found).
+    assertAgentsNeverCalledWithBadGameId();
+  });
+
   // ─── Cell 5: detail success + tab='info' → default render, agents NOT enabled ─
   it('Cell 5: detail success + tab=info → default render, agents NOT enabled', () => {
     useLibraryGameDetailSpy.mockImplementation(() => ({

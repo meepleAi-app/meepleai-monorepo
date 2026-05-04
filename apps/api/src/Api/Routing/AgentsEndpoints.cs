@@ -7,13 +7,15 @@ using Microsoft.AspNetCore.Mvc;
 namespace Api.Routing;
 
 /// <summary>
-/// User-facing Agents endpoints (read-only listing + by-id lookup + recent widget).
+/// User-facing Agents endpoints (read-only listing + by-id lookup + recent widget + readiness status).
 /// Issue #641 (Wave B.2 hotfix): expose existing GetAllAgentsQuery handler over HTTP
 /// so the frontend <c>useAgents</c> hook can resolve agents at <c>GET /api/v1/agents</c>.
 /// Issue #647 (Phase γ.1): expose <c>GET /api/v1/agents/{id}</c> for the single-agent
 /// detail surface consumed by the frontend <c>agentsClient.getById</c> helper.
 /// Issue #650 (Phase γ.3): expose <c>GET /api/v1/agents/recent</c> for the dashboard
 /// recent-agents widget consumed by the frontend <c>useRecentAgents</c> hook.
+/// Issue #648 (Phase γ.2): expose <c>GET /api/v1/agents/{id}/status</c> for the
+/// readiness widget consumed by the frontend <c>useAgentStatus</c> hook.
 /// </summary>
 internal static class AgentsEndpoints
 {
@@ -25,6 +27,7 @@ internal static class AgentsEndpoints
         // disambiguates at the matcher level, but explicit ordering keeps intent obvious.
         MapGetRecentAgentsEndpoint(group);
         MapGetAgentByIdEndpoint(group);
+        MapGetAgentStatusEndpoint(group);
         return group;
     }
 
@@ -109,6 +112,31 @@ internal static class AgentsEndpoints
         .WithTags("Agents")
         .WithSummary("Get recently used agents")
         .WithDescription("Returns active agents ordered by LastInvokedAt desc (limit clamped 1..50, default 10). Powers the dashboard recent-agents widget (frontend useRecentAgents hook). Issue #650 (Phase γ.3).")
+        .WithOpenApi();
+    }
+
+    private static void MapGetAgentStatusEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/agents/{id:guid}/status", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, _, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            var query = new GetAgentStatusQuery(id);
+            var dto = await mediator.Send(query, ct).ConfigureAwait(false);
+            return dto is null ? Results.NotFound() : Results.Ok(dto);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<AgentStatusDto>(200)
+        .Produces(401)
+        .Produces(404)
+        .WithTags("Agents")
+        .WithSummary("Get agent readiness status")
+        .WithDescription("Returns readiness derived from AgentDefinition flags (IsActive AND Strategy.Name presence). HasDocuments precise count is deferred to a follow-up if needed. Issue #648 — useAgentStatus widget.")
         .WithOpenApi();
     }
 }

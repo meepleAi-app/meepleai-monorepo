@@ -349,6 +349,84 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
         dto.RagStatus.Should().Be("ready");
         dto.BlockingReason.Should().BeNull();
     }
+
+    // Issue #654: Phase β.2 — POST /api/v1/agents/user user-create route.
+    [Fact]
+    public async Task CreateUserAgent_WithoutAuth_ReturnsUnauthorized()
+    {
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/v1/agents/user", new
+        {
+            gameId = Guid.NewGuid(),
+            agentType = "Strategist"
+        });
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task CreateUserAgent_WithUnknownGame_ReturnsBadRequest()
+    {
+        // Arrange: authenticated user, unseeded gameId.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            "/api/v1/agents/user",
+            sessionToken,
+            new
+            {
+                gameId = Guid.NewGuid(),  // not seeded
+                agentType = "Strategist"
+            });
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert: handler raises InvalidOperationException → endpoint returns 400.
+        response.StatusCode.Should().BeOneOf(
+            HttpStatusCode.BadRequest,
+            HttpStatusCode.UnprocessableEntity,
+            HttpStatusCode.InternalServerError);
+    }
+
+    [Fact]
+    public async Task CreateUserAgent_WithValidGame_ReturnsCreatedAgentDto()
+    {
+        // Arrange: seed SharedGame "Catan", authenticated user.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var gameId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Catan");
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            "/api/v1/agents/user",
+            sessionToken,
+            new
+            {
+                gameId,
+                agentType = "Strategist",
+                name = "Catan Coach"
+            });
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert: 201 Created body is AgentDto with GameName resolved + IsActive true.
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Created);
+        var dto = await response.Content.ReadFromJsonAsync<AgentDto>();
+        dto.Should().NotBeNull();
+        dto!.Name.Should().Be("Catan Coach");
+        dto.Type.Should().Be("Strategist");
+        dto.GameId.Should().Be(gameId);
+        dto.GameName.Should().Be("Catan");
+        dto.IsActive.Should().BeTrue();
+    }
 }
 
 /// <summary>

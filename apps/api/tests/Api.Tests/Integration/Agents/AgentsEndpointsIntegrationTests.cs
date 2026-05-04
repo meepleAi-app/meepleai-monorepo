@@ -427,6 +427,89 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
         dto.GameName.Should().Be("Catan");
         dto.IsActive.Should().BeTrue();
     }
+
+    // Issue #655: Phase β.3 — POST /api/v1/agents/create-with-setup orchestration.
+    [Fact]
+    public async Task CreateAgentWithSetup_WithoutAuth_ReturnsUnauthorized()
+    {
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/v1/agents/create-with-setup", new
+        {
+            gameId = Guid.NewGuid(),
+            addToCollection = false,
+            agentType = "Strategist"
+        });
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task CreateAgentWithSetup_WithoutAddToCollection_ReturnsAgentResultGameAddedFalse()
+    {
+        // Arrange: seed SharedGame "Wingspan", authenticated user, addToCollection=false.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var gameId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Wingspan");
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            "/api/v1/agents/create-with-setup",
+            sessionToken,
+            new
+            {
+                gameId,
+                addToCollection = false,
+                agentType = "Strategist",
+                agentName = "Wingspan Coach"
+            });
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert: 201 Created or 200 OK with orchestration result body.
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Created);
+        var body = await response.Content.ReadFromJsonAsync<CreateAgentWithSetupResponse>();
+        body.Should().NotBeNull();
+        body!.AgentName.Should().Be("Wingspan Coach");
+        body.GameAddedToCollection.Should().BeFalse();
+        body.SlotUsed.Should().Be(0);
+        body.AgentId.Should().NotBe(Guid.Empty);
+        body.ThreadId.Should().NotBe(Guid.Empty);
+    }
+
+    [Fact]
+    public async Task CreateAgentWithSetup_WithAddToCollection_AddsGameAndReturnsTrue()
+    {
+        // Arrange: seed SharedGame "Azul", authenticated user, addToCollection=true.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var gameId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Azul");
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            "/api/v1/agents/create-with-setup",
+            sessionToken,
+            new
+            {
+                gameId,
+                addToCollection = true,
+                agentType = "Tutor"
+            });
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert: gameAddedToCollection=true after successful AddGameToLibraryCommand step.
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Created);
+        var body = await response.Content.ReadFromJsonAsync<CreateAgentWithSetupResponse>();
+        body.Should().NotBeNull();
+        body!.GameAddedToCollection.Should().BeTrue();
+    }
 }
 
 /// <summary>
@@ -434,3 +517,15 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
 /// Mirrors anonymous object created in <c>AgentsEndpoints.MapGetAgentsEndpoint</c>.
 /// </summary>
 internal record GetAllAgentsResponse(bool Success, List<AgentDto> Agents, int Count);
+
+/// <summary>
+/// HTTP response shape returned by <c>POST /api/v1/agents/create-with-setup</c>.
+/// Mirrors <c>CreateAgentWithSetupResult</c> in
+/// <c>Api.BoundedContexts.KnowledgeBase.Application.Commands</c>. Issue #655 (Phase β.3).
+/// </summary>
+internal record CreateAgentWithSetupResponse(
+    Guid AgentId,
+    string AgentName,
+    Guid ThreadId,
+    int SlotUsed,
+    bool GameAddedToCollection);

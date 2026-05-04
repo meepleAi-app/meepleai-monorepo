@@ -1597,6 +1597,132 @@
         }
       }
     },
+    "gameDetail": {
+      "metadata": {
+        "title": "{title} — MeepleAI",
+        "description": "Specifiche, statistiche, agenti e knowledge base per {title}."
+      },
+      "breadcrumb": {
+        "games": "Giochi",
+        "current": "{title}"
+      },
+      "hero": {
+        "back": "Torna ai giochi",
+        "backAriaLabel": "Torna al catalogo dei giochi",
+        "ownedBadge": "✓ In libreria",
+        "communityBadge": "🌐 Community",
+        "metaPlayers": "{min}-{max} giocatori",
+        "metaPlayersSingle": "{count} giocatori",
+        "metaDuration": "{minutes} min",
+        "metaWeight": "Complessità {value}/5",
+        "metaRating": "BGG {value}",
+        "ctaPlay": "Gioca ora",
+        "ctaEdit": "Modifica",
+        "ctaShare": "Condividi",
+        "ctaShareAriaLabel": "Condividi questo gioco",
+        "ctaAddToLibrary": "+ Aggiungi a libreria",
+        "ctaSimilar": "Vedi simili",
+        "favoriteAriaLabel": "Preferito"
+      },
+      "tabs": {
+        "ariaLabel": "Sezioni del gioco",
+        "info": "Info",
+        "rules": "Regole",
+        "faqs": "FAQ",
+        "sessions": "Partite",
+        "agents": "Agenti",
+        "documents": "Documenti"
+      },
+      "kpi": {
+        "rating": "Valutazione",
+        "complexity": "Complessità",
+        "players": "Giocatori",
+        "playTime": "Durata",
+        "ratingUnit": "/10",
+        "complexityUnit": "/5",
+        "playersRange": "{min}-{max}",
+        "playersValue": "{count}",
+        "playTimeUnit": "min",
+        "notAvailable": "—"
+      },
+      "info": {
+        "descriptionTitle": "Descrizione",
+        "specsTitle": "Specifiche",
+        "specsDesigner": "Designer",
+        "specsPublisher": "Editore",
+        "specsYear": "Anno",
+        "specsAge": "Età",
+        "specsCategories": "Categorie",
+        "specsMechanics": "Meccaniche",
+        "specsBgg": "BGG ID",
+        "noDescription": "Nessuna descrizione disponibile per questo gioco."
+      },
+      "faqs": {
+        "title": "FAQ",
+        "subtitle": "Le domande più frequenti su {title}.",
+        "viewAll": "Vedi tutte le FAQ",
+        "viewAllAriaLabel": "Vai alla pagina FAQ completa",
+        "empty": "Nessuna FAQ disponibile per questo gioco.",
+        "questionAriaLabel": "Domanda"
+      },
+      "rules": {
+        "title": "Regole principali",
+        "subtitle": "Le sezioni più importanti del regolamento.",
+        "viewAll": "Vedi tutte le regole",
+        "viewAllAriaLabel": "Vai alla pagina regolamento completa",
+        "empty": "Nessuna sezione di regolamento disponibile."
+      },
+      "sessions": {
+        "title": "Partite recenti",
+        "subtitle": "Le tue ultime sessioni con questo gioco.",
+        "viewAll": "Vedi tutte le partite",
+        "viewAllAriaLabel": "Vai allo storico completo delle partite",
+        "empty": "Nessuna partita registrata.",
+        "emptySubtitle": "Le partite vengono tracciate automaticamente quando registri una nuova sessione.",
+        "playersCount": "{count, plural, =0 {nessun giocatore} =1 {1 giocatore} other {# giocatori}}",
+        "winLabel": "Vittoria",
+        "lossLabel": "Sconfitta",
+        "newSession": "+ Nuova partita"
+      },
+      "agents": {
+        "title": "Agenti AI",
+        "subtitle": "Agenti collegati a questo gioco.",
+        "empty": "Nessun agente disponibile.",
+        "emptySubtitle": "Crea un agente AI per chattare sulle regole di questo gioco.",
+        "createCta": "+ Crea agente",
+        "openAriaLabel": "Apri agente {name}",
+        "indexedLabel": "{count, plural, =0 {0 KB} =1 {1 KB} other {# KB}}",
+        "invocationsLabel": "{count} invocazioni"
+      },
+      "documents": {
+        "title": "Documenti indicizzati",
+        "subtitle": "PDF e regolamenti caricati per questo gioco.",
+        "empty": "Nessun documento indicizzato.",
+        "emptySubtitle": "Carica un PDF del regolamento per abilitare la chat con l'agente.",
+        "uploadCta": "↑ Carica documento",
+        "openCta": "Apri ↗",
+        "openAriaLabel": "Apri documento {name}",
+        "statusIndexed": "INDICIZZATO",
+        "statusProcessing": "ELABORAZIONE",
+        "statusFailed": "ERRORE",
+        "statsLine": "{size} · {pages} pag · {chunks} chunks"
+      },
+      "states": {
+        "loading": {
+          "ariaLabel": "Caricamento dettagli del gioco"
+        },
+        "notFound": {
+          "title": "Gioco non trovato",
+          "subtitle": "Il gioco che stai cercando non è disponibile o è stato rimosso.",
+          "cta": "Torna ai giochi"
+        },
+        "error": {
+          "title": "Impossibile caricare il gioco",
+          "subtitle": "Si è verificato un errore. Riprova tra qualche istante.",
+          "cta": "Riprova"
+        }
+      }
+    },
     "sharedGames": {
       "metadata": {
         "title": "Catalogo community — MeepleAI",

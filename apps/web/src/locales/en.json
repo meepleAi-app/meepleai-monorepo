@@ -1547,6 +1547,132 @@
         }
       }
     },
+    "gameDetail": {
+      "metadata": {
+        "title": "{title} — MeepleAI",
+        "description": "Specs, statistics, agents and knowledge base for {title}."
+      },
+      "breadcrumb": {
+        "games": "Games",
+        "current": "{title}"
+      },
+      "hero": {
+        "back": "Back to games",
+        "backAriaLabel": "Back to game catalog",
+        "ownedBadge": "✓ In library",
+        "communityBadge": "🌐 Community",
+        "metaPlayers": "{min}-{max} players",
+        "metaPlayersSingle": "{count} players",
+        "metaDuration": "{minutes} min",
+        "metaWeight": "Complexity {value}/5",
+        "metaRating": "BGG {value}",
+        "ctaPlay": "Play now",
+        "ctaEdit": "Edit",
+        "ctaShare": "Share",
+        "ctaShareAriaLabel": "Share this game",
+        "ctaAddToLibrary": "+ Add to library",
+        "ctaSimilar": "See similar",
+        "favoriteAriaLabel": "Favorite"
+      },
+      "tabs": {
+        "ariaLabel": "Game sections",
+        "info": "Info",
+        "rules": "Rules",
+        "faqs": "FAQ",
+        "sessions": "Sessions",
+        "agents": "Agents",
+        "documents": "Documents"
+      },
+      "kpi": {
+        "rating": "Rating",
+        "complexity": "Complexity",
+        "players": "Players",
+        "playTime": "Play time",
+        "ratingUnit": "/10",
+        "complexityUnit": "/5",
+        "playersRange": "{min}-{max}",
+        "playersValue": "{count}",
+        "playTimeUnit": "min",
+        "notAvailable": "—"
+      },
+      "info": {
+        "descriptionTitle": "Description",
+        "specsTitle": "Specifications",
+        "specsDesigner": "Designer",
+        "specsPublisher": "Publisher",
+        "specsYear": "Year",
+        "specsAge": "Age",
+        "specsCategories": "Categories",
+        "specsMechanics": "Mechanics",
+        "specsBgg": "BGG ID",
+        "noDescription": "No description available for this game."
+      },
+      "faqs": {
+        "title": "FAQ",
+        "subtitle": "Top questions about {title}.",
+        "viewAll": "View all FAQs",
+        "viewAllAriaLabel": "Open the full FAQ page",
+        "empty": "No FAQs available for this game.",
+        "questionAriaLabel": "Question"
+      },
+      "rules": {
+        "title": "Key rules",
+        "subtitle": "Most important sections of the rulebook.",
+        "viewAll": "View full rulebook",
+        "viewAllAriaLabel": "Open the full rules page",
+        "empty": "No rule sections available."
+      },
+      "sessions": {
+        "title": "Recent sessions",
+        "subtitle": "Your latest sessions with this game.",
+        "viewAll": "View all sessions",
+        "viewAllAriaLabel": "Open the full session history",
+        "empty": "No sessions recorded yet.",
+        "emptySubtitle": "Sessions are tracked automatically when you record a new play.",
+        "playersCount": "{count, plural, =0 {no players} =1 {1 player} other {# players}}",
+        "winLabel": "Win",
+        "lossLabel": "Loss",
+        "newSession": "+ New session"
+      },
+      "agents": {
+        "title": "AI agents",
+        "subtitle": "Agents linked to this game.",
+        "empty": "No agents available.",
+        "emptySubtitle": "Create an AI agent to chat about this game's rules.",
+        "createCta": "+ Create agent",
+        "openAriaLabel": "Open agent {name}",
+        "indexedLabel": "{count, plural, =0 {0 KB} =1 {1 KB} other {# KB}}",
+        "invocationsLabel": "{count} invocations"
+      },
+      "documents": {
+        "title": "Indexed documents",
+        "subtitle": "PDFs and rulebooks uploaded for this game.",
+        "empty": "No indexed documents.",
+        "emptySubtitle": "Upload a rulebook PDF to enable the chat agent.",
+        "uploadCta": "↑ Upload document",
+        "openCta": "Open ↗",
+        "openAriaLabel": "Open document {name}",
+        "statusIndexed": "INDEXED",
+        "statusProcessing": "PROCESSING",
+        "statusFailed": "FAILED",
+        "statsLine": "{size} · {pages} pages · {chunks} chunks"
+      },
+      "states": {
+        "loading": {
+          "ariaLabel": "Loading game details"
+        },
+        "notFound": {
+          "title": "Game not found",
+          "subtitle": "The game you are looking for is unavailable or has been removed.",
+          "cta": "Back to games"
+        },
+        "error": {
+          "title": "Unable to load this game",
+          "subtitle": "Something went wrong. Please try again in a moment.",
+          "cta": "Retry"
+        }
+      }
+    },
     "sharedGames": {
       "metadata": {
         "title": "Community catalog — MeepleAI",

@@ -523,7 +523,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Update a user-owned agent (name, strategy)
      * PUT /api/v1/agents/{id}/user
      * Issue #4683: User Agent CRUD Endpoints
-     * @todo BACKEND MISSING: No route registered for PUT /api/v1/agents/{id}/user. Throws on null response. See: endpoint audit 2026-04-15
+     * Resolved by #656 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async updateUserAgent(
       agentId: string,

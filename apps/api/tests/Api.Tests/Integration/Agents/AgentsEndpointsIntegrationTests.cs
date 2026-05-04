@@ -583,6 +583,71 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
         body.AgentName.Should().Be("Tutor for Splendor");
         body.KbCardCount.Should().Be(0);
     }
+
+    // -------------------------------------------------------------------------
+    // PUT /api/v1/agents/{id}/user — Issue #656
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task UpdateUserAgent_WithoutAuth_ReturnsUnauthorized()
+    {
+        // Act
+        var response = await _client.PutAsJsonAsync(
+            $"/api/v1/agents/{Guid.NewGuid()}/user",
+            new { name = "Updated" });
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task UpdateUserAgent_WithUnknownId_ReturnsNotFound()
+    {
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Put,
+            $"/api/v1/agents/{Guid.NewGuid()}/user",
+            sessionToken,
+            new { name = "Updated" });
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdateUserAgent_WithValidNameChange_ReturnsUpdatedAgentDto()
+    {
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        await TestSessionHelper.SeedAgentDefinitionsAsync(dbContext, activeCount: 1, inactiveCount: 0);
+        var seededId = await dbContext.AgentDefinitions.AsNoTracking().Select(a => a.Id).FirstAsync();
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Put,
+            $"/api/v1/agents/{seededId}/user",
+            sessionToken,
+            new { name = "Renamed Agent" });
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await response.Content.ReadFromJsonAsync<AgentDto>();
+        dto.Should().NotBeNull();
+        dto!.Id.Should().Be(seededId);
+        dto.Name.Should().Be("Renamed Agent");
+    }
 }
 
 /// <summary>

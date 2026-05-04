@@ -1,9 +1,9 @@
 # V2 Design Migration — Specification
 
-**Data**: 2026-04-26
+**Data**: 2026-04-26 (revisione 2026-05-04 — applicazione P0 spec-panel)
 **Autore**: Claude (sc:spec-panel multi-expert analysis)
-**Scope**: Migrazione frontend `apps/web/` al design system v2 usando i mockup SP3 + SP4 wave 1+2 come fonte di verità.
-**Status**: APPROVED (utente sign-off 2026-04-26 + clarificazione baseline = mockup)
+**Scope**: Migrazione frontend `apps/web/` al design system v2 usando i mockup SP3 + SP4 wave 1+2+3+4 come fonte di verità.
+**Status**: APPROVED (utente sign-off 2026-04-26 + amendment 2026-05-04 post Wave C.1 fail RCA)
 
 ---
 
@@ -26,26 +26,38 @@
 | Visual regression baseline | ❌ Non configurato |
 | Bundle size baseline | 12_877_170 bytes (JS-only sum chunks) |
 
-### 1.2 Decisioni architettoniche (utente, 2026-04-26)
+### 1.2 Decisioni architettoniche (utente, 2026-04-26 + amendment 2026-05-04)
 
 | # | Decisione | Implicazione |
 |---|-----------|-------------|
 | 1 | Procediamo con wave 1+2 (8 route) ora, wave 3+SP5 dopo | Phase 1+2 attive, Phase 3 review-gate prima di wave 3 |
-| 2 | **NO feature flag** — Big-Bang replacement legacy → v2 | Ogni PR sostituisce la route legacy; nessuna coesistenza; rollback = revert PR |
+| 2 | **Big-Bang per Tier S/M; coexistence flag opzionale per Tier L** *(amended 2026-05-04 post Wave C.1 fail)* | Route con ≥3 hook indipendenti (Tier L) abilitano feature flag NEXT_PUBLIC_<ROUTE>_V2 per rollout incrementale; rollback ridotto a env var toggle invece di git revert |
 | 3 | **No budget** per Chromatic/Percy/Argos | Visual regression via **Playwright `toHaveScreenshot()` nativo** (gratis) |
 | 4 | Spec dettagliata prima di aprire issue | Questo documento |
+| 5 | **Tier classification obbligatoria** *(added 2026-05-04)* | Ogni route in matrice ha colonna Tier (S/M/L); Tier L richiede Phase 0.5 sub-hook contract pre-implementation |
 
-### 1.3 Implicazioni della decisione "no feature flag + Big-Bang"
+### 1.3 Implicazioni della decisione "Big-Bang Tier-aware"
 
-⚠️ **Risk acuto** (Nygard): blast radius totale per ogni PR. Mitigazioni obbligatorie:
+⚠️ **Risk acuto** (Nygard): blast radius parziale per Tier S/M (single PR), zero blast radius per Tier L (env flag toggle). Mitigazioni obbligatorie:
 
 1. **Visual regression baseline GROUND-ZERO** prima di qualunque migrazione page-level
 2. **Smoke E2E happy path** per ogni page migrata
-3. **Bundle delta budget** stretto: max +50 KB per PR, max +30 KB raccomandato
-4. **Rollback documentato**: ogni PR include nel body comando `git revert <sha>` testato in branch
-5. **Squash merge** sempre (un commit = un revert)
+3. **Bundle delta budget** stretto: max +50 KB per PR Tier S, max +80 KB Tier M, max +120 KB Tier L (incl. legacy coexistence overhead)
+4. **Rollback documentato**:
+   - Tier S/M: `git revert <sha>` (testato pre-merge)
+   - Tier L: env var toggle `NEXT_PUBLIC_<ROUTE>_V2=0` (no deploy required)
+5. **Squash merge** sempre (un commit = un revert / un toggle)
 
 App non in produzione → blast radius limitato a dev/staging → rischio accettabile, ma test infra è non-negoziabile.
+
+### 1.4 Spec-panel review log
+
+| Data | Trigger | Amendments |
+|------|---------|-----------|
+| 2026-04-26 | Initial sign-off | Spec approved, 46 component scope wave 1+2 |
+| 2026-04-30 | Wave B.2 spec-panel review | Matrix update −1 (`/agents` not master-detail) |
+| 2026-05-03 | Wave 3+4 mockups landed (PR #640) | Scope grew 45 → 80 component |
+| 2026-05-04 | **Spec-panel critique post Wave C.1 fail (PR #697)** | **P0 applied**: Tier classification (1.2 #5), coexistence flag Tier L (1.2 #2 amended), Phase 0.5 sub-hook contract (sez. 3.4), test mix ratio 60/30/10 (sez. 4.1), bundle budget re-baseline (sez. 8) |
 
 ---
 
@@ -173,6 +185,75 @@ Pre-requisito non-negoziabile prima di Phase 1. Tre PR sequenziali, parent branc
 
 **Effort**: 2-3 giorni · **Owner pattern**: Wiegers (requirements traceability)
 
+### 3.4 Phase 0.5 — Sub-hook Contract (per Tier L routes only)
+
+**Aggiunto 2026-05-04** post-RCA Wave C.1 fail (PR #697 closed). Phase 0.5 è **obbligatoria** prima del 5-commit TDD pattern per route classificate Tier L. Per Tier S/M il pattern Wave B (single-shot subagent dispatch) resta sufficiente.
+
+**Tier classification**:
+
+| Tier | Hook count | FSM complexity | Esempi route |
+|------|-----------|----------------|--------------|
+| **S** | 1 hook | 5-state lineare (`default \| loading \| empty \| filtered-empty \| error`) | `/games?tab=library`, `/agents`, `/library`, `/players` |
+| **M** | 2 hook indipendenti | 5-state per hook + composition | `/sessions`, `/players/[id]`, `/toolkits/[id]`, `/kb/[id]` |
+| **L** | ≥3 hook indipendenti / cross-resource | Cartesian FSM (≥16 celle teoriche) | `/games/[id]`, `/agents/[id]`, `/sessions/[id]/live`, `/discover`, `/game-nights` |
+
+**Root cause Wave C.1 fail**: il dispatch subagent single-shot per `/games/[id]` non aveva contratti espliciti tra orchestrator e sub-hooks. Sintomi:
+1. `/api/v1/agents/undefined` calls (sub-hook fired prima che parent risolvesse `gameId`)
+2. State machine stuck (16-cell FSM non mappata, casi non-happy non gestiti)
+3. A11y fail (`role="tabpanel"` mancante perché component dispatch non aveva contract)
+
+**Phase 0.5 Deliverables (PR doc-only, parent branch `feature/v2-migrate-<page>` o `main-dev` se separato)**:
+
+1. **Hook dependency graph** — `docs/frontend/contracts/<route>-hooks.md`
+   ```markdown
+   # /games/[id] Hook Contract
+
+   ## Dependency graph
+   useGame(id) ──→ useAgentsByGame(gameId) ──→ AgentsList
+                ├→ useFaqsByGame(gameId)    ──→ FaqList
+                └→ useKbDocsByGame(gameId)  ──→ KbList
+
+   ## Gating contracts
+   - useGame.status === 'pending' → mount global skeleton (no children mount)
+   - useGame.status === 'error'   → mount error shell (no children mount)
+   - useGame.status === 'success' → children hooks abilitati con gameId valido
+   - Children query enabled: `enabled: !!gameId && useGame.isSuccess`
+   ```
+
+2. **FSM cell matrix** — esplicita ogni cella rilevante (subset 16 celle cartesiane):
+   ```markdown
+   | useGame | useAgents | UI Behavior |
+   |---------|-----------|-------------|
+   | loading | (gated)   | Global skeleton, no tab content |
+   | error   | (gated)   | Error shell with retry, no tabs visible |
+   | success | loading   | Tab "Agents" mostra inline skeleton |
+   | success | error     | Tab "Agents" mostra inline error banner (NO shell error) |
+   | success | empty     | Tab "Agents" mostra empty state with CTA |
+   | success | success   | Tab "Agents" mostra grid |
+   ```
+
+3. **Component contract** — props.shape per ogni component sub-tree:
+   ```markdown
+   ### AgentsList contract
+   Props: { gameId: string, queryEnabled: boolean }
+   States: { loading, error, empty, success }
+   - queryEnabled false → return null (NO render placeholder)
+   - queryEnabled true → fetch + render per state
+   ```
+
+4. **Storybook stories** (Tier L only) — 1 story per FSM cell rilevante. Senza Storybook → unit test per cella in `__tests__/<Component>.fsm.test.tsx`.
+
+**Definition of Done Phase 0.5**:
+- [ ] Hook dependency graph committato
+- [ ] FSM cell matrix esplicita per ogni hook (≥6 celle rilevanti documentate)
+- [ ] Component contracts documentati per sub-tree
+- [ ] Storybook stories OR unit FSM tests per ogni cella
+- [ ] Code review approval su contract PRIMA di dispatch implementation subagent
+
+**Effort**: 1-2 giorni per route Tier L · **Owner pattern**: Nygard (failure mode analysis) + Adzic (executable specs)
+
+**Anti-pattern**: dispatchare implementation subagent senza Phase 0.5 per route Tier L. Wave C.1 PR #697 ha esattamente questo anti-pattern come root cause.
+
 ---
 
 ## 4. Phase 1 — Wave 1 Migration (5 PR, 4 settimane)
@@ -191,16 +272,24 @@ Una PR per page, parent branch `frontend-dev`. Ordine raccomandato (low-risk →
 
 ### 4.1 Pattern PR per ogni page
 
-**Branch**: `feature/v2-migrate-<page>` da `frontend-dev`
+**Branch**: `feature/v2-migrate-<page>` da `main-dev` *(amended 2026-05-04: Wave B precedent ha mostrato `main-dev` parent stable)*
+
+**Pre-implementation gate (Tier L only)**:
+- ✅ Phase 0.5 PR mergiata (sez. 3.4) PRIMA di dispatchare implementation
+- ✅ Hook dependency graph reviewed
+- ✅ FSM cell matrix approvata
 
 **Body PR include**:
 1. Mockup source link (`admin-mockups/design_files/sp4-X.jsx`)
-2. Component nuovi creati (lista con path)
-3. Component legacy rimossi (lista esplicita)
-4. Visual regression: link allo snapshot updated
-5. Bundle delta: output `pnpm size`
-6. Rollback comando: `git revert <commit-sha>` (testato pre-merge)
-7. Code review nit fix dalla review SP4 wave 1+2 applicati:
+2. **Tier classification** (S/M/L) + link a Phase 0.5 contract se Tier L
+3. Component nuovi creati (lista con path)
+4. Component legacy rimossi (lista esplicita)
+5. Visual regression: link allo snapshot updated
+6. Bundle delta: output `pnpm size`
+7. **Rollback strategy**:
+   - Tier S/M: `git revert <commit-sha>` (testato pre-merge)
+   - Tier L: env var toggle `NEXT_PUBLIC_<ROUTE>_V2=0` documentato in PR body
+8. Code review nit fix dalla review SP4 wave 1+2 applicati:
    - Hex hardcoded `hsl(38,92%,50%)` → `entityHsl('agent')`
    - `role="tabpanel"` sui body dei tab
    - `prefers-reduced-motion` su `mai-shimmer`/`mai-pulse`/animazioni
@@ -211,17 +300,41 @@ Una PR per page, parent branch `frontend-dev`. Ordine raccomandato (low-risk →
 - ✅ Vitest unit (target 85%+ su component nuovi)
 - ✅ Playwright E2E happy path (login → page → element interaction)
 - ✅ Playwright visual regression (snapshot updated + reviewed)
-- ✅ Bundle size delta < +50 KB
+- ✅ A11y axe-core (zero violations su WCAG 2.1 AA)
+- ✅ Bundle size delta entro budget Tier-aware (sez. 1.3 punto 3)
+- ✅ Smoke E2E real-backend *(workflow_dispatch manual gate, post-merge nightly)*
 - ✅ GitGuardian (no secret pattern, no fake-UUID)
 
+**Test mix ratio (added 2026-05-04 post Wave C.1 RCA)**:
+
+Per evitare collasso del test budget durante single-shot subagent dispatch, adottare ratio:
+
+| Tier | Unit | Integration | E2E |
+|------|------|-------------|-----|
+| **S** | 70% | 20% | 10% |
+| **M** | 60% | 30% | 10% |
+| **L** | 50% | 35% | 15% |
+
+- **Unit**: component-level FSM cells, hook isolation tests
+- **Integration**: orchestrator hook contracts via `renderHook` + `MSW` mocks
+- **E2E**: 4–5 stati visuali rilevanti (resto coperti da unit/integration)
+
+Per Tier L l'integration tier è critico: deve esercitare la **cartesian FSM matrix** documentata in Phase 0.5. Esempio per `/games/[id]`:
+- `useGame.error` × `useAgents.success` → AgentsList non monta
+- `useGame.success` × `useAgents.error` → banner inline (NO shell error)
+- `useGame.loading` × tutti gli altri loading → single skeleton (no flash)
+
 **Definition of Done page-level**:
-- [ ] Page legacy completamente rimossa (file deleted)
+- [ ] Page legacy completamente rimossa (file deleted) **— Tier S/M only**
+- [ ] Page legacy gated dietro feature flag (Tier L only) — coexistenza temporanea fino smoke nightly green per 7 giorni
 - [ ] Page v2 implementata 1:1 con mockup
+- [ ] Tier L: Phase 0.5 contract validated post-implementation (FSM cells coperti)
 - [ ] Snapshot visual baseline aggiornato + reviewed
 - [ ] E2E happy path passa
-- [ ] Bundle delta entro budget
+- [ ] Test mix ratio rispettato per Tier
+- [ ] Bundle delta entro budget Tier-aware
 - [ ] Matrice migrazione aggiornata (row status `done`)
-- [ ] WCAG AA: focus visibile keyboard, role/aria su dialog/tabpanel
+- [ ] WCAG AA: focus visibile keyboard, role/aria su dialog/tabpanel, axe-core clean
 
 ---
 
@@ -284,17 +397,28 @@ Prima di committarsi a wave 3 + SP5, audit obbligatorio:
 
 ## 8. Success Metrics
 
-| Metrica | Target |
-|---------|--------|
-| Schermate migrate | 8/8 wave 1+2 |
-| Component v2 implementati | 46/46 backlog mockup wave 1+2 |
-| Token compliance | 100% (zero hex hardcoded — verificato via lint rule) |
-| Visual regression coverage | 36 snapshot iniziali + +1 per ogni PR migrazione |
-| Bundle delta totale | < +500 KB (ideal: < +300 KB) |
-| WCAG AA compliance | 100% page wave 1+2 (axe-core 0 violations) |
-| Test coverage component nuovi | ≥ 85% |
-| Code review nit residui | 0 (hex hardcoded, role/aria, prefers-reduced-motion tutti applicati) |
-| Time to complete (Phase 0 + 1 + 2) | 8-10 settimane stimate |
+**Re-baselined 2026-05-04** post Wave 3+4 mockup landing (scope grew 46 → 80 component).
+
+| Metrica | Target originale (wave 1+2 only) | Target re-baselined (wave 1+2+3+4) |
+|---------|---------------------------------|-------------------------------------|
+| Schermate migrate | 8/8 wave 1+2 | 17/17 wave 1+2+3+4 (8 wave 1+2 + 5 wave 3 + 4 wave 4) |
+| Component v2 implementati | 46/46 | 80/80 |
+| Token compliance | 100% (zero hex hardcoded) | 100% (sustained) |
+| Visual regression coverage | 36 snapshot iniziali + +1 per PR | 36 + +1 per PR + sentinel fixture per stati FSM |
+| **Bundle delta totale** | < +500 KB (ideal < +300 KB) | **< +800 KB (ideal < +500 KB) — incrementato proporzionalmente da 46 → 80 component** |
+| Bundle delta per PR | < +50 KB | Tier S < +50 KB, Tier M < +80 KB, Tier L < +120 KB |
+| WCAG AA compliance | 100% wave 1+2 | 100% all waves (axe-core 0 violations) |
+| Test coverage component nuovi | ≥ 85% | ≥ 85% (sustained) — con mix ratio Tier-aware sez. 4.1 |
+| Code review nit residui | 0 | 0 (sustained) |
+| Smoke nightly real-backend pass rate | (not specified) | ≥ 95% rolling 7-day window |
+| **Time to complete** | 8-10 settimane (wave 1+2) | 14-18 settimane (wave 1+2+3+4 incl. Phase 0.5 overhead Tier L) |
+
+**Bundle ledger aggiornato 2026-05-04**:
+- Baseline 2026-04-26: 12_877_170 bytes
+- Post Wave B.3 (2026-05-03): ~13_590_000 bytes (delta +713 KB su 5 component done)
+- Estrapolazione 80 component (lineare): ~14_100_000 bytes (totale delta +1.2 MB) — **fuori budget originale**
+- Mitigazione: code-splitting + lazy-load Tier L route (target delta ridotto ~30%)
+- Re-baseline target: 13_700_000 bytes (delta +823 KB sustainable)
 
 ---
 

@@ -458,7 +458,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     /**
      * Orchestrated agent creation with auto-setup
      * Issue #4772: Agent Creation Orchestration Flow
-     * @todo BACKEND MISSING: No route registered for POST /api/v1/agents/create-with-setup. Throws on null response. See: endpoint audit 2026-04-15
+     * Resolved by #655 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async createWithSetup(request: {
       gameId: string;

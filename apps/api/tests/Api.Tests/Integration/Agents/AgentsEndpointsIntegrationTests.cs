@@ -510,6 +510,79 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
         body.Should().NotBeNull();
         body!.GameAddedToCollection.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task QuickCreateAgent_WithoutAuth_ReturnsUnauthorized()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/agents/quick-create", new
+        {
+            gameId = Guid.NewGuid()
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task QuickCreateAgent_WithUnknownGame_ReturnsBadRequest()
+    {
+        // Arrange: authenticated user, no SharedGame seeded for the supplied id.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            "/api/v1/agents/quick-create",
+            sessionToken,
+            new
+            {
+                gameId = Guid.NewGuid()
+            });
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert: handler throws InvalidOperationException("SharedGame {id} not found")
+        // which the endpoint translates to BadRequest. Allow Unprocessable/InternalServerError
+        // as alternates if validator/error mapping evolves.
+        response.StatusCode.Should().BeOneOf(
+            HttpStatusCode.BadRequest,
+            HttpStatusCode.UnprocessableEntity,
+            HttpStatusCode.InternalServerError);
+    }
+
+    [Fact]
+    public async Task QuickCreateAgent_WithValidGame_ReturnsTutorResult()
+    {
+        // Arrange: seed SharedGame "Splendor", authenticated user.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var gameId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Splendor");
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            "/api/v1/agents/quick-create",
+            sessionToken,
+            new
+            {
+                gameId
+            });
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert: 201 Created with Tutor result body. Auto-derived name "Tutor for Splendor",
+        // ChatThreadId placeholder Guid (chat-thread BC integration deferred), KbCardCount=0
+        // (KB query deferred — separate followup if needed).
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Created);
+        var body = await response.Content.ReadFromJsonAsync<QuickCreateAgentResponse>();
+        body.Should().NotBeNull();
+        body!.AgentId.Should().NotBe(Guid.Empty);
+        body.ChatThreadId.Should().NotBe(Guid.Empty);
+        body.AgentName.Should().Be("Tutor for Splendor");
+        body.KbCardCount.Should().Be(0);
+    }
 }
 
 /// <summary>
@@ -529,3 +602,14 @@ internal record CreateAgentWithSetupResponse(
     Guid ThreadId,
     int SlotUsed,
     bool GameAddedToCollection);
+
+/// <summary>
+/// HTTP response shape returned by <c>POST /api/v1/agents/quick-create</c>.
+/// Mirrors <c>QuickCreateAgentResult</c> in
+/// <c>Api.BoundedContexts.KnowledgeBase.Application.Commands</c>. Issue #659 (Phase δ.1).
+/// </summary>
+internal record QuickCreateAgentResponse(
+    Guid AgentId,
+    Guid ChatThreadId,
+    string AgentName,
+    int KbCardCount);

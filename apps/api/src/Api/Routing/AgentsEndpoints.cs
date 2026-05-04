@@ -24,6 +24,10 @@ namespace Api.Routing;
 /// orchestration route consumed by the AgentCreationSheet wizard. Optional
 /// addToCollection step + agent creation (β.2 reuse). Placeholder threadId
 /// (chat-thread BC integration deferred) + slotUsed=0 (Issue #4771 deferred).
+/// Issue #659 (Phase δ.1): expose <c>POST /api/v1/agents/quick-create</c>
+/// for the frontend <c>agentsClient.quickCreateTutor</c> helper. Reuses
+/// <c>CreateUserAgentCommand</c> (β.2) with hardcoded <c>AgentType = "Tutor"</c>;
+/// auto-derived name <c>"Tutor for {GameName}"</c>; placeholder chat-thread + KB count.
 /// </summary>
 internal static class AgentsEndpoints
 {
@@ -38,6 +42,7 @@ internal static class AgentsEndpoints
         MapGetAgentStatusEndpoint(group);
         MapCreateUserAgentEndpoint(group);
         MapCreateAgentWithSetupEndpoint(group);
+        MapQuickCreateAgentEndpoint(group);
         return group;
     }
 
@@ -67,6 +72,17 @@ internal static class AgentsEndpoints
         string? StrategyName = null,
         Dictionary<string, object>? StrategyParameters = null,
         List<Guid>? DocumentIds = null
+    );
+
+    /// <summary>
+    /// Frontend <c>agentsClient.quickCreateTutor</c> request body shape.
+    /// Mirrors the <c>{ gameId, sharedGameId? }</c> body posted by
+    /// <c>apps/web/src/lib/api/clients/agentsClient.ts</c>. Issue #659 (Phase δ.1).
+    /// <c>SharedGameId</c> is informational only (alias of <c>GameId</c> in current schema).
+    /// </summary>
+    private sealed record QuickCreateAgentRequest(
+        Guid GameId,
+        Guid? SharedGameId = null
     );
 
     private static void MapGetAgentsEndpoint(RouteGroupBuilder group)
@@ -269,6 +285,47 @@ internal static class AgentsEndpoints
         .WithTags("Agents")
         .WithSummary("Create agent with optional library add + thread")
         .WithDescription("Orchestrates: optional addToCollection → AddGameToLibraryCommand (idempotent: 'already in' counts as success) → CreateUserAgentCommand → result with placeholder threadId (chat-thread BC integration deferred) and slotUsed=0 (tier/quota Issue #4771 deferred). Issue #655 (Phase β.3).")
+        .WithOpenApi();
+    }
+
+    private static void MapQuickCreateAgentEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/agents/quick-create", async (
+            [FromBody] QuickCreateAgentRequest request,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+            if (!UserLibraryCoreEndpoints.TryGetUserId(context, session, out var userId))
+                return Results.Unauthorized();
+
+            try
+            {
+                var command = new QuickCreateAgentCommand(
+                    UserId: userId,
+                    GameId: request.GameId);
+
+                var result = await mediator.Send(command, ct).ConfigureAwait(false);
+                return Results.Created($"/api/v1/agents/{result.AgentId}", result);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        })
+        .RequireAuthenticatedUser()
+        .Produces<QuickCreateAgentResult>(201)
+        .Produces(400)
+        .Produces(401)
+        .WithTags("Agents")
+        .WithSummary("Quick-create a Tutor agent")
+        .WithDescription("Fast 1-click Tutor onboarding: creates AgentDefinition with type=Tutor and HybridSearch strategy. Auto-derived name 'Tutor for {GameName}'. ChatThreadId placeholder (chat-thread BC integration deferred — same as PR #693) and KbCardCount=0 (KB query deferred). Issue #659 (Phase δ.1).")
         .WithOpenApi();
     }
 }

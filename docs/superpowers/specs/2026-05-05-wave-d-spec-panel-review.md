@@ -328,10 +328,310 @@ This retro is the gate for **Phase 2** (post-Wave D — additional V2 routes or 
 
 ---
 
-**Status**: DRAFT — pending user review before Phase 1 (D.1) dispatch.
-**Next steps post-approval**:
-1. Open child issue D.1 under umbrella #582 (route `/sessions`)
-2. D.1 single-shot subagent dispatch (Wave 4 D1 blueprint)
-3. After D.1 ships → open D.2 child issue + draft Phase 0.5 contract `sessions-id-live-hooks.md`
-4. After D.2 contract review → foundation sub-PR dispatch
-5. Continue per §6 sequencing
+**Status**: ⚠️ AMENDED 2026-05-05 — see §10 post-D.1 addendum.
+**Next steps post-approval**: see §10.4 revised sequencing.
+
+---
+
+## 10. Post-D.1 Amendments (2026-05-05)
+
+> **Trigger**: `/sc:spec-panel review #734 sequencing` after Wave D.1 PR #736 squash `7b8f558db` MERGED 2026-05-05T18:35:35Z.
+> **Validation data**: D.1 actuals (10 commits + 4 review-driven fixes, 187 tests, 6 issues caught by two-stage review including 1 critical at final cumulative review).
+> **Wave D umbrella quality reassessed**: 6.3/10 → **5.5/10** (revealed unflagged blind spots).
+
+### 10.1 Predictions vs actuals
+
+| Original prediction | D.1 actual | Validated? |
+|---------------------|------------|------------|
+| Tier S single-shot acceptable | Tier S, 5-task TDD shipped | ✅ |
+| 4-5 days effort | ~1 day (subagent-driven) | ❌ **4-5× overstated** |
+| Wave 4 D1 blueprint mirror | Mirror confirmed | ✅ |
+| Bundle target ~80 KB | Unverified (--admin merge) | ⏳ |
+| Quality 7.0/10 | Final review caught CRITICAL ICU bug | ❌ **Score TOO HIGH** |
+| MeepleCard variant=list/grid | Cards diverged (API insufficient) | ❌ **Assumption wrong** |
+| Single-shot dispatch acceptable | 6 review-driven fixes across all tasks | ⚠️ Caveat needed |
+
+### 10.2 Four NEW audit gates (must apply to D.2/D.3 + future waves)
+
+#### Gate A — ICU plural defensive pattern (Wiegers + Newman)
+
+**Trigger**: any i18n key with `{count, plural, ...}` or `{var, plural, ...}` ICU formatter.
+
+**Pre-implementation grep audit**:
+```bash
+grep -E "intl\.messages\[.*\] as string" apps/web/src/app/
+grep "{count, plural" apps/web/src/locales/*.json
+```
+
+**Required defensive pattern**:
+- ✅ Orchestrator: `t(key, { count })` resolves ICU plural via next-intl formatter
+- ✅ Component: receives plain `string` (not `template + count` props)
+- ❌ ANTI-PATTERN: `intl.messages[key].replace('{count}', String(count))` — naive replace breaks ICU plural opening identifier, produces raw ICU syntax in production UI
+
+**Rationale**: D.1 PR #736 final review caught this defect — naive `.replace('{count}', ...)` replaced only the opening variable identifier of the ICU plural clause, producing `"6, plural, =0 {Nessuna...} =1 {1 partita...} other {# partite registrate}}"` rendered as visible text. Fixed in commit `0af5df2bf`.
+
+**Apply to**: D.2 LiveTopBar (turn count, player count), EndgameDialog (final scores), D.3 SummaryHeroPodium (player counts), KpiGrid templates.
+
+---
+
+#### Gate B — Schema reality v1 carryover audit (Wiegers + Fowler)
+
+**Trigger**: every Phase 0.5 contract drafting + every Tier S audit checklist.
+
+**Required steps**:
+1. Read DTO schema source: `apps/web/src/lib/api/schemas/<domain>.schemas.ts`
+2. Map mockup field names to actual DTO field names
+3. Document v1 carryover gaps explicitly
+4. Propose backend extension issue (post-merge followup)
+5. Plan graceful degradation in components (e.g., hide score chips when all-zero)
+
+**Required documentation block** in transform/derive functions:
+```ts
+/**
+ * SCHEMA REALITY V1 CARRYOVER (Wave X.Y, mirror PR #717 + PR #736 pattern):
+ * <DtoName> exposes only <fields>. Wave X.Y = visual upgrade only;
+ * <missing-feature> is decorative (placeholder).
+ * Followup issue post-merge: <link or TBD>.
+ */
+```
+
+**Rationale**: D.1 actual revealed `SessionPlayerDto` exposes only `playerName/playerOrder/color` — NO `score/winner` fields. Implementer initially invented `displayName/score/isWinner` (matching mockup), broke compile against real DTO. Caught by spec compliance review (Task 1, commit `329262f8f`).
+
+**Apply to**: D.2 SSE event schema (verify `ScoreEvent`, `ActionLogEvent` shapes against `apps/api/src/Api/BoundedContexts/SessionTracking/`), D.3 SummaryDto schema, all future routes.
+
+---
+
+#### Gate C — MeepleCard API-fit audit (Fowler)
+
+**Trigger**: any v2 component spec mentioning "use MeepleCard variant=list/grid/...".
+
+**Required steps**:
+1. Inspect `apps/web/src/components/ui/data-display/meeple-card/` props (`ListCard.tsx`, `GridCard.tsx`)
+2. Match against mockup composition requirements:
+   - Children/inline content slots? (MeepleCard has NONE)
+   - Wrapper-level animation classes? (`mai-pulse`, etc.)
+   - Absolute-positioned overlays? (OutcomeBadge over cover area)
+   - Custom left-accent-bar? (`border-l-[3px]` sessions pattern)
+3. Decide WRAP (Wave 4 D1 simple cards = title + subtitle) vs DIVERGE (D.1 rich cards = scoring + outcome + connection chips)
+
+**Decision rule**:
+- ✅ WRAP: title + subtitle + optional metadata only (Players/Games index)
+- ❌ DIVERGE: inline composition required (Sessions list/grid, likely D.3 SummaryHeroPodium)
+
+**Rationale**: D.1 cards diverged from MeepleCard because `MeepleCardProps` has no children slot, no animation injection, no positioned overlays. ENGINEERING-JUSTIFIED divergence per spec compliance reviewer ruling. Pattern note: future Tier S routes with rich card composition may also justify divergence.
+
+**Apply to**: D.3 SummaryHeroPodium (3-place podium with confetti + tied logic — RICHER than MeepleCard, likely DIVERGE).
+
+---
+
+#### Gate D — Bootstrap-then-merge discipline (Crispin)
+
+**Trigger**: any visual regression PR with `gh workflow run visual-regression-migrated.yml ... -f mode=bootstrap`.
+
+**Required sequence**:
+1. Open PR (status BLOCKED waiting on bootstrap baselines)
+2. Trigger bootstrap workflow
+3. **WAIT** for bootstrap PNG commits to land on PR branch
+4. Verify visual regression test passes against committed baselines
+5. THEN consider --admin merge (only if E2E DB flake confirmed)
+
+**ANTI-PATTERN**: --admin merge before bootstrap completes
+- D.1 actual: PR #736 merged at 18:35:35Z, bootstrap workflow `25393528841` dispatched ~5min before merge → no rollback signal if bootstrap fails
+- Risk: post-merge baseline drift, broken visual tests on subsequent PRs
+
+**Rationale**: Bootstrap workflow generates canonical PNG baselines on Linux x86-64 runner. If bootstrap fails (e.g., backend missing, fixture mismatch), --admin merge ships code WITHOUT visual regression coverage. Future PRs will fail visual tests until baselines manually added.
+
+**Apply to**: D.2 foundation sub-PR, D.2 interactions sub-PR, D.3 PR — enforce strictly.
+
+### 10.3 Updated audit checklist (additive to §3 per-route critique)
+
+For D.2 Phase 0.5 contract drafting, add these sections:
+- §X: i18n defensive pattern (Gate A)
+- §X: SSE event schema reality audit (Gate B)
+- §X: MeepleCard API-fit audit per component (Gate C)
+- §X: SSE-to-polling transition test (NEW from D.1 review)
+
+For D.3 Phase 0.5 contract drafting:
+- All Gate A-D applied
+- Confetti accessibility audit (screen reader announcement)
+- ShareCard preview boundary clarification (download button hidden v1)
+
+### 10.4 Revised sequencing timeline
+
+Original #734 timeline: 4 weeks. Revised post-D.1 (subagent-driven velocity multiplier):
+
+| Phase | Original | Revised |
+|-------|----------|---------|
+| 1 | Week 1: D.1 single-shot | ✅ Day 1 — D.1 SHIPPED PR #736 |
+| 2 | Week 2: D.2 P0.5 + foundation | Days 2-4: spectator resolution + D.2 P0.5 contract + foundation sub-PR |
+| 2.5 | — | Day 5: **Phase 3 retro mid-stream** (NEW — captures D.1+D.2 lessons before D.3) |
+| 3 | Week 3: D.2 interactions | Days 6-8: D.2 interactions sub-PR + real SSE wiring + smoke spec |
+| 4 | Week 4: D.3 + retro | Days 9-11: D.3 P0.5 (informed by retro) + impl + close umbrella |
+
+**Total revised**: ~11 days (1.5-2 weeks) vs original 4 weeks.
+
+⚠️ **CAVEAT**: D.2 has unknown unknowns (real-time + dialog + dark mode). Conservative: 2 weeks total. Re-estimate after D.2 foundation sub-PR ships.
+
+### 10.5 Strategic questions resolution
+
+| # | Question (from §7) | Status | Action |
+|---|--------------------|--------|--------|
+| 1 | D.2 spectator mode in scope? | OPEN | **Prerequisite gate before D.2 P0.5** |
+| 2 | Phase 3 retro precede D.3? | ✅ RESOLVED → YES (mid-stream after D.2 foundation) | §10.4 sequencing reflects |
+| 3 | Bundle budget overrun mitigation | PARTIAL (D.1 unverified) | Verify D.1 CI Bundle Size, then assess |
+| 4 | Real-time SSE backend endpoint exists? | OPEN | **Verify before D.2 P0.5 dispatch** |
+| 5 | Endgame dialog → D.3 auto-redirect? | OPEN (UX defer) | Punt to D.3 implementation |
+
+### 10.6 Pre-D.2-dispatch prerequisite gates (ordered)
+
+1. ✅ **D.1 ship verification**: PR #736 merged, bootstrap workflow status check
+2. ⚠️ **D.2 spectator role decision**: re-read #582, RBAC scope
+3. ⚠️ **SSE backend endpoint verification**: `grep -rn "sessions.*events" apps/api/src/Api/BoundedContexts/SessionTracking/` — confirm endpoint shape OR file backend prerequisite issue
+4. ⚠️ **D.1 bundle baseline verification**: PR #736 Bundle Size check result (post-merge analytics)
+5. → THEN draft D.2 Phase 0.5 contract with Gates A+B+C+D applied
+
+### 10.7 Quality scoring methodology amendment
+
+Original quality scores (#734 §5) missed:
+- i18n template handling category (caught D.1 ICU plural)
+- Schema reality v1 carryover risk (caught D.1 player fields)
+- MeepleCard API-fit risk (caught D.1 card divergence)
+
+**Revised scoring axes** (post-D.1):
+- Clarity (0-10) — language precision
+- Completeness (0-10) — coverage of essential elements
+- Testability (0-10) — measurability + validation
+- Consistency (0-10) — internal coherence
+- **i18n discipline (0-10)** — NEW: ICU formatter handling, template safety
+- **Schema reality (0-10)** — NEW: DTO alignment with mockup expectations
+- **Component composition (0-10)** — NEW: shared component API-fit + divergence justification
+
+Future Phase 0.5 contracts should self-assess on these 7 axes.
+
+### 10.8 Pattern library updates (memory feedback files)
+
+Capture for future waves in `~/.claude/projects/.../memory/`:
+- New: `feedback_icu-plural-defensive-pattern.md` (Gate A)
+- New: `feedback_schema-reality-v1-carryover.md` (Gate B + Wave 4 D1 + Wave D.1 evidence)
+- New: `feedback_meeplecard-api-fit-audit.md` (Gate C)
+- New: `feedback_bootstrap-then-merge-discipline.md` (Gate D)
+
+These join existing `feedback_v2-tier-dispatch-strategy.md` + `feedback_brownfield-route-redirect-audit.md` + `feedback_subagent-serial-only.md`.
+
+---
+
+**Amendment status**: APPLIED 2026-05-05 post-D.1 ship.
+**Next decision point**: D.2 Phase 0.5 contract drafting (after prerequisite gates §10.6 resolved).
+
+### 10.9 Prerequisite gates RESOLVED (2026-05-05)
+
+Investigation post-amendment closed both critical OPEN gates from §10.6:
+
+#### Gate D.2.1 — Spectator role decision: ✅ RESOLVED (in-scope, server-enforced)
+
+**Source**: `apps/api/src/Api/BoundedContexts/SessionTracking/Domain/Enums/ParticipantRole.cs`
+
+Backend defines a 3-value enum with server-enforced action gating:
+
+| Role | Value | Capabilities |
+|------|-------|--------------|
+| **Spectator** | 0 | View-only access. Can send chat messages but **cannot modify session state**. |
+| **Player** | 1 | Active participant. Own score, dice, cards, timer, chat. |
+| **Host** | 2 | All Player actions + advance turns, pause/resume, kick participants, modify toolkit. |
+
+**Server enforcement**: Commands implement `IRequireSessionRole` with `MinimumRole` property. E.g., `AddSessionEventCommand.MinimumRole = Player` → spectators get 403 if they attempt to add events. `AssignParticipantRoleCommand.MinimumRole = Host` → only host can change roles.
+
+**Source ticket**: Issue #4765 (Player Action Endpoints + Host Validation) introduced role-based gating.
+
+**D.2 Phase 0.5 implications**:
+- ✅ Spectator IS in scope (existing concept, server-enforced)
+- Frontend must read `participant.role` from session DTO + render variant per role:
+  - Player + Host → write actions enabled (score input, dice, cards, timer)
+  - Spectator → write actions hidden OR disabled with tooltip "Only players can update scores"
+  - Host-only actions (pause/resume, kick, advance turn) → only Host sees these UI controls
+- Optimistic UI: client may show button enabled but server enforces — handle 403 gracefully (toast: "Permission denied")
+- E2E coverage: 3-role variant matrix (Spectator + Player + Host) for visual regression
+
+#### Gate D.2.2 — SSE backend endpoint verification: ✅ RESOLVED (4 endpoints exist)
+
+**Sources**: `apps/api/src/Api/Routing/SessionTracking/SessionQueryEndpoints.cs`, `apps/api/src/Api/Routing/SessionFlowEndpoints.cs`
+
+Four real-time/event endpoints exist:
+
+| Endpoint | Type | Use case |
+|----------|------|----------|
+| `GET /game-sessions/{id}/stream` | SSE v1 | Basic SSE, no reconnection state |
+| `GET /game-sessions/{id}/stream/v2` | SSE **v2** ⭐ | **Last-Event-ID reconnection, typed events, conn pool 20 max, per-player filtering** |
+| `GET /game-sessions/{id}/events` | REST paginated | Timeline events query (NOT SSE — paginated session diary) |
+| `GET /sessions/{id}/diary/stream` | SSE | Diary-specific updates |
+
+**Recommended for D.2: `/game-sessions/{id}/stream/v2`** — implements all Newman's reconnection recommendations from §3.2:
+
+- ✅ **Last-Event-ID header** (line 357): `var lastEventId = context.Request.Headers["Last-Event-ID"].FirstOrDefault();`
+- ✅ **Typed event names** (line 395): `event: <EventType>\n` (e.g., `session:score`, `session:turn`)
+- ✅ **Event ID per envelope** (line 394): `id: <envelope.Id>\n` for client `Last-Event-ID` tracking
+- ✅ **Heartbeat** (lines 367-384): 30s interval, `event: heartbeat\ndata: {timestamp}\n\n`
+- ✅ **Connection pool limits** (line 351): max 20 connections/session, returns 429 Too Many Requests
+- ✅ **Auth + access check** (lines 329-348): 401 (no auth), 403 (no access), 404 (session not found)
+- ✅ **Per-player filtering**: `broadcastService.SubscribeAsync(sessionId, userId, lastEventId, ct)` filters events by recipient
+
+**Service**: `ISessionBroadcastService.SubscribeAsync(...)` exposes `IAsyncEnumerable<EventEnvelope>` with `{ Id, EventType, Data }`.
+
+**Headers required** (per server impl):
+```
+GET /api/v1/game-sessions/{id}/stream/v2
+Headers:
+  Cookie: <session-cookie>
+  Last-Event-ID: <last-id-on-reconnect>  // optional
+Response:
+  Content-Type: text/event-stream
+  Cache-Control: no-cache
+  Connection: keep-alive
+```
+
+**SSE event format**:
+```
+id: <event-id>
+event: <EventType>  // e.g., session:score, session:turn, session:pause
+data: <json-payload>
+
+```
+
+**D.2 Phase 0.5 implications**:
+- ✅ Backend SSE is **production-ready**, no backend prerequisite issue needed (unlike Wave 3)
+- Frontend `useSessionLiveStream` hook should:
+  - Use native `EventSource` API (browser-native SSE client)
+  - Track `lastEventId` from `event.lastEventId` automatically (browser handles)
+  - On error: exponential backoff retry [1s, 2s, 4s, 8s, 16s] (Newman recommendation)
+  - After 5 retries → fall back to polling `useSessionState` 5s
+  - Show `ConnectionLostBanner` when SSE drops + auto-hide on reconnect
+  - Handle 429 (connection pool full) → show "Sessione affollata, riprova tra poco"
+- Event types enum to verify in implementation: grep backend for typed names emitted (e.g., `session:score`, `session:turn`, `session:pause`, `session:resume`, `session:endgame`, `session:chat`, `session:tool-execution`)
+
+#### Gate D.2 unblocked
+
+Both prerequisite gates **CLOSED**. D.2 Phase 0.5 contract drafting can proceed. Updated #10.6 sequencing:
+
+1. ✅ D.1 ship verification (PR #736 merged)
+2. ✅ **D.2 spectator role**: in-scope, 3-role variant matrix (Spectator/Player/Host) per server enum
+3. ✅ **SSE backend endpoint**: `/game-sessions/{id}/stream/v2` production-ready
+4. ⚠️ D.1 bundle baseline verification (deferred, post-merge analytics — non-blocking)
+5. → **PROCEED** to D.2 Phase 0.5 contract drafting
+
+#### D.2 Phase 0.5 contract additions (per resolved gates)
+
+The contract MUST include:
+- **§ Role-based variant matrix**: Spectator/Player/Host UI affordances + server-enforced gating + 403 handling
+- **§ SSE event schema**: typed event names enum, payload schemas per type, version field
+- **§ EventSource integration**: `lastEventId` tracking via browser API, retry semantics, 5-retry budget
+- **§ Polling fallback**: `useSessionState` 5s after SSE retry exhaustion, banner UX
+- **§ Connection pool handling**: 429 response → user-facing "Sessione affollata" message
+- **§ Heartbeat handling**: optional client-side detection of stale connection (no event >35s post-heartbeat)
+
+#### Pattern emerso
+
+**Gate resolution via codebase grep** — when prerequisite gates flag UNKNOWN backend state, the fastest resolution path is direct codebase investigation (`grep -rn` on backend BC + Domain/Enums + Routing). For Wave D.2, this revealed:
+- Spectator role NOT a UI invention — backend has full 3-role enum + command-level gating already
+- SSE infrastructure NOT a future requirement — production-ready v2 endpoint with all advanced features (Last-Event-ID, typed events, conn pool, per-player filtering)
+
+This pattern saves 1-2 days vs filing backend issue + waiting for clarification. Apply BEFORE filing audit issues like Wave 3 #728/#729/#730.

@@ -146,7 +146,7 @@ Status legend: ✅ controlled · ⚠️ partial · ❌ gap · 🆕 new threat
 
 ### 1.3 Risk Acceptance Records
 
-> 🆕 **C-2 (Adzic)**: see [Scenario: Critical finding non remediable](#scenarios) below.
+> 🆕 **C-2 (Adzic)**: see [Scenario: Critical finding non remediable](#8-scenarios-given--when--then) below.
 
 #### Acceptance 1: [Title]
 - **Alert**: CodeQL #[id]
@@ -651,7 +651,7 @@ Else it can defer to next quarter at tier-2
 
 ## Appendix C — References
 
-- [SECURITY.md](../../SECURITY.md)
+- `SECURITY.md` (root — pending restoration, see #745)
 - [OWASP Top 10 2021](https://owasp.org/Top10/)
 - [OWASP ASVS 4.0](https://owasp.org/www-project-application-security-verification-standard/)
 - [CWE Top 25](https://cwe.mitre.org/top25/)

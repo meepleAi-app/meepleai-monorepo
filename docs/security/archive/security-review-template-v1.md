@@ -348,7 +348,7 @@ AllowCredentials()
 - **Pre-commit hooks**: [version]
 
 ### References
-- [SECURITY.md](../../SECURITY.md)
+- `SECURITY.md` (root — pending restoration, see #745)
 - [OWASP Top 10 2021](https://owasp.org/Top10/)
 - [CWE Top 25](https://cwe.mitre.org/top25/)
 - [GitHub Security Advisories](https://github.com/advisories)

@@ -327,5 +327,5 @@ Questo context è stato completamente migrato alla nuova architettura DDD/CQRS. 
 ## Related Documentation
 
 - `docs/01-architecture/overview/system-architecture.md` (Configuration section)
-- `docs/security/environment-variables-production.md` (pending restoration — see #745)
+- `docs/security/environment-variables-production.md`
 - `docs/02-development/configuration-management.md`

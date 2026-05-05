@@ -19,4 +19,18 @@ internal interface IPhotoBatchUploadRepository : IRepository<PhotoBatchUpload, G
     /// Returns null when not found.
     /// </summary>
     Task<PhotoBatchUpload?> FindByIdWithPagesAsync(Guid id, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the extracted text for a specific page in a batch,
+    /// or <c>null</c> if the page does not exist or has no text yet.
+    /// Libro Game AI Assistant MVP Phase 3 — G4: GetParagraphQuery.
+    /// </summary>
+    Task<string?> GetPageTextAsync(Guid uploadId, int pageNumber, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns <c>true</c> when the batch exists AND belongs to the specified user.
+    /// Used for ownership-based authorization before fetching page text.
+    /// Libro Game AI Assistant MVP Phase 3 — G4: GetParagraphQuery.
+    /// </summary>
+    Task<bool> BelongsToUserAsync(Guid uploadId, Guid userId, CancellationToken ct = default);
 }

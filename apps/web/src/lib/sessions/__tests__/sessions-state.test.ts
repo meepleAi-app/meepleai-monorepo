@@ -4,6 +4,7 @@ import {
   type DeriveSessionsUiStateInput,
   type SessionsUiState,
   deriveSessionsUiState,
+  parseStateOverride,
 } from '../sessions-state';
 
 // ---------------------------------------------------------------------------
@@ -158,5 +159,31 @@ describe('deriveSessionsUiState', () => {
 
   it("returns 'default' when filteredCount=1 (edge: single visible result after filter)", () => {
     expectState(deriveSessionsUiState(input({ totalCount: 3, filteredCount: 1 })), 'default');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseStateOverride re-export — confirm sessions-state.ts re-exports it
+// ---------------------------------------------------------------------------
+
+describe('parseStateOverride re-export from sessions-state', () => {
+  it('is a function exported from sessions-state (not just from sessions-visual-test-fixture)', () => {
+    expect(typeof parseStateOverride).toBe('function');
+  });
+
+  it("returns 'loading' when ?state=loading (re-export delegates to fixture impl)", () => {
+    expect(parseStateOverride(new URLSearchParams({ state: 'loading' }))).toBe('loading');
+  });
+
+  it("returns 'empty' when ?state=empty", () => {
+    expect(parseStateOverride(new URLSearchParams({ state: 'empty' }))).toBe('empty');
+  });
+
+  it('returns null for unknown state values', () => {
+    expect(parseStateOverride(new URLSearchParams({ state: 'unknown' }))).toBeNull();
+  });
+
+  it('returns null when no state param', () => {
+    expect(parseStateOverride(new URLSearchParams())).toBeNull();
   });
 });

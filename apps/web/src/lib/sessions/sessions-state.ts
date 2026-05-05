@@ -49,3 +49,14 @@ export function deriveSessionsUiState(input: DeriveSessionsUiStateInput): Sessio
   if (input.filteredCount === 0) return 'filtered-empty';
   return 'default';
 }
+
+// ---------------------------------------------------------------------------
+// State override re-export (for orchestrator import convenience)
+// ---------------------------------------------------------------------------
+
+/**
+ * Re-exported from sessions-visual-test-fixture so orchestrator (Task 3) can
+ * import `parseStateOverride` from the same barrel as `deriveSessionsUiState`
+ * without coupling to the fixture module directly.
+ */
+export { parseStateOverride } from './sessions-visual-test-fixture';

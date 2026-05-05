@@ -1669,8 +1669,8 @@
         "ctaRetry": "Riprova"
       },
       "a11y": {
-        "resultsRegionLabel": "Lista partite",
-        "resultsCount": "{count, plural, =0 {Nessuna partita} =1 {1 partita} other {# partite}}"
+        "resultsLabel": "Lista partite",
+        "countTemplate": "{count, plural, =0 {Nessuna partita} =1 {1 partita} other {# partite}}"
       }
     },
     "players": {

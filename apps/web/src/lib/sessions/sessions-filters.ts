@@ -9,6 +9,9 @@
  *   id, gameId, status (InProgress|Paused|Setup|Completed|Abandoned),
  *   startedAt, completedAt, playerCount, players, winnerName, notes, durationMinutes
  *
+ * SessionPlayerDto (games.schemas.ts lines 58–62) provides:
+ *   playerName, playerOrder, color — NO score or winner fields.
+ *
  * Wave D.1 = visual upgrade only. The SessionListItem shape is a display-ready
  * transform of GameSessionDto — gameName is derived from gameId for now (the
  * orchestrator Task 3 will join game title from the games catalog).
@@ -18,6 +21,8 @@
  * those same values for consistency with the mockup; 'active' is treated as a
  * filter-level alias covering both 'inprogress' and 'paused' statuses.
  */
+
+import type { SessionPlayerDto } from '../api/schemas/games.schemas';
 
 /** Display-ready status values aligned with mockup filter chips. */
 export type SessionStatusFilter = 'all' | 'active' | 'completed' | 'abandoned';
@@ -73,7 +78,14 @@ export interface SessionListItem {
 }
 
 /**
- * Transforms a GameSessionDto array into display-ready SessionListItem rows.
+ * Transforms GameSessionDto[] from useActiveSessions to SessionListItem[].
+ *
+ * SCHEMA REALITY V1 CARRYOVER (Wave D.1):
+ * SessionPlayerDto exposes only playerName/playerOrder/color — NO score or winner
+ * fields. Wave D.1 = visual upgrade only; scoring is decorative (placeholder 0).
+ * Followup issue post-merge for true scoring API extension.
+ *
+ * Mirror: Wave 4 D1 PR #717 schema reality pattern.
  *
  * Game name resolution: the orchestrator (Task 3) should pre-resolve game titles
  * from the user library cache and pass them via a `gameNameMap` lookup table.
@@ -90,11 +102,7 @@ export function transformSessionsToItems(
     startedAt: string;
     completedAt: string | null;
     playerCount: number;
-    players: ReadonlyArray<{
-      displayName: string;
-      score?: number | null;
-      isWinner?: boolean | null;
-    }>;
+    players: ReadonlyArray<SessionPlayerDto>;
     winnerName: string | null;
     notes: string | null;
     durationMinutes: number;
@@ -105,10 +113,12 @@ export function transformSessionsToItems(
     const gameName = gameNameMap[dto.gameId] ?? dto.gameId;
     const status = mapStatus(dto.status);
     const outcome = deriveOutcome(dto);
+    // SCHEMA REALITY V1 CARRYOVER: SessionPlayerDto has no score/winner fields.
+    // score=0 and winner=false are placeholders until the scoring API is extended.
     const scores: ReadonlyArray<SessionScoreEntry> = dto.players.map(p => ({
-      name: p.displayName,
-      score: p.score ?? 0,
-      winner: p.isWinner ?? false,
+      name: p.playerName,
+      score: 0,
+      winner: false,
     }));
 
     return {
@@ -144,7 +154,7 @@ function mapStatus(backendStatus: string): SessionListItem['status'] {
 function deriveOutcome(dto: {
   status: string;
   winnerName: string | null;
-  players: ReadonlyArray<{ displayName: string }>;
+  players: ReadonlyArray<SessionPlayerDto>;
 }): SessionListItem['outcome'] {
   const status = mapStatus(dto.status);
   if (status !== 'completed') return null;

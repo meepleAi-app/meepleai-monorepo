@@ -10,7 +10,7 @@
 
 import type { ReactElement } from 'react';
 
-import type { ParticipantRole } from '@/lib/session-live/sse-events';
+import type { ParticipantRole } from '@/lib/session-live/participant-role';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

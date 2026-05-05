@@ -6,6 +6,7 @@ internal static class TranslationServiceExtensions
 {
     public static IServiceCollection AddTranslationServices(this IServiceCollection services)
     {
+        services.AddScoped<ITranslationCache, RedisTranslationCache>();
         services.AddScoped<OpenRouterTranslationService>();
         services.AddScoped<INarrativeTranslationService>(sp =>
             sp.GetRequiredService<OpenRouterTranslationService>());

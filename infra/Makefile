@@ -41,6 +41,15 @@ work: ## Hybrid dev loop: tunnel + local API+Web + watchdog (single command)
 work-stop: ## Stop work session cleanly (alternative to Ctrl+C)
 	bash scripts/work.sh stop
 
+smoke: ## Run automated smoke set against BASE_URL (default localhost:8080) — set TEST_EMAIL/TEST_PASSWORD for auth scenarios
+	bash scripts/smoke-set.sh $(BASE_URL) $(TEST_EMAIL) $(TEST_PASSWORD)
+
+smoke-staging: ## Run automated smoke set against staging (https://meepleai.app)
+	bash scripts/smoke-set.sh https://meepleai.app $(TEST_EMAIL) $(TEST_PASSWORD)
+
+smoke-pg-readback: ## Run pg-readback.sh DB-direct migration validation (requires open tunnel)
+	bash scripts/pg-readback.sh
+
 staging: ## Deploy staging — core + AI + monitoring (CAX31+ recommended, ~14GB reservation)
 	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
 		--profile ai --profile monitoring --profile proxy up -d
@@ -333,7 +342,7 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
 
 .PHONY: dev dev-core dev-down \
         tunnel tunnel-stop tunnel-status integration-check integration \
-        integration-down work work-stop staging staging-minimal staging-with-tutor staging-tutor-down staging-core staging-down prod prod-down \
+        integration-down work work-stop smoke smoke-staging smoke-pg-readback staging staging-minimal staging-with-tutor staging-tutor-down staging-core staging-down prod prod-down \
         alpha alpha-core alpha-down \
         secrets-setup secrets-sync \
         snapshot restore-staging restore-local seed-games \

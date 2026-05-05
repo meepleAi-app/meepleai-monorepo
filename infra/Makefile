@@ -126,13 +126,20 @@ backup-status: ## Show latest backup info
 	@echo "📊 Disk usage:"
 	@du -sh /backups/meepleai/ 2>/dev/null || echo "  No backup directory"
 
-backup-cron-install: ## Install daily backup cron job (3 AM)
-	@echo "Installing backup cron job..."
-	@(crontab -l 2>/dev/null | grep -v "meepleai.*backup"; \
+backup-cron-install: ## Install all infrastructure cron jobs (backup, verify, prune, DR)
+	@echo "Installing infrastructure cron jobs..."
+	@(crontab -l 2>/dev/null | grep -vE "meepleai.*(backup|prune|dr-walkthrough|restore-test)"; \
 	  echo "0 3 * * * cd /opt/meepleai/repo/infra && bash scripts/backup.sh >> /var/log/meepleai-backup.log 2>&1"; \
 	  echo "30 3 * * * cd /opt/meepleai/repo/infra && bash scripts/backup-verify.sh >> /var/log/meepleai-backup-verify.log 2>&1"; \
-	  echo "0 4 * * 0 cd /opt/meepleai/repo/infra && bash scripts/backup-restore-test.sh >> /var/log/meepleai-restore-test.log 2>&1") | crontab -
-	@echo "✅ Cron installed: backup daily 3:00, verify 3:30, restore test weekly Sunday 4:00"
+	  echo "0 5 * * * cd /opt/meepleai/repo/infra && bash scripts/daily-disk-prune.sh >> /var/log/meepleai-disk-prune.log 2>&1"; \
+	  echo "0 4 1 * * cd /opt/meepleai/repo/infra && bash scripts/backup-restore-test.sh --with-smoke-readback >> /var/log/meepleai-restore-test.log 2>&1"; \
+	  echo "0 9 1 1,4,7,10 * cd /opt/meepleai/repo/infra && bash scripts/dr-walkthrough-reminder.sh >> /var/log/meepleai-dr-reminder.log 2>&1") | crontab -
+	@echo "✅ Cron installed:"
+	@echo "  daily 03:00  → backup"
+	@echo "  daily 03:30  → backup-verify"
+	@echo "  daily 05:00  → disk-prune"
+	@echo "  monthly 1st 04:00  → restore-test (with smoke read-back)"
+	@echo "  quarterly 09:00    → DR walkthrough reminder"
 
 backup-cron-show: ## Show installed backup cron jobs
 	@crontab -l 2>/dev/null | grep meepleai || echo "No MeepleAI cron jobs found"

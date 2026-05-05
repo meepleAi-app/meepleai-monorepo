@@ -54,13 +54,13 @@ staging: ## Deploy staging — core + AI + monitoring (CAX31+ recommended, ~14GB
 	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
 		--profile ai --profile monitoring --profile proxy up -d
 
-staging-minimal: ## Deploy staging single-tester profile (~3GB RAM, no orchestration/n8n/seq/cadvisor)
-	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
-		--profile ai-essential --profile monitoring-essential --profile proxy up -d
+staging-minimal: ## Deploy staging single-tester profile (~3GB RAM) — edge via Cloudflare Tunnel (cloudflared on VPS, not Traefik)
+	$(COMPOSE) -f compose.staging.yml \
+		--profile ai-essential --profile monitoring-essential up -d
 
 staging-with-tutor: ## Deploy staging single-tester + orchestration-service for tutor agents (~5GB RAM)
-	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
-		--profile ai-essential --profile monitoring-essential --profile proxy --profile tutor-agents up -d
+	$(COMPOSE) -f compose.staging.yml \
+		--profile ai-essential --profile monitoring-essential --profile tutor-agents up -d
 
 staging-tutor-down: ## Stop only orchestration-service (keep rest of staging running)
 	$(COMPOSE) -f compose.staging.yml --profile tutor-agents stop orchestration-service

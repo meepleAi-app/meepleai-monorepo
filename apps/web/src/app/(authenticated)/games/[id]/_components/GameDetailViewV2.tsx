@@ -186,7 +186,7 @@ function NotFoundShell({
       <a
         href="/games"
         data-slot="game-detail-not-found-cta"
-        className="inline-flex items-center gap-1.5 rounded-md border-none bg-amber-600 px-4 py-2.5 font-display text-[13px] font-extrabold text-white shadow-md transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="inline-flex items-center gap-1.5 rounded-md border-none bg-amber-700 px-4 py-2.5 font-display text-[13px] font-extrabold text-white shadow-md transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {cta}
       </a>

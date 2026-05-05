@@ -92,7 +92,7 @@ export function GameDetailSessionsRail(props: GameDetailSessionsRailProps): Reac
               type="button"
               onClick={onNewSession}
               data-slot="game-detail-sessions-new"
-              className="rounded-md border-none bg-emerald-600 px-3 py-1 font-display text-[11px] font-extrabold text-white shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="rounded-md border-none bg-emerald-700 px-3 py-1 font-display text-[11px] font-extrabold text-white shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {labels.newSession}
             </button>

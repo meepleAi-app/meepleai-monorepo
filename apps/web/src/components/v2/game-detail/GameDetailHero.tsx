@@ -196,7 +196,7 @@ export function GameDetailHero(props: GameDetailHeroProps): ReactElement {
                 type="button"
                 onClick={onPlay}
                 data-slot="game-detail-cta-play"
-                className="inline-flex items-center gap-1.5 rounded-md border-none bg-emerald-600 px-4 py-2.5 font-display text-[13px] font-extrabold text-white shadow-md transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex items-center gap-1.5 rounded-md border-none bg-emerald-700 px-4 py-2.5 font-display text-[13px] font-extrabold text-white shadow-md transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <span aria-hidden="true">🎯</span>
                 <span>{labels.ctaPlay}</span>
@@ -221,7 +221,7 @@ export function GameDetailHero(props: GameDetailHeroProps): ReactElement {
                 type="button"
                 onClick={onAddToLibrary}
                 data-slot="game-detail-cta-add"
-                className="inline-flex items-center gap-1.5 rounded-md border-none bg-amber-600 px-4 py-2.5 font-display text-[13px] font-extrabold text-white shadow-md transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex items-center gap-1.5 rounded-md border-none bg-amber-700 px-4 py-2.5 font-display text-[13px] font-extrabold text-white shadow-md transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {labels.ctaAddToLibrary}
               </button>

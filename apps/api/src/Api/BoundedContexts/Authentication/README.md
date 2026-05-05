@@ -110,6 +110,6 @@ Questo context è stato completamente migrato alla nuova architettura DDD/CQRS. 
 
 ## Related Documentation
 
-- `docs/security/oauth-security.md` (pending restoration — see #745)
-- `docs/security/environment-variables-production.md` (pending restoration — see #745)
+- `docs/security/oauth-security.md`
+- `docs/security/environment-variables-production.md`
 - `SECURITY.md` (pending restoration — see #745)

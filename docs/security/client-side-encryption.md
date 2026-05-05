@@ -214,7 +214,7 @@ Client-side encryption is **Layer 3** in a multi-layer security strategy:
 │ • Prevent data: URIs in scripts                            │
 │ • Frame ancestors control (frame-ancestors 'none')         │
 │                                                             │
-│ See: docs/security/security-headers.md (pending — #745)    │
+│ See: security-headers.md (pending — #745)                  │
 └────────────────────────────────────────────────────────────┘
                          ▼
 ┌────────────────────────────────────────────────────────────┐
@@ -617,9 +617,9 @@ pnpm test:coverage
 - [Web Crypto API Examples](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
 
 ### Related Documentation
-- [Security Headers](./security-headers.md) - CSP and other HTTP headers
+- `security-headers.md` - CSP and other HTTP headers (pending restoration — see #745)
 - [OAuth Security](./oauth-security.md) - OAuth token encryption
-- [Security Patterns](./security-patterns.md) - General security patterns
+- `security-patterns.md` - General security patterns (pending restoration — see #745)
 
 ---
 

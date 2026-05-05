@@ -196,10 +196,13 @@ services:
   grafana:
     restart: always
     env_file: [./secrets/monitoring.secret]
-    # Traefik labels removed (post CF Tunnel cutover). For external grafana access add a CF tunnel public hostname.
+    # External access via Cloudflare Tunnel: grafana.meepleai.app → localhost:3001 → container :3000.
+    # Behind CF Access policy meepleai-prod (owner-only).
+    ports:
+      - "127.0.0.1:3001:3000"
     environment:
-      GF_SERVER_ROOT_URL: "https://meepleai.app/grafana"
-      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_SERVER_ROOT_URL: "https://grafana.meepleai.app"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
     volumes:
       - grafana-staging:/var/lib/grafana
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
@@ -208,7 +211,10 @@ services:
 
   prometheus:
     restart: always
-    # Traefik labels removed (post CF Tunnel cutover). For external prometheus access add a CF tunnel public hostname.
+    # External access via Cloudflare Tunnel: prometheus.meepleai.app → localhost:9090 → container :9090.
+    # Behind CF Access policy meepleai-prod (owner-only).
+    ports:
+      - "127.0.0.1:9090:9090"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'

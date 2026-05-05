@@ -619,7 +619,13 @@ jobs:
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
-            cd /opt/meepleai/repo/infra
+            # Sync /opt/meepleai/repo to the deploy SHA so compose files
+            # match the workflow context (compose.traefik.yml, etc.)
+            cd /opt/meepleai/repo
+            git fetch origin main-staging
+            git reset --hard ${{ env.DEPLOY_SHA }}
+            echo "✅ Repo synced to $(git rev-parse --short HEAD)"
+            cd infra
 
             # Pre-deploy port cleanup — kill any stale process holding :8080
             # (see memory: feedback_staging_stale_api_host_process)

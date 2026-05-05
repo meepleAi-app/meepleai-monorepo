@@ -50,6 +50,10 @@ internal sealed class GameMemoryEntityConfiguration : IEntityTypeConfiguration<G
             .HasColumnName("notes_json")
             .HasColumnType("jsonb");
 
+        builder.Property(e => e.GlossaryEntriesJson)
+            .HasColumnName("glossary_entries_json")
+            .HasColumnType("jsonb");
+
         // --- Indexes ---
 
         builder.HasIndex(e => new { e.GameId, e.OwnerId })

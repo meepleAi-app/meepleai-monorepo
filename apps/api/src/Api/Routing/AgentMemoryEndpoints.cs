@@ -1,6 +1,7 @@
 using Api.BoundedContexts.AgentMemory.Application.Commands;
 using Api.BoundedContexts.AgentMemory.Application.DTOs;
 using Api.BoundedContexts.AgentMemory.Application.Queries;
+using Api.BoundedContexts.AgentMemory.Domain.Enums;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -64,6 +65,20 @@ internal static class AgentMemoryEndpoints
             .Produces(400)
             .Produces(401)
             .WithSummary("Add a memory note");
+
+        agentMemory.MapPost("/games/{gameId:guid}/memory/glossary", HandleAddGlossaryEntry)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(401)
+            .Produces(409)
+            .WithSummary("Add a glossary entry");
+
+        agentMemory.MapGet("/games/{gameId:guid}/memory/glossary", HandleGetGlossary)
+            .RequireAuthenticatedUser()
+            .Produces<List<GlossaryEntryDto>>(200)
+            .Produces(401)
+            .WithSummary("Get all glossary entries for a game");
 
         // === Player Stats ===
 
@@ -169,6 +184,32 @@ internal static class AgentMemoryEndpoints
         return Results.NoContent();
     }
 
+    private static async Task<IResult> HandleAddGlossaryEntry(
+        Guid gameId,
+        [FromBody] AddGlossaryEntryRequest request,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var command = new AddGlossaryEntryCommand(
+            gameId, userId, request.Term, request.Definition, request.Language);
+
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleGetGlossary(
+        Guid gameId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator.Send(new GetGlossaryQuery(gameId, userId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     // === Player Stats Handlers ===
 
     private static async Task<IResult> HandleGetMyStats(
@@ -220,6 +261,8 @@ internal static class AgentMemoryEndpoints
     internal record AddHouseRuleRequest(string Description);
 
     internal record AddNoteRequest(string Content);
+
+    internal record AddGlossaryEntryRequest(string Term, string Definition, string Language = "en");
 
     internal record ClaimGuestRequest(Guid PlayerMemoryId);
 }

@@ -491,6 +491,10 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Phase 2 Task 2.5: House rule matcher — cross-BC read from AgentMemory, heuristic word-overlap
         services.AddScoped<IHouseRuleMatcher, HeuristicHouseRuleMatcher>();
+
+        // Phase 2 Task 2.3b: Pricing engine — NullPricingEngine stub (always allows).
+        // PHASE 3 REPLACE with CreditBasedPricingEngine in Phase 3 Task 3.2.
+        services.AddScoped<IPricingEngine, NullPricingEngine>();
     }
 
     private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)

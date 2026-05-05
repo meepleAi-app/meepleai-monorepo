@@ -17,5 +17,6 @@ internal record AskQuestionQuery(
     string Language = "en",
     bool BypassCache = false,
     Guid? UserId = null,
-    string? UserRole = null
+    string? UserRole = null,
+    string? ResponseLanguage = null // Phase 2: If set and differs from Language, response is translated post-LLM
 ) : IQuery<QaResponseDto>;

@@ -1,0 +1,86 @@
+# E2E test environment for Libro Game AI Assistant Phase 2
+# Isolated stack for testing translation + Q&A flows
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f compose.test.yml up -d
+#
+# Tests run against this isolated environment.
+# Postgres binds to :5433, Redis binds to :6380 (no dev conflict).
+# Data is in-memory (tmpfs) — destroyed on stack down.
+
+services:
+  # ===========================================================================
+  # Core Infrastructure (Test Overrides)
+  # ===========================================================================
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: meepleai_test
+      POSTGRES_USER: meepleai_test
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "127.0.0.1:5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6380:6379"
+    command: ["redis-server", "--save", ""]
+    tmpfs:
+      - /data
+
+  # ===========================================================================
+  # Application Services (Test Configuration)
+  # ===========================================================================
+
+  api:
+    env_file:
+      - ./secrets/test.secret
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Testing
+      ASPNETCORE_URLS: http://+:8080
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: meepleai_test
+      POSTGRES_USER: meepleai_test
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      # Translation service flags
+      TRANSLATION_SERVICE_ENABLED: "true"
+      # Pricing engine disabled in test (use NullPricingEngine)
+      PRICING_ENGINE_MODE: "null"
+      # Hallucination gate disabled for test determinism
+      HALLUCINATION_GATE_ENABLED: "false"
+      # Embedding: use local test instance (if available) or mock
+      EMBEDDING_PROVIDER: external
+      Embedding__Provider: External
+      EMBEDDING_MODEL: intfloat/multilingual-e5-base
+      Embedding__Model: intfloat/multilingual-e5-base
+      EMBEDDING_DIMENSIONS: 768
+      Embedding__Dimensions: 768
+      EMBEDDING_FALLBACK_ENABLED: "false"
+      Embedding__FallbackEnabled: "false"
+    volumes:
+      - ./secrets:/app/infra/secrets:ro
+
+  web:
+    ports:
+      - "127.0.0.1:3000:3000"
+    build:
+      args:
+        NEXT_PUBLIC_API_BASE: http://localhost:8080
+        NEXT_PUBLIC_ALPHA_MODE: "false"
+    environment:
+      NODE_ENV: test
+      API_BASE_URL: http://api:8080
+      NEXT_PUBLIC_API_BASE: http://localhost:8080
+
+# =============================================================================
+# Test-specific volumes (separate to avoid conflicts)
+# =============================================================================
+volumes: {}

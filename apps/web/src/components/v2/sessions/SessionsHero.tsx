@@ -22,26 +22,18 @@ import clsx from 'clsx';
 
 export interface SessionsHeroLabels {
   readonly title: string;
-  /** Template e.g. "{count} sessioni totali" — {count} is replaced at render time. */
-  readonly subtitleTemplate: string;
+  /** Resolved subtitle string (ICU plural already formatted by orchestrator with count). */
+  readonly subtitle: string;
   readonly ctaNew: string;
 }
 
 export interface SessionsHeroProps {
-  readonly count: number;
   readonly onNewSession: () => void;
   readonly labels: SessionsHeroLabels;
   readonly className?: string;
 }
 
-export function SessionsHero({
-  count,
-  onNewSession,
-  labels,
-  className,
-}: SessionsHeroProps): ReactElement {
-  const subtitle = labels.subtitleTemplate.replace('{count}', String(count));
-
+export function SessionsHero({ onNewSession, labels, className }: SessionsHeroProps): ReactElement {
   return (
     <section
       data-slot="sessions-hero"
@@ -53,7 +45,7 @@ export function SessionsHero({
           <h1 className="text-2xl font-bold tracking-tight text-[hsl(240,60%,45%)] sm:text-3xl">
             {labels.title}
           </h1>
-          <p className="text-sm text-slate-600">{subtitle}</p>
+          <p className="text-sm text-slate-600">{labels.subtitle}</p>
         </div>
 
         {/* CTA */}

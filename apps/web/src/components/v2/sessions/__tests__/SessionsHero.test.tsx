@@ -4,7 +4,7 @@
  * 6 tests:
  * 1. Renders data-slot="sessions-hero"
  * 2. Renders title from labels
- * 3. Substitutes {count} in subtitleTemplate
+ * 3. Renders resolved subtitle string from labels
  * 4. Renders CTA button with correct aria-label
  * 5. Fires onNewSession on CTA click
  * 6. Applies custom className
@@ -18,12 +18,11 @@ import type { SessionsHeroProps } from '../SessionsHero';
 
 const LABELS: SessionsHeroProps['labels'] = {
   title: 'Le tue partite',
-  subtitleTemplate: '{count} sessioni totali',
+  subtitle: '42 partite registrate',
   ctaNew: 'Nuova sessione',
 };
 
 const DEFAULT_PROPS: SessionsHeroProps = {
-  count: 42,
   onNewSession: vi.fn(),
   labels: LABELS,
 };
@@ -39,9 +38,9 @@ describe('SessionsHero', () => {
     expect(screen.getByText('Le tue partite')).toBeTruthy();
   });
 
-  it('substitutes {count} in subtitleTemplate', () => {
-    render(<SessionsHero {...DEFAULT_PROPS} count={42} />);
-    expect(screen.getByText('42 sessioni totali')).toBeTruthy();
+  it('renders resolved subtitle string from labels', () => {
+    render(<SessionsHero {...DEFAULT_PROPS} />);
+    expect(screen.getByText('42 partite registrate')).toBeTruthy();
   });
 
   it('renders CTA button with correct aria-label', () => {

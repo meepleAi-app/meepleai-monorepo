@@ -141,14 +141,11 @@ export function SessionsLibraryView(): ReactElement {
   const heroLabels = useMemo<SessionsHeroLabels>(
     () => ({
       title: t('pages.sessions.hero.title'),
-      // subtitleTemplate uses {count} replaced at render time in SessionsHero
-      // Use intl.messages to read the raw template string — bypasses ICU parsing
-      // (react-intl would throw for unresolved {count} variables if we used t())
-      subtitleTemplate:
-        (intl.messages['pages.sessions.hero.subtitle'] as string) ?? '{count} partite',
+      // Resolve ICU plural subtitle with count param via next-intl's t() (proper formatter)
+      subtitle: t('pages.sessions.hero.subtitle', { count: allItems.length }),
       ctaNew: t('pages.sessions.hero.ctaNew'),
     }),
-    [t, intl.messages]
+    [t, allItems.length]
   );
 
   const filtersLabels = useMemo<SessionsFiltersLabels>(
@@ -295,7 +292,7 @@ export function SessionsLibraryView(): ReactElement {
       className="flex flex-col gap-6 pb-24"
       id="sessions-content"
     >
-      <SessionsHero count={allItems.length} onNewSession={handleNewSession} labels={heroLabels} />
+      <SessionsHero onNewSession={handleNewSession} labels={heroLabels} />
 
       <SessionsFilters
         statusFilter={statusFilter}

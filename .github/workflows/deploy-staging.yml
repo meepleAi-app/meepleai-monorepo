@@ -615,6 +615,18 @@ jobs:
           script: |
             cd /opt/meepleai/repo/infra
 
+            # Pre-deploy port cleanup — kill any stale process holding :8080
+            # (see memory: feedback_staging_stale_api_host_process)
+            # Refs: docs/superpowers/specs/2026-05-05-infrastructure-single-tester-design.md G1.C1
+            STALE_PIDS=$(sudo fuser 8080/tcp 2>/dev/null | tr -d ':' | xargs || true)
+            if [ -n "$STALE_PIDS" ]; then
+              echo "🧹 Killing stale processes on :8080 — PIDs: $STALE_PIDS"
+              sudo kill -9 $STALE_PIDS 2>/dev/null || true
+              sleep 2
+            else
+              echo "✅ Port :8080 is clean"
+            fi
+
             # Load secrets for docker compose
             set -a
             for f in secrets/*.secret; do source "$f" 2>/dev/null; done

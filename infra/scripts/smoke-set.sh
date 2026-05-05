@@ -72,9 +72,17 @@ else
   log "A1: SKIPPED (TEST_EMAIL/TEST_PASSWORD not set)"
 fi
 
-# A2 — Search BGG
+# A2 — Search BGG (admin-only endpoint per BggEndpoints.cs:49 — RequireAdminSession,
+# BGG licensing constraint). Accept 200 (admin authenticated via cookie) OR
+# 401 (unauthenticated/non-admin) — both prove endpoint is reachable and auth works.
+# Same pattern as C3.
 log "A2: GET /api/v1/bgg/search?query=Catan"
-check_status "A2.bgg_search" "$BASE_URL/api/v1/bgg/search?query=Catan" "200"
+RES_A2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -b "$COOKIE_JAR" -c "$COOKIE_JAR" "$BASE_URL/api/v1/bgg/search?query=Catan" 2>/dev/null || echo "000")
+if [ "$RES_A2" = "200" ] || [ "$RES_A2" = "401" ]; then
+  ok "A2.bgg_search (HTTP $RES_A2)"
+else
+  ko "A2.bgg_search" "got $RES_A2"
+fi
 
 # A3 — KB status of test game (skipped if no test game ID)
 if [ -n "${TEST_GAME_ID:-}" ]; then

@@ -81,6 +81,9 @@ internal static class DocumentProcessingServiceExtensions
         // Issue #5445: Language detection for PDF pipeline routing
         services.AddSingleton<ILanguageDetector, LanguageDetector>();
 
+        // Libro Game AI Assistant Phase 2 — Task 2.4: Q&A complexity classifier (stateless, Singleton-safe)
+        services.AddSingleton<IQAComplexityClassifier, HeuristicQAComplexityClassifier>();
+
         // RAG translation: LLM-based chunk translation for cross-language retrieval
         services.AddScoped<IChunkTranslationService, ChunkTranslationService>();
 

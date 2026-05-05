@@ -488,6 +488,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // RAG Pipeline Hardening P1-4: heuristic query complexity analyzer for LLM model routing
         services.AddSingleton<QueryComplexityAnalyzer>();
+
+        // Phase 2 Task 2.5: House rule matcher — cross-BC read from AgentMemory, heuristic word-overlap
+        services.AddScoped<IHouseRuleMatcher, HeuristicHouseRuleMatcher>();
     }
 
     private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)

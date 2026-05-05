@@ -1815,5 +1815,29 @@
     "cookies": {
       "managePreferencesCta": "Gestisci preferenze"
     }
+  },
+  "gamebook": {
+    "upload": {
+      "title": "Carica Foto del Manuale",
+      "subtitle": "Carica le foto del manuale di gioco per l'indicizzazione AI",
+      "dropzoneLabel": "Trascina le foto qui o clicca per selezionare",
+      "dropzoneHint": "JPG, PNG, WEBP — massimo 20 MB ciascuna",
+      "selectedFiles": "{count, plural, one {# file selezionato} other {# file selezionati}}",
+      "submitButton": "Carica {count, plural, one {# foto} other {# foto}}",
+      "submitting": "Caricamento in corso...",
+      "uploadSuccess": "Caricamento avviato — batch {batchId}",
+      "uploadError": "Caricamento fallito. Riprova.",
+      "statusTitle": "Stato elaborazione",
+      "statusPending": "In attesa di avvio...",
+      "statusProcessing": "Elaborazione pagine...",
+      "statusCompleted": "Elaborazione completata",
+      "statusFailed": "Elaborazione fallita",
+      "statusCancelled": "Elaborazione annullata",
+      "progress": "{processed} / {total} pagine",
+      "confidence": "Confidenza media",
+      "errorMessage": "Errore: {message}",
+      "noFilesSelected": "Nessun file selezionato",
+      "gameIdLabel": "ID Gioco"
+    }
   }
 }

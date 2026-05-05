@@ -1597,6 +1597,51 @@
         }
       }
     },
+    "players": {
+      "metadata": {
+        "title": "Giocatori — MeepleAI",
+        "description": "Riepilogo delle tue partite: giochi giocati, sessioni e vittorie."
+      },
+      "hero": {
+        "title": "Le tue partite",
+        "subtitle": "Riepilogo dei giochi che hai giocato, con sessioni e vittorie.",
+        "totalPlays": "Sessioni totali",
+        "distinctGames": "Giochi distinti"
+      },
+      "filters": {
+        "searchPlaceholder": "Cerca per nome del gioco…",
+        "searchAriaLabel": "Cerca tra i tuoi giochi",
+        "clearFilters": "Cancella filtri"
+      },
+      "states": {
+        "loading": {
+          "ariaLabel": "Caricamento partite in corso…"
+        },
+        "empty": {
+          "title": "Nessuna partita ancora",
+          "subtitle": "Registra la tua prima partita per vedere il riepilogo qui.",
+          "cta": "Inizia a giocare",
+          "ctaAriaLabel": "Vai alla sezione giochi"
+        },
+        "filteredEmpty": {
+          "title": "Nessun gioco trovato",
+          "subtitle": "Prova a modificare la ricerca per trovare i tuoi giochi.",
+          "cta": "Cancella ricerca",
+          "ctaAriaLabel": "Cancella la ricerca attiva"
+        },
+        "error": {
+          "title": "Impossibile caricare le partite",
+          "subtitle": "Si è verificato un errore. Riprova tra qualche istante.",
+          "cta": "Riprova"
+        }
+      },
+      "results": {
+        "resultsCount": "{count, plural, =0 {Nessun risultato} =1 {1 gioco} other {# giochi}}",
+        "resultsAriaLabel": "Lista giochi giocati",
+        "cardSubtitle": "{count} partite",
+        "cardOpenAriaLabel": "Apri {gameName}"
+      }
+    },
     "agentDetail": {
       "metadata": {
         "title": "{name} — Agente AI — MeepleAI",
@@ -2060,11 +2105,14 @@
       "subtitle": "Carica le foto del manuale di gioco per l'indicizzazione AI",
       "dropzoneLabel": "Trascina le foto qui o clicca per selezionare",
       "dropzoneHint": "JPG, PNG, WEBP — massimo 20 MB ciascuna",
+      "photoLimitHint": "Massimo {max} foto per batch. Dimensione consigliata: ~300 KB ciascuna.",
       "selectedFiles": "{count, plural, one {# file selezionato} other {# file selezionati}}",
       "submitButton": "Carica {count, plural, one {# foto} other {# foto}}",
       "submitting": "Caricamento in corso...",
       "uploadSuccess": "Caricamento avviato — batch {batchId}",
       "uploadError": "Caricamento fallito. Riprova.",
+      "tooManyFiles": "Massimo {max} foto per batch. Selezionate {selected} — rimuovine alcune.",
+      "oversizeWarning": "{count, plural, one {# foto supera 1 MB} other {# foto superano 1 MB}}. Considera di ridurre la qualità per un upload più veloce.",
       "statusTitle": "Stato elaborazione",
       "statusPending": "In attesa di avvio...",
       "statusProcessing": "Elaborazione pagine...",
@@ -2075,7 +2123,30 @@
       "confidence": "Confidenza media",
       "errorMessage": "Errore: {message}",
       "noFilesSelected": "Nessun file selezionato",
-      "gameIdLabel": "ID Gioco"
+      "gameIdLabel": "ID Gioco",
+      "indexingComplete": "Indicizzazione completata!",
+      "indexingCompleteHint": "Ora puoi fare domande sul manuale.",
+      "startChat": "Inizia chat",
+      "pickerTitle": "Scegli il manuale da fotografare",
+      "pickerSubtitle": "Seleziona il gioco da tavolo di cui vuoi indicizzare il manuale",
+      "pickerSearchPlaceholder": "Cerca giochi...",
+      "pickerLoading": "Caricamento giochi...",
+      "pickerError": "Impossibile caricare i giochi. Riprova.",
+      "pickerNoResults": "Nessun gioco trovato per \"{search}\".",
+      "pickerNoGames": "Nessun gioco disponibile.",
+      "backToPicker": "Cambia gioco"
+    },
+    "play": {
+      "loading": "Caricamento...",
+      "pageNumber": "Pagina {num}",
+      "pageContent": "Contenuto pagina {num}",
+      "showOriginal": "📖 Mostra originale",
+      "showTranslation": "🌐 Mostra traduzione",
+      "distanceReading": "🔭 Lettura distante",
+      "normalReading": "🔍 Lettura normale",
+      "toggleDistanceReading": "Modalità lettura distante",
+      "translationUnavailable": "Traduzione non disponibile",
+      "retry": "Riprova"
     }
   }
 }

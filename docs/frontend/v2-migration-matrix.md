@@ -82,7 +82,7 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 | `/games?tab=library` | **S** | useLibraryGames single hook, 5-state lineare | ✅ done (B.1, PR #635) |
 | `/agents` | **S** | useAgentList single hook, grid pattern | ✅ done (B.2, PR #637) |
 | `/library` | **S** | useLibrary single hook, hybrid grid | ✅ done (B.3, PR #638) |
-| `/players` | **S** | useUsersList single hook, grid pattern (Wave 4 D1) | pending |
+| `/players` | **S** | usePlayerStatistics single hook, games-as-players grid (Wave 4 D1) — v1 carryover anti-pattern preserved | ✅ done (Wave 4 D1, PR #717) |
 | `/games/[id]` | **L** | useGame + useAgents/Faqs/KbDocs by gameId — Phase 0.5 contract enforced | ✅ done (Wave C.1, PR #702) — [`docs/frontend/contracts/games-id-hooks.md`](contracts/games-id-hooks.md) |
 | `/agents/[id]` | **L** | useAgent + chat history + KB docs cross-resource (2-step chain agent.gameId) | ✅ done (Wave C.2, PR #711) — [`docs/frontend/contracts/agents-id-hooks.md`](contracts/agents-id-hooks.md) |
 | `/sessions/[id]/live` | **L+** | Real-time SSE + multi-hook + dialog states | pending — Phase 0.5 + sub-PR split |
@@ -281,10 +281,10 @@ the PR review.
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
-| `sp4-players-index.jsx` | `PlayersHero` | `apps/web/src/components/v2/players/PlayersHero.tsx` | `/players` | pending | — | T A M V |
-| `sp4-players-index.jsx` | `PlayersFiltersInline` | `apps/web/src/components/v2/players/PlayersFiltersInline.tsx` | `/players` | pending | — | T A V |
-| `sp4-players-index.jsx` | `PlayersResultsGrid` | `apps/web/src/components/v2/players/PlayersResultsGrid.tsx` | `/players` | pending | — | T A V |
-| `sp4-players-index.jsx` | `EmptyPlayers` | `apps/web/src/components/v2/players/EmptyPlayers.tsx` | `/players` | pending | — | T A V |
+| `sp4-players-index.jsx` | `PlayersHero` | `apps/web/src/components/v2/players/PlayersHero.tsx` | `/players` | done | #717 | T A M V |
+| `sp4-players-index.jsx` | `PlayersFiltersInline` | `apps/web/src/components/v2/players/PlayersFiltersInline.tsx` | `/players` | done | #717 | T A V |
+| `sp4-players-index.jsx` | `PlayersResultsGrid` | `apps/web/src/components/v2/players/PlayersResultsGrid.tsx` | `/players` | done | #717 | T A V |
+| `sp4-players-index.jsx` | `EmptyPlayers` | `apps/web/src/components/v2/players/EmptyPlayers.tsx` | `/players` | done | #717 | T A V |
 
 ## Stub format (informational)
 

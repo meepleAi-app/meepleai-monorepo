@@ -81,3 +81,20 @@ export function batchProgressPercent(dto: PhotoBatchStatus): number {
   if (dto.totalPages === 0) return 0;
   return Math.round((dto.processedPages / dto.totalPages) * 100);
 }
+
+// ============================================================================
+// Paragraph — returned by GET /api/v1/photo-batches/{batchId}/paragraphs/{pageNumber}
+// ============================================================================
+
+/**
+ * A single extracted paragraph for a given page of a photo batch.
+ * Corresponds to Phase 3 Task 3.5a endpoint (G4 PR #716).
+ */
+export const ParagraphSchema = z.object({
+  pageNumber: z.number().int().positive(),
+  text: z.string(),
+  fallbackUsed: z.boolean(),
+  fallbackMethod: z.string().nullable(),
+});
+
+export type Paragraph = z.infer<typeof ParagraphSchema>;

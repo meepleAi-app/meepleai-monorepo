@@ -10,8 +10,10 @@
 import { apiClient } from '@/lib/api/client';
 
 import {
+  ParagraphSchema,
   PhotoBatchStatusSchema,
   UploadPhotoBatchResponseSchema,
+  type Paragraph,
   type PhotoUploadItem,
   type PhotoBatchStatus,
   type UploadPhotoBatchResponse,
@@ -50,4 +52,28 @@ export async function getPhotoBatchStatus(
     `/api/v1/gamebook/${gameId}/photos/${batchId}/status`,
     PhotoBatchStatusSchema
   );
+}
+
+/**
+ * Fetch a single extracted paragraph for a given page of a photo batch.
+ *
+ * Endpoint: GET /api/v1/photo-batches/{batchId}/paragraphs/{pageNumber}?hint=...
+ * Introduced by G4 (PR #716) — Phase 3 Task 3.5a.
+ *
+ * @param batchId    - Batch UUID whose pages have been processed
+ * @param pageNumber - 1-based page number
+ * @param hint       - Optional OCR/translation hint for disambiguation
+ * @returns Paragraph DTO, throws on empty / error response
+ */
+export async function getParagraph(
+  batchId: string,
+  pageNumber: number,
+  hint?: string
+): Promise<Paragraph> {
+  const url = hint
+    ? `/api/v1/photo-batches/${batchId}/paragraphs/${pageNumber}?hint=${encodeURIComponent(hint)}`
+    : `/api/v1/photo-batches/${batchId}/paragraphs/${pageNumber}`;
+  const result = await apiClient.get<Paragraph>(url, ParagraphSchema);
+  if (!result) throw new Error('Empty paragraph response');
+  return result;
 }

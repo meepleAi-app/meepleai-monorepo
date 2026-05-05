@@ -1043,12 +1043,24 @@
         "totalLabel": "{count, plural, one {1 question total} other {# questions total}}"
       },
       "categories": {
-        "all": { "label": "All" },
-        "account": { "label": "Account & Login" },
-        "games": { "label": "Games & Library" },
-        "ai": { "label": "AI & Chat" },
-        "privacy": { "label": "Privacy & Data" },
-        "billing": { "label": "Billing & Alpha" }
+        "all": {
+          "label": "All"
+        },
+        "account": {
+          "label": "Account & Login"
+        },
+        "games": {
+          "label": "Games & Library"
+        },
+        "ai": {
+          "label": "AI & Chat"
+        },
+        "privacy": {
+          "label": "Privacy & Data"
+        },
+        "billing": {
+          "label": "Billing & Alpha"
+        }
       },
       "popularSection": {
         "title": "Quick answers",
@@ -2121,6 +2133,74 @@
           "description": "The requested game does not exist or is no longer available in the community catalog.",
           "backLabel": "Back to catalog"
         }
+      }
+    },
+    "sessionLive": {
+      "metadata": {
+        "title": "Live session — MeepleAI",
+        "description": "Real-time game session."
+      },
+      "topBar": {
+        "sessionTitleAriaLabel": "Session: {name}",
+        "turnLabel": "{count, plural, =0 {Start} =1 {Turn 1/{total}} other {Turn #/{total}}}",
+        "statusInProgress": "In progress",
+        "statusPaused": "Paused",
+        "pauseCta": "Pause",
+        "resumeCta": "Resume",
+        "endgameCta": "End session",
+        "exitAriaLabel": "Exit session"
+      },
+      "turnIndicator": {
+        "currentTurnAriaLabel": "Turn {current} of {total}",
+        "activePlayerLabel": "{playerName}",
+        "yourTurnLabel": "Your turn",
+        "waitingLabel": "Wait for your turn"
+      },
+      "roster": {
+        "title": "Players",
+        "playerCountTemplate": "{count, plural, =0 {No players} =1 {1 player} other {# players}}",
+        "onlineLabel": "Online",
+        "offlineLabel": "Offline",
+        "kickAriaLabel": "Kick {playerName}",
+        "roleSpectator": "Spectator",
+        "rolePlayer": "Player",
+        "roleHost": "Host"
+      },
+      "scoring": {
+        "title": "Scores",
+        "scoreLabel": "Score: {score}",
+        "winnerLabel": "Winner",
+        "myScoreLabel": "Your score",
+        "incrementAriaLabel": "Increase {playerName}'s score",
+        "decrementAriaLabel": "Decrease {playerName}'s score",
+        "scoreInputAriaLabel": "Enter score for {playerName}"
+      },
+      "actionLog": {
+        "title": "Events",
+        "emptyLabel": "No events yet.",
+        "typeScore": "Score",
+        "typeTool": "Tool",
+        "typeAgent": "Agent",
+        "typeChat": "Chat",
+        "typePhoto": "Photo",
+        "typeEvent": "Event",
+        "timestampAriaLabel": "Events sorted chronologically, most recent at top"
+      },
+      "loading": {
+        "ariaLabel": "Loading live session…"
+      },
+      "error": {
+        "title": "Unable to load session",
+        "description": "An error occurred. Please try again.",
+        "ctaRetry": "Try again"
+      },
+      "notFound": {
+        "title": "Session not found",
+        "description": "The requested session does not exist or you do not have access.",
+        "ctaBack": "Back to sessions"
+      },
+      "a11y": {
+        "viewLabel": "Live session view"
       }
     }
   },

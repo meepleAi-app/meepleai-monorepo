@@ -1093,12 +1093,24 @@
         "totalLabel": "{count, plural, one {1 domanda totale} other {# domande totali}}"
       },
       "categories": {
-        "all": { "label": "Tutte" },
-        "account": { "label": "Account & Login" },
-        "games": { "label": "Giochi & Library" },
-        "ai": { "label": "AI & Chat" },
-        "privacy": { "label": "Privacy & Dati" },
-        "billing": { "label": "Billing & Alpha" }
+        "all": {
+          "label": "Tutte"
+        },
+        "account": {
+          "label": "Account & Login"
+        },
+        "games": {
+          "label": "Giochi & Library"
+        },
+        "ai": {
+          "label": "AI & Chat"
+        },
+        "privacy": {
+          "label": "Privacy & Dati"
+        },
+        "billing": {
+          "label": "Billing & Alpha"
+        }
       },
       "popularSection": {
         "title": "Risposte rapide",
@@ -2229,6 +2241,74 @@
     },
     "cookies": {
       "managePreferencesCta": "Gestisci preferenze"
+    },
+    "sessionLive": {
+      "metadata": {
+        "title": "Sessione live — MeepleAI",
+        "description": "Sessione di gioco in tempo reale."
+      },
+      "topBar": {
+        "sessionTitleAriaLabel": "Sessione: {name}",
+        "turnLabel": "{count, plural, =0 {Inizio} =1 {Turno 1/{total}} other {Turno #/{total}}}",
+        "statusInProgress": "In corso",
+        "statusPaused": "In pausa",
+        "pauseCta": "Pausa",
+        "resumeCta": "Riprendi",
+        "endgameCta": "Termina sessione",
+        "exitAriaLabel": "Esci dalla sessione"
+      },
+      "turnIndicator": {
+        "currentTurnAriaLabel": "Turno {current} di {total}",
+        "activePlayerLabel": "{playerName}",
+        "yourTurnLabel": "Il tuo turno",
+        "waitingLabel": "Aspetta il tuo turno"
+      },
+      "roster": {
+        "title": "Giocatori",
+        "playerCountTemplate": "{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}",
+        "onlineLabel": "Online",
+        "offlineLabel": "Offline",
+        "kickAriaLabel": "Espelli {playerName}",
+        "roleSpectator": "Spettatore",
+        "rolePlayer": "Giocatore",
+        "roleHost": "Host"
+      },
+      "scoring": {
+        "title": "Punteggi",
+        "scoreLabel": "Punteggio: {score}",
+        "winnerLabel": "Vincitore",
+        "myScoreLabel": "Il tuo punteggio",
+        "incrementAriaLabel": "Aumenta punteggio di {playerName}",
+        "decrementAriaLabel": "Diminuisci punteggio di {playerName}",
+        "scoreInputAriaLabel": "Inserisci punteggio per {playerName}"
+      },
+      "actionLog": {
+        "title": "Eventi",
+        "emptyLabel": "Nessun evento ancora.",
+        "typeScore": "Punteggio",
+        "typeTool": "Tool",
+        "typeAgent": "Agent",
+        "typeChat": "Chat",
+        "typePhoto": "Foto",
+        "typeEvent": "Evento",
+        "timestampAriaLabel": "Eventi ordinati cronologicamente, più recenti in alto"
+      },
+      "loading": {
+        "ariaLabel": "Caricamento sessione live…"
+      },
+      "error": {
+        "title": "Impossibile caricare la sessione",
+        "description": "Si è verificato un errore. Riprova.",
+        "ctaRetry": "Riprova"
+      },
+      "notFound": {
+        "title": "Sessione non trovata",
+        "description": "La sessione richiesta non esiste o non hai accesso.",
+        "ctaBack": "Torna alle sessioni"
+      },
+      "a11y": {
+        "viewLabel": "Vista sessione live"
+      }
     }
   },
   "gamebook": {

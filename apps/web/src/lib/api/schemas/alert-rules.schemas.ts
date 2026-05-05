@@ -10,8 +10,8 @@ export const alertRuleSchema = z.object({
   durationMinutes: z.number().int().min(1),
   isEnabled: z.boolean(),
   description: z.string().optional().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
 });
 
 export const createAlertRuleSchema = z.object({

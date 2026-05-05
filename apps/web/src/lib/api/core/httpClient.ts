@@ -55,7 +55,16 @@ export function getApiBase(): string {
     return '';
   }
 
-  // Server-side (SSR) / Test: Use absolute URL from environment
+  // Server-side (SSR) / Test: Use absolute URL from environment.
+  // Prefer API_BASE_URL (Docker-network hostname like http://api:8080) over
+  // NEXT_PUBLIC_API_BASE (which is browser-facing — e.g. http://localhost:8080
+  // — and is not reachable from inside the web container).
+  // Issue #676: fixes SSR fetch failures during E2E smoke real-backend run.
+  const serverBase = process.env.API_BASE_URL?.trim();
+  if (serverBase && serverBase !== 'undefined' && serverBase !== 'null') {
+    return serverBase;
+  }
+
   const envBase = process.env.NEXT_PUBLIC_API_BASE?.trim();
   if (envBase && envBase !== 'undefined' && envBase !== 'null') {
     return envBase;

@@ -3,6 +3,7 @@ using Api.Configuration; // CHAT-02
 using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Translation;
 using Api.Infrastructure.Security;
 using Api.Logging;
 using Api.Middleware;
@@ -292,6 +293,9 @@ builder.Services.AddHostedService<Api.Infrastructure.BackgroundTasks.UsedTotpCod
 // RAG backup: Weekly full snapshot on Sunday 03:00 UTC with retention pruning
 builder.Services.AddHostedService<Api.Infrastructure.BackgroundServices.RagBackupSchedulerService>();
 
+// ADR-051 Sprint 2 / Task 8: Mechanic-recalc async pipeline worker (Pending → Running → terminal).
+builder.Services.AddHostedService<Api.Infrastructure.BackgroundServices.MechanicRecalcBackgroundService>();
+
 // Issue #1449: FluentValidation for CQRS pipeline
 builder.Services.AddFluentValidation();
 
@@ -317,6 +321,9 @@ builder.Services.AddChatServices();
 builder.Services.AddAdminServices();
 builder.Services.AddBggServices();
 builder.Services.AddQualityServices();
+
+// Libro Game AI Assistant: narrative + generic translation via OpenRouter (Issue #2.1)
+builder.Services.AddTranslationServices();
 
 // DDD-PHASE2: Authentication bounded context (repositories for CQRS handlers)
 builder.Services.AddAuthenticationContext();
@@ -671,6 +678,7 @@ if (isAlphaMode)
 // Authentication (core only)
 v1Api.MapAuthEndpoints();
 v1Api.MapAccessRequestEndpoints(); // Invite-only registration: access requests + registration mode
+v1Api.MapWaitlistEndpoints(); // ISSUE-589: Public Alpha waitlist (Wave A.2)
 v1Api.MapUserProfileEndpoints();
 v1Api.MapOnboardingEndpoints(); // First-time user onboarding endpoints
 v1Api.MapUserAccountEndpoints(); // GDPR Art. 17: Self-service account deletion
@@ -682,11 +690,13 @@ v1Api.MapBggEndpoints(); // ISSUE-3120: BoardGameGeek integration
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapPrivateGameEndpoints();       // Private games (Issue #3663)
 v1Api.MapRuleSpecEndpoints();
+v1Api.MapGameNightEndpoints(); // Issue #46/#607: Game Night Event + public token-based RSVP (Wave A.5)
 
 // Document Processing
 v1Api.MapPdfEndpoints();
 v1Api.MapRulebookEndpoints(); // Rulebook upload with PDF deduplication + games-with-kb query
 v1Api.MapDocumentCollectionEndpoints();
+v1Api.MapPhotoIngestionEndpoints(); // Libro Game AI Assistant MVP Phase 1: photo batch upload + status
 
 // KnowledgeBase (RAG chat)
 v1Api.MapKnowledgeBaseEndpoints();
@@ -695,6 +705,8 @@ v1Api.MapUserGameKbEndpoints(); // KB-06: User feedback on KB chat responses
 v1Api.MapModelEndpoints(); // Issue #3377: AI model configuration endpoints
 v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
 v1Api.MapAiEndpoints();
+v1Api.MapAgentsEndpoints(); // Issue #641 (Wave B.2 hotfix): user-facing agent listing
+v1Api.MapAgentTypologiesEndpoints(); // Issue #649: user-facing typology dropdown
 v1Api.MapRulebookAnalysisEndpoints(); // ISSUE-2402: Rulebook analysis service
 
 // User Library
@@ -741,7 +753,6 @@ if (!isAlphaMode)
     v1Api.MapWhiteboardEndpoints(); // Issue #4971: Whiteboard base toolkit endpoints
     v1Api.MapSessionSnapshotEndpoints(); // Issue #4755: Session snapshot endpoints
     v1Api.MapPlaylistEndpoints(); // Issue #5582: Game Night Playlist endpoints
-    v1Api.MapGameNightEndpoints(); // Issue #46: Game Night Event endpoints
     v1Api.MapGameNightImprovvisataEndpoints(); // Game Night Improvvisata: E1-2 BGG import
     v1Api.MapRuleConflictFaqEndpoints(); // ISSUE-3966: Rule conflict FAQ management
     v1Api.MapVisionSnapshotEndpoints(); // Session Vision AI: board photo snapshots + game state extraction
@@ -873,6 +884,8 @@ if (!isAlphaMode)
     v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
     v1Api.MapRagExecutionAdminEndpoints(); // RAG Execution replay & compare (Issue #4459)
     v1Api.MapAdminMechanicExtractorEndpoints(); // Mechanic Extractor: Variant C copyright-compliant analysis
+    v1Api.MapAdminMechanicAnalysesEndpoints();  // ISSUE-524 / M1.2: AI-generated mechanic analyses (async pipeline)
+    v1Api.MapAdminMechanicExtractorValidationEndpoints(); // ADR-051 Sprint 1 / Task 32: Mechanic validation admin surface
     v1Api.MapReportingEndpoints();         // ISSUE-916: Report generation & scheduling
     v1Api.MapTestingMetricsEndpoints();    // Issue #2139: Testing metrics API
     v1Api.MapBggImportQueueEndpoints(); // Issue #3541: BGG import queue management (admin-only)

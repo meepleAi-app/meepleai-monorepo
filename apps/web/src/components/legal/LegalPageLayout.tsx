@@ -14,6 +14,8 @@
 
 'use client';
 
+import type { ReactNode } from 'react';
+
 import Link from 'next/link';
 
 import {
@@ -52,6 +54,8 @@ interface LegalPageLayoutProps {
   prevLink?: FooterNavLink;
   /** Navigation link for the right footer button */
   nextLink?: FooterNavLink;
+  /** Optional extra slot rendered inside the footer nav (e.g., reciprocal CTA link) */
+  footerSlot?: ReactNode;
   /** Meta description for SEO */
   metaDescription?: string;
 }
@@ -71,6 +75,7 @@ function LegalPageContent({
   lastUpdated,
   prevLink,
   nextLink,
+  footerSlot,
 }: LegalPageLayoutProps) {
   const { t, formatDate, locale } = useTranslation();
 
@@ -104,7 +109,7 @@ function LegalPageContent({
                 {title}
               </h1>
               <p className="text-slate-600 dark:text-slate-400 mt-2">{description}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-500 mt-1">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                 {t('legal.lastUpdated', {
                   date: formatDate(lastUpdated, {
                     year: 'numeric',
@@ -180,6 +185,7 @@ function LegalPageContent({
               <Link href="/">&larr; {locale === 'it' ? 'Torna alla Home' : 'Back to Home'}</Link>
             </Button>
           )}
+          {footerSlot && <div className="text-center">{footerSlot}</div>}
           {nextLink && (
             <Button variant="outline" asChild>
               <Link href={nextLink.href}>

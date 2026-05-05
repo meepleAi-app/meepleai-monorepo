@@ -28,8 +28,8 @@ export const RateLimitStatusDtoSchema = z.object({
   currentMonthlyCount: z.number().int().nonnegative(),
   maxMonthlyAllowed: z.number().int().positive(),
   isInCooldown: z.boolean(),
-  cooldownEndsAt: z.string().datetime().nullable(),
-  monthResetAt: z.string().datetime(),
+  cooldownEndsAt: z.string().datetime({ offset: true }).nullable(),
+  monthResetAt: z.string().datetime({ offset: true }),
 });
 
 export type RateLimitStatusDto = z.infer<typeof RateLimitStatusDtoSchema>;
@@ -45,8 +45,8 @@ export const UserShareRequestDtoSchema = z.object({
   userNotes: z.string().nullable(),
   adminFeedback: z.string().nullable(),
   attachedDocumentCount: z.number().int().nonnegative(),
-  createdAt: z.string().datetime(),
-  resolvedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  resolvedAt: z.string().datetime({ offset: true }).nullable(),
   resultingSharedGameId: z.string().uuid().nullable(),
 });
 
@@ -66,7 +66,7 @@ export const CreateShareRequestResponseSchema = z.object({
   shareRequestId: z.string().uuid(),
   status: ShareRequestStatusSchema,
   contributionType: ContributionTypeSchema,
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
 });
 
 export type CreateShareRequestResponse = z.infer<typeof CreateShareRequestResponseSchema>;

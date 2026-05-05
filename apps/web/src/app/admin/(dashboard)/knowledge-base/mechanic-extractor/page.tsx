@@ -252,20 +252,28 @@ export default function MechanicExtractorPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-          Mechanic Extractor
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Extract game mechanics from rulebook PDFs using a copyright-compliant human+AI workflow
-        </p>
-        <Badge
-          variant="outline"
-          className="mt-2 border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
-        >
-          <ShieldCheckIcon className="mr-1 h-3 w-3" />
-          Variant C: AI reads notes only, never the PDF
-        </Badge>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
+            Mechanic Extractor
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Extract game mechanics from rulebook PDFs using a copyright-compliant human+AI workflow
+          </p>
+          <Badge
+            variant="outline"
+            className="mt-2 border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+          >
+            <ShieldCheckIcon className="mr-1 h-3 w-3" />
+            Variant C: AI reads notes only, never the PDF
+          </Badge>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <a href="/admin/knowledge-base/mechanic-extractor/analyses">
+            <SparklesIcon className="mr-1 h-4 w-4" />
+            Async pipeline (M1.2) →
+          </a>
+        </Button>
       </div>
 
       {/* Game + PDF Selection */}

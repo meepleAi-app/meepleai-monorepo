@@ -195,14 +195,16 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             || type == NotificationType.AdminReviewLockExpiring
             || type == NotificationType.AdminStaleShareRequests
             || type == NotificationType.RateLimitReached
-            || type == NotificationType.SlackConnectionRevoked)
+            || type == NotificationType.SlackConnectionRevoked
+            || type == NotificationType.MechanicAnalysisRejected)
             return NotificationSeverity.Warning;
 
         if (type == NotificationType.DocumentReady
             || type == NotificationType.RuleSpecGenerated
             || type == NotificationType.BadgeEarned
             || type == NotificationType.AgentReady
-            || type == NotificationType.GdprDataExportReady)
+            || type == NotificationType.GdprDataExportReady
+            || type == NotificationType.MechanicAnalysisReady)
             return NotificationSeverity.Success;
 
         return NotificationSeverity.Info;
@@ -234,6 +236,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
         if (type == NotificationType.GdprAccountDeleted) return "Account eliminato";
         if (type == NotificationType.GdprAiConsentUpdated) return "Consenso AI aggiornato";
         if (type == NotificationType.SlackConnectionRevoked) return "Slack disconnesso";
+        if (type == NotificationType.MechanicAnalysisReady) return "Analisi meccaniche pronta";
+        if (type == NotificationType.MechanicAnalysisRejected) return "Analisi meccaniche rifiutata";
 
         // Admin types
         if (type == NotificationType.AdminNewShareRequest) return "[Admin] Nuova Share Request";

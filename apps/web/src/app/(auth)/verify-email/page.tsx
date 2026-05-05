@@ -7,18 +7,26 @@
 
 import { Suspense } from 'react';
 
+import { Metadata } from 'next';
+
 import { AuthCard } from '@/components/ui/v2/auth-card';
 
 import { VerifyEmailContent } from './_content';
+
+export const metadata: Metadata = {
+  title: 'Verifica email | MeepleAI',
+  description: 'Verifica il tuo indirizzo email per attivare il tuo account MeepleAI.',
+  robots: { index: false, follow: false },
+};
 
 export default function VerifyEmailPage() {
   return (
     <Suspense
       fallback={
-        <AuthCard title="Email verification">
+        <AuthCard title="Verifica email">
           <div className="text-center py-8">
             <div className="animate-pulse text-muted-foreground text-sm">
-              Verifying your email...
+              Verifica email in corso...
             </div>
           </div>
         </AuthCard>

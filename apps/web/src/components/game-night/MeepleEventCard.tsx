@@ -15,7 +15,7 @@ import { it } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
 
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
-import { buildEventNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildEventConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 
 // ============================================================================
 // Types
@@ -58,9 +58,9 @@ export function MeepleEventCard({
     }
   }, [event.scheduledAt]);
 
-  const navItems = useMemo(
+  const connections = useMemo(
     () =>
-      buildEventNavItems(
+      buildEventConnections(
         {
           participantCount: event.participantCount,
           gameCount: event.gameCount,
@@ -89,7 +89,7 @@ export function MeepleEventCard({
       variant={variant}
       title={event.title}
       subtitle={subtitle}
-      navItems={navItems}
+      connections={connections}
       onClick={onClick ? () => onClick(event.id) : undefined}
       className={className}
       data-testid={`event-card-${event.id}`}

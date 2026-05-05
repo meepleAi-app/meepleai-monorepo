@@ -12,7 +12,7 @@ import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
-import { buildAgentNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildAgentConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 
 // ============================================================================
 // Types
@@ -48,9 +48,9 @@ export function MeepleAgentCard({
 }: MeepleAgentCardProps) {
   const router = useRouter();
 
-  const navItems = useMemo(
+  const connections = useMemo(
     () =>
-      buildAgentNavItems(
+      buildAgentConnections(
         {
           chatCount: agent.chatCount ?? 0,
           kbCount: agent.kbCount ?? 0,
@@ -72,7 +72,7 @@ export function MeepleAgentCard({
       title={agent.name}
       subtitle={agent.description ?? undefined}
       imageUrl={agent.iconUrl ?? undefined}
-      navItems={navItems}
+      connections={connections}
       onClick={onClick ? () => onClick(agent.id) : undefined}
       className={className}
       data-testid={`agent-card-${agent.id}`}

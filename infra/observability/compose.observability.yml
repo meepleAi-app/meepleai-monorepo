@@ -1,0 +1,60 @@
+# Observability stack — Prometheus + Grafana + Loki + Promtail
+# DEPLOY: from `infra/` directory:
+#   docker compose -f compose.prod.yml -f observability/compose.observability.yml up -d
+# All bind-mount paths resolve relative to this compose file's directory (infra/observability/).
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    platform: linux/arm64
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    mem_limit: 512m
+
+  grafana:
+    image: grafana/grafana:latest
+    platform: linux/arm64
+    volumes:
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - ./grafana-dashboards-provisioner.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
+      - ./grafana-dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin
+    ports:
+      - "127.0.0.1:3001:3000"
+    secrets: [grafana_admin]
+    mem_limit: 256m
+
+  loki:
+    image: grafana/loki:latest
+    platform: linux/arm64
+    volumes:
+      - ./loki-config.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    ports:
+      - "127.0.0.1:3100:3100"
+    mem_limit: 512m
+
+  promtail:
+    image: grafana/promtail:latest
+    platform: linux/arm64
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    mem_limit: 128m
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+
+secrets:
+  grafana_admin:
+    external: true
+    name: grafana_admin

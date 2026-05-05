@@ -10,6 +10,7 @@
 import { useState, useCallback, useMemo } from 'react';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import dynamic from 'next/dynamic';
 
 import { AgentCreationSheet } from '@/components/agent/config';
 import { toast } from '@/components/layout/Toast';
@@ -19,7 +20,7 @@ import {
   type MeepleCardMetadata,
   type CardStatus,
 } from '@/components/ui/data-display/meeple-card';
-import { buildGameNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildGameConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 import { AddToWishlistDialog } from '@/components/wishlist/AddToWishlistDialog';
 import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
 import { libraryKeys } from '@/hooks/queries/useLibrary';
@@ -27,11 +28,24 @@ import { api } from '@/lib/api';
 import type { UserLibraryEntry, GameStateType } from '@/lib/api';
 import { useViewTransition } from '@/lib/domain-hooks/useViewTransition';
 
-import { AgentDrawerSheet } from './AgentDrawerSheet';
-import { ChatDrawerSheet } from './ChatDrawerSheet';
 import { DeclareOwnershipButton } from './DeclareOwnershipButton';
-import { KbDrawerSheet } from './KbDrawerSheet';
-import { SessionDrawerSheet } from './SessionDrawerSheet';
+
+// Dynamic imports to avoid pulling pdfjs-dist (via KbDrawerSheet → PdfViewerModal)
+// into static dependency graphs of consumers like AdminShell. SSR disabled because
+// drawer sheets are interactive client-only surfaces.
+const KbDrawerSheet = dynamic(() => import('./KbDrawerSheet').then(m => m.KbDrawerSheet), {
+  ssr: false,
+});
+const AgentDrawerSheet = dynamic(() => import('./AgentDrawerSheet').then(m => m.AgentDrawerSheet), {
+  ssr: false,
+});
+const ChatDrawerSheet = dynamic(() => import('./ChatDrawerSheet').then(m => m.ChatDrawerSheet), {
+  ssr: false,
+});
+const SessionDrawerSheet = dynamic(
+  () => import('./SessionDrawerSheet').then(m => m.SessionDrawerSheet),
+  { ssr: false }
+);
 
 // ============================================================================
 // Types
@@ -203,9 +217,9 @@ export function MeepleLibraryGameCard({
   const mappedStatus = mapGameStateToStatus(game.currentState);
   const badge = game.isFavorite ? '❤️ Preferito' : undefined;
 
-  const navItems = useMemo(
+  const connections = useMemo(
     () =>
-      buildGameNavItems(
+      buildGameConnections(
         {
           kbCount: game.kbCardCount ?? 0,
           agentCount: agentConfigured ? 1 : 0,
@@ -244,7 +258,7 @@ export function MeepleLibraryGameCard({
         metadata={metadata}
         badge={badge}
         status={mappedStatus}
-        navItems={navItems}
+        connections={connections}
         onClick={
           selectionMode
             ? undefined

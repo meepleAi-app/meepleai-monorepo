@@ -13,7 +13,7 @@ export const SessionChatMessageDtoSchema = z.object({
   id: z.string().uuid(),
   role: z.enum(['user', 'assistant', 'system']),
   content: z.string().min(1),
-  timestamp: z.string().datetime(),
+  timestamp: z.string().datetime({ offset: true }),
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
@@ -29,8 +29,8 @@ export const ChatSessionDtoSchema = z.object({
   title: z.string().nullable(),
   messageCount: z.number().int().nonnegative(),
   messages: z.array(SessionChatMessageDtoSchema),
-  createdAt: z.string().datetime(),
-  lastMessageAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  lastMessageAt: z.string().datetime({ offset: true }).nullable(),
   isArchived: z.boolean(),
 });
 
@@ -49,8 +49,8 @@ export const ChatSessionSummaryDtoSchema = z.object({
   title: z.string().nullable(),
   messageCount: z.number().int().nonnegative(),
   lastMessagePreview: z.string().nullable().optional(),
-  createdAt: z.string().datetime(),
-  lastMessageAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  lastMessageAt: z.string().datetime({ offset: true }).nullable(),
   isArchived: z.boolean(),
 });
 

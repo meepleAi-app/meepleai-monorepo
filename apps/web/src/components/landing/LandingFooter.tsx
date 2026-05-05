@@ -36,7 +36,7 @@ export function LandingFooter() {
             <Button
               asChild
               size="lg"
-              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+              className="shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
             >
               <Link href="/register">
                 Registrati Ora

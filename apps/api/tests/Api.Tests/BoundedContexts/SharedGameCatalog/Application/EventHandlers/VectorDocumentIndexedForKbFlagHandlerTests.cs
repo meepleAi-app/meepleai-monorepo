@@ -71,7 +71,7 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
         db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), new PassthroughRetryPolicy(), _logger.Object);
         var evt = new VectorDocumentIndexedEvent(documentId, gameId, chunkCount: 42, sharedGameId: sharedGameId);
 
         // Act
@@ -95,7 +95,7 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
         db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), new PassthroughRetryPolicy(), _logger.Object);
         var evt = new VectorDocumentIndexedEvent(documentId, gameId, chunkCount: 42, sharedGameId: null);
 
         // Act
@@ -111,7 +111,7 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
     {
         // Arrange
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), new PassthroughRetryPolicy(), _logger.Object);
         var evt = new VectorDocumentIndexedEvent(
             documentId: Guid.NewGuid(),
             gameId: Guid.NewGuid(),
@@ -137,7 +137,7 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
         db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: true));
         await db.SaveChangesAsync();
 
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), new PassthroughRetryPolicy(), _logger.Object);
         var evt = new VectorDocumentIndexedEvent(documentId, gameId, chunkCount: 42, sharedGameId: sharedGameId);
 
         // Act
@@ -153,7 +153,7 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
     {
         // Arrange
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), _logger.Object);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, CreateHybridCache(), new PassthroughRetryPolicy(), _logger.Object);
 
         // Act
         var act = async () => await handler.Handle(null!, CancellationToken.None);
@@ -176,7 +176,7 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
         db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: false));
         await db.SaveChangesAsync();
 
-        var handler = new VectorDocumentIndexedForKbFlagHandler(db, cache, _logger.Object);
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, cache, new PassthroughRetryPolicy(), _logger.Object);
         var evt = new VectorDocumentIndexedEvent(
             documentId: Guid.NewGuid(),
             gameId: Guid.NewGuid(),
@@ -202,5 +202,44 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
             },
             tags: tags);
         factoryInvoked.Should().BeTrue("RemoveByTagAsync should have evicted the sentinel");
+    }
+
+    [Fact]
+    public async Task Handle_WithValidUpdate_InvalidatesPerGameDetailCache()
+    {
+        // Issue #603 (Wave A.4) — verify the handler also evicts the per-game
+        // detail cache `shared-game:{id}` so the next /shared-games/{id} read
+        // sees the refreshed HasKnowledgeBase flag and KB previews.
+        // Mirrors the search-games eviction test pattern above.
+        var cache = CreateHybridCache();
+        var sharedGameId = Guid.NewGuid();
+        var perGameTag = $"shared-game:{sharedGameId}";
+        var detailKey = $"shared-game:{sharedGameId}";
+
+        await cache.SetAsync(detailKey, "seed-detail", tags: new[] { perGameTag });
+
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: false));
+        await db.SaveChangesAsync();
+
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, cache, new PassthroughRetryPolicy(), _logger.Object);
+        var evt = new VectorDocumentIndexedEvent(
+            documentId: Guid.NewGuid(),
+            gameId: Guid.NewGuid(),
+            chunkCount: 42,
+            sharedGameId: sharedGameId);
+
+        await handler.Handle(evt, CancellationToken.None);
+
+        var factoryInvoked = false;
+        await cache.GetOrCreateAsync(
+            detailKey,
+            _ =>
+            {
+                factoryInvoked = true;
+                return ValueTask.FromResult("fresh-detail");
+            },
+            tags: new[] { perGameTag });
+        factoryInvoked.Should().BeTrue("RemoveByTagAsync(\"shared-game:{id}\") should have evicted the detail entry");
     }
 }

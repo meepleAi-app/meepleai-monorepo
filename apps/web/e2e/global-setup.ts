@@ -21,6 +21,13 @@ import { waitForServerHealth } from './helpers/server-health';
 dotenv.config({ path: path.resolve(__dirname, '../.env.test') });
 
 export default async function globalSetup() {
+  // Issue #571: mockup-only runs don't need Next.js — skip health check
+  // (mockup-baseline-* projects only hit :5174 static server, started via webServer config).
+  if (process.env.MOCKUP_ONLY_WEBSERVER === '1') {
+    console.log('⏭️  MOCKUP_ONLY_WEBSERVER=1 → skipping Next.js health check');
+    return;
+  }
+
   console.log('🔍 Waiting for server to be healthy...');
 
   try {

@@ -14,10 +14,10 @@ export const N8nConfigDtoSchema = z.object({
   baseUrl: z.string(),
   webhookUrl: z.string().nullable().optional(),
   isActive: z.boolean(),
-  lastTestedAt: z.string().datetime().nullable().optional(),
+  lastTestedAt: z.string().datetime({ offset: true }).nullable().optional(),
   lastTestResult: z.string().nullable().optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
 });
 
 export type N8nConfigDto = z.infer<typeof N8nConfigDtoSchema>;
@@ -58,9 +58,9 @@ export const BatchJobDtoSchema = z.object({
   results: z.record(z.string(), z.any()).nullable(),
   errorMessage: z.string().nullable(),
   progress: z.number().min(0).max(100),
-  createdAt: z.string().datetime(),
-  startedAt: z.string().datetime().nullable(),
-  completedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  startedAt: z.string().datetime({ offset: true }).nullable(),
+  completedAt: z.string().datetime({ offset: true }).nullable(),
   duration: z.number().nullable(),
 });
 export type BatchJobDto = z.infer<typeof BatchJobDtoSchema>;
@@ -94,9 +94,9 @@ export const ProcessingJobSchema = z.object({
   status: z.string(),
   priority: z.number(),
   currentStep: z.string().nullable(),
-  createdAt: z.string().datetime(),
-  startedAt: z.string().datetime().nullable(),
-  completedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  startedAt: z.string().datetime({ offset: true }).nullable(),
+  completedAt: z.string().datetime({ offset: true }).nullable(),
   errorMessage: z.string().nullable(),
   retryCount: z.number(),
   maxRetries: z.number(),
@@ -130,8 +130,8 @@ export const ActiveOverrideSchema = z.object({
   reason: z.string(),
   adminUserId: z.string().uuid(),
   targetProvider: z.string().nullable(),
-  activatedAt: z.string().datetime(),
-  expiresAt: z.string().datetime(),
+  activatedAt: z.string().datetime({ offset: true }),
+  expiresAt: z.string().datetime({ offset: true }),
   remainingMinutes: z.number(),
 });
 export type ActiveOverride = z.infer<typeof ActiveOverrideSchema>;
@@ -147,7 +147,7 @@ export const AuditLogEntrySchema = z.object({
   result: z.string(),
   details: z.string().nullable().optional(),
   ipAddress: z.string().nullable().optional(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
   userName: z.string().nullable().optional(),
   userEmail: z.string().nullable().optional(),
 });

@@ -35,39 +35,26 @@ describe('FocusCard', () => {
     expect(screen.getByText('Klaus Teuber')).toBeInTheDocument();
   });
 
-  it('renders navItem chips when provided', () => {
+  it('renders connection chips when provided', () => {
     render(
       <FocusCard
         {...baseProps}
-        navItems={[
-          {
-            icon: <span>🎮</span>,
-            label: 'Sessioni',
-            entity: 'session',
-            count: 5,
-            href: '/games/1/sessions',
-          },
-          { icon: <span>📚</span>, label: 'Docs', entity: 'kb', count: 2, href: '/games/1/kb' },
+        connections={[
+          { entityType: 'session', label: 'Sessioni', count: 5 },
+          { entityType: 'kb', label: 'Docs', count: 2 },
         ]}
       />
     );
-    expect(screen.getByText('Sessioni')).toBeInTheDocument();
-    expect(screen.getByText('Docs')).toBeInTheDocument();
+    // FocusCard uses inline strip (no visible labels) — assert via aria-label.
+    expect(screen.getByLabelText('5 Sessioni')).toBeInTheDocument();
+    expect(screen.getByLabelText('2 Docs')).toBeInTheDocument();
   });
 
-  it('renders navItem count when provided', () => {
+  it('renders connection count when provided', () => {
     render(
       <FocusCard
         {...baseProps}
-        navItems={[
-          {
-            icon: <span>🎮</span>,
-            label: 'Sessioni',
-            entity: 'session',
-            count: 12,
-            href: '/games/1/sessions',
-          },
-        ]}
+        connections={[{ entityType: 'session', label: 'Sessioni', count: 12 }]}
       />
     );
     expect(screen.getByText('12')).toBeInTheDocument();

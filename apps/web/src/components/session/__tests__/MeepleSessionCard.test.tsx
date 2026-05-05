@@ -2,7 +2,7 @@
  * MeepleSessionCard Tests
  *
  * Current scope (v1): basic rendering, onClick handling, status badge,
- * subtitle composition, and navItems wiring via buildSessionNavItems.
+ * subtitle composition, and connections wiring via buildSessionConnections.
  *
  * Action-visibility matrix (Configura / Avvia / Pausa / Riprendi / Partecipa /
  * Lascia / Esporta) is a deferred v2 deliverable — see Issue #5003. The
@@ -142,10 +142,10 @@ describe('MeepleSessionCard', () => {
   });
 
   // --------------------------------------------------------------------------
-  // NavFooter — shows player count from session.playerCount
+  // Connections — shows player count from session.playerCount
   // --------------------------------------------------------------------------
 
-  it('renders NavFooter with player count from session data', () => {
+  it('renders connection chip with player count from session data', () => {
     render(<MeepleSessionCard session={mockSetupSession} />);
     // The Giocatori nav slot should appear with count badge 3
     expect(screen.getByText('Giocatori')).toBeInTheDocument();

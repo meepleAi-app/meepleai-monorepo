@@ -169,7 +169,18 @@ Questo sub-project sblocca: (1) completamento pubblico per SEO + compliance lega
 - **no-content**: gioco senza toolkit — CTA "Sii il primo a pubblicare"
 - **loading**: skeleton hero + tab
 
-**Componenti v2 da progettare**: `GamePublicHero`, `ToolkitPublicListItem`, riusa connection-bar pattern di SP4.
+**Componenti v2 da progettare**: `GamePublicHero`, `ToolkitPublicListItem`.
+
+**Componente già stabile (NON ridisegnare)**: `ConnectionBar` è già in produzione (PR #549 Step 1.6 + PR #552 Step 2). Path componente: `apps/web/src/components/ui/data-display/connection-bar/ConnectionBar.tsx`; tipi in `types.ts` (`ConnectionPip`, `ConnectionBarProps`). Il mockup deve mostrare la stessa primitive con pip-button entity-colored (`entityHsl(entityType, 0.1)` background, `entityHsl(entityType)` foreground), forma `rounded-full px-3 py-1.5 text-xs font-bold`, scroll orizzontale `overflow-x-auto`. Per il dettaglio shared-game pubblico, popolare con:
+```tsx
+const connections: ConnectionPip[] = [
+  { entityType: 'toolkit', count: 4, label: 'Toolkit',  icon: ToolboxIcon, isEmpty: false },
+  { entityType: 'agent',   count: 2, label: 'Agenti',   icon: Bot,         isEmpty: false },
+  { entityType: 'kb',      count: 7, label: 'Documenti',icon: FileText,    isEmpty: false },
+  { entityType: 'player',  count: 12,label: 'Top contributors', icon: User, isEmpty: false },
+];
+```
+Per il caricamento Claude Design: includere `ConnectionBar.tsx` + `types.ts` come reference visiva (Tier 2 pattern code).
 
 ---
 

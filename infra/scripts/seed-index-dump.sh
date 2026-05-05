@@ -21,7 +21,7 @@ TS=$(date -u +%Y%m%dT%H%M%SZ)
 COMMIT=$(git rev-parse --short=9 HEAD)
 
 EMBEDDING_MODEL=$(docker exec meepleai-api printenv EMBEDDING_MODEL 2>/dev/null || echo "unknown")
-EMBEDDING_DIM=$(docker exec meepleai-api printenv EMBEDDING_DIM 2>/dev/null || echo "0")
+EMBEDDING_DIM=$(docker exec meepleai-api printenv EMBEDDING_DIMENSIONS 2>/dev/null || docker exec meepleai-api printenv EMBEDDING_DIM 2>/dev/null || echo "0")
 MODEL_SLUG=$(echo "$EMBEDDING_MODEL" | tr '/' '_' | tr -cd 'A-Za-z0-9_.-')
 
 BASENAME="meepleai_seed_${TS}_${MODEL_SLUG}_${COMMIT}"
@@ -90,7 +90,13 @@ SELECT json_build_object(
   'failed_pdf_ids',    COALESCE((SELECT json_agg(\"Id\") FROM pdf_documents WHERE processing_state='Failed'), '[]'::json)
 );")
 
-MANIFEST_SHA=$(sha256sum apps/api/src/Api/Infrastructure/Seeders/Catalog/Manifests/dev.yml | awk '{print $1}')
+MANIFEST_PATH=""
+for f in apps/api/src/Api/Infrastructure/Seeders/Catalog/Manifests/dev.yml \
+         ../apps/api/src/Api/Infrastructure/Seeders/Catalog/Manifests/dev.yml; do
+    [ -f "$f" ] && { MANIFEST_PATH="$f"; break; }
+done
+[ -n "$MANIFEST_PATH" ] || fail "manifest dev.yml non trovato"
+MANIFEST_SHA=$(sha256sum "$MANIFEST_PATH" | awk '{print $1}')
 
 jq -n \
     --argjson stats "$STATS_JSON" \

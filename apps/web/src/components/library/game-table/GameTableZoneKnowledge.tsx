@@ -60,8 +60,6 @@ import { HouseRulesSection } from './HouseRulesSection';
 
 export interface GameTableZoneKnowledgeProps {
   gameId: string;
-  /** @deprecated Use gameId — the agent is now resolved automatically via useGameAgents */
-  agentId?: string;
 }
 
 // ============================================================================

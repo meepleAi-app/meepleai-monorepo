@@ -16,10 +16,10 @@ export const ChatMessageResponseSchema = z.object({
   level: z.string().min(1),
   content: z.string(),
   sequenceNumber: z.number().int().nonnegative(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }).nullable(),
   isDeleted: z.boolean(),
-  deletedAt: z.string().datetime().nullable(),
+  deletedAt: z.string().datetime({ offset: true }).nullable(),
   deletedByUserId: z.string().uuid().nullable(),
   isInvalidated: z.boolean(),
   metadataJson: z.string().nullable(),
@@ -32,7 +32,7 @@ export type ChatMessageResponse = z.infer<typeof ChatMessageResponseSchema>;
 export const ChatThreadMessageDtoSchema = z.object({
   content: z.string().min(1),
   role: z.string().min(1),
-  timestamp: z.string().datetime(),
+  timestamp: z.string().datetime({ offset: true }),
   backendMessageId: z.string().uuid().optional(),
   endpoint: z.string().optional(),
   gameId: z.string().uuid().optional(),
@@ -48,8 +48,8 @@ export const ChatThreadDtoSchema = z.object({
   agentId: z.string().uuid().nullable().optional(),
   agentType: z.string().nullable().optional(),
   title: z.string().nullable(),
-  createdAt: z.string().datetime(),
-  lastMessageAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  lastMessageAt: z.string().datetime({ offset: true }).nullable(),
   messageCount: z.number().int().nonnegative(),
   messages: z.array(ChatThreadMessageDtoSchema),
 });
@@ -58,26 +58,28 @@ export type ChatThreadDto = z.infer<typeof ChatThreadDtoSchema>;
 
 // ========== RuleSpec Comments ==========
 
-export const RuleSpecCommentSchema: z.ZodType<RuleSpecComment> = z.lazy(() => z.object({
-  id: z.string().uuid(),
-  gameId: z.string().uuid(),
-  version: z.string().min(1),
-  atomId: z.string().nullable(),
-  lineNumber: z.number().int().nullable(),
-  lineContext: z.string().nullable(),
-  parentCommentId: z.string().uuid().nullable(),
-  replies: z.array(RuleSpecCommentSchema),
-  userId: z.string().uuid(),
-  userDisplayName: z.string().min(1),
-  commentText: z.string().min(1),
-  isResolved: z.boolean(),
-  resolvedByUserId: z.string().uuid().nullable(),
-  resolvedByDisplayName: z.string().nullable(),
-  resolvedAt: z.string().datetime().nullable(),
-  mentionedUserIds: z.array(z.string().uuid()),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().nullable(),
-}));
+export const RuleSpecCommentSchema: z.ZodType<RuleSpecComment> = z.lazy(() =>
+  z.object({
+    id: z.string().uuid(),
+    gameId: z.string().uuid(),
+    version: z.string().min(1),
+    atomId: z.string().nullable(),
+    lineNumber: z.number().int().nullable(),
+    lineContext: z.string().nullable(),
+    parentCommentId: z.string().uuid().nullable(),
+    replies: z.array(RuleSpecCommentSchema),
+    userId: z.string().uuid(),
+    userDisplayName: z.string().min(1),
+    commentText: z.string().min(1),
+    isResolved: z.boolean(),
+    resolvedByUserId: z.string().uuid().nullable(),
+    resolvedByDisplayName: z.string().nullable(),
+    resolvedAt: z.string().datetime({ offset: true }).nullable(),
+    mentionedUserIds: z.array(z.string().uuid()),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+);
 
 export type RuleSpecComment = {
   id: string;
@@ -115,7 +117,7 @@ export const TopQuestionSchema = z.object({
   questionHash: z.string().min(1),
   hitCount: z.number().int().nonnegative(),
   missCount: z.number().int().nonnegative(),
-  lastHitAt: z.string().datetime().nullable(),
+  lastHitAt: z.string().datetime({ offset: true }).nullable(),
 });
 
 export type TopQuestion = z.infer<typeof TopQuestionSchema>;

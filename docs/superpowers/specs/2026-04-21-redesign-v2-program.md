@@ -103,7 +103,13 @@ Il programma è spezzato in 5 sub-project con audience/scope distinti. Ogni SP h
 **Brief Claude Design**: `admin-mockups/briefs/SP4-entity-desktop.md` — **pronto, da eseguire**.
 **Mockup**: da produrre (~16 file `sp4-*.{html,jsx}`).
 **Spec implementativa**: da scrivere dopo mockup.
-**Dipendenze**: SP2 completo (drawer stack + EntityChip + connection-bar consolidati).
+**Dipendenze**: SP2 completo (drawer stack + EntityChip consolidati).
+**Componenti già stabili in produzione (NON ridisegnare)**:
+- `ConnectionBar` (`apps/web/src/components/ui/data-display/connection-bar/`) — PR #549 (Step 1.6) + PR #552 (Step 2 call-site migration). API contract: `ConnectionPip[]` con `{ entityType, count, label, icon, isEmpty }`.
+- `ConnectionChip` family (`apps/web/src/components/ui/data-display/meeple-card/parts/`) — PR #542, #545, #549, #552.
+- `MeepleCard` unificato — già in produzione su 17 call-site.
+- `RecentsBar`, `MobileBottomBar`, `MiniNavSlot`, drawer stack — M5.
+SP4 deve **istanziare** ConnectionBar passando `connections` builder-driven (vedi `build-connections.ts`), non riprogettarla.
 **Priorità implementativa**:
 1. Game detail + Agent character sheet — già top-traffic
 2. Session live desktop — core live play
@@ -181,7 +187,7 @@ Prima di chiudere un SP per passare al successivo:
 - **Tailwind config**: mappa HSL entity tokens. Cambi additivi safe, rename breaking.
 - **`MeepleCard`**: già unificato, NON creare varianti parallele. Estendere con nuovi entity types solo se servono (ma constraint è: 9 entity type, no nuovi).
 - **Drawer stack**: `useCascadeNavigationStore` è contract. Modifiche richiedono migration di tutti i consumer.
-- **Connection-bar**: pattern già montato su Game/Agent/Session desktop (M5). SP4 deve estendere agli altri entity, NON reinventare.
+- **Connection-bar**: ✅ stabile in produzione (PR #549 Step 1.6 + PR #552 Step 2). Componente: `apps/web/src/components/ui/data-display/connection-bar/ConnectionBar.tsx`. Tipi: `types.ts` (`ConnectionPip`, `ConnectionBarProps`). Builder puri: `build-connections.ts` (`buildGameConnections`, `buildAgentConnections`, `buildSessionConnections`). SP4 deve **istanziare** passando `connections` props, NON ridisegnare. SP3 mockup pubblici che mostrano relazioni tra entity (es. shared-game-detail) usano la stessa primitive.
 
 ### Rischi
 

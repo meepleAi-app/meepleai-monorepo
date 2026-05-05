@@ -358,11 +358,14 @@ internal class HybridLlmService : ILlmService
         string systemPrompt,
         string userPrompt,
         RequestSource source = RequestSource.Manual,
+        int? maxTokens = null,
         CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(explicitModel);
         ArgumentException.ThrowIfNullOrWhiteSpace(systemPrompt);
         ArgumentException.ThrowIfNullOrWhiteSpace(userPrompt);
+
+        var effectiveMaxTokens = maxTokens ?? DefaultMaxTokens;
 
         // Issue #4332: Find client that supports the explicit model
         var client = _clients.FirstOrDefault(c => c.SupportsModel(explicitModel));
@@ -386,15 +389,15 @@ internal class HybridLlmService : ILlmService
         try
         {
             _logger.LogInformation(
-                "Generating completion with explicit model {Model} via {Provider}",
-                explicitModel, providerName);
+                "Generating completion with explicit model {Model} via {Provider} (max_tokens={MaxTokens})",
+                explicitModel, providerName, effectiveMaxTokens);
 
             var result = await client.GenerateCompletionAsync(
                 explicitModel,
                 systemPrompt,
                 userPrompt,
                 DefaultTemperature,
-                DefaultMaxTokens,
+                effectiveMaxTokens,
                 ct).ConfigureAwait(false);
 
             stopwatch.Stop();

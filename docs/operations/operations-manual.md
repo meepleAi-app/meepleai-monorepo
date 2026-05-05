@@ -2676,6 +2676,25 @@ pwsh setup-secrets.ps1 -Validate            # Validate all present
 - Test database (separate from dev/prod)
 - Minimal resource allocation
 
+### Feature Flags
+
+Frontend feature flags surface as `NEXT_PUBLIC_*` environment variables. Because Next.js inlines `NEXT_PUBLIC_*` at build time, every flag must be passed **both** as a build arg under `services.web.build.args` and as a runtime env under `services.web.environment` in the relevant compose file. Forgetting either one yields a stale value (build arg only) or an inconsistent SSR/CSR behavior (env only).
+
+| Flag | Default | Purpose | Owner |
+|------|---------|---------|-------|
+| `NEXT_PUBLIC_ALPHA_MODE` | `false` (dev: `true`) | Alpha Zero feature scope (auth, games, BGG, RAG chat, library). Build-time. | Product |
+| `NEXT_PUBLIC_MOCK_MODE` | `false` (dev: `true`) | Serves MSW mocks when backend is unavailable. | Frontend |
+| `NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED` | `false` (dev: `true`) | ADR-051 M2.1 admin-only Mechanic Extractor AI validation surfaces (`/admin/knowledge-base/mechanic-extractor/{dashboard,golden,review}`). Strict equality on the literal `'true'` — no truthy coercion. When off the routes return 404 and embedded gates render nothing. | Knowledge Base |
+
+To enable a flag in staging without touching `compose.staging.yml`, export it on the host shell before running `make staging`:
+
+```bash
+export NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED=true
+make staging
+```
+
+Compose substitutes `${NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED:-false}` with the host value at build time. Reverting is a `git`-clean operation: unset the var and rebuild.
+
 ---
 
 ## Appendix C: Runbook Cross-Reference

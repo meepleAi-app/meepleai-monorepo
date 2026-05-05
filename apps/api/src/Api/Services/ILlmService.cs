@@ -88,12 +88,14 @@ internal interface ILlmService
     /// <param name="userPrompt">User's input prompt</param>
     /// <param name="source">Request source for cost tracking</param>
     /// <param name="ct">Cancellation token</param>
+    /// <param name="maxTokens">Optional override for the provider's max_tokens cap. When null, the service default is used.</param>
     /// <returns>LLM completion result with usage and cost tracking</returns>
     Task<LlmCompletionResult> GenerateCompletionWithModelAsync(
         string explicitModel,
         string systemPrompt,
         string userPrompt,
         RequestSource source = RequestSource.Manual,
+        int? maxTokens = null,
         CancellationToken ct = default);
 }
 

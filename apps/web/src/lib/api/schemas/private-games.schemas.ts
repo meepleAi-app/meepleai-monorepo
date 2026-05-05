@@ -27,9 +27,9 @@ export const PrivateGameDtoSchema = z.object({
   complexityRating: z.number().min(0).max(5).nullable().optional(),
   imageUrl: z.string().url().nullable().optional(),
   thumbnailUrl: z.string().url().nullable().optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().nullable().optional(),
-  bggSyncedAt: z.string().datetime().nullable().optional(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }).nullable().optional(),
+  bggSyncedAt: z.string().datetime({ offset: true }).nullable().optional(),
   canProposeToCatalog: z.boolean().optional(),
   agentDefinitionId: z.string().uuid().nullable().optional(),
 });
@@ -37,41 +37,45 @@ export const PrivateGameDtoSchema = z.object({
 export type PrivateGameDto = z.infer<typeof PrivateGameDtoSchema>;
 
 // Add private game request (matches backend AddPrivateGameRequest)
-export const AddPrivateGameRequestSchema = z.object({
-  source: PrivateGameSourceSchema,
-  bggId: z.number().int().positive().nullable().optional(),
-  title: z.string().min(1).max(200),
-  minPlayers: z.number().int().min(1).max(99),
-  maxPlayers: z.number().int().min(1).max(99),
-  yearPublished: z.number().int().min(1900).max(2100).nullable().optional(),
-  description: z.string().max(5000).nullable().optional(),
-  playingTimeMinutes: z.number().int().min(1).max(10000).nullable().optional(),
-  minAge: z.number().int().min(0).max(99).nullable().optional(),
-  complexityRating: z.number().min(0).max(5).nullable().optional(),
-  imageUrl: z.string().url().nullable().optional(),
-  thumbnailUrl: z.string().url().nullable().optional(),
-}).refine((data) => data.maxPlayers >= data.minPlayers, {
-  message: 'Max players must be greater than or equal to min players',
-  path: ['maxPlayers'],
-});
+export const AddPrivateGameRequestSchema = z
+  .object({
+    source: PrivateGameSourceSchema,
+    bggId: z.number().int().positive().nullable().optional(),
+    title: z.string().min(1).max(200),
+    minPlayers: z.number().int().min(1).max(99),
+    maxPlayers: z.number().int().min(1).max(99),
+    yearPublished: z.number().int().min(1900).max(2100).nullable().optional(),
+    description: z.string().max(5000).nullable().optional(),
+    playingTimeMinutes: z.number().int().min(1).max(10000).nullable().optional(),
+    minAge: z.number().int().min(0).max(99).nullable().optional(),
+    complexityRating: z.number().min(0).max(5).nullable().optional(),
+    imageUrl: z.string().url().nullable().optional(),
+    thumbnailUrl: z.string().url().nullable().optional(),
+  })
+  .refine(data => data.maxPlayers >= data.minPlayers, {
+    message: 'Max players must be greater than or equal to min players',
+    path: ['maxPlayers'],
+  });
 
 export type AddPrivateGameRequest = z.infer<typeof AddPrivateGameRequestSchema>;
 
 // Update private game request (matches backend UpdatePrivateGameRequest)
-export const UpdatePrivateGameRequestSchema = z.object({
-  title: z.string().min(1).max(200),
-  minPlayers: z.number().int().min(1).max(99),
-  maxPlayers: z.number().int().min(1).max(99),
-  yearPublished: z.number().int().min(1900).max(2100).nullable().optional(),
-  description: z.string().max(5000).nullable().optional(),
-  playingTimeMinutes: z.number().int().min(1).max(10000).nullable().optional(),
-  minAge: z.number().int().min(0).max(99).nullable().optional(),
-  complexityRating: z.number().min(0).max(5).nullable().optional(),
-  imageUrl: z.string().url().nullable().optional(),
-}).refine((data) => data.maxPlayers >= data.minPlayers, {
-  message: 'Max players must be greater than or equal to min players',
-  path: ['maxPlayers'],
-});
+export const UpdatePrivateGameRequestSchema = z
+  .object({
+    title: z.string().min(1).max(200),
+    minPlayers: z.number().int().min(1).max(99),
+    maxPlayers: z.number().int().min(1).max(99),
+    yearPublished: z.number().int().min(1900).max(2100).nullable().optional(),
+    description: z.string().max(5000).nullable().optional(),
+    playingTimeMinutes: z.number().int().min(1).max(10000).nullable().optional(),
+    minAge: z.number().int().min(0).max(99).nullable().optional(),
+    complexityRating: z.number().min(0).max(5).nullable().optional(),
+    imageUrl: z.string().url().nullable().optional(),
+  })
+  .refine(data => data.maxPlayers >= data.minPlayers, {
+    message: 'Max players must be greater than or equal to min players',
+    path: ['maxPlayers'],
+  });
 
 export type UpdatePrivateGameRequest = z.infer<typeof UpdatePrivateGameRequestSchema>;
 

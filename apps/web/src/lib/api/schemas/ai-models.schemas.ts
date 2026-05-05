@@ -24,11 +24,7 @@ export type AiProvider = z.infer<typeof AiProviderSchema>;
 /**
  * AI Model Status
  */
-export const ModelStatusSchema = z.enum([
-  'active',
-  'inactive',
-  'deprecated',
-]);
+export const ModelStatusSchema = z.enum(['active', 'inactive', 'deprecated']);
 
 export type ModelStatus = z.infer<typeof ModelStatusSchema>;
 
@@ -51,7 +47,7 @@ export const ModelUsageStatsSchema = z.object({
   totalInputTokens: z.number().int().min(0),
   totalOutputTokens: z.number().int().min(0),
   estimatedCost: z.number().min(0),
-  lastUsedAt: z.string().datetime().nullable().optional(),
+  lastUsedAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 export type ModelUsageStats = z.infer<typeof ModelUsageStatsSchema>;
@@ -71,8 +67,8 @@ export const AiModelDtoSchema = z.object({
   temperature: z.number().min(0).max(2),
   maxTokens: z.number().int().min(512).max(8192),
   usageStats: ModelUsageStatsSchema.optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().nullable().optional(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 export type AiModelDto = z.infer<typeof AiModelDtoSchema>;
@@ -125,7 +121,7 @@ export const CostTrackingDtoSchema = z.object({
     percentageUsed: z.number().min(0).max(100),
   }),
   budgetStatus: z.enum(['on_track', 'warning', 'critical', 'exceeded']),
-  lastUpdatedAt: z.string().datetime(),
+  lastUpdatedAt: z.string().datetime({ offset: true }),
 });
 
 export type CostTrackingDto = z.infer<typeof CostTrackingDtoSchema>;

@@ -122,6 +122,25 @@ internal sealed class GameMemoryRepository : RepositoryBase, IGameMemoryReposito
             }
         }
 
+        // Restore glossary entries from JSONB
+        if (entity.GlossaryEntriesJson != null)
+        {
+            var glossaryDtos = JsonSerializer.Deserialize<List<GlossaryEntryDto>>(entity.GlossaryEntriesJson);
+            if (glossaryDtos != null)
+            {
+#pragma warning disable S3011 // Reflection needed for domain reconstruction from persistence
+                var glossaryList = (List<GlossaryEntry>)typeof(GameMemory)
+                    .GetField("_glossaryEntries", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                    .GetValue(memory)!;
+#pragma warning restore S3011
+
+                foreach (var dto in glossaryDtos)
+                {
+                    glossaryList.Add(GlossaryEntry.Restore(dto.Term, dto.Definition, dto.Language, (GlossaryEntrySource)dto.Source, dto.AddedAt));
+                }
+            }
+        }
+
         return memory;
     }
 
@@ -168,6 +187,20 @@ internal sealed class GameMemoryRepository : RepositoryBase, IGameMemoryReposito
             entity.NotesJson = JsonSerializer.Serialize(dtos);
         }
 
+        // Serialize glossary entries to JSONB
+        if (memory.GlossaryEntries.Count > 0)
+        {
+            var dtos = memory.GlossaryEntries.Select(e => new GlossaryEntryDto
+            {
+                Term = e.Term,
+                Definition = e.Definition,
+                Language = e.Language,
+                Source = (int)e.Source,
+                AddedAt = e.AddedAt,
+            }).ToList();
+            entity.GlossaryEntriesJson = JsonSerializer.Serialize(dtos);
+        }
+
         return entity;
     }
 
@@ -194,5 +227,15 @@ internal sealed class GameMemoryRepository : RepositoryBase, IGameMemoryReposito
         public string Content { get; set; } = string.Empty;
         public DateTime AddedAt { get; set; }
         public Guid? AddedByUserId { get; set; }
+    }
+
+    /// <summary>DTO for JSON serialization of GlossaryEntry.</summary>
+    private sealed class GlossaryEntryDto
+    {
+        public string Term { get; set; } = string.Empty;
+        public string Definition { get; set; } = string.Empty;
+        public string Language { get; set; } = "en";
+        public int Source { get; set; }
+        public DateTime AddedAt { get; set; }
     }
 }

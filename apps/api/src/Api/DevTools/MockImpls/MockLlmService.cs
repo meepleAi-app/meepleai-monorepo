@@ -118,6 +118,7 @@ internal sealed class MockLlmService : ILlmService
         string systemPrompt,
         string userPrompt,
         RequestSource source = RequestSource.Manual,
+        int? maxTokens = null,
         CancellationToken ct = default)
     {
         return GenerateCompletionAsync(systemPrompt, userPrompt, source, ct);

@@ -851,6 +851,63 @@
     }
   },
   "pages": {
+    "errors": {
+      "notFound": {
+        "eyebrow": "404",
+        "title": "Page not found",
+        "subtitle": "The page you're looking for doesn't exist or has been moved.",
+        "homeCta": "Back to home",
+        "exploreCta": "Explore games"
+      },
+      "serverError": {
+        "eyebrow": "500",
+        "title": "Something went wrong",
+        "subtitle": "An unexpected error occurred. Please retry or return home.",
+        "retryCta": "Retry",
+        "homeCta": "Back to home",
+        "digestLabel": "Error ID"
+      },
+      "offline": {
+        "title": "You're offline",
+        "subtitle": "Don't worry — you can still access content saved in cache.",
+        "retryCta": "Retry connection",
+        "homeCta": "Back to home",
+        "statsTitle": "Available offline",
+        "sessionsLabel": "Sessions",
+        "cachedGamesLabel": "Cached games",
+        "pendingLabel": "Pending actions",
+        "onlineStatus": "Connection restored",
+        "offlineStatus": "No connection"
+      }
+    },
+    "cookieSettings": {
+      "title": "Cookie preferences",
+      "subtitle": "Manage your cookie consent. You can update these settings at any time.",
+      "categories": {
+        "essential": {
+          "label": "Essential cookies",
+          "description": "Required for the site to function (session, core preferences). They cannot be disabled."
+        },
+        "analytics": {
+          "label": "Analytics cookies",
+          "description": "Help us understand how you use the site, in aggregated and anonymous form."
+        },
+        "functional": {
+          "label": "Functional cookies",
+          "description": "Improve your experience by remembering your choices (theme, language)."
+        }
+      },
+      "actions": {
+        "save": "Save preferences",
+        "acceptAll": "Accept all",
+        "rejectAll": "Reject optional"
+      },
+      "savedToast": "Preferences saved",
+      "policyLink": "Read the full cookie policy"
+    },
+    "cookies": {
+      "managePreferencesCta": "Manage preferences"
+    },
     "about": {
       "title": "About MeepleAI",
       "description": "Discover who we are and our mission to improve your gaming experience",
@@ -888,23 +945,23 @@
     },
     "howItWorks": {
       "title": "How It Works",
-      "description": "Discover how MeepleAI helps you with board game rules",
-      "steps": {
-        "step1": {
-          "title": "1. Choose Your Game",
-          "description": "Select a game from our catalog or upload your own rulebook PDF. We support hundreds of popular games."
-        },
-        "step2": {
-          "title": "2. Ask a Question",
-          "description": "Write your question in natural language: 'Can I move two characters on the same turn?', 'How does scoring work at the end?'"
-        },
-        "step3": {
-          "title": "3. Get the Answer",
-          "description": "Receive a precise answer with direct references to the rulebook. You can always verify the source of the response."
-        }
+      "subtitle": "Three simple steps to stop arguing about rules",
+      "ctaRegister": "Start Now",
+      "stepsHeading": "How it works",
+      "step1": {
+        "title": "1. Choose Your Game",
+        "description": "Select a game from our catalog or upload your own rulebook PDF. We support hundreds of popular games."
       },
+      "step2": {
+        "title": "2. Ask a Question",
+        "description": "Write your question in natural language: 'Can I move two characters on the same turn?', 'How does scoring work at the end?'"
+      },
+      "step3": {
+        "title": "3. Get the Answer",
+        "description": "Receive a precise answer with direct references to the rulebook. You can always verify the source of the response."
+      },
+      "featuresHeading": "Main features",
       "features": {
-        "title": "Main Features",
         "rag": {
           "title": "Intelligent RAG",
           "description": "Our Retrieval-Augmented Generation system finds the most relevant sections in the rulebook to answer your question."
@@ -921,7 +978,9 @@
           "title": "Personal Library",
           "description": "Save your games and access them quickly. Track your collection and preferences."
         }
-      }
+      },
+      "aboutCta": "Learn more about MeepleAI",
+      "faqCta": "Browse the FAQ"
     },
     "blog": {
       "title": "Blog",
@@ -973,76 +1032,917 @@
       }
     },
     "faq": {
-      "title": "Frequently Asked Questions",
-      "description": "Answers to the most common questions about MeepleAI",
+      "title": "Frequently asked questions",
+      "subtitle": "Quick answers about MeepleAI — accounts, games, AI, privacy and more.",
+      "eyebrow": "Help center",
+      "search": {
+        "placeholder": "Search the FAQ…",
+        "clearLabel": "Clear search",
+        "label": "Search the FAQ",
+        "resultsLabel": "{count, plural, =0 {No results} one {1 result} other {# results}} for \"{query}\"",
+        "totalLabel": "{count, plural, one {1 question total} other {# questions total}}"
+      },
       "categories": {
-        "general": {
-          "title": "General",
-          "questions": {
-            "q1": {
-              "question": "What is MeepleAI?",
-              "answer": "MeepleAI is an intelligent assistant that helps you understand board game rules. Using artificial intelligence, it analyzes rulebooks and answers your questions in a precise and sourced way."
-            },
-            "q2": {
-              "question": "Is MeepleAI free?",
-              "answer": "MeepleAI offers a free plan with limited functionality and a premium plan with advanced features. Check the pricing page for details."
-            },
-            "q3": {
-              "question": "Which games are supported?",
-              "answer": "We support hundreds of popular games and continuously add new ones. You can also upload your own rulebook PDF for games not in our catalog."
-            }
+        "all": { "label": "All" },
+        "account": { "label": "Account & Login" },
+        "games": { "label": "Games & Library" },
+        "ai": { "label": "AI & Chat" },
+        "privacy": { "label": "Privacy & Data" },
+        "billing": { "label": "Billing & Alpha" }
+      },
+      "popularSection": {
+        "title": "Quick answers",
+        "subtitle": "top 4 most searched",
+        "readMoreLabel": "Read more →"
+      },
+      "emptyState": {
+        "title": "No FAQ matches your search",
+        "subtitle": "Try different terms or contact us directly.",
+        "contactCta": "Contact support"
+      },
+      "loadingState": {
+        "label": "Loading FAQ…"
+      },
+      "errorState": {
+        "title": "Could not load the FAQ",
+        "subtitle": "Something went wrong. Please retry in a moment.",
+        "retryCta": "Retry"
+      },
+      "items": {
+        "q1": {
+          "question": "How do I create a MeepleAI account?",
+          "short": "During the private alpha, sign in via the email invite or join the waitlist on /join.",
+          "long": "During the **private alpha** (running through Q2 2026), MeepleAI is invite-only.\n\nThere are two ways:\n\n1. **Direct invites**: if you know an alpha member, they can share an `/accept-invite/{token}` link. Each user has 5 invites.\n2. **Waitlist**: register on `/join` indicating your favourite game. We send out new invites weekly based on your position.\n\nAfter the public go-live (post-alpha), registration will open for everyone."
+        },
+        "q2": {
+          "question": "I forgot my password — how do I reset it?",
+          "short": "Go to /login and click \"Forgot password?\". You'll receive a reset link by email within 5 minutes.",
+          "long": "From the `/login` page click **\"Forgot password?\"**. Enter your registered email.\n\nWithin 5 minutes you will receive an email with a reset link (valid 1 hour). If you don't see the email, check **spam/promotions**.\n\nIf the issue persists, contact us via `/contact`."
+        },
+        "q3": {
+          "question": "Can I change my email address?",
+          "short": "Yes, from Settings → Account → Email. You'll receive a verification at the new address before the change is applied.",
+          "long": "Go to **Settings → Account → Email**. Enter the new address and your current password.\n\nWe will send a **verification link to the new address**: the change becomes effective only after confirmation."
+        },
+        "q4": {
+          "question": "How do I install a toolkit for a game?",
+          "short": "Open the game from the catalog → Toolkit tab → click \"Install\" on the desired toolkit. It activates within 30 seconds.",
+          "long": "To **install a toolkit**:\n\n1. Go to the **Game Catalog** (`/games`)\n2. Open the desired game (e.g., Wingspan)\n3. **Toolkit** tab → choose a toolkit (Official or Community)\n4. Click **\"Install\"**\n\nThe toolkit activates within 30 seconds. You will find it under **\"My toolkits\"** in the side panel of the game. To uninstall, right-click → Remove."
+        },
+        "q5": {
+          "question": "Can I add a game that is not in the catalog?",
+          "short": "During the alpha only admins can add games. Suggest new games via /contact.",
+          "long": "During the **private alpha**, adding new games to the catalog is restricted to admins to ensure KB quality.\n\nYou can **suggest a game** via `/contact`: send title, publisher, year and BoardGameGeek link. We review requests weekly. Post-alpha, users will be able to propose games self-service with moderated approval."
+        },
+        "q6": {
+          "question": "How does my personal library work?",
+          "short": "The library tracks the games you own or follow. Add games from the catalog with the \"Owned\" button.",
+          "long": "The **Library** (`/library`) tracks the games you own or want to follow.\n\nFrom the catalog, click **\"Owned\"** to add it, **\"Wishlist\"** to follow it. From the library you can:\n\n- View statistics about your matches\n- Quickly access toolkits and KBs\n- Receive notifications about new community content"
+        },
+        "q7": {
+          "question": "How do MeepleAI's AI agents work?",
+          "short": "Each agent specializes in a single game. It answers questions about rules, strategy and setup citing the official KB.",
+          "long": "**AI agents** are specialized per game. Each agent:\n\n- Uses an **indexed KB** (rulebooks, official FAQ, errata)\n- Always cites the source (manual page or URL)\n- Supports **multiple models**: Claude Sonnet, GPT-4o, Gemini Pro\n\nOpen an agent from a game page → **Agents** tab → \"Try\". The conversation is private by default; you can share it post-fact via link."
+        },
+        "q8": {
+          "question": "Are my AI conversations private?",
+          "short": "Yes. Chats are private by default. You can share them via a public link if you choose to help the community.",
+          "long": "**Yes, your conversations are private** by default and are not used for training.\n\nYou may optionally **make a conversation public** (toggle \"Share\") to help other players. Only chats marked public are visible in the `/shared-chats` catalog."
+        },
+        "q9": {
+          "question": "Can I choose which AI model to use?",
+          "short": "Yes. Each agent exposes the supported models (Claude, GPT-4o, Gemini). Switch from the chat menu at the top.",
+          "long": "Yes. Each agent declares the **supported models**. From the chat menu (top right during a conversation) you can switch between:\n\n- **Claude Sonnet** (default, top quality)\n- **GPT-4o** (fast, cheap)\n- **Gemini Pro** (long-context for large rulebooks)\n\nDuring the alpha all models are **free** with a 100 msg/day limit."
+        },
+        "q10": {
+          "question": "What data does MeepleAI collect?",
+          "short": "Email, nickname, gameplay activity and AI conversations. No payment data during alpha. Details on /privacy.",
+          "long": "We collect:\n\n- **Account**: email, nickname, password (bcrypt hash)\n- **Gameplay**: owned games, sessions, statistics\n- **AI**: conversations with agents (private by default)\n\nWe do not collect **payment data** during the alpha (free). Data is hosted on EU servers (Frankfurt).\n\nFull policy: `/privacy`."
+        },
+        "q11": {
+          "question": "Can I export my data?",
+          "short": "Yes. From Settings → Privacy → Export data. You receive a .zip with JSON and markdown within 24h.",
+          "long": "Yes, in compliance with **GDPR Art. 20**.\n\nFrom **Settings → Privacy → Export my data**, request an export. Within 24h you'll receive a `.zip` containing:\n\n- `account.json` — profile and settings\n- `library.json` — owned games, statistics\n- `conversations/*.md` — all chats in markdown\n\nThe export is available for download for 7 days."
+        },
+        "q12": {
+          "question": "How do I delete my account?",
+          "short": "From Settings → Account → Delete account. Deletion is final after a 30-day grace period.",
+          "long": "From **Settings → Account → Delete account**.\n\nAfter the request you have a **30-day grace period** to reconsider (just log in). After that, **all your data is permanently deleted**: account, conversations and public contributions (toolkits/agents) get anonymized."
+        },
+        "q13": {
+          "question": "Is MeepleAI free?",
+          "short": "During the alpha yes, fully free. Post-alpha we'll have a free tier and a paid Pro plan.",
+          "long": "During the **private alpha** MeepleAI is **fully free** for invited members.\n\nPost-alpha (Q2 2026 estimated) we will offer:\n\n- **Free tier**: public catalog, 50 AI msg/day, 1 toolkit installed\n- **Pro** (~ €5/month): unlimited AI, unlimited toolkits, private agents, priority support\n\nAlpha members will receive **3 months Pro free** as a thank-you."
+        },
+        "q14": {
+          "question": "How long will the alpha last?",
+          "short": "The alpha started Jan 2026. We estimate public go-live in Q2 2026 (Apr–Jun).",
+          "long": "The **private alpha** started in **January 2026** with the first 100 invites.\n\nWe estimate public go-live for **Q2 2026** (April–June), depending on:\n\n- Infrastructure stability\n- Game catalog (target 100+ indexed games)\n- Alpha members feedback\n\nRegular updates on our changelog `/changelog`."
+        }
+      },
+      "footer": {
+        "title": "Didn't find an answer?",
+        "subtitle": "Our team responds within 24 hours. Reach out for requests, bugs or feedback on the platform."
+      },
+      "contactCta": "Contact us",
+      "howItWorksCta": "How It Works"
+    },
+    "invites": {
+      "metadata": {
+        "title": "Game night invitation — MeepleAI",
+        "description": "You've been invited to a game night. Confirm or decline your attendance."
+      },
+      "states": {
+        "default": {
+          "ariaRegion": "Invitation details"
+        },
+        "loggedIn": {
+          "preFillBadge": "We'll respond as {name}"
+        },
+        "acceptedSuccess": {
+          "heading": "You're in!",
+          "subText": "{hostName} has been notified.",
+          "addToCalendarCta": "Add to calendar",
+          "shareCta": "Share with others",
+          "rosterCount": "{accepted} of {expected} confirmed"
+        },
+        "declined": {
+          "heading": "You declined the invitation",
+          "subText": "{hostName} has been notified. No hard feelings!",
+          "changeMyMindCta": "Changed my mind, I'll come"
+        },
+        "tokenExpired": {
+          "heading": "Invitation expired",
+          "subText": "This invitation is no longer valid. Ask {hostName} to send it again.",
+          "ctaContactHost": "Contact the host"
+        },
+        "tokenInvalid": {
+          "heading": "Invitation not found",
+          "subText": "The link you opened doesn't match any invitation. Make sure it's complete.",
+          "ctaHome": "Go to home"
+        },
+        "alreadyAccepted": {
+          "heading": "Response already sent",
+          "subTextAccepted": "You accepted this invitation.",
+          "subTextDeclined": "You declined this invitation.",
+          "rosterCount": "{accepted} of {expected} confirmed",
+          "switchToDeclineCta": "Switch to: decline",
+          "switchToAcceptCta": "Switch to: accept"
+        }
+      },
+      "form": {
+        "acceptCta": "Accept, I'll be there →",
+        "acceptCtaLoggedIn": "Accept, I'll be there → (as {displayName})",
+        "declineCta": "I can't make it",
+        "submittingAccept": "Sending response…",
+        "submittingDecline": "Sending response…"
+      },
+      "session": {
+        "dateLabel": "Date",
+        "timeLabel": "Time",
+        "durationLabel": "Duration",
+        "durationValue": "{minutes, plural, one {1 minute} other {# minutes}}",
+        "locationLabel": "Location",
+        "locationMissing": "Location TBD",
+        "playersLabel": "Seats",
+        "playersValue": "{accepted} / {expected}",
+        "primaryGameLabel": "Primary game"
+      },
+      "host": {
+        "welcomeMessageLabel": "Message from the host",
+        "ariaAvatarFallback": "Avatar of {name}"
+      },
+      "banners": {
+        "errorGeneric": "Response not sent. Check your connection and try again.",
+        "stateSwitchConflict": "You've already responded: {currentResponse}. To change, use the dedicated button.",
+        "goneExpired": "The invitation expired while you were responding.",
+        "goneCancelled": "The host has cancelled the game night."
+      },
+      "telemetry": {
+        "events": {
+          "viewed": "invite.viewed",
+          "acceptClicked": "invite.accept_clicked",
+          "declineClicked": "invite.decline_clicked",
+          "respondSucceeded": "invite.respond_succeeded",
+          "respondFailed": "invite.respond_failed"
+        }
+      }
+    },
+    "join": {
+      "metadata": {
+        "title": "Join the Alpha — MeepleAI",
+        "description": "Sign up for the MeepleAI private waitlist: AI agents for your board games, smart library and live sessions."
+      },
+      "hero": {
+        "alphaPill": "Private alpha",
+        "tagline": "Your AI assistant for board games",
+        "subTagline": "Join the waitlist — you'll get an invite as soon as we open the next group."
+      },
+      "form": {
+        "emailLabel": "Email",
+        "emailPlaceholder": "you@email.com",
+        "emailErrorInvalid": "Invalid email",
+        "nameLabel": "Name",
+        "nameOptional": "(optional)",
+        "namePlaceholder": "What's your name?",
+        "nameHint": "If you tell us, we'll address you by name in emails",
+        "gameLabel": "Which game would you like an agent for?",
+        "gamePlaceholder": "Pick a game…",
+        "gameOtherPlaceholder": "E.g. Terraforming Mars",
+        "gameErrorRequired": "Select a game",
+        "gameErrorOtherTooShort": "Specify the game (min. 2 characters)",
+        "newsletterLabel": "I want to receive email updates about MeepleAI (you can unsubscribe at any time).",
+        "submitDefault": "Join the waitlist →",
+        "submitting": "Sending…",
+        "alreadyHaveInvite": "Already have an invite?",
+        "loginLink": "Sign in"
+      },
+      "banners": {
+        "alreadyOnList": "This email is already on the list — you're at position #{position}. Estimated entry: {weeks, plural, one {1 week} other {# weeks}}.",
+        "errorGeneric": "Something went wrong. Check your connection and try again in a few seconds.",
+        "errorEmailField": "Network error",
+        "alreadyEmailField": "Already registered"
+      },
+      "success": {
+        "heading": "You're on the list!",
+        "subText": "We'll get in touch within 2–3 weeks.",
+        "subTextSecond": "In the meantime, check your email for the confirmation.",
+        "positionLabel": "Your position",
+        "positionEstimate": "estimate {weeks, plural, one {1 week} other {# weeks}}",
+        "resetCta": "Sign up another email"
+      },
+      "features": {
+        "kb": {
+          "title": "Smart library",
+          "desc": "Add a game and AI indexes the manual in 60 seconds."
+        },
+        "agent": {
+          "title": "AI agents",
+          "desc": "A dedicated expert for every game. Cites the PDF page."
+        },
+        "session": {
+          "title": "Live sessions",
+          "desc": "Timer, score, history — all during the game."
+        }
+      },
+      "games": {
+        "azul": "Azul",
+        "catan": "Settlers of Catan",
+        "wingspan": "Wingspan",
+        "brass": "Brass: Birmingham",
+        "gloomhaven": "Gloomhaven",
+        "arknova": "Ark Nova",
+        "spirit": "Spirit Island",
+        "sevenWonders": "7 Wonders Duel",
+        "carcassonne": "Carcassonne",
+        "ticket": "Ticket to Ride",
+        "other": "Other…"
+      },
+      "select": {
+        "listboxAriaLabel": "Available games",
+        "otherInputAriaLabel": "Specify the game"
+      },
+      "stats": {
+        "inWaitlist": "on the list",
+        "estimatedWait": "weeks of waiting",
+        "free": "free during alpha"
+      }
+    },
+    "agents": {
+      "metadata": {
+        "title": "AI Agents — MeepleAI",
+        "description": "Agent studio: create, manage and refine your AI agents specialized for each game."
+      },
+      "hero": {
+        "eyebrow": "Your AI agents",
+        "title": "Agent studio",
+        "subtitle": "Create, manage and refine your AI agents specialized for each game.",
+        "cta": {
+          "create": "Create agent"
+        },
+        "stats": {
+          "attivo": "Active",
+          "inSetup": "In setup",
+          "archiviato": "Archived",
+          "totalInvocations": "Total invocations"
+        }
+      },
+      "filters": {
+        "search": {
+          "placeholder": "Search by name, type or strategy…",
+          "ariaLabel": "Search agents",
+          "clearAriaLabel": "Clear search"
+        },
+        "status": {
+          "label": "Status",
+          "all": "All",
+          "attivo": "Active",
+          "in-setup": "In setup",
+          "archiviato": "Archived"
+        },
+        "sort": {
+          "label": "Sort by",
+          "recent": "Recent",
+          "alpha": "A-Z",
+          "used": "Most used"
+        },
+        "resultCount": "{count, plural, =0 {No results} =1 {1 agent} other {# agents}}"
+      },
+      "grid": {
+        "ariaLabel": "Agents list",
+        "card": {
+          "status": {
+            "attivo": "Active",
+            "in-setup": "In setup",
+            "archiviato": "Archived"
+          },
+          "lastUsed": {
+            "never": "Never used",
+            "label": "Last used"
+          },
+          "invocations": "{count, plural, =0 {Never invoked} =1 {1 invocation} other {# invocations}}",
+          "openLabel": "Open agent"
+        }
+      },
+      "empty": {
+        "default": {
+          "title": "No agents yet",
+          "subtitle": "Create your first AI agent to start playing with the assistant.",
+          "cta": "Create agent"
+        },
+        "filtered": {
+          "title": "No agents found",
+          "subtitle": "Try adjusting the filters or your search query.",
+          "cta": "Clear filters"
+        },
+        "error": {
+          "title": "Couldn't load agents",
+          "subtitle": "Something went wrong. Please try again in a moment.",
+          "cta": "Retry"
+        }
+      }
+    },
+    "games": {
+      "library": {
+        "metadata": {
+          "title": "My games — MeepleAI",
+          "description": "Browse your game library: owned, wishlist and associated knowledge bases."
+        },
+        "hero": {
+          "title": "Your library",
+          "subtitle": "All your games, organized and ready to play with AI.",
+          "cta": {
+            "add": "Add game"
+          },
+          "stats": {
+            "owned": "Owned",
+            "wishlist": "Wishlist",
+            "totalEntries": "Total",
+            "kbDocs": "KB docs"
           }
         },
-        "usage": {
-          "title": "How to Use",
-          "questions": {
-            "q1": {
-              "question": "How do I ask a question?",
-              "answer": "Select a game, then type your question in the chat. You can ask in natural language, as if you were asking a friend who knows the rules well."
-            },
-            "q2": {
-              "question": "Can I upload my rulebook PDF?",
-              "answer": "Yes! With the free plan you can upload 1 PDF per month, while with the premium plan you have unlimited uploads."
-            },
-            "q3": {
-              "question": "In which languages can I ask questions?",
-              "answer": "Currently we support Italian and English. The AI can understand your question regardless of the rulebook language."
-            }
-          }
+        "filters": {
+          "search": {
+            "placeholder": "Search by title, publisher or year…",
+            "ariaLabel": "Search the library",
+            "clearAriaLabel": "Clear search"
+          },
+          "status": {
+            "label": "Status",
+            "all": "All",
+            "owned": "Owned",
+            "wishlist": "Wishlist",
+            "played": "Played"
+          },
+          "sort": {
+            "label": "Sort by",
+            "lastPlayed": "Recently added",
+            "rating": "Rating",
+            "title": "Title",
+            "year": "Year"
+          },
+          "view": {
+            "label": "View",
+            "grid": "Grid",
+            "list": "List"
+          },
+          "resultCount": "{count, plural, =0 {No results} =1 {1 result} other {# results}}"
         },
-        "technical": {
-          "title": "Technical Questions",
-          "questions": {
-            "q1": {
-              "question": "How accurate is the AI?",
-              "answer": "Our RAG system is designed to provide answers based directly on the rulebook text. Each answer includes the reference to the original source for verification."
-            },
-            "q2": {
-              "question": "Is my data safe?",
-              "answer": "Yes, we take your privacy seriously. Uploaded PDFs are processed and deleted within 30 days. See our Privacy Policy for more details."
-            },
-            "q3": {
-              "question": "Does it work on mobile?",
-              "answer": "Yes, MeepleAI is fully responsive and works on any device: smartphone, tablet, or desktop."
-            }
+        "empty": {
+          "library": {
+            "title": "Your library is empty",
+            "subtitle": "Add your first game to start building your collection.",
+            "cta": "Add game"
+          },
+          "filteredEmpty": {
+            "title": "No results",
+            "subtitle": "Try adjusting your filters or search.",
+            "cta": "Clear filters"
+          },
+          "error": {
+            "title": "Unable to load library",
+            "subtitle": "Something went wrong. Please try again.",
+            "cta": "Retry"
           }
+        }
+      }
+    },
+    "library": {
+      "metadata": {
+        "title": "My library — MeepleAI",
+        "description": "Your game collection: knowledge bases, loans, wishlist and recent activity."
+      },
+      "hero": {
+        "title": "My library",
+        "subtitle": "Your entire collection, AI agents and recent plays at a glance.",
+        "stats": {
+          "totalGames": "Total games",
+          "kbReady": "Knowledge bases",
+          "wishlist": "Wishlist",
+          "loaned": "On loan"
         },
-        "account": {
-          "title": "Account and Billing",
-          "questions": {
-            "q1": {
-              "question": "How do I create an account?",
-              "answer": "Click 'Sign Up' in the upper right corner and follow the instructions. You can register with email or through Google/Discord."
-            },
-            "q2": {
-              "question": "Can I cancel my subscription?",
-              "answer": "Yes, you can cancel anytime from your profile settings. You'll continue to have access to premium features until the end of the already paid period."
-            },
-            "q3": {
-              "question": "How do I delete my account?",
-              "answer": "You can request account deletion from your privacy settings. We will delete all your data within 30 days of your request."
-            }
-          }
+        "cta": {
+          "add": "Add game",
+          "addAriaLabel": "Add a new game to your library"
+        }
+      },
+      "tabs": {
+        "ariaLabel": "Library category filter",
+        "all": "All",
+        "kb": "Knowledge bases",
+        "loaned": "On loan",
+        "count": "{count, plural, =0 {none} =1 {1} other {#}}"
+      },
+      "selectionMode": {
+        "enter": "Select",
+        "enterAriaLabel": "Enter multi-select mode",
+        "exit": "Cancel",
+        "exitAriaLabel": "Exit selection mode",
+        "selectedCount": "{count, plural, =0 {Nothing selected} =1 {1 item selected} other {# items selected}}"
+      },
+      "filters": {
+        "search": {
+          "placeholder": "Search by title, publisher or year…",
+          "ariaLabel": "Search the library",
+          "clearAriaLabel": "Clear search"
+        }
+      },
+      "sort": {
+        "label": "Sort by",
+        "ariaLabel": "Change sort order",
+        "recent": "Recently added",
+        "title": "Title (A–Z)",
+        "rating": "Rating",
+        "state": "Status"
+      },
+      "view": {
+        "label": "View",
+        "ariaLabel": "Change view mode",
+        "grid": "Grid",
+        "list": "List",
+        "compact": "Compact"
+      },
+      "bulk": {
+        "actions": {
+          "delete": "Delete",
+          "deleteAriaLabel": "Delete the selected items",
+          "favorite": "Mark favorite",
+          "favoriteAriaLabel": "Mark the selected items as favorite",
+          "export": "Export",
+          "exportAriaLabel": "Export the selected items",
+          "loan": "Mark on loan",
+          "loanAriaLabel": "Mark the selected items as on loan"
+        },
+        "confirm": {
+          "deleteTitle": "Delete {count, plural, =1 {1 game} other {# games}}?",
+          "deleteMessage": "This will remove the selected items from your library. This action cannot be undone.",
+          "confirmCta": "Delete",
+          "cancelCta": "Cancel"
+        },
+        "clearSelection": "Clear selection",
+        "clearSelectionAriaLabel": "Deselect all items"
+      },
+      "activityRail": {
+        "title": "Recent activity",
+        "subtitle": "Latest additions and changes to your library.",
+        "empty": "No recent activity.",
+        "viewAll": "View all",
+        "viewAllAriaLabel": "Open the full activity history"
+      },
+      "emptyState": {
+        "default": {
+          "title": "Your library is empty",
+          "subtitle": "Add your first game to start building your collection.",
+          "cta": "Add game"
+        },
+        "filteredEmpty": {
+          "title": "No results",
+          "subtitle": "Try adjusting your filters or search.",
+          "cta": "Clear filters"
+        },
+        "error": {
+          "title": "Unable to load library",
+          "subtitle": "Something went wrong. Please try again in a moment.",
+          "cta": "Retry"
+        }
+      }
+    },
+    "agentDetail": {
+      "metadata": {
+        "title": "{name} — AI Agent — MeepleAI",
+        "description": "Configure, explore and use your AI agent {name} for board games."
+      },
+      "breadcrumb": {
+        "agents": "Agents",
+        "current": "{name}"
+      },
+      "hero": {
+        "back": "Back to agents",
+        "backAriaLabel": "Back to the agents list",
+        "activeBadge": "Active",
+        "draftBadge": "In setup",
+        "archivedBadge": "Archived",
+        "metaType": "Type: {type}",
+        "metaModel": "Model: {model}",
+        "metaCreated": "Created on {date}",
+        "metaLastUsed": "Last used: {date}",
+        "metaLastUsedNever": "Never used",
+        "metaInvocations": "{count, plural, =0 {No invocations} =1 {1 invocation} other {# invocations}}",
+        "metaGame": "Game: {name}",
+        "metaGameNone": "Standalone agent",
+        "ctaPlay": "Start chat",
+        "ctaSetup": "Continue setup",
+        "ctaUnarchive": "Reactivate",
+        "ctaShare": "Share",
+        "ctaShareAriaLabel": "Share this agent",
+        "setupBannerTitle": "This agent is in setup",
+        "setupBannerSubtitle": "Complete the configuration to start using it.",
+        "archivedBannerTitle": "This agent is archived",
+        "archivedBannerSubtitle": "Reactivate it to use it again."
+      },
+      "tabs": {
+        "ariaLabel": "Agent sections",
+        "identity": "Identity",
+        "knowledge": "Knowledge",
+        "performance": "Performance",
+        "history": "History",
+        "settings": "Settings"
+      },
+      "identity": {
+        "personaTitle": "Persona",
+        "personaEmpty": "No persona configured.",
+        "systemPromptTitle": "System Prompt",
+        "systemPromptEmpty": "No system prompt configured.",
+        "systemPromptHidden": "The system prompt is not available."
+      },
+      "knowledge": {
+        "title": "Knowledge Base Documents",
+        "subtitle": "Indexed documents for this agent.",
+        "empty": "No indexed documents.",
+        "emptySubtitle": "Upload a rulebook PDF to enable contextual chat.",
+        "uploadCta": "↑ Upload document",
+        "standaloneTitle": "Standalone agent",
+        "standaloneSubtitle": "This agent is not associated with a game. It has no dedicated Knowledge Base.",
+        "standaloneCta": "Associate a game",
+        "docsCount": "{count, plural, =0 {0 documents} =1 {1 document} other {# documents}}",
+        "statusIndexed": "INDEXED",
+        "statusProcessing": "PROCESSING",
+        "statusFailed": "ERROR"
+      },
+      "performance": {
+        "title": "Usage statistics",
+        "invocationsLabel": "Invocations",
+        "avgConfidenceLabel": "Average confidence",
+        "avgResponseTimeLabel": "Average response time",
+        "empty": "No statistics available.",
+        "emptySubtitle": "Statistics will be available after the first invocation.",
+        "lockedDraftTitle": "Performance not available",
+        "lockedDraftSubtitle": "Complete the agent setup to unlock statistics."
+      },
+      "history": {
+        "title": "Chat history",
+        "empty": "No conversations recorded.",
+        "emptySubtitle": "Conversations with this agent will appear here.",
+        "threadCount": "{count, plural, =0 {0 conversations} =1 {1 conversation} other {# conversations}}",
+        "lockedDraftTitle": "History not available",
+        "lockedDraftSubtitle": "Complete the agent setup to unlock history."
+      },
+      "settings": {
+        "title": "Agent settings",
+        "strategyLabel": "RAG Strategy",
+        "parametersLabel": "Strategy parameters",
+        "readOnlyBanner": "Settings are read-only for archived agents.",
+        "saveCta": "Save settings",
+        "cancelCta": "Cancel",
+        "saveSuccess": "Settings saved.",
+        "saveError": "Could not save. Please try again.",
+        "dangerZoneTitle": "Danger zone",
+        "archiveCta": "Archive agent",
+        "archiveConfirmTitle": "Archive agent?",
+        "archiveConfirmSubtitle": "The agent will be deactivated. You can reactivate it at any time.",
+        "archiveConfirm": "Archive",
+        "archiveCancel": "Cancel"
+      },
+      "states": {
+        "loading": {
+          "ariaLabel": "Loading agent details"
+        },
+        "notFound": {
+          "title": "Agent not found",
+          "subtitle": "The agent you're looking for doesn't exist or has been deleted.",
+          "cta": "Back to agents"
+        },
+        "error": {
+          "title": "Could not load agent",
+          "subtitle": "Something went wrong. Please try again in a moment.",
+          "cta": "Retry"
+        }
+      }
+    },
+    "gameDetail": {
+      "metadata": {
+        "title": "{title} — MeepleAI",
+        "description": "Specs, statistics, agents and knowledge base for {title}."
+      },
+      "breadcrumb": {
+        "games": "Games",
+        "current": "{title}"
+      },
+      "hero": {
+        "back": "Back to games",
+        "backAriaLabel": "Back to game catalog",
+        "ownedBadge": "✓ In library",
+        "communityBadge": "🌐 Community",
+        "metaPlayers": "{min}-{max} players",
+        "metaPlayersSingle": "{count} players",
+        "metaDuration": "{minutes} min",
+        "metaWeight": "Complexity {value}/5",
+        "metaRating": "BGG {value}",
+        "ctaPlay": "Play now",
+        "ctaEdit": "Edit",
+        "ctaShare": "Share",
+        "ctaShareAriaLabel": "Share this game",
+        "ctaAddToLibrary": "+ Add to library",
+        "ctaSimilar": "See similar",
+        "favoriteAriaLabel": "Favorite"
+      },
+      "tabs": {
+        "ariaLabel": "Game sections",
+        "info": "Info",
+        "rules": "Rules",
+        "faqs": "FAQ",
+        "sessions": "Sessions",
+        "agents": "Agents",
+        "documents": "Documents"
+      },
+      "kpi": {
+        "rating": "Rating",
+        "complexity": "Complexity",
+        "players": "Players",
+        "playTime": "Play time",
+        "ratingUnit": "/10",
+        "complexityUnit": "/5",
+        "playersRange": "{min}-{max}",
+        "playersValue": "{count}",
+        "playTimeUnit": "min",
+        "notAvailable": "—"
+      },
+      "info": {
+        "descriptionTitle": "Description",
+        "specsTitle": "Specifications",
+        "specsDesigner": "Designer",
+        "specsPublisher": "Publisher",
+        "specsYear": "Year",
+        "specsAge": "Age",
+        "specsCategories": "Categories",
+        "specsMechanics": "Mechanics",
+        "specsBgg": "BGG ID",
+        "noDescription": "No description available for this game."
+      },
+      "faqs": {
+        "title": "FAQ",
+        "subtitle": "Top questions about {title}.",
+        "viewAll": "View all FAQs",
+        "viewAllAriaLabel": "Open the full FAQ page",
+        "empty": "No FAQs available for this game.",
+        "questionAriaLabel": "Question"
+      },
+      "rules": {
+        "title": "Key rules",
+        "subtitle": "Most important sections of the rulebook.",
+        "viewAll": "View full rulebook",
+        "viewAllAriaLabel": "Open the full rules page",
+        "empty": "No rule sections available."
+      },
+      "sessions": {
+        "title": "Recent sessions",
+        "subtitle": "Your latest sessions with this game.",
+        "viewAll": "View all sessions",
+        "viewAllAriaLabel": "Open the full session history",
+        "empty": "No sessions recorded yet.",
+        "emptySubtitle": "Sessions are tracked automatically when you record a new play.",
+        "playersCount": "{count, plural, =0 {no players} =1 {1 player} other {# players}}",
+        "winLabel": "Win",
+        "lossLabel": "Loss",
+        "newSession": "+ New session"
+      },
+      "agents": {
+        "title": "AI agents",
+        "subtitle": "Agents linked to this game.",
+        "empty": "No agents available.",
+        "emptySubtitle": "Create an AI agent to chat about this game's rules.",
+        "createCta": "+ Create agent",
+        "openAriaLabel": "Open agent {name}",
+        "indexedLabel": "{count, plural, =0 {0 KB} =1 {1 KB} other {# KB}}",
+        "invocationsLabel": "{count} invocations"
+      },
+      "documents": {
+        "title": "Indexed documents",
+        "subtitle": "PDFs and rulebooks uploaded for this game.",
+        "empty": "No indexed documents.",
+        "emptySubtitle": "Upload a rulebook PDF to enable the chat agent.",
+        "uploadCta": "↑ Upload document",
+        "openCta": "Open ↗",
+        "openAriaLabel": "Open document {name}",
+        "statusIndexed": "INDEXED",
+        "statusProcessing": "PROCESSING",
+        "statusFailed": "FAILED",
+        "statsLine": "{size} · {pages} pages · {chunks} chunks"
+      },
+      "states": {
+        "loading": {
+          "ariaLabel": "Loading game details"
+        },
+        "notFound": {
+          "title": "Game not found",
+          "subtitle": "The game you are looking for is unavailable or has been removed.",
+          "cta": "Back to games"
+        },
+        "error": {
+          "title": "Unable to load this game",
+          "subtitle": "Something went wrong. Please try again in a moment.",
+          "cta": "Retry"
+        }
+      }
+    },
+    "sharedGames": {
+      "metadata": {
+        "title": "Community catalog — MeepleAI",
+        "description": "Explore games shared by the community: toolkits, AI agents and knowledge bases crafted for every title."
+      },
+      "hero": {
+        "badge": "Community catalog",
+        "headingLead": "Discover ",
+        "headingHighlight": "shared games",
+        "headingTail": " from the community",
+        "subtitle": "Toolkits, AI agents and knowledge bases for every game. Filter by genre, meet top contributors and find inspiration."
+      },
+      "filters": {
+        "searchPlaceholder": "Search a game…",
+        "searchAriaLabel": "Search games in the catalog",
+        "clearSearchAriaLabel": "Clear the search",
+        "genreAriaLabel": "Filter by genre",
+        "sortAriaLabel": "Sort results",
+        "resultCounter": "{shown, plural, =1 {1 result} other {# results}} of {total}",
+        "totalCounter": "{total, plural, =1 {1 game in the catalog} other {# games in the catalog}}"
+      },
+      "chips": {
+        "withToolkit": "With toolkit",
+        "withAgent": "With agent",
+        "topRated": "Top rated",
+        "new": "New"
+      },
+      "sort": {
+        "rating": "Top rated",
+        "contrib": "Most contributed",
+        "new": "Newest",
+        "title": "Title A→Z"
+      },
+      "genres": {
+        "all": "All genres",
+        "strategy": "Strategy",
+        "family": "Family",
+        "party": "Party",
+        "cooperative": "Cooperative",
+        "thematic": "Thematic",
+        "wargame": "Wargame"
+      },
+      "card": {
+        "ratingAriaLabel": "Rating",
+        "toolkitLabel": "tk",
+        "agentLabel": "ag",
+        "newWeekAriaLabel": "{count, plural, =1 {1 new this week} other {# new this week}}"
+      },
+      "sidebar": {
+        "title": "Top contributors",
+        "emptyTitle": "No contributors yet",
+        "toolkitsLabel": "Toolkits",
+        "agentsLabel": "Agents",
+        "statsHeading": "Community stats",
+        "meta": "{sessions, plural, =1 {1 session} other {# sessions}} · {wins, plural, =1 {1 win} other {# wins}}",
+        "rankAriaLabel": "Rank {rank}"
+      },
+      "states": {
+        "emptySearch": {
+          "title": "No games found",
+          "description": "We couldn't find any games matching your search. Try different keywords or remove some filters.",
+          "resetLabel": "Clear filters"
+        },
+        "filteredEmpty": {
+          "title": "No results with these filters",
+          "description": "Try removing a filter to widen the search.",
+          "resetLabel": "Clear filters"
+        },
+        "error": {
+          "title": "Loading error",
+          "description": "We couldn't load the catalog. Please try again in a moment.",
+          "retryLabel": "Retry"
+        }
+      }
+    },
+    "sharedGameDetail": {
+      "metadata": {
+        "titleFallback": "Shared game",
+        "titleSuffix": " — MeepleAI",
+        "descriptionFallback": "Details of a community-shared game: toolkits, AI agents and knowledge bases."
+      },
+      "hero": {
+        "entityLabel": "Game",
+        "ratingAriaLabel": "Rating",
+        "ratingOf": "of",
+        "metaPlayers": "players",
+        "metaMinutes": "min",
+        "metaComplexity": "complexity",
+        "metaAuthor": "by",
+        "toolkitsLabel": "Toolkits",
+        "agentsLabel": "Agents",
+        "kbsLabel": "Knowledge bases"
+      },
+      "tabs": {
+        "tablistAriaLabel": "Game sections",
+        "overview": "Overview",
+        "toolkits": "Toolkits",
+        "agents": "Agents",
+        "knowledge": "Knowledge",
+        "community": "Community"
+      },
+      "overview": {
+        "descriptionHeading": "Description",
+        "noDescription": "No description available."
+      },
+      "toolkits": {
+        "sectionTitle": "Published toolkits",
+        "authorPrefix": "by",
+        "updatedPrefix": "updated",
+        "previewLabel": "Preview",
+        "previewAriaLabel": "Preview the {name} toolkit",
+        "emptyTitle": "No toolkits yet",
+        "emptyDescription": "The community hasn't published any toolkit for this game yet. Be the first to contribute!"
+      },
+      "agents": {
+        "sectionTitle": "Available AI agents",
+        "updatedPrefix": "updated",
+        "invocationsLabel": "{count, plural, =1 {1 invocation} other {# invocations}}",
+        "tryLabel": "Try",
+        "tryAriaLabel": "Try the {name} agent",
+        "emptyTitle": "No agents available",
+        "emptyDescription": "No AI agents have been configured for this game yet."
+      },
+      "knowledge": {
+        "sectionTitle": "Knowledge base",
+        "indexedPrefix": "indexed",
+        "chunksLabel": "{count, plural, =1 {1 chunk} other {# chunks}}",
+        "openLabel": "Open",
+        "openAriaLabel": "Open the {title} document",
+        "documentTitleFallback": "Document",
+        "emptyTitle": "No knowledge base",
+        "emptyDescription": "No documents have been indexed for this game yet."
+      },
+      "community": {
+        "sectionTitle": "Community",
+        "contributorsTitle": "Contributors",
+        "playersLabel": "{count, plural, =1 {1 player} other {# players}}",
+        "overflowAriaLabel": "{count, plural, =1 {1 other contributor} other {# other contributors}}"
+      },
+      "stickyCta": {
+        "regionAriaLabel": "Sign-in required",
+        "mobileLabel": "Sign in to install",
+        "desktopHint": "To install this content…",
+        "desktopCtaLabel": "Sign in"
+      },
+      "states": {
+        "loading": {
+          "ariaLabel": "Loading game details…"
+        },
+        "error": {
+          "title": "Loading error",
+          "description": "We couldn't load the game details. Please try again in a moment.",
+          "retryLabel": "Retry"
+        },
+        "notFound": {
+          "title": "Game not found",
+          "description": "The requested game does not exist or is no longer available in the community catalog.",
+          "backLabel": "Back to catalog"
         }
       }
     }
@@ -1100,5 +2000,29 @@
     "adding": "Adding...",
     "addPrivateGame": "Add Private Game",
     "addFromBgg": "Add from catalog"
+  },
+  "gamebook": {
+    "upload": {
+      "title": "Upload Game Manual Photos",
+      "subtitle": "Upload photos of your board game manual for AI-powered indexing",
+      "dropzoneLabel": "Drop photos here or click to select",
+      "dropzoneHint": "JPG, PNG, WEBP — up to 20 MB each",
+      "selectedFiles": "{count, plural, one {# file selected} other {# files selected}}",
+      "submitButton": "Upload {count, plural, one {# photo} other {# photos}}",
+      "submitting": "Uploading...",
+      "uploadSuccess": "Upload started — tracking batch {batchId}",
+      "uploadError": "Upload failed. Please try again.",
+      "statusTitle": "Processing status",
+      "statusPending": "Waiting to start...",
+      "statusProcessing": "Processing pages...",
+      "statusCompleted": "Processing complete",
+      "statusFailed": "Processing failed",
+      "statusCancelled": "Processing cancelled",
+      "progress": "{processed} / {total} pages",
+      "confidence": "Average confidence",
+      "errorMessage": "Error: {message}",
+      "noFilesSelected": "No files selected yet",
+      "gameIdLabel": "Game ID"
+    }
   }
 }

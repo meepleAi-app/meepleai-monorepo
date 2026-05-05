@@ -20,8 +20,10 @@ const variantMap = {
   focus: FocusCard,
 } as const;
 
-export const MeepleCard = memo(function MeepleCard(props: MeepleCardProps) {
+function MeepleCardImpl(props: MeepleCardProps) {
   const variant = props.variant ?? 'grid';
   const Renderer = variantMap[variant];
   return <Renderer {...props} />;
-});
+}
+
+export const MeepleCard = memo(MeepleCardImpl);

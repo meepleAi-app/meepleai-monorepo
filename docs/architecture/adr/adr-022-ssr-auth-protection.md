@@ -39,7 +39,7 @@ Request /upload
 1. **Zero UI Flash**: Authentication must happen before render, not after
 2. **Next.js 16.0.1 + React 19.2.0**: Full Server Components support in App Router
 3. **App Router Architecture**: Project uses `/app` directory (Next.js 13+ pattern)
-4. **E2E Test Compatibility**: Must work with HTTP-level mocking (MSW, Playwright)
+4. **E2E Test Compatibility**: Must work with HTTP-level mocking (Playwright)
 5. **Middleware Enhancement**: Leverage existing cookie-based middleware
 6. **SEO Benefits**: Server-rendered content with auth data pre-loaded
 7. **Bundle Size Reduction**: Eliminate client-side auth logic

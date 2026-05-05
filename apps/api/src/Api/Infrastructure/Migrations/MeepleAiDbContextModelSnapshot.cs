@@ -636,6 +636,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("game_id");
 
+                    b.Property<string>("GlossaryEntriesJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("glossary_entries_json");
+
                     b.Property<string>("HouseRulesJson")
                         .HasColumnType("jsonb")
                         .HasColumnName("house_rules_json");
@@ -984,6 +988,153 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable((string)null);
 
                     b.ToView("vw_user_budgets", (string)null);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.DocumentProcessing.Domain.Entities.PhotoBatchPage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BlobKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("blob_key");
+
+                    b.Property<double>("Confidence")
+                        .HasColumnType("double precision")
+                        .HasColumnName("confidence");
+
+                    b.Property<string>("ConfidenceLevel")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("confidence_level");
+
+                    b.Property<string>("ExtractedText")
+                        .HasColumnType("text")
+                        .HasColumnName("extracted_text");
+
+                    b.Property<DateTime>("IndexedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("indexed_at");
+
+                    b.Property<bool>("IsBlank")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_blank");
+
+                    b.Property<string>("Orientation")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("orientation");
+
+                    b.Property<int>("PageNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("page_number");
+
+                    b.Property<Guid>("PhotoBatchUploadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("photo_batch_upload_id");
+
+                    b.PrimitiveCollection<string[]>("Warnings")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("warnings");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PhotoBatchUploadId")
+                        .HasDatabaseName("ix_photo_batch_pages_batch_id");
+
+                    b.HasIndex("PhotoBatchUploadId", "PageNumber")
+                        .IsUnique()
+                        .HasDatabaseName("uq_photo_batch_pages_batch_page");
+
+                    b.ToTable("photo_batch_pages", (string)null);
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.DocumentProcessing.Domain.Entities.PhotoBatchUpload", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("FailureReason")
+                        .HasColumnType("text")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<int>("IndexedPages")
+                        .HasColumnType("integer")
+                        .HasColumnName("indexed_pages");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("SourceLanguage")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("source_language");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("TotalPages")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_pages");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("_lowConfidencePageCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("low_confidence_page_count");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_photo_batch_uploads_user_id");
+
+                    b.HasIndex("GameId", "Status")
+                        .HasDatabaseName("ix_photo_batch_uploads_game_id_status");
+
+                    b.ToTable("photo_batch_uploads", (string)null);
                 });
 
             modelBuilder.Entity("Api.BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink", b =>
@@ -3132,6 +3283,63 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("used_totp_codes", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.Authentication.WaitlistEntryEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("ContactedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("contacted_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("GamePreferenceId")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("game_preference_id");
+
+                    b.Property<string>("GamePreferenceOther")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("game_preference_other");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("name");
+
+                    b.Property<bool>("NewsletterOptIn")
+                        .HasColumnType("boolean")
+                        .HasColumnName("newsletter_opt_in");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("Position");
+
+                    b.ToTable("waitlist_entries", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.BggImportQueueEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3517,14 +3725,14 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasDefaultValue("[]");
 
-                    b.Property<Guid>("SharedGameId")
-                        .HasMaxLength(64)
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("SharedGameId")
+                        .HasMaxLength(64)
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -3978,6 +4186,69 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("IX_game_night_events_status_scheduled");
 
                     b.ToTable("game_night_events", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightInvitationEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("email");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("GameNightId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_night_id");
+
+                    b.Property<DateTimeOffset?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("responded_at");
+
+                    b.Property<Guid?>("RespondedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("responded_by_user_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("token");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique()
+                        .HasDatabaseName("IX_game_night_invitations_token");
+
+                    b.HasIndex("GameNightId", "Status")
+                        .HasDatabaseName("IX_game_night_invitations_event_status");
+
+                    b.HasIndex("GameNightId", "Email", "Status")
+                        .HasDatabaseName("IX_game_night_invitations_event_email_status");
+
+                    b.ToTable("game_night_invitations", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightPlaylistEntity", b =>
@@ -8993,6 +9264,54 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("badges", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.CertificationThresholdsConfigEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<int>("MaxPageTolerance")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_page_tolerance");
+
+                    b.Property<decimal>("MinBggMatchPct")
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("min_bgg_match_pct");
+
+                    b.Property<decimal>("MinCoveragePct")
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("min_coverage_pct");
+
+                    b.Property<decimal>("MinOverallScore")
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("min_overall_score");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<uint>("Xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("certification_thresholds_config", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_certification_thresholds_config_max_page_tolerance_non_negative", "max_page_tolerance >= 0");
+
+                            t.HasCheckConstraint("ck_certification_thresholds_config_pct_ranges", "min_coverage_pct BETWEEN 0 AND 100 AND min_bgg_match_pct BETWEEN 0 AND 100 AND min_overall_score BETWEEN 0 AND 100");
+
+                            t.HasCheckConstraint("ck_certification_thresholds_config_singleton", "id = 1");
+                        });
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.ContributionRecordEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -9429,6 +9748,493 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("game_state_templates", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicAnalysisEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CertificationOverrideReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("certification_override_reason");
+
+                    b.Property<int>("CertificationStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("certification_status");
+
+                    b.Property<DateTimeOffset?>("CertifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("certified_at");
+
+                    b.Property<Guid?>("CertifiedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("certified_by_user_id");
+
+                    b.Property<DateTime?>("CostCapOverrideAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cost_cap_override_at");
+
+                    b.Property<Guid?>("CostCapOverrideBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cost_cap_override_by");
+
+                    b.Property<string>("CostCapOverrideReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("cost_cap_override_reason");
+
+                    b.Property<decimal>("CostCapUsd")
+                        .HasColumnType("numeric(12,6)")
+                        .HasColumnName("cost_cap_usd");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal>("EstimatedCostUsd")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(12,6)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("estimated_cost_usd");
+
+                    b.Property<bool>("IsSuppressed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_suppressed");
+
+                    b.Property<Guid?>("LastMetricsId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_metrics_id");
+
+                    b.Property<string>("ModelUsed")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("model_used");
+
+                    b.Property<Guid>("PdfDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pdf_document_id");
+
+                    b.Property<string>("PromptVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("prompt_version");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by");
+
+                    b.Property<Guid>("SharedGameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shared_game_id");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("SuppressedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("suppressed_at");
+
+                    b.Property<Guid?>("SuppressedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("suppressed_by");
+
+                    b.Property<string>("SuppressionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("suppression_reason");
+
+                    b.Property<int?>("SuppressionRequestSource")
+                        .HasColumnType("integer")
+                        .HasColumnName("suppression_request_source");
+
+                    b.Property<DateTime?>("SuppressionRequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("suppression_requested_at");
+
+                    b.Property<int>("TotalTokensUsed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("total_tokens_used");
+
+                    b.Property<uint>("Xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CertificationStatus")
+                        .HasDatabaseName("ix_mechanic_analyses_certification_status");
+
+                    b.HasIndex("CreatedBy")
+                        .HasDatabaseName("ix_mechanic_analyses_created_by");
+
+                    b.HasIndex("IsSuppressed")
+                        .HasDatabaseName("ix_mechanic_analyses_is_suppressed")
+                        .HasFilter("is_suppressed = true");
+
+                    b.HasIndex("PdfDocumentId")
+                        .HasDatabaseName("ix_mechanic_analyses_pdf_document_id");
+
+                    b.HasIndex("SharedGameId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_mechanic_analyses_published_per_game")
+                        .HasFilter("status = 2 AND is_suppressed = false");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_mechanic_analyses_status");
+
+                    b.HasIndex("SharedGameId", "PdfDocumentId", "PromptVersion")
+                        .IsUnique()
+                        .HasDatabaseName("ux_mechanic_analyses_shared_game_pdf_prompt")
+                        .HasFilter("status <> 3");
+
+                    b.ToTable("mechanic_analyses", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mechanic_analyses_cost_cap_override_all_or_none", "(cost_cap_override_at IS NULL AND cost_cap_override_by IS NULL AND cost_cap_override_reason IS NULL) OR (cost_cap_override_at IS NOT NULL AND cost_cap_override_by IS NOT NULL AND cost_cap_override_reason IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_mechanic_analyses_cost_cap_positive", "cost_cap_usd > 0");
+
+                            t.HasCheckConstraint("ck_mechanic_analyses_status_range", "status BETWEEN 0 AND 4");
+
+                            t.HasCheckConstraint("ck_mechanic_analyses_suppression_completeness", "(is_suppressed = false AND suppressed_at IS NULL AND suppressed_by IS NULL AND suppression_reason IS NULL AND suppression_request_source IS NULL AND suppression_requested_at IS NULL) OR (is_suppressed = true AND suppressed_at IS NOT NULL AND suppressed_by IS NOT NULL AND suppression_reason IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicAnalysisMetricsEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("BggMatchPct")
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("bgg_match_pct");
+
+                    b.Property<int>("CertificationStatus")
+                        .HasColumnType("int")
+                        .HasColumnName("certification_status");
+
+                    b.Property<DateTimeOffset>("ComputedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("computed_at");
+
+                    b.Property<decimal>("CoveragePct")
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("coverage_pct");
+
+                    b.Property<string>("GoldenVersionHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("golden_version_hash");
+
+                    b.Property<string>("MatchDetailsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("[]")
+                        .HasColumnName("match_details_json");
+
+                    b.Property<Guid>("MechanicAnalysisId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("mechanic_analysis_id");
+
+                    b.Property<decimal>("OverallScore")
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("overall_score");
+
+                    b.Property<decimal>("PageAccuracyPct")
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("page_accuracy_pct");
+
+                    b.Property<Guid>("SharedGameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shared_game_id");
+
+                    b.Property<string>("ThresholdsSnapshotJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("{}")
+                        .HasColumnName("thresholds_snapshot_json");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CertificationStatus")
+                        .HasDatabaseName("ix_mechanic_analysis_metrics_certification_status");
+
+                    b.HasIndex("MechanicAnalysisId")
+                        .HasDatabaseName("ix_mechanic_analysis_metrics_analysis_id");
+
+                    b.HasIndex("SharedGameId", "ComputedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_mechanic_analysis_metrics_shared_game_computed_at_desc");
+
+                    b.ToTable("mechanic_analysis_metrics", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mechanic_analysis_metrics_certification_status_range", "certification_status BETWEEN 0 AND 2");
+
+                            t.HasCheckConstraint("ck_mechanic_analysis_metrics_pct_ranges", "coverage_pct BETWEEN 0 AND 100 AND page_accuracy_pct BETWEEN 0 AND 100 AND bgg_match_pct BETWEEN 0 AND 100 AND overall_score BETWEEN 0 AND 100");
+                        });
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicAnalysisSectionRunEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AnalysisId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("analysis_id");
+
+                    b.Property<DateTime>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<int>("CompletionTokens")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("completion_tokens");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<decimal>("EstimatedCostUsd")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("numeric(12,6)")
+                        .HasDefaultValue(0m)
+                        .HasColumnName("estimated_cost_usd");
+
+                    b.Property<int>("LatencyMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("latency_ms");
+
+                    b.Property<string>("ModelUsed")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("model_used");
+
+                    b.Property<int>("PromptTokens")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("prompt_tokens");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("provider");
+
+                    b.Property<int>("RunOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("run_order");
+
+                    b.Property<int>("Section")
+                        .HasColumnType("integer")
+                        .HasColumnName("section");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<int>("TotalTokens")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("total_tokens");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnalysisId")
+                        .HasDatabaseName("ix_mechanic_section_runs_analysis_id");
+
+                    b.HasIndex("Provider")
+                        .HasDatabaseName("ix_mechanic_section_runs_provider");
+
+                    b.HasIndex("AnalysisId", "RunOrder")
+                        .IsUnique()
+                        .HasDatabaseName("ux_mechanic_section_runs_analysis_run_order");
+
+                    b.ToTable("mechanic_analysis_section_runs", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mechanic_section_runs_cost_non_negative", "estimated_cost_usd >= 0");
+
+                            t.HasCheckConstraint("ck_mechanic_section_runs_error_when_failed", "status <> 1 OR error_message IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_mechanic_section_runs_latency_non_negative", "latency_ms >= 0");
+
+                            t.HasCheckConstraint("ck_mechanic_section_runs_section_range", "section BETWEEN 0 AND 5");
+
+                            t.HasCheckConstraint("ck_mechanic_section_runs_status_range", "status BETWEEN 0 AND 2");
+
+                            t.HasCheckConstraint("ck_mechanic_section_runs_tokens_non_negative", "prompt_tokens >= 0 AND completion_tokens >= 0 AND total_tokens >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicCitationEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ChunkId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("chunk_id");
+
+                    b.Property<Guid>("ClaimId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("claim_id");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("display_order");
+
+                    b.Property<int>("PdfPage")
+                        .HasColumnType("integer")
+                        .HasColumnName("pdf_page");
+
+                    b.Property<string>("Quote")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("quote");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChunkId")
+                        .HasDatabaseName("ix_mechanic_citations_chunk_id")
+                        .HasFilter("chunk_id IS NOT NULL");
+
+                    b.HasIndex("ClaimId")
+                        .HasDatabaseName("ix_mechanic_citations_claim_id");
+
+                    b.HasIndex("ClaimId", "PdfPage")
+                        .HasDatabaseName("ix_mechanic_citations_claim_page");
+
+                    b.ToTable("mechanic_citations", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mechanic_citations_display_order_non_negative", "display_order >= 0");
+
+                            t.HasCheckConstraint("ck_mechanic_citations_page_positive", "pdf_page > 0");
+
+                            t.HasCheckConstraint("ck_mechanic_citations_quote_chars_cap", "char_length(quote) <= 400");
+
+                            t.HasCheckConstraint("ck_mechanic_citations_quote_not_empty", "char_length(btrim(quote)) > 0");
+
+                            t.HasCheckConstraint("ck_mechanic_citations_quote_word_cap", "array_length(regexp_split_to_array(btrim(quote), '\\s+'), 1) <= 25");
+                        });
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicClaimEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AnalysisId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("analysis_id");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("display_order");
+
+                    b.Property<string>("RejectionNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("rejection_note");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by");
+
+                    b.Property<int>("Section")
+                        .HasColumnType("integer")
+                        .HasColumnName("section");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("status");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnalysisId")
+                        .HasDatabaseName("ix_mechanic_claims_analysis_id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_mechanic_claims_status");
+
+                    b.HasIndex("AnalysisId", "Section", "DisplayOrder")
+                        .HasDatabaseName("ix_mechanic_claims_analysis_section_order");
+
+                    b.ToTable("mechanic_claims", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mechanic_claims_display_order_non_negative", "display_order >= 0");
+
+                            t.HasCheckConstraint("ck_mechanic_claims_rejection_note_when_rejected", "status <> 2 OR rejection_note IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_mechanic_claims_section_range", "section BETWEEN 0 AND 5");
+
+                            t.HasCheckConstraint("ck_mechanic_claims_status_range", "status BETWEEN 0 AND 2");
+                        });
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicDraftEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -9583,6 +10389,319 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_mechanic_drafts_game_pdf_status");
 
                     b.ToTable("mechanic_drafts", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicGoldenBggTagEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("category");
+
+                    b.Property<DateTimeOffset>("ImportedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("imported_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("SharedGameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shared_game_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SharedGameId")
+                        .HasDatabaseName("ix_mechanic_golden_bgg_tags_shared_game_id");
+
+                    b.HasIndex("SharedGameId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ux_mechanic_golden_bgg_tags_shared_game_name");
+
+                    b.ToTable("mechanic_golden_bgg_tags", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicGoldenClaimEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CuratorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("curator_user_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Vector>("Embedding")
+                        .HasColumnType("vector(768)")
+                        .HasColumnName("embedding");
+
+                    b.Property<int>("ExpectedPage")
+                        .HasColumnType("integer")
+                        .HasColumnName("expected_page");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("KeywordsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("[]")
+                        .HasColumnName("keywords_json");
+
+                    b.Property<int>("Section")
+                        .HasColumnType("integer")
+                        .HasColumnName("section");
+
+                    b.Property<Guid>("SharedGameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shared_game_id");
+
+                    b.Property<string>("SourceQuote")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("source_quote");
+
+                    b.Property<string>("Statement")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("statement");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SharedGameId")
+                        .HasDatabaseName("ix_mechanic_golden_claims_shared_game_id");
+
+                    b.HasIndex("SharedGameId", "Section")
+                        .HasDatabaseName("ix_mechanic_golden_claims_shared_game_section");
+
+                    b.ToTable("mechanic_golden_claims", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mechanic_golden_claims_expected_page_positive", "expected_page > 0");
+
+                            t.HasCheckConstraint("ck_mechanic_golden_claims_section_range", "section BETWEEN 0 AND 5");
+                        });
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicRecalcJobEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("CancellationRequested")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("cancellation_requested");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<int>("ConsecutiveFailures")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("consecutive_failures");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Failed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("failed");
+
+                    b.Property<DateTimeOffset?>("HeartbeatAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("heartbeat_at");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text")
+                        .HasColumnName("last_error");
+
+                    b.Property<Guid?>("LastProcessedAnalysisId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_processed_analysis_id");
+
+                    b.Property<int>("Processed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("processed");
+
+                    b.Property<int>("Skipped")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("skipped");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("status");
+
+                    b.Property<int>("Total")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("total");
+
+                    b.Property<Guid>("TriggeredByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("triggered_by_user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TriggeredByUserId");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("ix_mechanic_recalc_jobs_status_created")
+                        .HasFilter("status IN (0, 1)");
+
+                    b.ToTable("mechanic_recalc_jobs", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mechanic_recalc_jobs_status_range", "status BETWEEN 0 AND 4");
+                        });
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicStatusAuditEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_id");
+
+                    b.Property<Guid>("AnalysisId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("analysis_id");
+
+                    b.Property<int>("FromStatus")
+                        .HasColumnType("integer")
+                        .HasColumnName("from_status");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("note");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<int>("ToStatus")
+                        .HasColumnType("integer")
+                        .HasColumnName("to_status");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnalysisId")
+                        .HasDatabaseName("ix_mechanic_status_audit_analysis_id");
+
+                    b.HasIndex("AnalysisId", "OccurredAt")
+                        .HasDatabaseName("ix_mechanic_status_audit_analysis_time");
+
+                    b.ToTable("mechanic_status_audit", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mechanic_status_audit_distinct_states", "from_status <> to_status");
+
+                            t.HasCheckConstraint("ck_mechanic_status_audit_status_range", "from_status BETWEEN 0 AND 4 AND to_status BETWEEN 0 AND 4");
+                        });
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicSuppressionAuditEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_id");
+
+                    b.Property<Guid>("AnalysisId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("analysis_id");
+
+                    b.Property<bool>("IsSuppressed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_suppressed");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("reason");
+
+                    b.Property<int?>("RequestSource")
+                        .HasColumnType("integer")
+                        .HasColumnName("request_source");
+
+                    b.Property<DateTime?>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnalysisId")
+                        .HasDatabaseName("ix_mechanic_suppression_audit_analysis_id");
+
+                    b.HasIndex("AnalysisId", "OccurredAt")
+                        .HasDatabaseName("ix_mechanic_suppression_audit_analysis_time");
+
+                    b.ToTable("mechanic_suppression_audit", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_mechanic_suppression_audit_request_source_range", "request_source IS NULL OR request_source BETWEEN 0 AND 3");
+                        });
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.QuickQuestionEntity", b =>
@@ -12770,6 +13889,24 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.DocumentProcessing.Domain.Entities.PhotoBatchPage", b =>
+                {
+                    b.HasOne("Api.BoundedContexts.DocumentProcessing.Domain.Entities.PhotoBatchUpload", null)
+                        .WithMany("Pages")
+                        .HasForeignKey("PhotoBatchUploadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.DocumentProcessing.Domain.Entities.PhotoBatchUpload", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.GameToolbox.Domain.Entities.Phase", b =>
                 {
                     b.HasOne("Api.BoundedContexts.GameToolbox.Domain.Entities.Toolbox", null)
@@ -13249,6 +14386,15 @@ namespace Api.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("SharedGame");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightInvitationEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameManagement.GameNightEventEntity", null)
+                        .WithMany()
+                        .HasForeignKey("GameNightId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightRsvpEntity", b =>
@@ -14157,6 +15303,74 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("SharedGame");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicAnalysisEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
+                        .WithMany()
+                        .HasForeignKey("SharedGameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SharedGame");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicAnalysisMetricsEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.MechanicAnalysisEntity", "MechanicAnalysis")
+                        .WithMany()
+                        .HasForeignKey("MechanicAnalysisId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
+                        .WithMany()
+                        .HasForeignKey("SharedGameId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MechanicAnalysis");
+
+                    b.Navigation("SharedGame");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicAnalysisSectionRunEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.MechanicAnalysisEntity", "Analysis")
+                        .WithMany("SectionRuns")
+                        .HasForeignKey("AnalysisId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Analysis");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicCitationEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.TextChunkEntity", null)
+                        .WithMany()
+                        .HasForeignKey("ChunkId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.MechanicClaimEntity", "Claim")
+                        .WithMany("Citations")
+                        .HasForeignKey("ClaimId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Claim");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicClaimEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.MechanicAnalysisEntity", "Analysis")
+                        .WithMany("Claims")
+                        .HasForeignKey("AnalysisId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Analysis");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicDraftEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
@@ -14166,6 +15380,61 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("SharedGame");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicGoldenBggTagEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
+                        .WithMany()
+                        .HasForeignKey("SharedGameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SharedGame");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicGoldenClaimEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
+                        .WithMany()
+                        .HasForeignKey("SharedGameId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SharedGame");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicRecalcJobEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "TriggeredByUser")
+                        .WithMany()
+                        .HasForeignKey("TriggeredByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("TriggeredByUser");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicStatusAuditEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.MechanicAnalysisEntity", "Analysis")
+                        .WithMany()
+                        .HasForeignKey("AnalysisId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Analysis");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicSuppressionAuditEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.MechanicAnalysisEntity", "Analysis")
+                        .WithMany()
+                        .HasForeignKey("AnalysisId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Analysis");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.QuickQuestionEntity", b =>
@@ -14618,6 +15887,11 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.DocumentProcessing.Domain.Entities.PhotoBatchUpload", b =>
+                {
+                    b.Navigation("Pages");
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.GameToolbox.Domain.Entities.Toolbox", b =>
                 {
                     b.Navigation("Phases");
@@ -14755,6 +16029,18 @@ namespace Api.Infrastructure.Migrations
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.ContributorEntity", b =>
                 {
                     b.Navigation("Contributions");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicAnalysisEntity", b =>
+                {
+                    b.Navigation("Claims");
+
+                    b.Navigation("SectionRuns");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.MechanicClaimEntity", b =>
+                {
+                    b.Navigation("Citations");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SharedGameCatalog.ShareRequestEntity", b =>

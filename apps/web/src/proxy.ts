@@ -113,11 +113,6 @@ function cacheSessionValidation(cookieValue: string, valid: boolean) {
 }
 
 async function isSessionCookieValid(request: NextRequest, cookieValue: string): Promise<boolean> {
-  // In mock mode there is no real backend — skip validation to avoid self-referential loops
-  if (process.env.NEXT_PUBLIC_MOCK_MODE === 'true') {
-    return false;
-  }
-
   const cached = sessionValidationCache.get(cookieValue);
   if (cached && cached.expiresAt > Date.now()) {
     // Metrics: Cache hit
@@ -325,23 +320,29 @@ export async function proxy(request: NextRequest) {
   let isAuthenticated = false;
 
   // ============================================================================
-  // E2E Test Auth Bypass (development only)
+  // E2E Test Auth Bypass (development + visual-regression CI builds)
   // ============================================================================
-  // When PLAYWRIGHT_AUTH_BYPASS=true (dev only), trust session cookies without
-  // server-side backend validation. This allows Playwright E2E tests to mock
-  // auth at the browser level via page.route() without needing a running backend.
-  // Safety: Guarded by NODE_ENV !== 'production' - cannot activate in production.
-  if (
-    process.env.NODE_ENV !== 'production' &&
-    process.env.PLAYWRIGHT_AUTH_BYPASS === 'true' &&
-    sessionCookieValue
-  ) {
-    isAuthenticated = true;
-  } else if (process.env.NEXT_PUBLIC_MOCK_MODE === 'true') {
-    // In mock mode there is no real backend. Trust the session cookie if present
-    // (set by MSW on login), or bypass auth entirely so devs can navigate freely
-    // without having to log in first. Role is read from the cookie or from the
-    // NEXT_PUBLIC_DEV_AS_ROLE env var set in .env.local.
+  // When PLAYWRIGHT_AUTH_BYPASS=true, trust session cookies without server-side
+  // backend validation. Allows Playwright E2E tests to mock auth at the browser
+  // level via page.route() without needing a running backend.
+  //
+  // Safety guards (any one MUST pass to engage the bypass):
+  //   1. NODE_ENV !== 'production' — local dev / CI verify against dev server.
+  //   2. NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1' — set by the
+  //      `visual-regression-migrated.yml` workflow before `pnpm build`. This
+  //      env var is inlined at build time; production deploys never set it,
+  //      so the bypass branch is dead-code-eliminated by the bundler in real
+  //      production builds. (Wave B.1 lesson learned, Issue #633: brownfield
+  //      `(authenticated)` routes need the bypass to engage even in prod-mode
+  //      visual regression builds.)
+  //
+  // The bypass also requires PLAYWRIGHT_AUTH_BYPASS=true (set by playwright.config.ts
+  // webServer at line 434) AND a session cookie present (seeded by spec helper
+  // `seedAuthSession.ts`). Cannot activate in real production deploys because
+  // PLAYWRIGHT_AUTH_BYPASS is never set there.
+  const isVisualTestBuild = process.env.NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1';
+  const isAuthBypassAllowed = process.env.NODE_ENV !== 'production' || isVisualTestBuild;
+  if (isAuthBypassAllowed && process.env.PLAYWRIGHT_AUTH_BYPASS === 'true' && sessionCookieValue) {
     isAuthenticated = true;
   } else if (sessionCookieValue) {
     isAuthenticated = await isSessionCookieValid(request, sessionCookieValue);
@@ -349,12 +350,7 @@ export async function proxy(request: NextRequest) {
 
   // Check user role (only trusted when we know the session is valid)
   const userRoleCookie = request.cookies.get(USER_ROLE_COOKIE);
-  const userRole = isAuthenticated
-    ? userRoleCookie?.value ||
-      (process.env.NEXT_PUBLIC_MOCK_MODE === 'true'
-        ? (process.env.NEXT_PUBLIC_DEV_AS_ROLE ?? 'user')
-        : 'user')
-    : 'user';
+  const userRole = isAuthenticated ? (userRoleCookie?.value ?? 'user') : 'user';
   const isAdmin = isAuthenticated && isAdminRole(userRole);
 
   // Read view mode cookie — admin users can switch to 'user' shell via toggle.
@@ -459,8 +455,7 @@ export async function proxy(request: NextRequest) {
       pathname.startsWith('/api/') ||
       pathname.startsWith('/health') ||
       pathname.startsWith('/offline') ||
-      pathname.startsWith('/_next/') ||
-      pathname === '/mockServiceWorker.js'; // MSW SW must never be redirected
+      pathname.startsWith('/_next/');
 
     if (!isAlphaRoute && !isAuthRoute && !isPublicRoute) {
       const response = NextResponse.redirect(new URL('/dashboard', request.url));

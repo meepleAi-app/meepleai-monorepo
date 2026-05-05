@@ -45,6 +45,7 @@ internal static class DocumentProcessingServiceExtensions
 
         // Domain Layer
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+        services.AddScoped<IPhotoBatchUploadRepository, PhotoBatchUploadRepository>(); // Libro Game AI Assistant MVP Phase 1
         services.AddScoped<IProcessingJobRepository, ProcessingJobRepository>(); // Issue #4731: Queue commands
         services.AddScoped<IProcessingQueueConfigRepository, ProcessingQueueConfigRepository>(); // Issue #5455: Queue config
         services.AddScoped<IChunkedUploadSessionRepository, ChunkedUploadSessionRepository>();
@@ -79,6 +80,9 @@ internal static class DocumentProcessingServiceExtensions
 
         // Issue #5445: Language detection for PDF pipeline routing
         services.AddSingleton<ILanguageDetector, LanguageDetector>();
+
+        // Libro Game AI Assistant Phase 2 — Task 2.4: Q&A complexity classifier (stateless, Singleton-safe)
+        services.AddSingleton<IQAComplexityClassifier, HeuristicQAComplexityClassifier>();
 
         // RAG translation: LLM-based chunk translation for cross-language retrieval
         services.AddScoped<IChunkTranslationService, ChunkTranslationService>();
@@ -129,6 +133,24 @@ internal static class DocumentProcessingServiceExtensions
             // Fallback: Docnet extractor
             services.AddScoped<IPdfTextExtractor, DocnetPdfTextExtractor>();
         }
+
+        // Libro Game AI Assistant MVP Phase 1 — Task 1.4b
+        // Photo preprocessor HTTP adapter (no Polly: simple timeout sufficient for Sprint 1)
+        services.AddHttpClient("smoldocling-photo-preprocessor", client =>
+        {
+            var baseUrl = configuration["SMOLDOCLING_SERVICE_URL"] ?? "http://smoldocling-service:8500";
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        services.AddScoped<IPhotoPreprocessor, SmoldoclingPhotoPreprocessor>();
+
+        // Libro Game AI Assistant MVP Phase 2 — Task 2.3a: KB Indexing Services
+        services.AddScoped<IDocumentChunker, PageTextChunker>();
+        services.AddScoped<IKnowledgeBaseIndexer, KnowledgeBaseIndexer>();
+
+        // Libro Game AI Assistant MVP Phase 1 — Task 1.6: parallel photo batch processor
+        services.AddScoped<IPhotoBatchProcessor, PhotoBatchProcessor>();
 
         // Shared PDF processing pipeline (used by recovery job and future handler consolidation)
         services.AddScoped<IPdfProcessingPipelineService, PdfProcessingPipelineService>();

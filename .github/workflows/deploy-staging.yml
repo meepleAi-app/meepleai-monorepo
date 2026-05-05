@@ -448,6 +448,14 @@ jobs:
           else
             dotnet tool install --global dotnet-ef --version 9.*
           fi
+          # Self-hosted runners: $HOME/.dotnet/tools is where `dotnet tool
+          # install --global` places binaries, but this directory is NOT
+          # automatically added to PATH between steps. setup-dotnet only
+          # sets DOTNET_ROOT, not the user-global tools dir. Without this
+          # append, the next step's `dotnet ef ...` fails with "dotnet-ef
+          # not found on PATH" even though the tool is installed. Regression
+          # caught on staging deploy run 24779812732.
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Restore and build API project
         working-directory: apps/api/src/Api

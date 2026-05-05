@@ -5,7 +5,7 @@ import React from 'react';
 import { Crown, Loader2 } from 'lucide-react';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { buildPlayerNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildPlayerConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 import { hexToHsl } from '@/lib/color-utils';
 import { cn } from '@/lib/utils';
 
@@ -76,9 +76,9 @@ export function MeepleParticipantCard({
         subtitle={subtitle}
         badge={badge}
         metadata={metadata}
-        navItems={
+        connections={
           meepleVariant === 'grid'
-            ? buildPlayerNavItems({ totalWins: 0, totalSessions: 0 }, {})
+            ? buildPlayerConnections({ totalWins: 0, totalSessions: 0 }, {})
             : undefined
         }
         customColor={customColor}

@@ -108,7 +108,7 @@ internal sealed class CreateAbTestCommandHandler : ICommandHandler<CreateAbTestC
                 SystemPrompt,
                 query,
                 RequestSource.ABTesting,
-                cts.Token).ConfigureAwait(false);
+                ct: cts.Token).ConfigureAwait(false);
 
             sw.Stop();
 

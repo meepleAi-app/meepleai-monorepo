@@ -61,10 +61,7 @@ export const StrategyParametersSchema = z.record(z.string(), z.unknown()).option
  * Agent form data (for builder UI)
  */
 export const AgentFormSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'Name is required')
-    .max(100, 'Name must be 100 characters or less'),
+  name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
   description: z.string().max(1000, 'Description must be 1000 characters or less').optional(),
   type: z.string(), // Accept any string from API, validate in UI
   model: z.string().min(1, 'Model is required'),
@@ -117,8 +114,8 @@ export const AgentDefinitionResponseSchema = z.object({
   strategyParameters: z.record(z.string(), z.unknown()).optional(),
   prompts: z.array(PromptTemplateSchema).optional(),
   tools: z.array(ToolConfigSchema).optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().optional(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }).optional(),
 });
 
 export type AgentDefinitionResponse = z.infer<typeof AgentDefinitionResponseSchema>;

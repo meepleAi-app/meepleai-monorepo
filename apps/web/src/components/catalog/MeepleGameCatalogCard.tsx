@@ -35,7 +35,7 @@ import {
   type MeepleCardMetadata,
   type MeepleCardVariant,
 } from '@/components/ui/data-display/meeple-card';
-import { buildGameNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildGameConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 import { useGameInLibraryStatus } from '@/hooks/queries';
 import type { GameStatusSimple } from '@/hooks/queries/useBatchGameStatus';
 import { api } from '@/lib/api';
@@ -217,10 +217,10 @@ export function MeepleGameCatalogCard({
   // Build badge
   const badge = inLibrary && !isLoadingStatus ? 'In Libreria' : undefined;
 
-  // Build nav items — only when game is in user's library (drawers only render then)
-  const navItems = useMemo(() => {
+  // Build connections — only when game is in user's library (drawers only render then)
+  const connections = useMemo(() => {
     if (!inLibrary) return undefined;
-    return buildGameNavItems(
+    return buildGameConnections(
       {
         kbCount: kbDocuments?.length ?? 0,
         agentCount: 0,
@@ -258,7 +258,7 @@ export function MeepleGameCatalogCard({
         badge={badge}
         status={inLibrary ? 'owned' : undefined}
         actions={actions}
-        navItems={navItems}
+        connections={connections}
         onClick={onClick ? () => onClick(game.id) : undefined}
         className={className}
         data-testid={`catalog-game-card-${game.id}`}

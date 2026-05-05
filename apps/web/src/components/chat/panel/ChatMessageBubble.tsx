@@ -2,11 +2,10 @@
 
 import { type ReactNode } from 'react';
 
+import type { ChatMessageRole } from '@/components/chat/shared';
 import { cn } from '@/lib/utils';
 
 import { CitationExpander } from './CitationExpander';
-
-export type ChatMessageRole = 'user' | 'assistant';
 
 interface ChatMessageBubbleProps {
   role: ChatMessageRole;

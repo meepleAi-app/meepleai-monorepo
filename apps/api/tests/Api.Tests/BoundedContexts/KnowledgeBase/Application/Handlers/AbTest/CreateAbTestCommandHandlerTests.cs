@@ -40,7 +40,7 @@ public sealed class CreateAbTestCommandHandlerTests
         _llmServiceMock
             .Setup(l => l.GenerateCompletionWithModelAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 "Test response",
                 new LlmUsage(50, 30, 80),
@@ -75,7 +75,7 @@ public sealed class CreateAbTestCommandHandlerTests
 
         _llmServiceMock.Verify(l => l.GenerateCompletionWithModelAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-            RequestSource.ABTesting, It.IsAny<CancellationToken>()), Times.Exactly(2));
+            RequestSource.ABTesting, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -125,13 +125,13 @@ public sealed class CreateAbTestCommandHandlerTests
         _llmServiceMock
             .Setup(l => l.GenerateCompletionWithModelAsync(
                 "model-fail", It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateFailure("Provider timeout"));
 
         _llmServiceMock
             .Setup(l => l.GenerateCompletionWithModelAsync(
                 "model-ok", It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+                It.IsAny<RequestSource>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("OK"));
 
         var sut = CreateSut();
@@ -177,10 +177,10 @@ public sealed class CreateAbTestCommandHandlerTests
         // m1 should NOT call LLM (used cache), m2 should call LLM
         _llmServiceMock.Verify(l => l.GenerateCompletionWithModelAsync(
             "m1", It.IsAny<string>(), It.IsAny<string>(),
-            It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()), Times.Never);
+            It.IsAny<RequestSource>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Never);
 
         _llmServiceMock.Verify(l => l.GenerateCompletionWithModelAsync(
             "m2", It.IsAny<string>(), It.IsAny<string>(),
-            It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<RequestSource>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

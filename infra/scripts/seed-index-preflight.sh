@@ -13,13 +13,21 @@ docker compose version >/dev/null || fail "docker compose non disponibile"
 # 2. jq (usato da dump/verify/fetch)
 command -v jq >/dev/null || fail "jq non installato"
 
-# 3. Manifest dev.yml presente
-MANIFEST="apps/api/src/Api/Infrastructure/Seeders/Catalog/Manifests/dev.yml"
-[ -f "$MANIFEST" ] || fail "manifest non trovato: $MANIFEST"
+# 3. Manifest dev.yml presente (supporta esecuzione da repo root o da infra/)
+MANIFEST=""
+for f in apps/api/src/Api/Infrastructure/Seeders/Catalog/Manifests/dev.yml \
+         ../apps/api/src/Api/Infrastructure/Seeders/Catalog/Manifests/dev.yml; do
+    [ -f "$f" ] && { MANIFEST="$f"; break; }
+done
+[ -n "$MANIFEST" ] || fail "manifest non trovato: apps/api/src/Api/Infrastructure/Seeders/Catalog/Manifests/dev.yml"
 
-# 4. Seed blob bucket configurato (opzionale ma senza di esso PdfSeeder è silenzioso)
-if [ ! -f infra/secrets/storage.secret ] || ! grep -q "^SEED_BLOB_" infra/secrets/storage.secret 2>/dev/null; then
-    log "WARNING: seed blob non configurato in infra/secrets/storage.secret — PdfSeeder non seederà PDF"
+# 4. Seed bucket configurato (opzionale ma senza di esso PdfSeeder è silenzioso)
+STORAGE_SECRET=""
+for f in infra/secrets/storage.secret secrets/storage.secret; do
+    [ -f "$f" ] && { STORAGE_SECRET="$f"; break; }
+done
+if [ -z "$STORAGE_SECRET" ] || ! grep -qE "^SEED_(BLOB|BUCKET)_" "$STORAGE_SECRET" 2>/dev/null; then
+    log "WARNING: seed bucket non configurato in storage.secret — PdfSeeder non seederà PDF"
     log "Procedo comunque (il bake può essere legittimo per testare il flusso su 0 PDF)"
 fi
 

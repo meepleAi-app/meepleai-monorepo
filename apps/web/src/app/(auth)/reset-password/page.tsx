@@ -7,7 +7,15 @@
 
 import { Suspense } from 'react';
 
+import { Metadata } from 'next';
+
 import { ResetPasswordFallback, ResetPasswordPageContent } from './_content';
+
+export const metadata: Metadata = {
+  title: 'Reimposta password | MeepleAI',
+  description: 'Reimposta la password del tuo account MeepleAI in modo sicuro.',
+  robots: { index: false, follow: false },
+};
 
 export default function ResetPasswordPage() {
   return (

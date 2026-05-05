@@ -58,8 +58,8 @@ export const NotificationDtoSchema = z.object({
   link: z.string().nullable().optional(),
   metadata: z.string().nullable().optional(), // JSON string
   isRead: z.boolean(),
-  createdAt: z.string().datetime(),
-  readAt: z.string().datetime().nullable().optional(),
+  createdAt: z.string().datetime({ offset: true }),
+  readAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 export type NotificationDto = z.infer<typeof NotificationDtoSchema>;

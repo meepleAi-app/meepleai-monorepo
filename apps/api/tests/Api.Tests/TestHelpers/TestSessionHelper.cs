@@ -1,8 +1,11 @@
 using System.Net.Http.Json;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Tests.TestHelpers;
@@ -192,4 +195,142 @@ internal static class TestSessionHelper
         return request;
     }
 
+    /// <summary>
+    /// Seeds AgentDefinition aggregates into the test database.
+    /// Issue #641 (Wave B.2 hotfix): used by AgentsEndpoints integration tests to verify activeOnly filter.
+    /// </summary>
+    /// <param name="dbContext">Test database context.</param>
+    /// <param name="activeCount">Number of active agents to seed (calls Activate() after Create()).</param>
+    /// <param name="inactiveCount">Number of inactive agents to seed (default Draft state from Create()).</param>
+    /// <param name="gameId">
+    /// Optional GameId association for all seeded agents. Default null (system-wide agents).
+    /// Required parameter for Phase 6 future drift fix coexistence (AgentDto.GameName).
+    /// </param>
+    public static async Task SeedAgentDefinitionsAsync(
+        MeepleAiDbContext dbContext,
+        int activeCount,
+        int inactiveCount,
+        Guid? gameId = null)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        for (var i = 0; i < activeCount; i++)
+        {
+            var agent = AgentDefinition.Create(
+                name: $"Active Agent {i}",
+                description: $"Test active agent #{i}",
+                type: AgentType.RagAgent,
+                config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
+            agent.Activate();
+
+            if (gameId.HasValue)
+            {
+                // Issue #660: Use SetGameId domain method to associate seeded agents with a SharedGame.
+                agent.SetGameId(gameId.Value);
+            }
+
+            dbContext.AgentDefinitions.Add(agent);
+        }
+
+        for (var i = 0; i < inactiveCount; i++)
+        {
+            var agent = AgentDefinition.Create(
+                name: $"Inactive Agent {i}",
+                description: $"Test inactive agent #{i}",
+                type: AgentType.RulesInterpreter,
+                config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
+            // Default state from Create() is IsActive=false / Status=Draft
+
+            if (gameId.HasValue)
+            {
+                agent.SetGameId(gameId.Value);
+            }
+
+            dbContext.AgentDefinitions.Add(agent);
+        }
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Seeds AgentDefinition aggregates by Status for integration tests.
+    /// Issue #649: used by AgentTypologiesEndpoints integration tests to verify PublishedOnly filter.
+    /// Published path: Create() → StartTesting() → Publish() (auto-sets IsActive=true).
+    /// Draft path: Create() only (default state IsActive=false / Status=Draft).
+    /// </summary>
+    /// <param name="dbContext">Test database context.</param>
+    /// <param name="publishedCount">Number of Published agents to seed.</param>
+    /// <param name="draftCount">Number of Draft agents to seed.</param>
+    public static async Task SeedAgentDefinitionsByStatusAsync(
+        MeepleAiDbContext dbContext,
+        int publishedCount,
+        int draftCount)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        for (var i = 0; i < publishedCount; i++)
+        {
+            var agent = AgentDefinition.Create(
+                name: $"Published Agent {i}",
+                description: $"Test published agent #{i}",
+                type: AgentType.RagAgent,
+                config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
+            agent.StartTesting();
+            agent.Publish();
+
+            dbContext.AgentDefinitions.Add(agent);
+        }
+
+        for (var i = 0; i < draftCount; i++)
+        {
+            var agent = AgentDefinition.Create(
+                name: $"Draft Agent {i}",
+                description: $"Test draft agent #{i}",
+                type: AgentType.RulesInterpreter,
+                config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
+            // Default state from Create() is IsActive=false / Status=Draft
+
+            dbContext.AgentDefinitions.Add(agent);
+        }
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Seeds a SharedGame entity with the given title for integration tests.
+    /// Issue #660: Used by AgentsEndpointsIntegrationTests to assert AgentDto.GameName population
+    /// when an agent definition is linked to a game in the SharedGame catalog.
+    /// </summary>
+    /// <param name="dbContext">Test database context.</param>
+    /// <param name="title">SharedGame title (e.g. "Catan").</param>
+    /// <returns>The newly seeded SharedGame ID.</returns>
+    public static async Task<Guid> SeedSharedGameAsync(
+        MeepleAiDbContext dbContext,
+        string title)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+        if (string.IsNullOrWhiteSpace(title))
+            throw new ArgumentException("Title cannot be empty", nameof(title));
+
+        var sharedGameId = Guid.NewGuid();
+        dbContext.SharedGames.Add(new SharedGameEntity
+        {
+            Id = sharedGameId,
+            Title = title,
+            Description = "Integration test game",
+            ImageUrl = string.Empty,
+            ThumbnailUrl = string.Empty,
+            YearPublished = 2024,
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 45,
+            MinAge = 8,
+            Status = 1, // Approved — queryable in default ISharedGameRepository.GetByIds/Names paths
+            CreatedBy = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow,
+        });
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+        return sharedGameId;
+    }
 }

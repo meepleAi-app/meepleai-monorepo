@@ -71,7 +71,7 @@ export function PageHeader({
             type="button"
             onClick={primaryAction.onClick}
             className="inline-flex shrink-0 items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-            style={{ backgroundColor: 'hsl(25, 95%, 45%)' }}
+            style={{ backgroundColor: 'hsl(25, 95%, 38%)' }}
           >
             {primaryAction.icon && <span className="shrink-0">{primaryAction.icon}</span>}
             {primaryAction.label}

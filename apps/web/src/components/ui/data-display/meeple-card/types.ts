@@ -31,18 +31,6 @@ export interface MeepleCardAction {
   disabled?: boolean;
 }
 
-export interface NavFooterItem {
-  icon: ReactNode;
-  label: string;
-  entity: MeepleEntityType;
-  count?: number;
-  showPlus?: boolean;
-  disabled?: boolean;
-  onClick?: () => void;
-  onPlusClick?: () => void;
-  href?: string;
-}
-
 export type CardStatus =
   | 'owned'
   | 'wishlist'
@@ -56,6 +44,37 @@ export type CardStatus =
   | 'setup'
   | 'completed'
   | 'paused';
+
+export interface ConnectionItem {
+  id: string;
+  label: string;
+  href: string;
+}
+
+export interface ConnectionChipProps {
+  entityType: MeepleEntityType;
+  count?: number;
+  items?: ConnectionItem[];
+  size?: 'sm' | 'md';
+  showLabel?: boolean;
+  label?: string;
+  onCreate?: () => void;
+  createLabel?: string;
+  /** Click handler for chip activation. Lower precedence than items (popover) and onCreate; higher precedence than href. When both `onClick` and `href` are provided, the chip renders as a Link and onClick fires on left-click while href preserves middle-click semantics. */
+  onClick?: () => void;
+  href?: string;
+  colorOverride?: string;
+  disabled?: boolean;
+  loading?: boolean;
+  /**
+   * Optional icon node to render instead of the default Lucide icon for `entityType`.
+   */
+  iconOverride?: import('react').ReactNode;
+}
+
+export type OwnershipBadge = 'owned' | 'wishlist' | 'archived';
+
+export type LifecycleState = 'active' | 'idle' | 'completed' | 'setup' | 'processing' | 'failed';
 
 export interface CoverLabel {
   text: string;
@@ -77,8 +96,11 @@ export interface MeepleCardProps {
   badge?: string;
   coverLabels?: CoverLabel[];
   actions?: MeepleCardAction[];
-  navItems?: NavFooterItem[];
   manaPips?: ManaPip[];
+  connections?: ConnectionChipProps[];
+  connectionsVariant?: 'footer' | 'inline' | 'auto';
+  ownership?: OwnershipBadge;
+  lifecycle?: LifecycleState;
   onClick?: () => void;
   flippable?: boolean;
   flipBackContent?: ReactNode;

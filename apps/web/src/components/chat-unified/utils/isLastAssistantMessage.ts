@@ -19,7 +19,10 @@ import type { ChatMessageItem } from '../ChatMessageList';
  * isLastAssistantMessage(messages, 2); // false (user message)
  * ```
  */
-export function isLastAssistantMessage(messages: ChatMessageItem[], index: number): boolean {
+export function isLastAssistantMessage(
+  messages: ReadonlyArray<ChatMessageItem>,
+  index: number
+): boolean {
   const msg = messages[index];
   if (!msg || msg.role !== 'assistant') return false;
   // Find the last message with role='assistant' and compare its index

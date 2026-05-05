@@ -15,29 +15,6 @@ dev-down: ## Stop dev environment
 	$(COMPOSE) -f compose.dev.yml --profile ai --profile monitoring \
 		--profile automation --profile proxy --profile storage down
 
-# ================================================================
-# MeepleDev fast dev loop (Phase 1)
-# ================================================================
-
-dev-fast: ## Fast dev loop (reads .env.dev.local)
-	@bash scripts/dev-fast.sh
-
-dev-fast-api: ## Fast dev + local dotnet watch + Postgres
-	@DEV_BACKEND=true DEV_POSTGRES=true bash scripts/dev-fast.sh
-
-dev-fast-full: ## Fast dev + backend + Postgres + Redis, all mocks OFF
-	@DEV_BACKEND=true DEV_POSTGRES=true DEV_REDIS=true \
-	 MOCK_LLM=false MOCK_EMBEDDING=false MOCK_BGG=false \
-	 MOCK_S3=false MOCK_SMOLDOCLING=false MOCK_UNSTRUCTURED=false \
-	 MOCK_N8N=false MOCK_RERANKER=false \
-	 bash scripts/dev-fast.sh
-
-dev-fast-down: ## Stop everything started by dev-fast
-	@bash scripts/dev-fast-down.sh
-
-dev-fast-check: ## Verify .env.dev.local against template
-	@bash scripts/dev-env-check.sh
-
 tunnel: ## Open SSH tunnels to staging server
 	bash scripts/integration-tunnel.sh start
 
@@ -329,7 +306,7 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
 	node $(ROOT)/scripts/validate-workflows.js
 	@echo "✅ Workflows valid"
 
-.PHONY: dev dev-core dev-down dev-fast dev-fast-api dev-fast-full dev-fast-down dev-fast-check \
+.PHONY: dev dev-core dev-down \
         tunnel tunnel-stop tunnel-status integration-check integration \
         integration-down staging staging-down prod prod-down \
         alpha alpha-core alpha-down \

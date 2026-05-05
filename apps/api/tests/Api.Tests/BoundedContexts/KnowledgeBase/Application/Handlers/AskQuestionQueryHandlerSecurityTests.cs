@@ -1,4 +1,5 @@
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Translation;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
@@ -223,6 +224,9 @@ public class AskQuestionQueryHandlerSecurityTests
             new QueryComplexityAnalyzer(),
             _mockResponseCache.Object,
             _mockAskEmbeddingService.Object,
+            CreatePermissiveHouseRuleMatcherMock(),
+            CreatePermissivePricingEngineMock(),
+            CreateNoOpTranslationServiceMock(),
             _mockLogger.Object);
     }
 
@@ -536,6 +540,31 @@ public class AskQuestionQueryHandlerSecurityTests
     {
         var mock = new Mock<IRagAccessService>();
         mock.Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        return mock.Object;
+    }
+
+    private static IHouseRuleMatcher CreatePermissiveHouseRuleMatcherMock()
+    {
+        var mock = new Mock<IHouseRuleMatcher>();
+        mock.Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+        return mock.Object;
+    }
+
+    private static IPricingEngine CreatePermissivePricingEngineMock()
+    {
+        var mock = new Mock<IPricingEngine>();
+        mock.Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        return mock.Object;
+    }
+
+    private static IGenericTranslationService CreateNoOpTranslationServiceMock()
+    {
+        var mock = new Mock<IGenericTranslationService>();
+        mock.Setup(t => t.TranslateGenericAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string text, string src, string tgt, CancellationToken _) =>
+                TranslationResult.CreateSuccess(text, src, tgt, 0m));
         return mock.Object;
     }
 }

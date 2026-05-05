@@ -378,7 +378,7 @@ jobs:
         if: needs.detect-changes.outputs.deploy_api == 'true'
         uses: docker/build-push-action@v6
         with:
-          context: ./apps/api
+          context: .
           file: ./apps/api/src/Api/Dockerfile
           push: true
           tags: ${{ steps.meta-api.outputs.tags }}

@@ -1,8 +1,0 @@
-# Traefik generated files
-logs/
-letsencrypt/
-*.log
-
-# Keep directory structure
-!logs/.gitkeep
-!letsencrypt/.gitkeep

@@ -7,12 +7,12 @@ on:
       - 'CLAUDE.md'
       - '.github/workflows/docs-linkcheck.yml'
       - '.lycheeignore'
-  push:
-    branches: [main, main-dev]
-    paths:
-      - 'docs/**'
-      - 'CLAUDE.md'
   workflow_dispatch:
+    inputs:
+      full_scan:
+        description: 'Scan entire docs/ tree (vs PR-changed files only)'
+        required: false
+        default: 'false'
 
 # Avoid duplicate runs
 concurrency:
@@ -31,8 +31,35 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need history to diff against base
+
+      - name: Determine files to check
+        id: files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          FULL_SCAN: ${{ github.event.inputs.full_scan || 'false' }}
+        run: |
+          set -euo pipefail
+          if [[ "$FULL_SCAN" == "true" ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Mode: full scan"
+            git ls-files 'docs/**/*.md' 'CLAUDE.md' > .lychee-targets.txt
+          else
+            echo "Mode: PR-diff scan (base=$BASE_SHA head=$HEAD_SHA)"
+            git diff --name-only --diff-filter=AMR "$BASE_SHA" "$HEAD_SHA" -- 'docs/**/*.md' 'CLAUDE.md' > .lychee-targets.txt || true
+          fi
+          count=$(wc -l < .lychee-targets.txt)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "Will check $count file(s):"
+          cat .lychee-targets.txt || true
+
+      - name: Skip if no doc changes
+        if: steps.files.outputs.count == '0'
+        run: echo "No docs/CLAUDE.md changes in this PR — skipping link check."
 
       - name: Restore lychee cache
+        if: steps.files.outputs.count != '0'
         uses: actions/cache@v4
         with:
           path: .lycheecache
@@ -41,10 +68,11 @@ jobs:
 
       - name: Run lychee
         id: lychee
+        if: steps.files.outputs.count != '0'
         uses: lycheeverse/lychee-action@v2
         with:
-          # Check internal links only by default; external links can be flaky
-          # and we don't want PRs blocked by third-party downtime.
+          # Read targets from file (one path per line). --offline avoids
+          # external HTTP and makes the check deterministic + fast.
           args: >-
             --no-progress
             --cache
@@ -52,14 +80,14 @@ jobs:
             --offline
             --include-fragments
             --root-dir ${{ github.workspace }}
-            'docs/**/*.md'
-            'CLAUDE.md'
+            --
+            $(cat .lychee-targets.txt | tr '\n' ' ')
           fail: true
           format: markdown
           output: ./lychee-report.md
 
       - name: Upload report
-        if: always()
+        if: always() && steps.files.outputs.count != '0'
         uses: actions/upload-artifact@v4
         with:
           name: lychee-report
@@ -72,10 +100,11 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const body = fs.readFileSync('./lychee-report.md', 'utf8');
+            let body = '_(report unavailable)_';
+            try { body = fs.readFileSync('./lychee-report.md', 'utf8'); } catch {}
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `## Docs link check failed\n\n${body}\n\n_Run \`lychee 'docs/**/*.md' CLAUDE.md\` locally to reproduce._`
+              body: `## Docs link check failed\n\n${body}\n\n_The check scans only files changed in this PR. Pre-existing broken links elsewhere in \`docs/\` are tracked separately. To scan everything: trigger this workflow manually with \`full_scan=true\`._`
             });

@@ -1,0 +1,79 @@
+name: Docs Link Check
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'CLAUDE.md'
+      - '.github/workflows/docs-linkcheck.yml'
+      - '.lycheeignore'
+  push:
+    branches: [main, main-dev]
+    paths:
+      - 'docs/**'
+      - 'CLAUDE.md'
+  workflow_dispatch:
+
+# Avoid duplicate runs
+concurrency:
+  group: docs-linkcheck-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  link-check:
+    name: Lychee link check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore lychee cache
+        uses: actions/cache@v4
+        with:
+          path: .lycheecache
+          key: cache-lychee-${{ github.sha }}
+          restore-keys: cache-lychee-
+
+      - name: Run lychee
+        id: lychee
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # Check internal links only by default; external links can be flaky
+          # and we don't want PRs blocked by third-party downtime.
+          args: >-
+            --no-progress
+            --cache
+            --max-cache-age 1d
+            --offline
+            --include-fragments
+            --base .
+            'docs/**/*.md'
+            'CLAUDE.md'
+          fail: true
+          format: markdown
+          output: ./lychee-report.md
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lychee-report
+          path: ./lychee-report.md
+          retention-days: 14
+
+      - name: Comment on PR
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('./lychee-report.md', 'utf8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## Docs link check failed\n\n${body}\n\n_Run \`lychee 'docs/**/*.md' CLAUDE.md\` locally to reproduce._`
+            });

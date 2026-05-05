@@ -522,3 +522,116 @@ These join existing `feedback_v2-tier-dispatch-strategy.md` + `feedback_brownfie
 
 **Amendment status**: APPLIED 2026-05-05 post-D.1 ship.
 **Next decision point**: D.2 Phase 0.5 contract drafting (after prerequisite gates §10.6 resolved).
+
+### 10.9 Prerequisite gates RESOLVED (2026-05-05)
+
+Investigation post-amendment closed both critical OPEN gates from §10.6:
+
+#### Gate D.2.1 — Spectator role decision: ✅ RESOLVED (in-scope, server-enforced)
+
+**Source**: `apps/api/src/Api/BoundedContexts/SessionTracking/Domain/Enums/ParticipantRole.cs`
+
+Backend defines a 3-value enum with server-enforced action gating:
+
+| Role | Value | Capabilities |
+|------|-------|--------------|
+| **Spectator** | 0 | View-only access. Can send chat messages but **cannot modify session state**. |
+| **Player** | 1 | Active participant. Own score, dice, cards, timer, chat. |
+| **Host** | 2 | All Player actions + advance turns, pause/resume, kick participants, modify toolkit. |
+
+**Server enforcement**: Commands implement `IRequireSessionRole` with `MinimumRole` property. E.g., `AddSessionEventCommand.MinimumRole = Player` → spectators get 403 if they attempt to add events. `AssignParticipantRoleCommand.MinimumRole = Host` → only host can change roles.
+
+**Source ticket**: Issue #4765 (Player Action Endpoints + Host Validation) introduced role-based gating.
+
+**D.2 Phase 0.5 implications**:
+- ✅ Spectator IS in scope (existing concept, server-enforced)
+- Frontend must read `participant.role` from session DTO + render variant per role:
+  - Player + Host → write actions enabled (score input, dice, cards, timer)
+  - Spectator → write actions hidden OR disabled with tooltip "Only players can update scores"
+  - Host-only actions (pause/resume, kick, advance turn) → only Host sees these UI controls
+- Optimistic UI: client may show button enabled but server enforces — handle 403 gracefully (toast: "Permission denied")
+- E2E coverage: 3-role variant matrix (Spectator + Player + Host) for visual regression
+
+#### Gate D.2.2 — SSE backend endpoint verification: ✅ RESOLVED (4 endpoints exist)
+
+**Sources**: `apps/api/src/Api/Routing/SessionTracking/SessionQueryEndpoints.cs`, `apps/api/src/Api/Routing/SessionFlowEndpoints.cs`
+
+Four real-time/event endpoints exist:
+
+| Endpoint | Type | Use case |
+|----------|------|----------|
+| `GET /game-sessions/{id}/stream` | SSE v1 | Basic SSE, no reconnection state |
+| `GET /game-sessions/{id}/stream/v2` | SSE **v2** ⭐ | **Last-Event-ID reconnection, typed events, conn pool 20 max, per-player filtering** |
+| `GET /game-sessions/{id}/events` | REST paginated | Timeline events query (NOT SSE — paginated session diary) |
+| `GET /sessions/{id}/diary/stream` | SSE | Diary-specific updates |
+
+**Recommended for D.2: `/game-sessions/{id}/stream/v2`** — implements all Newman's reconnection recommendations from §3.2:
+
+- ✅ **Last-Event-ID header** (line 357): `var lastEventId = context.Request.Headers["Last-Event-ID"].FirstOrDefault();`
+- ✅ **Typed event names** (line 395): `event: <EventType>\n` (e.g., `session:score`, `session:turn`)
+- ✅ **Event ID per envelope** (line 394): `id: <envelope.Id>\n` for client `Last-Event-ID` tracking
+- ✅ **Heartbeat** (lines 367-384): 30s interval, `event: heartbeat\ndata: {timestamp}\n\n`
+- ✅ **Connection pool limits** (line 351): max 20 connections/session, returns 429 Too Many Requests
+- ✅ **Auth + access check** (lines 329-348): 401 (no auth), 403 (no access), 404 (session not found)
+- ✅ **Per-player filtering**: `broadcastService.SubscribeAsync(sessionId, userId, lastEventId, ct)` filters events by recipient
+
+**Service**: `ISessionBroadcastService.SubscribeAsync(...)` exposes `IAsyncEnumerable<EventEnvelope>` with `{ Id, EventType, Data }`.
+
+**Headers required** (per server impl):
+```
+GET /api/v1/game-sessions/{id}/stream/v2
+Headers:
+  Cookie: <session-cookie>
+  Last-Event-ID: <last-id-on-reconnect>  // optional
+Response:
+  Content-Type: text/event-stream
+  Cache-Control: no-cache
+  Connection: keep-alive
+```
+
+**SSE event format**:
+```
+id: <event-id>
+event: <EventType>  // e.g., session:score, session:turn, session:pause
+data: <json-payload>
+
+```
+
+**D.2 Phase 0.5 implications**:
+- ✅ Backend SSE is **production-ready**, no backend prerequisite issue needed (unlike Wave 3)
+- Frontend `useSessionLiveStream` hook should:
+  - Use native `EventSource` API (browser-native SSE client)
+  - Track `lastEventId` from `event.lastEventId` automatically (browser handles)
+  - On error: exponential backoff retry [1s, 2s, 4s, 8s, 16s] (Newman recommendation)
+  - After 5 retries → fall back to polling `useSessionState` 5s
+  - Show `ConnectionLostBanner` when SSE drops + auto-hide on reconnect
+  - Handle 429 (connection pool full) → show "Sessione affollata, riprova tra poco"
+- Event types enum to verify in implementation: grep backend for typed names emitted (e.g., `session:score`, `session:turn`, `session:pause`, `session:resume`, `session:endgame`, `session:chat`, `session:tool-execution`)
+
+#### Gate D.2 unblocked
+
+Both prerequisite gates **CLOSED**. D.2 Phase 0.5 contract drafting can proceed. Updated #10.6 sequencing:
+
+1. ✅ D.1 ship verification (PR #736 merged)
+2. ✅ **D.2 spectator role**: in-scope, 3-role variant matrix (Spectator/Player/Host) per server enum
+3. ✅ **SSE backend endpoint**: `/game-sessions/{id}/stream/v2` production-ready
+4. ⚠️ D.1 bundle baseline verification (deferred, post-merge analytics — non-blocking)
+5. → **PROCEED** to D.2 Phase 0.5 contract drafting
+
+#### D.2 Phase 0.5 contract additions (per resolved gates)
+
+The contract MUST include:
+- **§ Role-based variant matrix**: Spectator/Player/Host UI affordances + server-enforced gating + 403 handling
+- **§ SSE event schema**: typed event names enum, payload schemas per type, version field
+- **§ EventSource integration**: `lastEventId` tracking via browser API, retry semantics, 5-retry budget
+- **§ Polling fallback**: `useSessionState` 5s after SSE retry exhaustion, banner UX
+- **§ Connection pool handling**: 429 response → user-facing "Sessione affollata" message
+- **§ Heartbeat handling**: optional client-side detection of stale connection (no event >35s post-heartbeat)
+
+#### Pattern emerso
+
+**Gate resolution via codebase grep** — when prerequisite gates flag UNKNOWN backend state, the fastest resolution path is direct codebase investigation (`grep -rn` on backend BC + Domain/Enums + Routing). For Wave D.2, this revealed:
+- Spectator role NOT a UI invention — backend has full 3-role enum + command-level gating already
+- SSE infrastructure NOT a future requirement — production-ready v2 endpoint with all advanced features (Last-Event-ID, typed events, conn pool, per-player filtering)
+
+This pattern saves 1-2 days vs filing backend issue + waiting for clarification. Apply BEFORE filing audit issues like Wave 3 #728/#729/#730.

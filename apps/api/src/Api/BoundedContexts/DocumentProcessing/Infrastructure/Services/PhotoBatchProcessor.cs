@@ -10,25 +10,28 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 
 /// <summary>
 /// Parallel batch processor for photo uploads in the Libro Game AI Assistant pipeline.
-/// Retrieves page blobs, preprocesses each via OCR, and records indexed pages on the aggregate.
-/// Libro Game AI Assistant MVP Phase 1 — Task 1.6.
+/// Retrieves page blobs, preprocesses each via OCR, chunks the extracted text, and
+/// indexes chunks into the KB vector store before recording page state on the aggregate.
+/// Libro Game AI Assistant MVP Phase 1 — Task 1.6 / Phase 2 — Task 2.3.
 /// </summary>
 /// <remarks>
-/// Thread-safety: IO operations (blob retrieve + preprocess) run in parallel up to
-/// <c>PhotoBatch:MaxParallelism</c>. Aggregate state mutations
+/// Thread-safety: IO operations (blob retrieve + preprocess + chunk + KB index) run in
+/// parallel up to <c>PhotoBatch:MaxParallelism</c>. Aggregate state mutations
 /// (<see cref="PhotoBatchUpload.AttachPage"/> and <see cref="PhotoBatchUpload.RecordPageIndexed"/>)
 /// are serialized via <see cref="_aggregateMutex"/> to avoid race conditions on the
 /// <see cref="PhotoBatchUpload"/> entity collections.
 ///
-/// KB indexing (IDocumentChunker, IEmbeddingService, IKnowledgeBaseIndexer) is intentionally
-/// excluded from this class — deferred to Phase 2 Task 2.3 once those KnowledgeBase BC
-/// services are implemented.
+/// KB indexing failure is treated as a non-fatal degradation: if <see cref="IKnowledgeBaseIndexer"/>
+/// throws, the error is logged and page state is still recorded normally (batch completes).
+/// Vector store persistence is stubbed in <see cref="KnowledgeBaseIndexer"/> pending Gap G3.
 /// </remarks>
 internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
 {
     private readonly IPhotoBatchUploadRepository _repo;
     private readonly IBlobStorageService _blob;
     private readonly IPhotoPreprocessor _preprocessor;
+    private readonly IDocumentChunker _chunker;
+    private readonly IKnowledgeBaseIndexer _kbIndexer;
     private readonly IUnitOfWork _uow;
     private readonly int _maxParallelism;
     private readonly ILogger<PhotoBatchProcessor> _logger;
@@ -40,6 +43,8 @@ internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
         IPhotoBatchUploadRepository repo,
         IBlobStorageService blob,
         IPhotoPreprocessor preprocessor,
+        IDocumentChunker chunker,
+        IKnowledgeBaseIndexer kbIndexer,
         IUnitOfWork uow,
         IConfiguration config,
         ILogger<PhotoBatchProcessor> logger)
@@ -47,6 +52,8 @@ internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
         _repo = repo;
         _blob = blob;
         _preprocessor = preprocessor;
+        _chunker = chunker;
+        _kbIndexer = kbIndexer;
         _uow = uow;
         _maxParallelism = config.GetValue<int?>("PhotoBatch:MaxParallelism") ?? 4;
         _logger = logger;
@@ -155,18 +162,41 @@ internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
             warnings: preprocessed.Warnings,
             extractedText: preprocessed.ExtractedText);
 
-        // 5. Serialize aggregate state mutations to avoid concurrent list/counter corruption.
+        // 5. Chunk + index extracted text into KB (outside mutex — parallel-safe IO).
+        //    Skip blank pages and pages with no extracted text.
+        //    KB indexing failure is non-fatal: log and continue so page state is still recorded.
+        if (!preprocessed.IsBlankPage && !string.IsNullOrWhiteSpace(preprocessed.ExtractedText))
+        {
+            try
+            {
+                var chunks = _chunker.ChunkPage(
+                    batch.Id, page.Id, page.PageNumber,
+                    preprocessed.ExtractedText, batch.SourceLanguage, (float)preprocessed.ConfidenceScore);
+
+                if (chunks.Count > 0)
+                {
+                    var indexed = await _kbIndexer.IndexBatchAsync(
+                        batch.Id, batch.GameId, chunks, progress: null, ct).ConfigureAwait(false);
+
+                    _logger.LogDebug(
+                        "[PhotoBatchProcessor] Page {PageNumber} of batch {BatchId}: {ChunkCount} chunks, {IndexedCount} indexed",
+                        page.PageNumber, batch.Id, chunks.Count, indexed);
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // KB indexing failure must NOT abort the batch — page state still recorded below.
+                _logger.LogError(ex,
+                    "[PhotoBatchProcessor] KB indexing failed for page {PageNumber} of batch {BatchId} — continuing",
+                    page.PageNumber, batch.Id);
+            }
+        }
+
+        // 6. Serialize aggregate state mutations to avoid concurrent list/counter corruption.
         await _aggregateMutex.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             batch.AttachPage(page);
-
-#pragma warning disable S1135, MA0026
-            // TODO Phase 2 Task 2.3: chunk + embed + KB index here when KnowledgeBase BC
-            // services are ready (IDocumentChunker, IEmbeddingService, IKnowledgeBaseIndexer
-            // are not yet implemented in Phase 1). The extracted text is already on `page`.
-#pragma warning restore S1135, MA0026
-
             batch.RecordPageIndexed(page.PageNumber, preprocessed.ConfidenceScore, preprocessed.Warnings);
         }
         finally

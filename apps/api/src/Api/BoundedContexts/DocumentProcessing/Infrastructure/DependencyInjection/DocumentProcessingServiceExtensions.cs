@@ -142,6 +142,9 @@ internal static class DocumentProcessingServiceExtensions
 
         services.AddScoped<IPhotoPreprocessor, SmoldoclingPhotoPreprocessor>();
 
+        // Libro Game AI Assistant MVP Phase 1 — Task 1.6: parallel photo batch processor
+        services.AddScoped<IPhotoBatchProcessor, PhotoBatchProcessor>();
+
         // Shared PDF processing pipeline (used by recovery job and future handler consolidation)
         services.AddScoped<IPdfProcessingPipelineService, PdfProcessingPipelineService>();
 

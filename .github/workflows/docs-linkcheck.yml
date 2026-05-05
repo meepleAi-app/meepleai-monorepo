@@ -26,6 +26,8 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      pull-requests: write
+      issues: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,7 +51,7 @@ jobs:
             --max-cache-age 1d
             --offline
             --include-fragments
-            --base .
+            --root-dir ${{ github.workspace }}
             'docs/**/*.md'
             'CLAUDE.md'
           fail: true

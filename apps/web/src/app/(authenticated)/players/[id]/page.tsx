@@ -1,121 +1,35 @@
 /**
- * Player Detail Page - /players/[id]
+ * Player Detail Page — /players/[id]
  *
- * Shows player details with navigation footer linking to Sessions and Games.
- * Uses MeepleCard entity=player with hero variant.
+ * Thin client shell — normalized playerId passed to PlayerDetailView orchestrator.
+ * Suspense boundary required: PlayerDetailView uses useSearchParams() which triggers
+ * CSR bailout during static prerender without it. Mirror Wave 4 D1 lesson (PR #717).
  *
- * @see Issue #4693
+ * playerId normalization:
+ *   - string with length > 0 → pass as-is (URL slug decoded inside orchestrator)
+ *   - absent / invalid / undefined → null → FSM maps to 'not-found'
+ *
+ * Subroutes /players/[id]/{achievements,games,sessions,stats} UNCHANGED.
+ *
+ * @see Wave 3 /players/[id] (Issue #683)
  */
 
 'use client';
 
-import { use } from 'react';
+import { Suspense } from 'react';
 
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { useParams } from 'next/navigation';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { Button } from '@/components/ui/primitives/button';
-import { usePlayerStatistics } from '@/hooks/queries/usePlayersFromRecords';
-import { useEntityNavigation } from '@/hooks/useEntityNavigation';
+import { PlayerDetailView } from './_components/PlayerDetailView';
 
-export default function PlayerDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: playerId } = use(params);
-  const { data: stats } = usePlayerStatistics();
-  const _navLinks = useEntityNavigation('player', { id: playerId });
-
-  // Decode player name from URL slug
-  const playerName = decodeURIComponent(playerId).replace(/-/g, ' ');
+export default function PlayerDetailPage() {
+  const params = useParams<{ id: string }>();
+  const rawId = params?.id;
+  const playerId = typeof rawId === 'string' && rawId.length > 0 ? rawId : null;
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="container mx-auto max-w-7xl">
-        {/* Back Button */}
-        <Button asChild variant="ghost" className="mb-6 font-nunito">
-          <Link href="/players">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Torna ai Giocatori
-          </Link>
-        </Button>
-
-        {/* Hero Card */}
-        <section className="mb-8 flex justify-center">
-          <MeepleCard
-            entity="player"
-            variant="hero"
-            title={playerName}
-            subtitle="Giocatore"
-            metadata={
-              stats
-                ? [
-                    { label: `${stats.totalSessions} sessioni` },
-                    { label: `${stats.totalWins} vittorie` },
-                  ]
-                : []
-            }
-          />
-        </section>
-
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            <Card className="border-l-4 border-l-[hsl(262,83%,58%)] shadow-lg">
-              <CardHeader>
-                <CardTitle className="font-quicksand text-xl">Giochi Preferiti</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {Object.keys(stats.gamePlayCounts).length > 0 ? (
-                  <ul className="space-y-2 font-nunito">
-                    {Object.entries(stats.gamePlayCounts)
-                      .sort(([, a], [, b]) => b - a)
-                      .slice(0, 10)
-                      .map(([game, count]) => (
-                        <li key={game} className="flex justify-between text-sm">
-                          <span>{game}</span>
-                          <span className="text-muted-foreground">{count} partite</span>
-                        </li>
-                      ))}
-                  </ul>
-                ) : (
-                  <Alert>
-                    <AlertDescription className="font-nunito">
-                      Nessuna partita registrata.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-[hsl(240,60%,55%)] shadow-lg">
-              <CardHeader>
-                <CardTitle className="font-quicksand text-xl">Punteggi Medi</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {Object.keys(stats.averageScoresByGame).length > 0 ? (
-                  <ul className="space-y-2 font-nunito">
-                    {Object.entries(stats.averageScoresByGame)
-                      .sort(([, a], [, b]) => b - a)
-                      .slice(0, 10)
-                      .map(([game, avg]) => (
-                        <li key={game} className="flex justify-between text-sm">
-                          <span>{game}</span>
-                          <span className="text-muted-foreground">{avg.toFixed(1)} pts</span>
-                        </li>
-                      ))}
-                  </ul>
-                ) : (
-                  <Alert>
-                    <AlertDescription className="font-nunito">
-                      Nessun punteggio registrato.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
-    </div>
+    <Suspense>
+      <PlayerDetailView playerId={playerId} />
+    </Suspense>
   );
 }

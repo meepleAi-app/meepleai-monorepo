@@ -183,7 +183,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: meepleai-embedding
     restart: unless-stopped
-    profiles: [ai]
+    profiles: [ai, ai-essential]
     environment:
       # Model selection: e5-large (quality), e5-base (2x faster), e5-small (4x faster)
       # Model: e5-base (768d, 3.7x faster than e5-large on ARM64)
@@ -264,7 +264,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: meepleai-reranker
     restart: unless-stopped
-    profiles: [ai]
+    profiles: [ai, ai-essential]
     volumes:
       - reranker_models:/home/reranker/.cache/huggingface
     healthcheck:
@@ -290,7 +290,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: meepleai-orchestrator
     restart: unless-stopped
-    profiles: [ai]
+    profiles: [ai, tutor-agents]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
       interval: 30s
@@ -325,7 +325,7 @@ services:
     image: prom/prometheus:v3.7.0
     container_name: meepleai-prometheus
     restart: unless-stopped
-    profiles: [monitoring]
+    profiles: [monitoring, monitoring-essential]
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -356,7 +356,7 @@ services:
     image: grafana/grafana:11.4.0
     container_name: meepleai-grafana
     restart: unless-stopped
-    profiles: [monitoring]
+    profiles: [monitoring, monitoring-essential]
     entrypoint: ["/scripts/load-secrets-env.sh"]
     command: ["/run.sh"]
     volumes:
@@ -388,7 +388,7 @@ services:
     image: prom/alertmanager:v0.27.0
     container_name: meepleai-alertmanager
     restart: unless-stopped
-    profiles: [monitoring]
+    profiles: [monitoring, monitoring-essential]
     volumes:
       - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
@@ -445,7 +445,7 @@ services:
     image: prom/node-exporter:v1.8.2
     container_name: meepleai-node-exporter
     restart: unless-stopped
-    profiles: [monitoring]
+    profiles: [monitoring, monitoring-essential]
     command:
       - '--path.rootfs=/host'
       - '--path.procfs=/host/proc'

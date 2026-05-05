@@ -29,6 +29,7 @@ public sealed class RequestSourceTests
         values.Should().Contain(RequestSource.AdminOperation);
         values.Should().Contain(RequestSource.ABTesting);
         values.Should().Contain(RequestSource.RagClassification);
+        values.Should().Contain(RequestSource.Translation);
     }
 
     [Theory]
@@ -40,6 +41,7 @@ public sealed class RequestSourceTests
     [InlineData(RequestSource.AdminOperation, "AdminOperation")]
     [InlineData(RequestSource.ABTesting, "ABTesting")]
     [InlineData(RequestSource.RagClassification, "RagClassification")]
+    [InlineData(RequestSource.Translation, "Translation")]
     public void RequestSource_ToStringMatchesExpected(RequestSource source, string expected)
     {
         source.ToString().Should().Be(expected);
@@ -54,6 +56,7 @@ public sealed class RequestSourceTests
     [InlineData("AdminOperation", RequestSource.AdminOperation)]
     [InlineData("ABTesting", RequestSource.ABTesting)]
     [InlineData("RagClassification", RequestSource.RagClassification)]
+    [InlineData("Translation", RequestSource.Translation)]
     public void RequestSource_ParsesFromString(string name, RequestSource expected)
     {
         var parsed = Enum.Parse<RequestSource>(name);
@@ -61,10 +64,10 @@ public sealed class RequestSourceTests
     }
 
     [Fact]
-    public void RequestSource_HasExactly8Values()
+    public void RequestSource_HasExactly9Values()
     {
         // Regression guard: adding/removing values requires updating monitoring logic
         var count = Enum.GetValues<RequestSource>().Length;
-        count.Should().Be(8);
+        count.Should().Be(9);
     }
 }

@@ -328,10 +328,197 @@ This retro is the gate for **Phase 2** (post-Wave D — additional V2 routes or 
 
 ---
 
-**Status**: DRAFT — pending user review before Phase 1 (D.1) dispatch.
-**Next steps post-approval**:
-1. Open child issue D.1 under umbrella #582 (route `/sessions`)
-2. D.1 single-shot subagent dispatch (Wave 4 D1 blueprint)
-3. After D.1 ships → open D.2 child issue + draft Phase 0.5 contract `sessions-id-live-hooks.md`
-4. After D.2 contract review → foundation sub-PR dispatch
-5. Continue per §6 sequencing
+**Status**: ⚠️ AMENDED 2026-05-05 — see §10 post-D.1 addendum.
+**Next steps post-approval**: see §10.4 revised sequencing.
+
+---
+
+## 10. Post-D.1 Amendments (2026-05-05)
+
+> **Trigger**: `/sc:spec-panel review #734 sequencing` after Wave D.1 PR #736 squash `7b8f558db` MERGED 2026-05-05T18:35:35Z.
+> **Validation data**: D.1 actuals (10 commits + 4 review-driven fixes, 187 tests, 6 issues caught by two-stage review including 1 critical at final cumulative review).
+> **Wave D umbrella quality reassessed**: 6.3/10 → **5.5/10** (revealed unflagged blind spots).
+
+### 10.1 Predictions vs actuals
+
+| Original prediction | D.1 actual | Validated? |
+|---------------------|------------|------------|
+| Tier S single-shot acceptable | Tier S, 5-task TDD shipped | ✅ |
+| 4-5 days effort | ~1 day (subagent-driven) | ❌ **4-5× overstated** |
+| Wave 4 D1 blueprint mirror | Mirror confirmed | ✅ |
+| Bundle target ~80 KB | Unverified (--admin merge) | ⏳ |
+| Quality 7.0/10 | Final review caught CRITICAL ICU bug | ❌ **Score TOO HIGH** |
+| MeepleCard variant=list/grid | Cards diverged (API insufficient) | ❌ **Assumption wrong** |
+| Single-shot dispatch acceptable | 6 review-driven fixes across all tasks | ⚠️ Caveat needed |
+
+### 10.2 Four NEW audit gates (must apply to D.2/D.3 + future waves)
+
+#### Gate A — ICU plural defensive pattern (Wiegers + Newman)
+
+**Trigger**: any i18n key with `{count, plural, ...}` or `{var, plural, ...}` ICU formatter.
+
+**Pre-implementation grep audit**:
+```bash
+grep -E "intl\.messages\[.*\] as string" apps/web/src/app/
+grep "{count, plural" apps/web/src/locales/*.json
+```
+
+**Required defensive pattern**:
+- ✅ Orchestrator: `t(key, { count })` resolves ICU plural via next-intl formatter
+- ✅ Component: receives plain `string` (not `template + count` props)
+- ❌ ANTI-PATTERN: `intl.messages[key].replace('{count}', String(count))` — naive replace breaks ICU plural opening identifier, produces raw ICU syntax in production UI
+
+**Rationale**: D.1 PR #736 final review caught this defect — naive `.replace('{count}', ...)` replaced only the opening variable identifier of the ICU plural clause, producing `"6, plural, =0 {Nessuna...} =1 {1 partita...} other {# partite registrate}}"` rendered as visible text. Fixed in commit `0af5df2bf`.
+
+**Apply to**: D.2 LiveTopBar (turn count, player count), EndgameDialog (final scores), D.3 SummaryHeroPodium (player counts), KpiGrid templates.
+
+---
+
+#### Gate B — Schema reality v1 carryover audit (Wiegers + Fowler)
+
+**Trigger**: every Phase 0.5 contract drafting + every Tier S audit checklist.
+
+**Required steps**:
+1. Read DTO schema source: `apps/web/src/lib/api/schemas/<domain>.schemas.ts`
+2. Map mockup field names to actual DTO field names
+3. Document v1 carryover gaps explicitly
+4. Propose backend extension issue (post-merge followup)
+5. Plan graceful degradation in components (e.g., hide score chips when all-zero)
+
+**Required documentation block** in transform/derive functions:
+```ts
+/**
+ * SCHEMA REALITY V1 CARRYOVER (Wave X.Y, mirror PR #717 + PR #736 pattern):
+ * <DtoName> exposes only <fields>. Wave X.Y = visual upgrade only;
+ * <missing-feature> is decorative (placeholder).
+ * Followup issue post-merge: <link or TBD>.
+ */
+```
+
+**Rationale**: D.1 actual revealed `SessionPlayerDto` exposes only `playerName/playerOrder/color` — NO `score/winner` fields. Implementer initially invented `displayName/score/isWinner` (matching mockup), broke compile against real DTO. Caught by spec compliance review (Task 1, commit `329262f8f`).
+
+**Apply to**: D.2 SSE event schema (verify `ScoreEvent`, `ActionLogEvent` shapes against `apps/api/src/Api/BoundedContexts/SessionTracking/`), D.3 SummaryDto schema, all future routes.
+
+---
+
+#### Gate C — MeepleCard API-fit audit (Fowler)
+
+**Trigger**: any v2 component spec mentioning "use MeepleCard variant=list/grid/...".
+
+**Required steps**:
+1. Inspect `apps/web/src/components/ui/data-display/meeple-card/` props (`ListCard.tsx`, `GridCard.tsx`)
+2. Match against mockup composition requirements:
+   - Children/inline content slots? (MeepleCard has NONE)
+   - Wrapper-level animation classes? (`mai-pulse`, etc.)
+   - Absolute-positioned overlays? (OutcomeBadge over cover area)
+   - Custom left-accent-bar? (`border-l-[3px]` sessions pattern)
+3. Decide WRAP (Wave 4 D1 simple cards = title + subtitle) vs DIVERGE (D.1 rich cards = scoring + outcome + connection chips)
+
+**Decision rule**:
+- ✅ WRAP: title + subtitle + optional metadata only (Players/Games index)
+- ❌ DIVERGE: inline composition required (Sessions list/grid, likely D.3 SummaryHeroPodium)
+
+**Rationale**: D.1 cards diverged from MeepleCard because `MeepleCardProps` has no children slot, no animation injection, no positioned overlays. ENGINEERING-JUSTIFIED divergence per spec compliance reviewer ruling. Pattern note: future Tier S routes with rich card composition may also justify divergence.
+
+**Apply to**: D.3 SummaryHeroPodium (3-place podium with confetti + tied logic — RICHER than MeepleCard, likely DIVERGE).
+
+---
+
+#### Gate D — Bootstrap-then-merge discipline (Crispin)
+
+**Trigger**: any visual regression PR with `gh workflow run visual-regression-migrated.yml ... -f mode=bootstrap`.
+
+**Required sequence**:
+1. Open PR (status BLOCKED waiting on bootstrap baselines)
+2. Trigger bootstrap workflow
+3. **WAIT** for bootstrap PNG commits to land on PR branch
+4. Verify visual regression test passes against committed baselines
+5. THEN consider --admin merge (only if E2E DB flake confirmed)
+
+**ANTI-PATTERN**: --admin merge before bootstrap completes
+- D.1 actual: PR #736 merged at 18:35:35Z, bootstrap workflow `25393528841` dispatched ~5min before merge → no rollback signal if bootstrap fails
+- Risk: post-merge baseline drift, broken visual tests on subsequent PRs
+
+**Rationale**: Bootstrap workflow generates canonical PNG baselines on Linux x86-64 runner. If bootstrap fails (e.g., backend missing, fixture mismatch), --admin merge ships code WITHOUT visual regression coverage. Future PRs will fail visual tests until baselines manually added.
+
+**Apply to**: D.2 foundation sub-PR, D.2 interactions sub-PR, D.3 PR — enforce strictly.
+
+### 10.3 Updated audit checklist (additive to §3 per-route critique)
+
+For D.2 Phase 0.5 contract drafting, add these sections:
+- §X: i18n defensive pattern (Gate A)
+- §X: SSE event schema reality audit (Gate B)
+- §X: MeepleCard API-fit audit per component (Gate C)
+- §X: SSE-to-polling transition test (NEW from D.1 review)
+
+For D.3 Phase 0.5 contract drafting:
+- All Gate A-D applied
+- Confetti accessibility audit (screen reader announcement)
+- ShareCard preview boundary clarification (download button hidden v1)
+
+### 10.4 Revised sequencing timeline
+
+Original #734 timeline: 4 weeks. Revised post-D.1 (subagent-driven velocity multiplier):
+
+| Phase | Original | Revised |
+|-------|----------|---------|
+| 1 | Week 1: D.1 single-shot | ✅ Day 1 — D.1 SHIPPED PR #736 |
+| 2 | Week 2: D.2 P0.5 + foundation | Days 2-4: spectator resolution + D.2 P0.5 contract + foundation sub-PR |
+| 2.5 | — | Day 5: **Phase 3 retro mid-stream** (NEW — captures D.1+D.2 lessons before D.3) |
+| 3 | Week 3: D.2 interactions | Days 6-8: D.2 interactions sub-PR + real SSE wiring + smoke spec |
+| 4 | Week 4: D.3 + retro | Days 9-11: D.3 P0.5 (informed by retro) + impl + close umbrella |
+
+**Total revised**: ~11 days (1.5-2 weeks) vs original 4 weeks.
+
+⚠️ **CAVEAT**: D.2 has unknown unknowns (real-time + dialog + dark mode). Conservative: 2 weeks total. Re-estimate after D.2 foundation sub-PR ships.
+
+### 10.5 Strategic questions resolution
+
+| # | Question (from §7) | Status | Action |
+|---|--------------------|--------|--------|
+| 1 | D.2 spectator mode in scope? | OPEN | **Prerequisite gate before D.2 P0.5** |
+| 2 | Phase 3 retro precede D.3? | ✅ RESOLVED → YES (mid-stream after D.2 foundation) | §10.4 sequencing reflects |
+| 3 | Bundle budget overrun mitigation | PARTIAL (D.1 unverified) | Verify D.1 CI Bundle Size, then assess |
+| 4 | Real-time SSE backend endpoint exists? | OPEN | **Verify before D.2 P0.5 dispatch** |
+| 5 | Endgame dialog → D.3 auto-redirect? | OPEN (UX defer) | Punt to D.3 implementation |
+
+### 10.6 Pre-D.2-dispatch prerequisite gates (ordered)
+
+1. ✅ **D.1 ship verification**: PR #736 merged, bootstrap workflow status check
+2. ⚠️ **D.2 spectator role decision**: re-read #582, RBAC scope
+3. ⚠️ **SSE backend endpoint verification**: `grep -rn "sessions.*events" apps/api/src/Api/BoundedContexts/SessionTracking/` — confirm endpoint shape OR file backend prerequisite issue
+4. ⚠️ **D.1 bundle baseline verification**: PR #736 Bundle Size check result (post-merge analytics)
+5. → THEN draft D.2 Phase 0.5 contract with Gates A+B+C+D applied
+
+### 10.7 Quality scoring methodology amendment
+
+Original quality scores (#734 §5) missed:
+- i18n template handling category (caught D.1 ICU plural)
+- Schema reality v1 carryover risk (caught D.1 player fields)
+- MeepleCard API-fit risk (caught D.1 card divergence)
+
+**Revised scoring axes** (post-D.1):
+- Clarity (0-10) — language precision
+- Completeness (0-10) — coverage of essential elements
+- Testability (0-10) — measurability + validation
+- Consistency (0-10) — internal coherence
+- **i18n discipline (0-10)** — NEW: ICU formatter handling, template safety
+- **Schema reality (0-10)** — NEW: DTO alignment with mockup expectations
+- **Component composition (0-10)** — NEW: shared component API-fit + divergence justification
+
+Future Phase 0.5 contracts should self-assess on these 7 axes.
+
+### 10.8 Pattern library updates (memory feedback files)
+
+Capture for future waves in `~/.claude/projects/.../memory/`:
+- New: `feedback_icu-plural-defensive-pattern.md` (Gate A)
+- New: `feedback_schema-reality-v1-carryover.md` (Gate B + Wave 4 D1 + Wave D.1 evidence)
+- New: `feedback_meeplecard-api-fit-audit.md` (Gate C)
+- New: `feedback_bootstrap-then-merge-discipline.md` (Gate D)
+
+These join existing `feedback_v2-tier-dispatch-strategy.md` + `feedback_brownfield-route-redirect-audit.md` + `feedback_subagent-serial-only.md`.
+
+---
+
+**Amendment status**: APPLIED 2026-05-05 post-D.1 ship.
+**Next decision point**: D.2 Phase 0.5 contract drafting (after prerequisite gates §10.6 resolved).

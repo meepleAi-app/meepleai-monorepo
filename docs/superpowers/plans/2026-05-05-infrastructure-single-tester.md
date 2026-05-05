@@ -1414,9 +1414,11 @@ Path: `docs/operations/cf-tunnel-migration.md`
 4. Configure routes (web UI):
    - `meepleai.app` → `http://localhost:3000` (web)
    - `api.meepleai.app` → `http://localhost:8080` (api)
-5. Configure CF Access policy (optional but recommended):
-   - Application: `meepleai.app`
+5. **REQUIRED for single-tester alpha**: Configure CF Access policy:
+   - Application: `meepleai.app` (and `api.meepleai.app`)
    - Policy: "owner-only" with email match → your email only.
+   - Identity provider: Google SSO (preferito; alternativa: One-time PIN via email).
+   - **NOTA**: senza CF Access, dopo Phase 5 (UFW chiude 80/443) gli endpoint non-auth (`/health`, `/api/v1/games`, `/metrics`) diventano pubblici via tunnel — single point of compromise per single-tester. Mandatory.
 
 ## Phase 2 — Install `cloudflared` on VPS
 
@@ -1483,6 +1485,13 @@ The API container currently does NOT bind a host port (only Traefik routes traff
    nmap -p 80,443,22 204.168.135.69
    ```
    Expected: 22 open, 80/443 filtered or closed.
+3. **Verify CF Access auth gate is active** (Fix #2 from spec-panel review):
+   ```bash
+   # Without auth header — should be 401/403 redirect to CF login
+   curl -si https://meepleai.app/api/v1/admin/health | head -3
+   curl -si https://meepleai.app/metrics            | head -3
+   ```
+   Expected: HTTP 302/401/403 (CF Access challenge) o HTML login page. **NOT** 200 con payload applicativo. Se 200, la CF Access policy non è attiva su quel route — torna a Phase 1 step 5.
 
 ## Phase 6 — Decommission Traefik (after 7-day soak)
 

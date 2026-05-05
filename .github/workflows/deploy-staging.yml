@@ -138,6 +138,7 @@ jobs:
           fetch-depth: 0  # Full history needed to compare against github.event.before on merge commits
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
           # PDFs are managed via S3 blob storage, not git
+          # data/rulebook/golden/ (~52K) IS included: Api.csproj embeds these JSON fixtures (ADR-051)
           sparse-checkout: |
             apps/
             infra/
@@ -145,6 +146,7 @@ jobs:
             tests/
             scripts/
             packages/
+            data/rulebook/golden/
           sparse-checkout-cone-mode: true
 
       # IMPORTANT: explicitly set `base` to github.event.before for push events.
@@ -300,9 +302,11 @@ jobs:
         with:
           ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
+          # data/rulebook/golden/ (~52K) IS included: Api.csproj embeds these JSON fixtures (ADR-051)
           sparse-checkout: |
             apps/
             .github/
+            data/rulebook/golden/
           sparse-checkout-cone-mode: true
 
       - name: Generate Version

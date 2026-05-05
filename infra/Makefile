@@ -39,7 +39,19 @@ staging: ## Deploy staging — core + AI + monitoring (CAX31+ recommended, ~14GB
 	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
 		--profile ai --profile monitoring --profile proxy up -d
 
-staging-core: ## Deploy staging core only — no AI services (safe for CAX21, ~6GB reservation)
+staging-minimal: ## Deploy staging single-tester profile (~3GB RAM, no orchestration/n8n/seq/cadvisor)
+	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
+		--profile ai-essential --profile monitoring-essential --profile proxy up -d
+
+staging-with-tutor: ## Deploy staging single-tester + orchestration-service for tutor agents (~5GB RAM)
+	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
+		--profile ai-essential --profile monitoring-essential --profile proxy --profile tutor-agents up -d
+
+staging-tutor-down: ## Stop only orchestration-service (keep rest of staging running)
+	$(COMPOSE) -f compose.staging.yml --profile tutor-agents stop orchestration-service
+	$(COMPOSE) -f compose.staging.yml --profile tutor-agents rm -f orchestration-service
+
+staging-core: ## (Deprecated, use staging-minimal) Deploy staging core only — no AI services
 	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
 		--profile monitoring --profile proxy up -d
 
@@ -315,7 +327,7 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
 
 .PHONY: dev dev-core dev-down \
         tunnel tunnel-stop tunnel-status integration-check integration \
-        integration-down staging staging-down prod prod-down \
+        integration-down staging staging-minimal staging-with-tutor staging-tutor-down staging-core staging-down prod prod-down \
         alpha alpha-core alpha-down \
         secrets-setup secrets-sync \
         snapshot restore-staging restore-local seed-games \

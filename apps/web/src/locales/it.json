@@ -1642,6 +1642,61 @@
         "cardOpenAriaLabel": "Apri {gameName}"
       }
     },
+    "playerDetail": {
+      "metadata": {
+        "title": "{playerName} — MeepleAI",
+        "description": "Profilo giocatore: sessioni, vittorie e statistiche di {playerName}."
+      },
+      "hero": {
+        "back": "Torna ai Giocatori",
+        "backAriaLabel": "Torna alla lista giocatori",
+        "totalSessions": "{count} sessioni",
+        "totalWins": "{count} vittorie",
+        "winRate": "{rate}% win rate",
+        "achievementBadge": "{count} achievement"
+      },
+      "sections": {
+        "stats": {
+          "title": "Statistiche"
+        },
+        "leaderboard": {
+          "title": "Classifica",
+          "rank": "Posizione #{rank}",
+          "ariaLabel": "Posizione in classifica: {rank}"
+        },
+        "favoriteAgent": {
+          "title": "Agente Preferito",
+          "none": "Nessun agente usato ancora"
+        },
+        "achievements": {
+          "title": "Achievement",
+          "viewAll": "Vedi tutti",
+          "viewAllAriaLabel": "Vedi tutti gli achievement di {playerName}",
+          "empty": "Nessun achievement ancora"
+        }
+      },
+      "states": {
+        "loading": {
+          "ariaLabel": "Caricamento profilo giocatore in corso…"
+        },
+        "notFound": {
+          "title": "Giocatore non trovato",
+          "subtitle": "Il profilo che cerchi non esiste o non è disponibile.",
+          "cta": "Torna ai Giocatori"
+        },
+        "error": {
+          "title": "Impossibile caricare il profilo",
+          "subtitle": "Si è verificato un errore. Riprova tra qualche istante.",
+          "cta": "Riprova"
+        }
+      },
+      "subroutes": {
+        "achievements": "Achievement completi",
+        "games": "Giochi giocati",
+        "sessions": "Sessioni",
+        "stats": "Statistiche dettagliate"
+      }
+    },
     "agentDetail": {
       "metadata": {
         "title": "{name} — Agente AI — MeepleAI",

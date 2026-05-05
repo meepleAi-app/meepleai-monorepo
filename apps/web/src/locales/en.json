@@ -1592,6 +1592,61 @@
         "cardOpenAriaLabel": "Open {gameName}"
       }
     },
+    "playerDetail": {
+      "metadata": {
+        "title": "{playerName} — MeepleAI",
+        "description": "Player profile: sessions, wins and statistics for {playerName}."
+      },
+      "hero": {
+        "back": "Back to Players",
+        "backAriaLabel": "Back to players list",
+        "totalSessions": "{count} sessions",
+        "totalWins": "{count} wins",
+        "winRate": "{rate}% win rate",
+        "achievementBadge": "{count} achievements"
+      },
+      "sections": {
+        "stats": {
+          "title": "Statistics"
+        },
+        "leaderboard": {
+          "title": "Leaderboard",
+          "rank": "Rank #{rank}",
+          "ariaLabel": "Leaderboard position: {rank}"
+        },
+        "favoriteAgent": {
+          "title": "Favourite Agent",
+          "none": "No agent used yet"
+        },
+        "achievements": {
+          "title": "Achievements",
+          "viewAll": "View all",
+          "viewAllAriaLabel": "View all achievements for {playerName}",
+          "empty": "No achievements yet"
+        }
+      },
+      "states": {
+        "loading": {
+          "ariaLabel": "Loading player profile…"
+        },
+        "notFound": {
+          "title": "Player not found",
+          "subtitle": "The profile you are looking for does not exist or is unavailable.",
+          "cta": "Back to Players"
+        },
+        "error": {
+          "title": "Unable to load profile",
+          "subtitle": "Something went wrong. Please try again in a moment.",
+          "cta": "Retry"
+        }
+      },
+      "subroutes": {
+        "achievements": "Full achievements",
+        "games": "Games played",
+        "sessions": "Sessions",
+        "stats": "Detailed statistics"
+      }
+    },
     "agentDetail": {
       "metadata": {
         "title": "{name} — AI Agent — MeepleAI",

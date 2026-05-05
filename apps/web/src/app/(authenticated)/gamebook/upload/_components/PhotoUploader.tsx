@@ -9,11 +9,16 @@
  *  - useQuery polling for status (stops when terminal)
  *  - ConfidenceBadge displaying SmolDocling score
  *  - i18n via useTranslation (react-intl)
+ *  - G6: capture="environment" for mobile camera direct access
+ *  - G1 compromise: MAX_PHOTOS=5 limit + oversize warning
+ *  - G8: "Inizia chat" button post-completion
  */
 
 'use client';
 
 import { useCallback, useRef, useState, type JSX } from 'react';
+
+import Link from 'next/link';
 
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePhotoBatchStatus } from '@/lib/gamebook/hooks/usePhotoBatchStatus';
@@ -28,6 +33,10 @@ export interface PhotoUploaderProps {
 
 const ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+// G1 compromise: limit to 5 photos per batch for smartphone compatibility
+const MAX_PHOTOS = 5;
+// G1: warn when any file exceeds 1 MB (not a hard block, just a warning)
+const OVERSIZE_WARN_BYTES = 1_000_000; // 1 MB
 
 /**
  * Photo upload and status UI for game-manual pages.
@@ -42,6 +51,7 @@ export function PhotoUploader({ gameId }: PhotoUploaderProps): JSX.Element {
   const [files, setFiles] = useState<File[]>([]);
   const [batchId, setBatchId] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [oversizeWarning, setOversizeWarning] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   // ── Mutation ────────────────────────────────────────────────────────────────
@@ -78,10 +88,37 @@ export function PhotoUploader({ gameId }: PhotoUploaderProps): JSX.Element {
         setValidationError(t('gamebook.upload.uploadError', 'Invalid files'));
         return;
       }
+      // G1 compromise: enforce MAX_PHOTOS limit
+      if (valid.length > MAX_PHOTOS) {
+        setValidationError(
+          t('gamebook.upload.tooManyFiles', {
+            max: MAX_PHOTOS,
+            selected: valid.length,
+          })
+        );
+        return;
+      }
       setValidationError(null);
+      // G1: warn about oversize files (soft warning, not a block)
+      const oversize = valid.filter(f => f.size > OVERSIZE_WARN_BYTES);
+      if (oversize.length > 0) {
+        setOversizeWarning(t('gamebook.upload.oversizeWarning', { count: oversize.length }));
+      } else {
+        setOversizeWarning(null);
+      }
       setFiles(prev => {
-        const existing = new Set(prev.map(f => f.name));
-        return [...prev, ...valid.filter(f => !existing.has(f.name))];
+        const merged = [...prev, ...valid.filter(f => !new Set(prev.map(p => p.name)).has(f.name))];
+        // Enforce MAX_PHOTOS after merge too
+        if (merged.length > MAX_PHOTOS) {
+          setValidationError(
+            t('gamebook.upload.tooManyFiles', {
+              max: MAX_PHOTOS,
+              selected: merged.length,
+            })
+          );
+          return prev;
+        }
+        return merged;
       });
     },
     [validateFiles, t]
@@ -161,6 +198,7 @@ export function PhotoUploader({ gameId }: PhotoUploaderProps): JSX.Element {
           type="file"
           multiple
           accept={ACCEPTED_MIME_TYPES.join(',')}
+          capture="environment"
           className="sr-only"
           aria-label={t('gamebook.upload.dropzoneLabel', 'Drop photos here or click to select')}
           onChange={handleInputChange}
@@ -172,12 +210,22 @@ export function PhotoUploader({ gameId }: PhotoUploaderProps): JSX.Element {
         <p className="mt-1 text-xs text-muted-foreground">
           {t('gamebook.upload.dropzoneHint', 'JPG, PNG, WEBP — up to 20 MB each')}
         </p>
+        <p className="mt-1 text-xs text-muted-foreground" data-testid="photo-limit-hint">
+          {t('gamebook.upload.photoLimitHint', { max: MAX_PHOTOS })}
+        </p>
       </div>
 
       {/* Validation error */}
       {validationError && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" data-testid="validation-error" className="text-sm text-destructive">
           {validationError}
+        </p>
+      )}
+
+      {/* G1: oversize warning (soft, non-blocking) */}
+      {oversizeWarning && !validationError && (
+        <p role="note" data-testid="oversize-warning" className="text-sm text-amber-600">
+          {oversizeWarning}
         </p>
       )}
 
@@ -279,6 +327,31 @@ export function PhotoUploader({ gameId }: PhotoUploaderProps): JSX.Element {
               {t('gamebook.upload.errorMessage', { message: batchStatus.errorMessage })}
             </p>
           )}
+        </div>
+      )}
+
+      {/* G8: Chat-to-game link after indexing completes */}
+      {batchStatus?.status === 'Completed' && (
+        <div
+          data-testid="chat-link-panel"
+          className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-2"
+        >
+          <p className="text-sm font-semibold text-green-800">
+            {t('gamebook.upload.indexingComplete', 'Indexing complete!')}
+          </p>
+          <p className="text-xs text-green-700">
+            {t(
+              'gamebook.upload.indexingCompleteHint',
+              'You can now ask questions about the manual.'
+            )}
+          </p>
+          <Link
+            href={`/chat?gameId=${gameId}`}
+            data-testid="start-chat-link"
+            className="inline-block rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            {t('gamebook.upload.startChat', 'Start chat')}
+          </Link>
         </div>
       )}
     </div>

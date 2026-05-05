@@ -1597,6 +1597,82 @@
         }
       }
     },
+    "sessions": {
+      "metadata": {
+        "title": "Le mie partite — MeepleAI",
+        "description": "Storico delle tue sessioni di gioco: esiti, punteggi e diari."
+      },
+      "hero": {
+        "title": "Le tue partite",
+        "subtitle": "{count, plural, =0 {Nessuna partita ancora} =1 {1 partita registrata} other {# partite registrate}}",
+        "ctaNew": "Registra partita",
+        "ctaLive": "Avvia live",
+        "stats": {
+          "sessions": "partite",
+          "wins": "vittorie",
+          "totalTime": "totali",
+          "lastSession": "ultima"
+        }
+      },
+      "filters": {
+        "status": {
+          "all": "Tutti",
+          "active": "In corso",
+          "completed": "Completate",
+          "abandoned": "Abbandonate"
+        },
+        "searchPlaceholder": "Cerca partita o gioco…",
+        "searchAriaLabel": "Cerca tra le tue partite",
+        "view": {
+          "label": "Vista",
+          "list": "Lista",
+          "grid": "Griglia"
+        }
+      },
+      "card": {
+        "outcome": {
+          "won": "Vinta",
+          "lost": "Persa",
+          "tie": "Pareggio"
+        },
+        "status": {
+          "live": "Live",
+          "paused": "In pausa",
+          "abandoned": "Abbandonata"
+        },
+        "playerCount": "{count} giocatori",
+        "duration": "{duration}",
+        "scoreLabel": "Punteggio: {score}",
+        "winnerLabel": "Vincitore",
+        "turnLabel": "Turno {turn}",
+        "resumeCta": "Riprendi",
+        "resumeOrArchiveCta": "Riprendi o archivia",
+        "openAriaLabel": "Apri sessione {gameName}"
+      },
+      "empty": {
+        "title": "Nessuna partita ancora",
+        "description": "Registra la tua prima partita giocata o avvia una sessione live per tracciare turni, punteggi e diari.",
+        "ctaStart": "Registra prima partita",
+        "ctaLive": "Avvia live"
+      },
+      "filteredEmpty": {
+        "title": "Nessuna partita per questi filtri",
+        "description": "Prova a rimuovere alcuni vincoli o cambia periodo.",
+        "ctaClear": "Reset filtri"
+      },
+      "loading": {
+        "ariaLabel": "Caricamento partite in corso…"
+      },
+      "error": {
+        "title": "Errore caricamento",
+        "description": "Impossibile recuperare le partite. Verifica la connessione.",
+        "ctaRetry": "Riprova"
+      },
+      "a11y": {
+        "resultsRegionLabel": "Lista partite",
+        "resultsCount": "{count, plural, =0 {Nessuna partita} =1 {1 partita} other {# partite}}"
+      }
+    },
     "players": {
       "metadata": {
         "title": "Giocatori — MeepleAI",

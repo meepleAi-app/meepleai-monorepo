@@ -104,8 +104,8 @@ public sealed class SeedCatalogBlobIntegrationTests
         savedPdfs.Should().ContainSingle();
 
         var pdf = savedPdfs[0];
-        pdf.GameId.Should().Be(gameEntityId,
-            "PdfSeeder links to the games.Id bridge, not directly to shared_games.id");
+        pdf.SharedGameId.Should().Be(gameEntityId,
+            "PdfSeeder links the PDF to the shared game catalog entry");
         pdf.FileName.Should().Be("mage-knight_rulebook.pdf");
         pdf.ContentHash.Should().Be("sha256-deadbeef-integration-test");
         pdf.Language.Should().Be("en");

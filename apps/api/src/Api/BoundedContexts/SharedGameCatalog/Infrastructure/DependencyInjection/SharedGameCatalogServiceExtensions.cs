@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.BackgroundAnalysis;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
@@ -42,6 +43,12 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IGameStateTemplateRepository, GameStateTemplateRepository>(); // Issue #2400 Sprint 3
         services.AddScoped<IRulebookAnalysisRepository, RulebookAnalysisRepository>(); // Issue #2402 Sprint 3
         services.AddScoped<IMechanicDraftRepository, MechanicDraftRepository>(); // Mechanic Extractor: Variant C drafts
+        services.AddScoped<IMechanicAnalysisRepository, MechanicAnalysisRepository>(); // Issue #523: M1.1 Mechanic Analysis persistence
+        services.AddScoped<IMechanicGoldenClaimRepository, MechanicGoldenClaimRepository>(); // ADR-051 Sprint 1 / Task 15: golden claims
+        services.AddScoped<IMechanicGoldenBggTagRepository, MechanicGoldenBggTagRepository>(); // ADR-051 Sprint 1 / Task 15: BGG mechanic tags
+        services.AddScoped<IMechanicAnalysisMetricsRepository, MechanicAnalysisMetricsRepository>(); // ADR-051 Sprint 1 / Task 15: metrics snapshots
+        services.AddScoped<ICertificationThresholdsConfigRepository, CertificationThresholdsConfigRepository>(); // ADR-051 Sprint 1 / Task 15: thresholds config
+        services.AddScoped<IMechanicRecalcJobRepository, MechanicRecalcJobRepository>(); // ADR-051 Sprint 2 / Task 7: async recalc job persistence + SKIP LOCKED claim
         services.AddScoped<IShareRequestRepository, ShareRequestRepository>(); // Issue #2724: CreateShareRequest
         services.AddScoped<IBadgeRepository, BadgeRepository>(); // Issue #2731: Badge gamification system
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>(); // Issue #2731: User badge awards
@@ -64,6 +71,30 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IRulebookChunkAnalyzer, LlmRulebookChunkAnalyzer>();
         services.AddScoped<IRulebookMerger, LlmRulebookMerger>();
         services.AddScoped<IBackgroundRulebookAnalysisOrchestrator, BackgroundRulebookAnalysisOrchestrator>();
+
+        // ISSUE-524 / M1.2: Mechanic Extractor services (ADR-051).
+        // Pipeline flow: handler → create Draft aggregate → enqueue IMechanicAnalysisExecutor
+        // on a fresh DI scope → executor loads aggregate, runs IMechanicAnalysisPipeline,
+        // parses with MechanicOutputParser, persists, publishes domain events.
+        // Singleton: prompts are embedded assembly resources + internal ConcurrentDictionary cache.
+        // Scoped would silently defeat the cache (new instance per request).
+        services.AddSingleton<IMechanicPromptProvider, EmbeddedMechanicPromptProvider>();
+        services.AddScoped<IMechanicOutputValidator, MechanicOutputValidator>();
+        services.AddScoped<IAnalysisCostEstimator, AnalysisCostEstimator>();
+        services.AddScoped<IMechanicAnalysisPipeline, MechanicAnalysisPipeline>();
+        services.AddScoped<IMechanicAnalysisExecutor, MechanicAnalysisExecutor>();
+
+        // ADR-051 Sprint 1 / Task 18: AI comprehension validation - matching engine + keyword extractor.
+        // Consumed by CalculateMechanicAnalysisMetricsCommand to compute coverage/page-accuracy/BGG-match
+        // percentages by comparing analysis claims against curated golden claims + BGG mechanic tags.
+        services.AddScoped<IKeywordExtractor, BagOfWordsKeywordExtractor>();
+        services.AddScoped<IMechanicMatchingEngine, MechanicMatchingEngine>();
+
+        // ADR-051 Sprint 1: Bounded-context embedding adapter.
+        // Wraps Api.Services.IEmbeddingService to satisfy the narrow domain abstraction
+        // consumed by the golden-claim CRUD handlers and CalculateMechanicAnalysisMetricsHandler.
+        // CLAUDE.md pitfall #2565: register both the interface and the implementation.
+        services.AddScoped<IEmbeddingService, EmbeddingServiceAdapter>();
 
         // Issue #2729: Review lock configuration service with caching (Singleton for cache sharing)
         services.AddSingleton<IReviewLockConfigService, ReviewLockConfigService>();
@@ -114,6 +145,20 @@ internal static class SharedGameCatalogServiceExtensions
                 .WithIdentity("calculate-trending-trigger", "shared-game-catalog")
                 .WithCronSchedule("0 0 3 * * ?")
                 .WithDescription("Runs daily at 03:00 UTC to pre-compute trending game scores"));
+
+            // Issue #613: Register scheduled bulk invalidation job — defensive
+            // safety net catching any cache staleness left behind by a permanent
+            // event-handler retry exhaustion (e.g. multi-minute Redis outage).
+            q.AddJob<ScheduledBulkInvalidationJob>(opts => opts
+                .WithIdentity("scheduled-bulk-invalidation-job", "shared-game-catalog")
+                .StoreDurably(true));
+
+            // Trigger: Run every 15 minutes
+            q.AddTrigger(opts => opts
+                .ForJob("scheduled-bulk-invalidation-job", "shared-game-catalog")
+                .WithIdentity("scheduled-bulk-invalidation-trigger", "shared-game-catalog")
+                .WithCronSchedule("0 */15 * * * ?")
+                .WithDescription("Runs every 15 min to evict shared-game detail tags for top-N most-viewed games and the search-games list tag"));
         });
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs

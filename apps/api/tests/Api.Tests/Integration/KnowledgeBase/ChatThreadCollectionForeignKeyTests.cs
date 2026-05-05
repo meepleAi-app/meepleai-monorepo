@@ -67,7 +67,7 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
-            GameId = gameId,
+            SharedGameId = gameId,
             Name = "Gloomhaven Collection",
             CreatedByUserId = userId,
             DocumentsJson = "[]"
@@ -127,7 +127,7 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
-            GameId = gameId,
+            SharedGameId = gameId,
             Name = "Wingspan Expansions",
             CreatedByUserId = userId,
             DocumentsJson = "[]"
@@ -177,7 +177,7 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         var thread = new ChatThreadEntity { Id = threadId, UserId = userId, GameId = gameId, Title = "Azul Thread", CreatedAt = DateTime.UtcNow };
 
         var collectionId = Guid.NewGuid();
-        var collection = new DocumentCollectionEntity { Id = collectionId, GameId = gameId, Name = "Azul Collection", CreatedByUserId = userId, DocumentsJson = "[]" };
+        var collection = new DocumentCollectionEntity { Id = collectionId, SharedGameId = gameId, Name = "Azul Collection", CreatedByUserId = userId, DocumentsJson = "[]" };
 
         _dbContext.ChatThreads.Add(thread);
         _dbContext.DocumentCollections.Add(collection);
@@ -192,7 +192,7 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert - Collection and junction deleted, thread remains
-        var remainingCollections = await _dbContext.DocumentCollections.Where(c => c.GameId == gameId).ToListAsync(TestContext.Current.CancellationToken);
+        var remainingCollections = await _dbContext.DocumentCollections.Where(c => c.SharedGameId == gameId).ToListAsync(TestContext.Current.CancellationToken);
         remainingCollections.Should().BeEmpty();
 
         var remainingJunctions = await _dbContext.ChatThreadCollections.Where(j => j.CollectionId == collectionId).ToListAsync(TestContext.Current.CancellationToken);

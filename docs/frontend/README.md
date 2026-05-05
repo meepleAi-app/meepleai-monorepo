@@ -329,8 +329,10 @@ try {
 - [Testing Guide](../testing/README.md)
 - [User Flows](../11-user-flows/README.md)
 - [Development Guide](../development/README.md)
+- [V2 Migration Component Matrix](./v2-migration-matrix.md) — 46 SP4 wave 1+2 component stubs, paths, routes, acceptance criteria
+- [Bundle-size Budget Enforcement](./bundle-size-budget.md) — per-route First Load JS gate
 
 ---
 
-**Last Updated**: 2026-01-31
+**Last Updated**: 2026-04-29
 **Maintainer**: Frontend Team

@@ -14,7 +14,7 @@ import { it } from 'date-fns/locale';
 import Link from 'next/link';
 
 import { MeepleCard, type MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
-import { buildSessionNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildSessionConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 
 export interface MeepleResumeSessionCardProps {
   /** Session ID used to build the resume link. */
@@ -55,9 +55,9 @@ export function MeepleResumeSessionCard({
     ...(hasPhotos ? [{ label: `${photoCount} foto salvate` } as MeepleCardMetadata] : []),
   ];
 
-  const navItems = useMemo(
+  const connections = useMemo(
     () =>
-      buildSessionNavItems(
+      buildSessionConnections(
         {
           playerCount,
           hasNotes: false,
@@ -83,7 +83,7 @@ export function MeepleResumeSessionCard({
         metadata={metadata}
         badge="In pausa"
         status="paused"
-        navItems={navItems}
+        connections={connections}
       />
     </Link>
   );

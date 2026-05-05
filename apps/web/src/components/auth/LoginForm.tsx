@@ -1,21 +1,23 @@
 /**
  * LoginForm Component
  *
- * Reusable login form with:
- * - React Hook Form for form state management
+ * Reusable login form (auth-flow v2):
+ * - React Hook Form (Controller) for form state management
  * - Zod schema validation
- * - Accessible form controls
+ * - v2 primitives: InputField, PwdInput, Btn
+ * - Accessible form controls (aria-invalid, aria-describedby)
  * - Loading states
  * - Custom error display
  * - i18n support
  */
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import * as z from 'zod';
 
-import { AccessibleFormInput } from '@/components/accessible';
-import { LoadingButton } from '@/components/loading/LoadingButton';
+import { Btn } from '@/components/ui/v2/btn';
+import { InputField } from '@/components/ui/v2/input-field';
+import { PwdInput } from '@/components/ui/v2/pwd-input';
 import { useTranslation } from '@/hooks/useTranslation';
 
 // ============================================================================
@@ -52,7 +54,7 @@ export function LoginForm({ onSubmit, loading = false, error, onErrorDismiss }: 
   });
 
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
@@ -80,58 +82,61 @@ export function LoginForm({ onSubmit, loading = false, error, onErrorDismiss }: 
       data-testid="login-form"
     >
       {/* Email Field */}
-      <div className="space-y-2">
-        <AccessibleFormInput
-          label={t('auth.login.emailLabel')}
-          id="login-email"
-          type="email"
-          placeholder={t('auth.login.emailPlaceholder')}
-          autoComplete="email"
-          error={errors.email?.message}
-          required
-          disabled={isLoading}
-          data-testid="login-email"
-          {...register('email')}
-        />
-      </div>
+      <Controller
+        name="email"
+        control={control}
+        render={({ field }) => (
+          <InputField
+            label={t('auth.login.emailLabel')}
+            id="login-email"
+            type="email"
+            placeholder={t('auth.login.emailPlaceholder')}
+            autoComplete="email"
+            value={field.value}
+            onChange={field.onChange}
+            error={errors.email?.message}
+            disabled={isLoading}
+            required
+          />
+        )}
+      />
 
       {/* Password Field */}
-      <div className="space-y-2">
-        <AccessibleFormInput
-          label={t('auth.login.passwordLabel')}
-          id="login-password"
-          type="password"
-          placeholder={t('auth.login.passwordPlaceholder')}
-          autoComplete="current-password"
-          error={errors.password?.message}
-          required
-          disabled={isLoading}
-          data-testid="login-password"
-          {...register('password')}
-        />
-      </div>
+      <Controller
+        name="password"
+        control={control}
+        render={({ field }) => (
+          <PwdInput
+            label={t('auth.login.passwordLabel')}
+            id="login-password"
+            placeholder={t('auth.login.passwordPlaceholder')}
+            autoComplete="current-password"
+            value={field.value}
+            onChange={field.onChange}
+            error={errors.password?.message}
+            disabled={isLoading}
+            required
+            toggleShowLabel={t('auth.visibility.show')}
+            toggleHideLabel={t('auth.visibility.hide')}
+          />
+        )}
+      />
 
       {/* Error Message */}
       {error && (
         <div
-          className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3"
+          className="rounded-md bg-[hsl(var(--c-danger)/0.1)] border border-[hsl(var(--c-danger)/0.3)] p-3"
           role="alert"
           aria-live="polite"
         >
-          <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+          <p className="text-sm text-[hsl(var(--c-danger))]">{error}</p>
         </div>
       )}
 
       {/* Submit Button */}
-      <LoadingButton
-        type="submit"
-        className="w-full"
-        isLoading={isLoading}
-        loadingText={t('auth.login.loggingIn')}
-        data-testid="login-submit"
-      >
+      <Btn type="submit" variant="primary" fullWidth loading={isLoading}>
         {t('auth.login.loginButton')}
-      </LoadingButton>
+      </Btn>
     </form>
   );
 }

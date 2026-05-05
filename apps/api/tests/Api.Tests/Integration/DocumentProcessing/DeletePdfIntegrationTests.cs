@@ -169,7 +169,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         var pdfDoc = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = gameId,
+            SharedGameId = gameId,
             UploadedByUserId = userId,
             FileName = name,
             FilePath = $"/test/{name}",

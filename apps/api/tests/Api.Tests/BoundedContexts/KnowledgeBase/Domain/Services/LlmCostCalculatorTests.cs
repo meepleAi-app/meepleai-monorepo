@@ -214,6 +214,43 @@ public class LlmCostCalculatorTests
     }
 
     [Fact]
+    public void GetModelPricing_DeepSeekProviderModelId_ResolvesToSamePricingAsCanonical()
+    {
+        // Regression: DeepSeekLlmClient reports modelId as "deepseek-chat" (provider's native id),
+        // but the pricing registry historically only exposed the OpenRouter-prefixed
+        // "deepseek/deepseek-chat" key. The lookup miss caused a silent fallback to free pricing,
+        // which made the M1.2 mechanic-extractor calibration runs report $0 cost despite real API spend.
+        // Both keys must resolve to identical pricing.
+        var canonical = _calculator.GetModelPricing("deepseek/deepseek-chat");
+        var aliased = _calculator.GetModelPricing("deepseek-chat");
+
+        canonical.Should().NotBeNull();
+        aliased.Should().NotBeNull("DeepSeekLlmClient reports the provider-native modelId 'deepseek-chat'");
+        aliased!.InputCostPer1M.Should().Be(canonical!.InputCostPer1M);
+        aliased.OutputCostPer1M.Should().Be(canonical.OutputCostPer1M);
+        aliased.IsFree.Should().BeFalse(
+            "DeepSeek is paid; treating provider-native id as free silently corrupts cost telemetry");
+    }
+
+    [Fact]
+    public void CalculateCost_DeepSeekProviderNativeModelId_DoesNotFallbackToFree()
+    {
+        // Regression for the same bug observed via the calibration spike (T23):
+        // 80,583 total tokens across two runs, telemetry reported $0.000000.
+        var modelId = "deepseek-chat"; // <-- as reported by DeepSeekLlmClient.GenerateCompletionAsync
+        var promptTokens = 1000;
+        var completionTokens = 500;
+
+        var result = _calculator.CalculateCost(modelId, "DeepSeek", promptTokens, completionTokens);
+
+        // Same expected math as the canonical-key test above: $0.27/M in, $1.10/M out
+        result.InputCost.Should().Be(0.00027m);
+        result.OutputCost.Should().Be(0.00055m);
+        result.TotalCost.Should().Be(0.00082m);
+        result.IsFree.Should().BeFalse();
+    }
+
+    [Fact]
     public void CalculateCost_AllSupportedModels_HavePricing()
     {
         // Arrange - Test all configured models (cost-optimized set, Issue #2593 revert)

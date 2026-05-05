@@ -69,7 +69,7 @@ internal class CreateDocumentCollectionCommandHandler : ICommandHandler<CreateDo
             }
 
             // Validate PDF belongs to same game
-            if (pdfDoc.GameId != command.GameId)
+            if (pdfDoc.SharedGameId != command.GameId)
             {
                 throw new DomainException($"PDF document {docRequest.PdfDocumentId} does not belong to game {command.GameId}");
             }

@@ -1,7 +1,8 @@
 'use client';
 
+import { useConnectionSource } from '../hooks/useConnectionSource';
+import { ConnectionChipStrip } from '../parts/ConnectionChipStrip';
 import { MetaChips } from '../parts/MetaChips';
-import { NavFooter } from '../parts/NavFooter';
 import { Rating } from '../parts/Rating';
 import { entityHsl, entityIcon } from '../tokens';
 
@@ -17,11 +18,16 @@ export function ListCard(props: MeepleCardProps) {
     ratingMax,
     metadata = [],
     badge,
-    navItems = [],
     onClick,
     className = '',
   } = props;
   const testId = props['data-testid'];
+
+  // ListCard uses `inline` variant regardless of connectionsVariant.
+  const { source, items: csItems } = useConnectionSource({
+    ...props,
+    connectionsVariant: 'inline',
+  });
 
   return (
     <div
@@ -70,9 +76,9 @@ export function ListCard(props: MeepleCardProps) {
           {metadata.length > 0 && <MetaChips metadata={metadata} />}
         </div>
       </div>
-      {navItems.length > 0 && (
+      {source === 'connections' && csItems.length > 0 && (
         <div className="flex-shrink-0">
-          <NavFooter items={navItems} size="sm" />
+          <ConnectionChipStrip connections={csItems} variant="inline" />
         </div>
       )}
     </div>

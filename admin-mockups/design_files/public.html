@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MeepleAI — L'assistente AI per i tuoi boardgame</title>
+<meta name="description" content="MeepleAI è l'assistente AI per boardgamer: RAG hybrid search, multi-agent, house rules, game nights. Chiedi la regola esatta, ottieni la pagina del manuale." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="components.css" />
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+/* ─── Layout helpers ─────────────────────────────────────────────── */
+.pub-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--s-6);
+}
+
+/* ─── Hero ─────────────────────────────────────────────────────────── */
+.pub-hero {
+  position: relative;
+  padding: 100px var(--s-6) 80px;
+  overflow: hidden;
+}
+.pub-hero-bg {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 60% at 70% 40%, hsl(var(--c-game) / .08), transparent 60%),
+    radial-gradient(ellipse 50% 50% at 20% 80%, hsl(var(--c-event) / .07), transparent 55%),
+    radial-gradient(ellipse 40% 40% at 90% 90%, hsl(var(--c-player) / .06), transparent 50%);
+}
+.pub-hero .pub-wrap { position: relative; }
+.hero-kicker {
+  font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .12em; margin-bottom: 16px;
+}
+.pub-hero h1 {
+  font-size: clamp(40px, 7vw, 72px);
+  line-height: 1.05; letter-spacing: -.02em;
+  margin-bottom: 24px; max-width: 860px;
+}
+.mark {
+  background: linear-gradient(120deg, hsl(var(--c-game)), hsl(var(--c-event)) 70%, hsl(var(--c-player)));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero-lead {
+  font-size: var(--fs-lg); color: var(--text-sec);
+  max-width: 600px; line-height: var(--lh-relax);
+  margin-bottom: 36px;
+}
+.hero-ctas {
+  display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+}
+.hero-btn {
+  padding: 12px 24px !important;
+  font-size: var(--fs-md) !important;
+  border-radius: var(--r-lg) !important;
+}
+
+/* ─── Stats ─────────────────────────────────────────────────────────── */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+.stat-row .st {
+  padding: 20px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  background: var(--bg-card);
+}
+.stat-row .v {
+  font-family: var(--f-display); font-size: 32px;
+  font-weight: 800; letter-spacing: -.02em;
+}
+.stat-row .l {
+  font-size: var(--fs-xs); color: var(--text-sec); margin-top: 4px;
+  text-transform: uppercase; letter-spacing: .06em; font-weight: 700;
+}
+
+/* ─── Section titles ─────────────────────────────────────────────── */
+.pub-section-title {
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.1; margin-bottom: 40px;
+}
+
+/* ─── Feature grid ─────────────────────────────────────────────────── */
+.feat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+/* ─── Testimonials ─────────────────────────────────────────────────── */
+.test-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+/* ─── Pricing ─────────────────────────────────────────────────────── */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  align-items: start;
+  padding-bottom: 20px;
+}
+.pricing-card { padding: 0; }
+.pricing-highlight { z-index: 2; }
+
+/* ─── About ─────────────────────────────────────────────────────────── */
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 64px;
+  align-items: start;
+}
+
+/* ─── Terms ─────────────────────────────────────────────────────────── */
+.terms-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 48px;
+  align-items: start;
+}
+.terms-sidebar {
+  position: sticky; top: 80px;
+}
+
+/* ─── Contact ─────────────────────────────────────────────────────── */
+.contact-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 48px;
+  align-items: start;
+}
+
+/* ─── Footer ─────────────────────────────────────────────────────── */
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+  margin-bottom: 0;
+}
+
+/* ─── Form inputs ─────────────────────────────────────────────────── */
+.form-input {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: var(--f-body);
+  font-size: var(--fs-sm);
+  width: 100%;
+  transition: border-color var(--dur-sm);
+  outline: none;
+}
+.form-input:focus {
+  border-color: hsl(var(--c-game) / .5);
+  box-shadow: 0 0 0 3px hsl(var(--c-game) / .12);
+}
+.form-input::placeholder { color: var(--text-muted); }
+
+/* ─── Nav mobile ────────────────────────────────────────────────────── */
+.pub-nav-links { display: flex; align-items: center; gap: 2px; }
+.ham-btn {
+  background: none; border: none; padding: 6px; cursor: pointer;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.ham-btn span {
+  display: block; width: 22px; height: 2px;
+  background: var(--text); border-radius: 2px; transition: all 0.2s;
+}
+.mob-drawer {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 50;
+  backdrop-filter: blur(4px);
+}
+.mob-drawer-inner {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 260px;
+  background: var(--bg-card); padding: 24px 20px;
+  display: flex; flex-direction: column; gap: 4px;
+  box-shadow: var(--shadow-drawer);
+}
+.mob-drawer-inner a {
+  padding: 10px 12px; border-radius: var(--r-md);
+  font-size: var(--fs-md); font-weight: 600;
+  color: var(--text-sec); display: block;
+  transition: background 0.15s;
+}
+.mob-drawer-inner a:hover { background: var(--bg-hover); color: var(--text); }
+
+/* ─── Theme toggle ─────────────────────────────────────────────────── */
+.theme-toggle {
+  position: fixed; top: 12px; right: 12px; z-index: 100;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .about-grid { grid-template-columns: 1fr; gap: 40px; }
+  .test-grid { grid-template-columns: 1fr 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; }
+  .pricing-highlight { transform: none !important; }
+  .footer-grid { grid-template-columns: repeat(2, 1fr); }
+  .terms-layout { grid-template-columns: 1fr; }
+  .terms-sidebar { position: static; }
+  .contact-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .pub-hero { padding: 72px var(--s-4) 56px; }
+  .pub-hero h1 { font-size: clamp(32px, 9vw, 52px); }
+  .stat-row { grid-template-columns: repeat(2, 1fr); }
+  .feat-grid { grid-template-columns: 1fr; }
+  .test-grid { grid-template-columns: 1fr; }
+  .pub-nav-links { display: none; }
+  .ham-btn { display: flex !important; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .stat-row { grid-template-columns: repeat(2, 1fr); }
+  .footer-grid { grid-template-columns: 1fr; }
+  .contact-layout form > div:first-child { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- theme toggle -->
+<button class="theme-toggle" id="theme-btn" aria-label="Cambia tema">
+  <span id="theme-icon">☀️</span> <span id="theme-label">Light</span>
+</button>
+
+<script>
+(function(){
+  const t = localStorage.getItem('mai-theme') || 'light';
+  document.documentElement.dataset.theme = t;
+  document.getElementById('theme-icon').textContent = t === 'dark' ? '🌙' : '☀️';
+  document.getElementById('theme-label').textContent = t === 'dark' ? 'Dark' : 'Light';
+  document.getElementById('theme-btn').addEventListener('click', function(){
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('mai-theme', next);
+    document.getElementById('theme-icon').textContent = next === 'dark' ? '🌙' : '☀️';
+    document.getElementById('theme-label').textContent = next === 'dark' ? 'Dark' : 'Light';
+  });
+})();
+</script>
+
+<script type="text/babel" src="public.jsx"></script>
+</body>
+</html>

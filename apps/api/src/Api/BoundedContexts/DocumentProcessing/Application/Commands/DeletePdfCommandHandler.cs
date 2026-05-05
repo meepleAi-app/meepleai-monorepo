@@ -44,7 +44,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
                 return new PdfDeleteResult(false, "PDF not found", null);
             }
 
-            var gameId = pdfDoc.GameId;
+            var gameId = pdfDoc.SharedGameId;
 
             // Delete associated vector document and vectors from Qdrant
             await DeleteVectorDocumentAsync(pdfGuid, pdfId, cancellationToken).ConfigureAwait(false);

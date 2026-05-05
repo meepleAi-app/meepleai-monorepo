@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MeepleAI — Dark Mode</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="components.css" />
+<style>
+  /* Page wrapper: always adapts to [data-theme] on <html> */
+  .dm-stage { padding: 88px 32px 96px; max-width: 1440px; margin: 0 auto; }
+
+  .dm-hero { margin-bottom: 48px; text-align: center; }
+  .dm-hero .kicker {
+    font-family: var(--f-mono); font-size: 11px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .12em; margin-bottom: 10px;
+  }
+  .dm-hero h1 {
+    font-size: clamp(36px, 6vw, 60px); line-height: 1.05; margin-bottom: 14px;
+    letter-spacing: -.02em;
+  }
+  .dm-hero h1 em {
+    font-style: normal; position: relative; white-space: nowrap;
+    background: linear-gradient(120deg, hsl(var(--c-session)), hsl(var(--c-player)) 70%, hsl(var(--c-chat)));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .dm-hero p {
+    color: var(--text-sec); font-size: 17px; max-width: 640px;
+    line-height: 1.55; margin: 0 auto;
+  }
+
+  /* Mode switcher (big, central) */
+  .mode-switch {
+    display: inline-flex; padding: 5px;
+    background: var(--bg-muted); border-radius: var(--r-pill);
+    border: 1px solid var(--border); gap: 3px;
+    margin: 28px auto 0;
+  }
+  .mode-switch button {
+    padding: 10px 22px; border: 0; background: transparent;
+    font-family: var(--f-display); font-weight: 700; font-size: 13px;
+    color: var(--text-sec); border-radius: var(--r-pill);
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all var(--dur-sm) var(--ease-out);
+  }
+  .mode-switch button.on {
+    background: var(--bg-card); color: var(--text);
+    box-shadow: var(--shadow-sm);
+  }
+  .mode-switch button.on:is([data-mode="dark"]) { color: hsl(var(--c-player)); }
+  .mode-switch button.on:is([data-mode="light"]) { color: hsl(var(--c-game)); }
+  .mode-switch button.on:is([data-mode="split"]) { color: hsl(var(--c-session)); }
+
+  /* ── Side-by-side comparison container ── */
+  /* Each .compare-block is a self-contained region that shows either one theme (when global theme is set)
+     or BOTH at once (when in split mode, via data-theme attrs on .pane) */
+  .compare {
+    margin-bottom: 48px;
+  }
+  .compare > .head { margin-bottom: 16px; display: flex; align-items: baseline; gap: 14px; }
+  .compare > .head h2 { font-size: 24px; letter-spacing: -.01em; }
+  .compare > .head .n { font-family: var(--f-mono); font-size: 12px; color: var(--text-muted); }
+  .compare > .head .desc {
+    color: var(--text-sec); font-size: 13px; margin-left: auto;
+    font-style: italic; max-width: 460px; text-align: right;
+  }
+  .compare .panes {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  }
+  /* When mode is light or dark, we merge panes: */
+  body[data-mode="light"] .compare .panes,
+  body[data-mode="dark"]  .compare .panes {
+    grid-template-columns: 1fr;
+  }
+  body[data-mode="light"] .compare .pane.dark,
+  body[data-mode="dark"]  .compare .pane.light {
+    display: none;
+  }
+
+  /* The actual pane: inherits light/dark via inline attribute */
+  .pane {
+    background: var(--bg); color: var(--text);
+    border-radius: var(--r-2xl); padding: 24px;
+    border: 1px solid var(--border);
+    position: relative; overflow: hidden;
+    min-height: 200px;
+  }
+  .pane .pane-tag {
+    position: absolute; top: 14px; right: 14px;
+    padding: 4px 10px; border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .pane.light .pane-tag { background: rgba(0,0,0,.06); color: #5a4a38; }
+  .pane.dark  .pane-tag { background: rgba(255,200,130,.1); color: #e0b470; }
+
+  /* ── Scoped tokens so panes render in their own theme regardless of <html> ── */
+  .pane[data-theme="light"] {
+    --bg: #f7f3ee; --bg-card: #ffffff; --bg-muted: #efe6d9; --bg-sunken: #ede2d0;
+    --bg-hover: rgba(180,130,80,.06);
+    --text: #2b1f12; --text-sec: #5a4a38; --text-muted: #9a8870;
+    --border: rgba(180,130,80,.18); --border-light: rgba(180,130,80,.1); --border-strong: rgba(180,130,80,.32);
+    --shadow-xs: 0 1px 2px rgba(90,60,20,.06);
+    --shadow-sm: 0 2px 8px rgba(90,60,20,.08);
+    --shadow-md: 0 4px 16px rgba(90,60,20,.1);
+    --shadow-lg: 0 12px 36px rgba(90,60,20,.14);
+    --glass-bg: rgba(255,255,255,.88);
+    /* Light entity colors */
+    --c-game: 25 95% 45%; --c-player: 262 83% 58%; --c-session: 240 60% 55%;
+    --c-agent: 38 92% 50%; --c-kb: 174 60% 40%; --c-chat: 220 80% 55%;
+    --c-event: 350 89% 60%; --c-toolkit: 142 70% 45%; --c-tool: 195 80% 50%;
+    color-scheme: light;
+  }
+  .pane[data-theme="dark"] {
+    --bg: #14100a; --bg-card: #1e1710; --bg-muted: #241c13; --bg-sunken: #0f0c08;
+    --bg-hover: rgba(255,200,130,.05);
+    --text: #f0e4d2; --text-sec: #c8b896; --text-muted: #8a7860;
+    --border: rgba(224,180,110,.14); --border-light: rgba(224,180,110,.08); --border-strong: rgba(224,180,110,.28);
+    --shadow-xs: 0 1px 2px rgba(0,0,0,.3);
+    --shadow-sm: 0 2px 8px rgba(0,0,0,.4);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.5);
+    --shadow-lg: 0 12px 36px rgba(0,0,0,.6);
+    --glass-bg: rgba(30,22,14,.85);
+    --c-game: 28 95% 58%; --c-player: 262 75% 70%; --c-session: 235 70% 70%;
+    --c-agent: 38 92% 62%; --c-kb: 174 60% 55%; --c-chat: 218 80% 68%;
+    --c-event: 350 85% 70%; --c-toolkit: 142 60% 58%; --c-tool: 195 75% 62%;
+    color-scheme: dark;
+  }
+
+  /* ── Showcase: Entity palette strip (renders 9 colors) ── */
+  .pal-strip { display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; }
+  .pal-sw {
+    aspect-ratio: 1; border-radius: var(--r-md);
+    background: hsl(var(--e));
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 8px;
+  }
+  .pal-sw .em { font-size: 14px; position: absolute; top: 6px; right: 6px; opacity: .85; }
+  .pal-sw .lb { font-family: var(--f-mono); font-size: 9px; color: #fff; font-weight: 700; }
+
+  /* ── Showcase: Hero card (game detail) ── */
+  .sc-hero {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--r-xl); overflow: hidden;
+    box-shadow: var(--shadow-md);
+  }
+  .sc-hero .cover {
+    height: 140px; padding: 16px;
+    background: linear-gradient(135deg, hsl(200 70% 55%), hsl(180 50% 30%) 60%, hsl(230 60% 40%));
+    display: flex; align-items: flex-end;
+    color: #fff;
+  }
+  .sc-hero .cover .t {
+    font-family: var(--f-display); font-size: 22px; font-weight: 700;
+    text-shadow: 0 2px 8px rgba(0,0,0,.3);
+  }
+  .sc-hero .body { padding: 16px; }
+  .sc-hero .meta {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;
+  }
+  .sc-hero .chip {
+    padding: 3px 10px; border-radius: var(--r-sm);
+    background: hsl(var(--c-game) / .12); color: hsl(var(--c-game));
+    font-family: var(--f-display); font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .sc-hero .meta .chip:nth-child(2) { background: hsl(var(--c-session) / .12); color: hsl(var(--c-session)); }
+  .sc-hero .meta .chip:nth-child(3) { background: hsl(var(--c-toolkit) / .12); color: hsl(var(--c-toolkit)); }
+  .sc-hero .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .sc-hero .st {
+    padding: 10px; background: var(--bg-muted); border-radius: var(--r-md);
+  }
+  .sc-hero .st .v { font-family: var(--f-display); font-size: 18px; font-weight: 800; color: var(--text); }
+  .sc-hero .st .l { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+
+  /* ── Showcase: Chat ── */
+  .sc-chat {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--r-xl); overflow: hidden;
+    height: 300px; display: flex; flex-direction: column;
+  }
+  .sc-chat .head {
+    padding: 12px 14px; border-bottom: 1px solid var(--border-light);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sc-chat .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: hsl(var(--c-agent)); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .sc-chat .head .name { font-family: var(--f-display); font-size: 14px; font-weight: 700; }
+  .sc-chat .head .status { font-size: 11px; color: hsl(var(--c-toolkit)); font-weight: 600; }
+  .sc-chat .msgs { flex: 1; overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .sc-chat .msg { max-width: 75%; padding: 8px 12px; border-radius: var(--r-lg); font-size: 12px; line-height: 1.4; }
+  .sc-chat .msg.user { align-self: flex-end; background: hsl(var(--c-chat)); color: #fff; border-bottom-right-radius: 4px; }
+  .sc-chat .msg.bot { align-self: flex-start; background: var(--bg-muted); color: var(--text); border-bottom-left-radius: 4px; }
+  .sc-chat .input-bar {
+    border-top: 1px solid var(--border-light); padding: 10px 14px;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .sc-chat .input {
+    flex: 1; padding: 8px 12px; border-radius: var(--r-pill);
+    background: var(--bg-muted); color: var(--text-muted); font-size: 12px;
+  }
+  .sc-chat .send {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: hsl(var(--c-chat)); color: #fff; border: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Showcase: Drawer ── */
+  .sc-drawer-frame {
+    height: 340px; background: linear-gradient(180deg, hsl(var(--c-game) / .15), var(--bg));
+    border-radius: var(--r-xl); position: relative; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .sc-drawer-frame .bg-hero {
+    margin: 10px; height: 80px; border-radius: var(--r-md);
+    background: linear-gradient(135deg, hsl(25 70% 55%), hsl(10 60% 35%));
+    display: flex; align-items: flex-end; padding: 10px;
+    color: #fff; font-family: var(--f-display); font-weight: 700; font-size: 13px;
+  }
+  .sc-drawer-frame .draw {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: var(--bg-card); border-top-left-radius: 20px; border-top-right-radius: 20px;
+    border: 1px solid var(--border); border-bottom: 0;
+    box-shadow: var(--shadow-lg);
+    padding-bottom: 16px;
+  }
+  .sc-drawer-frame .handle {
+    width: 36px; height: 5px; border-radius: 3px;
+    background: var(--border-strong); margin: 10px auto;
+  }
+  .sc-drawer-frame .dh {
+    padding: 6px 16px 10px; display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .sc-drawer-frame .dh-ico {
+    width: 36px; height: 36px; border-radius: var(--r-md);
+    background: hsl(var(--c-game)); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .sc-drawer-frame .dh .t { font-family: var(--f-display); font-weight: 700; font-size: 14px; }
+  .sc-drawer-frame .dh .s { font-size: 11px; color: var(--text-muted); }
+  .sc-drawer-frame .tabs {
+    display: flex; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--border-light);
+  }
+  .sc-drawer-frame .tab {
+    padding: 4px 10px; border-radius: var(--r-sm);
+    font-family: var(--f-mono); font-size: 10px; font-weight: 700;
+    color: var(--text-muted); display: inline-flex; gap: 4px; align-items: center;
+  }
+  .sc-drawer-frame .tab.on { background: hsl(var(--c-game) / .14); color: hsl(var(--c-game)); }
+  .sc-drawer-frame .tab .cnt {
+    font-size: 9px; padding: 1px 5px; border-radius: 8px;
+    background: hsl(var(--c-game) / .2);
+  }
+  .sc-drawer-frame .drow { padding: 8px 16px; font-size: 11px; color: var(--text-sec); }
+  .sc-drawer-frame .drow b { color: var(--text); }
+
+  /* ── Showcase: Form ── */
+  .sc-form { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 20px; }
+  .sc-form h3 { font-size: 16px; margin-bottom: 14px; }
+  .sc-form .fld { margin-bottom: 12px; }
+  .sc-form label {
+    display: block; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; font-weight: 600;
+  }
+  .sc-form input, .sc-form textarea, .sc-form select {
+    width: 100%; padding: 9px 12px; border-radius: var(--r-md);
+    border: 1px solid var(--border); background: var(--bg);
+    color: var(--text); font-size: 13px; font-family: var(--f-body);
+  }
+  .sc-form input:focus { outline: 2px solid hsl(var(--c-session) / .4); border-color: hsl(var(--c-session)); }
+  .sc-form textarea { min-height: 60px; resize: none; }
+  .sc-form .actions { display: flex; gap: 8px; margin-top: 6px; }
+  .sc-form .btn {
+    padding: 8px 14px; border-radius: var(--r-md); border: 0;
+    font-family: var(--f-display); font-weight: 700; font-size: 12px; cursor: pointer;
+  }
+  .sc-form .btn.prim { background: hsl(var(--c-session)); color: #fff; }
+  .sc-form .btn.ghost { background: transparent; color: var(--text-sec); border: 1px solid var(--border); }
+
+  /* ── Showcase: Code block ── */
+  .sc-code {
+    background: var(--bg-sunken); border: 1px solid var(--border);
+    border-radius: var(--r-xl); padding: 16px 18px;
+    font-family: var(--f-mono); font-size: 12px; line-height: 1.6;
+    color: var(--text); overflow: auto;
+  }
+  .sc-code .c { color: var(--text-muted); font-style: italic; }
+  .sc-code .k { color: hsl(var(--c-chat)); }
+  .sc-code .v { color: hsl(var(--c-game)); }
+  .sc-code .p { color: hsl(var(--c-player)); }
+
+  /* ── Showcase: Activity feed row ── */
+  .sc-feed { display: flex; flex-direction: column; gap: 8px; }
+  .sc-feed-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: var(--r-md);
+    background: var(--bg-card); border: 1px solid var(--border-light);
+  }
+  .sc-feed-item .ico {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: hsl(var(--e) / .15); color: hsl(var(--e));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .sc-feed-item .txt { font-size: 12px; flex: 1; }
+  .sc-feed-item .txt b { font-weight: 700; }
+  .sc-feed-item .txt .act { color: var(--text-sec); }
+  .sc-feed-item .ago {
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+  }
+
+  /* Grid row of contrast test: text on bg */
+  .contrast-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;
+  }
+  .ct {
+    padding: 16px; border-radius: var(--r-lg);
+    background: hsl(var(--e)); color: #fff;
+  }
+  .ct .t { font-family: var(--f-display); font-size: 16px; font-weight: 700; }
+  .ct .s { font-size: 11px; opacity: .85; margin-top: 2px; }
+  .ct .aa { margin-top: 10px; padding: 4px 8px; background: rgba(255,255,255,.2); border-radius: var(--r-sm); display: inline-block;
+    font-family: var(--f-mono); font-size: 10px; font-weight: 700; }
+
+  /* Notes block */
+  .notes-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px; margin-top: 48px;
+  }
+  .note {
+    padding: 20px; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--r-xl); position: relative;
+  }
+  .note::before {
+    content: ''; position: absolute; left: 0; top: 20px; bottom: 20px; width: 3px;
+    background: hsl(var(--e)); border-radius: 0 3px 3px 0;
+  }
+  .note .nk {
+    font-family: var(--f-mono); font-size: 10px; color: hsl(var(--e));
+    text-transform: uppercase; letter-spacing: .08em; font-weight: 700; margin-bottom: 6px;
+  }
+  .note h4 { font-size: 15px; margin-bottom: 6px; }
+  .note p { font-size: 12px; color: var(--text-sec); line-height: 1.5; }
+
+  @media (max-width: 900px) {
+    body[data-mode="split"] .compare .panes { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body data-mode="split">
+
+<nav class="hub-nav">
+  <div class="brand"><span class="brand-mark">M</span><span>MeepleAI</span></div>
+  <span style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--bg-muted);font-family:var(--f-mono);color:var(--text-muted);">05 · Dark Mode</span>
+  <div class="spacer"></div>
+  <a href="index.html">← Hub</a>
+  <a href="01-screens.html">Screens</a>
+  <a href="02-desktop-patterns.html">Desktop</a>
+  <a href="03-drawer-variants.html">Drawer</a>
+  <a href="04-design-system.html">Tokens</a>
+  <a href="05-dark-mode.html" class="active">Dark</a>
+</nav>
+
+<button class="theme-toggle" id="themeToggle">🌗 <span id="themeLabel">Light</span></button>
+
+<div class="dm-stage">
+
+  <header class="dm-hero">
+    <div class="kicker">05 · Dark mode globale</div>
+    <h1>Un sistema, <em>due temperature.</em></h1>
+    <p>
+      Warm dark palette (<code>#14100a</code> + tinted browns) coerente con l'identità board-game/legno.
+      9 entity colors rialzate in luminosità per contrasto su bg scuro. Test di leggibilità,
+      hero cards, drawer, chat, form: tutto in split view sotto.
+    </p>
+    <div class="mode-switch" id="modeSwitch">
+      <button data-mode="light" class="">☀️ Light only</button>
+      <button data-mode="split" class="on">◐ Split view</button>
+      <button data-mode="dark" class="">🌙 Dark only</button>
+    </div>
+  </header>
+
+  <!-- ═════════ 01 Entity palette adaptation ═════════ -->
+  <section class="compare">
+    <div class="head">
+      <span class="n">01</span>
+      <h2>Entity palette</h2>
+      <div class="desc">Colori rialzati di ~12% L in dark, per AA contrast su bg scuro.</div>
+    </div>
+    <div class="panes">
+      <div class="pane light" data-theme="light">
+        <div class="pane-tag">☀ Light</div>
+        <div style="margin-bottom:12px;font-size:11px;font-family:var(--f-mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;">9 entity · saturi, profondi</div>
+        <div class="pal-strip" data-pane="light"></div>
+      </div>
+      <div class="pane dark" data-theme="dark">
+        <div class="pane-tag">🌙 Dark</div>
+        <div style="margin-bottom:12px;font-size:11px;font-family:var(--f-mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;">9 entity · luminosi, morbidi</div>
+        <div class="pal-strip" data-pane="dark"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 02 Hero card ═════════ -->
+  <section class="compare">
+    <div class="head">
+      <span class="n">02</span>
+      <h2>Hero card — Game detail</h2>
+      <div class="desc">Card su card: il surface warm mantiene readability senza perdere la gerarchia.</div>
+    </div>
+    <div class="panes">
+      <div class="pane light" data-theme="light">
+        <div class="pane-tag">☀ Light</div>
+        <div style="margin-top:20px;">
+          <div class="sc-hero">
+            <div class="cover"><div class="t">🔷 Azul</div></div>
+            <div class="body">
+              <div class="meta">
+                <span class="chip">Game</span><span class="chip">In Libreria</span><span class="chip">23 partite</span>
+              </div>
+              <div class="stat-row">
+                <div class="st"><div class="v">7.8</div><div class="l">Rating</div></div>
+                <div class="st"><div class="v">65%</div><div class="l">Win rate</div></div>
+                <div class="st"><div class="v">72</div><div class="l">Score avg</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pane dark" data-theme="dark">
+        <div class="pane-tag">🌙 Dark</div>
+        <div style="margin-top:20px;">
+          <div class="sc-hero">
+            <div class="cover"><div class="t">🔷 Azul</div></div>
+            <div class="body">
+              <div class="meta">
+                <span class="chip">Game</span><span class="chip">In Libreria</span><span class="chip">23 partite</span>
+              </div>
+              <div class="stat-row">
+                <div class="st"><div class="v">7.8</div><div class="l">Rating</div></div>
+                <div class="st"><div class="v">65%</div><div class="l">Win rate</div></div>
+                <div class="st"><div class="v">72</div><div class="l">Score avg</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 03 Chat ═════════ -->
+  <section class="compare">
+    <div class="head">
+      <span class="n">03</span>
+      <h2>Chat — Agent conversation</h2>
+      <div class="desc">Bubble del bot su bg-muted, user su colore chat pieno: contrasto bilanciato in entrambi i modi.</div>
+    </div>
+    <div class="panes">
+      <div class="pane light" data-theme="light">
+        <div class="pane-tag">☀ Light</div>
+        <div style="margin-top:20px;">
+          <div class="sc-chat">
+            <div class="head">
+              <div class="avatar">🤖</div>
+              <div>
+                <div class="name">Azul Rules Expert</div>
+                <div class="status">● Attivo</div>
+              </div>
+            </div>
+            <div class="msgs">
+              <div class="msg user">Come si calcolano i bonus di riga completa?</div>
+              <div class="msg bot">Quando completi una riga orizzontale sul tuo tappeto, ottieni 2 punti bonus. Se completi una colonna verticale, sono 7 punti.</div>
+              <div class="msg user">E i bonus per set?</div>
+              <div class="msg bot">Per ogni set di 5 tessere dello stesso colore, ricevi 10 punti bonus a fine partita.</div>
+            </div>
+            <div class="input-bar">
+              <div class="input">Scrivi un messaggio…</div>
+              <button class="send">↑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pane dark" data-theme="dark">
+        <div class="pane-tag">🌙 Dark</div>
+        <div style="margin-top:20px;">
+          <div class="sc-chat">
+            <div class="head">
+              <div class="avatar">🤖</div>
+              <div>
+                <div class="name">Azul Rules Expert</div>
+                <div class="status">● Attivo</div>
+              </div>
+            </div>
+            <div class="msgs">
+              <div class="msg user">Come si calcolano i bonus di riga completa?</div>
+              <div class="msg bot">Quando completi una riga orizzontale sul tuo tappeto, ottieni 2 punti bonus. Se completi una colonna verticale, sono 7 punti.</div>
+              <div class="msg user">E i bonus per set?</div>
+              <div class="msg bot">Per ogni set di 5 tessere dello stesso colore, ricevi 10 punti bonus a fine partita.</div>
+            </div>
+            <div class="input-bar">
+              <div class="input">Scrivi un messaggio…</div>
+              <button class="send">↑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 04 Drawer ═════════ -->
+  <section class="compare">
+    <div class="head">
+      <span class="n">04</span>
+      <h2>Drawer — Session peek</h2>
+      <div class="desc">La shadow drawer cambia natura: warm shadow in light, deep black in dark.</div>
+    </div>
+    <div class="panes">
+      <div class="pane light" data-theme="light">
+        <div class="pane-tag">☀ Light</div>
+        <div style="margin-top:20px;">
+          <div class="sc-drawer-frame">
+            <div class="bg-hero">Azul Rules Expert</div>
+            <div class="draw">
+              <div class="handle"></div>
+              <div class="dh">
+                <div class="dh-ico">🎲</div>
+                <div><div class="t">Azul</div><div class="s">Plan B Games · 2017</div></div>
+              </div>
+              <div class="tabs">
+                <span class="tab on">Info</span>
+                <span class="tab">Stats <span class="cnt">23</span></span>
+                <span class="tab">Docs <span class="cnt">3</span></span>
+                <span class="tab">Sessions <span class="cnt">12</span></span>
+              </div>
+              <div class="drow">Autore · <b>Michael Kiesling</b></div>
+              <div class="drow">Giocatori · <b>2–4</b> · Durata <b>30–45m</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pane dark" data-theme="dark">
+        <div class="pane-tag">🌙 Dark</div>
+        <div style="margin-top:20px;">
+          <div class="sc-drawer-frame">
+            <div class="bg-hero">Azul Rules Expert</div>
+            <div class="draw">
+              <div class="handle"></div>
+              <div class="dh">
+                <div class="dh-ico">🎲</div>
+                <div><div class="t">Azul</div><div class="s">Plan B Games · 2017</div></div>
+              </div>
+              <div class="tabs">
+                <span class="tab on">Info</span>
+                <span class="tab">Stats <span class="cnt">23</span></span>
+                <span class="tab">Docs <span class="cnt">3</span></span>
+                <span class="tab">Sessions <span class="cnt">12</span></span>
+              </div>
+              <div class="drow">Autore · <b>Michael Kiesling</b></div>
+              <div class="drow">Giocatori · <b>2–4</b> · Durata <b>30–45m</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 05 Form + Code ═════════ -->
+  <section class="compare">
+    <div class="head">
+      <span class="n">05</span>
+      <h2>Form &amp; code block</h2>
+      <div class="desc">Input focus ring sempre sul colore dell'entity di contesto (qui: session).</div>
+    </div>
+    <div class="panes">
+      <div class="pane light" data-theme="light">
+        <div class="pane-tag">☀ Light</div>
+        <div style="margin-top:20px;display:grid;gap:14px;">
+          <div class="sc-form">
+            <h3>Nuova sessione</h3>
+            <div class="fld">
+              <label>Nome sessione</label>
+              <input value="Serata Azul · Venerdì" />
+            </div>
+            <div class="fld">
+              <label>Giocatori</label>
+              <input value="Marco, Sara, Luca, Giulia" />
+            </div>
+            <div class="actions">
+              <button class="btn prim">Crea sessione</button>
+              <button class="btn ghost">Annulla</button>
+            </div>
+          </div>
+          <div class="sc-code"><span class="c">// tokens.css · light mode</span>
+<span class="k">--bg</span>:        <span class="v">#f7f3ee</span>;
+<span class="k">--bg-card</span>:   <span class="v">#ffffff</span>;
+<span class="k">--text</span>:      <span class="v">#2b1f12</span>;
+<span class="k">--c-session</span>: <span class="p">240 60% 55%</span>;</div>
+        </div>
+      </div>
+      <div class="pane dark" data-theme="dark">
+        <div class="pane-tag">🌙 Dark</div>
+        <div style="margin-top:20px;display:grid;gap:14px;">
+          <div class="sc-form">
+            <h3>Nuova sessione</h3>
+            <div class="fld">
+              <label>Nome sessione</label>
+              <input value="Serata Azul · Venerdì" />
+            </div>
+            <div class="fld">
+              <label>Giocatori</label>
+              <input value="Marco, Sara, Luca, Giulia" />
+            </div>
+            <div class="actions">
+              <button class="btn prim">Crea sessione</button>
+              <button class="btn ghost">Annulla</button>
+            </div>
+          </div>
+          <div class="sc-code"><span class="c">// tokens.css · dark mode</span>
+<span class="k">--bg</span>:        <span class="v">#14100a</span>;
+<span class="k">--bg-card</span>:   <span class="v">#1e1710</span>;
+<span class="k">--text</span>:      <span class="v">#f0e4d2</span>;
+<span class="k">--c-session</span>: <span class="p">235 70% 70%</span>;</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 06 Activity feed ═════════ -->
+  <section class="compare">
+    <div class="head">
+      <span class="n">06</span>
+      <h2>Activity feed</h2>
+      <div class="desc">Iconcine tint su background card: la palette warm mantiene il "caldo" delle icone in entrambi i temi.</div>
+    </div>
+    <div class="panes">
+      <div class="pane light" data-theme="light">
+        <div class="pane-tag">☀ Light</div>
+        <div style="margin-top:16px;" class="sc-feed" data-feed="light"></div>
+      </div>
+      <div class="pane dark" data-theme="dark">
+        <div class="pane-tag">🌙 Dark</div>
+        <div style="margin-top:16px;" class="sc-feed" data-feed="dark"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 07 Contrast test ═════════ -->
+  <section class="compare">
+    <div class="head">
+      <span class="n">07</span>
+      <h2>Contrast check — white text on entity bg</h2>
+      <div class="desc">Tutti i colori entity mantengono ≥ AA su fondo light, AAA su fondo dark grazie al boost di L.</div>
+    </div>
+    <div class="panes">
+      <div class="pane light" data-theme="light">
+        <div class="pane-tag">☀ Light</div>
+        <div style="margin-top:14px;" class="contrast-grid" data-ct="light"></div>
+      </div>
+      <div class="pane dark" data-theme="dark">
+        <div class="pane-tag">🌙 Dark</div>
+        <div style="margin-top:14px;" class="contrast-grid" data-ct="dark"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ Notes ═════════ -->
+  <div class="section-label">Note di design</div>
+  <div class="notes-grid">
+    <div class="note e-game">
+      <div class="nk">Warm, non neutro</div>
+      <h4>Background tinted brown, non grigio</h4>
+      <p>Il dark usa <code>#14100a</code> invece di <code>#0a0a0a</code> o <code>#111</code>: un nero caldo che mantiene l'identità board-game/legno anche al buio.</p>
+    </div>
+    <div class="note e-player">
+      <div class="nk">Luminosità +12%</div>
+      <h4>Entity colors rialzati in dark</h4>
+      <p>Ogni entity color in dark mode prende circa +12% di luminosità (es. game: 45%→58%) per garantire contrasto ≥ 4.5:1 su bg scuro.</p>
+    </div>
+    <div class="note e-session">
+      <div class="nk">Hue identica</div>
+      <h4>L'identità del colore non cambia</h4>
+      <p>Solo luminosità/saturazione si adattano. Session resta blu-violaceo in entrambi; game resta arancio. Il <em>meaning</em> del colore è costante.</p>
+    </div>
+    <div class="note e-chat">
+      <div class="nk">Shadow scura</div>
+      <h4>Ombre pure black in dark</h4>
+      <p>In light le shadow sono brown-tinted (<code>rgba(90,60,20,.08)</code>); in dark diventano nero puro intenso. Il drawer galleggia davvero sopra il canvas.</p>
+    </div>
+    <div class="note e-toolkit">
+      <div class="nk">Auto detect</div>
+      <h4>Preferenza OS opzionale</h4>
+      <p>Il toggle in alto a destra è persistente via localStorage. Al primo load, se non c'è preferenza, si può leggere <code>prefers-color-scheme</code>.</p>
+    </div>
+    <div class="note e-event">
+      <div class="nk">Focus ring</div>
+      <h4>Ring usa sempre entity color</h4>
+      <p>Input focus ring e ring di selezione usano <code>hsl(var(--e) / .4)</code>: sempre leggibile su qualunque surface, in qualunque tema.</p>
+    </div>
+  </div>
+
+</div>
+
+<footer style="max-width:1400px;margin:0 auto;padding:48px 32px;border-top:1px solid var(--border);color:var(--text-muted);font-size:12px;">
+  MeepleAI Dark Mode — definito in <code>tokens.css</code> via <code>:root[data-theme="dark"]</code> · switch persistente · warm dark palette
+</footer>
+
+<script src="data.js"></script>
+<script>
+  // Theme toggle (global, independent from split mode)
+  const root = document.documentElement;
+  const saved = localStorage.getItem('mai-theme') || 'light';
+  root.setAttribute('data-theme', saved);
+  document.getElementById('themeLabel').textContent = saved === 'dark' ? 'Dark' : 'Light';
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const cur = root.getAttribute('data-theme');
+    const next = cur === 'light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('mai-theme', next);
+    document.getElementById('themeLabel').textContent = next === 'dark' ? 'Dark' : 'Light';
+  });
+
+  // Mode switcher (light only / split / dark only)
+  const modeSwitch = document.getElementById('modeSwitch');
+  const body = document.body;
+  const savedMode = localStorage.getItem('mai-dm-mode') || 'split';
+  body.setAttribute('data-mode', savedMode);
+  modeSwitch.querySelectorAll('button').forEach(b => {
+    b.classList.toggle('on', b.dataset.mode === savedMode);
+    b.addEventListener('click', () => {
+      modeSwitch.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      const m = b.dataset.mode;
+      body.setAttribute('data-mode', m);
+      localStorage.setItem('mai-dm-mode', m);
+    });
+  });
+
+  // Populate palette strips
+  function paintPalStrip(container) {
+    Object.entries(DS.EC).forEach(([k, v]) => {
+      const sw = document.createElement('div');
+      sw.className = 'pal-sw e-' + k;
+      sw.innerHTML = `<span class="em">${v.em}</span><span class="lb">${v.lb.toUpperCase()}</span>`;
+      container.appendChild(sw);
+    });
+  }
+  document.querySelectorAll('.pal-strip').forEach(paintPalStrip);
+
+  // Populate activity feed
+  function paintFeed(container) {
+    const items = [
+      { e: 'session', em: '🎯', who: 'Marco', act: 'ha avviato Serata Azul', ago: '10m' },
+      { e: 'chat',    em: '💬', who: 'Sara',  act: 'ha chiesto in Wingspan Rules', ago: '2h' },
+      { e: 'toolkit', em: '🧰', who: 'Marco', act: 'ha pubblicato Azul Toolkit v2', ago: '3g' },
+      { e: 'kb',      em: '📄', who: 'Sistema', act: 'ha indicizzato wingspan-rules.pdf', ago: 'ieri' },
+      { e: 'event',   em: '🎉', who: 'Giulia', act: 'si è unita a Serata da Marco', ago: '2g' },
+    ];
+    items.forEach(it => {
+      const el = document.createElement('div');
+      el.className = 'sc-feed-item e-' + it.e;
+      el.innerHTML = `<div class="ico">${it.em}</div>
+        <div class="txt"><b>${it.who}</b> <span class="act">${it.act}</span></div>
+        <div class="ago">${it.ago}</div>`;
+      container.appendChild(el);
+    });
+  }
+  document.querySelectorAll('.sc-feed').forEach(paintFeed);
+
+  // Populate contrast grid
+  function paintContrast(container) {
+    Object.entries(DS.EC).forEach(([k, v]) => {
+      const el = document.createElement('div');
+      el.className = 'ct e-' + k;
+      el.innerHTML = `<div class="t">${v.lb}</div>
+        <div class="s">${v.em} bg colore entity</div>
+        <span class="aa">AA · 4.5:1</span>`;
+      container.appendChild(el);
+    });
+  }
+  document.querySelectorAll('.contrast-grid').forEach(paintContrast);
+</script>
+
+</body>
+</html>

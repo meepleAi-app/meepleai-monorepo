@@ -1,0 +1,150 @@
+name: Visual Regression — Mockup Baseline
+
+# Issue #571 — V2 Phase 0 visual regression baseline.
+# Compares Playwright screenshots of standalone mockup HTML files (admin-mockups/design_files/)
+# against committed baseline PNGs. Acts as the *design contract* for V2 page migrations.
+#
+# Triggers only on changes to:
+#   - admin-mockups/design_files/      (mockup source)
+#   - apps/web/e2e/visual-mockups/     (test spec + snapshots)
+#   - apps/web/scripts/serve-mockups.cjs (static server)
+#   - apps/web/playwright.config.ts    (project config)
+#   - this workflow file
+#
+# Failure indicates a mockup change that wasn't followed by a snapshot regen — the developer
+# must either (a) intentionally update the baseline via `pnpm test:visual:mockups:update`
+# and commit the new PNGs, or (b) revert the mockup change.
+
+on:
+  pull_request:
+    branches: [main, main-dev, main-staging, frontend-dev]
+    paths:
+      - 'admin-mockups/design_files/**'
+      - 'apps/web/e2e/visual-mockups/**'
+      - 'apps/web/scripts/serve-mockups.cjs'
+      - 'apps/web/playwright.config.ts'
+      - '.github/workflows/visual-regression-mockups.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'verify (compare against baseline) | bootstrap (regenerate baselines and upload as artifact)'
+        required: true
+        default: 'verify'
+        type: choice
+        options:
+          - verify
+          - bootstrap
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+concurrency:
+  group: visual-mockups-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual-regression-mockups:
+    name: Mockup Baseline (Desktop + Mobile)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Setup Playwright
+        uses: ./.github/actions/setup-playwright
+        with:
+          working-directory: apps/web
+
+      - name: Setup Test Environment
+        run: cp .env.test.example .env.test
+
+      # No `pnpm build` needed — these tests hit the standalone mockup server (port 5174),
+      # not the Next.js app. The Next.js webServer in playwright.config.ts is started but
+      # never navigated to by `mockup-baseline-*` projects.
+      - name: Run Mockup Visual Regression (verify)
+        if: github.event_name != 'workflow_dispatch' || inputs.mode == 'verify'
+        run: pnpm test:visual:mockups
+        env:
+          CI: true
+          # Skip Next.js webServer (mockup-baseline-* projects only hit :5174).
+          # Avoids requiring a `pnpm build` step in this workflow.
+          MOCKUP_ONLY_WEBSERVER: '1'
+
+      # Bootstrap mode: regenerate baselines on the Linux runner and upload as artifact.
+      # Use this on first setup or after intentional mockup changes that affect many files.
+      # Download the artifact, copy PNGs into apps/web/e2e/visual-mockups/baseline.spec.ts-snapshots/,
+      # and commit them. This produces canonical Linux x86-64 baselines that match the CI runner.
+      - name: Bootstrap Baselines (regenerate snapshots)
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'bootstrap'
+        run: pnpm test:visual:mockups:update
+        env:
+          CI: true
+          MOCKUP_ONLY_WEBSERVER: '1'
+
+      - name: Upload Bootstrapped Baselines
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'bootstrap'
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-mockups-baselines-${{ github.run_number }}
+          path: apps/web/e2e/visual-mockups/baseline.spec.ts-snapshots/
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload Playwright Report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-mockups-report-${{ github.run_number }}
+          path: apps/web/playwright-report/
+          retention-days: 14
+
+      - name: Upload Diff Snapshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-mockups-diffs-${{ github.run_number }}
+          path: apps/web/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Comment on PR (failure)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const body = `## Visual Regression — Mockup Baseline failed
+
+            One or more mockup screenshots differ from the committed baseline.
+
+            **What to do**:
+            1. Download the \`visual-mockups-report-${{ github.run_number }}\` artifact and inspect the diffs.
+            2. If the change is **intentional** (you edited a mockup), regenerate the baseline locally:
+               \`\`\`bash
+               cd apps/web
+               pnpm test:visual:mockups:update
+               git add apps/web/e2e/visual-mockups/baseline.spec.ts-snapshots/
+               git commit -m "chore(visual): update mockup baseline"
+               \`\`\`
+            3. If the change is **unintentional** (you didn't touch the mockup), revert your change and investigate.
+
+            See \`docs/frontend/visual-regression.md\` for full workflow.
+            `;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });

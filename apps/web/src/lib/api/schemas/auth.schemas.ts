@@ -89,8 +89,8 @@ export type ConfirmPasswordResetResponse = z.infer<typeof ConfirmPasswordResetRe
 // ========== Session Management ==========
 
 export const SessionStatusResponseSchema = z.object({
-  expiresAt: z.string().datetime(),
-  lastSeenAt: z.string().datetime().nullable(),
+  expiresAt: z.string().datetime({ offset: true }),
+  lastSeenAt: z.string().datetime({ offset: true }).nullable(),
   remainingMinutes: z.number().int().nonnegative(),
 });
 
@@ -100,10 +100,10 @@ export const UserSessionInfoSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
   userEmail: z.string().email(),
-  createdAt: z.string().datetime(),
-  expiresAt: z.string().datetime(),
-  lastSeenAt: z.string().datetime().nullable(),
-  revokedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  expiresAt: z.string().datetime({ offset: true }),
+  lastSeenAt: z.string().datetime({ offset: true }).nullable(),
+  revokedAt: z.string().datetime({ offset: true }).nullable(),
   ipAddress: z.string().nullable(),
   userAgent: z.string().nullable(),
 });
@@ -129,7 +129,7 @@ export type TotpSetupResponse = z.infer<typeof TotpSetupResponseSchema>;
 
 export const TwoFactorStatusDtoSchema = z.object({
   isEnabled: z.boolean(),
-  enabledAt: z.string().datetime().nullable(),
+  enabledAt: z.string().datetime({ offset: true }).nullable(),
   unusedBackupCodesCount: z.number().int().nonnegative(),
 });
 
@@ -157,9 +157,9 @@ export const UserProfileSchema = z.object({
   email: z.string().email(),
   displayName: z.string().min(1),
   role: z.string().min(1),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
   isTwoFactorEnabled: z.boolean(),
-  twoFactorEnabledAt: z.string().datetime().nullable(),
+  twoFactorEnabledAt: z.string().datetime({ offset: true }).nullable(),
   // User preferences (included in profile after Issue #1675)
   language: z.string().min(1),
   theme: z.string().min(1),
@@ -229,9 +229,9 @@ export const ApiKeyDtoSchema = z.object({
   keyName: z.string().min(1),
   keyPrefix: z.string().min(1),
   scopes: z.string().min(1),
-  createdAt: z.string().datetime(),
-  expiresAt: z.string().datetime().nullable(),
-  lastUsedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  expiresAt: z.string().datetime({ offset: true }).nullable(),
+  lastUsedAt: z.string().datetime({ offset: true }).nullable(),
   isActive: z.boolean(),
 });
 
@@ -243,7 +243,7 @@ export type ApiKeyDto = z.infer<typeof ApiKeyDtoSchema>;
 export const CreateApiKeyRequestSchema = z.object({
   keyName: z.string().min(3).max(100),
   scopes: z.string().min(1),
-  expiresAt: z.string().datetime().nullable().optional(),
+  expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
   metadata: z.string().nullable().optional(),
 });
 
@@ -259,8 +259,8 @@ export const CreateApiKeyResponseSchema = z.object({
   keyPrefix: z.string().min(1),
   plaintextKey: z.string().min(1),
   scopes: z.string().min(1),
-  createdAt: z.string().datetime(),
-  expiresAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  expiresAt: z.string().datetime({ offset: true }).nullable(),
 });
 
 export type CreateApiKeyResponse = z.infer<typeof CreateApiKeyResponseSchema>;

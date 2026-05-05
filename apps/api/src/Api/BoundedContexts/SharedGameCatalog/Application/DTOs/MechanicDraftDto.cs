@@ -23,7 +23,9 @@ public record MechanicDraftDto(
     string QuestionsDraft,
     DateTime CreatedAt,
     DateTime LastModified,
-    string Status);
+    string Status,
+    int TotalTokensUsed,
+    decimal EstimatedCostUsd);
 
 /// <summary>
 /// Result of AI assist operation.
@@ -31,4 +33,6 @@ public record MechanicDraftDto(
 /// </summary>
 public record AiAssistResultDto(
     string Section,
-    string GeneratedDraft);
+    string GeneratedDraft,
+    int TokensUsed,
+    decimal CostUsd);

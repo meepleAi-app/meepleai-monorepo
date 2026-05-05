@@ -137,18 +137,18 @@ public class UploadPrivatePdfCommandValidatorTests
     [Fact]
     public void Validate_WithOversizedFile_FailsValidation()
     {
-        // Arrange - 51 MB file (exceeds 50 MB limit)
+        // Arrange - 101 MB file (exceeds 100 MB limit)
         var command = new UploadPrivatePdfCommand(
             Guid.NewGuid(),
             Guid.NewGuid(),
-            CreateMockPdfFormFile("oversized.pdf", 53_428_800)); // ~51 MB
+            CreateMockPdfFormFile("oversized.pdf", 105_906_176)); // ~101 MB
 
         // Act
         var result = _validator.TestValidate(command);
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.PdfFile.Length)
-            .WithErrorMessage("PDF file size cannot exceed 50 MB.");
+            .WithErrorMessage("PDF file size cannot exceed 100 MB.");
     }
 
     [Fact]

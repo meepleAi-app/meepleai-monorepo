@@ -24,14 +24,20 @@ import type { SortOption } from '../entity-list-view.types';
 // Entity Color Map
 // ============================================================================
 
+// Mirror of MeepleCard `entityColors` token palette so the sidebar
+// checkbox chips stay visually consistent with EntityBadge across the app.
+// Lightness values updated with #636 to satisfy WCAG 2.1 AA contrast for
+// the white check glyph rendered over the colored chip background.
+// TODO: refactor to import from `meeple-card/tokens` once the key mapping
+//       (`document` ↔ `kb`, `chatSession` ↔ `chat`) is unified.
 const ENTITY_COLORS: Record<string, string> = {
-  game: 'hsl(25, 95%, 45%)',
-  agent: 'hsl(38, 92%, 50%)',
-  document: 'hsl(210, 40%, 55%)',
+  game: 'hsl(25, 95%, 39%)',
+  agent: 'hsl(38, 92%, 33%)',
+  document: 'hsl(210, 40%, 48%)',
   session: 'hsl(240, 60%, 55%)',
   player: 'hsl(262, 83%, 58%)',
   chatSession: 'hsl(220, 80%, 55%)',
-  event: 'hsl(350, 89%, 60%)',
+  event: 'hsl(350, 89%, 48%)',
 };
 
 const ENTITY_LABELS: Record<string, string> = {

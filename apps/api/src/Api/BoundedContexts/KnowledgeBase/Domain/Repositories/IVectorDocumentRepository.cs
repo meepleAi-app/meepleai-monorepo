@@ -78,9 +78,10 @@ internal interface IVectorDocumentRepository
     /// Returns lightweight indexing info for a game's VectorDocument (status, chunk count, error).
     /// Returns null if no VectorDocument exists for the game.
     /// Issue #4943: PDF indexing status polling.
+    /// Task 8: parameter is the SharedGame.Id (direct resolution, no legacy bridge).
     /// </summary>
     Task<VectorDocumentIndexingInfo?> GetIndexingInfoByGameIdAsync(
-        Guid gameId,
+        Guid sharedGameId,
         CancellationToken cancellationToken = default);
 
     /// <summary>

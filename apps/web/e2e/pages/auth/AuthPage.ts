@@ -550,11 +550,17 @@ export class AuthPage extends BasePage implements IAuthPage {
   }
 
   /**
-   * Get password strength indicator text
+   * Get password strength indicator text.
+   *
+   * Matches the v2 StrengthMeter primitive
+   * (`apps/web/src/components/ui/v2/strength-meter/strength-meter.tsx`),
+   * which renders "Password: <label>" where label ∈ {Debole, Discreta, Buona, Ottima}.
    */
   async getPasswordStrength(): Promise<string> {
-    const strengthElement = this.page.getByText(/password strength:/i).locator('..');
-    const strengthText = await strengthElement.getByText(/weak|medium|strong/i).textContent();
+    const strengthContainer = this.page.getByText(/^Password:/).locator('..');
+    const strengthText = await strengthContainer
+      .getByText(/Debole|Discreta|Buona|Ottima/)
+      .textContent();
     return strengthText?.toLowerCase().trim() || '';
   }
 

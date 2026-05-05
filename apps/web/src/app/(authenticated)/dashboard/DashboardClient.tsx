@@ -12,6 +12,7 @@ import { OwnershipConfirmDialog } from '@/components/dialogs/OwnershipConfirmDia
 import { HubLayout, type FilterChip } from '@/components/layout/HubLayout';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardProps, MeepleEntityType } from '@/components/ui/data-display/meeple-card';
+import type { ManaPip } from '@/components/ui/data-display/meeple-card/parts/ManaPips';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useAgents } from '@/hooks/queries/useAgents';
 import { useBatchGameStatus } from '@/hooks/queries/useBatchGameStatus';
@@ -373,6 +374,7 @@ function ToolkitGrid() {
 
 export function DashboardClient() {
   const { user } = useAuth();
+  const router = useRouter();
   const displayName = user?.displayName ?? 'giocatore';
 
   const [gamesSearch, setGamesSearch] = useState('');
@@ -419,16 +421,43 @@ export function DashboardClient() {
 
   const gameItems: MeepleCardProps[] = useMemo(() => {
     const entries = libraryData?.items ?? [];
-    return entries.map(entry => ({
-      id: entry.id,
-      entity: 'game' as MeepleEntityType,
-      title: entry.gameTitle,
-      subtitle: entry.gamePublisher ?? undefined,
-      imageUrl: entry.gameImageUrl ?? undefined,
-      rating: entry.averageRating ?? undefined,
-      variant: 'grid',
-    }));
-  }, [libraryData]);
+    return entries.map(entry => {
+      const gameId = entry.gameId;
+      const manaPips: ManaPip[] = [
+        {
+          entityType: 'session',
+          count: 0,
+          onCreate: () =>
+            router.push(
+              `/sessions/new?gameId=${gameId}&gameName=${encodeURIComponent(entry.gameTitle)}`
+            ),
+          createLabel: 'Nuova sessione',
+        },
+        {
+          entityType: 'kb',
+          count: 0,
+          onCreate: () => router.push(`/games/${gameId}`),
+          createLabel: 'Carica documento',
+        },
+        {
+          entityType: 'agent',
+          count: 0,
+          onCreate: () => router.push(`/chat?gameId=${gameId}`),
+          createLabel: 'Crea agente',
+        },
+      ];
+      return {
+        id: entry.id,
+        entity: 'game' as MeepleEntityType,
+        title: entry.gameTitle,
+        subtitle: entry.gamePublisher ?? undefined,
+        imageUrl: entry.gameImageUrl ?? undefined,
+        rating: entry.averageRating ?? undefined,
+        variant: 'grid',
+        manaPips,
+      };
+    });
+  }, [libraryData, router]);
 
   const filteredGameItems = useMemo(() => {
     let result = gameItems;
@@ -447,21 +476,46 @@ export function DashboardClient() {
 
   const sessionItems: MeepleCardProps[] = useMemo(() => {
     const sessions = sessionsData?.sessions ?? [];
-    return sessions.map(session => ({
-      id: session.id,
-      entity: 'session' as MeepleEntityType,
-      title: `Sessione ${session.id.slice(0, 8)}`,
-      subtitle: session.status,
-      variant: 'grid',
-      status:
-        session.status.toLowerCase() === 'inprogress'
-          ? ('inprogress' as const)
-          : session.status.toLowerCase() === 'paused'
-            ? ('paused' as const)
-            : session.status.toLowerCase() === 'setup'
-              ? ('setup' as const)
-              : undefined,
-    }));
+    return sessions.map(session => {
+      const manaPips: ManaPip[] = [
+        {
+          entityType: 'game',
+          count: 1,
+          items: [
+            {
+              id: session.gameId,
+              label: session.gameId.slice(0, 8),
+              href: `/games/${session.gameId}`,
+            },
+          ],
+        },
+        {
+          entityType: 'player',
+          count: session.playerCount ?? 0,
+          items: (session.players ?? []).map(p => ({
+            id: p.playerName,
+            label: p.playerName,
+            href: `/sessions/${session.id}`,
+          })),
+        },
+      ];
+      return {
+        id: session.id,
+        entity: 'session' as MeepleEntityType,
+        title: `Sessione ${session.id.slice(0, 8)}`,
+        subtitle: session.status,
+        variant: 'grid',
+        manaPips,
+        status:
+          session.status.toLowerCase() === 'inprogress'
+            ? ('inprogress' as const)
+            : session.status.toLowerCase() === 'paused'
+              ? ('paused' as const)
+              : session.status.toLowerCase() === 'setup'
+                ? ('setup' as const)
+                : undefined,
+      };
+    });
   }, [sessionsData]);
 
   const filteredSessionItems = useMemo(() => {
@@ -481,17 +535,46 @@ export function DashboardClient() {
   // ---------------------------------------------------------------------------
 
   const agentItems: MeepleCardProps[] = useMemo(() => {
-    const agents: Array<{ id: string; name: string; type: string; isActive: boolean }> =
-      Array.isArray(agentsData) ? agentsData : [];
-    return agents.map(agent => ({
-      id: agent.id,
-      entity: 'agent' as MeepleEntityType,
-      title: agent.name,
-      subtitle: agent.type,
-      variant: 'grid',
-      status: agent.isActive ? ('active' as const) : ('idle' as const),
-    }));
-  }, [agentsData]);
+    const agents: Array<{
+      id: string;
+      name: string;
+      type: string;
+      isActive: boolean;
+      gameId?: string | null;
+      gameName?: string | null;
+    }> = Array.isArray(agentsData) ? agentsData : [];
+    return agents.map(agent => {
+      const manaPips: ManaPip[] = [];
+      if (agent.gameId) {
+        manaPips.push({
+          entityType: 'game',
+          count: 1,
+          items: [
+            {
+              id: agent.gameId,
+              label: agent.gameName ?? agent.gameId.slice(0, 8),
+              href: `/games/${agent.gameId}`,
+            },
+          ],
+        });
+      }
+      manaPips.push({
+        entityType: 'chat',
+        count: 0,
+        onCreate: () => router.push(`/chat?agentId=${agent.id}`),
+        createLabel: 'Avvia chat',
+      });
+      return {
+        id: agent.id,
+        entity: 'agent' as MeepleEntityType,
+        title: agent.name,
+        subtitle: agent.type,
+        variant: 'grid',
+        manaPips,
+        status: agent.isActive ? ('active' as const) : ('idle' as const),
+      };
+    });
+  }, [agentsData, router]);
 
   const filteredAgentItems = useMemo(() => {
     let result = agentItems;

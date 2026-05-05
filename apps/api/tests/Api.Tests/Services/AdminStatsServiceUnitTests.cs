@@ -609,8 +609,8 @@ public class AdminStatsServiceUnitTests : IDisposable
         // Create PDFs with known page counts
         var pdfs = new[]
         {
-            new PdfDocumentEntity { Id = Guid.NewGuid(), GameId = game.Id, FileName = "a.pdf", FilePath = "a.pdf", FileSizeBytes = 1000, UploadedByUserId = user.Id, PageCount = 10, UploadedAt = now },
-            new PdfDocumentEntity { Id = Guid.NewGuid(), GameId = game.Id, FileName = "b.pdf", FilePath = "b.pdf", FileSizeBytes = 1000, UploadedByUserId = user.Id, PageCount = 30, UploadedAt = now },
+            new PdfDocumentEntity { Id = Guid.NewGuid(), SharedGameId = game.Id, FileName = "a.pdf", FilePath = "a.pdf", FileSizeBytes = 1000, UploadedByUserId = user.Id, PageCount = 10, UploadedAt = now },
+            new PdfDocumentEntity { Id = Guid.NewGuid(), SharedGameId = game.Id, FileName = "b.pdf", FilePath = "b.pdf", FileSizeBytes = 1000, UploadedByUserId = user.Id, PageCount = 30, UploadedAt = now },
         };
         await _dbContext.PdfDocuments.AddRangeAsync(pdfs);
         await _dbContext.SaveChangesAsync();
@@ -732,7 +732,7 @@ public class AdminStatsServiceUnitTests : IDisposable
             pdfs.Add(new PdfDocumentEntity
             {
                 Id = Guid.NewGuid(),
-                GameId = game1.Id,
+                SharedGameId = game1.Id,
                 FileName = $"game1_{i}.pdf",
                 FilePath = $"path/game1_{i}.pdf",
                 FileSizeBytes = 1000,
@@ -746,7 +746,7 @@ public class AdminStatsServiceUnitTests : IDisposable
             pdfs.Add(new PdfDocumentEntity
             {
                 Id = Guid.NewGuid(),
-                GameId = game2.Id,
+                SharedGameId = game2.Id,
                 FileName = $"game2_{i}.pdf",
                 FilePath = $"path/game2_{i}.pdf",
                 FileSizeBytes = 1000,

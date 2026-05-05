@@ -44,7 +44,7 @@ export const kbCardDtoSchema = z.object({
   fileName: z.string(),
   indexingStatus: z.string(),
   chunkCount: z.number().int(),
-  indexedAt: z.string().datetime().nullable(),
+  indexedAt: z.string().datetime({ offset: true }).nullable(),
   documentType: z.string().nullable(),
   version: z.string().nullable(),
   isActive: z.boolean(),
@@ -65,8 +65,8 @@ export const agentDefinitionDtoSchema = z.object({
   chatLanguage: z.string().optional().default('auto'),
   isActive: z.boolean(),
   status: z.number().optional().default(0),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }).nullable(),
 });
 
 // Types

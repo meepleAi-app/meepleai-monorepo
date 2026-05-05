@@ -36,6 +36,7 @@ internal static class KnowledgeBaseEndpoints
         MapChatMessageEndpoints(group);
         MapChatExportEndpoints(group);
         MapContextEngineeringEndpoints(group);
+        MapSharedGameKbStatusEndpoint(group);
         MapGameDocumentsEndpoint(group);
         MapLinkKbEndpoint(group);
 
@@ -850,6 +851,29 @@ internal static class KnowledgeBaseEndpoints
 
         logger.LogInformation("Retrieved {SourceCount} context sources", result.Count);
 
+        return Results.Ok(result);
+    }
+
+    private static void MapSharedGameKbStatusEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/shared-games/{gameId:guid}/kb-status", HandleGetSharedGameKbStatus)
+            .WithName("GetSharedGameKbStatus")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Get KB status for a shared game")
+            .WithDescription("Returns whether a shared game has indexed KB content available for chat, without requiring library ownership.")
+            .Produces<SharedGameKbStatusDto>()
+            .Produces(StatusCodes.Status401Unauthorized);
+    }
+
+    private static async Task<IResult> HandleGetSharedGameKbStatus(
+        Guid gameId,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var query = new GetSharedGameKbStatusQuery(gameId);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

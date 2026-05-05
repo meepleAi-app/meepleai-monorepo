@@ -62,7 +62,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Implements GetAllAgentsQuery from backend
      * @param activeOnly If true, only return active agents
      * @param type Optional agent type filter
-     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents. Returns empty array via fallback. See: endpoint audit 2026-04-15
+     * Resolved by Wave B.2 hotfix #641 (2026-05-03) — route registered in AgentsEndpoints.cs.
      */
     async getAll(activeOnly?: boolean, type?: string): Promise<AgentDto[]> {
       const params = new URLSearchParams();
@@ -108,7 +108,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Get agent by ID
      * Implements GetAgentByIdQuery from backend
      * @param id Agent ID (GUID format)
-     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents/{id}. Returns null via fallback. See: endpoint audit 2026-04-15
+     * Resolved by #647 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async getById(id: string): Promise<AgentDto | null> {
       return httpClient.get(`/api/v1/agents/${encodeURIComponent(id)}`, AgentDtoSchema);
@@ -118,7 +118,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Get agent chat readiness status
      * Validates KB populated and RAG initialized
      * @param id Agent ID (GUID format)
-     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents/{id}/status. Throws on null response. See: endpoint audit 2026-04-15
+     * Resolved by #648 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async getStatus(id: string): Promise<{
       agentId: string;
@@ -154,7 +154,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Get approved agent typologies (authenticated endpoint)
      * Issue #3186 (AGT-012): Agent Config Modal
      * @param status Filter by status (default: 'Approved')
-     * @todo BACKEND MISSING: No route registered for GET /api/v1/agent-typologies. Returns empty array via fallback. See: endpoint audit 2026-04-15
+     * Resolved by #649 (2026-05-04) — route registered in AgentTypologiesEndpoints.cs.
      */
     async getTypologies(status: 'Approved' = 'Approved'): Promise<Typology[]> {
       const params = new URLSearchParams();
@@ -180,7 +180,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     /**
      * Get recent agents for dashboard widget
      * Issue #4126: API Integration
-     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents/recent. Returns empty array via fallback. See: endpoint audit 2026-04-15
+     * Resolved by #650 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async getRecent(limit: number = 10): Promise<AgentDto[]> {
       const response = await httpClient.get<AgentDto[]>(
@@ -393,7 +393,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Create a user-owned agent with tier-aware configuration
      * Issue #4683: User Agent CRUD Endpoints
      * @param request Agent creation params (gameId, agentType, name, etc.)
-     * @todo BACKEND MISSING: No route registered for POST /api/v1/agents/user. Throws on null response. See: endpoint audit 2026-04-15
+     * Resolved by #654 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async createUserAgent(request: {
       gameId: string;
@@ -458,7 +458,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     /**
      * Orchestrated agent creation with auto-setup
      * Issue #4772: Agent Creation Orchestration Flow
-     * @todo BACKEND MISSING: No route registered for POST /api/v1/agents/create-with-setup. Throws on null response. See: endpoint audit 2026-04-15
+     * Resolved by #655 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async createWithSetup(request: {
       gameId: string;
@@ -523,7 +523,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Update a user-owned agent (name, strategy)
      * PUT /api/v1/agents/{id}/user
      * Issue #4683: User Agent CRUD Endpoints
-     * @todo BACKEND MISSING: No route registered for PUT /api/v1/agents/{id}/user. Throws on null response. See: endpoint audit 2026-04-15
+     * Resolved by #656 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async updateUserAgent(
       agentId: string,
@@ -637,7 +637,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
 
     /**
      * Get current LLM configuration for an agent
-     * @todo BACKEND MISSING: No route registered for GET /api/v1/agents/{id}/configuration. Throws on null response. See: endpoint audit 2026-04-15
+     * Resolved by #657 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async getAgentConfiguration(agentId: string): Promise<BackendAgentConfigurationDto> {
       const response = await httpClient.get<BackendAgentConfigurationDto>(
@@ -651,7 +651,7 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
 
     /**
      * Patch LLM configuration for an agent (partial update)
-     * @todo BACKEND MISSING: No route registered for PATCH /api/v1/agents/{id}/configuration. Throws on null response. See: endpoint audit 2026-04-15
+     * Resolved by #658 (2026-05-04) — route registered in AgentsEndpoints.cs.
      */
     async updateAgentConfiguration(
       agentId: string,

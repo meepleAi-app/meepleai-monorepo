@@ -33,11 +33,11 @@ import {
 const ICON_SIZE = 14;
 
 /**
- * Lucide icon registry for MeepleCard NavFooter buttons.
+ * Lucide icon registry for MeepleCard connection chip icons.
  *
  * Each entry is a pre-instantiated React element so consumers can pass
- * `navIcons.kb` directly to a NavFooterItem.icon prop without re-rendering
- * the icon component.
+ * `navIcons.kb` directly to a ConnectionChipProps.iconOverride prop without
+ * re-rendering the icon component.
  */
 export const navIcons = {
   // Game

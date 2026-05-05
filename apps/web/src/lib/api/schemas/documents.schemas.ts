@@ -43,8 +43,8 @@ export const documentCollectionSchema = z.object({
   name: z.string(),
   description: z.string().nullable(),
   documentCount: z.number().int().min(0),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
 });
 export type DocumentCollection = z.infer<typeof documentCollectionSchema>;
 
@@ -57,7 +57,7 @@ export const collectionDocumentSchema = z.object({
   documentType: documentTypeSchema,
   sortOrder: z.number().int().min(0),
   fileName: z.string(),
-  uploadedAt: z.string().datetime(),
+  uploadedAt: z.string().datetime({ offset: true }),
 });
 export type CollectionDocument = z.infer<typeof collectionDocumentSchema>;
 

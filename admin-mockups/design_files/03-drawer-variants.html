@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MeepleAI — Drawer Variants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="components.css" />
+<style>
+  .stage { padding: 96px 24px 80px; }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    max-width: 1440px; margin: 40px auto 0; gap: 40px 32px;
+  }
+  .variant { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .v-label {
+    font-family: var(--f-mono); font-size: 10px; color: hsl(var(--c-toolkit));
+    text-transform: uppercase; letter-spacing: .1em; font-weight: 700;
+  }
+  .v-title { font-family: var(--f-display); font-size: 18px; font-weight: 700; text-align: center; }
+  .v-desc {
+    font-size: 12px; color: var(--text-sec); text-align: center;
+    line-height: 1.5; max-width: 340px;
+  }
+  .v-pros {
+    font-size: 11px; color: var(--text-muted); text-align: center;
+    max-width: 340px; font-style: italic;
+  }
+  .v-pros strong { color: hsl(var(--c-toolkit)); font-style: normal; }
+
+  /* Mini phone frame for drawer demos */
+  .mphone {
+    width: 320px; height: 580px;
+    border-radius: 40px; border: 8px solid #1a1a1a;
+    background: var(--bg);
+    overflow: hidden; position: relative;
+    box-shadow: 0 30px 60px rgba(0,0,0,.2);
+    display: flex; flex-direction: column;
+  }
+  [data-theme="dark"] .mphone { border-color: #0a0a0a; box-shadow: 0 30px 60px rgba(0,0,0,.5); }
+  .mphone .mpbg {
+    position: absolute; inset: 0; padding: 14px;
+    overflow: hidden;
+  }
+  .mphone .mpbg .bghero {
+    height: 120px; border-radius: 12px; margin-bottom: 10px;
+    display: flex; align-items: flex-end; padding: 10px;
+    position: relative; overflow: hidden;
+  }
+  .mphone .mpbg .bghero .bgcov { position: absolute; inset: 0; }
+  .mphone .mpbg .bghero .bgem {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 48px; color: rgba(255,255,255,.4);
+  }
+  .mphone .mpbg .bghero .bgti {
+    position: relative; color: #fff; font-family: var(--f-display);
+    font-weight: 700; font-size: 18px;
+  }
+  .mphone .mpbg .bgli {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px; border-bottom: 1px solid var(--border-light);
+    font-size: 11px; opacity: .7;
+  }
+  .mphone .mpbg .bgli .cc {
+    width: 26px; height: 32px; border-radius: 4px;
+  }
+
+  /* ─── VARIANT 1: Bottom sheet (baseline) ─── */
+  .v1 .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 60%; background: var(--bg-card);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -10px 30px rgba(0,0,0,.25);
+    display: flex; flex-direction: column;
+  }
+  .v1 .sheet::before {
+    content: ''; position: absolute; top: -60%; left: 0; right: 0; bottom: 100%;
+    background: rgba(0,0,0,.35);
+  }
+
+  /* Shared drawer inner styles */
+  .dh { display: flex; align-items: center; gap: 8px; padding: 10px 14px; }
+  .dh .icn { width: 28px; height: 28px; border-radius: 7px; display: flex;
+    align-items: center; justify-content: center; color: #fff; font-size: 14px;
+    background: hsl(var(--e, var(--c-session))); }
+  .dh .tit { flex: 1; font-family: var(--f-display); font-size: 14px; font-weight: 700; }
+  .dh .ax { width: 26px; height: 26px; border-radius: 50%; border: none;
+    background: var(--bg-muted); font-size: 10px; color: var(--text-sec); cursor: pointer; }
+  .dt { display: flex; border-bottom: 1px solid var(--border); padding: 0 8px; gap: 2px; }
+  .dtab { padding: 7px 10px; font-family: var(--f-display); font-size: 11px;
+    font-weight: 700; color: var(--text-muted); border-bottom: 2px solid transparent; }
+  .dtab.act { color: hsl(var(--e)); border-bottom-color: hsl(var(--e)); }
+  .dtab .b { background: hsl(var(--e)); color: #fff; font-size: 9px;
+    padding: 0 5px; border-radius: 999px; margin-left: 3px; font-weight: 800; }
+  .dc { flex: 1; overflow-y: auto; padding: 10px 14px; font-size: 11px; line-height: 1.5; }
+  .dc .ir { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--border-light); }
+  .dc .ir .l { color: var(--text-muted); }
+  .dc .ir .v { font-weight: 700; }
+  .dc h5 { font-family: var(--f-display); font-size: 10px; text-transform: uppercase;
+    letter-spacing: .05em; margin-top: 10px; margin-bottom: 4px; }
+  .df { display: flex; gap: 5px; padding: 8px 12px; border-top: 1px solid var(--border);
+    background: var(--bg); }
+  .df .b { padding: 7px 10px; border-radius: 7px; border: none;
+    font-family: var(--f-display); font-weight: 700; font-size: 10px; cursor: pointer; }
+  .df .b.pri { background: hsl(var(--e)); color: #fff; flex: 1; }
+  .df .b.sec { background: var(--bg-muted); color: var(--text-sec); }
+  .drag { width: 36px; height: 4px; border-radius: 2px; background: var(--border-strong); margin: 7px auto 0; }
+
+  /* ─── VARIANT 2: Peek & expand (2 stops) ─── */
+  .v2 .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 38%; background: var(--bg-card);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -10px 30px rgba(0,0,0,.25);
+    display: flex; flex-direction: column;
+    transition: height .35s var(--ease-out);
+  }
+  .v2 .sheet.expanded { height: 88%; }
+  .v2 .peek-hint {
+    position: absolute; right: 12px; top: 8px;
+    padding: 2px 7px; border-radius: 999px;
+    background: hsl(var(--c-toolkit) / .15); color: hsl(var(--c-toolkit));
+    font-size: 9px; font-weight: 700; font-family: var(--f-display);
+  }
+
+  /* ─── VARIANT 3: Full-screen modal ─── */
+  .v3 .modal {
+    position: absolute; inset: 0; background: var(--bg-card);
+    display: flex; flex-direction: column;
+    animation: slideUp .35s var(--ease-out);
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .v3 .mhero {
+    height: 160px; position: relative; display: flex; align-items: flex-end; padding: 12px;
+    overflow: hidden;
+  }
+  .v3 .mhero .mhcov { position: absolute; inset: 0; }
+  .v3 .mhero .mhem {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 60px; opacity: .4;
+  }
+  .v3 .mhero .mhgrad {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,.6), transparent 60%);
+  }
+  .v3 .mhero .mhti { position: relative; color: #fff; font-family: var(--f-display);
+    font-weight: 700; font-size: 22px; }
+  .v3 .mhero .mhax {
+    position: absolute; top: 10px; right: 10px; z-index: 5;
+    width: 32px; height: 32px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,.4); color: #fff; cursor: pointer;
+    backdrop-filter: blur(6px);
+  }
+
+  /* ─── VARIANT 4: Side sheet (right) ─── */
+  .v4 .ssheet {
+    position: absolute; top: 0; right: 0; bottom: 0;
+    width: 76%; background: var(--bg-card);
+    box-shadow: -10px 0 30px rgba(0,0,0,.25);
+    display: flex; flex-direction: column;
+    animation: slideL .35s var(--ease-out);
+  }
+  @keyframes slideL {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+
+  /* ─── VARIANT 5: Swipe between entities ─── */
+  .v5 .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 65%; background: var(--bg-card);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -10px 30px rgba(0,0,0,.25);
+    display: flex; flex-direction: column;
+  }
+  .v5 .swipe-dots {
+    display: flex; gap: 5px; justify-content: center;
+    padding: 6px 0 2px;
+  }
+  .v5 .swipe-dots .sd {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--border-strong);
+  }
+  .v5 .swipe-dots .sd.act { background: hsl(var(--e)); width: 16px; border-radius: 3px; }
+  .v5 .swipe-nav {
+    display: flex; gap: 6px; padding: 0 14px;
+    font-size: 10px; color: var(--text-muted);
+  }
+  .v5 .swipe-nav .arrow {
+    padding: 3px 8px; border-radius: 5px; background: var(--bg-muted);
+    cursor: pointer; font-family: var(--f-display); font-weight: 700;
+  }
+  .v5 .swipe-nav .arrow.on { background: hsl(var(--c-player) / .15); color: hsl(var(--c-player)); }
+  .v5 .peek-left, .v5 .peek-right {
+    position: absolute; bottom: 0; top: 37%; width: 8%;
+    background: var(--bg-card);
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -6px 20px rgba(0,0,0,.12);
+    opacity: .5;
+  }
+  .v5 .peek-left { left: -6%; }
+  .v5 .peek-right { right: -6%; }
+
+  /* ─── VARIANT 6: Split-pane (dual entity) ─── */
+  .v6 .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 70%; background: var(--bg-card);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -10px 30px rgba(0,0,0,.25);
+    display: flex; flex-direction: column;
+  }
+  .v6 .sphead {
+    display: flex; border-bottom: 1px solid var(--border);
+  }
+  .v6 .sphead .sp {
+    flex: 1; padding: 8px 10px; display: flex; align-items: center; gap: 6px;
+    border-right: 1px solid var(--border);
+  }
+  .v6 .sphead .sp:last-child { border-right: none; }
+  .v6 .sphead .sp .spicn {
+    width: 22px; height: 22px; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center; color: #fff;
+    font-size: 11px;
+  }
+  .v6 .sphead .sp .spti {
+    font-family: var(--f-display); font-size: 11px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .v6 .spbody {
+    flex: 1; display: flex; overflow: hidden;
+  }
+  .v6 .spbody .sppane {
+    flex: 1; padding: 8px 12px; overflow-y: auto;
+    font-size: 10px; line-height: 1.5; border-right: 1px solid var(--border);
+  }
+  .v6 .spbody .sppane:last-child { border-right: none; }
+  .v6 .spbody .sppane h5 {
+    font-family: var(--f-display); font-size: 9px; text-transform: uppercase;
+    letter-spacing: .05em; color: var(--text); margin: 0 0 4px;
+  }
+  .v6 .spbody .sppane .ir {
+    display: flex; justify-content: space-between; padding: 2px 0;
+    border-bottom: 1px solid var(--border-light); font-size: 10px;
+  }
+  .v6 .spbody .sppane .ir .l { color: var(--text-muted); }
+  .v6 .compare-arrow {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 50%; width: 22px; height: 22px; display: flex;
+    align-items: center; justify-content: center; font-size: 11px;
+    z-index: 5;
+  }
+</style>
+</head>
+<body>
+
+<nav class="hub-nav">
+  <a href="index.html" class="brand" style="color:inherit;"><span class="brand-mark">M</span><span>MeepleAI</span></a>
+  <span style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--bg-muted);font-family:var(--f-mono);color:var(--text-muted);">03 · Drawer Variants</span>
+  <div class="spacer"></div>
+  <a href="02-desktop-patterns.html">← Desktop</a>
+  <a href="index.html">Hub</a>
+  <a href="04-design-system.html">Tokens →</a>
+</nav>
+
+<button class="theme-toggle" id="themeToggle">🌗 <span id="themeLabel">Light</span></button>
+
+<div class="stage">
+  <div class="stage-wrap">
+    <h1>6 variazioni di <span style="color:hsl(var(--c-toolkit));">drawer</span></h1>
+    <p class="lead">
+      Il drawer è il cuore del sistema — ma esistono molti modi di progettarlo. Ogni variante
+      ha un trade-off diverso tra contesto mantenuto, densità di informazione, e facilità di comparazione.
+    </p>
+
+    <div class="grid">
+
+      <!-- ═══ V1 ═══ -->
+      <div class="variant">
+        <div class="v-label">V1 · Baseline</div>
+        <div class="v-title">Bottom sheet</div>
+        <div class="mphone v1 e-session" style="--e:var(--c-session);">
+          <div class="mpbg">
+            <div class="bghero" style="background:linear-gradient(135deg,hsl(240,55%,55%),hsl(240,35%,30%) 60%,hsl(270,45%,40%));">
+              <div class="bgem">🎯</div><div class="bgti">Serata Azul</div>
+            </div>
+            <div class="bgli"><div class="cc" style="background:linear-gradient(135deg,hsl(85,45%,55%),hsl(85,25%,30%) 60%);"></div><span>Wingspan · Domenica</span></div>
+            <div class="bgli"><div class="cc" style="background:linear-gradient(135deg,hsl(220,40%,55%),hsl(220,20%,30%) 60%);"></div><span>Brass Martedì</span></div>
+          </div>
+          <div class="sheet">
+            <div class="drag"></div>
+            <div class="dh"><div class="icn">🎯</div><div class="tit">Serata Azul</div><button class="ax">✕</button></div>
+            <div class="dt">
+              <div class="dtab act">📋 Live</div>
+              <div class="dtab">🔧 Toolkit <span class="b">3</span></div>
+              <div class="dtab">🕒 Timeline</div>
+            </div>
+            <div class="dc">
+              <div class="ir"><span class="l">Stato</span><span class="v" style="color:hsl(var(--c-session));">In Corso</span></div>
+              <div class="ir"><span class="l">Turno</span><span class="v">3/5</span></div>
+              <div class="ir"><span class="l">Codice</span><span class="v" style="font-family:var(--f-mono);">AZL-7X2K</span></div>
+              <h5>Giocatori (4)</h5>
+              <div class="ir"><span class="l">🥇 Marco R.</span><span class="v">72pt</span></div>
+              <div class="ir"><span class="l">🥈 Sara T.</span><span class="v">61pt</span></div>
+            </div>
+            <div class="df">
+              <button class="b pri">▶️ Riprendi</button>
+              <button class="b sec">📊</button>
+            </div>
+          </div>
+        </div>
+        <div class="v-desc">Bottom sheet a un solo stop. Occupa il 60% del viewport, lasciando visibile la pagina sotto.</div>
+        <div class="v-pros"><strong>✓ Pro:</strong> pattern familiare, mantiene contesto principale. <strong>✗ Con:</strong> poco spazio per contenuto complesso.</div>
+      </div>
+
+      <!-- ═══ V2 ═══ -->
+      <div class="variant">
+        <div class="v-label">V2 · Progressive</div>
+        <div class="v-title">Peek &amp; Expand</div>
+        <div class="mphone v2 e-agent" style="--e:var(--c-agent);">
+          <div class="mpbg">
+            <div class="bghero" style="background:linear-gradient(135deg,hsl(38,80%,55%),hsl(38,60%,30%) 60%);">
+              <div class="bgem">🤖</div><div class="bgti">Azul Rules Expert</div>
+            </div>
+          </div>
+          <div class="sheet" id="v2sheet">
+            <div class="peek-hint">Tap per espandere</div>
+            <div class="drag"></div>
+            <div class="dh"><div class="icn">🤖</div><div class="tit">Azul Rules Expert</div><button class="ax">✕</button></div>
+            <div class="dc" style="padding:8px 14px;">
+              <div style="display:flex;gap:6px;font-size:10px;">
+                <div style="flex:1;"><div style="color:var(--text-muted);">Status</div><div style="font-weight:700;color:hsl(var(--c-toolkit));">● Attivo</div></div>
+                <div style="flex:1;"><div style="color:var(--text-muted);">Invocazioni</div><div style="font-weight:700;">342</div></div>
+                <div style="flex:1;"><div style="color:var(--text-muted);">Latenza</div><div style="font-weight:700;">1.2s</div></div>
+              </div>
+              <div class="dt" style="margin:10px -14px 0;">
+                <div class="dtab act">🤖 Overview</div>
+                <div class="dtab">📜 Storico <span class="b">342</span></div>
+                <div class="dtab">⚙️ Config</div>
+              </div>
+              <div style="padding-top:8px;">
+                <div class="ir"><span class="l">Strategia</span><span class="v">hybrid-rag</span></div>
+                <div class="ir"><span class="l">Modello</span><span class="v">GPT-4o-mini</span></div>
+                <div class="ir"><span class="l">KB docs</span><span class="v">3</span></div>
+                <h5>Chat recenti</h5>
+                <div class="ir"><span class="l">💬 Come si gioca?</span><span class="v">12 msg</span></div>
+                <div class="ir"><span class="l">💬 Bonus riga?</span><span class="v">4 msg</span></div>
+              </div>
+            </div>
+            <div class="df">
+              <button class="b pri">💬 Chat</button>
+              <button class="b sec">🔄</button>
+            </div>
+          </div>
+        </div>
+        <div class="v-desc">Due stop: peek (40%) mostra essenziali, expanded (90%) tutto. Tap sull'handle alterna gli stati.</div>
+        <div class="v-pros"><strong>✓ Pro:</strong> progressivo, quick glance + deep dive. <strong>Perfetto per</strong> entità con molti metadati.</div>
+        <div>
+          <button onclick="document.getElementById('v2sheet').classList.toggle('expanded')"
+            style="padding:6px 12px;border-radius:8px;background:hsl(var(--c-toolkit));color:#fff;border:none;font-family:var(--f-display);font-weight:700;font-size:11px;cursor:pointer;">
+            ↕ Toggle expand
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══ V3 ═══ -->
+      <div class="variant">
+        <div class="v-label">V3 · Deep focus</div>
+        <div class="v-title">Full-screen modal</div>
+        <div class="mphone v3 e-kb" style="--e:var(--c-kb);">
+          <div class="modal">
+            <div class="mhero">
+              <div class="mhcov" style="background:linear-gradient(135deg,hsl(174,55%,55%),hsl(174,35%,30%) 60%);"></div>
+              <div class="mhem">📄</div><div class="mhgrad"></div>
+              <div class="mhti">azul-regole-ita.pdf</div>
+              <button class="mhax">✕</button>
+            </div>
+            <div class="dt">
+              <div class="dtab act">📄 Overview</div>
+              <div class="dtab">👁️ Anteprima</div>
+              <div class="dtab">💬 Citazioni</div>
+            </div>
+            <div class="dc">
+              <div class="ir"><span class="l">Size</span><span class="v">2.4 MB</span></div>
+              <div class="ir"><span class="l">Pagine</span><span class="v">12</span></div>
+              <div class="ir"><span class="l">Chunks</span><span class="v">47</span></div>
+              <div class="ir"><span class="l">Status</span><span class="v" style="color:hsl(var(--c-toolkit));">● Indicizzato</span></div>
+              <div class="ir"><span class="l">Embedding</span><span class="v" style="font-family:var(--f-mono);font-size:10px;">e5-base 768d</span></div>
+              <h5>Gioco</h5>
+              <div class="ir"><span class="l">🎲 Azul</span><span class="v" style="color:hsl(var(--c-game));">→</span></div>
+              <h5>Agenti che lo usano</h5>
+              <div class="ir"><span class="l">🤖 Azul Rules Expert</span><span class="v" style="color:hsl(var(--c-agent));">→</span></div>
+            </div>
+            <div class="df">
+              <button class="b pri">🔄 Reindex</button>
+              <button class="b sec">⬇️</button>
+              <button class="b sec">👁️</button>
+            </div>
+          </div>
+        </div>
+        <div class="v-desc">Il drawer occupa tutto il viewport. La pagina sotto sparisce completamente — l'entità diventa il focus assoluto.</div>
+        <div class="v-pros"><strong>✓ Pro:</strong> massimo spazio disponibile. <strong>✗ Con:</strong> rompe il contesto, richiede un "back" esplicito.</div>
+      </div>
+
+      <!-- ═══ V4 ═══ -->
+      <div class="variant">
+        <div class="v-label">V4 · Lateral</div>
+        <div class="v-title">Side sheet</div>
+        <div class="mphone v4 e-chat" style="--e:var(--c-chat);">
+          <div class="mpbg">
+            <div class="bghero" style="background:linear-gradient(135deg,hsl(25,70%,55%),hsl(25,50%,30%) 60%);">
+              <div class="bgem">🎲</div><div class="bgti">Azul</div>
+            </div>
+          </div>
+          <div class="ssheet">
+            <div class="dh"><div class="icn">💬</div><div class="tit">Chat: Come si gioca?</div><button class="ax">✕</button></div>
+            <div class="dt">
+              <div class="dtab act">💬 Messaggi <span class="b">12</span></div>
+              <div class="dtab">📄 Fonti</div>
+            </div>
+            <div class="dc" style="display:flex;flex-direction:column;gap:6px;">
+              <div style="align-self:flex-end;max-width:82%;padding:7px 10px;border-radius:10px 10px 3px 10px;background:var(--bg-muted);font-size:11px;">Come si calcola il bonus di riga in Azul?</div>
+              <div style="align-self:flex-start;max-width:90%;padding:7px 10px;border-radius:10px 10px 10px 3px;border:1px solid var(--border);font-size:11px;">
+                Il bonus di riga vale 2 punti per ogni riga completata.
+                <span style="display:inline-block;padding:1px 5px;margin-left:3px;border-radius:3px;background:hsl(var(--c-kb) / .15);color:hsl(var(--c-kb));font-size:9px;font-weight:700;">📄 p.3 §2</span>
+              </div>
+              <div style="align-self:flex-end;max-width:82%;padding:7px 10px;border-radius:10px 10px 3px 10px;background:var(--bg-muted);font-size:11px;">E i bonus di colonna?</div>
+              <div style="align-self:flex-start;max-width:90%;padding:7px 10px;border-radius:10px 10px 10px 3px;border:1px solid var(--border);font-size:11px;">
+                Ogni colonna completa vale 7 punti
+                <span style="display:inline-block;padding:1px 5px;margin-left:3px;border-radius:3px;background:hsl(var(--c-kb) / .15);color:hsl(var(--c-kb));font-size:9px;font-weight:700;">📄 p.3 §4</span>
+              </div>
+            </div>
+            <div class="df">
+              <button class="b pri">💬 Continua</button>
+              <button class="b sec">📦</button>
+            </div>
+          </div>
+        </div>
+        <div class="v-desc">Side sheet scorre da destra. Su mobile copre ~76%, su tablet/desktop diventa un pannello fisso.</div>
+        <div class="v-pros"><strong>✓ Pro:</strong> adatto a contenuti verticali (chat, log, thread). <strong>Transiziona</strong> bene a desktop.</div>
+      </div>
+
+      <!-- ═══ V5 ═══ -->
+      <div class="variant">
+        <div class="v-label">V5 · Navigate</div>
+        <div class="v-title">Swipe between entities</div>
+        <div class="mphone v5 e-player" style="--e:var(--c-player);">
+          <div class="mpbg">
+            <div class="bghero" style="background:linear-gradient(135deg,hsl(240,55%,55%),hsl(240,35%,30%) 60%);">
+              <div class="bgem">🎯</div><div class="bgti">Serata Azul</div>
+            </div>
+          </div>
+          <div class="peek-left"></div>
+          <div class="peek-right"></div>
+          <div class="sheet">
+            <div class="drag"></div>
+            <div class="swipe-dots">
+              <div class="sd"></div><div class="sd"></div><div class="sd act"></div><div class="sd"></div>
+            </div>
+            <div class="swipe-nav">
+              <span class="arrow">◀ Sara T.</span>
+              <div style="flex:1;text-align:center;color:var(--text-muted);">3/4 giocatori</div>
+              <span class="arrow on">Luca B. ▶</span>
+            </div>
+            <div class="dh"><div class="icn">MR</div><div class="tit">Marco R.</div><button class="ax">✕</button></div>
+            <div class="dt">
+              <div class="dtab act">👤 Profilo</div>
+              <div class="dtab">🏆 Stats <span class="b">47</span></div>
+              <div class="dtab">📜 Storico</div>
+            </div>
+            <div class="dc">
+              <div style="display:flex;gap:6px;margin-bottom:8px;">
+                <div style="flex:1;padding:8px;border-radius:7px;background:var(--bg-muted);text-align:center;">
+                  <div style="font-family:var(--f-display);font-weight:800;font-size:14px;color:hsl(var(--c-player));">47</div>
+                  <div style="font-size:8px;text-transform:uppercase;color:var(--text-muted);font-weight:700;">Vittorie</div>
+                </div>
+                <div style="flex:1;padding:8px;border-radius:7px;background:var(--bg-muted);text-align:center;">
+                  <div style="font-family:var(--f-display);font-weight:800;font-size:14px;color:hsl(var(--c-toolkit));">53%</div>
+                  <div style="font-size:8px;text-transform:uppercase;color:var(--text-muted);font-weight:700;">Win rate</div>
+                </div>
+              </div>
+              <div class="ir"><span class="l">Membro</span><span class="v">Gen 2025</span></div>
+              <div class="ir"><span class="l">Preferito</span><span class="v">Azul</span></div>
+            </div>
+            <div class="df">
+              <button class="b pri">📊 Confronta</button>
+              <button class="b sec">↗️</button>
+            </div>
+          </div>
+        </div>
+        <div class="v-desc">Swipe laterale per passare tra entità dello stesso tipo. Perfetto per scorrere giocatori di una sessione, KB di un gioco, ecc.</div>
+        <div class="v-pros"><strong>✓ Pro:</strong> naviga collezioni senza tornare indietro. <strong>Pattern</strong> alla Tinder/Instagram stories.</div>
+      </div>
+
+      <!-- ═══ V6 ═══ -->
+      <div class="variant">
+        <div class="v-label">V6 · Compare</div>
+        <div class="v-title">Split-pane (dual)</div>
+        <div class="mphone v6 e-game" style="--e:var(--c-game);">
+          <div class="mpbg">
+            <div class="bghero" style="background:linear-gradient(135deg,hsl(25,70%,55%),hsl(25,50%,30%) 60%);">
+              <div class="bgem">🎲</div><div class="bgti">Giochi in libreria</div>
+            </div>
+          </div>
+          <div class="sheet">
+            <div class="drag"></div>
+            <div class="sphead">
+              <div class="sp"><div class="spicn" style="background:linear-gradient(135deg,hsl(200,70%,55%),hsl(200,50%,30%));">🔷</div><div class="spti">Azul</div></div>
+              <div class="sp" style="background:hsl(var(--c-game) / .06);"><div class="spicn" style="background:linear-gradient(135deg,hsl(85,45%,55%),hsl(85,25%,30%));">🦜</div><div class="spti">Wingspan</div></div>
+            </div>
+            <div class="spbody">
+              <div class="compare-arrow">vs</div>
+              <div class="sppane">
+                <h5>Azul</h5>
+                <div class="ir"><span class="l">Anno</span><span>2017</span></div>
+                <div class="ir"><span class="l">Giocatori</span><span>2–4</span></div>
+                <div class="ir"><span class="l">Durata</span><span>30–45m</span></div>
+                <div class="ir"><span class="l">Peso</span><span>1.77</span></div>
+                <div class="ir"><span class="l">Rating</span><span style="color:hsl(var(--c-toolkit));">7.8</span></div>
+                <div class="ir"><span class="l">Partite</span><span>23</span></div>
+                <div class="ir"><span class="l">Win rate</span><span>65%</span></div>
+                <h5 style="margin-top:8px;">Connessioni</h5>
+                <div class="ir"><span class="l">🤖 Agenti</span><span>1</span></div>
+                <div class="ir"><span class="l">📄 KB</span><span>3</span></div>
+                <div class="ir"><span class="l">🎯 Sessioni</span><span>3</span></div>
+              </div>
+              <div class="sppane">
+                <h5>Wingspan</h5>
+                <div class="ir"><span class="l">Anno</span><span>2019</span></div>
+                <div class="ir"><span class="l">Giocatori</span><span>1–5</span></div>
+                <div class="ir"><span class="l">Durata</span><span>40–70m</span></div>
+                <div class="ir"><span class="l">Peso</span><span>2.42</span></div>
+                <div class="ir"><span class="l">Rating</span><span style="color:hsl(var(--c-toolkit));">8.1</span></div>
+                <div class="ir"><span class="l">Partite</span><span>17</span></div>
+                <div class="ir"><span class="l">Win rate</span><span>59%</span></div>
+                <h5 style="margin-top:8px;">Connessioni</h5>
+                <div class="ir"><span class="l">🤖 Agenti</span><span>1</span></div>
+                <div class="ir"><span class="l">📄 KB</span><span>1</span></div>
+                <div class="ir"><span class="l">🎯 Sessioni</span><span>1</span></div>
+              </div>
+            </div>
+            <div class="df">
+              <button class="b pri">📊 Stats dettaglio</button>
+              <button class="b sec">✕</button>
+            </div>
+          </div>
+        </div>
+        <div class="v-desc">Dual-pane per confrontare due entità dello stesso tipo. Header selezionabile per cambiare ognuno dei due elementi.</div>
+        <div class="v-pros"><strong>✓ Pro:</strong> confronto diretto side-by-side. <strong>Unico</strong> per scegliere tra opzioni simili.</div>
+      </div>
+
+    </div>
+
+    <div style="max-width:1000px;margin:60px auto 0;padding:24px;border-radius:14px;background:var(--bg-card);border:1px solid var(--border);">
+      <h3 style="font-family:var(--f-display);margin-bottom:8px;">🎯 Raccomandazione</h3>
+      <p style="color:var(--text-sec);font-size:13px;line-height:1.55;">
+        <strong>V1 Bottom sheet</strong> come default in tutto il sistema — pattern già familiare dall'iOS/Android. Adotta <strong>V2 Peek &amp; Expand</strong> per entità dense come Agent e KB dove c'è molto da mostrare. <strong>V5 Swipe</strong> è un power-user gesture: tienilo come shortcut dentro sessioni ed eventi (dove le collezioni sono naturali). <strong>V3 / V4 / V6</strong> in contesti specifici (deep focus, contenuti verticali lunghi, comparazione).
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const root = document.documentElement;
+  root.setAttribute('data-theme', localStorage.getItem('mai-theme') || 'light');
+  document.getElementById('themeLabel').textContent = root.getAttribute('data-theme') === 'dark' ? 'Dark' : 'Light';
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('mai-theme', next);
+    document.getElementById('themeLabel').textContent = next === 'dark' ? 'Dark' : 'Light';
+  });
+</script>
+
+</body>
+</html>

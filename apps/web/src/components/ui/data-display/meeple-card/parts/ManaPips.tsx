@@ -19,6 +19,18 @@ export interface ManaPip {
   items?: ManaPipItem[];
   onCreate?: () => void;
   createLabel?: string;
+  colorOverride?: string;
+}
+
+export interface KbPipState {
+  kbIndexedCount: number;
+  kbProcessingCount: number;
+}
+
+export function getKbPipColor(state: KbPipState): string {
+  if (state.kbIndexedCount > 0) return 'hsl(142, 71%, 45%)'; // green
+  if (state.kbProcessingCount > 0) return 'hsl(45, 93%, 47%)'; // yellow
+  return 'hsl(0, 0%, 60%)'; // grey
 }
 
 interface ManaPipsProps {
@@ -60,7 +72,7 @@ function PipRenderer({
   dotSize: number;
 }) {
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const color = entityHsl(pip.entityType);
+  const color = pip.colorOverride ?? entityHsl(pip.entityType);
   const isInteractive = pip.onCreate !== undefined;
   const count = pip.count ?? 0;
 

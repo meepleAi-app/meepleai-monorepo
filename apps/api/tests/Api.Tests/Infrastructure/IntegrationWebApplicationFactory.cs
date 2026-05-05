@@ -151,9 +151,26 @@ internal static class IntegrationWebApplicationFactory
                         .Returns(mockDatabase.Object);
                     services.AddSingleton(mockRedis.Object);
 
-                    // Mock embedding service
+                    // Mock embedding service.
+                    // IMPORTANT: Mock.Of<T>() returns default values, but EmbeddingResult is a record (class)
+                    // → default is null → EmbeddingServiceAdapter would NRE on `result.Success`.
+                    // Configure both single-text and language-aware overloads to return a successful result
+                    // with a deterministic 768-dim zero vector so handlers that recompute embeddings
+                    // (Create/Update Golden) succeed.
                     services.RemoveAll(typeof(Api.Services.IEmbeddingService));
-                    services.AddScoped<Api.Services.IEmbeddingService>(_ => Mock.Of<Api.Services.IEmbeddingService>());
+                    services.AddScoped<Api.Services.IEmbeddingService>(_ =>
+                    {
+                        var mock = new Mock<Api.Services.IEmbeddingService>();
+                        var stubVector = new float[768];
+                        var success = Api.Services.EmbeddingResult.CreateSuccess(new List<float[]> { stubVector });
+                        mock
+                            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                            .ReturnsAsync(success);
+                        mock
+                            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                            .ReturnsAsync(success);
+                        return mock.Object;
+                    });
 
                     // Mock HybridCache — use pass-through implementation that executes factory directly
                     services.RemoveAll(typeof(Api.Services.IHybridCacheService));

@@ -515,4 +515,22 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         _lastInvokedAt = DateTime.UtcNow;
         _updatedAt = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Associates this agent definition with an optional shared game.
+    /// Issue #660: Enables AgentDto.GameName population via bulk SharedGame lookup
+    /// in GetAllAgentsQueryHandler. Pass <c>null</c> to clear the association.
+    /// </summary>
+    public void SetGameId(Guid? gameId)
+    {
+        if (_gameId == gameId)
+            return;
+
+        _gameId = gameId;
+        _updatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, gameId.HasValue
+            ? $"GameId set to '{gameId.Value}'"
+            : "GameId cleared"));
+    }
 }

@@ -46,4 +46,10 @@ public enum RequestSource
     /// RAG query classification — lightweight LLM call for adaptive routing.
     /// </summary>
     RagClassification,
+
+    /// <summary>
+    /// Libro Game AI Assistant — narrative and generic text translation via OpenRouter.
+    /// Issue #2.1: TranslationService skeleton + OpenRouter integration.
+    /// </summary>
+    Translation,
 }

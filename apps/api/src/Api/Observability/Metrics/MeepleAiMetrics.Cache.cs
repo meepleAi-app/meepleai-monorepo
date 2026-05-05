@@ -77,6 +77,49 @@ internal static partial class MeepleAiMetrics
         description: "Dashboard cache invalidations triggered by configuration changes");
 
     /// <summary>
+    /// Counter for cache invalidation retry attempts.
+    /// Issue #613: Tracks how often the SharedGameCatalog read-model
+    /// invalidation pipeline retries on transient Redis/HybridCache failures.
+    /// </summary>
+    public static readonly Counter<long> CacheInvalidationRetryAttemptsTotal = Meter.CreateCounter<long>(
+        name: "meepleai.cache.invalidation.retry_attempts.total",
+        unit: "attempts",
+        description: "Total number of cache invalidation retry attempts");
+
+    /// <summary>
+    /// Counter for cache invalidation outcome (success vs failure after retries).
+    /// Issue #613: Distinguishes recovered transient failures from permanent failures
+    /// that left the read-model stale.
+    /// </summary>
+    public static readonly Counter<long> CacheInvalidationOutcomeTotal = Meter.CreateCounter<long>(
+        name: "meepleai.cache.invalidation.outcome.total",
+        unit: "operations",
+        description: "Cache invalidation outcomes (success/failure) by operation");
+
+    /// <summary>
+    /// Records a single retry attempt during cache invalidation.
+    /// </summary>
+    public static void RecordCacheInvalidationRetry()
+    {
+        CacheInvalidationRetryAttemptsTotal.Add(1);
+    }
+
+    /// <summary>
+    /// Records the terminal outcome of a cache invalidation operation.
+    /// </summary>
+    /// <param name="operationName">Logical name of the invalidation site (low-cardinality).</param>
+    /// <param name="outcome">"success" or "failure".</param>
+    public static void RecordCacheInvalidationOutcome(string operationName, string outcome)
+    {
+        var tags = new TagList
+        {
+            { "operation", operationName },
+            { "outcome", outcome }
+        };
+        CacheInvalidationOutcomeTotal.Add(1, tags);
+    }
+
+    /// <summary>
     /// Records cache hit or miss
     /// </summary>
     public static void RecordCacheAccess(bool isHit, string? cacheType = null)

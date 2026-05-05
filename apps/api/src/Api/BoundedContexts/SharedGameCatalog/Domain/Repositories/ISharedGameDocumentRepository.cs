@@ -84,4 +84,14 @@ public interface ISharedGameDocumentRepository
     /// Counts the number of documents created by a specific user.
     /// </summary>
     Task<int> CountByUserAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks whether a specific PDF is linked to a shared game (any document type / any version).
+    /// Used by ISSUE-524 / M1.2 mechanic extractor handler to validate the (game, pdf) pair
+    /// without leaking <c>SharedGameDocument</c> entity projections into the command handler.
+    /// </summary>
+    Task<bool> IsPdfLinkedToGameAsync(
+        Guid sharedGameId,
+        Guid pdfDocumentId,
+        CancellationToken cancellationToken = default);
 }

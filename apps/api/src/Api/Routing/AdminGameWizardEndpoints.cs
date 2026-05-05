@@ -142,22 +142,24 @@ internal static class AdminGameWizardEndpoints
         httpContext.Response.Headers.Append("Connection", "keep-alive");
         httpContext.Response.Headers.Append("X-Accel-Buffering", "no");
 
-        // Resolve gameId: the wizard passes SharedGameId, but PdfDocuments reference games.Id
-        var resolvedGameId = gameId;
-        var gameExistsDirectly = await dbContext.Games
-            .AnyAsync(g => g.Id == gameId, cancellationToken)
+        // Resolve to SharedGameId: after the 2026-04-19 migration, PdfDocuments reference SharedGameId directly
+        // (no longer GameEntity.Id). The wizard may pass either a SharedGameId or a GameEntity.Id; normalise
+        // here so the PDF query below always filters by SharedGameId.
+        var resolvedSharedGameId = gameId;
+        var sharedGameExistsDirectly = await dbContext.SharedGames
+            .AnyAsync(sg => sg.Id == gameId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (!gameExistsDirectly)
+        if (!sharedGameExistsDirectly)
         {
             var game = await dbContext.Games
-                .FirstOrDefaultAsync(g => g.SharedGameId == gameId, cancellationToken)
+                .FirstOrDefaultAsync(g => g.Id == gameId, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (game is not null)
+            if (game?.SharedGameId is Guid sharedId)
             {
-                resolvedGameId = game.Id;
-                logger.LogInformation("SSE: Resolved SharedGameId {SharedGameId} to GameId {GameId}", gameId, resolvedGameId);
+                resolvedSharedGameId = sharedId;
+                logger.LogInformation("SSE: Resolved GameEntity {GameId} to SharedGameId {SharedGameId}", gameId, resolvedSharedGameId);
             }
         }
 
@@ -168,9 +170,9 @@ internal static class AdminGameWizardEndpoints
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                // Query the latest PDF for this game
+                // Query the latest PDF for this game (by SharedGameId since PdfDocumentEntity.GameId was dropped)
                 var pdfInfo = await dbContext.PdfDocuments
-                    .Where(p => p.GameId == resolvedGameId)
+                    .Where(p => p.SharedGameId == resolvedSharedGameId)
                     .OrderByDescending(p => p.UploadedAt)
                     .Select(p => new
                     {
@@ -186,17 +188,14 @@ internal static class AdminGameWizardEndpoints
                 var isComplete = string.Equals(pdfState, "Ready", StringComparison.Ordinal);
                 var isFailed = string.Equals(pdfState, "Failed", StringComparison.Ordinal);
 
-                // Agent system removed (Task 10: Agent cleanup)
-                var agentExists = false;
-
                 var progressEvent = new WizardProgressEvent
                 {
                     CurrentStep = pdfState,
                     PdfState = pdfState,
-                    AgentExists = agentExists,
-                    OverallPercent = MapStateToPercent(pdfState, agentExists),
-                    Message = BuildProgressMessage(pdfState, agentExists, pdfInfo?.FileName),
-                    IsComplete = isComplete && agentExists,
+                    AgentExists = false,
+                    OverallPercent = MapStateToPercent(pdfState),
+                    Message = BuildProgressMessage(pdfState, pdfInfo?.FileName),
+                    IsComplete = isComplete,
                     ErrorMessage = isFailed ? pdfInfo?.ProcessingError : null,
                     Priority = pdfInfo?.ProcessingPriority ?? "Normal",
                     Timestamp = DateTime.UtcNow
@@ -236,9 +235,9 @@ internal static class AdminGameWizardEndpoints
 
     /// <summary>
     /// Maps PDF processing state to overall wizard progress percentage.
-    /// Pending=0%, Uploading=10%, Extracting=25%, Chunking=45%, Embedding=65%, Indexing=80%, Ready=90%, AgentCreated=100%
+    /// Pending=0%, Uploading=10%, Extracting=25%, Chunking=45%, Embedding=65%, Indexing=80%, Ready=100%
     /// </summary>
-    private static int MapStateToPercent(string pdfState, bool agentExists)
+    private static int MapStateToPercent(string pdfState)
     {
         var basePercent = pdfState switch
         {
@@ -248,7 +247,7 @@ internal static class AdminGameWizardEndpoints
             "Chunking" => 45,
             "Embedding" => 65,
             "Indexing" => 80,
-            "Ready" => agentExists ? 100 : 90,
+            "Ready" => 100,
             "Failed" => 0,
             _ => 0
         };
@@ -256,7 +255,7 @@ internal static class AdminGameWizardEndpoints
         return basePercent;
     }
 
-    private static string BuildProgressMessage(string pdfState, bool agentExists, string? fileName)
+    private static string BuildProgressMessage(string pdfState, string? fileName)
     {
         return pdfState switch
         {
@@ -266,8 +265,7 @@ internal static class AdminGameWizardEndpoints
             "Chunking" => "Splitting content into semantic chunks...",
             "Embedding" => "Generating vector embeddings...",
             "Indexing" => "Indexing embeddings in vector database...",
-            "Ready" when agentExists => "Processing complete! Agent is ready.",
-            "Ready" => "PDF processed. Creating AI agent...",
+            "Ready" => "PDF processed successfully.",
             "Failed" => "Processing failed. Check error details.",
             _ => "Processing..."
         };

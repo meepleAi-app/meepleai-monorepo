@@ -8,7 +8,7 @@
 import { useMemo } from 'react';
 
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
-import { buildSessionNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildSessionConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
 
 // ============================================================================
@@ -72,9 +72,9 @@ export function MeepleSessionCard({
           ? 'In pausa'
           : undefined;
 
-  const navItems = useMemo(
+  const connections = useMemo(
     () =>
-      buildSessionNavItems(
+      buildSessionConnections(
         {
           playerCount: session.playerCount,
           hasNotes: false, // session DTO doesn't expose notes flag
@@ -96,7 +96,7 @@ export function MeepleSessionCard({
       title={`Sessione #${session.id.slice(0, 8)}`}
       subtitle={subtitle}
       badge={statusBadge}
-      navItems={navItems}
+      connections={connections}
       className={className}
       onClick={onClick ? () => onClick(session.id) : undefined}
       data-testid={`session-card-${session.id}`}

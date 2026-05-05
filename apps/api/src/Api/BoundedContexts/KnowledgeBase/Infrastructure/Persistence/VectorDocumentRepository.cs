@@ -108,27 +108,27 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
     }
 
     public async Task<VectorDocumentIndexingInfo?> GetIndexingInfoByGameIdAsync(
-        Guid gameId,
+        Guid sharedGameId,
         CancellationToken cancellationToken = default)
     {
         // First: direct match on VectorDocument.GameId (shared games)
         var info = await DbContext.VectorDocuments
             .AsNoTracking()
-            .Where(vd => vd.GameId == gameId)
+            .Where(vd => vd.GameId == sharedGameId)
             // Null IndexedAt (pending/processing) sorts to top so in-progress trumps older completed docs.
             .OrderByDescending(vd => vd.IndexedAt ?? DateTime.MaxValue)
             .Select(vd => new { vd.IndexingStatus, vd.ChunkCount, vd.IndexingError })
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        // Fallback: join via PdfDocumentEntity.PrivateGameId (private games have GameId = null)
+        // Fallback: join via PdfDocumentEntity.PrivateGameId (private games have VectorDocument.GameId = null)
         if (info is null)
         {
             info = await (
                 from pdf in DbContext.PdfDocuments.AsNoTracking()
                 join vd in DbContext.VectorDocuments.AsNoTracking()
                     on pdf.Id equals vd.PdfDocumentId
-                where pdf.PrivateGameId == gameId
+                where pdf.PrivateGameId == sharedGameId
                 orderby vd.IndexedAt == null ? DateTime.MaxValue : vd.IndexedAt descending
                 select new { vd.IndexingStatus, vd.ChunkCount, vd.IndexingError }
             ).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
@@ -144,79 +144,28 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
         // Third fallback: VectorDocument not yet created (PDF still in pipeline).
         // Read PdfDocumentEntity.ProcessingState (authoritative 7-state field) so polling
         // returns "processing" instead of 404 during extraction/chunking/embedding.
-        // Covers both:
-        //   - Private games (PrivateGameId == gameId)
-        //   - Shared catalog games (GameId == gameId, Issue #5217)
+        // Direct resolution via PdfDocumentEntity.SharedGameId or PrivateGameId
+        // (Task 8: replaces legacy GameEntity.SharedGameId -> GameEntity.Id bridge).
         var pdfProcessingState = await DbContext.PdfDocuments
             .AsNoTracking()
-            .Where(pdf => pdf.PrivateGameId == gameId || pdf.GameId == gameId)
+            .Where(pdf => pdf.PrivateGameId == sharedGameId || pdf.SharedGameId == sharedGameId)
             // Order by most recently uploaded so multi-PDF games return the latest state.
             .OrderByDescending(pdf => pdf.UploadedAt)
             .Select(pdf => pdf.ProcessingState)
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        if (pdfProcessingState is not null)
-        {
-            var inferredStatus = pdfProcessingState.ToLowerInvariant() switch
-            {
-                "failed" => VectorDocumentIndexingStatus.Failed,
-                "ready" => VectorDocumentIndexingStatus.Completed,       // ProcessingState.Ready = fully indexed
-                "pending" => VectorDocumentIndexingStatus.Pending,
-                _ => VectorDocumentIndexingStatus.Processing             // uploading/extracting/chunking/embedding/indexing
-            };
-            return new VectorDocumentIndexingInfo(inferredStatus, 0, null);
-        }
-
-        // Fourth fallback: the caller passed a SharedGame.Id (catalog game ID), but
-        // UploadPdfCommandHandler.FindOrCreateGameAsync resolves it to an internal
-        // GameEntity.Id (games table) before saving PdfDocument.GameId.
-        // So PdfDocument.GameId = internalId != sharedGameId.
-        // Resolve via: GameEntity.SharedGameId == gameId → GameEntity.Id → PdfDocument.GameId.
-        var internalGameIds = await DbContext.Games
-            .AsNoTracking()
-            .Where(g => g.SharedGameId == gameId)
-            .Select(g => g.Id)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        if (internalGameIds.Count == 0)
+        if (pdfProcessingState is null)
             return null;
 
-        // Retry VectorDocument lookup with internal game IDs (post-indexing)
-        var infoViaInternal = await DbContext.VectorDocuments
-            .AsNoTracking()
-            .Where(vd => vd.GameId != null && internalGameIds.Contains(vd.GameId.Value))
-            .OrderByDescending(vd => vd.IndexedAt ?? DateTime.MaxValue)
-            .Select(vd => new { vd.IndexingStatus, vd.ChunkCount, vd.IndexingError })
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        if (infoViaInternal is not null)
-        {
-            var statusViaInternal = Enum.Parse<VectorDocumentIndexingStatus>(infoViaInternal.IndexingStatus, ignoreCase: true);
-            return new VectorDocumentIndexingInfo(statusViaInternal, infoViaInternal.ChunkCount, infoViaInternal.IndexingError);
-        }
-
-        // Retry PdfDocument ProcessingState lookup with internal game IDs (in-pipeline)
-        var pdfStateViaInternal = await DbContext.PdfDocuments
-            .AsNoTracking()
-            .Where(pdf => pdf.GameId != null && internalGameIds.Contains(pdf.GameId.Value))
-            .Select(pdf => pdf.ProcessingState)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        if (pdfStateViaInternal is null)
-            return null;
-
-        var inferredStatusViaInternal = pdfStateViaInternal.ToLowerInvariant() switch
+        var inferredStatus = pdfProcessingState.ToLowerInvariant() switch
         {
             "failed" => VectorDocumentIndexingStatus.Failed,
-            "ready" => VectorDocumentIndexingStatus.Completed,
+            "ready" => VectorDocumentIndexingStatus.Completed,       // ProcessingState.Ready = fully indexed
             "pending" => VectorDocumentIndexingStatus.Pending,
-            _ => VectorDocumentIndexingStatus.Processing
+            _ => VectorDocumentIndexingStatus.Processing             // uploading/extracting/chunking/embedding/indexing
         };
-        return new VectorDocumentIndexingInfo(inferredStatusViaInternal, 0, null);
+        return new VectorDocumentIndexingInfo(inferredStatus, 0, null);
     }
 
     public async Task<List<Guid>> GetGameIdsWithDocumentsAsync(

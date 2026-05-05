@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -34,7 +35,7 @@ internal class GetPromptAuditLogQueryHandler : IQueryHandler<GetPromptAuditLogQu
 
         if (template == null)
         {
-            throw new InvalidOperationException($"Template not found: {request.TemplateId}");
+            throw new NotFoundException("Template", request.TemplateId);
         }
 
         var auditEntries = await _db.PromptAuditLogs

@@ -398,7 +398,7 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         var pdfDoc = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            GameId = game.Id,
+            SharedGameId = game.Id,
             FileName = "test.pdf",
             FilePath = "/tmp/test.pdf",
             FileSizeBytes = 1000,

@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MeepleAI — Design System Tokens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="components.css" />
+<style>
+  .ds-stage { padding: 88px 32px 96px; max-width: 1400px; margin: 0 auto; }
+
+  .ds-hero { margin-bottom: 48px; }
+  .ds-hero .kicker {
+    font-family: var(--f-mono); font-size: 11px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .12em; margin-bottom: 10px;
+  }
+  .ds-hero h1 {
+    font-size: clamp(36px, 6vw, 56px); line-height: 1.05; margin-bottom: 12px;
+  }
+  .ds-hero h1 em {
+    font-style: normal;
+    background: linear-gradient(120deg, hsl(var(--c-toolkit)), hsl(var(--c-kb)) 70%, hsl(var(--c-chat)));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .ds-hero p { color: var(--text-sec); font-size: 16px; max-width: 680px; line-height: 1.55; }
+
+  /* Section shell */
+  .ds-section { margin-bottom: 72px; scroll-margin-top: 80px; }
+  .ds-section > h2 {
+    font-size: 28px; margin-bottom: 6px;
+    display: flex; align-items: baseline; gap: 14px;
+  }
+  .ds-section > h2 .n {
+    font-family: var(--f-mono); font-size: 13px; color: var(--text-muted);
+    font-weight: 500; letter-spacing: .08em;
+  }
+  .ds-section > .desc {
+    color: var(--text-sec); font-size: 14px; max-width: 640px;
+    margin-bottom: 28px; line-height: 1.55;
+  }
+
+  /* ── Entity palette (big cards) ── */
+  .pal-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .pal-card {
+    position: relative; aspect-ratio: 5/4; border-radius: var(--r-xl);
+    padding: 18px; color: #fff;
+    background: linear-gradient(150deg, hsl(var(--e)) 0%, hsl(var(--e) / .75) 100%);
+    display: flex; flex-direction: column; justify-content: space-between;
+    overflow: hidden; box-shadow: var(--shadow-sm);
+  }
+  .pal-card::before {
+    content: ''; position: absolute; right: -20px; top: -20px;
+    width: 100px; height: 100px; border-radius: 50%;
+    background: hsl(0 0% 100% / .18); filter: blur(4px);
+  }
+  .pal-card .em {
+    font-size: 28px; position: relative; z-index: 1;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.2));
+  }
+  .pal-card .name {
+    font-family: var(--f-display); font-size: 18px; font-weight: 700;
+    letter-spacing: -.01em; position: relative; z-index: 1;
+  }
+  .pal-card .hsl {
+    font-family: var(--f-mono); font-size: 10px; opacity: .75;
+    margin-top: 2px; position: relative; z-index: 1;
+  }
+  .pal-card .usage {
+    font-size: 11px; opacity: .9; margin-top: 4px;
+    position: relative; z-index: 1; line-height: 1.35;
+  }
+
+  /* ── Semantic colors ── */
+  .sem-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .sem {
+    padding: 16px; border-radius: var(--r-lg);
+    background: var(--bg-card); border: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .sem .sw {
+    width: 48px; height: 48px; border-radius: var(--r-md);
+    flex-shrink: 0;
+  }
+  .sem .lbl { font-family: var(--f-display); font-weight: 700; font-size: 14px; }
+  .sem .val { font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ── Surfaces ── */
+  .surf-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .surf {
+    padding: 16px; border-radius: var(--r-lg);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+    min-height: 72px;
+  }
+  .surf .lbl-box { flex: 1; }
+  .surf .lbl { font-family: var(--f-display); font-weight: 700; font-size: 13px; }
+  .surf .val { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ── Typography ── */
+  .type-table {
+    display: grid; grid-template-columns: 140px 1fr auto; gap: 16px 24px;
+    align-items: baseline; padding: 24px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+  }
+  .type-table .lab { font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); }
+  .type-table .val { font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); text-align: right; }
+  .type-table .spec { line-height: 1; color: var(--text); }
+
+  .ff-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    margin-bottom: 24px;
+  }
+  .ff {
+    padding: 20px; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+  }
+  .ff .role { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
+  .ff .name { font-size: 22px; font-weight: 700; margin: 6px 0 4px; letter-spacing: -.01em; }
+  .ff .sample-d { font-family: var(--f-display); font-size: 14px; margin-top: 10px; }
+  .ff .sample-b { font-family: var(--f-body); font-size: 14px; margin-top: 10px; }
+  .ff .sample-m { font-family: var(--f-mono); font-size: 13px; margin-top: 10px; }
+
+  /* ── Spacing ── */
+  .space-row {
+    display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+    padding: 24px; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: var(--r-xl);
+  }
+  .sp {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .sp .box {
+    background: linear-gradient(135deg, hsl(var(--c-game)), hsl(var(--c-event)));
+    border-radius: var(--r-sm);
+  }
+  .sp .tk { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); }
+  .sp .vx { font-family: var(--f-mono); font-size: 10px; color: var(--text); font-weight: 600; }
+
+  /* ── Radius ── */
+  .radius-row {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px;
+  }
+  .rad {
+    background: var(--bg-card); border: 1px solid var(--border);
+    padding: 20px 12px; display: flex; flex-direction: column;
+    align-items: center; gap: 10px;
+  }
+  .rad .box {
+    width: 100%; aspect-ratio: 1;
+    background: linear-gradient(135deg, hsl(var(--c-player)), hsl(var(--c-chat)));
+  }
+  .rad .tk { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); }
+  .rad .v { font-family: var(--f-mono); font-size: 10px; font-weight: 600; }
+
+  /* ── Shadows ── */
+  .shad-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 24px; padding: 40px; background: var(--bg-muted);
+    border-radius: var(--r-xl);
+  }
+  .sh {
+    background: var(--bg-card); border-radius: var(--r-lg);
+    padding: 24px 16px; text-align: center;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .sh.xs { box-shadow: var(--shadow-xs); }
+  .sh.sm { box-shadow: var(--shadow-sm); }
+  .sh.md { box-shadow: var(--shadow-md); }
+  .sh.lg { box-shadow: var(--shadow-lg); }
+  .sh .tk { font-family: var(--f-mono); font-size: 11px; font-weight: 700; }
+  .sh .vx { font-family: var(--f-mono); font-size: 9px; color: var(--text-muted); }
+
+  /* ── Motion ── */
+  .motion-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+  }
+  .mt {
+    padding: 20px; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--r-lg); cursor: pointer; overflow: hidden;
+  }
+  .mt .lab { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); }
+  .mt .name { font-family: var(--f-display); font-size: 14px; font-weight: 700; margin: 4px 0 12px; }
+  .mt .track { height: 6px; background: var(--bg-muted); border-radius: 3px; position: relative; overflow: hidden; }
+  .mt .ball {
+    position: absolute; left: 0; top: -4px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: hsl(var(--c-chat));
+    transform: translateX(0);
+  }
+  .mt.run .ball { animation: runroll var(--dur, 400ms) var(--ease, linear) forwards; }
+  @keyframes runroll {
+    from { transform: translateX(0); } to { transform: translateX(calc(100% - 14px)); }
+  }
+  .mt .hint { font-size: 11px; color: var(--text-muted); margin-top: 10px; }
+
+  /* ── Component playground ── */
+  .cp-grid {
+    display: grid; grid-template-columns: 280px 1fr; gap: 24px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--r-2xl); overflow: hidden;
+  }
+  @media (max-width: 900px) { .cp-grid { grid-template-columns: 1fr; } }
+  .cp-side {
+    background: var(--bg-muted); padding: 24px; border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  .cp-side h3 {
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .cp-side .field { display: flex; flex-direction: column; gap: 6px; }
+  .cp-side .field label { font-size: 12px; font-weight: 700; font-family: var(--f-display); }
+  .cp-side .seg {
+    display: flex; gap: 4px; padding: 3px;
+    background: var(--bg-sunken); border-radius: var(--r-md);
+  }
+  .cp-side .seg button {
+    flex: 1; padding: 6px; border: 0;
+    background: transparent; border-radius: 6px;
+    font-size: 11px; font-weight: 700; color: var(--text-sec);
+    font-family: var(--f-display);
+  }
+  .cp-side .seg button.on {
+    background: var(--bg-card); color: var(--text);
+    box-shadow: var(--shadow-xs);
+  }
+  .cp-side .ent-picker {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
+  }
+  .cp-side .ent-picker button {
+    aspect-ratio: 1; border: 2px solid transparent; border-radius: var(--r-sm);
+    background: hsl(var(--pe)); font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cp-side .ent-picker button.on {
+    border-color: var(--text);
+    transform: scale(1.1);
+  }
+
+  .cp-stage {
+    padding: 48px 32px;
+    background:
+      radial-gradient(circle at 10% 0%, hsl(var(--pe, var(--c-game)) / .08), transparent 60%),
+      radial-gradient(circle at 100% 100%, hsl(var(--pe, var(--c-game)) / .05), transparent 60%);
+    min-height: 480px;
+    display: flex; flex-direction: column; gap: 24px;
+  }
+  .cp-stage .demo-label {
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .08em; font-weight: 600;
+  }
+  .cp-stage .demo-row {
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+  }
+  .cp-stage .demo-card {
+    padding: 18px; border-radius: var(--r-xl);
+    background: var(--bg-card); border: 1px solid var(--border);
+    min-width: 240px;
+  }
+  .cp-stage .demo-card.tint {
+    background: hsl(var(--pe) / .08);
+    border-color: hsl(var(--pe) / .3);
+  }
+
+  /* Toggle for size */
+  .cp-stage .demo-btn {
+    font-family: var(--f-display); font-weight: 700; border: 0; border-radius: var(--r-md);
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: transform var(--dur-sm) var(--ease-out), box-shadow var(--dur-sm) var(--ease-out);
+    cursor: pointer;
+  }
+  .cp-stage .demo-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .cp-stage .demo-btn.sm { padding: 6px 12px; font-size: 12px; }
+  .cp-stage .demo-btn.md { padding: 10px 16px; font-size: 14px; }
+  .cp-stage .demo-btn.lg { padding: 14px 22px; font-size: 16px; }
+  .cp-stage .demo-btn.primary { background: hsl(var(--pe)); color: #fff; }
+  .cp-stage .demo-btn.ghost { background: transparent; border: 1px solid hsl(var(--pe) / .4); color: hsl(var(--pe)); }
+  .cp-stage .demo-btn.tinted { background: hsl(var(--pe) / .12); color: hsl(var(--pe)); }
+
+  .cp-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: var(--r-sm);
+    background: hsl(var(--pe) / .12); color: hsl(var(--pe));
+    font-size: 11px; font-weight: 700; font-family: var(--f-display);
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .cp-chip .d { width: 6px; height: 6px; border-radius: 50%; background: hsl(var(--pe)); }
+
+  /* connection bar demo */
+  .cbar {
+    display: inline-flex; gap: 0; border-radius: var(--r-pill);
+    background: var(--bg-card); padding: 4px;
+    border: 1px solid var(--border);
+  }
+  .cbar .pip {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; position: relative;
+    margin-right: -6px;
+    border: 2px solid var(--bg-card);
+  }
+  .cbar .pip:last-child { margin-right: 0; }
+  .cbar .more {
+    margin-left: 2px; padding: 0 10px;
+    display: flex; align-items: center;
+    font-family: var(--f-mono); font-size: 11px; color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  /* mini drawer */
+  .mdrawer {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--r-2xl); width: 280px; overflow: hidden;
+    box-shadow: var(--shadow-lg);
+  }
+  .mdrawer .handle {
+    height: 5px; width: 40px; border-radius: 3px;
+    background: var(--border-strong); margin: 10px auto;
+  }
+  .mdrawer .hero {
+    height: 80px;
+    background: linear-gradient(135deg, hsl(var(--pe)), hsl(var(--pe) / .6));
+    display: flex; align-items: flex-end; padding: 12px;
+    color: #fff; font-family: var(--f-display); font-weight: 700;
+  }
+  .mdrawer .body { padding: 14px; }
+  .mdrawer .row {
+    font-size: 12px; color: var(--text-sec); padding: 6px 0;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .mdrawer .row:last-child { border-bottom: 0; }
+  .mdrawer .row b { color: var(--text); font-weight: 700; }
+
+  /* ── TOC sidebar ── */
+  .toc {
+    position: fixed; left: 24px; top: 50%; transform: translateY(-50%);
+    background: var(--glass-bg); backdrop-filter: blur(10px);
+    border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 14px 10px; z-index: 30;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .toc a {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: var(--r-sm);
+    font-size: 11px; font-weight: 700; font-family: var(--f-display);
+    color: var(--text-sec);
+  }
+  .toc a .n { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); }
+  .toc a:hover { background: var(--bg-hover); color: var(--text); }
+  @media (max-width: 1100px) { .toc { display: none; } }
+
+  /* ── Code block ── */
+  .code {
+    font-family: var(--f-mono); font-size: 12px;
+    background: var(--bg-sunken); color: var(--text);
+    padding: 14px 16px; border-radius: var(--r-md);
+    border: 1px solid var(--border-light);
+    white-space: pre; overflow-x: auto;
+  }
+  .code .k { color: hsl(var(--c-chat)); }
+  .code .v { color: hsl(var(--c-game)); }
+  .code .c { color: var(--text-muted); font-style: italic; }
+</style>
+</head>
+<body>
+
+<nav class="hub-nav">
+  <div class="brand"><span class="brand-mark">M</span><span>MeepleAI</span></div>
+  <span style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--bg-muted);font-family:var(--f-mono);color:var(--text-muted);">04 · Tokens</span>
+  <div class="spacer"></div>
+  <a href="index.html">← Hub</a>
+  <a href="01-screens.html">Screens</a>
+  <a href="02-desktop-patterns.html">Desktop</a>
+  <a href="03-drawer-variants.html">Drawer</a>
+  <a href="04-design-system.html" class="active">Tokens</a>
+  <a href="05-dark-mode.html">Dark</a>
+</nav>
+
+<button class="theme-toggle" id="themeToggle">🌗 <span id="themeLabel">Light</span></button>
+
+<aside class="toc">
+  <a href="#colors"><span class="n">01</span>Colors</a>
+  <a href="#surfaces"><span class="n">02</span>Surfaces</a>
+  <a href="#type"><span class="n">03</span>Type</a>
+  <a href="#spacing"><span class="n">04</span>Spacing</a>
+  <a href="#radius"><span class="n">05</span>Radius</a>
+  <a href="#shadows"><span class="n">06</span>Shadow</a>
+  <a href="#motion"><span class="n">07</span>Motion</a>
+  <a href="#playground"><span class="n">08</span>Play</a>
+</aside>
+
+<div class="ds-stage">
+
+  <header class="ds-hero">
+    <div class="kicker">Design System v1 · Tokens &amp; Components</div>
+    <h1>Tutti i <em>tokens</em> del sistema,<br/>con un playground per provarli.</h1>
+    <p>
+      La fondazione visiva di MeepleAI: 9 entity colors, palette semantica, typography, scale di spacing,
+      radius, shadows e motion. Tutto definito in <code>tokens.css</code> e pronto per light/dark. In fondo
+      trovi un playground per vedere i componenti vivi.
+    </p>
+  </header>
+
+  <!-- ═════════ COLORS ═════════ -->
+  <section class="ds-section" id="colors">
+    <h2><span class="n">01</span> Entity palette</h2>
+    <p class="desc">
+      9 colori, uno per entity type. Espressi in HSL per rendere facile la composizione con alpha
+      (<code>hsl(var(--c-game) / .12)</code> per i tint). Semanticamente legati al ruolo:
+      caldi (game, agent, event) per azione/contenuto, freddi (session, chat, tool) per stato/sistema.
+    </p>
+    <div class="pal-grid" id="palGrid"></div>
+  </section>
+
+  <section class="ds-section">
+    <h2><span class="n">01b</span> Semantic colors</h2>
+    <p class="desc">Collegati agli entity per coerenza: success = toolkit, warning = agent, danger = event, info = chat.</p>
+    <div class="sem-grid">
+      <div class="sem"><div class="sw" style="background:hsl(var(--c-success));"></div>
+        <div><div class="lbl">Success</div><div class="val">--c-success → toolkit</div></div></div>
+      <div class="sem"><div class="sw" style="background:hsl(var(--c-warning));"></div>
+        <div><div class="lbl">Warning</div><div class="val">--c-warning → agent</div></div></div>
+      <div class="sem"><div class="sw" style="background:hsl(var(--c-danger));"></div>
+        <div><div class="lbl">Danger</div><div class="val">--c-danger → event</div></div></div>
+      <div class="sem"><div class="sw" style="background:hsl(var(--c-info));"></div>
+        <div><div class="lbl">Info</div><div class="val">--c-info → chat</div></div></div>
+    </div>
+  </section>
+
+  <!-- ═════════ SURFACES ═════════ -->
+  <section class="ds-section" id="surfaces">
+    <h2><span class="n">02</span> Surfaces &amp; text</h2>
+    <p class="desc">Warm neutrals (beige/brown tinted) per matchare il mondo board-game/legno. 4 livelli di background + 3 di testo.</p>
+
+    <div class="section-label" style="margin-top:0;">Background</div>
+    <div class="surf-grid">
+      <div class="surf" style="background:var(--bg);"><div class="lbl-box"><div class="lbl">--bg</div><div class="val">Base canvas</div></div></div>
+      <div class="surf" style="background:var(--bg-card);"><div class="lbl-box"><div class="lbl">--bg-card</div><div class="val">Card surface</div></div></div>
+      <div class="surf" style="background:var(--bg-muted);"><div class="lbl-box"><div class="lbl">--bg-muted</div><div class="val">Subtle block</div></div></div>
+      <div class="surf" style="background:var(--bg-sunken);"><div class="lbl-box"><div class="lbl">--bg-sunken</div><div class="val">Deep/inset</div></div></div>
+    </div>
+
+    <div class="section-label">Text</div>
+    <div class="surf-grid">
+      <div class="surf"><div class="lbl-box"><div class="lbl" style="color:var(--text);">--text</div><div class="val">Primary</div></div></div>
+      <div class="surf"><div class="lbl-box"><div class="lbl" style="color:var(--text-sec);">--text-sec</div><div class="val">Secondary</div></div></div>
+      <div class="surf"><div class="lbl-box"><div class="lbl" style="color:var(--text-muted);">--text-muted</div><div class="val">Muted · labels, meta</div></div></div>
+    </div>
+  </section>
+
+  <!-- ═════════ TYPE ═════════ -->
+  <section class="ds-section" id="type">
+    <h2><span class="n">03</span> Typography</h2>
+    <p class="desc">Due famiglie per contesto: Quicksand rotondo per UI/titoli/brand, Nunito per body, JetBrains Mono per labels tecnici e codice.</p>
+
+    <div class="ff-row">
+      <div class="ff">
+        <div class="role">--f-display</div>
+        <div class="name" style="font-family:var(--f-display);">Quicksand</div>
+        <div class="sample-d">UI, titoli, brand, componenti — 400/500/600/700</div>
+      </div>
+      <div class="ff">
+        <div class="role">--f-body</div>
+        <div class="name" style="font-family:var(--f-body);">Nunito</div>
+        <div class="sample-b">Paragrafi, body copy, descrizioni — 400/500/600/700/800</div>
+      </div>
+      <div class="ff">
+        <div class="role">--f-mono</div>
+        <div class="name" style="font-family:var(--f-mono);">JetBrains Mono</div>
+        <div class="sample-m">Tokens, labels, code — 400/500/600</div>
+      </div>
+    </div>
+
+    <div class="type-table">
+      <div class="lab">--fs-4xl / bold</div>
+      <div class="spec" style="font-family:var(--f-display);font-size:40px;font-weight:700;">Display hero</div>
+      <div class="val">40px · 1.05</div>
+
+      <div class="lab">--fs-3xl / bold</div>
+      <div class="spec" style="font-family:var(--f-display);font-size:32px;font-weight:700;">Titolo sezione</div>
+      <div class="val">32px · 1.2</div>
+
+      <div class="lab">--fs-2xl / semi</div>
+      <div class="spec" style="font-family:var(--f-display);font-size:24px;font-weight:600;">Heading card</div>
+      <div class="val">24px · 1.25</div>
+
+      <div class="lab">--fs-xl / semi</div>
+      <div class="spec" style="font-family:var(--f-display);font-size:20px;font-weight:600;">Subtitle</div>
+      <div class="val">20px · 1.35</div>
+
+      <div class="lab">--fs-lg</div>
+      <div class="spec" style="font-size:17px;">Lead paragraph — questa è la taglia per testo introduttivo.</div>
+      <div class="val">17px · 1.5</div>
+
+      <div class="lab">--fs-base</div>
+      <div class="spec" style="font-size:14px;">Body default — il paragrafo principale dell'app.</div>
+      <div class="val">14px · 1.5</div>
+
+      <div class="lab">--fs-sm</div>
+      <div class="spec" style="font-size:12px;">Meta, captions, secondary UI.</div>
+      <div class="val">12px · 1.5</div>
+
+      <div class="lab">--fs-xs · mono</div>
+      <div class="spec" style="font-family:var(--f-mono);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;">token · label · kicker</div>
+      <div class="val">11px mono</div>
+    </div>
+  </section>
+
+  <!-- ═════════ SPACING ═════════ -->
+  <section class="ds-section" id="spacing">
+    <h2><span class="n">04</span> Spacing scale</h2>
+    <p class="desc">Griglia 4px, da 0 a 64px. Usa nomi (--s-3) non valori raw, così rename globale è un token.</p>
+    <div class="space-row" id="spaceRow"></div>
+  </section>
+
+  <!-- ═════════ RADIUS ═════════ -->
+  <section class="ds-section" id="radius">
+    <h2><span class="n">05</span> Radius</h2>
+    <p class="desc">7 step. xs-sm per chips/badges, md-lg per bottoni e input, xl-2xl per cards e drawer, pill per entity pips.</p>
+    <div class="radius-row" id="radRow"></div>
+  </section>
+
+  <!-- ═════════ SHADOWS ═════════ -->
+  <section class="ds-section" id="shadows">
+    <h2><span class="n">06</span> Shadows</h2>
+    <p class="desc">Warm brown-tinted su light, pure black su dark. 4 elevazioni + una dedicata al drawer (shadow che sale dal basso).</p>
+    <div class="shad-row">
+      <div class="sh xs"><div class="tk">--shadow-xs</div><div class="vx">Hover subtle</div></div>
+      <div class="sh sm"><div class="tk">--shadow-sm</div><div class="vx">Card resting</div></div>
+      <div class="sh md"><div class="tk">--shadow-md</div><div class="vx">Card hover</div></div>
+      <div class="sh lg"><div class="tk">--shadow-lg</div><div class="vx">Floating · Drawer</div></div>
+    </div>
+  </section>
+
+  <!-- ═════════ MOTION ═════════ -->
+  <section class="ds-section" id="motion">
+    <h2><span class="n">07</span> Motion</h2>
+    <p class="desc">Click su una card per provarla. Ease-out per entrate/UI, ease-spring per drawer e bottom sheet, durate scalate su distanza.</p>
+    <div class="motion-row" id="motionRow"></div>
+  </section>
+
+  <!-- ═════════ PLAYGROUND ═════════ -->
+  <section class="ds-section" id="playground">
+    <h2><span class="n">08</span> Component playground</h2>
+    <p class="desc">Cambia entity o size → i componenti si aggiornano live usando le stesse CSS custom properties del sistema.</p>
+
+    <div class="cp-grid" id="cpGrid" style="--pe: var(--c-session);">
+      <aside class="cp-side">
+        <div>
+          <h3>Entity</h3>
+          <div class="ent-picker" id="entPicker"></div>
+        </div>
+        <div class="field">
+          <label>Button size</label>
+          <div class="seg" id="sizeSeg">
+            <button data-val="sm">Small</button>
+            <button data-val="md" class="on">Medium</button>
+            <button data-val="lg">Large</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Radius</label>
+          <div class="seg" id="radSeg">
+            <button data-val="md">Md</button>
+            <button data-val="lg" class="on">Lg</button>
+            <button data-val="xl">Xl</button>
+            <button data-val="2xl">2xl</button>
+          </div>
+        </div>
+        <div>
+          <h3 style="margin-top:4px;">Token usato</h3>
+          <div class="code" style="font-size:10px;padding:10px;">--e: <span class="k">var(</span><span class="v" id="tkVar">--c-session</span><span class="k">)</span>;</div>
+        </div>
+      </aside>
+
+      <div class="cp-stage" id="cpStage">
+        <div>
+          <div class="demo-label">Buttons</div>
+          <div class="demo-row" style="margin-top:10px;">
+            <button class="demo-btn primary" id="btn1">Primary action</button>
+            <button class="demo-btn tinted" id="btn2">Secondary</button>
+            <button class="demo-btn ghost" id="btn3">Ghost</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="demo-label">Chips &amp; badges</div>
+          <div class="demo-row" style="margin-top:10px;">
+            <span class="cp-chip"><span class="d"></span><span id="chip1">Session</span></span>
+            <span class="cp-chip" style="background:hsl(var(--pe));color:#fff;"><span id="chip2">Attivo</span></span>
+            <span class="cp-chip" style="background:transparent;border:1px solid hsl(var(--pe) / .4);"><span id="chip3">In corso</span></span>
+          </div>
+        </div>
+
+        <div>
+          <div class="demo-label">Connection bar</div>
+          <div class="cbar" style="margin-top:10px;">
+            <div class="pip" style="background:hsl(var(--c-game));color:#fff;">🎲</div>
+            <div class="pip" style="background:hsl(var(--c-player));color:#fff;">👤</div>
+            <div class="pip" style="background:hsl(var(--c-agent));color:#fff;">🤖</div>
+            <div class="pip" style="background:hsl(var(--c-kb));color:#fff;">📄</div>
+            <div class="more">+2</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="demo-label">Mini drawer preview</div>
+          <div class="mdrawer" id="mDrawer" style="margin-top:10px;">
+            <div class="handle"></div>
+            <div class="hero">
+              <div><div id="drEmoji" style="font-size:20px;">🎯</div><div id="drTitle">Serata Azul</div></div>
+            </div>
+            <div class="body">
+              <div class="row">Type · <b id="drType">Session</b></div>
+              <div class="row">Status · <b>In corso</b></div>
+              <div class="row">Turn · <b>3/5</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer style="max-width:1400px;margin:0 auto;padding:48px 32px;border-top:1px solid var(--border);color:var(--text-muted);font-size:12px;">
+  MeepleAI Design System v1 — Tokens definiti in <code>tokens.css</code> (202 righe) ·
+  Componenti in <code>components.css</code> · Dataset in <code>data.js</code>
+</footer>
+
+<script src="data.js"></script>
+<script>
+  // Theme toggle
+  const root = document.documentElement;
+  const saved = localStorage.getItem('mai-theme') || 'light';
+  root.setAttribute('data-theme', saved);
+  document.getElementById('themeLabel').textContent = saved === 'dark' ? 'Dark' : 'Light';
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const cur = root.getAttribute('data-theme');
+    const next = cur === 'light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('mai-theme', next);
+    document.getElementById('themeLabel').textContent = next === 'dark' ? 'Dark' : 'Light';
+  });
+
+  // Entity palette cards
+  const palGrid = document.getElementById('palGrid');
+  const usage = {
+    game: 'Giochi, libreria, copertine',
+    player: 'Giocatori, stats, wins',
+    session: 'Partite, sessioni live',
+    agent: 'Bot AI, expert',
+    kb: 'Docs, knowledge base',
+    chat: 'Chat, conversazioni',
+    event: 'Eventi, calendario, live',
+    toolkit: 'Toolkit, strumenti, published',
+    tool: 'Tool singoli, timer, counter',
+  };
+  Object.entries(DS.EC).forEach(([k, v]) => {
+    const el = document.createElement('div');
+    el.className = 'pal-card e-' + k;
+    el.innerHTML = `
+      <div><div class="em">${v.em}</div></div>
+      <div>
+        <div class="name">${v.lb}</div>
+        <div class="hsl">${v.h} ${v.s}% ${v.l}%</div>
+        <div class="usage">${usage[k]}</div>
+      </div>`;
+    palGrid.appendChild(el);
+  });
+
+  // Spacing row
+  const spaceRow = document.getElementById('spaceRow');
+  const spaces = [
+    ['s-1', 4], ['s-2', 8], ['s-3', 12], ['s-4', 16], ['s-5', 20],
+    ['s-6', 24], ['s-7', 32], ['s-8', 40], ['s-9', 48], ['s-10', 64]
+  ];
+  spaces.forEach(([tk, px]) => {
+    const el = document.createElement('div');
+    el.className = 'sp';
+    el.innerHTML = `<div class="box" style="width:${px}px;height:${px}px;"></div>
+      <div class="tk">--${tk}</div><div class="vx">${px}</div>`;
+    spaceRow.appendChild(el);
+  });
+
+  // Radius row
+  const radRow = document.getElementById('radRow');
+  const rads = [
+    ['r-xs', 4], ['r-sm', 6], ['r-md', 10], ['r-lg', 14],
+    ['r-xl', 18], ['r-2xl', 24], ['r-pill', 9999]
+  ];
+  rads.forEach(([tk, px]) => {
+    const el = document.createElement('div');
+    el.className = 'rad';
+    el.innerHTML = `<div class="box" style="border-radius:${px===9999?'9999px':px+'px'};"></div>
+      <div class="tk">--${tk}</div><div class="v">${px===9999?'pill':px+'px'}</div>`;
+    radRow.appendChild(el);
+  });
+
+  // Motion row
+  const motionRow = document.getElementById('motionRow');
+  const motions = [
+    ['dur-xs', 120, 'ease-out', 'Micro hover, toggle'],
+    ['dur-sm', 180, 'ease-out', 'Chip, button'],
+    ['dur-md', 280, 'ease-out', 'Drawer open, card'],
+    ['dur-lg', 400, 'ease-spring', 'Bottom sheet bounce'],
+    ['dur-xl', 600, 'ease-in-out', 'Page transition'],
+  ];
+  const easeMap = {
+    'ease-out': 'cubic-bezier(.16,1,.3,1)',
+    'ease-spring': 'cubic-bezier(.34,1.56,.64,1)',
+    'ease-in-out': 'cubic-bezier(.65,0,.35,1)',
+  };
+  motions.forEach(([tk, dur, ease, hint]) => {
+    const el = document.createElement('div');
+    el.className = 'mt';
+    el.style.setProperty('--dur', dur + 'ms');
+    el.style.setProperty('--ease', easeMap[ease]);
+    el.innerHTML = `<div class="lab">--${tk} · ${ease}</div>
+      <div class="name">${dur}ms</div>
+      <div class="track"><div class="ball"></div></div>
+      <div class="hint">${hint}</div>`;
+    el.addEventListener('click', () => {
+      el.classList.remove('run'); void el.offsetWidth;
+      el.classList.add('run');
+    });
+    motionRow.appendChild(el);
+  });
+  // auto-play once
+  setTimeout(() => document.querySelectorAll('.mt').forEach((m, i) => setTimeout(() => m.click(), i * 180)), 600);
+
+  // ── PLAYGROUND ──
+  const cpGrid = document.getElementById('cpGrid');
+  const entPicker = document.getElementById('entPicker');
+  Object.entries(DS.EC).forEach(([k, v]) => {
+    const b = document.createElement('button');
+    b.style.setProperty('--pe', `var(--c-${k})`);
+    b.textContent = v.em;
+    b.dataset.ent = k;
+    b.title = v.lb;
+    if (k === 'session') b.classList.add('on');
+    b.addEventListener('click', () => {
+      entPicker.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      cpGrid.style.setProperty('--pe', `var(--c-${k})`);
+      document.getElementById('tkVar').textContent = '--c-' + k;
+      document.getElementById('drEmoji').textContent = v.em;
+      document.getElementById('drType').textContent = v.lb;
+      // Sample update per entity
+      const examples = {
+        game: { title: 'Azul', chip: 'Game', chip2: 'In Libreria' },
+        player: { title: 'Marco R.', chip: 'Player', chip2: 'Pro' },
+        session: { title: 'Serata Azul', chip: 'Session', chip2: 'In corso' },
+        agent: { title: 'Azul Expert', chip: 'Agent', chip2: 'Attivo' },
+        kb: { title: 'azul-regole.pdf', chip: 'KB', chip2: 'Indicizzato' },
+        chat: { title: 'Come si gioca?', chip: 'Chat', chip2: 'Attiva' },
+        event: { title: 'Serata Marco', chip: 'Event', chip2: 'Confermato' },
+        toolkit: { title: 'Azul Toolkit v2', chip: 'Toolkit', chip2: 'Pubblicato' },
+        tool: { title: 'Timer Turno', chip: 'Tool', chip2: 'Attivo' },
+      };
+      const ex = examples[k];
+      document.getElementById('drTitle').textContent = ex.title;
+      document.getElementById('chip1').textContent = ex.chip;
+      document.getElementById('chip2').textContent = ex.chip2;
+    });
+    entPicker.appendChild(b);
+  });
+
+  // size seg
+  document.querySelectorAll('#sizeSeg button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#sizeSeg button').forEach(x => x.classList.remove('on'));
+      btn.classList.add('on');
+      const sz = btn.dataset.val;
+      ['btn1','btn2','btn3'].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.remove('sm','md','lg');
+        el.classList.add(sz);
+      });
+    });
+  });
+  // init sizes
+  ['btn1','btn2','btn3'].forEach(id => document.getElementById(id).classList.add('md'));
+
+  // radius seg
+  const radMap = { 'md':'10px', 'lg':'14px', 'xl':'18px', '2xl':'24px' };
+  document.querySelectorAll('#radSeg button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#radSeg button').forEach(x => x.classList.remove('on'));
+      btn.classList.add('on');
+      const r = radMap[btn.dataset.val];
+      document.querySelectorAll('.cp-stage .demo-btn').forEach(el => el.style.borderRadius = r);
+      document.getElementById('mDrawer').style.borderRadius = r;
+    });
+  });
+</script>
+
+</body>
+</html>

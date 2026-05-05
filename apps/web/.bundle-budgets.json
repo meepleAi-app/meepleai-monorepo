@@ -1,0 +1,27 @@
+{
+  "description": "Per-route First Load JS budgets (gzipped bytes). Fails CI if measured size exceeds budget × (1 + tolerance). See docs/frontend/bundle-size-budget.md.",
+  "updatedAt": "2026-04-29",
+  "tolerance": 0.05,
+  "routes": {
+    "/shared-games": {
+      "gzippedBytes": 570217,
+      "note": "Wave A.3b catalog. Baseline 2026-04-29 measured."
+    },
+    "/shared-games/[id]": {
+      "gzippedBytes": 606268,
+      "note": "Wave A.4 detail. Baseline 2026-04-29 measured. Aspirational target 45KB documented in docs/frontend/bundle-size-budget.md (out of scope #629; deferred to optimization pass)."
+    },
+    "/discover": {
+      "gzippedBytes": 619000,
+      "note": "Baseline 2026-04-29 measured."
+    },
+    "/library": {
+      "gzippedBytes": 660649,
+      "note": "Baseline 2026-04-29 measured."
+    },
+    "/chat/[threadId]": {
+      "gzippedBytes": 631411,
+      "note": "Baseline 2026-04-29 measured."
+    }
+  }
+}

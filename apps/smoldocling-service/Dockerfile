@@ -43,9 +43,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     # PDF to Image conversion
     poppler-utils \
-    # Image processing
+    # Image processing (OpenCV + Pillow runtime)
     libgl1 \
     libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
     # Cleanup
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*

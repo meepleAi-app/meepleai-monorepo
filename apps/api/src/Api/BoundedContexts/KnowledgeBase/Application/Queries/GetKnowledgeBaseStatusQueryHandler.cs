@@ -62,7 +62,7 @@ internal class GetKnowledgeBaseStatusQueryHandler : IQueryHandler<GetKnowledgeBa
             var pdf = await _dbContext.PdfDocuments
                 .Where(p => query.IsPrivateGame
                     ? p.PrivateGameId == query.GameId
-                    : p.GameId == query.GameId)
+                    : p.SharedGameId == query.GameId)
                 .OrderByDescending(p => p.UploadedAt)
                 .AsNoTracking()
                 .Select(p => new

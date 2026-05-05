@@ -1,31 +1,20 @@
-import Link from 'next/link';
-
-import { Button } from '@/components/ui/primitives/button';
+import { HeroGradient } from '@/components/ui/v2/hero-gradient';
 
 export function WelcomeHero() {
   return (
-    <section
-      aria-label="Hero"
-      className="flex min-h-[80vh] flex-col items-center justify-center px-4 py-20 text-center"
-    >
-      <p className="mb-4 text-sm uppercase tracking-widest text-muted-foreground">
-        Il tuo compagno di gioco AI
-      </p>
-      <h1 className="mb-4 max-w-2xl text-4xl font-extrabold leading-tight text-foreground sm:text-5xl lg:text-6xl">
-        Ogni serata giochi merita un arbitro
-      </h1>
-      <p className="mb-10 max-w-lg text-lg text-muted-foreground">
-        Setup, regole, punteggi, dispute — un agente AI che conosce il tuo gioco e vi aiuta al
-        tavolo.
-      </p>
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Button asChild size="lg">
-          <Link href="/register">Inizia gratis</Link>
-        </Button>
-        <Button asChild variant="outline" size="lg">
-          <Link href="#come-funziona">Scopri come funziona ↓</Link>
-        </Button>
-      </div>
-    </section>
+    <HeroGradient
+      title={
+        <>
+          <span className="block text-sm uppercase tracking-widest text-muted-foreground mb-4 font-normal">
+            Il tuo compagno di gioco AI
+          </span>
+          <span className="block">Ogni serata giochi merita un arbitro</span>
+        </>
+      }
+      subtitle="Setup, regole, punteggi, dispute — un agente AI che conosce il tuo gioco e vi aiuta al tavolo."
+      primaryCta={{ label: 'Inizia gratis', href: '/register' }}
+      secondaryCta={{ label: 'Scopri come funziona ↓', href: '#come-funziona' }}
+      className="min-h-[80vh] flex flex-col items-center justify-center"
+    />
   );
 }

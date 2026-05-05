@@ -8,8 +8,6 @@ public class PdfDocumentEntity
 {
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid Id { get; set; } = Guid.NewGuid();
-    // DDD-PHASE2: Converted to Guid for domain alignment
-    public Guid? GameId { get; set; }
     public string FileName { get; set; } = default!;
     public string FilePath { get; set; } = default!;
     public long FileSizeBytes { get; set; }
@@ -119,7 +117,6 @@ public class PdfDocumentEntity
             : JsonSerializer.Serialize(value);
     }
 
-    public GameEntity Game { get; set; } = default!;
     public UserEntity UploadedBy { get; set; } = default!;
 
     // Issue #2051: Navigation to collection

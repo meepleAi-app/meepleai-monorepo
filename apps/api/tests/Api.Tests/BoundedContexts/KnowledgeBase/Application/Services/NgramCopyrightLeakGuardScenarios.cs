@@ -158,9 +158,9 @@ public class NgramCopyrightLeakGuardScenarios
         sw.Stop();
 
         Assert.False(result.HasLeak);
-        // CI tolerance: 250ms allowance on shared runners (target <50ms locally)
-        Assert.True(sw.ElapsedMilliseconds < 250,
-            $"Scan took {sw.ElapsedMilliseconds}ms, expected <250ms on CI (target <50ms local)");
+        // CI tolerance: 500ms allowance on shared ARM64 runners (target <50ms locally)
+        Assert.True(sw.ElapsedMilliseconds < 500,
+            $"Scan took {sw.ElapsedMilliseconds}ms, expected <500ms on CI (target <50ms local)");
     }
 
     [Fact]

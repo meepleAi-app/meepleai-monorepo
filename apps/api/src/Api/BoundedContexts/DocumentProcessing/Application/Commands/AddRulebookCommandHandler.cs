@@ -221,7 +221,7 @@ internal sealed class AddRulebookCommandHandler : ICommandHandler<AddRulebookCom
         var pdfDoc = new PdfDocumentEntity
         {
             Id = Guid.Parse(storageResult.FileId!),
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = fileName,
             FilePath = storageResult.FilePath!,
             FileSizeBytes = storageResult.FileSizeBytes,

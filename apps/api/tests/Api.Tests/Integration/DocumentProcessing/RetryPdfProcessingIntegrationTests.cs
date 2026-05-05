@@ -153,7 +153,7 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var failedPdf = new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "test.pdf",
             FilePath = "/test/path.pdf",
             FileSizeBytes = 1024,
@@ -204,7 +204,7 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var exhaustedPdf = new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "test.pdf",
             FilePath = "/test/path.pdf",
             FileSizeBytes = 1024,
@@ -255,7 +255,7 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var processingPdf = new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "test.pdf",
             FilePath = "/test/path.pdf",
             FileSizeBytes = 1024,
@@ -307,7 +307,7 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var failedPdf = new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "test.pdf",
             FilePath = "/test/path.pdf",
             FileSizeBytes = 1024,
@@ -359,7 +359,7 @@ public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime
         var failedPdf = new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "test.pdf",
             FilePath = "/test/path.pdf",
             FileSizeBytes = 1024,

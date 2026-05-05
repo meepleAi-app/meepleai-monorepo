@@ -14,20 +14,23 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+import clsx from 'clsx';
 import { useRouter } from 'next/navigation';
 
 import { AccessibleModal } from '@/components/accessible';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
+import { Divider } from '@/components/ui/v2/divider';
+import { OAuthButton } from '@/components/ui/v2/oauth-buttons';
 import { useAuth, type AuthUser } from '@/hooks/useAuth';
+import { useTranslation } from '@/hooks/useTranslation';
 import { trackSignUp } from '@/lib/analytics/flywheel-events';
 import { api } from '@/lib/api';
 import { logger } from '@/lib/logger';
 import { isAdminRole } from '@/lib/utils/roles';
 
 import { LoginForm, LoginFormData } from './LoginForm';
-import OAuthButtons from './OAuthButtons';
-import { RegisterForm, RegisterFormData } from './RegisterForm';
+import { buildOAuthUrl } from './oauth-url';
+import { RegisterForm, RegisterSubmitPayload } from './RegisterForm';
 import { TwoFactorVerification, TwoFactorVerificationData } from './TwoFactorVerification';
 
 // ============================================================================
@@ -60,6 +63,7 @@ export function AuthModal({
   hideOAuth = false,
 }: AuthModalProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const { register, loadCurrentUser, clearError } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(defaultMode);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -188,12 +192,20 @@ export function AuthModal({
 
   // Handle registration submission
   const handleRegister = useCallback(
-    async (data: Omit<RegisterFormData, 'confirmPassword'>) => {
+    async (data: RegisterSubmitPayload) => {
       setIsAuthenticating(true);
       setError('');
 
       try {
-        const user = await register(data);
+        // Bot protection: silently drop submissions that fill the honeypot.
+        if (data.honeypot && data.honeypot.length > 0) {
+          return;
+        }
+
+        const user = await register({
+          email: data.email,
+          password: data.password,
+        });
         trackSignUp({ method: 'email' });
         onSuccess?.(user);
         onClose();
@@ -217,16 +229,21 @@ export function AuthModal({
     [register, onSuccess, onClose, router]
   );
 
-  // Handle tab change
+  // Handle tab change (segmented control)
   const handleTabChange = useCallback(
-    (value: string) => {
-      setActiveTab(value as 'login' | 'register');
+    (value: 'login' | 'register') => {
+      setActiveTab(value);
       clearError();
       setError('');
       setIsAuthenticating(false);
     },
     [clearError]
   );
+
+  // Handle OAuth login — preserves legacy buildOAuthUrl behavior
+  const handleOAuthLogin = useCallback((provider: 'google' | 'discord' | 'github') => {
+    window.location.assign(buildOAuthUrl(provider));
+  }, []);
 
   // Determine modal title based on current state
   const getModalTitle = () => {
@@ -291,41 +308,60 @@ export function AuthModal({
               </div>
             )}
 
-            {/* Auth Tabs */}
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login" data-testid="auth-tab-login">
-                  Login
-                </TabsTrigger>
-                <TabsTrigger value="register" data-testid="auth-tab-register">
-                  Register
-                </TabsTrigger>
-              </TabsList>
+            {/* Auth Tabs (v2 segmented control) */}
+            <div
+              role="tablist"
+              aria-label={t('auth.modal.tabsLabel')}
+              className="grid grid-cols-2 gap-1 p-1 bg-muted rounded-lg mb-4"
+            >
+              {(['login', 'register'] as const).map(m => (
+                <button
+                  key={m}
+                  role="tab"
+                  type="button"
+                  aria-selected={activeTab === m}
+                  onClick={() => handleTabChange(m)}
+                  data-testid={`auth-tab-${m}`}
+                  className={clsx(
+                    'px-3 py-1.5 rounded-md text-sm font-body transition-colors',
+                    activeTab === m
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {m === 'login' ? t('auth.modal.loginTab') : t('auth.modal.registerTab')}
+                </button>
+              ))}
+            </div>
 
-              {/* Login Tab */}
-              <TabsContent value="login" className="space-y-4 mt-4">
-                <LoginForm
-                  onSubmit={handleLogin}
-                  loading={isAuthenticating}
-                  error={error}
-                  onErrorDismiss={() => setError('')}
-                />
-              </TabsContent>
+            {/* Active form */}
+            {activeTab === 'login' ? (
+              <LoginForm
+                onSubmit={handleLogin}
+                loading={isAuthenticating}
+                error={error}
+                onErrorDismiss={() => setError('')}
+              />
+            ) : (
+              <RegisterForm
+                onSubmit={handleRegister}
+                loading={isAuthenticating}
+                error={error}
+                onErrorDismiss={() => setError('')}
+              />
+            )}
 
-              {/* Register Tab */}
-              <TabsContent value="register" className="space-y-4 mt-4">
-                <RegisterForm
-                  onSubmit={handleRegister}
-                  loading={isAuthenticating}
-                  error={error}
-                  onErrorDismiss={() => setError('')}
-                  showRoleSelector={false}
-                />
-              </TabsContent>
-            </Tabs>
-
-            {/* OAuth Buttons (includes "Or continue with" separator) */}
-            <OAuthButtons hidden={hideOAuth} />
+            {/* OAuth section (hidden in alpha invite-only mode) */}
+            {!hideOAuth && (
+              <>
+                <Divider label={t('auth.oauth.separator')} />
+                <div className="flex flex-col gap-2">
+                  <OAuthButton provider="google" onClick={() => handleOAuthLogin('google')} />
+                  <OAuthButton provider="discord" onClick={() => handleOAuthLogin('discord')} />
+                  <OAuthButton provider="github" onClick={() => handleOAuthLogin('github')} />
+                </div>
+              </>
+            )}
           </>
         )}
       </div>

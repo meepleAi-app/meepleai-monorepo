@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Validators;
 /// </summary>
 internal sealed class UploadPrivatePdfCommandValidator : AbstractValidator<UploadPrivatePdfCommand>
 {
-    private const long MaxFileSizeBytes = 52_428_800; // 50 MB
+    private const long MaxFileSizeBytes = 104_857_600; // 100 MB
     private const string AllowedContentType = "application/pdf";
     private const string AllowedExtension = ".pdf";
 

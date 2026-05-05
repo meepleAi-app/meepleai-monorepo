@@ -252,18 +252,21 @@ test.describe('Password Reset - New Password Submission', () => {
     const newPasswordInput = page.getByLabel(/^new password$/i);
     await expect(newPasswordInput).toBeVisible({ timeout: 10000 });
 
-    // Weak password
+    // v2 StrengthMeter (strength-meter.tsx) renders "Password: <label>" where
+    // label ∈ {Debole, Discreta, Buona, Ottima} based on computeScore(password).
+
+    // Weak password — score 1 → "Debole"
     await newPasswordInput.fill('pass');
-    await expect(page.getByText(/password strength:/i)).toBeVisible();
-    await expect(page.getByText(/weak/i)).toBeVisible();
+    await expect(page.getByText(/^Password:/)).toBeVisible();
+    await expect(page.getByText(/Debole/)).toBeVisible();
 
-    // Medium password
+    // Medium/strong password — score 3+ → "Buona" or "Ottima"
     await newPasswordInput.fill('Password1');
-    await expect(page.getByText(/medium|strong/i)).toBeVisible();
+    await expect(page.getByText(/Buona|Ottima/)).toBeVisible();
 
-    // Strong password
+    // Strong password — top score → "Ottima"
     await newPasswordInput.fill(TEST_USER.newPassword);
-    await expect(page.getByText(/strong/i)).toBeVisible();
+    await expect(page.getByText(/Ottima/)).toBeVisible();
   });
 
   test('should validate password confirmation matches', async ({ page }) => {

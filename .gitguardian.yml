@@ -3,3 +3,6 @@ paths-ignore:
   - "**/appsettings.Development.json"
   - "**/*.example"
   - "**/*.sample"
+  - "**/__tests__/**"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"

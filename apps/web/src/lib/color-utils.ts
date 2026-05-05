@@ -1,3 +1,28 @@
+import type { EntityType } from '@/components/ui/v2/entity-tokens';
+
+/**
+ * Build an `hsl()` color string referencing a CSS entity color variable.
+ *
+ * Issue #572: V2 Phase 0 — eliminates hardcoded `hsl(<h>,<s>,<l>)` literals
+ * in v2 component code. Pairs with the ESLint `no-hardcoded-hex` rule which
+ * forbids inline color literals outside of token files.
+ *
+ * Returns:
+ * - `hsl(var(--c-<entity>))` when alpha is omitted
+ * - `hsl(var(--c-<entity>) / <alpha>)` when alpha is provided
+ *
+ * Note: alpha=0 and alpha=1 still emit the explicit `/ <alpha>` suffix —
+ * caller intent is preserved (only `undefined` skips the suffix).
+ *
+ * @example
+ * entityHsl('agent')         // "hsl(var(--c-agent))"
+ * entityHsl('agent', 0.1)    // "hsl(var(--c-agent) / 0.1)"
+ */
+export function entityHsl(entity: EntityType, alpha?: number): string {
+  const colorVar = `--c-${entity}`;
+  return alpha !== undefined ? `hsl(var(${colorVar}) / ${alpha})` : `hsl(var(${colorVar}))`;
+}
+
 /**
  * Convert a hex color string to HSL format string: "H S% L%"
  * Accepts hex with or without leading '#', in 3- or 6-digit form.

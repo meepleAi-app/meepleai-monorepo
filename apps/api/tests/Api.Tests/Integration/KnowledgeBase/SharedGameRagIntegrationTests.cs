@@ -270,7 +270,7 @@ public sealed class SharedGameRagIntegrationTests
             _dbContext.PdfDocuments.Add(new PdfDocumentEntity
             {
                 Id = TestPdfDocId,
-                GameId = TestGameId,
+                SharedGameId = TestGameId,
                 FileName = "catan-rules.pdf",
                 FilePath = "/uploads/catan-rules.pdf",
                 FileSizeBytes = 50000,
@@ -381,7 +381,7 @@ public sealed class SharedGameRagIntegrationTests
             _dbContext.PdfDocuments.Add(new PdfDocumentEntity
             {
                 Id = pdfId,
-                GameId = privateGameId,
+                PrivateGameId = privateGameId,
                 FileName = "private-rules.pdf",
                 FilePath = "/uploads/private-rules.pdf",
                 FileSizeBytes = 30000,

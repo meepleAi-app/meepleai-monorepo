@@ -48,24 +48,32 @@ internal sealed class GetKbReadinessQueryHandler : IQueryHandler<GetKbReadinessQ
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // Step 1: resolve the legacy GameEntity.Id.
+        // Step 1: resolve to both legacy (private) game id and shared game id.
         // Accept both shapes: caller may pass the SharedGame id or the legacy game id directly.
-        var legacyGameId = await _db.Games
+        var gameIds = await _db.Games
             .AsNoTracking()
             .Where(g => g.Id == request.GameId || g.SharedGameId == request.GameId)
-            .Select(g => (Guid?)g.Id)
+            .Select(g => new { g.Id, g.SharedGameId })
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        if (legacyGameId is null)
+        Guid? legacyGameId = gameIds?.Id;
+        Guid? sharedGameId = gameIds?.SharedGameId ?? request.GameId;
+
+        if (legacyGameId is null && sharedGameId is null)
         {
             return new KbReadinessDto(false, "None", 0, 0, Array.Empty<string>());
         }
 
-        // Step 2: load all PDFs for that legacy game.
+        // Step 2: load all PDFs for that game (match PrivateGameId or SharedGameId).
+        // OR-broadening is safe because SharedGameId and PrivateGameId are drawn from disjoint Guid spaces
+        // (both are random v4 UUIDs; collision probability is cryptographically negligible).
+        // Callers pass an opaque gameId without needing to disambiguate the kind.
         var pdfs = await _db.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.GameId == legacyGameId.Value)
+            .Where(p =>
+                (legacyGameId != null && p.PrivateGameId == legacyGameId) ||
+                (sharedGameId != null && p.SharedGameId == sharedGameId))
             .Select(p => new { p.Id, p.ProcessingState })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);

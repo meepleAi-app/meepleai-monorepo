@@ -63,7 +63,6 @@ public sealed class PrivateGameRagFlowIntegrationTests : IDisposable
         {
             Id = Guid.NewGuid(),
             PrivateGameId = privateGameId,
-            GameId = null,
             FileName = "rulebook.pdf",
             FilePath = "/uploads/rulebook.pdf",
             FileSizeBytes = 102400,

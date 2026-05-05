@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -36,14 +37,14 @@ internal class CreatePromptVersionCommandHandler : ICommandHandler<CreatePromptV
 
         if (template == null)
         {
-            throw new InvalidOperationException($"Template {command.TemplateId} not found");
+            throw new NotFoundException("Template", command.TemplateId.ToString());
         }
 
         // Load user for navigation property
         var user = await _dbContext.Set<UserEntity>().FindAsync([command.CreatedByUserId], cancellationToken).ConfigureAwait(false);
         if (user == null)
         {
-            throw new InvalidOperationException($"User {command.CreatedByUserId} not found");
+            throw new NotFoundException("User", command.CreatedByUserId.ToString());
         }
 
         // Calculate next version number

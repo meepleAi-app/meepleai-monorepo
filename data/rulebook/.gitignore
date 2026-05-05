@@ -1,0 +1,6 @@
+manifest.json.bak-*
+manifest.json.tmp
+manifest.json.group
+manifest_group_*.json
+.cookies
+.cookies-ragtest

@@ -1,0 +1,218 @@
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+import { ConnectionChip } from '../ConnectionChip';
+
+describe('ConnectionChip', () => {
+  it('renders count badge when count > 0', () => {
+    render(<ConnectionChip entityType="session" count={5} />);
+    expect(screen.getByTestId('connection-chip-badge')).toHaveTextContent('5');
+  });
+
+  it('renders "99+" when count > 99', () => {
+    render(<ConnectionChip entityType="kb" count={150} />);
+    expect(screen.getByTestId('connection-chip-badge')).toHaveTextContent('99+');
+  });
+
+  it('omits badge when count is 0', () => {
+    render(<ConnectionChip entityType="chat" count={0} />);
+    expect(screen.queryByTestId('connection-chip-badge')).not.toBeInTheDocument();
+  });
+
+  it('shows plus overlay when count=0 and onCreate provided', () => {
+    render(<ConnectionChip entityType="player" count={0} onCreate={() => {}} />);
+    expect(screen.getByTestId('connection-chip-plus')).toBeInTheDocument();
+  });
+
+  it('omits plus overlay when count=0 and no onCreate', () => {
+    render(<ConnectionChip entityType="player" count={0} />);
+    expect(screen.queryByTestId('connection-chip-plus')).not.toBeInTheDocument();
+  });
+
+  it('calls onCreate when empty chip is clicked', async () => {
+    const onCreate = vi.fn();
+    render(<ConnectionChip entityType="player" count={0} onCreate={onCreate} />);
+    await userEvent.click(screen.getByRole('button'));
+    expect(onCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('is not clickable when disabled', async () => {
+    const onCreate = vi.fn();
+    render(<ConnectionChip entityType="player" count={0} onCreate={onCreate} disabled />);
+    const btn = screen.getByRole('button');
+    expect(btn).toBeDisabled();
+    await userEvent.click(btn);
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it('renders skeleton when loading=true', () => {
+    render(<ConnectionChip entityType="kb" loading />);
+    expect(screen.getByTestId('connection-chip-loading')).toBeInTheDocument();
+    expect(screen.queryByTestId('connection-chip-badge')).not.toBeInTheDocument();
+  });
+
+  it('renders a Lucide SVG icon (not emoji) for the entity', () => {
+    const { container } = render(<ConnectionChip entityType="game" count={3} />);
+    expect(container.querySelector('svg')).toBeTruthy();
+  });
+
+  it('shows label under chip when showLabel=true', () => {
+    render(<ConnectionChip entityType="kb" count={3} showLabel label="Docs" />);
+    expect(screen.getByText('Docs')).toBeInTheDocument();
+  });
+
+  it('opens popover when clicked and items are present', async () => {
+    render(
+      <ConnectionChip
+        entityType="session"
+        count={2}
+        items={[
+          { id: '1', label: 'First', href: '/sessions/1' },
+          { id: '2', label: 'Second', href: '/sessions/2' },
+        ]}
+      />
+    );
+    await userEvent.click(screen.getByRole('button'));
+    expect(await screen.findByText('First')).toBeInTheDocument();
+    expect(screen.getByText('Second')).toBeInTheDocument();
+  });
+
+  it('has aria-label including count and entity label', () => {
+    render(<ConnectionChip entityType="session" count={5} />);
+    const btn = screen.getByRole('button');
+    expect(btn.getAttribute('aria-label')).toMatch(/5/);
+    expect(btn.getAttribute('aria-label')?.toLowerCase()).toMatch(/session/);
+  });
+
+  it('renders as a link when href is provided and no items/popover', () => {
+    render(<ConnectionChip entityType="kb" count={3} href="/kb/123" />);
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/kb/123');
+    expect(link.getAttribute('aria-label')).toMatch(/3/);
+  });
+
+  it('renders as Link when count > 0 and href provided but no items preloaded', () => {
+    render(<ConnectionChip entityType="session" count={3} href="/sessions" />);
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/sessions');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('uses "99 or more" in aria-label when count exceeds 99', () => {
+    render(<ConnectionChip entityType="session" count={150} />);
+    const btn = screen.getByRole('button');
+    expect(btn.getAttribute('aria-label')).toMatch(/99 or more/i);
+    expect(btn.getAttribute('aria-label')).not.toMatch(/150/);
+  });
+
+  it('does NOT render as Link when hasCreate is true and href is provided (even with count 0)', () => {
+    const onCreate = vi.fn();
+    render(<ConnectionChip entityType="player" count={0} href="/players" onCreate={onCreate} />);
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByRole('button')).toBeInTheDocument();
+  });
+
+  it('invokes onCreate when clicked with href + count 0 + onCreate', async () => {
+    const onCreate = vi.fn();
+    render(<ConnectionChip entityType="player" count={0} href="/players" onCreate={onCreate} />);
+    await userEvent.click(screen.getByRole('button'));
+    expect(onCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders as disabled button when href is provided and disabled is true', () => {
+    render(<ConnectionChip entityType="kb" count={0} href="/kb/123" disabled />);
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    const btn = screen.getByRole('button');
+    expect(btn).toBeDisabled();
+  });
+
+  it('renders iconOverride instead of default entity icon when provided', () => {
+    const Custom = () => <svg data-testid="custom-icon" />;
+    const { container } = render(
+      <ConnectionChip entityType="kb" count={3} iconOverride={<Custom />} />
+    );
+    expect(container.querySelector('[data-testid="custom-icon"]')).toBeTruthy();
+  });
+
+  it('invokes onClick when clicked with onClick provided and no href, no items, no onCreate', async () => {
+    const onClick = vi.fn();
+    render(<ConnectionChip entityType="kb" count={3} onClick={onClick} />);
+    await userEvent.click(screen.getByRole('button'));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders as <a> Link when both onClick and href are provided (preserves middle-click)', () => {
+    const onClick = vi.fn();
+    render(<ConnectionChip entityType="kb" count={3} href="/kb/123" onClick={onClick} />);
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/kb/123');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('calls onClick and prevents default navigation on left-click when both onClick and href are provided', async () => {
+    const onClick = vi.fn();
+    render(<ConnectionChip entityType="kb" count={3} href="/kb/123" onClick={onClick} />);
+    const link = screen.getByRole('link');
+    await userEvent.click(link);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT call onClick on Cmd/Ctrl/Shift+click so the browser can open the href in a new tab/window', () => {
+    // Regression guard: when href+onClick coexist on a <Link>, a blanket
+    // e.preventDefault() would swallow Cmd/Ctrl+click (open in new tab) and
+    // Shift+click (open in new window). The handler must short-circuit on
+    // modifier keys and let the browser process the navigation natively.
+    const onClick = vi.fn();
+    render(<ConnectionChip entityType="kb" count={3} href="/kb/123" onClick={onClick} />);
+    const link = screen.getByRole('link');
+
+    for (const modifier of [{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }] as const) {
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true, ...modifier });
+      link.dispatchEvent(event);
+      // Browser default (navigation / open-in-new-tab) must remain enabled:
+      expect(event.defaultPrevented).toBe(false);
+    }
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('renders as <button> (not <a>) when onClick is provided without href', () => {
+    render(<ConnectionChip entityType="kb" count={3} onClick={() => {}} />);
+    expect(screen.getByRole('button')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('does not invoke onClick when disabled', async () => {
+    const onClick = vi.fn();
+    render(<ConnectionChip entityType="kb" count={3} onClick={onClick} disabled />);
+    await userEvent.click(screen.getByRole('button'));
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('items (popover) take precedence over onClick when both are provided', async () => {
+    const onClick = vi.fn();
+    render(
+      <ConnectionChip
+        entityType="session"
+        count={2}
+        onClick={onClick}
+        items={[
+          { id: '1', label: 'First', href: '/sessions/1' },
+          { id: '2', label: 'Second', href: '/sessions/2' },
+        ]}
+      />
+    );
+    await userEvent.click(screen.getByRole('button'));
+    expect(onClick).not.toHaveBeenCalled();
+    expect(await screen.findByText('First')).toBeInTheDocument();
+  });
+
+  it('onCreate takes precedence over onClick when count=0 and both are provided', async () => {
+    const onCreate = vi.fn();
+    const onClick = vi.fn();
+    render(<ConnectionChip entityType="player" count={0} onCreate={onCreate} onClick={onClick} />);
+    await userEvent.click(screen.getByRole('button'));
+    expect(onCreate).toHaveBeenCalledTimes(1);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+});

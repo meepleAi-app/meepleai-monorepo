@@ -153,7 +153,7 @@ jobs:
           echo $! > api.pid
           sleep 15  # Wait for startup (migrations already done)
         env:
-          ASPNETCORE_ENVIRONMENT: Testing
+          ASPNETCORE_ENVIRONMENT: CI
           ASPNETCORE_URLS: "http://localhost:8080"
           POSTGRES_HOST: localhost
           POSTGRES_PORT: "5432"
@@ -477,7 +477,7 @@ jobs:
           echo $! > api.pid
           sleep 15  # Wait for startup (migrations already done)
         env:
-          ASPNETCORE_ENVIRONMENT: Testing
+          ASPNETCORE_ENVIRONMENT: CI
           ASPNETCORE_URLS: "http://localhost:8080"
           POSTGRES_HOST: localhost
           POSTGRES_PORT: "5432"

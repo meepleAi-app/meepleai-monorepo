@@ -146,7 +146,7 @@ internal static class PdfUploadTestHelpers
         // Verify no orphaned PDF documents (all must have valid FK references)
         var orphanedDocs = await context.PdfDocuments
             .Where(d => !context.Users.Any(u => u.Id == d.UploadedByUserId) ||
-                       !context.Games.Any(g => g.Id == d.GameId))
+                       (d.SharedGameId != null && !context.Games.Any(g => g.Id == d.SharedGameId)))
             .CountAsync(ct);
 
         orphanedDocs.Should().Be(0, "no PDF documents with broken FK references should exist");

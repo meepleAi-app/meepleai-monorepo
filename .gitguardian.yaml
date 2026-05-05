@@ -4,4 +4,9 @@ version: 2
 # and example/template files with placeholder values
 ignore-paths:
   - apps/api/tests/
+  - apps/web/src/components/auth/__tests__/
+  - apps/web/src/components/ui/v2/strength-meter/
+  - apps/web/src/**/__tests__/
+  - apps/web/src/**/*.test.tsx
+  - apps/web/src/**/*.test.ts
   - infra/secrets/*.secret.example

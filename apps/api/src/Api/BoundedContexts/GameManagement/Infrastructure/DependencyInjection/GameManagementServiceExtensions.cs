@@ -44,6 +44,7 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<ISessionAttachmentRepository, SessionAttachmentRepository>(); // Issue #5360: Session photo attachments
         services.AddScoped<IGameNightPlaylistRepository, GameNightPlaylistRepository>(); // Issue #5582: Game Night Playlist
         services.AddScoped<IGameNightEventRepository, GameNightEventRepository>(); // Issue #42: Game Night Event
+        services.AddScoped<IGameNightInvitationRepository, GameNightInvitationRepository>(); // Issue #607: Token-based public RSVP invitations
         services.AddScoped<IRuleDisputeRepository, RuleDisputeRepository>(); // Structured rule dispute persistence
         services.AddScoped<IGamePhaseTemplateRepository, GamePhaseTemplateRepository>(); // Game phase templates for session setup
         services.AddScoped<IPhaseRulesSearchService, PhaseRulesSearchService>(); // Phase rules keyword search via TextChunks

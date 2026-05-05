@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -34,14 +35,14 @@ internal class CreatePromptTemplateCommandHandler : ICommandHandler<CreatePrompt
 
         if (exists)
         {
-            throw new InvalidOperationException($"Template with name '{command.Name}' already exists");
+            throw new ConflictException($"Template with name '{command.Name}' already exists");
         }
 
         // Load user for navigation property
         var user = await _dbContext.Set<UserEntity>().FindAsync([command.CreatedByUserId], cancellationToken).ConfigureAwait(false);
         if (user == null)
         {
-            throw new InvalidOperationException($"User {command.CreatedByUserId} not found");
+            throw new NotFoundException("User", command.CreatedByUserId.ToString());
         }
 
         // Create template

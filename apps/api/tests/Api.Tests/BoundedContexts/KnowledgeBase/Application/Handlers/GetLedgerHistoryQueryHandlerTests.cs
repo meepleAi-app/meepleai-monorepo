@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -44,7 +45,7 @@ public class GetLedgerHistoryQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentSession_ThrowsInvalidOperationException()
+    public async Task Handle_WithNonExistentSession_ThrowsNotFoundException()
     {
         // Arrange
         var sessionId = Guid.NewGuid();
@@ -55,7 +56,7 @@ public class GetLedgerHistoryQueryHandlerTests
 
         // Act & Assert
         Func<Task> act = async () => await _handler.Handle(query, TestCancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain(sessionId.ToString());
     }

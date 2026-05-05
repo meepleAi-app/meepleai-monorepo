@@ -1,11 +1,19 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render as rtlRender, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { GameDetailsDrawer } from '../GameDetailsDrawer';
 
 vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibraryGameDetail: () => ({ data: null, isLoading: false, isError: false }),
 }));
+
+function render(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  return rtlRender(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
 
 describe('GameDetailsDrawer', () => {
   it('does not render tab content when closed', () => {

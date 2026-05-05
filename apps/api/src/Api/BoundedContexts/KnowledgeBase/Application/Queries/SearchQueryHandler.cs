@@ -66,18 +66,33 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         // Validate search parameters
         _vectorSearchService.ValidateSearchParameters(query.TopK, query.MinScore);
 
-        // Generate query embedding
-        _logger.LogDebug("[SearchQueryHandler] Step 1: Generating embedding via IEmbeddingService...");
-        var sw1 = System.Diagnostics.Stopwatch.StartNew();
-        var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(
-            query.Query,
-            query.Language,
-            cancellationToken).ConfigureAwait(false);
-        sw1.Stop();
-        _logger.LogInformation("[SearchQueryHandler] Step 1 DONE: Embedding generated in {ElapsedMs}ms - Success: {Success}",
-            sw1.ElapsedMilliseconds, queryEmbedding.Success);
+        // Step 1: Resolve query embedding.
+        // Issue #563: When the caller supplies a pre-computed QueryVector (e.g., AskQuestionQueryHandler
+        // already produced one for semantic cache lookup), reuse it to avoid a duplicate embedding call
+        // (~50–200ms savings per cache miss). Otherwise fall back to generating one here.
+        Vector queryVector;
+        if (query.QueryVector is { Count: > 0 } precomputed)
+        {
+            _logger.LogDebug(
+                "[SearchQueryHandler] Step 1: Reusing caller-supplied query vector (Dim={Dim}) — skipping embedding call",
+                precomputed.Count);
+            // Materialize to float[] (Vector ctor requires array). ToArray() is a no-op when caller passes float[].
+            queryVector = new Vector(precomputed as float[] ?? precomputed.ToArray());
+        }
+        else
+        {
+            _logger.LogDebug("[SearchQueryHandler] Step 1: Generating embedding via IEmbeddingService...");
+            var sw1 = System.Diagnostics.Stopwatch.StartNew();
+            var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(
+                query.Query,
+                query.Language,
+                cancellationToken).ConfigureAwait(false);
+            sw1.Stop();
+            _logger.LogInformation("[SearchQueryHandler] Step 1 DONE: Embedding generated in {ElapsedMs}ms - Success: {Success}",
+                sw1.ElapsedMilliseconds, queryEmbedding.Success);
 
-        var queryVector = new Vector(queryEmbedding.ToFloatArray());
+            queryVector = new Vector(queryEmbedding.ToFloatArray());
+        }
 
         // Execute search based on mode
         _logger.LogDebug("[SearchQueryHandler] Step 2: Executing {SearchMode} search...", query.SearchMode);

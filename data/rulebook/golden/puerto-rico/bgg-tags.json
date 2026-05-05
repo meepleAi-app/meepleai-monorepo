@@ -1,0 +1,22 @@
+{
+  "sharedGameSlug": "puerto-rico",
+  "bggId": 3076,
+  "tags": [
+    { "category": "Mechanism", "name": "Action Drafting" },
+    { "category": "Mechanism", "name": "End Game Bonuses" },
+    { "category": "Mechanism", "name": "Hand Management" },
+    { "category": "Mechanism", "name": "Income" },
+    { "category": "Mechanism", "name": "Turn Order: Claim Action" },
+    { "category": "Mechanism", "name": "Variable Phase Order" },
+    { "category": "Mechanism", "name": "Variable Set-up" },
+    { "category": "Mechanism", "name": "Worker Placement" },
+    { "category": "Category", "name": "Economic" },
+    { "category": "Category", "name": "Farming" },
+    { "category": "Category", "name": "Nautical" },
+    { "category": "Category", "name": "Transportation" },
+    { "category": "Family", "name": "Components: Map (Caribbean)" },
+    { "category": "Family", "name": "Continents: Caribbean" },
+    { "category": "Family", "name": "Country: Puerto Rico" },
+    { "category": "Family", "name": "Mechanism: Tableau Building" }
+  ]
+}

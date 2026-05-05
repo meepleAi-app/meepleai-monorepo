@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Services.Pdf;
@@ -54,9 +55,11 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
         }
 
         // 2. Retrieve PDF file from blob storage
+        // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
+        var bucketKey = PdfStorageKey.ForPdf(pdf.Id);
         var fileStream = await _blobStorage.RetrieveAsync(
-            pdfId.ToString("N"),
-            (pdf.PrivateGameId ?? pdf.GameId)?.ToString() ?? string.Empty,
+            bucketKey,
+            bucketKey,
             cancellationToken).ConfigureAwait(false);
 
         if (fileStream == null)

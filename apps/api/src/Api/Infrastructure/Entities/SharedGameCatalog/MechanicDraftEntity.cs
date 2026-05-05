@@ -36,6 +36,10 @@ public class MechanicDraftEntity
     /// </summary>
     public int Status { get; set; }
 
+    public int TotalTokensUsed { get; set; }
+    public decimal EstimatedCostUsd { get; set; }
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
     // Navigation properties
     public SharedGameEntity SharedGame { get; set; } = default!;
 }

@@ -19,7 +19,7 @@ import { Clock } from 'lucide-react';
 import Link from 'next/link';
 
 import { AuthLayout } from '@/components/layouts';
-import { Button } from '@/components/ui/primitives/button';
+import { Btn } from '@/components/ui/v2/btn';
 
 export default function InvitationExpiredPage() {
   return (
@@ -40,12 +40,12 @@ export default function InvitationExpiredPage() {
 
         {/* Actions */}
         <div className="flex flex-col gap-2 pt-4 w-full">
-          <Button asChild className="w-full">
+          <Btn asChild fullWidth>
             <Link href="/register">Request Access</Link>
-          </Button>
-          <Button variant="ghost" asChild className="w-full">
+          </Btn>
+          <Btn variant="ghost" asChild fullWidth>
             <Link href="/login">Back to Login</Link>
-          </Button>
+          </Btn>
         </div>
       </div>
     </AuthLayout>

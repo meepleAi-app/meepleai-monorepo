@@ -1,93 +1,46 @@
 /**
- * Agent Detail Page - Chat with AI Agent
+ * Agent Detail Page — Wave C.2 v2 brownfield migration (Issue #581).
  *
- * Displays agent information using AgentCharacterSheet — an RPG-style two-column layout
- * with a sticky portrait on the left and scrollable sections (KB, Chat, History) on the right.
- * No tabs — all sections visible at once.
+ * CONVERTED: server component → client thin shell (mirror Wave C.1 pattern).
+ *
+ * BEFORE (legacy v1 server component):
+ *   export default async function AgentPage({ params }) {
+ *     let agent;
+ *     try { agent = await api.agents.getById(params.id); } catch { notFound(); }
+ *     if (!agent) notFound();
+ *     return <AgentCharacterSheet data={agentDetailData} />;
+ *   }
+ *
+ * AFTER (Wave C.2 client thin shell):
+ *   - `useParams` for agentId (pre-hydration safe normalization)
+ *   - agentId normalized to string|null (NEVER undefined or 'undefined' string)
+ *   - delegates entirely to AgentDetailViewV2 orchestrator
+ *   - No server-side data fetching, no notFound(), no generateMetadata
+ *
+ * Phase 0.5 contract sez. 2.1 — agentId normalization:
+ *   params?.id may be undefined during Next.js 16 app router pre-hydration.
+ *   `typeof rawId === 'string' && rawId.length > 0` coerces to string|null.
+ *
+ * AgentCharacterSheet legacy component is no longer used here (kept as
+ * deprecated for backward compat in components/agent/AgentCharacterSheet.tsx).
+ *
+ * Refs #581 (Wave C umbrella — /agents/[id] v2 brownfield).
  */
 
-import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+'use client';
 
-import { AgentCharacterSheet } from '@/components/agent/AgentCharacterSheet';
-import { DeckTrackerSync } from '@/components/layout/DeckTrackerSync';
-import type { AgentDetailData } from '@/components/ui/data-display/extra-meeple-card/types';
-import { api } from '@/lib/api';
+import { useParams } from 'next/navigation';
 
-interface AgentPageProps {
-  params: { id: string };
-}
+import { AgentDetailViewV2 } from './_components/AgentDetailViewV2';
 
-export async function generateMetadata({ params }: AgentPageProps): Promise<Metadata> {
-  try {
-    const agent = await api.agents.getById(params.id);
+export default function AgentPage() {
+  const params = useParams<{ id: string }>();
 
-    if (!agent) {
-      return {
-        title: 'Agent Not Found | MeepleAI',
-      };
-    }
+  // Phase 0.5 contract sez. 2.1: normalize to string|null.
+  // params?.id can be undefined during pre-hydration in Next.js 16 app router.
+  // typeof check + length guard ensures we NEVER pass 'undefined' or '' as agentId.
+  const rawId = params?.id;
+  const agentId = typeof rawId === 'string' && rawId.length > 0 ? rawId : null;
 
-    return {
-      title: `${agent.name} | MeepleAI Agents`,
-      description: `Chat with ${agent.name} - ${agent.type} agent with knowledge base integration`,
-    };
-  } catch {
-    return {
-      title: 'Agent Not Found | MeepleAI',
-    };
-  }
-}
-
-export default async function AgentPage({ params }: AgentPageProps) {
-  let agent;
-
-  try {
-    agent = await api.agents.getById(params.id);
-  } catch {
-    notFound();
-  }
-
-  if (!agent) {
-    notFound();
-  }
-
-  const agentHref = `/agents/${agent.id}`;
-
-  // Build AgentDetailData for the CharacterSheet
-  const agentDetailData: AgentDetailData = {
-    id: agent.id,
-    name: agent.name,
-    type: agent.type,
-    strategyName: agent.strategyName,
-    strategyParameters: agent.strategyParameters,
-    isActive: agent.isActive,
-    isIdle: agent.isIdle,
-    invocationCount: agent.invocationCount,
-    lastInvokedAt: agent.lastInvokedAt,
-    createdAt: agent.createdAt,
-    gameId: agent.gameId ?? undefined,
-    gameName: agent.gameName ?? undefined,
-  };
-
-  return (
-    <div className="container max-w-7xl py-8">
-      <DeckTrackerSync
-        entity="agent"
-        id={agent.id}
-        title={agent.name}
-        href={agentHref}
-        subtitle={agent.isActive ? 'Active' : 'Inactive'}
-      />
-
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">{agent.name}</h1>
-        <p className="text-muted-foreground">Agente AI alimentato dalla Knowledge Base</p>
-      </div>
-
-      {/* Character Sheet */}
-      <AgentCharacterSheet data={agentDetailData} />
-    </div>
-  );
+  return <AgentDetailViewV2 agentId={agentId} />;
 }

@@ -1,7 +1,9 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExtractor;
 
@@ -15,13 +17,19 @@ internal sealed class AiAssistMechanicDraftCommandHandler
     : ICommandHandler<AiAssistMechanicDraftCommand, AiAssistResultDto>
 {
     private readonly ILlmService _llmService;
+    private readonly IMechanicDraftRepository _draftRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AiAssistMechanicDraftCommandHandler> _logger;
 
     public AiAssistMechanicDraftCommandHandler(
         ILlmService llmService,
+        IMechanicDraftRepository draftRepository,
+        IUnitOfWork unitOfWork,
         ILogger<AiAssistMechanicDraftCommandHandler> logger)
     {
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+        _draftRepository = draftRepository ?? throw new ArgumentNullException(nameof(draftRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -50,13 +58,27 @@ internal sealed class AiAssistMechanicDraftCommandHandler
                 $"AI failed to generate a draft: {result.ErrorMessage ?? "Empty response"}. Please try again.");
         }
 
+        var tokensUsed = result.Usage?.TotalTokens ?? 0;
+        var costUsd = result.Cost?.TotalCost ?? 0m;
+
         _logger.LogInformation(
-            "AI assist completed for draft {DraftId}, section {Section}. Tokens: {Tokens}",
+            "AI assist completed for draft {DraftId}, section {Section}. Tokens: {Tokens}, Cost: {Cost}",
             request.DraftId,
             request.Section,
-            result.Usage?.TotalTokens ?? 0);
+            tokensUsed,
+            costUsd);
 
-        return new AiAssistResultDto(request.Section, result.Response.Trim());
+        // Persist token tracking to draft
+        var draft = await _draftRepository.GetByIdAsync(request.DraftId, cancellationToken)
+            .ConfigureAwait(false);
+        if (draft is not null)
+        {
+            draft.TrackTokenUsage(tokensUsed, costUsd);
+            _draftRepository.Update(draft);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        return new AiAssistResultDto(request.Section, result.Response.Trim(), tokensUsed, costUsd);
     }
 
     private static string BuildSystemPrompt(string section, string gameTitle)

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.DocumentProcessing;
@@ -20,7 +21,7 @@ namespace Api.Infrastructure.Seeders.Catalog;
 /// only picks them up after 2 minutes of staleness and runs only once at boot, so they slip
 /// through the crack).
 ///
-/// Idempotent: skips PDFs where GameId + FileName already exists with matching hash.
+/// Idempotent: skips PDFs where SharedGameId + FileName already exists with matching hash.
 /// Hash drift: deletes old document cascade and reinserts when hash changes.
 /// </summary>
 internal static class PdfSeeder
@@ -66,17 +67,26 @@ internal static class PdfSeeder
 
         logger.LogInformation("PdfSeeder: processing {Count} blob PDF entries from manifest", pdfEntries.Count);
 
-        // Load existing PDF documents for idempotency check (GameId + FileName → ContentHash)
+        // Build a lookup GameEntity.Id → SharedGameId so we can compute the idempotency key below
+        // (after 2026-04-19 migration, PdfDocumentEntity no longer stores GameId; it only stores SharedGameId/PrivateGameId).
+        var gameIdToSharedId = await db.Games
+            .AsNoTracking()
+            .Where(g => g.SharedGameId != null)
+            .Select(g => new { g.Id, g.SharedGameId })
+            .ToDictionaryAsync(g => g.Id, g => g.SharedGameId!.Value, ct)
+            .ConfigureAwait(false);
+
+        // Load existing PDF documents for idempotency check (SharedGameId + FileName → ContentHash)
         var existingPdfs = await db.PdfDocuments
             .AsNoTracking()
-            .Select(p => new { p.Id, p.GameId, p.FileName, p.ContentHash, p.FilePath })
+            .Select(p => new { p.Id, p.SharedGameId, p.FileName, p.ContentHash, p.FilePath })
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
         var existingMap = existingPdfs
-            .Where(p => p.GameId.HasValue)
+            .Where(p => p.SharedGameId.HasValue)
             .ToDictionary(
-                p => $"{p.GameId}:{p.FileName}",
+                p => $"{p.SharedGameId}:{p.FileName}",
                 p => new { p.Id, p.ContentHash, p.FilePath },
                 StringComparer.OrdinalIgnoreCase);
 
@@ -101,10 +111,20 @@ internal static class PdfSeeder
                     continue;
                 }
 
-                var idempotencyKey = $"{gameId}:{fileName}";
-                var gameIdStr = gameId.ToString("N");
+                // Resolve the SharedGameId (community-catalog id). PdfDocumentEntity now stores SharedGameId directly
+                // after the 2026-04-19 migration, so this is the key field for both idempotency and persistence.
+                if (!gameIdToSharedId.TryGetValue(gameId, out var sharedGameId))
+                {
+                    logger.LogWarning(
+                        "PdfSeeder: no SharedGameId linked to GameEntity {GameId} ('{Title}'). Skipping blob PDF.",
+                        gameId, entry.Title);
+                    skipped++;
+                    continue;
+                }
 
-                // Idempotency: check if GameId + FileName pair already exists
+                var idempotencyKey = $"{sharedGameId}:{fileName}";
+
+                // Idempotency: check if SharedGameId + FileName pair already exists
                 if (existingMap.TryGetValue(idempotencyKey, out var existing))
                 {
                     // Hash match → skip (no changes)
@@ -123,7 +143,7 @@ internal static class PdfSeeder
                         "PdfSeeder: hash drift detected for '{FileName}' (game '{Title}'). Replacing.",
                         fileName, entry.Title);
 
-                    await DeletePdfCascadeAsync(db, primaryBlob, existing.Id, gameIdStr, existing.FilePath, logger, ct)
+                    await DeletePdfCascadeAsync(db, primaryBlob, existing.Id, PdfStorageKey.ForPdf(existing.Id), existing.FilePath, logger, ct)
                         .ConfigureAwait(false);
 
                     existingMap.Remove(idempotencyKey);
@@ -139,10 +159,16 @@ internal static class PdfSeeder
                     continue;
                 }
 
+                // Pre-generate pdfId so StoreAsync and PdfDocumentEntity share the same bucket key.
+                // Post-migration (2026-04-19) PDFs live under pdfs/{pdfId}/ — all reads use
+                // PdfStorageKey.ForPdf(pdf.Id), so the seeder must also write to the pdfId bucket
+                // or the pipeline (extract/download) will 404 on seeded files.
+                var pdfId = Guid.NewGuid();
+
                 // Stream from seed bucket → store into primary blob
                 var stream = await seedBlob.OpenReadAsync(blobKey, ct).ConfigureAwait(false);
                 await using var _ = stream.ConfigureAwait(false);
-                var result = await primaryBlob.StoreAsync(stream, fileName, gameIdStr, ct).ConfigureAwait(false);
+                var result = await primaryBlob.StoreAsync(stream, fileName, PdfStorageKey.ForPdf(pdfId), ct).ConfigureAwait(false);
 
                 if (!result.Success)
                 {
@@ -153,19 +179,11 @@ internal static class PdfSeeder
                     continue;
                 }
 
-                // Look up SharedGameId from the Games table
-                var sharedGameId = await db.Games
-                    .AsNoTracking()
-                    .Where(g => g.Id == gameId)
-                    .Select(g => g.SharedGameId)
-                    .FirstOrDefaultAsync(ct)
-                    .ConfigureAwait(false);
-
                 // Create PdfDocumentEntity in Pending state
+                // Community-seeded PDFs are stored against SharedGameId (community catalog id).
                 var pdfEntity = new PdfDocumentEntity
                 {
-                    Id = Guid.NewGuid(),
-                    GameId = gameId,
+                    Id = pdfId,
                     SharedGameId = sharedGameId,
                     FileName = fileName,
                     FilePath = result.FilePath ?? string.Empty,

@@ -43,7 +43,7 @@ internal class DocumentCollectionRepository : RepositoryBase, IDocumentCollectio
     {
         var entity = await DbContext.DocumentCollections
             .AsNoTracking()
-            .Where(c => c.GameId == gameId)
+            .Where(c => c.SharedGameId == gameId)
             .OrderByDescending(c => c.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
@@ -64,7 +64,7 @@ internal class DocumentCollectionRepository : RepositoryBase, IDocumentCollectio
     public async Task<bool> ExistsForGameAsync(Guid gameId, CancellationToken cancellationToken = default)
     {
         return await DbContext.DocumentCollections
-            .AnyAsync(c => c.GameId == gameId, cancellationToken).ConfigureAwait(false);
+            .AnyAsync(c => c.SharedGameId == gameId, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task AddAsync(DocumentCollection collection, CancellationToken cancellationToken = default)
@@ -174,7 +174,7 @@ internal class DocumentCollectionRepository : RepositoryBase, IDocumentCollectio
         // Issue #2140: Use Reconstitute factory method instead of reflection
         return DocumentCollection.Reconstitute(
             id: entity.Id,
-            gameId: entity.GameId,
+            gameId: entity.SharedGameId,
             name: collectionName,
             description: entity.Description,
             createdByUserId: entity.CreatedByUserId,
@@ -200,7 +200,7 @@ internal class DocumentCollectionRepository : RepositoryBase, IDocumentCollectio
         return new Api.Infrastructure.Entities.DocumentCollectionEntity
         {
             Id = domain.Id,
-            GameId = domain.GameId,
+            SharedGameId = domain.GameId,
             Name = domain.Name.Value,
             Description = domain.Description,
             CreatedByUserId = domain.CreatedByUserId,

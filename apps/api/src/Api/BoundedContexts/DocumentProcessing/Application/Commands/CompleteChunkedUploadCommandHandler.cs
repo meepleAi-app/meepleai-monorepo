@@ -305,7 +305,6 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         var pdfDoc = new PdfDocumentEntity
         {
             Id = Guid.Parse(storageResult.FileId!),
-            GameId = session.GameId,
             PrivateGameId = session.PrivateGameId,
             FileName = sanitizedFileName,
             FilePath = storageResult.FilePath!,
@@ -695,7 +694,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             vectorDoc = new VectorDocumentEntity
             {
                 Id = Guid.NewGuid(),
-                GameId = pdfDoc.GameId,
+                GameId = pdfDoc.SharedGameId,
                 SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
                 PdfDocumentId = pdfGuid,
                 IndexingStatus = "completed",
@@ -740,7 +739,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             .Select((chunk, index) => new TextChunkEntity
             {
                 Id = Guid.NewGuid(),
-                GameId = pdfDoc.GameId,
+                GameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfGuid,
                 ChunkIndex = index,
                 PageNumber = chunk.Page,

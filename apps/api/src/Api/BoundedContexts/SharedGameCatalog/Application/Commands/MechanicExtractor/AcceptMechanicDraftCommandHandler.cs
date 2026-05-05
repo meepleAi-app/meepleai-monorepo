@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExtractor;
 
@@ -47,7 +48,15 @@ internal sealed class AcceptMechanicDraftCommandHandler
         draft.AcceptDraft(request.Section, request.AcceptedDraft);
         _draftRepository.Update(draft);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConflictException(
+                "Draft was modified by another user. Please reload and try again.");
+        }
 
         return MapToDto(draft);
     }
@@ -74,6 +83,8 @@ internal sealed class AcceptMechanicDraftCommandHandler
             draft.QuestionsDraft,
             draft.CreatedAt,
             draft.LastModified,
-            draft.Status.ToString());
+            draft.Status.ToString(),
+            draft.TotalTokensUsed,
+            draft.EstimatedCostUsd);
     }
 }

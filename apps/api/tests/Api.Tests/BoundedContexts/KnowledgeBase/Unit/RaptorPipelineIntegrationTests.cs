@@ -196,7 +196,6 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
         var pdfDoc = new PdfDocumentEntity
         {
             Id = _pdfDocumentId,
-            GameId = null,
             FileName = "test.pdf",
             FilePath = "/fake/path/test.pdf",
             ContentType = "application/pdf",
@@ -263,7 +262,7 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
         var pdfDoc = new PdfDocumentEntity
         {
             Id = _pdfDocumentId,
-            GameId = _gameId,
+            SharedGameId = _gameId,
             FileName = "test.pdf",
             FilePath = "/fake/path/test.pdf",
             ContentType = "application/pdf",

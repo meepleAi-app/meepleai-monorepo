@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Queries.AlertConfiguration;
 using Api.BoundedContexts.Administration.Domain.Aggregates.AlertConfigurations;
 using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using MediatR;
 
 namespace Api.BoundedContexts.Administration.Application.Queries.AlertConfiguration;
@@ -25,7 +26,7 @@ internal class GetAlertConfigurationQueryHandler : IRequestHandler<GetAlertConfi
 
         if (configs.Count == 0)
         {
-            throw new InvalidOperationException($"No configuration found for category: {request.Category}");
+            throw new NotFoundException("AlertConfiguration", request.Category);
         }
 
 #pragma warning disable S6608 // Prefer indexing instead of "Enumerable" methods on "IReadOnlyList" - First() is clearer here after Count check

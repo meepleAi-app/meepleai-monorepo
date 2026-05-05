@@ -22,7 +22,7 @@ export const UserBadgeDtoSchema = z.object({
   description: z.string(),
   tier: z.enum(['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond']),
   iconUrl: z.string(),
-  earnedAt: z.string().datetime(),
+  earnedAt: z.string().datetime({ offset: true }),
   isDisplayed: z.boolean(),
   category: z.string().optional(),
 });
@@ -36,7 +36,7 @@ export const BadgeNotificationDataSchema = z.object({
   description: z.string(),
   tier: z.enum(['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond']),
   iconUrl: z.string(),
-  earnedAt: z.string().datetime(),
+  earnedAt: z.string().datetime({ offset: true }),
 });
 
 export type BadgeNotificationData = z.infer<typeof BadgeNotificationDataSchema>;

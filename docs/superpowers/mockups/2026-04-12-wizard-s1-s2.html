@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mockup — Session Wizard S1+S2</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    padding: 32px 16px;
+  }
+
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #f8fafc; }
+  h2 { font-size: 14px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; }
+  .section { margin-bottom: 56px; }
+  .label { font-size: 11px; color: #64748b; margin-bottom: 6px; }
+  .change-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .badge-new { background: #16a34a22; color: #4ade80; border: 1px solid #16a34a55; }
+  .badge-mod { background: #f59e0b22; color: #fbbf24; border: 1px solid #f59e0b55; }
+  .badge-fix { background: #3b82f622; color: #60a5fa; border: 1px solid #3b82f655; }
+
+  /* ── Phone frame ── */
+  .phone {
+    width: 320px;
+    background: #1e2330;
+    border-radius: 20px;
+    border: 1.5px solid #334155;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 8px 32px #00000066;
+    display: inline-flex;
+    flex-direction: column;
+  }
+  .phone-header {
+    background: #1a1f2e;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid #2a3040;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .phone-header .back { color: #60a5fa; font-size: 12px; }
+  .phone-header .title { font-size: 14px; font-weight: 600; flex: 1; }
+  .phone-body { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* ── Step dots ── */
+  .step-dots { display: flex; gap: 10px; justify-content: center; padding: 4px 0 8px; }
+  .dot {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; transition: all .15s;
+  }
+  .dot-active { background: #f59e0b; color: #fff; box-shadow: 0 0 12px #f59e0b66; transform: scale(1.1); }
+  .dot-done { background: #f59e0b33; color: #f59e0b; }
+  .dot-inactive { background: #1e293b; color: #475569; border: 1px solid #334155; }
+
+  /* ── Card ── */
+  .card {
+    background: #252d3d;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  /* ── Player row ── */
+  .player-row {
+    display: flex; align-items: center; gap: 10px;
+    background: #1a1f2e; border: 1px solid #2a3040;
+    border-radius: 10px; padding: 10px 12px;
+    margin-bottom: 6px;
+  }
+  .player-dot { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; }
+  .player-name { flex: 1; font-size: 13px; font-weight: 500; }
+  .pos-badge {
+    font-size: 11px; font-weight: 800; color: #f59e0b;
+    width: 22px; text-align: center; flex-shrink: 0;
+  }
+  .arrow-col { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+  .arrow-btn {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: #1e293b; border: 1px solid #334155;
+    color: #94a3b8; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 12px;
+  }
+  .arrow-btn:hover { background: #2d3748; color: #e2e8f0; }
+  .arrow-btn.disabled { opacity: 0.2; cursor: not-allowed; }
+
+  /* ── Color dot ── */
+  .c-red { background: #ef4444; }
+  .c-blue { background: #3b82f6; }
+  .c-green { background: #22c55e; }
+  .c-yellow { background: #eab308; }
+  .c-purple { background: #a855f7; }
+  .c-orange { background: #f97316; }
+
+  /* ── Buttons ── */
+  .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+  .btn-primary {
+    flex: 1; padding: 11px; border-radius: 10px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff; font-size: 13px; font-weight: 700;
+    border: none; text-align: center;
+  }
+  .btn-outline {
+    flex: 1; padding: 11px; border-radius: 10px;
+    background: transparent; border: 1px solid #334155;
+    color: #94a3b8; font-size: 13px; font-weight: 500; text-align: center;
+  }
+
+  /* ── Summary chips ── */
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #1e293b; border-radius: 20px;
+    padding: 4px 10px; font-size: 12px; font-weight: 500;
+    border: 1px solid #334155; margin: 3px;
+  }
+  .chip-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .chip-num { font-size: 10px; font-weight: 800; color: #f59e0b; }
+
+  /* ── Annotation ── */
+  .annotation {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: #1e293b44; border-left: 3px solid #f59e0b;
+    padding: 8px 12px; border-radius: 0 8px 8px 0;
+    font-size: 12px; color: #94a3b8; margin-top: 6px;
+  }
+  .annotation strong { color: #fbbf24; }
+
+  /* ── Grid ── */
+  .screens-grid {
+    display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;
+  }
+  .screen-wrapper { display: flex; flex-direction: column; gap: 10px; }
+  .screen-title { font-size: 13px; font-weight: 600; color: #cbd5e1; }
+
+  /* ── Section header ── */
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px; padding-bottom: 12px;
+    border-bottom: 1px solid #1e293b;
+  }
+  .section-header h2 { margin: 0; }
+
+  /* ── Drawer sheet mockup ── */
+  .drawer {
+    width: 300px; background: #ffffffe0; border-radius: 16px;
+    border: 1px solid #e2e8f0; overflow: hidden;
+    box-shadow: 0 8px 32px #00000033;
+    color: #1e293b;
+  }
+  .drawer-header { padding: 14px 16px; border-bottom: 1px solid #e2e8f0; }
+  .drawer-title { font-size: 14px; font-weight: 700; }
+  .drawer-body { padding: 12px; }
+  .drawer-session-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px;
+    margin-bottom: 6px; font-size: 12px;
+  }
+  .session-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+  .drawer-btn {
+    width: 100%; padding: 10px; border-radius: 10px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff; font-size: 13px; font-weight: 700;
+    border: none; text-align: center; margin-top: 8px;
+  }
+  .url-pill {
+    display: inline-block; font-size: 11px; font-family: monospace;
+    background: #0f172a; color: #60a5fa; padding: 4px 10px;
+    border-radius: 6px; border: 1px solid #1e40af55;
+  }
+  .arrow-big { font-size: 22px; color: #475569; align-self: center; margin: 0 8px; }
+
+  hr { border: none; border-top: 1px solid #1e293b; margin: 40px 0; }
+  .info-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .info-icon { font-size: 16px; }
+  .info-text { font-size: 12px; color: #94a3b8; }
+</style>
+</head>
+<body>
+
+<div style="max-width:1100px;margin:0 auto;">
+
+<h1>Session Wizard — Mockup S1 + S2 <span style="font-size:14px;color:#64748b;font-weight:400">2026-04-12</span></h1>
+<p style="color:#64748b;font-size:13px;margin-bottom:32px;">User story: avvia sessione dalla card del gioco → inserisci giocatori → definisci ordine turni → avvia partita</p>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- FLOW 1: ENTRY POINT -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <h2>① Entry point — dalla Game Card</h2>
+    <span class="change-badge badge-fix">FIX</span>
+  </div>
+
+  <div class="screens-grid">
+
+    <!-- GameCard -->
+    <div class="screen-wrapper">
+      <div class="screen-title">Game Card (libreria)</div>
+      <div class="card" style="width:220px;">
+        <div style="width:100%;height:110px;background:#1e293b;border-radius:8px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;color:#475569;font-size:28px;">🎲</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px;">Catan</div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:10px;">Klaus Teuber · 3-4 giocatori</div>
+        <div style="display:flex;gap:6px;font-size:11px;">
+          <span style="background:#f59e0b22;color:#fbbf24;padding:2px 8px;border-radius:6px;border:1px solid #f59e0b44;">RAG ✓</span>
+          <span style="background:#3b82f622;color:#60a5fa;padding:2px 8px;border-radius:6px;border:1px solid #3b82f644;">In libreria</span>
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #334155;display:flex;gap:6px;">
+          <div style="flex:1;padding:7px;text-align:center;background:#f59e0b;border-radius:8px;font-size:12px;font-weight:700;color:#fff;">▶ Gioca</div>
+          <div style="padding:7px 10px;background:#1e293b;border-radius:8px;font-size:12px;color:#94a3b8;border:1px solid #334155;">···</div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Tap "Gioca"</strong> genera URL:<br/>
+        <span class="url-pill">/sessions/new?gameId=xxx&amp;gameName=Catan</span>
+      </div>
+    </div>
+
+    <div class="arrow-big">→</div>
+
+    <!-- SessionDrawerSheet BEFORE -->
+    <div class="screen-wrapper">
+      <div class="screen-title">SessionDrawerSheet <span class="change-badge badge-fix">prima</span></div>
+      <div class="drawer">
+        <div class="drawer-header">
+          <div class="drawer-title"><span style="color:#6366f1">Sessioni</span> Catan</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px;">2 sessioni</div>
+        </div>
+        <div class="drawer-body">
+          <div class="drawer-session-row"><div class="session-dot"></div> Sessione del 10/04 · 3 giocatori</div>
+          <div class="drawer-session-row" style="--dot-color:#475569"><div class="session-dot" style="background:#94a3b8"></div> Sessione del 05/04 · 4 giocatori</div>
+          <div class="drawer-btn">+ Nuova Sessione</div>
+          <div style="font-size:11px;color:#dc2626;margin-top:6px;font-family:monospace;background:#fee2e2;padding:4px 8px;border-radius:4px;">→ /sessions/new?game=xxx</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-big">→</div>
+
+    <!-- SessionDrawerSheet AFTER -->
+    <div class="screen-wrapper">
+      <div class="screen-title">SessionDrawerSheet <span class="change-badge badge-fix">dopo</span></div>
+      <div class="drawer">
+        <div class="drawer-header">
+          <div class="drawer-title"><span style="color:#6366f1">Sessioni</span> Catan</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px;">2 sessioni</div>
+        </div>
+        <div class="drawer-body">
+          <div class="drawer-session-row"><div class="session-dot"></div> Sessione del 10/04 · 3 giocatori</div>
+          <div class="drawer-session-row"><div class="session-dot" style="background:#94a3b8"></div> Sessione del 05/04 · 4 giocatori</div>
+          <div class="drawer-btn">+ Nuova Sessione</div>
+          <div style="font-size:11px;color:#16a34a;margin-top:6px;font-family:monospace;background:#dcfce7;padding:4px 8px;border-radius:4px;">→ /sessions/new?<strong>gameId</strong>=xxx&amp;<strong>gameName</strong>=Catan</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr/>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- FLOW 2: STEP DOTS — PRIMA vs DOPO -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <h2>② Progress dots — prima vs dopo</h2>
+    <span class="change-badge badge-mod">MOD</span>
+  </div>
+
+  <div class="screens-grid" style="gap:48px;align-items:flex-start;">
+
+    <div class="screen-wrapper">
+      <div class="screen-title">Prima (4 step)</div>
+      <div style="background:#1e2330;border-radius:16px;border:1px solid #334155;padding:20px 24px;width:280px;">
+        <div class="step-dots">
+          <div class="dot dot-done">✓</div>
+          <div class="dot dot-done">✓</div>
+          <div class="dot dot-active">⊞</div>
+          <div class="dot dot-inactive">🚀</div>
+        </div>
+        <div style="display:flex;justify-content:center;gap:14px;font-size:10px;color:#475569;margin-top:4px;">
+          <span>Gioco</span><span>Giocatori</span><span style="color:#f59e0b">Fasi</span><span>Avvio</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-wrapper">
+      <div class="screen-title">Dopo — lancio normale (5 step)</div>
+      <div style="background:#1e2330;border-radius:16px;border:1px solid #334155;padding:20px 24px;width:320px;">
+        <div class="step-dots">
+          <div class="dot dot-done">✓</div>
+          <div class="dot dot-done">✓</div>
+          <div class="dot dot-active">↕</div>
+          <div class="dot dot-inactive">⊞</div>
+          <div class="dot dot-inactive">🚀</div>
+        </div>
+        <div style="display:flex;justify-content:center;gap:10px;font-size:10px;color:#475569;margin-top:4px;">
+          <span>Gioco</span><span>Giocatori</span><span style="color:#f59e0b">Ordine</span><span>Fasi</span><span>Avvio</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-wrapper">
+      <div class="screen-title">Dopo — da game card S1 (step 1 skip)</div>
+      <div style="background:#1e2330;border-radius:16px;border:1px solid #334155;padding:20px 24px;width:320px;">
+        <div class="step-dots">
+          <div class="dot dot-done" style="opacity:0.5;" title="Pre-filled, non cliccabile">✓</div>
+          <div class="dot dot-done">✓</div>
+          <div class="dot dot-active">↕</div>
+          <div class="dot dot-inactive">⊞</div>
+          <div class="dot dot-inactive">🚀</div>
+        </div>
+        <div style="display:flex;justify-content:center;gap:10px;font-size:10px;color:#475569;margin-top:4px;">
+          <span style="opacity:0.4">Gioco</span><span>Giocatori</span><span style="color:#f59e0b">Ordine</span><span>Fasi</span><span>Avvio</span>
+        </div>
+      </div>
+      <div class="annotation" style="width:320px;">
+        Step 1 dot = <strong>done + dimmed</strong>, non cliccabile.<br/>
+        Wizard parte già da step 2 (giocatori).
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr/>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- FLOW 3: STEP 1 SKIP — da game card -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <h2>③ Step 1 skip — wizard aperto da game card</h2>
+    <span class="change-badge badge-new">S1</span>
+  </div>
+
+  <div class="screens-grid">
+
+    <!-- Prima: step 1 sempre visibile -->
+    <div class="screen-wrapper">
+      <div class="screen-title">Prima — step 1 sempre visibile</div>
+      <div class="phone">
+        <div class="phone-header">
+          <span class="back">←</span>
+          <span class="title">Nuova Sessione</span>
+        </div>
+        <div class="phone-body">
+          <div class="step-dots">
+            <div class="dot dot-active">🎮</div>
+            <div class="dot dot-inactive">👥</div>
+            <div class="dot dot-inactive">⊞</div>
+            <div class="dot dot-inactive">🚀</div>
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Scegli un gioco</div>
+            <div style="font-size:12px;color:#64748b;margin-bottom:10px;">Seleziona un gioco dalla tua libreria</div>
+          </div>
+          <div style="background:#1a1f2e;border-radius:8px;padding:8px;display:flex;align-items:center;gap:6px;border:1px solid #334155;">
+            <span style="color:#475569">🔍</span>
+            <span style="font-size:12px;color:#475569;">Cerca gioco...</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div style="border:2px solid #f59e0b;border-radius:10px;padding:8px;text-align:center;background:#f59e0b11;">
+              <div style="font-size:24px;margin-bottom:4px;">🎲</div>
+              <div style="font-size:11px;font-weight:600;">Catan</div>
+              <div style="font-size:11px;color:#f59e0b;">✓</div>
+            </div>
+            <div style="border:1px solid #334155;border-radius:10px;padding:8px;text-align:center;">
+              <div style="font-size:24px;margin-bottom:4px;">🃏</div>
+              <div style="font-size:11px;font-weight:600;">Ticket to Ride</div>
+            </div>
+          </div>
+          <div class="btn-primary" style="opacity:0.4;text-align:center;padding:11px;border-radius:10px;">Avanti</div>
+        </div>
+      </div>
+      <div class="annotation" style="width:288px;">
+        ❌ User must <strong>re-select Catan</strong> even though they tapped "Gioca" from Catan's card
+      </div>
+    </div>
+
+    <div class="arrow-big">→</div>
+
+    <!-- Dopo: step 2 diretto -->
+    <div class="screen-wrapper">
+      <div class="screen-title">Dopo — apre direttamente step 2</div>
+      <div class="phone">
+        <div class="phone-header">
+          <span class="back">←</span>
+          <span class="title">Nuova Sessione</span>
+        </div>
+        <div class="phone-body">
+          <div class="step-dots">
+            <div class="dot dot-done" style="opacity:0.5;">✓</div>
+            <div class="dot dot-active">👥</div>
+            <div class="dot dot-inactive">↕</div>
+            <div class="dot dot-inactive">⊞</div>
+            <div class="dot dot-inactive">🚀</div>
+          </div>
+          <!-- Game context pill -->
+          <div style="display:flex;align-items:center;gap:8px;background:#f59e0b11;border:1px solid #f59e0b44;border-radius:8px;padding:8px 10px;">
+            <span style="font-size:16px;">🎲</span>
+            <div>
+              <div style="font-size:10px;color:#94a3b8;">Gioco selezionato</div>
+              <div style="font-size:13px;font-weight:700;color:#fbbf24;">Catan</div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Aggiungi giocatori</div>
+            <div style="font-size:12px;color:#64748b;">Chi gioca stasera? Assegna nomi e colori.</div>
+          </div>
+          <div class="player-row">
+            <div class="player-dot c-red"></div>
+            <span class="player-name">Giocatore 1</span>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <div style="flex:1;background:#1a1f2e;border:1px solid #334155;border-radius:8px;padding:8px;font-size:12px;color:#475569;">Nome giocatore</div>
+            <div style="padding:8px 12px;background:#1a1f2e;border:1px solid #334155;border-radius:8px;font-size:12px;color:#e2e8f0;">+ Aggiungi</div>
+          </div>
+          <div class="btn-row">
+            <div class="btn-primary" style="text-align:center;padding:11px;border-radius:10px;">Avanti</div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation" style="width:288px;">
+        ✅ Apre subito step 2. Gioco pre-selezionato visibile come <strong>context pill</strong>.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr/>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- FLOW 4: STEP 3 — ORDINE TURNI (nuovo) -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <h2>④ Step 3 — Ordine Turni</h2>
+    <span class="change-badge badge-new">NUOVO S2</span>
+  </div>
+
+  <div class="screens-grid">
+
+    <!-- Default order -->
+    <div class="screen-wrapper">
+      <div class="screen-title">Ordine default (come aggiunto)</div>
+      <div class="phone">
+        <div class="phone-header">
+          <span class="back">←</span>
+          <span class="title">Nuova Sessione</span>
+        </div>
+        <div class="phone-body">
+          <div class="step-dots">
+            <div class="dot dot-done" style="opacity:0.5;">✓</div>
+            <div class="dot dot-done">✓</div>
+            <div class="dot dot-active">↕</div>
+            <div class="dot dot-inactive">⊞</div>
+            <div class="dot dot-inactive">🚀</div>
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Ordine turni</div>
+            <div style="font-size:12px;color:#64748b;">Chi gioca per primo? Usa le frecce per riordinare.</div>
+          </div>
+          <div role="list">
+            <div class="player-row">
+              <span class="pos-badge">1°</span>
+              <div class="player-dot c-red"></div>
+              <span class="player-name">Alice</span>
+              <div class="arrow-col">
+                <div class="arrow-btn disabled">▲</div>
+                <div class="arrow-btn">▼</div>
+              </div>
+            </div>
+            <div class="player-row">
+              <span class="pos-badge">2°</span>
+              <div class="player-dot c-blue"></div>
+              <span class="player-name">Bob</span>
+              <div class="arrow-col">
+                <div class="arrow-btn">▲</div>
+                <div class="arrow-btn">▼</div>
+              </div>
+            </div>
+            <div class="player-row">
+              <span class="pos-badge">3°</span>
+              <div class="player-dot c-green"></div>
+              <span class="player-name">Carlo</span>
+              <div class="arrow-col">
+                <div class="arrow-btn">▲</div>
+                <div class="arrow-btn disabled">▼</div>
+              </div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <div class="btn-outline" style="text-align:center;padding:11px;border-radius:10px;">Indietro</div>
+            <div class="btn-primary" style="text-align:center;padding:11px;border-radius:10px;">Avanti</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- After reorder -->
+    <div class="screen-wrapper">
+      <div class="screen-title">Dopo aver spostato Bob al 1° posto</div>
+      <div class="phone">
+        <div class="phone-header">
+          <span class="back">←</span>
+          <span class="title">Nuova Sessione</span>
+        </div>
+        <div class="phone-body">
+          <div class="step-dots">
+            <div class="dot dot-done" style="opacity:0.5;">✓</div>
+            <div class="dot dot-done">✓</div>
+            <div class="dot dot-active">↕</div>
+            <div class="dot dot-inactive">⊞</div>
+            <div class="dot dot-inactive">🚀</div>
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Ordine turni</div>
+            <div style="font-size:12px;color:#64748b;">Chi gioca per primo? Usa le frecce per riordinare.</div>
+          </div>
+          <div role="list">
+            <div class="player-row" style="border-color:#f59e0b55;background:#f59e0b0a;">
+              <span class="pos-badge">1°</span>
+              <div class="player-dot c-blue"></div>
+              <span class="player-name">Bob</span>
+              <div class="arrow-col">
+                <div class="arrow-btn disabled">▲</div>
+                <div class="arrow-btn">▼</div>
+              </div>
+            </div>
+            <div class="player-row">
+              <span class="pos-badge">2°</span>
+              <div class="player-dot c-red"></div>
+              <span class="player-name">Alice</span>
+              <div class="arrow-col">
+                <div class="arrow-btn">▲</div>
+                <div class="arrow-btn">▼</div>
+              </div>
+            </div>
+            <div class="player-row">
+              <span class="pos-badge">3°</span>
+              <div class="player-dot c-green"></div>
+              <span class="player-name">Carlo</span>
+              <div class="arrow-col">
+                <div class="arrow-btn">▲</div>
+                <div class="arrow-btn disabled">▼</div>
+              </div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <div class="btn-outline" style="text-align:center;padding:11px;border-radius:10px;">Indietro</div>
+            <div class="btn-primary" style="text-align:center;padding:11px;border-radius:10px;">Avanti</div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation" style="width:288px;">
+        Bob spostato in 1° — riga evidenziata in <strong>amber</strong>.<br/>
+        Il suo ▲ è <strong>disabled</strong> (già primo).
+      </div>
+    </div>
+
+    <!-- Single player -->
+    <div class="screen-wrapper">
+      <div class="screen-title">Caso 1 solo giocatore</div>
+      <div class="phone">
+        <div class="phone-header">
+          <span class="back">←</span>
+          <span class="title">Nuova Sessione</span>
+        </div>
+        <div class="phone-body">
+          <div class="step-dots">
+            <div class="dot dot-done" style="opacity:0.5;">✓</div>
+            <div class="dot dot-done">✓</div>
+            <div class="dot dot-active">↕</div>
+            <div class="dot dot-inactive">⊞</div>
+            <div class="dot dot-inactive">🚀</div>
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Ordine turni</div>
+            <div style="font-size:12px;color:#64748b;">Chi gioca per primo? Usa le frecce per riordinare.</div>
+          </div>
+          <div class="player-row">
+            <span class="pos-badge">1°</span>
+            <div class="player-dot c-red"></div>
+            <span class="player-name">Alice</span>
+            <div class="arrow-col">
+              <div class="arrow-btn disabled">▲</div>
+              <div class="arrow-btn disabled">▼</div>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:11px;color:#475569;padding:8px;">
+            Un solo giocatore — ordine non applicabile.
+          </div>
+          <div class="btn-row">
+            <div class="btn-outline" style="text-align:center;padding:11px;border-radius:10px;">Indietro</div>
+            <div class="btn-primary" style="text-align:center;padding:11px;border-radius:10px;">Avanti</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr/>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- FLOW 5: STEP 5 — SUMMARY (aggiornata) -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <h2>⑤ Step 5 — Summary (aggiornata con ordine turni)</h2>
+    <span class="change-badge badge-mod">MOD</span>
+  </div>
+
+  <div class="screens-grid">
+
+    <div class="screen-wrapper">
+      <div class="screen-title">Prima (nessun ordine turni)</div>
+      <div class="phone">
+        <div class="phone-header">
+          <span class="back">←</span>
+          <span class="title">Nuova Sessione</span>
+        </div>
+        <div class="phone-body" style="gap:12px;">
+          <div class="step-dots">
+            <div class="dot dot-done">✓</div>
+            <div class="dot dot-done">✓</div>
+            <div class="dot dot-done">✓</div>
+            <div class="dot dot-active">🚀</div>
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:2px;">Tutto pronto!</div>
+            <div style="font-size:12px;color:#64748b;">Controlla e inizia la partita.</div>
+          </div>
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <div style="width:36px;height:36px;background:#f59e0b22;border-radius:8px;display:flex;align-items:center;justify-content:center;">🎮</div>
+              <div>
+                <div style="font-size:10px;color:#64748b;">Gioco</div>
+                <div style="font-size:13px;font-weight:700;">Catan</div>
+              </div>
+            </div>
+            <div style="font-size:10px;color:#64748b;margin-bottom:6px;">Giocatori (3)</div>
+            <div>
+              <span class="chip"><div class="chip-dot c-red"></div>Alice</span>
+              <span class="chip"><div class="chip-dot c-blue"></div>Bob</span>
+              <span class="chip"><div class="chip-dot c-green"></div>Carlo</span>
+            </div>
+          </div>
+          <div class="btn-primary" style="text-align:center;padding:12px;border-radius:10px;font-size:14px;">🎮 Inizia a Giocare</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-big">→</div>
+
+    <div class="screen-wrapper">
+      <div class="screen-title">Dopo — include sezione Ordine Turni</div>
+      <div class="phone">
+        <div class="phone-header">
+          <span class="back">←</span>
+          <span class="title">Nuova Sessione</span>
+        </div>
+        <div class="phone-body" style="gap:12px;">
+          <div class="step-dots">
+            <div class="dot dot-done" style="opacity:0.5;">✓</div>
+            <div class="dot dot-done">✓</div>
+            <div class="dot dot-done">✓</div>
+            <div class="dot dot-done">✓</div>
+            <div class="dot dot-active">🚀</div>
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:2px;">Tutto pronto!</div>
+            <div style="font-size:12px;color:#64748b;">Controlla e inizia la partita.</div>
+          </div>
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <div style="width:36px;height:36px;background:#f59e0b22;border-radius:8px;display:flex;align-items:center;justify-content:center;">🎮</div>
+              <div>
+                <div style="font-size:10px;color:#64748b;">Gioco</div>
+                <div style="font-size:13px;font-weight:700;">Catan</div>
+              </div>
+            </div>
+            <div style="font-size:10px;color:#64748b;margin-bottom:6px;">Giocatori (3)</div>
+            <div style="margin-bottom:12px;">
+              <span class="chip"><div class="chip-dot c-red"></div>Alice</span>
+              <span class="chip"><div class="chip-dot c-blue"></div>Bob</span>
+              <span class="chip"><div class="chip-dot c-green"></div>Carlo</span>
+            </div>
+            <!-- NEW: Turn order section -->
+            <div style="border-top:1px solid #334155;padding-top:10px;">
+              <div style="font-size:10px;color:#64748b;margin-bottom:6px;">Ordine turni</div>
+              <div>
+                <span class="chip"><span class="chip-num">1°</span><div class="chip-dot c-blue"></div>Bob</span>
+                <span class="chip"><span class="chip-num">2°</span><div class="chip-dot c-red"></div>Alice</span>
+                <span class="chip"><span class="chip-num">3°</span><div class="chip-dot c-green"></div>Carlo</span>
+              </div>
+            </div>
+          </div>
+          <div class="btn-primary" style="text-align:center;padding:12px;border-radius:10px;font-size:14px;">🎮 Inizia a Giocare</div>
+        </div>
+      </div>
+      <div class="annotation" style="width:288px;">
+        Nuova sezione <strong>Ordine turni</strong> con badge numerati e colori.<br/>
+        Bob è 1° (come definito al step 3).
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr/>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- API FLOW -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <h2>⑥ API flow — handleStart aggiornato</h2>
+    <span class="change-badge badge-mod">MOD</span>
+  </div>
+  <div style="background:#1a1f2e;border-radius:12px;padding:20px;font-family:monospace;font-size:12px;color:#94a3b8;border:1px solid #334155;max-width:600px;">
+    <div style="margin-bottom:8px;"><span style="color:#64748b">// 1.</span> <span style="color:#60a5fa">createSession</span><span style="color:#e2e8f0">(gameName, gameId)</span> <span style="color:#64748b">→ sessionId</span></div>
+    <div style="margin-bottom:8px;"><span style="color:#64748b">// 2.</span> <span style="color:#22c55e">for each player</span> <span style="color:#e2e8f0">in players (ordine UI):</span></div>
+    <div style="margin-bottom:8px;padding-left:20px;"><span style="color:#60a5fa">addPlayer</span><span style="color:#e2e8f0">(sessionId, {name, color})</span> <span style="color:#64748b">→ playerId</span></div>
+    <div style="margin-bottom:8px;padding-left:20px;"><span style="color:#64748b">// collect: addedPlayerIds.push(playerId)</span></div>
+    <div style="margin-bottom:8px;color:#4ade80;font-weight:700;">// 3. NEW — imposta ordine turni</div>
+    <div style="margin-bottom:8px;color:#4ade80;"><span style="color:#60a5fa">updateTurnOrder</span><span style="color:#e2e8f0">(sessionId, </span><span style="color:#4ade80">{ playerIds: addedPlayerIds }</span><span style="color:#e2e8f0">)</span></div>
+    <div style="margin-bottom:8px;"><span style="color:#64748b">// 4.</span> <span style="color:#60a5fa">configurePhases</span><span style="color:#e2e8f0">(sessionId, phases)</span> <span style="color:#64748b">// non bloccante</span></div>
+    <div><span style="color:#64748b">// 5.</span> <span style="color:#f59e0b">router.push</span><span style="color:#e2e8f0">('/sessions/live/' + sessionId)</span></div>
+  </div>
+  <div class="annotation" style="max-width:600px;margin-top:10px;">
+    <strong>API esistente</strong>: <code>PUT /live-sessions/{id}/turn-order</code> con <code>{ playerIds: string[] }</code><br/>
+    — già definita in <code>liveSessionsClient.ts:132</code>, schema in <code>live-sessions.schemas.ts:246</code>
+  </div>
+</div>
+
+</div><!-- /max-width -->
+</body>
+</html>

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services.Pdf;
@@ -41,7 +42,8 @@ internal sealed class GetPdfPageImageQueryHandler : IQueryHandler<GetPdfPageImag
             throw new NotFoundException($"PdfDocument {query.PdfDocumentId} not found");
 
         // Resolve storage bucket
-        var bucket = pdfDoc.PrivateGameId?.ToString() ?? pdfDoc.GameId.ToString();
+        // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
+        var bucket = PdfStorageKey.ForPdf(pdfDoc.Id);
 
         // Extract file ID from stored path
         var fileId = ExtractFileIdFromPath(pdfDoc.FilePath);

@@ -123,6 +123,21 @@ internal sealed class MechanicDraftEntityConfiguration : IEntityTypeConfiguratio
             .HasDefaultValue(0)
             .IsRequired();
 
+        builder.Property(d => d.TotalTokensUsed)
+            .HasColumnName("total_tokens_used")
+            .HasDefaultValue(0)
+            .IsRequired();
+
+        builder.Property(d => d.EstimatedCostUsd)
+            .HasColumnName("estimated_cost_usd")
+            .HasColumnType("numeric(12,6)")
+            .HasDefaultValue(0m)
+            .IsRequired();
+
+        builder.Property(d => d.RowVersion)
+            .HasColumnName("row_version")
+            .IsRowVersion();
+
         // Indexes
         builder.HasIndex(d => d.SharedGameId)
             .HasDatabaseName("ix_mechanic_drafts_shared_game_id");

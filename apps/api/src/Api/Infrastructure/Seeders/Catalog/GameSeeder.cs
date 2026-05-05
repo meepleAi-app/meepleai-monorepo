@@ -159,12 +159,22 @@ internal static class GameSeeder
         Guid systemUserId,
         CancellationToken ct)
     {
+        // Check by SharedGameId relationship first (fastest path)
         var existingBridge = await db.Games
             .FirstOrDefaultAsync(g => g.SharedGameId == sharedGame.Id, ct)
             .ConfigureAwait(false);
 
         if (existingBridge != null)
             return existingBridge;
+
+        // Check by Name (the IX_games_Name unique constraint column) to prevent
+        // duplicate key violations when DB is pre-populated from a snapshot restore
+        var bridgeByName = await db.Games
+            .FirstOrDefaultAsync(g => g.Name == sharedGame.Title, ct)
+            .ConfigureAwait(false);
+
+        if (bridgeByName != null)
+            return bridgeByName;
 
         var bridge = new GameEntity
         {

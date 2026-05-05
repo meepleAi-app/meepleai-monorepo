@@ -126,7 +126,7 @@ internal sealed class RagExportService : IRagExportService
 
         var docInfo = new RagExportDocumentInfo(
             PdfDocumentId: pdfDoc.Id,
-            GameId: pdfDoc.GameId,
+            GameId: pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
             GameSlug: gameSlug,
             GameName: gameName,
             FileName: pdfDoc.FileName,

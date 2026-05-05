@@ -46,12 +46,10 @@ internal class GetProcessingQueueQueryHandler : IQueryHandler<GetProcessingQueue
             dbQuery = dbQuery.Where(j => j.CreatedAt <= query.ToDate.Value);
         }
 
-        // Filter by game ID (matches PdfDocument.GameId or PdfDocument.SharedGameId)
+        // Filter by game ID (matches PdfDocument.SharedGameId)
         if (query.GameId.HasValue)
         {
-            dbQuery = dbQuery.Where(j =>
-                j.PdfDocument.GameId == query.GameId.Value ||
-                j.PdfDocument.SharedGameId == query.GameId.Value);
+            dbQuery = dbQuery.Where(j => j.PdfDocument.SharedGameId == query.GameId.Value);
         }
 
         // Search text (matches PDF filename, case-insensitive via EF.Functions.ILike for PostgreSQL)

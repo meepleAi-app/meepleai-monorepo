@@ -10,6 +10,8 @@
 
 import { LegalPageLayout } from '@/components/legal';
 
+import { ManagePreferencesLink } from './ManagePreferencesLink';
+
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -51,6 +53,7 @@ export default function CookiesPage() {
         labelIt: 'Termini e Condizioni',
         labelEn: 'Terms and Conditions',
       }}
+      footerSlot={<ManagePreferencesLink />}
     />
   );
 }

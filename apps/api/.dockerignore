@@ -33,6 +33,8 @@ tests/
 README.md
 LICENSE
 *.md
+# Re-include MechanicExtractor prompt resources (ISSUE-524 / ADR-051): embedded into Api.dll
+!src/Api/BoundedContexts/SharedGameCatalog/Infrastructure/Prompts/MechanicExtractor/v1/*.md
 
 # NuGet
 **/packages/

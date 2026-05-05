@@ -64,7 +64,7 @@ internal class GetCollectionByIdQueryHandler : IQueryHandler<GetCollectionByIdQu
                 AddedAt: doc.AddedAt,
                 PdfDocument: pdfDoc != null ? new PdfDocumentDto(
                     Id: pdfDoc.Id,
-                    GameId: pdfDoc.GameId,
+                    GameId: pdfDoc.SharedGameId,
                     FileName: pdfDoc.FileName.Value,
                     FilePath: pdfDoc.FilePath,
                     FileSizeBytes: pdfDoc.FileSize.Bytes,

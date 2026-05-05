@@ -4,7 +4,7 @@ using FluentValidation;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Validators;
 
 /// <summary>
-/// Validator for QuickCreateAgentCommand.
+/// Validator for <see cref="QuickCreateAgentCommand"/>. Issue #659 (Phase δ.1).
 /// </summary>
 internal class QuickCreateAgentCommandValidator : AbstractValidator<QuickCreateAgentCommand>
 {
@@ -17,10 +17,5 @@ internal class QuickCreateAgentCommandValidator : AbstractValidator<QuickCreateA
         RuleFor(x => x.GameId)
             .NotEmpty()
             .WithMessage("GameId is required");
-
-        RuleFor(x => x.SharedGameId)
-            .Must(id => id == null || id != Guid.Empty)
-            .When(x => x.SharedGameId.HasValue)
-            .WithMessage("SharedGameId cannot be empty when provided");
     }
 }

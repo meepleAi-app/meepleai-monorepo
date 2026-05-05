@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Guards;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -63,7 +64,7 @@ internal class StartGameSessionCommandHandler : ICommandHandler<StartGameSession
         // Get game to validate existence and player count
         var game = await _gameRepository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false);
         if (game == null)
-            throw new InvalidOperationException($"Game with ID {command.GameId} not found");
+            throw new NotFoundException("Game", command.GameId.ToString());
 
         // Validate player count against game's limits
         var playerCount = command.Players.Count;

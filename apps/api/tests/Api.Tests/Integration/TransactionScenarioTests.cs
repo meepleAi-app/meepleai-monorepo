@@ -369,7 +369,7 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
         var pdf = new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "scope_test.pdf",
             FilePath = "/path/scope_test.pdf",
             FileSizeBytes = 1000000,
@@ -396,7 +396,6 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
         var persistedUser = await _dbContext.Users.FindAsync(new object[] { userId }, TestCancellationToken);
         var persistedGame = await _dbContext.Games.FindAsync(new object[] { gameId }, TestCancellationToken);
         var persistedPdf = await _dbContext.PdfDocuments
-            .Include(p => p.Game)
             .Include(p => p.UploadedBy)
             .FirstOrDefaultAsync(p => p.Id == pdfId, TestCancellationToken);
 
@@ -405,12 +404,11 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
         persistedPdf.Should().NotBeNull();
 
         // Verify FK relationships
-        persistedPdf!.GameId.Should().Be(gameId);
+        persistedPdf!.SharedGameId.Should().Be(gameId);
         persistedPdf.UploadedByUserId.Should().Be(userId);
-        persistedPdf.Game.Should().NotBeNull();
-        persistedPdf.Game.Name.Should().Be("Scope Test Game");
+        persistedGame!.Name.Should().Be("Scope Test Game");
         persistedPdf.UploadedBy.Should().NotBeNull();
-        persistedPdf.UploadedBy.Email.Should().Be("scope@test.com");
+        persistedPdf.UploadedBy!.Email.Should().Be("scope@test.com");
     }
 
     #endregion

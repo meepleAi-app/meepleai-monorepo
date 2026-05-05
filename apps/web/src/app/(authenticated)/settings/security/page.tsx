@@ -20,6 +20,8 @@ import {
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { SettingsList } from '@/components/ui/v2/settings-list';
+import { SettingsRow } from '@/components/ui/v2/settings-row';
 import { api } from '@/lib/api';
 
 export default function SecuritySettingsPage() {
@@ -146,43 +148,36 @@ export default function SecuritySettingsPage() {
       )}
 
       {/* 2FA Section */}
-      <div className="bg-card rounded-xl p-6 border border-border/50 mb-6">
-        <div className="flex items-start gap-4">
-          <Shield className="h-8 w-8 text-primary mt-1" />
-          <div className="flex-1">
-            <h2 className="text-xl font-bold mb-2">Two-Factor Authentication</h2>
-            <p className="text-muted-foreground mb-4">
-              Add an extra layer of security to your account
-            </p>
-
-            <div className="flex items-center gap-3">
-              <div
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  is2FAEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                }`}
+      <SettingsList ariaLabel="Two-Factor Authentication" className="mb-6">
+        <SettingsRow
+          icon={<Shield className="h-5 w-5" aria-hidden="true" />}
+          label="Two-Factor Authentication"
+          description={
+            is2FAEnabled
+              ? 'Enabled — an extra layer of security is active on your account'
+              : 'Disabled — add an extra layer of security to your account'
+          }
+          entity="agent"
+          trailing={
+            !is2FAEnabled ? (
+              <Button onClick={handleEnableClick} disabled={setupMutation.isPending} size="sm">
+                {setupMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Enable 2FA
+              </Button>
+            ) : (
+              <Button
+                variant="destructive"
+                onClick={() => disableMutation.mutate()}
+                disabled={disableMutation.isPending}
+                size="sm"
               >
-                {is2FAEnabled ? 'Enabled' : 'Disabled'}
-              </div>
-
-              {!is2FAEnabled ? (
-                <Button onClick={handleEnableClick} disabled={setupMutation.isPending}>
-                  {setupMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Enable 2FA
-                </Button>
-              ) : (
-                <Button
-                  variant="destructive"
-                  onClick={() => disableMutation.mutate()}
-                  disabled={disableMutation.isPending}
-                >
-                  {disableMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Disable 2FA
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+                {disableMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Disable 2FA
+              </Button>
+            )
+          }
+        />
+      </SettingsList>
 
       {/* 2FA Setup Wizard */}
       <Dialog

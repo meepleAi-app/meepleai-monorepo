@@ -2,6 +2,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.Middleware.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -43,8 +44,7 @@ internal sealed class GetLedgerHistoryQueryHandler
 
         if (sessionState == null)
         {
-            throw new InvalidOperationException(
-                $"Game session {query.SessionId} not found");
+            throw new NotFoundException("GameSession", query.SessionId.ToString());
         }
 
         // Get all snapshots (ordered by turn number descending)

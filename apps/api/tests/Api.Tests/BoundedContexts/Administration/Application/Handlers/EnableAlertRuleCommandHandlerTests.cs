@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Aggregates.AlertRules;
 using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Moq;
@@ -98,7 +99,7 @@ public class EnableAlertRuleCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenAlertRuleNotFound_ThrowsInvalidOperationException()
+    public async Task Handle_WhenAlertRuleNotFound_ThrowsNotFoundException()
     {
         // Arrange
         var ruleId = Guid.NewGuid();
@@ -110,7 +111,7 @@ public class EnableAlertRuleCommandHandlerTests
         // Act & Assert
         var act = () =>
             _handler.Handle(command, CancellationToken.None);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<NotFoundException>()).Which;
 
         exception.Message.Should().Contain(ruleId.ToString());
         exception.Message.Should().Contain("not found");

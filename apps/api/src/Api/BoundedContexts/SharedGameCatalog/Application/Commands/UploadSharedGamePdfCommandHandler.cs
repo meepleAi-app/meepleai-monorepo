@@ -100,7 +100,6 @@ internal sealed class UploadSharedGamePdfCommandHandler
         {
             Id = pdfDocumentId,
             SharedGameId = command.SharedGameId,
-            GameId = command.SharedGameId, // Issue #97: Use SharedGameId so Qdrant indexes with correct game_id
             FileName = fileName,
             FilePath = storageResult.FilePath!,
             FileSizeBytes = storageResult.FileSizeBytes,

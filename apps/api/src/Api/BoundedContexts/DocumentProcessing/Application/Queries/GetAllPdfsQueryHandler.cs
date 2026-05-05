@@ -9,6 +9,11 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Queries;
 /// Handler for GetAllPdfsQuery.
 /// PDF Storage Management Hub: Enriched with 7-state processing, game joins,
 /// chunk counts, file sizes, sorting, and filtering.
+///
+/// Task 5 (PDF SharedGameId migration): filters by SharedGameId and uses an
+/// explicit LINQ Join to shared_games for GameTitle projection. Status filter
+/// maps lowercase API contract values (completed/failed/pending/processing) to
+/// the 7-state ProcessingState vocabulary.
 /// </summary>
 internal sealed class GetAllPdfsQueryHandler : IQueryHandler<GetAllPdfsQuery, PdfListResult>
 {
@@ -25,35 +30,24 @@ internal sealed class GetAllPdfsQueryHandler : IQueryHandler<GetAllPdfsQuery, Pd
 
         var pdfsQuery = _dbContext.PdfDocuments
             .AsNoTracking()
-            .Include(p => p.Game)
             .AsQueryable();
 
-        // Filter by legacy status — map to ProcessingState when possible
+        // Filter by legacy status (API contract uses lowercase) — map to ProcessingState
         if (!string.IsNullOrWhiteSpace(query.Status))
         {
-            var mappedState = query.Status switch
+            pdfsQuery = query.Status.ToLowerInvariant() switch
             {
-                "pending" => nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Pending),
-                "completed" => nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready),
-                "failed" => nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Failed),
-                _ => (string?)null
+                "completed" => pdfsQuery.Where(p => p.ProcessingState == "Ready"),
+                "failed" => pdfsQuery.Where(p => p.ProcessingState == "Failed"),
+                "pending" => pdfsQuery.Where(p => p.ProcessingState == "Pending"),
+                "processing" => pdfsQuery.Where(p =>
+                    p.ProcessingState == "Uploading" ||
+                    p.ProcessingState == "Extracting" ||
+                    p.ProcessingState == "Chunking" ||
+                    p.ProcessingState == "Embedding" ||
+                    p.ProcessingState == "Indexing"),
+                _ => pdfsQuery
             };
-
-            if (mappedState != null)
-            {
-                pdfsQuery = pdfsQuery.Where(p => p.ProcessingState == mappedState);
-            }
-            else
-            {
-                // "processing" maps to multiple states — filter out terminal states
-                var readyState = nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready);
-                var failedState = nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Failed);
-                var pendingState = nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Pending);
-                pdfsQuery = pdfsQuery.Where(p =>
-                    p.ProcessingState != readyState &&
-                    p.ProcessingState != failedState &&
-                    p.ProcessingState != pendingState);
-            }
         }
 
         // Filter by 7-state processing state
@@ -84,27 +78,30 @@ internal sealed class GetAllPdfsQueryHandler : IQueryHandler<GetAllPdfsQuery, Pd
             pdfsQuery = pdfsQuery.Where(p => p.UploadedAt <= query.UploadedBefore.Value);
         }
 
-        // Filter by game
+        // Filter by shared game (GameId parameter is now semantically SharedGameId)
         if (query.GameId.HasValue)
         {
-            pdfsQuery = pdfsQuery.Where(p => p.GameId == query.GameId.Value);
+            pdfsQuery = pdfsQuery.Where(p => p.SharedGameId == query.GameId.Value);
         }
 
-        // Get total count
+        // Get total count before sorting / paging
         var total = await pdfsQuery.CountAsync(cancellationToken).ConfigureAwait(false);
 
         // Apply sorting
         pdfsQuery = ApplySorting(pdfsQuery, query.SortBy, query.SortOrder);
 
-        // Get paginated results with enriched data
-        var pdfs = await pdfsQuery
-            .Skip((query.Page - 1) * query.PageSize)
-            .Take(query.PageSize)
-            .Select(p => new PdfListItemDto(
+        // Project via explicit left-join to shared_games so GameTitle can be populated
+        // without a correlated subquery. Chunk count still uses correlated subquery
+        // since it aggregates the text_chunks child table.
+        var pdfs = await (
+            from p in pdfsQuery
+            join sg in _dbContext.SharedGames on p.SharedGameId equals sg.Id into sgj
+            from sg in sgj.DefaultIfEmpty()
+            select new PdfListItemDto(
                 p.Id,
                 p.FileName,
-                p.Game != null ? p.Game.Name : null,
-                p.GameId != Guid.Empty ? p.GameId : null,
+                sg != null ? sg.Title : null,
+                p.SharedGameId,
                 p.ProcessingState,
                 MapStateToProgress(p.ProcessingState),
                 p.FileSizeBytes,
@@ -116,6 +113,8 @@ internal sealed class GetAllPdfsQueryHandler : IQueryHandler<GetAllPdfsQuery, Pd
                 p.UploadedAt,
                 p.ProcessedAt
             ))
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 

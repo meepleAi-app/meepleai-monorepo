@@ -2,12 +2,11 @@
 
 import { useEffect, useState, useCallback } from 'react';
 
-import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { VerificationError } from '@/components/auth/VerificationError';
 import { VerificationSuccess } from '@/components/auth/VerificationSuccess';
-import { AuthLayout } from '@/components/layouts';
+import { AuthCard } from '@/components/ui/v2/auth-card';
 import { useEmailVerification } from '@/hooks/useEmailVerification';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -93,74 +92,82 @@ export function VerifyEmailContent() {
     }
   };
 
+  /**
+   * Render a loading branch (used for both in-flight verification and the
+   * brief pre-verification mount window). The loading message is announced
+   * to assistive tech only when the verification is actually in progress.
+   */
+  const renderLoading = (withStatusRole: boolean) => (
+    <AuthCard title={t('auth.emailVerification.pageTitle')}>
+      <div className="text-center py-8" data-testid="verify-email-page">
+        <div
+          className="animate-pulse text-muted-foreground text-sm"
+          {...(withStatusRole ? { role: 'status', 'aria-live': 'polite' } : {})}
+        >
+          {t('auth.emailVerification.verifying')}
+        </div>
+      </div>
+    </AuthCard>
+  );
+
   // No token provided
   if (!token) {
     return (
-      <AuthLayout data-testid="verify-email-page">
-        <VerificationError
-          errorType="invalid"
-          errorMessage={t('auth.emailVerification.error.noToken')}
-          onRetry={handleRetry}
-          data-testid="verification-error"
-        />
-      </AuthLayout>
+      <AuthCard title={t('auth.emailVerification.pageTitle')}>
+        <div data-testid="verify-email-page">
+          <VerificationError
+            errorType="invalid"
+            errorMessage={t('auth.emailVerification.error.noToken')}
+            onRetry={handleRetry}
+            data-testid="verification-error"
+          />
+        </div>
+      </AuthCard>
     );
   }
 
   // Loading state
   if (isLoading) {
-    return (
-      <AuthLayout data-testid="verify-email-page">
-        <div className="flex flex-col items-center justify-center py-12 space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden="true" />
-          <p className="text-muted-foreground" role="status" aria-live="polite">
-            {t('auth.emailVerification.verifying')}
-          </p>
-        </div>
-      </AuthLayout>
-    );
+    return renderLoading(true);
   }
 
   // Success state
   if (isVerified) {
     return (
-      <AuthLayout data-testid="verify-email-page">
-        <VerificationSuccess
-          email={email || undefined}
-          redirectUrl="/library"
-          autoRedirectSeconds={3}
-          onRedirect={handleRedirect}
-          data-testid="verification-success"
-        />
-      </AuthLayout>
+      <AuthCard title={t('auth.emailVerification.pageTitle')}>
+        <div data-testid="verify-email-page">
+          <VerificationSuccess
+            email={email || undefined}
+            redirectUrl="/library"
+            autoRedirectSeconds={3}
+            onRedirect={handleRedirect}
+            data-testid="verification-success"
+          />
+        </div>
+      </AuthCard>
     );
   }
 
   // Error state
   if (error && errorType) {
     return (
-      <AuthLayout data-testid="verify-email-page">
-        <VerificationError
-          errorType={errorType}
-          errorMessage={error}
-          onResend={email ? handleResend : undefined}
-          isResending={isResending}
-          cooldownSeconds={cooldownSeconds}
-          onGoToLogin={handleGoToLogin}
-          onRetry={handleRetry}
-          data-testid="verification-error"
-        />
-      </AuthLayout>
+      <AuthCard title={t('auth.emailVerification.pageTitle')}>
+        <div data-testid="verify-email-page">
+          <VerificationError
+            errorType={errorType}
+            errorMessage={error}
+            onResend={email ? handleResend : undefined}
+            isResending={isResending}
+            cooldownSeconds={cooldownSeconds}
+            onGoToLogin={handleGoToLogin}
+            onRetry={handleRetry}
+            data-testid="verification-error"
+          />
+        </div>
+      </AuthCard>
     );
   }
 
-  // Default loading (should not reach here normally)
-  return (
-    <AuthLayout data-testid="verify-email-page">
-      <div className="flex flex-col items-center justify-center py-12 space-y-4">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden="true" />
-        <p className="text-muted-foreground">{t('auth.emailVerification.verifying')}</p>
-      </div>
-    </AuthLayout>
-  );
+  // Default loading (brief window between mount and verifyEmail setting isLoading)
+  return renderLoading(false);
 }

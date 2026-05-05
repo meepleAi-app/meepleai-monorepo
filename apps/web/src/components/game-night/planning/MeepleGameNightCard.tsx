@@ -7,7 +7,7 @@ import Link from 'next/link';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardMetadata } from '@/components/ui/data-display/meeple-card';
-import { buildEventNavItems } from '@/components/ui/data-display/meeple-card/nav-items';
+import { buildEventConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 import { cn } from '@/lib/utils';
 import type { GameNightSummary, GameNightStatus } from '@/stores/game-night';
 
@@ -37,9 +37,9 @@ export function MeepleGameNightCard({ night }: MeepleGameNightCardProps) {
     { icon: <Gamepad2 className="h-4 w-4" />, label: String(night.gameCount) },
   ];
 
-  const navItems = useMemo(
+  const connections = useMemo(
     () =>
-      buildEventNavItems(
+      buildEventConnections(
         { participantCount: night.playerCount, gameCount: night.gameCount },
         {
           // Link-style: entire card navigates via <Link> wrapper, so inner clicks
@@ -63,7 +63,7 @@ export function MeepleGameNightCard({ night }: MeepleGameNightCardProps) {
         subtitle={subtitle}
         metadata={metadata}
         badge={STATUS_BADGE[night.status] ?? 'Sconosciuto'}
-        navItems={navItems}
+        connections={connections}
         className="h-full"
         data-testid="game-night-card"
       />

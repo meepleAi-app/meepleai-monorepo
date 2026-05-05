@@ -3,7 +3,7 @@
  * Issue #4858: Migrated to MeepleCard design system
  *
  * Compact card for dashboard "Recently Added" widget.
- * Delegates to MeepleLibraryGameCard adapter so navItems and drawers are wired.
+ * Delegates to MeepleLibraryGameCard adapter so connections and drawers are wired.
  */
 
 'use client';

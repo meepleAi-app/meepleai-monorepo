@@ -1,10 +1,24 @@
 import 'fake-indexeddb/auto';
 import { Suspense } from 'react';
-import { render, screen, fireEvent, waitFor, type RenderResult } from '@testing-library/react';
+import {
+  render as rtlRender,
+  screen,
+  fireEvent,
+  waitFor,
+  type RenderResult,
+} from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import PhotosPage from '../page';
 import { clearAllPhotos, addPhoto } from '@/lib/storage/photo-store';
+
+function render(ui: React.ReactElement): RenderResult {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  return rtlRender(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
 
 // jsdom doesn't implement URL.createObjectURL / revokeObjectURL.
 // Stub them so <img src={...}> and revoke-on-unmount work in tests.

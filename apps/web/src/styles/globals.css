@@ -180,6 +180,8 @@
     position: relative;
     background: var(--bg-base);
     color: var(--text-primary);
+    /* Safety net: prevent horizontal page scroll on mobile viewports */
+    overflow-x: clip;
   }
 
   /* MeepleAI Background Texture System - Issue #2905 */
@@ -486,6 +488,8 @@
   --color-entity-kb:      hsl(var(--e-document));
   --color-entity-chat:    hsl(var(--e-chat));
   --color-entity-event:   hsl(var(--e-event));
+  --color-entity-toolkit: hsl(var(--e-toolkit));
+  --color-entity-tool:    hsl(var(--e-tool));
 
   /* Font family utilities */
   --font-heading: var(--font-quicksand), system-ui, sans-serif;
@@ -498,13 +502,15 @@
 
 :root {
   /* MeepleCard v2 entity color shortcuts (Issue #4604) */
-  --e-game: 25 95% 45%;
+  --e-game: 25 95% 38%;            /* WCAG AA: Darkened to 38% for 4.5:1 contrast with white text (Issue #587, gate #601) */
   --e-player: 262 83% 58%;
   --e-session: 240 60% 55%;
   --e-agent: 38 92% 50%;
-  --e-document: 210 40% 55%;
+  --e-document: 174 60% 40%;  /* KB teal — aligned with Claude Design v1 mockup (--c-kb) */
   --e-chat: 220 80% 55%;
   --e-event: 350 89% 60%;
+  --e-toolkit: 142 70% 45%;  /* Toolkit green — aligned with Claude Design v1 mockup (--c-toolkit) */
+  --e-tool: 195 80% 50%;     /* Sky Blue — Epic #412 */
 
   /* Base theme tokens - Opzione A: Playful Boardroom */
   --radius: 0.625rem;
@@ -601,9 +607,9 @@
   --popover: 0 0% 18%;
   --popover-foreground: 30 25% 90%;
   --primary: 25 95% 60%;            /* #d2691e lighter - Orange for visibility */
-  --primary-foreground: 0 0% 100%;
+  --primary-foreground: 0 0% 10%;   /* WCAG AA: Dark text on lighter primary for 7.4:1 contrast (Issue #587, gate #601) */
   --secondary: 142 76% 45%;         /* Green for visibility */
-  --secondary-foreground: 0 0% 100%;
+  --secondary-foreground: 0 0% 10%; /* WCAG AA: Dark text on lighter secondary for 8.1:1 contrast (Issue #587, gate #601) */
   --muted: 0 0% 20%;                /* Neutral muted background */
   --muted-foreground: 0 0% 60%;     /* #999999 - Neutral muted text */
   --accent: 45 93% 56%;             /* #fbbf24 - Amber for visibility */
@@ -623,7 +629,7 @@
   --sidebar: 0 0% 15%;              /* Neutral dark sidebar */
   --sidebar-foreground: 30 25% 90%;
   --sidebar-primary: 25 95% 60%;
-  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-primary-foreground: 0 0% 10%; /* WCAG AA: Mirror --primary-foreground (Issue #587, gate #601) */
   --sidebar-accent: 0 0% 22%;
   --sidebar-accent-foreground: 30 25% 90%;
   --sidebar-border: 0 0% 25%;

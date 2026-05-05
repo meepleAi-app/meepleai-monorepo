@@ -69,8 +69,8 @@ export const ToolboxSchema = z.object({
   currentPhaseId: z.string().uuid().nullable(),
   tools: z.array(ToolboxToolSchema),
   phases: z.array(PhaseSchema),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
 });
 
 export type ToolboxDto = z.infer<typeof ToolboxSchema>;
@@ -108,7 +108,7 @@ export const ToolboxTemplateSchema = z.object({
   source: z.string(),
   toolsJson: z.string(),
   phasesJson: z.string(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
 });
 
 export type ToolboxTemplateDto = z.infer<typeof ToolboxTemplateSchema>;

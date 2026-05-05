@@ -99,7 +99,7 @@ public sealed class VectorDocumentReadyStateHandlerTests
         var pdfEntity = new PdfDocumentEntity
         {
             Id = _pdfDocumentId,
-            GameId = _gameId,
+            SharedGameId = _gameId,
             UploadedByUserId = _userId,
             FileName = "test-rulebook.pdf",
             FilePath = "/test/test-rulebook.pdf",

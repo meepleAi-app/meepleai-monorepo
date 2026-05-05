@@ -69,29 +69,15 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
             .ToList();
 
         // Issue #4998: Batch load KB stats for both shared and private games in a single query.
-        // Private game PDFs are stored with GameId = PrivateGameId AND PrivateGameId = PrivateGameId,
-        // so we match them via the PrivateGameId column. We project PrivateGameId to split results
-        // into two dictionaries without a second round-trip.
         // ProcessingState is stored as string (HasConversion<string>()), so group in memory.
         //
-        // IMPORTANT: pdf_documents.GameId references games.Id (the versioned game record),
-        // NOT shared_games.id (SharedGameId used by library entries). We must resolve
-        // SharedGameId → games.Id before querying, then remap back for the stats dictionary.
-        var sharedToGameRecord = await _dbContext.Games
-            .AsNoTracking()
-            .Where(g => g.SharedGameId.HasValue && sharedGameIds.Contains(g.SharedGameId!.Value))
-            .Select(g => new { GameRecordId = g.Id, SharedGameId = g.SharedGameId!.Value })
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        var gameRecordIds = sharedToGameRecord.Select(x => x.GameRecordId).ToList();
-        var gameRecordToSharedMap = sharedToGameRecord
-            .ToDictionary(x => x.GameRecordId, x => x.SharedGameId);
-
+        // PDF -> SharedGame migration: pdf_documents.GameId removed. PDFs now reference
+        // SharedGames.Id directly via pdf_documents.SharedGameId (for shared library PDFs)
+        // or PrivateGames.Id via pdf_documents.PrivateGameId (for custom private PDFs).
         var pdfDocumentsRaw = await _dbContext.PdfDocuments
-            .Where(p => (p.GameId.HasValue && gameRecordIds.Contains(p.GameId.Value)) ||
+            .Where(p => (p.SharedGameId.HasValue && sharedGameIds.Contains(p.SharedGameId.Value)) ||
                         (p.PrivateGameId.HasValue && privateGameIds.Contains(p.PrivateGameId.Value)))
-            .Select(p => new { p.GameId, p.PrivateGameId, p.ProcessingState })
+            .Select(p => new { p.SharedGameId, p.PrivateGameId, p.ProcessingState })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -106,11 +92,11 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
         static bool IsFailed(string? state) =>
             string.Equals(state, nameof(PdfProcessingState.Failed), StringComparison.OrdinalIgnoreCase);
 
-        // Shared game PDFs: PrivateGameId IS NULL. Group by SharedGameId (not games.Id) so the
+        // Shared game PDFs: PrivateGameId IS NULL. Group by SharedGameId so the
         // dictionary key matches entry.GameId used below.
         var kbStatsByGame = pdfDocumentsRaw
-            .Where(p => !p.PrivateGameId.HasValue && p.GameId.HasValue && gameRecordToSharedMap.ContainsKey(p.GameId.Value))
-            .GroupBy(p => gameRecordToSharedMap[p.GameId!.Value])
+            .Where(p => !p.PrivateGameId.HasValue && p.SharedGameId.HasValue)
+            .GroupBy(p => p.SharedGameId!.Value)
             .ToDictionary(
                 g => g.Key,
                 g => new

@@ -61,7 +61,7 @@ internal class AddDocumentToCollectionCommandHandler : ICommandHandler<AddDocume
         }
 
         // Validate PDF belongs to same game as collection
-        if (pdfDoc.GameId != collection.GameId)
+        if (pdfDoc.SharedGameId != collection.GameId)
         {
             throw new DomainException("PDF document does not belong to the collection's game.");
         }

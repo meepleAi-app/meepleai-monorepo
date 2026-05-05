@@ -1,0 +1,1234 @@
+/* ===================================================================
+   SP6 Libro Game — Photo Upload (sp6-libro-game-photo-upload.jsx)
+   Route: /gamebook/upload
+   Descrizione: Wizard 3-step per fotografare manuale (scegli gioco → scatta pagine → indicizzazione).
+   Persona: Sara, 32, casual italian gamer / GM al tavolo (mobile-first, camera nativa).
+
+   Stati: 11 totali distribuiti su 3 step, vedi STATES array in fondo file.
+   Gherkin coperti: G1.2, G1.3, G1.4, G1.5, G1.6
+   =================================================================== */
+
+const { useState, useEffect } = React;
+
+/* ─── entityHsl helper ─── */
+const ENTITY_HSL = {
+  game:    '25 95% 45%',
+  player:  '262 83% 58%',
+  session: '240 60% 55%',
+  agent:   '38 92% 50%',
+  kb:      '174 60% 40%',
+  chat:    '220 80% 55%',
+  event:   '350 89% 60%',
+  toolkit: '142 70% 45%',
+  tool:    '195 80% 50%',
+};
+const entityHsl = (entity, alpha) =>
+  alpha != null ? `hsl(${ENTITY_HSL[entity]} / ${alpha})` : `hsl(${ENTITY_HSL[entity]})`;
+
+/* Confidence badges (colori semantici, NON entity) */
+const CONF_COLORS = {
+  high:   { bg: 'hsl(142 70% 45% / .15)', fg: 'hsl(142 70% 35%)', dark: 'hsl(142 70% 60%)' },
+  medium: { bg: 'hsl(38 92% 50% / .18)',  fg: 'hsl(38 92% 38%)',  dark: 'hsl(38 92% 62%)' },
+  low:    { bg: 'hsl(350 89% 60% / .15)', fg: 'hsl(350 89% 50%)', dark: 'hsl(350 89% 68%)' },
+};
+
+/* ─── Mock catalog data ─── */
+const SHARED_CATALOG = [
+  { id: 'tg', title: 'Tainted Grail', publisher: 'Awaken Realms', emoji: '⚔️', cover: ['hsl(350 60% 22%)', 'hsl(350 80% 38%)'], indexed: true, sharedBy: 1247 },
+  { id: 'iss', title: 'ISS Vanguard', publisher: 'Awaken Realms', emoji: '🚀', cover: ['hsl(220 70% 22%)', 'hsl(195 80% 50%)'], indexed: true, sharedBy: 892 },
+  { id: 'sf', title: 'Stuffed Fables', publisher: 'Plaid Hat', emoji: '🧸', cover: ['hsl(28 80% 38%)', 'hsl(38 92% 60%)'], indexed: true, sharedBy: 643 },
+  { id: 'gloomhaven', title: 'Gloomhaven', publisher: 'Cephalofair', emoji: '🗡️', cover: ['hsl(0 0% 18%)', 'hsl(28 50% 32%)'], indexed: true, sharedBy: 3421 },
+  { id: 'destinies', title: 'Destinies', publisher: 'Lucky Duck Games', emoji: '🌑', cover: ['hsl(262 60% 25%)', 'hsl(262 70% 45%)'], indexed: true, sharedBy: 512 },
+];
+
+const BGG_RESULTS = [
+  { id: 'bgg-andor', title: 'Andor Chronicles', publisher: 'Kosmos', year: 2021, bggId: 318240 },
+  { id: 'bgg-zaa', title: 'Zaardam Adventures', publisher: 'Indie Press', year: 2024, bggId: 412556 },
+];
+
+/* ─── Step indicator (sticky top) ─── */
+function StepIndicator({ current, onBack }) {
+  const steps = [
+    { n: 1, label: 'Gioco', icon: '🎲' },
+    { n: 2, label: 'Foto',  icon: '📷' },
+    { n: 3, label: 'Indice',icon: '⚙️' },
+  ];
+  return (
+    <div className="pu-stepbar">
+      <button type="button" className="pu-back-btn" onClick={onBack} aria-label="Indietro">←</button>
+      <div className="pu-step-list">
+        {steps.map((s, i) => {
+          const done = s.n < current;
+          const active = s.n === current;
+          return (
+            <React.Fragment key={s.n}>
+              <div className={`pu-step ${active ? 'active' : ''} ${done ? 'done' : ''}`}>
+                <span
+                  className="pu-step-circle"
+                  style={{
+                    background: done || active ? entityHsl('game') : 'transparent',
+                    color: done || active ? '#fff' : 'var(--text-muted)',
+                    border: `2px solid ${done || active ? entityHsl('game') : 'var(--border)'}`,
+                  }}
+                >
+                  {done ? '✓' : s.n}
+                </span>
+                <span className="pu-step-label" style={{ color: active ? 'var(--text)' : 'var(--text-muted)' }}>
+                  {s.label}
+                </span>
+              </div>
+              {i < steps.length - 1 && (
+                <span className="pu-step-line" style={{
+                  background: s.n < current ? entityHsl('game') : 'var(--border)',
+                }}/>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────────
+   STEP 1 — Scegli gioco
+   ─────────────────────────────────────────────────────────────── */
+
+function GameCard({ game, onClick, selected }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`pu-game-card ${selected ? 'selected' : ''}`}
+      style={{
+        border: `2px solid ${selected ? entityHsl('game') : 'var(--border)'}`,
+        background: 'var(--bg-card)',
+        boxShadow: selected ? `0 0 0 4px ${entityHsl('game', 0.15)}` : 'var(--shadow-sm)',
+      }}
+    >
+      <div
+        className="pu-game-cover"
+        style={{ background: `linear-gradient(155deg, ${game.cover[0]}, ${game.cover[1]})` }}
+      >
+        <span style={{ fontSize: 28 }} aria-hidden="true">{game.emoji}</span>
+      </div>
+      <div className="pu-game-body">
+        <div className="pu-game-title">{game.title}</div>
+        <div className="pu-game-meta">
+          <span style={{ fontFamily: 'var(--f-mono)' }}>{game.publisher}</span>
+        </div>
+        <div className="pu-game-shared">
+          <span aria-hidden="true">👥</span>
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>{game.sharedBy.toLocaleString('it')}</span>
+          <span style={{ color: 'var(--text-muted)' }}>condiviso</span>
+        </div>
+      </div>
+      {selected && (
+        <div className="pu-game-check" style={{ background: entityHsl('game') }}>✓</div>
+      )}
+    </button>
+  );
+}
+
+function Step1_Default() {
+  return (
+    <div className="pu-step-content">
+      <div className="pu-step-header">
+        <h2 className="pu-step-h2">Quale gioco vuoi indicizzare?</h2>
+        <p className="pu-step-sub">Scegli dal catalogo condiviso o cercane uno nuovo.</p>
+      </div>
+      <div className="pu-search-bar">
+        <span aria-hidden="true">🔍</span>
+        <input type="text" placeholder="Cerca un gioco…" readOnly/>
+      </div>
+      <div className="pu-search-tabs">
+        <span className="pu-search-tab active" style={{ color: entityHsl('game'), borderColor: entityHsl('game') }}>📚 Catalogo</span>
+        <span className="pu-search-tab">🌐 BGG</span>
+      </div>
+      <div className="pu-game-grid">
+        {SHARED_CATALOG.slice(0, 4).map((g, i) => (
+          <GameCard key={g.id} game={g} selected={i === 1}/>
+        ))}
+      </div>
+      <div className="pu-step-footer">
+        <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }}>
+          Continua →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Step1_Searching() {
+  const matches = SHARED_CATALOG.filter(g => g.title.toLowerCase().includes('and'));
+  return (
+    <div className="pu-step-content">
+      <div className="pu-step-header">
+        <h2 className="pu-step-h2">Quale gioco vuoi indicizzare?</h2>
+      </div>
+      <div className="pu-search-bar focused" style={{ borderColor: entityHsl('game') }}>
+        <span aria-hidden="true">🔍</span>
+        <input type="text" defaultValue="andor" readOnly/>
+        <button type="button" className="pu-search-clear">×</button>
+      </div>
+      <div className="pu-search-tabs">
+        <span className="pu-search-tab active" style={{ color: entityHsl('game'), borderColor: entityHsl('game') }}>📚 Catalogo (0)</span>
+        <span className="pu-search-tab">🌐 BGG (2)</span>
+      </div>
+      <div className="pu-search-info">
+        <span aria-hidden="true">ℹ️</span>
+        <span>Nessun risultato nel catalogo condiviso. Cerca su BGG ↑</span>
+      </div>
+    </div>
+  );
+}
+
+function Step1_NoResults() {
+  return (
+    <div className="pu-step-content">
+      <div className="pu-step-header">
+        <h2 className="pu-step-h2">Quale gioco vuoi indicizzare?</h2>
+      </div>
+      <div className="pu-search-bar focused" style={{ borderColor: entityHsl('game') }}>
+        <span aria-hidden="true">🔍</span>
+        <input type="text" defaultValue="zaardam" readOnly/>
+        <button type="button" className="pu-search-clear">×</button>
+      </div>
+      <div className="pu-no-results">
+        <div
+          className="pu-no-results-illu"
+          style={{ background: entityHsl('game', 0.12), border: `1px dashed ${entityHsl('game', 0.4)}` }}
+        >
+          <span style={{ fontSize: 32 }} aria-hidden="true">🔭</span>
+        </div>
+        <h3 className="pu-no-results-title">"Zaardam" non trovato</h3>
+        <p className="pu-no-results-sub">Tre modi per continuare:</p>
+        <div className="pu-no-results-actions">
+          <button type="button" className="pu-action-card" style={{ borderColor: entityHsl('game', 0.3) }}>
+            <span className="pu-action-icon" style={{ background: entityHsl('game', 0.15), color: entityHsl('game') }}>＋</span>
+            <div>
+              <div className="pu-action-title">Crea gioco nuovo</div>
+              <div className="pu-action-sub">Manuale che non esiste in nessun database</div>
+            </div>
+          </button>
+          <button type="button" className="pu-action-card" style={{ borderColor: entityHsl('kb', 0.3) }}>
+            <span className="pu-action-icon" style={{ background: entityHsl('kb', 0.15), color: entityHsl('kb') }}>🌐</span>
+            <div>
+              <div className="pu-action-title">Cerca su BoardGameGeek</div>
+              <div className="pu-action-sub">Fonte ufficiale con metadati completi</div>
+            </div>
+          </button>
+          <button type="button" className="pu-action-card" style={{ borderColor: entityHsl('agent', 0.3) }}>
+            <span className="pu-action-icon" style={{ background: entityHsl('agent', 0.15), color: entityHsl('agent') }}>🔒</span>
+            <div>
+              <div className="pu-action-title">Indicizza solo per me</div>
+              <div className="pu-action-sub">Privato — non condiviso con la community <span style={{ color: entityHsl('agent'), fontFamily: 'var(--f-mono)', fontSize: 10 }}>G1.5</span></div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Step1_BGGLoading() {
+  return (
+    <div className="pu-step-content">
+      <div className="pu-step-header">
+        <h2 className="pu-step-h2">Quale gioco vuoi indicizzare?</h2>
+      </div>
+      <div className="pu-search-bar focused" style={{ borderColor: entityHsl('game') }}>
+        <span aria-hidden="true">🔍</span>
+        <input type="text" defaultValue="andor" readOnly/>
+      </div>
+      <div className="pu-search-tabs">
+        <span className="pu-search-tab">📚 Catalogo</span>
+        <span className="pu-search-tab active" style={{ color: entityHsl('kb'), borderColor: entityHsl('kb') }}>🌐 BGG</span>
+      </div>
+      <div className="pu-bgg-loading">
+        <div className="pu-bgg-spinner" style={{ borderColor: `${entityHsl('kb', 0.2)} ${entityHsl('kb', 0.2)} ${entityHsl('kb', 0.2)} ${entityHsl('kb')}` }}/>
+        <div>
+          <div className="pu-bgg-loading-title">Cerco su BoardGameGeek…</div>
+          <div className="pu-bgg-loading-sub">Può richiedere qualche secondo</div>
+        </div>
+      </div>
+      <div className="pu-bgg-skeleton">
+        {[0,1,2].map(i => (
+          <div key={i} className="pu-bgg-skel-row">
+            <div className="pu-bgg-skel-cover pu-shimmer"/>
+            <div style={{ flex: 1 }}>
+              <div className="pu-bgg-skel-line pu-shimmer" style={{ width: '70%', height: 14 }}/>
+              <div className="pu-bgg-skel-line pu-shimmer" style={{ width: '40%', height: 10, marginTop: 6 }}/>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────────
+   STEP 2 — Scatta pagine
+   ─────────────────────────────────────────────────────────────── */
+
+function CameraViewfinder({ variant, capturedCount }) {
+  // variant: ready | low-light | detection-failed | denied
+  // Real impl: getUserMedia / native file picker
+  const isOk = variant === 'ready';
+  const isLow = variant === 'low-light';
+  const isFailed = variant === 'detection-failed';
+
+  return (
+    <div className="pu-camera">
+      {/* Top toolbar */}
+      <div className="pu-cam-top">
+        <button type="button" className="pu-cam-icon" aria-label="Chiudi">×</button>
+        <div className="pu-cam-counter" style={{ background: 'rgba(0,0,0,.6)' }}>
+          <span aria-hidden="true">📸</span>
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>{capturedCount} / 50</span>
+        </div>
+        <button type="button" className="pu-cam-icon" aria-label="Flash">⚡</button>
+      </div>
+
+      {/* Viewfinder */}
+      <div
+        className="pu-cam-vf"
+        style={{
+          background: isLow
+            ? 'radial-gradient(ellipse at center, hsl(28 30% 12%) 0%, hsl(0 0% 4%) 100%)'
+            : 'radial-gradient(ellipse at center, hsl(28 35% 22%) 0%, hsl(0 0% 8%) 100%)',
+        }}
+      >
+        {/* Page detection frame */}
+        <div
+          className={`pu-cam-frame ${isFailed ? 'failed' : ''}`}
+          style={{
+            borderColor: isFailed ? entityHsl('event') : isOk ? entityHsl('toolkit') : 'rgba(255,255,255,.4)',
+            borderStyle: isFailed ? 'dashed' : 'solid',
+          }}
+        >
+          {/* Corner accents */}
+          {['tl','tr','bl','br'].map(c => (
+            <span key={c} className={`pu-cam-corner ${c}`} style={{
+              background: isFailed ? entityHsl('event') : isOk ? entityHsl('toolkit') : 'rgba(255,255,255,.6)',
+            }}/>
+          ))}
+
+          {/* Page mock content */}
+          {!isFailed && (
+            <div className="pu-cam-page">
+              <div className="pu-cam-page-line" style={{ width: '60%' }}/>
+              <div className="pu-cam-page-line" style={{ width: '90%' }}/>
+              <div className="pu-cam-page-line" style={{ width: '85%' }}/>
+              <div className="pu-cam-page-line" style={{ width: '40%' }}/>
+              <div style={{ height: 8 }}/>
+              <div className="pu-cam-page-line" style={{ width: '88%' }}/>
+              <div className="pu-cam-page-line" style={{ width: '72%' }}/>
+            </div>
+          )}
+
+          {/* Status hint */}
+          <div className="pu-cam-hint" style={{
+            background: isFailed
+              ? entityHsl('event', 0.95)
+              : isOk
+                ? entityHsl('toolkit', 0.95)
+                : 'rgba(0,0,0,.7)',
+            color: '#fff',
+          }}>
+            {isOk && '✓ Pagina riconosciuta'}
+            {isLow && '☁️ Avvicina alla luce'}
+            {isFailed && '✗ Bordi non rilevati'}
+          </div>
+        </div>
+
+        {/* Light meter */}
+        <div className="pu-light-meter" aria-label="Misuratore luce">
+          <span className="pu-lm-icon" aria-hidden="true">☀️</span>
+          <div className="pu-lm-track">
+            <div
+              className="pu-lm-fill"
+              style={{
+                width: isLow ? '25%' : isOk ? '78%' : '55%',
+                background: isLow ? entityHsl('event') : isOk ? entityHsl('toolkit') : entityHsl('agent'),
+              }}
+            />
+          </div>
+          <span className="pu-lm-value" style={{
+            color: isLow ? entityHsl('event') : '#fff',
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            {isLow ? 'BASSA' : isOk ? 'OK' : 'MEDIA'}
+          </span>
+        </div>
+      </div>
+
+      {/* Captured strip */}
+      {capturedCount > 0 && (
+        <div className="pu-cam-strip">
+          <div className="pu-cam-strip-scroll">
+            {Array.from({ length: capturedCount }).map((_, i) => (
+              <div key={i} className="pu-cam-thumb">
+                <div className="pu-cam-thumb-img" style={{
+                  background: `linear-gradient(135deg, hsl(${30 + i * 8} 40% 75%), hsl(${30 + i * 8} 30% 55%))`,
+                }}/>
+                <span className="pu-cam-thumb-num">{i + 1}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Shutter */}
+      <div className="pu-cam-shutter-row">
+        <button type="button" className="pu-cam-side-btn" aria-label="Galleria">🖼️</button>
+        <button
+          type="button"
+          className="pu-cam-shutter"
+          aria-label="Scatta"
+          disabled={isLow || isFailed}
+          style={{
+            opacity: (isLow || isFailed) ? 0.5 : 1,
+            cursor: (isLow || isFailed) ? 'not-allowed' : 'pointer',
+          }}
+        >
+          <span className="pu-cam-shutter-inner"/>
+        </button>
+        <button
+          type="button"
+          className="pu-cam-side-btn done"
+          style={{ background: capturedCount > 0 ? entityHsl('toolkit') : 'rgba(255,255,255,.15)' }}
+          disabled={capturedCount === 0}
+        >
+          ✓
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Step2_Ready()   { return <CameraViewfinder variant="ready" capturedCount={0}/>; }
+function Step2_Capturing(){ return <CameraViewfinder variant="ready" capturedCount={8}/>; }
+function Step2_LowLight() { return <CameraViewfinder variant="low-light" capturedCount={3}/>; }
+function Step2_Failed()   { return <CameraViewfinder variant="detection-failed" capturedCount={2}/>; }
+
+function Step2_Denied() {
+  return (
+    <div className="pu-step-content pu-denied">
+      <div
+        className="pu-denied-illu"
+        style={{ background: entityHsl('event', 0.12), border: `1px solid ${entityHsl('event', 0.4)}` }}
+      >
+        <span style={{ fontSize: 36 }} aria-hidden="true">🔒</span>
+      </div>
+      <h2 className="pu-denied-title">Camera bloccata</h2>
+      <p className="pu-denied-sub">
+        MeepleAI non ha accesso alla fotocamera. Abilita i permessi nelle impostazioni del sistema per scattare le pagine.
+      </p>
+      <button type="button" className="pu-cta-primary" style={{ background: entityHsl('event') }}>
+        ⚙️ Apri impostazioni
+      </button>
+      <button type="button" className="pu-cta-ghost">
+        🖼️ Carica dalla galleria
+      </button>
+      <p className="pu-denied-hint">
+        <span aria-hidden="true">💡</span> In alternativa, puoi caricare foto già scattate.
+      </p>
+    </div>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────────
+   STEP 3 — Indicizzazione
+   ─────────────────────────────────────────────────────────────── */
+
+function ConfidenceBadge({ level }) {
+  const c = CONF_COLORS[level];
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  return (
+    <span className="pu-conf-badge" style={{ background: c.bg, color: isDark ? c.dark : c.fg }}>
+      {level === 'high' && '✓'}
+      {level === 'medium' && '◐'}
+      {level === 'low' && '⚠'}
+    </span>
+  );
+}
+
+function PageThumb({ num, conf, processing, retake }) {
+  return (
+    <div className={`pu-page-thumb ${processing ? 'processing' : ''} ${retake ? 'retake' : ''}`} style={{
+      borderColor: retake ? entityHsl('event') : 'var(--border)',
+    }}>
+      <div className="pu-page-thumb-img" style={{
+        background: processing
+          ? 'var(--bg-muted)'
+          : `linear-gradient(135deg, hsl(${30 + num * 5} 40% 78%), hsl(${30 + num * 5} 30% 58%))`,
+      }}>
+        {processing && <span className="pu-page-spin"/>}
+      </div>
+      <div className="pu-page-thumb-foot">
+        <span className="pu-page-num" style={{ fontVariantNumeric: 'tabular-nums' }}>{num}</span>
+        {!processing && conf && <ConfidenceBadge level={conf}/>}
+      </div>
+      {retake && (
+        <button type="button" className="pu-page-retake" style={{ background: entityHsl('event'), color: '#fff' }}>
+          📷 Riscatta
+        </button>
+      )}
+    </div>
+  );
+}
+
+function IndexingScreen({ variant }) {
+  // variant: in-progress | partial-fail | complete | offline
+  const isComplete = variant === 'complete';
+  const isPartial = variant === 'partial-fail';
+  const isOffline = variant === 'offline';
+  const indexed = isComplete ? 50 : isPartial ? 50 : isOffline ? 18 : 24;
+  const total = 50;
+  const pct = Math.round((indexed / total) * 100);
+
+  // Build mock pages
+  const pages = Array.from({ length: 30 }).map((_, i) => {
+    const num = i + 1;
+    if (isComplete) {
+      const r = (num * 7) % 10;
+      return { num, conf: r < 7 ? 'high' : r < 9 ? 'medium' : 'low', processing: false };
+    }
+    if (isPartial) {
+      const lowSet = [4, 17, 23];
+      return {
+        num,
+        conf: lowSet.includes(num) ? 'low' : (num * 3) % 10 < 7 ? 'high' : 'medium',
+        processing: false,
+        retake: lowSet.includes(num),
+      };
+    }
+    if (isOffline) {
+      if (num <= indexed) return { num, conf: (num * 5) % 10 < 7 ? 'high' : 'medium', processing: false };
+      return { num, processing: true };
+    }
+    // in-progress
+    if (num <= indexed) return { num, conf: (num * 4) % 10 < 7 ? 'high' : (num * 4) % 10 < 9 ? 'medium' : 'low', processing: false };
+    if (num === indexed + 1) return { num, processing: true };
+    return { num, conf: null, processing: false, pending: true };
+  });
+
+  return (
+    <div className="pu-step-content pu-idx">
+      {isOffline && (
+        <div className="pu-offline-banner" style={{
+          background: entityHsl('event', 0.12),
+          borderColor: entityHsl('event', 0.4),
+        }}>
+          <span aria-hidden="true" style={{ fontSize: 16 }}>📡</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="pu-offline-title">Connessione persa</div>
+            <div className="pu-offline-sub">
+              Riprenderà automaticamente al ripristino. <span style={{ fontFamily: 'var(--f-mono)', fontSize: 10, opacity: 0.7 }}>G1.4</span>
+            </div>
+          </div>
+          <button type="button" className="pu-offline-btn">Riprova ora</button>
+        </div>
+      )}
+
+      <div className="pu-idx-header">
+        <div>
+          <h2 className="pu-step-h2">
+            {isComplete ? 'Manuale pronto!' : isPartial ? 'Quasi pronto' : 'Indicizzazione…'}
+          </h2>
+          <p className="pu-step-sub">
+            {isComplete && '50 pagine indicizzate, 47 ad alta confidenza.'}
+            {isPartial && '47 pagine ok, 3 da riscattare per qualità migliore.'}
+            {variant === 'in-progress' && 'Sara, puoi tenere il telefono in tasca.'}
+            {isOffline && 'Connessione interrotta a 18/50. Ripartirà appena torna.'}
+          </p>
+        </div>
+        {!isComplete && (
+          <span className="pu-idx-counter" style={{ fontVariantNumeric: 'tabular-nums', color: entityHsl('toolkit') }}>
+            {indexed}<span style={{ color: 'var(--text-muted)', fontSize: '60%' }}> / {total}</span>
+          </span>
+        )}
+        {isComplete && (
+          <span className="pu-idx-counter" style={{ color: entityHsl('toolkit'), fontSize: 28 }}>✓</span>
+        )}
+      </div>
+
+      <div className="pu-idx-bar" aria-label={`${pct}% completato`}>
+        <div className="pu-idx-bar-fill" style={{
+          width: pct + '%',
+          background: isComplete
+            ? entityHsl('toolkit')
+            : isOffline
+              ? entityHsl('event')
+              : `linear-gradient(90deg, ${entityHsl('toolkit')}, ${entityHsl('game')})`,
+        }}/>
+      </div>
+
+      <div className="pu-idx-meta">
+        <span className="pu-idx-meta-chip" style={{ background: CONF_COLORS.high.bg, color: CONF_COLORS.high.fg }}>
+          ✓ {isComplete ? 47 : isPartial ? 47 : variant === 'in-progress' ? 18 : 13} alta
+        </span>
+        <span className="pu-idx-meta-chip" style={{ background: CONF_COLORS.medium.bg, color: CONF_COLORS.medium.fg }}>
+          ◐ {isComplete ? 2 : isPartial ? 0 : variant === 'in-progress' ? 5 : 4} media
+        </span>
+        {(isComplete || isPartial) && (
+          <span className="pu-idx-meta-chip" style={{ background: CONF_COLORS.low.bg, color: CONF_COLORS.low.fg }}>
+            ⚠ {isPartial ? 3 : 1} bassa
+          </span>
+        )}
+      </div>
+
+      <div className="pu-page-grid">
+        {pages.slice(0, 24).map(p => <PageThumb key={p.num} {...p}/>)}
+      </div>
+
+      {isComplete && (
+        <div className="pu-step-footer pu-idx-footer">
+          <button type="button" className="pu-cta-secondary">Salva e basta</button>
+          <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }}>
+            🎯 Inizia sessione →
+          </button>
+        </div>
+      )}
+      {isPartial && (
+        <div className="pu-step-footer pu-idx-footer">
+          <button type="button" className="pu-cta-secondary">Salta — uso così</button>
+          <button type="button" className="pu-cta-primary" style={{ background: entityHsl('event') }}>
+            📷 Riscatta 3 pagine
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Cancel modal ─── */
+function CancelModal() {
+  return (
+    <div className="pu-modal-overlay">
+      <div className="pu-modal" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+        <div className="pu-modal-icon" style={{
+          background: entityHsl('event', 0.12),
+          color: entityHsl('event'),
+        }}>⚠️</div>
+        <h3 className="pu-modal-title">Annullare l'indicizzazione?</h3>
+        <p className="pu-modal-sub">
+          Hai già scattato 24 pagine. Se annulli ora, dovrai ricominciare da capo.
+        </p>
+        <div className="pu-modal-actions">
+          <button type="button" className="pu-cta-secondary">Continua a indicizzare</button>
+          <button type="button" className="pu-cta-primary" style={{ background: entityHsl('event') }}>
+            Sì, annulla
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Desktop drag-drop fallback ─── */
+function DesktopDropFallback({ step, variant }) {
+  if (step !== 2) return null;
+  return (
+    <div className="pu-dt-drop" style={{
+      borderColor: entityHsl('game', 0.4),
+      background: entityHsl('game', 0.04),
+    }}>
+      <div className="pu-dt-drop-icon" style={{ color: entityHsl('game') }}>📁</div>
+      <h3 className="pu-dt-drop-title">Trascina le foto qui</h3>
+      <p className="pu-dt-drop-sub">
+        Su desktop puoi anche caricare foto già scattate.<br/>
+        Formati supportati: JPG, PNG, HEIC · Max 50 file
+      </p>
+      <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }}>
+        🖼️ Sfoglia file
+      </button>
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 16 }}>
+        Oppure usa lo smartphone per scattare → <a href="#" style={{ color: entityHsl('game') }}>Invia link al telefono</a>
+      </p>
+    </div>
+  );
+}
+
+/* ─── Screen composition ─── */
+function Screen({ stateId, desktop }) {
+  const stepNum = Number(stateId.split('-')[0]);
+
+  let content;
+  if (stateId === '1-default') content = <Step1_Default/>;
+  else if (stateId === '1-searching') content = <Step1_Searching/>;
+  else if (stateId === '1-no-results') content = <Step1_NoResults/>;
+  else if (stateId === '1-bgg-loading') content = <Step1_BGGLoading/>;
+  else if (stateId === '2-ready') content = desktop ? <DesktopDropFallback step={2}/> : <Step2_Ready/>;
+  else if (stateId === '2-capturing') content = desktop ? <DesktopDropFallback step={2}/> : <Step2_Capturing/>;
+  else if (stateId === '2-low-light') content = desktop ? <DesktopDropFallback step={2}/> : <Step2_LowLight/>;
+  else if (stateId === '2-failed') content = desktop ? <DesktopDropFallback step={2}/> : <Step2_Failed/>;
+  else if (stateId === '2-denied') content = <Step2_Denied/>;
+  else if (stateId === '3-progress') content = <IndexingScreen variant="in-progress"/>;
+  else if (stateId === '3-partial') content = <IndexingScreen variant="partial-fail"/>;
+  else if (stateId === '3-complete') content = <IndexingScreen variant="complete"/>;
+  else if (stateId === '3-offline') content = <IndexingScreen variant="offline"/>;
+  else if (stateId === '3-cancel-modal') content = <><IndexingScreen variant="in-progress"/><CancelModal/></>;
+
+  // Step 2 camera occupies full body (no step bar)
+  const isFullCam = stateId.startsWith('2-') && stateId !== '2-denied' && !desktop;
+
+  return (
+    <div className="pu-screen" style={{ position: 'relative' }}>
+      {!isFullCam && <StepIndicator current={stepNum} onBack={() => {}}/>}
+      <div className="pu-screen-body">{content}</div>
+    </div>
+  );
+}
+
+/* ─── Frames ─── */
+function MobileFrame({ stateId, label, gherkin }) {
+  return (
+    <div>
+      <div className="pu-frame-caption">
+        📱 Mobile 375 — {label}
+        {gherkin && <span className="gherkin">{gherkin}</span>}
+      </div>
+      <div className="pu-phone">
+        <div className="pu-phone-sbar">
+          <span>9:41</span>
+          <span>▲ ◆ ▶</span>
+        </div>
+        <div className="pu-phone-body">
+          <Screen stateId={stateId} desktop={false}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DesktopFrame({ stateId, label, gherkin }) {
+  return (
+    <div style={{ width: '100%' }}>
+      <div className="pu-frame-caption">
+        🖥️ Desktop 1440 — {label}
+        {gherkin && <span className="gherkin">{gherkin}</span>}
+      </div>
+      <div className="pu-desktop">
+        <div className="pu-desktop-bar">
+          <span className="traffic"/><span className="traffic"/><span className="traffic"/>
+          <span className="url">meepleai.app/gamebook/upload</span>
+        </div>
+        <div className="pu-desktop-body">
+          <div style={{ maxWidth: 720, margin: '0 auto', padding: '24px 32px 48px' }}>
+            <Screen stateId={stateId} desktop={true}/>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── State catalog ─── */
+const STATES = [
+  // Step 1
+  { id: '1-default',     label: 'Step 1 · Catalogo (default)',  step: 1 },
+  { id: '1-searching',   label: 'Step 1 · Ricerca in corso',    step: 1 },
+  { id: '1-no-results',  label: 'Step 1 · No results (3 azioni · G1.5)', step: 1, gherkin: 'G1.5' },
+  { id: '1-bgg-loading', label: 'Step 1 · BGG search loading',  step: 1, gherkin: 'G1.6' },
+  // Step 2
+  { id: '2-ready',       label: 'Step 2 · Camera ready',        step: 2 },
+  { id: '2-capturing',   label: 'Step 2 · 8 pagine in strip',   step: 2, gherkin: 'G1.2' },
+  { id: '2-low-light',   label: 'Step 2 · Light meter low',     step: 2, gherkin: 'G1.3' },
+  { id: '2-failed',      label: 'Step 2 · Page detection failed', step: 2, gherkin: 'G1.3' },
+  { id: '2-denied',      label: 'Step 2 · Permission denied',   step: 2 },
+  // Step 3
+  { id: '3-progress',    label: 'Step 3 · Indexing 24/50 mixed',step: 3 },
+  { id: '3-partial',     label: 'Step 3 · Partial fail (3 retake)', step: 3 },
+  { id: '3-complete',    label: 'Step 3 · Complete (CTA play)', step: 3 },
+  { id: '3-offline',     label: 'Step 3 · Connection lost',     step: 3, gherkin: 'G1.4' },
+  { id: '3-cancel-modal',label: 'Step 3 · Cancel modal',        step: 3 },
+];
+
+function App() {
+  const [stepFilter, setStepFilter] = useState('all');
+  const [frameFilter, setFrameFilter] = useState('both');
+
+  useEffect(() => {
+    const sh = e => setStepFilter(e.detail);
+    const fh = e => setFrameFilter(e.detail);
+    document.addEventListener('pu-tweak-step', sh);
+    document.addEventListener('pu-tweak-frame', fh);
+    return () => {
+      document.removeEventListener('pu-tweak-step', sh);
+      document.removeEventListener('pu-tweak-frame', fh);
+    };
+  }, []);
+
+  const visible = stepFilter === 'all'
+    ? STATES
+    : STATES.filter(s => String(s.step) === String(stepFilter));
+
+  const grouped = [1, 2, 3].map(step => ({
+    step,
+    items: visible.filter(s => s.step === step),
+  })).filter(g => g.items.length > 0);
+
+  return (
+    <div>
+      {grouped.map(g => (
+        <div key={g.step}>
+          <div className="pu-section-label">
+            <span className="step">STEP {g.step}</span>
+            {g.step === 1 && '· Scegli gioco'}
+            {g.step === 2 && '· Scatta pagine'}
+            {g.step === 3 && '· Indicizzazione'}
+          </div>
+          {g.items.map(s => (
+            <section key={s.id} style={{ marginBottom: 36 }}>
+              <div className="pu-state-grid">
+                {(frameFilter === 'both' || frameFilter === 'mobile') && (
+                  <MobileFrame stateId={s.id} label={s.label} gherkin={s.gherkin}/>
+                )}
+                {(frameFilter === 'both' || frameFilter === 'desktop') && (
+                  <DesktopFrame stateId={s.id} label={s.label} gherkin={s.gherkin}/>
+                )}
+              </div>
+            </section>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Inline scoped styles ─── */
+const styleEl = document.createElement('style');
+styleEl.textContent = `
+  /* Screen + step bar */
+  .pu-screen { display: flex; flex-direction: column; min-height: 100%; height: 100%; }
+  .pu-screen-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+  .pu-stepbar {
+    flex-shrink: 0; display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px; background: var(--bg);
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10;
+  }
+  .pu-back-btn {
+    width: 36px; height: 36px; border-radius: var(--r-md);
+    background: var(--bg-muted); border: 1px solid var(--border);
+    cursor: pointer; font-size: 18px; color: var(--text);
+  }
+  .pu-step-list { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .pu-step { display: flex; align-items: center; gap: 6px; }
+  .pu-step-circle {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--f-display); font-weight: 700; font-size: 12px;
+  }
+  .pu-step-label { font-family: var(--f-display); font-weight: 600; font-size: 12px; }
+  .pu-step-line { flex: 1; height: 2px; min-width: 16px; }
+
+  .pu-step-content {
+    padding: 20px 16px 24px; display: flex; flex-direction: column; gap: 16px;
+    flex: 1;
+  }
+  .pu-step-header { display: flex; flex-direction: column; gap: 4px; }
+  .pu-step-h2 {
+    font-family: var(--f-display); font-weight: 700; font-size: 22px;
+    color: var(--text); margin: 0; line-height: 1.2;
+  }
+  .pu-step-sub { font-size: 13px; color: var(--text-sec); margin: 0; line-height: 1.5; }
+  .pu-step-footer {
+    margin-top: auto; padding-top: 16px; display: flex; gap: 10px;
+  }
+
+  .pu-cta-primary {
+    flex: 1; padding: 14px 18px; border-radius: var(--r-lg);
+    color: #fff; border: none; cursor: pointer;
+    font-family: var(--f-display); font-weight: 700; font-size: 14px;
+  }
+  .pu-cta-secondary {
+    flex: 1; padding: 14px 18px; border-radius: var(--r-lg);
+    background: var(--bg-card); border: 1px solid var(--border); cursor: pointer;
+    font-family: var(--f-display); font-weight: 600; font-size: 14px; color: var(--text);
+  }
+  .pu-cta-ghost {
+    padding: 12px 18px; border-radius: var(--r-lg);
+    background: transparent; border: 1px solid var(--border); cursor: pointer;
+    font-family: var(--f-display); font-weight: 600; font-size: 13px; color: var(--text-sec);
+  }
+
+  /* Search bar */
+  .pu-search-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border-radius: var(--r-lg);
+    background: var(--bg-card); border: 1px solid var(--border);
+    transition: border-color var(--dur-sm) var(--ease-out);
+  }
+  .pu-search-bar input {
+    flex: 1; background: transparent; border: none; outline: none;
+    font-family: var(--f-display); font-size: 14px; color: var(--text);
+  }
+  .pu-search-clear {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--bg-muted); border: none; cursor: pointer;
+    color: var(--text-muted); font-size: 16px;
+  }
+
+  .pu-search-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); }
+  .pu-search-tab {
+    padding: 8px 14px; font-family: var(--f-display); font-weight: 600;
+    font-size: 12px; color: var(--text-muted); cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .pu-search-tab.active { font-weight: 700; }
+
+  .pu-search-info {
+    display: flex; gap: 8px; padding: 12px 14px;
+    background: var(--bg-muted); border-radius: var(--r-md);
+    font-size: 12px; color: var(--text-sec);
+  }
+
+  /* Game grid */
+  .pu-game-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .pu-game-card {
+    position: relative; padding: 0; border-radius: var(--r-lg);
+    overflow: hidden; cursor: pointer; text-align: left;
+    transition: transform var(--dur-sm) var(--ease-out);
+  }
+  .pu-game-card:hover { transform: translateY(-2px); }
+  .pu-game-cover {
+    aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center;
+  }
+  .pu-game-body { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 3px; }
+  .pu-game-title {
+    font-family: var(--f-display); font-weight: 700; font-size: 13px;
+    color: var(--text); line-height: 1.2;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pu-game-meta { font-size: 10px; color: var(--text-muted); }
+  .pu-game-shared {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 10px; color: var(--text-sec);
+    font-family: var(--f-mono); margin-top: 2px;
+  }
+  .pu-game-check {
+    position: absolute; top: 8px; right: 8px;
+    width: 22px; height: 22px; border-radius: 50%;
+    color: #fff; font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  }
+
+  /* No results */
+  .pu-no-results {
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; gap: 10px; padding: 16px 0;
+  }
+  .pu-no-results-illu {
+    width: 80px; height: 80px; border-radius: 20px;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .pu-no-results-title {
+    font-family: var(--f-display); font-weight: 700; font-size: 18px;
+    color: var(--text); margin: 0;
+  }
+  .pu-no-results-sub { font-size: 12px; color: var(--text-muted); margin: 0; }
+  .pu-no-results-actions {
+    width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 8px;
+  }
+  .pu-action-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: var(--r-lg);
+    background: var(--bg-card); border: 1px solid var(--border);
+    cursor: pointer; text-align: left;
+    transition: transform var(--dur-sm) var(--ease-out);
+  }
+  .pu-action-card:hover { transform: translateY(-1px); }
+  .pu-action-icon {
+    width: 36px; height: 36px; border-radius: var(--r-md);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; flex-shrink: 0;
+  }
+  .pu-action-title {
+    font-family: var(--f-display); font-weight: 700; font-size: 13px; color: var(--text);
+  }
+  .pu-action-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* BGG loading */
+  .pu-bgg-loading {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: var(--r-lg);
+  }
+  .pu-bgg-spinner {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 2.5px solid;
+    animation: puSpin 0.8s linear infinite; flex-shrink: 0;
+  }
+  @keyframes puSpin { to { transform: rotate(360deg); } }
+  .pu-bgg-loading-title { font-family: var(--f-display); font-weight: 700; font-size: 13px; color: var(--text); }
+  .pu-bgg-loading-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .pu-bgg-skeleton { display: flex; flex-direction: column; gap: 8px; }
+  .pu-bgg-skel-row {
+    display: flex; gap: 10px; align-items: center;
+    padding: 10px; border-radius: var(--r-md);
+    background: var(--bg-card); border: 1px solid var(--border);
+  }
+  .pu-bgg-skel-cover {
+    width: 40px; height: 40px; border-radius: var(--r-sm); flex-shrink: 0;
+  }
+  .pu-bgg-skel-line { border-radius: var(--r-sm); }
+  .pu-shimmer {
+    background: linear-gradient(90deg, var(--bg-muted) 0%, var(--bg-hover) 50%, var(--bg-muted) 100%);
+    background-size: 200% 100%; animation: puShimmer 1.6s ease-in-out infinite;
+  }
+  @keyframes puShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .pu-shimmer, .pu-bgg-spinner, .pu-page-spin, .pu-cam-shutter:hover .pu-cam-shutter-inner { animation: none; }
+  }
+
+  /* Camera */
+  .pu-camera {
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column;
+    background: #000; color: #fff; position: relative;
+  }
+  .pu-cam-top {
+    flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 14px; background: linear-gradient(to bottom, rgba(0,0,0,.6), transparent);
+    z-index: 2;
+  }
+  .pu-cam-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(0,0,0,.5); border: none; color: #fff;
+    cursor: pointer; font-size: 18px;
+  }
+  .pu-cam-counter {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-weight: 700; font-size: 12px; color: #fff;
+  }
+
+  .pu-cam-vf {
+    flex: 1; min-height: 0; position: relative;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .pu-cam-frame {
+    position: relative; width: 78%; aspect-ratio: 3/4;
+    border: 2px solid; border-radius: 4px;
+    display: flex; flex-direction: column; padding: 16px;
+    background: rgba(255,250,240,.06);
+  }
+  .pu-cam-frame.failed { background: hsl(350 50% 30% / .15); }
+  .pu-cam-corner {
+    position: absolute; width: 18px; height: 18px;
+  }
+  .pu-cam-corner.tl { top: -2px; left: -2px; border-top: 3px solid; border-left: 3px solid; background: transparent !important; border-color: inherit; }
+  .pu-cam-corner.tr { top: -2px; right: -2px; border-top: 3px solid; border-right: 3px solid; background: transparent !important; border-color: inherit; }
+  .pu-cam-corner.bl { bottom: -2px; left: -2px; border-bottom: 3px solid; border-left: 3px solid; background: transparent !important; border-color: inherit; }
+  .pu-cam-corner.br { bottom: -2px; right: -2px; border-bottom: 3px solid; border-right: 3px solid; background: transparent !important; border-color: inherit; }
+
+  .pu-cam-page {
+    display: flex; flex-direction: column; gap: 4px; padding: 4px;
+  }
+  .pu-cam-page-line {
+    height: 4px; background: rgba(255,250,240,.4); border-radius: 2px;
+  }
+  .pu-cam-hint {
+    position: absolute; bottom: -34px; left: 50%; transform: translateX(-50%);
+    padding: 6px 14px; border-radius: var(--r-pill); white-space: nowrap;
+    font-family: var(--f-display); font-weight: 700; font-size: 12px;
+  }
+
+  .pu-light-meter {
+    position: absolute; top: 14px; right: 14px;
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,0,0,.6); padding: 5px 10px; border-radius: var(--r-pill);
+  }
+  .pu-lm-icon { font-size: 12px; }
+  .pu-lm-track {
+    width: 50px; height: 4px; border-radius: var(--r-pill);
+    background: rgba(255,255,255,.2); overflow: hidden;
+  }
+  .pu-lm-fill { height: 100%; transition: width var(--dur-md) var(--ease-out); }
+  .pu-lm-value { font-family: var(--f-mono); font-size: 9px; font-weight: 700; }
+
+  .pu-cam-strip {
+    flex-shrink: 0; padding: 8px 0;
+    background: linear-gradient(to top, rgba(0,0,0,.7), transparent);
+  }
+  .pu-cam-strip-scroll {
+    display: flex; gap: 6px; padding: 0 14px; overflow-x: auto;
+  }
+  .pu-cam-strip-scroll::-webkit-scrollbar { display: none; }
+  .pu-cam-thumb {
+    position: relative; flex-shrink: 0; width: 44px; height: 56px;
+    border-radius: var(--r-sm); overflow: hidden;
+    border: 1.5px solid rgba(255,255,255,.4);
+  }
+  .pu-cam-thumb-img { width: 100%; height: 100%; }
+  .pu-cam-thumb-num {
+    position: absolute; bottom: 2px; right: 3px;
+    font-family: var(--f-mono); font-weight: 700; font-size: 9px;
+    color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.8);
+  }
+
+  .pu-cam-shutter-row {
+    flex-shrink: 0; display: flex; align-items: center; justify-content: space-around;
+    padding: 14px 24px 18px; background: rgba(0,0,0,.6);
+  }
+  .pu-cam-side-btn {
+    width: 46px; height: 46px; border-radius: 50%;
+    background: rgba(255,255,255,.15); border: none; color: #fff;
+    cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pu-cam-shutter {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(255,255,255,.2); border: 4px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+  }
+  .pu-cam-shutter-inner {
+    width: 50px; height: 50px; border-radius: 50%; background: #fff;
+    transition: transform var(--dur-sm) var(--ease-out);
+  }
+  .pu-cam-shutter:hover .pu-cam-shutter-inner { transform: scale(0.92); }
+
+  /* Permission denied */
+  .pu-denied {
+    align-items: center; text-align: center; padding-top: 40px;
+  }
+  .pu-denied-illu {
+    width: 100px; height: 100px; border-radius: 24px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pu-denied-title {
+    font-family: var(--f-display); font-weight: 700; font-size: 22px;
+    color: var(--text); margin: 0;
+  }
+  .pu-denied-sub {
+    font-size: 13px; color: var(--text-sec); max-width: 280px; margin: 0;
+    line-height: 1.5;
+  }
+  .pu-denied-hint {
+    font-size: 11px; color: var(--text-muted); margin: 0;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* Indexing */
+  .pu-idx-header {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  }
+  .pu-idx-counter {
+    font-family: var(--f-display); font-weight: 800; font-size: 32px;
+    line-height: 1; flex-shrink: 0;
+  }
+  .pu-idx-bar {
+    height: 8px; border-radius: var(--r-pill);
+    background: var(--bg-muted); overflow: hidden;
+  }
+  .pu-idx-bar-fill {
+    height: 100%; transition: width var(--dur-md) var(--ease-out);
+  }
+  .pu-idx-meta {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .pu-idx-meta-chip {
+    padding: 4px 10px; border-radius: var(--r-pill);
+    font-family: var(--f-display); font-weight: 700; font-size: 11px;
+  }
+
+  .pu-page-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  }
+  .pu-page-thumb {
+    position: relative; border-radius: var(--r-md); overflow: hidden;
+    border: 1px solid;
+    background: var(--bg-card);
+  }
+  .pu-page-thumb-img {
+    aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center;
+  }
+  .pu-page-thumb-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 6px; background: var(--bg-card);
+  }
+  .pu-page-num {
+    font-family: var(--f-mono); font-weight: 700; font-size: 10px; color: var(--text-sec);
+  }
+  .pu-conf-badge {
+    width: 16px; height: 16px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+  }
+  .pu-page-spin {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--border); border-top-color: hsl(${ENTITY_HSL.toolkit});
+    animation: puSpin 0.8s linear infinite;
+  }
+  .pu-page-retake {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 4px; border: none; cursor: pointer;
+    font-family: var(--f-display); font-weight: 700; font-size: 9px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+
+  /* Offline banner */
+  .pu-offline-banner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: var(--r-lg); border: 1px solid;
+  }
+  .pu-offline-title { font-family: var(--f-display); font-weight: 700; font-size: 12px; color: var(--text); }
+  .pu-offline-sub { font-size: 11px; color: var(--text-sec); margin-top: 1px; }
+  .pu-offline-btn {
+    padding: 6px 10px; border-radius: var(--r-sm);
+    background: ${entityHsl('event')}; color: #fff; border: none;
+    cursor: pointer; font-family: var(--f-display); font-weight: 700; font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .pu-idx-footer { gap: 10px; }
+
+  /* Modal */
+  .pu-modal-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px; z-index: 100;
+  }
+  .pu-modal {
+    width: 100%; max-width: 320px;
+    border-radius: var(--r-xl); padding: 22px;
+    display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px;
+    box-shadow: var(--shadow-lg);
+  }
+  .pu-modal-icon {
+    width: 56px; height: 56px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .pu-modal-title {
+    font-family: var(--f-display); font-weight: 700; font-size: 18px;
+    color: var(--text); margin: 0;
+  }
+  .pu-modal-sub { font-size: 13px; color: var(--text-sec); margin: 0; line-height: 1.5; }
+  .pu-modal-actions { display: flex; gap: 8px; width: 100%; margin-top: 6px; }
+
+  /* Desktop drop fallback */
+  .pu-dt-drop {
+    border: 2px dashed; border-radius: var(--r-xl);
+    padding: 56px 32px; display: flex; flex-direction: column; align-items: center;
+    text-align: center; gap: 12px;
+  }
+  .pu-dt-drop-icon { font-size: 64px; line-height: 1; }
+  .pu-dt-drop-title {
+    font-family: var(--f-display); font-weight: 700; font-size: 22px;
+    color: var(--text); margin: 0;
+  }
+  .pu-dt-drop-sub { font-size: 13px; color: var(--text-sec); line-height: 1.6; margin: 0; }
+`;
+document.head.appendChild(styleEl);
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);

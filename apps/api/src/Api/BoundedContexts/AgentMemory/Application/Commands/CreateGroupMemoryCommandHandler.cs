@@ -1,6 +1,7 @@
 using Api.BoundedContexts.AgentMemory.Application.Commands;
 using Api.BoundedContexts.AgentMemory.Domain.Entities;
 using Api.BoundedContexts.AgentMemory.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -39,7 +40,7 @@ internal sealed class CreateGroupMemoryCommandHandler : ICommandHandler<CreateGr
             .ConfigureAwait(false);
 
         if (!isEnabled)
-            throw new InvalidOperationException("Feature AgentMemory.Enabled is disabled");
+            throw new ConflictException("Feature AgentMemory.Enabled is disabled");
 
         var group = GroupMemory.Create(command.CreatorId, command.Name);
 

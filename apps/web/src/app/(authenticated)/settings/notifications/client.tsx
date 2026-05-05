@@ -1,6 +1,8 @@
 /**
  * Notification Settings Page (Issue #4220, #4416)
  * Multi-channel notification preferences for PDF processing
+ *
+ * Migrated to Claude Design v1 (M6 Task 9): uses SettingsList + SettingsRow + ToggleSwitch.
  */
 
 'use client';
@@ -20,8 +22,10 @@ import {
   SendHorizontal,
 } from 'lucide-react';
 
-import { Switch } from '@/components/ui/forms/switch';
 import { Button } from '@/components/ui/primitives/button';
+import { SettingsList } from '@/components/ui/v2/settings-list';
+import { SettingsRow } from '@/components/ui/v2/settings-row';
+import { ToggleSwitch } from '@/components/ui/v2/toggle-switch';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useToast } from '@/hooks/useToast';
 
@@ -44,6 +48,8 @@ interface NotificationPreferences {
   emailOnGameNightReminder: boolean;
   pushOnGameNightReminder: boolean;
 }
+
+type PrefKey = keyof Omit<NotificationPreferences, 'userId' | 'hasPushSubscription'>;
 
 export default function NotificationSettingsPage() {
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
@@ -129,10 +135,7 @@ export default function NotificationSettingsPage() {
     }
   };
 
-  const updatePref = (
-    key: keyof Omit<NotificationPreferences, 'userId' | 'hasPushSubscription'>,
-    value: boolean
-  ) => {
+  const updatePref = (key: PrefKey, value: boolean) => {
     if (!prefs) return;
     setPrefs({ ...prefs, [key]: value });
   };
@@ -156,6 +159,32 @@ export default function NotificationSettingsPage() {
   }
 
   const pushEnabled = push.isSupported && push.isSubscribed;
+
+  // Render helper to keep the switch + row tests green.
+  // SettingsRow exposes label as plain text; trailing slot hosts the ToggleSwitch.
+  const renderToggleRow = (params: {
+    icon: React.ReactNode;
+    label: string;
+    description: string;
+    prefKey: PrefKey;
+    disabled?: boolean;
+    ariaLabel: string;
+  }) => (
+    <SettingsRow
+      icon={params.icon}
+      label={params.label}
+      description={params.description}
+      trailing={
+        <ToggleSwitch
+          checked={prefs[params.prefKey] as boolean}
+          onCheckedChange={checked => updatePref(params.prefKey, checked)}
+          disabled={params.disabled}
+          ariaLabel={params.ariaLabel}
+          entity="agent"
+        />
+      }
+    />
+  );
 
   return (
     <div className="container max-w-3xl mx-auto py-8">
@@ -240,8 +269,8 @@ export default function NotificationSettingsPage() {
       )}
 
       {/* Document Ready Notifications */}
-      <div className="bg-card rounded-xl p-6 border border-border/50 mb-6">
-        <div className="flex items-start gap-4 mb-6">
+      <div className="mb-6">
+        <div className="flex items-start gap-4 mb-3">
           <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/20">
             <Bell className="h-6 w-6 text-green-600 dark:text-green-400" />
           </div>
@@ -252,64 +281,37 @@ export default function NotificationSettingsPage() {
             </p>
           </div>
         </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <Mail className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Email Notification</p>
-                <p className="text-sm text-muted-foreground">
-                  Receive email when document is ready
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={prefs.emailOnDocumentReady}
-              onCheckedChange={checked => updatePref('emailOnDocumentReady', checked)}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <Smartphone className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Push Notification</p>
-                <p className="text-sm text-muted-foreground">
-                  {pushEnabled
-                    ? 'Browser push notification when document is ready'
-                    : 'Enable push notifications above to use this'}
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={prefs.pushOnDocumentReady}
-              onCheckedChange={checked => updatePref('pushOnDocumentReady', checked)}
-              disabled={!pushEnabled}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <MessageSquare className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">In-App Notification</p>
-                <p className="text-sm text-muted-foreground">
-                  Show notification in notification center
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={prefs.inAppOnDocumentReady}
-              onCheckedChange={checked => updatePref('inAppOnDocumentReady', checked)}
-            />
-          </div>
-        </div>
+        <SettingsList ariaLabel="Document Ready notifications">
+          {renderToggleRow({
+            icon: <Mail className="h-5 w-5 text-muted-foreground" aria-hidden="true" />,
+            label: 'Email Notification',
+            description: 'Receive email when document is ready',
+            prefKey: 'emailOnDocumentReady',
+            ariaLabel: 'Email — document ready',
+          })}
+          {renderToggleRow({
+            icon: <Smartphone className="h-5 w-5 text-muted-foreground" aria-hidden="true" />,
+            label: 'Push Notification',
+            description: pushEnabled
+              ? 'Browser push notification when document is ready'
+              : 'Enable push notifications above to use this',
+            prefKey: 'pushOnDocumentReady',
+            disabled: !pushEnabled,
+            ariaLabel: 'Push — document ready',
+          })}
+          {renderToggleRow({
+            icon: <MessageSquare className="h-5 w-5 text-muted-foreground" aria-hidden="true" />,
+            label: 'In-App Notification',
+            description: 'Show notification in notification center',
+            prefKey: 'inAppOnDocumentReady',
+            ariaLabel: 'In-app — document ready',
+          })}
+        </SettingsList>
       </div>
 
       {/* Document Failed Notifications */}
-      <div className="bg-card rounded-xl p-6 border border-border/50 mb-6">
-        <div className="flex items-start gap-4 mb-6">
+      <div className="mb-6">
+        <div className="flex items-start gap-4 mb-3">
           <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/20">
             <Bell className="h-6 w-6 text-red-600 dark:text-red-400" />
           </div>
@@ -320,60 +322,37 @@ export default function NotificationSettingsPage() {
             </p>
           </div>
         </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <Mail className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Email Notification</p>
-                <p className="text-sm text-muted-foreground">Receive email with error details</p>
-              </div>
-            </div>
-            <Switch
-              checked={prefs.emailOnDocumentFailed}
-              onCheckedChange={checked => updatePref('emailOnDocumentFailed', checked)}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <Smartphone className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Push Notification</p>
-                <p className="text-sm text-muted-foreground">
-                  {pushEnabled
-                    ? 'Browser push notification on processing failure'
-                    : 'Enable push notifications above to use this'}
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={prefs.pushOnDocumentFailed}
-              onCheckedChange={checked => updatePref('pushOnDocumentFailed', checked)}
-              disabled={!pushEnabled}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <MessageSquare className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">In-App Notification</p>
-                <p className="text-sm text-muted-foreground">Show error in notification center</p>
-              </div>
-            </div>
-            <Switch
-              checked={prefs.inAppOnDocumentFailed}
-              onCheckedChange={checked => updatePref('inAppOnDocumentFailed', checked)}
-            />
-          </div>
-        </div>
+        <SettingsList ariaLabel="Processing Failed notifications">
+          {renderToggleRow({
+            icon: <Mail className="h-5 w-5 text-muted-foreground" aria-hidden="true" />,
+            label: 'Email Notification',
+            description: 'Receive email with error details',
+            prefKey: 'emailOnDocumentFailed',
+            ariaLabel: 'Email — processing failed',
+          })}
+          {renderToggleRow({
+            icon: <Smartphone className="h-5 w-5 text-muted-foreground" aria-hidden="true" />,
+            label: 'Push Notification',
+            description: pushEnabled
+              ? 'Browser push notification on processing failure'
+              : 'Enable push notifications above to use this',
+            prefKey: 'pushOnDocumentFailed',
+            disabled: !pushEnabled,
+            ariaLabel: 'Push — processing failed',
+          })}
+          {renderToggleRow({
+            icon: <MessageSquare className="h-5 w-5 text-muted-foreground" aria-hidden="true" />,
+            label: 'In-App Notification',
+            description: 'Show error in notification center',
+            prefKey: 'inAppOnDocumentFailed',
+            ariaLabel: 'In-app — processing failed',
+          })}
+        </SettingsList>
       </div>
 
       {/* Game Night Invitations (Issue #33) */}
-      <div className="bg-card rounded-xl p-6 border border-border/50 mb-6">
-        <div className="flex items-start gap-4 mb-6">
+      <div className="mb-6">
+        <div className="flex items-start gap-4 mb-3">
           <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/20">
             <Calendar className="h-6 w-6 text-amber-600 dark:text-amber-400" />
           </div>
@@ -384,58 +363,35 @@ export default function NotificationSettingsPage() {
             </p>
           </div>
         </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <Mail className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Email</p>
-                <p className="text-sm text-muted-foreground">Ricevi email per nuovi inviti</p>
-              </div>
-            </div>
-            <Switch
-              checked={prefs.emailOnGameNightInvitation}
-              onCheckedChange={checked => updatePref('emailOnGameNightInvitation', checked)}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <Smartphone className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Push</p>
-                <p className="text-sm text-muted-foreground">
-                  {pushEnabled ? 'Notifica push per nuovi inviti' : 'Abilita le push sopra'}
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={prefs.pushOnGameNightInvitation}
-              onCheckedChange={checked => updatePref('pushOnGameNightInvitation', checked)}
-              disabled={!pushEnabled}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <MessageSquare className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">In-App</p>
-                <p className="text-sm text-muted-foreground">Mostra nel centro notifiche</p>
-              </div>
-            </div>
-            <Switch
-              checked={prefs.inAppOnGameNightInvitation}
-              onCheckedChange={checked => updatePref('inAppOnGameNightInvitation', checked)}
-            />
-          </div>
-        </div>
+        <SettingsList ariaLabel="Game night invitations">
+          {renderToggleRow({
+            icon: <Mail className="h-5 w-5 text-muted-foreground" aria-hidden="true" />,
+            label: 'Email',
+            description: 'Ricevi email per nuovi inviti',
+            prefKey: 'emailOnGameNightInvitation',
+            ariaLabel: 'Email — inviti serate',
+          })}
+          {renderToggleRow({
+            icon: <Smartphone className="h-5 w-5 text-muted-foreground" aria-hidden="true" />,
+            label: 'Push',
+            description: pushEnabled ? 'Notifica push per nuovi inviti' : 'Abilita le push sopra',
+            prefKey: 'pushOnGameNightInvitation',
+            disabled: !pushEnabled,
+            ariaLabel: 'Push — inviti serate',
+          })}
+          {renderToggleRow({
+            icon: <MessageSquare className="h-5 w-5 text-muted-foreground" aria-hidden="true" />,
+            label: 'In-App',
+            description: 'Mostra nel centro notifiche',
+            prefKey: 'inAppOnGameNightInvitation',
+            ariaLabel: 'In-app — inviti serate',
+          })}
+        </SettingsList>
       </div>
 
       {/* Game Night Reminders (Issue #33) */}
-      <div className="bg-card rounded-xl p-6 border border-border/50 mb-6">
-        <div className="flex items-start gap-4 mb-6">
+      <div className="mb-6">
+        <div className="flex items-start gap-4 mb-3">
           <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/20">
             <Calendar className="h-6 w-6 text-amber-600 dark:text-amber-400" />
           </div>
@@ -444,44 +400,28 @@ export default function NotificationSettingsPage() {
             <p className="text-sm text-muted-foreground">Promemoria 24h e 1h prima della serata</p>
           </div>
         </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <Mail className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Email</p>
-                <p className="text-sm text-muted-foreground">Ricevi email di promemoria</p>
-              </div>
-            </div>
-            <Switch
-              checked={prefs.emailOnGameNightReminder}
-              onCheckedChange={checked => updatePref('emailOnGameNightReminder', checked)}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <Smartphone className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Push</p>
-                <p className="text-sm text-muted-foreground">
-                  {pushEnabled ? 'Notifica push di promemoria' : 'Abilita le push sopra'}
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={prefs.pushOnGameNightReminder}
-              onCheckedChange={checked => updatePref('pushOnGameNightReminder', checked)}
-              disabled={!pushEnabled}
-            />
-          </div>
-        </div>
+        <SettingsList ariaLabel="Game night reminders">
+          {renderToggleRow({
+            icon: <Mail className="h-5 w-5 text-muted-foreground" aria-hidden="true" />,
+            label: 'Email',
+            description: 'Ricevi email di promemoria',
+            prefKey: 'emailOnGameNightReminder',
+            ariaLabel: 'Email — promemoria serate',
+          })}
+          {renderToggleRow({
+            icon: <Smartphone className="h-5 w-5 text-muted-foreground" aria-hidden="true" />,
+            label: 'Push',
+            description: pushEnabled ? 'Notifica push di promemoria' : 'Abilita le push sopra',
+            prefKey: 'pushOnGameNightReminder',
+            disabled: !pushEnabled,
+            ariaLabel: 'Push — promemoria serate',
+          })}
+        </SettingsList>
       </div>
 
       {/* Retry Available Notifications */}
-      <div className="bg-card rounded-xl p-6 border border-border/50">
-        <div className="flex items-start gap-4 mb-6">
+      <div>
+        <div className="flex items-start gap-4 mb-3">
           <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/20">
             <Bell className="h-6 w-6 text-blue-600 dark:text-blue-400" />
           </div>
@@ -492,57 +432,32 @@ export default function NotificationSettingsPage() {
             </p>
           </div>
         </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <Mail className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Email Notification</p>
-                <p className="text-sm text-muted-foreground">Receive email when retry starts</p>
-              </div>
-            </div>
-            <Switch
-              checked={prefs.emailOnRetryAvailable}
-              onCheckedChange={checked => updatePref('emailOnRetryAvailable', checked)}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <Smartphone className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Push Notification</p>
-                <p className="text-sm text-muted-foreground">
-                  {pushEnabled
-                    ? 'Browser push notification on retry'
-                    : 'Enable push notifications above to use this'}
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={prefs.pushOnRetryAvailable}
-              onCheckedChange={checked => updatePref('pushOnRetryAvailable', checked)}
-              disabled={!pushEnabled}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <MessageSquare className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">In-App Notification</p>
-                <p className="text-sm text-muted-foreground">
-                  Show retry status in notification center
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={prefs.inAppOnRetryAvailable}
-              onCheckedChange={checked => updatePref('inAppOnRetryAvailable', checked)}
-            />
-          </div>
-        </div>
+        <SettingsList ariaLabel="Retry available notifications">
+          {renderToggleRow({
+            icon: <Mail className="h-5 w-5 text-muted-foreground" aria-hidden="true" />,
+            label: 'Email Notification',
+            description: 'Receive email when retry starts',
+            prefKey: 'emailOnRetryAvailable',
+            ariaLabel: 'Email — retry available',
+          })}
+          {renderToggleRow({
+            icon: <Smartphone className="h-5 w-5 text-muted-foreground" aria-hidden="true" />,
+            label: 'Push Notification',
+            description: pushEnabled
+              ? 'Browser push notification on retry'
+              : 'Enable push notifications above to use this',
+            prefKey: 'pushOnRetryAvailable',
+            disabled: !pushEnabled,
+            ariaLabel: 'Push — retry available',
+          })}
+          {renderToggleRow({
+            icon: <MessageSquare className="h-5 w-5 text-muted-foreground" aria-hidden="true" />,
+            label: 'In-App Notification',
+            description: 'Show retry status in notification center',
+            prefKey: 'inAppOnRetryAvailable',
+            ariaLabel: 'In-app — retry available',
+          })}
+        </SettingsList>
       </div>
     </div>
   );

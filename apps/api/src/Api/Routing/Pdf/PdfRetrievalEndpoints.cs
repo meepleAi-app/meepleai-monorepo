@@ -2,6 +2,8 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
 using Api.Services;
@@ -27,6 +29,7 @@ internal static class PdfRetrievalEndpoints
     {
         MapPdfListEndpoint(group);
         MapPdfTextEndpoint(group);
+        MapPdfPageTextEndpoint(group);
         MapPdfDownloadEndpoint(group);
     }
 
@@ -40,6 +43,16 @@ internal static class PdfRetrievalEndpoints
     {
         group.MapGet("/pdfs/{pdfId:guid}/text", HandleGetPdfText)
         .RequireSession(); // Issue #1446: Automatic session validation
+    }
+
+    private static void MapPdfPageTextEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/pdfs/{pdfId:guid}/pages/{pageNumber:int}/text", HandleGetPageText)
+            .RequireSession()
+            .WithName("GetPdfPageText")
+            .WithDescription("Get extracted text for a specific PDF page")
+            .Produces<PdfPageTextDto>()
+            .Produces(404);
     }
 
     private static void MapPdfDownloadEndpoint(RouteGroupBuilder group)
@@ -131,6 +144,22 @@ internal static class PdfRetrievalEndpoints
         }
 
         return Results.Json(pdf);
+    }
+
+    private static async Task<IResult> HandleGetPageText(
+        Guid pdfId,
+        int pageNumber,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.User!.Id;
+
+        var result = await mediator.Send(
+            new GetPdfPageTextQuery(pdfId, pageNumber, userId), ct).ConfigureAwait(false);
+
+        return Results.Json(result);
     }
 
     private static async Task<IResult> HandleDownloadPdf(Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)

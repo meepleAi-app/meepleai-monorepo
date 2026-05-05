@@ -38,16 +38,17 @@ internal class GetPdfChunksPreviewQueryHandler
             Page: query.Page,
             PageSize: query.PageSize);
 
-        // 1. Get the PDF document to find its GameId
+        // 1. Get the PDF document to find its SharedGameId
         var pdfDoc = await _pdfDocumentRepository.GetByIdAsync(query.PdfId, cancellationToken).ConfigureAwait(false);
-        if (pdfDoc is null)
+        if (pdfDoc is null || pdfDoc.SharedGameId is null)
         {
+            // No PDF, or PDF not associated with a shared game (Task 8: direct SharedGameId resolution).
             return emptyResult;
         }
 
         // 2. Find the VectorDocument linked to this PDF
         var vectorDoc = await _vectorDocumentRepository.GetByGameAndSourceAsync(
-            pdfDoc.GameId,
+            pdfDoc.SharedGameId.Value,
             pdfDoc.Id,
             cancellationToken).ConfigureAwait(false);
 

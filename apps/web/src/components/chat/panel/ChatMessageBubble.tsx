@@ -1,8 +1,11 @@
 'use client';
 
+import { type ReactNode } from 'react';
+
+import type { ChatMessageRole } from '@/components/chat/shared';
 import { cn } from '@/lib/utils';
 
-export type ChatMessageRole = 'user' | 'assistant';
+import { CitationExpander } from './CitationExpander';
 
 interface ChatMessageBubbleProps {
   role: ChatMessageRole;
@@ -19,6 +22,54 @@ function initials(name: string): string {
     .join('')
     .slice(0, 2)
     .toUpperCase();
+}
+
+// eslint-disable-next-line security/detect-unsafe-regex -- bounded by \] terminator, no catastrophic backtracking risk
+const CITATION_REGEX = /\[cite:([a-f0-9-]+):(\d+)(?::([^\]]{1,200}))?\]/g;
+
+/**
+ * Parse content for citation markers and replace with CitationExpander components.
+ * Markers have the format: [cite:pdfId:pageNumber] or [cite:pdfId:pageNumber:docName]
+ */
+function renderContentWithCitations(content: string): ReactNode {
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  // Reset regex state
+  CITATION_REGEX.lastIndex = 0;
+
+  while ((match = CITATION_REGEX.exec(content)) !== null) {
+    // Add text before the citation
+    if (match.index > lastIndex) {
+      parts.push(content.slice(lastIndex, match.index));
+    }
+
+    const [, pdfId, pageStr, docName] = match;
+    parts.push(
+      <CitationExpander
+        key={`cite-${key++}`}
+        pdfId={pdfId}
+        pageNumber={parseInt(pageStr, 10)}
+        docName={docName}
+      />
+    );
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < content.length) {
+    parts.push(content.slice(lastIndex));
+  }
+
+  // No citations found — return plain string
+  if (parts.length === 0) {
+    return content;
+  }
+
+  return parts;
 }
 
 export function ChatMessageBubble({
@@ -90,7 +141,7 @@ export function ChatMessageBubble({
               ))}
             </div>
           )}
-          <p className="whitespace-pre-wrap">{content}</p>
+          <div className="whitespace-pre-wrap">{renderContentWithCitations(content)}</div>
         </div>
       </div>
     </div>

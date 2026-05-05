@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,7 +42,7 @@ internal sealed class GetQuickQuestionsQueryHandler
 
         if (!gameExists)
         {
-            throw new InvalidOperationException($"Shared game with ID {query.SharedGameId} not found");
+            throw new NotFoundException("SharedGame", query.SharedGameId.ToString());
         }
 
         // Query questions from context

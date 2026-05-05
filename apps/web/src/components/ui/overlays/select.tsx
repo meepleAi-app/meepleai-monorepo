@@ -77,7 +77,7 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        'relative z-50 max-h-[--radix-select-content-available-height] min-w-[8rem]',
+        'relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-[8rem]',
         'overflow-y-auto overflow-x-hidden rounded-md',
         'border border-border/50 dark:border-border/70',
         // Light mode: Glass morphism dropdown

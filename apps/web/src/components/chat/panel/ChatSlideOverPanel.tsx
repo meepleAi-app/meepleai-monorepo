@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { createThread } from '@/components/chat/entry/ThreadCreator';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { useGames } from '@/hooks/queries/useGames';
@@ -180,7 +181,7 @@ export function ChatSlideOverPanel() {
   // ─── Handlers ────────────────────────────────────────────────────────────
 
   const handleSend = useCallback(
-    (message: string) => {
+    async (message: string) => {
       // Need a game + a resolved agent + no in-flight stream to send safely.
       if (!message.trim() || !gameContext || !agentId || stream.state.isStreaming) return;
 
@@ -193,12 +194,35 @@ export function ChatSlideOverPanel() {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      stream.sendMessage(agentId, message, threadId ?? undefined, {
+      // Lazy thread creation: if opened from a ManaPip click with gameContext
+      // but no existing thread, create one on the first message send.
+      let currentThreadId = threadId;
+      if (!currentThreadId && gameContext) {
+        try {
+          const result = await createThread({
+            gameId: gameContext.id,
+            gameName: gameContext.name,
+            agentId,
+            initialMessage: message,
+          });
+          currentThreadId = result.threadId;
+          setThreadId(currentThreadId);
+        } catch {
+          toast({
+            title: 'Errore creazione chat',
+            description: 'Non è stato possibile avviare la conversazione.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
+      stream.sendMessage(agentId, message, currentThreadId ?? undefined, {
         gameName: gameContext.name,
         agentTypology: 'default',
       });
     },
-    [gameContext, agentId, stream, threadId]
+    [gameContext, agentId, stream, threadId, toast]
   );
 
   const handleNewChat = useCallback(() => {

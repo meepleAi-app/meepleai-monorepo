@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
-// Mock the LibraryHub so we don't pull in its downstream deps
-vi.mock('../LibraryHub', () => ({
-  LibraryHub: () => <div data-testid="library-hub">Library Hub</div>,
+// Mock the LibraryHubV2 orchestrator so we don't pull in its downstream deps
+vi.mock('../_components/LibraryHubV2', () => ({
+  LibraryHubV2: () => <div data-testid="library-hub">Library Hub</div>,
 }));
 
 vi.mock('../AddGameDrawer', () => ({

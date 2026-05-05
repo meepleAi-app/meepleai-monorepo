@@ -134,7 +134,7 @@ public class CopyrightDataProjectionTests
         db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = docId,
-            GameId = gameId,
+            SharedGameId = gameId,
             UploadedByUserId = uploaderId,
             FileName = "rules.pdf",
             FilePath = "/uploads/rules.pdf",
@@ -259,7 +259,6 @@ public class CopyrightDataProjectionTests
             FilePath = "/uploads/private.pdf",
             LicenseType = (int)LicenseType.Copyrighted,
             DocumentCategory = nameof(DocumentCategory.Rulebook),
-            GameId = null,
             PrivateGameId = privateGameId,
             IsPublic = false
         });

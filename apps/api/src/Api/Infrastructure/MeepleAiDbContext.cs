@@ -113,6 +113,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<LlmCostLogEntity> LlmCostLogs => Set<LlmCostLogEntity>(); // ISSUE-960: BGAI-018
     public DbSet<LlmRequestLogEntity> LlmRequestLogs => Set<LlmRequestLogEntity>(); // ISSUE-5072: Detailed request logging with 30-day retention
     public DbSet<ChunkedUploadSessionEntity> ChunkedUploadSessions => Set<ChunkedUploadSessionEntity>(); // Chunked PDF upload
+    public DbSet<BoundedContexts.DocumentProcessing.Domain.Entities.PhotoBatchUpload> PhotoBatchUploads => Set<BoundedContexts.DocumentProcessing.Domain.Entities.PhotoBatchUpload>(); // Libro Game AI Assistant MVP Phase 1
+    public DbSet<BoundedContexts.DocumentProcessing.Domain.Entities.PhotoBatchPage> PhotoBatchPages => Set<BoundedContexts.DocumentProcessing.Domain.Entities.PhotoBatchPage>(); // Libro Game AI Assistant MVP Phase 1
     public DbSet<AdminReportEntity> AdminReports => Set<AdminReportEntity>(); // ISSUE-916: Report generation + scheduling
     public DbSet<ReportExecutionEntity> ReportExecutions => Set<ReportExecutionEntity>(); // ISSUE-916: Report execution history
     public DbSet<DocumentCollectionEntity> DocumentCollections => Set<DocumentCollectionEntity>(); // ISSUE-2051: Multi-document collections
@@ -122,6 +124,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<InvitationGameSuggestionEntity> InvitationGameSuggestions => Set<InvitationGameSuggestionEntity>(); // Admin Invitation Flow: game suggestions on invitations
     public DbSet<GameSuggestionEntity> GameSuggestions => Set<GameSuggestionEntity>(); // Admin Invitation Flow: user game suggestions
     public DbSet<AccessRequestEntity> AccessRequests => Set<AccessRequestEntity>(); // ISSUE-124: Access request management
+    public DbSet<WaitlistEntryEntity> WaitlistEntries => Set<WaitlistEntryEntity>(); // ISSUE-589: Public Alpha waitlist (Wave A.2)
     public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>(); // ISSUE-2053: User notifications
     public DbSet<SharedGameEntity> SharedGames => Set<SharedGameEntity>(); // ISSUE-2370: Shared game catalog
     public DbSet<GameDesignerEntity> GameDesigners => Set<GameDesignerEntity>(); // ISSUE-2370: Game designers
@@ -135,6 +138,17 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameStateTemplateEntity> GameStateTemplates => Set<GameStateTemplateEntity>(); // ISSUE-2400: Sprint 3 - Game state templates
     public DbSet<RulebookAnalysisEntity> RulebookAnalyses => Set<RulebookAnalysisEntity>(); // ISSUE-2402: Sprint 3 - Rulebook analysis service
     public DbSet<MechanicDraftEntity> MechanicDrafts => Set<MechanicDraftEntity>(); // Mechanic Extractor: Variant C draft workspace
+    public DbSet<MechanicAnalysisEntity> MechanicAnalyses => Set<MechanicAnalysisEntity>(); // ISSUE-523: Mechanic Extractor M1.1 — AI-first analysis aggregate
+    public DbSet<MechanicClaimEntity> MechanicClaims => Set<MechanicClaimEntity>(); // ISSUE-523: Child of MechanicAnalysis
+    public DbSet<MechanicCitationEntity> MechanicCitations => Set<MechanicCitationEntity>(); // ISSUE-523: Child of MechanicClaim (ADR-051 T1 quote cap)
+    public DbSet<MechanicStatusAuditEntity> MechanicStatusAudits => Set<MechanicStatusAuditEntity>(); // ISSUE-523: T6 audit trail for lifecycle transitions
+    public DbSet<MechanicSuppressionAuditEntity> MechanicSuppressionAudits => Set<MechanicSuppressionAuditEntity>(); // ISSUE-523: T5 audit trail for suppressions
+    public DbSet<MechanicAnalysisSectionRunEntity> MechanicAnalysisSectionRuns => Set<MechanicAnalysisSectionRunEntity>(); // ISSUE-524: M1.2 per-section provider/token tracking (B6=C)
+    public DbSet<MechanicGoldenClaimEntity> MechanicGoldenClaims => Set<MechanicGoldenClaimEntity>(); // ADR-051 Sprint 1 / M2.0: golden-set claims
+    public DbSet<MechanicGoldenBggTagEntity> MechanicGoldenBggTags => Set<MechanicGoldenBggTagEntity>(); // ADR-051 Sprint 1 / M2.0: BGG mechanic tags
+    public DbSet<MechanicAnalysisMetricsEntity> MechanicAnalysisMetrics => Set<MechanicAnalysisMetricsEntity>(); // ADR-051 Sprint 1 / M2.0: per-run scoring snapshot
+    public DbSet<CertificationThresholdsConfigEntity> CertificationThresholdsConfigs => Set<CertificationThresholdsConfigEntity>(); // ADR-051 Sprint 1 / M2.0: singleton thresholds config
+    public DbSet<MechanicRecalcJobEntity> MechanicRecalcJobs => Set<MechanicRecalcJobEntity>(); // ADR-051 Sprint 2 / M2.1: async recalc pipeline jobs
     public DbSet<QuickQuestionEntity> QuickQuestions => Set<QuickQuestionEntity>(); // ISSUE-2401: Sprint 3 - Quick questions AI generation
     public DbSet<UserLibraryEntryEntity> UserLibraryEntries => Set<UserLibraryEntryEntity>(); // User Library feature
     public DbSet<WishlistItemEntity> WishlistItems => Set<WishlistItemEntity>(); // ISSUE-3917: Wishlist management
@@ -206,6 +220,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameNightEventEntity> GameNightEvents => Set<GameNightEventEntity>(); // ISSUE-42: Game Night Event
     public DbSet<GameNightRsvpEntity> GameNightRsvps => Set<GameNightRsvpEntity>(); // ISSUE-42: Game Night RSVP
     public DbSet<GameNightSessionEntity> GameNightSessions => Set<GameNightSessionEntity>(); // Game Night Sessions
+    public DbSet<GameNightInvitationEntity> GameNightInvitations => Set<GameNightInvitationEntity>(); // ISSUE-607: Token-based public RSVP invitations
     public DbSet<RuleDisputeEntity> RuleDisputes => Set<RuleDisputeEntity>(); // Structured rule dispute persistence
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity> GameMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity>(); // AgentMemory: per-game memory
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity> GroupMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity>(); // AgentMemory: play group memory
@@ -295,6 +310,7 @@ public class MeepleAiDbContext : DbContext
             modelBuilder.Entity<ConversationMemoryEntity>().Ignore(e => e.Embedding);
             modelBuilder.Entity<StrategyPatternEntity>().Ignore(e => e.Embedding);
             modelBuilder.Entity<PgVectorEmbeddingEntity>().Ignore(e => e.Vector);
+            modelBuilder.Entity<Api.Infrastructure.Entities.SharedGameCatalog.MechanicGoldenClaimEntity>().Ignore(e => e.Embedding);
         }
 
         // Ignore domain aggregate roots - EF Core should only map persistence entities
@@ -303,6 +319,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.Session>();
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.ShareLink>(); // ISSUE-2052
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.AccessRequest>(); // ISSUE-124: Access request domain entity
+        modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.WaitlistEntry>(); // ISSUE-589: Public Alpha waitlist (Wave A.2)
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.InvitationToken>(); // Admin Invitation Flow: domain aggregate
         modelBuilder.Ignore<BoundedContexts.Authentication.Domain.Entities.InvitationGameSuggestion>(); // Admin Invitation Flow: domain entity
         modelBuilder.Ignore<BoundedContexts.UserLibrary.Domain.Entities.GameSuggestion>(); // Admin Invitation Flow: domain aggregate

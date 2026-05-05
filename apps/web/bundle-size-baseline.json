@@ -1,6 +1,6 @@
 {
-  "description": "Baseline JS bundle size for prod build (no mock). Update manually in dedicated PRs.",
-  "updatedAt": "2026-04-11",
-  "totalBytes": 12451770,
+  "description": "Baseline JS bundle size for prod build (no mock). Update manually in dedicated PRs. Last bump rebaselines post-Wave B v2 brownfield migrations (#635, #637, #638) which added 15 new v2 feature components.",
+  "updatedAt": "2026-05-03",
+  "totalBytes": 13590039,
   "toleranceBytes": 10240
 }

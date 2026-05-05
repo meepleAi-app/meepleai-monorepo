@@ -25,7 +25,7 @@ export const AiRequestSchema = z.object({
   errorMessage: z.string().nullable(),
   ipAddress: z.string().nullable(),
   userAgent: z.string().nullable(),
-  createdAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
   model: z.string().nullable(),
   finishReason: z.string().nullable(),
 });

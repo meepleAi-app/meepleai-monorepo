@@ -13,12 +13,12 @@ import { useQuery } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 
 import { ChatHistoryFilters } from '@/components/admin/agents/chat-history-filters';
 import { ChatHistoryTable } from '@/components/admin/agents/chat-history-table';
 import { EmptyFeatureState } from '@/components/admin/EmptyFeatureState';
-import { CostBreakdownPanel } from '@/components/admin/usage/CostBreakdownPanel';
 import { FreeQuotaIndicator } from '@/components/admin/usage/FreeQuotaIndicator';
 import { KpiCards } from '@/components/admin/usage/KpiCards';
 import { RateLimitGauge } from '@/components/admin/usage/RateLimitGauge';
@@ -26,7 +26,15 @@ import {
   RecentRequestsTable,
   type RecentRequestsFilters,
 } from '@/components/admin/usage/RecentRequestsTable';
-import { RequestTimelineChart } from '@/components/admin/usage/RequestTimelineChart';
+
+const CostBreakdownPanel = dynamic(
+  () => import('@/components/admin/usage/CostBreakdownPanel').then(m => m.CostBreakdownPanel),
+  { ssr: false, loading: () => <div className="h-48 animate-pulse rounded-lg bg-muted" /> }
+);
+const RequestTimelineChart = dynamic(
+  () => import('@/components/admin/usage/RequestTimelineChart').then(m => m.RequestTimelineChart),
+  { ssr: false, loading: () => <div className="h-48 animate-pulse rounded-lg bg-muted" /> }
+);
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/navigation/tabs';
 import { Button } from '@/components/ui/primitives/button';
 import { createAdminClient } from '@/lib/api/clients/adminClient';

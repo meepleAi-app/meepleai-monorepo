@@ -578,22 +578,14 @@ public class IndexPdfCommandHandlerTests
         return new PdfDocumentEntity
         {
             Id = id,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "test.pdf",
             FilePath = "/uploads/test.pdf",
             FileSizeBytes = 1024,
             UploadedByUserId = Guid.NewGuid(),
             UploadedAt = DateTime.UtcNow,
             ProcessingState = status == "completed" ? "Ready" : "Pending",
-            ExtractedText = extractedText,
-            Game = new GameEntity
-            {
-                Id = gameId,
-                Name = "Test Game",
-                MinPlayers = 2,
-                MaxPlayers = 4,
-                CreatedAt = DateTime.UtcNow
-            }
+            ExtractedText = extractedText
         };
     }
 
@@ -685,7 +677,6 @@ public class IndexPdfCommandHandlerTests
         var pdf = new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = null,
             PrivateGameId = null,
             SharedGameId = sharedGameId,
             FileName = "shared-game-rules.pdf",
@@ -736,60 +727,6 @@ public class IndexPdfCommandHandlerTests
         {
             chunk.SharedGameId.Should().Be(sharedGameId, "SharedGameId must propagate from PDF to text chunks");
             chunk.GameId.Should().Be(sharedGameId, "effectiveGameId should fall through to SharedGameId, not Guid.Empty");
-        });
-    }
-
-    [Fact]
-    [Trait("Category", TestCategories.Unit)]
-    [Trait("BoundedContext", "DocumentProcessing")]
-    public async Task Handle_RegularGamePdf_DoesNotSetSharedGameId()
-    {
-        // Arrange — Regular game PDF has GameId set, no SharedGameId
-        using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
-
-        var gameId = Guid.NewGuid();
-        var pdfId = Guid.NewGuid();
-        var pdf = CreatePdfDocument(pdfId, gameId, "completed", GenerateExtractedText(3));
-        await context.PdfDocuments.AddAsync(pdf);
-        await context.SaveChangesAsync();
-
-        var textChunks = GenerateTextChunks(3);
-        chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(textChunks);
-
-        embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
-            {
-                var embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList();
-                return new EmbeddingResult { Success = true, Embeddings = embeddings };
-            });
-
-        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
-        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
-
-        var handler = new IndexPdfCommandHandler(
-            context, chunkingServiceMock.Object, embeddingServiceMock.Object,
-            loggerMock.Object, indexingSettingsMock.Object,
-            Mock.Of<ISemanticResponseCache>());
-
-        // Act
-        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
-
-        // Assert — indexing succeeds and SharedGameId remains null for regular game PDFs
-        result.Success.Should().BeTrue();
-
-        var savedChunks = await context.TextChunks
-            .Where(tc => tc.PdfDocumentId == pdfId)
-            .ToListAsync();
-
-        savedChunks.Should().HaveCount(3);
-        savedChunks.Should().AllSatisfy(chunk =>
-        {
-            chunk.SharedGameId.Should().BeNull("regular game PDFs should not have SharedGameId on chunks");
-            chunk.GameId.Should().Be(gameId);
         });
     }
 

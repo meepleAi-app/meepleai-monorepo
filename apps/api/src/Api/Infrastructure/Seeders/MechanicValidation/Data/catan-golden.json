@@ -1,0 +1,261 @@
+{
+  "claims": [
+    {
+      "section": "Summary",
+      "statement": "Catan is a strategy game in which 3 to 4 players settle the island of Catan, gather resources, build roads and settlements, and compete to be the first to reach 10 victory points.",
+      "expectedPage": 2,
+      "sourceQuote": "In CATAN, you control a group of settlers exploring and taming the uncharted island of Catan."
+    },
+    {
+      "section": "Summary",
+      "statement": "The game supports 3 to 4 players, with an average playing time of about 60 to 90 minutes.",
+      "expectedPage": 1,
+      "sourceQuote": "For 3 to 4 players, ages 10 and up. Playing time approximately 60 to 90 minutes."
+    },
+    {
+      "section": "Summary",
+      "statement": "The objective of the game is to be the first player to score 10 victory points on your turn.",
+      "expectedPage": 2,
+      "sourceQuote": "The first player to reach 10 victory points on their turn wins the game."
+    },
+    {
+      "section": "Summary",
+      "statement": "Catan's game components include 19 terrain hexes, 6 sea frame pieces, 9 harbor pieces, 18 number tokens, and a deck of resource and development cards.",
+      "expectedPage": 3,
+      "sourceQuote": "The game contains 19 terrain hexes, 6 sea frame pieces, 9 harbor pieces, 18 circular number tokens, 95 resource cards, and 25 development cards."
+    },
+    {
+      "section": "Summary",
+      "statement": "Each player has wooden pieces representing 5 settlements, 4 cities, and 15 roads in their chosen color.",
+      "expectedPage": 3,
+      "sourceQuote": "Each player receives 5 settlements, 4 cities, and 15 roads in their color."
+    },
+    {
+      "section": "Phases",
+      "statement": "Before play begins, the terrain hexes are arranged on the board, either following the standard layout or shuffled for a variable setup.",
+      "expectedPage": 4,
+      "sourceQuote": "Place the 19 terrain hexes inside the sea frame following the standard layout, or shuffle them for a variable setup."
+    },
+    {
+      "section": "Phases",
+      "statement": "After arranging hexes, the 18 number tokens are placed face-down on land hexes (skipping the desert), then turned face-up in alphabetical order.",
+      "expectedPage": 4,
+      "sourceQuote": "Place the number tokens face-down, then flip them face-up in alphabetical order, skipping the desert hex."
+    },
+    {
+      "section": "Phases",
+      "statement": "Each player rolls one die; the player with the highest roll places the first settlement and proceeds clockwise for initial placement.",
+      "expectedPage": 5,
+      "sourceQuote": "The player with the highest roll places the first settlement and a connecting road, then play continues clockwise."
+    },
+    {
+      "section": "Phases",
+      "statement": "During initial placement, each player places two settlements and two adjacent roads, with the second placement order reversed.",
+      "expectedPage": 5,
+      "sourceQuote": "Each player places one settlement and one road. After the last player places, the order reverses for the second settlement and road."
+    },
+    {
+      "section": "Phases",
+      "statement": "After the second settlement is placed, players collect one resource card for each terrain hex adjacent to that settlement.",
+      "expectedPage": 5,
+      "sourceQuote": "After placing your second settlement, you receive one resource card of each terrain type adjacent to it."
+    },
+    {
+      "section": "Phases",
+      "statement": "A player's turn consists of three phases: roll for resource production, trade and build, then end the turn.",
+      "expectedPage": 6,
+      "sourceQuote": "On your turn, you roll the dice for resource production, then trade and build, and finally end your turn."
+    },
+    {
+      "section": "Phases",
+      "statement": "At the start of your turn, you roll both dice to determine which terrain hexes produce resources this turn.",
+      "expectedPage": 6,
+      "sourceQuote": "At the beginning of your turn, you roll both dice."
+    },
+    {
+      "section": "Phases",
+      "statement": "After resource production, the active player may trade with other players or with the bank, and then build settlements, cities, roads, or buy development cards.",
+      "expectedPage": 6,
+      "sourceQuote": "After production, you may trade and build in any order during your turn."
+    },
+    {
+      "section": "Phases",
+      "statement": "A turn ends when the active player passes the dice to the player on their left.",
+      "expectedPage": 7,
+      "sourceQuote": "When you finish your turn, pass the dice to the player on your left."
+    },
+    {
+      "section": "Phases",
+      "statement": "Trading and building can only be done on the active player's turn; only the bank trade (4:1) and harbor trades require no other player's consent.",
+      "expectedPage": 7,
+      "sourceQuote": "You may only trade and build on your own turn."
+    },
+    {
+      "section": "Mechanics",
+      "statement": "When the dice roll matches a number token on a terrain hex, every player with a settlement adjacent to that hex receives one resource card of that terrain type.",
+      "expectedPage": 6,
+      "sourceQuote": "Each player who has a settlement adjacent to a hex with the rolled number receives one resource card of that terrain type."
+    },
+    {
+      "section": "Mechanics",
+      "statement": "A city adjacent to a producing terrain hex yields two resource cards instead of one.",
+      "expectedPage": 6,
+      "sourceQuote": "A city produces two resource cards of the adjacent terrain's resource type when its number is rolled."
+    },
+    {
+      "section": "Mechanics",
+      "statement": "Players may trade resources with each other on the active player's turn at any mutually agreed-upon ratio.",
+      "expectedPage": 7,
+      "sourceQuote": "You may negotiate trades with other players on your turn at any rate you both agree on."
+    },
+    {
+      "section": "Mechanics",
+      "statement": "Maritime trade with the bank costs four identical resource cards in exchange for one resource of the player's choice.",
+      "expectedPage": 7,
+      "sourceQuote": "You may trade 4 identical resource cards to the bank for 1 resource of your choice."
+    },
+    {
+      "section": "Mechanics",
+      "statement": "A settlement built on a generic harbor allows a 3:1 trade with the bank, while specialized harbors allow a 2:1 trade for the indicated resource.",
+      "expectedPage": 7,
+      "sourceQuote": "Generic harbors offer a 3:1 trade rate; specialized harbors offer a 2:1 rate for the depicted resource."
+    },
+    {
+      "section": "Mechanics",
+      "statement": "When a 7 is rolled, the active player must move the robber to a different hex, blocking its production until the robber is moved again.",
+      "expectedPage": 8,
+      "sourceQuote": "When you roll a 7, you must move the robber to a different terrain hex."
+    },
+    {
+      "section": "Mechanics",
+      "statement": "After moving the robber, the active player steals one random resource card from a player with a settlement or city adjacent to the new robber hex.",
+      "expectedPage": 8,
+      "sourceQuote": "After moving the robber, you draw one random resource card from a player with a building adjacent to that hex."
+    },
+    {
+      "section": "Mechanics",
+      "statement": "Development cards are bought from the deck and provide one-time effects such as Knights, Year of Plenty, Monopoly, and Road Building, plus Victory Point cards.",
+      "expectedPage": 9,
+      "sourceQuote": "The development card deck contains Knights, Progress cards (Year of Plenty, Monopoly, Road Building), and Victory Point cards."
+    },
+    {
+      "section": "Mechanics",
+      "statement": "A Knight card moves the robber and steals a resource just like rolling a 7, but does not require any player to discard.",
+      "expectedPage": 9,
+      "sourceQuote": "Playing a Knight card moves the robber and steals a card, but no player must discard."
+    },
+    {
+      "section": "Mechanics",
+      "statement": "Largest Army awards 2 victory points to the first player who has played at least 3 Knight cards, and can be stolen by any player who later plays more.",
+      "expectedPage": 10,
+      "sourceQuote": "The first player to play 3 Knight cards earns the Largest Army and 2 victory points; if another player plays more Knights, they take the card."
+    },
+    {
+      "section": "Mechanics",
+      "statement": "Longest Road awards 2 victory points to the first player to build a continuous road of at least 5 segments, and can be stolen by any player who later builds longer.",
+      "expectedPage": 10,
+      "sourceQuote": "The first player to build an unbroken road of at least 5 segments earns the Longest Road and 2 victory points."
+    },
+    {
+      "section": "Mechanics",
+      "statement": "A development card cannot be played on the same turn it is bought, except for a Victory Point card revealed to win the game.",
+      "expectedPage": 9,
+      "sourceQuote": "You may not play a development card on the same turn you bought it, except for Victory Point cards used to win."
+    },
+    {
+      "section": "Resources",
+      "statement": "There are five resource types in Catan: brick, lumber, wool, grain, and ore.",
+      "expectedPage": 3,
+      "sourceQuote": "The five resources are brick, lumber, wool, grain, and ore."
+    },
+    {
+      "section": "Resources",
+      "statement": "Hill hexes produce brick, forest hexes produce lumber, pasture hexes produce wool, field hexes produce grain, and mountain hexes produce ore.",
+      "expectedPage": 3,
+      "sourceQuote": "Hills yield brick, forests yield lumber, pastures yield wool, fields yield grain, and mountains yield ore."
+    },
+    {
+      "section": "Resources",
+      "statement": "Building a road costs one brick and one lumber.",
+      "expectedPage": 11,
+      "sourceQuote": "A road costs 1 brick and 1 lumber."
+    },
+    {
+      "section": "Resources",
+      "statement": "Building a settlement costs one brick, one lumber, one wool, and one grain.",
+      "expectedPage": 11,
+      "sourceQuote": "A settlement costs 1 brick, 1 lumber, 1 wool, and 1 grain."
+    },
+    {
+      "section": "Resources",
+      "statement": "Upgrading a settlement to a city costs three ore and two grain, and the replaced settlement returns to the player's supply.",
+      "expectedPage": 11,
+      "sourceQuote": "A city costs 3 ore and 2 grain. The settlement is returned to your supply when upgraded."
+    },
+    {
+      "section": "Resources",
+      "statement": "Buying a development card costs one wool, one grain, and one ore.",
+      "expectedPage": 11,
+      "sourceQuote": "A development card costs 1 wool, 1 grain, and 1 ore."
+    },
+    {
+      "section": "Victory",
+      "statement": "The game ends immediately when a player reaches 10 victory points on their own turn.",
+      "expectedPage": 12,
+      "sourceQuote": "The first player to reach 10 victory points on their own turn wins the game."
+    },
+    {
+      "section": "Victory",
+      "statement": "Each settlement on the board is worth 1 victory point.",
+      "expectedPage": 12,
+      "sourceQuote": "Each settlement is worth 1 victory point."
+    },
+    {
+      "section": "Victory",
+      "statement": "Each city on the board is worth 2 victory points.",
+      "expectedPage": 12,
+      "sourceQuote": "Each city is worth 2 victory points."
+    },
+    {
+      "section": "Victory",
+      "statement": "The Longest Road and Largest Army special cards are each worth 2 victory points to their current holder.",
+      "expectedPage": 12,
+      "sourceQuote": "Longest Road and Largest Army are each worth 2 victory points."
+    },
+    {
+      "section": "Victory",
+      "statement": "Victory Point development cards each grant 1 hidden victory point and are revealed only when claiming victory.",
+      "expectedPage": 12,
+      "sourceQuote": "Victory Point cards count for 1 victory point each and are kept hidden until you can win the game."
+    },
+    {
+      "section": "Faq",
+      "statement": "When a 7 is rolled, every player holding more than 7 resource cards must discard half of their hand, rounded down.",
+      "expectedPage": 8,
+      "sourceQuote": "When a 7 is rolled, all players with more than 7 cards in hand must discard half (rounded down) of their resource cards."
+    },
+    {
+      "section": "Faq",
+      "statement": "If the robber is placed on the desert hex, no player loses a resource and no production occurs from the desert.",
+      "expectedPage": 8,
+      "sourceQuote": "The desert produces no resources, and the robber may be placed there if no other hex is desired."
+    }
+  ],
+  "bggTags": [
+    { "name": "Dice Rolling", "category": "mechanic" },
+    { "name": "Trading", "category": "mechanic" },
+    { "name": "Network and Route Building", "category": "mechanic" },
+    { "name": "Modular Board", "category": "mechanic" },
+    { "name": "Variable Set-up", "category": "mechanic" },
+    { "name": "Hexagon Grid", "category": "mechanic" },
+    { "name": "Random Production", "category": "mechanic" },
+    { "name": "Negotiation", "category": "mechanic" },
+    { "name": "Income", "category": "mechanic" },
+    { "name": "Hand Management", "category": "mechanic" },
+    { "name": "City Building", "category": "theme" },
+    { "name": "Medieval", "category": "theme" },
+    { "name": "Civilization", "category": "theme" },
+    { "name": "Economic", "category": "theme" },
+    { "name": "Exploration", "category": "theme" }
+  ]
+}

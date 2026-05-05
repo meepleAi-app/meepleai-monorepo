@@ -56,7 +56,7 @@ public class CitationValidationServiceTests
             new PdfDocumentEntity
             {
                 Id = pdf1Id,
-                GameId = gameId,
+                SharedGameId = gameId,
                 FileName = "test-rules.pdf",
                 FilePath = "/test/rules.pdf",
                 FileSizeBytes = 1000,
@@ -67,7 +67,7 @@ public class CitationValidationServiceTests
             new PdfDocumentEntity
             {
                 Id = pdf2Id,
-                GameId = gameId,
+                SharedGameId = gameId,
                 FileName = "test-expansion.pdf",
                 FilePath = "/test/expansion.pdf",
                 FileSizeBytes = 2000,

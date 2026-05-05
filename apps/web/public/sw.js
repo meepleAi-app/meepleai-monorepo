@@ -7,11 +7,37 @@
  * - Session data: StaleWhileRevalidate
  */
 
-const CACHE_VERSION = 'meepleai-v3'; // Bumped: Fix menu flickering (removed aggressive default caching)
+const CACHE_VERSION = 'meepleai-v4'; // Bumped: Fix /admin redirect loop (never cache authenticated navigations)
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const RULES_CACHE = `${CACHE_VERSION}-rules`;
+
+// Authenticated app routes: navigation responses MUST NOT be cached.
+// Their payload depends on cookies the SW cannot observe, so any cached
+// body replays stale state and can break server-side redirects
+// (e.g. /admin → /admin/overview producing /admin keyed to /admin/overview body).
+const AUTHENTICATED_NAV_PREFIXES = [
+  '/admin',
+  '/library',
+  '/chat',
+  '/sessions',
+  '/games',
+  '/agents',
+  '/upload',
+  '/editor',
+  '/settings',
+  '/play-records',
+  '/game-nights',
+  '/dashboard',
+  '/profile',
+];
+
+function isAuthenticatedNavigation(url) {
+  return AUTHENTICATED_NAV_PREFIXES.some(
+    prefix => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`)
+  );
+}
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -242,17 +268,39 @@ async function staleWhileRevalidateStrategy(request) {
 
 /**
  * Navigation strategy with offline fallback
+ *
+ * Authenticated app routes (see AUTHENTICATED_NAV_PREFIXES) are always
+ * network-only: their payload depends on cookies the SW cannot read, so any
+ * cached body would replay stale state and can cause redirect loops when the
+ * server responds with 3xx (fetch follows redirects and response.url may
+ * differ from request.url, producing mismatched cache entries).
  */
 async function navigationStrategy(request) {
+  const url = new URL(request.url);
+  const isAuthNav = isAuthenticatedNavigation(url);
+
   try {
     const response = await fetch(request);
-    if (response.ok) {
+
+    // Only cache public navigations whose final URL matches the requested URL.
+    // This prevents storing redirected bodies under the original key.
+    if (!isAuthNav && response.ok && !response.redirected && response.url === request.url) {
       const cache = await caches.open(DYNAMIC_CACHE);
       cache.put(request, response.clone());
     }
+
     return response;
   } catch {
-    // Try cached version
+    // Never serve stale navigation for authenticated routes — fall through to
+    // the offline page so the user sees a clear offline state instead of
+    // potentially-stale authenticated content.
+    if (isAuthNav) {
+      const offlinePage = await caches.match('/offline');
+      if (offlinePage) return offlinePage;
+      return new Response('Offline', { status: 503 });
+    }
+
+    // Try cached version for public navigations
     const cached = await caches.match(request);
     if (cached) {
       return cached;

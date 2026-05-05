@@ -125,7 +125,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "gloomhaven.pdf",
             FilePath = "/uploads/gloomhaven.pdf",
             UploadedByUserId = UserId,
@@ -194,7 +194,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = targetPdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "pandemic.pdf",
             FilePath = "/uploads/pandemic.pdf",
             UploadedByUserId = UserId,
@@ -203,7 +203,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = otherPdfId,
-            GameId = gameId,
+            SharedGameId = gameId,
             FileName = "pandemic-expansion.pdf",
             FilePath = "/uploads/pandemic-expansion.pdf",
             UploadedByUserId = UserId,
@@ -287,7 +287,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            GameId = gameBId,
+            SharedGameId = gameBId,
             FileName = "game-b.pdf",
             FilePath = "/uploads/game-b.pdf",
             UploadedByUserId = UserId,

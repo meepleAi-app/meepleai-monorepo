@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,7 +37,7 @@ internal class GenerateRuleSpecFromPdfCommandHandler : ICommandHandler<GenerateR
 
         if (pdf is null)
         {
-            throw new InvalidOperationException($"PDF document {command.PdfDocumentId} not found");
+            throw new NotFoundException("PdfDocument", command.PdfDocumentId.ToString());
         }
 
         // Parse rules from PDF (try AtomicRules first, then ExtractedText)
@@ -65,7 +66,7 @@ internal class GenerateRuleSpecFromPdfCommandHandler : ICommandHandler<GenerateR
 
         return new RuleSpecDto(
             Id: Guid.NewGuid(), // Temporary - will be assigned by DB
-            GameId: pdf.GameId ?? Guid.Empty,
+            GameId: pdf.PrivateGameId ?? pdf.SharedGameId ?? Guid.Empty,
             Version: version,
             CreatedAt: timestamp,
             CreatedByUserId: null,

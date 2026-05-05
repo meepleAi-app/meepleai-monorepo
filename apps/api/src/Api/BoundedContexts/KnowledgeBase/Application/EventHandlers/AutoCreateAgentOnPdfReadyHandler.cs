@@ -43,7 +43,7 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<Pd
             // Get the PDF entity to check priority (ProcessingPriority is on EF entity, not domain)
             var pdfEntity = await _dbContext.PdfDocuments
                 .Where(p => p.Id == notification.PdfDocumentId)
-                .Select(p => new { p.GameId, p.ProcessingPriority })
+                .Select(p => new { p.SharedGameId, p.PrivateGameId, p.ProcessingPriority })
                 .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false);
 
@@ -64,6 +64,9 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<Pd
                 return;
             }
 
+            // Resolve game id from PDF (private > shared > empty)
+            var resolvedGameId = pdfEntity.PrivateGameId ?? pdfEntity.SharedGameId ?? Guid.Empty;
+
             // Get first active system definition
             var definitions = await _definitionRepo.GetAllAsync(cancellationToken).ConfigureAwait(false);
             var defaultDefinition = definitions.FirstOrDefault(d => d.IsSystemDefined && d.IsActive);
@@ -72,7 +75,7 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<Pd
             {
                 _logger.LogWarning(
                     "AutoCreateAgent: No active system definition found. Cannot auto-create agent for game {GameId}",
-                    pdfEntity.GameId);
+                    resolvedGameId);
                 return;
             }
 
@@ -89,13 +92,13 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<Pd
                 _logger.LogWarning(
                     "AutoCreateAgent: User {UserId} not found in database. Cannot determine tier/role for quota enforcement. Skipping auto-agent creation for game {GameId}",
                     notification.UploadedByUserId,
-                    pdfEntity.GameId);
+                    resolvedGameId);
                 return;
             }
 
             // Create agent with defaults
             var command = new CreateGameAgentCommand(
-                GameId: pdfEntity.GameId ?? Guid.Empty,
+                GameId: resolvedGameId,
                 AgentDefinitionId: defaultDefinition.Id,
                 StrategyName: "Balanced",
                 StrategyParameters: null,
@@ -107,7 +110,7 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<Pd
 
             _logger.LogInformation(
                 "AutoCreateAgent: Agent auto-created for game {GameId} (PDF {PdfId}), library entry {EntryId}",
-                pdfEntity.GameId,
+                resolvedGameId,
                 notification.PdfDocumentId,
                 result.LibraryEntryId);
         }

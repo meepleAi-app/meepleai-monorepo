@@ -78,15 +78,41 @@ export default function MechanicExtractorPage() {
   const [aiResult, setAiResult] = useState<AiAssistResultDto | null>(null);
   const [autoSaveTimer, setAutoSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
-  // PDF viewer ref
-  const pdfUrl = selectedPdfId ? `/api/v1/documents/${selectedPdfId}/download` : '';
+  // PDF viewer ref (endpoint: /api/v1/pdfs/{pdfId}/download — see PdfRetrievalEndpoints)
+  const pdfUrl = selectedPdfId ? `/api/v1/pdfs/${selectedPdfId}/download` : '';
 
   // Fetch shared games for selection
-  const { data: gamesData } = useQuery({
+  const { data: gamesData, isLoading: isGamesLoading } = useQuery({
     queryKey: ['shared-games', 'all'],
     queryFn: () => gamesClient.getAll({ page: 1, pageSize: 100 }),
     staleTime: 60_000,
   });
+
+  // Fetch all PDFs in Ready state to determine which games have a PDF available
+  // NOTE: pageSize=500 is a deliberate cap; if exceeded the game filter will
+  // silently under-count eligible games. Raise or paginate if scale demands.
+  const { data: readyPdfsData, isLoading: isReadyPdfsLoading } = useQuery({
+    queryKey: ['admin', 'pdfs', 'ready-all'],
+    queryFn: () =>
+      adminClient.getAllPdfs({
+        state: 'Ready',
+        page: 1,
+        pageSize: 500,
+      }),
+    staleTime: 60_000,
+  });
+
+  const isGameSelectLoading = isGamesLoading || isReadyPdfsLoading;
+
+  // Build set of gameIds that have at least one Ready PDF
+  const gameIdsWithPdf = new Set(
+    (readyPdfsData?.items ?? []).map(p => p.gameId).filter((id): id is string => !!id)
+  );
+
+  // Filter games to those with at least one PDF available
+  const gamesWithPdf = (gamesData?.items ?? []).filter((g: { id: string }) =>
+    gameIdsWithPdf.has(g.id)
+  );
 
   // Fetch PDFs for selected game
   const { data: pdfsData } = useQuery({
@@ -94,7 +120,7 @@ export default function MechanicExtractorPage() {
     queryFn: () =>
       adminClient.getAllPdfs({
         gameId: selectedGameId,
-        status: 'Completed',
+        state: 'Ready',
         page: 1,
         pageSize: 50,
       }),
@@ -210,7 +236,7 @@ export default function MechanicExtractorPage() {
   const handleGameSelect = (gameId: string) => {
     setSelectedGameId(gameId);
     setSelectedPdfId('');
-    const game = gamesData?.items?.find((g: { id: string; title: string }) => g.id === gameId);
+    const game = gamesWithPdf.find((g: { id: string; title: string }) => g.id === gameId);
     if (game) setGameTitle(game.title);
   };
 
@@ -226,20 +252,28 @@ export default function MechanicExtractorPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
-          Mechanic Extractor
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Extract game mechanics from rulebook PDFs using a copyright-compliant human+AI workflow
-        </p>
-        <Badge
-          variant="outline"
-          className="mt-2 border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
-        >
-          <ShieldCheckIcon className="mr-1 h-3 w-3" />
-          Variant C: AI reads notes only, never the PDF
-        </Badge>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="font-quicksand text-2xl font-bold tracking-tight text-foreground">
+            Mechanic Extractor
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Extract game mechanics from rulebook PDFs using a copyright-compliant human+AI workflow
+          </p>
+          <Badge
+            variant="outline"
+            className="mt-2 border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+          >
+            <ShieldCheckIcon className="mr-1 h-3 w-3" />
+            Variant C: AI reads notes only, never the PDF
+          </Badge>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <a href="/admin/knowledge-base/mechanic-extractor/analyses">
+            <SparklesIcon className="mr-1 h-4 w-4" />
+            Async pipeline (M1.2) →
+          </a>
+        </Button>
       </div>
 
       {/* Game + PDF Selection */}
@@ -251,11 +285,19 @@ export default function MechanicExtractorPage() {
                 Select Game
               </label>
               <Select value={selectedGameId} onValueChange={handleGameSelect}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a game..." />
+                <SelectTrigger disabled={isGameSelectLoading}>
+                  <SelectValue
+                    placeholder={
+                      isGameSelectLoading
+                        ? 'Loading…'
+                        : gamesWithPdf.length === 0
+                          ? 'No games with PDF available'
+                          : 'Choose a game...'
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {gamesData?.items?.map((game: { id: string; title: string }) => (
+                  {gamesWithPdf.map((game: { id: string; title: string }) => (
                     <SelectItem key={game.id} value={game.id}>
                       {game.title}
                     </SelectItem>
@@ -417,6 +459,16 @@ export default function MechanicExtractorPage() {
                     )}
                   </div>
 
+                  {existingDraft && existingDraft.totalTokensUsed > 0 && (
+                    <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                      <SparklesIcon className="h-3 w-3" />
+                      <span>{existingDraft.totalTokensUsed} tokens used</span>
+                      {existingDraft.estimatedCostUsd > 0 && (
+                        <span>(${existingDraft.estimatedCostUsd.toFixed(4)})</span>
+                      )}
+                    </div>
+                  )}
+
                   {/* AI Result Preview */}
                   {aiResult && aiResult.section === activeSection && (
                     <div className="mb-3 rounded-lg border-2 border-amber-300 bg-amber-50/50 p-3 dark:border-amber-700 dark:bg-amber-950/20">
@@ -475,18 +527,28 @@ export default function MechanicExtractorPage() {
                   {/* Finalize Button */}
                   {canFinalize && (
                     <div className="mt-4 border-t border-slate-200 pt-4 dark:border-zinc-700">
-                      <Button
-                        onClick={() => finalizeMutation.mutate()}
-                        disabled={finalizeMutation.isPending}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        {finalizeMutation.isPending ? (
-                          <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <ShieldCheckIcon className="mr-2 h-4 w-4" />
-                        )}
-                        Activate in Knowledge Base
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" className="flex-1" asChild>
+                          <a
+                            href={`/admin/knowledge-base/mechanic-extractor/review?sharedGameId=${selectedGameId}&pdfDocumentId=${selectedPdfId}`}
+                          >
+                            <FileTextIcon className="mr-2 h-4 w-4" />
+                            Preview & Export
+                          </a>
+                        </Button>
+                        <Button
+                          onClick={() => finalizeMutation.mutate()}
+                          disabled={finalizeMutation.isPending}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          {finalizeMutation.isPending ? (
+                            <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <ShieldCheckIcon className="mr-2 h-4 w-4" />
+                          )}
+                          Activate in Knowledge Base
+                        </Button>
+                      </div>
                       <p className="mt-1 text-center text-xs text-muted-foreground">
                         Creates a RulebookAnalysis entry with GenerationSource.Manual
                       </p>

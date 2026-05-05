@@ -138,7 +138,7 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
                     p.FileName,
                     p.ProcessingState,
                     p.SharedGameId,
-                    GameName = _db.Games.Where(g => g.Id == p.GameId).Select(g => g.Name).FirstOrDefault(),
+                    GameName = _db.Games.Where(g => g.Id == p.SharedGameId).Select(g => g.Name).FirstOrDefault(),
                     TotalChunks = _db.VectorDocuments.Where(vd => vd.PdfDocumentId == p.Id).Select(vd => (int?)vd.ChunkCount).FirstOrDefault()
                 })
                 .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
@@ -212,7 +212,7 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
                 p.FileName,
                 p.ProcessingState,
                 p.SharedGameId,
-                GameName = _db.Games.Where(g => g.Id == p.GameId).Select(g => g.Name).FirstOrDefault(),
+                GameName = _db.Games.Where(g => g.Id == p.SharedGameId).Select(g => g.Name).FirstOrDefault(),
                 TotalChunks = _db.VectorDocuments.Where(vd => vd.PdfDocumentId == p.Id).Select(vd => (int?)vd.ChunkCount).FirstOrDefault()
             })
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
@@ -637,7 +637,6 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             var pdfDoc = new PdfDocumentEntity
             {
                 Id = Guid.Parse(storageResult.FileId!),
-                GameId = resolvedGameId,
                 SharedGameId = resolvedSharedGameId,
                 FileName = fileName,
                 FilePath = storageResult.FilePath!,
@@ -748,11 +747,11 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
         RecordUploadMetricSafely("success", file.Length);
 
         // Issue #5187: Auto-create EntityLink Game → KbCard for PDF-KB association (shared games only)
-        await CreateKbCardEntityLinkSafelyAsync(pdfDoc.Id, pdfDoc.GameId ?? Guid.Empty, userId, cancellationToken).ConfigureAwait(false);
+        await CreateKbCardEntityLinkSafelyAsync(pdfDoc.Id, pdfDoc.SharedGameId ?? Guid.Empty, userId, cancellationToken).ConfigureAwait(false);
 
         return new PdfUploadResult(true, "PDF uploaded successfully", new PdfDocumentDto(
             Id: pdfDoc.Id,
-            GameId: pdfDoc.GameId,
+            GameId: pdfDoc.SharedGameId,
             FileName: pdfDoc.FileName,
             FilePath: pdfDoc.FilePath,
             FileSizeBytes: pdfDoc.FileSizeBytes,
@@ -851,7 +850,7 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
 
         var documentDto = new PdfDocumentDto(
             Id: pdfDoc.Id,
-            GameId: pdfDoc.GameId,
+            GameId: pdfDoc.SharedGameId,
             FileName: pdfDoc.FileName,
             FilePath: pdfDoc.FilePath,
             FileSizeBytes: pdfDoc.FileSizeBytes,

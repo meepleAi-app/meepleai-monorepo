@@ -24,6 +24,10 @@ import {
   type GetEntityLinksParams,
 } from '../schemas/entity-link.schemas';
 import {
+  LibraryActivityResponseSchema,
+  type LibraryActivityItem,
+} from '../schemas/library-activity.schemas';
+import {
   PaginatedLibraryResponseSchema,
   UserLibraryStatsSchema,
   UserLibraryEntrySchema,
@@ -134,6 +138,8 @@ export interface LibraryClient {
   getLibrary(params?: GetUserLibraryParams): Promise<PaginatedLibraryResponse>;
   getStats(): Promise<UserLibraryStats>;
   getQuota(): Promise<LibraryQuotaResponse>;
+  // Library activity feed (Issue #642 — Wave B.3 followup)
+  getActivity(limit?: number): Promise<LibraryActivityItem[]>;
   addGame(gameId: string, request?: AddGameToLibraryRequest): Promise<UserLibraryEntry>;
   removeGame(gameId: string): Promise<void>;
   updateEntry(gameId: string, request: UpdateLibraryEntryRequest): Promise<UserLibraryEntry>;
@@ -304,6 +310,18 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
           percentageUsed: 0,
         }
       );
+    },
+
+    /**
+     * Get the activity feed for the user's library (Issue #642 — Wave B.3 followup).
+     * Limit is clamped server-side to 1–50 (default 20).
+     */
+    async getActivity(limit: number = 20): Promise<LibraryActivityItem[]> {
+      const data = await httpClient.get<LibraryActivityItem[]>(
+        `/api/v1/library/activity?limit=${limit}`,
+        LibraryActivityResponseSchema
+      );
+      return data ?? [];
     },
 
     /**

@@ -25,7 +25,7 @@ export const STORY_METADATA: StoryMeta[] = [
     title: 'MeepleCard',
     category: 'Data Display',
     description:
-      'Universal card component for games, players, agents, sessions, and more. NavFooter states included.',
+      'Universal card component for games, players, agents, sessions, and more. Connection-chip states included.',
     controlCount: 12,
     presetCount: 11,
   },

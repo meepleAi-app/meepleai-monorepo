@@ -155,12 +155,12 @@ describe('NotificationsPage', () => {
     expect(screen.getByText(/Unread notification/)).toBeInTheDocument();
   });
 
-  it('should filter by notification type when type chips are clicked', async () => {
+  it('should filter by notification category when filter pills are clicked', async () => {
     const user = userEvent.setup();
     const notifications = [
       createNotification({ title: 'PDF done', type: 'document_ready' }),
-      createNotification({ title: 'Link accessed', type: 'shared_link_accessed' }),
-      createNotification({ title: 'Error occurred', type: 'document_processing_failed' }),
+      createNotification({ title: 'Agent ready', type: 'agent_ready' }),
+      createNotification({ title: 'Night invite', type: 'game_night_invitation' }),
     ];
     setupStore({ notifications, unreadCount: 3 });
 
@@ -168,16 +168,16 @@ describe('NotificationsPage', () => {
 
     // All visible initially
     expect(screen.getByText(/PDF done/)).toBeInTheDocument();
-    expect(screen.getByText(/Link accessed/)).toBeInTheDocument();
-    expect(screen.getByText(/Error occurred/)).toBeInTheDocument();
+    expect(screen.getByText(/Agent ready/)).toBeInTheDocument();
+    expect(screen.getByText(/Night invite/)).toBeInTheDocument();
 
-    // Click "Link condivisi" filter chip
-    await user.click(screen.getByText('Link condivisi'));
+    // Click "Serate" filter pill
+    await user.click(screen.getByRole('button', { name: /serate/i }));
 
-    // Only shared link notification visible
+    // Only game-night notification visible
     expect(screen.queryByText(/PDF done/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Link accessed/)).toBeInTheDocument();
-    expect(screen.queryByText(/Error occurred/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Agent ready/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Night invite/)).toBeInTheDocument();
   });
 
   it('should paginate with 20 items per page and navigation works', async () => {
@@ -299,22 +299,24 @@ describe('NotificationsPage', () => {
 
     render(<NotificationsPage />);
 
-    // Click a type filter that has no matching notifications
-    await user.click(screen.getByText('Link condivisi'));
+    // Click a filter category that has no matching notifications
+    await user.click(screen.getByRole('button', { name: /serate/i }));
 
     expect(screen.getByText(EMPTY.notificationsOfType)).toBeInTheDocument();
   });
 
-  it('should display all type filter chips', () => {
+  it('should display all filter category pills', () => {
     setupStore();
 
     render(<NotificationsPage />);
 
-    expect(screen.getByText('Tutti')).toBeInTheDocument();
-    expect(screen.getByText('Documenti pronti')).toBeInTheDocument();
-    expect(screen.getByText('Regole generate')).toBeInTheDocument();
-    expect(screen.getByText('Errori elaborazione')).toBeInTheDocument();
-    expect(screen.getByText('Link condivisi')).toBeInTheDocument();
+    // Claude Design v1: all | sessions | agents | events | system
+    const filterBar = screen.getByRole('tablist', { name: /categoria notifiche/i });
+    expect(within(filterBar).getByRole('button', { name: /^tutte$/i })).toBeInTheDocument();
+    expect(within(filterBar).getByRole('button', { name: /sessioni/i })).toBeInTheDocument();
+    expect(within(filterBar).getByRole('button', { name: /agenti/i })).toBeInTheDocument();
+    expect(within(filterBar).getByRole('button', { name: /serate/i })).toBeInTheDocument();
+    expect(within(filterBar).getByRole('button', { name: /sistema/i })).toBeInTheDocument();
   });
 
   it('should show "Nessuna notifica non letta" when all are read', () => {
@@ -324,5 +326,65 @@ describe('NotificationsPage', () => {
     render(<NotificationsPage />);
 
     expect(screen.getByText(EMPTY.notificationsUnread)).toBeInTheDocument();
+  });
+
+  // ── Claude Design v1 migration (M6 Task 11) ─────────────────────
+  it('should render NotificationCard with entity border and unread dot', () => {
+    const notifications = [
+      createNotification({
+        title: 'Unread test',
+        type: 'game_night_invitation',
+        isRead: false,
+      }),
+    ];
+    setupStore({ notifications, unreadCount: 1 });
+
+    render(<NotificationsPage />);
+
+    // Entity "event" assigned for game_night_* notifications
+    const card = document.querySelector('[data-entity="event"]');
+    expect(card).not.toBeNull();
+    // Unread dot present (from NotificationCard)
+    expect(document.querySelector('[data-testid="unread-dot"]')).not.toBeNull();
+  });
+
+  it('should open detail drawer when notification card is clicked and mark as read', async () => {
+    const user = userEvent.setup();
+    const notifications = [
+      createNotification({
+        title: 'Detail target',
+        message: 'Long detail message content',
+        type: 'agent_ready',
+        isRead: false,
+      }),
+    ];
+    setupStore({ notifications, unreadCount: 1 });
+
+    render(<NotificationsPage />);
+
+    // Click the card (NotificationCard becomes a button when only onClick, role=button when onDismiss)
+    const card = screen.getByRole('button', { name: /detail target/i });
+    await user.click(card);
+
+    // markAsRead invoked
+    expect(mockMarkAsRead).toHaveBeenCalledWith(notifications[0].id);
+  });
+
+  it('should group notifications by day (Oggi / Ieri / Precedenti)', () => {
+    const today = new Date();
+    const yesterday = new Date(today.getTime() - 24 * 3600_000);
+    const lastMonth = new Date(today.getTime() - 40 * 24 * 3600_000);
+    const notifications = [
+      createNotification({ title: 'Today item', createdAt: today.toISOString() }),
+      createNotification({ title: 'Yesterday item', createdAt: yesterday.toISOString() }),
+      createNotification({ title: 'Old item', createdAt: lastMonth.toISOString() }),
+    ];
+    setupStore({ notifications, unreadCount: 3 });
+
+    render(<NotificationsPage />);
+
+    expect(screen.getByRole('heading', { name: /oggi/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /ieri/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /precedenti/i })).toBeInTheDocument();
   });
 });

@@ -2,6 +2,7 @@ using Api.BoundedContexts.AgentMemory.Application.Commands;
 using Api.BoundedContexts.AgentMemory.Domain.Entities;
 using Api.BoundedContexts.AgentMemory.Domain.Enums;
 using Api.BoundedContexts.AgentMemory.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -40,7 +41,7 @@ internal sealed class AddHouseRuleCommandHandler : ICommandHandler<AddHouseRuleC
             .ConfigureAwait(false);
 
         if (!isEnabled)
-            throw new InvalidOperationException("Feature AgentMemory.Enabled is disabled");
+            throw new ConflictException("Feature AgentMemory.Enabled is disabled");
 
         var memory = await _gameMemoryRepo
             .GetByGameAndOwnerAsync(command.GameId, command.OwnerId, cancellationToken)

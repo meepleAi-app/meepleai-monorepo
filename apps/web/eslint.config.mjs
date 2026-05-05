@@ -12,6 +12,8 @@ import importPlugin from "eslint-plugin-import";
 
 // Custom security rules
 import noIncompleteSanitization from "./eslint-rules/no-incomplete-sanitization.js";
+// V2 design system rule (Issue #572)
+import noHardcodedHex from "./eslint-rules/no-hardcoded-hex.js";
 
 export default [
   {
@@ -91,6 +93,7 @@ export default [
       "local": {
         rules: {
           "no-incomplete-sanitization": noIncompleteSanitization,
+          "no-hardcoded-hex": noHardcodedHex,
         },
       },
     },
@@ -484,6 +487,43 @@ export default [
     ],
     rules: {
       "@typescript-eslint/no-non-null-assertion": "off",
+    },
+  },
+  // Enforce chat/shared boundary: shared primitives are leaf modules and MUST
+  // NOT depend on feature-layer chat modules (chat-unified or chat/panel).
+  // See docs/superpowers/plans/2026-04-24-chat-shared-primitives-phase-0.md (AC-8).
+  {
+    files: ["src/components/chat/shared/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "**/components/chat-unified/**",
+                "@/components/chat-unified/**",
+                "**/components/chat/panel/**",
+                "@/components/chat/panel/**",
+              ],
+              message:
+                "chat/shared/* MUST NOT depend on chat-unified/* or chat/panel/*. Shared primitives are leaf modules.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // V2 design system: forbid hardcoded color literals in v2 components.
+  // V2 components must consume design tokens via entityHsl() or hsl(var(--c-*)).
+  // Issue #572 — see docs/frontend/token-audit-2026-04-26.md.
+  // The rule does not apply outside src/components/ui/v2/ — V1 components,
+  // app routes, and admin pages may still contain hex/hsl literals pending
+  // Phase 1+ migrations.
+  {
+    files: ["src/components/ui/v2/**/*.{ts,tsx}"],
+    rules: {
+      "local/no-hardcoded-hex": "error",
     },
   },
   // Configuration for components rendering user-uploaded images.

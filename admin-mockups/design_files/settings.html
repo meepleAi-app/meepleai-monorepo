@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+<link rel="stylesheet" href="components.css"/>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+  /* ─── Stage ─── */
+  .stage { padding: 96px 24px 80px; }
+
+  /* ─── Desktop demo frame ─── */
+  .desktop-frame {
+    height: 640px;
+    border-radius: var(--r-2xl);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    background: var(--bg);
+    margin-top: 8px;
+  }
+
+  /* ─── Phone grid (same as auth-flow) ─── */
+  .phones-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 380px));
+    gap: 36px 28px;
+    justify-content: center;
+    margin-top: 32px;
+  }
+
+  /* ─── Phone scrollbar hide ─── */
+  .phone * { scrollbar-width: none; }
+  .phone *::-webkit-scrollbar { display: none; }
+
+  /* ─── Phone sbar ─── */
+  .phone .phone-sbar {
+    height: 32px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 22px 0;
+    font-size: 12px; font-weight: var(--fw-bold);
+    font-family: var(--f-display);
+    background: var(--bg);
+    color: var(--text-sec);
+  }
+  .phone .phone-sbar .ind { display: flex; gap: 4px; font-size: 11px; }
+
+  /* ─── Phone buttons ─── */
+  .phone .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: var(--r-md);
+    font-size: 12px; font-weight: var(--fw-bold);
+    font-family: var(--f-display); border: 1px solid transparent;
+    cursor: pointer; transition: all var(--dur-sm) var(--ease-out);
+    background: var(--bg-muted); color: var(--text);
+  }
+  .phone .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-xs); }
+  .phone .btn.primary { background: hsl(var(--c-game)); color: #fff; }
+  .phone .btn.ghost   { background: transparent; border-color: var(--border); color: var(--text-sec); }
+  .phone .btn.sm      { padding: 5px 10px; font-size: 11px; }
+
+  /* ─── Desktop buttons ─── */
+  #desktop-root .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: var(--r-md);
+    font-size: 12px; font-weight: var(--fw-bold);
+    font-family: var(--f-display); border: 1px solid transparent;
+    cursor: pointer; transition: all var(--dur-sm) var(--ease-out);
+    background: var(--bg-muted); color: var(--text);
+  }
+  #desktop-root .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-xs); }
+  #desktop-root .btn.primary { background: hsl(var(--c-game)); color: #fff; }
+  #desktop-root .btn.ghost   { background: transparent; border-color: var(--border); color: var(--text-sec); }
+  #desktop-root .btn.sm      { padding: 5px 10px; font-size: 11px; }
+  #desktop-root .btn:disabled { opacity: .5; pointer-events: none; }
+
+  /* ─── Tweaks panel ─── */
+  #tweaks-panel {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    display: none;
+    background: var(--glass-bg); backdrop-filter: blur(16px);
+    border: 1px solid var(--border); border-radius: var(--r-xl);
+    box-shadow: var(--shadow-lg);
+    padding: 16px 18px; min-width: 220px;
+    font-family: var(--f-display); font-size: 13px; color: var(--text);
+  }
+  #tweaks-panel h4 {
+    font-size: 11px; font-weight: 700; margin: 0 0 12px;
+    text-transform: uppercase; letter-spacing: .08em;
+    color: var(--text-muted); font-family: var(--f-mono);
+  }
+  #tweaks-panel label {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; font-size: 12px; margin-bottom: 10px; color: var(--text-sec);
+  }
+  #tweaks-panel select, #tweaks-panel input[type="range"] {
+    font-family: inherit; font-size: 12px;
+    padding: 3px 6px; border-radius: var(--r-sm);
+    border: 1px solid var(--border); background: var(--bg);
+    color: var(--text); cursor: pointer;
+  }
+
+  @media (max-width: 800px) {
+    .desktop-frame { height: 500px; }
+    .phones-grid   { grid-template-columns: 380px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── Hub nav ─── -->
+<nav class="hub-nav">
+  <a href="00-hub.html" class="brand" style="color:inherit;text-decoration:none;">
+    <span class="brand-mark">M</span>
+    <span>MeepleAI</span>
+  </a>
+  <span style="font-size:11px;padding:3px 8px;border-radius:6px;
+    background:var(--bg-muted);font-family:var(--f-mono);color:var(--text-muted);">
+    07 · Settings
+  </span>
+  <div class="spacer"></div>
+  <a href="auth-flow.html">Auth</a>
+  <a href="00-hub.html">← Hub</a>
+</nav>
+
+<!-- ─── Theme toggle ─── -->
+<button class="theme-toggle" id="themeToggle">🌗 <span id="themeLabel">Light</span></button>
+
+<!-- ─── Stage ─── -->
+<div class="stage">
+  <div class="stage-wrap">
+    <h1>Settings <span style="color:hsl(var(--c-game));">completo</span></h1>
+    <p class="lead">
+      6 pannelli interattivi — profilo, account, preferenze, notifiche, API keys, servizi connessi.
+      Desktop con sidebar sticky, mobile navigabile con back-button. Ogni controllo entity-colored.
+    </p>
+
+    <!-- Feature chips -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:36px;">
+      <span class="e-game e-chip">⚙️ 6 pannelli</span>
+      <span class="e-session e-chip">🔔 Toggle entity-colored</span>
+      <span class="e-toolkit e-chip">🗝️ API Keys + modal</span>
+      <span class="e-agent e-chip">⚠️ Destructive confirms</span>
+      <span class="e-kb e-chip">🛡️ 2FA toggle + QR</span>
+      <span class="e-event e-chip">🔗 OAuth services</span>
+    </div>
+
+    <!-- ─── Desktop demo ─── -->
+    <div class="section-label">Desktop · Sidebar + content</div>
+    <div class="desktop-frame">
+      <div id="desktop-root" style="height:100%;"></div>
+    </div>
+
+    <!-- ─── Mobile phones ─── -->
+    <div class="section-label" style="margin-top:64px;">Mobile · 4 screen navigabili</div>
+    <div id="mobile-root"></div>
+  </div>
+</div>
+
+<!-- ─── Tweaks panel ─── -->
+<div id="tweaks-panel">
+  <h4>Tweaks</h4>
+  <label>
+    <span>Tema</span>
+    <select id="tweak-theme">
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </select>
+  </label>
+  <label>
+    <span>Desktop height</span>
+    <input type="range" id="tweak-height" min="480" max="800" step="20" value="640"/>
+  </label>
+  <label>
+    <span>Gap phones</span>
+    <input type="range" id="tweak-gap" min="16" max="60" step="4" value="28"/>
+  </label>
+</div>
+
+<script>
+  // ─── Theme ───────────────────────────────────────────
+  const root = document.documentElement;
+  const saved = localStorage.getItem('mai-theme') || 'light';
+  root.setAttribute('data-theme', saved);
+  document.getElementById('themeLabel').textContent = saved === 'dark' ? 'Dark' : 'Light';
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('mai-theme', next);
+    document.getElementById('themeLabel').textContent = next === 'dark' ? 'Dark' : 'Light';
+    document.getElementById('tweak-theme').value = next;
+  });
+
+  // ─── Tweaks ──────────────────────────────────────────
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "theme": "light",
+    "desktopHeight": 640,
+    "phoneGap": 28
+  }/*EDITMODE-END*/;
+
+  window.addEventListener('message', e => {
+    if (e.data?.type === '__activate_edit_mode')   document.getElementById('tweaks-panel').style.display = 'block';
+    if (e.data?.type === '__deactivate_edit_mode') document.getElementById('tweaks-panel').style.display = 'none';
+  });
+  window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+
+  document.getElementById('tweak-theme').value = saved;
+  document.getElementById('tweak-theme').addEventListener('change', e => {
+    const next = e.target.value;
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('mai-theme', next);
+    document.getElementById('themeLabel').textContent = next === 'dark' ? 'Dark' : 'Light';
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { theme: next } }, '*');
+  });
+
+  document.getElementById('tweak-height').addEventListener('input', e => {
+    const h = parseInt(e.target.value);
+    document.querySelector('.desktop-frame').style.height = h + 'px';
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { desktopHeight: h } }, '*');
+  });
+
+  document.getElementById('tweak-gap').addEventListener('input', e => {
+    const g = parseInt(e.target.value);
+    document.querySelector('.phones-grid').style.gap = g + 'px ' + Math.round(g * 0.78) + 'px';
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { phoneGap: g } }, '*');
+  });
+</script>
+
+<script type="text/babel" src="settings.jsx"></script>
+
+</body>
+</html>

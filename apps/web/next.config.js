@@ -222,18 +222,20 @@ const nextConfig = {
       { source: '/sessions/history', destination: '/sessions?tab=history', permanent: true },
       { source: '/play-records/stats', destination: '/play-records?tab=stats', permanent: true },
 
-      // Discover / Community catalog
-      // /games/[id] sub-pages → /discover/[id] with tabs
-      { source: '/games/:id/faqs', destination: '/discover/:id?tab=faq', permanent: true },
-      { source: '/games/:id/reviews', destination: '/discover/:id?tab=reviews', permanent: true },
-      { source: '/games/:id/rules', destination: '/discover/:id?tab=rules', permanent: true },
-      { source: '/games/:id/sessions', destination: '/discover/:id?tab=sessions', permanent: true },
-      {
-        source: '/games/:id/strategies',
-        destination: '/discover/:id?tab=strategies',
-        permanent: true,
-      },
-      { source: '/games/:id', destination: '/discover/:id', permanent: true },
+      // ── Wave C.1 (Issue #581) — REMOVED /games/:id → /discover/:id redirects ──
+      // Pre-Wave C.1, /games/:id and its subroutes redirected to /discover/:id?tab=...
+      // (anticipating a Wave 3 Discover route that hasn't shipped). Wave C.1 brings
+      // back /games/:id as a v2 brownfield route per Phase 0.5 contract:
+      //   - /games/:id is now a real route (page.tsx + GameDetailViewV2 orchestrator)
+      //   - /games/:id/{faqs,rules,sessions,strategies,reviews} subroutes PRESERVED
+      //     unchanged per Phase 0.5 contract sez. 4.4 (legacy subroute CTA bridge)
+      // Removed redirects (move to Wave 3 Discover when that route ships):
+      //   '/games/:id'             → '/discover/:id'
+      //   '/games/:id/faqs'        → '/discover/:id?tab=faq'
+      //   '/games/:id/reviews'     → '/discover/:id?tab=reviews'
+      //   '/games/:id/rules'       → '/discover/:id?tab=rules'
+      //   '/games/:id/sessions'    → '/discover/:id?tab=sessions'
+      //   '/games/:id/strategies'  → '/discover/:id?tab=strategies'
 
       // ── Legacy redirects (pre-Issue #5039) ───────────────────────────────
       // Issue #3843: Redirect old /giochi route to new /games route
@@ -257,9 +259,9 @@ const nextConfig = {
       },
       { source: '/games/:id/agents', destination: '/library/:id?tab=agent', permanent: true },
       { source: '/games/:id/chats', destination: '/chat', permanent: true },
-      { source: '/games', destination: '/library?tab=public', permanent: true },
-      { source: '/games/catalog', destination: '/library?tab=public', permanent: true },
-      { source: '/games/add', destination: '/library', permanent: true },
+      // NOTE (Wave B.1, Issue #633): Removed legacy redirects for /games, /games/catalog, /games/add
+      // — superseded by the V2 GamesLibraryView at apps/web/src/app/(authenticated)/games/page.tsx
+      // which handles tab=library|catalog|kb internally and links to /games/new for adding.
 
       // Catch-all for any other /settings sub-paths
       { source: '/settings/:path*', destination: '/profile?tab=settings', permanent: true },

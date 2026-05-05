@@ -155,13 +155,22 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
   const callbacksRef = useRef(callbacks);
   const activeRequestIdRef = useRef<number>(0);
   const retryCountRef = useRef(0);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   callbacksRef.current = callbacks;
+
+  const clearRetryTimeout = useCallback(() => {
+    if (retryTimeoutRef.current !== null) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+  }, []);
 
   const stopStreaming = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    clearRetryTimeout();
     retryCountRef.current = 0;
     setState(prev => ({
       ...prev,
@@ -170,7 +179,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
       connectionStatus: 'idle',
       retryCount: 0,
     }));
-  }, []);
+  }, [clearRetryTimeout]);
 
   const reset = useCallback(() => {
     stopStreaming();
@@ -188,6 +197,16 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
     window.addEventListener('meepledev:scenario-switch-begin', onScenarioSwitch);
     return () => {
       window.removeEventListener('meepledev:scenario-switch-begin', onScenarioSwitch);
+    };
+  }, []);
+
+  // Cleanup any pending retry timeout on unmount to avoid late setState after teardown.
+  useEffect(() => {
+    return () => {
+      if (retryTimeoutRef.current !== null) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
     };
   }, []);
 
@@ -458,6 +477,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
         })
         .catch(catchError => {
           if (catchError.name === 'AbortError') {
+            clearRetryTimeout();
             setState(prev => ({
               ...prev,
               isStreaming: false,
@@ -486,7 +506,8 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
             if (!hasAnswer) {
               retryCountRef.current++;
               const currentRetry = retryCountRef.current;
-              setTimeout(() => {
+              retryTimeoutRef.current = setTimeout(() => {
+                retryTimeoutRef.current = null;
                 setState(prev => ({
                   ...prev,
                   connectionStatus: 'reconnecting' as ConnectionStatus,
@@ -510,7 +531,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks) {
           callbacksRef.current?.onError?.(errorMsg);
         });
     },
-    [stopStreaming]
+    [stopStreaming, clearRetryTimeout]
   );
 
   return { state, sendMessage, stopStreaming, reset };

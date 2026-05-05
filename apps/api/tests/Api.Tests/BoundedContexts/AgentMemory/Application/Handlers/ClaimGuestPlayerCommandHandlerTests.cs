@@ -102,7 +102,7 @@ public class ClaimGuestPlayerCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_FeatureDisabled_ThrowsInvalidOperationException()
+    public async Task Handle_FeatureDisabled_ThrowsConflictException()
     {
         // Arrange
         _featureFlagsMock
@@ -113,6 +113,6 @@ public class ClaimGuestPlayerCommandHandlerTests
 
         // Act & Assert
         var act3 = () => _handler.Handle(command, CancellationToken.None);
-        await act3.Should().ThrowAsync<InvalidOperationException>();
+        await act3.Should().ThrowAsync<ConflictException>();
     }
 }

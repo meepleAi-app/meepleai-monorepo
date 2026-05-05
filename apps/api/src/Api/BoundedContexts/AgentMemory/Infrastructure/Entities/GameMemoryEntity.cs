@@ -12,6 +12,7 @@ public class GameMemoryEntity
     public string? HouseRulesJson { get; set; }  // JSONB
     public string? CustomSetupJson { get; set; }  // JSONB
     public string? NotesJson { get; set; }  // JSONB
+    public string? GlossaryEntriesJson { get; set; }  // JSONB
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }

@@ -1547,6 +1547,51 @@
         }
       }
     },
+    "players": {
+      "metadata": {
+        "title": "Players — MeepleAI",
+        "description": "Summary of your play history: games played, sessions and wins."
+      },
+      "hero": {
+        "title": "Your play history",
+        "subtitle": "Summary of the games you have played, with sessions and wins.",
+        "totalPlays": "Total sessions",
+        "distinctGames": "Distinct games"
+      },
+      "filters": {
+        "searchPlaceholder": "Search by game name…",
+        "searchAriaLabel": "Search your games",
+        "clearFilters": "Clear filters"
+      },
+      "states": {
+        "loading": {
+          "ariaLabel": "Loading play history…"
+        },
+        "empty": {
+          "title": "No plays yet",
+          "subtitle": "Log your first play to see your history here.",
+          "cta": "Start playing",
+          "ctaAriaLabel": "Go to the games section"
+        },
+        "filteredEmpty": {
+          "title": "No games found",
+          "subtitle": "Try adjusting your search to find your games.",
+          "cta": "Clear search",
+          "ctaAriaLabel": "Clear the active search"
+        },
+        "error": {
+          "title": "Unable to load play history",
+          "subtitle": "Something went wrong. Please try again in a moment.",
+          "cta": "Retry"
+        }
+      },
+      "results": {
+        "resultsCount": "{count, plural, =0 {No results} =1 {1 game} other {# games}}",
+        "resultsAriaLabel": "Played games list",
+        "cardSubtitle": "{count} plays",
+        "cardOpenAriaLabel": "Open {gameName}"
+      }
+    },
     "agentDetail": {
       "metadata": {
         "title": "{name} — AI Agent — MeepleAI",

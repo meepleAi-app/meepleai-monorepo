@@ -2173,7 +2173,8 @@
         "myScoreLabel": "Your score",
         "incrementAriaLabel": "Increase {playerName}'s score",
         "decrementAriaLabel": "Decrease {playerName}'s score",
-        "scoreInputAriaLabel": "Enter score for {playerName}"
+        "scoreInputAriaLabel": "Enter score for {playerName}",
+        "playerCount": "{count, plural, =0 {No players} =1 {1 player} other {# players}}"
       },
       "actionLog": {
         "title": "Events",
@@ -2198,6 +2199,13 @@
         "title": "Session not found",
         "description": "The requested session does not exist or you do not have access.",
         "ctaBack": "Back to sessions"
+      },
+      "connectionLost": {
+        "retryCount": "{count, plural, =1 {attempt 1/5} other {attempt #/5}}",
+        "reconnecting": "Connection lost, retrying...",
+        "degradedPolling": "Updates every 5s — click to retry real-time",
+        "failed": "Session is busy or there was an error — try again in 60s",
+        "manualRetryLabel": "Retry connection"
       },
       "a11y": {
         "viewLabel": "Live session view"

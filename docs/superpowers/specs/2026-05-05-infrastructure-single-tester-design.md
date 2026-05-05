@@ -32,7 +32,7 @@ Questo design risponde alla domanda: *"qual è il minimo di infrastruttura neces
 
 **Specific**: I 9 scenari smoke (A1-A5 + C1+C2+C3+C5) passano sia su `dev` (locale o tramite `make work`) sia su `staging` (`meepleai.app`).
 
-**Measurable**: 9/9 pass, esecuzione sequenziale ≤15 min totali, RAG query ≤10s end-to-end.
+**Measurable**: 7/9 automated PASS via `smoke-set.sh` (A2, A3-via-status, A5, C1, C3-endpoint, C5-perf-proxy, plus A1+login se TEST_EMAIL/PASSWORD provided) + 2/9 manual UI checklist (A4 SSE chat con citations, C5 RAG real query <10s end-to-end via `/chat` UI). Esecuzione automated set ≤2 min; manual checklist ≤5 min totali. C2 (migration applied) validato da `pg-readback.sh` (DB direct via tunnel) — è uno smoke separato perché richiede tunnel.
 
 **Achievable**: Smoke automation parziale già esiste (`smoke_test()` nel deploy workflow); estendere copertura.
 
@@ -120,7 +120,7 @@ Scenario: C5 — RAG query end-to-end <10s
 
 **Specific**: `meepleai.app` servito tramite `cloudflared` daemon su VPS, Traefik+Let's Encrypt rimossi dall'edge, porte 80/443 chiuse a internet pubblico, accesso staging limitato a CF Access (Google SSO, solo email proprietario).
 
-**Measurable**: `nmap -p 80,443 204.168.135.69` ritorna `filtered/closed`, smoke set G1 continua a passare 9/9, downtime durante migrazione <30 min.
+**Measurable**: `nmap -p 80,443 204.168.135.69` ritorna `filtered/closed`; smoke set G1 continua a passare (7/9 automated + 2/9 manual checklist); downtime durante migrazione <30 min misurato via `curl` polling pre/durante/post; **CF Access policy "owner-only" attiva** (Google SSO con email proprietario) — verificata pre-cutover via `cloudflared access curl https://meepleai.app` che ritorna 401/403 per identity non autorizzata.
 
 **Achievable**: setup `cloudflared` ~2h + reconfig service routing ~2h + test ~1h.
 
@@ -280,7 +280,8 @@ Scenario: Monthly auto-restore test passa
   When cron esegue scripts/backup-restore-test.sh --with-smoke-readback
   Then crea container Postgres temp da backup
   And esegue 3 query smoke (SELECT count FROM games, users, sessions)
-  And ogni query restituisce row count >0
+  And users e games row count > 0 (proprietario + game catalog seedato)
+  And sessions row count >= 0 (legitimate vuoto su single-tester fresh; query MUST succeed senza errori)
   And cleanup del container temp avviene
   And log finale "✅ Restore + smoke read-back PASSED" in /var/log/meepleai-restore-test.log
 

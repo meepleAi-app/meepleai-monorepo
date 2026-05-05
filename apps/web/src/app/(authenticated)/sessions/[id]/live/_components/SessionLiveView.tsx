@@ -210,7 +210,10 @@ export function SessionLiveView(): ReactElement {
   const sessionId = resolveSessionId(params?.id);
 
   // ── URL state SSOT ────────────────────────────────────────────────────────
-  const tab = parseLiveTab(searchParams.get('tab'));
+  // `tab` parsed but unused in Foundation (RightColumnTabs is Interactions sub-PR).
+  // Reserved for forward compatibility — will be passed to RightColumnTabs once mounted.
+  const _tab = parseLiveTab(searchParams.get('tab'));
+  void _tab;
   const mobileTab = parseMobileTab(searchParams.get('mtab'));
   const fixtureVariantParam = searchParams.get('fixture');
 
@@ -298,13 +301,15 @@ export function SessionLiveView(): ReactElement {
     [searchParams]
   );
 
-  const handleTabChange = useCallback(
+  // handleTabChange reserved for Interactions sub-PR (RightColumnTabs orchestration)
+  const _handleTabChange = useCallback(
     (next: LiveTab) => {
       const val = next === 'tools' ? null : next;
       router.replace(`${pathname}${buildQuery({ tab: val })}`, { scroll: false });
     },
     [router, pathname, buildQuery]
   );
+  void _handleTabChange;
 
   const handleMobileTabChange = useCallback(
     (next: MobileTab) => {
@@ -465,6 +470,25 @@ export function SessionLiveView(): ReactElement {
     return active?.name ?? '';
   }, [activeSession]);
 
+  // Mobile content selection based on active tab.
+  // MUST be declared BEFORE any early return per react-hooks/rules-of-hooks.
+  // Returns null when activeSession not yet ready (loading/error/not-found shells use early returns below).
+  const mobileContent = useMemo<React.ReactNode>(() => {
+    if (activeSession == null) return null;
+    if (mobileTab === 'log') {
+      return <ActionLogTimeline entries={activeSession.actionLog} labels={actionLogLabels} />;
+    }
+    // Default and score tab: scoring panel
+    return (
+      <LiveScoringPanel
+        scores={scores}
+        viewerRole={activeSession.viewerRole}
+        viewerId={activeSession.viewerId}
+        labels={scoringLabels}
+      />
+    );
+  }, [mobileTab, activeSession, scores, scoringLabels, actionLogLabels]);
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   // FSM loading shell
@@ -536,22 +560,7 @@ export function SessionLiveView(): ReactElement {
   }
 
   // ── Default content ───────────────────────────────────────────────────────
-
-  // Mobile content selection based on active tab
-  const mobileContent = useMemo((): React.ReactNode => {
-    if (mobileTab === 'log') {
-      return <ActionLogTimeline entries={activeSession.actionLog} labels={actionLogLabels} />;
-    }
-    // Default and score tab: scoring panel
-    return (
-      <LiveScoringPanel
-        scores={scores}
-        viewerRole={activeSession.viewerRole}
-        viewerId={activeSession.viewerId}
-        labels={scoringLabels}
-      />
-    );
-  }, [mobileTab, activeSession, scores, scoringLabels, actionLogLabels]);
+  // (mobileContent declared before early returns per react-hooks/rules-of-hooks)
 
   const desktopLeftSidebar = (
     <div className="flex flex-col gap-0 divide-y divide-slate-100">

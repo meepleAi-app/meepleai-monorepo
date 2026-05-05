@@ -219,7 +219,9 @@ const nextConfig = {
       { source: '/agent/slots', destination: '/agents?tab=slots', permanent: true },
 
       // Sessions & Play Records
-      { source: '/sessions/history', destination: '/sessions?tab=history', permanent: true },
+      // Wave D.1 (Issue #735): updated from ?tab=history → ?status=completed to match
+      // the v2 SessionsLibraryView URL-based filter schema (?status= not ?tab=).
+      { source: '/sessions/history', destination: '/sessions?status=completed', permanent: true },
       { source: '/play-records/stats', destination: '/play-records?tab=stats', permanent: true },
 
       // ── Wave C.1 (Issue #581) — REMOVED /games/:id → /discover/:id redirects ──

@@ -1,16 +1,82 @@
-// TODO: implement per admin-mockups/design_files/sp4-sessions-index.jsx
-// Mapped from mockup component: ChipStrip
-// Spec: docs/superpowers/specs/2026-04-26-v2-design-migration.md (Phase 1+2)
-// Tracking: docs/frontend/v2-migration-matrix.md (Issue #573)
+/**
+ * ConnectionChipStripFooter — Wave D.1 v2 component (Issue #735).
+ *
+ * Mapped from `admin-mockups/design_files/sp4-sessions-index.jsx` (ChipStrip).
+ *
+ * Footer row of entity chips — max 3 (game / player / chat).
+ *
+ * Per chip:
+ *   - Empty chip (count=0 or empty=true): dashed border, 55% opacity.
+ *   - Non-empty chip: entity-colored background (10% alpha), solid border.
+ * Colors via inline style (entityHsl token from MeepleCard — avoids Tailwind
+ * arbitrary value purging for dynamically derived HSL strings).
+ */
 
 import type { ReactElement } from 'react';
 
-export interface ConnectionChipStripFooterProps {
-  // TODO: extract props contract from mockup analysis
+import clsx from 'clsx';
+
+import { entityHsl, entityIcon } from '@/components/ui/data-display/meeple-card';
+import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
+
+export interface ConnectionChip {
+  readonly entity: 'game' | 'player' | 'chat';
+  readonly label?: string;
+  readonly count?: number;
+  readonly empty?: boolean;
 }
 
-export function ConnectionChipStripFooter(
-  _props: ConnectionChipStripFooterProps
-): ReactElement | null {
-  return null;
+export interface ConnectionChipStripFooterProps {
+  /** Maximum 3 chips displayed. Additional chips are silently dropped. */
+  readonly chips: ReadonlyArray<ConnectionChip>;
+  readonly className?: string;
+}
+
+export function ConnectionChipStripFooter({
+  chips,
+  className,
+}: ConnectionChipStripFooterProps): ReactElement {
+  const visibleChips = chips.slice(0, 3);
+
+  return (
+    <div
+      data-slot="connection-chip-strip-footer"
+      className={clsx('flex flex-wrap items-center gap-1', className)}
+    >
+      {visibleChips.map((chip, idx) => {
+        const isEmpty = chip.empty === true || (chip.count !== undefined && chip.count === 0);
+        const entityType = chip.entity as MeepleEntityType;
+        const icon = entityIcon[entityType];
+        const solid = entityHsl(entityType);
+        const fill = entityHsl(entityType, 0.1);
+        const border = entityHsl(entityType, 0.2);
+        const dashedBorder = entityHsl(entityType, 0.4);
+
+        return (
+          <span
+            key={idx}
+            data-slot="connection-chip"
+            data-entity={chip.entity}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 3,
+              paddingInline: 7,
+              paddingBlock: 2,
+              borderRadius: '9999px',
+              background: isEmpty ? 'transparent' : fill,
+              border: `1px ${isEmpty ? 'dashed' : 'solid'} ${isEmpty ? dashedBorder : border}`,
+              color: solid,
+              opacity: isEmpty ? 0.55 : 1,
+            }}
+            className="font-mono text-[9.5px] font-extrabold uppercase tracking-wider"
+          >
+            <span aria-hidden="true">{icon}</span>
+            {chip.label && <span>{chip.label}</span>}
+            {chip.count !== undefined && !chip.label && <span>{chip.count}</span>}
+          </span>
+        );
+      })}
+    </div>
+  );
 }

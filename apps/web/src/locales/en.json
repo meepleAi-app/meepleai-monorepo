@@ -1547,6 +1547,83 @@
         }
       }
     },
+    "sessions": {
+      "metadata": {
+        "title": "My sessions — MeepleAI",
+        "description": "Your game session history: outcomes, scores and session diaries."
+      },
+      "hero": {
+        "title": "Your sessions",
+        "subtitle": "{count, plural, =0 {No sessions yet} =1 {1 session logged} other {# sessions logged}}",
+        "ctaNew": "Log session",
+        "ctaLive": "Start live",
+        "stats": {
+          "sessions": "sessions",
+          "wins": "wins",
+          "totalTime": "total",
+          "lastSession": "last"
+        }
+      },
+      "filters": {
+        "status": {
+          "all": "All",
+          "active": "Active",
+          "completed": "Completed",
+          "abandoned": "Abandoned"
+        },
+        "searchPlaceholder": "Search session or game…",
+        "searchAriaLabel": "Search your sessions",
+        "view": {
+          "label": "View",
+          "list": "List",
+          "grid": "Grid"
+        }
+      },
+      "card": {
+        "outcome": {
+          "won": "Won",
+          "lost": "Lost",
+          "tie": "Tie"
+        },
+        "status": {
+          "live": "Live",
+          "paused": "Paused",
+          "abandoned": "Abandoned"
+        },
+        "playerCount": "{count} players",
+        "duration": "{duration}",
+        "scoreLabel": "Score: {score}",
+        "winnerLabel": "Winner",
+        "turnLabel": "Turn {turn}",
+        "resumeCta": "Resume",
+        "resumeOrArchiveCta": "Resume or archive",
+        "openAriaLabel": "Open {gameName} session",
+        "scoreOverflowTemplate": "+{count} more"
+      },
+      "empty": {
+        "title": "No sessions yet",
+        "description": "Log your first play or start a live session to track turns, scores and session diaries.",
+        "ctaStart": "Log first session",
+        "ctaLive": "Start live"
+      },
+      "filteredEmpty": {
+        "title": "No sessions match your filters",
+        "description": "Try removing some constraints or changing the period.",
+        "ctaClear": "Reset filters"
+      },
+      "loading": {
+        "ariaLabel": "Loading sessions…"
+      },
+      "error": {
+        "title": "Error loading sessions",
+        "description": "Unable to retrieve sessions. Check your connection.",
+        "ctaRetry": "Retry"
+      },
+      "a11y": {
+        "resultsLabel": "Sessions list",
+        "countTemplate": "{count, plural, =0 {No sessions} =1 {1 session} other {# sessions}}"
+      }
+    },
     "players": {
       "metadata": {
         "title": "Players — MeepleAI",

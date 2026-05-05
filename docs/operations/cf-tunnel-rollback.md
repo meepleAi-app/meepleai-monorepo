@@ -4,12 +4,38 @@
 > **Estimated time**: 30 min.
 > **When to use**: smoke set fails after migration; CF Tunnel adds unacceptable latency; CF outage.
 
-## Phase 0 — Verify Traefik config still in repo
+## Phase 0 — Restore Traefik config in repo
 
+After T18 cleanup PR, Traefik files are NO LONGER in `main-dev` HEAD. To rollback you must first restore them.
+
+**Option A — Revert the cleanup commits (preferred):**
+```bash
+# On a fresh branch:
+git checkout main-dev
+git checkout -b chore/rollback-cf-tunnel-restore-traefik
+git log --oneline | grep -E "decommission Traefik|cleanup.*traefik|cleanup-traefik-files"
+# Revert in reverse chronological order:
+git revert <SHA of "cleanup traefik files">
+git revert <SHA of "decommission Traefik post CF Tunnel cutover">
+git push -u origin chore/rollback-cf-tunnel-restore-traefik
+gh pr create --base main-dev --title "rollback: restore Traefik for emergency cutover-back"
+# Merge with admin override.
+```
+
+**Option B — Restore from VPS pre-cutover backup tgz:**
+```bash
+ssh deploy@204.168.135.69 'ls -lh /tmp/traefik-backup-*.tgz'
+# If backup still exists (only on VPS, not pushed to repo):
+ssh deploy@204.168.135.69 'cd /opt/meepleai/repo/infra && tar xzf /tmp/traefik-backup-<DATE>.tgz'
+# This restores compose.traefik.yml + traefik/ directory locally on VPS only —
+# you still need to commit them to repo via Option A or manual git add.
+```
+
+After config is restored, verify:
 ```bash
 ls infra/traefik/ infra/compose.traefik.yml
 ```
-Expected: files exist. If not, restore from `/tmp/traefik-backup-*.tgz` (created in cf-tunnel-migration.md Phase 0).
+Expected: files exist.
 
 ## Phase 1 — Disable cloudflared
 

@@ -692,6 +692,7 @@ v1Api.MapGameNightEndpoints(); // Issue #46/#607: Game Night Event + public toke
 v1Api.MapPdfEndpoints();
 v1Api.MapRulebookEndpoints(); // Rulebook upload with PDF deduplication + games-with-kb query
 v1Api.MapDocumentCollectionEndpoints();
+v1Api.MapPhotoIngestionEndpoints(); // Libro Game AI Assistant MVP Phase 1: photo batch upload + status
 
 // KnowledgeBase (RAG chat)
 v1Api.MapKnowledgeBaseEndpoints();

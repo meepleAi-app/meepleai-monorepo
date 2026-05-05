@@ -3,9 +3,9 @@ using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 
 /// <summary>
-/// Indexes KnowledgeChunks into the vector store (pgvector).
+/// Indexes KnowledgeChunks into the vector store (pgvector) via the KB ACL.
 /// Generates embeddings and persists as VectorDocuments in the KB.
-/// Libro Game AI Assistant MVP Phase 2 — Task 2.3a.
+/// Libro Game AI Assistant MVP Phase 2 — Task 2.3a / Gap G3.
 /// </summary>
 internal interface IKnowledgeBaseIndexer
 {
@@ -24,5 +24,5 @@ internal interface IKnowledgeBaseIndexer
     /// <summary>
     /// Removes all vector documents for a photo batch (on re-index or deletion).
     /// </summary>
-    Task DeleteBatchAsync(Guid photoBatchUploadId, CancellationToken ct = default);
+    Task<int> DeleteBatchAsync(Guid photoBatchUploadId, Guid gameId, CancellationToken ct = default);
 }

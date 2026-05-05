@@ -8,6 +8,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Translation;
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
@@ -45,6 +46,9 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly QueryComplexityAnalyzer _complexityAnalyzer;
     private readonly ISemanticResponseCache _responseCache;
     private readonly IEmbeddingService _embeddingService;
+    private readonly IHouseRuleMatcher _houseRuleMatcher;
+    private readonly IPricingEngine _pricingEngine;
+    private readonly IGenericTranslationService _genericTranslationService;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
 
     public AskQuestionQueryHandler(
@@ -61,6 +65,9 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         QueryComplexityAnalyzer complexityAnalyzer,
         ISemanticResponseCache responseCache,
         IEmbeddingService embeddingService,
+        IHouseRuleMatcher houseRuleMatcher,
+        IPricingEngine pricingEngine,
+        IGenericTranslationService genericTranslationService,
         ILogger<AskQuestionQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
@@ -76,6 +83,9 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _complexityAnalyzer = complexityAnalyzer ?? throw new ArgumentNullException(nameof(complexityAnalyzer));
         _responseCache = responseCache ?? throw new ArgumentNullException(nameof(responseCache));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _houseRuleMatcher = houseRuleMatcher ?? throw new ArgumentNullException(nameof(houseRuleMatcher));
+        _pricingEngine = pricingEngine ?? throw new ArgumentNullException(nameof(pricingEngine));
+        _genericTranslationService = genericTranslationService ?? throw new ArgumentNullException(nameof(genericTranslationService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -111,6 +121,35 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogInformation(
             "[AskQuestionHandler] ENTRY - Processing AskQuestionQuery: GameId={GameId}, Question={Question}",
             query.GameId, query.Question);
+
+        // PHASE 2: House rule check (graceful degradation per AC-2.5.4)
+        // Cross-BC read from AgentMemory — failure must not abort Q&A (R-23 mitigation).
+        string? houseRuleMatch = null;
+        if (query.UserId.HasValue)
+        {
+            try
+            {
+                houseRuleMatch = await _houseRuleMatcher.FindMatchingHouseRuleAsync(
+                    query.GameId, query.UserId, query.Question, cancellationToken).ConfigureAwait(false);
+                if (houseRuleMatch is not null)
+                    _logger.LogInformation(
+                        "[AskQuestionHandler] House rule matched for game {GameId}",
+                        query.GameId);
+            }
+            catch (Exception ex)
+            {
+                // R-23 mitigation: cross-BC failure should not abort Q&A
+                _logger.LogWarning(ex,
+                    "[AskQuestionHandler] House rule lookup failed for game {GameId}, proceeding without",
+                    query.GameId);
+            }
+        }
+
+        // PHASE 2: Pricing quota check — throws ForbiddenException if daily quota exhausted.
+        var quotaAllowed = await _pricingEngine.ConsumeQuotaAsync(
+            query.UserId, "qa_question", cancellationToken).ConfigureAwait(false);
+        if (!quotaAllowed)
+            throw new ForbiddenException("Quota giornaliera esaurita. Acquista crediti per continuare.");
 
         // P1-5: Semantic cache lookup — generate query vector and check for a cached response.
         // Issue #563: The vector produced here is now also forwarded to SearchQueryHandler via
@@ -246,7 +285,14 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         var context = string.Join("\n\n", searchResults.Select(sr =>
             $"[Page {sr.PageNumber}] {sr.TextContent}"));
 
-        var baseQuestion = $"Question: {query.Question}\n\nContext:\n{context}";
+        // PHASE 2: Prepend house rule context to the user prompt when a matching house rule was found.
+        // This augments the RAG context with group-specific rules stored in AgentMemory, ensuring the
+        // LLM answers relative to the user's actual table rules rather than the rulebook alone.
+        var houseRulePrefix = houseRuleMatch is not null
+            ? $"[House Rule for this group]\n{houseRuleMatch}\n\n"
+            : string.Empty;
+
+        var baseQuestion = $"{houseRulePrefix}Question: {query.Question}\n\nContext:\n{context}";
         var userPrompt = !string.IsNullOrWhiteSpace(chatHistoryContext)
             ? _chatContextService.EnrichPromptWithHistory(baseQuestion, chatHistoryContext)
             : baseQuestion;
@@ -307,6 +353,37 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             CacheHit: false,
             NoRelevantContext: false);
         await _qualityTracker.TrackQueryAsync(successMetrics, cancellationToken).ConfigureAwait(false);
+
+        // PHASE 2: Translate response if ResponseLanguage differs from the query language.
+        // Graceful degradation: on any failure, return the original answer with a warning logged.
+        if (query.ResponseLanguage is not null
+            && !string.Equals(query.ResponseLanguage, query.Language, StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(response.Answer))
+        {
+            try
+            {
+                var translationResult = await _genericTranslationService.TranslateGenericAsync(
+                    response.Answer, query.Language, query.ResponseLanguage, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (translationResult.Success)
+                {
+                    response = response with { Answer = translationResult.TranslatedText };
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "[AskQuestionHandler] Translation failed for game {GameId}, returning original: {Error}",
+                        query.GameId, translationResult.ErrorCode);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "[AskQuestionHandler] Translation threw for game {GameId}, returning original",
+                    query.GameId);
+            }
+        }
 
         return response;
     }

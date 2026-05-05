@@ -14,8 +14,8 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20260505090846_AddGlossaryEntriesToGameMemory")]
-    partial class AddGlossaryEntriesToGameMemory
+    [Migration("20260505141438_AddPhotoIngestionTables")]
+    partial class AddPhotoIngestionTables
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

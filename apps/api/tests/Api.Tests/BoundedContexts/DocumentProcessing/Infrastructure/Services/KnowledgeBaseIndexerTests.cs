@@ -122,21 +122,28 @@ public class KnowledgeBaseIndexerTests
             .IngestChunksAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<IReadOnlyList<ChunkIngestionRequest>>(), Arg.Any<CancellationToken>())
             .Returns(callInfo => ((IReadOnlyList<ChunkIngestionRequest>)callInfo[2]).Count);
 
+        // Use synchronous IProgress to avoid Progress<T> ThreadPool dispatch race
+        // (Progress<T> queues callbacks via SynchronizationContext or ThreadPool, so
+        // arrival order at progressReports.Add(v) is non-deterministic under CI load.)
         var progressReports = new List<int>();
-        var progress = new Progress<int>(v => progressReports.Add(v));
+        var progress = new SyncProgress<int>(progressReports.Add);
 
         var sut = CreateSut();
 
         // ACT
         await sut.IndexBatchAsync(batchId, gameId, chunks, progress, CancellationToken.None);
 
-        // Allow Progress<T> callbacks to flush on the thread pool
-        await Task.Delay(50);
-
         // ASSERT
         progressReports.Should().NotBeEmpty();
         progressReports.Should().BeInAscendingOrder();
         progressReports.Last().Should().Be(3);
+    }
+
+    private sealed class SyncProgress<T> : IProgress<T>
+    {
+        private readonly Action<T> _handler;
+        public SyncProgress(Action<T> handler) => _handler = handler;
+        public void Report(T value) => _handler(value);
     }
 
     [Fact]

@@ -73,6 +73,15 @@ describe('PlayersResultsGrid', () => {
     render(<PlayersResultsGrid {...DEFAULT_PROPS} items={[]} />);
     const grid = document.querySelector('[data-slot="players-results-grid"]');
     expect(grid).not.toBeNull();
-    expect(grid!.children.length).toBe(0);
+    // No grid items rendered (sr-only count announcement is not a grid item)
+    expect(document.querySelectorAll('[data-slot="players-results-grid-item"]').length).toBe(0);
+  });
+
+  it('renders sr-only resultsCount announcement using labels.resultsCount template', () => {
+    render(<PlayersResultsGrid {...DEFAULT_PROPS} />);
+    const announce = document.querySelector('[data-slot="players-results-count"]');
+    expect(announce).not.toBeNull();
+    expect(announce!.textContent).toContain(`${ITEMS.length} risultati`);
+    expect(announce!.getAttribute('aria-live')).toBe('polite');
   });
 });

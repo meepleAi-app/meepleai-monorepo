@@ -48,15 +48,21 @@ export function PlayersResultsGrid({
   labels,
   className,
 }: PlayersResultsGridProps): ReactElement {
+  const resultsCountText = labels.resultsCount.replace('{count}', String(items.length));
+
   return (
     <div
       data-slot="players-results-grid"
+      role="region"
       aria-label={labels.resultsAriaLabel}
       className={clsx(
         'grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4 px-4 sm:px-8 max-w-[1280px] mx-auto',
         className
       )}
     >
+      <span data-slot="players-results-count" className="sr-only" aria-live="polite">
+        {resultsCountText}
+      </span>
       {items.map(item => {
         const subtitle = labels.cardSubtitle.replace('{count}', String(item.playCount));
         const openAriaLabel = labels.cardOpenAriaLabel.replace('{gameName}', item.gameName);

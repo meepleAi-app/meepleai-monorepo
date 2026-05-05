@@ -58,4 +58,12 @@ describe('PlayersFiltersInline', () => {
     fireEvent.click(clearBtn);
     expect(onClearFilters).toHaveBeenCalledOnce();
   });
+
+  it('fires onSearchChange with new value on input change', () => {
+    const onSearchChange = vi.fn();
+    render(<PlayersFiltersInline {...DEFAULT_PROPS} onSearchChange={onSearchChange} />);
+    const input = screen.getByPlaceholderText('Cerca per nome del gioco…');
+    fireEvent.change(input, { target: { value: 'Catan' } });
+    expect(onSearchChange).toHaveBeenCalledWith('Catan');
+  });
 });

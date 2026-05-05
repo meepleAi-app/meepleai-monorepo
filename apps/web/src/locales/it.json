@@ -2316,6 +2316,48 @@
       },
       "a11y": {
         "viewLabel": "Vista sessione live"
+      },
+      "rightColumn": {
+        "tabsAriaLabel": "Pannelli sessione",
+        "tabTools": "Strumenti",
+        "tabChat": "Chat",
+        "tabNotes": "Note"
+      },
+      "tools": {
+        "title": "Strumenti",
+        "toolDiceLabel": "Dado",
+        "toolTimerLabel": "Timer",
+        "toolCardLabel": "Carta",
+        "executeAriaTemplate": "Esegui {toolName}",
+        "disabledSpectatorTooltip": "Solo giocatori possono usare gli strumenti"
+      },
+      "chat": {
+        "title": "Chat",
+        "inputAriaLabel": "Scrivi un messaggio",
+        "sendAriaLabel": "Invia messaggio",
+        "visibilityPrivate": "Privato",
+        "visibilityShared": "Condiviso",
+        "emptyMessage": "Nessun messaggio ancora."
+      },
+      "notes": {
+        "title": "Note",
+        "inputAriaLabel": "Scrivi una nota",
+        "addAriaLabel": "Aggiungi nota",
+        "visibilityPrivate": "Privata",
+        "visibilityShared": "Condivisa",
+        "emptyMessage": "Nessuna nota ancora."
+      },
+      "pauseOverlay": {
+        "title": "Sessione in pausa",
+        "resumeCta": "Riprendi",
+        "closeCta": "Chiudi",
+        "closeAriaLabel": "Chiudi overlay pausa"
+      },
+      "endgameDialog": {
+        "title": "Fine sessione",
+        "winnerLabel": "Vincitore",
+        "acknowledgeCta": "Ho capito",
+        "viewSummaryCta": "Vedi riepilogo"
       }
     }
   },

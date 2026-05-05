@@ -2209,6 +2209,48 @@
       },
       "a11y": {
         "viewLabel": "Live session view"
+      },
+      "rightColumn": {
+        "tabsAriaLabel": "Session panels",
+        "tabTools": "Tools",
+        "tabChat": "Chat",
+        "tabNotes": "Notes"
+      },
+      "tools": {
+        "title": "Tools",
+        "toolDiceLabel": "Dice",
+        "toolTimerLabel": "Timer",
+        "toolCardLabel": "Card",
+        "executeAriaTemplate": "Execute {toolName}",
+        "disabledSpectatorTooltip": "Only players can use tools"
+      },
+      "chat": {
+        "title": "Chat",
+        "inputAriaLabel": "Type a message",
+        "sendAriaLabel": "Send message",
+        "visibilityPrivate": "Private",
+        "visibilityShared": "Shared",
+        "emptyMessage": "No messages yet."
+      },
+      "notes": {
+        "title": "Notes",
+        "inputAriaLabel": "Write a note",
+        "addAriaLabel": "Add note",
+        "visibilityPrivate": "Private",
+        "visibilityShared": "Shared",
+        "emptyMessage": "No notes yet."
+      },
+      "pauseOverlay": {
+        "title": "Session paused",
+        "resumeCta": "Resume",
+        "closeCta": "Close",
+        "closeAriaLabel": "Close pause overlay"
+      },
+      "endgameDialog": {
+        "title": "Session ended",
+        "winnerLabel": "Winner",
+        "acknowledgeCta": "Got it",
+        "viewSummaryCta": "View summary"
       }
     }
   },

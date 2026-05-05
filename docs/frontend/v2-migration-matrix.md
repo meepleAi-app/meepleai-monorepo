@@ -90,7 +90,7 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 | `/game-nights` | **L** | Calendar + day-detail drawer + filters | pending — Phase 0.5 required |
 | `/sessions` | **M** | Sessions list + filters composition | pending |
 | `/sessions/[id]/summary` | **M** | Summary KPI + diary + photos | pending |
-| `/players/[id]` | **M** | Player profile + stats + leaderboard | pending |
+| `/players/[id]` | **M** | usePlayerStatistics single hook (current user only — schema reality v1 carryover) | ✅ done (Wave 3, PR #724) |
 | `/toolkits/[id]` | **M** | Toolkit summary + version timeline | pending |
 | `/kb/[id]` | **M** | KB header + chunks + search | pending |
 

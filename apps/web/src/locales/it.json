@@ -2076,6 +2076,18 @@
       "errorMessage": "Errore: {message}",
       "noFilesSelected": "Nessun file selezionato",
       "gameIdLabel": "ID Gioco"
+    },
+    "play": {
+      "loading": "Caricamento...",
+      "pageNumber": "Pagina {num}",
+      "pageContent": "Contenuto pagina {num}",
+      "showOriginal": "📖 Mostra originale",
+      "showTranslation": "🌐 Mostra traduzione",
+      "distanceReading": "🔭 Lettura distante",
+      "normalReading": "🔍 Lettura normale",
+      "toggleDistanceReading": "Modalità lettura distante",
+      "translationUnavailable": "Traduzione non disponibile",
+      "retry": "Riprova"
     }
   }
 }

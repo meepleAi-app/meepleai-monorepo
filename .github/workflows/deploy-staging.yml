@@ -224,9 +224,11 @@ jobs:
         with:
           ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
+          # data/rulebook/golden/ (~52K) IS included: Api.csproj embeds these JSON fixtures (ADR-051)
           sparse-checkout: |
             apps/
             .github/
+            data/rulebook/golden/
           sparse-checkout-cone-mode: true
 
       - name: Verify CI passed on this commit

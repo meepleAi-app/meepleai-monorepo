@@ -70,11 +70,13 @@ log "✅ Latest migration: $LATEST_MIGRATION"
 
 # ─────────────────────────────────────────────
 # Smoke read-back queries (sanity, optional)
+# Identifiers are lowercase per EF Core migrations
+# (MeepleAiDbContextModelSnapshot: ToTable("users"), ToTable("games")).
 # ─────────────────────────────────────────────
 log "📊 Smoke read-back queries..."
-for table in "Users" "Games"; do
+for table in users games; do
   COUNT=$(psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -tAc \
-    "SELECT COUNT(*) FROM \"$table\"" 2>/dev/null || echo "ERROR")
+    "SELECT COUNT(*) FROM $table" 2>/dev/null || echo "ERROR")
   if [[ "$COUNT" =~ ^[0-9]+$ ]] && [ "$COUNT" -gt 0 ]; then
     log "  ✅ $table: $COUNT rows"
   else
@@ -83,6 +85,7 @@ for table in "Users" "Games"; do
 done
 
 # Sessions accepted >=0 per Fix #3 (legitimate empty on fresh single-tester)
+# Table is "GameSessions" (PascalCase quoted) per EF migration
 SESSIONS_COUNT=$(psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -tAc \
   'SELECT COUNT(*) FROM "GameSessions"' 2>/dev/null || echo "ERROR")
 if [[ "$SESSIONS_COUNT" =~ ^[0-9]+$ ]]; then

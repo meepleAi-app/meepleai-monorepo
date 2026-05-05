@@ -87,10 +87,16 @@ fi
 # A4 — Chat citations (manual UI — see docs/operations/smoke-manual-ui-checklist.md)
 log "A4: SKIPPED here (manual UI — see smoke-manual-ui-checklist.md)"
 
-# A5 — Logout
+# A5 — Logout (POST-only endpoint per AuthenticationEndpoints.cs)
 if [ -n "$TEST_EMAIL" ]; then
   log "A5: POST /api/v1/auth/logout"
-  check_status "A5.logout" "$BASE_URL/api/v1/auth/logout" "200"
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+    -X POST -b "$COOKIE_JAR" -c "$COOKIE_JAR" "$BASE_URL/api/v1/auth/logout" 2>/dev/null || echo "000")
+  if [ "$STATUS" = "200" ]; then
+    ok "A5.logout (HTTP 200)"
+  else
+    ko "A5.logout" "got $STATUS"
+  fi
 fi
 
 # C1 — Deploy senza rotture (validated by health endpoint)
@@ -100,10 +106,11 @@ check_status "C1.health" "$BASE_URL/health" "200"
 # C2 — Migration applicata: separate validation via pg-readback.sh (requires tunnel)
 log "C2: SKIPPED here (use pg-readback.sh for DB-direct migration validation)"
 
-# C3 — Backup: validated by backup-verify cron, smoke check that endpoint exists
-log "C3: GET /api/v1/admin/rag-backup/snapshots/latest"
+# C3 — Backup: validated by backup-verify cron. Smoke checks the list endpoint
+# (avoids 404 on /snapshots/latest where "latest" is treated as a Guid id).
+log "C3: GET /api/v1/admin/rag-backup/snapshots"
 # May 401 if not admin — accept 200 OR 401 (endpoint reachable)
-RES_C3=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -b "$COOKIE_JAR" "$BASE_URL/api/v1/admin/rag-backup/snapshots/latest" 2>/dev/null || echo "000")
+RES_C3=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -b "$COOKIE_JAR" "$BASE_URL/api/v1/admin/rag-backup/snapshots" 2>/dev/null || echo "000")
 if [ "$RES_C3" = "200" ] || [ "$RES_C3" = "401" ]; then
   ok "C3.backup_endpoint (HTTP $RES_C3)"
 else

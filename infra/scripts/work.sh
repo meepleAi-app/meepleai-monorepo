@@ -79,7 +79,9 @@ do_start() {
   ) &
   echo $! > "$WATCHDOG_PID_FILE"
 
-  trap 'do_stop; exit 0' INT TERM
+  # Trap on EXIT too — ensures cleanup if integration-start.sh exits naturally
+  # (e.g., dotnet/pnpm crash) and not via Ctrl+C. do_stop is idempotent.
+  trap 'do_stop; exit 0' INT TERM EXIT
 
   log "✅ make work running"
   log "   API: http://localhost:8080"

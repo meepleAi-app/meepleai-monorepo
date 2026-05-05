@@ -106,13 +106,13 @@ echo "Restore completed in ${RESTORE_TIME}s"
 
 echo "Verifying restored data..."
 
-# Query Administration.Users count
+# Query users count (lowercase, default schema — actual table name in EF migrations)
 USERS_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d meepleai -t -c \
-  'SELECT COUNT(*) FROM "Administration"."Users";' 2>/dev/null | tr -d '[:space:]' || echo "ERROR")
+  'SELECT COUNT(*) FROM users;' 2>/dev/null | tr -d '[:space:]' || echo "ERROR")
 
-# Query GameManagement.Games count
+# Query games count (lowercase, default schema — actual table name in EF migrations)
 GAMES_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d meepleai -t -c \
-  'SELECT COUNT(*) FROM "GameManagement"."Games";' 2>/dev/null | tr -d '[:space:]' || echo "ERROR")
+  'SELECT COUNT(*) FROM games;' 2>/dev/null | tr -d '[:space:]' || echo "ERROR")
 
 # Query schema count (exclude pg_catalog, information_schema, pg_toast, public)
 SCHEMA_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d meepleai -t -c \
@@ -123,8 +123,8 @@ SCHEMA_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d meepleai 
 
 echo ""
 echo "--- Data Verification ---"
-echo "  Administration.Users count : ${USERS_COUNT}"
-echo "  GameManagement.Games count : ${GAMES_COUNT}"
+echo "  users count                : ${USERS_COUNT}"
+echo "  games count                : ${GAMES_COUNT}"
 echo "  Custom schema count        : ${SCHEMA_COUNT} (expected >= 5, up to 18 bounded contexts)"
 
 # ─── Check schema count >= 5 ─────────────────────────────────────────────────

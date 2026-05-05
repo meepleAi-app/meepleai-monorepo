@@ -83,7 +83,7 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 | `/agents` | **S** | useAgentList single hook, grid pattern | ✅ done (B.2, PR #637) |
 | `/library` | **S** | useLibrary single hook, hybrid grid | ✅ done (B.3, PR #638) |
 | `/players` | **S** | useUsersList single hook, grid pattern (Wave 4 D1) | pending |
-| `/games/[id]` | **L** | useGame + useAgents/Faqs/KbDocs by gameId — Wave C.1 fail PR #697 | pending — Phase 0.5 contract draft: [`docs/frontend/contracts/games-id-hooks.md`](contracts/games-id-hooks.md) |
+| `/games/[id]` | **L** | useGame + useAgents/Faqs/KbDocs by gameId — Phase 0.5 contract enforced | ✅ done (Wave C.1, PR #702) — [`docs/frontend/contracts/games-id-hooks.md`](contracts/games-id-hooks.md) |
 | `/agents/[id]` | **L** | useAgent + chat history + KB docs cross-resource | pending — Phase 0.5 required |
 | `/sessions/[id]/live` | **L+** | Real-time SSE + multi-hook + dialog states | pending — Phase 0.5 + sub-PR split |
 | `/discover` | **L** | Multiple horizontal-row hooks | pending — Phase 0.5 required |
@@ -126,14 +126,14 @@ the PR review.
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
-| `sp4-game-detail.jsx` | `GameDetailHero` | `apps/web/src/components/v2/game-detail/GameDetailHero.tsx` | `/games/[id]` | pending | — | T A M V |
-| `sp4-game-detail.jsx` | `GameDetailTabsAnimated` | `apps/web/src/components/v2/game-detail/GameDetailTabsAnimated.tsx` | `/games/[id]` | pending | — | T A M V |
-| `sp4-game-detail.jsx` | `GameDetailKpiCards` | `apps/web/src/components/v2/game-detail/GameDetailKpiCards.tsx` | `/games/[id]` | pending | — | T A V |
-| `sp4-game-detail.jsx` | `GameDetailFaqList` | `apps/web/src/components/v2/game-detail/GameDetailFaqList.tsx` | `/games/[id]` | pending | — | T A V |
-| `sp4-game-detail.jsx` | `GameDetailRulesAccordion` | `apps/web/src/components/v2/game-detail/GameDetailRulesAccordion.tsx` | `/games/[id]` | pending | — | T A M V |
-| `sp4-game-detail.jsx` | `GameDetailSessionsRail` | `apps/web/src/components/v2/game-detail/GameDetailSessionsRail.tsx` | `/games/[id]` | pending | — | T A V |
-| `sp4-game-detail.jsx` | `GameDetailAgentsList` | `apps/web/src/components/v2/game-detail/GameDetailAgentsList.tsx` | `/games/[id]` | pending | — | T A V |
-| `sp4-game-detail.jsx` | `GameDetailKbDocList` | `apps/web/src/components/v2/game-detail/GameDetailKbDocList.tsx` | `/games/[id]` | pending | — | T A V |
+| `sp4-game-detail.jsx` | `GameDetailHero` | `apps/web/src/components/v2/game-detail/GameDetailHero.tsx` | `/games/[id]` | done | #702 | T A M V |
+| `sp4-game-detail.jsx` | `GameDetailTabsAnimated` | `apps/web/src/components/v2/game-detail/GameDetailTabsAnimated.tsx` | `/games/[id]` | done | #702 | T A M V |
+| `sp4-game-detail.jsx` | `GameDetailKpiCards` | `apps/web/src/components/v2/game-detail/GameDetailKpiCards.tsx` | `/games/[id]` | done | #702 | T A V |
+| `sp4-game-detail.jsx` | `GameDetailFaqList` | `apps/web/src/components/v2/game-detail/GameDetailFaqList.tsx` | `/games/[id]` | done | #702 | T A V |
+| `sp4-game-detail.jsx` | `GameDetailRulesAccordion` | `apps/web/src/components/v2/game-detail/GameDetailRulesAccordion.tsx` | `/games/[id]` | done | #702 | T A M V |
+| `sp4-game-detail.jsx` | `GameDetailSessionsRail` | `apps/web/src/components/v2/game-detail/GameDetailSessionsRail.tsx` | `/games/[id]` | done | #702 | T A V |
+| `sp4-game-detail.jsx` | `GameDetailAgentsList` | `apps/web/src/components/v2/game-detail/GameDetailAgentsList.tsx` | `/games/[id]` | done | #702 | T A V |
+| `sp4-game-detail.jsx` | `GameDetailKbDocList` | `apps/web/src/components/v2/game-detail/GameDetailKbDocList.tsx` | `/games/[id]` | done | #702 | T A V |
 
 ### Agents index — `/agents` — 4 components — **Tier S**
 

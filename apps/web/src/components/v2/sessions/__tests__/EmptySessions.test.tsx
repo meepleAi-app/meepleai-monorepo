@@ -41,8 +41,8 @@ describe('EmptySessions', () => {
     expect(el!.getAttribute('role')).toBe('status');
   });
 
-  it('empty kind renders title, description, and CTA', () => {
-    render(<EmptySessions kind="empty" labels={LABELS} />);
+  it('empty kind renders title, description, and CTA when onPrimaryAction provided', () => {
+    render(<EmptySessions kind="empty" labels={LABELS} onPrimaryAction={vi.fn()} />);
     expect(screen.getByText('Nessuna partita ancora')).toBeTruthy();
     expect(screen.getByText('Registra la tua prima partita.')).toBeTruthy();
     expect(screen.getByText('Inizia la prima sessione')).toBeTruthy();
@@ -61,10 +61,16 @@ describe('EmptySessions', () => {
     expect(el).not.toBeNull();
   });
 
-  it('filtered-empty kind renders title and CTA text', () => {
-    render(<EmptySessions kind="filtered-empty" labels={LABELS} />);
+  it('filtered-empty kind renders title and CTA text when onPrimaryAction provided', () => {
+    render(<EmptySessions kind="filtered-empty" labels={LABELS} onPrimaryAction={vi.fn()} />);
     expect(screen.getByText('Nessun risultato')).toBeTruthy();
     expect(screen.getByText('Rimuovi filtro')).toBeTruthy();
+  });
+
+  it('CTA button is hidden when onPrimaryAction is undefined (avoids no-op click)', () => {
+    render(<EmptySessions kind="empty" labels={LABELS} />);
+    expect(screen.queryByText('Inizia la prima sessione')).toBeNull();
+    expect(document.querySelector('[data-slot="sessions-empty-cta"]')).toBeNull();
   });
 
   it('error kind renders data-slot="sessions-empty-error" with role="alert"', () => {

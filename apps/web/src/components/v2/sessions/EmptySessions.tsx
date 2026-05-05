@@ -135,14 +135,16 @@ export function EmptySessions({
       <h2 className="text-lg font-semibold text-foreground sm:text-xl">{title}</h2>
       <p className="max-w-md text-sm text-muted-foreground">{description}</p>
 
-      <button
-        type="button"
-        onClick={onPrimaryAction}
-        className={SESSION_CTA_CLASS}
-        data-slot="sessions-empty-cta"
-      >
-        {cta}
-      </button>
+      {onPrimaryAction && (
+        <button
+          type="button"
+          onClick={onPrimaryAction}
+          className={SESSION_CTA_CLASS}
+          data-slot="sessions-empty-cta"
+        >
+          {cta}
+        </button>
+      )}
     </div>
   );
 }

@@ -142,6 +142,10 @@ internal static class DocumentProcessingServiceExtensions
 
         services.AddScoped<IPhotoPreprocessor, SmoldoclingPhotoPreprocessor>();
 
+        // Libro Game AI Assistant MVP Phase 2 — Task 2.3a: KB Indexing Services
+        services.AddScoped<IDocumentChunker, PageTextChunker>();
+        services.AddScoped<IKnowledgeBaseIndexer, KnowledgeBaseIndexer>();
+
         // Libro Game AI Assistant MVP Phase 1 — Task 1.6: parallel photo batch processor
         services.AddScoped<IPhotoBatchProcessor, PhotoBatchProcessor>();
 

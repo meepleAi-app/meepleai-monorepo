@@ -431,6 +431,9 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IModelCompatibilityRepository, ModelCompatibilityRepository>(); // Issue #5496: Model compatibility matrix + change log
         services.AddScoped<IKbUserFeedbackRepository, KbUserFeedbackRepository>(); // KB-06: User feedback on KB chat responses
 
+        // Gap G3: ACL for cross-BC chunk + embedding ingestion (DocumentProcessing → KnowledgeBase)
+        services.AddScoped<IKnowledgeBaseIngestService, KnowledgeBaseIngestService>();
+
         // Infrastructure - Adapters (Scoped - uses MeepleAiDbContext for pgvector operations)
         services.AddScoped<IVectorStoreAdapter, PgVectorStoreAdapter>();
         // Infrastructure - In-Memory Repository (Singleton - shared in-memory store)

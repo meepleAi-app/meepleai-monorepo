@@ -3,6 +3,7 @@ using Api.Configuration; // CHAT-02
 using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Translation;
 using Api.Infrastructure.Security;
 using Api.Logging;
 using Api.Middleware;
@@ -320,6 +321,9 @@ builder.Services.AddChatServices();
 builder.Services.AddAdminServices();
 builder.Services.AddBggServices();
 builder.Services.AddQualityServices();
+
+// Libro Game AI Assistant: narrative + generic translation via OpenRouter (Issue #2.1)
+builder.Services.AddTranslationServices();
 
 // DDD-PHASE2: Authentication bounded context (repositories for CQRS handlers)
 builder.Services.AddAuthenticationContext();

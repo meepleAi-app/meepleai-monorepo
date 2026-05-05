@@ -1647,7 +1647,8 @@
         "turnLabel": "Turno {turn}",
         "resumeCta": "Riprendi",
         "resumeOrArchiveCta": "Riprendi o archivia",
-        "openAriaLabel": "Apri sessione {gameName}"
+        "openAriaLabel": "Apri sessione {gameName}",
+        "scoreOverflowTemplate": "+{count} altri"
       },
       "empty": {
         "title": "Nessuna partita ancora",

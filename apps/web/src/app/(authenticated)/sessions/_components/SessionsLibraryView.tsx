@@ -191,9 +191,9 @@ export function SessionsLibraryView(): ReactElement {
   const gridCardLabels = useMemo<SessionCardGridLabels>(
     () => ({
       ...cardLabels,
-      scoreOverflowTemplate: '+{count} altri',
+      scoreOverflowTemplate: t('pages.sessions.card.scoreOverflowTemplate'),
     }),
-    [cardLabels]
+    [cardLabels, t]
   );
 
   const emptyLabels = useMemo<EmptySessionsLabels>(

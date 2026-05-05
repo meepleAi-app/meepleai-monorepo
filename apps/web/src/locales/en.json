@@ -1597,7 +1597,8 @@
         "turnLabel": "Turn {turn}",
         "resumeCta": "Resume",
         "resumeOrArchiveCta": "Resume or archive",
-        "openAriaLabel": "Open {gameName} session"
+        "openAriaLabel": "Open {gameName} session",
+        "scoreOverflowTemplate": "+{count} more"
       },
       "empty": {
         "title": "No sessions yet",

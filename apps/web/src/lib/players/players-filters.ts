@@ -53,12 +53,14 @@ export function applyPlayersFilters(
 export function transformStatsToItems(
   gamePlayCounts: Record<string, number>
 ): ReadonlyArray<PlayerListItem> {
-  return Object.entries(gamePlayCounts).map(([gameName, count]) => ({
-    id: gameName.toLowerCase().replace(/\s+/g, '-'),
-    displayName: gameName,
-    gameName,
-    playCount: count,
-  }));
+  return Object.entries(gamePlayCounts)
+    .map(([gameName, count]) => ({
+      id: gameName.toLowerCase().replace(/\s+/g, '-'),
+      displayName: gameName,
+      gameName,
+      playCount: count,
+    }))
+    .sort((a, b) => b.playCount - a.playCount);
 }
 
 /**

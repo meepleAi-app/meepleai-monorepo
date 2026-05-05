@@ -56,7 +56,52 @@
 - [x] Test pass (4 + 7 unit C# + 4 pytest Python)
 - [x] Pattern compliance verificata (audit fixed 4 plan v2 errors)
 - [x] OCR validation script eseguibile (run blocked su manuali Aaron)
+- [x] PR #701 mergiato in `main-dev` (commit `555001410`)
+
+## Sprint 1 — Phase 1 Backend completion ✅ COMPLETO
+
+**Commit history** (5 commit, 28 files, 2363 insertions):
+
+| Commit | Task | Description |
+|--------|------|-------------|
+| `1e8853066` | 1.4b | SmoldoclingPhotoPreprocessor HTTP client + DI (3/3 tests) |
+| `ac624cb6c` | 1.5 | UploadPhotoBatchCommandHandler + Enqueue + IPhotoBatchProcessor stub (2/2 tests) |
+| `edf588b10` | 1.6 | PhotoBatchProcessor parallel processing — KB indexing deferred Phase 2 (6/6 tests) |
+| `ff055c786` | 1.7 | GetPhotoBatchStatus query + photo-batches endpoints (5/5 tests) |
+| `1b690b02f` | 1.8 | Frontend gamebook upload UI — TanStack Query + Zod + react-intl (11/11 tests) |
+
+### Phase 1 backend (Task 1.4b → 1.8)
+
+| Task | Status | Commit | Tests |
+|------|--------|--------|-------|
+| 1.4b — SmoldoclingPhotoPreprocessor HTTP client | ✅ | `1e8853066` | 3/3 unit |
+| 1.5 — UploadPhotoBatchCommandHandler + Enqueue | ✅ | `ac624cb6c` | 2/2 unit |
+| 1.6 — IPhotoBatchProcessor parallel + bounded mutex | ✅ | `edf588b10` | 6/6 unit |
+| 1.7 — GetPhotoBatchStatusQuery + endpoints (CQRS) | ✅ | `ff055c786` | 5/5 unit |
+| 1.8 — Frontend upload page + ConfidenceBadge | ✅ | `1b690b02f` | 11/11 component |
+
+### Acceptance Sprint 1
+
+- [x] Tutti i task backend Sprint 1 committati su `feature/libro-game-sprint1-phase1`
+- [x] Test pass (16 backend C# + 11 frontend = 27 unit tests)
+- [x] Build clean (0 warnings 0 errors backend, typecheck OK frontend)
+- [x] Pattern compliance verificata (5 plan v2 spike errors corrected)
 - [ ] PR aperto + code review + merge in `main-dev` ← **NEXT**
+
+### Sprint 1 plan v2 spike findings
+
+5 plan v2 errors caught during spike-and-adapt:
+1. Task 1.4b: `/preprocess` → `/api/v1/preprocess` (already known from Sprint 0)
+2. Task 1.5: `IBlobStorageService.StoreAsync(Stream, string, string gameId, ...)` — `gameId` is **string** NOT `Guid`
+3. Task 1.5: `BlobStorageResult` shape — `(Success, FileId?, FilePath?, FileSizeBytes, ErrorMessage?)` — NO `ContentHash` field
+4. Task 1.6: KB services (`IDocumentChunker`, `IEmbeddingService`, `IKnowledgeBaseIndexer`, `KnowledgeChunk`) **NOT FOUND** → KB indexing deferred to Phase 2 Task 2.3 (TODO comment in PhotoBatchProcessor)
+5. Task 1.7: `GetPresignedDownloadUrlAsync` no `CancellationToken` param; auth pattern uses `httpContext.TryGetAuthenticatedUser()` (session-based, NOT JWT claims)
+
+### Task 1.9 — Phase 1 acceptance gate (DEFERRED)
+
+🔵 **Blocked on B-1** procurement (manuali fisici). Avvio Sprint 2 (post-B-1):
+- E2E Playwright test su 1 manuale Tainted Grail completo (50 pagine)
+- Validation criteria: throughput ≥ 10 pag/min, confidence ≥ 0.7 su ≥ 95% pages, KB query funzionante post-indexing
 
 ## Sprint 1 — Risk gate (week 3, blocked Aaron procurement)
 

@@ -131,6 +131,20 @@ internal static class DocumentProcessingServiceExtensions
             services.AddScoped<IPdfTextExtractor, DocnetPdfTextExtractor>();
         }
 
+        // Libro Game AI Assistant MVP Phase 1 — Task 1.4b
+        // Photo preprocessor HTTP adapter (no Polly: simple timeout sufficient for Sprint 1)
+        services.AddHttpClient("smoldocling-photo-preprocessor", client =>
+        {
+            var baseUrl = configuration["SMOLDOCLING_SERVICE_URL"] ?? "http://smoldocling-service:8500";
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        services.AddScoped<IPhotoPreprocessor, SmoldoclingPhotoPreprocessor>();
+
+        // Libro Game AI Assistant MVP Phase 1 — Task 1.6: parallel photo batch processor
+        services.AddScoped<IPhotoBatchProcessor, PhotoBatchProcessor>();
+
         // Shared PDF processing pipeline (used by recovery job and future handler consolidation)
         services.AddScoped<IPdfProcessingPipelineService, PdfProcessingPipelineService>();
 

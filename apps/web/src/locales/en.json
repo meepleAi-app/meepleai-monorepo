@@ -1888,5 +1888,29 @@
     "adding": "Adding...",
     "addPrivateGame": "Add Private Game",
     "addFromBgg": "Add from catalog"
+  },
+  "gamebook": {
+    "upload": {
+      "title": "Upload Game Manual Photos",
+      "subtitle": "Upload photos of your board game manual for AI-powered indexing",
+      "dropzoneLabel": "Drop photos here or click to select",
+      "dropzoneHint": "JPG, PNG, WEBP — up to 20 MB each",
+      "selectedFiles": "{count, plural, one {# file selected} other {# files selected}}",
+      "submitButton": "Upload {count, plural, one {# photo} other {# photos}}",
+      "submitting": "Uploading...",
+      "uploadSuccess": "Upload started — tracking batch {batchId}",
+      "uploadError": "Upload failed. Please try again.",
+      "statusTitle": "Processing status",
+      "statusPending": "Waiting to start...",
+      "statusProcessing": "Processing pages...",
+      "statusCompleted": "Processing complete",
+      "statusFailed": "Processing failed",
+      "statusCancelled": "Processing cancelled",
+      "progress": "{processed} / {total} pages",
+      "confidence": "Average confidence",
+      "errorMessage": "Error: {message}",
+      "noFilesSelected": "No files selected yet",
+      "gameIdLabel": "Game ID"
+    }
   }
 }

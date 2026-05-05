@@ -179,13 +179,18 @@ the PR review.
 
 ## Wave 2 — 16 components
 
-### Sessions index — `/sessions` — 3 components — **Tier M**
+### Sessions index — `/sessions` — 8 components — **Tier S** (per spec-panel review PR #734)
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
-| `sp4-sessions-index.jsx` | `SessionsHero` | `apps/web/src/components/v2/sessions/SessionsHero.tsx` | `/sessions` | pending | — | T A M V |
-| `sp4-sessions-index.jsx` | `SessionsFilters` | `apps/web/src/components/v2/sessions/SessionsFilters.tsx` | `/sessions` | pending | — | T A V |
-| `sp4-sessions-index.jsx` | `ConnectionChipStripFooter` | `apps/web/src/components/v2/sessions/ConnectionChipStripFooter.tsx` | `/sessions` | pending | — | T A V |
+| `sp4-sessions-index.jsx` | `SessionsHero` | `apps/web/src/components/v2/sessions/SessionsHero.tsx` | `/sessions` | done | TBD | T A M V |
+| `sp4-sessions-index.jsx` | `SessionsFilters` | `apps/web/src/components/v2/sessions/SessionsFilters.tsx` | `/sessions` | done | TBD | T A V |
+| `sp4-sessions-index.jsx` | `SessionCardList` | `apps/web/src/components/v2/sessions/SessionCardList.tsx` | `/sessions` | done | TBD | T A V |
+| `sp4-sessions-index.jsx` | `SessionCardGrid` | `apps/web/src/components/v2/sessions/SessionCardGrid.tsx` | `/sessions` | done | TBD | T A V |
+| `sp4-sessions-index.jsx` | `EmptySessions` | `apps/web/src/components/v2/sessions/EmptySessions.tsx` | `/sessions` | done | TBD | T A V |
+| `sp4-sessions-index.jsx` | `OutcomeBadge` | `apps/web/src/components/v2/sessions/OutcomeBadge.tsx` | `/sessions` | done | TBD | T A V |
+| `sp4-sessions-index.jsx` | `ScoringInline` | `apps/web/src/components/v2/sessions/ScoringInline.tsx` | `/sessions` | done | TBD | T A V |
+| `sp4-sessions-index.jsx` | `ConnectionChipStripFooter` | `apps/web/src/components/v2/sessions/ConnectionChipStripFooter.tsx` | `/sessions` | done | TBD | T A V |
 
 ### Session live — `/sessions/[id]` — 7 components — **Tier L+** ⚠️ Phase 0.5 + sub-PR split required
 

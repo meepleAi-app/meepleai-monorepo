@@ -137,7 +137,7 @@ Tests cover:
 
 ## Documentation
 
-See: `docs/06-security/frontend-security-best-practices.md`
+See: `docs/security/frontend-security-best-practices.md` (pending restoration — see #745)
 
 ---
 

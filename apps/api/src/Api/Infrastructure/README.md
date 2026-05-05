@@ -459,5 +459,5 @@ public class UserRepositoryTests : IAsyncLifetime
 
 - `docs/02-development/database-migrations.md`
 - `docs/02-development/testing/integration-testing.md`
-- `docs/06-security/secrets-management.md`
+- `docs/security/secrets-management.md` (pending restoration — see #745)
 - `docs/01-architecture/overview/system-architecture.md` (Infrastructure section)

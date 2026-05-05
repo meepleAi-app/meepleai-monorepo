@@ -1,6 +1,6 @@
 # Golden Test Set — Libro Game MVP Phase 1
 
-> **Status**: Sprint 0 schema + converter artifact. Full data creation blocked on contractor (BLOCKERS.md B-3).
+> **Status**: B-3 partial — golden set expanded to 100 Q&A + 50 translations via AI-assisted draft (2026-05-05). Citation pages pending B-1 procurement (manuali fisici Aaron). Aaron quality review pending.
 
 ## Purpose
 
@@ -8,13 +8,21 @@ Ground truth dataset for LLM evaluation:
 - **Q&A hallucination CI gate** (Phase 2 Task 2.7): hallucination rate ≤ 3% on golden set
 - **Translation MOS validation** (pre v2 launch): minimum 4/5 human score
 
+## Draft Status
+
+- **Citation pages**: All entries use `"primary_pages": []` as placeholder. Will be filled post-B-1 (procurement of physical manuals by Aaron).
+- **Match policy**: `overlap_at_least_one` used as relaxed policy during draft; hard edge-case entries use `exact` (empty expected = "I don't know" path test).
+- **Italian content**: AI-generated (Claude Sonnet 4.6) — native IT speaker review by Aaron pending post-B-1.
+- **Game accuracy**: Plausible based on general training knowledge of each game's setting and mechanics. Specific rule citations (page numbers, exact wording) require manual verification against physical rulebooks post-B-1.
+- **Source languages**: ~30 EN, ~10 DE, ~5 FR, ~3 ES/NL mixed (Andor German original + others where plausible).
+
 ## Files
 
 | File | Purpose |
 |------|---------|
 | `schema.md` | Formal JSONL schemas + match policy enum |
-| `qa-questions.jsonl` | Sample 3 entries (full set: 100, blocked on B-3) |
-| `translation-paragraphs.jsonl` | Sample 2 entries (full set: 50, blocked on B-3) |
+| `qa-questions.jsonl` | 100 entries — 5 games × 20 Q&A, difficulty 60/30/10 (B-3 AI draft) |
+| `translation-paragraphs.jsonl` | 50 entries — 5 games × ~10 paragraphs, types 20/15/10/5 (B-3 AI draft) |
 | `csv_to_jsonl.py` | CSV → JSONL converter for contractor workflow |
 | `requirements.txt` | Python deps (none — uses stdlib only) |
 

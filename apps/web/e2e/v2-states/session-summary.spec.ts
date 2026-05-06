@@ -143,7 +143,7 @@ test.describe('Session summary — state coverage', () => {
 
   test('desktop dark share card preview (page stays light)', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await gotoSummary(page, '?theme=dark');
+    await gotoSummary(page, '?fixture=default&theme=dark');
     await waitForSummaryReady(page);
     // Confirm ShareCard surface is mounted with the dark theme attribute.
     await expect(page.locator('[data-slot="session-share-card"]')).toBeVisible();

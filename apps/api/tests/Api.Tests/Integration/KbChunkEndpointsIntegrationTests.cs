@@ -199,6 +199,37 @@ public sealed class KbChunkEndpointsIntegrationTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    // ========================================
+    // Access control regression (Critical 1)
+    // ========================================
+
+    /// <summary>
+    /// Verifies that a private document owned by another user returns 403 Forbidden
+    /// when accessed by a different authenticated (non-admin) user.
+    /// This is the regression test for Issue #730 final review Critical 1.
+    /// </summary>
+    [Fact]
+    public async Task GetKbDocument_PrivateDocOwnedByOtherUser_Returns403()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        // Seed user A (owner) and a private doc owned by user A
+        var (ownerUserId, _) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var (docId, _) = await SeedPrivateDocWithSingleChunkAsync(dbContext, ownerUserId);
+
+        // Authenticate as user B (not the owner, not admin)
+        var (_, userBSessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/kb-docs/{docId}",
+            userBSessionToken);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
     // ─── Seed helpers ────────────────────────────────────────────────────────
 
     /// <summary>
@@ -499,5 +530,45 @@ public sealed class KbChunkEndpointsIntegrationTests : IAsyncLifetime
         // added by InitializeAsync, so it is automatically populated on INSERT.
 
         return (docId, firstChunkId);
+    }
+
+    /// <summary>
+    /// Seeds a private (IsPublic=false) PdfDocumentEntity owned by <paramref name="ownedByUserId"/>
+    /// with a single TextChunkEntity. Used by the Critical 1 regression test.
+    /// </summary>
+    private static async Task<(Guid DocId, Guid ChunkId)> SeedPrivateDocWithSingleChunkAsync(
+        MeepleAiDbContext dbContext,
+        Guid ownedByUserId)
+    {
+        var docId = Guid.NewGuid();
+        var chunkId = Guid.NewGuid();
+
+        dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = docId,
+            FileName = $"private-{docId:N}.pdf",
+            ProcessingState = "Ready",
+            UploadedAt = DateTime.UtcNow,
+            Language = "en",
+            DocumentCategory = "Rulebook",
+            UploadedByUserId = ownedByUserId,
+            FilePath = $"/tmp/private-{docId:N}.pdf",
+            IsPublic = false
+        });
+
+        dbContext.TextChunks.Add(new TextChunkEntity
+        {
+            Id = chunkId,
+            PdfDocumentId = docId,
+            Content = "Private document content",
+            ChunkIndex = 0,
+            PageNumber = 1,
+            CharacterCount = 24,
+            ElementType = "NarrativeText",
+            Level = 1
+        });
+
+        await dbContext.SaveChangesAsync();
+        return (docId, chunkId);
     }
 }

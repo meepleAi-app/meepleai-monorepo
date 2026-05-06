@@ -916,7 +916,8 @@ internal static class KnowledgeBaseEndpoints
             .WithDescription("Returns chunks ordered by position with breadcrumb headingPath. Admin users see vectorId, characterCount, elementType, embeddingStatus.")
             .Produces<KbChunkListDto>()
             .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status404NotFound);
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
 
         // Issue #730: G2 single chunk full content
         group.MapGet("/kb-docs/{id:guid}/chunks/{chunkId:guid}", HandleGetKbChunkById)
@@ -926,7 +927,8 @@ internal static class KnowledgeBaseEndpoints
             .WithSummary("Get a single chunk with full content + prev/next navigation")
             .WithDescription("Returns chunk content as markdown, with hierarchical breadcrumb and prev/next chunk IDs for navigation.")
             .Produces<KbChunkDetailDto>()
-            .Produces(StatusCodes.Status404NotFound);
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
 
         // Issue #730: G3 in-document FTS
         group.MapPost("/kb-docs/{id:guid}/chunks/search", HandleSearchKbChunks)
@@ -937,7 +939,8 @@ internal static class KnowledgeBaseEndpoints
             .WithDescription("PostgreSQL ts_rank_cd ranking with ts_headline highlighting (<mark> tags). Query length 1-200 chars.")
             .Produces<KbChunkSearchResultDto>()
             .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status404NotFound);
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
     }
 
     private static async Task<IResult> HandleGetKbDocumentById(
@@ -947,8 +950,9 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken cancellationToken)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session.User!.Id;
         var userIsAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
-        var query = new GetKbDocumentByIdQuery(id, userIsAdmin);
+        var query = new GetKbDocumentByIdQuery(id, RequestingUserId: userId, UserIsAdmin: userIsAdmin);
         var dto = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(dto);
     }
@@ -970,8 +974,9 @@ internal static class KnowledgeBaseEndpoints
         }
 
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+        var userId = session.User!.Id;
         var isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
-        var query = new GetKbChunksQuery(id, skipValue, takeValue, UserIsAdmin: isAdmin);
+        var query = new GetKbChunksQuery(id, RequestingUserId: userId, Skip: skipValue, Take: takeValue, UserIsAdmin: isAdmin);
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
@@ -984,11 +989,12 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken cancellationToken)
     {
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+        var userId = session.User!.Id;
         var isAdmin = string.Equals(
             session.User!.Role,
             UserRole.Admin.ToString(),
             StringComparison.OrdinalIgnoreCase);
-        var query = new GetKbChunkByIdQuery(id, chunkId, UserIsAdmin: isAdmin);
+        var query = new GetKbChunkByIdQuery(id, RequestingUserId: userId, ChunkId: chunkId, UserIsAdmin: isAdmin);
         var dto = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(dto);
     }
@@ -1005,7 +1011,10 @@ internal static class KnowledgeBaseEndpoints
             return Results.BadRequest(new { error = "query must be between 1 and 200 characters" });
         }
 
-        var query = new SearchKbChunksQuery(id, body.Query, body.Skip ?? 0, body.Take ?? 20);
+        var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+        var userId = session.User!.Id;
+        var isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var query = new SearchKbChunksQuery(id, RequestingUserId: userId, Query: body.Query, Skip: body.Skip ?? 0, Take: body.Take ?? 20, UserIsAdmin: isAdmin);
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }

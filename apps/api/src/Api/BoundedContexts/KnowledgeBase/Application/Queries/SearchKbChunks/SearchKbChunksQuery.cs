@@ -11,10 +11,17 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchKbChunks;
 /// (no tsquery operator injection possible). Ranking uses <c>ts_rank_cd</c> and snippets
 /// are generated with <c>ts_headline</c> producing <c>&lt;mark&gt;</c> tags.
 /// </para>
+///
+/// <para>
+/// Access is denied (ForbiddenException) when the document is not public, not owned by
+/// <see cref="RequestingUserId"/>, and the requester is not an admin.
+/// </para>
 /// </summary>
 internal sealed record SearchKbChunksQuery(
     Guid DocumentId,
+    Guid RequestingUserId,
     string Query,
     int Skip,
-    int Take
+    int Take,
+    bool UserIsAdmin
 ) : IQuery<KbChunkSearchResultDto>;

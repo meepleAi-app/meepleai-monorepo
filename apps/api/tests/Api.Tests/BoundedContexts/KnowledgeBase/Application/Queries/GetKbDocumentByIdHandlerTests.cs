@@ -41,7 +41,8 @@ public sealed class GetKbDocumentByIdHandlerTests
             Language = "it",
             DocumentCategory = "Rulebook",
             UploadedByUserId = Guid.NewGuid(),
-            FilePath = "/tmp/test.pdf"
+            FilePath = "/tmp/test.pdf",
+            IsPublic = true
         };
         var vd = new VectorDocumentEntity
         {
@@ -56,7 +57,7 @@ public sealed class GetKbDocumentByIdHandlerTests
         _dbContext.VectorDocuments.Add(vd);
         await _dbContext.SaveChangesAsync();
 
-        var query = new GetKbDocumentByIdQuery(docId, UserIsAdmin: false);
+        var query = new GetKbDocumentByIdQuery(docId, RequestingUserId: Guid.NewGuid(), UserIsAdmin: false);
 
         // Act
         var dto = await _handler.Handle(query, CancellationToken.None);
@@ -86,12 +87,13 @@ public sealed class GetKbDocumentByIdHandlerTests
             Language = "en",
             DocumentCategory = "Rulebook",
             UploadedByUserId = Guid.NewGuid(),
-            FilePath = "/tmp/broken.pdf"
+            FilePath = "/tmp/broken.pdf",
+            IsPublic = true
         };
         _dbContext.PdfDocuments.Add(pdf);
         await _dbContext.SaveChangesAsync();
 
-        var query = new GetKbDocumentByIdQuery(docId, UserIsAdmin: true);
+        var query = new GetKbDocumentByIdQuery(docId, RequestingUserId: Guid.NewGuid(), UserIsAdmin: true);
 
         var dto = await _handler.Handle(query, CancellationToken.None);
 
@@ -117,12 +119,13 @@ public sealed class GetKbDocumentByIdHandlerTests
             Language = "en",
             DocumentCategory = "Rulebook",
             UploadedByUserId = Guid.NewGuid(),
-            FilePath = "/tmp/broken.pdf"
+            FilePath = "/tmp/broken.pdf",
+            IsPublic = true
         };
         _dbContext.PdfDocuments.Add(pdf);
         await _dbContext.SaveChangesAsync();
 
-        var query = new GetKbDocumentByIdQuery(docId, UserIsAdmin: false);
+        var query = new GetKbDocumentByIdQuery(docId, RequestingUserId: Guid.NewGuid(), UserIsAdmin: false);
 
         var dto = await _handler.Handle(query, CancellationToken.None);
 
@@ -135,7 +138,7 @@ public sealed class GetKbDocumentByIdHandlerTests
     [Fact]
     public async Task Handle_WhenDocNotFound_ThrowsNotFoundException()
     {
-        var query = new GetKbDocumentByIdQuery(Guid.NewGuid(), UserIsAdmin: false);
+        var query = new GetKbDocumentByIdQuery(Guid.NewGuid(), RequestingUserId: Guid.NewGuid(), UserIsAdmin: false);
 
         var act = () => _handler.Handle(query, CancellationToken.None);
 
@@ -157,7 +160,8 @@ public sealed class GetKbDocumentByIdHandlerTests
             Language = "en",
             DocumentCategory = "Rulebook",
             UploadedByUserId = Guid.NewGuid(),
-            FilePath = "/tmp/ready.pdf"
+            FilePath = "/tmp/ready.pdf",
+            IsPublic = true
         };
         var vd = new VectorDocumentEntity
         {
@@ -172,7 +176,7 @@ public sealed class GetKbDocumentByIdHandlerTests
         _dbContext.VectorDocuments.Add(vd);
         await _dbContext.SaveChangesAsync();
 
-        var query = new GetKbDocumentByIdQuery(docId, UserIsAdmin: true);
+        var query = new GetKbDocumentByIdQuery(docId, RequestingUserId: Guid.NewGuid(), UserIsAdmin: true);
 
         // Act
         var dto = await _handler.Handle(query, CancellationToken.None);

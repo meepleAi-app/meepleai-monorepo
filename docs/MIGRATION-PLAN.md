@@ -41,8 +41,11 @@ Plus an out-of-tree archive: `.docs-archive/` (gitignored from main builds, opti
 3. Add `.docs-archive/` to `.gitignore` if going out-of-tree (or create `docs-archive` branch).
 4. Create the 3 new root dirs with stub READMEs.
 
-### Phase 1 — Archive purge (1 PR, ~100 files moved)
-**Lowest risk**: archived stuff has fewest inbound links.
+### Phase 1 — Archive purge ✅ EXECUTED 2026-05-06
+**Lowest risk**: archived stuff has fewest inbound links — confirmed by audit
+(zero incoming references from active docs to any moved path).
+
+Outcome: ~290 files moved out of `docs/` into `.docs-archive/` (in-repo).
 
 ```bash
 # From repo root

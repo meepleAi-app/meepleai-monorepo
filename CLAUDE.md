@@ -262,6 +262,17 @@ tests/Api.Tests/          # Backend test suite
 
 ## AI Assistant Rules
 
+### 🔒 Active Freezes
+
+**SP6 v2 expansion FREEZE** (issued 2026-05-06, see [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808))
+
+- ❌ NO new components under `apps/web/src/components/v2/**` using `hsl(*, 89%, 48%)` + `hsla(*, 89%, *, 0.10)` token pattern
+- ❌ NO new SP6 v2 routes (`/gamebook/**`, `/agents/**`) until A11y token redesign ([#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807) Fase 2) lands on `main-dev`
+- ❌ NO migration of legacy components to current v2 design tokens
+- ✅ ALLOWED: bugfix on existing v2 surfaces, performance, tests, i18n, docs, A11y fixes
+- 🟡 CASE-BY-CASE: bugfix that *adds* new v2 component (e.g. error boundary), hot-fix
+- A11y CI job (`Frontend - A11y E2E`) is now `continue-on-error: true` until token redesign — restore blocking when [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807) Fase 2 completes
+
 ### DDD Rules
 
 - ✅ Entities: Private setters + factory methods

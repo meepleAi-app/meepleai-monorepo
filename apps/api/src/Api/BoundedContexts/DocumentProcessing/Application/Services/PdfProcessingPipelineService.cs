@@ -167,6 +167,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                         if (!string.IsNullOrWhiteSpace(t.TranslatedText))
                         {
                             var origChunk = chunks[t.OriginalIndex];
+                            // Issue #730 / spec §5.3 forward-wiring: hierarchy fields are not yet propagated from origChunk
+                            // to the translated chunk because the upstream chunking pipeline does not currently populate them.
+                            // Once AdvancedChunkingService is wired, copy origChunk.Heading/Level/ParentChunkId/ElementType here.
                             translatedChunks.Add((
                                 new DocumentChunkInput
                                 {
@@ -595,19 +598,27 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _db.TextChunks.RemoveRange(existingChunks);
         }
 
+        // text_chunks.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
+        var resolvedGameId = await PdfGameIdResolver.ResolveAsync(_db, pdfDoc, cancellationToken)
+            .ConfigureAwait(false);
+
         var textChunkEntities = chunks
             .Select((chunk, index) => new TextChunkEntity
             {
                 Id = Guid.NewGuid(),
-                // GameId resolution: same strategy as IndexPdfCommandHandler.effectiveGameId
-                GameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
+                GameId = resolvedGameId,
                 SharedGameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfDoc.Id,
                 Content = chunk.Text,
                 ChunkIndex = index,
                 PageNumber = chunk.Page,
                 CharacterCount = chunk.Text.Length,
-                CreatedAt = now
+                CreatedAt = now,
+                // Issue #730: persist chunk hierarchy fields from chunking pipeline
+                Heading = chunk.Heading,
+                Level = chunk.Level,
+                ParentChunkId = chunk.ParentChunkId,
+                ElementType = chunk.ElementType
             })
             .ToList();
 

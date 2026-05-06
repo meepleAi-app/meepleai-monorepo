@@ -7,10 +7,18 @@ on:
       - 'docs/09-bounded-contexts/diagrams/**/*.mmd'
   workflow_dispatch: # Allow manual trigger
 
+
+# Q2 2026 Security Review (#186) P1.2 AC5: default least-privilege.
+# Job-level permissions blocks (where present) override this default.
+permissions:
+  contents: read
+
 jobs:
   generate-svgs:
     name: Generate SVG Diagrams
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # this job pushes regenerated SVGs back to the branch
 
     steps:
       - name: Checkout repository

@@ -11,6 +11,12 @@ concurrency:
   group: security-review-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+
+# Q2 2026 Security Review (#186) P1.2 AC5: default least-privilege.
+# Job-level permissions blocks (where present) override this default.
+permissions:
+  contents: read
+
 jobs:
   create-reminder-issue:
     name: Create Quarterly Security Review Issue
@@ -75,7 +81,7 @@ jobs:
             This is an automated reminder to conduct the quarterly security review.
 
             ## Review Template
-            📋 Use the template: [docs/06-security/security-review-template.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/docs/06-security/security-review-template.md)
+            📋 Use the template: [docs/security/security-review-template.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/docs/security/security-review-template.md)
 
             ## Review Scope
 
@@ -145,13 +151,13 @@ jobs:
             - [ ] Document changes
 
             ### End of Quarter: Documentation
-            - [ ] Create \`docs/06-security/${YEAR}-${QUARTER_LABEL}-security-review.md\` from template
+            - [ ] Create \`docs/security/${YEAR}-${QUARTER_LABEL}-security-review.md\` from template
             - [ ] Update \`SECURITY.md\` if needed
             - [ ] Archive security scan results
 
             ## Resources
             - [Security Review Process](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/SECURITY.md#quarterly-security-review-process)
-            - [Security Documentation](https://github.com/${context.repo.owner}/${context.repo.repo}/tree/main/docs/06-security)
+            - [Security Documentation](https://github.com/${context.repo.owner}/${context.repo.repo}/tree/main/docs/security)
             - [Security Scanning Workflow](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/.github/workflows/security-scan.yml)
 
             ## Success Criteria
@@ -163,7 +169,7 @@ jobs:
             ---
 
             **Next Review Due**: ${nextReviewDate}
-            **Automated Issue**: Created by [security-review-reminder.yml](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/.github/workflows/security-review-reminder.yml)
+            **Automated Issue**: Created by [security-review.yml](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/.github/workflows/security-review.yml)
             `;
 
             await github.rest.issues.create({

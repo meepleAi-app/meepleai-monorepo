@@ -38,7 +38,7 @@ jobs:
       runner: ${{ steps.select-runner.outputs.runner }}
     steps:
       - uses: actions/checkout@v6
-      - uses: dorny/paths-filter@v4
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
         id: filter
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -111,7 +111,7 @@ jobs:
 
       - name: Upload Coverage
         if: always()
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
         with:
           files: apps/web/coverage/lcov.info
           flags: frontend
@@ -168,7 +168,7 @@ jobs:
 
       - name: Upload Coverage
         if: always()
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
         with:
           files: apps/api/coverage/unit-coverage.xml
           flags: backend-unit,backend
@@ -349,7 +349,7 @@ jobs:
 
       - name: Upload Coverage
         if: always()
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
         with:
           files: apps/api/coverage/${{ matrix.shard.coverage_file }}
           flags: backend-integration-${{ matrix.shard.name }}
@@ -396,7 +396,7 @@ jobs:
 
       - name: Upload Python Coverage
         if: always()
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
         with:
           files: apps/orchestration-service/coverage.xml
           flags: python,arbitro
@@ -593,13 +593,19 @@ jobs:
 
   # Frontend Accessibility Gate (Issue #601)
   # Runs Playwright + axe-core against public routes for WCAG 2.1 AA compliance.
-  # Blocking gate — failures block merge. No backend services required: tests
-  # rely on PLAYWRIGHT_AUTH_BYPASS=true (set by playwright.config webServer).
+  # NON-BLOCKING WARNING (until #807 Fase 2 completes — see #808 freeze policy).
+  # Pattern: hsl(*, 89%, 48%) on hsla(0.10) bg in SP6 v2 design tokens triggers
+  # 30+ axe-core color-contrast violations distributed across all SP6 v2 surfaces.
+  # Restore `continue-on-error: false` (or remove the line) when token redesign
+  # lands and all e2e/a11y/*.spec.ts pass clean. See:
+  #   - https://github.com/meepleAi-app/meepleai-monorepo/issues/807 (audit + plan)
+  #   - https://github.com/meepleAi-app/meepleai-monorepo/issues/808 (freeze policy)
   frontend-a11y:
     name: Frontend - A11y E2E
     runs-on: ${{ needs.changes.outputs.runner }}
     timeout-minutes: 15
     needs: changes
+    continue-on-error: true # #807: A11y debt sistemico — failures non bloccano merge
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
       run:

@@ -16,7 +16,7 @@ RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.t
 
 # Pre-download ML model in builder to avoid cold-start delay
 ENV HF_HOME=/model-cache
-RUN pip install --no-cache /app/wheels/* \
+RUN pip install --no-cache-dir /app/wheels/* \
     && python -c "from sentence_transformers import CrossEncoder; CrossEncoder('BAAI/bge-reranker-v2-m3')"
 
 # Production stage
@@ -37,7 +37,7 @@ COPY --from=builder /app/wheels /wheels
 COPY --from=builder /app/requirements.txt .
 
 # Install dependencies from wheels (faster, no compilation)
-RUN pip install --no-cache /wheels/*
+RUN pip install --no-cache-dir /wheels/*
 
 # Copy pre-downloaded model from builder
 COPY --from=builder --chown=reranker:reranker /model-cache /home/reranker/.cache/huggingface

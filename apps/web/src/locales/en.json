@@ -1043,12 +1043,24 @@
         "totalLabel": "{count, plural, one {1 question total} other {# questions total}}"
       },
       "categories": {
-        "all": { "label": "All" },
-        "account": { "label": "Account & Login" },
-        "games": { "label": "Games & Library" },
-        "ai": { "label": "AI & Chat" },
-        "privacy": { "label": "Privacy & Data" },
-        "billing": { "label": "Billing & Alpha" }
+        "all": {
+          "label": "All"
+        },
+        "account": {
+          "label": "Account & Login"
+        },
+        "games": {
+          "label": "Games & Library"
+        },
+        "ai": {
+          "label": "AI & Chat"
+        },
+        "privacy": {
+          "label": "Privacy & Data"
+        },
+        "billing": {
+          "label": "Billing & Alpha"
+        }
       },
       "popularSection": {
         "title": "Quick answers",
@@ -1545,6 +1557,83 @@
           "subtitle": "Something went wrong. Please try again in a moment.",
           "cta": "Retry"
         }
+      }
+    },
+    "sessions": {
+      "metadata": {
+        "title": "My sessions — MeepleAI",
+        "description": "Your game session history: outcomes, scores and session diaries."
+      },
+      "hero": {
+        "title": "Your sessions",
+        "subtitle": "{count, plural, =0 {No sessions yet} =1 {1 session logged} other {# sessions logged}}",
+        "ctaNew": "Log session",
+        "ctaLive": "Start live",
+        "stats": {
+          "sessions": "sessions",
+          "wins": "wins",
+          "totalTime": "total",
+          "lastSession": "last"
+        }
+      },
+      "filters": {
+        "status": {
+          "all": "All",
+          "active": "Active",
+          "completed": "Completed",
+          "abandoned": "Abandoned"
+        },
+        "searchPlaceholder": "Search session or game…",
+        "searchAriaLabel": "Search your sessions",
+        "view": {
+          "label": "View",
+          "list": "List",
+          "grid": "Grid"
+        }
+      },
+      "card": {
+        "outcome": {
+          "won": "Won",
+          "lost": "Lost",
+          "tie": "Tie"
+        },
+        "status": {
+          "live": "Live",
+          "paused": "Paused",
+          "abandoned": "Abandoned"
+        },
+        "playerCount": "{count} players",
+        "duration": "{duration}",
+        "scoreLabel": "Score: {score}",
+        "winnerLabel": "Winner",
+        "turnLabel": "Turn {turn}",
+        "resumeCta": "Resume",
+        "resumeOrArchiveCta": "Resume or archive",
+        "openAriaLabel": "Open {gameName} session",
+        "scoreOverflowTemplate": "+{count} more"
+      },
+      "empty": {
+        "title": "No sessions yet",
+        "description": "Log your first play or start a live session to track turns, scores and session diaries.",
+        "ctaStart": "Log first session",
+        "ctaLive": "Start live"
+      },
+      "filteredEmpty": {
+        "title": "No sessions match your filters",
+        "description": "Try removing some constraints or changing the period.",
+        "ctaClear": "Reset filters"
+      },
+      "loading": {
+        "ariaLabel": "Loading sessions…"
+      },
+      "error": {
+        "title": "Error loading sessions",
+        "description": "Unable to retrieve sessions. Check your connection.",
+        "ctaRetry": "Retry"
+      },
+      "a11y": {
+        "resultsLabel": "Sessions list",
+        "countTemplate": "{count, plural, =0 {No sessions} =1 {1 session} other {# sessions}}"
       }
     },
     "players": {
@@ -2045,6 +2134,205 @@
           "backLabel": "Back to catalog"
         }
       }
+    },
+    "sessionLive": {
+      "metadata": {
+        "title": "Live session — MeepleAI",
+        "description": "Real-time game session."
+      },
+      "topBar": {
+        "sessionTitleAriaLabel": "Session: {name}",
+        "turnLabel": "{count, plural, =0 {Start} =1 {Turn 1/{total}} other {Turn #/{total}}}",
+        "statusInProgress": "In progress",
+        "statusPaused": "Paused",
+        "pauseCta": "Pause",
+        "resumeCta": "Resume",
+        "endgameCta": "End session",
+        "exitAriaLabel": "Exit session"
+      },
+      "turnIndicator": {
+        "currentTurnAriaLabel": "Turn {current} of {total}",
+        "activePlayerLabel": "{playerName}",
+        "yourTurnLabel": "Your turn",
+        "waitingLabel": "Wait for your turn"
+      },
+      "roster": {
+        "title": "Players",
+        "playerCountTemplate": "{count, plural, =0 {No players} =1 {1 player} other {# players}}",
+        "onlineLabel": "Online",
+        "offlineLabel": "Offline",
+        "kickAriaLabel": "Kick {playerName}",
+        "roleSpectator": "Spectator",
+        "rolePlayer": "Player",
+        "roleHost": "Host"
+      },
+      "scoring": {
+        "title": "Scores",
+        "scoreLabel": "Score: {score}",
+        "winnerLabel": "Winner",
+        "myScoreLabel": "Your score",
+        "incrementAriaLabel": "Increase {playerName}'s score",
+        "decrementAriaLabel": "Decrease {playerName}'s score",
+        "scoreInputAriaLabel": "Enter score for {playerName}",
+        "playerCount": "{count, plural, =0 {No players} =1 {1 player} other {# players}}"
+      },
+      "actionLog": {
+        "title": "Events",
+        "emptyLabel": "No events yet.",
+        "typeScore": "Score",
+        "typeTool": "Tool",
+        "typeAgent": "Agent",
+        "typeChat": "Chat",
+        "typePhoto": "Photo",
+        "typeEvent": "Event",
+        "timestampAriaLabel": "Events sorted chronologically, most recent at top"
+      },
+      "loading": {
+        "ariaLabel": "Loading live session…"
+      },
+      "error": {
+        "title": "Unable to load session",
+        "description": "An error occurred. Please try again.",
+        "ctaRetry": "Try again"
+      },
+      "notFound": {
+        "title": "Session not found",
+        "description": "The requested session does not exist or you do not have access.",
+        "ctaBack": "Back to sessions"
+      },
+      "connectionLost": {
+        "retryCount": "{count, plural, =1 {attempt 1/5} other {attempt #/5}}",
+        "reconnecting": "Connection lost, retrying...",
+        "degradedPolling": "Updates every 5s — click to retry real-time",
+        "failed": "Session is busy or there was an error — try again in 60s",
+        "manualRetryLabel": "Retry connection"
+      },
+      "a11y": {
+        "viewLabel": "Live session view"
+      },
+      "rightColumn": {
+        "tabsAriaLabel": "Session panels",
+        "tabTools": "Tools",
+        "tabChat": "Chat",
+        "tabNotes": "Notes"
+      },
+      "tools": {
+        "title": "Tools",
+        "toolDiceLabel": "Dice",
+        "toolTimerLabel": "Timer",
+        "toolCardLabel": "Card",
+        "executeAriaTemplate": "Execute {toolName}",
+        "disabledSpectatorTooltip": "Only players can use tools"
+      },
+      "chat": {
+        "title": "Chat",
+        "inputAriaLabel": "Type a message",
+        "sendAriaLabel": "Send message",
+        "visibilityPrivate": "Private",
+        "visibilityShared": "Shared",
+        "emptyMessage": "No messages yet."
+      },
+      "notes": {
+        "title": "Notes",
+        "inputAriaLabel": "Write a note",
+        "addAriaLabel": "Add note",
+        "visibilityPrivate": "Private",
+        "visibilityShared": "Shared",
+        "emptyMessage": "No notes yet."
+      },
+      "pauseOverlay": {
+        "title": "Session paused",
+        "resumeCta": "Resume",
+        "closeCta": "Close",
+        "closeAriaLabel": "Close pause overlay"
+      },
+      "endgameDialog": {
+        "title": "Session ended",
+        "winnerLabel": "Winner",
+        "acknowledgeCta": "Got it",
+        "viewSummaryCta": "View summary"
+      }
+    },
+    "sessionSummary": {
+      "hero": {
+        "title": "Session summary",
+        "podiumLabel": "Final podium",
+        "tiedBanner": "{count, plural, =2 {🤝 Tie between {names}} other {🤝 {count}-way tie: {names}}}",
+        "confettiAriaLabel": "Victory celebration animation",
+        "confettiSkippedLabel": "Victory medal"
+      },
+      "kpi": {
+        "duration": "Duration",
+        "players": "Players",
+        "turns": "Turns",
+        "avgRoundTime": "Average turn time",
+        "totalScore": "Total score"
+      },
+      "scoring": {
+        "title": "Detailed scoring",
+        "headerName": "Player",
+        "headerScore": "Score",
+        "headerRank": "Rank",
+        "tied": "Tied"
+      },
+      "connectionBar": {
+        "title": "Game timeline",
+        "eventLabel": "Event",
+        "emptyEvent": "No events recorded"
+      },
+      "achievements": {
+        "title": "Achievements",
+        "unlockedAt": "Unlocked on {date}",
+        "locked": "Still locked",
+        "empty": "No achievements unlocked in this session"
+      },
+      "diary": {
+        "title": "Session diary",
+        "filterAll": "All",
+        "filterScore": "Score",
+        "filterEvent": "Events",
+        "filterChat": "Chat",
+        "filterPhoto": "Photos",
+        "empty": "No events match this filter",
+        "expand": "Expand turn {turn}",
+        "collapse": "Collapse turn {turn}"
+      },
+      "photos": {
+        "title": "Session photos",
+        "empty": "No photos in this session",
+        "viewLarger": "Open photo"
+      },
+      "chatHighlights": {
+        "title": "Chat highlights",
+        "empty": "No highlights captured"
+      },
+      "share": {
+        "title": "Share summary",
+        "previewLight": "Light theme",
+        "previewDark": "Dark theme",
+        "copyLink": "Copy link",
+        "shareTwitter": "Share on Twitter",
+        "shareInstagram": "Share on Instagram",
+        "shareWhatsApp": "Share on WhatsApp",
+        "downloadPng": "Download PNG",
+        "downloadPngDisabled": "Coming soon"
+      },
+      "playAgain": {
+        "title": "Ready for a rematch?",
+        "cta": "Play again with same players",
+        "description": "Same game, same players — agent already loaded"
+      },
+      "states": {
+        "notCompleted": {
+          "title": "Session in progress",
+          "description": "This session has not been completed yet.",
+          "continueLive": "Go to live session"
+        },
+        "notFound": {
+          "title": "Session not found",
+          "backToSessions": "Back to sessions"
+        }
+      }
     }
   },
   "privateGames": {
@@ -2136,7 +2424,107 @@
       "pickerError": "Could not load games. Please try again.",
       "pickerNoResults": "No games found for \"{search}\".",
       "pickerNoGames": "No games available yet.",
-      "backToPicker": "Change game"
+      "backToPicker": "Change game",
+      "wizard": {
+        "meta": {
+          "title": "Upload manual | MeepleAI",
+          "description": "Photograph your board game manual step by step"
+        },
+        "stepIndicator": {
+          "back": "Back",
+          "stepGame": "Game",
+          "stepPhoto": "Photo",
+          "stepIndex": "Index"
+        },
+        "step1": {
+          "title": "Which game do you want to index?",
+          "subtitle": "Pick from the shared catalog or search a new one.",
+          "searchPlaceholder": "Search a game...",
+          "tabCatalog": "Catalog",
+          "tabBgg": "BGG",
+          "tabBadge": "({count})",
+          "continueButton": "Continue",
+          "searchInfo": "No results in catalog. Try BGG ↑",
+          "bggLoadingTitle": "Searching BoardGameGeek...",
+          "bggLoadingSubtitle": "This may take a few seconds",
+          "noResultsTitle": "\"{query}\" not found",
+          "noResultsSubtitle": "Three ways to continue:",
+          "actionCardCreate": "Create new game",
+          "actionCardCreateSubtitle": "Manual not in any database",
+          "actionCardBgg": "Search on BoardGameGeek",
+          "actionCardBggSubtitle": "Official source with full metadata",
+          "actionCardPrivate": "Index for me only",
+          "actionCardPrivateSubtitle": "Private — not shared with the community"
+        },
+        "step2": {
+          "title": "Photograph the manual",
+          "cameraAria": "Camera viewfinder",
+          "shutterAria": "Take photo",
+          "closeAria": "Close camera",
+          "galleryAria": "Open gallery",
+          "doneAria": "Done — go to indexing",
+          "counter": "{count, plural, =0 {0 of {max}} one {1 of {max}} other {{count} of {max}}}",
+          "hintReady": "✓ Page detected",
+          "hintLowLight": "☁️ Move closer to light",
+          "hintFailed": "✗ Edges not detected",
+          "lightMeterAria": "Light meter",
+          "lightMeterLow": "LOW",
+          "lightMeterMedium": "MEDIUM",
+          "lightMeterOk": "OK",
+          "deniedTitle": "Camera blocked",
+          "deniedSubtitle": "MeepleAI does not have camera access. Enable permissions in your system settings.",
+          "deniedOpenSettings": "Open settings",
+          "deniedGallery": "Upload from gallery",
+          "deniedHint": "💡 Alternatively, you can upload photos already taken.",
+          "unsupportedTitle": "Camera not supported",
+          "unsupportedSubtitle": "Your browser does not support camera access. Upload photos from gallery.",
+          "desktopDropTitle": "Drop photos here",
+          "desktopDropSubtitle": "On desktop you can also upload photos already taken.",
+          "desktopDropFormats": "Supported formats: JPG, PNG, HEIC · Max {max} files",
+          "desktopDropBrowse": "Browse files",
+          "desktopDropSendToPhone": "Send link to phone"
+        },
+        "step3": {
+          "progressTitle": "Indexing…",
+          "progressSubtitle": "You can keep your phone in your pocket.",
+          "progressLabel": "{processedPages, plural, =0 {0 of {totalPages}} one {1 of {totalPages}} other {{processedPages} of {totalPages}}}",
+          "partialTitle": "Almost ready",
+          "partialSubtitle": "{ok} pages ok, {retake} to retake for better quality.",
+          "completeTitle": "Manual ready!",
+          "completeSubtitle": "{total} pages indexed, {high} at high confidence.",
+          "lowConfidenceLabel": "Low confidence — retake suggested",
+          "retakeAria": "Retake page {pageNumber}",
+          "retakeButton": "📷 Retake",
+          "retakeBatch": "{count, plural, one {📷 Retake # page} other {📷 Retake # pages}}",
+          "skipPartial": "Skip — use as-is",
+          "savePlain": "Save and stop",
+          "startSession": "🎯 Start session",
+          "cancelButton": "Cancel"
+        },
+        "confidence": {
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low",
+          "processing": "Processing"
+        },
+        "offline": {
+          "bannerTitle": "Connection lost",
+          "bannerSubtitle": "Will resume automatically when reconnected.",
+          "retryNow": "Retry now",
+          "retryAttempt": "Attempt {current}/5 in {seconds}s",
+          "cancel": "Cancel",
+          "failedTerminalTitle": "Indexing interrupted",
+          "failedTerminalSubtitle": "Retry manually when you have a stable connection.",
+          "failedTerminalRetry": "Retry",
+          "failedTerminalChange": "Change photos"
+        },
+        "cancelModal": {
+          "title": "Cancel indexing?",
+          "body": "You have already taken {count, plural, one {# page} other {# pages}}. If you cancel now, you'll have to start over.",
+          "continue": "Continue indexing",
+          "confirm": "Yes, cancel"
+        }
+      }
     },
     "play": {
       "loading": "Loading...",
@@ -2149,6 +2537,56 @@
       "toggleDistanceReading": "Distance reading mode",
       "translationUnavailable": "Translation not available",
       "retry": "Retry"
+    },
+    "index": {
+      "hero": {
+        "kicker": "📚 Gamebooks",
+        "title": "Your manuals",
+        "subtitle": "Photographed manuals ready for the table",
+        "kpiTotalGamebooks": "manuals",
+        "kpiTotalSessions": "this month",
+        "kpiActiveAgents": "translations",
+        "ctaAddManual": "Add manual"
+      },
+      "quota": {
+        "title": "Translation quota",
+        "usedCount": "{used, plural, =0 {0 of {total}} one {1 of {total}} other {{used} of {total}}}",
+        "resetIn": "Resets on {date}",
+        "softWarning": "You're about to exhaust your monthly quota",
+        "hardLimit": "Quota reached — buy credits to continue",
+        "upgrade": "Buy credits"
+      },
+      "card": {
+        "statusReady": "Ready",
+        "statusIndexing": "Indexing…",
+        "statusError": "Error · Retry",
+        "pagesCount": "{pages, plural, =0 {0 pages} one {1 page} other {{pages} pages}}",
+        "pagesProgress": "{indexed}/{total} pgs",
+        "chunksCount": "{count} chunks",
+        "qaCount": "{count} questions",
+        "sessionsCount": "{count} sessions",
+        "indexingProgress": "Indexing… {indexed}/{total}",
+        "errorRetry": "Retry",
+        "openGamebook": "Open gamebook"
+      },
+      "section": {
+        "title": "Your gamebooks",
+        "count": "({count})"
+      },
+      "empty": {
+        "title": "No gamebooks yet",
+        "description": "Photograph your first gamebook to start playing in your language.",
+        "cta": "📷 Capture your first manual",
+        "howItWorks": "How it works →"
+      },
+      "loading": {
+        "label": "Loading gamebooks…"
+      },
+      "error": {
+        "title": "Could not load library",
+        "description": "Connection unstable. Try again in a moment.",
+        "retry": "🔄 Retry"
+      }
     }
   }
 }

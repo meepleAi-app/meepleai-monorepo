@@ -352,3 +352,34 @@ describe('ChatMessageList — streaming characterization', () => {
     expect(status).toHaveTextContent('Collegamento in corso...');
   });
 });
+
+// ── Tests: Typing indicator on assistant placeholder bubble ───────────────────
+
+describe('ChatMessageList — typing indicator on assistant placeholder', () => {
+  it('shows typing indicator on empty assistant message while isSending', () => {
+    const messages: ChatMessageItem[] = [
+      { id: 'u-1', role: 'user', content: 'Q?' },
+      { id: 'a-1', role: 'assistant', content: '' },
+    ];
+    render(<ChatMessageList {...defaultProps} messages={messages} isSending />);
+    expect(screen.getByTestId('chat-typing-indicator')).toBeInTheDocument();
+  });
+
+  it('hides typing indicator once the assistant message has content', () => {
+    const messages: ChatMessageItem[] = [
+      { id: 'u-1', role: 'user', content: 'Q?' },
+      { id: 'a-1', role: 'assistant', content: 'Risposta in arrivo' },
+    ];
+    render(<ChatMessageList {...defaultProps} messages={messages} isSending />);
+    expect(screen.queryByTestId('chat-typing-indicator')).toBeNull();
+  });
+
+  it('does not show typing indicator when isSending is false', () => {
+    const messages: ChatMessageItem[] = [
+      { id: 'u-1', role: 'user', content: 'Q?' },
+      { id: 'a-1', role: 'assistant', content: '' },
+    ];
+    render(<ChatMessageList {...defaultProps} messages={messages} isSending={false} />);
+    expect(screen.queryByTestId('chat-typing-indicator')).toBeNull();
+  });
+});

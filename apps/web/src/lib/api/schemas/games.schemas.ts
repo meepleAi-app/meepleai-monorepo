@@ -56,6 +56,10 @@ export type GamesArrayResponse = z.infer<typeof GamesArrayResponseSchema>;
 // ========== Game Sessions ==========
 
 export const SessionPlayerDtoSchema = z.object({
+  // Gate B (Wave D.2): id field present when backend SessionTracking returns
+  // participant IDs alongside player display info. Optional for backward compat
+  // with older responses that omit the field.
+  id: z.string().optional(),
   playerName: z.string().min(1),
   playerOrder: z.number().int().nonnegative(),
   color: z.string().nullable(),

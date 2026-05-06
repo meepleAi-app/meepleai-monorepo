@@ -79,7 +79,7 @@
 # These files require security-aware review
 /.github/workflows/security-scan.yml    @meepleAi-app
 /SECURITY.md                            @meepleAi-app
-/docs/06-security/                      @meepleAi-app
+/docs/security/                         @meepleAi-app
 
 # ============================================
 # Documentation

@@ -210,12 +210,3 @@ internal partial class UploadPdfCommandHandler
         });
     }
 }
-
-// Helper class for document chunk input
-internal class DocumentChunkInput
-{
-    public required string Text { get; init; }
-    public int Page { get; init; }
-    public int CharStart { get; init; }
-    public int CharEnd { get; init; }
-}

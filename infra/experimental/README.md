@@ -263,5 +263,5 @@ Nessuno ancora (primo POC).
 
 - Issue #936 - Infisical POC
 - `../secrets/README.md` - Current secrets management (Docker secrets)
-- `docs/06-security/secrets-management.md`
+- `docs/security/secrets-management.md`
 - Infisical docs: https://infisical.com/docs

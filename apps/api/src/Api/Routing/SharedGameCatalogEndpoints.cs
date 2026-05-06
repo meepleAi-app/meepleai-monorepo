@@ -16,6 +16,7 @@ internal static class SharedGameCatalogEndpoints
         SharedGameCatalogContributorEndpoints.Map(group);
         SharedGameCatalogBadgeEndpoints.Map(group);
         SharedGameCatalogTrendingEndpoints.Map(group);
+        SharedGameCatalogDiscoverEndpoints.Map(group); // Wave 3 Phase 1 (#805): /discover quick-win endpoints
         SharedGameCatalogWizardEndpoints.Map(group); // Issue #4139: PDF Wizard endpoints
 
         return group;

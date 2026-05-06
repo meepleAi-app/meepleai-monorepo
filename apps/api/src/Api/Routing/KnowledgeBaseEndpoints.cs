@@ -9,6 +9,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunkById;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbDocumentById;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetRecentKbDocs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchKbChunks;
 using Api.Extensions;
 using Api.Helpers;
@@ -896,6 +897,23 @@ internal static class KnowledgeBaseEndpoints
 
     private static void MapKbDocumentEndpoints(RouteGroupBuilder group)
     {
+        // Wave 3 Phase 1 (#805 / PR #732 §4.3.5): /discover "Recent KB docs" rail.
+        // Registered before the {id:guid} route so the literal "recent" segment is
+        // matched first; the :guid constraint also disambiguates at the matcher
+        // level but explicit ordering keeps intent obvious (mirror /agents/recent).
+        group.MapGet("/kb-docs/recent", HandleGetRecentKbDocs)
+            .WithName("GetRecentKbDocs")
+            .RequireSession()
+            .WithTags("Discover", "KnowledgeBase")
+            .WithSummary("Get recently indexed KB documents")
+            .WithDescription(
+                "Returns the most recently indexed KB documents (ProcessingState == Ready) "
+                + "sorted by lastIngestedAt DESC. Powers the SP4 /discover \"Recent KB docs\" "
+                + "rail. Cache: 5min via HybridCache. Wave 3 Phase 1 (Issue #805 / PR #732 §4.3.5).")
+            .Produces<DiscoverItemsEnvelope<RecentKbDocDto>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status400BadRequest);
+
         // Issue #730: G4 single doc metadata
         group.MapGet("/kb-docs/{id:guid}", HandleGetKbDocumentById)
             .WithName("GetKbDocumentById")
@@ -941,6 +959,28 @@ internal static class KnowledgeBaseEndpoints
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    /// <summary>
+    /// Wave 3 Phase 1 (PR #732 §4.3.5 / Issue #805): handler for
+    /// <c>GET /api/v1/kb-docs/recent</c>. Clamps the <c>limit</c> query
+    /// parameter to <c>[1, 50]</c> with a default of 10. Returns a
+    /// <c>{ items: RecentKbDocDto[] }</c> envelope per PR #732 §3.4 empty-state
+    /// contract (200 with empty array rather than 404 / 204).
+    /// </summary>
+    private static async Task<IResult> HandleGetRecentKbDocs(
+        [FromQuery] int? limit,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var safeLimit = limit.GetValueOrDefault(10);
+        if (safeLimit < 1) safeLimit = 10;
+        if (safeLimit > 50) safeLimit = 50;
+
+        var query = new GetRecentKbDocsQuery(safeLimit);
+        var items = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+
+        return Results.Ok(new DiscoverItemsEnvelope<RecentKbDocDto>(items));
     }
 
     private static async Task<IResult> HandleGetKbDocumentById(

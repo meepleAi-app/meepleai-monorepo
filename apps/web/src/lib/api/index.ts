@@ -71,6 +71,7 @@ import {
   createAgentDocumentsClient,
   createInfrastructureClient,
   createSessionFlowClient,
+  createDiscoverClient,
   type AuthClient,
   type GamesClient,
   type SessionsClient,
@@ -122,6 +123,7 @@ import {
   type AgentDocumentsClient,
   type InfrastructureClient,
   type SessionFlowClient,
+  type DiscoverClient,
 } from './clients';
 import { HttpClient, type HttpClientConfig } from './core/httpClient';
 
@@ -363,6 +365,9 @@ export interface ApiClient {
   /** Session Flow v2.1 — lifecycle, turns, scores, diary */
   sessionFlow: SessionFlowClient;
 
+  /** Discover dashboard — community discovery composite endpoint (Issue #728) */
+  discover: DiscoverClient;
+
   /** Generic DELETE helper (used in some legacy tests) */
   delete: (path: string) => Promise<void>;
 }
@@ -464,6 +469,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     agentDocuments: createAgentDocumentsClient({ httpClient }), // User agent document selection
     infrastructure: createInfrastructureClient({ httpClient }), // AI Infrastructure Dashboard
     sessionFlow: createSessionFlowClient({ httpClient }), // Session Flow v2.1
+    discover: createDiscoverClient({ httpClient }), // Discover dashboard (Issue #728)
     delete: (path: string) => httpClient.delete(path),
   };
 

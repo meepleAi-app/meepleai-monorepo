@@ -143,3 +143,6 @@ export * from './ownership.schemas';
 
 // Agent Documents schemas (user-scoped document selection)
 export * from './agent-documents.schemas';
+
+// Discover dashboard schemas (Issue #728)
+export * from './discover.schemas';

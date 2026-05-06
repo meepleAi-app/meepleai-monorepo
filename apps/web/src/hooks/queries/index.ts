@@ -233,6 +233,9 @@ export {
   snapshotKeys,
 } from './useSessionSnapshots';
 
+// Discover dashboard (Issue #728)
+export { useDiscover, discoverKeys } from './useDiscover';
+
 // Re-export from @tanstack/react-query for convenience
 export {
   useQuery,

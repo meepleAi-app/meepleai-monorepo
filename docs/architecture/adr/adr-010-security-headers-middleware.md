@@ -354,7 +354,7 @@ public class SecurityHeadersMiddleware
 12. ✅ OWASP ZAP security scan
 
 ### Phase 4: Documentation (Sprint 1)
-13. ✅ docs/security/security-headers.md (pending restoration — see #745)
+13. ✅ docs/security/security-headers.md
 14. ✅ Update SECURITY.md
 15. ✅ API documentation
 16. ✅ This ADR

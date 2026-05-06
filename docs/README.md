@@ -24,27 +24,33 @@
 
 ```
 docs/
-├── architecture/             # ADRs, DDD, diagrams, system overview
-├── development/              # Developer guides, git workflow, secrets
-├── api/                      # API reference, RAG system docs
-├── deployment/               # Deployment, infrastructure, secrets, monitoring
-├── testing/                  # Testing strategy (backend, frontend, e2e, perf)
-├── security/                 # Security documentation, OWASP, vulnerabilities
-├── frontend/                 # Frontend architecture, components, dashboard
-├── bounded-contexts/         # DDD Bounded Contexts guides
-├── user-guides/              # Admin guides, user flows, gap analysis
-├── migrations/               # Migration guides (dashboard v1→v2)
-├── for-claude/               # Audience-segmented stub (Phase 0 of reorg)
-├── for-developers/           # Audience-segmented stub (Phase 0 of reorg)
-├── for-users/                # Wikipedia-style end-user wiki (Phase 0+5 of reorg)
-└── templates/                # Documentation templates
+├── architecture/             # ADRs (sacred, append-only) + diagrams
+│   ├── adr/                  # 30 numbered architecture decisions
+│   └── diagrams/             # Mermaid system diagrams
+├── api/rag/                  # RAG concept docs (HOW-IT-WORKS) — Scalar UI is API SSOT
+├── development/              # README + snapshot-seed-workflow + git-workflow
+├── deployment/               # 5 critical deploy/CI/CD guides
+├── operations/               # operations-manual.md (production runbook)
+├── security/                 # OWASP + DPIA + Q1/Q2 reviews + iac-scans
+├── testing/                  # README + 1 patterns doc per area (backend/frontend/e2e)
+├── frontend/                 # meeple-card-design-tokens + v2-migration-matrix (referenced from CLAUDE.md)
+├── superpowers/              # 4 active design specs + 1 in-flight plan
+├── for-claude/               # 🆕 Audience root (Phase 0)
+├── for-developers/           # 🆕 Audience root (Phase 0)
+├── for-users/                # 🆕 Wikipedia-style user wiki (Phase 0+5)
+└── templates/                # 1 template
 
 .docs-archive/                # Out-of-tree (since Phase 1): historical
                               # epics, sessions, PDCA, roadmap, research,
-                              # evaluation-reports, archived sprint specs.
-                              # Read-only history, no longer referenced from
-                              # active docs.
+                              # archived sprint specs. Read-only history,
+                              # no incoming references from active docs.
 ```
+
+**Phase 2 outcome (2026-05-06)**: 670 → ~120 files, 26 → 13 top-dirs.
+Removed: code-mirror docs (BC docs duplicated in `apps/api/.../BoundedContexts/{X}/README.md`),
+auto-generated diagrams (.png/.svg regen via `.github/workflows/generate-diagrams.yml`
+from `.mmd` source), screenshots/mockups (process artifacts), dead single-file folders,
+inactive specs/plans. Recovery via `git log --all --diff-filter=D --name-only`.
 
 > **Reorganization in progress.** Active docs are migrating to
 > `for-claude/` / `for-developers/` / `for-users/` — see
@@ -264,5 +270,5 @@ export async function askQuestion(question: string, gameId: string): Promise<Ans
 
 ---
 
-**Last Updated**: 2026-05-06 (Phase 1 of [reorganization](./MIGRATION-PLAN.md))
+**Last Updated**: 2026-05-06 (Phase 2 of [reorganization](./MIGRATION-PLAN.md) — aggressive prune)
 **Maintainer**: Documentation Team

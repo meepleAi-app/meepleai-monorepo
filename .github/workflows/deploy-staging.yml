@@ -138,6 +138,7 @@ jobs:
           fetch-depth: 0  # Full history needed to compare against github.event.before on merge commits
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
           # PDFs are managed via S3 blob storage, not git
+          # data/rulebook/golden/ (~52K) IS included: Api.csproj embeds these JSON fixtures (ADR-051)
           sparse-checkout: |
             apps/
             infra/
@@ -145,6 +146,7 @@ jobs:
             tests/
             scripts/
             packages/
+            data/rulebook/golden/
           sparse-checkout-cone-mode: true
 
       # IMPORTANT: explicitly set `base` to github.event.before for push events.
@@ -222,9 +224,11 @@ jobs:
         with:
           ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
+          # data/rulebook/golden/ (~52K) IS included: Api.csproj embeds these JSON fixtures (ADR-051)
           sparse-checkout: |
             apps/
             .github/
+            data/rulebook/golden/
           sparse-checkout-cone-mode: true
 
       - name: Verify CI passed on this commit
@@ -300,9 +304,11 @@ jobs:
         with:
           ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
+          # data/rulebook/golden/ (~52K) IS included: Api.csproj embeds these JSON fixtures (ADR-051)
           sparse-checkout: |
             apps/
             .github/
+            data/rulebook/golden/
           sparse-checkout-cone-mode: true
 
       - name: Generate Version
@@ -372,7 +378,7 @@ jobs:
         if: needs.detect-changes.outputs.deploy_api == 'true'
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
         with:
-          context: ./apps/api
+          context: .
           file: ./apps/api/src/Api/Dockerfile
           push: true
           tags: ${{ steps.meta-api.outputs.tags }}
@@ -396,9 +402,13 @@ jobs:
           platforms: linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          # Note: No environment build-args. NODE_ENV is set in Dockerfile,
-          # NEXT_PUBLIC_ENV has no ARG in Dockerfile (was silently ignored).
-          # Environment config is injected at runtime via compose files.
+          # NEXT_PUBLIC_* are baked into JS bundle at build time by Next.js.
+          # Without these args the Dockerfile defaults to http://localhost:* and
+          # client-side OAuth/API calls hit smartphone localhost (broken).
+          build-args: |
+            NEXT_PUBLIC_API_BASE=https://meepleai.app
+            NEXT_PUBLIC_APP_URL=https://meepleai.app
+            NEXT_PUBLIC_SITE_URL=https://meepleai.app
 
       - name: Build Summary
         run: |
@@ -613,7 +623,13 @@ jobs:
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
-            cd /opt/meepleai/repo/infra
+            # Sync /opt/meepleai/repo to the deploy SHA so compose files
+            # match the workflow context (compose.traefik.yml, etc.)
+            cd /opt/meepleai/repo
+            git fetch origin main-staging
+            git reset --hard ${{ env.DEPLOY_SHA }}
+            echo "✅ Repo synced to $(git rev-parse --short HEAD)"
+            cd infra
 
             # Pre-deploy port cleanup — kill any stale process holding :8080
             # (see memory: feedback_staging_stale_api_host_process)

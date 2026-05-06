@@ -86,6 +86,13 @@ Expected: JSON body with `"role":"superadmin"`, `"email":"badsworm@gmail.com"`.
 **Files:**
 - No code changes (Phase 1 is workaround only)
 
+**⚠️ Sequencing note vs T7**:
+The S3 copy created in this task lives at `pdf_uploads/{pdfId}/{pdfId}_*` — exactly where the **buggy** retrieve code (`RetrieveAsync(fileId, fileId)`) looks. It works precisely because it patches the runtime symptom of the bug while the bug is still active.
+
+After T7 merges and staging redeploys with the fix, retrieve will use `(fileId, gameId)` and look at `pdf_uploads/{realGameId}/{pdfId}_*` (the original save path). The T2 workaround S3 object becomes inert at that point — orphaned but harmless. Rules.pdf indexing will continue to work because the original save path is preserved and the new code finds it correctly.
+
+**Order recommendation**: complete T2 → T6 entirely (smoke validated), then run T7 in a follow-up session. If T7 lands while T2 is in flight, re-trigger retry after redeploy (Step 2.3 + 2.4).
+
 - [ ] **Step 2.1: Verify Rules.pdf is currently stuck**
 
 Run:
@@ -238,12 +245,32 @@ ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69 \
     -d "{\"gameId\":\"94e99e38-1a5a-499c-89a9-2ea66173f63e\",\"agentType\":\"Tutor\",\"name\":\"Tutor Nanolith\",\"documentIds\":[\"808b83ec-8e93-430e-95a8-c4918b2dab03\",\"b680bc20-ef11-4a73-acd0-36f919e2533b\"]}" | head -20'
 ```
 
-- [ ] **Step 3.3: Verify Tutor agent persisted with sources**
+- [ ] **Step 3.2b: Extract Tutor agent id**
 
-Run (replace `TUTOR_AGENT_ID` with the ID from previous step):
+Run:
 ```bash
 ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69 \
-  'curl -s -b /tmp/cookies.txt "http://localhost:8080/api/v1/agents/TUTOR_AGENT_ID" | python3 -m json.tool'
+  'curl -s -b /tmp/cookies.txt "http://localhost:8080/api/v1/agents?gameId=94e99e38-1a5a-499c-89a9-2ea66173f63e" \
+    | python3 -c "import json,sys; d=json.load(sys.stdin); agents=d if isinstance(d,list) else d.get(\"agents\",[]); 
+        [print(a[\"id\"]) for a in agents if a.get(\"agentType\",\"\").lower()==\"tutor\"]" | head -1' \
+  | tee /tmp/tutor_agent_id.txt
+```
+
+Expected: a UUID printed on one line. Save it to your local shell as `TUTOR_AGENT_ID=$(cat /tmp/local_tutor.txt)` if running follow-ups locally; or reference `$(cat /tmp/tutor_agent_id.txt)` inline.
+
+For inline reuse on the staging server, embed the substitution inside ssh:
+
+```bash
+TUTOR_AGENT_ID=$(ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69 'cat /tmp/tutor_agent_id.txt' | tr -d '\r\n')
+echo "TUTOR_AGENT_ID=$TUTOR_AGENT_ID"
+```
+
+- [ ] **Step 3.3: Verify Tutor agent persisted with sources**
+
+Run:
+```bash
+ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69 \
+  "curl -s -b /tmp/cookies.txt http://localhost:8080/api/v1/agents/$TUTOR_AGENT_ID | python3 -m json.tool"
 ```
 
 Expected: agent details with `agentType="Tutor"`, `isActive=true`, `gameId=94e99e38-...`. If sources weren't auto-linked by quick-create, link them in next step.
@@ -253,15 +280,15 @@ Expected: agent details with `agentType="Tutor"`, `isActive=true`, `gameId=94e99
 Inspect existing agent sources:
 ```bash
 ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69 \
-  'curl -s -b /tmp/cookies.txt "http://localhost:8080/api/v1/agents/TUTOR_AGENT_ID/configuration" | python3 -m json.tool 2>&1 | head -30'
+  "curl -s -b /tmp/cookies.txt http://localhost:8080/api/v1/agents/$TUTOR_AGENT_ID/configuration | python3 -m json.tool 2>&1 | head -30"
 ```
 
 If `documentIds` is empty or missing one PDF, update via:
 ```bash
 ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69 \
-  'curl -s -i -b /tmp/cookies.txt -X PUT http://localhost:8080/api/v1/agents/TUTOR_AGENT_ID/configuration \
-    -H "Content-Type: application/json" \
-    -d "{\"documentIds\":[\"808b83ec-8e93-430e-95a8-c4918b2dab03\",\"b680bc20-ef11-4a73-acd0-36f919e2533b\"]}" | head -10'
+  "curl -s -i -b /tmp/cookies.txt -X PUT http://localhost:8080/api/v1/agents/$TUTOR_AGENT_ID/configuration \
+    -H 'Content-Type: application/json' \
+    -d '{\"documentIds\":[\"808b83ec-8e93-430e-95a8-c4918b2dab03\",\"b680bc20-ef11-4a73-acd0-36f919e2533b\"]}' | head -10"
 ```
 
 Expected: `HTTP/1.1 200 OK`.
@@ -297,7 +324,7 @@ Note: `documentIds` ordered with Rules first (priority 1) per Arbitro typology. 
 
 Expected: `HTTP/1.1 200 OK` (or 201) with `"agentType":"Arbitro"`.
 
-- [ ] **Step 4.3: Acceptance G3 — verify 2 active agents**
+- [ ] **Step 4.3: Acceptance G3 — verify 2 active agents (API view)**
 
 Run:
 ```bash
@@ -311,6 +338,35 @@ Tutor   | Tutor Nanolith   | active=True
 Arbitro | Arbitro Nanolith | active=True
 ```
 
+- [ ] **Step 4.4: Acceptance G3 — SQL verification (Status + source count)**
+
+The API view does not surface `Status` or `source_count`. The spec G3 acceptance requires both. Run the spec's verbatim SQL:
+
+```bash
+ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69 << 'EOF'
+docker exec meepleai-postgres psql -U meepleai -d meepleai_staging -c "
+SELECT a.\"Id\", a.\"Name\", a.\"Typology\", a.\"IsActive\", a.\"Status\",
+       (SELECT COUNT(*) FROM agent_kb_sources s WHERE s.\"AgentId\" = a.\"Id\") AS source_count
+FROM agent_definitions a
+WHERE a.\"SharedGameId\" = '94e99e38-1a5a-499c-89a9-2ea66173f63e'
+  AND a.\"Typology\" IN ('Tutor', 'Arbitro')
+ORDER BY a.\"Typology\";
+"
+EOF
+```
+
+Expected: 2 rows, both `IsActive=t`, `Status='Published'`, `source_count=2`.
+
+If `agent_definitions` table doesn't exist (only AgentDefinition entity in EF, mapped to a different table name), discover the actual table:
+```bash
+ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69 \
+  'docker exec meepleai-postgres psql -U meepleai -d meepleai_staging -tAc "
+    SELECT tablename FROM pg_tables WHERE schemaname=$$public$$ AND tablename ~* $$(agent.*defin|definition)$$ ORDER BY tablename;
+  "'
+```
+
+Then adapt the table name in the verification query. Document the discovered name in the spec doc References section.
+
 ---
 
 ## Task 5: Validate Q&A streaming via API (G4)
@@ -320,7 +376,9 @@ Arbitro | Arbitro Nanolith | active=True
 
 - [ ] **Step 5.1: Test Tutor Q&A — setup question**
 
-Run:
+⚠️ The endpoint takes `gameId` (which historically resolves both private and shared game ids). Try the games.Id first; if response is "no agents configured" or empty, retry with the sharedGameId.
+
+Run (private games.Id first):
 ```bash
 ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69 \
   'curl -s -N -b /tmp/cookies.txt -X POST http://localhost:8080/api/v1/agents/qa/stream \
@@ -328,6 +386,17 @@ ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69 \
     -d "{\"gameId\":\"6db3e01e-0b21-414c-8e3b-a899782feb40\",\"query\":\"Come si imposta il gioco per 2 giocatori?\",\"responseStyle\":\"concise\"}" \
     --max-time 60 | head -50'
 ```
+
+If the stream contains `"errorCode":"NO_AGENTS"` or similar, retry with sharedGameId:
+```bash
+ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69 \
+  'curl -s -N -b /tmp/cookies.txt -X POST http://localhost:8080/api/v1/agents/qa/stream \
+    -H "Content-Type: application/json" \
+    -d "{\"gameId\":\"94e99e38-1a5a-499c-89a9-2ea66173f63e\",\"query\":\"Come si imposta il gioco per 2 giocatori?\",\"responseStyle\":\"concise\"}" \
+    --max-time 60 | head -50'
+```
+
+Whichever ID succeeds, document it in the spec References section as the canonical id for chat queries.
 
 Expected: SSE event stream containing:
 - `data: {"Type":0,...}` (StateUpdate)

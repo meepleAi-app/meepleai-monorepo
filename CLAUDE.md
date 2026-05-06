@@ -135,6 +135,21 @@ git push -u origin feature/issue-123-desc
 # PR to frontend-dev (NOT main!) → merge → git branch -D feature/issue-123-desc
 ```
 
+**🔴 Branch Hygiene Rule** (issue #806): ALWAYS switch to the parent branch BEFORE creating a feature branch. Never run `git checkout -b feature/...` while HEAD is on another in-progress feature branch — it absorbs the other branch's commits into your new branch's ancestry. Concurrent multi-terminal workflows (incl. AI agentic sessions) are particularly prone to this.
+
+**Pre-creation safety check** — run before `git checkout -b`:
+
+```bash
+# Verify HEAD is on the intended parent (main-dev / frontend-dev / main),
+# NOT on another feature/* branch
+git branch --show-current  # MUST print main-dev, frontend-dev, or main
+git status                 # MUST show clean tree
+git pull --ff-only         # MUST succeed (no divergence)
+git checkout -b feature/issue-{n}-{desc}
+```
+
+If `git branch --show-current` prints `feature/...`, STOP. Run `git checkout main-dev && git pull` first.
+
 **Commits**: `feat|fix|docs|refactor|test|chore(scope): description`
 
 ### Feature Development Flow

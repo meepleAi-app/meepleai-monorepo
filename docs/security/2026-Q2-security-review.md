@@ -510,23 +510,25 @@ Discovery first (15min):
 - Check existing `[TwoFactor*]` attributes in Authentication BC
 - Audit which `/admin/*` endpoints exist and rank by sensitivity
 
-#### **P1.2 — GitHub Actions supply chain hardening** (Q2, due 2026-05-31, ~6.5h effort)
+#### **P1.2 — GitHub Actions supply chain hardening** ✅ CLOSED 2026-05-06
 
-Acceptance criteria:
-- AC1: Audit report: count + list of unpinned third-party actions (excluding allow-list)
-- AC2: Allow-list policy documented in `docs/security/github-actions-pinning.md`:
-  - GitHub-owned (`actions/*`, `github/*`) and own-org (`meepleAi-app/*`) MAY use major-version tags
-  - Third-party MUST be SHA-pinned (with version comment for readability)
-- AC3: All third-party actions pinned to SHA (with comment `# v1.2.3` for readability)
-- AC4: CI gate added in `.github/workflows/validate-workflows.yml`: regex check fails PR introducing unpinned third-party action
-- AC5: Audit `GITHUB_TOKEN` permissions per workflow — default to `contents: read`, escalate per-job
+- [x] **AC1**: Audit produced — initial state had 21 third-party actions across 32 active workflows, all referenced by major version tag
+- [x] **AC2**: Policy documented in [`docs/security/github-actions-pinning.md`](./github-actions-pinning.md) — three tiers: trusted (actions/*, github/*, meepleAi-app/*), third-party (SHA-pinned), local (relative paths)
+- [x] **AC3**: 18 unique third-party action+version references SHA-pinned with `# vX.Y` comment for readability across 20 active workflow files
+- [x] **AC4**: CI gate `.github/workflows/validate-workflows.yml` added — fails any PR introducing unpinned third-party action with actionable error message + fix instructions
+- [⚠️] **AC5**: `GITHUB_TOKEN` permissions audit completed (18/32 workflows have explicit block, 14 inherit write-default) — **deferred** as separate follow-up: 14 mechanical edits documented in policy doc, scope-creep avoided on this PR
 
-Tooling:
+Tooling (from policy doc):
 ```bash
-grep -rE "uses: [^@]+@v?[0-9]" .github/workflows/ | \
-  grep -vE "@[a-f0-9]{40}|^[^:]+:\s+(actions|github|meepleAi-app)/"
-# Expected: empty after Q2 closure
+grep -rEh "^\s*-?\s*uses: " .github/workflows/*.yml | \
+  grep -E "@v?[0-9]" | \
+  grep -vE "@[a-f0-9]{40}" | \
+  grep -vE "uses: (actions|github|meepleAi-app)/" | \
+  grep -v "uses: \./"
+# Verified: 0 results on main-dev post-merge
 ```
+
+Note: `deploy-production.yml.disabled` is intentionally out of scope (workflow not active; pinning deferred to re-enablement).
 
 #### **P1.3 — OpenTelemetry coordinated upgrade** (DEFERRED to Q3, ~3.5h effort)
 

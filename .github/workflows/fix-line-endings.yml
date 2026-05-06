@@ -10,7 +10,7 @@ jobs:
     if: vars.DEPLOY_METHOD == 'ssh'
     steps:
       - name: Fix line endings and restart API
-        uses: appleboy/ssh-action@v1.2.2
+        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f  # v1.2.2
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}

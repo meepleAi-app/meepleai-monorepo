@@ -607,7 +607,7 @@ jobs:
       # Option 1: SSH Deploy (VPS/Dedicated Server)
       - name: Deploy via SSH
         if: vars.DEPLOY_METHOD == 'ssh'
-        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f  # v1.2.2
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
@@ -895,7 +895,7 @@ jobs:
 
       - name: Update Server Baseline
         if: always() && steps.metrics.outputs.json != ''
-        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f  # v1.2.2
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}

@@ -29,6 +29,13 @@ export interface ToChatMessagePropsContext {
   showFeedback: boolean;
   /** Curried feedback handler with messageId already bound */
   onFeedbackChange: (value: FeedbackValue, comment?: string) => Promise<void>;
+  /**
+   * Render the typing indicator instead of the message body. Used for the
+   * assistant placeholder bubble between optimistic append and the first
+   * token arrival on the qaStream path (which doesn't drive
+   * `streamState.currentAnswer`).
+   */
+  isTyping?: boolean;
 }
 
 export function toChatMessageProps(
@@ -43,6 +50,7 @@ export function toChatMessageProps(
     isFeedbackLoading: ctx.isFeedbackLoading,
     showFeedback: ctx.showFeedback,
     onFeedbackChange: ctx.onFeedbackChange,
+    isTyping: ctx.isTyping ?? false,
   };
 
   if (item.role === 'user') {
@@ -51,7 +59,6 @@ export function toChatMessageProps(
 
   // NOTE: citations deliberately NOT passed — kept outside as <RuleSourceCard>
   // NOTE: confidence/agentType not yet available from ChatMessageItem
-  // NOTE: isTyping is handled separately via the streaming bubble, not per message
 
   return base;
 }

@@ -119,9 +119,23 @@ describe('toChatMessageProps', () => {
       expect(toChatMessageProps(item, baseCtx).agentType).toBeUndefined();
     });
 
-    it('does NOT set isTyping (handled by separate streaming bubble)', () => {
+    it('defaults isTyping to false when not provided', () => {
       const item: ChatMessageItem = { id: 'a', role: 'assistant', content: 'A' };
-      expect(toChatMessageProps(item, baseCtx).isTyping).toBeUndefined();
+      expect(toChatMessageProps(item, baseCtx).isTyping).toBe(false);
+    });
+  });
+
+  describe('isTyping propagation', () => {
+    it('passes isTyping=true when ctx.isTyping is true', () => {
+      const item: ChatMessageItem = { id: 'a', role: 'assistant', content: '' };
+      const result = toChatMessageProps(item, { ...baseCtx, isTyping: true });
+      expect(result.isTyping).toBe(true);
+    });
+
+    it('passes isTyping=false when ctx.isTyping is false', () => {
+      const item: ChatMessageItem = { id: 'a', role: 'assistant', content: 'A' };
+      const result = toChatMessageProps(item, { ...baseCtx, isTyping: false });
+      expect(result.isTyping).toBe(false);
     });
   });
 });

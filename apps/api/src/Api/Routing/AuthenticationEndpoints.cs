@@ -275,8 +275,19 @@ internal static class AuthenticationEndpoints
                 return Results.Unauthorized();
             }
 
-            var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
-            var tokenHash = Convert.ToBase64String(hash);
+            // C1 fix: use SessionTokenHasher (single source of truth) so the lookup hash
+            // matches Session.TokenHash storage. Inline SHA256 over UTF-8(cookie) was a bug
+            // because storage hashes the *decoded* random bytes, not the Base-64 string.
+            string tokenHash;
+            try
+            {
+                tokenHash = Api.BoundedContexts.Authentication.Domain.ValueObjects.SessionTokenHasher
+                    .HashFromCookie(token);
+            }
+            catch (Api.SharedKernel.Domain.Exceptions.ValidationException)
+            {
+                return Results.Unauthorized();
+            }
 
             // Look up session by token hash via CQRS query
             var dbSession = await mediator.Send(new GetSessionByTokenHashQuery(tokenHash), ct).ConfigureAwait(false);
@@ -459,12 +470,21 @@ internal static class AuthenticationEndpoints
             var userId = session!.User!.Id;
 
             // Get current session token hash for optional exclusion
+            // C1 fix: SessionTokenHasher is the single source of truth — must match Session.TokenHash storage.
             string? currentTokenHash = null;
             var sessionCookieName = CookieHelpers.GetSessionCookieName(context);
             if (context.Request.Cookies.TryGetValue(sessionCookieName, out var token) && !string.IsNullOrWhiteSpace(token))
             {
-                var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
-                currentTokenHash = Convert.ToBase64String(hash);
+                try
+                {
+                    currentTokenHash = Api.BoundedContexts.Authentication.Domain.ValueObjects.SessionTokenHasher
+                        .HashFromCookie(token);
+                }
+                catch (Api.SharedKernel.Domain.Exceptions.ValidationException)
+                {
+                    // Malformed cookie — treat as "no current session to exclude".
+                    currentTokenHash = null;
+                }
             }
 
             // Execute command via CQRS

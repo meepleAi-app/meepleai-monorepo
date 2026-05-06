@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using Api.Helpers;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -132,9 +132,13 @@ internal class TempSessionService : ITempSessionService
         return Convert.ToBase64String(bytes);
     }
 
-    // Helper: Hash token for storage (SHA-256)
+    // Helper: Hash token for storage (SHA-256 of decoded Base-64 bytes).
+    // C1 fix: route through SessionTokenHasher so all session-token hashing in the codebase
+    // shares one algorithm. Previously this used CryptographyHelper.ComputeSha256HashBase64
+    // which hashes UTF-8 bytes of the Base-64 *string* — algorithmically inconsistent with
+    // SessionToken.ComputeHash and causing endpoint lookups to fail (C1).
     private static string HashToken(string token)
     {
-        return CryptographyHelper.ComputeSha256HashBase64(token);
+        return SessionTokenHasher.HashFromCookie(token);
     }
 }

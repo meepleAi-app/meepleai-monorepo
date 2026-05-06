@@ -1,0 +1,64 @@
+name: Validate Workflows
+
+# Q2 2026 Security Review (#186) P1.2: GitHub Actions supply chain hardening.
+# Fails the PR if any third-party action is referenced without SHA pinning.
+# Policy: docs/security/github-actions-pinning.md
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - 'docs/security/github-actions-pinning.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-workflows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pinning-check:
+    name: Third-party action pinning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Detect unpinned third-party actions
+        run: |
+          set -euo pipefail
+          # Allow-list: GitHub-owned (actions/*, github/*), own-org (meepleAi-app/*),
+          # local actions (./.github/actions/*) — see docs/security/github-actions-pinning.md
+          unpinned=$(grep -rEh "^\s*-?\s*uses: " .github/workflows/*.yml | \
+            grep -E "@v?[0-9]" | \
+            grep -vE "@[a-f0-9]{40}" | \
+            grep -vE "uses: (actions|github|meepleAi-app)/" | \
+            grep -v "uses: \./" || true)
+
+          if [ -n "$unpinned" ]; then
+            echo "::error::Found unpinned third-party action(s) — must be SHA-pinned per docs/security/github-actions-pinning.md"
+            echo ""
+            echo "Unpinned references:"
+            echo "$unpinned" | sed 's/^/  /'
+            echo ""
+            echo "How to fix:"
+            echo "  1. Resolve SHA: gh api repos/<owner>/<repo>/git/refs/tags/<version> --jq '.object.sha'"
+            echo "  2. Update: uses: <repo>@<sha>  # <version>"
+            exit 1
+          fi
+
+          echo "::notice::All third-party actions are SHA-pinned ✓"
+
+      - name: Verify .yml.disabled files are not scanned by GitHub
+        run: |
+          # Sanity check: warn if any .yml.disabled file is missing the .disabled suffix
+          # (would expose unpinned actions to actual execution)
+          shopt -s nullglob
+          for f in .github/workflows/*.yml.disabled; do
+            if [ -f "${f%.disabled}" ]; then
+              echo "::warning file=${f}::Both ${f} and ${f%.disabled} exist — disabled file may shadow active one"
+            fi
+          done

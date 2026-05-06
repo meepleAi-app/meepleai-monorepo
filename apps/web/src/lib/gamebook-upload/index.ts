@@ -66,3 +66,24 @@ export {
   parseIdempotencyKey,
   type IdempotencyKeyParts,
 } from './idempotency-key';
+
+// Camera capabilities (Phase C.2.A Interactions)
+export { detectCameraPermissionState, requestCameraStream } from './camera-capabilities';
+
+// Offline-budget reducer (Phase C.2.A Interactions)
+export {
+  elapsedBudgetMs,
+  initialOfflineBudgetState,
+  offlineBudgetReducer,
+  type OfflineBudgetAction,
+  type OfflineBudgetState,
+} from './offline-budget';
+
+// Confidence classifier (Phase C.2.A Interactions)
+export {
+  CONFIDENCE_HIGH_THRESHOLD,
+  CONFIDENCE_MEDIUM_THRESHOLD,
+  classifyConfidence,
+  deriveHeuristicPageConfidence,
+  shouldRequestRetake,
+} from './confidence-classifier';

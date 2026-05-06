@@ -8,8 +8,12 @@
  *
  * `TranslateParagraphDemo` is the Phase A demo component (kept exported for
  * the Nanolith one-shot flow under /gamebook/[gameId]/play).
+ *
+ * SP6 Phase C.1.B Task B (Issue #789) appends the 5 read-only wizard
+ * components for /gamebook/upload Tier L Foundation sub-PR.
  */
 
+// Phase B (SP6 #788)
 export { GamebookHero } from './GamebookHero';
 export type { GamebookHeroLabels, GamebookHeroProps } from './GamebookHero';
 
@@ -28,3 +32,19 @@ export type { GamebookCardSkeletonProps } from './GamebookCardSkeleton';
 // Phase A demo component (preserved):
 export { TranslateParagraphDemo } from './TranslateParagraphDemo';
 export type { TranslateParagraphDemoProps } from './TranslateParagraphDemo';
+
+// Phase C.1.B Task B — /gamebook/upload wizard read-only components (SP6 #789)
+export { StepIndicator } from './StepIndicator';
+export type { StepIndicatorLabels, StepIndicatorProps } from './StepIndicator';
+
+export { GameSearchBar } from './GameSearchBar';
+export type { GameSearchBarLabels, GameSearchBarProps } from './GameSearchBar';
+
+export { GameSearchCard } from './GameSearchCard';
+export type { GameSearchCardLabels, GameSearchCardProps } from './GameSearchCard';
+
+export { NoResultsPanel } from './NoResultsPanel';
+export type { NoResultsPanelLabels, NoResultsPanelProps } from './NoResultsPanel';
+
+export { ActionCard } from './ActionCard';
+export type { ActionCardProps } from './ActionCard';

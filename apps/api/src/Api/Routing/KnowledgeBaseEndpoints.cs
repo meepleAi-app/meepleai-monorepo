@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbDocumentById;
 using Api.Extensions;
 using Api.Helpers;
@@ -903,6 +904,17 @@ internal static class KnowledgeBaseEndpoints
             .Produces<KbDocumentDto>()
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status403Forbidden);
+
+        // Issue #730: G1 paginated chunks list
+        group.MapGet("/kb-docs/{id:guid}/chunks", HandleGetKbChunks)
+            .WithName("GetKbChunks")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Get paginated chunks list with hierarchical headings")
+            .WithDescription("Returns chunks ordered by position with breadcrumb headingPath. Admin users see vectorId, characterCount, elementType, embeddingStatus.")
+            .Produces<KbChunkListDto>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound);
     }
 
     private static async Task<IResult> HandleGetKbDocumentById(
@@ -916,6 +928,29 @@ internal static class KnowledgeBaseEndpoints
         var query = new GetKbDocumentByIdQuery(id, userIsAdmin);
         var dto = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(dto);
+    }
+
+    private static async Task<IResult> HandleGetKbChunks(
+        Guid id,
+        int? skip,
+        int? take,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var skipValue = skip ?? 0;
+        var takeValue = take ?? 50;
+
+        if (takeValue < 1 || takeValue > 100)
+        {
+            return Results.BadRequest(new { error = "take must be between 1 and 100" });
+        }
+
+        var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+        var isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var query = new GetKbChunksQuery(id, skipValue, takeValue, UserIsAdmin: isAdmin);
+        var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     private static void MapLinkKbEndpoint(RouteGroupBuilder group)

@@ -3,6 +3,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -86,15 +87,17 @@ public sealed class KbChunkEndpointsIntegrationTests : IAsyncLifetime
     /// Without the route registration the request returns 404 before reaching the handler.
     /// Remove the Skip once the endpoint is registered.
     /// </remarks>
-    [Fact(Skip = "Wire GET /api/v1/kb-docs/{id}/chunks endpoint in Task 8 before enabling")]
+    [Fact]
     public async Task GetKbChunks_NestedHeadings_ReturnsHeadingPath()
     {
         // Arrange — seed a doc with 3 chained chunks
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var docId = await SeedDocWithNestedChunksAsync(dbContext);
 
-        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        // Create a real user first — PdfDocument.UploadedByUserId has a FK constraint to users
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var docId = await SeedDocWithNestedChunksAsync(dbContext, uploadedByUserId: userId);
+
         var request = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Get,
             $"/api/v1/kb-docs/{docId}/chunks?skip=0&take=10",
@@ -125,16 +128,48 @@ public sealed class KbChunkEndpointsIntegrationTests : IAsyncLifetime
             options => options.WithStrictOrdering());
     }
 
+    /// <summary>
+    /// Verifies the endpoint returns 400 Bad Request when take exceeds the maximum of 100.
+    /// The take validation happens before the document lookup, so no seed is required.
+    /// An unauthenticated client will get 401 before the handler runs; use an authenticated
+    /// request so the validation code path is exercised.
+    /// </summary>
+    [Fact]
+    public async Task GetKbChunks_TakeExceedsLimit_Returns400()
+    {
+        // Arrange — create an authenticated session so we reach the validation code
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/kb-docs/{Guid.NewGuid()}/chunks?take=500",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert — 400 because take=500 > 100 (validation fires before document lookup)
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     // ─── Seed helpers ────────────────────────────────────────────────────────
 
     /// <summary>
     /// Seeds a PdfDocumentEntity with 3 chained TextChunkEntities that form the
     /// hierarchy: "Setup" (root) → "Players" (child) → "Distribution" (leaf).
     /// </summary>
-    private static async Task<Guid> SeedDocWithNestedChunksAsync(MeepleAiDbContext dbContext)
+    /// <param name="dbContext">Test database context.</param>
+    /// <param name="uploadedByUserId">
+    /// The ID of a user that already exists in the database.
+    /// PdfDocument.UploadedByUserId has a FK constraint — a random Guid will fail.
+    /// </param>
+    private static async Task<Guid> SeedDocWithNestedChunksAsync(
+        MeepleAiDbContext dbContext,
+        Guid uploadedByUserId)
     {
         var docId = Guid.NewGuid();
-        var uploadedBy = Guid.NewGuid();
 
         dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
@@ -144,7 +179,7 @@ public sealed class KbChunkEndpointsIntegrationTests : IAsyncLifetime
             UploadedAt = DateTime.UtcNow,
             Language = "en",
             DocumentCategory = "Rulebook",
-            UploadedByUserId = uploadedBy,
+            UploadedByUserId = uploadedByUserId,
             FilePath = "/tmp/nested-headings-test.pdf"
         });
 

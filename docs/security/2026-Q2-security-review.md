@@ -533,7 +533,7 @@ Discovery first (15min):
 - [x] **AC2**: Policy documented in [`docs/security/github-actions-pinning.md`](./github-actions-pinning.md) — three tiers: trusted (actions/*, github/*, meepleAi-app/*), third-party (SHA-pinned), local (relative paths)
 - [x] **AC3**: 18 unique third-party action+version references SHA-pinned with `# vX.Y` comment for readability across 20 active workflow files
 - [x] **AC4**: CI gate `.github/workflows/validate-workflows.yml` added — fails any PR introducing unpinned third-party action with actionable error message + fix instructions
-- [⚠️] **AC5**: `GITHUB_TOKEN` permissions audit completed (18/32 workflows have explicit block, 14 inherit write-default) — **deferred** as separate follow-up: 14 mechanical edits documented in policy doc, scope-creep avoided on this PR
+- [x] **AC5**: `GITHUB_TOKEN` permissions tightened across all 14 workflows missing top-level block. Top-level default `contents: read` added to 13 workflows (1 already had it). Job-level escalations preserved/added where needed: `docs-linkcheck` (job has `issues:write`+`pull-requests:write`), `security-review` (`issues:write`), `generate-operations-pdf` (`contents:write`), `generate-diagrams` (added new `contents:write` for SVG push job). Result: 32/32 workflows now have explicit permissions, default least-privilege.
 
 Tooling (from policy doc):
 ```bash
@@ -594,10 +594,47 @@ Acceptance criteria (when executed in Q3):
 
 | Role | Name | Date | Signature |
 |------|------|------|-----------|
-| Reviewer (Responsible) | @DegrassiAaron | TBD (after action items closed) | TBD |
-| Approver (Accountable) | @DegrassiAaron (single-maintainer self-sign) | TBD | TBD |
+| Reviewer (Responsible) | @DegrassiAaron | 2026-05-06 | PR #784 (this) |
+| Approver (Accountable) | @DegrassiAaron (single-maintainer self-sign) | 2026-05-06 | PR #784 (this) |
 
-> Sign-off pending completion of High Priority action items.
+### Sign-off rationale
+
+All Q2-eligible action items closed in same-day execution (2026-05-06):
+
+**P0 (5/5 closed)**:
+- Re-enabled Dependabot — PR #767
+- axios bumped to ≥1.15.1, closed 4 HIGH advisories — PR #767
+- Bulk-dismissed 87 `cs/log-forging` alerts (FP, mitigated globally) — operational
+- Fixed protobufjs + handlebars CRITICAL + bonus HIGH (flatted, picomatch, vite) via pnpm.overrides — PR #773
+- Triaged 13 manual-review HIGH (cleartext-storage, path-injection, http-to-file-access) — operational
+
+**P1 (3/4 in-scope closed; 1 gated)**:
+- P1.1-A 2FA admin enforcement scaffolding (shadow mode) — PR #780
+- P1.4a Hadolint Dockerfile lint + CI gate — PR #781
+- P1.2 GH Actions SHA pinning + CI gate + policy doc — PR #782
+- P1.2 AC5 GITHUB_TOKEN permissions tightening — PR #784
+- P1.1-B (2FA strict mode) — gated on ≥1 week shadow-mode telemetry collection
+- P1.3 (OTel) and P1.4b (Trivy) — formally deferred to Q3 per spec-panel review
+
+**Final HIGH triage (24/24 closed as FP)**:
+- Logger format string × 4, regex anchor in test code × 16, file-system race in dev tooling × 3, SSR sanitize fallback × 1 — all dismissed with documented justification
+
+### Final posture
+
+- **Critical: 0** ✅ (was 2 baseline)
+- **High: 0** ✅ (was 50 baseline)
+- **Total alerts: 113** (was 286 baseline, −60%)
+- All in-scope SMART acceptance criteria met or formally deferred with documented rationale.
+- Q2 review process executed against the v2 hardened template (#743), validating the spec-panel methodology.
+
+### Continuity to Q3
+
+Q3 review pickup items:
+1. P1.1-B execution after shadow-mode telemetry confirms ≥90% adoption rate
+2. P1.3 (OTel coordinated upgrade)
+3. P1.4b (Trivy full scope: image scan, fs scan, config scan, CI gate)
+4. SBOM generation (deferred from Q2 §2.3)
+5. DAST baseline (deferred from Q2 §5)
 
 ---
 

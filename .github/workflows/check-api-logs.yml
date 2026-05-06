@@ -3,6 +3,12 @@ name: Check API Startup Logs
 on:
   workflow_dispatch:
 
+
+# Q2 2026 Security Review (#186) P1.2 AC5: default least-privilege.
+# Job-level permissions blocks (where present) override this default.
+permissions:
+  contents: read
+
 jobs:
   check-logs:
     name: Check API Logs on Staging

@@ -3,6 +3,12 @@ name: Fix Secret Line Endings
 on:
   workflow_dispatch:
 
+
+# Q2 2026 Security Review (#186) P1.2 AC5: default least-privilege.
+# Job-level permissions blocks (where present) override this default.
+permissions:
+  contents: read
+
 jobs:
   fix-secrets:
     name: Fix CRLF in secrets and restart API

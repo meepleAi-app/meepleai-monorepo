@@ -89,7 +89,7 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 | `/discover` | **L** | Multiple horizontal-row hooks | pending — Phase 0.5 required |
 | `/game-nights` | **L** | Calendar + day-detail drawer + filters | pending — Phase 0.5 required |
 | `/sessions` | **M** | Sessions list + filters composition | pending |
-| `/sessions/[id]/summary` | **M** | Summary KPI + diary + photos | pending |
+| `/sessions/[id]` | **M-L** | Post-game summary: podium + KPI + diary + photos + share + tie-group computation | ✅ done (Wave D.3, PR #762) — [`docs/frontend/contracts/sessions-id-summary-hooks.md`](contracts/sessions-id-summary-hooks.md) |
 | `/players/[id]` | **M** | usePlayerStatistics single hook (current user only — schema reality v1 carryover) | ✅ done (Wave 3, PR #724) |
 | `/toolkits/[id]` | **M** | Toolkit summary + version timeline | pending |
 | `/kb/[id]` | **M** | KB header + chunks + search | pending |
@@ -220,16 +220,21 @@ the PR review.
 | `sp4-session-live.jsx` | `PauseOverlay` (lazy) | `apps/web/src/components/v2/session-live/PauseOverlay.tsx` | `/sessions/[id]/live` | done | #750 | T A V dialog |
 | `sp4-session-live.jsx` | `EndgameDialog` (lazy) | `apps/web/src/components/v2/session-live/EndgameDialog.tsx` | `/sessions/[id]/live` | done | #750 | T A V dialog |
 
-### Session summary — `/sessions/[id]/summary` — 6 components — **Tier M**
+### Session summary — `/sessions/[id]` — 11 components — **Tier M-L**
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
-| `sp4-session-summary-parts.jsx` | `SessionSummaryHero` | `apps/web/src/components/v2/session-summary/SessionSummaryHero.tsx` | `/sessions/[id]/summary` | pending | — | T A M V |
-| `sp4-session-summary-parts.jsx` | `SessionKpiGrid` | `apps/web/src/components/v2/session-summary/SessionKpiGrid.tsx` | `/sessions/[id]/summary` | pending | — | T A V |
-| `sp4-session-summary-parts.jsx` | `ScoringBreakdownTable` | `apps/web/src/components/v2/session-summary/ScoringBreakdownTable.tsx` | `/sessions/[id]/summary` | pending | — | T A V |
-| `sp4-session-summary.jsx` | `SessionDiaryTimeline` | `apps/web/src/components/v2/session-summary/SessionDiaryTimeline.tsx` | `/sessions/[id]/summary` | pending | — | T A V |
-| `sp4-session-summary.jsx` | `PhotosGallery` | `apps/web/src/components/v2/session-summary/PhotosGallery.tsx` | `/sessions/[id]/summary` | pending | — | T A V |
-| `sp4-session-summary.jsx` | `SessionShareCard` | `apps/web/src/components/v2/session-summary/SessionShareCard.tsx` | `/sessions/[id]/summary` | pending | — | T A V |
+| `sp4-session-summary-parts.jsx` | `SessionSummaryHero` | `apps/web/src/components/v2/session-summary/SessionSummaryHero.tsx` | `/sessions/[id]` | done | #762 | T A M V |
+| `sp4-session-summary-parts.jsx` | `SessionKpiGrid` | `apps/web/src/components/v2/session-summary/SessionKpiGrid.tsx` | `/sessions/[id]` | done | #762 | T A V |
+| `sp4-session-summary-parts.jsx` | `ScoringBreakdownTable` | `apps/web/src/components/v2/session-summary/ScoringBreakdownTable.tsx` | `/sessions/[id]` | done | #762 | T A V |
+| `sp4-session-summary-parts.jsx` | `ConnectionBar` | `apps/web/src/components/v2/session-summary/ConnectionBar.tsx` | `/sessions/[id]` | done | #762 | T A V |
+| `sp4-session-summary-parts.jsx` | `AchievementsCarousel` | `apps/web/src/components/v2/session-summary/AchievementsCarousel.tsx` | `/sessions/[id]` | done | #762 | T A V |
+| `sp4-session-summary.jsx` | `SessionDiaryTimeline` | `apps/web/src/components/v2/session-summary/SessionDiaryTimeline.tsx` | `/sessions/[id]` | done | #762 | T A V |
+| `sp4-session-summary.jsx` | `PhotosGallery` | `apps/web/src/components/v2/session-summary/PhotosGallery.tsx` | `/sessions/[id]` | done | #762 | T A V |
+| `sp4-session-summary.jsx` | `ChatHighlights` | `apps/web/src/components/v2/session-summary/ChatHighlights.tsx` | `/sessions/[id]` | done | #762 | T A V |
+| `sp4-session-summary.jsx` | `SessionShareCard` | `apps/web/src/components/v2/session-summary/SessionShareCard.tsx` | `/sessions/[id]` | done | #762 | T A V |
+| `sp4-session-summary.jsx` | `PlayAgainCta` | `apps/web/src/components/v2/session-summary/PlayAgainCta.tsx` | `/sessions/[id]` | done | #762 | T A V |
+| `sp4-session-summary.jsx` | `Confetti` | `apps/web/src/components/v2/session-summary/Confetti.tsx` | `/sessions/[id]` | done | #762 | T A V |
 
 ## Wave 3 — 31 components
 

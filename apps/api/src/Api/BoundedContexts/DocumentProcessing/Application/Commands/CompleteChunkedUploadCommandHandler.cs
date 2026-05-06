@@ -745,7 +745,12 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 PageNumber = chunk.Page,
                 Content = chunk.Text,
                 CharacterCount = chunk.Text.Length,
-                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
+                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
+                // Issue #730: persist chunk hierarchy fields from chunking pipeline
+                Heading = chunk.Heading,
+                Level = chunk.Level,
+                ParentChunkId = chunk.ParentChunkId,
+                ElementType = chunk.ElementType
             })
             .ToList();
 

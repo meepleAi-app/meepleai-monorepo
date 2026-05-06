@@ -141,4 +141,46 @@ public sealed class GetKbDocumentByIdHandlerTests
 
         await act.Should().ThrowAsync<NotFoundException>();
     }
+
+    [Fact]
+    public async Task Handle_WhenReadyDocAndAdmin_AdminFieldsAreNull()
+    {
+        // Arrange: Ready doc with RetryCount=0 (default, no retries occurred)
+        var docId = Guid.NewGuid();
+        var pdf = new PdfDocumentEntity
+        {
+            Id = docId,
+            FileName = "Ready.pdf",
+            ProcessingState = "Ready",
+            PageCount = 10,
+            UploadedAt = DateTime.UtcNow,
+            Language = "en",
+            DocumentCategory = "Rulebook",
+            UploadedByUserId = Guid.NewGuid(),
+            FilePath = "/tmp/ready.pdf"
+        };
+        var vd = new VectorDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            PdfDocumentId = docId,
+            GameId = Guid.NewGuid(),
+            ChunkCount = 50,
+            IndexedAt = DateTime.UtcNow,
+            IndexingStatus = "Completed"
+        };
+        _dbContext.PdfDocuments.Add(pdf);
+        _dbContext.VectorDocuments.Add(vd);
+        await _dbContext.SaveChangesAsync();
+
+        var query = new GetKbDocumentByIdQuery(docId, UserIsAdmin: true);
+
+        // Act
+        var dto = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert: admin viewing a Ready doc — all admin fields should be null/omitted
+        dto!.ProcessingState.Should().Be("ready");
+        dto.ProcessingError.Should().BeNull();
+        dto.RetryCount.Should().BeNull();
+        dto.FailedAtState.Should().BeNull();
+    }
 }

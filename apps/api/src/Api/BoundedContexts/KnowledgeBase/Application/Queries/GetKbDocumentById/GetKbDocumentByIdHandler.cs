@@ -66,7 +66,7 @@ internal sealed class GetKbDocumentByIdHandler : IQueryHandler<GetKbDocumentById
             Language: data.pdf.Language,
             VersionLabel: data.pdf.VersionLabel,
             ProcessingError: query.UserIsAdmin ? data.pdf.ProcessingError : null,
-            RetryCount: query.UserIsAdmin ? data.pdf.RetryCount : null,
+            RetryCount: query.UserIsAdmin && data.pdf.RetryCount > 0 ? data.pdf.RetryCount : (int?)null,
             FailedAtState: query.UserIsAdmin ? data.pdf.FailedAtState : null
         );
     }

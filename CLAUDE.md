@@ -8,7 +8,7 @@
 |------|---------|-----|
 | Start Dev (full) | `make dev` | `infra/` |
 | Start Dev (core) | `make dev-core` | `infra/` |
-| Dev from Snapshot | `make dev-from-snapshot` | `infra/` — [guide](./docs/development/snapshot-seed-workflow.md) |
+| Dev from Snapshot | `make dev-from-snapshot` | `infra/` — [guide](./docs/for-developers/workflows/snapshot-seed-workflow.md) |
 | Alpha Mode | `make alpha` | `infra/` |
 | Bake Snapshot | `make seed-index` | `infra/` — raro, indicizza tutti i PDF |
 | Integration | `make tunnel && make integration` | `infra/` — **Git Bash only (Windows)** |
@@ -118,7 +118,7 @@ cd ../../infra && make dev        # All services (make dev-core = no AI/monitori
 
 **Rule**: Never commit `.secret` files. Only `.secret.example` templates are committed.
 
-**S3 Storage**: Factory pattern via `STORAGE_PROVIDER` env var (`local` default, `s3` for R2/AWS/MinIO). Config in `infra/secrets/storage.secret` — see [Operations Manual](./docs/operations/operations-manual.md).
+**S3 Storage**: Factory pattern via `STORAGE_PROVIDER` env var (`local` default, `s3` for R2/AWS/MinIO). Config in `infra/secrets/storage.secret` — see [Operations Manual](./docs/for-developers/operations/operations-manual.md).
 
 ### Git Workflow
 
@@ -172,7 +172,7 @@ Review SQL, test dev first, never delete old migrations.
 - **Component**: Typed props + explicit `JSX.Element` return
 - **Store**: Zustand with TypeScript interface
 
-*Full examples: [docs/development/README.md](./docs/development/README.md)*
+*Full examples: [docs/for-developers/workflows/README.md](./docs/for-developers/workflows/README.md)*
 
 ### Card Components
 
@@ -186,11 +186,11 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 
 Entity types: `game` (orange) · `player` (purple) · `collection` (teal) · `event` (rose)
 Variants: `grid` (default) · `list` · `compact` · `featured` · `hero`
-Docs: [docs/frontend/meeple-card-design-tokens.md](./docs/frontend/meeple-card-design-tokens.md)
+Docs: [docs/for-developers/frontend/meeple-card-design-tokens.md](./docs/for-developers/frontend/meeple-card-design-tokens.md)
 
 ### V2 Migration Components
 
-Phase 0 of the v2 design migration — see [docs/superpowers/specs/2026-04-26-v2-design-migration.md](./docs/superpowers/specs/2026-04-26-v2-design-migration.md) — pre-stubs the 46 feature components introduced by SP4 wave 1+2 mockups under `apps/web/src/components/v2/<feature>/`. The single source of truth for the mapping `<Mockup, Component, Path, Route, AcceptanceCriteria, Status, PR>` is [docs/frontend/v2-migration-matrix.md](./docs/frontend/v2-migration-matrix.md). Pick `pending` rows from there before implementing v2 features; update `Status` and `PR` in the same PR that lands the implementation.
+Phase 0 of the v2 design migration — see [docs/for-developers/specs/2026-04-26-v2-design-migration.md](./docs/for-developers/specs/2026-04-26-v2-design-migration.md) — pre-stubs the 46 feature components introduced by SP4 wave 1+2 mockups under `apps/web/src/components/v2/<feature>/`. The single source of truth for the mapping `<Mockup, Component, Path, Route, AcceptanceCriteria, Status, PR>` is [docs/for-developers/frontend/v2-migration-matrix.md](./docs/for-developers/frontend/v2-migration-matrix.md). Pick `pending` rows from there before implementing v2 features; update `Status` and `PR` in the same PR that lands the implementation.
 
 Path discipline: existing v2 *primitives* live under `apps/web/src/components/ui/v2/` (auth-card, btn, drawer, …); new SP4 *feature compositions* live under `apps/web/src/components/v2/`. Do not collapse the two trees.
 
@@ -206,7 +206,7 @@ dotnet test --filter "BoundedContext=GameManagement"  # By context
 dotnet test /p:CollectCoverage=true                   # With coverage
 ```
 
-Patterns: [docs/testing/backend/backend-testing-patterns.md](./docs/testing/backend/backend-testing-patterns.md)
+Patterns: [docs/for-developers/testing/backend/backend-testing-patterns.md](./docs/for-developers/testing/backend/backend-testing-patterns.md)
 
 ### Frontend (Target: 85%+)
 
@@ -242,8 +242,8 @@ tests/Api.Tests/          # Backend test suite
 | Build fails (BE) | `dotnet clean && dotnet build` |
 | Testhost blocking | `tasklist \| grep testhost` → `taskkill //PID <PID> //F` |
 | Port conflict | `netstat -ano \| findstr :8080` → `taskkill /PID <PID> /F` |
-| Snapshot drift | `make seed-index` (rigenera) or `make dev` (fallback) — [workflow](./docs/development/snapshot-seed-workflow.md#compat-gate--exit-codes) |
-| Full ops reference | [docs/operations/operations-manual.md](./docs/operations/operations-manual.md) |
+| Snapshot drift | `make seed-index` (rigenera) or `make dev` (fallback) — [workflow](./docs/for-developers/workflows/snapshot-seed-workflow.md#compat-gate--exit-codes) |
+| Full ops reference | [docs/for-developers/operations/operations-manual.md](./docs/for-developers/operations/operations-manual.md) |
 
 ## AI Assistant Rules
 

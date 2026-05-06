@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbDocumentById;
 using Api.Extensions;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
@@ -39,6 +40,7 @@ internal static class KnowledgeBaseEndpoints
         MapSharedGameKbStatusEndpoint(group);
         MapGameDocumentsEndpoint(group);
         MapLinkKbEndpoint(group);
+        MapKbDocumentEndpoints(group);
 
         return group;
     }
@@ -887,6 +889,33 @@ internal static class KnowledgeBaseEndpoints
             .WithDescription("Returns the list of KB documents linked to a game, ordered by creation date descending.")
             .Produces<IReadOnlyList<GameDocumentDto>>()
             .Produces(StatusCodes.Status401Unauthorized);
+    }
+
+    private static void MapKbDocumentEndpoints(RouteGroupBuilder group)
+    {
+        // Issue #730: G4 single doc metadata
+        group.MapGet("/kb-docs/{id:guid}", HandleGetKbDocumentById)
+            .WithName("GetKbDocumentById")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Get KB document metadata")
+            .WithDescription("Returns metadata for a single KB document (title, processing state, total chunks, page count). Admin users see additional diagnostic fields.")
+            .Produces<KbDocumentDto>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> HandleGetKbDocumentById(
+        Guid id,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userIsAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var query = new GetKbDocumentByIdQuery(id, userIsAdmin);
+        var dto = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(dto);
     }
 
     private static void MapLinkKbEndpoint(RouteGroupBuilder group)

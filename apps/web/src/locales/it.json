@@ -2477,7 +2477,107 @@
       "pickerError": "Impossibile caricare i giochi. Riprova.",
       "pickerNoResults": "Nessun gioco trovato per \"{search}\".",
       "pickerNoGames": "Nessun gioco disponibile.",
-      "backToPicker": "Cambia gioco"
+      "backToPicker": "Cambia gioco",
+      "wizard": {
+        "meta": {
+          "title": "Carica manuale | MeepleAI",
+          "description": "Fotografa il tuo manuale di gioco passo dopo passo"
+        },
+        "stepIndicator": {
+          "back": "Indietro",
+          "stepGame": "Gioco",
+          "stepPhoto": "Foto",
+          "stepIndex": "Indice"
+        },
+        "step1": {
+          "title": "Quale gioco vuoi indicizzare?",
+          "subtitle": "Scegli dal catalogo condiviso o cercane uno nuovo.",
+          "searchPlaceholder": "Cerca un gioco...",
+          "tabCatalog": "Catalogo",
+          "tabBgg": "BGG",
+          "tabBadge": "({count})",
+          "continueButton": "Continua",
+          "searchInfo": "Nessun risultato nel catalogo. Cerca su BGG ↑",
+          "bggLoadingTitle": "Cerco su BoardGameGeek...",
+          "bggLoadingSubtitle": "Può richiedere qualche secondo",
+          "noResultsTitle": "\"{query}\" non trovato",
+          "noResultsSubtitle": "Tre modi per continuare:",
+          "actionCardCreate": "Crea gioco nuovo",
+          "actionCardCreateSubtitle": "Manuale che non esiste in nessun database",
+          "actionCardBgg": "Cerca su BoardGameGeek",
+          "actionCardBggSubtitle": "Fonte ufficiale con metadati completi",
+          "actionCardPrivate": "Indicizza solo per me",
+          "actionCardPrivateSubtitle": "Privato — non condiviso con la community"
+        },
+        "step2": {
+          "title": "Fotografa il manuale",
+          "cameraAria": "Fotocamera mirino",
+          "shutterAria": "Scatta foto",
+          "closeAria": "Chiudi fotocamera",
+          "galleryAria": "Apri galleria",
+          "doneAria": "Fine — vai a indicizzazione",
+          "counter": "{count, plural, =0 {0 di {max}} one {1 di {max}} other {{count} di {max}}}",
+          "hintReady": "✓ Pagina riconosciuta",
+          "hintLowLight": "☁️ Avvicina alla luce",
+          "hintFailed": "✗ Bordi non rilevati",
+          "lightMeterAria": "Misuratore luce",
+          "lightMeterLow": "BASSA",
+          "lightMeterMedium": "MEDIA",
+          "lightMeterOk": "OK",
+          "deniedTitle": "Camera bloccata",
+          "deniedSubtitle": "MeepleAI non ha accesso alla fotocamera. Abilita i permessi nelle impostazioni del sistema.",
+          "deniedOpenSettings": "Apri impostazioni",
+          "deniedGallery": "Carica dalla galleria",
+          "deniedHint": "💡 In alternativa, puoi caricare foto già scattate.",
+          "unsupportedTitle": "Fotocamera non supportata",
+          "unsupportedSubtitle": "Il tuo browser non supporta l'accesso alla fotocamera. Carica le foto dalla galleria.",
+          "desktopDropTitle": "Trascina le foto qui",
+          "desktopDropSubtitle": "Su desktop puoi anche caricare foto già scattate.",
+          "desktopDropFormats": "Formati supportati: JPG, PNG, HEIC · Max {max} file",
+          "desktopDropBrowse": "Sfoglia file",
+          "desktopDropSendToPhone": "Invia link al telefono"
+        },
+        "step3": {
+          "progressTitle": "Indicizzazione…",
+          "progressSubtitle": "Puoi tenere il telefono in tasca.",
+          "progressLabel": "{processedPages, plural, =0 {0 di {totalPages}} one {1 di {totalPages}} other {{processedPages} di {totalPages}}}",
+          "partialTitle": "Quasi pronto",
+          "partialSubtitle": "{ok} pagine ok, {retake} da riscattare per qualità migliore.",
+          "completeTitle": "Manuale pronto!",
+          "completeSubtitle": "{total} pagine indicizzate, {high} ad alta confidenza.",
+          "lowConfidenceLabel": "Bassa confidenza — riscatta consigliato",
+          "retakeAria": "Riscatta pagina {pageNumber}",
+          "retakeButton": "📷 Riscatta",
+          "retakeBatch": "{count, plural, one {📷 Riscatta # pagina} other {📷 Riscatta # pagine}}",
+          "skipPartial": "Salta — uso così",
+          "savePlain": "Salva e basta",
+          "startSession": "🎯 Inizia sessione",
+          "cancelButton": "Annulla"
+        },
+        "confidence": {
+          "high": "Alta",
+          "medium": "Media",
+          "low": "Bassa",
+          "processing": "In elaborazione"
+        },
+        "offline": {
+          "bannerTitle": "Connessione persa",
+          "bannerSubtitle": "Riprenderà automaticamente al ripristino.",
+          "retryNow": "Riprova ora",
+          "retryAttempt": "Tentativo {current}/5 in {seconds}s",
+          "cancel": "Annulla",
+          "failedTerminalTitle": "Indicizzazione interrotta",
+          "failedTerminalSubtitle": "Riprova manualmente quando hai connessione stabile.",
+          "failedTerminalRetry": "Riprova",
+          "failedTerminalChange": "Cambia foto"
+        },
+        "cancelModal": {
+          "title": "Annullare l'indicizzazione?",
+          "body": "Hai già scattato {count, plural, one {# pagina} other {# pagine}}. Se annulli ora, dovrai ricominciare da capo.",
+          "continue": "Continua a indicizzare",
+          "confirm": "Sì, annulla"
+        }
+      }
     },
     "play": {
       "loading": "Caricamento...",

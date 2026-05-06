@@ -1,151 +1,37 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import React from 'react';
+/**
+ * Page-level smoke test for `/sessions/[id]` after Wave D.3 BIG-BANG (Issue #756).
+ *
+ * The legacy live UI render path was migrated to `/sessions/[id]/live` in Wave D.2
+ * (PR #749 Foundation + #753 Interactions). This route now renders the
+ * post-game session summary via `SessionSummaryView`. Detailed FSM/URL/handler
+ * coverage lives in
+ * `_components/__tests__/SessionSummaryView.test.tsx`. This file remains a
+ * thin smoke test that verifies the page is wired correctly.
+ */
 
-// Mock React.use so params resolves synchronously
-vi.mock('react', async () => {
-  const actual = await vi.importActual<typeof import('react')>('react');
-  return { ...actual, use: (v: unknown) => v };
-});
+import { render } from '@testing-library/react';
+import { IntlProvider } from 'react-intl';
+import { describe, it, expect, vi } from 'vitest';
 
-// Session store mock — returns a loaded session by default
-const mockSessionStore = {
-  activeSession: null as Record<string, unknown> | null,
-  scores: [] as unknown[],
-  isLoading: false,
-  error: null as string | null,
-  loadScores: vi.fn(),
-  pauseSession: vi.fn(),
-  resumeSession: vi.fn(),
-  completeSession: vi.fn(),
-  handleSessionUpdate: vi.fn(),
-};
-
-vi.mock('@/lib/stores/session-store', () => ({
-  useSessionStore: (selector: (s: typeof mockSessionStore) => unknown) =>
-    selector(mockSessionStore),
+// Mock SessionSummaryView so we don't pull in hook factories etc.
+vi.mock('../_components/SessionSummaryView', () => ({
+  SessionSummaryView: ({ sessionId }: { sessionId: string }) => (
+    <div data-testid="session-summary-view-mock" data-session-id={sessionId} />
+  ),
 }));
 
-vi.mock('@/lib/domain-hooks/useSessionSync', () => ({
-  useSessionSync: () => ({ isConnected: true }),
-}));
+import SessionDetailPage from '../page';
 
-vi.mock('@/components/session', () => ({
-  LiveIndicator: () => <div data-testid="live-indicator" />,
-  Scoreboard: () => <div data-testid="scoreboard" />,
-  SessionHeader: () => <div data-testid="session-header" />,
-  SessionParticipantsList: () => <div data-testid="session-participants" />,
-  SessionDiaryTimeline: () => <div data-testid="session-diary" />,
-  SessionQuickActions: () => <div data-testid="session-quick-actions" />,
-}));
-
-vi.mock('@/components/session/adapters', () => ({
-  toScoreboardData: () => ({ players: [], rounds: [] }),
-  toSession: () => ({
-    id: 'session-1',
-    title: 'Test Session',
-    status: 'InProgress',
-    gameName: 'Catan',
-  }),
-}));
-
-vi.mock('@/components/ui/data-display/entity-link/related-entities-section', () => ({
-  RelatedEntitiesSection: () => <div data-testid="related-entities" />,
-}));
-
-vi.mock('@/hooks/useConnectionBarNav', () => ({
-  useConnectionBarNav: () => ({ handlePipClick: vi.fn() }),
-}));
-
-vi.mock('@/components/ui/data-display/connection-bar', () => ({
-  ConnectionBar: ({ connections }: { connections: Array<unknown> }) =>
-    connections.length > 0 ? <div data-testid="connection-bar" /> : null,
-  buildSessionConnections: (counts: Record<string, number>) =>
-    Object.values(counts).some(v => v > 0) ? [{ count: 1 }] : [],
-}));
-
-const SESSION_ID = '00000000-0000-4000-8000-000000000001';
-
-function makeActiveSession(overrides: Record<string, unknown> = {}) {
-  return {
-    id: SESSION_ID,
-    sessionCode: 'ABC123',
-    gameId: 'game-1',
-    gameName: 'Catan',
-    createdByUserId: 'user-1',
-    status: 'InProgress',
-    visibility: 'Public',
-    groupId: null,
-    createdAt: '2025-01-01T00:00:00Z',
-    startedAt: '2025-01-01T00:00:00Z',
-    pausedAt: null,
-    completedAt: null,
-    updatedAt: '2025-01-01T00:00:00Z',
-    lastSavedAt: null,
-    currentTurnIndex: 0,
-    currentTurnPlayerId: null,
-    agentMode: 'None',
-    chatSessionId: null,
-    notes: null,
-    players: [
-      {
-        id: 'player-1',
-        displayName: 'Alice',
-        color: '#ff0000',
-        role: 'Player',
-        totalScore: 10,
-        currentRank: 1,
-        isActive: true,
-      },
-    ],
-    teams: [],
-    roundScores: [],
-    scoringConfig: { mode: 'Points' },
-    ...overrides,
-  };
-}
-
-import SessionScoreboardPage from '../page';
-
-describe('SessionScoreboardPage', () => {
-  beforeEach(() => {
-    mockSessionStore.activeSession = null;
-    mockSessionStore.scores = [];
-    mockSessionStore.isLoading = false;
-    mockSessionStore.error = null;
-  });
-
-  it('renders nothing when isLoading and no session', () => {
-    mockSessionStore.isLoading = true;
-    const { container } = render(
-      <SessionScoreboardPage params={{ id: SESSION_ID } as unknown as Promise<{ id: string }>} />
+describe('SessionDetailPage', () => {
+  it('renders SessionSummaryView with the resolved sessionId', async () => {
+    const params = Promise.resolve({ id: '00000000-0000-4000-8000-000000000aaa' });
+    const element = await SessionDetailPage({ params });
+    const { findByTestId } = render(
+      <IntlProvider locale="it" messages={{}} defaultLocale="it">
+        {element}
+      </IntlProvider>
     );
-    // Loading spinner shown, no session content
-    expect(screen.queryByTestId('session-header')).not.toBeInTheDocument();
-    expect(container.firstChild).not.toBeNull();
-  });
-
-  it('renders session header when session is loaded', () => {
-    mockSessionStore.activeSession = makeActiveSession();
-    render(
-      <SessionScoreboardPage params={{ id: SESSION_ID } as unknown as Promise<{ id: string }>} />
-    );
-    expect(screen.getByTestId('session-header')).toBeInTheDocument();
-  });
-
-  it('renders connection-bar when session has players and game', () => {
-    mockSessionStore.activeSession = makeActiveSession();
-    render(
-      <SessionScoreboardPage params={{ id: SESSION_ID } as unknown as Promise<{ id: string }>} />
-    );
-    expect(screen.getByTestId('connection-bar')).toBeInTheDocument();
-  });
-
-  it('does not render connection-bar when session has no game and no players', () => {
-    mockSessionStore.activeSession = makeActiveSession({ gameId: null, players: [] });
-    render(
-      <SessionScoreboardPage params={{ id: SESSION_ID } as unknown as Promise<{ id: string }>} />
-    );
-    expect(screen.queryByTestId('connection-bar')).not.toBeInTheDocument();
+    const node = await findByTestId('session-summary-view-mock');
+    expect(node).toHaveAttribute('data-session-id', '00000000-0000-4000-8000-000000000aaa');
   });
 });

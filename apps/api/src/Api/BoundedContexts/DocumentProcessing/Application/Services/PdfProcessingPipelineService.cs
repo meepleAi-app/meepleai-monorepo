@@ -598,12 +598,15 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _db.TextChunks.RemoveRange(existingChunks);
         }
 
+        // text_chunks.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
+        var resolvedGameId = await PdfGameIdResolver.ResolveAsync(_db, pdfDoc, cancellationToken)
+            .ConfigureAwait(false);
+
         var textChunkEntities = chunks
             .Select((chunk, index) => new TextChunkEntity
             {
                 Id = Guid.NewGuid(),
-                // GameId resolution: same strategy as IndexPdfCommandHandler.effectiveGameId
-                GameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
+                GameId = resolvedGameId,
                 SharedGameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfDoc.Id,
                 Content = chunk.Text,

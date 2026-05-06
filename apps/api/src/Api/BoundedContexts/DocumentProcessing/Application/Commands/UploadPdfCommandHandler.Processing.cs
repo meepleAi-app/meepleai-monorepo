@@ -503,10 +503,15 @@ internal partial class UploadPdfCommandHandler
 
         if (vectorDoc == null)
         {
+            // vector_documents.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
+            // Same constraint that applies to text_chunks.GameId.
+            var resolvedGameId = await PdfGameIdResolver.ResolveAsync(db, pdfDoc, cancellationToken)
+                .ConfigureAwait(false);
+
             vectorDoc = new VectorDocumentEntity
             {
                 Id = Guid.NewGuid(),
-                GameId = pdfDoc.SharedGameId,
+                GameId = resolvedGameId,
                 SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
                 PdfDocumentId = pdfGuid,
                 IndexingStatus = "completed",
@@ -549,12 +554,15 @@ internal partial class UploadPdfCommandHandler
         }
 
         // Create TextChunkEntity for each document chunk (for FTS)
-        var textChunkGameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
+        // text_chunks.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
+        var textChunkGameId = await PdfGameIdResolver.ResolveAsync(db, pdfDoc, cancellationToken)
+            .ConfigureAwait(false);
         var textChunkEntities = allDocumentChunks
             .Select((chunk, index) => new TextChunkEntity
             {
                 Id = Guid.NewGuid(),
                 GameId = textChunkGameId,
+                SharedGameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfGuid,
                 Content = chunk.Text,
                 ChunkIndex = index,

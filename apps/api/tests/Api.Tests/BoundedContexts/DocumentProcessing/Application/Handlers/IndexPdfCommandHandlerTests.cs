@@ -666,13 +666,24 @@ public class IndexPdfCommandHandlerTests
     [Fact]
     [Trait("Category", TestCategories.Unit)]
     [Trait("BoundedContext", "DocumentProcessing")]
-    public async Task Handle_SharedGamePdf_StoresSharedGameIdOnTextChunks()
+    public async Task Handle_SharedGamePdf_ResolvesGameIdFromGamesTable()
     {
-        // Arrange — SharedGame PDF has null GameId and PrivateGameId, only SharedGameId set
+        // Arrange — SharedGame PDF has null PrivateGameId, only SharedGameId set.
+        // text_chunks.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
+        // We seed a matching GameEntity so the resolver can map SharedGameId → games.Id.
         using var context = CreateFreshDbContext();
         var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var sharedGameId = Guid.NewGuid();
+        var gamesId = Guid.NewGuid();
+        await context.Games.AddAsync(new GameEntity
+        {
+            Id = gamesId,
+            Name = "Shared Game Mirror",
+            SharedGameId = sharedGameId,
+            CreatedAt = DateTime.UtcNow
+        });
+
         var pdfId = Guid.NewGuid();
         var pdf = new PdfDocumentEntity
         {
@@ -717,7 +728,7 @@ public class IndexPdfCommandHandlerTests
         // Assert — indexing succeeds
         result.Success.Should().BeTrue();
 
-        // Assert — text chunks have SharedGameId set AND GameId equals SharedGameId (not Guid.Empty)
+        // Assert — text chunks have SharedGameId propagated AND GameId resolved to games.Id
         var savedChunks = await context.TextChunks
             .Where(tc => tc.PdfDocumentId == pdfId)
             .ToListAsync();
@@ -726,7 +737,7 @@ public class IndexPdfCommandHandlerTests
         savedChunks.Should().AllSatisfy(chunk =>
         {
             chunk.SharedGameId.Should().Be(sharedGameId, "SharedGameId must propagate from PDF to text chunks");
-            chunk.GameId.Should().Be(sharedGameId, "effectiveGameId should fall through to SharedGameId, not Guid.Empty");
+            chunk.GameId.Should().Be(gamesId, "GameId must resolve to games.Id via SharedGameId (FK to games, not shared_games)");
         });
     }
 

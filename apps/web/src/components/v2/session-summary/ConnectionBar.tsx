@@ -25,6 +25,8 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
+import { ENTITY_TEXT_HSL } from '@/lib/sessions-summary';
+
 export type ConnectionBarEntity =
   | 'game'
   | 'player'
@@ -35,16 +37,16 @@ export type ConnectionBarEntity =
   | 'session'
   | 'toolkit';
 
-const ENTITY_FULL: Record<ConnectionBarEntity, string> = {
-  game: 'hsl(25, 95%, 39%)',
-  player: 'hsl(262, 83%, 58%)',
-  agent: 'hsl(38, 92%, 33%)',
-  chat: 'hsl(220, 80%, 55%)',
-  kb: 'hsl(210, 40%, 48%)',
-  event: 'hsl(350, 89%, 48%)',
-  session: 'hsl(240, 60%, 45%)',
-  toolkit: 'hsl(142, 70%, 31%)',
-};
+/**
+ * Text colour for the pip — darkened variants from `ENTITY_TEXT_HSL` to meet
+ * WCAG AA SC 1.4.3 (≥ 4.5:1) when blended over `bg-card/80` + entity-tinted
+ * alpha 0.1 background. Issue #756 a11y hotfix.
+ *
+ * Decorative chrome (border + background tint) — `ENTITY_BG_ALPHA` and
+ * `ENTITY_RING_ALPHA` below — keep the original lighter palette so visual
+ * baselines drift minimally. Only the foreground colour darkens.
+ */
+const ENTITY_TEXT: Record<ConnectionBarEntity, string> = ENTITY_TEXT_HSL;
 
 const ENTITY_BG_ALPHA: Record<ConnectionBarEntity, string> = {
   game: 'hsla(25, 95%, 39%, 0.1)',
@@ -133,7 +135,7 @@ export function ConnectionBar({ pips, labels, className }: ConnectionBarProps): 
             )}
             style={{
               ...baseStyle,
-              color: ENTITY_FULL[p.entity],
+              color: ENTITY_TEXT[p.entity],
             }}
           >
             <span aria-hidden="true">{p.emoji}</span>

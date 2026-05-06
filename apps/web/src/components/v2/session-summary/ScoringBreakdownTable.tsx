@@ -106,7 +106,7 @@ export function ScoringBreakdownTable({
                       {p.isTied && (
                         <span
                           aria-label={labels.tied}
-                          className="ml-1 inline-flex items-center text-[hsl(142,70%,31%)]"
+                          className="ml-1 inline-flex items-center text-[hsl(142,70%,25%)]"
                           data-slot="scoring-tied-indicator"
                         >
                           =
@@ -127,7 +127,7 @@ export function ScoringBreakdownTable({
                     className={clsx(
                       'px-3 py-2.5 text-right tabular-nums',
                       isWinner
-                        ? 'font-display text-base font-extrabold text-[hsl(142,70%,31%)]'
+                        ? 'font-display text-base font-extrabold text-[hsl(142,70%,25%)]'
                         : 'font-display text-base font-extrabold text-foreground'
                     )}
                   >

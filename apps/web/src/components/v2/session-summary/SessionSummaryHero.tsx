@@ -223,7 +223,7 @@ function PodiumPlace({ entry, tied, podiumPlaceAriaLabel }: PodiumPlaceProps): R
       <div
         className={clsx(
           'tabular-nums leading-none font-extrabold',
-          isWinner ? 'text-3xl text-[hsl(142,70%,31%)]' : 'text-xl text-foreground'
+          isWinner ? 'text-3xl text-[hsl(142,70%,25%)]' : 'text-xl text-foreground'
         )}
       >
         {participant.totalScore}
@@ -233,7 +233,7 @@ function PodiumPlace({ entry, tied, podiumPlaceAriaLabel }: PodiumPlaceProps): R
         className={clsx(
           'mt-1 flex w-[88%] items-center justify-center rounded-t-md text-base font-extrabold',
           isWinner
-            ? 'border-t-[3px] border-x border-t-[hsl(142,70%,31%)] border-x-border text-[hsl(142,70%,31%)]'
+            ? 'border-t-[3px] border-x border-t-[hsl(142,70%,31%)] border-x-border text-[hsl(142,70%,25%)]'
             : 'border border-border text-muted-foreground'
         )}
         style={{
@@ -310,7 +310,7 @@ export function SessionSummaryHero({
       {isTied && labels.tiedBanner && (
         <div
           data-slot="hero-tied-banner"
-          className="relative z-10 mx-auto mb-4 flex max-w-md items-center justify-center gap-1.5 rounded-full border border-[hsla(142,70%,31%,0.3)] bg-[hsla(142,70%,31%,0.12)] px-3 py-1.5 text-center text-xs font-extrabold uppercase tracking-wide text-[hsl(142,70%,31%)]"
+          className="relative z-10 mx-auto mb-4 flex max-w-md items-center justify-center gap-1.5 rounded-full border border-[hsla(142,70%,31%,0.3)] bg-[hsla(142,70%,31%,0.12)] px-3 py-1.5 text-center text-xs font-extrabold uppercase tracking-wide text-[hsl(142,70%,25%)]"
         >
           {labels.tiedBanner}
         </div>

@@ -26,6 +26,8 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
+import { ENTITY_TEXT_HSL } from '@/lib/sessions-summary';
+
 /**
  * Entity color hint for the left-accent border + value text. Maps to
  * `tokens.ts` entityColors palette. The component itself is decoupled from
@@ -33,13 +35,48 @@ import clsx from 'clsx';
  */
 export type KpiEntityHint = 'session' | 'toolkit' | 'game' | 'agent' | 'kb' | 'chat';
 
-const ENTITY_HSL: Record<KpiEntityHint, { full: string; alpha: string }> = {
-  session: { full: 'hsl(240, 60%, 45%)', alpha: 'hsla(240, 60%, 55%, 0.22)' },
-  toolkit: { full: 'hsl(142, 70%, 31%)', alpha: 'hsla(142, 70%, 31%, 0.22)' },
-  game: { full: 'hsl(25, 95%, 39%)', alpha: 'hsla(25, 95%, 45%, 0.22)' },
-  agent: { full: 'hsl(38, 92%, 33%)', alpha: 'hsla(38, 92%, 33%, 0.22)' },
-  kb: { full: 'hsl(210, 40%, 48%)', alpha: 'hsla(210, 40%, 48%, 0.22)' },
-  chat: { full: 'hsl(220, 80%, 55%)', alpha: 'hsla(220, 80%, 55%, 0.22)' },
+/**
+ * Hue triplet per entity:
+ *   - `text`: darkened from `ENTITY_TEXT_HSL` for WCAG AA SC 1.4.3 compliance
+ *     when the value text sits on `bg-card` (Issue #756 a11y hotfix).
+ *   - `accent`: original lighter shade kept for the left-accent border so
+ *     the visual rhythm matches the rest of the page chrome.
+ *   - `alpha`: 22% tint of the accent kept for the muted border edges.
+ *
+ * Splitting `text` from `accent` minimises visual baseline drift to the
+ * value text only.
+ */
+const ENTITY_HSL: Record<KpiEntityHint, { text: string; accent: string; alpha: string }> = {
+  session: {
+    text: ENTITY_TEXT_HSL.session,
+    accent: 'hsl(240, 60%, 45%)',
+    alpha: 'hsla(240, 60%, 55%, 0.22)',
+  },
+  toolkit: {
+    text: ENTITY_TEXT_HSL.toolkit,
+    accent: 'hsl(142, 70%, 31%)',
+    alpha: 'hsla(142, 70%, 31%, 0.22)',
+  },
+  game: {
+    text: ENTITY_TEXT_HSL.game,
+    accent: 'hsl(25, 95%, 39%)',
+    alpha: 'hsla(25, 95%, 45%, 0.22)',
+  },
+  agent: {
+    text: ENTITY_TEXT_HSL.agent,
+    accent: 'hsl(38, 92%, 33%)',
+    alpha: 'hsla(38, 92%, 33%, 0.22)',
+  },
+  kb: {
+    text: ENTITY_TEXT_HSL.kb,
+    accent: 'hsl(210, 40%, 48%)',
+    alpha: 'hsla(210, 40%, 48%, 0.22)',
+  },
+  chat: {
+    text: ENTITY_TEXT_HSL.chat,
+    accent: 'hsl(220, 80%, 55%)',
+    alpha: 'hsla(220, 80%, 55%, 0.22)',
+  },
 };
 
 export interface KpiEntry {
@@ -83,7 +120,7 @@ export function SessionKpiGrid({
             className="flex flex-col gap-1 rounded-md border bg-card p-3 sm:p-4"
             style={{
               borderColor: colors.alpha,
-              borderLeft: `3px solid ${colors.full}`,
+              borderLeft: `3px solid ${colors.accent}`,
             }}
           >
             <dt className="flex items-center gap-1.5 font-mono text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground">
@@ -92,7 +129,7 @@ export function SessionKpiGrid({
             </dt>
             <dd
               className="font-display text-xl font-extrabold leading-tight tracking-tight tabular-nums sm:text-2xl"
-              style={{ color: colors.full }}
+              style={{ color: colors.text }}
             >
               {k.value}
             </dd>

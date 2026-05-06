@@ -33,3 +33,10 @@ export {
   sessionSummaryFixtures,
   type SessionSummaryFixture,
 } from './visual-test-fixture';
+
+export {
+  ENTITY_TEXT_HSL,
+  entityBorderHslClass,
+  entityTextHslClass,
+  type SessionSummaryEntity,
+} from './entity-text-tokens';

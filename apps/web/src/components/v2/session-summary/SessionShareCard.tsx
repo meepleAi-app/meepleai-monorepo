@@ -213,7 +213,7 @@ export function SessionShareCard({
         </span>
         <div className="relative z-10 flex h-full flex-col justify-between p-6">
           <div>
-            <div className="inline-flex items-center gap-1 rounded-full bg-[hsla(142,70%,31%,0.18)] px-2 py-0.5 font-mono text-[9px] font-extrabold uppercase tracking-wider text-[hsl(142,70%,31%)]">
+            <div className="inline-flex items-center gap-1 rounded-full bg-[hsla(142,70%,31%,0.18)] px-2 py-0.5 font-mono text-[9px] font-extrabold uppercase tracking-wider text-[hsl(142,70%,25%)]">
               <span aria-hidden="true">🏆</span>
             </div>
             <h4

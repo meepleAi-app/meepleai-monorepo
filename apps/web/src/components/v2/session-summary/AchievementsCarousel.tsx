@@ -144,7 +144,9 @@ export function AchievementsCarousel({
                 <div
                   className={clsx(
                     'truncate font-display text-xs font-extrabold',
-                    unlocked ? 'text-[hsl(142,70%,31%)]' : 'text-muted-foreground'
+                    // a11y (Issue #756): darkened toolkit text for WCAG AA SC 1.4.3
+                    // contrast on the entity-tinted bg (≥ 4.5:1).
+                    unlocked ? 'text-[hsl(142,70%,25%)]' : 'text-muted-foreground'
                   )}
                 >
                   {titleResolved}

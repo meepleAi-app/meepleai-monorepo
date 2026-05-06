@@ -43,11 +43,19 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$FULL_SCAN" == "true" ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "Mode: full scan"
+            echo "Mode: full scan (excluding .docs-archive/)"
             git ls-files 'docs/**/*.md' 'CLAUDE.md' > .lychee-targets.txt
           else
+            # Filter: A=Added, M=Modified. R=Renamed excluded — pure renames don't change file
+            # content, so re-checking them creates false positives when archived files retain
+            # relative links to currently-active docs/ siblings (those siblings haven't moved).
             echo "Mode: PR-diff scan (base=$BASE_SHA head=$HEAD_SHA)"
-            git diff --name-only --diff-filter=AMR "$BASE_SHA" "$HEAD_SHA" -- 'docs/**/*.md' 'CLAUDE.md' > .lychee-targets.txt || true
+            git diff --name-only --diff-filter=AM "$BASE_SHA" "$HEAD_SHA" -- 'docs/**/*.md' 'CLAUDE.md' > .lychee-targets.txt || true
+          fi
+          # Always exclude .docs-archive/ — those files are dead by definition.
+          if [[ -f .lychee-targets.txt ]]; then
+            grep -v '^\.docs-archive/' .lychee-targets.txt > .lychee-targets.filtered.txt || true
+            mv .lychee-targets.filtered.txt .lychee-targets.txt
           fi
           count=$(wc -l < .lychee-targets.txt)
           echo "count=$count" >> "$GITHUB_OUTPUT"

@@ -34,12 +34,22 @@ docs/
 ├── bounded-contexts/         # DDD Bounded Contexts guides
 ├── user-guides/              # Admin guides, user flows, gap analysis
 ├── migrations/               # Migration guides (dashboard v1→v2)
-├── archive/                  # Historical docs (completed epics, sessions)
-├── pdca/                     # Active PDCA cycles
-├── roadmap/                  # Project roadmap & execution plans
-├── evaluation-reports/       # Quality baselines & metrics
+├── for-claude/               # Audience-segmented stub (Phase 0 of reorg)
+├── for-developers/           # Audience-segmented stub (Phase 0 of reorg)
+├── for-users/                # Wikipedia-style end-user wiki (Phase 0+5 of reorg)
 └── templates/                # Documentation templates
+
+.docs-archive/                # Out-of-tree (since Phase 1): historical
+                              # epics, sessions, PDCA, roadmap, research,
+                              # evaluation-reports, archived sprint specs.
+                              # Read-only history, no longer referenced from
+                              # active docs.
 ```
+
+> **Reorganization in progress.** Active docs are migrating to
+> `for-claude/` / `for-developers/` / `for-users/` — see
+> [`MIGRATION-PLAN.md`](./MIGRATION-PLAN.md) and
+> [`_audit-2026-05-05.csv`](./_audit-2026-05-05.csv).
 
 ---
 
@@ -254,5 +264,5 @@ export async function askQuestion(question: string, gameId: string): Promise<Ans
 
 ---
 
-**Last Updated**: 2026-03-26
+**Last Updated**: 2026-05-06 (Phase 1 of [reorganization](./MIGRATION-PLAN.md))
 **Maintainer**: Documentation Team

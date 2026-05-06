@@ -218,4 +218,9 @@ internal class DocumentChunkInput
     public int Page { get; init; }
     public int CharStart { get; init; }
     public int CharEnd { get; init; }
+    // Issue #730: hierarchy fields — null/defaults when not set by chunking pipeline
+    public string? Heading { get; init; }
+    public short Level { get; init; } = 1;
+    public Guid? ParentChunkId { get; init; }
+    public string ElementType { get; init; } = "NarrativeText";
 }

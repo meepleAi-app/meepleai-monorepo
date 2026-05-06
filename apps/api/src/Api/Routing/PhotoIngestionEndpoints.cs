@@ -1,6 +1,8 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
 using Api.Middleware.Exceptions;
 using MediatR;
@@ -13,8 +15,9 @@ namespace Api.Routing;
 /// Exposes upload and status-polling for scanned rulebook photo batches.
 ///
 /// Endpoints:
-///   POST /api/v1/photo-batches       — submit a new photo batch
-///   GET  /api/v1/photo-batches/{id}  — poll status / per-page results
+///   POST /api/v1/photo-batches                                 — submit a new photo batch
+///   GET  /api/v1/photo-batches/{id}                            — poll status / per-page results
+///   GET  /api/v1/photo-batches/{id}/paragraphs/{pageNumber}    — retrieve OCR text for a page (G4)
 /// </summary>
 internal static class PhotoIngestionEndpoints
 {
@@ -41,10 +44,54 @@ internal static class PhotoIngestionEndpoints
             .WithSummary("Get photo batch processing status")
             .WithDescription("Returns the current status of a photo batch including per-page OCR results and thumbnail URLs. Only the batch owner may call this endpoint.");
 
+        // GET /photo-batches/{batchId}/paragraphs/{pageNumber} — retrieve OCR text for a page (G4)
+        group.MapGet("/photo-batches/{batchId:guid}/paragraphs/{pageNumber:int}", HandleGetParagraph)
+            .RequireAuthenticatedUser()
+            .Produces<ParagraphDto>(200)
+            .Produces(400)
+            .Produces(401)
+            .Produces(404)
+            .WithTags("PhotoIngestion")
+            .WithSummary("Get OCR text for a specific page of a photo batch")
+            .WithDescription(
+                "Returns the extracted OCR text for a single page of a scanned rulebook photo batch. " +
+                "When the numbered page text is unavailable a semantic RAG search is used as fallback. " +
+                "Only the batch owner may call this endpoint. " +
+                "Libro Game AI Assistant MVP Phase 3 — G4.");
+
         return group;
     }
 
     #region Handlers
+
+    private static async Task<IResult> HandleGetParagraph(
+        Guid batchId,
+        int pageNumber,
+        [FromQuery] string? hint,
+        HttpContext httpContext,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var userId = ExtractUserId(httpContext);
+        if (userId == Guid.Empty)
+            return Results.Unauthorized();
+
+        var query = new GetParagraphQuery(batchId, pageNumber, userId, hint);
+
+        try
+        {
+            var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+        catch (NotFoundException ex)
+        {
+            return Results.NotFound(new { error = ex.Message });
+        }
+    }
 
     private static async Task<IResult> HandleUploadBatch(
         [FromBody] UploadPhotoBatchRequest request,

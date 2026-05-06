@@ -1,0 +1,115 @@
+name: Security Audit — Staging external port scan
+
+# Runs daily at 04:00 UTC. Verifies that only port 22 is reachable from the
+# public Internet on the staging server. Opens an issue on drift.
+#
+# Spec: docs/superpowers/specs/2026-05-06-database-network-isolation-design.md
+# Issue: #795
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Target IP/hostname (default: staging 204.168.135.69)"
+        required: false
+        default: "204.168.135.69"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  port-scan:
+    name: External nmap scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install nmap
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq nmap
+
+      - name: Run security-audit.sh against staging
+        id: audit
+        env:
+          SECURITY_AUDIT_TARGET: ${{ inputs.target || '204.168.135.69' }}
+        run: |
+          set +e
+          OUTPUT=$(bash infra/scripts/security-audit.sh 2>&1)
+          RC=$?
+          echo "rc=$RC" >> "$GITHUB_OUTPUT"
+          # Save output to file (escape multiline for GH Actions output)
+          {
+            echo "audit_output<<EOF_AUDIT"
+            echo "$OUTPUT"
+            echo "EOF_AUDIT"
+          } >> "$GITHUB_OUTPUT"
+          # Display in workflow logs
+          echo "$OUTPUT"
+          exit $RC
+
+      - name: Open issue on drift detected
+        if: failure() && steps.audit.outputs.rc != '0'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const target = process.env.TARGET || '204.168.135.69';
+            const output = `${{ steps.audit.outputs.audit_output }}`;
+            const today = new Date().toISOString().slice(0,10);
+            const title = `[Security Drift] Unauthorized open ports detected on ${target} — ${today}`;
+            const body = [
+              '## 🚨 Security audit drift detected',
+              '',
+              `**Target**: \`${target}\``,
+              `**Date**: ${today}`,
+              `**Workflow run**: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              '',
+              '### Audit output',
+              '',
+              '```',
+              output,
+              '```',
+              '',
+              '### Reference',
+              '- Spec: `docs/superpowers/specs/2026-05-06-database-network-isolation-design.md`',
+              '- Original incident: #795',
+              '',
+              '### Triage',
+              '1. SSH to target: `ssh deploy@${target}`',
+              '2. Check listeners: `sudo ss -tlnp | grep -vE "127\\.0\\.0\\.1:|\\[::1\\]:"`',
+              '3. Check Docker port maps: `docker ps --format "table {{.Names}}\\t{{.Ports}}"`',
+              '4. Verify DOCKER-USER chain: `sudo iptables -L DOCKER-USER -n -v --line-numbers`',
+            ].join('\n');
+            // De-duplicate: search for an existing open issue with same title pattern
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'security-drift',
+              per_page: 50
+            });
+            const sameDay = existing.data.find(i => i.title.includes(today) && i.title.includes('Security Drift'));
+            if (sameDay) {
+              core.info(`Issue already exists for today: #${sameDay.number}`);
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: sameDay.number,
+                body: `New audit run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\n\`\`\`\n${output}\n\`\`\``
+              });
+            } else {
+              const created = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['security-drift', 'priority:high', 'type:security']
+              });
+              core.info(`Issue created: #${created.data.number}`);
+            }

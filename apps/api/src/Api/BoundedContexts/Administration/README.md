@@ -342,7 +342,7 @@ Questo context è stato completamente migrato alla nuova architettura DDD/CQRS. 
 
 ## Related Documentation
 
-- `docs/06-security/audit-trail.md`
+- `docs/security/audit-trail.md`
 - `docs/02-development/admin-dashboard.md`
 - `docs/01-architecture/overview/system-architecture.md` (Administration section)
 - `SECURITY.md`

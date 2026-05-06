@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -13,16 +14,17 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 
 /// <summary>
 /// Unit tests for <see cref="KnowledgeBaseIndexer"/>.
-/// Libro Game AI Assistant MVP Phase 2 — Task 2.3a.
+/// Libro Game AI Assistant MVP Phase 2 — Task 2.3a / Gap G3.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "DocumentProcessing")]
 public class KnowledgeBaseIndexerTests
 {
     private readonly IEmbeddingService _embeddingService = Substitute.For<IEmbeddingService>();
+    private readonly IKnowledgeBaseIngestService _ingestService = Substitute.For<IKnowledgeBaseIngestService>();
 
     private KnowledgeBaseIndexer CreateSut() =>
-        new(_embeddingService, NullLogger<KnowledgeBaseIndexer>.Instance);
+        new(_embeddingService, _ingestService, NullLogger<KnowledgeBaseIndexer>.Instance);
 
     private static EmbeddingResult SuccessResult() =>
         EmbeddingResult.CreateSuccess(new List<float[]> { new float[768] });
@@ -57,6 +59,13 @@ public class KnowledgeBaseIndexerTests
             .GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(SuccessResult());
 
+        _embeddingService.GetModelName().Returns("e5-base-v2");
+
+        // ingestService returns count of requests it received.
+        _ingestService
+            .IngestChunksAsync(batchId, gameId, Arg.Any<IReadOnlyList<ChunkIngestionRequest>>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => ((IReadOnlyList<ChunkIngestionRequest>)callInfo[2]).Count);
+
         var sut = CreateSut();
 
         // ACT
@@ -66,6 +75,8 @@ public class KnowledgeBaseIndexerTests
         count.Should().Be(2);
         await _embeddingService.Received(2)
             .GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _ingestService.Received(1)
+            .IngestChunksAsync(batchId, gameId, Arg.Any<IReadOnlyList<ChunkIngestionRequest>>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -84,12 +95,16 @@ public class KnowledgeBaseIndexerTests
         count.Should().Be(0);
         await _embeddingService.DidNotReceive()
             .GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _ingestService.DidNotReceive()
+            .IngestChunksAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<IReadOnlyList<ChunkIngestionRequest>>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task IndexBatchAsync_WithProgressCallback_ReportsProgress()
     {
         // ARRANGE
+        var batchId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
         var chunks = new[]
         {
             MakeChunk("chunk one", chunkIndex: 0),
@@ -101,16 +116,22 @@ public class KnowledgeBaseIndexerTests
             .GenerateEmbeddingAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(SuccessResult());
 
+        _embeddingService.GetModelName().Returns("e5-base-v2");
+
+        _ingestService
+            .IngestChunksAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<IReadOnlyList<ChunkIngestionRequest>>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => ((IReadOnlyList<ChunkIngestionRequest>)callInfo[2]).Count);
+
+        // Use synchronous IProgress to avoid Progress<T> ThreadPool dispatch race
+        // (Progress<T> queues callbacks via SynchronizationContext or ThreadPool, so
+        // arrival order at progressReports.Add(v) is non-deterministic under CI load.)
         var progressReports = new List<int>();
-        var progress = new Progress<int>(v => progressReports.Add(v));
+        var progress = new SyncProgress<int>(progressReports.Add);
 
         var sut = CreateSut();
 
         // ACT
-        await sut.IndexBatchAsync(Guid.NewGuid(), Guid.NewGuid(), chunks, progress, CancellationToken.None);
-
-        // Allow Progress<T> callbacks to flush on the thread pool
-        await Task.Delay(50);
+        await sut.IndexBatchAsync(batchId, gameId, chunks, progress, CancellationToken.None);
 
         // ASSERT
         progressReports.Should().NotBeEmpty();
@@ -118,10 +139,19 @@ public class KnowledgeBaseIndexerTests
         progressReports.Last().Should().Be(3);
     }
 
+    private sealed class SyncProgress<T> : IProgress<T>
+    {
+        private readonly Action<T> _handler;
+        public SyncProgress(Action<T> handler) => _handler = handler;
+        public void Report(T value) => _handler(value);
+    }
+
     [Fact]
     public async Task IndexBatchAsync_EmbeddingServiceReturnsFailure_SkipsChunkAndContinues()
     {
         // ARRANGE
+        var batchId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
         var chunks = new[]
         {
             MakeChunk("good chunk", chunkIndex: 0),
@@ -141,12 +171,18 @@ public class KnowledgeBaseIndexerTests
             .GenerateEmbeddingAsync("bad chunk", Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(EmbeddingResult.CreateFailure("service unavailable"));
 
+        _embeddingService.GetModelName().Returns("e5-base-v2");
+
+        _ingestService
+            .IngestChunksAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<IReadOnlyList<ChunkIngestionRequest>>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => ((IReadOnlyList<ChunkIngestionRequest>)callInfo[2]).Count);
+
         var sut = CreateSut();
 
         // ACT
-        var count = await sut.IndexBatchAsync(Guid.NewGuid(), Guid.NewGuid(), chunks, null, CancellationToken.None);
+        var count = await sut.IndexBatchAsync(batchId, gameId, chunks, null, CancellationToken.None);
 
-        // ASSERT — failed chunk skipped, other two counted
+        // ASSERT — failed chunk skipped, two good ones indexed
         count.Should().Be(2);
     }
 
@@ -154,6 +190,8 @@ public class KnowledgeBaseIndexerTests
     public async Task IndexBatchAsync_EmbeddingThrowsException_SkipsChunkAndContinues()
     {
         // ARRANGE
+        var batchId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
         var chunks = new[]
         {
             MakeChunk("chunk a", chunkIndex: 0),
@@ -168,10 +206,16 @@ public class KnowledgeBaseIndexerTests
             .GenerateEmbeddingAsync("chunk b throws", Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Throws(new HttpRequestException("network error"));
 
+        _embeddingService.GetModelName().Returns("e5-base-v2");
+
+        _ingestService
+            .IngestChunksAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<IReadOnlyList<ChunkIngestionRequest>>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => ((IReadOnlyList<ChunkIngestionRequest>)callInfo[2]).Count);
+
         var sut = CreateSut();
 
         // ACT — should not throw
-        var count = await sut.IndexBatchAsync(Guid.NewGuid(), Guid.NewGuid(), chunks, null, CancellationToken.None);
+        var count = await sut.IndexBatchAsync(batchId, gameId, chunks, null, CancellationToken.None);
 
         // ASSERT
         count.Should().Be(1);
@@ -193,13 +237,24 @@ public class KnowledgeBaseIndexerTests
     }
 
     [Fact]
-    public async Task DeleteBatchAsync_DoesNotThrow()
+    public async Task DeleteBatchAsync_DelegatesToIngestService()
     {
         // ARRANGE
+        var batchId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
+        _ingestService
+            .RemoveBySourceAsync(batchId, gameId, Arg.Any<CancellationToken>())
+            .Returns(3);
+
         var sut = CreateSut();
 
-        // ACT + ASSERT — stub implementation must be callable without error
-        var act = async () => await sut.DeleteBatchAsync(Guid.NewGuid(), CancellationToken.None);
-        await act.Should().NotThrowAsync();
+        // ACT
+        var count = await sut.DeleteBatchAsync(batchId, gameId, CancellationToken.None);
+
+        // ASSERT
+        count.Should().Be(3);
+        await _ingestService.Received(1)
+            .RemoveBySourceAsync(batchId, gameId, Arg.Any<CancellationToken>());
     }
 }

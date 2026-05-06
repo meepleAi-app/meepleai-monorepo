@@ -8,7 +8,7 @@
 |------|---------|-----|
 | Start Dev (full) | `make dev` | `infra/` |
 | Start Dev (core) | `make dev-core` | `infra/` |
-| Dev from Snapshot | `make dev-from-snapshot` | `infra/` — [guide](./docs/development/snapshot-seed-workflow.md) |
+| Dev from Snapshot | `make dev-from-snapshot` | `infra/` — [guide](./docs/for-developers/workflows/snapshot-seed-workflow.md) |
 | Alpha Mode | `make alpha` | `infra/` |
 | Bake Snapshot | `make seed-index` | `infra/` — raro, indicizza tutti i PDF |
 | Integration | `make tunnel && make integration` | `infra/` — **Git Bash only (Windows)** |
@@ -118,7 +118,7 @@ cd ../../infra && make dev        # All services (make dev-core = no AI/monitori
 
 **Rule**: Never commit `.secret` files. Only `.secret.example` templates are committed.
 
-**S3 Storage**: Factory pattern via `STORAGE_PROVIDER` env var (`local` default, `s3` for R2/AWS/MinIO). Config in `infra/secrets/storage.secret` — see [Operations Manual](./docs/operations/operations-manual.md).
+**S3 Storage**: Factory pattern via `STORAGE_PROVIDER` env var (`local` default, `s3` for R2/AWS/MinIO). Config in `infra/secrets/storage.secret` — see [Operations Manual](./docs/for-developers/operations/operations-manual.md).
 
 ### Git Workflow
 
@@ -134,6 +134,21 @@ git config branch.feature/issue-123-desc.parent frontend-dev
 git push -u origin feature/issue-123-desc
 # PR to frontend-dev (NOT main!) → merge → git branch -D feature/issue-123-desc
 ```
+
+**🔴 Branch Hygiene Rule** (issue #806): ALWAYS switch to the parent branch BEFORE creating a feature branch. Never run `git checkout -b feature/...` while HEAD is on another in-progress feature branch — it absorbs the other branch's commits into your new branch's ancestry. Concurrent multi-terminal workflows (incl. AI agentic sessions) are particularly prone to this.
+
+**Pre-creation safety check** — run before `git checkout -b`:
+
+```bash
+# Verify HEAD is on the intended parent (main-dev / frontend-dev / main),
+# NOT on another feature/* branch
+git branch --show-current  # MUST print main-dev, frontend-dev, or main
+git status                 # MUST show clean tree
+git pull --ff-only         # MUST succeed (no divergence)
+git checkout -b feature/issue-{n}-{desc}
+```
+
+If `git branch --show-current` prints `feature/...`, STOP. Run `git checkout main-dev && git pull` first.
 
 **Commits**: `feat|fix|docs|refactor|test|chore(scope): description`
 
@@ -172,7 +187,7 @@ Review SQL, test dev first, never delete old migrations.
 - **Component**: Typed props + explicit `JSX.Element` return
 - **Store**: Zustand with TypeScript interface
 
-*Full examples: [docs/development/README.md](./docs/development/README.md)*
+*Full examples: [docs/for-developers/workflows/README.md](./docs/for-developers/workflows/README.md)*
 
 ### Card Components
 
@@ -186,11 +201,11 @@ import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 
 Entity types: `game` (orange) · `player` (purple) · `collection` (teal) · `event` (rose)
 Variants: `grid` (default) · `list` · `compact` · `featured` · `hero`
-Docs: [docs/frontend/meeple-card-design-tokens.md](./docs/frontend/meeple-card-design-tokens.md)
+Docs: [docs/for-developers/frontend/meeple-card-design-tokens.md](./docs/for-developers/frontend/meeple-card-design-tokens.md)
 
 ### V2 Migration Components
 
-Phase 0 of the v2 design migration — see [docs/superpowers/specs/2026-04-26-v2-design-migration.md](./docs/superpowers/specs/2026-04-26-v2-design-migration.md) — pre-stubs the 46 feature components introduced by SP4 wave 1+2 mockups under `apps/web/src/components/v2/<feature>/`. The single source of truth for the mapping `<Mockup, Component, Path, Route, AcceptanceCriteria, Status, PR>` is [docs/frontend/v2-migration-matrix.md](./docs/frontend/v2-migration-matrix.md). Pick `pending` rows from there before implementing v2 features; update `Status` and `PR` in the same PR that lands the implementation.
+Phase 0 of the v2 design migration — see [docs/for-developers/specs/2026-04-26-v2-design-migration.md](./docs/for-developers/specs/2026-04-26-v2-design-migration.md) — pre-stubs the 46 feature components introduced by SP4 wave 1+2 mockups under `apps/web/src/components/v2/<feature>/`. The single source of truth for the mapping `<Mockup, Component, Path, Route, AcceptanceCriteria, Status, PR>` is [docs/for-developers/frontend/v2-migration-matrix.md](./docs/for-developers/frontend/v2-migration-matrix.md). Pick `pending` rows from there before implementing v2 features; update `Status` and `PR` in the same PR that lands the implementation.
 
 Path discipline: existing v2 *primitives* live under `apps/web/src/components/ui/v2/` (auth-card, btn, drawer, …); new SP4 *feature compositions* live under `apps/web/src/components/v2/`. Do not collapse the two trees.
 
@@ -206,7 +221,7 @@ dotnet test --filter "BoundedContext=GameManagement"  # By context
 dotnet test /p:CollectCoverage=true                   # With coverage
 ```
 
-Patterns: [docs/testing/backend/backend-testing-patterns.md](./docs/testing/backend/backend-testing-patterns.md)
+Patterns: [docs/for-developers/testing/backend/backend-testing-patterns.md](./docs/for-developers/testing/backend/backend-testing-patterns.md)
 
 ### Frontend (Target: 85%+)
 
@@ -242,10 +257,21 @@ tests/Api.Tests/          # Backend test suite
 | Build fails (BE) | `dotnet clean && dotnet build` |
 | Testhost blocking | `tasklist \| grep testhost` → `taskkill //PID <PID> //F` |
 | Port conflict | `netstat -ano \| findstr :8080` → `taskkill /PID <PID> /F` |
-| Snapshot drift | `make seed-index` (rigenera) or `make dev` (fallback) — [workflow](./docs/development/snapshot-seed-workflow.md#compat-gate--exit-codes) |
-| Full ops reference | [docs/operations/operations-manual.md](./docs/operations/operations-manual.md) |
+| Snapshot drift | `make seed-index` (rigenera) or `make dev` (fallback) — [workflow](./docs/for-developers/workflows/snapshot-seed-workflow.md#compat-gate--exit-codes) |
+| Full ops reference | [docs/for-developers/operations/operations-manual.md](./docs/for-developers/operations/operations-manual.md) |
 
 ## AI Assistant Rules
+
+### 🔒 Active Freezes
+
+**SP6 v2 expansion FREEZE** (issued 2026-05-06, see [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808))
+
+- ❌ NO new components under `apps/web/src/components/v2/**` using `hsl(*, 89%, 48%)` + `hsla(*, 89%, *, 0.10)` token pattern
+- ❌ NO new SP6 v2 routes (`/gamebook/**`, `/agents/**`) until A11y token redesign ([#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807) Fase 2) lands on `main-dev`
+- ❌ NO migration of legacy components to current v2 design tokens
+- ✅ ALLOWED: bugfix on existing v2 surfaces, performance, tests, i18n, docs, A11y fixes
+- 🟡 CASE-BY-CASE: bugfix that *adds* new v2 component (e.g. error boundary), hot-fix
+- A11y CI job (`Frontend - A11y E2E`) is now `continue-on-error: true` until token redesign — restore blocking when [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807) Fase 2 completes
 
 ### DDD Rules
 

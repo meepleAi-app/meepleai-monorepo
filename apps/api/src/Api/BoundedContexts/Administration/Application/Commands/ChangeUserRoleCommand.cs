@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Attributes;
+using Api.BoundedContexts.Authentication.Application.Attributes;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -13,6 +14,7 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 /// <param name="Reason">Optional reason for the role change.</param>
 /// <param name="AdminRole">The role of the admin performing this action (from session). Used for privilege level validation.</param>
 [AuditableAction("UserRoleChange", "User", Level = 1)]
+[RequireTwoFactor(Reason = "Role escalation grants new privileges and must be guarded.")]
 internal record ChangeUserRoleCommand(
     string UserId,
     string NewRole,

@@ -233,7 +233,7 @@ function getApiOrigins(): string[] {
  * Security headers configuration
  * Applied to all responses for defense-in-depth protection
  *
- * See: docs/06-security/client-side-encryption.md
+ * See: docs/security/client-side-encryption.md
  *
  * @param requestOrigin - The origin of the incoming request (for CSP deduplication)
  */

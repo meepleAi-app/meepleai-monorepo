@@ -1,0 +1,31 @@
+# Hadolint scan — 2026-Q2 (2026-05-06, post-fixes)
+# Tool: Haskell Dockerfile Linter 2.14.0
+# Config: .hadolint.yaml (DL3008/DL3018/DL3059 globally ignored with rationale)
+
+=== apps/api/src/Api/Dockerfile ===
+(clean)
+
+=== apps/embedding-service/Dockerfile ===
+(clean)
+
+=== apps/orchestration-service/Dockerfile ===
+(clean)
+
+=== apps/reranker-service/Dockerfile ===
+(clean)
+
+=== apps/smoldocling-service/Dockerfile ===
+(clean)
+
+=== apps/unstructured-service/Dockerfile ===
+(clean)
+
+=== apps/web/Dockerfile ===
+(clean)
+
+=== apps/web/Dockerfile.e2e ===
+(clean)
+
+=== infra/sidecar/ssh-tunnel/Dockerfile ===
+(clean)
+

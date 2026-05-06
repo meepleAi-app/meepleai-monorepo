@@ -15,6 +15,12 @@ on:
       - '.github/actions/**'
       - 'scripts/validate-workflows.js'
 
+
+# Q2 2026 Security Review (#186) P1.2 AC5: default least-privilege.
+# Job-level permissions blocks (where present) override this default.
+permissions:
+  contents: read
+
 jobs:
   validate-workflow-patterns:
     name: Validate pnpm Cache Patterns

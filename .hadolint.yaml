@@ -1,0 +1,29 @@
+# Hadolint config — MeepleAI monorepo
+# Q2 2026 Security Review (#186) P1.4a
+
+# Globally ignored rules with documented rationale:
+ignored:
+  # DL3008/DL3018: Pin versions in apt-get/apk install
+  # Rationale: base images are explicitly pinned; transitive package pinning
+  # produces operational pain (every CVE bump requires Dockerfile edit) with
+  # marginal additional security benefit since the build is reproducible from
+  # base image + lockfile. Trivy/Dependabot cover transitive package CVEs at
+  # image scan time. Reconsider if attack-on-OS-package becomes prominent.
+  - DL3008
+  - DL3018
+
+  # DL3059: Multiple consecutive `RUN` instructions
+  # Rationale: image-layer count is a minor optimization; readability of
+  # multi-step RUN blocks is preserved deliberately. Will revisit if image
+  # size becomes a blocker.
+  - DL3059
+
+# Trusted base image registries
+trustedRegistries:
+  - docker.io
+  - mcr.microsoft.com
+  - ghcr.io
+  - registry.gitlab.com
+
+# Output format
+no-color: true

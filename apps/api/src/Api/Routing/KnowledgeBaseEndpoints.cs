@@ -6,6 +6,10 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunkById;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbDocumentById;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchKbChunks;
 using Api.Extensions;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
@@ -39,6 +43,7 @@ internal static class KnowledgeBaseEndpoints
         MapSharedGameKbStatusEndpoint(group);
         MapGameDocumentsEndpoint(group);
         MapLinkKbEndpoint(group);
+        MapKbDocumentEndpoints(group);
 
         return group;
     }
@@ -889,6 +894,131 @@ internal static class KnowledgeBaseEndpoints
             .Produces(StatusCodes.Status401Unauthorized);
     }
 
+    private static void MapKbDocumentEndpoints(RouteGroupBuilder group)
+    {
+        // Issue #730: G4 single doc metadata
+        group.MapGet("/kb-docs/{id:guid}", HandleGetKbDocumentById)
+            .WithName("GetKbDocumentById")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Get KB document metadata")
+            .WithDescription("Returns metadata for a single KB document (title, processing state, total chunks, page count). Admin users see additional diagnostic fields.")
+            .Produces<KbDocumentDto>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // Issue #730: G1 paginated chunks list
+        group.MapGet("/kb-docs/{id:guid}/chunks", HandleGetKbChunks)
+            .WithName("GetKbChunks")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Get paginated chunks list with hierarchical headings")
+            .WithDescription("Returns chunks ordered by position with breadcrumb headingPath. Admin users see vectorId, characterCount, elementType, embeddingStatus.")
+            .Produces<KbChunkListDto>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // Issue #730: G2 single chunk full content
+        group.MapGet("/kb-docs/{id:guid}/chunks/{chunkId:guid}", HandleGetKbChunkById)
+            .WithName("GetKbChunkById")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Get a single chunk with full content + prev/next navigation")
+            .WithDescription("Returns chunk content as markdown, with hierarchical breadcrumb and prev/next chunk IDs for navigation.")
+            .Produces<KbChunkDetailDto>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // Issue #730: G3 in-document FTS
+        group.MapPost("/kb-docs/{id:guid}/chunks/search", HandleSearchKbChunks)
+            .WithName("SearchKbChunks")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Search chunks within a single document by keyword")
+            .WithDescription("PostgreSQL ts_rank_cd ranking with ts_headline highlighting (<mark> tags). Query length 1-200 chars.")
+            .Produces<KbChunkSearchResultDto>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> HandleGetKbDocumentById(
+        Guid id,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session.User!.Id;
+        var userIsAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var query = new GetKbDocumentByIdQuery(id, RequestingUserId: userId, UserIsAdmin: userIsAdmin);
+        var dto = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(dto);
+    }
+
+    private static async Task<IResult> HandleGetKbChunks(
+        Guid id,
+        int? skip,
+        int? take,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var skipValue = skip ?? 0;
+        var takeValue = take ?? 50;
+
+        if (takeValue < 1 || takeValue > 100)
+        {
+            return Results.BadRequest(new { error = "take must be between 1 and 100" });
+        }
+
+        var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+        var userId = session.User!.Id;
+        var isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var query = new GetKbChunksQuery(id, RequestingUserId: userId, Skip: skipValue, Take: takeValue, UserIsAdmin: isAdmin);
+        var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetKbChunkById(
+        Guid id,
+        Guid chunkId,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+        var userId = session.User!.Id;
+        var isAdmin = string.Equals(
+            session.User!.Role,
+            UserRole.Admin.ToString(),
+            StringComparison.OrdinalIgnoreCase);
+        var query = new GetKbChunkByIdQuery(id, RequestingUserId: userId, ChunkId: chunkId, UserIsAdmin: isAdmin);
+        var dto = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(dto);
+    }
+
+    private static async Task<IResult> HandleSearchKbChunks(
+        Guid id,
+        [FromBody] SearchKbChunksRequest body,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        if (body is null || string.IsNullOrWhiteSpace(body.Query) || body.Query.Length > 200)
+        {
+            return Results.BadRequest(new { error = "query must be between 1 and 200 characters" });
+        }
+
+        var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+        var userId = session.User!.Id;
+        var isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var query = new SearchKbChunksQuery(id, RequestingUserId: userId, Query: body.Query, Skip: body.Skip ?? 0, Take: body.Take ?? 20, UserIsAdmin: isAdmin);
+        var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     private static void MapLinkKbEndpoint(RouteGroupBuilder group)
     {
         group.MapPost("/games/{gameId:guid}/knowledge-base/link", HandleLinkKb)
@@ -985,3 +1115,8 @@ internal record AssembleContextRequest(
 /// Request model for linking an existing KB (processed PDF) to a different game.
 /// </summary>
 internal record LinkKbRequest(Guid PdfDocumentId);
+
+/// <summary>
+/// Request body for POST /api/v1/kb-docs/{id}/chunks/search (G3 in-document FTS).
+/// </summary>
+internal sealed record SearchKbChunksRequest(string Query, int? Skip, int? Take);

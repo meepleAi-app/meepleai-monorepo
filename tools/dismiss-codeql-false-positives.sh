@@ -123,13 +123,13 @@ case $choice in
         dismiss_alerts \
             "cs/log-forging" \
             "false positive" \
-            "False positive - Log forging is mitigated by global LogForgingSanitizationPolicy. See: docs/06-security/codeql-false-positive-management.md. Evidence: 100% structured logging, zero string interpolation, automatic newline sanitization in LoggingConfiguration.cs"
+            "False positive - Log forging is mitigated by global LogForgingSanitizationPolicy. See: docs/security/codeql-false-positive-management.md. Evidence: 100% structured logging, zero string interpolation, automatic newline sanitization in LoggingConfiguration.cs"
         ;;
     2)
         dismiss_alerts \
             "cs/catch-of-all-exceptions" \
             "won't fix" \
-            "Intentional pattern - All 220 instances are properly documented with #pragma warning disable CA1031 and architectural justifications. See: docs/06-security/codeql-false-positive-management.md and generic-catch-analysis.md"
+            "Intentional pattern - All 220 instances are properly documented with #pragma warning disable CA1031 and architectural justifications. See: docs/security/codeql-false-positive-management.md and docs/security/generic-catch-analysis.md"
         ;;
     3)
         echo -e "${BLUE}Fetching all open alerts...${NC}"
@@ -167,7 +167,7 @@ echo ""
 echo "Next steps:"
 echo "1. Verify dismissals at: https://github.com/${REPO}/security/code-scanning"
 echo "2. Review remaining alerts and categorize them"
-echo "3. Update docs/06-security/codeql-false-positive-management.md if needed"
+echo "3. Update docs/security/codeql-false-positive-management.md if needed"
 echo ""
 echo "Note: Automated config (.github/codeql/codeql-config.yml) will prevent"
 echo "      new Log Forging and Generic Exception alerts in future scans."

@@ -21,6 +21,15 @@ internal class TextChunkEntityConfiguration : IEntityTypeConfiguration<TextChunk
         builder.Property(e => e.CharacterCount).IsRequired();
         builder.Property(e => e.CreatedAt).IsRequired();
 
+        // Issue #730: Chunk hierarchy fields
+        builder.Property(e => e.Heading).HasMaxLength(500).IsRequired(false);
+        builder.Property(e => e.ParentChunkId).IsRequired(false);
+        builder.Property(e => e.Level).IsRequired().HasDefaultValue<short>(1);
+        builder.Property(e => e.ElementType).IsRequired().HasMaxLength(20).HasDefaultValue("NarrativeText");
+
+        builder.HasIndex(e => e.ParentChunkId);
+        builder.HasIndex(e => new { e.PdfDocumentId, e.ChunkIndex }).HasDatabaseName("ix_text_chunks_pdf_chunk_index");
+
         // AI-14: Hybrid search - PostgreSQL GENERATED stored tsvector column
         // Computed from "Content" via migration AddSearchVectorColumns. Ignored by EF Core since it's DB-managed.
         builder.Ignore(e => e.SearchVector);

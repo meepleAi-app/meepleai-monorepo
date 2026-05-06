@@ -138,6 +138,7 @@ jobs:
           fetch-depth: 0  # Full history needed to compare against github.event.before on merge commits
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
           # PDFs are managed via S3 blob storage, not git
+          # data/rulebook/golden/ (~52K) IS included: Api.csproj embeds these JSON fixtures (ADR-051)
           sparse-checkout: |
             apps/
             infra/
@@ -145,6 +146,7 @@ jobs:
             tests/
             scripts/
             packages/
+            data/rulebook/golden/
           sparse-checkout-cone-mode: true
 
       # IMPORTANT: explicitly set `base` to github.event.before for push events.
@@ -158,7 +160,7 @@ jobs:
       #
       # Only runs on push events. For workflow_dispatch the decision step
       # below forces a full deploy regardless, so this step would be a no-op.
-      - uses: dorny/paths-filter@v4
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
         id: changes
         if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
         with:
@@ -222,9 +224,11 @@ jobs:
         with:
           ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
+          # data/rulebook/golden/ (~52K) IS included: Api.csproj embeds these JSON fixtures (ADR-051)
           sparse-checkout: |
             apps/
             .github/
+            data/rulebook/golden/
           sparse-checkout-cone-mode: true
 
       - name: Verify CI passed on this commit
@@ -300,9 +304,11 @@ jobs:
         with:
           ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
           # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
+          # data/rulebook/golden/ (~52K) IS included: Api.csproj embeds these JSON fixtures (ADR-051)
           sparse-checkout: |
             apps/
             .github/
+            data/rulebook/golden/
           sparse-checkout-cone-mode: true
 
       - name: Generate Version
@@ -324,15 +330,15 @@ jobs:
           echo "📊 Disk after cleanup: $(df -h / | tail -1 | awk '{print $4}') free"
 
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4
 
       - name: Setup QEMU for ARM64 cross-compilation
-        uses: docker/setup-qemu-action@v4
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a  # v4
         with:
           platforms: arm64
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121  # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -341,7 +347,7 @@ jobs:
       - name: Extract API Metadata
         if: needs.detect-changes.outputs.deploy_api == 'true'
         id: meta-api
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf  # v6
         with:
           images: ${{ env.API_IMAGE }}
           tags: |
@@ -351,7 +357,7 @@ jobs:
       - name: Extract Web Metadata
         if: needs.detect-changes.outputs.deploy_web == 'true'
         id: meta-web
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf  # v6
         with:
           images: ${{ env.WEB_IMAGE }}
           tags: |
@@ -370,9 +376,9 @@ jobs:
 
       - name: Build and Push API Image
         if: needs.detect-changes.outputs.deploy_api == 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
         with:
-          context: ./apps/api
+          context: .
           file: ./apps/api/src/Api/Dockerfile
           push: true
           tags: ${{ steps.meta-api.outputs.tags }}
@@ -386,7 +392,7 @@ jobs:
 
       - name: Build and Push Web Image
         if: needs.detect-changes.outputs.deploy_web == 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
         with:
           context: ./apps/web
           file: ./apps/web/Dockerfile
@@ -396,9 +402,13 @@ jobs:
           platforms: linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          # Note: No environment build-args. NODE_ENV is set in Dockerfile,
-          # NEXT_PUBLIC_ENV has no ARG in Dockerfile (was silently ignored).
-          # Environment config is injected at runtime via compose files.
+          # NEXT_PUBLIC_* are baked into JS bundle at build time by Next.js.
+          # Without these args the Dockerfile defaults to http://localhost:* and
+          # client-side OAuth/API calls hit smartphone localhost (broken).
+          build-args: |
+            NEXT_PUBLIC_API_BASE=https://meepleai.app
+            NEXT_PUBLIC_APP_URL=https://meepleai.app
+            NEXT_PUBLIC_SITE_URL=https://meepleai.app
 
       - name: Build Summary
         run: |
@@ -607,13 +617,31 @@ jobs:
       # Option 1: SSH Deploy (VPS/Dedicated Server)
       - name: Deploy via SSH
         if: vars.DEPLOY_METHOD == 'ssh'
-        uses: appleboy/ssh-action@v1.2.2
+        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f  # v1.2.2
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
-            cd /opt/meepleai/repo/infra
+            # Sync /opt/meepleai/repo to the deploy SHA so compose files
+            # match the workflow context (compose.traefik.yml, etc.)
+            cd /opt/meepleai/repo
+            git fetch origin main-staging
+            git reset --hard ${{ env.DEPLOY_SHA }}
+            echo "✅ Repo synced to $(git rev-parse --short HEAD)"
+            cd infra
+
+            # Pre-deploy port cleanup — kill any stale process holding :8080
+            # (see memory: feedback_staging_stale_api_host_process)
+            # Refs: docs/superpowers/specs/2026-05-05-infrastructure-single-tester-design.md G1.C1
+            STALE_PIDS=$(sudo fuser 8080/tcp 2>/dev/null | tr -d ':' | xargs || true)
+            if [ -n "$STALE_PIDS" ]; then
+              echo "🧹 Killing stale processes on :8080 — PIDs: $STALE_PIDS"
+              sudo kill -9 $STALE_PIDS 2>/dev/null || true
+              sleep 2
+            else
+              echo "✅ Port :8080 is clean"
+            fi
 
             # Load secrets for docker compose
             set -a
@@ -654,8 +682,12 @@ jobs:
             done
 
             # Deploy only changed services (--force-recreate ensures container restarts even if image digest unchanged)
+            # Single-tester profiles: ai-essential (embedding+reranker) + monitoring-essential
+            # + proxy (traefik). NO orchestration, NO n8n, NO seq/cadvisor.
+            # See docs/superpowers/specs/2026-05-05-infrastructure-single-tester-design.md G3
             docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml \
-              --profile minimal up -d --no-deps --force-recreate $SERVICES
+              --profile ai-essential --profile monitoring-essential --profile proxy \
+              up -d --no-deps --force-recreate $SERVICES
 
             # Health check via docker exec (port not exposed on host)
             echo "⏳ Waiting for API health..."
@@ -879,7 +911,7 @@ jobs:
 
       - name: Update Server Baseline
         if: always() && steps.metrics.outputs.json != ''
-        uses: appleboy/ssh-action@v1.2.2
+        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f  # v1.2.2
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}

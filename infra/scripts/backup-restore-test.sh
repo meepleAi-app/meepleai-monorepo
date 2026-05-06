@@ -106,13 +106,13 @@ echo "Restore completed in ${RESTORE_TIME}s"
 
 echo "Verifying restored data..."
 
-# Query Administration.Users count
+# Query users count (lowercase, default schema — actual table name in EF migrations)
 USERS_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d meepleai -t -c \
-  'SELECT COUNT(*) FROM "Administration"."Users";' 2>/dev/null | tr -d '[:space:]' || echo "ERROR")
+  'SELECT COUNT(*) FROM users;' 2>/dev/null | tr -d '[:space:]' || echo "ERROR")
 
-# Query GameManagement.Games count
+# Query games count (lowercase, default schema — actual table name in EF migrations)
 GAMES_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d meepleai -t -c \
-  'SELECT COUNT(*) FROM "GameManagement"."Games";' 2>/dev/null | tr -d '[:space:]' || echo "ERROR")
+  'SELECT COUNT(*) FROM games;' 2>/dev/null | tr -d '[:space:]' || echo "ERROR")
 
 # Query schema count (exclude pg_catalog, information_schema, pg_toast, public)
 SCHEMA_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d meepleai -t -c \
@@ -123,8 +123,8 @@ SCHEMA_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d meepleai 
 
 echo ""
 echo "--- Data Verification ---"
-echo "  Administration.Users count : ${USERS_COUNT}"
-echo "  GameManagement.Games count : ${GAMES_COUNT}"
+echo "  users count                : ${USERS_COUNT}"
+echo "  games count                : ${GAMES_COUNT}"
 echo "  Custom schema count        : ${SCHEMA_COUNT} (expected >= 5, up to 18 bounded contexts)"
 
 # ─── Check schema count >= 5 ─────────────────────────────────────────────────
@@ -138,6 +138,45 @@ if [[ "${SCHEMA_COUNT}" =~ ^[0-9]+$ ]]; then
 else
   echo "ERROR: Could not determine schema count" >&2
   exit 1
+fi
+
+# ─── Smoke read-back (only with --with-smoke-readback flag) ──────────────────
+
+if [[ " $* " == *" --with-smoke-readback "* ]]; then
+  echo ""
+  echo "--- Smoke read-back ---"
+
+  SMOKE_FAIL=0
+
+  # Reuse already-computed counts from earlier verification block
+  for pair in "users:${USERS_COUNT}" "games:${GAMES_COUNT}"; do
+    label="${pair%:*}"
+    count="${pair#*:}"
+    if [[ "$count" =~ ^[0-9]+$ ]] && [ "$count" -gt 0 ]; then
+      echo "  ✅ $label: $count rows"
+    else
+      echo "  ❌ $label: got '$count' (expected positive integer)"
+      SMOKE_FAIL=1
+    fi
+  done
+
+  # Third query: GameSessions (>=0 accepted per Fix #3 — legitimate vuoto su single-tester fresh)
+  SESSIONS_COUNT=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d "${DB_NAME}" -t -c \
+    'SELECT COUNT(*) FROM "GameSessions";' 2>/dev/null | tr -d '[:space:]' || echo "ERROR")
+  if [[ "$SESSIONS_COUNT" =~ ^[0-9]+$ ]]; then
+    echo "  ✅ sessions: $SESSIONS_COUNT rows (>=0 accepted, table may be empty)"
+  else
+    echo "  ❌ sessions: query failed (got '$SESSIONS_COUNT')"
+    SMOKE_FAIL=1
+  fi
+
+  if [ "$SMOKE_FAIL" -ne 0 ]; then
+    echo ""
+    echo "❌ Restore OK but smoke read-back FAILED" >&2
+    exit 1
+  fi
+
+  echo "  ✅ Restore + smoke read-back PASSED"
 fi
 
 # ─── Done ─────────────────────────────────────────────────────────────────────

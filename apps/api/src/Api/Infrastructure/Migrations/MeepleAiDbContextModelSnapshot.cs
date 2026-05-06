@@ -11857,12 +11857,31 @@ namespace Api.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("ElementType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("NarrativeText");
+
                     b.Property<Guid?>("GameId")
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Heading")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<short>("Level")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("smallint")
+                        .HasDefaultValue((short)1);
+
                     b.Property<int?>("PageNumber")
                         .HasColumnType("integer");
+
+                    b.Property<Guid?>("ParentChunkId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("PdfDocumentId")
                         .HasMaxLength(64)
@@ -11879,9 +11898,14 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("PageNumber");
 
+                    b.HasIndex("ParentChunkId");
+
                     b.HasIndex("PdfDocumentId");
 
                     b.HasIndex("SharedGameId");
+
+                    b.HasIndex("PdfDocumentId", "ChunkIndex")
+                        .HasDatabaseName("ix_text_chunks_pdf_chunk_index");
 
                     b.ToTable("text_chunks", (string)null);
                 });

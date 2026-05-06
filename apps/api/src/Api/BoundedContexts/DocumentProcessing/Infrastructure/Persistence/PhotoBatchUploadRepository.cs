@@ -87,4 +87,24 @@ internal sealed class PhotoBatchUploadRepository : RepositoryBase, IPhotoBatchUp
         return await DbContext.Set<PhotoBatchUpload>()
             .AnyAsync(b => b.Id == id, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <inheritdoc/>
+    public async Task<string?> GetPageTextAsync(Guid uploadId, int pageNumber, CancellationToken ct = default)
+    {
+        return await DbContext.PhotoBatchPages
+            .AsNoTracking()
+            .Where(p => p.PhotoBatchUploadId == uploadId && p.PageNumber == pageNumber)
+            .Select(p => p.ExtractedText)
+            .FirstOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> BelongsToUserAsync(Guid uploadId, Guid userId, CancellationToken ct = default)
+    {
+        return await DbContext.PhotoBatchUploads
+            .AsNoTracking()
+            .AnyAsync(b => b.Id == uploadId && b.UserId == userId, ct)
+            .ConfigureAwait(false);
+    }
 }

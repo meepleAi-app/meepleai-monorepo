@@ -1093,12 +1093,24 @@
         "totalLabel": "{count, plural, one {1 domanda totale} other {# domande totali}}"
       },
       "categories": {
-        "all": { "label": "Tutte" },
-        "account": { "label": "Account & Login" },
-        "games": { "label": "Giochi & Library" },
-        "ai": { "label": "AI & Chat" },
-        "privacy": { "label": "Privacy & Dati" },
-        "billing": { "label": "Billing & Alpha" }
+        "all": {
+          "label": "Tutte"
+        },
+        "account": {
+          "label": "Account & Login"
+        },
+        "games": {
+          "label": "Giochi & Library"
+        },
+        "ai": {
+          "label": "AI & Chat"
+        },
+        "privacy": {
+          "label": "Privacy & Dati"
+        },
+        "billing": {
+          "label": "Billing & Alpha"
+        }
       },
       "popularSection": {
         "title": "Risposte rapide",
@@ -1597,6 +1609,183 @@
         }
       }
     },
+    "sessions": {
+      "metadata": {
+        "title": "Le mie partite — MeepleAI",
+        "description": "Storico delle tue sessioni di gioco: esiti, punteggi e diari."
+      },
+      "hero": {
+        "title": "Le tue partite",
+        "subtitle": "{count, plural, =0 {Nessuna partita ancora} =1 {1 partita registrata} other {# partite registrate}}",
+        "ctaNew": "Registra partita",
+        "ctaLive": "Avvia live",
+        "stats": {
+          "sessions": "partite",
+          "wins": "vittorie",
+          "totalTime": "totali",
+          "lastSession": "ultima"
+        }
+      },
+      "filters": {
+        "status": {
+          "all": "Tutti",
+          "active": "In corso",
+          "completed": "Completate",
+          "abandoned": "Abbandonate"
+        },
+        "searchPlaceholder": "Cerca partita o gioco…",
+        "searchAriaLabel": "Cerca tra le tue partite",
+        "view": {
+          "label": "Vista",
+          "list": "Lista",
+          "grid": "Griglia"
+        }
+      },
+      "card": {
+        "outcome": {
+          "won": "Vinta",
+          "lost": "Persa",
+          "tie": "Pareggio"
+        },
+        "status": {
+          "live": "Live",
+          "paused": "In pausa",
+          "abandoned": "Abbandonata"
+        },
+        "playerCount": "{count} giocatori",
+        "duration": "{duration}",
+        "scoreLabel": "Punteggio: {score}",
+        "winnerLabel": "Vincitore",
+        "turnLabel": "Turno {turn}",
+        "resumeCta": "Riprendi",
+        "resumeOrArchiveCta": "Riprendi o archivia",
+        "openAriaLabel": "Apri sessione {gameName}",
+        "scoreOverflowTemplate": "+{count} altri"
+      },
+      "empty": {
+        "title": "Nessuna partita ancora",
+        "description": "Registra la tua prima partita giocata o avvia una sessione live per tracciare turni, punteggi e diari.",
+        "ctaStart": "Registra prima partita",
+        "ctaLive": "Avvia live"
+      },
+      "filteredEmpty": {
+        "title": "Nessuna partita per questi filtri",
+        "description": "Prova a rimuovere alcuni vincoli o cambia periodo.",
+        "ctaClear": "Reset filtri"
+      },
+      "loading": {
+        "ariaLabel": "Caricamento partite in corso…"
+      },
+      "error": {
+        "title": "Errore caricamento",
+        "description": "Impossibile recuperare le partite. Verifica la connessione.",
+        "ctaRetry": "Riprova"
+      },
+      "a11y": {
+        "resultsLabel": "Lista partite",
+        "countTemplate": "{count, plural, =0 {Nessuna partita} =1 {1 partita} other {# partite}}"
+      }
+    },
+    "players": {
+      "metadata": {
+        "title": "Giocatori — MeepleAI",
+        "description": "Riepilogo delle tue partite: giochi giocati, sessioni e vittorie."
+      },
+      "hero": {
+        "title": "Le tue partite",
+        "subtitle": "Riepilogo dei giochi che hai giocato, con sessioni e vittorie.",
+        "totalPlays": "Sessioni totali",
+        "distinctGames": "Giochi distinti"
+      },
+      "filters": {
+        "searchPlaceholder": "Cerca per nome del gioco…",
+        "searchAriaLabel": "Cerca tra i tuoi giochi",
+        "clearFilters": "Cancella filtri"
+      },
+      "states": {
+        "loading": {
+          "ariaLabel": "Caricamento partite in corso…"
+        },
+        "empty": {
+          "title": "Nessuna partita ancora",
+          "subtitle": "Registra la tua prima partita per vedere il riepilogo qui.",
+          "cta": "Inizia a giocare",
+          "ctaAriaLabel": "Vai alla sezione giochi"
+        },
+        "filteredEmpty": {
+          "title": "Nessun gioco trovato",
+          "subtitle": "Prova a modificare la ricerca per trovare i tuoi giochi.",
+          "cta": "Cancella ricerca",
+          "ctaAriaLabel": "Cancella la ricerca attiva"
+        },
+        "error": {
+          "title": "Impossibile caricare le partite",
+          "subtitle": "Si è verificato un errore. Riprova tra qualche istante.",
+          "cta": "Riprova"
+        }
+      },
+      "results": {
+        "resultsCount": "{count, plural, =0 {Nessun risultato} =1 {1 gioco} other {# giochi}}",
+        "resultsAriaLabel": "Lista giochi giocati",
+        "cardSubtitle": "{count} partite",
+        "cardOpenAriaLabel": "Apri {gameName}"
+      }
+    },
+    "playerDetail": {
+      "metadata": {
+        "title": "{playerName} — MeepleAI",
+        "description": "Profilo giocatore: sessioni, vittorie e statistiche di {playerName}."
+      },
+      "hero": {
+        "back": "Torna ai Giocatori",
+        "backAriaLabel": "Torna alla lista giocatori",
+        "totalSessions": "{count} sessioni",
+        "totalWins": "{count} vittorie",
+        "winRate": "{rate}% win rate",
+        "achievementBadge": "{count} achievement"
+      },
+      "sections": {
+        "stats": {
+          "title": "Statistiche"
+        },
+        "leaderboard": {
+          "title": "Classifica",
+          "rank": "Posizione #{rank}",
+          "ariaLabel": "Posizione in classifica: {rank}"
+        },
+        "favoriteAgent": {
+          "title": "Agente Preferito",
+          "none": "Nessun agente usato ancora"
+        },
+        "achievements": {
+          "title": "Achievement",
+          "viewAll": "Vedi tutti",
+          "viewAllAriaLabel": "Vedi tutti gli achievement di {playerName}",
+          "empty": "Nessun achievement ancora"
+        }
+      },
+      "states": {
+        "loading": {
+          "ariaLabel": "Caricamento profilo giocatore in corso…"
+        },
+        "notFound": {
+          "title": "Giocatore non trovato",
+          "subtitle": "Il profilo che cerchi non esiste o non è disponibile.",
+          "cta": "Torna ai Giocatori"
+        },
+        "error": {
+          "title": "Impossibile caricare il profilo",
+          "subtitle": "Si è verificato un errore. Riprova tra qualche istante.",
+          "cta": "Riprova"
+        }
+      },
+      "subroutes": {
+        "achievements": "Achievement completi",
+        "games": "Giochi giocati",
+        "sessions": "Sessioni",
+        "stats": "Statistiche dettagliate"
+      }
+    },
     "agentDetail": {
       "metadata": {
         "title": "{name} — Agente AI — MeepleAI",
@@ -2052,6 +2241,205 @@
     },
     "cookies": {
       "managePreferencesCta": "Gestisci preferenze"
+    },
+    "sessionLive": {
+      "metadata": {
+        "title": "Sessione live — MeepleAI",
+        "description": "Sessione di gioco in tempo reale."
+      },
+      "topBar": {
+        "sessionTitleAriaLabel": "Sessione: {name}",
+        "turnLabel": "{count, plural, =0 {Inizio} =1 {Turno 1/{total}} other {Turno #/{total}}}",
+        "statusInProgress": "In corso",
+        "statusPaused": "In pausa",
+        "pauseCta": "Pausa",
+        "resumeCta": "Riprendi",
+        "endgameCta": "Termina sessione",
+        "exitAriaLabel": "Esci dalla sessione"
+      },
+      "turnIndicator": {
+        "currentTurnAriaLabel": "Turno {current} di {total}",
+        "activePlayerLabel": "{playerName}",
+        "yourTurnLabel": "Il tuo turno",
+        "waitingLabel": "Aspetta il tuo turno"
+      },
+      "roster": {
+        "title": "Giocatori",
+        "playerCountTemplate": "{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}",
+        "onlineLabel": "Online",
+        "offlineLabel": "Offline",
+        "kickAriaLabel": "Espelli {playerName}",
+        "roleSpectator": "Spettatore",
+        "rolePlayer": "Giocatore",
+        "roleHost": "Host"
+      },
+      "scoring": {
+        "title": "Punteggi",
+        "scoreLabel": "Punteggio: {score}",
+        "winnerLabel": "Vincitore",
+        "myScoreLabel": "Il tuo punteggio",
+        "incrementAriaLabel": "Aumenta punteggio di {playerName}",
+        "decrementAriaLabel": "Diminuisci punteggio di {playerName}",
+        "scoreInputAriaLabel": "Inserisci punteggio per {playerName}",
+        "playerCount": "{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}"
+      },
+      "actionLog": {
+        "title": "Eventi",
+        "emptyLabel": "Nessun evento ancora.",
+        "typeScore": "Punteggio",
+        "typeTool": "Tool",
+        "typeAgent": "Agent",
+        "typeChat": "Chat",
+        "typePhoto": "Foto",
+        "typeEvent": "Evento",
+        "timestampAriaLabel": "Eventi ordinati cronologicamente, più recenti in alto"
+      },
+      "loading": {
+        "ariaLabel": "Caricamento sessione live…"
+      },
+      "error": {
+        "title": "Impossibile caricare la sessione",
+        "description": "Si è verificato un errore. Riprova.",
+        "ctaRetry": "Riprova"
+      },
+      "notFound": {
+        "title": "Sessione non trovata",
+        "description": "La sessione richiesta non esiste o non hai accesso.",
+        "ctaBack": "Torna alle sessioni"
+      },
+      "connectionLost": {
+        "retryCount": "{count, plural, =1 {tentativo 1/5} other {tentativo #/5}}",
+        "reconnecting": "Connessione persa, riprovo...",
+        "degradedPolling": "Aggiornamenti ogni 5s — clicca per riprovare in tempo reale",
+        "failed": "Sessione affollata o errore — riprova tra 60s",
+        "manualRetryLabel": "Riprova connessione"
+      },
+      "a11y": {
+        "viewLabel": "Vista sessione live"
+      },
+      "rightColumn": {
+        "tabsAriaLabel": "Pannelli sessione",
+        "tabTools": "Strumenti",
+        "tabChat": "Chat",
+        "tabNotes": "Note"
+      },
+      "tools": {
+        "title": "Strumenti",
+        "toolDiceLabel": "Dado",
+        "toolTimerLabel": "Timer",
+        "toolCardLabel": "Carta",
+        "executeAriaTemplate": "Esegui {toolName}",
+        "disabledSpectatorTooltip": "Solo giocatori possono usare gli strumenti"
+      },
+      "chat": {
+        "title": "Chat",
+        "inputAriaLabel": "Scrivi un messaggio",
+        "sendAriaLabel": "Invia messaggio",
+        "visibilityPrivate": "Privato",
+        "visibilityShared": "Condiviso",
+        "emptyMessage": "Nessun messaggio ancora."
+      },
+      "notes": {
+        "title": "Note",
+        "inputAriaLabel": "Scrivi una nota",
+        "addAriaLabel": "Aggiungi nota",
+        "visibilityPrivate": "Privata",
+        "visibilityShared": "Condivisa",
+        "emptyMessage": "Nessuna nota ancora."
+      },
+      "pauseOverlay": {
+        "title": "Sessione in pausa",
+        "resumeCta": "Riprendi",
+        "closeCta": "Chiudi",
+        "closeAriaLabel": "Chiudi overlay pausa"
+      },
+      "endgameDialog": {
+        "title": "Fine sessione",
+        "winnerLabel": "Vincitore",
+        "acknowledgeCta": "Ho capito",
+        "viewSummaryCta": "Vedi riepilogo"
+      }
+    },
+    "sessionSummary": {
+      "hero": {
+        "title": "Riepilogo partita",
+        "podiumLabel": "Podio finale",
+        "tiedBanner": "{count, plural, =2 {🤝 Pareggio tra {names}} other {🤝 Pareggio a {count} tra {names}}}",
+        "confettiAriaLabel": "Animazione festeggiamento vittoria",
+        "confettiSkippedLabel": "Medaglia vittoria"
+      },
+      "kpi": {
+        "duration": "Durata",
+        "players": "Giocatori",
+        "turns": "Turni",
+        "avgRoundTime": "Tempo medio turno",
+        "totalScore": "Punteggio totale"
+      },
+      "scoring": {
+        "title": "Punteggio dettagliato",
+        "headerName": "Giocatore",
+        "headerScore": "Punteggio",
+        "headerRank": "Posizione",
+        "tied": "Pari merito"
+      },
+      "connectionBar": {
+        "title": "Andamento partita",
+        "eventLabel": "Evento",
+        "emptyEvent": "Nessun evento registrato"
+      },
+      "achievements": {
+        "title": "Achievements",
+        "unlockedAt": "Sbloccato il {date}",
+        "locked": "Ancora bloccato",
+        "empty": "Nessun achievement sbloccato in questa partita"
+      },
+      "diary": {
+        "title": "Diario partita",
+        "filterAll": "Tutti",
+        "filterScore": "Punteggio",
+        "filterEvent": "Eventi",
+        "filterChat": "Chat",
+        "filterPhoto": "Foto",
+        "empty": "Nessun evento per questo filtro",
+        "expand": "Espandi turno {turn}",
+        "collapse": "Comprimi turno {turn}"
+      },
+      "photos": {
+        "title": "Foto sessione",
+        "empty": "Nessuna foto in questa partita",
+        "viewLarger": "Apri foto"
+      },
+      "chatHighlights": {
+        "title": "Momenti chat",
+        "empty": "Nessun momento saliente registrato"
+      },
+      "share": {
+        "title": "Condividi riepilogo",
+        "previewLight": "Tema chiaro",
+        "previewDark": "Tema scuro",
+        "copyLink": "Copia link",
+        "shareTwitter": "Condividi su Twitter",
+        "shareInstagram": "Condividi su Instagram",
+        "shareWhatsApp": "Condividi su WhatsApp",
+        "downloadPng": "Scarica PNG",
+        "downloadPngDisabled": "In arrivo prossimamente"
+      },
+      "playAgain": {
+        "title": "Pronti per la rivincita?",
+        "cta": "Riavvia con stessi giocatori",
+        "description": "Stesso gioco, stessi giocatori — agente già caricato"
+      },
+      "states": {
+        "notCompleted": {
+          "title": "Sessione in corso",
+          "description": "Questa sessione non è ancora terminata.",
+          "continueLive": "Vai alla sessione live"
+        },
+        "notFound": {
+          "title": "Sessione non trovata",
+          "backToSessions": "Torna alle sessioni"
+        }
+      }
     }
   },
   "gamebook": {
@@ -2060,11 +2448,14 @@
       "subtitle": "Carica le foto del manuale di gioco per l'indicizzazione AI",
       "dropzoneLabel": "Trascina le foto qui o clicca per selezionare",
       "dropzoneHint": "JPG, PNG, WEBP — massimo 20 MB ciascuna",
+      "photoLimitHint": "Massimo {max} foto per batch. Dimensione consigliata: ~300 KB ciascuna.",
       "selectedFiles": "{count, plural, one {# file selezionato} other {# file selezionati}}",
       "submitButton": "Carica {count, plural, one {# foto} other {# foto}}",
       "submitting": "Caricamento in corso...",
       "uploadSuccess": "Caricamento avviato — batch {batchId}",
       "uploadError": "Caricamento fallito. Riprova.",
+      "tooManyFiles": "Massimo {max} foto per batch. Selezionate {selected} — rimuovine alcune.",
+      "oversizeWarning": "{count, plural, one {# foto supera 1 MB} other {# foto superano 1 MB}}. Considera di ridurre la qualità per un upload più veloce.",
       "statusTitle": "Stato elaborazione",
       "statusPending": "In attesa di avvio...",
       "statusProcessing": "Elaborazione pagine...",
@@ -2075,7 +2466,180 @@
       "confidence": "Confidenza media",
       "errorMessage": "Errore: {message}",
       "noFilesSelected": "Nessun file selezionato",
-      "gameIdLabel": "ID Gioco"
+      "gameIdLabel": "ID Gioco",
+      "indexingComplete": "Indicizzazione completata!",
+      "indexingCompleteHint": "Ora puoi fare domande sul manuale.",
+      "startChat": "Inizia chat",
+      "pickerTitle": "Scegli il manuale da fotografare",
+      "pickerSubtitle": "Seleziona il gioco da tavolo di cui vuoi indicizzare il manuale",
+      "pickerSearchPlaceholder": "Cerca giochi...",
+      "pickerLoading": "Caricamento giochi...",
+      "pickerError": "Impossibile caricare i giochi. Riprova.",
+      "pickerNoResults": "Nessun gioco trovato per \"{search}\".",
+      "pickerNoGames": "Nessun gioco disponibile.",
+      "backToPicker": "Cambia gioco",
+      "wizard": {
+        "meta": {
+          "title": "Carica manuale | MeepleAI",
+          "description": "Fotografa il tuo manuale di gioco passo dopo passo"
+        },
+        "stepIndicator": {
+          "back": "Indietro",
+          "stepGame": "Gioco",
+          "stepPhoto": "Foto",
+          "stepIndex": "Indice"
+        },
+        "step1": {
+          "title": "Quale gioco vuoi indicizzare?",
+          "subtitle": "Scegli dal catalogo condiviso o cercane uno nuovo.",
+          "searchPlaceholder": "Cerca un gioco...",
+          "tabCatalog": "Catalogo",
+          "tabBgg": "BGG",
+          "tabBadge": "({count})",
+          "continueButton": "Continua",
+          "searchInfo": "Nessun risultato nel catalogo. Cerca su BGG ↑",
+          "bggLoadingTitle": "Cerco su BoardGameGeek...",
+          "bggLoadingSubtitle": "Può richiedere qualche secondo",
+          "noResultsTitle": "\"{query}\" non trovato",
+          "noResultsSubtitle": "Tre modi per continuare:",
+          "actionCardCreate": "Crea gioco nuovo",
+          "actionCardCreateSubtitle": "Manuale che non esiste in nessun database",
+          "actionCardBgg": "Cerca su BoardGameGeek",
+          "actionCardBggSubtitle": "Fonte ufficiale con metadati completi",
+          "actionCardPrivate": "Indicizza solo per me",
+          "actionCardPrivateSubtitle": "Privato — non condiviso con la community"
+        },
+        "step2": {
+          "title": "Fotografa il manuale",
+          "cameraAria": "Fotocamera mirino",
+          "shutterAria": "Scatta foto",
+          "closeAria": "Chiudi fotocamera",
+          "galleryAria": "Apri galleria",
+          "doneAria": "Fine — vai a indicizzazione",
+          "counter": "{count, plural, =0 {0 di {max}} one {1 di {max}} other {{count} di {max}}}",
+          "hintReady": "✓ Pagina riconosciuta",
+          "hintLowLight": "☁️ Avvicina alla luce",
+          "hintFailed": "✗ Bordi non rilevati",
+          "lightMeterAria": "Misuratore luce",
+          "lightMeterLow": "BASSA",
+          "lightMeterMedium": "MEDIA",
+          "lightMeterOk": "OK",
+          "deniedTitle": "Camera bloccata",
+          "deniedSubtitle": "MeepleAI non ha accesso alla fotocamera. Abilita i permessi nelle impostazioni del sistema.",
+          "deniedOpenSettings": "Apri impostazioni",
+          "deniedGallery": "Carica dalla galleria",
+          "deniedHint": "💡 In alternativa, puoi caricare foto già scattate.",
+          "unsupportedTitle": "Fotocamera non supportata",
+          "unsupportedSubtitle": "Il tuo browser non supporta l'accesso alla fotocamera. Carica le foto dalla galleria.",
+          "desktopDropTitle": "Trascina le foto qui",
+          "desktopDropSubtitle": "Su desktop puoi anche caricare foto già scattate.",
+          "desktopDropFormats": "Formati supportati: JPG, PNG, HEIC · Max {max} file",
+          "desktopDropBrowse": "Sfoglia file",
+          "desktopDropSendToPhone": "Invia link al telefono"
+        },
+        "step3": {
+          "progressTitle": "Indicizzazione…",
+          "progressSubtitle": "Puoi tenere il telefono in tasca.",
+          "progressLabel": "{processedPages, plural, =0 {0 di {totalPages}} one {1 di {totalPages}} other {{processedPages} di {totalPages}}}",
+          "partialTitle": "Quasi pronto",
+          "partialSubtitle": "{ok} pagine ok, {retake} da riscattare per qualità migliore.",
+          "completeTitle": "Manuale pronto!",
+          "completeSubtitle": "{total} pagine indicizzate, {high} ad alta confidenza.",
+          "lowConfidenceLabel": "Bassa confidenza — riscatta consigliato",
+          "retakeAria": "Riscatta pagina {pageNumber}",
+          "retakeButton": "📷 Riscatta",
+          "retakeBatch": "{count, plural, one {📷 Riscatta # pagina} other {📷 Riscatta # pagine}}",
+          "skipPartial": "Salta — uso così",
+          "savePlain": "Salva e basta",
+          "startSession": "🎯 Inizia sessione",
+          "cancelButton": "Annulla"
+        },
+        "confidence": {
+          "high": "Alta",
+          "medium": "Media",
+          "low": "Bassa",
+          "processing": "In elaborazione"
+        },
+        "offline": {
+          "bannerTitle": "Connessione persa",
+          "bannerSubtitle": "Riprenderà automaticamente al ripristino.",
+          "retryNow": "Riprova ora",
+          "retryAttempt": "Tentativo {current}/5 in {seconds}s",
+          "cancel": "Annulla",
+          "failedTerminalTitle": "Indicizzazione interrotta",
+          "failedTerminalSubtitle": "Riprova manualmente quando hai connessione stabile.",
+          "failedTerminalRetry": "Riprova",
+          "failedTerminalChange": "Cambia foto"
+        },
+        "cancelModal": {
+          "title": "Annullare l'indicizzazione?",
+          "body": "Hai già scattato {count, plural, one {# pagina} other {# pagine}}. Se annulli ora, dovrai ricominciare da capo.",
+          "continue": "Continua a indicizzare",
+          "confirm": "Sì, annulla"
+        }
+      }
+    },
+    "play": {
+      "loading": "Caricamento...",
+      "pageNumber": "Pagina {num}",
+      "pageContent": "Contenuto pagina {num}",
+      "showOriginal": "📖 Mostra originale",
+      "showTranslation": "🌐 Mostra traduzione",
+      "distanceReading": "🔭 Lettura distante",
+      "normalReading": "🔍 Lettura normale",
+      "toggleDistanceReading": "Modalità lettura distante",
+      "translationUnavailable": "Traduzione non disponibile",
+      "retry": "Riprova"
+    },
+    "index": {
+      "hero": {
+        "kicker": "📚 Libri game",
+        "title": "I tuoi manuali",
+        "subtitle": "Manuali fotografati pronti per il tuo tavolo",
+        "kpiTotalGamebooks": "manuali",
+        "kpiTotalSessions": "questo mese",
+        "kpiActiveAgents": "traduzioni",
+        "ctaAddManual": "Aggiungi manuale"
+      },
+      "quota": {
+        "title": "Quota traduzioni",
+        "usedCount": "{used, plural, =0 {0 di {total}} one {1 di {total}} other {{used} di {total}}}",
+        "resetIn": "Resetta il {date}",
+        "softWarning": "Stai per esaurire la quota mensile",
+        "hardLimit": "Quota raggiunta — acquista crediti per continuare",
+        "upgrade": "Acquista crediti"
+      },
+      "card": {
+        "statusReady": "Pronto",
+        "statusIndexing": "Indicizzazione…",
+        "statusError": "Errore · Riprova",
+        "pagesCount": "{pages, plural, =0 {0 pagine} one {1 pagina} other {{pages} pagine}}",
+        "pagesProgress": "{indexed}/{total} pag",
+        "chunksCount": "{count} chunks",
+        "qaCount": "{count} domande",
+        "sessionsCount": "{count} sessioni",
+        "indexingProgress": "Indicizzazione… {indexed}/{total}",
+        "errorRetry": "Riprova",
+        "openGamebook": "Apri manuale"
+      },
+      "section": {
+        "title": "I tuoi manuali",
+        "count": "({count})"
+      },
+      "empty": {
+        "title": "Nessun manuale ancora",
+        "description": "Fotografa il tuo primo gamebook per iniziare a giocare in italiano.",
+        "cta": "📷 Scatta il primo manuale",
+        "howItWorks": "Come funziona →"
+      },
+      "loading": {
+        "label": "Caricamento manuali…"
+      },
+      "error": {
+        "title": "Impossibile caricare la libreria",
+        "description": "Connessione instabile. Riprova fra un momento.",
+        "retry": "🔄 Riprova"
+      }
     }
   }
 }

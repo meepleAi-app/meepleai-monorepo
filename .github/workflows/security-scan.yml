@@ -84,7 +84,7 @@ jobs:
 
       # Frontend dependencies
       - name: Setup pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@a8198c4bff370c8506180b035930dea56dbd5288  # v5
         with:
           version: 10
 
@@ -109,6 +109,24 @@ jobs:
             exit 1
           fi
           echo "✅ No HIGH/CRITICAL vulnerabilities in production dependencies"
+
+  # Dockerfile lint with Hadolint
+  # Q2 2026 Security Review (#186) P1.4a
+  hadolint:
+    name: Dockerfile Lint (Hadolint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run Hadolint on all Dockerfiles
+        uses: hadolint/hadolint-action@54c9adbab1582c2ef04b2016b760714a4bfde3cf  # v3.1.0
+        with:
+          recursive: true
+          config: .hadolint.yaml
+          # Fail on any warning+ in tracked Dockerfiles (info still printed but doesn't fail)
+          failure-threshold: warning
+          ignore: DL3008,DL3018,DL3059  # also documented in .hadolint.yaml
 
   # Secrets scanning with Semgrep
   secrets:
@@ -143,7 +161,7 @@ jobs:
 
   notify-end:
     if: always() && contains(join(needs.*.result, ','), 'failure')
-    needs: [codeql, dependencies, secrets]
+    needs: [codeql, dependencies, hadolint, secrets]
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: failed

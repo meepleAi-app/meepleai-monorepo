@@ -223,6 +223,12 @@ export { useUserFeatures, featureFlagKeys } from './useFeatureFlags';
 // KB Game Documents queries (Mobile Library → KB flow)
 export { useKbGameDocuments, kbGameDocumentKeys } from './useGameDocuments';
 
+// KB Document & Chunk queries (Issue #730 — G1-G4)
+export { useKbDocument, kbDocumentKeys } from './useKbDocument';
+export { useKbChunks, kbChunksKeys } from './useKbChunks';
+export { useKbChunk, kbChunkKeys } from './useKbChunk';
+export { useKbChunkSearch } from './useKbChunkSearch';
+
 // Next Session queries (Library Hero Banner)
 
 // Session Vision AI — Snapshots & Game State

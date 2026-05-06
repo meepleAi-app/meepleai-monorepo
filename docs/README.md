@@ -1,268 +1,98 @@
 # MeepleAI Documentation
 
-**AI-powered board game assistant** - Complete documentation for developers, DevOps, and architects
+**AI-powered board game assistant** — documentation hub.
+
+The full reorganization (Phases 0-5) is complete. Documentation is now split into 3 audience-segmented roots.
 
 ---
 
-## Quick Start
+## Choose your audience
 
-**New to MeepleAI?** Start here:
+| You are… | Go to |
+|----------|-------|
+| **End user** of MeepleAI (player, table master, workspace admin) | [`for-users/`](./for-users/README.md) — Wikipedia-style wiki |
+| **Contributor** (backend, frontend, devops, QA, security) | [`for-developers/`](./for-developers/README.md) — task-oriented guides |
+| **AI agent / architect** | [`for-claude/`](./for-claude/README.md) — dense reference, ADRs, RAG architecture |
+| **Setting up the repo** | [`../CLAUDE.md`](../CLAUDE.md) — single source of truth for dev workflow |
 
-1. **[CLAUDE.md](../CLAUDE.md)** - Complete development guide (setup, standards, workflows)
-2. **[Architecture Overview](./architecture/README.md)** - System design and ADRs
-3. **[Development Guide](./development/README.md)** - Local setup and development workflow
-4. **[Bounded Contexts](./bounded-contexts/README.md)** - DDD context guides
+---
+
+## Live resources
 
 | Resource | URL |
 |----------|-----|
-| **API Docs (Scalar UI)** | http://localhost:8080/scalar/v1 |
-| **OpenAPI Spec** | http://localhost:8080/openapi/v1.json |
+| **REST API explorer** | `http://localhost:8080/scalar/v1` (Scalar UI — API SSOT) |
+| **OpenAPI spec** | `http://localhost:8080/openapi/v1.json` |
+| **Grafana dashboards** | `http://localhost:3001` |
 
 ---
 
-## Documentation Structure
+## Tree (after Phase 5)
 
 ```
 docs/
-├── architecture/             # ADRs, DDD, diagrams, system overview
-├── development/              # Developer guides, git workflow, secrets
-├── api/                      # API reference, RAG system docs
-├── deployment/               # Deployment, infrastructure, secrets, monitoring
-├── testing/                  # Testing strategy (backend, frontend, e2e, perf)
-├── security/                 # Security documentation, OWASP, vulnerabilities
-├── frontend/                 # Frontend architecture, components, dashboard
-├── bounded-contexts/         # DDD Bounded Contexts guides
-├── user-guides/              # Admin guides, user flows, gap analysis
-├── migrations/               # Migration guides (dashboard v1→v2)
-├── for-claude/               # Audience-segmented stub (Phase 0 of reorg)
-├── for-developers/           # Audience-segmented stub (Phase 0 of reorg)
-├── for-users/                # Wikipedia-style end-user wiki (Phase 0+5 of reorg)
-└── templates/                # Documentation templates
+├── for-users/                # End-user wiki (Italian)
+│   ├── features/             # 5 Alpha features (rag-chat, pdf-upload, games-bgg, library, auth)
+│   ├── faq.md
+│   └── meepleai-project-brief.md
+│
+├── for-developers/           # Contributor guides
+│   ├── workflows/            # snapshot-seed, git-workflow, secrets
+│   ├── testing/              # backend / frontend / e2e patterns
+│   ├── frontend/             # design tokens + v2 migration matrix
+│   ├── deployment/           # 5 deploy/CI guides
+│   ├── operations/           # operations-manual.md
+│   ├── security/             # OWASP, DPIA, Q1/Q2 reviews, iac-scans
+│   ├── templates/            # bounded-context template
+│   ├── specs/                # 4 active design specs
+│   ├── plans/                # 1 in-flight plan
+│   └── alpha-zero-scope.md
+│
+├── for-claude/               # AI/architect reference
+│   ├── architecture/
+│   │   ├── adr/              # 30 ADRs (sacred, append-only)
+│   │   └── diagrams/         # Mermaid sources
+│   ├── api-reference/        # RAG concept docs
+│   ├── skills-reference.md
+│   └── claude-design-todo.md
+│
+├── README.md                 # ← you are here
+├── MIGRATION-PLAN.md         # Phases 0-5 record
+└── _audit-2026-05-05.csv     # Pre-reorg classification
 
-.docs-archive/                # Out-of-tree (since Phase 1): historical
-                              # epics, sessions, PDCA, roadmap, research,
-                              # evaluation-reports, archived sprint specs.
-                              # Read-only history, no longer referenced from
-                              # active docs.
+.docs-archive/                # Out-of-tree (Phase 1): historical epics, sessions,
+                              # PDCA, roadmap, research, archived specs.
+                              # Read-only; no inbound refs from active docs.
 ```
 
-> **Reorganization in progress.** Active docs are migrating to
-> `for-claude/` / `for-developers/` / `for-users/` — see
-> [`MIGRATION-PLAN.md`](./MIGRATION-PLAN.md) and
-> [`_audit-2026-05-05.csv`](./_audit-2026-05-05.csv).
+---
+
+## Reorganization journey (Phase 0-5)
+
+| Phase | Date | PR | Outcome |
+|-------|------|-----|---------|
+| **0** Foundation | 2026-05-05 | #742 | audit + migration plan + CI link checker + 3 audience stub roots + RAG Chat pilot |
+| **1** Archive purge | 2026-05-06 | #784 | 290 files → `.docs-archive/` (in-repo, out-of-tree) |
+| **2** Aggressive prune | 2026-05-06 | #791 | 580 deletes (code-mirror, auto-gen, process artifacts) |
+| **3** for-claude/ build | 2026-05-06 | this PR | architecture + api-reference moved under audience root |
+| **4** for-developers/ build | 2026-05-06 | this PR | dev/test/frontend/deploy/ops/security consolidated |
+| **5** for-users/ wiki | 2026-05-06 | this PR | 5 feature pages + FAQ written, project brief moved |
+| **Bonus** | 2026-05-06 | this PR | stale ADR links patched |
+
+**Net result**: 941 → ~110 files in `docs/` (88% reduction), 19 → 4 top-level dirs.
+
+**Rollback tag**: `pre-docs-reorg-2026-05-05` restores full pre-reorg state.
 
 ---
 
-## Find What You Need
+## Standards
 
-### By Role
-
-**Developer**
-- [Development Guide](./development/README.md) - Local setup, coding standards
-- [Quick Start Guide](./development/quick-start-guide.md) - Fast onboarding
-- [Bounded Contexts](./bounded-contexts/README.md) - DDD context guides
-- [Testing Guide](./testing/README.md) - Testing strategy
-- [API Reference](./api/README.md) - REST API documentation
-- [Frontend Guide](./frontend/README.md) - Frontend architecture
-- [Git Workflow](./development/git-workflow.md) - Branching & commit strategy
-
-**Architect**
-- [Architecture](./architecture/README.md) - System design
-- [ADRs](./architecture/adr/README.md) - Architecture decisions
-- [DDD Guide](./architecture/ddd/quick-reference.md) - DDD patterns
-- [Diagrams](./architecture/diagrams/README.md) - Mermaid architecture diagrams
-
-**DevOps**
-- [Deployment Guide](./deployment/README.md) - Infrastructure deployment
-- [Operations Manual](./operations/operations-manual.md) - Service management, backup, monitoring, incident response
-- [Deployment Workflows](./deployment/deployment-workflows-guide.md) - CI/CD pipeline
-
-**QA/Tester**
-- [Testing Guide](./testing/README.md) - Testing philosophy and pyramid
-- [Backend Testing](./testing/backend/) - xUnit, Testcontainers
-- [Frontend Testing](./testing/frontend/) - Vitest, Testing Library
-- [E2E Testing](./testing/e2e/) - Playwright guides
-
-**Security**
-- [Security Guide](./security/README.md) - Security documentation
-- [OWASP Compliance](./security/owasp-top-10-compliance.md) - OWASP Top 10
-- [Operations Manual](./operations/operations-manual.md) - Secrets, incident response, DR
-- [OAuth Testing](./testing/backend/oauth-testing.md) - OAuth security
+- **File naming**: `kebab-case.md`
+- **Cross-references**: relative paths from current file
+- **CI gate**: `.github/workflows/docs-linkcheck.yml` (lychee, PR-scoped, --diff-filter=AM, excludes `.docs-archive/`)
+- **Diagrams**: Mermaid in code blocks; PNG/SVG auto-generated by `.github/workflows/generate-diagrams.yml`
 
 ---
 
-### By Topic
-
-**RAG System**
-- [RAG Overview](./api/rag/README.md) - RAG architecture and documentation
-- [KnowledgeBase Context](./bounded-contexts/knowledge-base.md) - Bounded context
-- [RAG Diagram](./architecture/diagrams/rag-system-detailed.md) - Architecture diagram
-
-**PDF Processing**
-- [ADR-003b: Unstructured PDF](./architecture/adr/adr-003b-unstructured-pdf.md) - PDF processing pipeline
-- [DocumentProcessing Context](./bounded-contexts/document-processing.md) - Bounded context
-- [PDF Pipeline Diagram](./architecture/diagrams/pdf-pipeline-detailed.md) - Architecture diagram
-
-**Authentication**
-- [Authentication Context](./bounded-contexts/authentication.md) - Bounded context
-- [OAuth Testing](./testing/backend/oauth-testing.md) - OAuth security
-- [Secrets Management](./deployment/secrets-management.md) - Secret management
-
-**Deployment**
-- [Infrastructure Checklist](./deployment/infrastructure-deployment-checklist.md) - Step-by-step
-- [Domain Setup](./deployment/domain-setup-guide.md) - DNS & domain config
-- [Cost Summary](./deployment/infrastructure-cost-summary.md) - Budget planning
-
-**Testing**
-- [Testing Philosophy](./testing/README.md) - Strategy and pyramid
-- [Testcontainers Best Practices](./testing/backend/testcontainers-best-practices.md) - Integration testing
-- [E2E Guide](./testing/e2e/e2-e-test-guide.md) - Playwright E2E
-
----
-
-## Key Documents
-
-### Must Read for All Developers
-1. **[CLAUDE.md](../CLAUDE.md)** - Complete development guide
-2. **[Architecture README](./architecture/README.md)** - System architecture
-3. **[Development README](./development/README.md)** - Development workflow
-4. **[Bounded Contexts Overview](./bounded-contexts/README.md)** - DDD contexts
-
-### Essential ADRs
-1. **[ADR-003b: Unstructured PDF](./architecture/adr/adr-003b-unstructured-pdf.md)** - PDF processing
-2. **[ADR-006: Multi-Layer Validation](./architecture/adr/adr-006-multi-layer-validation.md)** - 5-layer validation
-3. **[ADR-007: Hybrid LLM](./architecture/adr/adr-007-hybrid-llm.md)** - Multi-model consensus
-4. **[ADR-009: Error Handling](./architecture/adr/adr-009-centralized-error-handling.md)** - Centralized errors
-5. **[ADR-012: FluentValidation CQRS](./architecture/adr/adr-012-fluentvalidation-cqrs.md)** - Validation pattern
-
-### Production Deployment
-1. **[Deployment Guide](./deployment/README.md)** - Complete deployment index
-2. **[Infrastructure Checklist](./deployment/infrastructure-deployment-checklist.md)** - Step-by-step
-3. **[Cost Summary](./deployment/infrastructure-cost-summary.md)** - Budget planning
-4. **[Monitoring Quickstart](./deployment/monitoring-quickstart.md)** - Observability
-
----
-
-## Documentation by Phase
-
-### Alpha (Local Development)
-- [CLAUDE.md](../CLAUDE.md) - Complete setup guide
-- [Development Guide](./development/README.md) - Local dev workflow
-- [Testing Guide](./testing/README.md) - Testing strategy
-
-### Beta (Staging Deployment)
-- [Infrastructure Checklist](./deployment/infrastructure-deployment-checklist.md) - Deployment steps
-- [Domain Setup](./deployment/domain-setup-guide.md) - DNS configuration
-- [Monitoring Quickstart](./deployment/monitoring-quickstart.md) - Observability setup
-
-### Release (Production)
-- [Cost Summary](./deployment/infrastructure-cost-summary.md) - Budget planning
-- [Email & TOTP Services](./deployment/email-totp-services.md) - External services
-- [Security Guide](./security/README.md) - Security hardening
-
----
-
-## Living Documentation (Auto-Generated)
-
-### Backend - Bounded Contexts
-
-Each context has a README: `apps/api/src/Api/BoundedContexts/{Context}/README.md`
-
-**Documented Contexts (18/19)**:
-Administration, AgentMemory, Authentication, BusinessSimulations, DatabaseSync,
-DocumentProcessing, EntityRelationships, GameManagement, GameToolbox, GameToolkit,
-Gamification, KnowledgeBase, SessionTracking, SharedGameCatalog, SystemConfiguration,
-UserLibrary, UserNotifications, WorkflowIntegration
-
-**Template**: [bounded-context-template.md](./templates/bounded-context-template.md)
-
-### API Documentation (Auto-Generated)
-
-- **XML Docs**: `apps/api/src/Api/bin/Debug/net9.0/Api.xml` (generated on build)
-- **OpenAPI Spec**: http://localhost:8080/openapi/v1.json
-- **Interactive UI**: http://localhost:8080/scalar/v1 (Scalar API Explorer)
-
-### Frontend Documentation
-
-- **JSDoc Comments**: Block comments `/** */` on all exported functions/components
-- **TypeDoc Generation**: `npx typedoc --out docs-generated src/lib`
-
----
-
-## Documentation Guidelines
-
-### Backend (C#) - XML Comments
-
-**Required for all public APIs**:
-```csharp
-/// <summary>
-/// Executes RAG query with hybrid retrieval (vector + keyword)
-/// </summary>
-/// <param name="request">Query request with question and game context</param>
-/// <returns>Answer DTO with confidence score and sources</returns>
-public async Task<AnswerDto> HandleAsync(AskQuestionCommand request)
-```
-
-### Frontend (TypeScript) - JSDoc Comments
-
-**Required for all exported functions/components**:
-```typescript
-/**
- * Executes RAG query with streaming response
- * @param question - User question about game rules
- * @param gameId - Game identifier
- * @returns Promise with streaming answer and sources
- */
-export async function askQuestion(question: string, gameId: string): Promise<AnswerDto>
-```
-
-### Living Documentation Principles
-
-1. **Code is Truth**: Code auto-generates documentation via XML/JSDoc
-2. **Manual for Context**: ADRs, system overviews, workflows require manual docs
-3. **Keep Minimal**: Remove outdated docs, maintain high signal-to-noise ratio
-4. **Single Source**: Avoid duplication, link to canonical sources
-5. **Version Control**: All docs in Git, reviewed in PRs
-
----
-
-## Contributing
-
-### Documentation Standards
-
-**File Naming**: `kebab-case.md` (e.g., `authentication-guide.md`, `oauth-testing.md`)
-
-**Structure**:
-- Use headers (##, ###) for hierarchy
-- Include table of contents for docs >50 lines
-- Add metadata footer (version, date, maintainer)
-- Use code fences with language hints
-
-**Cross-References**:
-- Use relative paths from current file
-- Link to specific sections with anchors
-- Verify links work before committing
-
----
-
-## External Resources
-
-- **API Explorer**: http://localhost:8080/scalar/v1 (interactive API docs)
-- **Grafana**: http://localhost:3001 (monitoring dashboards)
-
----
-
-## Maintenance
-
-### Regular Updates
-
-**Weekly**: Update test coverage stats in [Testing Guide](./testing/README.md)
-
-**Monthly**: Review ADRs for outdated decisions
-
-**Quarterly**: Full documentation audit, update architecture diagrams
-
----
-
-**Last Updated**: 2026-05-06 (Phase 1 of [reorganization](./MIGRATION-PLAN.md))
+**Last Updated**: 2026-05-06 (Phase 5 — reorganization complete)
 **Maintainer**: Documentation Team

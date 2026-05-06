@@ -58,7 +58,7 @@ git mv docs/audit               .docs-archive/audit
 git mv docs/superpowers/plans   .docs-archive/superpowers/plans
 git mv docs/superpowers/research .docs-archive/superpowers/research
 git mv docs/superpowers/design-review .docs-archive/superpowers/design-review
-git mv docs/superpowers/specs/archived .docs-archive/superpowers/specs-archived
+git mv docs/for-developers/specs/archived .docs-archive/superpowers/specs-archived
 git mv docs/specs/game-night-sprint2 .docs-archive/specs/game-night-sprint2
 git mv docs/meepleai-manual-test-plan.pdf .docs-archive/meepleai-manual-test-plan.pdf
 rm -rf docs/brand/__pycache__   # bytecode artifact
@@ -67,23 +67,45 @@ rm docs/skills-reference.pdf    # duplicate of .md
 
 Run `scripts/rewrite-docs-links.sh` (see below) before commit.
 
-### Phase 2 — Asset extraction (1 PR, ~250 files moved)
-Move binary mockups/diagrams out of `docs/` into `assets/`.
+### Phase 2 — Aggressive prune ✅ EXECUTED 2026-05-06 (REDESIGNED from "asset extraction")
+**Original plan** moved binaries to `assets/`. **Redesigned plan** instead deletes
+everything non-essential — user feedback: "non ho interesse a mantenere vecchia
+documentazione, voglio ridurre sensibilmente". Asset extraction was "shifting the
+noise"; aggressive deletion is the only path to a navigable docs/.
 
-```bash
-mkdir -p assets/{diagrams,frontend-screenshots,ux-mockups,layout-concepts,research-mockups,superpowers-mockups}
-git mv docs/bounded-contexts/diagrams        assets/diagrams/bounded-contexts
-git mv docs/frontend/screenshots             assets/frontend-screenshots
-git mv docs/frontend/ux-mockups              assets/ux-mockups
-git mv docs/frontend/layout-concepts         assets/layout-concepts
-git mv docs/research/mockups                 assets/research-mockups   # if not already in archive
-git mv docs/superpowers/mockups              assets/superpowers-mockups
-```
+**Outcome**: 670 → ~120 files (~82% reduction), 26 → 13 top-level dirs.
+
+**Deleted categories**:
+1. **Code-mirror docs** — `docs/bounded-contexts/*.md` (18 files mirrored 1:1
+   in `apps/api/src/Api/BoundedContexts/{X}/README.md`)
+2. **Auto-generated diagrams** — all `.png`/`.svg` in `docs/bounded-contexts/diagrams/`
+   (regen on demand from `.mmd` source via `.github/workflows/generate-diagrams.yml`)
+3. **Auto-generated API ref** — `docs/for-claude/api-reference/{bounded-contexts,endpoints,session-tracking}/`
+   (Scalar UI at `/scalar/v1` is the SSOT; only `api/rag/` concept docs survive)
+4. **Process artifacts** — `docs/superpowers/{mockups,fixtures}`,
+   `docs/for-developers/frontend/{screenshots,ux-mockups,layout-concepts}`
+5. **Inactive specs/plans** — kept only 4 specs referenced by ADRs/CLAUDE.md +
+   1 in-flight plan (`2026-05-06-sp6-libro-game-migration.md`)
+6. **Single-file dead folders** — `pages/`, `rulebooks/`, `contracts/`, `migrations/`,
+   `content-strategy/`, `navigation/`, `brand/`, `features/`, `libro-game-assistant/`
+7. **Architecture non-canonical** — `docs/for-claude/architecture/{components,ddd,overview}/`
+   (sacred ADRs preserved 100%)
+8. **Aggressive testing/deployment/development prune** — kept only files referenced
+   by CLAUDE.md or essential for production ops
+
+**Verified before deletion**:
+- All 7 CLAUDE.md → docs/ links survive
+- 18 BC mirror READMEs exist in code
+- `generate-diagrams.yml` workflow exists (binary regen)
+- `git log --all --diff-filter=D --name-only` recovers any deleted file
 
 **Critical**: rewrite all `![](./diagrams/...)` references in surrounding `.md` files. Script handles this.
 
-### Phase 3 — for-claude/ build (1 PR, ~200 files moved)
-Reference dense tecnica.
+### Phase 3 — for-claude/ build ✅ EXECUTED 2026-05-06
+Architecture (ADRs + diagrams + cross-cutting), api/rag/ concept docs, SKILLS-REFERENCE.md
+consolidated under `docs/for-claude/`. Stale ADR refs (docs/01-architecture/, docs/03-api/,
+docs/04-deployment/, docs/plans/, docs/research/) patched to current paths or replaced with
+Scalar UI / .docs-archive notes.
 
 ```bash
 mkdir -p docs/for-claude/{architecture,api-reference,patterns}
@@ -91,12 +113,15 @@ git mv docs/architecture                     docs/for-claude/architecture
 git mv docs/bounded-contexts                 docs/for-claude/architecture/bounded-contexts
 git mv docs/api                              docs/for-claude/api-reference
 git mv docs/contracts                        docs/for-claude/api-reference/contracts
-git mv docs/development/agent-architecture   docs/for-claude/patterns/agent-architecture
-git mv docs/SKILLS-REFERENCE.md              docs/for-claude/skills-reference.md
+git mv docs/for-developers/workflows/agent-architecture   docs/for-claude/patterns/agent-architecture
+git mv docs/for-claude/skills-reference.md              docs/for-claude/skills-reference.md
 ```
 
-### Phase 4 — for-developers/ build (1 PR, ~150 files moved)
-Contributor task guides.
+### Phase 4 — for-developers/ build ✅ EXECUTED 2026-05-06
+development → workflows/, testing → testing/, frontend → frontend/, deployment → deployment/,
+operations → operations/, security → security/, templates → templates/, superpowers/specs →
+specs/, superpowers/plans → plans/, alpha-zero-scope.md → for-developers/alpha-zero-scope.md.
+All CLAUDE.md → docs/ links auto-rewritten and verified OK.
 
 ```bash
 mkdir -p docs/for-developers/{workflows,testing,frontend,deployment,security}
@@ -112,12 +137,14 @@ git mv docs/templates                        docs/for-developers/workflows/templ
 git mv docs/specs                            docs/for-developers/workflows/specs
 git mv docs/superpowers/specs                docs/for-developers/workflows/superpowers-specs
 git mv docs/superpowers/fixtures             docs/for-developers/testing/fixtures
-git mv docs/alpha-zero-scope.md              docs/for-developers/alpha-zero-scope.md
+git mv docs/for-developers/alpha-zero-scope.md              docs/for-developers/alpha-zero-scope.md
 rmdir docs/superpowers
 ```
 
-### Phase 5 — for-users/ creation (1 PR, NEW content + ~40 files moved)
-Wiki utenti — the only phase requiring **writing**, not just moving.
+### Phase 5 — for-users/ wiki ✅ EXECUTED 2026-05-06
+5 Alpha feature pages written (rag-chat existed from Phase 0; pdf-upload, games-bgg, library,
+auth NEW), faq.md NEW, meepleai-project-brief.md moved to for-users/. Italian-first.
+Wikipedia-style template: cosa fa, come si usa, limiti, costi, FAQ, link correlati.
 
 ```bash
 mkdir -p docs/for-users/{features,roles,tutorials,brand}
@@ -128,7 +155,7 @@ git mv docs/brand                            docs/for-users/brand
 git mv docs/content-strategy/*.md            docs/for-users/brand/
 git mv docs/navigation/*.md                  docs/for-users/navigation.md
 git mv docs/pages                            docs/for-users/pages   # verify content first
-git mv docs/meepleai-project-brief.md        docs/for-users/README.md  # adapted as wiki landing
+git mv docs/for-users/meepleai-project-brief.md        docs/for-users/README.md  # adapted as wiki landing
 ```
 
 Then **write** missing wiki pages — use the [RAG Chat pilot](./for-users/features/rag-chat.md) as template:
@@ -160,7 +187,7 @@ done
 
 Run after **each** `git mv` batch:
 ```bash
-./scripts/rewrite-docs-links.sh "docs/architecture/" "docs/for-claude/architecture/"
+./scripts/rewrite-docs-links.sh "docs/for-claude/architecture/" "docs/for-claude/architecture/"
 ```
 
 ### Manual checks
@@ -172,7 +199,7 @@ git grep -nE 'docs/(archive|pdca|roadmap|user-guides|architecture|bounded-contex
 
 ### CLAUDE.md update points
 Specifically update these references in root `CLAUDE.md`:
-- L11: `docs/development/snapshot-seed-workflow.md` → `docs/for-developers/workflows/snapshot-seed-workflow.md`
+- L11: `docs/for-developers/workflows/snapshot-seed-workflow.md` → `docs/for-developers/workflows/snapshot-seed-workflow.md`
 - L? (every `./docs/...` link — ~30 instances). Grep before/after migration.
 
 ---

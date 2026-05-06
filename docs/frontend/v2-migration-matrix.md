@@ -192,17 +192,33 @@ the PR review.
 | `sp4-sessions-index.jsx` | `ScoringInline` | `apps/web/src/components/v2/sessions/ScoringInline.tsx` | `/sessions` | done | TBD | T A V |
 | `sp4-sessions-index.jsx` | `ConnectionChipStripFooter` | `apps/web/src/components/v2/sessions/ConnectionChipStripFooter.tsx` | `/sessions` | done | TBD | T A V |
 
-### Session live — `/sessions/[id]` — 7 components — **Tier L+** ⚠️ Phase 0.5 + sub-PR split required
+### Session live — `/sessions/[id]/live` — Tier L+ ⚠️ Phase 0.5 + sub-PR split
+
+**Sub-PR split**: Foundation (read-only static fixture) → Interactions (real SSE + write actions + dialogs)
+
+#### Foundation sub-PR (7 read-only components — IN REVIEW PR TBD)
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
-| `sp4-session-live-parts.jsx` | `LiveTopBar` | `apps/web/src/components/v2/session-live/LiveTopBar.tsx` | `/sessions/[id]` | pending | — | T A V |
-| `sp4-session-live-parts.jsx` | `TurnIndicator` | `apps/web/src/components/v2/session-live/TurnIndicator.tsx` | `/sessions/[id]` | pending | — | T A M V |
-| `sp4-session-live-parts.jsx` | `PlayerRosterLive` | `apps/web/src/components/v2/session-live/PlayerRosterLive.tsx` | `/sessions/[id]` | pending | — | T A V |
-| `sp4-session-live-parts.jsx` | `LiveScoringPanel` | `apps/web/src/components/v2/session-live/LiveScoringPanel.tsx` | `/sessions/[id]` | pending | — | T A V |
-| `sp4-session-live-parts.jsx` | `ActionLogTimeline` | `apps/web/src/components/v2/session-live/ActionLogTimeline.tsx` | `/sessions/[id]` | pending | — | T A V |
-| `sp4-session-live.jsx` | `SessionToolsRail` | `apps/web/src/components/v2/session-live/SessionToolsRail.tsx` | `/sessions/[id]` | pending | — | T A V |
-| `sp4-session-live.jsx` | `LiveAgentChat` | `apps/web/src/components/v2/session-live/LiveAgentChat.tsx` | `/sessions/[id]` | pending | — | T A V |
+| `sp4-session-live-parts.jsx` | `LiveTopBar` | `apps/web/src/components/v2/session-live/LiveTopBar.tsx` | `/sessions/[id]/live` | done | TBD | T A V |
+| `sp4-session-live-parts.jsx` | `TurnIndicator` | `apps/web/src/components/v2/session-live/TurnIndicator.tsx` | `/sessions/[id]/live` | done | TBD | T A M V |
+| `sp4-session-live-parts.jsx` | `PlayerRosterLive` | `apps/web/src/components/v2/session-live/PlayerRosterLive.tsx` | `/sessions/[id]/live` | done | TBD | T A V |
+| `sp4-session-live-parts.jsx` | `LiveScoringPanel` | `apps/web/src/components/v2/session-live/LiveScoringPanel.tsx` | `/sessions/[id]/live` | done | TBD | T A V |
+| `sp4-session-live-parts.jsx` | `ActionLogTimeline` | `apps/web/src/components/v2/session-live/ActionLogTimeline.tsx` | `/sessions/[id]/live` | done | TBD | T A V |
+| `sp4-session-live-parts.jsx` | `DesktopBody` | `apps/web/src/components/v2/session-live/DesktopBody.tsx` | `/sessions/[id]/live` | done | TBD | T A V |
+| `sp4-session-live-parts.jsx` | `MobileBody` | `apps/web/src/components/v2/session-live/MobileBody.tsx` | `/sessions/[id]/live` | done | TBD | T A V |
+
+#### Interactions sub-PR (6 interactive + 2 lazy dialogs — PENDING)
+
+| Mockup | Component | Path | Route | Status | PR | AC |
+|--------|-----------|------|-------|--------|----|----|
+| `sp4-session-live.jsx` | `SessionToolsRail` | `apps/web/src/components/v2/session-live/SessionToolsRail.tsx` | `/sessions/[id]/live` | pending | — | T A V |
+| `sp4-session-live.jsx` | `LiveAgentChat` | `apps/web/src/components/v2/session-live/LiveAgentChat.tsx` | `/sessions/[id]/live` | pending | — | T A V |
+| `sp4-session-live.jsx` | `LiveSessionNotes` | `apps/web/src/components/v2/session-live/LiveSessionNotes.tsx` | `/sessions/[id]/live` | pending | — | T A V |
+| `sp4-session-live.jsx` | `RightColumnTabs` | `apps/web/src/components/v2/session-live/RightColumnTabs.tsx` | `/sessions/[id]/live` | pending | — | T A V |
+| `sp4-session-live.jsx` | `ConnectionLostBanner` | `apps/web/src/components/v2/session-live/ConnectionLostBanner.tsx` | `/sessions/[id]/live` | pending | — | T A V |
+| `sp4-session-live.jsx` | `PauseOverlay` (lazy) | `apps/web/src/components/v2/session-live/PauseOverlay.tsx` | `/sessions/[id]/live` | pending | — | T A V dialog |
+| `sp4-session-live.jsx` | `EndgameDialog` (lazy) | `apps/web/src/components/v2/session-live/EndgameDialog.tsx` | `/sessions/[id]/live` | pending | — | T A V dialog |
 
 ### Session summary — `/sessions/[id]/summary` — 6 components — **Tier M**
 

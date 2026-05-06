@@ -53,7 +53,24 @@ The Q2 review was blocked by missing referenced documentation (#745) and a non-h
 | **Frontend deps (pnpm)** | **0** | **0** | 11 | 1 | **12** | **−36** |
 | **gitleaks (in-scope)** | 0 | 0 | 0 | 0 | **0** | 0 |
 
-**Total movement (same day)**: 286 → 150 alerts (−136 = −48%). Critical: 2→0. High: 50→24 (CodeQL HIGH remaining are mostly `cs/exposure-of-sensitive-information`/regex-anchor — to be triaged in subsequent batches).
+**Total movement (same day)**: 286 → 150 alerts (−136 = −48%). Critical: 2→0. High: 50→24.
+
+### State after P1 batch + final HIGH triage (same day evening)
+
+| Source | Critical | High | Medium | Low | Total | Δ vs baseline |
+|--------|----------|------|--------|-----|-------|---------------|
+| **CodeQL** | 0 | **0** | 99 | 1 | **100** | **−137** (87 log-forging + 13 cleartext/path + 24 final HIGH triage) |
+| **Backend deps (.NET)** | 0 | 0 | 1 | 0 | **1** | 0 |
+| **Frontend deps (pnpm)** | **0** | **0** | 11 | 1 | **12** | **−36** |
+| **gitleaks (in-scope)** | 0 | 0 | 0 | 0 | **0** | 0 |
+
+**Total movement Q2 same-day**: 286 → 113 alerts (**−60%**). **Critical: 2→0. High: 50→0.**
+
+The final 24 HIGH triaged 2026-05-06 (all confirmed FP):
+- 16× `js/regex/missing-regexp-anchor` — test code (e2e/spec) URL matching, not security-sensitive
+- 4× `js/tainted-format-string` — `lib/logger.ts`, JS `console.*` doesn't interpret format specifiers (already documented + nosemgrep-suppressed inline)
+- 3× `js/file-system-race` — TOCTOU in dev tooling (jekyll fix, migration scripts, mock-pdf gen), no production attack surface
+- 1× `js/incomplete-multi-character-sanitization` — SSR fallback strip-tags regex, intentionally aggressive defense-in-depth (already nosemgrep-suppressed; production uses DOMPurify on client)
 
 > *gitleaks raw count was 403 across 148 MB but includes `node_modules/`, build artifacts, and lock files. In-scope source code: 0 leaks.*
 

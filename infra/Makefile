@@ -319,6 +319,11 @@ sec-pentest: ## 2FA penetration tests — mirrors security-pentest.yml
 	cd $(API) && dotnet test $(API_TESTS) --filter "FullyQualifiedName~TwoFactorSecurityPenetrationTests" --nologo -v q
 	@echo "✅ Security pentest passed"
 
+security-audit: ## External port-scan against staging (default) — verifies only port 22 is publicly reachable. Override with SECURITY_AUDIT_TARGET=ip
+	@echo "🔵 Security audit (external port scan)..."
+	bash scripts/security-audit.sh
+	@echo "✅ Security audit passed"
+
 test-e2e: ## Playwright E2E tests (requires make dev + api + web running) — mirrors test-e2e.yml
 	@echo "🔵 E2E Playwright tests..."
 	cd $(WEB) && pnpm test:e2e
@@ -348,6 +353,6 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
         snapshot restore-staging restore-local seed-games \
         logs logging logging-down logs-ui ps build clean help \
         ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all \
-        sec-scan sec-pentest test-e2e test-visual test-perf validate-workflows \
+        sec-scan sec-pentest security-audit test-e2e test-visual test-perf validate-workflows \
         backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show \
         db-snapshot db-snapshot-sanitized db-reset-migrations db-restore-snapshot db-rollback-safetynet

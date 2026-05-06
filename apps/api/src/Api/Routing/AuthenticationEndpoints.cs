@@ -20,6 +20,7 @@ using RevokeSessionCommand = Api.BoundedContexts.Authentication.Application.Comm
 using GetUserSessionsQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserSessionsQuery;
 using LogoutAllDevicesCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutAllDevicesCommand;
 using GetSessionByTokenHashQuery = Api.BoundedContexts.Authentication.Application.Queries.GetSessionByTokenHashQuery;
+using GetCurrentUserQuery = Api.BoundedContexts.Authentication.Application.Queries.GetCurrentUserQuery;
 using AcceptInvitationCommand = Api.BoundedContexts.Authentication.Application.Commands.Invitation.AcceptInvitationCommand;
 using ActivateInvitedAccountCommand = Api.BoundedContexts.Authentication.Application.Commands.Invitation.ActivateInvitedAccountCommand;
 using ValidateInvitationTokenQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.ValidateInvitationTokenQuery;
@@ -195,15 +196,24 @@ internal static class AuthenticationEndpoints
 
     private static void MapMeEndpoint(RouteGroupBuilder group)
     {
-        group.MapGet("/auth/me", (HttpContext context) =>
+        group.MapGet("/auth/me", async (HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
             var (authenticated, session, _) = context.TryGetActiveSession();
-            if (authenticated)
+            if (!authenticated || session.SessionId is null)
             {
-                return Results.Json(new { user = session.User, expiresAt = session.ExpiresAt });
+                return Results.Unauthorized();
             }
 
-            return Results.Unauthorized();
+            // CQRS: materialize the user DTO via MediatR (replaces inline session.User).
+            var user = await mediator
+                .Send(new GetCurrentUserQuery(session.SessionId.Value), ct)
+                .ConfigureAwait(false);
+            if (user is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            return Results.Json(new { user, expiresAt = session.ExpiresAt });
         });
     }
 

@@ -169,7 +169,7 @@ public sealed class User : AggregateRoot<Guid>
             Id = Guid.NewGuid(),
             Email = email,
             DisplayName = displayName,
-            PasswordHash = null!,
+            PasswordHash = null,
             Role = role,
             Tier = tier,
             Status = UserAccountStatus.Pending,
@@ -1038,7 +1038,7 @@ public sealed class User : AggregateRoot<Guid>
     /// </summary>
     internal void RestorePasswordHash(PasswordHash? passwordHash)
     {
-        PasswordHash = passwordHash!;
+        PasswordHash = passwordHash;
     }
 
     /// <summary>

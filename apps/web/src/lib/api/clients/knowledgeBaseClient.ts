@@ -9,6 +9,16 @@ import { z } from 'zod';
 
 import { GameDocumentSchema, type GameDocument } from '../schemas/game-documents.schemas';
 import {
+  kbDocumentSchema,
+  kbChunkListSchema,
+  kbChunkDetailSchema,
+  kbChunkSearchResultSchema,
+  type KbDocument,
+  type KbChunkList,
+  type KbChunkDetail,
+  type KbChunkSearchResult,
+} from '../schemas/kb-document.schemas';
+import {
   KnowledgeBaseStatusSchema,
   RagConfigSchema,
   UserGameKbStatusSchema,
@@ -246,6 +256,65 @@ export function createKnowledgeBaseClient({ httpClient }: CreateKnowledgeBaseCli
         QuickLinksSchema
       );
       return result ?? [];
+    },
+
+    // ========== KB Document & Chunk Methods (Issue #730 — G1-G4) ==========
+
+    /**
+     * G4: Get a single KB document record by its ID
+     * @param docId KB document UUID
+     * @returns KB document metadata including processing state and chunk counts
+     */
+    async getKbDocument(docId: string): Promise<KbDocument | null> {
+      return httpClient.get(`/api/v1/kb-docs/${encodeURIComponent(docId)}`, kbDocumentSchema);
+    },
+
+    /**
+     * G1: Get paginated list of chunks for a KB document
+     * @param docId KB document UUID
+     * @param params Optional pagination parameters (skip, take)
+     * @returns Paginated chunk list with heading paths and snippets
+     */
+    async getKbChunks(
+      docId: string,
+      params: { skip?: number; take?: number } = {}
+    ): Promise<KbChunkList | null> {
+      const search = new URLSearchParams();
+      if (params.skip !== undefined) search.set('skip', String(params.skip));
+      if (params.take !== undefined) search.set('take', String(params.take));
+      const qs = search.toString();
+      const url = `/api/v1/kb-docs/${encodeURIComponent(docId)}/chunks${qs ? `?${qs}` : ''}`;
+      return httpClient.get(url, kbChunkListSchema);
+    },
+
+    /**
+     * G2: Get full content of a single KB chunk by ID
+     * @param docId KB document UUID
+     * @param chunkId Chunk UUID
+     * @returns Full chunk content with navigation pointers to prev/next chunks
+     */
+    async getKbChunk(docId: string, chunkId: string): Promise<KbChunkDetail | null> {
+      return httpClient.get(
+        `/api/v1/kb-docs/${encodeURIComponent(docId)}/chunks/${encodeURIComponent(chunkId)}`,
+        kbChunkDetailSchema
+      );
+    },
+
+    /**
+     * G3: Search chunks within a KB document using full-text / semantic search
+     * @param docId KB document UUID
+     * @param body Search payload (query string + optional pagination)
+     * @returns Ranked list of matching chunks with snippets
+     */
+    async searchKbChunks(
+      docId: string,
+      body: { query: string; skip?: number; take?: number }
+    ): Promise<KbChunkSearchResult> {
+      return httpClient.post(
+        `/api/v1/kb-docs/${encodeURIComponent(docId)}/chunks/search`,
+        body,
+        kbChunkSearchResultSchema
+      );
     },
   };
 }

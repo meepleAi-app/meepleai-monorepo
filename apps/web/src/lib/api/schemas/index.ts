@@ -143,3 +143,6 @@ export * from './ownership.schemas';
 
 // Agent Documents schemas (user-scoped document selection)
 export * from './agent-documents.schemas';
+
+// KB Document & Chunk schemas (Issue #730 — G1-G4 chunk endpoints)
+export * from './kb-document.schemas';

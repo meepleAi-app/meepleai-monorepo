@@ -400,8 +400,13 @@ export function SessionLiveView(): ReactElement {
 
   // ── Write actions (Player+Host) ───────────────────────────────────────────
 
-  /** Optimistic score update with 403 rollback. */
-  const handleScoreUpdate = useCallback(
+  /**
+   * Optimistic score update with 403 rollback.
+   * Reserved for future score input UI in LiveScoringPanel — wired in v2 polish.
+   * Kept as `_handleScoreUpdate` to preserve callsite documentation while ESLint
+   * recognizes intentional non-usage in current sub-PR.
+   */
+  const _handleScoreUpdate = useCallback(
     async (playerId: string, newScore: number): Promise<void> => {
       if (activeSession == null) return;
       if (!hasRequiredRole(activeSession.viewerRole, 'Player')) return;
@@ -475,6 +480,7 @@ export function SessionLiveView(): ReactElement {
     },
     [activeSession, sessionId]
   );
+  void _handleScoreUpdate;
 
   const handleToolExecute = useCallback(
     async (toolId: string): Promise<void> => {

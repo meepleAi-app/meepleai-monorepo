@@ -306,6 +306,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
     cfg.AddOpenBehavior(typeof(Api.SharedKernel.Application.Behaviors.ValidationBehavior<,>));
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.Administration.Application.Behaviors.AuditLoggingBehavior<,>)); // Issue #3691: Audit logging
+    cfg.AddOpenBehavior(typeof(Api.BoundedContexts.Authentication.Application.Behaviors.TwoFactorEnforcementBehavior<,>)); // Issue #186 P1.1: 2FA admin enforcement (shadow mode)
     cfg.AddOpenBehavior(typeof(Api.BoundedContexts.SessionTracking.Application.Behaviors.ValidatePlayerRoleBehavior<,>)); // Issue #4765: Role validation
     var mediatrLicenseKey = Environment.GetEnvironmentVariable("MEDIATR_LICENSE_KEY");
     if (!string.IsNullOrWhiteSpace(mediatrLicenseKey))

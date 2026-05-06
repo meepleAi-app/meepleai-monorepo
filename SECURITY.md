@@ -184,7 +184,7 @@ No security vulnerabilities have been publicly disclosed yet. We'll maintain a l
 
 ## Additional Resources
 
-- `CONTRIBUTING.md` - Contribution guidelines (pending — repo doesn't have one yet)
+- [CONTRIBUTING.md](./CONTRIBUTING.md) - Contribution guidelines
 - [docs/security/](./docs/security/) - Detailed security procedures and references
 - `docs/observability.md` - Monitoring and logging (pending restoration)
 - [GitHub Security Advisories](https://github.com/meepleAi-app/meepleai-monorepo/security/advisories)

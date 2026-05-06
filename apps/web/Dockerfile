@@ -59,8 +59,15 @@ RUN mkdir -p public
 # Copy PDF.js worker to public for client-side access
 # Worker version must match the pdfjs-dist bundled by react-pdf (resolved via pnpm)
 # Issue #4168: Try .mjs first (v5+), fallback to .js (v3)
-RUN WORKER_PATH=$(find node_modules -path "*/pdfjs-dist/build/pdf.worker.min.mjs" -o -path "*/pdfjs-dist/build/pdf.worker.min.js" | head -1) && \
-    cp "$WORKER_PATH" public/pdf.worker.min.js || cp "$WORKER_PATH" public/pdf.worker.min.mjs
+SHELL ["/bin/sh", "-o", "pipefail", "-c"]
+RUN WORKER_PATH=$(find node_modules \( -path "*/pdfjs-dist/build/pdf.worker.min.mjs" -o -path "*/pdfjs-dist/build/pdf.worker.min.js" \) -print -quit) && \
+    if [ -z "$WORKER_PATH" ]; then \
+        echo "ERROR: pdfjs-dist worker not found in node_modules" >&2; exit 1; \
+    elif [ "${WORKER_PATH##*.}" = "mjs" ]; then \
+        cp "$WORKER_PATH" public/pdf.worker.min.mjs; \
+    else \
+        cp "$WORKER_PATH" public/pdf.worker.min.js; \
+    fi
 
 # Build Next.js application (generates .next/standalone)
 RUN pnpm run build

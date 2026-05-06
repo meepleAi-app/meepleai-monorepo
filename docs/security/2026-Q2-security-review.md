@@ -539,14 +539,16 @@ Acceptance criteria (when executed in Q3):
 - AC4: Smoke test: `docker compose up` → trigger `/healthz` → metrics in Prometheus + traces in Grafana within 30s of request
 - AC5: Rollback document in PR body (which packages bumped, revert SHA)
 
-#### **P1.4a — Hadolint Dockerfile lint** (Q2, due 2026-06-15, ~2h effort)
+#### **P1.4a — Hadolint Dockerfile lint** ✅ CLOSED 2026-05-06
 
-Acceptance criteria:
-- AC1: Hadolint installed (`winget install hadolint`) — verified by `hadolint --version`
-- AC2: Run on all `apps/*/Dockerfile` and `infra/*/Dockerfile`
-- AC3: Findings archived in `docs/security/iac-scans/2026-Q2/hadolint.txt`
-- AC4: All DL3002+ findings either fixed OR `# hadolint ignore=DLxxxx` with justification comment
-- AC5: CI step added to `security-scan.yml` workflow (allows future regression detection)
+- [x] **AC1**: Hadolint 2.14.0 installed via `winget install hadolint.hadolint` — verified
+- [x] **AC2**: Run on all 9 Dockerfiles (`apps/*/Dockerfile`, `apps/*/Dockerfile.e2e`, `infra/sidecar/ssh-tunnel/Dockerfile`)
+- [x] **AC3**: Initial + post-fix outputs archived in `docs/security/iac-scans/2026-Q2/hadolint.txt`
+- [x] **AC4**: 18 initial findings triaged:
+  - **15 globally ignored** with rationale in `.hadolint.yaml`: DL3008/DL3018 (apt/apk pin — operational pain vs marginal gain, covered by Trivy at scan time), DL3059 (RUN consolidation — readability deliberate)
+  - **3 fixed in code**: DL4006 (SHELL pipefail in apps/web/Dockerfile L62), SC2015 (A&&B||C ambiguity replaced with explicit if/elif/else), DL3042 (pip --no-cache-dir in reranker-service ×2)
+  - **Final state: 0 findings on all 9 Dockerfiles**
+- [x] **AC5**: CI step added to `.github/workflows/security-scan.yml` (`hadolint` job using `hadolint/hadolint-action@SHA-pinned`, `failure-threshold: warning`, included in `notify-end` failure aggregation)
 
 #### **P1.4b — Trivy vulnerability + config scan** (DEFERRED to Q3, ~6h effort)
 

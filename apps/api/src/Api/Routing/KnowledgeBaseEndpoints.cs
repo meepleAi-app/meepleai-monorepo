@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Discover.Application.Queries.GetDiscoverData;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.ContextEngineering.Queries;
@@ -44,6 +45,7 @@ internal static class KnowledgeBaseEndpoints
         MapGameDocumentsEndpoint(group);
         MapLinkKbEndpoint(group);
         MapKbDocumentEndpoints(group);
+        MapDiscoverEndpoints(group);
 
         return group;
     }
@@ -892,6 +894,37 @@ internal static class KnowledgeBaseEndpoints
             .WithDescription("Returns the list of KB documents linked to a game, ordered by creation date descending.")
             .Produces<IReadOnlyList<GameDocumentDto>>()
             .Produces(StatusCodes.Status401Unauthorized);
+    }
+
+    private static void MapDiscoverEndpoints(RouteGroupBuilder group)
+    {
+        // Issue #728: composite discovery dashboard
+        group.MapGet("/discover", HandleGetDiscover)
+            .WithName("GetDiscover")
+            .RequireSession()
+            .WithTags("Discover")
+            .WithSummary("Get composite /discover dashboard data (5 cross-BC rows)")
+            .WithDescription("Returns newGames, topAgents, recommendedToolkits, recentKb, topContributors arrays. Partial-success: a failed sub-query returns empty array (logged); endpoint never returns 500 due to single-row failure.")
+            .Produces<DiscoverDto>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized);
+    }
+
+    private static async Task<IResult> HandleGetDiscover(
+        int? limit,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var limitValue = limit ?? 10;
+
+        if (limitValue < 1 || limitValue > 20)
+        {
+            return Results.BadRequest(new { error = "limit must be between 1 and 20" });
+        }
+
+        var dto = await mediator.Send(new GetDiscoverDataQuery(limitValue), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(dto);
     }
 
     private static void MapKbDocumentEndpoints(RouteGroupBuilder group)

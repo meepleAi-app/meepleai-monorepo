@@ -503,10 +503,15 @@ internal partial class UploadPdfCommandHandler
 
         if (vectorDoc == null)
         {
+            // vector_documents.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
+            // Same constraint that applies to text_chunks.GameId.
+            var resolvedGameId = await PdfGameIdResolver.ResolveAsync(db, pdfDoc, cancellationToken)
+                .ConfigureAwait(false);
+
             vectorDoc = new VectorDocumentEntity
             {
                 Id = Guid.NewGuid(),
-                GameId = pdfDoc.SharedGameId,
+                GameId = resolvedGameId,
                 SharedGameId = pdfDoc.SharedGameId, // Issue #5185: propagate SharedGameId from PDF
                 PdfDocumentId = pdfGuid,
                 IndexingStatus = "completed",

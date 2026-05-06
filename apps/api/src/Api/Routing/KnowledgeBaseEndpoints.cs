@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunkById;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbDocumentById;
 using Api.Extensions;
@@ -915,6 +916,16 @@ internal static class KnowledgeBaseEndpoints
             .Produces<KbChunkListDto>()
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound);
+
+        // Issue #730: G2 single chunk full content
+        group.MapGet("/kb-docs/{id:guid}/chunks/{chunkId:guid}", HandleGetKbChunkById)
+            .WithName("GetKbChunkById")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Get a single chunk with full content + prev/next navigation")
+            .WithDescription("Returns chunk content as markdown, with hierarchical breadcrumb and prev/next chunk IDs for navigation.")
+            .Produces<KbChunkDetailDto>()
+            .Produces(StatusCodes.Status404NotFound);
     }
 
     private static async Task<IResult> HandleGetKbDocumentById(
@@ -951,6 +962,23 @@ internal static class KnowledgeBaseEndpoints
         var query = new GetKbChunksQuery(id, skipValue, takeValue, UserIsAdmin: isAdmin);
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetKbChunkById(
+        Guid id,
+        Guid chunkId,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+        var isAdmin = string.Equals(
+            session.User!.Role,
+            UserRole.Admin.ToString(),
+            StringComparison.OrdinalIgnoreCase);
+        var query = new GetKbChunkByIdQuery(id, chunkId, UserIsAdmin: isAdmin);
+        var dto = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(dto);
     }
 
     private static void MapLinkKbEndpoint(RouteGroupBuilder group)

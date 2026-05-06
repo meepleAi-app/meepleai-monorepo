@@ -154,7 +154,81 @@ public sealed class KbChunkEndpointsIntegrationTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    // ========================================
+    // GET /api/v1/kb-docs/{id}/chunks/{chunkId}  (G2)
+    // ========================================
+
+    /// <summary>
+    /// Verifies that requesting a chunk from a different document returns 404,
+    /// preventing cross-document chunk enumeration leakage.
+    /// The unit test <c>Handle_ChunkBelongsToOtherDoc_ThrowsNotFound</c> already
+    /// covers the handler logic; this integration test validates the full HTTP stack.
+    /// </summary>
+    [Fact]
+    public async Task GetKbChunk_ChunkBelongsToOtherDoc_Returns404()
+    {
+        // Arrange — seed two separate documents, each with one chunk
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var (docAId, _) = await SeedDocWithSingleChunkAsync(dbContext, userId);
+        var (_, chunkBId) = await SeedDocWithSingleChunkAsync(dbContext, userId);
+
+        // Request chunk from docB while specifying docA in the URL
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/kb-docs/{docAId}/chunks/{chunkBId}",
+            sessionToken);
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     // ─── Seed helpers ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Seeds a PdfDocumentEntity with a single TextChunkEntity.
+    /// Returns (docId, chunkId) for use in G2 tests.
+    /// </summary>
+    private static async Task<(Guid DocId, Guid ChunkId)> SeedDocWithSingleChunkAsync(
+        MeepleAiDbContext dbContext,
+        Guid uploadedByUserId)
+    {
+        var docId = Guid.NewGuid();
+        var chunkId = Guid.NewGuid();
+
+        dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = docId,
+            FileName = $"single-chunk-{docId:N}.pdf",
+            ProcessingState = "Ready",
+            UploadedAt = DateTime.UtcNow,
+            Language = "en",
+            DocumentCategory = "Rulebook",
+            UploadedByUserId = uploadedByUserId,
+            FilePath = $"/tmp/single-{docId:N}.pdf"
+        });
+
+        dbContext.TextChunks.Add(new TextChunkEntity
+        {
+            Id = chunkId,
+            PdfDocumentId = docId,
+            Content = "Only chunk content",
+            ChunkIndex = 0,
+            PageNumber = 1,
+            CharacterCount = 18,
+            ElementType = "NarrativeText",
+            Level = 1
+        });
+
+        await dbContext.SaveChangesAsync();
+        return (docId, chunkId);
+    }
 
     /// <summary>
     /// Seeds a PdfDocumentEntity with 3 chained TextChunkEntities that form the

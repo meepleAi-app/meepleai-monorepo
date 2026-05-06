@@ -67,18 +67,37 @@ rm docs/skills-reference.pdf    # duplicate of .md
 
 Run `scripts/rewrite-docs-links.sh` (see below) before commit.
 
-### Phase 2 — Asset extraction (1 PR, ~250 files moved)
-Move binary mockups/diagrams out of `docs/` into `assets/`.
+### Phase 2 — Aggressive prune ✅ EXECUTED 2026-05-06 (REDESIGNED from "asset extraction")
+**Original plan** moved binaries to `assets/`. **Redesigned plan** instead deletes
+everything non-essential — user feedback: "non ho interesse a mantenere vecchia
+documentazione, voglio ridurre sensibilmente". Asset extraction was "shifting the
+noise"; aggressive deletion is the only path to a navigable docs/.
 
-```bash
-mkdir -p assets/{diagrams,frontend-screenshots,ux-mockups,layout-concepts,research-mockups,superpowers-mockups}
-git mv docs/bounded-contexts/diagrams        assets/diagrams/bounded-contexts
-git mv docs/frontend/screenshots             assets/frontend-screenshots
-git mv docs/frontend/ux-mockups              assets/ux-mockups
-git mv docs/frontend/layout-concepts         assets/layout-concepts
-git mv docs/research/mockups                 assets/research-mockups   # if not already in archive
-git mv docs/superpowers/mockups              assets/superpowers-mockups
-```
+**Outcome**: 670 → ~120 files (~82% reduction), 26 → 13 top-level dirs.
+
+**Deleted categories**:
+1. **Code-mirror docs** — `docs/bounded-contexts/*.md` (18 files mirrored 1:1
+   in `apps/api/src/Api/BoundedContexts/{X}/README.md`)
+2. **Auto-generated diagrams** — all `.png`/`.svg` in `docs/bounded-contexts/diagrams/`
+   (regen on demand from `.mmd` source via `.github/workflows/generate-diagrams.yml`)
+3. **Auto-generated API ref** — `docs/api/{bounded-contexts,endpoints,session-tracking}/`
+   (Scalar UI at `/scalar/v1` is the SSOT; only `api/rag/` concept docs survive)
+4. **Process artifacts** — `docs/superpowers/{mockups,fixtures}`,
+   `docs/frontend/{screenshots,ux-mockups,layout-concepts}`
+5. **Inactive specs/plans** — kept only 4 specs referenced by ADRs/CLAUDE.md +
+   1 in-flight plan (`2026-05-06-sp6-libro-game-migration.md`)
+6. **Single-file dead folders** — `pages/`, `rulebooks/`, `contracts/`, `migrations/`,
+   `content-strategy/`, `navigation/`, `brand/`, `features/`, `libro-game-assistant/`
+7. **Architecture non-canonical** — `docs/architecture/{components,ddd,overview}/`
+   (sacred ADRs preserved 100%)
+8. **Aggressive testing/deployment/development prune** — kept only files referenced
+   by CLAUDE.md or essential for production ops
+
+**Verified before deletion**:
+- All 7 CLAUDE.md → docs/ links survive
+- 18 BC mirror READMEs exist in code
+- `generate-diagrams.yml` workflow exists (binary regen)
+- `git log --all --diff-filter=D --name-only` recovers any deleted file
 
 **Critical**: rewrite all `![](./diagrams/...)` references in surrounding `.md` files. Script handles this.
 

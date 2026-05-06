@@ -61,12 +61,12 @@ public sealed class SessionToken : ValueObject
     /// <summary>
     /// Computes SHA256 hash of this token for secure storage.
     /// Tokens should be stored hashed, not in plaintext.
+    /// Delegates to <see cref="SessionTokenHasher.HashFromCookie"/> to keep a single source of truth
+    /// shared with endpoints that hash the raw cookie value (C1 fix).
     /// </summary>
     public string ComputeHash()
     {
-        var tokenBytes = Convert.FromBase64String(Value);
-        var hashBytes = SHA256.HashData(tokenBytes);
-        return Convert.ToBase64String(hashBytes);
+        return SessionTokenHasher.HashFromCookie(Value);
     }
 
     /// <summary>

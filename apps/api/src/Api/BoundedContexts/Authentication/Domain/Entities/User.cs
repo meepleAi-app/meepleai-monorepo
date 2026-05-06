@@ -15,7 +15,10 @@ public sealed class User : AggregateRoot<Guid>
 {
     public Email Email { get; private set; }
     public string DisplayName { get; private set; }
-    public PasswordHash PasswordHash { get; private set; }
+    /// <summary>
+    /// User's password hash. Null for OAuth-only users that have never set a password (C2/C3 fix).
+    /// </summary>
+    public PasswordHash? PasswordHash { get; private set; }
     public Role Role { get; private set; }
     public UserTier Tier { get; private set; }
     public UserAccountStatus Status { get; private set; } // Epic #4068 (replaces IsSuspended)
@@ -239,9 +242,15 @@ public sealed class User : AggregateRoot<Guid>
 
     /// <summary>
     /// Verifies if the provided password is correct.
+    /// Returns false for OAuth-only users that have no password set (C2 fix).
     /// </summary>
     public bool VerifyPassword(string plaintextPassword)
     {
+        if (PasswordHash is null)
+        {
+            return false;
+        }
+
         return PasswordHash.Verify(plaintextPassword);
     }
 

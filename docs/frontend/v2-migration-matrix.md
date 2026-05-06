@@ -92,6 +92,7 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 | `/sessions/[id]` | **M-L** | Post-game summary: podium + KPI + diary + photos + share + tie-group computation | ✅ done (Wave D.3, PR #762) — [`docs/frontend/contracts/sessions-id-summary-hooks.md`](contracts/sessions-id-summary-hooks.md) |
 | `/players/[id]` | **M** | usePlayerStatistics single hook (current user only — schema reality v1 carryover) | ✅ done (Wave 3, PR #724) |
 | `/toolkits/[id]` | **M** | Toolkit summary + version timeline | pending |
+| `/gamebook` | **M** | Libro-game index: Hero + QuotaWidget + Card grid + EmptyState | ✅ done (SP6 Phase B, PR #792) |
 | `/kb/[id]` | **M** | KB header + chunks + search | pending |
 
 **Anti-pattern**: dispatchare implementation subagent senza Phase 0.5 per route Tier L. Wave C.1 PR #697 ha esattamente questo come root cause (vedi [post-mortem](../superpowers/specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only)).

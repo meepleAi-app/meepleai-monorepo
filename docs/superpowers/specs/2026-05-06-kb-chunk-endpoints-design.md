@@ -210,9 +210,9 @@ Feature: In-document keyword search with relevance ranking
 > **so that** I can decide if the KB is ready or needs to be retried/diagnosed.
 
 **SMART criteria**:
-- **S**: `GET /api/v1/kb-docs/{id}` returns `KbDocumentDto { id, title, gameId, sharedGameId?, documentCategory, processingState, totalChunks, pageCount, indexedAt?, uploadedAt, language, versionLabel?, processingError? (admin), retryCount? (admin) }`
+- **S**: `GET /api/v1/kb-docs/{id}` returns `KbDocumentDto { id, title, gameId, sharedGameId?, documentCategory, processingState, totalChunks, pageCount, indexedAt?, uploadedAt, language, versionLabel?, processingError? (admin), retryCount? (admin), failedAtState? (admin) }`
 - **M**: P95 < 80ms (cache hit), < 200ms (cold); cache TTL 60s
-- **A**: join `VectorDocument` + `PdfDocument` + count `TextChunkEntity` (denormalized `TotalChunks` already in `VectorDocument`)
+- **A**: join `VectorDocument` + `PdfDocument`; read `TotalChunks` from `VectorDocument` (already denormalized at indexing time, no extra count query needed)
 - **R**: powers `KbHeader` mockup
 - **T**: this PR
 
@@ -261,9 +261,9 @@ Feature: Document metadata overview
 > **so that** I can identify in **≤ 30 seconds** which chunk caused issues (e.g. embedding mismatch, OCR parsing failure).
 
 **SMART criteria**:
-- **S**: G1/G2 endpoints include `vectorId`, `characterCount`, `elementType`, `embeddingStatus` ONLY if `currentUser.IsAdmin === true`. Server-side field gating; fields `null` in DTO for non-admin
+- **S**: G1/G2 endpoints include `vectorId`, `characterCount`, `elementType`, `embeddingStatus` ONLY if `currentUser.IsAdmin === true`. Server-side field gating: handler sets fields to null in DTO for non-admin; per-field `[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]` annotations cause those fields to be omitted from the JSON wire payload
 - **M**: zero leak of admin fields to non-admin (audit log on attempts); 100% test coverage of gating logic
-- **A**: handler checks `currentUser.HasRole("Admin")` post-MediatR, populates/null-ifies fields in projection
+- **A**: handler checks `currentUser.HasRole("Admin")` post-MediatR, populates fields only for admin (defaults to null otherwise)
 - **R**: enables admin debug UI without creating duplicate endpoints
 - **T**: this PR
 
@@ -282,8 +282,8 @@ Feature: Admin chunk-level diagnostics
     Given the same doc as G5.1
     And currentUser has role=User (not admin)
     When the reader calls GET /api/v1/kb-docs/{docId}/chunks?skip=0&take=10
-    Then each chunk DTO has vectorId=null, characterCount=null, elementType=null, embeddingStatus=null
-    And the JSON serializer omits null fields (JsonIgnoreCondition.WhenWritingNull is global)
+    Then each chunk DTO has the four admin fields set to null in the projection
+    And the JSON wire payload omits those fields (per-field [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] annotation on KbChunkSummaryDto)
 
   Scenario: Admin views chunk with failed embedding
     Given a doc with processingState=Failed

@@ -487,11 +487,80 @@ For every Critical/High finding fixed in this quarter, a regression test must:
   - 2 path-injection in `apps/web/scripts/serve-mockups.cjs`: dev-only Playwright mock server with explicit 403 path validation upstream
   - 3 http-to-file-access in codegen/docs scripts: paths derive from script-controlled constants (`OUTPUT_DIR`, `OUTPUT_JSON`), no runtime impact
 
-### Medium Priority (Q2 stretch / Q3)
-- [ ] Verify 2FA enforcement for admin role — Due: 2026-05-31
-- [ ] Audit GitHub Actions pinning (SHA vs tag) — Due: 2026-05-31
-- [ ] Bump OpenTelemetry.Api 1.14.0 → 1.x latest — Due: 2026-05-31
-- [ ] Install + run Hadolint, Trivy on `apps/*/Dockerfile` + `infra/` — Due: 2026-06-15
+### Medium Priority (P1) — SMART acceptance criteria
+
+> Each P1 originally scoped as activity ("verify", "audit", "bump", "install"). Spec-panel review (2026-05-06) flagged this as not testable + effort underestimated by ~4×. Items below are the rewritten SMART specifications.
+
+#### **P1.1 — 2FA admin enforcement** (Q2, due 2026-05-31, ~10h effort)
+
+Acceptance criteria:
+- AC1: All endpoints under `/admin/*` require active session AND `(totp_verified_at within last 30min OR fresh totp challenge passed)`
+- AC2: Admin without TOTP enrolled CANNOT login as admin; redirected to enrollment flow
+- AC3: Recovery codes (10× single-use) issued at enrollment, stored hashed (PBKDF2 same as passwords)
+- AC4: Failed TOTP attempts rate-limited to 5/min/IP, with audit log entry on each failure
+- AC5: Integration tests: matrix `[admin/user] × [totp on/off] × [valid/invalid challenge]` in `Category=SecurityRegression`
+
+Decision points (resolve before implementation):
+- D1: Login-block vs auto-enroll on first admin login? **Recommend: auto-enroll**
+- D2: Step-up scope: every admin write OR sensitive admin actions only (delete/role-change)? **Recommend: sensitive only via `[RequireTwoFactor]` attribute**
+- D3: Step-up freshness window? **Recommend: 30min for sensitive, 8h for read**
+
+Discovery first (15min):
+- Verify `TotpService.cs` has needed APIs (challenge, verify, enrollment, recovery-codes)
+- Check existing `[TwoFactor*]` attributes in Authentication BC
+- Audit which `/admin/*` endpoints exist and rank by sensitivity
+
+#### **P1.2 — GitHub Actions supply chain hardening** (Q2, due 2026-05-31, ~6.5h effort)
+
+Acceptance criteria:
+- AC1: Audit report: count + list of unpinned third-party actions (excluding allow-list)
+- AC2: Allow-list policy documented in `docs/security/github-actions-pinning.md`:
+  - GitHub-owned (`actions/*`, `github/*`) and own-org (`meepleAi-app/*`) MAY use major-version tags
+  - Third-party MUST be SHA-pinned (with version comment for readability)
+- AC3: All third-party actions pinned to SHA (with comment `# v1.2.3` for readability)
+- AC4: CI gate added in `.github/workflows/validate-workflows.yml`: regex check fails PR introducing unpinned third-party action
+- AC5: Audit `GITHUB_TOKEN` permissions per workflow — default to `contents: read`, escalate per-job
+
+Tooling:
+```bash
+grep -rE "uses: [^@]+@v?[0-9]" .github/workflows/ | \
+  grep -vE "@[a-f0-9]{40}|^[^:]+:\s+(actions|github|meepleAi-app)/"
+# Expected: empty after Q2 closure
+```
+
+#### **P1.3 — OpenTelemetry coordinated upgrade** (DEFERRED to Q3, ~3.5h effort)
+
+> Spec-panel decision (2026-05-06): defer to Q3. Single Moderate advisory (GHSA-g94r-2vxg-569j) doesn't justify Q2 effort given P0+P1.1+P1.2+P1.4a budget. Will move to Q3 P1.
+
+Acceptance criteria (when executed in Q3):
+- AC1: Identify all `OpenTelemetry.*` packages: `dotnet list package --include-transitive | grep -i OpenTelemetry > .audit/otel-pre.txt`
+- AC2: Bump as coordinated family (latest 1.x for Api + matching SDK + Exporters)
+- AC3: GHSA-g94r-2vxg-569j is closed (verify in re-audit)
+- AC4: Smoke test: `docker compose up` → trigger `/healthz` → metrics in Prometheus + traces in Grafana within 30s of request
+- AC5: Rollback document in PR body (which packages bumped, revert SHA)
+
+#### **P1.4a — Hadolint Dockerfile lint** (Q2, due 2026-06-15, ~2h effort)
+
+Acceptance criteria:
+- AC1: Hadolint installed (`winget install hadolint`) — verified by `hadolint --version`
+- AC2: Run on all `apps/*/Dockerfile` and `infra/*/Dockerfile`
+- AC3: Findings archived in `docs/security/iac-scans/2026-Q2/hadolint.txt`
+- AC4: All DL3002+ findings either fixed OR `# hadolint ignore=DLxxxx` with justification comment
+- AC5: CI step added to `security-scan.yml` workflow (allows future regression detection)
+
+#### **P1.4b — Trivy vulnerability + config scan** (DEFERRED to Q3, ~6h effort)
+
+> Spec-panel decision (2026-05-06): defer full-scope Trivy to Q3. Q2 budget covers install only (folded into P1.4a CI integration scaffolding).
+
+Acceptance criteria (when executed in Q3):
+- AC1: Trivy installed (`winget install AquaSecurity.Trivy`)
+- AC2: Three scans run with `--severity HIGH,CRITICAL --ignore-unfixed`:
+  - Image scan: each `meepleai-*` container post-build
+  - Filesystem scan: `trivy fs apps/`
+  - Config scan: `trivy config infra/`
+- AC3: Findings archived in `docs/security/iac-scans/2026-Q3/trivy-{image,fs,config}.json`
+- AC4: All HIGH/CRITICAL findings triaged (fix / mitigate / risk-accept w/ docs)
+- AC5: CI step in `security-scan.yml`: fail PR if introduces new HIGH+ finding
 
 ### Continuous Improvements
 - [ ] Add pre-commit gitleaks hook (#745 §m-1)

@@ -2,12 +2,14 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.GetRecentKbDocum
 
 /// <summary>
 /// DTO for a recently indexed KB document on the Discover dashboard.
-/// Stub placeholder — full implementation in Task C (GetRecentKbDocumentsQuery handler).
+/// GameName is resolved from SharedGameEntity.Title via VectorDocument.SharedGameId.
 /// Issue #728.
 /// </summary>
 internal sealed record RecentKbDocDto(
     Guid Id,
     string Title,
     string GameName,
-    DateTime IndexedAt
+    string DocumentCategory,
+    DateTime IndexedAt,
+    string Language
 );

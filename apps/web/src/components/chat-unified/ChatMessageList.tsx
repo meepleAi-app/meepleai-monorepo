@@ -165,6 +165,10 @@ export function ChatMessageList({
             const isLastAssistant =
               !streamState.isStreaming && isLastAssistantMessage(messages, msgIndex);
             const showFeedback = msg.role === 'assistant' && !!gameId && !!threadId;
+            // Show the typing indicator on the assistant placeholder bubble
+            // (empty content) while a send is in flight. This covers the
+            // qaStream path which doesn't drive `streamState.currentAnswer`.
+            const isAssistantPlaceholder = msg.role === 'assistant' && !msg.content && !!isSending;
 
             return (
               <div
@@ -181,6 +185,7 @@ export function ChatMessageList({
                     onFeedbackChange: async (value, comment) => {
                       await handleFeedback(msg.id, value, comment);
                     },
+                    isTyping: isAssistantPlaceholder,
                   })}
                 />
 

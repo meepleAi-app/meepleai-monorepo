@@ -48,3 +48,22 @@ export type { NoResultsPanelLabels, NoResultsPanelProps } from './NoResultsPanel
 
 export { ActionCard } from './ActionCard';
 export type { ActionCardProps } from './ActionCard';
+
+// Phase C.2.B Task B — /gamebook/upload wizard interactive components (SP6 #789)
+export { CameraViewfinder } from './CameraViewfinder';
+export type { CameraViewfinderLabels, CameraViewfinderProps } from './CameraViewfinder';
+
+export { PageThumb } from './PageThumb';
+export type { PageThumbLabels, PageThumbProps } from './PageThumb';
+
+export { ConfidenceBadge } from './ConfidenceBadge';
+export type { ConfidenceBadgeLabels, ConfidenceBadgeProps } from './ConfidenceBadge';
+
+export { OfflineBanner } from './OfflineBanner';
+export type { OfflineBannerLabels, OfflineBannerProps } from './OfflineBanner';
+
+export { CancelModal } from './CancelModal';
+export type { CancelModalLabels, CancelModalProps } from './CancelModal';
+
+export { DesktopDropFallback } from './DesktopDropFallback';
+export type { DesktopDropFallbackLabels, DesktopDropFallbackProps } from './DesktopDropFallback';

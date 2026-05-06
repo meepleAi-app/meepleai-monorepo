@@ -24,11 +24,14 @@
  *     `CatalogGameRef[]` — orchestrator adapts: `id|title|publisher|imageUrl`
  *     mapped, `sharedByCount` defaulted to 0 (no community count exposed by
  *     `/api/v1/games`), `isIndexed = hasKnowledgeBase ?? false`.
- *   - BGG search is a STUB: backend `/api/v1/bgg/search` endpoint not
- *     audited per contract §3 — orchestrator returns empty `bggResults` and
- *     surfaces an inline "BGG ricerca non disponibile" hint via
- *     existing `step1-no-results` ActionCards. When backend lands, swap stub
- *     for a real `useSearchBggGames` hook (TanStack `useQuery`).
+ *   - BGG search wired to real backend (Wave 3 Phase 0 / Issue #805) via
+ *     `useBggSearch` hook. The endpoint `/api/v1/bgg/search` is now gated
+ *     behind `RequireAuthenticatedUser()` (was admin-only) and rate-limited at
+ *     60 req/hour/user. Adapter normalizes the API client's
+ *     `{bggId,name,yearPublished,thumbnailUrl,type}` → FSM canonical
+ *     `{bggId,title,publisher,yearPublished}`. `publisher` is null in v1
+ *     because the BGG search endpoint does not return publishers (only
+ *     `/games/{bggId}` does). Hook fires only when `?tab=bgg` is active.
  *   - Per-page confidence: backend exposes only `averageConfidence` per
  *     batch (contract §12) — orchestrator uses heuristic via
  *     `deriveHeuristicPageConfidence` for Step 3 PageThumb confidence
@@ -82,6 +85,7 @@ import {
   type PageThumbLabels,
   type StepIndicatorLabels,
 } from '@/components/v2/gamebook';
+import { useBggSearch } from '@/hooks/queries/useBggSearch';
 import { useGames } from '@/hooks/queries/useGames';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePhotoBatchStatus } from '@/lib/gamebook/hooks/usePhotoBatchStatus';
@@ -100,6 +104,7 @@ import {
   requestCameraStream,
   STATE_OVERRIDE_ENABLED,
   wizardFixtures,
+  type BggSearchResult,
   type CameraPermissionState,
   type CapturedPage,
   type CatalogGameRef,
@@ -193,17 +198,33 @@ export function GamebookUploadView(): ReactElement {
     return games.map(g => adaptGameToCatalogRef(g));
   }, [isFixtureMode, gamesQuery.data]);
 
-  // BGG remote search — STUB (Gate B v1 carryover). Backend `/api/v1/bgg/search`
-  // endpoint not audited; until then, return empty results + non-pending state.
-  // ActionCards in `step1-no-results` cell carry the user toward catalog or
-  // private-index flows.
+  // BGG remote search — Wave 3 Phase 0 (Issue #805) wired against the now
+  // authenticated-user-accessible `/api/v1/bgg/search` endpoint via the
+  // SP6-tuned `useBggSearch` hook (24h staleTime, ≥3-char gate).
+  //
+  // Gating: the request only fires when the BGG tab is active (`?tab=bgg`).
+  // Adapter: the API client returns `{bggId, name, yearPublished, thumbnailUrl,
+  // type}`; the FSM's canonical `BggSearchResult` shape is `{bggId, title,
+  // publisher, yearPublished}`. `publisher` is not exposed by the BGG XML
+  // search endpoint (only `/games/{bggId}` returns publishers) → null in v1.
+  // Suspense-style stale data is preserved across query changes; the FSM only
+  // observes `isPending` + `data` so a no-op stale read here is safe.
+  const bggQuery = useBggSearch({
+    query: queryParam,
+    enabled: !isFixtureMode && tabParam === 'bgg',
+  });
   const bggSearchQuery = useMemo(
     () => ({
-      isPending: false,
-      isError: false,
-      data: [] as readonly never[],
+      isPending: bggQuery.isPending && bggQuery.fetchStatus !== 'idle',
+      isError: bggQuery.isError,
+      data: (bggQuery.data?.results ?? []).map<BggSearchResult>(r => ({
+        bggId: r.bggId,
+        title: r.name,
+        publisher: null,
+        yearPublished: r.yearPublished,
+      })),
     }),
-    []
+    [bggQuery.data, bggQuery.fetchStatus, bggQuery.isError, bggQuery.isPending]
   );
 
   // ── Camera permission + stream lifecycle (Step 2 only) ──────────────────

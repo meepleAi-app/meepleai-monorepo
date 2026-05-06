@@ -48,12 +48,12 @@ The Q2 review was blocked by missing referenced documentation (#745) and a non-h
 
 | Source | Critical | High | Medium | Low | Total | Δ |
 |--------|----------|------|--------|-----|-------|---|
-| **CodeQL** | 0 | 34 | 115 | 1 | **150** | **−87** (log-forging bulk dismiss) |
+| **CodeQL** | 0 | 24 | 112 | 1 | **137** | **−100** (87 log-forging + 13 cleartext/path-access bulk dismiss) |
 | **Backend deps (.NET)** | 0 | 0 | 1 | 0 | **1** | 0 |
 | **Frontend deps (pnpm)** | **0** | **0** | 11 | 1 | **12** | **−36** |
 | **gitleaks (in-scope)** | 0 | 0 | 0 | 0 | **0** | 0 |
 
-**Total movement (same day)**: 286 → 163 alerts (-123 = -43%). Critical: 2→0. High: 50→34 (only CodeQL HIGH remain — to be triaged per action items).
+**Total movement (same day)**: 286 → 150 alerts (−136 = −48%). Critical: 2→0. High: 50→24 (CodeQL HIGH remaining are mostly `cs/exposure-of-sensitive-information`/regex-anchor — to be triaged in subsequent batches).
 
 > *gitleaks raw count was 403 across 148 MB but includes `node_modules/`, build artifacts, and lock files. In-scope source code: 0 leaks.*
 
@@ -476,16 +476,16 @@ For every Critical/High finding fixed in this quarter, a regression test must:
 
 ## 11. Action Items for Q3 (or remaining Q2)
 
-### High Priority
+### High Priority — ALL P0 CLOSED 2026-05-06 ✅
 
-#### ✅ Closed 2026-05-06
 - [x] **Fix axios** (4 HIGH advisories) via `pnpm.overrides` ≥1.15.1 → resolved 1.13.5 → 1.16.0 — PR #767
 - [x] **Re-enable Dependabot** security alerts + automated security fixes via `gh api PUT /vulnerability-alerts` + `/automated-security-fixes` — PR #767 (operational, no file diff)
 - [x] **Bulk-dismiss `cs/log-forging`** 87 alerts dismissed as false-positive with global LogForgingSanitizationPolicy reference — operational via `gh api PATCH`
-- [x] **Fix protobufjs + handlebars CRITICAL** (+ bonus: flatted, picomatch, vite HIGH) via `pnpm.overrides` — this PR. **0 CRITICAL, 0 HIGH remaining in pnpm audit**
-
-#### ⏳ Still open
-- [ ] **Review 8 `cs/cleartext-storage` HIGH findings** + 5 `js/path-injection`/`js/http-to-file-access` — Owner: @DegrassiAaron — Due: 2026-05-31
+- [x] **Fix protobufjs + handlebars CRITICAL** (+ bonus: flatted, picomatch, vite HIGH) via `pnpm.overrides` — PR #773. **0 CRITICAL, 0 HIGH remaining in pnpm audit**
+- [x] **Triaged 13 manual-review HIGH alerts** (8 `cs/cleartext-storage` + 2 `js/path-injection` + 3 `js/http-to-file-access`) — all confirmed FP and dismissed:
+  - 8 cleartext-storage in `Services/LlmClients/{Ollama,DeepSeek,OpenRouter}LlmClient.cs`: response body sanitized via `DataMasking.MaskResponseBody()` before logging — the `Replace` call CodeQL flags IS the redaction mitigation; inline `#pragma` justifications + comments document this.
+  - 2 path-injection in `apps/web/scripts/serve-mockups.cjs`: dev-only Playwright mock server with explicit 403 path validation upstream
+  - 3 http-to-file-access in codegen/docs scripts: paths derive from script-controlled constants (`OUTPUT_DIR`, `OUTPUT_JSON`), no runtime impact
 
 ### Medium Priority (Q2 stretch / Q3)
 - [ ] Verify 2FA enforcement for admin role — Due: 2026-05-31

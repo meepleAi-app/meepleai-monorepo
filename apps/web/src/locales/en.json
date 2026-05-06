@@ -2424,7 +2424,107 @@
       "pickerError": "Could not load games. Please try again.",
       "pickerNoResults": "No games found for \"{search}\".",
       "pickerNoGames": "No games available yet.",
-      "backToPicker": "Change game"
+      "backToPicker": "Change game",
+      "wizard": {
+        "meta": {
+          "title": "Upload manual | MeepleAI",
+          "description": "Photograph your board game manual step by step"
+        },
+        "stepIndicator": {
+          "back": "Back",
+          "stepGame": "Game",
+          "stepPhoto": "Photo",
+          "stepIndex": "Index"
+        },
+        "step1": {
+          "title": "Which game do you want to index?",
+          "subtitle": "Pick from the shared catalog or search a new one.",
+          "searchPlaceholder": "Search a game...",
+          "tabCatalog": "Catalog",
+          "tabBgg": "BGG",
+          "tabBadge": "({count})",
+          "continueButton": "Continue",
+          "searchInfo": "No results in catalog. Try BGG ↑",
+          "bggLoadingTitle": "Searching BoardGameGeek...",
+          "bggLoadingSubtitle": "This may take a few seconds",
+          "noResultsTitle": "\"{query}\" not found",
+          "noResultsSubtitle": "Three ways to continue:",
+          "actionCardCreate": "Create new game",
+          "actionCardCreateSubtitle": "Manual not in any database",
+          "actionCardBgg": "Search on BoardGameGeek",
+          "actionCardBggSubtitle": "Official source with full metadata",
+          "actionCardPrivate": "Index for me only",
+          "actionCardPrivateSubtitle": "Private — not shared with the community"
+        },
+        "step2": {
+          "title": "Photograph the manual",
+          "cameraAria": "Camera viewfinder",
+          "shutterAria": "Take photo",
+          "closeAria": "Close camera",
+          "galleryAria": "Open gallery",
+          "doneAria": "Done — go to indexing",
+          "counter": "{count, plural, =0 {0 of {max}} one {1 of {max}} other {{count} of {max}}}",
+          "hintReady": "✓ Page detected",
+          "hintLowLight": "☁️ Move closer to light",
+          "hintFailed": "✗ Edges not detected",
+          "lightMeterAria": "Light meter",
+          "lightMeterLow": "LOW",
+          "lightMeterMedium": "MEDIUM",
+          "lightMeterOk": "OK",
+          "deniedTitle": "Camera blocked",
+          "deniedSubtitle": "MeepleAI does not have camera access. Enable permissions in your system settings.",
+          "deniedOpenSettings": "Open settings",
+          "deniedGallery": "Upload from gallery",
+          "deniedHint": "💡 Alternatively, you can upload photos already taken.",
+          "unsupportedTitle": "Camera not supported",
+          "unsupportedSubtitle": "Your browser does not support camera access. Upload photos from gallery.",
+          "desktopDropTitle": "Drop photos here",
+          "desktopDropSubtitle": "On desktop you can also upload photos already taken.",
+          "desktopDropFormats": "Supported formats: JPG, PNG, HEIC · Max {max} files",
+          "desktopDropBrowse": "Browse files",
+          "desktopDropSendToPhone": "Send link to phone"
+        },
+        "step3": {
+          "progressTitle": "Indexing…",
+          "progressSubtitle": "You can keep your phone in your pocket.",
+          "progressLabel": "{processedPages, plural, =0 {0 of {totalPages}} one {1 of {totalPages}} other {{processedPages} of {totalPages}}}",
+          "partialTitle": "Almost ready",
+          "partialSubtitle": "{ok} pages ok, {retake} to retake for better quality.",
+          "completeTitle": "Manual ready!",
+          "completeSubtitle": "{total} pages indexed, {high} at high confidence.",
+          "lowConfidenceLabel": "Low confidence — retake suggested",
+          "retakeAria": "Retake page {pageNumber}",
+          "retakeButton": "📷 Retake",
+          "retakeBatch": "{count, plural, one {📷 Retake # page} other {📷 Retake # pages}}",
+          "skipPartial": "Skip — use as-is",
+          "savePlain": "Save and stop",
+          "startSession": "🎯 Start session",
+          "cancelButton": "Cancel"
+        },
+        "confidence": {
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low",
+          "processing": "Processing"
+        },
+        "offline": {
+          "bannerTitle": "Connection lost",
+          "bannerSubtitle": "Will resume automatically when reconnected.",
+          "retryNow": "Retry now",
+          "retryAttempt": "Attempt {current}/5 in {seconds}s",
+          "cancel": "Cancel",
+          "failedTerminalTitle": "Indexing interrupted",
+          "failedTerminalSubtitle": "Retry manually when you have a stable connection.",
+          "failedTerminalRetry": "Retry",
+          "failedTerminalChange": "Change photos"
+        },
+        "cancelModal": {
+          "title": "Cancel indexing?",
+          "body": "You have already taken {count, plural, one {# page} other {# pages}}. If you cancel now, you'll have to start over.",
+          "continue": "Continue indexing",
+          "confirm": "Yes, cancel"
+        }
+      }
     },
     "play": {
       "loading": "Loading...",

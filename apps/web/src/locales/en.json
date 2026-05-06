@@ -2437,6 +2437,56 @@
       "toggleDistanceReading": "Distance reading mode",
       "translationUnavailable": "Translation not available",
       "retry": "Retry"
+    },
+    "index": {
+      "hero": {
+        "kicker": "📚 Gamebooks",
+        "title": "Your manuals",
+        "subtitle": "Photographed manuals ready for the table",
+        "kpiTotalGamebooks": "manuals",
+        "kpiTotalSessions": "this month",
+        "kpiActiveAgents": "translations",
+        "ctaAddManual": "Add manual"
+      },
+      "quota": {
+        "title": "Translation quota",
+        "usedCount": "{used, plural, =0 {0 of {total}} one {1 of {total}} other {{used} of {total}}}",
+        "resetIn": "Resets on {date}",
+        "softWarning": "You're about to exhaust your monthly quota",
+        "hardLimit": "Quota reached — buy credits to continue",
+        "upgrade": "Buy credits"
+      },
+      "card": {
+        "statusReady": "Ready",
+        "statusIndexing": "Indexing…",
+        "statusError": "Error · Retry",
+        "pagesCount": "{pages, plural, =0 {0 pages} one {1 page} other {{pages} pages}}",
+        "pagesProgress": "{indexed}/{total} pgs",
+        "chunksCount": "{count} chunks",
+        "qaCount": "{count} questions",
+        "sessionsCount": "{count} sessions",
+        "indexingProgress": "Indexing… {indexed}/{total}",
+        "errorRetry": "Retry",
+        "openGamebook": "Open gamebook"
+      },
+      "section": {
+        "title": "Your gamebooks",
+        "count": "({count})"
+      },
+      "empty": {
+        "title": "No gamebooks yet",
+        "description": "Photograph your first gamebook to start playing in your language.",
+        "cta": "📷 Capture your first manual",
+        "howItWorks": "How it works →"
+      },
+      "loading": {
+        "label": "Loading gamebooks…"
+      },
+      "error": {
+        "title": "Could not load library",
+        "description": "Connection unstable. Try again in a moment.",
+        "retry": "🔄 Retry"
+      }
     }
   }
 }

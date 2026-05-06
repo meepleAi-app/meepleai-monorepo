@@ -2359,6 +2359,87 @@
         "acknowledgeCta": "Ho capito",
         "viewSummaryCta": "Vedi riepilogo"
       }
+    },
+    "sessionSummary": {
+      "hero": {
+        "title": "Riepilogo partita",
+        "podiumLabel": "Podio finale",
+        "tiedBanner": "{count, plural, =2 {🤝 Pareggio tra {names}} other {🤝 Pareggio a {count} tra {names}}}",
+        "confettiAriaLabel": "Animazione festeggiamento vittoria",
+        "confettiSkippedLabel": "Medaglia vittoria"
+      },
+      "kpi": {
+        "duration": "Durata",
+        "players": "Giocatori",
+        "turns": "Turni",
+        "avgRoundTime": "Tempo medio turno",
+        "totalScore": "Punteggio totale"
+      },
+      "scoring": {
+        "title": "Punteggio dettagliato",
+        "headerName": "Giocatore",
+        "headerScore": "Punteggio",
+        "headerRank": "Posizione",
+        "tied": "Pari merito"
+      },
+      "connectionBar": {
+        "title": "Andamento partita",
+        "eventLabel": "Evento",
+        "emptyEvent": "Nessun evento registrato"
+      },
+      "achievements": {
+        "title": "Achievements",
+        "unlockedAt": "Sbloccato il {date}",
+        "locked": "Ancora bloccato",
+        "empty": "Nessun achievement sbloccato in questa partita"
+      },
+      "diary": {
+        "title": "Diario partita",
+        "filterAll": "Tutti",
+        "filterScore": "Punteggio",
+        "filterEvent": "Eventi",
+        "filterChat": "Chat",
+        "filterPhoto": "Foto",
+        "empty": "Nessun evento per questo filtro",
+        "expand": "Espandi turno {turn}",
+        "collapse": "Comprimi turno {turn}"
+      },
+      "photos": {
+        "title": "Foto sessione",
+        "empty": "Nessuna foto in questa partita",
+        "viewLarger": "Apri foto"
+      },
+      "chatHighlights": {
+        "title": "Momenti chat",
+        "empty": "Nessun momento saliente registrato"
+      },
+      "share": {
+        "title": "Condividi riepilogo",
+        "previewLight": "Tema chiaro",
+        "previewDark": "Tema scuro",
+        "copyLink": "Copia link",
+        "shareTwitter": "Condividi su Twitter",
+        "shareInstagram": "Condividi su Instagram",
+        "shareWhatsApp": "Condividi su WhatsApp",
+        "downloadPng": "Scarica PNG",
+        "downloadPngDisabled": "In arrivo prossimamente"
+      },
+      "playAgain": {
+        "title": "Pronti per la rivincita?",
+        "cta": "Riavvia con stessi giocatori",
+        "description": "Stesso gioco, stessi giocatori — agente già caricato"
+      },
+      "states": {
+        "notCompleted": {
+          "title": "Sessione in corso",
+          "description": "Questa sessione non è ancora terminata.",
+          "continueLive": "Vai alla sessione live"
+        },
+        "notFound": {
+          "title": "Sessione non trovata",
+          "backToSessions": "Torna alle sessioni"
+        }
+      }
     }
   },
   "gamebook": {

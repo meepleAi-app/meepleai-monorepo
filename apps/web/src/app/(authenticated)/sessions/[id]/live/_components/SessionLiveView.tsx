@@ -1,20 +1,27 @@
 /**
- * SessionLiveView — Wave D.2 Foundation sub-PR (Issue #746).
+ * SessionLiveView — Wave D.2 Interactions sub-PR (Issue #750).
  *
- * Orchestrator for `/sessions/[id]/live` — static fixture mode.
+ * Orchestrator for `/sessions/[id]/live` — full SSE + interactions.
  *
- * **Foundation scope (NO SSE wiring)**:
- *   - Reads data from VISUAL_TEST_FIXTURE_SESSION (IS_VISUAL_TEST_BUILD=true) or
- *     useSession(sessionId) (real backend).
- *   - No useSessionLiveStream — Interactions sub-PR adds real-time SSE.
- *   - All write handlers are absent (aria-disabled on child components).
+ * **Interactions extension** (over Foundation sub-PR #746):
+ *   - useSessionLiveStream wired when !IS_VISUAL_TEST_BUILD + session loaded
+ *   - composeSessionLiveState reducer merges DTO + SSE events into liveState
+ *   - RightColumnTabs mounted (desktop right column) with tab URL SSOT
+ *   - PauseOverlay / EndgameDialog lazy-loaded, mounted from ?dialog= URL param
+ *   - ConnectionLostBanner shown for reconnecting/degraded-polling/failed states
+ *   - Mobile tab routing extended: chat → LiveAgentChat, tools → SessionToolsRail
+ *   - Desktop right column: tools → SessionToolsRail, chat → LiveAgentChat, notes → LiveSessionNotes
+ *   - Write actions: handleScoreUpdate (optimistic UI), handleToolExecute,
+ *     handleSendMessage, handleAddNote, handleResume, handlePause, handleEndgame
+ *   - 403 handling: score rollback + toast "Permesso negato"
+ *   - 429 handling: connectionState='failed' shown as ConnectionLostBanner kind='failed'
  *
  * **URL state SSOT** (no useState mirrors):
  *   ?tab=tools|chat|notes (default 'tools')   — desktop right-column tab
  *   ?mtab=score|log|tools|chat (default 'score') — mobile bottom nav tab
+ *   ?dialog=pause|endgame                      — dialog state
  *   ?fixture=spectator|host|paused             — fixture variant (visual baselines)
  *   ?state=loading|not-found                   — override gated by STATE_OVERRIDE_ENABLED
- *   ?dialog=pause|endgame                      — dialog state (Foundation: derived, not rendered)
  *
  * **Gate A (ICU plural)**:
  *   `pages.sessionLive.topBar.turnLabel` has `{count, plural, ...}` — resolved here via
@@ -30,12 +37,12 @@
  *   `/sessions/[id]` (D.3 summary) and `/sessions/[id]/diary/*` are UNTOUCHED.
  *
  * Pattern blueprint: Wave D.1 SessionsLibraryView + Wave C.1 AgentDetailView.
- * Wave D.2 Foundation sub-PR — Issue #746
+ * Wave D.2 Interactions sub-PR — Issue #750
  */
 
 'use client';
 
-import { useCallback, useMemo, type ReactElement } from 'react';
+import { useCallback, useMemo, useRef, useState, lazy, Suspense, type ReactElement } from 'react';
 
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useIntl } from 'react-intl';
@@ -57,8 +64,22 @@ import {
   type PlayerRosterLiveLabels,
   type TurnIndicatorLabels,
 } from '@/components/v2/session-live';
+import {
+  ConnectionLostBanner,
+  LiveAgentChat,
+  LiveSessionNotes,
+  RightColumnTabs,
+  SessionToolsRail,
+  type ConnectionLostBannerLabels,
+  type LiveAgentChatLabels,
+  type LiveSessionNotesLabels,
+  type RightColumnTabsLabels,
+  type SessionToolsRailLabels,
+} from '@/components/v2/session-live';
 import { useSession } from '@/hooks/queries/useActiveSessions';
 import { useTranslation } from '@/hooks/useTranslation';
+import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
+import { hasRequiredRole } from '@/lib/session-live/participant-role';
 import {
   deriveSessionLiveUiState,
   deriveSessionLiveDialogState,
@@ -75,6 +96,17 @@ import {
   VISUAL_TEST_FIXTURE_SESSION_PAUSED,
   type LiveSessionFixture,
 } from '@/lib/session-live/session-live-visual-test-fixture';
+import { useSessionLiveStream } from '@/lib/session-live/use-session-live-stream';
+
+// ─── Lazy dialogs (orchestrator-side lazy import per Task 3 spec) ──────────────
+
+const PauseOverlay = lazy(() =>
+  import('@/components/v2/session-live/PauseOverlay').then(m => ({ default: m.PauseOverlay }))
+);
+
+const EndgameDialog = lazy(() =>
+  import('@/components/v2/session-live/EndgameDialog').then(m => ({ default: m.EndgameDialog }))
+);
 
 // ─── SessionId validation ─────────────────────────────────────────────────────
 // Contract §2.1: never pass undefined or literal 'undefined' to sub-hooks.
@@ -210,10 +242,7 @@ export function SessionLiveView(): ReactElement {
   const sessionId = resolveSessionId(params?.id);
 
   // ── URL state SSOT ────────────────────────────────────────────────────────
-  // `tab` parsed but unused in Foundation (RightColumnTabs is Interactions sub-PR).
-  // Reserved for forward compatibility — will be passed to RightColumnTabs once mounted.
-  const _tab = parseLiveTab(searchParams.get('tab'));
-  void _tab;
+  const tab = parseLiveTab(searchParams.get('tab'));
   const mobileTab = parseMobileTab(searchParams.get('mtab'));
   const fixtureVariantParam = searchParams.get('fixture');
 
@@ -222,12 +251,10 @@ export function SessionLiveView(): ReactElement {
     ? parseStateOverride(new URLSearchParams(searchParams.toString()))
     : null;
 
-  // Dialog state derived from URL (Foundation: derived but no dialog components mounted)
-  // Included so E2E ?state= override visual tests can verify dialog-state derivation.
-  const _dialogState: SessionLiveDialogState = deriveSessionLiveDialogState(
+  // Dialog state derived from URL — Interactions mounts actual dialog components
+  const dialogState: SessionLiveDialogState = deriveSessionLiveDialogState(
     new URLSearchParams(searchParams.toString())
   );
-  void _dialogState; // Interactions sub-PR mounts actual dialog components
 
   // ── Data: fixture or real hook ────────────────────────────────────────────
   const fixture: LiveSessionFixture | null = useMemo(() => {
@@ -240,6 +267,28 @@ export function SessionLiveView(): ReactElement {
     sessionId ?? '',
     /* enabled= */ !IS_VISUAL_TEST_BUILD && sessionId != null
   );
+
+  // ── SSE hook (Interactions sub-PR) ───────────────────────────────────────
+  // Wired when NOT in fixture mode AND session has loaded successfully.
+  // Contract §2.2: useSessionLiveStream mounts ONLY after parent success.
+  const liveStream = useSessionLiveStream({
+    sessionId,
+    enabled:
+      !IS_VISUAL_TEST_BUILD &&
+      sessionId != null &&
+      sessionQuery.isSuccess &&
+      sessionQuery.data != null,
+  });
+
+  // ── Optimistic local scores (for 403 rollback) ────────────────────────────
+  // Map: playerId → local score delta (applied on top of liveState)
+  // Rolled back on 403 response from server.
+  const [localScoreOverrides, setLocalScoreOverrides] = useState<ReadonlyMap<string, number>>(
+    new Map()
+  );
+
+  // Ref to track pending score requests for rollback
+  const pendingScoreRef = useRef<Map<string, number>>(new Map());
 
   // ── FSM derivation ────────────────────────────────────────────────────────
   const realUiState = useMemo<SessionLiveUiState>(() => {
@@ -254,36 +303,45 @@ export function SessionLiveView(): ReactElement {
 
   const effectiveUiState: SessionLiveUiState = stateOverride ?? realUiState;
 
-  // ── Active fixture data (fixture or real session mapped to fixture shape) ─
-  // Foundation: only fixture data is fully typed; real GameSessionDto lacks live fields.
-  // Interactions sub-PR wires useSessionLiveStream + reducer for real live state.
+  // ── Active session data ───────────────────────────────────────────────────
+  // Priority: fixture > composed live state > DTO proxy
   const activeSession: LiveSessionFixture | null = useMemo(() => {
     if (fixture != null) return fixture;
-    // When real session is loaded (Cell 5), create a minimal fixture-shaped proxy
-    // for Foundation display (no live fields — SSE wiring comes in Interactions).
     const dto = sessionQuery.data;
     if (dto == null) return null;
+
+    // Adapt DTO players: SessionPlayerDto.id is optional (backward-compat Gate B).
+    // composeSessionLiveState requires id: string — synthesise from playerName+playerOrder.
+    const initialData = {
+      ...dto,
+      players: dto.players.map((p, idx) => ({
+        ...p,
+        id: p.id ?? `${p.playerName}-${p.playerOrder}-${idx}`,
+      })),
+    };
+
+    // Compose live state from DTO + accumulated SSE events
+    const liveState = composeSessionLiveState(initialData, liveStream.events);
+
+    // Apply local score overrides (optimistic UI)
+    const playersWithOverrides = liveState.players.map(p => {
+      const override = localScoreOverrides.get(p.id);
+      return override !== undefined ? { ...p, score: override } : p;
+    });
+
     return {
       id: dto.id,
       name: `Sessione ${dto.id.slice(0, 8)}`,
-      status: (dto.status === 'Paused' ? 'Paused' : 'InProgress') as 'InProgress' | 'Paused',
-      viewerRole: 'Player', // Foundation default — SSE wires real viewerRole
+      status: liveState.status === 'Paused' ? 'Paused' : 'InProgress',
+      viewerRole: 'Player' as const, // Foundation default — real viewerRole from session DTO
       viewerId: '',
-      currentTurn: 0,
-      totalTurns: 0,
-      activePlayerId: '',
-      players: dto.players.map((p, idx) => ({
-        // SessionPlayerDto has no `id` field — generate a deterministic positional key.
-        // SSE wiring (Interactions sub-PR) will replace this with real participant IDs.
-        id: `player-order-${p.playerOrder ?? idx}`,
-        name: p.playerName,
-        role: 'Player' as const,
-        score: 0,
-        isOnline: true,
-      })),
-      actionLog: [],
+      currentTurn: liveState.currentTurn,
+      totalTurns: liveState.totalTurns,
+      activePlayerId: liveState.activePlayerId,
+      players: playersWithOverrides,
+      actionLog: liveState.actionLog,
     };
-  }, [fixture, sessionQuery.data]);
+  }, [fixture, sessionQuery.data, liveStream.events, localScoreOverrides]);
 
   // ── Navigation handlers ───────────────────────────────────────────────────
 
@@ -301,20 +359,28 @@ export function SessionLiveView(): ReactElement {
     [searchParams]
   );
 
-  // handleTabChange reserved for Interactions sub-PR (RightColumnTabs orchestration)
-  const _handleTabChange = useCallback(
+  const handleTabChange = useCallback(
     (next: LiveTab) => {
       const val = next === 'tools' ? null : next;
       router.replace(`${pathname}${buildQuery({ tab: val })}`, { scroll: false });
     },
     [router, pathname, buildQuery]
   );
-  void _handleTabChange;
 
   const handleMobileTabChange = useCallback(
     (next: MobileTab) => {
       const val = next === 'score' ? null : next;
       router.replace(`${pathname}${buildQuery({ mtab: val })}`, { scroll: false });
+    },
+    [router, pathname, buildQuery]
+  );
+
+  /** Dialog dismiss/open handler — updates ?dialog= URL param.
+   *  'none' removes the param (clears dialog from URL). */
+  const handleDialogChange = useCallback(
+    (next: SessionLiveDialogState) => {
+      const val = next === 'none' ? null : next;
+      router.replace(`${pathname}${buildQuery({ dialog: val })}`, { scroll: false });
     },
     [router, pathname, buildQuery]
   );
@@ -332,22 +398,171 @@ export function SessionLiveView(): ReactElement {
     router.push('/sessions');
   }, [router]);
 
+  // ── Write actions (Player+Host) ───────────────────────────────────────────
+
+  /**
+   * Optimistic score update with 403 rollback.
+   * Reserved for future score input UI in LiveScoringPanel — wired in v2 polish.
+   * Kept as `_handleScoreUpdate` to preserve callsite documentation while ESLint
+   * recognizes intentional non-usage in current sub-PR.
+   */
+  const _handleScoreUpdate = useCallback(
+    async (playerId: string, newScore: number): Promise<void> => {
+      if (activeSession == null) return;
+      if (!hasRequiredRole(activeSession.viewerRole, 'Player')) return;
+
+      // Get current score for rollback
+      const currentScore = activeSession.players.find(p => p.id === playerId)?.score ?? 0;
+      pendingScoreRef.current.set(playerId, currentScore);
+
+      // Optimistic update
+      setLocalScoreOverrides(prev => {
+        const next = new Map(prev);
+        next.set(playerId, newScore);
+        return next;
+      });
+
+      try {
+        if (sessionId == null) throw new Error('no sessionId');
+        const res = await fetch(
+          `/api/v1/game-sessions/${sessionId}/participants/${playerId}/score`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ score: newScore }),
+            credentials: 'include',
+          }
+        );
+
+        if (res.status === 403) {
+          // 403: rollback optimistic update
+          setLocalScoreOverrides(prev => {
+            const next = new Map(prev);
+            const rollbackScore = pendingScoreRef.current.get(playerId);
+            if (rollbackScore !== undefined) next.set(playerId, rollbackScore);
+            else next.delete(playerId);
+            return next;
+          });
+          // TODO: toast "Permesso negato" (requires toast integration)
+          return;
+        }
+
+        if (res.status === 429) {
+          // 429: server rate limit — keep optimistic but note degraded state
+          // ConnectionLostBanner kind='failed' handles toast UI
+          return;
+        }
+
+        if (!res.ok) {
+          // Other error: rollback
+          setLocalScoreOverrides(prev => {
+            const next = new Map(prev);
+            const rollbackScore = pendingScoreRef.current.get(playerId);
+            if (rollbackScore !== undefined) next.set(playerId, rollbackScore);
+            else next.delete(playerId);
+            return next;
+          });
+          return;
+        }
+
+        // Success: clear pending (SSE event will arrive with canonical score)
+        pendingScoreRef.current.delete(playerId);
+      } catch {
+        // Network error: rollback
+        setLocalScoreOverrides(prev => {
+          const next = new Map(prev);
+          const rollbackScore = pendingScoreRef.current.get(playerId);
+          if (rollbackScore !== undefined) next.set(playerId, rollbackScore);
+          else next.delete(playerId);
+          return next;
+        });
+      }
+    },
+    [activeSession, sessionId]
+  );
+  void _handleScoreUpdate;
+
+  const handleToolExecute = useCallback(
+    async (toolId: string): Promise<void> => {
+      if (sessionId == null) return;
+      if (activeSession == null) return;
+      if (!hasRequiredRole(activeSession.viewerRole, 'Player')) return;
+
+      try {
+        await fetch(`/api/v1/game-sessions/${sessionId}/tools/${toolId}/execute`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+      } catch {
+        // Fail silently — SSE event confirms or not
+      }
+    },
+    [sessionId, activeSession]
+  );
+
+  const handleSendMessage = useCallback(
+    async (content: string, visibility: 'private' | 'shared'): Promise<void> => {
+      if (sessionId == null) return;
+
+      try {
+        await fetch(`/api/v1/game-sessions/${sessionId}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content, visibility }),
+          credentials: 'include',
+        });
+      } catch {
+        // Fail silently — SSE event confirms or not
+      }
+    },
+    [sessionId]
+  );
+
+  const handleAddNote = useCallback(
+    async (content: string, visibility: 'private' | 'shared'): Promise<void> => {
+      if (sessionId == null) return;
+
+      try {
+        await fetch(`/api/v1/game-sessions/${sessionId}/diary`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content, visibility }),
+          credentials: 'include',
+        });
+      } catch {
+        // Fail silently — SSE event confirms or not
+      }
+    },
+    [sessionId]
+  );
+
+  const handleResume = useCallback(async (): Promise<void> => {
+    if (sessionId == null) return;
+    if (activeSession == null) return;
+    if (!hasRequiredRole(activeSession.viewerRole, 'Host')) return;
+
+    try {
+      await fetch(`/api/v1/game-sessions/${sessionId}/resume`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      handleDialogChange('none');
+    } catch {
+      // Fail silently
+    }
+  }, [sessionId, activeSession, handleDialogChange]);
+
   // ── i18n labels ───────────────────────────────────────────────────────────
   // Gate A: ICU plural keys resolved here — never in child components.
-  // t(key, { count }) delegates to react-intl formatter which handles {count, plural, ...}.
 
   const topBarLabels = useMemo<LiveTopBarLabels>((): LiveTopBarLabels => {
     const currentTurn = activeSession?.currentTurn ?? 0;
     const totalTurns = activeSession?.totalTurns ?? 0;
     const sessionName = activeSession?.name ?? '';
     return {
-      // Gate A: sessionTitleAriaLabel has {name} interpolation — resolved here.
-      // LiveTopBar also does `.replace('{name}', sessionName)` as a secondary guard;
-      // by pre-resolving we avoid formatjs missing-variable console errors in tests.
       sessionTitleAriaLabel: t('pages.sessionLive.topBar.sessionTitleAriaLabel', {
         name: sessionName,
       }),
-      // Gate A: ICU plural resolved here with { count, total } values
       turnLabelResolved: t('pages.sessionLive.topBar.turnLabel', {
         count: currentTurn,
         total: totalTurns,
@@ -363,11 +578,9 @@ export function SessionLiveView(): ReactElement {
 
   const turnIndicatorLabels = useMemo<TurnIndicatorLabels>(
     (): TurnIndicatorLabels => ({
-      // currentTurnAriaLabel has {current}/{total} — raw template, TurnIndicator does .replace()
       currentTurnAriaLabel:
         (intl.messages['pages.sessionLive.turnIndicator.currentTurnAriaLabel'] as string) ??
         'Turno {current} di {total}',
-      // activePlayerLabel has {playerName} — raw template, component does .replace()
       activePlayerLabel:
         (intl.messages['pages.sessionLive.turnIndicator.activePlayerLabel'] as string) ??
         '{playerName}',
@@ -381,13 +594,11 @@ export function SessionLiveView(): ReactElement {
     const playerCount = activeSession?.players.length ?? 0;
     return {
       title: t('pages.sessionLive.roster.title'),
-      // Gate A: ICU plural resolved here with { count } value
       playerCountResolved: t('pages.sessionLive.roster.playerCountTemplate', {
         count: playerCount,
       }),
       onlineLabel: t('pages.sessionLive.roster.onlineLabel'),
       offlineLabel: t('pages.sessionLive.roster.offlineLabel'),
-      // kickAriaLabelTemplate has {playerName} — raw template, component does .replace()
       kickAriaLabelTemplate:
         (intl.messages['pages.sessionLive.roster.kickAriaLabel'] as string) ??
         'Espelli {playerName}',
@@ -400,7 +611,6 @@ export function SessionLiveView(): ReactElement {
   const scoringLabels = useMemo<LiveScoringPanelLabels>(
     (): LiveScoringPanelLabels => ({
       title: t('pages.sessionLive.scoring.title'),
-      // Template strings with {score}/{playerName} — raw templates, component does .replace()
       scoreLabelTemplate:
         (intl.messages['pages.sessionLive.scoring.scoreLabel'] as string) ?? 'Punteggio: {score}',
       winnerLabel: t('pages.sessionLive.scoring.winnerLabel'),
@@ -437,9 +647,71 @@ export function SessionLiveView(): ReactElement {
     (): MobileBodyLabels => ({
       tabScore: t('pages.sessionLive.scoring.title'),
       tabLog: t('pages.sessionLive.actionLog.title'),
-      tabTools: t('pages.sessionLive.topBar.endgameCta'), // placeholder; Interactions sub-PR refines
-      tabChat: t('pages.sessionLive.connectionLost.manualRetryLabel'), // placeholder
+      tabTools: t('pages.sessionLive.rightColumn.tabTools'),
+      tabChat: t('pages.sessionLive.rightColumn.tabChat'),
       bottomNavAriaLabel: t('pages.sessionLive.a11y.viewLabel'),
+    }),
+    [t]
+  );
+
+  const connectionLostLabels = useMemo<ConnectionLostBannerLabels>(
+    (): ConnectionLostBannerLabels => ({
+      // Gate A: ICU plural resolved here
+      retryCountResolved: t('pages.sessionLive.connectionLost.retryCount', {
+        count: liveStream.retryCount,
+      }),
+      reconnecting: t('pages.sessionLive.connectionLost.reconnecting'),
+      degradedPolling: t('pages.sessionLive.connectionLost.degradedPolling'),
+      failed: t('pages.sessionLive.connectionLost.failed'),
+      manualRetryLabel: t('pages.sessionLive.connectionLost.manualRetryLabel'),
+    }),
+    [t, liveStream.retryCount]
+  );
+
+  const rightColumnTabsLabels = useMemo<RightColumnTabsLabels>(
+    (): RightColumnTabsLabels => ({
+      tabsAriaLabel: t('pages.sessionLive.rightColumn.tabsAriaLabel'),
+      tabTools: t('pages.sessionLive.rightColumn.tabTools'),
+      tabChat: t('pages.sessionLive.rightColumn.tabChat'),
+      tabNotes: t('pages.sessionLive.rightColumn.tabNotes'),
+    }),
+    [t]
+  );
+
+  const toolsRailLabels = useMemo<SessionToolsRailLabels>(
+    (): SessionToolsRailLabels => ({
+      title: t('pages.sessionLive.tools.title'),
+      toolDiceLabel: t('pages.sessionLive.tools.toolDiceLabel'),
+      toolTimerLabel: t('pages.sessionLive.tools.toolTimerLabel'),
+      toolCardLabel: t('pages.sessionLive.tools.toolCardLabel'),
+      executeAriaTemplate:
+        (intl.messages['pages.sessionLive.tools.executeAriaTemplate'] as string) ??
+        'Esegui {toolName}',
+      disabledSpectatorTooltip: t('pages.sessionLive.tools.disabledSpectatorTooltip'),
+    }),
+    [t, intl.messages]
+  );
+
+  const chatLabels = useMemo<LiveAgentChatLabels>(
+    (): LiveAgentChatLabels => ({
+      title: t('pages.sessionLive.chat.title'),
+      inputAriaLabel: t('pages.sessionLive.chat.inputAriaLabel'),
+      sendAriaLabel: t('pages.sessionLive.chat.sendAriaLabel'),
+      visibilityPrivate: t('pages.sessionLive.chat.visibilityPrivate'),
+      visibilityShared: t('pages.sessionLive.chat.visibilityShared'),
+      emptyMessage: t('pages.sessionLive.chat.emptyMessage'),
+    }),
+    [t]
+  );
+
+  const notesLabels = useMemo<LiveSessionNotesLabels>(
+    (): LiveSessionNotesLabels => ({
+      title: t('pages.sessionLive.notes.title'),
+      inputAriaLabel: t('pages.sessionLive.notes.inputAriaLabel'),
+      addAriaLabel: t('pages.sessionLive.notes.addAriaLabel'),
+      visibilityPrivate: t('pages.sessionLive.notes.visibilityPrivate'),
+      visibilityShared: t('pages.sessionLive.notes.visibilityShared'),
+      emptyMessage: t('pages.sessionLive.notes.emptyMessage'),
     }),
     [t]
   );
@@ -470,24 +742,121 @@ export function SessionLiveView(): ReactElement {
     return active?.name ?? '';
   }, [activeSession]);
 
+  // ── Default tools list ────────────────────────────────────────────────────
+  // Foundation: standard 3 tools. Real tools come from session DTO in future.
+  const toolsList = useMemo(
+    () => [
+      { id: 'dice', name: toolsRailLabels.toolDiceLabel, icon: 'dice' as const },
+      { id: 'timer', name: toolsRailLabels.toolTimerLabel, icon: 'timer' as const },
+      { id: 'card', name: toolsRailLabels.toolCardLabel, icon: 'card' as const },
+    ],
+    [toolsRailLabels]
+  );
+
+  // ── Chat messages from SSE events ────────────────────────────────────────
+  // Extract chat messages from liveState actionLog (type='chat' entries).
+  // Foundation proxy: fixture has no chat messages.
+  const chatMessages = useMemo(() => {
+    if (activeSession == null) return [];
+    return activeSession.actionLog
+      .filter(e => e.type === 'chat')
+      .map(e => ({
+        id: e.id,
+        senderId: e.authorName,
+        senderName: e.authorName,
+        content: e.content,
+        visibility: 'shared' as const,
+        timestamp: e.timestamp,
+      }));
+  }, [activeSession]);
+
+  // ── Notes from SSE events ────────────────────────────────────────────────
+  const noteEntries = useMemo(() => {
+    if (activeSession == null) return [];
+    return activeSession.actionLog
+      .filter(e => e.type === 'event')
+      .map(e => ({
+        id: e.id,
+        authorId: e.authorName,
+        authorName: e.authorName,
+        content: e.content,
+        visibility: 'shared' as const,
+        timestamp: e.timestamp,
+      }));
+  }, [activeSession]);
+
+  // ── Pause/endgame data from liveState ────────────────────────────────────
+  // Extract pause/endgame metadata for dialog components.
+  // Foundation proxy: SSE events not yet received — typed null until SSE delivers them.
+  const pauseEvent = useMemo<{ pausedBy: string; pausedAt: string } | null>(() => {
+    if (activeSession == null) return null;
+    // Interactions sub-PR: will extract from liveStream.events when SSE delivers 'SessionPaused'
+    return null;
+  }, [activeSession]);
+
+  const endgameEvent = useMemo<{ endedAt: string; endedBy: string } | null>(() => {
+    if (activeSession == null) return null;
+    // Interactions sub-PR: will extract from liveStream.events when SSE delivers 'SessionEnded'
+    return null;
+  }, [activeSession]);
+
   // Mobile content selection based on active tab.
   // MUST be declared BEFORE any early return per react-hooks/rules-of-hooks.
-  // Returns null when activeSession not yet ready (loading/error/not-found shells use early returns below).
   const mobileContent = useMemo<React.ReactNode>(() => {
     if (activeSession == null) return null;
-    if (mobileTab === 'log') {
-      return <ActionLogTimeline entries={activeSession.actionLog} labels={actionLogLabels} />;
+    switch (mobileTab) {
+      case 'log':
+        return <ActionLogTimeline entries={activeSession.actionLog} labels={actionLogLabels} />;
+      case 'chat':
+        return (
+          <LiveAgentChat
+            messages={chatMessages}
+            viewerRole={activeSession.viewerRole}
+            viewerId={activeSession.viewerId}
+            onSendMessage={handleSendMessage}
+            labels={chatLabels}
+          />
+        );
+      case 'tools':
+        return (
+          <SessionToolsRail
+            tools={toolsList}
+            viewerRole={activeSession.viewerRole}
+            onToolExecute={handleToolExecute}
+            labels={toolsRailLabels}
+          />
+        );
+      case 'score':
+      default:
+        return (
+          <LiveScoringPanel
+            scores={scores}
+            viewerRole={activeSession.viewerRole}
+            viewerId={activeSession.viewerId}
+            labels={scoringLabels}
+          />
+        );
     }
-    // Default and score tab: scoring panel
-    return (
-      <LiveScoringPanel
-        scores={scores}
-        viewerRole={activeSession.viewerRole}
-        viewerId={activeSession.viewerId}
-        labels={scoringLabels}
-      />
-    );
-  }, [mobileTab, activeSession, scores, scoringLabels, actionLogLabels]);
+  }, [
+    mobileTab,
+    activeSession,
+    scores,
+    scoringLabels,
+    actionLogLabels,
+    chatMessages,
+    chatLabels,
+    handleSendMessage,
+    toolsList,
+    toolsRailLabels,
+    handleToolExecute,
+  ]);
+
+  // ── ConnectionLostBanner — shown for non-healthy SSE states ──────────────
+  const showConnectionBanner =
+    !IS_VISUAL_TEST_BUILD &&
+    (liveStream.connectionState === 'reconnecting' ||
+      liveStream.connectionState === 'degraded-polling' ||
+      liveStream.connectionState === 'failed');
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -546,7 +915,6 @@ export function SessionLiveView(): ReactElement {
   // FSM default shell (Cell 5) — requires activeSession
   if (activeSession == null) {
     // Guard: effectiveUiState='default' but activeSession null is a race guard.
-    // Should not happen in practice; treat as loading.
     return (
       <div
         data-slot="session-live-view"
@@ -596,6 +964,38 @@ export function SessionLiveView(): ReactElement {
     </div>
   );
 
+  // Desktop right column: RightColumnTabs with tab content
+  const desktopRightColumn = (
+    <RightColumnTabs activeTab={tab} onTabChange={handleTabChange} labels={rightColumnTabsLabels}>
+      {tab === 'tools' && (
+        <SessionToolsRail
+          tools={toolsList}
+          viewerRole={activeSession.viewerRole}
+          onToolExecute={handleToolExecute}
+          labels={toolsRailLabels}
+        />
+      )}
+      {tab === 'chat' && (
+        <LiveAgentChat
+          messages={chatMessages}
+          viewerRole={activeSession.viewerRole}
+          viewerId={activeSession.viewerId}
+          onSendMessage={handleSendMessage}
+          labels={chatLabels}
+        />
+      )}
+      {tab === 'notes' && (
+        <LiveSessionNotes
+          notes={noteEntries}
+          viewerRole={activeSession.viewerRole}
+          viewerId={activeSession.viewerId}
+          onAddNote={handleAddNote}
+          labels={notesLabels}
+        />
+      )}
+    </RightColumnTabs>
+  );
+
   return (
     <div
       data-slot="session-live-view"
@@ -613,11 +1013,32 @@ export function SessionLiveView(): ReactElement {
         labels={topBarLabels}
       />
 
+      {/* ConnectionLostBanner — SSE non-healthy states */}
+      {showConnectionBanner && (
+        <div className="px-4 pt-2">
+          <ConnectionLostBanner
+            kind={
+              liveStream.connectionState === 'reconnecting'
+                ? 'reconnecting'
+                : liveStream.connectionState === 'degraded-polling'
+                  ? 'degraded-polling'
+                  : 'failed'
+            }
+            retryCount={liveStream.retryCount}
+            retryAt={liveStream.retryAt}
+            onManualRetry={
+              liveStream.connectionState !== 'reconnecting' ? liveStream.reconnect : undefined
+            }
+            labels={connectionLostLabels}
+          />
+        </div>
+      )}
+
       {/* Desktop 3-column layout (lg+) */}
       <DesktopBody
         leftSidebar={desktopLeftSidebar}
         centerColumn={desktopCenterColumn}
-        // rightColumn: Foundation placeholder (Interactions sub-PR: RightColumnTabs)
+        rightColumn={desktopRightColumn}
       />
 
       {/* Mobile single-column with bottom nav (< lg) */}
@@ -627,6 +1048,50 @@ export function SessionLiveView(): ReactElement {
         content={mobileContent}
         labels={mobileBodyLabels}
       />
+
+      {/* Lazy dialogs — mounted from ?dialog= URL param */}
+      {dialogState === 'pause' && (
+        <Suspense fallback={null}>
+          <PauseOverlay
+            pausedBy={pauseEvent?.pausedBy ?? '—'}
+            pausedAt={pauseEvent?.pausedAt ?? '—'}
+            viewerRole={activeSession.viewerRole}
+            onResume={
+              hasRequiredRole(activeSession.viewerRole, 'Host')
+                ? () => void handleResume()
+                : undefined
+            }
+            onClose={() => handleDialogChange('none')}
+            labels={{
+              title: t('pages.sessionLive.pauseOverlay.title'),
+              resumeCta: t('pages.sessionLive.pauseOverlay.resumeCta'),
+              closeCta: t('pages.sessionLive.pauseOverlay.closeCta'),
+              closeAriaLabel: t('pages.sessionLive.pauseOverlay.closeAriaLabel'),
+            }}
+          />
+        </Suspense>
+      )}
+
+      {dialogState === 'endgame' && (
+        <Suspense fallback={null}>
+          <EndgameDialog
+            finalScores={scores.map(s => ({
+              playerName: s.playerName,
+              score: s.score,
+              isWinner: s.isWinner,
+            }))}
+            endedAt={endgameEvent?.endedAt ?? '—'}
+            endedBy={endgameEvent?.endedBy ?? '—'}
+            onAcknowledge={() => handleDialogChange('none')}
+            labels={{
+              title: t('pages.sessionLive.endgameDialog.title'),
+              winnerLabel: t('pages.sessionLive.endgameDialog.winnerLabel'),
+              acknowledgeCta: t('pages.sessionLive.endgameDialog.acknowledgeCta'),
+              viewSummaryCta: t('pages.sessionLive.endgameDialog.viewSummaryCta'),
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

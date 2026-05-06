@@ -1,6 +1,6 @@
 {
-  "description": "Baseline JS bundle size for prod build (no mock). Update manually in dedicated PRs. Last bump rebaselines post-Wave D.2 v2 brownfield migration (#749 Foundation + #753 Interactions) which added 14 new session-live components + SSE hook + reducer composition.",
+  "description": "Baseline JS bundle size for prod build (no mock). Update manually in dedicated PRs. Last bump rebaselines post-SP6 Libro Game migration: Phase A Nanolith demo (#790) + Phase B /gamebook index Tier M (#792) + Phase C contract (#794) + Phase C.1 Foundation (#796) + Phase C.2 Interactions (#800) — 11 new gamebook components + 14-state wizard FSM + camera/offline/confidence libs.",
   "updatedAt": "2026-05-06",
-  "totalBytes": 13718922,
+  "totalBytes": 13797614,
   "toleranceBytes": 10240
 }

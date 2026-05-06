@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http.Json;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchKbChunks;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;

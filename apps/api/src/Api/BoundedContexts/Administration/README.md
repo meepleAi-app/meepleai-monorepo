@@ -345,4 +345,4 @@ Questo context è stato completamente migrato alla nuova architettura DDD/CQRS. 
 - `docs/security/audit-trail.md` (pending restoration — see #745)
 - `docs/02-development/admin-dashboard.md`
 - `docs/01-architecture/overview/system-architecture.md` (Administration section)
-- `SECURITY.md` (pending restoration — see #745)
+- `SECURITY.md`

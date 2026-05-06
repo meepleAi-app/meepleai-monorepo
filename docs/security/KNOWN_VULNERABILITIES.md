@@ -115,4 +115,4 @@ For security concerns, contact:
 - **Security Team**: [security@meepleai.com]
 - **Development Lead**: [dev@meepleai.com]
 
-For reporting new vulnerabilities, see `SECURITY.md` (root — pending restoration, see #745)
+For reporting new vulnerabilities, see [SECURITY.md](../../SECURITY.md)

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetPopularAgents;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -38,6 +39,9 @@ internal static class AgentsEndpoints
         // segment never reaches the GUID-constrained handler. The :guid constraint already
         // disambiguates at the matcher level, but explicit ordering keeps intent obvious.
         MapGetRecentAgentsEndpoint(group);
+        // Popular: same literal-before-{id:guid} ordering rationale as recent.
+        // Wave 3 Phase 1 (#805) — /discover "Popular agents" rail.
+        MapGetPopularAgentsEndpoint(group);
         MapGetAgentByIdEndpoint(group);
         MapGetAgentStatusEndpoint(group);
         MapCreateUserAgentEndpoint(group);
@@ -193,6 +197,44 @@ internal static class AgentsEndpoints
         .WithTags("Agents")
         .WithSummary("Get recently used agents")
         .WithDescription("Returns active agents ordered by LastInvokedAt desc (limit clamped 1..50, default 10). Powers the dashboard recent-agents widget (frontend useRecentAgents hook). Issue #650 (Phase γ.3).")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// Wave 3 Phase 1 (PR #732 §4.3.3 / Issue #805): expose
+    /// <c>GET /api/v1/agents/popular</c> for the SP4 /discover route's
+    /// "Popular agents" rail (frontend <c>useDiscoverPopularAgents</c>).
+    /// Schema reality v1 carryover: <c>InstallCount</c> always 0 — see
+    /// <see cref="PopularAgentDto"/> for the full Gate B note.
+    /// </summary>
+    private static void MapGetPopularAgentsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/agents/popular", async (
+            [FromQuery] int? limit,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, _, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            var safeLimit = limit.GetValueOrDefault(10);
+            if (safeLimit < 1) safeLimit = 10;
+            if (safeLimit > 50) safeLimit = 50;
+
+            var query = new GetPopularAgentsQuery(safeLimit);
+            var agents = await mediator.Send(query, ct).ConfigureAwait(false);
+            return Results.Ok(new DiscoverItemsEnvelope<PopularAgentDto>(agents));
+        })
+        .RequireAuthenticatedUser()
+        .Produces<DiscoverItemsEnvelope<PopularAgentDto>>(200)
+        .Produces(401)
+        .WithTags("Discover", "Agents")
+        .WithSummary("Get popular agents")
+        .WithDescription(
+            "Returns active agents sorted by installCount DESC + invocationCount DESC tiebreak "
+            + "(limit clamped 1..50, default 10). Powers the SP4 /discover \"Popular agents\" "
+            + "rail. Cache: 15min via HybridCache. Wave 3 Phase 1 (Issue #805 / PR #732 §4.3.3).")
         .WithOpenApi();
     }
 

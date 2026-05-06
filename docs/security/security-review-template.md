@@ -651,7 +651,7 @@ Else it can defer to next quarter at tier-2
 
 ## Appendix C — References
 
-- `SECURITY.md` (root — pending restoration, see #745)
+- [SECURITY.md](../../SECURITY.md)
 - [OWASP Top 10 2021](https://owasp.org/Top10/)
 - [OWASP ASVS 4.0](https://owasp.org/www-project-application-security-verification-standard/)
 - [CWE Top 25](https://cwe.mitre.org/top25/)

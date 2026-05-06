@@ -52,6 +52,14 @@ internal sealed class GetKbDocumentByIdHandler : IQueryHandler<GetKbDocumentById
             throw new NotFoundException($"KB document {query.DocumentId} not found");
         }
 
+        // Issue #730 final review: enforce access control
+        if (!data.pdf.IsPublic
+            && data.pdf.UploadedByUserId != query.RequestingUserId
+            && !query.UserIsAdmin)
+        {
+            throw new ForbiddenException($"Access denied to document {query.DocumentId}");
+        }
+
         return new KbDocumentDto(
             Id: data.pdf.Id,
             Title: data.pdf.FileName,

@@ -71,6 +71,25 @@ internal sealed class GetKbChunkByIdHandler : IQueryHandler<GetKbChunkByIdQuery,
             "Fetching KB chunk {ChunkId} from doc {DocId} (admin={IsAdmin})",
             query.ChunkId, query.DocumentId, query.UserIsAdmin);
 
+        // Issue #730 final review: enforce access control — check document ownership before chunk fetch.
+        var docAccess = await _dbContext.PdfDocuments.AsNoTracking()
+            .Where(p => p.Id == query.DocumentId)
+            .Select(p => new { p.IsPublic, p.UploadedByUserId })
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (docAccess is null)
+        {
+            throw new NotFoundException($"KB document {query.DocumentId} not found");
+        }
+
+        if (!docAccess.IsPublic
+            && docAccess.UploadedByUserId != query.RequestingUserId
+            && !query.UserIsAdmin)
+        {
+            throw new ForbiddenException($"Access denied to document {query.DocumentId}");
+        }
+
         // Primary fetch — also validates that the chunk belongs to the requested document.
         var chunk = await _dbContext.TextChunks.AsNoTracking()
             .Where(c => c.Id == query.ChunkId && c.PdfDocumentId == query.DocumentId)
@@ -123,7 +142,7 @@ internal sealed class GetKbChunkByIdHandler : IQueryHandler<GetKbChunkByIdQuery,
             VectorId: query.UserIsAdmin ? chunk.Id : (Guid?)null,
             CharacterCount: query.UserIsAdmin ? chunk.CharacterCount : (int?)null,
             ElementType: query.UserIsAdmin ? chunk.ElementType : null,
-            EmbeddingStatus: query.UserIsAdmin ? "indexed" : null,
+            EmbeddingStatus: null,  // Issue #730: source field not yet in TextChunkEntity (follow-up)
             ParentChunkId: query.UserIsAdmin ? chunk.ParentChunkId : null
         );
     }

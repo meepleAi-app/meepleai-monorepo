@@ -59,14 +59,24 @@ internal sealed class SearchKbChunksHandler : IQueryHandler<SearchKbChunksQuery,
             "SearchKbChunks for doc {DocId} query='{Query}' skip={Skip} take={Take}",
             query.DocumentId, query.Query, skip, take);
 
-        // Verify document exists before issuing the FTS query.
-        var docExists = await _dbContext.PdfDocuments.AsNoTracking()
-            .AnyAsync(p => p.Id == query.DocumentId, cancellationToken)
+        // Verify document exists and enforce access control before issuing the FTS query.
+        // Issue #730 final review: fetch ownership fields alongside existence check.
+        var docAccess = await _dbContext.PdfDocuments.AsNoTracking()
+            .Where(p => p.Id == query.DocumentId)
+            .Select(p => new { p.IsPublic, p.UploadedByUserId })
+            .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        if (!docExists)
+        if (docAccess is null)
         {
             throw new NotFoundException("Document", query.DocumentId.ToString());
+        }
+
+        if (!docAccess.IsPublic
+            && docAccess.UploadedByUserId != query.RequestingUserId
+            && !query.UserIsAdmin)
+        {
+            throw new ForbiddenException($"Access denied to document {query.DocumentId}");
         }
 
         // FTS ranked query using plainto_tsquery (prevents operator injection).

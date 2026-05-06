@@ -29,7 +29,7 @@ public sealed class GetKbChunksHandlerTests
     public async Task Handle_WhenDocHas120Chunks_ReturnsFirstPage()
     {
         var docId = await SeedDocumentWithChunksAsync(120, processingState: "Ready");
-        var query = new GetKbChunksQuery(docId, Skip: 0, Take: 50, UserIsAdmin: false);
+        var query = new GetKbChunksQuery(docId, RequestingUserId: Guid.NewGuid(), Skip: 0, Take: 50, UserIsAdmin: false);
 
         var result = await _handler.Handle(query, CancellationToken.None);
 
@@ -45,7 +45,7 @@ public sealed class GetKbChunksHandlerTests
     public async Task Handle_LastPagePartial_HasMoreFalse()
     {
         var docId = await SeedDocumentWithChunksAsync(120, processingState: "Ready");
-        var query = new GetKbChunksQuery(docId, Skip: 100, Take: 50, UserIsAdmin: false);
+        var query = new GetKbChunksQuery(docId, RequestingUserId: Guid.NewGuid(), Skip: 100, Take: 50, UserIsAdmin: false);
 
         var result = await _handler.Handle(query, CancellationToken.None);
 
@@ -57,7 +57,7 @@ public sealed class GetKbChunksHandlerTests
     public async Task Handle_DocStillProcessing_ReturnsEmptyChunks()
     {
         var docId = await SeedDocumentWithChunksAsync(0, processingState: "Embedding");
-        var query = new GetKbChunksQuery(docId, Skip: 0, Take: 50, UserIsAdmin: false);
+        var query = new GetKbChunksQuery(docId, RequestingUserId: Guid.NewGuid(), Skip: 0, Take: 50, UserIsAdmin: false);
 
         var result = await _handler.Handle(query, CancellationToken.None);
 
@@ -69,7 +69,7 @@ public sealed class GetKbChunksHandlerTests
     public async Task Handle_AdminSeesDiagnosticFields()
     {
         var docId = await SeedDocumentWithChunksAsync(5, processingState: "Ready");
-        var query = new GetKbChunksQuery(docId, Skip: 0, Take: 5, UserIsAdmin: true);
+        var query = new GetKbChunksQuery(docId, RequestingUserId: Guid.NewGuid(), Skip: 0, Take: 5, UserIsAdmin: true);
 
         var result = await _handler.Handle(query, CancellationToken.None);
 
@@ -83,7 +83,7 @@ public sealed class GetKbChunksHandlerTests
     public async Task Handle_NonAdminGetsAdminFieldsNulled()
     {
         var docId = await SeedDocumentWithChunksAsync(5, processingState: "Ready");
-        var query = new GetKbChunksQuery(docId, Skip: 0, Take: 5, UserIsAdmin: false);
+        var query = new GetKbChunksQuery(docId, RequestingUserId: Guid.NewGuid(), Skip: 0, Take: 5, UserIsAdmin: false);
 
         var result = await _handler.Handle(query, CancellationToken.None);
 
@@ -106,7 +106,8 @@ public sealed class GetKbChunksHandlerTests
             Language = "en",
             DocumentCategory = "Rulebook",
             UploadedByUserId = Guid.NewGuid(),
-            FilePath = "/tmp/test.pdf"
+            FilePath = "/tmp/test.pdf",
+            IsPublic = true
         };
         _dbContext.PdfDocuments.Add(pdf);
 

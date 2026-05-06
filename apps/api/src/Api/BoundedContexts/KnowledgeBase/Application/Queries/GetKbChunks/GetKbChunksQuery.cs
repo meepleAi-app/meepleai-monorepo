@@ -7,9 +7,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
 /// Used by <c>GET /api/v1/kb-docs/{id}/chunks</c> (G1 goal).
 /// Admin-only fields (VectorId, CharacterCount, ElementType, EmbeddingStatus) are gated via <see cref="UserIsAdmin"/>.
 /// headingPath returns an empty array in this skeleton — recursive CTE populated in next commit.
+/// Access is denied (ForbiddenException) when the document is not public, not owned by
+/// <see cref="RequestingUserId"/>, and the requester is not an admin.
 /// </summary>
 internal sealed record GetKbChunksQuery(
     Guid DocumentId,
+    Guid RequestingUserId,
     int Skip,
     int Take,
     bool UserIsAdmin

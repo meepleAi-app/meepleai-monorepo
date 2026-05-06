@@ -32,7 +32,7 @@ public sealed class GetKbChunkByIdHandlerTests
         var docId = Guid.NewGuid();
         var (chunk0, chunk1, chunk2) = await SeedThreeChunksAsync(docId);
 
-        var query = new GetKbChunkByIdQuery(docId, chunk1, UserIsAdmin: false);
+        var query = new GetKbChunkByIdQuery(docId, RequestingUserId: Guid.NewGuid(), ChunkId: chunk1, UserIsAdmin: false);
         var dto = await _handler.Handle(query, CancellationToken.None);
 
         dto.ChunkId.Should().Be(chunk1);
@@ -46,7 +46,7 @@ public sealed class GetKbChunkByIdHandlerTests
         var docId = Guid.NewGuid();
         var (chunk0, _, _) = await SeedThreeChunksAsync(docId);
 
-        var query = new GetKbChunkByIdQuery(docId, chunk0, UserIsAdmin: false);
+        var query = new GetKbChunkByIdQuery(docId, RequestingUserId: Guid.NewGuid(), ChunkId: chunk0, UserIsAdmin: false);
         var dto = await _handler.Handle(query, CancellationToken.None);
 
         dto.PrevChunkId.Should().BeNull();
@@ -59,7 +59,7 @@ public sealed class GetKbChunkByIdHandlerTests
         var docId = Guid.NewGuid();
         var (_, _, chunk2) = await SeedThreeChunksAsync(docId);
 
-        var query = new GetKbChunkByIdQuery(docId, chunk2, UserIsAdmin: false);
+        var query = new GetKbChunkByIdQuery(docId, RequestingUserId: Guid.NewGuid(), ChunkId: chunk2, UserIsAdmin: false);
         var dto = await _handler.Handle(query, CancellationToken.None);
 
         dto.NextChunkId.Should().BeNull();
@@ -75,7 +75,7 @@ public sealed class GetKbChunkByIdHandlerTests
         var (chunkB, _, _) = await SeedThreeChunksAsync(docB);
 
         // Request chunk from docB but specifying docA — must 404
-        var query = new GetKbChunkByIdQuery(docA, chunkB, UserIsAdmin: false);
+        var query = new GetKbChunkByIdQuery(docA, RequestingUserId: Guid.NewGuid(), ChunkId: chunkB, UserIsAdmin: false);
         var act = () => _handler.Handle(query, CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
@@ -87,7 +87,7 @@ public sealed class GetKbChunkByIdHandlerTests
         var docId = Guid.NewGuid();
         await SeedThreeChunksAsync(docId);
 
-        var query = new GetKbChunkByIdQuery(docId, Guid.NewGuid(), UserIsAdmin: false);
+        var query = new GetKbChunkByIdQuery(docId, RequestingUserId: Guid.NewGuid(), ChunkId: Guid.NewGuid(), UserIsAdmin: false);
         var act = () => _handler.Handle(query, CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
@@ -104,7 +104,8 @@ public sealed class GetKbChunkByIdHandlerTests
             Language = "en",
             DocumentCategory = "Rulebook",
             UploadedByUserId = Guid.NewGuid(),
-            FilePath = "/tmp/doc.pdf"
+            FilePath = "/tmp/doc.pdf",
+            IsPublic = true
         };
         _dbContext.PdfDocuments.Add(pdf);
 

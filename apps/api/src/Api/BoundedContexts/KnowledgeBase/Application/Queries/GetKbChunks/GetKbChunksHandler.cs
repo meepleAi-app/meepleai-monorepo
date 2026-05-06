@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -78,13 +79,27 @@ internal sealed class GetKbChunksHandler : IQueryHandler<GetKbChunksQuery, KbChu
             "Fetching KB chunks for doc {DocId} (skip={Skip}, take={Take}, admin={IsAdmin})",
             query.DocumentId, skip, take, query.UserIsAdmin);
 
-        var processingState = await _dbContext.PdfDocuments.AsNoTracking()
+        // Issue #730 fix: fetch document first to validate existence + enforce access control
+        var doc = await _dbContext.PdfDocuments.AsNoTracking()
             .Where(p => p.Id == query.DocumentId)
-            .Select(p => p.ProcessingState)
+            .Select(p => new { p.ProcessingState, p.IsPublic, p.UploadedByUserId })
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        var processingStateLower = processingState?.ToLowerInvariant() ?? "unknown";
+        if (doc is null)
+        {
+            throw new NotFoundException($"KB document {query.DocumentId} not found");
+        }
+
+        // Issue #730 final review: enforce access control
+        if (!doc.IsPublic
+            && doc.UploadedByUserId != query.RequestingUserId
+            && !query.UserIsAdmin)
+        {
+            throw new ForbiddenException($"Access denied to document {query.DocumentId}");
+        }
+
+        var processingStateLower = doc.ProcessingState.ToLowerInvariant();
 
         var totalCount = await _dbContext.TextChunks.AsNoTracking()
             .CountAsync(c => c.PdfDocumentId == query.DocumentId, cancellationToken)
@@ -126,7 +141,7 @@ internal sealed class GetKbChunksHandler : IQueryHandler<GetKbChunksQuery, KbChu
             VectorId: query.UserIsAdmin ? r.Id : (Guid?)null,
             CharacterCount: query.UserIsAdmin ? r.CharacterCount : (int?)null,
             ElementType: query.UserIsAdmin ? r.ElementType : null,
-            EmbeddingStatus: query.UserIsAdmin ? "indexed" : null
+            EmbeddingStatus: null  // Issue #730: source field not yet in TextChunkEntity (follow-up)
         )).ToList();
 
         return new KbChunkListDto(

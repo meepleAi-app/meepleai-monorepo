@@ -2252,6 +2252,87 @@
         "acknowledgeCta": "Got it",
         "viewSummaryCta": "View summary"
       }
+    },
+    "sessionSummary": {
+      "hero": {
+        "title": "Session summary",
+        "podiumLabel": "Final podium",
+        "tiedBanner": "{count, plural, =2 {🤝 Tie between {names}} other {🤝 {count}-way tie: {names}}}",
+        "confettiAriaLabel": "Victory celebration animation",
+        "confettiSkippedLabel": "Victory medal"
+      },
+      "kpi": {
+        "duration": "Duration",
+        "players": "Players",
+        "turns": "Turns",
+        "avgRoundTime": "Average turn time",
+        "totalScore": "Total score"
+      },
+      "scoring": {
+        "title": "Detailed scoring",
+        "headerName": "Player",
+        "headerScore": "Score",
+        "headerRank": "Rank",
+        "tied": "Tied"
+      },
+      "connectionBar": {
+        "title": "Game timeline",
+        "eventLabel": "Event",
+        "emptyEvent": "No events recorded"
+      },
+      "achievements": {
+        "title": "Achievements",
+        "unlockedAt": "Unlocked on {date}",
+        "locked": "Still locked",
+        "empty": "No achievements unlocked in this session"
+      },
+      "diary": {
+        "title": "Session diary",
+        "filterAll": "All",
+        "filterScore": "Score",
+        "filterEvent": "Events",
+        "filterChat": "Chat",
+        "filterPhoto": "Photos",
+        "empty": "No events match this filter",
+        "expand": "Expand turn {turn}",
+        "collapse": "Collapse turn {turn}"
+      },
+      "photos": {
+        "title": "Session photos",
+        "empty": "No photos in this session",
+        "viewLarger": "Open photo"
+      },
+      "chatHighlights": {
+        "title": "Chat highlights",
+        "empty": "No highlights captured"
+      },
+      "share": {
+        "title": "Share summary",
+        "previewLight": "Light theme",
+        "previewDark": "Dark theme",
+        "copyLink": "Copy link",
+        "shareTwitter": "Share on Twitter",
+        "shareInstagram": "Share on Instagram",
+        "shareWhatsApp": "Share on WhatsApp",
+        "downloadPng": "Download PNG",
+        "downloadPngDisabled": "Coming soon"
+      },
+      "playAgain": {
+        "title": "Ready for a rematch?",
+        "cta": "Play again with same players",
+        "description": "Same game, same players — agent already loaded"
+      },
+      "states": {
+        "notCompleted": {
+          "title": "Session in progress",
+          "description": "This session has not been completed yet.",
+          "continueLive": "Go to live session"
+        },
+        "notFound": {
+          "title": "Session not found",
+          "backToSessions": "Back to sessions"
+        }
+      }
     }
   },
   "privateGames": {

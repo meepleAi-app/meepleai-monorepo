@@ -1,5 +1,11 @@
 # V2 Migration Component Matrix
 
+> 🔒 **FREEZE 2026-05-06**: SP6 v2 expansion (and any new v2 component using current
+> design tokens) is FROZEN until [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807)
+> Fase 2 (token redesign) lands. See [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808)
+> for the freeze policy. `pending` rows in this matrix are NOT pickable until lift-criteria
+> in #808 are met. Bugfix/perf/tests on existing `done` rows are still allowed.
+
 > Wave A closeout — Step 5 (Issue #573).
 > Pre-requisite for Phase 1+2 of the v2 design migration ([spec](../superpowers/specs/2026-04-26-v2-design-migration.md), section 3.3).
 > **Tier classification added 2026-05-04** post spec-panel critique Wave C.1 fail RCA — see [Tier classification](#tier-classification) section.

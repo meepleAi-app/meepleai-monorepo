@@ -90,9 +90,9 @@ test.describe('V2 Visual Migrated — /sessions/[id] summary matches mockup base
     }) => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await seedAuth(page);
-      // No `?fixture=` query — exercise the implicit `default` fixture path
-      // (visual-test-fixture sentinel kicks in via IS_VISUAL_TEST_BUILD env).
-      await page.goto(`/sessions/${FIXTURE_SESSION_ID}`, {
+      // Use explicit `?fixture=default` to short-circuit hooks and render
+      // deterministic baseline data (orchestrator gates on STATE_OVERRIDE_ENABLED).
+      await page.goto(`/sessions/${FIXTURE_SESSION_ID}?fixture=default`, {
         waitUntil: 'domcontentloaded',
       });
       await waitForSummaryReady(page);

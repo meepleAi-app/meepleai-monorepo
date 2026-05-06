@@ -96,16 +96,20 @@ internal sealed class SearchKbChunksHandler : IQueryHandler<SearchKbChunksQuery,
             .ConfigureAwait(false);
 
         // Count total matches (without pagination).
-        const string countSQL = @"
+        // Execute the count as a plain scalar SQL query to avoid EF Core wrapping issues
+        // with SqlQueryRaw<T>.CountAsync() when 0 rows are returned.
+        const string countFtsSQL = @"
             SELECT COUNT(*)::int AS ""Value""
             FROM text_chunks tc, plainto_tsquery('simple', {1}) q
-            WHERE tc.""PdfDocumentId"" = {0} AND tc.search_vector @@ q;";
+            WHERE tc.""PdfDocumentId"" = {0}
+              AND tc.search_vector @@ q";
 
-        var totalCount = await _dbContext.Database
-            .SqlQueryRaw<IntValueRow>(countSQL, query.DocumentId, query.Query)
-            .Select(r => r.Value)
-            .FirstAsync(cancellationToken)
+        var countRows = await _dbContext.Database
+            .SqlQueryRaw<IntValueRow>(countFtsSQL, query.DocumentId, query.Query)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        var totalCount = countRows.Count == 1 ? countRows[0].Value : 0;
 
         // Build heading paths for matched chunks in a single round-trip (same CTE pattern as G1/G2).
         var matchIds = rows.Select(r => r.Id).ToList();
@@ -184,9 +188,9 @@ internal sealed class SearchKbChunksHandler : IQueryHandler<SearchKbChunksQuery,
         float Rank,
         string Snippet);
 
-    /// <summary>Projection for the scalar COUNT query using SqlQueryRaw&lt;T&gt;.</summary>
-    private sealed record IntValueRow(int Value);
-
     /// <summary>Projection for the heading-path recursive CTE result.</summary>
     private sealed record HeadingPathRow(Guid StartId, string? Heading, int Depth);
+
+    /// <summary>Projection for a scalar integer COUNT result.</summary>
+    private sealed record IntValueRow(int Value);
 }

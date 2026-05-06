@@ -9,6 +9,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunkById;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbDocumentById;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchKbChunks;
 using Api.Extensions;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
@@ -926,6 +927,17 @@ internal static class KnowledgeBaseEndpoints
             .WithDescription("Returns chunk content as markdown, with hierarchical breadcrumb and prev/next chunk IDs for navigation.")
             .Produces<KbChunkDetailDto>()
             .Produces(StatusCodes.Status404NotFound);
+
+        // Issue #730: G3 in-document FTS
+        group.MapPost("/kb-docs/{id:guid}/chunks/search", HandleSearchKbChunks)
+            .WithName("SearchKbChunks")
+            .RequireSession()
+            .WithTags("KnowledgeBase")
+            .WithSummary("Search chunks within a single document by keyword")
+            .WithDescription("PostgreSQL ts_rank_cd ranking with ts_headline highlighting (<mark> tags). Query length 1-200 chars.")
+            .Produces<KbChunkSearchResultDto>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound);
     }
 
     private static async Task<IResult> HandleGetKbDocumentById(
@@ -979,6 +991,23 @@ internal static class KnowledgeBaseEndpoints
         var query = new GetKbChunkByIdQuery(id, chunkId, UserIsAdmin: isAdmin);
         var dto = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(dto);
+    }
+
+    private static async Task<IResult> HandleSearchKbChunks(
+        Guid id,
+        [FromBody] SearchKbChunksRequest body,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        if (body is null || string.IsNullOrWhiteSpace(body.Query) || body.Query.Length > 200)
+        {
+            return Results.BadRequest(new { error = "query must be between 1 and 200 characters" });
+        }
+
+        var query = new SearchKbChunksQuery(id, body.Query, body.Skip ?? 0, body.Take ?? 20);
+        var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     private static void MapLinkKbEndpoint(RouteGroupBuilder group)
@@ -1072,6 +1101,11 @@ internal record AssembleContextRequest(
     IDictionary<string, int>? MaxTokensPerSource = null,
     bool? IncludeEmbedding = null
 );
+
+/// <summary>
+/// Request body for G3 in-document FTS search (Issue #730).
+/// </summary>
+internal sealed record SearchKbChunksRequest(string Query, int? Skip, int? Take);
 
 /// <summary>
 /// Request model for linking an existing KB (processed PDF) to a different game.

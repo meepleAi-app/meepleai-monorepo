@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http.Json;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchKbChunks;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
@@ -42,6 +44,14 @@ public sealed class KbChunkEndpointsIntegrationTests : IAsyncLifetime
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<Api.Infrastructure.MeepleAiDbContext>();
             await dbContext.Database.MigrateAsync();
+
+            // G3 (FTS): the search_vector column is not added by EF migrations — it is managed by a
+            // startup service that is disabled in test mode. Add it here so G3 tests can exercise
+            // plainto_tsquery / ts_rank_cd / ts_headline against real PostgreSQL.
+            await dbContext.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE text_chunks
+                ADD COLUMN IF NOT EXISTS search_vector tsvector
+                GENERATED ALWAYS AS (to_tsvector('simple', ""Content"")) STORED;");
         }
 
         _client = _factory.CreateClient();
@@ -305,5 +315,189 @@ public sealed class KbChunkEndpointsIntegrationTests : IAsyncLifetime
 
         await dbContext.SaveChangesAsync();
         return docId;
+    }
+
+    // ========================================
+    // POST /api/v1/kb-docs/{id}/chunks/search  (G3)
+    // ========================================
+
+    /// <summary>
+    /// Verifies that chunks containing the keyword are returned in descending rank order
+    /// and that the snippet contains the expected &lt;mark&gt; highlight tags.
+    ///
+    /// The seed helper manually populates search_vector via to_tsvector('simple', ...) because
+    /// the tsvector trigger is not installed in the Testcontainers-migrated database.
+    /// </summary>
+    [Fact]
+    public async Task SearchChunks_KeywordPresent_ReturnsRankedMatches()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var (docId, _) = await SeedDocWithKeywordChunksAsync(dbContext, userId, "initiative", new[] { 3, 0, 2, 1 });
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"/api/v1/kb-docs/{docId}/chunks/search",
+            sessionToken,
+            new { query = "initiative", skip = 0, take = 20 });
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var result = await response.Content.ReadFromJsonAsync<KbChunkSearchResultDto>();
+        result.Should().NotBeNull();
+        // 3 chunks contain the keyword (occurrences 3, 2, 1 — the 0-occurrence chunk is excluded)
+        result!.TotalCount.Should().Be(3);
+        result.Matches.Should().HaveCount(3);
+        // Results are in descending rank order
+        result.Matches.Should().BeInDescendingOrder(m => m.Rank);
+        // The highest-ranked snippet should contain a <mark> tag
+        result.Matches.First().Snippet.Should().Contain("<mark>");
+    }
+
+    /// <summary>
+    /// Verifies that a search with no matching keyword returns an empty result with TotalCount=0.
+    /// </summary>
+    [Fact]
+    public async Task SearchChunks_NoMatches_ReturnsEmpty()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var (docId, _) = await SeedDocWithSingleChunkAsync(dbContext, userId);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"/api/v1/kb-docs/{docId}/chunks/search",
+            sessionToken,
+            new { query = "xyzzyx", skip = 0, take = 20 });
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var result = await response.Content.ReadFromJsonAsync<KbChunkSearchResultDto>();
+        result.Should().NotBeNull();
+        result!.TotalCount.Should().Be(0);
+        result.Matches.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Verifies that a query longer than 200 characters is rejected with 400 Bad Request
+    /// by the endpoint body validation (before the handler is reached).
+    /// </summary>
+    [Fact]
+    public async Task SearchChunks_QueryTooLong_Returns400()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var longQuery = new string('a', 250);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"/api/v1/kb-docs/{Guid.NewGuid()}/chunks/search",
+            sessionToken,
+            new { query = longQuery, skip = 0, take = 20 });
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>
+    /// Verifies that a query containing the tsquery pipe operator '|' is treated as literal text
+    /// (plainto_tsquery sanitises the input — no "syntax error in tsquery" exception).
+    /// The test documents contain "initiative" so a match should still be found.
+    /// </summary>
+    [Fact]
+    public async Task SearchChunks_OperatorInjection_TreatedAsLiteral()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var (docId, _) = await SeedDocWithKeywordChunksAsync(dbContext, userId, "initiative", new[] { 1 });
+
+        // Submit a query that contains the tsquery '|' operator.
+        // If plainto_tsquery is NOT used this would throw "syntax error in tsquery".
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"/api/v1/kb-docs/{docId}/chunks/search",
+            sessionToken,
+            new { query = "initiative | drop", skip = 0, take = 20 });
+
+        var response = await _client.SendAsync(request);
+
+        // plainto_tsquery treats '|' as a literal character (part of the lexeme), not a tsquery operator.
+        // The response must NOT be 500 (no "syntax error in tsquery").
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    // ─── G3 seed helpers ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Seeds a document with N text chunks, where chunk[i].Content contains the keyword
+    /// repeated <paramref name="occurrencesPerChunk"/>[i] times.
+    /// After inserting, manually populates <c>search_vector</c> using
+    /// <c>to_tsvector('simple', ...)</c> (the trigger is not installed in test DBs).
+    /// Chunks with 0 occurrences still have a valid search_vector but no match for the keyword.
+    /// </summary>
+    /// <returns>(docId, firstChunkId)</returns>
+    private static async Task<(Guid DocId, Guid FirstChunkId)> SeedDocWithKeywordChunksAsync(
+        MeepleAiDbContext dbContext,
+        Guid uploadedByUserId,
+        string keyword,
+        int[] occurrencesPerChunk)
+    {
+        var docId = Guid.NewGuid();
+
+        dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = docId,
+            FileName = $"fts-test-{docId:N}.pdf",
+            ProcessingState = "Ready",
+            UploadedAt = DateTime.UtcNow,
+            Language = "en",
+            DocumentCategory = "Rulebook",
+            UploadedByUserId = uploadedByUserId,
+            FilePath = $"/tmp/fts-{docId:N}.pdf"
+        });
+
+        var firstChunkId = Guid.Empty;
+
+        for (var i = 0; i < occurrencesPerChunk.Length; i++)
+        {
+            var chunkId = Guid.NewGuid();
+            if (i == 0) firstChunkId = chunkId;
+
+            // Build content: repeat keyword N times, padded with filler text so the lexer has tokens
+            var keywordPart = occurrencesPerChunk[i] > 0
+                ? string.Join(" ", Enumerable.Repeat(keyword, occurrencesPerChunk[i]))
+                : "filler text without any matching content";
+
+            dbContext.TextChunks.Add(new TextChunkEntity
+            {
+                Id = chunkId,
+                PdfDocumentId = docId,
+                Content = $"Chunk {i}: {keywordPart} some additional context here.",
+                ChunkIndex = i,
+                PageNumber = i + 1,
+                CharacterCount = 50,
+                ElementType = "NarrativeText",
+                Level = 1
+            });
+        }
+
+        await dbContext.SaveChangesAsync();
+        // search_vector is a GENERATED ALWAYS AS (to_tsvector('simple', "Content")) STORED column
+        // added by InitializeAsync, so it is automatically populated on INSERT.
+
+        return (docId, firstChunkId);
     }
 }

@@ -12,7 +12,7 @@
 - **Setup locale + workflow** → [CLAUDE.md](../../CLAUDE.md) (single source of truth)
 - **Snapshot/seed dev DB** → [`workflows/snapshot-seed-workflow.md`](./workflows/snapshot-seed-workflow.md)
 - **Git branching/PR** → [`workflows/git-workflow.md`](./workflows/git-workflow.md)
-- **Secrets management** → [`workflows/secrets-management.md`](./workflows/secrets-management.md)
+- **Secrets management** → [`security/secrets-management.md`](./security/secrets-management.md)
 - **Alpha scope** → [`alpha-zero-scope.md`](./alpha-zero-scope.md)
 
 ---

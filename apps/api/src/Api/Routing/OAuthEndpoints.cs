@@ -122,7 +122,7 @@ Rate limited to 10 requests per minute per IP address.
 
                 var frontendUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000";
                 var errorParam = Uri.EscapeDataString(error ?? "missing_code");
-                return Results.Redirect($"{frontendUrl}/auth/callback?error={errorParam}");
+                return Results.Redirect($"{frontendUrl}/oauth-callback?error={errorParam}");
             }
 
             // AUTH-06-P4: Rate limiting on callback to prevent abuse (configurable via admin UI)
@@ -138,7 +138,7 @@ Rate limited to 10 requests per minute per IP address.
             if (!rateLimitResult.Allowed)
             {
                 var frontendUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000";
-                return Results.Redirect($"{frontendUrl}/auth/callback?error=rate_limit");
+                return Results.Redirect($"{frontendUrl}/oauth-callback?error=rate_limit");
             }
 
             // Execute OAuth callback via CQRS handler
@@ -163,7 +163,7 @@ Rate limited to 10 requests per minute per IP address.
                 logger.LogWarning("OAuth callback failed: {ErrorMessage}", result.ErrorMessage);
 
                 var frontendUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000";
-                return Results.Redirect($"{frontendUrl}/auth/callback?error=oauth_failed");
+                return Results.Redirect($"{frontendUrl}/oauth-callback?error=oauth_failed");
             }
 
             // Set session cookie - get expiration from configuration
@@ -173,7 +173,7 @@ Rate limited to 10 requests per minute per IP address.
 
             // Redirect to frontend with success
             var successFrontendUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000";
-            var redirectUrl = $"{successFrontendUrl}/auth/callback?success=true&new={result.IsNewUser}";
+            var redirectUrl = $"{successFrontendUrl}/oauth-callback?success=true&new={result.IsNewUser}";
             return Results.Redirect(redirectUrl);
         })
         .WithName("HandleOAuthCallback")

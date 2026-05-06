@@ -270,6 +270,9 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 return (false, null, "Embedding count mismatch", PdfIndexingErrorCode.EmbeddingFailed);
             }
 
+            // Issue #730 / spec §5.3 forward-wiring: hierarchy fields (Heading, Level, ParentChunkId, ElementType)
+            // are intentionally not mapped here because the basic ITextChunkingService.ChunkText path does not
+            // produce them. When AdvancedChunkingService is integrated upstream, propagate from the source TextChunk.
             // Prepare document chunks with embeddings
             var batchChunks = textChunks.Skip(i).Take(batchSize)
                 .Select((chunk, index) => new DocumentChunk

@@ -167,6 +167,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                         if (!string.IsNullOrWhiteSpace(t.TranslatedText))
                         {
                             var origChunk = chunks[t.OriginalIndex];
+                            // Issue #730 / spec §5.3 forward-wiring: hierarchy fields are not yet propagated from origChunk
+                            // to the translated chunk because the upstream chunking pipeline does not currently populate them.
+                            // Once AdvancedChunkingService is wired, copy origChunk.Heading/Level/ParentChunkId/ElementType here.
                             translatedChunks.Add((
                                 new DocumentChunkInput
                                 {

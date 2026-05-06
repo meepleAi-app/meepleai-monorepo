@@ -549,12 +549,15 @@ internal partial class UploadPdfCommandHandler
         }
 
         // Create TextChunkEntity for each document chunk (for FTS)
-        var textChunkGameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
+        // text_chunks.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
+        var textChunkGameId = await PdfGameIdResolver.ResolveAsync(db, pdfDoc, cancellationToken)
+            .ConfigureAwait(false);
         var textChunkEntities = allDocumentChunks
             .Select((chunk, index) => new TextChunkEntity
             {
                 Id = Guid.NewGuid(),
                 GameId = textChunkGameId,
+                SharedGameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfGuid,
                 Content = chunk.Text,
                 ChunkIndex = index,

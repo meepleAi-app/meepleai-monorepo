@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Configuration;
 using Api.Infrastructure;
@@ -94,7 +95,9 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             }
 
             // Step 4: Save text chunks to PostgreSQL for hybrid search
-            await SaveTextChunksToPostgresAsync(pdfId, effectiveGameId, pdf.SharedGameId, documentChunks!, cancellationToken).ConfigureAwait(false);
+            // text_chunks.GameId is FK to games.Id (NOT shared_games.id) — resolve via PdfGameIdResolver.
+            var chunkGameId = await PdfGameIdResolver.ResolveAsync(_db, pdf, cancellationToken).ConfigureAwait(false);
+            await SaveTextChunksToPostgresAsync(pdfId, chunkGameId, pdf.SharedGameId, documentChunks!, cancellationToken).ConfigureAwait(false);
 
             // Mark processing complete
             pdf.ProcessingState = "Ready";
@@ -367,7 +370,7 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
     /// </summary>
     private async Task SaveTextChunksToPostgresAsync(
         string pdfId,
-        Guid gameId,
+        Guid? gameId,
         Guid? sharedGameId,
         List<DocumentChunk> documentChunks,
         CancellationToken cancellationToken)

@@ -1,5 +1,6 @@
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -7,32 +8,43 @@ using Microsoft.Extensions.Logging;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
 
 /// <summary>
-/// Handles <see cref="GetKbChunksQuery"/>.
-///
-/// Returns a paginated list of text chunks for the given document, ordered by ChunkIndex.
-/// Offset pagination is clamped to <see cref="MaxTake"/> = 100 per page.
-///
-/// Admin-only fields (<c>VectorId</c>, <c>CharacterCount</c>, <c>ElementType</c>, <c>EmbeddingStatus</c>)
-/// are populated only when <see cref="GetKbChunksQuery.UserIsAdmin"/> is <c>true</c>.
-///
-/// <c>HeadingPath</c> is built by walking up <c>ParentChunkId</c> via a single recursive
-/// CTE on PostgreSQL (one SQL round-trip for the whole page).  When the database is an
-/// InMemory provider (unit tests), the CTE is skipped and an empty array is returned.
+/// Handler for <see cref="GetKbChunksQuery"/> — Wave 3 Phase 3 spec-conformant
+/// rewrite of <c>GET /api/v1/kb-docs/{id}/chunks</c> per PR #732 §6.3.2 verbatim.
 /// </summary>
-internal sealed class GetKbChunksHandler : IQueryHandler<GetKbChunksQuery, KbChunkListDto>
+/// <remarks>
+/// <para>
+/// <b>Cursor pagination</b>: <c>(Position, Id)</c> tuple, <c>WHERE (Position, Id) > (cursor.Position, cursor.Id)
+/// ORDER BY Position ASC, Id ASC LIMIT n+1</c>. The (n+1)th row signals a next
+/// page; we drop it from <c>Items</c> and emit its cursor as <c>NextCursor</c>.
+/// </para>
+///
+/// <para>
+/// <b>HeadingPath</b>: built by walking up <c>ParentChunkId</c> via a single
+/// recursive CTE on PostgreSQL (one SQL round-trip for the whole page). When
+/// the database is the InMemory provider (unit tests), CTE is skipped and an
+/// empty array is returned per the established pattern.
+/// </para>
+///
+/// <para>
+/// <b>Caching</b>: 30min HybridCache keyed by
+/// <c>kb:chunks:{docId}:{viewerId}:c={cursor}:l={limit}</c>. Per-viewer because
+/// access-control may differ. Tags <c>["kb", "kbDoc:{id}", "kbChunks:{id}"]</c>
+/// for invalidation when the doc is re-indexed.
+/// </para>
+///
+/// <para>
+/// <b>VectorId</b> de-gating: emitted as a string for all viewers per spec
+/// §6.3.2 (security review documented on <see cref="KbChunkSummaryDto"/>).
+/// </para>
+/// </remarks>
+internal sealed class GetKbChunksHandler : IQueryHandler<GetKbChunksQuery, KbChunksListResponse>
 {
-    private const int MaxTake = 100;
     private const int SnippetMaxLength = 200;
-
-    /// <summary>Maximum ancestor depth traversed by the recursive CTE.</summary>
     private const int MaxCteDepth = 10;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(30);
 
-    // Recursive CTE that, for every seed id in the input array, climbs the
-    // parent_chunk_id chain up to MaxCteDepth levels and collects non-null headings.
-    // Column names are PascalCase — EF Core convention maps C# property names to
-    // identical DB column names unless [Column(...)] is used (confirmed: migration
-    // 20260506111654_AddChunkHierarchyToTextChunkEntity uses PascalCase names).
-    // Static readonly (not const) because C# does not allow string concatenation in const fields.
+    // Recursive CTE — see baseline GetKbChunksHandler for column-name rationale
+    // (PascalCase per migration AddChunkHierarchyToTextChunkEntity).
     private static readonly string HeadingPathCte = @"
         WITH RECURSIVE chunk_path(start_id, id, ""Heading"", parent_chunk_id, depth) AS (
           SELECT
@@ -60,29 +72,51 @@ internal sealed class GetKbChunksHandler : IQueryHandler<GetKbChunksQuery, KbChu
         ORDER BY start_id, depth DESC;";
 
     private readonly MeepleAiDbContext _dbContext;
+    private readonly IHybridCacheService _cache;
     private readonly ILogger<GetKbChunksHandler> _logger;
 
-    public GetKbChunksHandler(MeepleAiDbContext dbContext, ILogger<GetKbChunksHandler> logger)
+    public GetKbChunksHandler(
+        MeepleAiDbContext dbContext,
+        IHybridCacheService cache,
+        ILogger<GetKbChunksHandler> logger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<KbChunkListDto> Handle(GetKbChunksQuery query, CancellationToken cancellationToken)
+    public async Task<KbChunksListResponse> Handle(GetKbChunksQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var skip = Math.Max(0, query.Skip);
-        var take = Math.Clamp(query.Take, 1, MaxTake);
-
         _logger.LogDebug(
-            "Fetching KB chunks for doc {DocId} (skip={Skip}, take={Take}, admin={IsAdmin})",
-            query.DocumentId, skip, take, query.UserIsAdmin);
+            "Fetching KB chunks for doc {DocId} (cursor={Cursor}, limit={Limit}, admin={IsAdmin})",
+            query.DocumentId,
+            query.Cursor is null ? "<null>" : $"{query.Cursor.Position}:{query.Cursor.Id}",
+            query.Limit,
+            query.UserIsAdmin);
 
-        // Issue #730 fix: fetch document first to validate existence + enforce access control
+        var cursorKey = query.Cursor is null
+            ? "first"
+            : $"{query.Cursor.Position}:{query.Cursor.Id:N}";
+        var cacheKey = $"kb:chunks:{query.DocumentId:N}:{query.RequestingUserId:N}:c={cursorKey}:l={query.Limit}";
+
+        return await _cache.GetOrCreateAsync(
+            cacheKey,
+            async ct => await ComputeAsync(query, ct).ConfigureAwait(false),
+            tags: ["kb", $"kbDoc:{query.DocumentId:N}", $"kbChunks:{query.DocumentId:N}"],
+            expiration: CacheTtl,
+            ct: cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<KbChunksListResponse> ComputeAsync(
+        GetKbChunksQuery query,
+        CancellationToken cancellationToken)
+    {
+        // Validate doc existence + access control before chunk fetch.
         var doc = await _dbContext.PdfDocuments.AsNoTracking()
             .Where(p => p.Id == query.DocumentId)
-            .Select(p => new { p.ProcessingState, p.IsPublic, p.UploadedByUserId })
+            .Select(p => new { p.IsPublic, p.UploadedByUserId })
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -91,7 +125,6 @@ internal sealed class GetKbChunksHandler : IQueryHandler<GetKbChunksQuery, KbChu
             throw new NotFoundException($"KB document {query.DocumentId} not found");
         }
 
-        // Issue #730 final review: enforce access control
         if (!doc.IsPublic
             && doc.UploadedByUserId != query.RequestingUserId
             && !query.UserIsAdmin)
@@ -99,73 +132,78 @@ internal sealed class GetKbChunksHandler : IQueryHandler<GetKbChunksQuery, KbChu
             throw new ForbiddenException($"Access denied to document {query.DocumentId}");
         }
 
-        var processingStateLower = doc.ProcessingState.ToLowerInvariant();
-
         var totalCount = await _dbContext.TextChunks.AsNoTracking()
             .CountAsync(c => c.PdfDocumentId == query.DocumentId, cancellationToken)
             .ConfigureAwait(false);
 
-        var rows = await _dbContext.TextChunks.AsNoTracking()
-            .Where(c => c.PdfDocumentId == query.DocumentId)
+        // Cursor predicate: WHERE (Position, Id) > (cursorPosition, cursorId).
+        // EF translates the tuple comparison into the row-comparison the spec
+        // expects when targeting PostgreSQL.
+        var queryable = _dbContext.TextChunks.AsNoTracking()
+            .Where(c => c.PdfDocumentId == query.DocumentId);
+
+        if (query.Cursor is not null)
+        {
+            var cursorPosition = query.Cursor.Position;
+            var cursorId = query.Cursor.Id;
+            queryable = queryable.Where(c =>
+                c.ChunkIndex > cursorPosition
+                || (c.ChunkIndex == cursorPosition && c.Id.CompareTo(cursorId) > 0));
+        }
+
+        // Fetch limit + 1 to detect next page.
+        var rows = await queryable
             .OrderBy(c => c.ChunkIndex)
-            .Skip(skip)
-            .Take(take)
+            .ThenBy(c => c.Id)
+            .Take(query.Limit + 1)
             .Select(c => new
             {
                 c.Id,
                 c.PageNumber,
                 c.ChunkIndex,
-                c.Level,
-                c.Heading,
-                c.ParentChunkId,
-                c.Content,
-                c.CharacterCount,
-                c.ElementType
+                c.Content
             })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        // Phase 2: load heading paths for this page in a single SQL round-trip.
+        string? nextCursor = null;
+        if (rows.Count > query.Limit)
+        {
+            // Drop the lookahead row (position n+1) and emit a cursor pointing
+            // to the LAST returned row (position n) — the predicate on next
+            // request is `(Position, Id) > (cursor.Position, cursor.Id)` so
+            // the lookahead becomes the first item of the subsequent page.
+            rows = rows.Take(query.Limit).ToList();
+            var lastReturned = rows[^1];
+            nextCursor = KbChunksCursor.Encode(
+                new KbChunksCursor.CursorPayload(lastReturned.ChunkIndex, lastReturned.Id));
+        }
+
         var chunkIds = rows.Select(r => r.Id).ToList();
         var headingPaths = chunkIds.Count == 0
             ? new Dictionary<Guid, IReadOnlyList<string>>()
             : await LoadHeadingPathsAsync(chunkIds, cancellationToken).ConfigureAwait(false);
 
-        var chunks = rows.Select(r => new KbChunkSummaryDto(
-            ChunkId: r.Id,
-            PageNumber: r.PageNumber,
+        var items = rows.Select(r => new KbChunkSummaryDto(
+            Id: r.Id,
             Position: r.ChunkIndex,
-            Level: r.Level,
             HeadingPath: headingPaths.TryGetValue(r.Id, out var path) ? path : Array.Empty<string>(),
             Snippet: TruncateSnippet(r.Content),
-            VectorId: query.UserIsAdmin ? r.Id : (Guid?)null,
-            CharacterCount: query.UserIsAdmin ? r.CharacterCount : (int?)null,
-            ElementType: query.UserIsAdmin ? r.ElementType : null,
-            EmbeddingStatus: null  // Issue #730: source field not yet in TextChunkEntity (follow-up)
+            PageNumber: r.PageNumber,
+            VectorId: r.Id.ToString("N")
         )).ToList();
 
-        return new KbChunkListDto(
-            Chunks: chunks,
-            TotalCount: totalCount,
-            Skip: skip,
-            Take: take,
-            HasMore: skip + take < totalCount,
-            ProcessingState: processingStateLower
-        );
+        return new KbChunksListResponse(items, nextCursor, totalCount);
     }
 
     /// <summary>
-    /// Executes a recursive CTE on PostgreSQL to build heading paths for all chunk IDs
-    /// in a single round-trip.  Returns an empty dictionary when running against the
-    /// EF InMemory provider (unit-test context) because raw SQL is not supported there.
+    /// Executes recursive CTE on PostgreSQL; returns empty dict for InMemory.
+    /// Mirrors the baseline pattern from <c>GetKbChunksHandler.LoadHeadingPathsAsync</c>.
     /// </summary>
     private async Task<Dictionary<Guid, IReadOnlyList<string>>> LoadHeadingPathsAsync(
         IReadOnlyList<Guid> chunkIds,
         CancellationToken cancellationToken)
     {
-        // InMemory provider does not support raw SQL — return empty paths so unit tests pass.
-        // Use provider name comparison (same pattern as HandleOAuthCallbackCommandHandler) because
-        // the InMemory package is not referenced by the main project, making IsInMemory() unavailable.
         if (string.Equals(
                 _dbContext.Database.ProviderName,
                 "Microsoft.EntityFrameworkCore.InMemory",
@@ -184,7 +222,7 @@ internal sealed class GetKbChunksHandler : IQueryHandler<GetKbChunksQuery, KbChu
             .ToDictionary(
                 g => g.Key,
                 g => (IReadOnlyList<string>)g
-                    .OrderByDescending(x => x.Depth)   // root (deepest depth value) first
+                    .OrderByDescending(x => x.Depth)
                     .Select(x => x.Heading!)
                     .ToList());
     }
@@ -192,6 +230,5 @@ internal sealed class GetKbChunksHandler : IQueryHandler<GetKbChunksQuery, KbChu
     private static string TruncateSnippet(string content) =>
         content.Length <= SnippetMaxLength ? content : content[..SnippetMaxLength];
 
-    /// <summary>Projection type for the heading-path recursive CTE result.</summary>
     private sealed record HeadingPathRow(Guid StartId, string? Heading, int Depth);
 }

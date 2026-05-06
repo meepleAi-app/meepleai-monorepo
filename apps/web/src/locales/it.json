@@ -2490,6 +2490,56 @@
       "toggleDistanceReading": "Modalità lettura distante",
       "translationUnavailable": "Traduzione non disponibile",
       "retry": "Riprova"
+    },
+    "index": {
+      "hero": {
+        "kicker": "📚 Libri game",
+        "title": "I tuoi manuali",
+        "subtitle": "Manuali fotografati pronti per il tuo tavolo",
+        "kpiTotalGamebooks": "manuali",
+        "kpiTotalSessions": "questo mese",
+        "kpiActiveAgents": "traduzioni",
+        "ctaAddManual": "Aggiungi manuale"
+      },
+      "quota": {
+        "title": "Quota traduzioni",
+        "usedCount": "{used, plural, =0 {0 di {total}} one {1 di {total}} other {{used} di {total}}}",
+        "resetIn": "Resetta il {date}",
+        "softWarning": "Stai per esaurire la quota mensile",
+        "hardLimit": "Quota raggiunta — acquista crediti per continuare",
+        "upgrade": "Acquista crediti"
+      },
+      "card": {
+        "statusReady": "Pronto",
+        "statusIndexing": "Indicizzazione…",
+        "statusError": "Errore · Riprova",
+        "pagesCount": "{pages, plural, =0 {0 pagine} one {1 pagina} other {{pages} pagine}}",
+        "pagesProgress": "{indexed}/{total} pag",
+        "chunksCount": "{count} chunks",
+        "qaCount": "{count} domande",
+        "sessionsCount": "{count} sessioni",
+        "indexingProgress": "Indicizzazione… {indexed}/{total}",
+        "errorRetry": "Riprova",
+        "openGamebook": "Apri manuale"
+      },
+      "section": {
+        "title": "I tuoi manuali",
+        "count": "({count})"
+      },
+      "empty": {
+        "title": "Nessun manuale ancora",
+        "description": "Fotografa il tuo primo gamebook per iniziare a giocare in italiano.",
+        "cta": "📷 Scatta il primo manuale",
+        "howItWorks": "Come funziona →"
+      },
+      "loading": {
+        "label": "Caricamento manuali…"
+      },
+      "error": {
+        "title": "Impossibile caricare la libreria",
+        "description": "Connessione instabile. Riprova fra un momento.",
+        "retry": "🔄 Riprova"
+      }
     }
   }
 }

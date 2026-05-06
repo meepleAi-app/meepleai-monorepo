@@ -914,39 +914,53 @@ internal static class KnowledgeBaseEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status400BadRequest);
 
-        // Issue #730: G4 single doc metadata
+        // Wave 3 Phase 3 (Issue #805 / PR #732 §6.3.1): doc detail with 423 Locked.
         group.MapGet("/kb-docs/{id:guid}", HandleGetKbDocumentById)
             .WithName("GetKbDocumentById")
             .RequireSession()
             .WithTags("KnowledgeBase")
-            .WithSummary("Get KB document metadata")
-            .WithDescription("Returns metadata for a single KB document (title, processing state, total chunks, page count). Admin users see additional diagnostic fields.")
-            .Produces<KbDocumentDto>()
+            .WithSummary("Get KB document detail (spec §6.3.1)")
+            .WithDescription(
+                "Returns spec-conformant document detail with gameName + uploaderName joins. "
+                + "Returns 423 Locked when processingStatus != 'ready' (Nygard semantic distinct from 404). "
+                + "Cache: HybridCache 1h per-viewer, tags ['kb', 'kbDoc:{id}'].")
+            .Produces<KbDocumentDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status403Forbidden);
+            .Produces(StatusCodes.Status423Locked);
 
-        // Issue #730: G1 paginated chunks list
+        // Wave 3 Phase 3 (Issue #805 / PR #732 §6.3.2): cursor-paginated chunks list.
         group.MapGet("/kb-docs/{id:guid}/chunks", HandleGetKbChunks)
             .WithName("GetKbChunks")
             .RequireSession()
             .WithTags("KnowledgeBase")
-            .WithSummary("Get paginated chunks list with hierarchical headings")
-            .WithDescription("Returns chunks ordered by position with breadcrumb headingPath. Admin users see vectorId, characterCount, elementType, embeddingStatus.")
-            .Produces<KbChunkListDto>()
+            .WithSummary("Get cursor-paginated chunks list (spec §6.3.2)")
+            .WithDescription(
+                "Returns chunks ordered by position with breadcrumb headingPath, opaque cursor "
+                + "pagination ((Position, Id) tuple base64-encoded). nextCursor null on last page. "
+                + "Cache: HybridCache 30min per-viewer.")
+            .Produces<KbChunksListResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status403Forbidden);
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
 
-        // Issue #730: G2 single chunk full content
+        // Wave 3 Phase 3 (Issue #805 / PR #732 §6.3.3): chunk detail w/ markdown subset.
         group.MapGet("/kb-docs/{id:guid}/chunks/{chunkId:guid}", HandleGetKbChunkById)
             .WithName("GetKbChunkById")
             .RequireSession()
             .WithTags("KnowledgeBase")
-            .WithSummary("Get a single chunk with full content + prev/next navigation")
-            .WithDescription("Returns chunk content as markdown, with hierarchical breadcrumb and prev/next chunk IDs for navigation.")
-            .Produces<KbChunkDetailDto>()
-            .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status403Forbidden);
+            .WithSummary("Get chunk detail with prev/next navigation (spec §6.3.3)")
+            .WithDescription(
+                "Returns chunk content sanitized to spec markdown subset (H4-H6 demoted, "
+                + "raw HTML stripped, images replaced, footnotes stripped) with prev/nextChunkId "
+                + "navigation. Cache: HybridCache 24h (chunks immutable post-ingest).")
+            .Produces<KbChunkDetailDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
 
         // Issue #730: G3 in-document FTS
         group.MapPost("/kb-docs/{id:guid}/chunks/search", HandleSearchKbChunks)
@@ -997,26 +1011,44 @@ internal static class KnowledgeBaseEndpoints
         return Results.Ok(dto);
     }
 
+    /// <summary>
+    /// Wave 3 Phase 3 handler for cursor-paginated chunks list.
+    /// Decodes opaque cursor; malformed cursor → 400 Bad Request.
+    /// </summary>
     private static async Task<IResult> HandleGetKbChunks(
         Guid id,
-        int? skip,
-        int? take,
+        [FromQuery] string? cursor,
+        [FromQuery] int? limit,
         HttpContext httpContext,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        var skipValue = skip ?? 0;
-        var takeValue = take ?? 50;
+        var limitValue = limit ?? 50;
 
-        if (takeValue < 1 || takeValue > 100)
+        if (limitValue < 1 || limitValue > 100)
         {
-            return Results.BadRequest(new { error = "take must be between 1 and 100" });
+            return Results.BadRequest(new { error = "limit must be between 1 and 100" });
+        }
+
+        KbChunksCursor.CursorPayload? decodedCursor;
+        try
+        {
+            decodedCursor = KbChunksCursor.Decode(cursor);
+        }
+        catch (FormatException ex)
+        {
+            return Results.BadRequest(new { error = $"Invalid cursor: {ex.Message}" });
         }
 
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
         var userId = session.User!.Id;
         var isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
-        var query = new GetKbChunksQuery(id, RequestingUserId: userId, Skip: skipValue, Take: takeValue, UserIsAdmin: isAdmin);
+        var query = new GetKbChunksQuery(
+            id,
+            RequestingUserId: userId,
+            Cursor: decodedCursor,
+            Limit: limitValue,
+            UserIsAdmin: isAdmin);
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }

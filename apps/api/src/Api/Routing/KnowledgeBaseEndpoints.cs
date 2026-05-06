@@ -9,6 +9,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunkById;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbDocumentById;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchKbChunks;
 using Api.Extensions;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
@@ -1114,3 +1115,8 @@ internal record AssembleContextRequest(
 /// Request model for linking an existing KB (processed PDF) to a different game.
 /// </summary>
 internal record LinkKbRequest(Guid PdfDocumentId);
+
+/// <summary>
+/// Request body for POST /api/v1/kb-docs/{id}/chunks/search (G3 in-document FTS).
+/// </summary>
+internal sealed record SearchKbChunksRequest(string Query, int? Skip, int? Take);

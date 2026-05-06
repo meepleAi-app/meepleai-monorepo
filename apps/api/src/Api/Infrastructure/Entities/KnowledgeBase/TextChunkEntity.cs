@@ -30,6 +30,8 @@ public class TextChunkEntity
     // Issue #730: Chunk hierarchy fields (heading_path derivation)
     public string? Heading { get; set; }
     public Guid? ParentChunkId { get; set; }
+    // Defaults below are migration fill values for pre-existing rows.
+    // Real values are populated from ChunkPayload by AdvancedChunkingService on new ingestions.
     public short Level { get; set; } = 1;
     public string ElementType { get; set; } = "NarrativeText";
 

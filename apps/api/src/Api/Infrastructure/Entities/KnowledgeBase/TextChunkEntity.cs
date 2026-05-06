@@ -27,6 +27,12 @@ public class TextChunkEntity
     public int CharacterCount { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    // Issue #730: Chunk hierarchy fields (heading_path derivation)
+    public string? Heading { get; set; }
+    public Guid? ParentChunkId { get; set; }
+    public short Level { get; set; } = 1;
+    public string ElementType { get; set; } = "NarrativeText";
+
     // PostgreSQL full-text search vector (automatically maintained by trigger)
     // This column is populated by the tsvector_update_text_chunks trigger
     [Column("search_vector")]

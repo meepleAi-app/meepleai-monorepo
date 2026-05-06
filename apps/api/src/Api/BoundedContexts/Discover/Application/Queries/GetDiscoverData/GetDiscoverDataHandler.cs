@@ -9,13 +9,6 @@ namespace Api.BoundedContexts.Discover.Application.Queries.GetDiscoverData;
 
 internal sealed class GetDiscoverDataHandler : IQueryHandler<GetDiscoverDataQuery, DiscoverDto>
 {
-    private readonly ILogger<GetDiscoverDataHandler> _logger;
-
-    public GetDiscoverDataHandler(ILogger<GetDiscoverDataHandler> logger)
-    {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
-
     public Task<DiscoverDto> Handle(GetDiscoverDataQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);

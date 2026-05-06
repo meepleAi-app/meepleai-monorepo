@@ -33,6 +33,11 @@ services:
 
   api:
     restart: always
+    # CF Tunnel exposure: bind 8080 on localhost (IPv4 + IPv6 dual-stack)
+    # cloudflared resolves localhost → ::1 first; without IPv6 binding it returns 502.
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "::1:8080:8080"
     env_file:
       - ./secrets/database.secret
       - ./secrets/jwt.secret
@@ -96,6 +101,11 @@ services:
 
   web:
     restart: always
+    # CF Tunnel exposure: bind 3000 on localhost (IPv4 + IPv6 dual-stack)
+    # cloudflared resolves localhost → ::1 first; without IPv6 binding it returns 502.
+    ports:
+      - "127.0.0.1:3000:3000"
+      - "::1:3000:3000"
     build:
       args:
         NEXT_PUBLIC_API_BASE: "https://meepleai.app"

@@ -89,12 +89,13 @@ internal sealed class GetNewGamesQueryHandler
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        // YearPublished defaults to 0 for legacy rows seeded without a year; the projection
+        // surfaces null so the FE can render "Year unknown". Image fallback prefers ImageUrl
+        // over ThumbnailUrl when both are present.
         return rows.Select(g => new NewGameDto(
             Id: g.Id,
             Name: g.Title,
             Publisher: string.IsNullOrWhiteSpace(g.Publisher) ? null : g.Publisher,
-            // YearPublished defaults to 0 for legacy rows seeded without a year;
-            // surface as null so the FE can render "Year unknown".
             Year: g.YearPublished > 0 ? g.YearPublished : null,
             ImageUrl: !string.IsNullOrWhiteSpace(g.ImageUrl)
                 ? g.ImageUrl

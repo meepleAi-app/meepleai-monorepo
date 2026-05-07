@@ -841,6 +841,7 @@ if (!isAlphaMode)
     v1Api.MapWishlistEndpoints();          // Wishlist management (Issue #3917)
     v1Api.MapUserHandEndpoints();          // My Hand quick-access slots (La Mia Mano)
     v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)
+    v1Api.MapGamebookCampaignEndpoints();  // Iter 1.A — Libro Game gamebook campaigns
 
     // Audit & Analytics
     v1Api.MapAuditEndpoints();             // Audit log retrieval & search

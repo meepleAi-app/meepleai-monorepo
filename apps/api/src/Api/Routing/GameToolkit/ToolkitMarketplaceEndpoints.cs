@@ -1,8 +1,10 @@
 using Api.BoundedContexts.GameToolkit.Application.Commands.InstallToolkit;
+using Api.BoundedContexts.GameToolkit.Application.Queries.GetRecommendedToolkits;
 using Api.BoundedContexts.GameToolkit.Application.Queries.GetToolkitDetail;
 using Api.BoundedContexts.GameToolkit.Application.Queries.GetToolkitVersions;
 using Api.Extensions;
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Routing.GameToolkit;
 
@@ -34,6 +36,25 @@ internal static class ToolkitMarketplaceEndpoints
         var toolkits = group.MapGroup("/toolkits")
             .WithTags("ToolkitMarketplace")
             .RequireAuthorization();
+
+        // ── GET /api/v1/toolkits/recommended ────────────────────────────────
+        // Wave 3 Phase 4a (Issue #805 / PR #732 §4.3.4): SP4 /discover rail
+        // "Recommended toolkits". Static route registered BEFORE /{toolkitId:guid}
+        // so the /recommended literal does not get parsed as a Guid route value.
+        toolkits.MapGet("/recommended", HandleGetRecommendedToolkits)
+            .WithName("GetRecommendedToolkits")
+            .WithSummary("Get recommended marketplace toolkits")
+            .WithDescription(
+                "Returns published toolkits sorted by Bayesian score "
+                + "(ratingAverage * log(ratingCount + 1) DESC, installCount DESC "
+                + "tiebreak, createdAt DESC final tiebreak). Limit clamped 1..50, "
+                + "default 10. Schema reality v1 carryover: rating + install "
+                + "metrics are 0/null until the ToolkitRating + ToolkitInstallation "
+                + "entities ship — effective sort collapses to createdAt DESC. "
+                + "Cache: 30min HybridCache. Powers the SP4 /discover \"Recommended "
+                + "toolkits\" rail. Wave 3 Phase 4a (Issue #805 / PR #732 §4.3.4).")
+            .Produces<RecommendedToolkitsResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized);
 
         // ── GET /api/v1/toolkits/{toolkitId} ────────────────────────────────
         toolkits.MapGet("/{toolkitId:guid}", HandleGetToolkitDetail)
@@ -96,6 +117,24 @@ internal static class ToolkitMarketplaceEndpoints
         return response is null
             ? Results.NotFound()
             : Results.Ok(response);
+    }
+
+    private static async Task<IResult> HandleGetRecommendedToolkits(
+        [FromQuery] int? limit,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        // Limit clamping at the endpoint layer (PR #732 §3.3 — UI-friendly
+        // silent clamp rather than 400). Validator on the query enforces the
+        // same range for the CQRS handler.
+        var safeLimit = limit.GetValueOrDefault(10);
+        if (safeLimit < 1) safeLimit = 10;
+        if (safeLimit > 50) safeLimit = 50;
+
+        var query = new GetRecommendedToolkitsQuery(safeLimit);
+        var response = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+
+        return Results.Ok(response);
     }
 
     private static async Task<IResult> HandleGetToolkitVersions(

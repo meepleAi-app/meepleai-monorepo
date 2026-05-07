@@ -10,6 +10,7 @@ using Api.Middleware;
 using Api.Models;
 using Api.Observability;
 using Api.Routing;
+using Api.Routing.AdministrationDiscover;
 using Api.Routing.GameManagement;
 using Api.Routing.GameToolkit;
 using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
@@ -710,6 +711,9 @@ v1Api.MapAiEndpoints();
 v1Api.MapAgentsEndpoints(); // Issue #641 (Wave B.2 hotfix): user-facing agent listing
 v1Api.MapAgentTypologiesEndpoints(); // Issue #649: user-facing typology dropdown
 v1Api.MapRulebookAnalysisEndpoints(); // ISSUE-2402: Rulebook analysis service
+
+// Discover surface (cross-BC aggregation)
+TopUserContributorsEndpoints.Map(v1Api); // Wave 3 Phase 4a (#805): /users/top-contributors
 
 // User Library
 v1Api.MapUserLibraryEndpoints();       // User game library

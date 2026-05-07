@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameToolkit.Application.Commands.InstallToolkit;
 using Api.BoundedContexts.GameToolkit.Application.Queries.GetRecommendedToolkits;
 using Api.BoundedContexts.GameToolkit.Application.Queries.GetToolkitDetail;
+using Api.BoundedContexts.GameToolkit.Application.Queries.GetToolkitRatings;
 using Api.BoundedContexts.GameToolkit.Application.Queries.GetToolkitVersions;
 using Api.Extensions;
 using MediatR;
@@ -82,6 +83,50 @@ internal static class ToolkitMarketplaceEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound);
 
+        // ── GET /api/v1/toolkits/{toolkitId}/ratings ───────────────────────
+        // Wave 3 Phase 4b (Issue #805 / PR #732 §5.3.3): ratings list with
+        // 5-star breakdown for the SP4 /toolkits/[id] ratings tab. Schema
+        // reality v1 carryover (Gate B): empty stub — ToolkitRating entity
+        // ships in Phase 5.
+        toolkits.MapGet("/{toolkitId:guid}/ratings", HandleGetToolkitRatings)
+            .WithName("GetToolkitRatings")
+            .WithSummary("List toolkit ratings (cursor paginated)")
+            .WithDescription(
+                "Returns ratings sorted by createdAt DESC with 5-star "
+                + "breakdown distribution and averageStars (1-5 with one "
+                + "decimal). Cursor opaque, nextCursor=null when exhausted. "
+                + "Limit clamped 1..50, default 20. 404 when toolkit is "
+                + "missing or hidden from the viewer (PR #732 §5.2 security "
+                + "boundary). Empty-state contract per §3.4: 200 with "
+                + "{ items: [] } rather than 404. Schema reality v1 carryover: "
+                + "ToolkitRating entity not yet shipped — handler returns "
+                + "stub envelope (items=[], breakdown all zero, averageStars=0, "
+                + "totalCount=0) once visibility check passes. Cache: 5min "
+                + "HybridCache. Wave 3 Phase 4b (Issue #805 / PR #732 §5.3.3).")
+            .Produces<ToolkitRatingsResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // ── POST /api/v1/toolkits/{toolkitId}/ratings ──────────────────────
+        // Wave 3 Phase 4b (Issue #805 / PR #732 §5.3.4): rating submission
+        // STUB — returns 501 Not Implemented because the ToolkitRating
+        // entity + persistence ship in Phase 5. Wire shape (route literal
+        // and method) is reserved so the FE submission flow can call this
+        // surface today and detect the stub via 501.
+        toolkits.MapPost("/{toolkitId:guid}/ratings", HandleSubmitToolkitRating)
+            .WithName("SubmitToolkitRating")
+            .WithSummary("Submit a toolkit rating (Phase 4b stub — 501)")
+            .WithDescription(
+                "Phase 4b stub. Returns 501 Not Implemented with a "
+                + "machine-readable body { error: \"ratings_submission_not_yet_available\", "
+                + "phase: \"4b-stub\" } so the FE can surface a \"coming soon\" "
+                + "affordance without breaking on a 404. Persistence + "
+                + "validation rules (one rating per (userId, toolkitId), "
+                + "hasInstalled gate, viewer != author, edit window 24h) "
+                + "ship in Phase 5. Wave 3 Phase 4b (Issue #805 / PR #732 §5.3.4).")
+            .Produces(StatusCodes.Status501NotImplemented)
+            .Produces(StatusCodes.Status401Unauthorized);
+
         // ── POST /api/v1/toolkits/{toolkitId}/install ──────────────────────
         toolkits.MapPost("/{toolkitId:guid}/install", HandleInstallToolkit)
             .WithName("InstallToolkit")
@@ -155,6 +200,58 @@ internal static class ToolkitMarketplaceEndpoints
         return response is null
             ? Results.NotFound()
             : Results.Ok(response);
+    }
+
+    private static async Task<IResult> HandleGetToolkitRatings(
+        Guid toolkitId,
+        HttpContext httpContext,
+        [FromQuery] string? cursor,
+        [FromQuery] int? limit,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var viewerId = httpContext.User.GetUserId();
+        if (viewerId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        // Limit clamping at the endpoint layer (PR #732 §3.3 — UI-friendly
+        // silent clamp rather than 400). Validator on the query enforces the
+        // same range for the CQRS handler.
+        var safeLimit = limit.GetValueOrDefault(20);
+        if (safeLimit < 1) safeLimit = 20;
+        if (safeLimit > 50) safeLimit = 50;
+
+        var query = new GetToolkitRatingsQuery(toolkitId, viewerId, cursor, safeLimit);
+        var response = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+
+        return response is null
+            ? Results.NotFound()
+            : Results.Ok(response);
+    }
+
+    private static IResult HandleSubmitToolkitRating(
+        Guid toolkitId,
+        HttpContext httpContext)
+    {
+        var viewerId = httpContext.User.GetUserId();
+        if (viewerId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        // Phase 4b stub — ToolkitRating entity ships in Phase 5. Body shape
+        // is intentionally minimal and machine-readable so the FE can detect
+        // the stub state without parsing prose error messages.
+        return Results.Json(
+            new
+            {
+                error = "ratings_submission_not_yet_available",
+                phase = "4b-stub",
+                toolkitId
+            },
+            statusCode: StatusCodes.Status501NotImplemented);
     }
 
     private static async Task<IResult> HandleInstallToolkit(

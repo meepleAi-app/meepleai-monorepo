@@ -212,6 +212,70 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Creates a new user authenticated through an OAuth provider (C3+I8).
+    /// PasswordHash is left null as the canonical "OAuth-only" marker — the legacy
+    /// behaviour of stamping a 32-byte random Base64 string into PasswordHash is
+    /// removed because that value was never a valid PBKDF2 hash and made the
+    /// account silently non-recoverable via local password change.
+    /// EmailVerified is true: the OAuth provider has already validated the address.
+    /// </summary>
+    public static User CreateForOAuth(
+        Guid id,
+        Email email,
+        string displayName,
+        Role role,
+        UserTier? tier,
+        string oauthProvider,
+        TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(email);
+        ArgumentNullException.ThrowIfNull(displayName);
+        ArgumentNullException.ThrowIfNull(role);
+        ArgumentException.ThrowIfNullOrWhiteSpace(oauthProvider);
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var user = new User
+        {
+            Id = id,
+            Email = email,
+            DisplayName = displayName,
+            PasswordHash = null,                // OAuth-only marker (C3)
+            Role = role,
+            Tier = tier ?? UserTier.Free,
+            Status = UserAccountStatus.Active,
+            CreatedAt = now,
+            EmailVerified = true,               // Provider has already verified
+            EmailVerifiedAt = now,
+            VerificationGracePeriodEndsAt = null,
+
+            // Default preferences (mirror standard User ctor defaults)
+            Language = "en",
+            EmailNotifications = true,
+            Theme = "system",
+            DataRetentionDays = 90,
+
+            // Default privacy settings
+            ShowProfile = true,
+            ShowActivity = true,
+            ShowLibrary = true,
+
+            // Default gamification (Issue #3141)
+            Level = 1,
+            ExperiencePoints = 0,
+
+            // Default lockout state (Issue #3339)
+            FailedLoginAttempts = 0,
+            LockedUntil = null,
+
+            IsTwoFactorEnabled = false,
+        };
+
+        user.AddDomainEvent(new UserCreatedViaOAuthEvent(id, email.Value, oauthProvider));
+        return user;
+    }
+
+    /// <summary>
     /// Activates a pending user account from an invitation.
     /// Transitions the user from Pending to Active, sets their password, and marks email as verified.
     /// </summary>

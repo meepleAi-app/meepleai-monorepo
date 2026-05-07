@@ -624,7 +624,7 @@ internal static class AuthenticationEndpoints
         .WithTags("Authentication", "Invitations")
         .WithSummary("Accept an invitation and create an account")
         .WithDescription("Validates the invitation token, creates the user account, and returns a session for immediate login.")
-        .RequireRateLimiting("AuthRegister")
+        .RequireRateLimiting("AuthInvitation") // I11: dedicated invitation policy (20/min/IP)
         .Produces(200)
         .Produces(400);
     }
@@ -664,7 +664,7 @@ internal static class AuthenticationEndpoints
         .WithTags("Authentication", "Invitations")
         .WithSummary("Validate an invitation token")
         .WithDescription("Checks whether an invitation token is valid without consuming it. Returns email and display name for valid tokens, or a uniform error reason (\"invalid\" or \"already_used\") to prevent state enumeration.")
-        .RequireRateLimiting("AuthRegister")
+        .RequireRateLimiting("AuthInvitation") // I11: dedicated invitation policy (20/min/IP)
         .Produces(200)
         .Produces(400);
     }
@@ -717,7 +717,7 @@ internal static class AuthenticationEndpoints
         .WithTags("Authentication", "Invitations")
         .WithSummary("Activate an invited account by setting a password")
         .WithDescription("Activates a pending invited user account. Sets the password, transitions the user to Active status, creates a session, and returns a session token for immediate login.")
-        .RequireRateLimiting("AuthRegister")
+        .RequireRateLimiting("AuthInvitation") // I11: dedicated invitation policy (20/min/IP)
         .Produces(200)
         .Produces(400);
     }

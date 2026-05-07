@@ -105,6 +105,9 @@ internal static class RateLimitingServiceExtensions
                 options.AddPolicy("AuthVerify2FA", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
+                options.AddPolicy("AuthInvitation", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
                 options.AddPolicy("AuthPasswordReset", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
@@ -378,6 +381,36 @@ internal static class RateLimitingServiceExtensions
                     {
                         Window = TimeSpan.FromMinutes(1),
                         PermitLimit = 5,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // I11: AuthInvitation — 20 req/min per IP for invitation
+            // validate / accept / activate-account flows.
+            //
+            // Threat: untrusted callers can replay valid (or guessed) tokens
+            // to enumerate which invitations are still valid, time-attack
+            // token validation, or hammer accept-invitation with leaked
+            // tokens. The token is high-entropy (Argon2id-hashed in storage,
+            // 256-bit raw) so brute force is infeasible — but we still
+            // bound the cost of replay so a single IP can't burn CPU on
+            // hash verification at unlimited rate.
+            //
+            // 20/min is wide enough for a real user clicking through the
+            // setup-account flow (validate → activate ≤ 4 round-trips) but
+            // narrow enough to make script-driven enumeration loud.
+            options.AddPolicy("AuthInvitation", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"auth-invitation-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 20,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,

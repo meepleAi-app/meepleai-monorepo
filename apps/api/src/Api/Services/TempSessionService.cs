@@ -103,6 +103,20 @@ internal class TempSessionService : ITempSessionService
         }
     }
 
+    // C6: temporary stubs — replaced with real implementations in the C6
+    // GREEN commit. Defined here so the new tests compile and fail with
+    // assertion errors against real wall-time behaviour rather than
+    // compile errors.
+
+    public Task<Guid?> ValidateTempSessionAsync(string token, CancellationToken cancellationToken = default)
+        => Task.FromResult<Guid?>(null);
+
+    public Task ConsumeTempSessionAsync(string token, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    public Task<bool> RecordFailedAttemptAsync(string token, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
+
     /// <summary>
     /// Cleanup expired temp sessions (run periodically)
     /// </summary>

@@ -453,13 +453,34 @@ internal static class AuthenticationEndpoints
                 return Results.BadRequest(new { error = result.ErrorMessage });
             }
 
-            // Refresh session cookie with new expiration if this is the current session
-            var sessionCookieName = CookieHelpers.GetSessionCookieName(context);
-            var currentSessionToken = context.Request.Cookies[sessionCookieName];
-            if (!string.IsNullOrEmpty(currentSessionToken) && result.NewExpiresAt.HasValue)
+            // R4 (auth security fixes): only refresh the response cookie when
+            // the {sessionId} in the URL matches the session the request was
+            // authenticated with. Pre-fix the cookie was rewritten on every
+            // successful extend regardless of which session was extended —
+            // so extending a "phone" session from a "laptop" tab would
+            // overwrite the laptop's cookie expiration with the phone's
+            // (or, more subtly, leave the cookie value pointing at the
+            // current session but with the phone's new ExpiresAt — a
+            // mis-attributed lifetime). Now: extend always succeeds at the
+            // DB level (the handler already verifies ownership via userId),
+            // but the cookie refresh is gated on currentSession.SessionId == sessionId.
+            var (authenticated, currentSession, _) = context.TryGetActiveSession();
+            var isCurrentSession = authenticated
+                && currentSession.SessionId.HasValue
+                && currentSession.SessionId.Value == sessionId;
+
+            if (isCurrentSession && result.NewExpiresAt.HasValue)
             {
-                CookieHelpers.WriteSessionCookie(context, currentSessionToken, result.NewExpiresAt.Value);
-                logger.LogInformation("Session cookie refreshed for session {SessionId}, new expiration: {ExpiresAt}", sessionId, result.NewExpiresAt.Value);
+                var sessionCookieName = CookieHelpers.GetSessionCookieName(context);
+                var currentSessionToken = context.Request.Cookies[sessionCookieName];
+                if (!string.IsNullOrEmpty(currentSessionToken))
+                {
+                    CookieHelpers.WriteSessionCookie(context, currentSessionToken, result.NewExpiresAt.Value);
+                    logger.LogInformation(
+                        "Session cookie refreshed for current session {SessionId}, new expiration: {ExpiresAt}",
+                        sessionId,
+                        result.NewExpiresAt.Value);
+                }
             }
 
             return Results.Json(new { ok = true, expiresAt = result.NewExpiresAt });

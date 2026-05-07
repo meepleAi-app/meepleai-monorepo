@@ -1,6 +1,6 @@
 ---
 title: Libro Game Nanolith — Demo Dogfooding Design
-status: draft
+status: reviewed
 type: spec-design
 date: 2026-05-07
 authors: [DegrassiAaron]
@@ -9,8 +9,14 @@ related-specs:
   - docs/superpowers/specs/2026-05-04-libro-game-assistant-vision.md
 related-plans:
   - docs/for-developers/plans/2026-05-06-sp6-libro-game-migration.md
-review-cycle: brainstorming + spec-self-review + sc:spec-panel
+review-cycle: brainstorming + spec-self-review + sc:spec-panel-applied
+expert-panel-applied: [Wiegers, Adzic, Cockburn, Fowler, Newman, Nygard, Crispin, Doumont]
 ---
+
+> **Naming convention** (per Doumont review, m1):
+> - Le sezioni numeriche (1.1, 2.1, ...) seguono la struttura del documento
+> - I **Goal ID** `N1`-`N4` sono identificatori semantici stabili (referenziati in test, plan, issue tracker)
+> - Gli **Scenario ID** `N1.1`-`N4.5` referenziano `N{goal}.{scenario}` per traceability cross-document
 
 # Libro Game Nanolith — Demo Dogfooding Design
 
@@ -33,17 +39,76 @@ review-cycle: brainstorming + spec-self-review + sc:spec-panel
 
 ## Indice
 
+- [0. Operational Definitions](#0-operational-definitions)
 - [1. Context & Persona](#1-context--persona)
 - [2. User Goals SMART](#2-user-goals-smart)
 - [3. Scenari Gherkin](#3-scenari-gherkin)
 - [4. Architettura & Data Flow](#4-architettura--data-flow)
 - [5. Persistence Model](#5-persistence-model)
-- [6. Failure Modes & Graceful Degradation](#6-failure-modes--graceful-degradation)
+- [6. Failure Modes & Resilience](#6-failure-modes--resilience)
 - [7. Testing Strategy](#7-testing-strategy)
 - [8. Pre-condizioni & Seed Dataset](#8-pre-condizioni--seed-dataset)
 - [9. Out of Scope](#9-out-of-scope)
 - [10. Decisions Log](#10-decisions-log)
 - [11. Open Questions Carry-forward](#11-open-questions-carry-forward)
+- [12. Riferimenti](#12-riferimenti)
+- [13. Glossario Terminologia Tecnica](#13-glossario-terminologia-tecnica)
+
+---
+
+## 0. Operational Definitions
+
+> **Spec-panel fix C1 (Wiegers)**: termini soggettivi nelle DoD ("actionable", "consistency", "letti senza esitazione") rendevano le metriche non-ripetibili. Definizione operativa qui consolidata.
+
+### 0.1 *Actionable* (referenziato in N1, N2 DoD)
+
+Una risposta è **actionable** se soddisfa **tutti e tre** i criteri seguenti:
+
+1. **Specificità nominale**: nomina almeno un componente/concetto specifico del gioco (es. "tabellone Avalon", "carta personaggio", "dado nero") — non frasi generiche tipo "metti i pezzi al loro posto"
+2. **Indicazioni quantitative o posizionali**: include numeri (es. "5 carte", "3 dadi") oppure indicazioni spaziali concrete (es. "al centro del tavolo", "sopra il tabellone") — non vaghi "intorno", "vicino"
+3. **Self-contained**: eseguibile senza consultare PDF/regolamento esterno per quel singolo step
+
+Validation pattern: review manuale post-sessione su Google Sheet `nanolith-dogfood-eval.gsheet`, 1 riga per query, 3 colonne boolean (criterio 1, 2, 3), DoD met se ≥ 4/5 query con tutti e 3 i criteri TRUE.
+
+### 0.2 *Glossary consistency* (referenziato in N4 DoD)
+
+```
+consistency_rate = count(translated_paragraphs WHERE term_used == glossary[term].term_it)
+                 / count(translated_paragraphs WHERE term_present)
+```
+
+dove:
+- `term_present` = il paragrafo EN contiene il termine (case-insensitive match) glossary entry
+- `term_used` = la traduzione IT contiene il valore `term_it` registrato nel glossario
+- N (sample size) ≥ 20 paragrafi che contengono almeno 1 termine glossary
+
+DoD met se `consistency_rate ≥ 0.95` calcolato su sample N ≥ 20.
+
+### 0.3 *Letto senza esitazione* (referenziato in N3 DoD)
+
+Aaron annota durante la sessione su Google Sheet `nanolith-dogfood-eval.gsheet` per ogni paragrafo tradotto letto a voce alta: 1 colonna boolean `read_fluent` con criterio:
+- TRUE = lettura completa senza pause > 2 sec, senza correzioni grammatica/sintassi mid-frase, senza ricorso a EN originale
+- FALSE = pause prolungate, correzioni manuali, fallback EN
+
+DoD met se ≥ 28/30 paragrafi annotati TRUE.
+
+### 0.4 *Confidence score binning* (referenziato in N1, N2)
+
+Mapping confidence numerico → label visibile UI:
+- **alta** (verde): confidence ≥ 0.85
+- **media** (amber): 0.70 ≤ confidence < 0.85
+- **bassa** (rosso): confidence < 0.70
+
+Confidence < 0.70 → forced disclaimer UI: "non sono certo, controlla pag. X".
+
+### 0.5 *Hallucination rate* (referenziato in N2 DoD)
+
+```
+hallucination_rate = count(responses WHERE Aaron_review == "sbagliata" AND confidence >= 0.85)
+                   / count(responses WHERE confidence >= 0.85)
+```
+
+Sample N ≥ 20 responses post-sessione. DoD met se rate ≤ 3% target, **0% target su confidence > 0.85**.
 
 ---
 
@@ -58,6 +123,20 @@ review-cycle: brainstorming + spec-self-review + sc:spec-panel
 ### 1.2 Modello d'uso
 
 Nanolith è una **campagna mista** (vedi brainstorming): lo **Storybook** è narrativa lunga multi-sessione (mesi, branching, paragrafi numerati `§N`); l'**Encounter Book** è on-demand sotto-sessione self-contained. Per Iter 1 entrambi usano lo stesso flusso N3 (foto pagina → OCR → translate); UX cheatsheet card per Encounter è deferred a Iter 2.
+
+### 1.2bis Stakeholder map
+
+> **Spec-panel fix M5 (Cockburn)**: il design originale tratta Aaron come unico attore. In realtà gli amici al tavolo sono il "purpose" reale — Aaron è proxy della loro esperienza.
+
+| Stakeholder | Ruolo | Interesse / "Win condition" | Loss condition |
+|---|---|---|---|
+| **Aaron (badsworm)** | Primary actor — GM operatore app | Non rovinare la sera, tradurre fluentemente, validare vision | App fallisce silently → ripiego cartaceo, sera "morta" |
+| **Marco / Giulia / Luca** (amici al tavolo) | Secondary stakeholders — passive consumer della traduzione | Partita fluida (no attese > 30s), divertimento, immersione narrativa | Aaron costretto a continue interruption per tech-fix → frustrazione tavolo |
+| **Aaron-as-developer** | Tertiary stakeholder | Telemetria / feedback per iterare Iter 2+ | Sessione senza dati = no learning, dogfooding sterile |
+| **Anthropic / OpenRouter** (LLM providers) | External dependency | Costi prevedibili (≤ €1-3/sessione), no abuse | Cost runaway su bug retry-loop |
+| **Nanolith publisher** (stakeholder etico) | External (no contatto diretto) | Foto storybook NON persistite long-term (copyright) | Storage permanente di pagine narrative protette |
+
+**Implicazione design**: Iter 1 success = (a) Aaron completa la sessione, **(b) gli amici NON dicono "perché continui ad armeggiare col telefono?"**, (c) Aaron ha dati per iterare. (b) è il vero termometro qualità — non misurabile in CI ma da raccogliere via post-sessione informal feedback.
 
 ### 1.3 Mapping su Bounded Context MeepleAI esistenti (riuso totale)
 
@@ -97,6 +176,29 @@ L'unico asset critico mancante è il backend pipeline single-shot photo → OCR 
 
 Quattro user goal numerati N1-N4, mappati a Iter 1.A/1.B per scope-cap.
 
+### 2.0 Goal level hierarchy (Cockburn)
+
+> **Spec-panel fix M6 (Cockburn)**: i 4 goal originali mescolavano livelli (subfunction/user/summary). Riorganizzati gerarchicamente.
+
+```
+SUMMARY GOAL (months / multi-session)
+└── G_summary: "Aaron porta a termine 1 campagna Nanolith con gli amici via app companion"
+    │
+    USER GOAL (single sitting, 4h sessione tipo)
+    ├── G_user_session: "Aaron gestisce 1 sessione gioco di 4h"
+    │
+    SUBFUNCTION GOALS (atomic actions durante sessione)
+    ├── N1 — Q&A setup (pre-sessione, durata 30 min)
+    ├── N2 — Q&A regole (during-session, on-demand 15-25 volte)
+    ├── N3 — Translate paragraph (during-session, on-demand 30 volte)
+    └── N4 — Resume cross-day (between-session, durata 30 sec)
+```
+
+**Mappa Iter implementation**:
+- **Sprint 0 (validazione pre-condizioni)**: N1 baseline check (riuso 100% codice esistente, "sanity test" del setup)
+- **Iter 1.A (settimana 1)**: N2 + N3 core
+- **Iter 1.B (settimana 2)**: N4 cross-day persistence + glossary
+
 ### 🎯 N1 — Q&A setup & tutorial Nanolith (Press Start KB)
 
 > Aaron, prima di iniziare la prima sessione, chiede al chat "come si setupa Nanolith per 4 giocatori?" e riceve guida actionable in IT con citazione pagina.
@@ -111,7 +213,7 @@ Quattro user goal numerati N1-N4, mappati a Iter 1.A/1.B per scope-cap.
 
 **Definition of Done**: Aaron apre `/library/games/nanolith/play` 30 minuti prima dell'arrivo amici. Pone 5 domande tipiche ("setup 4 giocatori", "componenti necessari", "come si decide chi inizia", "fase 1 prima azione", "regola dei dadi neri"). Riceve 5 risposte IT con citazione Press Start, ≥ 4/5 actionable senza fallback PDF.
 
-**Iter mapping**: Pre-Iter 1.A (validazione baseline pre-condizioni). Se N1 fallisce, niente Iter 1.A.
+**Iter mapping**: **Sprint 0 — Pre-condition Validation** (smoke test baseline, riuso 100%, durata < 1 giorno). Se N1 fallisce → blocker per Iter 1.A (significa che KB indexing o agent setup non funzionano, da risolvere prima di scrivere nuovo codice).
 
 ### 🎯 N2 — Q&A regole in-game durante partita (Rules KB)
 
@@ -259,22 +361,37 @@ And NON lascia Aaron in attesa silenziosa
 
 ### N3 — Translate Storybook via foto pagina
 
-#### N3.1 — Foto pagina A4 con 3 paragrafi @happy @dogfood
+#### N3.1a — Foto pagina A4: segmentazione 3 paragrafi @happy @dogfood
 ```gherkin
 Given Aaron è in `/library/games/nanolith/play/paragraph/§147`
 And il Storybook fisico è aperto alla pagina contenente §146, §147, §148
 And la luce salotto è normale (non bassa)
 When Aaron tappa il bottone "Fotografa pagina" (CameraViewfinder primitive)
 And scatta 1 foto della pagina A4 con il telefono
-And la foto è uploaded a `POST /api/v1/gamebook/{gameId}/photo-translate`
-Then in ≤ 3 sec backend OCR riconosce 3 paragrafi separabili (segmentation accuracy ≥ 90%)
-And la UI mostra una lista "Paragrafi trovati: §146, §147, §148" con preview snippet IT first 50 chars
-And Aaron tappa "§147"
-And in ≤ 1 sec post-tap il primo token della traduzione IT è visibile nel viewer fullscreen (streaming)
+And la foto è uploaded a `POST /api/v1/gamebook/{gameId}/photo-segments`
+Then in ≤ 4.5 sec backend restituisce 3 paragrafi separabili (segmentation accuracy ≥ 90%)
+And la UI mostra una lista "Paragrafi trovati: §146, §147, §148" con preview snippet EN first 50 chars
+And ogni paragrafo include `ocr_confidence` per-page-avg (smoldocling) + `segmentation_match_quality` ('exact' | 'partial' | 'fallback')
+```
+
+#### N3.1b — Translate selected paragraph: latency budget @happy
+```gherkin
+Given Aaron ha completato N3.1a e vede 3 paragrafi
+When Aaron tappa "§147"
+And il frontend invia `POST /api/v1/gamebook/{gameId}/photo-segments/{photoId}/translations` con paragraphId="§147"
+Then in ≤ 1 sec post-tap il primo token della traduzione IT è visibile nel viewer fullscreen (streaming SSE)
 And in ≤ 5 sec post-tap la traduzione IT completa è visibile (completion)
-And cumulato dallo scatto al primo token: P95 < 8 sec
-And il testo è renderizzato a font 26px, line-height 1.6, max-width 60ch (mockup SP6-D spec)
-And Aaron legge ad alta voce senza esitare
+And cumulato dallo scatto (N3.1a inizio) al primo token: P95 < 8 sec
+```
+
+#### N3.1c — Translate viewer rendering: read-aloud @happy @dogfood
+```gherkin
+Given Aaron ha completato N3.1b e vede la traduzione IT renderizzata
+When il testo è visibile nel viewer fullscreen
+Then è renderizzato a font 26px, line-height 1.6, max-width 60ch (mockup SP6-D spec)
+And ha aria-live="polite" per accessibility
+And i termini glossario sono pill cliccabili inline (es. "Voidstone")
+And Aaron legge ad alta voce e annota "read_fluent=TRUE" (vedi §0.3) sul tracking sheet post-paragrafo
 ```
 
 #### N3.2 — Foto sfocata o luce bassa @edge
@@ -335,19 +452,74 @@ And mostra azione [⏪ Riprova con altra pagina]
 And NON tenta traduzione random
 ```
 
+#### N3.8 — Segmentation accuracy sotto threshold (rolling) @error
+> **Spec-panel fix M4 (Adzic)**: behavior quando metric SMART viene violato.
+
+```gherkin
+Given i ultimi 10 photo-segments hanno segmentation accuracy media < 0.90 (sotto target SMART)
+When viene completato un nuovo photo-segment
+Then backend emette metric `segmentation_accuracy_below_threshold_total` (Prometheus)
+And alert PagerDuty/log warning a livello WARN
+And la UI mostra (visibile solo a Aaron come superadmin) un banner "⚠️ Qualità segmentation degradata (87% media ultimi 10)"
+And la sessione continua normalmente (non blocca utente)
+And la metrica entra in dashboard dogfooding-feedback per review post-sessione
+```
+
+#### N3.9 — Privacy: EXIF location stripping su upload @happy
+> **Spec-panel fix m7 (Crispin)**: privacy/EXIF è failure mode #14 ma mancava test coverage.
+
+```gherkin
+Given Aaron scatta una foto al tavolo di casa
+And il device incorpora GPS coordinates nei EXIF metadata
+When la foto viene uploaded a `POST /api/v1/gamebook/{gameId}/photo-segments`
+Then prima dell'invio (client-side), i campi EXIF GPS (`GPSLatitude`, `GPSLongitude`, `GPSTimestamp`) sono rimossi
+And il payload server NON contiene location data
+And NESSUN face detection viene persistito (anche se il foto contiene volti accidentali nello sfondo)
+And la foto è cifrata in transit (HTTPS)
+And la foto è conservata su R2 per max 24h con purge automatica
+```
+
+#### N3.10 — Sessione 4h end-to-end happy combinato @e2e-day @dogfood
+> **Spec-panel fix M3 (Adzic)**: scenario orchestration di "una serata tipo" che combina N1-N4 sequence.
+
+```gherkin
+Given Aaron ha completato Sprint 0 (N1 setup tutorial OK)
+And gli amici sono al tavolo, sessione iniziata alle 21:00
+When durante 4 ore Aaron:
+  | Azione                               | Conteggio | User goal |
+  | Q&A regola via chat panel laterale   | 20 query  | N2        |
+  | Foto storybook + traduzione paragrafo| 30 paragrafi | N3      |
+  | Edit glossary pill inline            | 2 termini | N3.5      |
+  | Save state automatico ogni 30s       | ~480 saves| N4 (auto) |
+Then alle 01:00 (4h dopo) Aaron chiude l'app
+And la `GamebookCampaignSession` è persistita con: ultimo §, glossary aggiornato, party intatto
+And costo LLM totale ≤ €1.50 (target dogfooding)
+And Aaron annota su `nanolith-dogfood-eval.gsheet`:
+  | DoD criteria               | Target | Achieved |
+  | N2: ≥17/20 risposte utili  | 85%    | TBD      |
+  | N3: ≥28/30 fluent reads    | 93%    | TBD      |
+  | N3 P95 latency < 8s        | 100%   | TBD      |
+  | N4 auto-save survive       | 100%   | TBD      |
+And gli amici NON dicono "perché continui ad armeggiare col telefono?" (qualitativo, §1.2bis)
+```
+
 ### N4 — Resume cross-day + glossario
 
-#### N4.1 — Resume sessione 1 settimana dopo @happy @dogfood
+#### N4.1 — Resume sessione N giorni dopo @happy @dogfood
+> **Spec-panel fix M1 (Adzic)**: date hardcoded sostituite con relative time per riproducibilità in CI.
+
 ```gherkin
-Given Aaron ha giocato sessione 1 il 2026-05-14 (30 paragrafi, 12 termini glossario, party 4 personaggi)
+Given Aaron ha giocato sessione 1 in data X (30 paragrafi, 12 termini glossario, party 4 personaggi)
 And ha chiuso l'app a paragrafo §289
 And la `GamebookCampaignSession` è persistita in DB
-When Aaron riapre `/library/games/nanolith/play` il 2026-05-21 (7 giorni dopo)
-Then la UI mostra una card "Riprendi sessione: ultimo §289 letto il 14 maggio · 12 termini glossario"
+When Aaron riapre `/library/games/nanolith/play` Y giorni dopo (Y in [1, 90])
+Then la UI mostra una card "Riprendi sessione: ultimo §289 letto Y giorni fa · 12 termini glossario"
 And tappa la card
 And in < 2 sec la sessione è ripristinata: ultimo §, glossario, party
 And il viewer è posizionato pronto a ricevere il prossimo paragrafo §290
 ```
+
+E2E test parametrizzato: `for Y in [1, 7, 30, 90] run resume_test(Y)`.
 
 #### N4.2 — Coerenza glossario nella sessione 2 @happy @dogfood
 ```gherkin
@@ -411,77 +583,74 @@ And se sceglie "riprendi", il glossario è ancora consistente
             └── Q&A Rules KB con citazione pagina
 ```
 
-### 4.2 Data flow N3 happy path frame-by-frame
+### 4.2 Data flow N3 happy path (sequence diagram + frame timing)
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│ FRONTEND (mobile, /library/games/nanolith/play/paragraph/§147)         │
-│                                                                         │
-│  Frame 1: tap "Fotografa pagina"                          [t=0s]       │
-│  Frame 2: CameraViewfinder primitive                                   │
-│           scatta JPEG ~2-4MB, mostra preview confirm/retake [t=0-1s]   │
-│  Frame 3: POST multipart/form-data                                     │
-│    URL:  /api/v1/gamebook/nanolith/photo-translate                     │
-│    Hdr:  Idempotency-Key: ${campaignSessionId}:${ts}                   │
-│    Body: photo + targetLang=it + sourceLang=en + currentParagraph=§147 │
-│          + glossary[] (loaded from AgentMemory cache)        [t=1-2s]  │
-└─────────────────────────────────────────────────────────────────────────┘
-                                ↓
-┌─────────────────────────────────────────────────────────────────────────┐
-│ BACKEND (.NET 9, MediatR)                                               │
-│                                                                         │
-│  Frame 4: validate (size ≤10MB, format, ownership)         [t=2s]       │
-│           persiste foto temporanea S3 (R2) → photoId                    │
-│  Frame 5: smoldocling-service OCR                          [t=2-4s]     │
-│           output: testo grezzo + bounding boxes + confidence            │
-│  Frame 6: ParagraphSegmentationService NEW                 [t=4-4.5s]   │
-│           regex r"§\s*(\d+)" → separa N paragrafi                       │
-│           fallback no-match → 1 paragrafo whole-page                    │
-│  Frame 7: response phase 1 sync (≤ 4.5s totale)                         │
-│    JSON: {photoId, paragraphs:[{number,snippet_en,confidence},...]}    │
-└─────────────────────────────────────────────────────────────────────────┘
-                                ↓
-┌─────────────────────────────────────────────────────────────────────────┐
-│ FRONTEND                                                                │
-│  Frame 8: UI segmentation list                                          │
-│           Aaron sceglie "§147"                              [t=4.5-7s]  │
-│  Frame 9: POST translate-specific                                       │
-│    URL:  /api/v1/gamebook/nanolith/photo-translate/{photoId}/translate │
-│    Body: {paragraph:"§147", glossary:[...12 terms]}          [t=7s]    │
-└─────────────────────────────────────────────────────────────────────────┘
-                                ↓
-┌─────────────────────────────────────────────────────────────────────────┐
-│ BACKEND                                                                 │
-│  Frame 10: chat-stream LLM existing (SSE streaming)                     │
-│            prompt template "translate-narrative-with-glossary"          │
-│            input: §147 EN text + glossary[] + tone=narrative            │
-│            output: streaming chunks IT      [first token <1s, total <5s]│
-│  Frame 11: post-translate persist (async, no block)                     │
-│            GamebookCampaignSession.translatedParagraphs[§147] = txt     │
-│            LLM piggy-back: extract new terms → glossary delta           │
-│            AgentMemory.MemoryNote[nanolith-glossary-{cid}].append       │
-│            lastParagraphRead = §147                                     │
-└─────────────────────────────────────────────────────────────────────────┘
-                                ↓
-┌─────────────────────────────────────────────────────────────────────────┐
-│ FRONTEND                                                                │
-│  Frame 12: viewer fullscreen rendering (streaming)                      │
-│            text chunk-by-chunk, font 26px / lh 1.6 / max-width 60ch     │
-│            glossary pills inline cliccabili                             │
-│            aria-live="polite" per a11y                          [t=12s] │
-│  Frame 13: optimistic state update                                      │
-│            useCampaignSession(cid).lastParagraphRead = §147             │
-│            rollback se backend conferma fallisce               [t=12s]  │
-│  END: Aaron legge ad alta voce                                          │
-└─────────────────────────────────────────────────────────────────────────┘
+> **Spec-panel fix m3 (Doumont)**: ASCII art frame-by-frame sostituito da Mermaid sequence diagram per leggibilità cross-device.
 
-Total P95 budget user-perceived (frames 1→12 first token):
-  - Foto upload+OCR+segmentation visibile (frame 7): ≤ 4.5s
-  - User choice (frame 8): ~2-3s (user-controlled, not in budget)
-  - Translate streaming first token visible (frame 10): ≤ 1s post-tap
-  - Wall clock perceived first token: ~7-8s (target P95 < 8s rispettato)
-  - Translate streaming completion (frame 12): ≤ 5s post-tap
+```mermaid
+sequenceDiagram
+    participant U as Aaron (mobile)
+    participant FE as Frontend
+    participant API as Backend API
+    participant OCR as smoldocling
+    participant SEG as ParagraphSegmentation
+    participant LLM as chat-stream (OpenRouter)
+    participant DB as Postgres
+    participant R2 as S3 (R2)
+    participant MN as MemoryNote (Glossary)
+
+    Note over U,FE: t=0s
+    U->>FE: tap "Fotografa pagina"
+    FE->>U: CameraViewfinder + preview
+    Note over U,FE: t=0-1s scatta JPEG ~2-4MB
+
+    Note over FE,API: Endpoint #1 (segment)
+    FE->>API: POST /photo-segments<br/>Idempotency-Key + photo + glossary snapshot
+    Note over API,R2: t=2s validate + persist S3
+    API->>R2: PUT photo (TTL 24h)
+    Note over API,OCR: t=2-4s OCR
+    API->>OCR: extract text + ocr_confidence (page-avg)
+    OCR-->>API: raw text + bboxes + ocr_confidence
+    Note over API,SEG: t=4-4.5s segment
+    API->>SEG: regex §\s*(\d+) + segmentation_match_quality
+    SEG-->>API: paragraphs[] (number, snippet_en, ocr_confidence, segmentation_match_quality)
+    API-->>FE: 200 OK {photoId, paragraphs[]}
+
+    Note over U,FE: t=4.5-7s user choice
+    U->>FE: tap "§147"
+
+    Note over FE,API: Endpoint #2 (translate)
+    FE->>API: POST /photo-segments/{photoId}/translations<br/>{paragraphId="§147", glossarySnapshot[]}
+    Note over API,LLM: t=7s SSE start
+    API->>LLM: prompt "translate-narrative-with-glossary"
+    LLM-->>FE: chunk 1 (first token < 1s post-tap)
+    LLM-->>FE: chunks 2..N streaming
+    LLM-->>API: completion (total < 5s post-tap)
+
+    Note over API,DB: t=12s persist (async)
+    API->>DB: TranslatedParagraph.Create(§147, text_it, glossary_snapshot, confidence)
+    API->>LLM: piggy-back: extract new terms (1 LLM call combinato)
+    LLM-->>API: new_terms[]
+    API->>MN: append new terms to nanolith-glossary-{cid}
+    API->>DB: GamebookCampaignSession.MarkParagraphRead(§147)
+
+    Note over FE,U: viewer fullscreen
+    FE->>U: render IT text font 26px lh 1.6 max-w 60ch + glossary pills + aria-live
 ```
+
+**P95 latency budget recap**:
+
+| Phase | Target | Frame |
+|---|---|---|
+| Photo upload + OCR + segmentation | ≤ 4.5s | photo → list visible |
+| User choice (NOT in CI budget, user-controlled) | ~2-3s | tap "§147" |
+| Translate streaming first token (post-tap) | ≤ 1s | first chunk visible |
+| Translate streaming completion (post-tap) | ≤ 5s | full text visible |
+| **Wall clock first token (cumulato dallo scatto)** | **P95 < 8s** | end-to-end target |
+
+> **Spec-panel fix M8 (Fowler)**: confidence disambiguation. Due metriche distinte:
+> - `ocr_confidence` (decimal 0-1, **page-level avg** restituito da smoldocling)
+> - `segmentation_match_quality` (enum: `exact` = regex match perfetto §N, `partial` = match con OCR noise tolerato, `fallback` = no match, intera pagina come 1 paragrafo)
 
 ### 4.3 Componenti coinvolti
 
@@ -492,27 +661,51 @@ Total P95 budget user-perceived (frames 1→12 first token):
 - Composizione primitive v2 esistenti: `CameraViewfinder`, `PageThumb`, `ConfidenceBadge`, `OfflineBanner`, `auth-card`, `btn`, `drawer` (Q&A panel)
 - **Zero nuovi component v2 con HSL pattern** (FREEZE-compliant)
 
-**Backend (.NET 9, MediatR)**:
-- Endpoint NEW 1: `POST /api/v1/gamebook/{gameId}/photo-translate` → `UploadAndSegmentPhotoCommand` → `IUploadAndSegmentPhotoHandler`
-- Endpoint NEW 2: `POST /api/v1/gamebook/{gameId}/photo-translate/{photoId}/translate` → `TranslateParagraphCommand` → `ITranslateParagraphHandler` (riusa chat-stream)
-- Service NEW: `IParagraphSegmentationService` (Domain interface, Application impl con regex + fallback)
+**Backend (.NET 9, MediatR)** — endpoint REST resource-oriented:
+
+> **Spec-panel fix C3 (Fowler) + m6 (Fowler)**: rename per coerenza REST + service interface astratta non rivela implementazione.
+
+- Endpoint NEW 1: `POST /api/v1/gamebook/{gameId}/photo-segments` → `IngestPhotoCommand` → **`IPhotoSegmentationHandler`** (returns `{photoId, paragraphs[]}`)
+- Endpoint NEW 2: `POST /api/v1/gamebook/{gameId}/photo-segments/{photoId}/translations` → `TranslateParagraphCommand` → `IParagraphTranslationHandler` (returns SSE stream + persisted `TranslatedParagraph`)
+- Service NEW: `IParagraphSegmentationService` (Domain interface, Application impl con regex + fallback). Output enum `SegmentationMatchQuality`
 - Service riusato: `ISmoldoclingClient` (DocumentProcessing BC)
-- Aggregato NEW: `GamebookCampaignSession` (in `SessionTracking` BC) con factory + `MarkParagraphRead()` method
-- EF migration: nuove tabelle `gamebook_campaign_sessions` + `gamebook_photo_artifacts`
+- Aggregati NEW (in `SessionTracking` BC, vedi M7 fix §5.1):
+  - `GamebookCampaignSession` (root aggregate)
+  - `TranslatedParagraph` (separate aggregate, 1-N relationship con session)
+- EF migration: nuove tabelle `gamebook_campaign_sessions` + `gamebook_translated_paragraphs` + `gamebook_photo_artifacts`
 - Riuso `AgentMemory.MemoryNote` con tag `nanolith-glossary-{campaign_id}`
 
-**Glossary feedback loop**:
+> **Spec-panel fix C3 (Fowler) cross-BC**: `gamebook_photo_artifacts.campaign_session_id` FK punta a tabella in BC diverso (`SessionTracking`). Soluzione adottata: **sposta `gamebook_photo_artifacts` in `SessionTracking` BC** (è transitorio per session, conceptual fit). Foto fisica resta su R2, solo metadata ref. Documentato in [ADR-053](../../architecture/adr/adr-053-shared-game-detail-cross-bc-read-model.md) come precedente.
+
+**Glossary feedback loop** (con M11 race condition fix):
 - Round-trip: ogni translate → glossary extraction prompt piggy-back (1 LLM call combinato)
-- Persistenza: `MemoryNote` per-campaign tagged
-- Inline editing: tap pill → edit modal → PUT to MemoryNote (optimistic + rollback)
+- **Glossary snapshot at translate-start** (no hot-reload mid-stream): translate request include `glossarySnapshot[]` come immutabile reference per quella translation
+- Persistenza: `MemoryNote` per-campaign tagged, write at translate-completion
+- Inline editing: tap pill → edit modal → PUT to MemoryNote (optimistic + rollback). Translations già completed restano con vecchio value finché Aaron non re-fotografa quella pagina
+
+### 4.4 API versioning policy
+
+> **Spec-panel fix m4 (Newman)**: policy esplicita per evolvere v1 → v2.
+
+- Tutti gli endpoint sotto `/api/v1/` per Iter 1
+- Breaking change rules:
+  - Aggiunta field response = non breaking (consumers ignorano unknown fields)
+  - Rimozione field / rename = breaking → bump v2 obbligatorio
+  - Cambio request shape = breaking → bump v2
+- Strategia: deprecazione 90 giorni v1 prima di sunset, response header `Deprecation: true; sunset="2026-12-01"` durante deprecazione
+- Reference futura: OpenAPI spec auto-generata via Scalar (CLAUDE.md), reachable a `/scalar/v1` (vedi [§12 Riferimenti](#12-riferimenti))
 
 ---
 
 ## 5. Persistence Model
 
-### 5.1 Schema DB nuovo (1 EF migration)
+### 5.1 Schema DB nuovo (1 EF migration, 3 tabelle)
 
-**Tabella `gamebook_campaign_sessions`** — `SessionTracking` BC:
+> **Spec-panel fix M7 (Fowler)**: `translated_paragraphs_jsonb` cresce illimitatamente nell'aggregate root. Estratto come **`TranslatedParagraph` aggregate separato** (1-N relationship). Vantaggi: performance (no full-aggregate load per ogni paragrafo), concurrency granulare (paragraph-level lock), soft-delete granulare.
+>
+> **Spec-panel fix C3 (Fowler)**: `gamebook_photo_artifacts` spostato in `SessionTracking` BC (era cross-BC). Conceptual fit: photo è transitoria per-session.
+
+**Tabella `gamebook_campaign_sessions`** — `SessionTracking` BC, root aggregate:
 
 | Campo | Tipo | Note |
 |---|---|---|
@@ -523,24 +716,42 @@ Total P95 budget user-perceived (frames 1→12 first token):
 | `party_json` | jsonb | `{members:[{name,class,hp,...}]}` free-form per-gioco |
 | `last_paragraph_id` | varchar(20) | es. `"§289"` |
 | `scoring_json` | jsonb | free-form per-gioco |
-| `translated_paragraphs_jsonb` | jsonb | `{"§147":{text_it,translated_at,glossary_used:[...],confidence}}` |
 | `created_at, updated_at, deleted_at` | timestamptz | audit + soft delete |
 | `created_by, updated_by` | uuid | audit |
 | `row_version` | bytea (timestamp) | optimistic concurrency |
 
-Indici: `(user_id, deleted_at)`, `(shared_game_id, deleted_at)`, GIN su `translated_paragraphs_jsonb`.
+Indici: `(user_id, deleted_at)`, `(shared_game_id, deleted_at)`.
 
-**Tabella `gamebook_photo_artifacts`** — `DocumentProcessing` BC, transitoria:
+**Tabella `gamebook_translated_paragraphs`** — `SessionTracking` BC, aggregate separato (1-N con session):
+
+| Campo | Tipo | Note |
+|---|---|---|
+| `id` | uuid PK | aggregato |
+| `campaign_session_id` | uuid FK gamebook_campaign_sessions | parent |
+| `paragraph_id` | varchar(20) | es. `"§147"` (UNIQUE per `(campaign_session_id, paragraph_id)`) |
+| `text_it` | text | traduzione completa |
+| `glossary_snapshot_jsonb` | jsonb | snapshot glossary a translate-start (per audit, M11 fix) |
+| `ocr_confidence` | decimal(3,2) | page-avg da smoldocling |
+| `segmentation_match_quality` | varchar(10) | enum: `exact` \| `partial` \| `fallback` |
+| `llm_provider` | varchar(50) | es. `openrouter:anthropic-haiku-3` (audit fallback chain) |
+| `llm_cost_eur` | decimal(6,4) | costo stimato per dogfooding tracking |
+| `translated_at` | timestamptz | |
+| `created_at, updated_at, deleted_at` | timestamptz | audit + soft delete |
+| `row_version` | bytea | optimistic concurrency paragraph-level |
+
+Indici: `(campaign_session_id, deleted_at)`, `(campaign_session_id, paragraph_id)` UNIQUE WHERE `deleted_at IS NULL`.
+
+**Tabella `gamebook_photo_artifacts`** — `SessionTracking` BC (spostata da `DocumentProcessing` per fix C3), transitoria:
 
 | Campo | Tipo | Note |
 |---|---|---|
 | `id` | uuid PK | photoId |
-| `campaign_session_id` | uuid FK | parent |
+| `campaign_session_id` | uuid FK | parent (in stesso BC, no cross-BC) |
 | `s3_key` | varchar | R2 storage key |
 | `ocr_confidence_avg` | decimal(3,2) | da smoldocling |
-| `detected_paragraphs_jsonb` | jsonb | output Frame 6 (cache segmentation per re-translate altri §) |
+| `detected_paragraphs_jsonb` | jsonb | output segmentation (cache per re-translate altri §) |
 | `created_at` | timestamptz | |
-| `expires_at` | timestamptz | now() + 24h, background job purge |
+| `expires_at` | timestamptz | now() + 24h, background job purge (vedi §6.4 M9) |
 
 **Riuso esistente**: `MemoryNote` in `AgentMemory` BC con tag `nanolith-glossary-{campaign_id}`, content JSON `{term_en, term_it, first_seen_paragraph, user_edited: bool}`.
 
@@ -578,7 +789,7 @@ Lvl 3: LLM provider (OpenRouter chain)
 
 ---
 
-## 6. Failure Modes & Graceful Degradation
+## 6. Failure Modes & Resilience
 
 ### 6.1 Failure modes (18 finali consolidati)
 
@@ -601,7 +812,7 @@ Lvl 3: LLM provider (OpenRouter chain)
 | 15 | OpenRouter chain totalmente esausta | 10 | catch-all fallback | banner red persistente "Tutti i provider AI non rispondono. Riprova tra qualche minuto." | offline use traduzioni cached |
 | 16 | Foto orientation EXIF (landscape vs portrait) | 5 | OCR text incoerente | auto-rotate via `image-orientation: from-image` + EXIF normalization backend pre-OCR | re-photo CTA |
 | 17 | Long paragraph multi-pagina (§147 occupa 4 pag) | 6 | fragment ending mid-sentence | Banner "Sembra che §147 continui sulla pagina dopo. Fotografa la pagina successiva?" + concat workflow | concatenate translations |
-| 18 | R2 storage quota exhausted | 4 | `507 Insufficient Storage` | Toast "Storage temporaneo pieno, contatta admin" | local FS fallback emergency |
+| 18 | R2 storage quota exhausted | 4 | `507 Insufficient Storage` | Backpressure: response `503 Service Unavailable` + header `Retry-After: 300` + toast "Storage temporaneo pieno, riprova tra 5 min" | **NO local FS fallback** (anti-pattern: container ephemeral, no persist) — fix M10 |
 
 ### 6.2 Strategie trasversali
 
@@ -612,9 +823,69 @@ Lvl 3: LLM provider (OpenRouter chain)
 - **Hallucination detection**: confidence < 0.7 → forced disclaimer "non sono certo, controlla pag. X"
 - **Privacy minimization**: EXIF location stripped pre-upload, no face detection persistence, no permanent photo storage
 
-### 6.3 Cost cap (out of scope MVP demo)
+### 6.3 Cost cap (out of scope paywall, MA hard cap superadmin)
 
-Superadmin bypass quota durante dogfooding. Cost indicator visibile ma non blocca. Integrazione paywall paywall enforcement → quando si esporrà l'app a Sara/beta tester (out of scope Iter 1).
+Superadmin bypass quota durante dogfooding. Cost indicator visibile ma non blocca. **Tuttavia hard cap di sicurezza superadmin** (Nygard fix): `daily_cost_eur ≤ 5.00` per account, oltre questo tetto le translation request ricevono `503 + Retry-After: <seconds_to_midnight_UTC>`. Previene cost runaway su bug retry-loop.
+
+Integrazione paywall enforcement (per non-superadmin) → quando si esporrà l'app a Sara/beta tester (out of scope Iter 1).
+
+### 6.4 Resilience patterns + monitoring
+
+> **Spec-panel fix C2 (Nygard) + M9 + M11**: circuit breaker, bulkhead, monitoring + photo retention job + glossary snapshot semantics.
+
+#### 6.4.1 Circuit breaker per LLM provider chain
+
+| Stato | Trigger | Behavior |
+|---|---|---|
+| **Closed** (default) | Sistema healthy | Tutte le request passano al provider primary |
+| **Open** | 5 consecutive failures entro 30s su provider X | Skip provider X, salta al next nella chain (OpenRouter → Anthropic Haiku → DeepSeek) |
+| **Half-Open** | 60s dopo Open | 1 request di prova al provider X. Se OK → Closed. Se fail → torna Open con cooldown raddoppiato (max 600s) |
+
+Implementazione: libreria Polly (.NET) con `CircuitBreakerPolicy<HttpResponseMessage>`. Telemetry: emit metric `llm_circuit_breaker_state{provider="x"}`.
+
+#### 6.4.2 Bulkhead — isolation pool
+
+LLM calls usano connection pool dedicato (max 5 concurrent), separato dal pool delle Q&A regolari. Una translation lenta NON blocca Q&A in-game (N2 latency budget rimane < 5s anche durante translation slow). Polly `BulkheadPolicy(maxConcurrency: 5, maxQueue: 10)`.
+
+#### 6.4.3 Glossary snapshot semantics (M11 fix)
+
+Race condition: Aaron edita un termine glossario inline mentre N translations sono mid-stream con vecchio value. Soluzione:
+
+```
+1. translate request → server reads MemoryNote glossary, snapshot a JSON immutable
+2. snapshot serialized in `gamebook_translated_paragraphs.glossary_snapshot_jsonb`
+3. LLM riceve glossary snapshot inline nel prompt (no fresh read mid-stream)
+4. Aaron edita pill → MemoryNote update applies to FUTURE translations only
+5. Translations già completate restano con vecchio snapshot (audit trail)
+6. Per re-applicare new glossary value su translation passata, Aaron deve esplicitamente "re-translate" (cache miss)
+```
+
+#### 6.4.4 Photo retention background job (M9 fix)
+
+`Api.HostedServices.PhotoArtifactPurgeJob` (NEW, .NET `BackgroundService`):
+
+- **Schedule**: cron `0 */6 * * *` (ogni 6 ore)
+- **Logic**: `DELETE FROM gamebook_photo_artifacts WHERE expires_at < now()` + S3 `DeleteObject` per ogni `s3_key`
+- **Monitoring**: emit metric `photo_purge_backlog_total` (count rows con `expires_at < now()`). Alert se > 100 (job stuck/failing)
+- **Idempotency**: safe to run concurrent (UPSERT delete pattern)
+
+#### 6.4.5 Monitoring & alerting (Prometheus / OpenTelemetry)
+
+Metrica obbligatorie esposte da Iter 1.A:
+
+| Metric name | Type | Labels | Threshold alert |
+|---|---|---|---|
+| `translation_success_rate` | gauge | `provider`, `confidence_bin` | < 0.95 → WARN |
+| `ocr_confidence_p50` | histogram | - | < 0.70 → WARN (foto qualità degrading) |
+| `glossary_consistency_rate` | gauge | `campaign_id` | < 0.95 → WARN |
+| `llm_chain_saturation` | gauge | `provider` | > 0.80 → WARN |
+| `retry_rate_per_endpoint` | counter | `endpoint`, `reason` | > 0.10 → WARN |
+| `segmentation_accuracy_below_threshold_total` | counter | - | rolling avg < 0.90 → N3.8 alert |
+| `daily_cost_eur` | gauge | `user_id` | > 5.00 → CRIT (cost cap reached) |
+| `photo_purge_backlog_total` | gauge | - | > 100 → WARN |
+| `circuit_breaker_state` | gauge | `provider` | state == open → INFO log |
+
+Dashboard Grafana: `dashboards/nanolith-dogfood-feedback.json` (NEW asset Iter 1.A).
 
 ---
 
@@ -625,20 +896,38 @@ Superadmin bypass quota durante dogfooding. Cost indicator visibile ma non blocc
 **Backend (xUnit + FluentAssertions)**:
 - `ParagraphSegmentationServiceTests` — regex multi-paragrafo, fallback no-match, edge cases (`§ 147` con spazio, `§147a` lettera, multi-page)
 - `GamebookCampaignSessionTests` — factory, `MarkParagraphRead()`, soft-delete, concurrency `RowVersion`
-- `UploadAndSegmentPhotoHandlerTests` — happy + 4 validation errors + OCR fail + S3 fail
-- `TranslateParagraphHandlerTests` — happy + glossary inline + LLM error + idempotency cache hit
+- `TranslatedParagraphTests` — factory, `glossary_snapshot_jsonb` serialization, soft-delete granulare, paragraph-level concurrency (M7 aggregate fix)
+- `PhotoSegmentationHandlerTests` — happy + 4 validation errors + OCR fail + S3 fail (rinominato per m6)
+- `ParagraphTranslationHandlerTests` — happy + glossary snapshot immutable mid-stream (M11) + LLM error + idempotency cache hit
 - `GlossaryExtractionPromptTests` — JSON parsing robustness, dedup case-insensitive, `user_edited` preservation
+- **`ExifStripperTests`** (NEW per m7 privacy): given JPEG con EXIF GPS data (lat/lon/timestamp), post-strip ha NO GPS fields. Test su sample JPEG fixture con `exiftool` reference baseline
+- **`CircuitBreakerPolicyTests`** (NEW per C2): 5 consecutive failures → Open state; 60s timeout → Half-Open; success → Closed; failure during Half-Open → Open con cooldown doubled (cap 600s)
+- **`BulkheadPolicyTests`** (NEW per C2): 5 concurrent translate requests OK; 6th con queue; 16th rejected con 503
+- **`PhotoArtifactPurgeJobTests`** (NEW per M9): given N artifacts con `expires_at` past + future, post-run delete only past, S3 DeleteObject called N times, metric `photo_purge_backlog_total` updated
+- **`DailyCostCapTests`** (NEW per §6.3 hard cap): given `daily_cost_eur >= 5.00`, translate request returns 503 + `Retry-After` header con seconds-to-midnight-UTC
 
 **Frontend (Vitest + RTL)**:
 - `useTranslateParagraph.test.ts` — 22 tests cherry-pick + 5 nuovi single-shot pattern
 - `useCampaignSession.test.ts` — query/mutation/optimistic/rollback (~15 tests)
 - Component tests page composition (renders, primitives wired, glossary pills clickable, error states)
+- `clientExifStripper.test.ts` (NEW per m7): given File con GPS EXIF, post-strip has no GPS, image content unchanged byte-by-byte
 
 ### 7.2 Integration (Testcontainers Postgres)
 
 - `GamebookCampaignSessionRepositoryTests` — migration + CRUD + soft-delete query filter
-- `UploadAndSegmentPhotoIntegrationTests` — full pipeline upload → S3 (testcontainer minio) → smoldocling (mock) → segmentation → DB write
+- `TranslatedParagraphRepositoryTests` (NEW M7) — paragraph-level CRUD, UNIQUE constraint `(campaign_session_id, paragraph_id)`, soft-delete granulare
+- `PhotoSegmentationIntegrationTests` (renamed m6) — full pipeline upload → S3 (testcontainer minio) → smoldocling (mock) → segmentation → DB write
 - `MemoryNoteGlossaryIntegrationTests` — tag-based query, dedup, multi-campaign isolation
+- **`GlossaryConsistencyIntegrationTest`** (NEW M12): operationalizzazione concreta della metrica DoD N4
+  ```csharp
+  // Pseudocode
+  // 1. Seed glossary con 20 entries: [{term_en: "Voidstone", term_it: "Pietra del Vuoto"}, ...]
+  // 2. Translate 20 paragrafi mock_storybook_with_glossary_terms.txt (each contains ≥ 1 glossary term)
+  // 3. For each translated paragraph, parse text_it
+  // 4. Count match: term_used (term_it appears in text_it) / term_present (term_en in source)
+  // 5. Assert consistency_rate >= 0.95
+  ```
+- `LlmFallbackChainIntegrationTest` (NEW C2) — given OpenRouter mock returns 503, expect fallback to Anthropic, expect telemetry `llm_circuit_breaker_state{provider="openrouter"}=open`
 
 ### 7.3 E2E (Playwright)
 
@@ -762,6 +1051,7 @@ Decisioni prese durante la sessione di brainstorming socratico (2026-05-07):
 | D13 | Failure modes review: 18 finali (15 originali - 3 fusi/rimossi + 6 aggiunti) | Risposta utente: "s6 review". Aggiunti privacy/EXIF, OpenRouter chain exhausted, orientation, long paragraph, glossary race, R2 quota |
 | D14 | Tag `@dogfood` su scenari Gherkin per setup reale Aaron + Nanolith reali. Seed E2E solo per CI | Risposta utente: "s7 reali". Revert su decisione precedente fixture-only |
 | D15 | Aaron email = `badsworm@gmail.com` (non `@libero.it` che è email Claude/sistema) | Risposta utente: "@gmail.com, badsworm@gmail.com" |
+| D16 | sc:spec-panel review applicata (Wiegers, Adzic, Cockburn, Fowler, Newman, Nygard, Crispin, Doumont). 23 fix applicati: 3 critical + 12 major + 8 minor | Risposta utente: "b e minor issue anche". Quality score pre-fix: 7.1/10. Tracking fix in §0, §1.2bis, §2.0, §3 (split N3.1, new N3.8/N3.9/N3.10, fix N4.1), §4.2 (Mermaid), §4.3 (REST naming), §4.4 (API versioning), §5.1 (TranslatedParagraph aggregate), §6 (rename + R2 backpressure + §6.4 resilience), §7 (privacy + consistency tests), §12 (OpenAPI), §13 (glossario tech) |
 
 ---
 
@@ -782,10 +1072,65 @@ Da prioritizzare DOPO feedback dogfooding sessione 1.
 
 ## 12. Riferimenti
 
+**Spec & vision**:
 - [Vision Document 2026-05-04](2026-05-04-libro-game-assistant-vision.md) — vision a 12 mesi, persona "Sara casual designer", 4 user goal G1-G4
-- [SP6 Migration Plan 2026-05-06](../../for-developers/plans/2026-05-06-sp6-libro-game-migration.md) — plan tecnico Phase A/B/C (cherry-pick demo + index + upload wizard)
-- Mockup SP6-D translation-viewer: `admin-mockups/design_files/sp6-libro-game-translation-viewer.html` (untracked)
-- Mockup SP6-C play-session: `admin-mockups/design_files/sp6-libro-game-play-session.html` (untracked)
-- Worktree commit demo: `aa72b1b70` (`useTranslateParagraph` + `TranslateParagraphDemo` + 43 tests)
-- Datasource Nanolith: `data/rulebook/nanolith_datasource/` (Rules ENG.pdf + Press Start ENG.pdf)
+- [SP6 Migration Plan 2026-05-06](../../for-developers/plans/2026-05-06-sp6-libro-game-migration.md) — plan tecnico Phase A/B/C
+- [ADR-053 Cross-BC read-model](../../architecture/adr/adr-053-shared-game-detail-cross-bc-read-model.md) — pattern citato in fix C3
+
+**API documentation**:
+- OpenAPI / Scalar interactive: http://localhost:8080/scalar/v1 (dev) — auto-generato da endpoint annotations (riferimento m5)
+- Endpoint `POST /api/v1/gamebook/{gameId}/photo-segments` e `POST /api/v1/gamebook/{gameId}/photo-segments/{photoId}/translations` esposti in OpenAPI a Iter 1.A merge
+- API versioning policy: vedi §4.4
+
+**Asset codice**:
+- Worktree commit demo: `aa72b1b70` (`useTranslateParagraph` + `TranslateParagraphDemo` + 43 tests cherry-pickable)
+- Componenti `apps/web/src/components/v2/gamebook/*` (16 file FREEZE-compliant)
+
+**Mockup hi-fi**:
+- SP6-D translation-viewer: `admin-mockups/design_files/sp6-libro-game-translation-viewer.html` (untracked)
+- SP6-C play-session: `admin-mockups/design_files/sp6-libro-game-play-session.html` (untracked)
+
+**Datasource & operativi**:
+- Nanolith PDF: `data/rulebook/nanolith_datasource/` (Rules ENG.pdf 101MB + Press Start ENG.pdf 36MB)
 - MEMORY freeze policy: `project_sp6_v2_freeze.md` (issue #807, #808)
+- MEMORY DeepSeek LLM: `project_deepseek_llm.md` (provider chain fallback)
+- MEMORY LLM routing chain: `feedback_llm_routing_chain.md` (debugging "0 tokens")
+
+**Tracking dogfooding**:
+- Google Sheet `nanolith-dogfood-eval.gsheet` (Aaron-managed) — riferito in §0.1, §0.3, §0.5
+
+---
+
+## 13. Glossario Terminologia Tecnica
+
+> **Spec-panel fix m2 (Doumont)**: glossario per stakeholder non-tech che leggessero questo doc.
+
+| Termine | Significato |
+|---|---|
+| **BC (Bounded Context)** | Confine logico DDD che raggruppa entità/servizi correlati, isola lessico/regole di business. Vedi [CLAUDE.md §DDD](../../../CLAUDE.md) |
+| **CQRS** | Command-Query Responsibility Segregation. Pattern architetturale che separa write (Commands) e read (Queries) — qui implementato via MediatR |
+| **MediatR** | Libreria .NET per implementare CQRS via in-process messaging. Endpoint API → `IMediator.Send(Command)` → `IHandler` |
+| **EF Core** | Entity Framework Core, ORM Microsoft per .NET |
+| **EF migration** | Script SQL versionato che modifica schema DB (add table, alter column, etc.) |
+| **Aggregate root** | Entità DDD che è punto di ingresso ad un cluster di entità correlate; garantisce invarianti |
+| **Soft-delete** | Pattern: `IsDeleted = true` + `DeletedAt = now()` invece di DELETE SQL fisico |
+| **Optimistic concurrency** | Lock-free concurrency via `RowVersion` timestamp; conflitto rilevato a write-time, non lock-time |
+| **HSL FREEZE pattern** | Specifico CSS pattern (`hsl(*, 89%, 48%)`) bloccato per nuovi component v2 fino a token redesign #807 Fase 2 |
+| **Page composition** | Strategia frontend: build una page React combinando primitive esistenti senza creare nuovo "component" v2 (FREEZE-compliant) |
+| **OCR** | Optical Character Recognition. Qui via `smoldocling-service` (fork di Docling per docs structured) |
+| **Smoldocling** | Servizio Python di document processing usato per OCR con bounding boxes + confidence per page |
+| **OpenRouter** | LLM provider abstraction layer; permette di switchare provider (Anthropic, OpenAI, DeepSeek) via 1 API |
+| **Circuit breaker** | Pattern Nygard "Release It!": dopo N failures, il circuit "apre" e skippa il provider failing per evitare cascading failures |
+| **Bulkhead** | Pattern isolation: thread pools/connection pools dedicati per evitare che 1 servizio lento impatti gli altri |
+| **R2** | Cloudflare's S3-compatible object storage; usato per photo storage temp 24h |
+| **SSE (Server-Sent Events)** | Protocollo HTTP che permette streaming server→client unidirezionale; usato per `chat-stream` LLM token-by-token |
+| **IndexedDB** | API browser per storage persistente locale (no cookie size limit); qui Lvl 1 cache traduzioni |
+| **Idempotency key** | Header HTTP che permette retry-safe: stesso key → stesso risultato, no duplicate side-effect |
+| **SMART criteria** | Specific, Measurable, Achievable, Relevant, Time-bound. Framework Wiegers per requirement quality |
+| **Gherkin** | Linguaggio Adzic specification-by-example: `Given/When/Then` clauses per test scenarios eseguibili |
+| **DoD (Definition of Done)** | Lista criteri concreti che definiscono "feature complete" — superato a Iter merge |
+| **MVP** | Minimum Viable Product. Qui = scope-cap rigoroso "Iter 1.A + 1.B" |
+| **§N** | Notazione gamebook per "paragrafo N" (es. §147 = paragrafo 147 dello Storybook) |
+| **Storybook** | Libro narrativo di Nanolith, paragrafi numerati, lettura sequenziale ad alta voce |
+| **Encounter Book** | Libro scenari/scontri di Nanolith, on-demand, self-contained per encounter |
+| **Glossary per-game** | Mappa `term_en → term_it` specifica della campagna corrente, garantisce coerenza traduzione |

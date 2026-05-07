@@ -743,13 +743,19 @@ jobs:
           sparse-checkout-cone-mode: true
 
       - name: Deep Health Check
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
           echo "🔍 Running deep health checks..."
 
-          # Wait for API with structured health response
+          # CF Access bypass headers reused for all curls in this step
+          CF_HEADERS=(-H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}")
+
+          # Wait for API with structured health response (CF Access bypass)
           HEALTH=""
           for i in {1..30}; do
-            HEALTH=$(curl -sf https://api.meepleai.app/health 2>/dev/null || true)
+            HEALTH=$(curl -sf "${CF_HEADERS[@]}" https://api.meepleai.app/health 2>/dev/null || true)
             if [ -n "$HEALTH" ]; then
               echo "📋 Health response received"
               break
@@ -786,8 +792,14 @@ jobs:
           echo "✅ All critical services healthy"
 
       - name: Web Health Check
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://meepleai.app)
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
+            -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
+            https://meepleai.app)
           if [ "$HTTP_STATUS" != "200" ]; then
             echo "❌ Web returned status $HTTP_STATUS"
             exit 1
@@ -795,6 +807,9 @@ jobs:
           echo "✅ Web healthy (HTTP $HTTP_STATUS)"
 
       - name: Smoke Tests
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
           echo "🧪 Running staging smoke tests..."
           FAIL=0
@@ -803,7 +818,10 @@ jobs:
           smoke_test() {
             local name="$1" url="$2" expect="$3"
             local status
-            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" 2>/dev/null || echo "000")
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+              -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
+              -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
+              "$url" 2>/dev/null || echo "000")
             if echo "$expect" | grep -q "$status"; then
               echo "  ✅ $name: HTTP $status"
               RESULTS="${RESULTS}| $name | $status | ✅ |\n"
@@ -822,7 +840,10 @@ jobs:
 
           # Health endpoint JSON validation
           echo "  Validating health response structure..."
-          HEALTH_JSON=$(curl -sf --max-time 10 https://meepleai.app/health 2>/dev/null || true)
+          HEALTH_JSON=$(curl -sf --max-time 10 \
+            -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
+            -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
+            https://meepleai.app/health 2>/dev/null || true)
           if [ -n "$HEALTH_JSON" ] && echo "$HEALTH_JSON" | jq -e '.status' > /dev/null 2>&1; then
             echo "  ✅ Health JSON: valid structure"
           else
@@ -830,7 +851,10 @@ jobs:
           fi
 
           # Response time check
-          RT=$(curl -sf -o /dev/null -w "%{time_total}" --max-time 10 https://meepleai.app 2>/dev/null || echo "9.999")
+          RT=$(curl -sf -o /dev/null -w "%{time_total}" --max-time 10 \
+            -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
+            -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
+            https://meepleai.app 2>/dev/null || echo "9.999")
           echo "  📊 Response time: ${RT}s"
 
           # Write summary to job output

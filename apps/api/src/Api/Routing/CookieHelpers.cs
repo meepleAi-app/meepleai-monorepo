@@ -1,7 +1,9 @@
 using Api.Configuration;
 using Api.Models;
 using Api.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
 
 namespace Api.Routing;
 
@@ -13,7 +15,22 @@ internal static class CookieHelpers
 {
     // Session Cookie Methods
 
-    private const string UserRoleCookieName = "meepleai_user_role";
+    // C4: legacy plaintext role cookie. Read-only during the grace period;
+    // every WriteUserRoleCookie call lazy-deletes it.
+    private const string UserRoleCookieNameV1 = "meepleai_user_role";
+
+    // C4: HMAC-protected role cookie. Always issued on login / role change.
+    private const string UserRoleCookieNameV2 = "meepleai_user_role_v2";
+
+    // C4: DataProtection purpose. Changing this string invalidates all v2
+    // cookies in the wild — bump it only as part of an intentional rotation.
+    private const string UserRoleDataProtectionPurpose = "MeepleAi.UserRoleCookie.v2";
+
+    // C4: hard sunset for the v1 grace period. After this date, even an
+    // intact plaintext v1 cookie is ignored — clients must have re-logged in.
+    // Aligned with the 7-day rollout window from the C4 spec.
+    private static readonly DateTime UserRoleCookieV1SunsetUtc =
+        new(2026, 5, 13, 0, 0, 0, DateTimeKind.Utc);
 
     public static void WriteSessionCookie(HttpContext context, string token, DateTime expiresAt)
     {
@@ -60,80 +77,104 @@ internal static class CookieHelpers
     /// <summary>
     /// Writes the user role cookie for middleware authorization checks.
     /// SEC-07: Cookie is HttpOnly to prevent XSS-based role discovery.
-    /// Next.js middleware can read HttpOnly cookies on the server side.
-    /// Role should be exposed to client-side JS via the /auth/me endpoint instead.
+    /// C4: value is HMAC-protected via ASP.NET Data Protection
+    /// (<see cref="UserRoleDataProtectionPurpose"/>) under the new
+    /// <c>meepleai_user_role_v2</c> name. The legacy plaintext
+    /// <c>meepleai_user_role</c> cookie is lazily expired on every write so
+    /// existing browsers stop sending it within one round-trip.
     /// </summary>
     public static void WriteUserRoleCookie(HttpContext context, string role, DateTime expiresAt)
     {
         ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(role);
+
+        var protector = context.RequestServices
+            .GetRequiredService<IDataProtectionProvider>()
+            .CreateProtector(UserRoleDataProtectionPurpose);
+        var protectedValue = protector.Protect(role.ToLowerInvariant());
+
         var configuration = GetSessionCookieConfiguration(context);
-        var isHttps = context.Request.IsHttps;
+        var options = BuildRoleCookieOptions(context, configuration, expiresAt);
 
-        if (!isHttps && configuration.UseForwardedProto &&
-            context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto) &&
-            forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
-        {
-            isHttps = true;
-        }
-
-        var secure = configuration.Secure ?? isHttps;
-        var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
-
-        // SEC-I5: Use same SameSite as session cookie — Lax for CSRF protection
-        var sameSite = configuration.SameSite ?? SameSiteMode.Lax;
-
-        var options = new CookieOptions
-        {
-            HttpOnly = true, // SEC-07: Prevent XSS from reading admin role
-            Secure = secure,
-            SameSite = sameSite,
-            Path = path,
-            Expires = new DateTimeOffset(expiresAt, TimeSpan.Zero)
-        };
-
-        if (!string.IsNullOrWhiteSpace(configuration.Domain))
-        {
-            options.Domain = configuration.Domain;
-        }
-
-        // BGAI-081: Development workaround for SameSite=None without Secure
+        // C4: write v2 (HMAC-protected). The protected value is opaque base64,
+        // not URL-encoded; pass through Cookies.Append which encodes safely.
         if (context.RequestServices.GetRequiredService<IHostEnvironment>().IsDevelopment() &&
-            sameSite == SameSiteMode.None && !secure)
+            options.SameSite == SameSiteMode.None && !options.Secure)
         {
-            // SEC-07: Include HttpOnly in manual Set-Cookie header
-            var cookieValue = $"{UserRoleCookieName}={role.ToLowerInvariant()}; " +
-                            $"Path={path}; " +
-                            $"Expires={expiresAt:R}; " +
-                            $"HttpOnly; " +
-                            $"SameSite=None";
-
-            if (!string.IsNullOrWhiteSpace(configuration.Domain))
+            // BGAI-081: same dev-only manual Set-Cookie path as the session cookie.
+            var cookieValue = $"{UserRoleCookieNameV2}={protectedValue}; " +
+                              $"Path={options.Path}; " +
+                              $"Expires={expiresAt:R}; " +
+                              $"HttpOnly; " +
+                              $"SameSite=None";
+            if (!string.IsNullOrWhiteSpace(options.Domain))
             {
-                cookieValue += $"; Domain={configuration.Domain}";
+                cookieValue += $"; Domain={options.Domain}";
             }
-
             context.Response.Headers.Append("Set-Cookie", cookieValue);
         }
         else
         {
-            context.Response.Cookies.Append(UserRoleCookieName, role.ToLowerInvariant(), options);
+            context.Response.Cookies.Append(UserRoleCookieNameV2, protectedValue, options);
         }
+
+        // C4: lazy-migrate v1 — emit a Set-Cookie that immediately expires it.
+        // Mirror Path/Domain so the browser actually identifies the same cookie.
+        var deleteOptions = new CookieOptions
+        {
+            Path = options.Path,
+            Expires = DateTimeOffset.UnixEpoch,
+        };
+        if (!string.IsNullOrWhiteSpace(options.Domain))
+        {
+            deleteOptions.Domain = options.Domain;
+        }
+        context.Response.Cookies.Delete(UserRoleCookieNameV1, deleteOptions);
     }
 
     /// <summary>
-    /// Reads the role from the user-role cookie. Stub: replaced in C4 by an
-    /// implementation that decrypts the v2 HMAC value and falls back to v1
-    /// during the deprecation grace period. Currently always returns null so
-    /// the new tests can compile against a known surface while staying RED.
+    /// Reads the user's role from the role cookie. Tries the HMAC-protected
+    /// v2 cookie first; falls back to the legacy plaintext v1 cookie during
+    /// the grace window (until <see cref="UserRoleCookieV1SunsetUtc"/>) so
+    /// existing user sessions don't all get logged out on the C4 deploy.
+    /// Returns <c>null</c> on tampered, wrong-purpose, or expired payloads.
     /// </summary>
     public static string? ReadUserRoleCookie(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+
+        // Prefer the v2 (HMAC-protected) cookie.
+        if (context.Request.Cookies.TryGetValue(UserRoleCookieNameV2, out var v2Value) &&
+            !string.IsNullOrWhiteSpace(v2Value))
+        {
+            try
+            {
+                var protector = context.RequestServices
+                    .GetRequiredService<IDataProtectionProvider>()
+                    .CreateProtector(UserRoleDataProtectionPurpose);
+                return protector.Unprotect(v2Value);
+            }
+            catch (CryptographicException)
+            {
+                // Tampered, wrong purpose, or rolled-out key — fail closed.
+                return null;
+            }
+        }
+
+        // C4: grace-period fallback to the legacy plaintext cookie. After the
+        // sunset date, ignore v1 entirely and force a fresh login.
+        if (DateTime.UtcNow < UserRoleCookieV1SunsetUtc &&
+            context.Request.Cookies.TryGetValue(UserRoleCookieNameV1, out var v1Value) &&
+            !string.IsNullOrWhiteSpace(v1Value))
+        {
+            return v1Value.ToLowerInvariant();
+        }
+
         return null;
     }
 
     /// <summary>
-    /// Removes the user role cookie during logout.
+    /// Removes both the v1 and v2 user role cookies during logout.
     /// </summary>
     public static void RemoveUserRoleCookie(HttpContext context)
     {
@@ -153,7 +194,42 @@ internal static class CookieHelpers
             options.Domain = configuration.Domain;
         }
 
-        context.Response.Cookies.Delete(UserRoleCookieName, options);
+        context.Response.Cookies.Delete(UserRoleCookieNameV1, options);
+        context.Response.Cookies.Delete(UserRoleCookieNameV2, options);
+    }
+
+    private static CookieOptions BuildRoleCookieOptions(
+        HttpContext context,
+        SessionCookieConfiguration configuration,
+        DateTime expiresAt)
+    {
+        var isHttps = context.Request.IsHttps;
+        if (!isHttps && configuration.UseForwardedProto &&
+            context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto) &&
+            forwardedProto.Any(proto => string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase)))
+        {
+            isHttps = true;
+        }
+
+        var secure = configuration.Secure ?? isHttps;
+        var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
+        var sameSite = configuration.SameSite ?? SameSiteMode.Lax;
+
+        var options = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = secure,
+            SameSite = sameSite,
+            Path = path,
+            Expires = new DateTimeOffset(expiresAt, TimeSpan.Zero)
+        };
+
+        if (!string.IsNullOrWhiteSpace(configuration.Domain))
+        {
+            options.Domain = configuration.Domain;
+        }
+
+        return options;
     }
 
     public static string GetSessionCookieName(HttpContext context)

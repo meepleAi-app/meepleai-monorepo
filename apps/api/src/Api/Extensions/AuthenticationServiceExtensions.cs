@@ -14,7 +14,7 @@ internal static class AuthenticationServiceExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddDataProtectionServices();
+        services.AddDataProtectionServices(configuration);
         services.AddAuthServices();
         services.AddSessionServices();
         services.AddPasswordResetServices();
@@ -58,10 +58,27 @@ internal static class AuthenticationServiceExtensions
         return services;
     }
 
-    private static IServiceCollection AddDataProtectionServices(this IServiceCollection services)
+    private static IServiceCollection AddDataProtectionServices(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
-        // AUTH-06: Data Protection API for OAuth token encryption
-        services.AddDataProtection();
+        // AUTH-06: Data Protection API for OAuth token encryption.
+        // C4: same key ring is used for the meepleai_user_role_v2 cookie HMAC.
+        // Without persisted keys, every API process restart invalidates every
+        // role cookie in the wild — fine for local dev / unit tests, fatal in
+        // production. Opt in to file-system persistence by setting
+        // DataProtection:KeysPath; multi-instance deployments should point all
+        // replicas at the same volume (or migrate to PersistKeysToStackExchangeRedis).
+        var dp = services.AddDataProtection()
+            .SetApplicationName("MeepleAi")
+            .SetDefaultKeyLifetime(TimeSpan.FromDays(90));
+
+        var keysPath = configuration["DataProtection:KeysPath"];
+        if (!string.IsNullOrWhiteSpace(keysPath))
+        {
+            Directory.CreateDirectory(keysPath);
+            dp.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        }
 
         return services;
     }

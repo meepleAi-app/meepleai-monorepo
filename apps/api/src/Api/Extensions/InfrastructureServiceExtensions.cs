@@ -455,6 +455,15 @@ internal static class InfrastructureServiceExtensions
             BoundedContexts.SecurityAudit.Application.Services.IAuditLogger,
             BoundedContexts.SecurityAudit.Infrastructure.Services.AuditLogger>();
 
+        // I5 (auth security fixes): email outbox + drainer. The service is
+        // scoped (per-request DbContext); the drainer is hosted (singleton
+        // via BackgroundService and uses IServiceScopeFactory to spin up a
+        // scope on each tick).
+        services.AddScoped<
+            BoundedContexts.UserNotifications.Application.Services.IEmailOutboxService,
+            BoundedContexts.UserNotifications.Infrastructure.Services.EmailOutboxService>();
+        services.AddHostedService<Infrastructure.BackgroundServices.EmailOutboxBackgroundService>();
+
         // Issue #936: Infisical secrets management client (POC)
         services.AddHttpClient("Infisical", client =>
         {

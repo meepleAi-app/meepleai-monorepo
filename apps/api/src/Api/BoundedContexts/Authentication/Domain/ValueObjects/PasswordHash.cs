@@ -72,11 +72,12 @@ public sealed class PasswordHash : ValueObject
 
     public override string ToString() => "[REDACTED]"; // Never expose hash value
 
-    public static implicit operator string(PasswordHash hash)
-    {
-        ArgumentNullException.ThrowIfNull(hash);
-        return hash.Value;
-    }
+    // R1 (auth security fixes): implicit string conversion removed. Same
+    // reasoning as SessionToken: the operator silently bypassed the
+    // "[REDACTED]" guard whenever a PasswordHash landed in a string-typed
+    // context (logging, string interpolation). Callers must reach for
+    // .Value explicitly so any path that exposes the raw stored hash is
+    // visible at the call site.
 
     private static string CreateVersionedHash(string plaintextPassword)
     {

@@ -95,9 +95,10 @@ public sealed class SessionToken : ValueObject
 
     public override string ToString() => "[REDACTED]"; // Never expose token value
 
-    public static implicit operator string(SessionToken token)
-    {
-        ArgumentNullException.ThrowIfNull(token);
-        return token.Value;
-    }
+    // R1 (auth security fixes): implicit string conversion removed. The
+    // operator made it too easy to log or interpolate a session token by
+    // mistake (e.g. `$"token={sessionToken}"` would silently coerce, but
+    // ToString() returns "[REDACTED]" — the implicit operator bypasses
+    // that guard). Callers must now reach for .Value explicitly, which
+    // makes the leak path visible at the call site.
 }

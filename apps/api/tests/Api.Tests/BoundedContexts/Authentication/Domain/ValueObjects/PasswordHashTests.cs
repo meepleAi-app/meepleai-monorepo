@@ -312,17 +312,17 @@ public sealed class PasswordHashTests
     #region Implicit Conversion Tests
 
     [Fact]
-    public void ImplicitConversion_ToString_ReturnsHashValue()
+    public void Value_ReturnsStoredHashString()
     {
-        // Arrange
+        // R1 (auth security fixes): the implicit operator string(PasswordHash)
+        // was removed because it silently bypassed ToString() = "[REDACTED]"
+        // and could leak the stored hash through any string-typed sink.
+        // Callers must reach for .Value explicitly.
         var hash = PasswordHash.Create("SecurePassword123!");
 
-        // Act
-        string value = hash;
-
-        // Assert
-        value.Should().Be(hash.Value);
-        value.Should().StartWith("v1.");
+        hash.Value.Should().StartWith("v1.");
+        hash.ToString().Should().Be("[REDACTED]",
+            "ToString() must NEVER expose the stored hash — only .Value does.");
     }
 
     #endregion

@@ -74,8 +74,11 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
             throw new DomainException("Invalid email or password");
         }
 
-        // Issue #3339: Reset failed attempts on successful login
-        user.RecordSuccessfulLogin();
+        // C6: do NOT reset the failed-login counter here. If 2FA is required
+        // and the user fails the second factor, an attacker could re-login
+        // with the right password to keep refilling the brute-force budget.
+        // RecordSuccessfulLogin is now invoked in Verify2FACommandHandler
+        // for the 2FA branch and inline below for the non-2FA branch.
 
         // Check if 2FA is required
         if (user.RequiresTwoFactor())
@@ -105,7 +108,13 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
             userAgent: command.UserAgent
         );
 
+        // C6: only reset the failed-login counter once we know the login
+        // fully succeeded — for the non-2FA branch that is right now (the
+        // session is about to be persisted). The 2FA branch resets the
+        // counter from Verify2FACommandHandler.
         await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
+        user.RecordSuccessfulLogin();
+        await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Issue #3677: Enforce device limit (max 5 unique devices)

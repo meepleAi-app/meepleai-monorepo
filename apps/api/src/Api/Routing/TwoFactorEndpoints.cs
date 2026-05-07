@@ -151,6 +151,7 @@ internal static class TwoFactorEndpoints
             // Issue #1676 Phase 2: Return UserDto directly (no legacy conversion)
             return Results.Ok(new { message = "2FA verification successful", user = sessionResult.User });
         })
+        .RequireRateLimiting("AuthVerify2FA") // C6: IP-based throttle on top of per-session-token limit
         .WithName("Verify2FA")
         .WithTags("Authentication");
     }

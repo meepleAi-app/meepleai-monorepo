@@ -102,6 +102,9 @@ internal static class RateLimitingServiceExtensions
                 options.AddPolicy("AuthRegister", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
+                options.AddPolicy("AuthVerify2FA", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
                 options.AddPolicy("AuthPasswordReset", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
@@ -376,6 +379,29 @@ internal static class RateLimitingServiceExtensions
                         Window = TimeSpan.FromMinutes(1),
                         PermitLimit = 5,
                         SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // C6: AuthVerify2FA — 10 req per 15 min per IP for /auth/2fa/verify.
+            // Layered on top of the per-session-token limit (3/min) so re-login
+            // can't keep refilling the brute-force budget against a single user
+            // by minting fresh temp sessions. The TempSessionService tracks the
+            // per-session 5-failure invalidation; this policy bounds the IP
+            // even if the attacker keeps cycling through valid passwords + 2FA
+            // pairs (e.g. credential stuffing).
+            options.AddPolicy("AuthVerify2FA", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"auth-2fa-verify-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(15),
+                        PermitLimit = 10,
+                        SegmentsPerWindow = 5,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
                     });

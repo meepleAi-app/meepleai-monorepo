@@ -1139,17 +1139,21 @@ Sessione fresca su `claude.ai/design/` con:
 - **Output atteso**: `sp6-libro-game-resume-state.html` + `.jsx` (file 1500-2500 righe ciascuno, pattern A-E) + `sp6-libro-game-glossary-editor.html` + `.jsx`
 - **FREEZE-compliance check** post-gen: `grep -E "hsl\([0-9]+,?\s*89%,\s*48%\)" sp6-libro-game-{resume-state,glossary-editor}.html` deve restituire zero match
 
-### 13bis.4 Path nel plan implementativo
+### 13bis.4 Workflow ordering (decisione utente: mockup PRECEDONO il plan)
 
-Phase 0 del writing-plans (precedente Iter 1.A) include:
-1. **Task 0.1**: commit mockup C, D, E (untracked) sul branch corrente
-2. **Task 0.2**: generazione mockup G via claude.ai/design/ (~30 min sessione + commit)
-3. **Task 0.3**: generazione mockup H via claude.ai/design/ (~30 min sessione + commit)
-4. **Task 0.4**: FREEZE compliance grep su tutti i mockup
-5. **Task 0.5**: aggiornamento `admin-mockups/briefs/SP6-libro-game.md` con G+H entries
-6. **Task 0.6**: aggiornamento `MEMORY.md` `project_sp6_libro_game_mockups_wip.md` da "A+B+C+D+E ✅, F pending" a "A+B+C+D+E+G+H ✅, F pending (vision)"
+> **Decisione D17b**: l'utente ha scelto sequence `design → mockup G → mockup H → writing-plans → implementation` invece di mettere Phase 0 dentro il plan. Razionale: il plan implementativo deve potersi riferire a mockup committed e ispezionabili, non a brief da generare in futuro. I mockup sono input al plan, non un task del plan.
 
-Dopo Phase 0, Iter 1.A può iniziare wiring `useTranslateParagraph` ai mockup C, D, H. Iter 1.B usa mockup G per resume.
+Sequenza:
+
+1. **(in corso)** Generazione mockup G `sp6-libro-game-resume-state` via claude.ai/design/ (~30 min sessione + commit)
+2. **(next)** Generazione mockup H `sp6-libro-game-glossary-editor` via claude.ai/design/ (~30 min sessione + commit)
+3. Commit mockup C, D, E untracked sullo stesso branch
+4. FREEZE compliance grep gate su G+H+C+D+E (zero `hsl(*, 89%, 48%)` hardcoded)
+5. Update `admin-mockups/briefs/SP6-libro-game.md` con G+H entries
+6. Update `MEMORY.md` `project_sp6_libro_game_mockups_wip.md` da "A+B+C+D+E ✅" a "A+B+C+D+E+G+H ✅"
+7. **(then)** Invocazione `superpowers:writing-plans` skill per implementation plan Iter 1.A + 1.B basato su spec reviewed + mockup completi A,C,D,E,G,H disponibili
+
+Iter 1.A wira `useTranslateParagraph` su mockup C, D, H. Iter 1.B usa mockup G per resume + multi-campagna list.
 
 ---
 

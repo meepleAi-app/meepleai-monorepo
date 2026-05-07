@@ -272,7 +272,7 @@ public class FeatureFlagTierHierarchyTests
             id: Guid.NewGuid(),
             email: new Email($"test-{Guid.NewGuid():N}@example.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Test123!"),
+            passwordHash: PasswordHash.Create("T3stPwd1234!"),
             role: role,
             tier: tier
         );

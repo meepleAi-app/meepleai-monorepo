@@ -809,7 +809,7 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var payload = new
         {
             email = "admin@test.local",
-            password = "TestAdmin123!"
+            password = "TestUnusualAdm123!"
         };
 
         var response = await Client.PostAsJsonAsync("/api/v1/auth/login", payload);
@@ -819,7 +819,7 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
             var registerPayload = new
             {
                 email = "admin@test.local",
-                password = "TestAdmin123!",
+                password = "TestUnusualAdm123!",
                 displayName = "Test Admin"
             };
 

@@ -13,7 +13,7 @@ import { z } from 'zod';
 const errorMessages = {
   required: 'Campo obbligatorio',
   email: 'Email non valida',
-  passwordMin: 'La password deve contenere almeno 8 caratteri',
+  passwordMin: 'La password deve contenere almeno 12 caratteri',
   passwordPattern:
     'La password deve contenere maiuscole, minuscole e numeri',
   passwordMatch: 'Le password non coincidono',
@@ -41,7 +41,7 @@ export type LoginFormData = z.infer<typeof loginFormSchema>;
 
 const passwordSchema = z
   .string({ message: errorMessages.required })
-  .min(8, errorMessages.passwordMin)
+  .min(12, errorMessages.passwordMin)
   .regex(
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
     errorMessages.passwordPattern

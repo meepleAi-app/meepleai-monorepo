@@ -74,10 +74,22 @@ const PUBLIC_AUTH_ROUTES = ['/login', '/register'];
 const SESSION_COOKIE_NAME = 'meepleai_session';
 
 /**
- * User role cookie name
- * Used to check authorization for protected routes
+ * User role cookies.
+ * - V1 (legacy plaintext): readable directly from the edge during the grace
+ *   period so existing sessions don't get bounced through /auth/me on the
+ *   first hit after deploy.
+ * - V2 (HMAC-protected via ASP.NET Data Protection): only the API can read
+ *   this; the edge cannot decrypt it. When v2 is the only role cookie
+ *   present, the role is sourced from /auth/me (via session validation
+ *   cache below) instead.
+ *
+ * V1 sunset must stay aligned with CookieHelpers.UserRoleCookieV1SunsetUtc.
  */
-const USER_ROLE_COOKIE = 'meepleai_user_role';
+const USER_ROLE_COOKIE_V1 = 'meepleai_user_role';
+// V2 is intentionally referenced only by name in comments here — the value is
+// HMAC-protected and only the API can decrypt it. The middleware never reads
+// it directly, but documenting the constant keeps future readers honest.
+const USER_ROLE_COOKIE_V1_SUNSET = Date.UTC(2026, 4, 13); // 2026-05-13 UTC (month is 0-indexed)
 
 // ============================================================================
 // Proxy Function
@@ -86,9 +98,12 @@ const USER_ROLE_COOKIE = 'meepleai_user_role';
 // Cache API origin at module level for performance (only computed once)
 let cachedApiOrigin: string | null = null;
 
-// Simple session validation cache so we don't call the API on every request
+// Simple session validation cache so we don't call the API on every request.
+// C4: also caches the user role so we don't have to read the (now HMAC-only)
+// v2 role cookie on the edge — the cookie value is opaque base64 from here.
 type SessionValidationEntry = {
   valid: boolean;
+  role: string | null;
   expiresAt: number;
 };
 
@@ -96,11 +111,12 @@ const SESSION_CACHE_TTL_MS = 120 * 1000; // 2 minutes (optimized for performance
 const SESSION_CACHE_LIMIT = 200;
 const sessionValidationCache = new Map<string, SessionValidationEntry>();
 
-function cacheSessionValidation(cookieValue: string, valid: boolean) {
+function cacheSessionValidation(cookieValue: string, valid: boolean, role: string | null = null) {
   if (!cookieValue) return;
 
   sessionValidationCache.set(cookieValue, {
     valid,
+    role,
     expiresAt: Date.now() + SESSION_CACHE_TTL_MS,
   });
 
@@ -110,6 +126,15 @@ function cacheSessionValidation(cookieValue: string, valid: boolean) {
       sessionValidationCache.delete(oldestKey);
     }
   }
+}
+
+function getCachedRole(cookieValue: string | undefined | null): string | null {
+  if (!cookieValue) return null;
+  const cached = sessionValidationCache.get(cookieValue);
+  if (cached && cached.expiresAt > Date.now() && cached.valid) {
+    return cached.role;
+  }
+  return null;
 }
 
 async function isSessionCookieValid(request: NextRequest, cookieValue: string): Promise<boolean> {
@@ -158,7 +183,23 @@ async function isSessionCookieValid(request: NextRequest, cookieValue: string): 
         metrics.recordValidationFailure();
       }
 
-      cacheSessionValidation(cookieValue, response.ok);
+      // C4: extract role from the /auth/me payload so the middleware doesn't
+      // need to read the v2 (HMAC-protected) role cookie. The role coming
+      // back is already lower-cased by the API.
+      let role: string | null = null;
+      if (response.ok) {
+        try {
+          const payload = (await response.json()) as { user?: { role?: string } };
+          if (typeof payload?.user?.role === 'string') {
+            role = payload.user.role.toLowerCase();
+          }
+        } catch {
+          // Non-JSON or unexpected shape — treat as authenticated but role-less;
+          // the proxy default ('user') will still be applied downstream.
+        }
+      }
+
+      cacheSessionValidation(cookieValue, response.ok, role);
       return response.ok;
     } catch (fetchError) {
       clearTimeout(timeoutId);
@@ -348,9 +389,26 @@ export async function proxy(request: NextRequest) {
     isAuthenticated = await isSessionCookieValid(request, sessionCookieValue);
   }
 
-  // Check user role (only trusted when we know the session is valid)
-  const userRoleCookie = request.cookies.get(USER_ROLE_COOKIE);
-  const userRole = isAuthenticated ? (userRoleCookie?.value ?? 'user') : 'user';
+  // Check user role (only trusted when we know the session is valid).
+  // C4 cookie-versioning resolution order:
+  //   1. /auth/me cache (populated by isSessionCookieValid above) — the
+  //      authoritative source post-deploy. The v2 cookie value is HMAC-only
+  //      and cannot be decoded at the edge.
+  //   2. v1 plaintext cookie — kept as a fast path during the grace period
+  //      so existing browsers don't have to wait for the cache to warm up.
+  //   3. Default 'user' — never elevate privileges by guessing.
+  let userRole: string = 'user';
+  if (isAuthenticated) {
+    const cachedRole = getCachedRole(sessionCookieValue);
+    if (cachedRole) {
+      userRole = cachedRole;
+    } else if (Date.now() < USER_ROLE_COOKIE_V1_SUNSET) {
+      const v1 = request.cookies.get(USER_ROLE_COOKIE_V1)?.value;
+      if (v1) {
+        userRole = v1;
+      }
+    }
+  }
   const isAdmin = isAuthenticated && isAdminRole(userRole);
 
   // Read view mode cookie — admin users can switch to 'user' shell via toggle.

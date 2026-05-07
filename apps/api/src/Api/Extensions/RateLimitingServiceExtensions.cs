@@ -102,6 +102,12 @@ internal static class RateLimitingServiceExtensions
                 options.AddPolicy("AuthRegister", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
+                options.AddPolicy("AuthVerify2FA", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("AuthInvitation", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
                 options.AddPolicy("AuthPasswordReset", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
@@ -376,6 +382,59 @@ internal static class RateLimitingServiceExtensions
                         Window = TimeSpan.FromMinutes(1),
                         PermitLimit = 5,
                         SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // I11: AuthInvitation — 20 req/min per IP for invitation
+            // validate / accept / activate-account flows.
+            //
+            // Threat: untrusted callers can replay valid (or guessed) tokens
+            // to enumerate which invitations are still valid, time-attack
+            // token validation, or hammer accept-invitation with leaked
+            // tokens. The token is high-entropy (Argon2id-hashed in storage,
+            // 256-bit raw) so brute force is infeasible — but we still
+            // bound the cost of replay so a single IP can't burn CPU on
+            // hash verification at unlimited rate.
+            //
+            // 20/min is wide enough for a real user clicking through the
+            // setup-account flow (validate → activate ≤ 4 round-trips) but
+            // narrow enough to make script-driven enumeration loud.
+            options.AddPolicy("AuthInvitation", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"auth-invitation-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 20,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // C6: AuthVerify2FA — 10 req per 15 min per IP for /auth/2fa/verify.
+            // Layered on top of the per-session-token limit (3/min) so re-login
+            // can't keep refilling the brute-force budget against a single user
+            // by minting fresh temp sessions. The TempSessionService tracks the
+            // per-session 5-failure invalidation; this policy bounds the IP
+            // even if the attacker keeps cycling through valid passwords + 2FA
+            // pairs (e.g. credential stuffing).
+            options.AddPolicy("AuthVerify2FA", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"auth-2fa-verify-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(15),
+                        PermitLimit = 10,
+                        SegmentsPerWindow = 5,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
                     });

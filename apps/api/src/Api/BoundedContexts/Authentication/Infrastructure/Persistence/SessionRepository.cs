@@ -127,6 +127,44 @@ public class SessionRepository : RepositoryBase, ISessionRepository
     }
 
     /// <summary>
+    /// C7: revoke every active session for the user except the one identified
+    /// by <paramref name="excludedSessionId"/>. Used by the password-change
+    /// flow so the user remains logged in on the device they initiated the
+    /// change from while every other device is invalidated.
+    /// </summary>
+    public async Task RevokeAllUserSessionsExceptAsync(
+        Guid userId,
+        Guid excludedSessionId,
+        CancellationToken cancellationToken = default)
+    {
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        var sessionsToRevoke = await DbContext.UserSessions
+            .Where(s => s.UserId == userId && s.RevokedAt == null && s.Id != excludedSessionId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        if (sessionsToRevoke.Count == 0)
+        {
+            return; // Nothing else to revoke (idempotent)
+        }
+
+        foreach (var session in sessionsToRevoke)
+        {
+            session.RevokedAt = now;
+            DbContext.Entry(session).State = EntityState.Modified;
+        }
+
+        try
+        {
+            _ = await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Same idempotent semantics as RevokeAllUserSessionsAsync.
+        }
+    }
+
+    /// <summary>
     /// Maps persistence entity to domain entity.
     /// </summary>
     private static Session MapToDomain(Api.Infrastructure.Entities.UserSessionEntity entity)

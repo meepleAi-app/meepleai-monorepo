@@ -6,3 +6,5 @@ paths-ignore:
   - "**/__tests__/**"
   - "**/*.test.ts"
   - "**/*.test.tsx"
+  # I7: common-password blocklist (rejection list, not credential leak)
+  - "**/CommonPasswords.txt"

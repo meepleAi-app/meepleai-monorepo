@@ -40,8 +40,8 @@ public class BulkImportUsersCommandHandlerTests
     {
         // Arrange
         var csvContent = @"email,displayName,role,password
-user1@test.com,User One,user,Password123!
-user2@test.com,User Two,admin,Password456!";
+user1@test.com,User One,user,UnusualPwd123!
+user2@test.com,User Two,admin,UnusualPwd456!";
 
         _mockUserRepository.Setup(r => r.ExistsByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
@@ -78,7 +78,7 @@ user2@test.com,User Two,admin,Password456!";
     {
         // Arrange
         var csvContent = @"wrong,header,columns
-user1@test.com,User One,user,Password123!";
+user1@test.com,User One,user,UnusualPwd123!";
 
         var command = new BulkImportUsersCommand(csvContent, Guid.NewGuid());
 
@@ -93,8 +93,8 @@ user1@test.com,User One,user,Password123!";
     {
         // Arrange
         var csvContent = @"email,displayName,role,password
-duplicate@test.com,User One,user,Password123!
-duplicate@test.com,User Two,user,Password456!";
+duplicate@test.com,User One,user,UnusualPwd123!
+duplicate@test.com,User Two,user,UnusualPwd456!";
 
         var command = new BulkImportUsersCommand(csvContent, Guid.NewGuid());
 
@@ -109,7 +109,7 @@ duplicate@test.com,User Two,user,Password456!";
     {
         // Arrange
         var csvContent = @"email,displayName,role,password
-existing@test.com,User One,user,Password123!";
+existing@test.com,User One,user,UnusualPwd123!";
 
         _mockUserRepository.Setup(r => r.ExistsByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -129,7 +129,7 @@ existing@test.com,User One,user,Password123!";
         var csvLines = new List<string> { "email,displayName,role,password" };
         for (int i = 0; i < 1001; i++)
         {
-            csvLines.Add($"user{i}@test.com,User {i},user,Password123!");
+            csvLines.Add($"user{i}@test.com,User {i},user,UnusualPwd123!");
         }
         var csvContent = string.Join("\n", csvLines);
 
@@ -147,7 +147,7 @@ existing@test.com,User One,user,Password123!";
         // Arrange
         var csvContent = @"email,displayName,role,password
 user1@test.com,User One,user,short
-user2@test.com,User Two,user,ValidPassword123!";
+user2@test.com,User Two,user,ValidUnusualPwd123!";
 
         _mockUserRepository.Setup(r => r.ExistsByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
@@ -168,8 +168,8 @@ user2@test.com,User Two,user,ValidPassword123!";
     {
         // Arrange
         var csvContent = @"email,displayName,role,password
-,User One,user,Password123!
-user2@test.com,,user,Password456!
+,User One,user,UnusualPwd123!
+user2@test.com,,user,UnusualPwd456!
 user3@test.com,User Three,,Password789!
 user4@test.com,User Four,user,ValidPassword!";
 
@@ -195,7 +195,7 @@ user4@test.com,User Four,user,ValidPassword!";
             .Setup(r => r.ExistsByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException(sensitiveMessage));
 
-        var csvContent = "email,displayName,role,password\nuser@test.com,Test User,user,Password123!";
+        var csvContent = "email,displayName,role,password\nuser@test.com,Test User,user,UnusualPwd123!";
         var command = new BulkImportUsersCommand(csvContent, Guid.NewGuid());
 
         // Act & Assert
@@ -220,7 +220,7 @@ user4@test.com,User Four,user,ValidPassword!";
             .ThrowsAsync(new InvalidOperationException(sensitiveDbMessage));
 
         var email = "sensitive@user.com";
-        var csvContent = $"email,displayName,role,password\n{email},Test User,user,Password123!";
+        var csvContent = $"email,displayName,role,password\n{email},Test User,user,UnusualPwd123!";
         var command = new BulkImportUsersCommand(csvContent, Guid.NewGuid());
 
         // Act

@@ -84,10 +84,10 @@ internal static class IntegrationWebApplicationFactory
                         ["Authentication:SessionManagement:SessionExpirationDays"] = "30",
                         // Admin seeding
                         ["Admin:Email"] = "admin@test.local",
-                        ["Admin:Password"] = "TestAdmin123!",
+                        ["Admin:Password"] = "TestUnusualAdm123!",
                         ["Admin:DisplayName"] = "Test Admin",
                         ["INITIAL_ADMIN_EMAIL"] = "admin@test.local",
-                        ["INITIAL_ADMIN_PASSWORD"] = "TestAdmin123!",
+                        ["INITIAL_ADMIN_PASSWORD"] = "TestUnusualAdm123!",
                         ["INITIAL_ADMIN_DISPLAY_NAME"] = "Test Admin",
                         // Observability
                         ["Observability:Enabled"] = "false",

@@ -457,7 +457,7 @@ public class ConcurrentSessionSecurityTests : IDisposable
     {
         var user = new UserBuilder()
             .WithEmail($"test-{Guid.NewGuid()}@example.com")
-            .WithPassword("TestPassword123!")
+            .WithPassword("UniqueT3stPwd!")
             .WithDisplayName($"TestUser-{Guid.NewGuid():N}")
             .Build();
 

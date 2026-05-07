@@ -43,7 +43,7 @@ public class BulkPasswordResetSecurityTests
         _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(requester);
 
-        var command = new BulkPasswordResetCommand(userIds, "SecurePassword123!", requesterId);
+        var command = new BulkPasswordResetCommand(userIds, "SecureUnusualPwd123!", requesterId);
 
         var act = () => _handler.Handle(command, CancellationToken.None);
 
@@ -68,7 +68,7 @@ public class BulkPasswordResetSecurityTests
         _mockUserRepository.Setup(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var command = new BulkPasswordResetCommand(userIds, "SecurePassword123!", requesterId);
+        var command = new BulkPasswordResetCommand(userIds, "SecureUnusualPwd123!", requesterId);
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
@@ -94,7 +94,7 @@ public class BulkPasswordResetSecurityTests
         _mockUserRepository.Setup(r => r.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var command = new BulkPasswordResetCommand(userIds, "SecurePassword123!", requesterId);
+        var command = new BulkPasswordResetCommand(userIds, "SecureUnusualPwd123!", requesterId);
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
@@ -109,7 +109,7 @@ public class BulkPasswordResetSecurityTests
         var requesterId = Guid.NewGuid();
         var userIds = Enumerable.Range(0, 1001).Select(_ => Guid.NewGuid()).ToList();
 
-        var command = new BulkPasswordResetCommand(userIds, "SecurePassword123!", requesterId);
+        var command = new BulkPasswordResetCommand(userIds, "SecureUnusualPwd123!", requesterId);
 
         var act = () => _handler.Handle(command, CancellationToken.None);
 
@@ -127,7 +127,7 @@ public class BulkPasswordResetSecurityTests
         _mockUserRepository.Setup(r => r.GetByIdAsync(requesterId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
-        var command = new BulkPasswordResetCommand(userIds, "SecurePassword123!", requesterId);
+        var command = new BulkPasswordResetCommand(userIds, "SecureUnusualPwd123!", requesterId);
 
         // Act
         var act = () => _handler.Handle(command, CancellationToken.None);
@@ -152,7 +152,7 @@ public class BulkPasswordResetSecurityTests
             id: id,
             email: new Email(email),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Password123!"),
+            passwordHash: PasswordHash.Create("UnusualPwd123!"),
             role: userRole);
     }
 }

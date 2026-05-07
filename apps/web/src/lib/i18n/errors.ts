@@ -110,7 +110,7 @@ export const validationMessages = {
   emailRequired: 'L\'email è obbligatoria.',
   emailInvalid: 'Inserisci un indirizzo email valido.',
   passwordRequired: 'La password è obbligatoria.',
-  passwordTooShort: 'La password deve contenere almeno 8 caratteri.',
+  passwordTooShort: 'La password deve contenere almeno 12 caratteri.',
   passwordTooWeak: 'La password deve contenere lettere maiuscole, minuscole, numeri e caratteri speciali.',
   displayNameRequired: 'Il nome visualizzato è obbligatorio.',
   displayNameTooShort: 'Il nome deve contenere almeno 2 caratteri.',

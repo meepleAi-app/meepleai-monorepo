@@ -17,5 +17,10 @@ internal sealed class AdminDisable2FACommandValidator : AbstractValidator<AdminD
         RuleFor(x => x.TargetUserId)
             .NotEmpty()
             .WithMessage("Target user ID is required");
+
+        // I4: admin re-auth password required (verified server-side).
+        RuleFor(x => x.AdminPassword)
+            .NotEmpty()
+            .WithMessage("Admin password is required");
     }
 }

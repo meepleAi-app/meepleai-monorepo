@@ -81,7 +81,7 @@ public sealed class UnsuspendUserCommandHandlerIntegrationTests : IAsyncLifetime
             userId,
             new Email("user@example.com"),
             "Test User",
-            PasswordHash.Create("hashedPassword"),
+            PasswordHash.Create("hashedPwd1234"),
             Role.User
         );
         user.Suspend("Original suspension reason");
@@ -124,7 +124,7 @@ public sealed class UnsuspendUserCommandHandlerIntegrationTests : IAsyncLifetime
             userId,
             new Email("event@example.com"),
             "Event Test User",
-            PasswordHash.Create("hashedPassword"),
+            PasswordHash.Create("hashedPwd1234"),
             Role.User
         );
         user.Suspend("Event test");

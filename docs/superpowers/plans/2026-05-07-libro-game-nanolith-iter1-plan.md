@@ -391,30 +391,25 @@ Mirror del pattern `project_sp6_libro_game_mockups_wip.md`. Una riga in MEMORY.m
   agent,Nanolith Tutor,$agent_id,ACTIVE
   ```
 
-- [ ] **Step 9**: chmod +x + commit
-  ```bash
-  chmod +x infra/scripts/seed-nanolith-demo.sh
-  git add infra/scripts/seed-nanolith-demo.sh
-  git commit -m "feat(infra): add seed-nanolith-demo.sh (Sprint -1 G8-G11 automation)"
-  ```
+- [x] **Step 9**: chmod +x + commit (eseguito su branch `feature/nanolith-iter1-plan-extension`)
 
 ### Task S-1.2: Add Makefile target
 
 **Files:**
 - Modify: `infra/Makefile`
 
-- [ ] **Step 1**: aggiungi target dopo `seed-index`:
+- [x] **Step 1**: target aggiunto in `infra/Makefile` (vicino a `seed-games`):
   ```makefile
-  seed-nanolith-demo: ## Seed minimal state for Nanolith libro game demo (account + game + 2 KBs + agent)
-  	@./scripts/seed-nanolith-demo.sh local
+  seed-nanolith-demo: ## Sprint -1: seed Nanolith libro game demo
+  	bash scripts/seed-nanolith-demo.sh local
 
-  seed-nanolith-demo-staging: ## Same, against staging tunnel (requires SSH key)
-  	@./scripts/seed-nanolith-demo.sh staging
+  seed-nanolith-demo-staging: ## Same, against staging tunnel (requires SSH key + secrets)
+  	bash scripts/seed-nanolith-demo.sh staging
   ```
 
-- [ ] **Step 2**: aggiorna `make help` se serve
-- [ ] **Step 3**: smoke test su local stack pulito: `make dev && make seed-nanolith-demo`
-- [ ] **Step 4**: commit `chore(infra): add seed-nanolith-demo Makefile targets`
+- [x] **Step 2**: `make help` raccoglie i nuovi target dalla docstring `##`
+- [ ] **Step 3**: smoke test su local stack pulito (richiede `make dev` attivo): `make seed-nanolith-demo`
+- [x] **Step 4**: commit incluso in `feature/nanolith-iter1-plan-extension`
 
 ### Task S-1.3: bats test del seed script
 
@@ -423,9 +418,18 @@ Mirror del pattern `project_sp6_libro_game_mockups_wip.md`. Una riga in MEMORY.m
 
 Riusa pattern `snapshot-verify.bats`. Verifica che dopo `make seed-nanolith-demo` su DB pulito le 4 precondizioni Sprint 0 SO.1 passino (account, game, 2 PDF complete, agent active).
 
-- [ ] **Step 1**: scrivi 4 test case (uno per precondizione)
-- [ ] **Step 2**: aggiungi a CI matrix `infra/scripts/tests/` (se esiste run-tests script)
-- [ ] **Step 3**: commit `test(infra): bats test for seed-nanolith-demo`
+- [x] **Step 1**: 6 test case scritti in `infra/scripts/tests/seed-nanolith-demo.bats`:
+  - `exit 1 on invalid TARGET argument`
+  - `fail when Nanolith Rules PDF is missing`
+  - `fail when Nanolith Press Start PDF is missing`
+  - `fail when admin credentials are not configured`
+  - `credentials sourced from infra/secrets/admin.secret when env vars empty`
+  - `syntax: bash -n parses the script`
+
+  > **Scope nota**: i test coprono solo le pre-flight failure paths (dipendenze dichiarate, PDF presenti, credenziali admin). Il flusso live (login → create user → create game → upload PDF → poll → create agent) richiede stack attivo ed è validato manualmente via `make seed-nanolith-demo` con `make dev` running.
+
+- [ ] **Step 2**: opzionale aggiunta a CI matrix (richiede `bats-core` installato sull'agent)
+- [x] **Step 3**: commit incluso in `feature/nanolith-iter1-plan-extension`
 
 ### Task S-1.4: Update Sprint 0 SO.1 step "If missing: create via admin UI"
 

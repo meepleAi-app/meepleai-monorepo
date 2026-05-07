@@ -254,10 +254,21 @@ internal static class TwoFactorEndpoints
                 return Results.BadRequest(new { error = "invalid_target_user_id", message = "Invalid target user ID format" });
             }
 
+            // I4 (auth security fixes): admin re-auth with their own password.
+            if (string.IsNullOrWhiteSpace(request.AdminPassword))
+            {
+                return Results.BadRequest(new
+                {
+                    error = "admin_password_required",
+                    message = "Admin password is required to disable two-factor authentication for another user."
+                });
+            }
+
             // Execute admin 2FA disable via CQRS handler
             var command = new AdminDisable2FACommand(
                 AdminUserId: adminUserId,
-                TargetUserId: targetUserId
+                TargetUserId: targetUserId,
+                AdminPassword: request.AdminPassword
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);

@@ -169,8 +169,15 @@ internal static class AuthenticationEndpoints
                 return Results.Json(new { error = "Invalid email or password" }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
-            var sessionExpirationDays = (await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30).ConfigureAwait(false)) ?? 30;
-            var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
+            // I2 (auth security fixes): the Session aggregate is the source
+            // of truth for ExpiresAt. The endpoint used to recompute the
+            // expiration from Authentication:SessionManagement:SessionExpirationDays
+            // here, which could diverge from the value actually persisted on
+            // the user_sessions row (e.g. the Session aggregate's
+            // DefaultLifetime constant changes but the config doesn't, or a
+            // different code path mints sessions with a different lifetime).
+            // Now we use the value the handler echoed back from session.ExpiresAt.
+            var expiresAt = result.ExpiresAt ?? DateTime.UtcNow.AddDays(30);
             CookieHelpers.WriteSessionCookie(context, result.SessionToken, expiresAt);
             CookieHelpers.WriteUserRoleCookie(context, result.User.Role, expiresAt);
             logger.LogInformation("User {UserId} logged in successfully with role {Role}", result.User.Id, result.User.Role);

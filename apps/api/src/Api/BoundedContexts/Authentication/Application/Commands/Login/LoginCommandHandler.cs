@@ -127,7 +127,11 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
             RequiresTwoFactor: false,
             TempSessionToken: null,
             User: userDto,
-            SessionToken: sessionToken.Value
+            SessionToken: sessionToken.Value,
+            // I2: surface the Session aggregate's canonical expiration so
+            // the endpoint stops recomputing it from configuration (and
+            // potentially returning a value that doesn't match the DB row).
+            ExpiresAt: session.ExpiresAt
         );
     }
 

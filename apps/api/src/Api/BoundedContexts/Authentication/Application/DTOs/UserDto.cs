@@ -59,7 +59,13 @@ internal record LoginResponse(
     bool RequiresTwoFactor,
     string? TempSessionToken,
     UserDto? User,
-    string? SessionToken
+    string? SessionToken,
+    // I2 (auth security fixes): canonical session expiration. Mirrors the
+    // Session aggregate's ExpiresAt so the endpoint stops recomputing
+    // (and potentially diverging from) the real DB-side value when setting
+    // the response cookie. Null on the 2FA-required branch where no full
+    // session has been created yet.
+    DateTime? ExpiresAt = null
 );
 
 /// <summary>

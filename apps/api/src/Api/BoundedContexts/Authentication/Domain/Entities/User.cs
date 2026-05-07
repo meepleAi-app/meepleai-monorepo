@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.Middleware.Exceptions; // C3: ConflictException (HTTP 409 mapping)
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Enums; // Epic #4068: UserAccountStatus (moved to SharedKernel)
 using Api.SharedKernel.Domain.Entities;
@@ -321,8 +322,21 @@ public sealed class User : AggregateRoot<Guid>
     /// <summary>
     /// Changes the user's password (requires current password verification).
     /// </summary>
+    /// <exception cref="ConflictException">Thrown when the user is OAuth-only
+    /// (PasswordHash is null), so there is no current password to compare against.
+    /// Maps to HTTP 409 with an actionable message instead of a misleading 400
+    /// "Current password is incorrect".</exception>
     public void ChangePassword(string currentPassword, PasswordHash newPasswordHash)
     {
+        // C3: short-circuit OAuth-only users (PasswordHash == null) before
+        // VerifyPassword. Without this guard, VerifyPassword returns false
+        // (null-safe since #01) and the user gets the misleading
+        // "Current password is incorrect" error.
+        if (PasswordHash is null)
+            throw new ConflictException(
+                "Cannot change password for an OAuth-only account. " +
+                "Set a password via account settings first.");
+
         if (!VerifyPassword(currentPassword))
             throw new DomainException("Current password is incorrect");
 

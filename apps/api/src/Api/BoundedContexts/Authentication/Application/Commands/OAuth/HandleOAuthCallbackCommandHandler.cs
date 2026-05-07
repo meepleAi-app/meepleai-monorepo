@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Exceptions;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -33,6 +32,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
     private readonly IEncryptionService _encryptionService;
     private readonly TimeProvider _timeProvider;
     private readonly MeepleAiDbContext _db;
+    private readonly IUserRepository _userRepository;
 
     public HandleOAuthCallbackCommandHandler(
         IOAuthService oauthService,
@@ -40,7 +40,8 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         ILogger<HandleOAuthCallbackCommandHandler> logger,
         IEncryptionService encryptionService,
         TimeProvider timeProvider,
-        MeepleAiDbContext db)
+        MeepleAiDbContext db,
+        IUserRepository userRepository)
     {
         _oauthService = oauthService ?? throw new ArgumentNullException(nameof(oauthService));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
@@ -48,6 +49,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         _encryptionService = encryptionService ?? throw new ArgumentNullException(nameof(encryptionService));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
     }
 
     public async Task<HandleOAuthCallbackResult> Handle(HandleOAuthCallbackCommand command, CancellationToken cancellationToken)
@@ -453,29 +455,37 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
 
             if (user == null)
             {
-                // Create new user
+                // C3+I8: route OAuth provisioning through the User aggregate factory
+                // so the domain invariants (Email/Role value objects, defaults from
+                // the standard ctor) and the UserCreatedViaOAuthEvent domain event
+                // are produced. PasswordHash is left null — the canonical OAuth-only
+                // marker — replacing the legacy GenerateRandomPasswordHash() call
+                // which stamped a 32-byte random Base64 string that was never a
+                // valid PBKDF2 hash.
                 var emailParts = userInfo!.Email?.Split('@') ?? Array.Empty<string>();
                 var emailPrefix = emailParts.Length > 0 && !string.IsNullOrEmpty(emailParts[0])
                     ? emailParts[0]
                     : "User";
 
-                var now = _timeProvider.GetUtcNow().UtcDateTime;
-                user = new UserEntity
-                {
-                    Id = Guid.NewGuid(),
+                var domainUser = User.CreateForOAuth(
+                    id: Guid.NewGuid(),
 #pragma warning disable CS8602
-                    Email = userInfo.Email.ToLowerInvariant(),
+                    email: new Email(userInfo.Email.ToLowerInvariant()),
 #pragma warning restore CS8602
-                    DisplayName = userInfo.Name ?? emailPrefix,
-                    PasswordHash = GenerateRandomPasswordHash(),
-                    Role = UserRole.User.ToString(),
-                    CreatedAt = now,
-                    // Issue #3672: OAuth users have pre-verified emails from provider
-                    EmailVerified = true,
-                    EmailVerifiedAt = now
-                };
-                _db.Users.Add(user);
+                    displayName: userInfo.Name ?? emailPrefix,
+                    role: Role.User,
+                    tier: null,
+                    oauthProvider: providerLower,
+                    timeProvider: _timeProvider);
+
+                await _userRepository.AddAsync(domainUser, cancellationToken).ConfigureAwait(false);
                 await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+                // Re-fetch as tracked UserEntity for the OAuth account linking path
+                // below, which still works against the persistence model directly.
+                user = await _db.Users.AsTracking()
+                    .SingleAsync(u => u.Id == domainUser.Id, cancellationToken)
+                    .ConfigureAwait(false);
                 isNewUser = true;
                 _logger.LogInformation("Created new user via OAuth. Provider: {Provider}, UserId: {UserId}", provider, user.Id);
             }
@@ -582,14 +592,4 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Generates random password hash for OAuth-only users (business logic - moved from OAuthService)
-    /// </summary>
-    private static string GenerateRandomPasswordHash()
-    {
-        // For OAuth-only users, generate a random unguessable password hash
-        // They won't know the password and can only login via OAuth
-        var randomBytes = RandomNumberGenerator.GetBytes(32);
-        return Convert.ToBase64String(randomBytes);
-    }
 }

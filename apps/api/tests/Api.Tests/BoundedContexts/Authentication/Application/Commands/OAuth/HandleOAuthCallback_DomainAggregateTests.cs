@@ -69,13 +69,18 @@ public sealed class HandleOAuthCallback_DomainAggregateTests : IDisposable
 
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
 
+        var userRepository = new UserRepository(
+            _dbContext,
+            TestDbContextFactory.CreateMockEventCollector().Object);
+
         _handler = new HandleOAuthCallbackCommandHandler(
             _oauthServiceMock.Object,
             _mediatorMock.Object,
             _loggerMock.Object,
             _encryptionServiceMock.Object,
             _timeProviderMock.Object,
-            _dbContext);
+            _dbContext,
+            userRepository);
     }
 
     public void Dispose() => _dbContext.Dispose();

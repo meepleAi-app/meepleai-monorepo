@@ -117,8 +117,10 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var payload2 = new { Email = email, Password = "Password456!", DisplayName = "User 2" };
         var response = await _client.PostAsJsonAsync("/api/v1/auth/register", payload2);
 
-        // Assert - DomainException returns 400 BadRequest
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        // Assert - C5: the pre-flight email-existence check is removed; the DB
+        // unique-violation is now translated to a 409 ConflictException by
+        // RegisterCommandHandler instead of a 400 DomainException.
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]

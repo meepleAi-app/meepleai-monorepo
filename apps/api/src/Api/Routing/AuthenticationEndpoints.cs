@@ -103,7 +103,8 @@ internal static class AuthenticationEndpoints
                 DisplayName: displayName,
                 Role: null,
                 IpAddress: context.Connection.RemoteIpAddress?.ToString(),
-                UserAgent: context.Request.Headers.UserAgent.ToString());
+                UserAgent: context.Request.Headers.UserAgent.ToString(),
+                BootstrapToken: payload.BootstrapToken);
 
             logger.LogInformation("User registration attempt for {Email}", DataMasking.MaskEmail(payload.Email));
             var result = await mediator.Send(command, ct).ConfigureAwait(false);

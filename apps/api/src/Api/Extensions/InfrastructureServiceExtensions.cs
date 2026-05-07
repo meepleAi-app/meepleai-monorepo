@@ -443,6 +443,11 @@ internal static class InfrastructureServiceExtensions
         // Issue #3695: Daily database metrics snapshots for growth tracking
         services.AddHostedService<Infrastructure.BackgroundServices.DatabaseMetricsSnapshotService>();
 
+        // R6 (auth security fixes): periodic cleanup of expired / used temp
+        // 2FA sessions. Without this the temp_sessions table grows
+        // monotonically and slows the C6 atomic-update path over time.
+        services.AddHostedService<Infrastructure.BackgroundServices.CleanupExpiredTempSessionsService>();
+
         // Issue #936: Infisical secrets management client (POC)
         services.AddHttpClient("Infisical", client =>
         {

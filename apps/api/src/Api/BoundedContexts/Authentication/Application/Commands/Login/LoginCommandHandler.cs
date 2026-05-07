@@ -43,6 +43,16 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
         if (user == null)
             throw new DomainException("Invalid email or password");
 
+        // Issue #2886 + C2: gate the entire login flow on the account status BEFORE
+        // touching the lockout counter or VerifyPassword. CanAuthenticate() returns
+        // true only for Status == Active, covering Pending/Suspended/Banned (and
+        // future Deleted) under a single neutral "Account is not available" message
+        // so we don't (a) leak existence of pending invitations via the
+        // "Invalid email or password" branch, (b) increment the failed-login counter
+        // for accounts that must never authenticate, or (c) NRE on null PasswordHash.
+        if (!user.CanAuthenticate())
+            throw new DomainException("Account is not available");
+
         // Issue #3339: Check if account is locked out
         if (user.IsLockedOut())
         {
@@ -66,10 +76,6 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
 
         // Issue #3339: Reset failed attempts on successful login
         user.RecordSuccessfulLogin();
-
-        // Issue #2886: Check if user is suspended
-        if (user.IsSuspended)
-            throw new DomainException("Account is suspended");
 
         // Check if 2FA is required
         if (user.RequiresTwoFactor())

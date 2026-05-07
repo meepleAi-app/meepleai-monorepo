@@ -71,3 +71,10 @@ export type { DesktopDropFallbackLabels, DesktopDropFallbackProps } from './Desk
 // Iter 1.A — /play/[campaignId] shell
 export { GamebookPlayShell } from './GamebookPlayShell';
 export type { GamebookPlayShellProps } from './GamebookPlayShell';
+
+// Iter 1.A — New campaign dialog + Nanolith CTA
+export { NewCampaignDialog } from './NewCampaignDialog';
+export type { NewCampaignDialogProps } from './NewCampaignDialog';
+
+export { NanolithCampaignCTA } from './NanolithCampaignCTA';
+export type { NanolithCampaignCTAProps } from './NanolithCampaignCTA';

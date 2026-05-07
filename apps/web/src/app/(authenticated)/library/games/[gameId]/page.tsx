@@ -20,6 +20,7 @@ import { isGameTabId, type GameTabId } from '@/components/game-detail/tabs';
 import { GameTableSkeleton } from '@/components/library/game-table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
+import { NanolithCampaignCTA } from '@/components/v2/gamebook/NanolithCampaignCTA';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 
 import GameDetailMobile from './game-detail-mobile';
@@ -87,6 +88,11 @@ export default function LibraryGameDetailPage() {
 
   return (
     <div className="h-full">
+      {/* Iter 1.A: Nanolith libro game CTA — renders only for Nanolith, no-op for other games */}
+      <div className="px-4 pt-3">
+        <NanolithCampaignCTA gameId={gameId} gameTitle={gameDetail.gameTitle} />
+      </div>
+
       {/* Mobile layout — replaced by S5 */}
       <div className="lg:hidden">
         <GameDetailMobile gameId={gameId} />

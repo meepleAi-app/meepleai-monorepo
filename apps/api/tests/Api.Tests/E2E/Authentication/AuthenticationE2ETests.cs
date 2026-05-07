@@ -251,7 +251,7 @@ public sealed class AuthenticationE2ETests : E2ETestBase
     }
 
     [Fact]
-    public async Task Logout_WithoutSession_ReturnsSuccess()
+    public async Task Logout_WithoutSession_ReturnsUnauthorized()
     {
         // Arrange - No session
         ClearAuthentication();
@@ -259,8 +259,11 @@ public sealed class AuthenticationE2ETests : E2ETestBase
         // Act
         var response = await Client.PostAsync("/api/v1/auth/logout", null);
 
-        // Assert - Logout should succeed even without session (idempotent)
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        // Assert — R5 (auth security fixes): logout without a session used to
+        // return 200 OK (treated as idempotent). That obscured client-side
+        // bugs and metrics. The endpoint now returns 401 so callers can
+        // distinguish "nothing to revoke" from "revoke succeeded".
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     #endregion

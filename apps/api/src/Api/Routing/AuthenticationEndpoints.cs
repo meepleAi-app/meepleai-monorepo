@@ -192,13 +192,23 @@ internal static class AuthenticationEndpoints
         {
             var sessionCookieName = CookieHelpers.GetSessionCookieName(context);
 
-            if (context.Request.Cookies.TryGetValue(sessionCookieName, out var token) &&
-                !string.IsNullOrWhiteSpace(token))
+            // R5 (auth security fixes): a logout call without a session
+            // cookie is either a bug in the client or a probe — there is
+            // nothing to log out. Returning 200 OK was misleading because
+            // the response was indistinguishable from "I had a session and
+            // it's been revoked". Surface as 401 so clients (and metrics)
+            // can distinguish.
+            if (!context.Request.Cookies.TryGetValue(sessionCookieName, out var token) ||
+                string.IsNullOrWhiteSpace(token))
             {
-                var command = new DddLogoutCommand(SessionToken: token);
-                await mediator.Send(command, ct).ConfigureAwait(false);
-                logger.LogInformation("User logged out successfully");
+                CookieHelpers.RemoveSessionCookie(context);
+                CookieHelpers.RemoveUserRoleCookie(context);
+                return Results.Unauthorized();
             }
+
+            var command = new DddLogoutCommand(SessionToken: token);
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("User logged out successfully");
 
             CookieHelpers.RemoveSessionCookie(context);
             CookieHelpers.RemoveUserRoleCookie(context);

@@ -288,13 +288,17 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Logout_WithoutSession_StillReturnsOk()
+    public async Task Logout_WithoutSession_ReturnsUnauthorized()
     {
-        // Act - Logout without any session
+        // Act — logout without any session cookie present.
         var response = await _client.PostAsync("/api/v1/auth/logout", null);
 
-        // Assert - Should succeed even without session
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        // Assert — R5 (auth security fixes): logout without a session used to
+        // return 200 OK, indistinguishable from a successful revoke. That
+        // hid client-side bugs (stale UI calling logout twice, race between
+        // tab close and revoke). Now returns 401 so the caller can tell
+        // "I had nothing to revoke" apart from "revoke succeeded".
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // ========================================

@@ -367,7 +367,7 @@ public sealed class User : AggregateRoot<Guid>
     /// Suspends the user account. Suspended users cannot login.
     /// Epic #4068: Updated to use UserAccountStatus
     /// </summary>
-    public void Suspend(string? reason = null)
+    public void Suspend(string? reason = null, TimeProvider? timeProvider = null)
     {
         if (Status == UserAccountStatus.Suspended)
             throw new DomainException("User is already suspended");
@@ -376,7 +376,10 @@ public sealed class User : AggregateRoot<Guid>
 
         Status = UserAccountStatus.Suspended;
         IsSuspended = true;
-        SuspendedAt = DateTime.UtcNow;
+        // R2: optional TimeProvider; defaults to TimeProvider.System for
+        // backward compatibility with the 100+ existing call sites that
+        // don't pass one.
+        SuspendedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         SuspendReason = reason;
         AddDomainEvent(new UserSuspendedEvent(Id, reason));
     }
@@ -384,14 +387,15 @@ public sealed class User : AggregateRoot<Guid>
     /// <summary>
     /// Bans the user account permanently (Epic #4068)
     /// </summary>
-    public void Ban(string reason)
+    public void Ban(string reason, TimeProvider? timeProvider = null)
     {
         if (Status == UserAccountStatus.Banned)
             throw new DomainException("User is already banned");
 
         Status = UserAccountStatus.Banned;
         IsSuspended = true; // Maintain backward compat
-        SuspendedAt = DateTime.UtcNow;
+        // R2: optional TimeProvider for testability.
+        SuspendedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         SuspendReason = reason;
         AddDomainEvent(new UserSuspendedEvent(Id, reason)); // Reuse event
     }
@@ -653,9 +657,10 @@ public sealed class User : AggregateRoot<Guid>
     /// </summary>
     /// <param name="totpSecret">Encrypted TOTP secret value object.</param>
     /// <param name="backupCodes">List of backup code value objects (optional for testing).</param>
+    /// <param name="timeProvider">Optional TimeProvider for testability (R2). Defaults to TimeProvider.System.</param>
     /// <exception cref="ArgumentNullException">Thrown when totpSecret is null.</exception>
     /// <exception cref="DomainException">Thrown when 2FA is already enabled or backup codes are invalid.</exception>
-    public void Enable2FA(TotpSecret totpSecret, List<BackupCode>? backupCodes = null)
+    public void Enable2FA(TotpSecret totpSecret, List<BackupCode>? backupCodes = null, TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(totpSecret);
 
@@ -669,7 +674,8 @@ public sealed class User : AggregateRoot<Guid>
 
         TotpSecret = totpSecret;
         IsTwoFactorEnabled = true;
-        TwoFactorEnabledAt = DateTime.UtcNow;
+        // R2: optional TimeProvider for testability.
+        TwoFactorEnabledAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
 
         // Replace backup codes if provided
         _backupCodes.Clear();

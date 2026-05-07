@@ -135,7 +135,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         var command = new AdminDisable2FACommand(
             AdminUserId: adminUser.Id,
-            TargetUserId: targetUser.Id, AdminPassword: "DefaultPassword123!");
+            TargetUserId: targetUser.Id, AdminPassword: "DefaultUnusualPwd123!");
 
         // Act
         _output("Executing AdminDisable2FACommand...");
@@ -217,7 +217,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         var command = new AdminDisable2FACommand(
             AdminUserId: adminUser.Id,
-            TargetUserId: targetUser.Id, AdminPassword: "DefaultPassword123!");
+            TargetUserId: targetUser.Id, AdminPassword: "DefaultUnusualPwd123!");
 
         // Act
         await _mediator!.Send(command, TestCancellationToken);
@@ -243,7 +243,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         var command = new AdminDisable2FACommand(
             AdminUserId: editorUser.Id,
-            TargetUserId: targetUser.Id, AdminPassword: "DefaultPassword123!");
+            TargetUserId: targetUser.Id, AdminPassword: "DefaultUnusualPwd123!");
 
         // Act
         var result = await _mediator!.Send(command, TestCancellationToken);
@@ -283,7 +283,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         var command = new AdminDisable2FACommand(
             AdminUserId: nonExistentAdminId,
-            TargetUserId: targetUser.Id, AdminPassword: "DefaultPassword123!");
+            TargetUserId: targetUser.Id, AdminPassword: "DefaultUnusualPwd123!");
 
         // Act
         var result = await _mediator!.Send(command, TestCancellationToken);
@@ -305,7 +305,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         var command = new AdminDisable2FACommand(
             AdminUserId: adminUser.Id,
-            TargetUserId: nonExistentTargetId, AdminPassword: "DefaultPassword123!");
+            TargetUserId: nonExistentTargetId, AdminPassword: "DefaultUnusualPwd123!");
 
         // Act
         var result = await _mediator!.Send(command, TestCancellationToken);
@@ -338,7 +338,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         var command = new AdminDisable2FACommand(
             AdminUserId: adminUser.Id,
-            TargetUserId: targetUserWithout2FA.Id, AdminPassword: "DefaultPassword123!");
+            TargetUserId: targetUserWithout2FA.Id, AdminPassword: "DefaultUnusualPwd123!");
 
         // Act
         var result = await _mediator!.Send(command, TestCancellationToken);
@@ -370,7 +370,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
 
         var command = new AdminDisable2FACommand(
             AdminUserId: adminUser.Id,
-            TargetUserId: adminUser.Id, AdminPassword: "DefaultPassword123!"); // Same user
+            TargetUserId: adminUser.Id, AdminPassword: "DefaultUnusualPwd123!"); // Same user
 
         // Act
         var result = await _mediator!.Send(command, TestCancellationToken);

@@ -42,7 +42,7 @@ public class BulkPasswordResetCommandHandlerTests
         var userId1 = Guid.NewGuid();
         var userId2 = Guid.NewGuid();
         var requesterId = Guid.NewGuid();
-        var newPassword = "NewSecurePassword123!";
+        var newPassword = "NewSecureUnusualPwd123!";
 
         var user1 = CreateTestUser(userId1, "user1@test.com");
         var user2 = CreateTestUser(userId2, "user2@test.com");
@@ -81,7 +81,7 @@ public class BulkPasswordResetCommandHandlerTests
         var userId1 = Guid.NewGuid();
         var userId2 = Guid.NewGuid();
         var requesterId = Guid.NewGuid();
-        var newPassword = "NewSecurePassword123!";
+        var newPassword = "NewSecureUnusualPwd123!";
 
         var user1 = CreateTestUser(userId1, "user1@test.com");
 
@@ -118,7 +118,7 @@ public class BulkPasswordResetCommandHandlerTests
         // Arrange
         var command = new BulkPasswordResetCommand(
             new List<Guid>(),
-            "NewPassword123!",
+            "NewUnusualPwd123!",
             Guid.NewGuid()
         );
 
@@ -134,7 +134,7 @@ public class BulkPasswordResetCommandHandlerTests
         var userIds = Enumerable.Range(0, 1001).Select(_ => Guid.NewGuid()).ToList();
         var command = new BulkPasswordResetCommand(
             userIds,
-            "NewPassword123!",
+            "NewUnusualPwd123!",
             Guid.NewGuid()
         );
 
@@ -175,7 +175,7 @@ public class BulkPasswordResetCommandHandlerTests
 
         var command = new BulkPasswordResetCommand(
             new List<Guid> { userId, userId, userId },
-            "NewPassword123!",
+            "NewUnusualPwd123!",
             requesterId
         );
 
@@ -208,7 +208,7 @@ public class BulkPasswordResetCommandHandlerTests
 
         var command = new BulkPasswordResetCommand(
             new List<Guid> { userId },
-            "NewPassword123!",
+            "NewUnusualPwd123!",
             requesterId
         );
 
@@ -244,7 +244,7 @@ public class BulkPasswordResetCommandHandlerTests
 
         var command = new BulkPasswordResetCommand(
             new List<Guid> { userId },
-            "NewPassword123!",
+            "NewUnusualPwd123!",
             requesterId
         );
 
@@ -263,7 +263,7 @@ public class BulkPasswordResetCommandHandlerTests
             id: id,
             email: new Email(email),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("OldPassword123!"),
+            passwordHash: PasswordHash.Create("OldUnusualPwd123!"),
             role: Role.User
         );
     }
@@ -274,7 +274,7 @@ public class BulkPasswordResetCommandHandlerTests
             id: id,
             email: new Email("superadmin@test.com"),
             displayName: "Super Admin",
-            passwordHash: PasswordHash.Create("SuperAdminPassword123!"),
+            passwordHash: PasswordHash.Create("SuperAdminUnusualPwd123!"),
             role: Role.SuperAdmin
         );
     }

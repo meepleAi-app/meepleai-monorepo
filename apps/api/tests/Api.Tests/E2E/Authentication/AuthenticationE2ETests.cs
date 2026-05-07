@@ -33,7 +33,7 @@ public sealed class AuthenticationE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"testuser_{Guid.NewGuid():N}@example.com";
-        var password = "ValidPassword123!";
+        var password = "ValidUnusualPwd123!";
         var displayName = "Test User";
 
         // Act
@@ -55,7 +55,7 @@ public sealed class AuthenticationE2ETests : E2ETestBase
     {
         // Arrange - First registration
         var email = $"duplicate_{Guid.NewGuid():N}@example.com";
-        var password = "ValidPassword123!";
+        var password = "ValidUnusualPwd123!";
         await RegisterUserAsync(email, password);
 
         // Clear cookies for second registration attempt
@@ -70,8 +70,8 @@ public sealed class AuthenticationE2ETests : E2ETestBase
     }
 
     [Theory]
-    [InlineData("", "ValidPassword123!", "Email")]  // Changed to match actual API error "Email is required"
-    [InlineData("invalid-email", "ValidPassword123!", "email")]  // Changed to match "valid email address"
+    [InlineData("", "ValidUnusualPwd123!", "Email")]  // Changed to match actual API error "Email is required"
+    [InlineData("invalid-email", "ValidUnusualPwd123!", "email")]  // Changed to match "valid email address"
     [InlineData("valid@email.com", "short", "Password")]  // Changed to match actual API error
     public async Task Register_WithInvalidInput_ReturnsBadRequest(string email, string password, string expectedError)
     {
@@ -96,7 +96,7 @@ public sealed class AuthenticationE2ETests : E2ETestBase
     {
         // Arrange - Create user first
         var email = $"logintest_{Guid.NewGuid():N}@example.com";
-        var password = "ValidPassword123!";
+        var password = "ValidUnusualPwd123!";
         await RegisterUserAsync(email, password);
 
         // Clear cookies for login test
@@ -115,13 +115,13 @@ public sealed class AuthenticationE2ETests : E2ETestBase
     {
         // Arrange - Create user first
         var email = $"wrongpass_{Guid.NewGuid():N}@example.com";
-        var password = "ValidPassword123!";
+        var password = "ValidUnusualPwd123!";
         await RegisterUserAsync(email, password);
 
         ClearAuthentication();
 
         // Act
-        var payload = new { email, password = "WrongPassword123!" };
+        var payload = new { email, password = "WrongUnusualPwd123!" };
         var response = await Client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Assert - May return BadRequest or Unauthorized depending on API implementation
@@ -135,7 +135,7 @@ public sealed class AuthenticationE2ETests : E2ETestBase
         var payload = new
         {
             email = $"nonexistent_{Guid.NewGuid():N}@example.com",
-            password = "AnyPassword123!"
+            password = "AnyUnusualPwd123!"
         };
 
         // Act
@@ -150,7 +150,7 @@ public sealed class AuthenticationE2ETests : E2ETestBase
     {
         // Arrange - Register with lowercase
         var email = $"casetest_{Guid.NewGuid():N}@example.com";
-        var password = "ValidPassword123!";
+        var password = "ValidUnusualPwd123!";
         await RegisterUserAsync(email.ToLowerInvariant(), password);
 
         ClearAuthentication();
@@ -171,7 +171,7 @@ public sealed class AuthenticationE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"sessionstatus_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
 
         SetSessionCookie(sessionToken);
 
@@ -206,7 +206,7 @@ public sealed class AuthenticationE2ETests : E2ETestBase
         // Arrange
         var email = $"metest_{Guid.NewGuid():N}@example.com";
         var displayName = "Me Test User";
-        var (sessionToken, userId) = await RegisterUserAsync(email, "ValidPassword123!", displayName);
+        var (sessionToken, userId) = await RegisterUserAsync(email, "ValidUnusualPwd123!", displayName);
 
         SetSessionCookie(sessionToken);
 
@@ -232,7 +232,7 @@ public sealed class AuthenticationE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"logout_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
 
         SetSessionCookie(sessionToken);
 
@@ -275,7 +275,7 @@ public sealed class AuthenticationE2ETests : E2ETestBase
     {
         // Step 1: Register
         var email = $"journey_{Guid.NewGuid():N}@example.com";
-        var password = "JourneyPassword123!";
+        var password = "JourneyUnusualPwd123!";
         var (registrationToken, userId) = await RegisterUserAsync(email, password);
 
         registrationToken.Should().NotBeNullOrEmpty();
@@ -309,7 +309,7 @@ public sealed class AuthenticationE2ETests : E2ETestBase
     {
         // Register user
         var email = $"multisession_{Guid.NewGuid():N}@example.com";
-        var password = "MultiPassword123!";
+        var password = "MultiUnusualPwd123!";
         var (session1Token, userId) = await RegisterUserAsync(email, password);
 
         // Clear and login again (simulating different device)

@@ -85,7 +85,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var payload = new
         {
             Email = $"test-{Guid.NewGuid():N}@test.com",
-            Password = "SecurePassword123!",
+            Password = "SecureUnusualPwd123!",
             DisplayName = "Test User"
         };
 
@@ -114,7 +114,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         await _client.PostAsJsonAsync("/api/v1/auth/register", payload1);
 
         // Act - Try to register same email
-        var payload2 = new { Email = email, Password = "Password456!", DisplayName = "User 2" };
+        var payload2 = new { Email = email, Password = "UnusualPwd456!", DisplayName = "User 2" };
         var response = await _client.PostAsJsonAsync("/api/v1/auth/register", payload2);
 
         // Assert - C5: the pre-flight email-existence check is removed; the DB
@@ -148,7 +148,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var payload = new
         {
             Email = "not-an-email",
-            Password = "SecurePassword123!",
+            Password = "SecureUnusualPwd123!",
             DisplayName = "Test User"
         };
 
@@ -168,7 +168,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
     {
         // Arrange - Register user first
         var email = $"login-{Guid.NewGuid():N}@test.com";
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
         await _client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             Email = email,
@@ -203,7 +203,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         await _client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             Email = email,
-            Password = "CorrectPassword123!",
+            Password = "CorrectUnusualPwd123!",
             DisplayName = "Test User"
         });
 
@@ -211,7 +211,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new
         {
             Email = email,
-            Password = "WrongPassword123!"
+            Password = "WrongUnusualPwd123!"
         });
 
         // Assert - DomainException "Invalid email or password" returns 400 BadRequest
@@ -255,7 +255,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
     {
         // Arrange - Register and login to get session
         var email = $"logout-{Guid.NewGuid():N}@test.com";
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
         await _client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             Email = email,
@@ -310,7 +310,7 @@ public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime
     {
         // Arrange - Register and login
         var email = $"me-{Guid.NewGuid():N}@test.com";
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
         var displayName = "Me Test User";
 
         await _client.PostAsJsonAsync("/api/v1/auth/register", new

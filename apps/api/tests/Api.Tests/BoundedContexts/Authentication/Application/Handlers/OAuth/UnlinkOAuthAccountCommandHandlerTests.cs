@@ -261,7 +261,7 @@ public class UnlinkOAuthAccountCommandHandlerTests
             id: userId,
             email: new Email("oauth@example.com"),
             displayName: "OAuth User",
-            passwordHash: PasswordHash.Create("TempPassword123!"),
+            passwordHash: PasswordHash.Create("TempUnusualPwd123!"),
             role: Role.User
         );
 

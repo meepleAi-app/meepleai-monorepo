@@ -19,7 +19,7 @@ public sealed class PasswordHashTests
     public void Create_WithValidPassword_CreatesHash()
     {
         // Arrange
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
 
         // Act
         var hash = PasswordHash.Create(password);
@@ -110,7 +110,7 @@ public sealed class PasswordHashTests
     public void Create_ProducesUniqueHashesForSamePassword()
     {
         // Arrange - same password
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
 
         // Act - create multiple hashes
         var hash1 = PasswordHash.Create(password);
@@ -124,7 +124,7 @@ public sealed class PasswordHashTests
     public void Create_HashContainsFourParts()
     {
         // Arrange
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
 
         // Act
         var hash = PasswordHash.Create(password);
@@ -142,7 +142,7 @@ public sealed class PasswordHashTests
     public void FromStored_WithValidStoredHash_ReturnsPasswordHash()
     {
         // Arrange
-        var originalHash = PasswordHash.Create("SecurePassword123!");
+        var originalHash = PasswordHash.Create("SecureUnusualPwd123!");
         var storedValue = originalHash.Value;
 
         // Act
@@ -182,7 +182,7 @@ public sealed class PasswordHashTests
     public void Verify_WithCorrectPassword_ReturnsTrue()
     {
         // Arrange
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
         var hash = PasswordHash.Create(password);
 
         // Act
@@ -196,7 +196,7 @@ public sealed class PasswordHashTests
     public void Verify_WithIncorrectPassword_ReturnsFalse()
     {
         // Arrange
-        var hash = PasswordHash.Create("SecurePassword123!");
+        var hash = PasswordHash.Create("SecureUnusualPwd123!");
 
         // Act
         var result = hash.Verify("WrongPassword!");
@@ -209,7 +209,7 @@ public sealed class PasswordHashTests
     public void Verify_WithEmptyPassword_ReturnsFalse()
     {
         // Arrange
-        var hash = PasswordHash.Create("SecurePassword123!");
+        var hash = PasswordHash.Create("SecureUnusualPwd123!");
 
         // Act
         var result = hash.Verify("");
@@ -222,7 +222,7 @@ public sealed class PasswordHashTests
     public void Verify_WithWhitespacePassword_ReturnsFalse()
     {
         // Arrange
-        var hash = PasswordHash.Create("SecurePassword123!");
+        var hash = PasswordHash.Create("SecureUnusualPwd123!");
 
         // Act
         var result = hash.Verify("   ");
@@ -235,7 +235,7 @@ public sealed class PasswordHashTests
     public void Verify_WithCaseSensitivePassword_ReturnsFalseForWrongCase()
     {
         // Arrange
-        var hash = PasswordHash.Create("SecurePassword123!");
+        var hash = PasswordHash.Create("SecureUnusualPwd123!");
 
         // Act - wrong case
         var result = hash.Verify("SECUREPASSWORD123!");
@@ -248,7 +248,7 @@ public sealed class PasswordHashTests
     public void Verify_WithReconstructedHash_WorksCorrectly()
     {
         // Arrange
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
         var original = PasswordHash.Create(password);
         var reconstructed = PasswordHash.FromStored(original.Value);
 
@@ -293,7 +293,7 @@ public sealed class PasswordHashTests
     public void Equals_WithSameHashValue_ReturnsTrue()
     {
         // Arrange
-        var originalHash = PasswordHash.Create("SecurePassword123!");
+        var originalHash = PasswordHash.Create("SecureUnusualPwd123!");
         var hash1 = PasswordHash.FromStored(originalHash.Value);
         var hash2 = PasswordHash.FromStored(originalHash.Value);
 
@@ -304,7 +304,7 @@ public sealed class PasswordHashTests
     [Fact]
     public void Equals_WithDifferentHashValues_ReturnsFalse()
     {
-        // Arrange — "Password123!" is in the I7 blocklist; pick a
+        // Arrange — "UnusualPwd123!" is in the I7 blocklist; pick a
         // length-compliant non-common password instead.
         var hash1 = PasswordHash.Create("UnusualUniqueP4ssword!");
         var hash2 = PasswordHash.Create("UnusualUniqueP4ssword!");
@@ -317,7 +317,7 @@ public sealed class PasswordHashTests
     public void GetHashCode_WithSameValue_ReturnsSameHash()
     {
         // Arrange
-        var originalHash = PasswordHash.Create("SecurePassword123!");
+        var originalHash = PasswordHash.Create("SecureUnusualPwd123!");
         var hash1 = PasswordHash.FromStored(originalHash.Value);
         var hash2 = PasswordHash.FromStored(originalHash.Value);
 
@@ -333,7 +333,7 @@ public sealed class PasswordHashTests
     public void ToString_ReturnsRedacted()
     {
         // Arrange
-        var hash = PasswordHash.Create("SecurePassword123!");
+        var hash = PasswordHash.Create("SecureUnusualPwd123!");
 
         // Act
         var result = hash.ToString();
@@ -353,7 +353,7 @@ public sealed class PasswordHashTests
         // was removed because it silently bypassed ToString() = "[REDACTED]"
         // and could leak the stored hash through any string-typed sink.
         // Callers must reach for .Value explicitly.
-        var hash = PasswordHash.Create("SecurePassword123!");
+        var hash = PasswordHash.Create("SecureUnusualPwd123!");
 
         hash.Value.Should().StartWith("v1.");
         hash.ToString().Should().Be("[REDACTED]",

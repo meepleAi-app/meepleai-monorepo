@@ -39,7 +39,7 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "newuser@example.com",
-            "SecurePassword123!",
+            "SecureUnusualPwd123!",
             "Test User",
             Role.User.Value
         );
@@ -70,7 +70,7 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "admin@example.com",
-            "SecurePassword123!",
+            "SecureUnusualPwd123!",
             "Admin User",
             Role.Admin.Value
         );
@@ -96,7 +96,7 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "existing@example.com",
-            "SecurePassword123!",
+            "SecureUnusualPwd123!",
             "Test User",
             Role.User.Value
         );
@@ -105,7 +105,7 @@ public class CreateUserCommandHandlerTests
             Guid.NewGuid(),
             new Email("existing@example.com"),
             "Existing User",
-            PasswordHash.Create("OldPassword123!"),
+            PasswordHash.Create("OldUnusualPwd123!"),
             Role.User
         );
 
@@ -133,7 +133,7 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "editor@example.com",
-            "SecurePassword123!",
+            "SecureUnusualPwd123!",
             "Editor User",
             Role.Editor.Value
         );
@@ -156,7 +156,7 @@ public class CreateUserCommandHandlerTests
         // Arrange
         var command = new CreateUserCommand(
             "user@example.com",
-            "SecurePassword123!",
+            "SecureUnusualPwd123!",
             "  Test User  ", // Whitespace to be trimmed
             Role.User.Value
         );

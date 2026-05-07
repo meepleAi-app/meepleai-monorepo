@@ -22,7 +22,7 @@ public sealed class ResetPasswordCommandValidatorTests
         var command = new ResetPasswordCommand
         {
             Token = Guid.NewGuid().ToString(),
-            NewPassword = "NewPassword123!"
+            NewPassword = "NewUnusualPwd123!"
         };
 
         // Act
@@ -41,7 +41,7 @@ public sealed class ResetPasswordCommandValidatorTests
         var command = new ResetPasswordCommand
         {
             Token = token!,
-            NewPassword = "NewPassword123!"
+            NewPassword = "NewUnusualPwd123!"
         };
 
         // Act
@@ -63,7 +63,7 @@ public sealed class ResetPasswordCommandValidatorTests
         var command = new ResetPasswordCommand
         {
             Token = token,
-            NewPassword = "NewPassword123!"
+            NewPassword = "NewUnusualPwd123!"
         };
 
         // Act
@@ -81,7 +81,7 @@ public sealed class ResetPasswordCommandValidatorTests
         var command = new ResetPasswordCommand
         {
             Token = "12345678-1234-1234-1234-123456789abc",
-            NewPassword = "NewPassword123!"
+            NewPassword = "NewUnusualPwd123!"
         };
 
         // Act
@@ -98,7 +98,7 @@ public sealed class ResetPasswordCommandValidatorTests
         var command = new ResetPasswordCommand
         {
             Token = "12345678123412341234123456789abc",
-            NewPassword = "NewPassword123!"
+            NewPassword = "NewUnusualPwd123!"
         };
 
         // Act

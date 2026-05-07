@@ -59,7 +59,7 @@ public sealed class ChangePasswordCommandHandler_SessionRevokeTests
         {
             UserId = user.Id,
             CurrentPassword = currentPassword,
-            NewPassword = "BrandNewPassword123!",
+            NewPassword = "BrandNewUnusualPwd123!",
             CurrentSessionId = currentSessionId,
             IncludeCurrentInRevoke = false,
         };
@@ -98,7 +98,7 @@ public sealed class ChangePasswordCommandHandler_SessionRevokeTests
         {
             UserId = user.Id,
             CurrentPassword = currentPassword,
-            NewPassword = "BrandNewPassword123!",
+            NewPassword = "BrandNewUnusualPwd123!",
             CurrentSessionId = Guid.NewGuid(),
             IncludeCurrentInRevoke = true,
         };
@@ -134,7 +134,7 @@ public sealed class ChangePasswordCommandHandler_SessionRevokeTests
         {
             UserId = user.Id,
             CurrentPassword = currentPassword,
-            NewPassword = "BrandNewPassword123!",
+            NewPassword = "BrandNewUnusualPwd123!",
             CurrentSessionId = null,
             IncludeCurrentInRevoke = false,
         };
@@ -151,7 +151,7 @@ public sealed class ChangePasswordCommandHandler_SessionRevokeTests
 
     private static (User user, string currentPassword) SeedUserWithPassword()
     {
-        const string password = "OldPassword123!";
+        const string password = "OldUnusualPwd123!";
         var user = new User(
             id: Guid.NewGuid(),
             email: new Email("user@test.local"),

@@ -50,7 +50,7 @@ internal static class AdminUserFactory
     /// <param name="factory">WebApplicationFactory for accessing services</param>
     /// <param name="client">HttpClient for making API requests</param>
     /// <param name="email">Optional custom email (defaults to unique test email)</param>
-    /// <param name="password">Optional custom password (defaults to "Admin123!")</param>
+    /// <param name="password">Optional custom password (defaults to "UnusualAdm123!")</param>
     /// <param name="displayName">Optional custom display name (defaults to "Admin User")</param>
     /// <returns>Tuple of (User ID, Authentication cookie string)</returns>
     public static async Task<(Guid userId, string cookie)>
@@ -62,7 +62,7 @@ internal static class AdminUserFactory
             string? displayName = null)
     {
         var adminEmail = email ?? $"admin-{Guid.NewGuid():N}@test.com";
-        var adminPassword = password ?? "Admin123!";
+        var adminPassword = password ?? "UnusualAdm123!";
         var adminDisplayName = displayName ?? "Admin User";
 
         // Step 1: Register user via API (gets session cookie)

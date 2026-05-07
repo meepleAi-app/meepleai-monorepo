@@ -177,7 +177,7 @@ public sealed class HandleOAuthCallback_DomainAggregateTests : IDisposable
             oauthProvider: "google",
             timeProvider: TimeProvider.System);
 
-        var newHash = PasswordHash.Create("BrandNewPassword123!");
+        var newHash = PasswordHash.Create("BrandNewUnusualPwd123!");
 
         var act = () => oauthUser.ChangePassword("anything", newHash);
 

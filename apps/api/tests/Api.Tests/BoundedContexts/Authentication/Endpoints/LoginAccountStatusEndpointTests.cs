@@ -89,7 +89,7 @@ public sealed class LoginAccountStatusEndpointTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync(Endpoint, new
         {
             Email = email,
-            Password = "AnyPassword123!"
+            Password = "AnyUnusualPwd123!"
         });
 
         // Assert — DomainException → 400. Message must be the unified "Account is not
@@ -106,7 +106,7 @@ public sealed class LoginAccountStatusEndpointTests : IAsyncLifetime
     public async Task Login_SuspendedUser_ReturnsAccountNotAvailable()
     {
         var email = $"suspended-{Guid.NewGuid():N}@test.local";
-        const string password = "ValidPassword123!";
+        const string password = "ValidUnusualPwd123!";
         await SeedActiveUserAsync(email, password, applyStatus: u => u.Suspend("test"));
 
         var response = await _client.PostAsJsonAsync(Endpoint, new
@@ -127,7 +127,7 @@ public sealed class LoginAccountStatusEndpointTests : IAsyncLifetime
     public async Task Login_BannedUser_ReturnsAccountNotAvailable()
     {
         var email = $"banned-{Guid.NewGuid():N}@test.local";
-        const string password = "ValidPassword123!";
+        const string password = "ValidUnusualPwd123!";
         await SeedActiveUserAsync(email, password, applyStatus: u => u.Ban("test"));
 
         var response = await _client.PostAsJsonAsync(Endpoint, new
@@ -149,7 +149,7 @@ public sealed class LoginAccountStatusEndpointTests : IAsyncLifetime
     {
         // Regression guard: Active users must keep passing the new CanAuthenticate gate.
         var email = $"active-{Guid.NewGuid():N}@test.local";
-        const string password = "ValidPassword123!";
+        const string password = "ValidUnusualPwd123!";
         await SeedActiveUserAsync(email, password);
 
         var response = await _client.PostAsJsonAsync(Endpoint, new

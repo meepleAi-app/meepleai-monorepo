@@ -140,7 +140,7 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
             id: Guid.NewGuid(),
             email: Email.Parse("test@meepleai.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("InitialPassword123!"),
+            passwordHash: PasswordHash.Create("InitialUnusualPwd123!"),
             role: Role.User
         );
 
@@ -148,11 +148,11 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
         user.ClearDomainEvents();
 
         // Change password twice (raises 2 PasswordChangedEvents)
-        var newPassword1 = PasswordHash.Create("NewPassword123!");
-        var newPassword2 = PasswordHash.Create("FinalPassword123!");
+        var newPassword1 = PasswordHash.Create("NewUnusualPwd123!");
+        var newPassword2 = PasswordHash.Create("FinalUnusualPwd123!");
 
-        user.ChangePassword("InitialPassword123!", newPassword1);
-        user.ChangePassword("NewPassword123!", newPassword2);
+        user.ChangePassword("InitialUnusualPwd123!", newPassword1);
+        user.ChangePassword("NewUnusualPwd123!", newPassword2);
 
         user.DomainEvents.Should().HaveCount(2);
 
@@ -240,7 +240,7 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
             id: Guid.NewGuid(),
             email: Email.Parse("admin@meepleai.com"),
             displayName: "Admin User",
-            passwordHash: PasswordHash.Create("AdminPassword123!"),
+            passwordHash: PasswordHash.Create("AdminUnusualPwd123!"),
             role: Role.User
         );
 

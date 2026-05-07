@@ -17,7 +17,7 @@ namespace Api.Tests.Benchmarks;
 [Trait("BoundedContext", "Authentication")]
 public class PasswordHashBaselineTests
 {
-    private const string TestPassword = "BaselinePassword123!";
+    private const string TestPassword = "BaselineUnusualPwd123!";
     private const int Samples = 5;
 
     [Fact(Skip = "Performance baseline — run locally to capture timings; do not run in CI.")]

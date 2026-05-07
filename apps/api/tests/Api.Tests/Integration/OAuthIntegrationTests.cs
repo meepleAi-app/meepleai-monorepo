@@ -156,7 +156,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             userId,
             email,
             "New OAuth User",
-            PasswordHash.Create("TempPassword123!"), // Temp password for new OAuth users
+            PasswordHash.Create("TempUnusualPwd123!"), // Temp password for new OAuth users
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -208,7 +208,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             userId,
             email,
             "Existing User",
-            PasswordHash.Create("ExistingPassword123!"),
+            PasswordHash.Create("ExistingUnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);

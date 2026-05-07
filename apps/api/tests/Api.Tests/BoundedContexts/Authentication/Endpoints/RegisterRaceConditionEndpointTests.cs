@@ -113,7 +113,7 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
             new
             {
                 Email = email,
-                Password = "ValidPassword123!",
+                Password = "ValidUnusualPwd123!",
                 DisplayName = $"Racer {i}"
             }))).ToArray();
 
@@ -151,7 +151,7 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync(Endpoint, new
         {
             Email = email,
-            Password = "ValidPassword123!",
+            Password = "ValidUnusualPwd123!",
             DisplayName = "First Admin",
             BootstrapToken
         });
@@ -170,7 +170,7 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync(Endpoint, new
         {
             Email = email,
-            Password = "ValidPassword123!",
+            Password = "ValidUnusualPwd123!",
             DisplayName = "Plain User"
         });
 
@@ -186,7 +186,7 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync(Endpoint, new
         {
             Email = email,
-            Password = "ValidPassword123!",
+            Password = "ValidUnusualPwd123!",
             DisplayName = "Wrong Token",
             BootstrapToken = BootstrapToken + "-tampered"
         });
@@ -208,7 +208,7 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync(Endpoint, new
         {
             Email = email,
-            Password = "ValidPassword123!",
+            Password = "ValidUnusualPwd123!",
             DisplayName = "First User No Token"
         });
 
@@ -233,7 +233,7 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
             _client.PostAsJsonAsync(Endpoint, new
             {
                 Email = $"bootstrap-race-{i}-{Guid.NewGuid():N}@test.local",
-                Password = "ValidPassword123!",
+                Password = "ValidUnusualPwd123!",
                 DisplayName = $"Bootstrap Racer {i}",
                 BootstrapToken
             }))).ToArray();
@@ -284,7 +284,7 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
             await _client.PostAsJsonAsync(Endpoint, new
             {
                 Email = $"timing-match-{Guid.NewGuid():N}@test.local",
-                Password = "ValidPassword123!",
+                Password = "ValidUnusualPwd123!",
                 DisplayName = $"Match {i}",
                 BootstrapToken
             });
@@ -295,7 +295,7 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
             await _client.PostAsJsonAsync(Endpoint, new
             {
                 Email = $"timing-miss-{Guid.NewGuid():N}@test.local",
-                Password = "ValidPassword123!",
+                Password = "ValidUnusualPwd123!",
                 DisplayName = $"Miss {i}",
                 BootstrapToken = nearMiss
             });

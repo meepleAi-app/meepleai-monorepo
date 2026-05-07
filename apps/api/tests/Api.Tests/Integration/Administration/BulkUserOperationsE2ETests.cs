@@ -139,8 +139,8 @@ public sealed class BulkUserOperationsE2ETests : IAsyncLifetime
         // Arrange
         var adminId = Guid.NewGuid();
         var csvContent = @"email,displayName,role,password
-user1@e2etest.com,User One,user,Password123!
-user2@e2etest.com,User Two,admin,Password456!
+user1@e2etest.com,User One,user,UnusualPwd123!
+user2@e2etest.com,User Two,admin,UnusualPwd456!
 user3@e2etest.com,User Three,user,Password789!";
 
         var logger = new Mock<ILogger<BulkImportUsersCommandHandler>>();
@@ -273,7 +273,7 @@ user3@e2etest.com,User Three,user,Password789!";
         var originalHash2 = user2.PasswordHash.Value;
 
         var userIds = new List<Guid> { user1.Id, user2.Id };
-        var newPassword = "NewSecurePassword456!";
+        var newPassword = "NewSecureUnusualPwd456!";
 
         var logger = new Mock<ILogger<BulkPasswordResetCommandHandler>>();
         var handler = new BulkPasswordResetCommandHandler(_userRepository!, _unitOfWork!, logger.Object);
@@ -352,7 +352,7 @@ user3@e2etest.com,User Three,user,Password789!";
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
         var csvContent = @"email,displayName,role,password
-duplicate@test.com,Duplicate User,user,Password123!";
+duplicate@test.com,Duplicate User,user,UnusualPwd123!";
 
         var adminId = Guid.NewGuid();
         var logger = new Mock<ILogger<BulkImportUsersCommandHandler>>();
@@ -405,7 +405,7 @@ duplicate@test.com,Duplicate User,user,Password123!";
             id: Guid.NewGuid(),
             email: new Email(email),
             displayName: displayName,
-            passwordHash: PasswordHash.Create("TempPassword123!"),
+            passwordHash: PasswordHash.Create("TempUnusualPwd123!"),
             role: role
         );
     }

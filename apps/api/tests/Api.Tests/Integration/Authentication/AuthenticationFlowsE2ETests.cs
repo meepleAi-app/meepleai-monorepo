@@ -154,7 +154,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
             userId,
             new Email(userEmail),
             "New OAuth User",
-            PasswordHash.Create("TempOAuthPassword123!"),
+            PasswordHash.Create("TempOAuthUnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -291,7 +291,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
             userId,
             new Email(userEmail),
             "Multi OAuth User",
-            PasswordHash.Create("SecurePassword123!"),
+            PasswordHash.Create("SecureUnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -359,7 +359,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
             userId,
             new Email(userEmail),
             "2FA Test User",
-            PasswordHash.Create("SecurePassword123!"),
+            PasswordHash.Create("SecureUnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -406,7 +406,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
             userId,
             new Email(userEmail),
             "2FA Login User",
-            PasswordHash.Create("SecurePassword123!"),
+            PasswordHash.Create("SecureUnusualPwd123!"),
             Role.User);
 
         var totpSecret = TotpSecret.FromEncrypted("test_encrypted_totp_secret_2fa_login");
@@ -417,7 +417,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         _output("Setup: User with 2FA enabled");
 
         // Step 1: Password verification succeeds
-        var passwordValid = passwordHashingService.VerifySecret("SecurePassword123!", user.PasswordHash.Value);
+        var passwordValid = passwordHashingService.VerifySecret("SecureUnusualPwd123!", user.PasswordHash.Value);
         passwordValid.Should().BeTrue();
         _output("Step 1: Password verified");
 
@@ -465,7 +465,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
             userId,
             new Email(userEmail),
             "2FA Disable User",
-            PasswordHash.Create("SecurePassword123!"),
+            PasswordHash.Create("SecureUnusualPwd123!"),
             Role.User);
 
         var totpSecret = TotpSecret.FromEncrypted("test_encrypted_totp_secret_2fa_disable");

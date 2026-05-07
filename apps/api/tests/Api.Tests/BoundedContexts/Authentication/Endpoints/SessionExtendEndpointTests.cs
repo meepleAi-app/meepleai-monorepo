@@ -160,7 +160,7 @@ public sealed class SessionExtendEndpointTests : IAsyncLifetime
         var registerPayload = new
         {
             Email = $"extend-{Guid.NewGuid():N}@test.local",
-            Password = "ValidPassword123!",
+            Password = "ValidUnusualPwd123!",
             DisplayName = "Session Extend Tester"
         };
 

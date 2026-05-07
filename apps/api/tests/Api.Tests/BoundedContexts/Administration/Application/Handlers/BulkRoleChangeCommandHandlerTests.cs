@@ -247,7 +247,7 @@ public class BulkRoleChangeCommandHandlerTests
             id: id,
             email: new Email("superadmin@test.com"),
             displayName: "Super Admin",
-            passwordHash: PasswordHash.Create("SuperAdminPassword123!"),
+            passwordHash: PasswordHash.Create("SuperAdminUnusualPwd123!"),
             role: Role.SuperAdmin
         );
     }

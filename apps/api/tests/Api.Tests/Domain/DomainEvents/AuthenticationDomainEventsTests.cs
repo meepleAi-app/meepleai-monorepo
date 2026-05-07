@@ -20,7 +20,7 @@ public class AuthenticationDomainEventsTests
     {
         // Arrange
         var user = CreateTestUser();
-        var newPasswordHash = PasswordHash.Create("NewPassword123!");
+        var newPasswordHash = PasswordHash.Create("NewUnusualPwd123!");
 
         // Act
         user.ChangePassword("UniqueT3stPwd!", newPasswordHash);
@@ -41,7 +41,7 @@ public class AuthenticationDomainEventsTests
     {
         // Arrange
         var user = CreateTestUser();
-        var newPasswordHash = PasswordHash.Create("NewPassword123!");
+        var newPasswordHash = PasswordHash.Create("NewUnusualPwd123!");
 
         // Act
         user.UpdatePassword(newPasswordHash);

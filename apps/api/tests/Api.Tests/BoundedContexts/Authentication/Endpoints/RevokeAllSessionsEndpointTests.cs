@@ -66,7 +66,7 @@ public sealed class RevokeAllSessionsEndpointTests : IAsyncLifetime
     {
         // Arrange — register one user (creates session A) then login again to mint session B.
         var email = $"revoke-{Guid.NewGuid():N}@test.local";
-        const string password = "ValidPassword123!";
+        const string password = "ValidUnusualPwd123!";
         var sessionA = await RegisterAsync(email, password);
         var sessionB = await LoginAsync(email, password);
 
@@ -105,7 +105,7 @@ public sealed class RevokeAllSessionsEndpointTests : IAsyncLifetime
     {
         // Variant: includeCurrentSession=true — current session must end up revoked.
         var email = $"revoke-incl-{Guid.NewGuid():N}@test.local";
-        const string password = "ValidPassword123!";
+        const string password = "ValidUnusualPwd123!";
         var sessionA = await RegisterAsync(email, password);
         var sessionB = await LoginAsync(email, password);
 

@@ -16,7 +16,7 @@ namespace Api.Tests.Benchmarks;
 [MemoryDiagnoser]
 public class PasswordHashBenchmark
 {
-    private const string TestPassword = "BenchmarkPassword123!";
+    private const string TestPassword = "BenchmarkUnusualPwd123!";
     private PasswordHash _hash = null!;
 
     [GlobalSetup]

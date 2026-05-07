@@ -538,11 +538,11 @@ internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
                 ["Qdrant:Port"] = "6333",
                 ["Authentication:SessionManagement:SessionExpirationDays"] = "30",
                 ["Admin:Email"] = "admin@test.local",
-                ["Admin:Password"] = "TestAdmin123!",
+                ["Admin:Password"] = "TestUnusualAdm123!",
                 ["Admin:DisplayName"] = "Test Admin",
                 // CI environment admin seeding configuration
                 ["INITIAL_ADMIN_EMAIL"] = "admin@test.local",
-                ["INITIAL_ADMIN_PASSWORD"] = "TestAdmin123!",
+                ["INITIAL_ADMIN_PASSWORD"] = "TestUnusualAdm123!",
                 ["INITIAL_ADMIN_DISPLAY_NAME"] = "Test Admin",
                 ["Observability:Enabled"] = "false",
                 ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "",

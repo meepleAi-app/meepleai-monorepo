@@ -30,7 +30,7 @@ public class ChangePasswordCommandHandlerTests
     {
         _mockRepository = new Mock<IUserRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
-        _handler = new ChangePasswordCommandHandler(_mockRepository.Object, _mockUnitOfWork.Object);
+        _handler = new ChangePasswordCommandHandler(_mockRepository.Object, Mock.Of<ISessionRepository>(), _mockUnitOfWork.Object);
     }
 
     [Fact]

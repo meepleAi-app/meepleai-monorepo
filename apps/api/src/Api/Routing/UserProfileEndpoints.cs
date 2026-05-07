@@ -157,7 +157,11 @@ internal static class UserProfileEndpoints
             {
                 UserId = session!.User!.Id,
                 CurrentPassword = payload.CurrentPassword,
-                NewPassword = payload.NewPassword
+                NewPassword = payload.NewPassword,
+                // C7: forward the active session id so the handler can revoke
+                // every other session for the user while preserving this one.
+                CurrentSessionId = session.SessionId,
+                IncludeCurrentInRevoke = payload.LogoutEverywhere ?? false,
             };
 
             await mediator.Send(command, ct).ConfigureAwait(false);
@@ -633,8 +637,15 @@ internal record UpdateProfilePayload(string? DisplayName, string? Email, string?
 
 /// <summary>
 /// Payload for changing password.
+/// C7: <paramref name="LogoutEverywhere"/> opts the user into revoking the
+/// current session along with every other one (default behaviour preserves
+/// the current session so the user isn't kicked off the device they just
+/// changed the password from).
 /// </summary>
-internal record ChangePasswordPayload(string CurrentPassword, string NewPassword);
+internal record ChangePasswordPayload(
+    string CurrentPassword,
+    string NewPassword,
+    bool? LogoutEverywhere = null);
 
 /// <summary>
 /// Payload for updating user preferences.

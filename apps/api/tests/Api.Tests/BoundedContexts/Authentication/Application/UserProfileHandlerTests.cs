@@ -190,7 +190,7 @@ public class UserProfileHandlerTests
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, _unitOfWorkMock.Object);
+        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, Mock.Of<Api.BoundedContexts.Authentication.Infrastructure.Persistence.ISessionRepository>(), _unitOfWorkMock.Object);
         var command = new ChangePasswordCommand
         {
             UserId = userId,
@@ -218,7 +218,7 @@ public class UserProfileHandlerTests
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, _unitOfWorkMock.Object);
+        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, Mock.Of<Api.BoundedContexts.Authentication.Infrastructure.Persistence.ISessionRepository>(), _unitOfWorkMock.Object);
         var command = new ChangePasswordCommand
         {
             UserId = userId,
@@ -244,7 +244,7 @@ public class UserProfileHandlerTests
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, _unitOfWorkMock.Object);
+        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, Mock.Of<Api.BoundedContexts.Authentication.Infrastructure.Persistence.ISessionRepository>(), _unitOfWorkMock.Object);
         var command = new ChangePasswordCommand
         {
             UserId = userId,
@@ -267,7 +267,7 @@ public class UserProfileHandlerTests
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
-        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, _unitOfWorkMock.Object);
+        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, Mock.Of<Api.BoundedContexts.Authentication.Infrastructure.Persistence.ISessionRepository>(), _unitOfWorkMock.Object);
         var command = new ChangePasswordCommand
         {
             UserId = userId,

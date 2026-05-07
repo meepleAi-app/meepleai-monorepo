@@ -70,18 +70,18 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
         // Validate and create email
         var email = new Email(command.Email);
 
-        // Allocate the user ID up-front so we can use it as
-        // SystemConfiguration.CreatedByUserId when the bootstrap path fires —
-        // the bootstrap-admin row is "created by" the very user being
-        // provisioned in the same UoW transaction.
         var userId = Guid.NewGuid();
 
-        // C5: role is now determined exclusively by the bootstrap-admin token.
-        // The legacy HasAnyUsersAsync first-user-is-admin path is removed
-        // because two concurrent first registrations both observed an empty
-        // users table and both became Admin.
-        var role = await DetermineRoleFromBootstrapTokenAsync(command.BootstrapToken, userId, cancellationToken)
-            .ConfigureAwait(false);
+        // C5 + F1: the bootstrap-admin claim happens AFTER the user is
+        // committed (see further down). The user starts as Role.User by
+        // default; if and only if the post-commit atomic claim wins the
+        // single-use race, the user is promoted to Admin via a second
+        // SaveChanges. This sequence avoids the FK constraint on
+        // SystemConfiguration.CreatedByUserId (which restricts to a real
+        // existing user) and removes the TOCTOU race the original
+        // read-then-write design left open under concurrent valid-token
+        // registrations.
+        var role = Role.User;
 
         // Reject self-assignment of elevated roles for the explicit-role
         // pathway (admins assign roles via Administration BC, not /auth/register).
@@ -92,12 +92,7 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
             {
                 throw new DomainException("Only administrators can assign elevated roles");
             }
-            // Honour the explicit non-elevated role only if the bootstrap
-            // path didn't already grant Admin.
-            if (role != Role.Admin)
-            {
-                role = requested;
-            }
+            role = requested;
         }
 
         // Create password hash
@@ -149,6 +144,19 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
             throw new ConflictException("Email is already registered");
         }
 
+        // C5 + F1: bootstrap-admin claim runs only AFTER the user is committed,
+        // so the SystemConfiguration.CreatedByUserId FK can reference this
+        // newly-persisted user. The claim itself is atomic — even under
+        // concurrent valid-token registrations, exactly one caller can flip
+        // the singleton row's BootstrapAdminCreated flag from false to true.
+        if (await TryClaimBootstrapAdminAsync(command.BootstrapToken, userId, cancellationToken)
+            .ConfigureAwait(false))
+        {
+            user.UpdateRole(Role.Admin);
+            await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         // ISSUE-3071: Send verification email after successful registration
         // This is fire-and-forget - email failures should not fail registration
         try
@@ -178,23 +186,29 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
     }
 
     /// <summary>
-    /// C5: returns <see cref="Role.Admin"/> only if the supplied token equals
-    /// the configured <c>Authentication:BootstrapAdminToken</c> (constant-time
-    /// compare) AND the bootstrap path has not already been consumed.
-    /// All other inputs return <see cref="Role.User"/> — wrong/missing token,
-    /// missing config, or post-bootstrap re-use. Single-use enforcement
-    /// uses a dedicated row in <c>system_configurations</c>; the flag is
-    /// flipped in the same UoW transaction as the user create.
+    /// C5 + F1: atomic single-use bootstrap-admin claim. Returns true only
+    /// when the supplied token matches the configured one (constant-time)
+    /// AND this call wins the race to flip the singleton SystemConfiguration
+    /// row's <c>BootstrapAdminCreated</c> flag from false to true. Concurrent
+    /// valid-token callers all hit the same row but only one transitions the
+    /// flag — Postgres serialises both the unique-constraint INSERT and the
+    /// conditional UPDATE at the row level. Losers return false → caller
+    /// keeps the user at Role.User.
+    ///
+    /// The claim runs after the bootstrapping user is already committed so
+    /// SystemConfiguration.CreatedByUserId (FK Restrict on users.Id) is
+    /// satisfied. If the claim succeeds the caller MUST promote the user via
+    /// <see cref="User.UpdateRole"/> + a follow-up SaveChanges.
     /// </summary>
-    private async Task<Role> DetermineRoleFromBootstrapTokenAsync(
+    private async Task<bool> TryClaimBootstrapAdminAsync(
         string? providedToken, Guid bootstrappingUserId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(providedToken))
-            return Role.User;
+            return false;
 
         var configuredToken = _configuration["Authentication:BootstrapAdminToken"];
         if (string.IsNullOrWhiteSpace(configuredToken))
-            return Role.User;
+            return false;
 
         // Constant-time compare: equal-length is required by FixedTimeEquals,
         // so length-mismatch is detected explicitly without short-circuiting
@@ -202,51 +216,97 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
         var configBytes = Encoding.UTF8.GetBytes(configuredToken);
         var inputBytes = Encoding.UTF8.GetBytes(providedToken);
         if (configBytes.Length != inputBytes.Length)
-            return Role.User;
+            return false;
         if (!CryptographicOperations.FixedTimeEquals(configBytes, inputBytes))
-            return Role.User;
+            return false;
 
-        // Single-use enforcement. Find/create the dedicated singleton row.
-        var sysConfig = await _db.Set<SystemConfigurationEntity>()
-            .FirstOrDefaultAsync(c => c.Key == BootstrapAdminConfigKey, cancellationToken)
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        // Step 1 — atomic flip on the existing row, if any. ExecuteUpdateAsync
+        // emits a single SQL statement; Postgres takes a row-level lock for
+        // the duration of the WHERE evaluation + SET, so concurrent callers
+        // serialise here: exactly one observes the flag-false condition and
+        // flips it. The others get rowsAffected == 0.
+        var rowsAffected = await _db.Set<SystemConfigurationEntity>()
+            .Where(c => c.Key == BootstrapAdminConfigKey
+                        && c.Environment == "All"
+                        && !c.BootstrapAdminCreated)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(c => c.BootstrapAdminCreated, true)
+                .SetProperty(c => c.BootstrapAdminCreatedAt, (DateTime?)now)
+                .SetProperty(c => c.UpdatedAt, now)
+                .SetProperty(c => c.UpdatedByUserId, (Guid?)bootstrappingUserId), cancellationToken)
             .ConfigureAwait(false);
 
-        if (sysConfig != null && sysConfig.BootstrapAdminCreated)
+        if (rowsAffected == 1)
+            return true;
+
+        if (rowsAffected > 1)
+        {
+            _logger.LogError(
+                "Bootstrap claim affected {RowCount} rows; expected 0 or 1. " +
+                "The (Key, Environment) unique index on system_configurations should " +
+                "make this impossible — investigate schema drift.",
+                rowsAffected);
+            return false;
+        }
+
+        // rowsAffected == 0 means either the row already exists with flag=true
+        // (post-bootstrap re-use — token must be rotated) OR the row doesn't
+        // exist yet (cold start). Distinguish via a read.
+        var alreadyClaimed = await _db.Set<SystemConfigurationEntity>()
+            .AsNoTracking()
+            .AnyAsync(c => c.Key == BootstrapAdminConfigKey
+                        && c.Environment == "All"
+                        && c.BootstrapAdminCreated, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (alreadyClaimed)
         {
             _logger.LogWarning(
                 "Bootstrap admin token presented after the first admin was already provisioned — " +
                 "rejecting privilege escalation; rotate AUTHENTICATION__BOOTSTRAPADMINTOKEN.");
-            return Role.User;
+            return false;
         }
 
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-        if (sysConfig == null)
+        // Step 2 — cold-start INSERT. The (Key, Environment) unique index
+        // serialises concurrent INSERTs: at most one wins, the rest get a
+        // 23505. Losers detach the failed entity and retry the atomic flip
+        // (which now finds the row the winner just created and flips it iff
+        // they were the winner — they weren't, so they get 0 rows).
+        var newRow = new SystemConfigurationEntity
         {
-            sysConfig = new SystemConfigurationEntity
-            {
-                Id = Guid.NewGuid(),
-                Key = BootstrapAdminConfigKey,
-                Value = "true",
-                ValueType = "bool",
-                Category = "Authentication",
-                Description = "Bootstrap-admin single-use guard (C5).",
-                IsActive = true,
-                Environment = "All",
-                Version = 1,
-                CreatedAt = now,
-                UpdatedAt = now,
-                // FK Restrict on system_configurations.CreatedByUserId — point
-                // it at the bootstrapping user being persisted in this same UoW.
-                CreatedByUserId = bootstrappingUserId,
-            };
-            _db.Set<SystemConfigurationEntity>().Add(sysConfig);
-        }
-        sysConfig.BootstrapAdminCreated = true;
-        sysConfig.BootstrapAdminCreatedAt = now;
-        sysConfig.UpdatedAt = now;
-        sysConfig.UpdatedByUserId = bootstrappingUserId;
+            Id = Guid.NewGuid(),
+            Key = BootstrapAdminConfigKey,
+            Value = "true",
+            ValueType = "bool",
+            Category = "Authentication",
+            Description = "Bootstrap-admin single-use guard (C5).",
+            IsActive = true,
+            Environment = "All",
+            Version = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CreatedByUserId = bootstrappingUserId,
+            UpdatedByUserId = bootstrappingUserId,
+            BootstrapAdminCreated = true,
+            BootstrapAdminCreatedAt = now,
+        };
 
-        return Role.Admin;
+        try
+        {
+            _db.Set<SystemConfigurationEntity>().Add(newRow);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            _db.Set<SystemConfigurationEntity>().Entry(newRow).State = EntityState.Detached;
+            _logger.LogWarning(ex,
+                "Lost the cold-start bootstrap INSERT race; another concurrent caller " +
+                "won. Falling back to Role.User.");
+            return false;
+        }
     }
 
     private static bool IsUniqueViolation(DbUpdateException ex)

@@ -3,6 +3,7 @@ using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Moq;
@@ -113,13 +114,25 @@ public sealed class AntiforgeryEndpointFilterTests
             Times.Once);
     }
 
-    private EndpointFilterInvocationContext CreateContext(string environmentName)
+    private EndpointFilterInvocationContext CreateContext(
+        string environmentName,
+        bool csrfEnforcementEnabled = true)
     {
         _env.SetupGet(e => e.EnvironmentName).Returns(environmentName);
 
         var services = new ServiceCollection();
         services.AddSingleton(_antiforgery.Object);
         services.AddSingleton(_env.Object);
+
+        // F3: filter consults Authentication:CsrfEnforcement; default tests
+        // run with it ON so existing assertions about token validation hold.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Authentication:CsrfEnforcement"] = csrfEnforcementEnabled.ToString().ToLowerInvariant(),
+            })
+            .Build();
+        services.AddSingleton<IConfiguration>(config);
 
         var httpContext = new DefaultHttpContext
         {
@@ -129,4 +142,26 @@ public sealed class AntiforgeryEndpointFilterTests
         return new DefaultEndpointFilterInvocationContext(httpContext);
     }
 
+    [Fact]
+    public async Task InvokeAsync_Production_FlagDisabled_BypassesValidation()
+    {
+        // F3: until the frontend rolls out the X-XSRF-TOKEN pipeline, the
+        // filter must fail open (allow through) so legitimate clients aren't
+        // 400'd. This test pins the safety valve.
+        var context = CreateContext("Production", csrfEnforcementEnabled: false);
+        var sentinel = Results.Ok();
+        _next.Setup(n => n(It.IsAny<EndpointFilterInvocationContext>()))
+            .ReturnsAsync(sentinel);
+
+        var result = await _filter.InvokeAsync(context, _next.Object);
+
+        result.Should().Be(sentinel);
+        _next.Verify(n => n(It.IsAny<EndpointFilterInvocationContext>()), Times.Once);
+        _antiforgery.Verify(
+            a => a.ValidateRequestAsync(It.IsAny<HttpContext>()),
+            Times.Never,
+            "with Authentication:CsrfEnforcement=false the filter must NOT " +
+            "consult IAntiforgery — flipping the flag is the operator " +
+            "switch that goes live the moment the frontend ships.");
+    }
 }

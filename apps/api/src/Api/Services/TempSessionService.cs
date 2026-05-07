@@ -219,19 +219,108 @@ internal class TempSessionService : ITempSessionService
             return true;
         }
 
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        // F2 (auth security review): the original read-then-write design had
+        // a TOCTOU window where two concurrent verify attempts could both
+        // observe count < MaxFailedAttempts and both increment, granting an
+        // attacker M extra attempts for M parallel connections. Atomic
+        // ExecuteUpdateAsync below collapses read+conditional-write into a
+        // single SQL statement; Postgres holds a row-level lock for the
+        // WHERE evaluation + SET, so concurrent callers serialise.
+        //
+        // The InMemory provider used by unit tests doesn't support
+        // ExecuteUpdate (Microsoft.EntityFrameworkCore.InMemory) — fall back
+        // to the original tracked-entity path there. Production uses Npgsql
+        // and gets the atomic guarantee.
+        var providerName = _dbContext.Database.ProviderName;
+        var supportsExecuteUpdate = !string.Equals(
+            providerName,
+            "Microsoft.EntityFrameworkCore.InMemory",
+            StringComparison.Ordinal);
+
+        if (!supportsExecuteUpdate)
+        {
+            return await RecordFailedAttemptViaTrackingAsync(tokenHash, now, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        var bumpedRowCount = await _dbContext.TempSessions
+            .Where(ts => ts.TokenHash == tokenHash
+                         && !ts.IsUsed
+                         && ts.FailedAttemptCount < MaxFailedAttempts)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(ts => ts.FailedAttemptCount, ts => ts.FailedAttemptCount + 1),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (bumpedRowCount == 0)
+        {
+            // The row is gone, expired, IsUsed=true, or already at threshold.
+            // All four cases are observationally equivalent for the caller:
+            // the session is no longer a live verify target.
+            return true;
+        }
+
+        // If the bump took us to (or past) the threshold, atomically flip
+        // IsUsed=true. The WHERE clause guarantees idempotence: if a sibling
+        // concurrent call already flipped it, this UPDATE reports 0.
+        var lockoutCount = await _dbContext.TempSessions
+            .Where(ts => ts.TokenHash == tokenHash
+                         && !ts.IsUsed
+                         && ts.FailedAttemptCount >= MaxFailedAttempts)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(ts => ts.IsUsed, true)
+                .SetProperty(ts => ts.UsedAt, (DateTime?)now),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        // True iff THIS call's increment crossed the threshold (lockoutCount == 1)
+        // OR a sibling already had it pinned at threshold (lockoutCount == 0
+        // because IsUsed was already set OR because count was at threshold but
+        // sibling raced ahead). The contract is "true means caller should
+        // surface 'session invalidated'", and either branch satisfies that.
+        if (lockoutCount > 0)
+        {
+            return true;
+        }
+
+        // Below threshold: read back the current count to decide. Concurrent
+        // sibling could have flipped IsUsed already; treat IsUsed as
+        // invalidated regardless of count.
+        var current = await _dbContext.TempSessions
+            .AsNoTracking()
+            .Where(ts => ts.TokenHash == tokenHash)
+            .Select(ts => new { ts.FailedAttemptCount, ts.IsUsed })
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (current is null)
+        {
+            return true;
+        }
+
+        return current.IsUsed || current.FailedAttemptCount >= MaxFailedAttempts;
+    }
+
+    /// <summary>
+    /// F2 fallback for the InMemory provider (used by unit tests). The
+    /// race the production path defends against is a real-DB phenomenon —
+    /// two ASP.NET requests serialised through a single InMemory context
+    /// don't have it. The behaviour is functionally identical to the
+    /// original RecordFailedAttempt implementation.
+    /// </summary>
+    private async Task<bool> RecordFailedAttemptViaTrackingAsync(
+        string tokenHash, DateTime now, CancellationToken cancellationToken)
+    {
         var session = await _dbContext.TempSessions
             .FirstOrDefaultAsync(ts => ts.TokenHash == tokenHash, cancellationToken)
             .ConfigureAwait(false);
 
         if (session == null)
         {
-            // No row — treat as invalidated (caller's path must error out).
             return true;
         }
 
-        // Idempotent on already-invalidated sessions: the row is locked
-        // either by IsUsed or by FailedAttemptCount >= threshold. Don't
-        // bump the counter further or reopen IsUsed.
         if (session.IsUsed || session.FailedAttemptCount >= MaxFailedAttempts)
         {
             return true;
@@ -242,7 +331,7 @@ internal class TempSessionService : ITempSessionService
         if (nowInvalidated)
         {
             session.IsUsed = true;
-            session.UsedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            session.UsedAt = now;
         }
 
         try
@@ -251,7 +340,7 @@ internal class TempSessionService : ITempSessionService
         }
         catch (DbUpdateException ex)
         {
-            _logger.LogError(ex, "Failed to record 2FA failed attempt");
+            _logger.LogError(ex, "Failed to record 2FA failed attempt (InMemory path)");
             return false;
         }
 

@@ -220,6 +220,49 @@ public sealed class RegisterRaceConditionEndpointTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Register_5ConcurrentBootstrapTokenRegistrations_ProducesExactlyOneAdmin()
+    {
+        // F1 (auth security review): the original C5 implementation read the
+        // SystemConfiguration BootstrapAdminCreated flag via FirstOrDefaultAsync
+        // and wrote it back with the user UoW commit. Two concurrent valid-
+        // token registrations could both observe flag=false and both produce
+        // an Admin. After the F1 fix, exactly ONE caller wins the atomic
+        // INSERT-or-UPDATE-WHERE-flag=false flip; the others fall back to
+        // Role.User.
+        var tasks = Enumerable.Range(0, 5).Select(i => Task.Run(() =>
+            _client.PostAsJsonAsync(Endpoint, new
+            {
+                Email = $"bootstrap-race-{i}-{Guid.NewGuid():N}@test.local",
+                Password = "ValidPassword123!",
+                DisplayName = $"Bootstrap Racer {i}",
+                BootstrapToken
+            }))).ToArray();
+
+        var responses = await Task.WhenAll(tasks);
+
+        // All five HTTP calls succeed (each creates a user — only the role
+        // differs); race resolution does NOT bubble up as 4xx/5xx for the
+        // losers.
+        responses.Should().OnlyContain(
+            r => r.StatusCode == HttpStatusCode.OK,
+            "every concurrent valid-token registration should still create " +
+            "the user account; only the role differs.");
+
+        // Exactly one of the five users is Admin.
+        var adminCount = 0;
+        foreach (var r in responses)
+        {
+            var role = await ReadRoleAsync(r);
+            if (role == "admin") adminCount++;
+        }
+
+        adminCount.Should().Be(1,
+            "the bootstrap-admin guard is single-use under concurrent load; " +
+            "more than one Admin would mean the TOCTOU race called out by " +
+            "Finding 1 in the security review is still open.");
+    }
+
+    [Fact]
     public async Task BootstrapAdminToken_ConstantTimeCompare_NoTimingLeak()
     {
         // Smoke test only. Construct a near-miss token (same length, last

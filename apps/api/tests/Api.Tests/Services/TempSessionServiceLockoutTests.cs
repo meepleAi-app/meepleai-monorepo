@@ -60,7 +60,7 @@ public sealed class TempSessionServiceLockoutTests : IDisposable
     public async Task ValidateTempSession_FreshToken_ReturnsUserId_DoesNotConsume()
     {
         var userId = Guid.NewGuid();
-        var token = await _service.CreateTempSessionAsync(userId);
+        var (token, _) = await _service.CreateTempSessionAsync(userId);
 
         var resolved = await _service.ValidateTempSessionAsync(token);
 
@@ -78,7 +78,7 @@ public sealed class TempSessionServiceLockoutTests : IDisposable
     public async Task RecordFailedAttempt_IncrementsCounter_WithoutInvalidating_BelowThreshold()
     {
         var userId = Guid.NewGuid();
-        var token = await _service.CreateTempSessionAsync(userId);
+        var (token, _) = await _service.CreateTempSessionAsync(userId);
 
         for (var i = 1; i < MaxFailedAttempts; i++)
         {
@@ -101,7 +101,7 @@ public sealed class TempSessionServiceLockoutTests : IDisposable
     public async Task RecordFailedAttempt_AtThreshold_InvalidatesSession()
     {
         var userId = Guid.NewGuid();
-        var token = await _service.CreateTempSessionAsync(userId);
+        var (token, _) = await _service.CreateTempSessionAsync(userId);
 
         bool? lastResult = null;
         for (var i = 0; i < MaxFailedAttempts; i++)
@@ -130,7 +130,7 @@ public sealed class TempSessionServiceLockoutTests : IDisposable
     public async Task ValidateTempSession_AfterInvalidation_ReturnsNull_EvenIfTokenWouldOtherwiseBeFresh()
     {
         var userId = Guid.NewGuid();
-        var token = await _service.CreateTempSessionAsync(userId);
+        var (token, _) = await _service.CreateTempSessionAsync(userId);
         for (var i = 0; i < MaxFailedAttempts; i++)
         {
             await _service.RecordFailedAttemptAsync(token);
@@ -150,7 +150,7 @@ public sealed class TempSessionServiceLockoutTests : IDisposable
     public async Task ConsumeTempSession_MarksUsed_OnSuccessPath()
     {
         var userId = Guid.NewGuid();
-        var token = await _service.CreateTempSessionAsync(userId);
+        var (token, _) = await _service.CreateTempSessionAsync(userId);
 
         await _service.ConsumeTempSessionAsync(token);
 
@@ -163,7 +163,7 @@ public sealed class TempSessionServiceLockoutTests : IDisposable
     public async Task RecordFailedAttempt_AfterInvalidation_DoesNotExtendLockoutOrUnflagSession()
     {
         var userId = Guid.NewGuid();
-        var token = await _service.CreateTempSessionAsync(userId);
+        var (token, _) = await _service.CreateTempSessionAsync(userId);
         for (var i = 0; i < MaxFailedAttempts; i++)
         {
             await _service.RecordFailedAttemptAsync(token);
@@ -190,7 +190,7 @@ public sealed class TempSessionServiceLockoutTests : IDisposable
     public async Task ValidateTempSession_ExpiredToken_ReturnsNull()
     {
         var userId = Guid.NewGuid();
-        var token = await _service.CreateTempSessionAsync(userId);
+        var (token, _) = await _service.CreateTempSessionAsync(userId);
 
         // Default TempSessionLifetimeMinutes is 5; advance 6 minutes.
         _time.Advance(TimeSpan.FromMinutes(6));

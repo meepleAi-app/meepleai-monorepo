@@ -449,8 +449,10 @@ internal static class InfrastructureServiceExtensions
         services.AddHostedService<Infrastructure.BackgroundServices.CleanupExpiredTempSessionsService>();
 
         // I10 (auth security fixes): security audit logger writes to the
-        // dedicated security_audit_logs table. Scoped because it depends
-        // on the per-request DbContext.
+        // dedicated security_audit_logs table. Resolves a fresh DbContext
+        // from a child scope on each LogAsync call so audit rows do NOT
+        // participate in the caller's UnitOfWork transaction (a rollback
+        // there would otherwise silently lose the audit row).
         services.AddScoped<
             BoundedContexts.SecurityAudit.Application.Services.IAuditLogger,
             BoundedContexts.SecurityAudit.Infrastructure.Services.AuditLogger>();

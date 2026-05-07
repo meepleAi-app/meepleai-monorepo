@@ -15,19 +15,28 @@ namespace Api.BoundedContexts.SecurityAudit.Infrastructure.Services;
 /// is preferable to losing a legitimate user action because the audit
 /// store is degraded.
 /// </para>
+///
+/// <para>
+/// Transaction isolation: the logger resolves a fresh <see cref="MeepleAiDbContext"/>
+/// from a child <see cref="IServiceScopeFactory"/> scope rather than
+/// participating in the caller's ambient scope. Without this, an audit
+/// row added in the caller's tracker would be rolled back together with
+/// any subsequent failure in the caller's UnitOfWork — silently violating
+/// the "audit on every attempt" guarantee that is the point of I10.
+/// </para>
 /// </summary>
 internal sealed class AuditLogger : IAuditLogger
 {
-    private readonly MeepleAiDbContext _dbContext;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<AuditLogger> _logger;
 
     public AuditLogger(
-        MeepleAiDbContext dbContext,
+        IServiceScopeFactory scopeFactory,
         TimeProvider timeProvider,
         ILogger<AuditLogger> logger)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -65,8 +74,10 @@ internal sealed class AuditLogger : IAuditLogger
         // legitimate user actions.
         try
         {
-            _dbContext.Set<AuditLogEntity>().Add(entry);
-            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            using var scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            dbContext.Set<AuditLogEntity>().Add(entry);
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

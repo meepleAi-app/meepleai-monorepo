@@ -123,18 +123,15 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
         // Check if 2FA is required
         if (user.RequiresTwoFactor())
         {
-            // Create temp session for 2FA verification (5-min TTL, single-use)
-            var tempSessionToken = await _tempSessionService.CreateTempSessionAsync(
+            // Create temp session for 2FA verification (5-min TTL, single-use).
+            // F5 (auth security review): the service returns the canonical
+            // ExpiresAt persisted to the row, so the client surface matches
+            // the actual revocation deadline (no recomputed-clock drift).
+            var (tempSessionToken, tempSessionExpiresAt) = await _tempSessionService.CreateTempSessionAsync(
                 user.Id,
                 command.IpAddress
             ).ConfigureAwait(false);
 
-            // F5 (auth security review): on the 2FA-required branch we expose
-            // the temp-session expiration through ExpiresAt so the client
-            // can time out the 2FA prompt. The temp-session lifetime is
-            // managed by ITempSessionService (5 minutes by default); we
-            // reflect that bound via the time provider.
-            var tempSessionExpiresAt = DateTime.UtcNow.AddMinutes(5);
             return new LoginResponse(
                 RequiresTwoFactor: true,
                 TempSessionToken: tempSessionToken,

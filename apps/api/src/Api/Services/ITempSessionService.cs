@@ -7,12 +7,15 @@ namespace Api.Services;
 internal interface ITempSessionService
 {
     /// <summary>
-    /// Create temporary session after password validation
+    /// Create temporary session after password validation.
+    /// Returns the plaintext token and the canonical ExpiresAt stored in the
+    /// row, so callers can surface the expiration to the client without
+    /// recomputing it (which would drift from what was actually persisted).
     /// </summary>
     /// <param name="userId">User ID</param>
     /// <param name="ipAddress">Client IP address</param>
-    /// <returns>Temporary session token (5-min TTL, single-use)</returns>
-    Task<string> CreateTempSessionAsync(Guid userId, string? ipAddress = null);
+    /// <returns>Temporary session token (5-min TTL, single-use) and its UTC expiration.</returns>
+    Task<(string Token, DateTime ExpiresAt)> CreateTempSessionAsync(Guid userId, string? ipAddress = null);
 
     /// <summary>
     /// Validate and consume temporary session token (legacy single-step path).

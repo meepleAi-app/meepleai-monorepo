@@ -126,9 +126,16 @@ internal sealed class EmailOutboxBackgroundService : BackgroundService
         foreach (var row in due)
         {
             await TrySendAsync(row, dbContext, emailService, cancellationToken).ConfigureAwait(false);
-        }
 
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            // Flush per-row so a cancellation mid-batch does NOT lose the
+            // mutations from rows already processed (Sent / AttemptCount++).
+            // Without this, a graceful shutdown after an SMTP success but
+            // before the loop's final flush would re-send the row on the
+            // next poll. Use CancellationToken.None for the flush so we
+            // commit even if the host is stopping — the row count per
+            // batch is bounded by BatchSize.
+            await dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+        }
     }
 
     private async Task TrySendAsync(

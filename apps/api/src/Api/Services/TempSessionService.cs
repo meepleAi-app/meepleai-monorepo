@@ -39,13 +39,14 @@ internal class TempSessionService : ITempSessionService
     /// <summary>
     /// Create temp session with cryptographically secure token
     /// </summary>
-    public async Task<string> CreateTempSessionAsync(Guid userId, string? ipAddress = null)
+    public async Task<(string Token, DateTime ExpiresAt)> CreateTempSessionAsync(Guid userId, string? ipAddress = null)
     {
         // Generate secure random token
         var token = GenerateSecureToken();
         var tokenHash = HashToken(token);
 
         var now = _timeProvider.GetUtcNow();
+        var expiresAt = now.AddMinutes(TempSessionLifetimeMinutes).UtcDateTime;
         var tempSession = new TempSessionEntity
         {
             Id = Guid.NewGuid(),
@@ -53,7 +54,7 @@ internal class TempSessionService : ITempSessionService
             TokenHash = tokenHash,
             IpAddress = ipAddress,
             CreatedAt = now.UtcDateTime,
-            ExpiresAt = now.AddMinutes(TempSessionLifetimeMinutes).UtcDateTime,
+            ExpiresAt = expiresAt,
             IsUsed = false
         };
 
@@ -63,7 +64,7 @@ internal class TempSessionService : ITempSessionService
         _logger.LogInformation("Temp session created for user {UserId}, expires at {ExpiresAt}",
             userId, tempSession.ExpiresAt);
 
-        return token;
+        return (token, expiresAt);
     }
 
     /// <summary>

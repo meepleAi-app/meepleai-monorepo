@@ -64,7 +64,10 @@ internal static class AuthenticationEndpoints
         MapAcceptInvitationEndpoint(group);
         MapValidateInvitationEndpoint(group);
         MapActivateAccountEndpoint(group);
-        MapValidateInvitationGetEndpoint(group);
+        // I1 (auth security fixes): GET /auth/validate-invitation removed —
+        // tokens in query strings leak via server access logs, browser
+        // history, and Referer headers. POST /auth/validate-invitation
+        // (mapped above) carries the token in the request body instead.
 
         return group;
     }
@@ -712,35 +715,10 @@ internal static class AuthenticationEndpoints
         .Produces(400);
     }
 
-    // ISSUE-124: Validate invitation token via GET (public, unauthenticated)
-    private static void MapValidateInvitationGetEndpoint(RouteGroupBuilder group)
-    {
-        group.MapGet("/auth/validate-invitation", async (
-            string token,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct) =>
-        {
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                return Results.BadRequest(new { error = "Token is required" });
-            }
-
-            logger.LogInformation("Invitation token validation attempt (GET)");
-
-            var query = new ValidateInvitationTokenQuery(token);
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            return Results.Ok(result);
-        })
-        .WithName("ValidateInvitationTokenGet")
-        .WithTags("Authentication", "Invitations")
-        .WithSummary("Validate an invitation token (GET)")
-        .WithDescription("Checks whether an invitation token is valid without consuming it. Accepts token as query parameter. Returns email and display name for valid tokens.")
-        .RequireRateLimiting("AuthRegister")
-        .Produces(200)
-        .Produces(400);
-    }
+    // I1 (auth security fixes): the GET /auth/validate-invitation endpoint
+    // was removed — tokens in URL query strings leak via server access logs,
+    // browser history, and Referer headers. The POST variant (token in
+    // request body) is the canonical way to validate an invitation.
 }
 
 /// <summary>

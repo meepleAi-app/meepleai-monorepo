@@ -115,11 +115,15 @@ export function SetupAccountContent() {
     async function validateToken() {
       try {
         const baseUrl = getApiBase();
-        const url = `${baseUrl}/api/v1/auth/validate-invitation?token=${encodeURIComponent(token!)}`;
+        // I1 (auth security fixes): use POST so the invitation token never
+        // ends up in URL query strings (server access logs, browser history,
+        // Referer header on outbound links).
+        const url = `${baseUrl}/api/v1/auth/validate-invitation`;
         const response = await fetch(url, {
-          method: 'GET',
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
+          body: JSON.stringify({ token }),
         });
 
         if (cancelled) return;

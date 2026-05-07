@@ -10,7 +10,9 @@ using Api.Middleware;
 using Api.Models;
 using Api.Observability;
 using Api.Routing;
+using Api.Routing.AdministrationDiscover;
 using Api.Routing.GameManagement;
+using Api.Routing.GameToolkit;
 using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
 using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.AgentMemory.Infrastructure.DependencyInjection;
@@ -710,6 +712,9 @@ v1Api.MapAgentsEndpoints(); // Issue #641 (Wave B.2 hotfix): user-facing agent l
 v1Api.MapAgentTypologiesEndpoints(); // Issue #649: user-facing typology dropdown
 v1Api.MapRulebookAnalysisEndpoints(); // ISSUE-2402: Rulebook analysis service
 
+// Discover surface (cross-BC aggregation)
+TopUserContributorsEndpoints.Map(v1Api); // Wave 3 Phase 4a (#805): /users/top-contributors
+
 // User Library
 v1Api.MapUserLibraryEndpoints();       // User game library
 v1Api.MapCollectionWizardEndpoints();  // Issue #4823: Collection wizard game preview
@@ -748,6 +753,7 @@ if (!isAlphaMode)
     v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
     v1Api.MapSessionAttachmentEndpoints(); // Issue #5365: Session photo attachment endpoints
     v1Api.MapGameToolkitEndpoints(); // Issue #4753: Game toolkit CQRS endpoints
+    v1Api.MapToolkitMarketplaceEndpoints(); // Wave 3 Phase 2 (#805): /toolkits/[id] marketplace
     v1Api.MapGameToolboxEndpoints(); // Epic #412: Game toolbox per-game containers
     v1Api.MapToolStateEndpoints(); // Issue #4754: Tool state CQRS endpoints
     v1Api.MapTurnOrderEndpoints(); // Issue #4970: TurnOrder base toolkit endpoints

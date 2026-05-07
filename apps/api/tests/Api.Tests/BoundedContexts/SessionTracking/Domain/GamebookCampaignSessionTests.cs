@@ -34,7 +34,7 @@ public class GamebookCampaignSessionTests
     {
         var session = GamebookCampaignSession.Create(GameId, OwnerId, "C1");
         var before = session.UpdatedAt;
-        Thread.Sleep(10);
+        Thread.Sleep(50);
 
         session.UpdateProgress(currentParagraph: 47);
 

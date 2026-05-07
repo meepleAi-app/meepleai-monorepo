@@ -35,6 +35,7 @@ internal static class CookieHelpers
     public static void WriteSessionCookie(HttpContext context, string token, DateTime expiresAt)
     {
         ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(token);
         var options = CreateSessionCookieOptions(context, expiresAt);
         var sessionCookieName = GetSessionCookieName(context);
 
@@ -44,8 +45,14 @@ internal static class CookieHelpers
             options.SameSite == SameSiteMode.None &&
             !options.Secure)
         {
-            // Build Set-Cookie header manually
-            var cookieValue = $"{sessionCookieName}={token}; " +
+            // I9 (auth security fixes): the manual Set-Cookie path bypassed
+            // ASP.NET Core's cookie-value escaping. Session tokens are
+            // RFC 4648 URL-safe Base64 today, but no contract enforces that —
+            // a future generator change could emit a value containing ';' or
+            // ',' which would corrupt the header. Always pass through
+            // Uri.EscapeDataString so the dev-only path stays robust.
+            var encodedToken = Uri.EscapeDataString(token);
+            var cookieValue = $"{sessionCookieName}={encodedToken}; " +
                             $"Path={options.Path}; " +
                             $"Expires={expiresAt:R}; " +
                             $"HttpOnly; " +
@@ -55,6 +62,17 @@ internal static class CookieHelpers
             {
                 cookieValue += $"; Domain={options.Domain}";
             }
+
+            // I9: log a warning so this code path is loud during development —
+            // it is intentionally NOT used in production (production sets
+            // Secure=true so the standard Cookies.Append path applies).
+            // Misconfiguration in staging/production would otherwise be
+            // silent: this warning makes it visible in structured logs.
+            var loggerFactory = context.RequestServices.GetService<ILoggerFactory>();
+            var logger = loggerFactory?.CreateLogger("Api.Routing.CookieHelpers");
+            logger?.LogWarning(
+                "Session cookie written via dev SameSite=None workaround (URL-encoded token); " +
+                "this code path must NOT execute in staging or production.");
 
             context.Response.Headers.Append("Set-Cookie", cookieValue);
         }
@@ -102,7 +120,11 @@ internal static class CookieHelpers
             options.SameSite == SameSiteMode.None && !options.Secure)
         {
             // BGAI-081: same dev-only manual Set-Cookie path as the session cookie.
-            var cookieValue = $"{UserRoleCookieNameV2}={protectedValue}; " +
+            // I9 (auth security fixes): URL-encode the protected value so the
+            // dev path doesn't accidentally produce a malformed Set-Cookie if
+            // DataProtection ever emits a value containing ';' or ','.
+            var encodedValue = Uri.EscapeDataString(protectedValue);
+            var cookieValue = $"{UserRoleCookieNameV2}={encodedValue}; " +
                               $"Path={options.Path}; " +
                               $"Expires={expiresAt:R}; " +
                               $"HttpOnly; " +
@@ -111,6 +133,14 @@ internal static class CookieHelpers
             {
                 cookieValue += $"; Domain={options.Domain}";
             }
+
+            // I9: warn so the dev workaround is visible in structured logs.
+            var loggerFactory = context.RequestServices.GetService<ILoggerFactory>();
+            var logger = loggerFactory?.CreateLogger("Api.Routing.CookieHelpers");
+            logger?.LogWarning(
+                "User role cookie written via dev SameSite=None workaround (URL-encoded value); " +
+                "this code path must NOT execute in staging or production.");
+
             context.Response.Headers.Append("Set-Cookie", cookieValue);
         }
         else

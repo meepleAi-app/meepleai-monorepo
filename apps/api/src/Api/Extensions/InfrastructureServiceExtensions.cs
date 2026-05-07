@@ -448,6 +448,13 @@ internal static class InfrastructureServiceExtensions
         // monotonically and slows the C6 atomic-update path over time.
         services.AddHostedService<Infrastructure.BackgroundServices.CleanupExpiredTempSessionsService>();
 
+        // I10 (auth security fixes): security audit logger writes to the
+        // dedicated security_audit_logs table. Scoped because it depends
+        // on the per-request DbContext.
+        services.AddScoped<
+            BoundedContexts.SecurityAudit.Application.Services.IAuditLogger,
+            BoundedContexts.SecurityAudit.Infrastructure.Services.AuditLogger>();
+
         // Issue #936: Infisical secrets management client (POC)
         services.AddHttpClient("Infisical", client =>
         {

@@ -37,6 +37,7 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<RegisterCommandHandler> _logger;
+    private readonly Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger _auditLogger;
 
     public RegisterCommandHandler(
         IUserRepository userRepository,
@@ -46,7 +47,8 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
         IConfiguration configuration,
         MeepleAiDbContext db,
         TimeProvider timeProvider,
-        ILogger<RegisterCommandHandler> logger)
+        ILogger<RegisterCommandHandler> logger,
+        Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger auditLogger)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
@@ -56,6 +58,7 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
     }
 
     public async Task<RegisterResponse> Handle(RegisterCommand command, CancellationToken cancellationToken)
@@ -155,6 +158,18 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
             user.UpdateRole(Role.Admin);
             await _userRepository.UpdateAsync(user, cancellationToken).ConfigureAwait(false);
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            // I10: bootstrap admin provisioned. This is a one-time, high-
+            // privilege transition; the security review requires it be
+            // surfaced explicitly so any operator can spot a successful
+            // bootstrap on the audit dashboard.
+            await _auditLogger.LogAsync(
+                Api.BoundedContexts.SecurityAudit.Application.Services.AuditEventType.BootstrapAdminCreated,
+                actorUserId: user.Id,
+                targetUserId: user.Id,
+                ipAddress: command.IpAddress,
+                userAgent: command.UserAgent,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         // ISSUE-3071: Send verification email after successful registration

@@ -97,8 +97,16 @@ internal static class AuthenticationEndpoints
                 return Results.BadRequest(new { error = "Email and password are required" });
             }
 
+            // R3 (auth security fixes): generate a random "Player-{ShortGuid}"
+            // when the client doesn't supply a display name. The legacy
+            // fallback used the email-prefix (e.g. "alice" from
+            // "alice@example.com"), which exposed the local-part of the
+            // address to anyone who could see the user's profile — a low-
+            // grade enumeration vector and a privacy leak. The random
+            // fallback is opaque and the user can change it later via
+            // /users/profile.
             var displayName = string.IsNullOrWhiteSpace(payload.DisplayName)
-                ? payload.Email.Split('@')[0]
+                ? $"Player-{Guid.NewGuid():N}"[..14]
                 : payload.DisplayName.Trim();
 
             var command = new DddRegisterCommand(

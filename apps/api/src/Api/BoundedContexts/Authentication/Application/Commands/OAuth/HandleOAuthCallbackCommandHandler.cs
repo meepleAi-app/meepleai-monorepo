@@ -518,17 +518,18 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                 // marker — replacing the legacy GenerateRandomPasswordHash() call
                 // which stamped a 32-byte random Base64 string that was never a
                 // valid PBKDF2 hash.
-                var emailParts = userInfo!.Email?.Split('@') ?? Array.Empty<string>();
-                var emailPrefix = emailParts.Length > 0 && !string.IsNullOrEmpty(emailParts[0])
-                    ? emailParts[0]
-                    : "User";
+                // R3 (auth security fixes): if the OAuth provider didn't
+                // send a display name, fall back to a random Player-{ShortGuid}
+                // — never to the email local-part. The user can change it
+                // later via /users/profile.
+                var fallbackDisplayName = $"Player-{Guid.NewGuid():N}"[..14];
 
                 var domainUser = User.CreateForOAuth(
                     id: Guid.NewGuid(),
 #pragma warning disable CS8602
                     email: new Email(userInfo.Email.ToLowerInvariant()),
 #pragma warning restore CS8602
-                    displayName: userInfo.Name ?? emailPrefix,
+                    displayName: userInfo.Name ?? fallbackDisplayName,
                     role: Role.User,
                     tier: null,
                     oauthProvider: providerLower,

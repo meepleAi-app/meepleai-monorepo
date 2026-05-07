@@ -121,6 +121,18 @@ internal static class CookieHelpers
     }
 
     /// <summary>
+    /// Reads the role from the user-role cookie. Stub: replaced in C4 by an
+    /// implementation that decrypts the v2 HMAC value and falls back to v1
+    /// during the deprecation grace period. Currently always returns null so
+    /// the new tests can compile against a known surface while staying RED.
+    /// </summary>
+    public static string? ReadUserRoleCookie(HttpContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        return null;
+    }
+
+    /// <summary>
     /// Removes the user role cookie during logout.
     /// </summary>
     public static void RemoveUserRoleCookie(HttpContext context)

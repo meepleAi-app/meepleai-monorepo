@@ -236,7 +236,7 @@ public class BulkRoleChangeCommandHandlerTests
             id: id,
             email: new Email(email),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Password123!"),
+            passwordHash: PasswordHash.Create("UnusualPwd123!"),
             role: role
         );
     }

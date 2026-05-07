@@ -16,7 +16,24 @@ public sealed class PasswordHash : ValueObject
     private const string HashVersion = "v1";
     private const int SaltSize = 16; // 128 bits
     private const int HashSize = 32; // 256 bits
-    private const int Iterations = 210_000; // OWASP recommendation for PBKDF2-SHA256
+
+    // I7 (auth security fixes): PBKDF2-SHA256 iterations bumped from 210k
+    // (OWASP 2021) to 600k (OWASP 2023). Applied only to NEW hashes —
+    // existing 210k hashes continue to verify because VerifyVersionedHash
+    // reads the iteration count from the stored value.
+    private const int Iterations = 600_000;
+
+    // I7: minimum password length raised from 8 to 12. Modern guidance
+    // (NIST SP 800-63B Rev 4) prioritises length over composition rules;
+    // 12 chars makes brute-force pricing meaningfully harder for any
+    // policy-compliant password.
+    private const int MinPasswordLength = 12;
+
+    // I7: maximum password length capped at 128 to prevent
+    // resource-exhaustion attacks via extremely long inputs through
+    // PBKDF2 (which would otherwise scale linearly with input size).
+    // 128 chars is well above any sensible passphrase.
+    private const int MaxPasswordLength = 128;
 
     public string Value { get; }
 
@@ -39,8 +56,25 @@ public sealed class PasswordHash : ValueObject
         if (string.IsNullOrWhiteSpace(plaintextPassword))
             throw new ValidationException(nameof(PasswordHash), "Password cannot be empty");
 
-        if (plaintextPassword.Length < 8)
-            throw new ValidationException(nameof(PasswordHash), "Password must be at least 8 characters");
+        // I7: length bounds. Min raised from 8 to 12 (NIST SP 800-63B Rev 4).
+        // Max capped at 128 to bound PBKDF2 input cost.
+        if (plaintextPassword.Length < MinPasswordLength)
+            throw new ValidationException(
+                nameof(PasswordHash),
+                $"Password must be at least {MinPasswordLength} characters");
+
+        if (plaintextPassword.Length > MaxPasswordLength)
+            throw new ValidationException(
+                nameof(PasswordHash),
+                $"Password cannot exceed {MaxPasswordLength} characters");
+
+        // I7: top-N common-password blocklist. Rejects passwords that are
+        // length-compliant but trivially guessable (e.g. "password1234",
+        // "qwerty123456", "Password123!"). Lookup is O(1) via HashSet.
+        if (CommonPasswordBlocklist.IsCommon(plaintextPassword))
+            throw new ValidationException(
+                nameof(PasswordHash),
+                "Password is in the list of well-known compromised passwords. Choose a less common password.");
 
         var storedHash = CreateVersionedHash(plaintextPassword);
         return new PasswordHash(storedHash);

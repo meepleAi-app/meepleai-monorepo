@@ -624,7 +624,7 @@ public class UserRepositoryTests : SharedDatabaseTestBase<UserRepository>
     private static User CreateTestUser(string email, Role role)
     {
         var emailVo = new Email(email);
-        var passwordHash = PasswordHash.Create("Password123!");
+        var passwordHash = PasswordHash.Create("UnusualPwd123!");
         var displayName = $"User {email.Split('@')[0]}";
 
         return new User(

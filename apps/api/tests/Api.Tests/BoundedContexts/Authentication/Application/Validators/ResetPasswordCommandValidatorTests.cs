@@ -145,7 +145,7 @@ public sealed class ResetPasswordCommandValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.NewPassword)
-            .WithErrorMessage("New password must be at least 8 characters");
+            .WithErrorMessage("New password must be at least 12 characters");
     }
 
     [Fact]

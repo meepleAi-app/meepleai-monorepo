@@ -194,7 +194,7 @@ export const InvalidEmailValidation: Story = {
 };
 
 /**
- * Password too short - minimum 8 characters
+ * Password too short - minimum 12 characters
  */
 export const PasswordTooShortValidation: Story = {
   args: {
@@ -205,7 +205,7 @@ export const PasswordTooShortValidation: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Password must be at least 8 characters. Shows inline validation error.',
+        story: 'Password must be at least 12 characters. Shows inline validation error.',
       },
     },
   },

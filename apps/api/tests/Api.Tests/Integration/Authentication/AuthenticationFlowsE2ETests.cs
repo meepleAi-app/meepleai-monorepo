@@ -226,7 +226,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
             userId,
             new Email(userEmail),
             "Existing OAuth User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -517,7 +517,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
             userId,
             new Email(userEmail),
             "Session Test User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -571,7 +571,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
             userId,
             new Email(userEmail),
             "Revoke Test User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -624,7 +624,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
             userId,
             new Email(userEmail),
             "Renew Test User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -688,7 +688,7 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
             userId,
             new Email(userEmail),
             "Multi-Session User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);

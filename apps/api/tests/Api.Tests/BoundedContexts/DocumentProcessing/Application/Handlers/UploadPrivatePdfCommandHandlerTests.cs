@@ -95,7 +95,7 @@ public class UploadPrivatePdfCommandHandlerTests
                     userId,
                     new Email("test@example.com"),
                     "TestUser",
-                    PasswordHash.Create("TestPassword123!"),
+                    PasswordHash.Create("UniqueT3stPwd!"),
                     AuthRole.User,
                     UserTier.Normal);
                 return user;

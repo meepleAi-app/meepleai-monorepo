@@ -52,24 +52,58 @@ public sealed class PasswordHashTests
     }
 
     [Fact]
-    public void Create_WithPasswordLessThan8Characters_ThrowsValidationException()
+    public void Create_WithPasswordLessThan12Characters_ThrowsValidationException()
     {
-        // Act
+        // I7 (auth security fixes): minimum length raised from 8 to 12.
         var action = () => PasswordHash.Create("Short1!");
 
-        // Assert
         action.Should().Throw<ValidationException>()
-            .WithMessage("*Password must be at least 8 characters*");
+            .WithMessage("*Password must be at least 12 characters*");
     }
 
     [Fact]
-    public void Create_WithPasswordExactly8Characters_Succeeds()
+    public void Create_WithPasswordExactly12Characters_Succeeds()
     {
-        // Act
-        var hash = PasswordHash.Create("Exactly8");
+        // I7: 12 chars is the new minimum. The plaintext must also avoid
+        // the common-password blocklist — "Exactly12abc" satisfies both.
+        var hash = PasswordHash.Create("Exactly12abc");
 
-        // Assert
         hash.Value.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void Create_WithPasswordExceeding128Characters_ThrowsValidationException()
+    {
+        // I7: max length 128 caps PBKDF2 input cost.
+        var tooLong = new string('A', 129);
+
+        var action = () => PasswordHash.Create(tooLong);
+
+        action.Should().Throw<ValidationException>()
+            .WithMessage("*Password cannot exceed 128 characters*");
+    }
+
+    [Fact]
+    public void Create_WithCommonPassword_ThrowsValidationException()
+    {
+        // I7: top-N common-password blocklist. "password1234" is in the
+        // shipped seed AND is length-compliant (12 chars), so the blocklist
+        // is the gate that catches it (length passes, blocklist rejects).
+        var action = () => PasswordHash.Create("password1234");
+
+        action.Should().Throw<ValidationException>()
+            .WithMessage("*compromised passwords*");
+    }
+
+    [Fact]
+    public void Create_WithCommonPasswordCaseVariant_ThrowsValidationException()
+    {
+        // I7: blocklist lookup is case-insensitive — "PASSWORD1234" and
+        // "password1234" are both equally trivial to brute-force.
+        var action = () => PasswordHash.Create("PASSWORD1234");
+
+        action.Should().Throw<ValidationException>()
+            .WithMessage("*compromised passwords*");
     }
 
     [Fact]
@@ -270,9 +304,10 @@ public sealed class PasswordHashTests
     [Fact]
     public void Equals_WithDifferentHashValues_ReturnsFalse()
     {
-        // Arrange
-        var hash1 = PasswordHash.Create("Password123!");
-        var hash2 = PasswordHash.Create("Password123!");
+        // Arrange — "Password123!" is in the I7 blocklist; pick a
+        // length-compliant non-common password instead.
+        var hash1 = PasswordHash.Create("UnusualUniqueP4ssword!");
+        var hash2 = PasswordHash.Create("UnusualUniqueP4ssword!");
 
         // Assert - different due to random salt
         hash1.Should().NotBe(hash2);

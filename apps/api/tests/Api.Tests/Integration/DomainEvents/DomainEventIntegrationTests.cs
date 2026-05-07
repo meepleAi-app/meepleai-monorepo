@@ -141,7 +141,7 @@ public class DomainEventIntegrationTests : IAsyncLifetime
         // Arrange
         var user = CreateTestUser();
         var newPasswordHash = PasswordHash.Create("NewPassword123!");
-        user.ChangePassword("TestPassword123!", newPasswordHash);
+        user.ChangePassword("UniqueT3stPwd!", newPasswordHash);
 
         user.DomainEvents.Should().HaveCount(1);
 
@@ -158,7 +158,7 @@ public class DomainEventIntegrationTests : IAsyncLifetime
             id: Guid.NewGuid(),
             email: Email.Parse("test@example.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("TestPassword123!"),
+            passwordHash: PasswordHash.Create("UniqueT3stPwd!"),
             role: Role.User
         );
     }

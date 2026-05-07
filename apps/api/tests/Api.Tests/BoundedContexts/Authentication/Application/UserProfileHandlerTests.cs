@@ -281,7 +281,7 @@ public class UserProfileHandlerTests
         var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
         exception.Message.Should().Contain("User not found");
     }
-    private static User CreateTestUser(Guid? userId = null, string password = "TestPassword123!")
+    private static User CreateTestUser(Guid? userId = null, string password = "UniqueT3stPwd!")
     {
         return new User(
             id: userId ?? Guid.NewGuid(),

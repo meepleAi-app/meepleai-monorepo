@@ -261,7 +261,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             userId,
             email,
             "Unlink Test User",
-            PasswordHash.Create("Password123!"), // Has password as fallback
+            PasswordHash.Create("UnusualPwd123!"), // Has password as fallback
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -337,7 +337,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             userId,
             email,
             "Single OAuth User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -391,7 +391,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             userId,
             email,
             "Multi OAuth User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -485,7 +485,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             userId,
             email,
             "Progressive OAuth User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User);
 
         await userRepository.AddAsync(user, TestCancellationToken);
@@ -578,7 +578,7 @@ public class OAuthIntegrationTests : IAsyncLifetime
             Guid.Parse("00000000-0000-0000-0000-000000000001"),
             new Email("preexisting@test.meepleai.dev"),
             "Pre-existing Test User",
-            PasswordHash.Create("TestPassword123!"),
+            PasswordHash.Create("UniqueT3stPwd!"),
             Role.User);
 
         await scopedUserRepository.AddAsync(testUser, TestCancellationToken);

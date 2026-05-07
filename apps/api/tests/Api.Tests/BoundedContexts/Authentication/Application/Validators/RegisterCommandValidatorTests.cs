@@ -128,7 +128,7 @@ public sealed class RegisterCommandValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Password)
-            .WithErrorMessage("Password must be at least 8 characters");
+            .WithErrorMessage("Password must be at least 12 characters");
     }
 
     [Fact]

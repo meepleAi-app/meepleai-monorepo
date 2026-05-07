@@ -59,10 +59,12 @@ jobs:
           # ============================================
           # main-dev can be updated from:
           # - frontend-dev, backend-dev (primary paths)
-          # - feature/* branches (hotfixes, backend features)
+          # - feature/* branches (backend features)
+          # - hotfix/* branches (urgent security/bug fixes; still flow
+          #   through main-dev → main-staging → main, no direct-to-main)
           # - fix/*, docs/*, refactor/*, chore/* branches
           if [[ "$BASE_BRANCH" == "main-dev" ]]; then
-            ALLOWED_PATTERNS="^(frontend-dev|backend-dev|feature/|fix/|docs/|test/|refactor/|chore/|release/|merge/)"
+            ALLOWED_PATTERNS="^(frontend-dev|backend-dev|feature/|fix/|hotfix/|docs/|test/|refactor/|chore/|release/|merge/)"
 
             if ! echo "$SOURCE_BRANCH" | grep -qE "$ALLOWED_PATTERNS"; then
               echo "::error::Branch 'main-dev' can only be updated from allowed branches"
@@ -72,6 +74,7 @@ jobs:
               echo "  - frontend-dev"
               echo "  - backend-dev"
               echo "  - feature/*"
+              echo "  - hotfix/*"
               echo "  - fix/*"
               echo "  - docs/*"
               echo "  - test/*"

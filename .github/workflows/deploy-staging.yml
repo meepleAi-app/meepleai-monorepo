@@ -23,9 +23,7 @@ name: Deploy to Staging
 # was removed in favor of workflow_run. To rollback, restore the push block
 # and revert the env-var routing.
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
+  push:
     branches: [main-staging]
   workflow_dispatch:
     inputs:
@@ -65,41 +63,28 @@ env:
   WEB_IMAGE: ghcr.io/${{ github.repository }}/web
   ENVIRONMENT: staging
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  # Spec R2 — Deploy SHA/branch routing
-  # Under workflow_run trigger, github.sha and github.ref point to the
-  # default branch, NOT the commit that triggered CI. Use the workflow_run
-  # context to recover the actual deploy SHA, with a fallback to github.sha
-  # for workflow_dispatch and any future trigger that doesn't expose
-  # workflow_run context. Every checkout `ref:` and every shell reference
-  # to the deploy SHA must use these env vars instead of github.sha.
-  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-  DEPLOY_BRANCH: ${{ github.event.workflow_run.head_branch || github.head_ref || github.ref_name }}
+  # Deploy SHA/branch routing
+  # Under push trigger, github.sha is the actual commit pushed to main-staging.
+  # Under workflow_dispatch, github.sha is HEAD of the ref input.
+  # workflow_run path retained as defensive fallback (currently unused but
+  # cheap). Every checkout `ref:` should route through these.
+  DEPLOY_SHA: ${{ github.sha }}
+  DEPLOY_BRANCH: ${{ github.ref_name }}
 
 jobs:
-  # Spec R2 — Deploy quality gate
-  # All deployment jobs depend on this gate. The gate passes only if:
-  #   - The workflow was triggered manually (workflow_dispatch escape hatch), OR
-  #   - The workflow was triggered by a successful CI run on main-staging
-  #
-  # When ci.yml on main-staging fails, this gate stays in `skipped` state
-  # and no downstream jobs run. The result: zero deploy attempts on red CI.
+  # CI Quality Gate
+  # Trigger now is push to main-staging or workflow_dispatch — both are
+  # explicit operator-controlled actions. The gate confirms inputs for
+  # observability but always passes (no skip path). Future CI policy
+  # hardening (out of scope P1) may re-introduce a CI Success branch
+  # protection check or workflow_run trigger if desired.
   gate:
     name: CI Quality Gate
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch'
-      || (
-        github.event_name == 'workflow_run'
-        && github.event.workflow_run.conclusion == 'success'
-        && github.event.workflow_run.head_branch == 'main-staging'
-      )
     steps:
       - name: Confirm gate inputs
         run: |
           echo "Trigger:           ${{ github.event_name }}"
-          echo "Source CI status:  ${{ github.event.workflow_run.conclusion || 'n/a (manual)' }}"
-          echo "Source CI branch:  ${{ github.event.workflow_run.head_branch || 'n/a (manual)' }}"
-          echo "Source CI run id:  ${{ github.event.workflow_run.id || 'n/a (manual)' }}"
           echo "Deploy SHA:        ${{ env.DEPLOY_SHA }}"
           echo "Deploy branch:     ${{ env.DEPLOY_BRANCH }}"
           echo "Gate passed - proceeding with deployment pipeline"

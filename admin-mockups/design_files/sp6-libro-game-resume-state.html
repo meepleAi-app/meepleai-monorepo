@@ -1,0 +1,376 @@
+<!doctype html>
+<!--
+  ===================================================================
+  SP6 Libro Game — Resume State (sp6-libro-game-resume-state.html)
+  Route: /library/games/[gameId]/play (entry point shell, estende A index con resume awareness)
+  Persona: Aaron (badsworm@gmail.com), project owner MeepleAI / superadmin in dogfooding.
+           Estensione della family Sara (vedi Capitolo 2 brief master) — tono UI identico,
+           bypass quota, quality bar "non rovinare la sera con gli amici".
+
+  Coverage Gherkin design doc 2026-05-07:
+    @N4.1 — resume sessione N giorni dopo (happy)
+    @N4.4 — multi-campagna parallela 2+ card (edge)
+    @N4.5 — campagna stale > 90 giorni (edge)
+
+  Stati implementati (4 mobile + 2 desktop variants):
+    state-01-first-time       — Aaron mai giocato Nanolith, hero "Inizia la prima campagna"
+    state-02-single-resume    — 1 campagna attiva, ultima sessione 7gg fa, glossary preview
+    state-03-multi-campaign   — 2 campagne parallele (entityHsl game vs agent)
+    state-04-stale-warning    — 1 campagna 100gg fa, warning amber rispettoso
+    state-02-desktop-split    — split-view 380px lista + dettaglio party/glossary
+    state-03-desktop-grid     — 2-column grid
+
+  Vincolo FREEZE v2 (#807, #808): SOLO entityHsl(entity, alpha) helper o token semantici
+  var(--c-game/agent/kb/warning/event). NO hsl(<num>, 89%, 48%) hardcoded.
+
+  Tono: warm/accogliente/paritario (NON admin-tecnico). Dogfooding badge SUPERADMIN
+  visibile solo nell'avatar pip + cost indicator footer (no UI debug-mode).
+  ===================================================================
+-->
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Resume state (SP6 · G · Libro game)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+<link rel="stylesheet" href="components.css"/>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+  body { background: var(--bg); }
+
+  /* ─── Stage ─── */
+  .lg-stage { padding: 56px 24px 80px; min-height: 100vh; }
+  .lg-wrap { max-width: 1480px; margin: 0 auto; }
+
+  .lg-section-label {
+    font-family: var(--f-mono); font-size: var(--fs-xs);
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.08em; margin: var(--s-9) 0 var(--s-3);
+    padding-bottom: var(--s-2); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .lg-section-label:first-of-type { margin-top: var(--s-4); }
+  .lg-section-label .anchor {
+    font-family: var(--f-mono); font-size: 10px;
+    padding: 2px 8px; border-radius: var(--r-sm);
+    background: hsl(var(--c-kb) / 0.12); color: hsl(var(--c-kb));
+    text-transform: none; letter-spacing: 0;
+  }
+  .lg-section-label .gherkin {
+    font-family: var(--f-mono); font-size: 10px;
+    padding: 2px 8px; border-radius: var(--r-sm);
+    background: hsl(var(--c-agent) / 0.14); color: hsl(var(--c-agent));
+    text-transform: none; letter-spacing: 0; font-weight: 700;
+  }
+
+  .lg-state-grid {
+    display: grid; gap: 28px; align-items: flex-start;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  }
+
+  /* ─── Phone bezel (.phone-sp6 reproduction 1:1 from C/D mockup) ─── */
+  .lg-phone {
+    width: 380px; height: 780px;
+    border-radius: 48px; border: 10px solid #1a1a1a;
+    background: var(--bg);
+    overflow: hidden; position: relative;
+    box-shadow: 0 40px 80px rgba(90,60,20,.18), 0 0 0 2px #000;
+    display: flex; flex-direction: column;
+  }
+  [data-theme="dark"] .lg-phone {
+    border-color: #0a0a0a;
+    box-shadow: 0 40px 80px rgba(0,0,0,.6), 0 0 0 2px #000;
+  }
+  /* sepia variant — warm dimming for "table light" reading mode (replicato da D) */
+  .lg-phone.theme-sepia {
+    --bg: #f3e9d4;
+    --bg-card: #faf2dc;
+    --bg-muted: #e8dabb;
+    --text: #3a2a14;
+    --text-sec: #6b513a;
+    --text-muted: #9a8060;
+    --border: rgba(140, 100, 50, 0.22);
+    --border-light: rgba(140, 100, 50, 0.12);
+    --border-strong: rgba(140, 100, 50, 0.36);
+    color-scheme: light;
+  }
+  .lg-phone-sbar {
+    height: 32px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 22px 0; font-size: 12px; font-weight: var(--fw-bold);
+    font-family: var(--f-display); color: var(--text-sec);
+  }
+  .lg-phone-sbar .ind { display: flex; gap: 4px; font-size: 11px; }
+  .lg-phone-body {
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+    background: var(--bg);
+  }
+  .lg-phone-body::-webkit-scrollbar { display: none; }
+  .lg-phone-body { scrollbar-width: none; }
+  .lg-phone-home {
+    height: 18px; flex-shrink: 0;
+    display: flex; justify-content: center; align-items: flex-end;
+    padding-bottom: 6px;
+  }
+  .lg-phone-home::after {
+    content: ''; width: 130px; height: 4px; border-radius: 999px;
+    background: var(--text); opacity: .35;
+  }
+
+  /* ─── Desktop frame (replicato da C split-view) ─── */
+  .lg-desktop {
+    width: 100%; max-width: 1280px;
+    height: 820px;
+    border-radius: 16px;
+    border: 1px solid var(--border-strong);
+    background: var(--bg);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column;
+  }
+  .lg-desktop-bar {
+    height: 36px; flex-shrink: 0;
+    background: var(--bg-muted);
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .lg-desktop-bar .traffic { width: 12px; height: 12px; border-radius: 50%; }
+  .lg-desktop-bar .traffic:nth-child(1) { background: #ff5f57; }
+  .lg-desktop-bar .traffic:nth-child(2) { background: #febc2e; }
+  .lg-desktop-bar .traffic:nth-child(3) { background: #28c840; }
+  .lg-desktop-bar .url {
+    margin-left: 14px;
+    font-family: var(--f-mono); font-size: 11px;
+    color: var(--text-muted);
+  }
+  .lg-desktop-body {
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+  }
+  .lg-desktop-body::-webkit-scrollbar { width: 6px; }
+  .lg-desktop-body::-webkit-scrollbar-thumb {
+    background: var(--border); border-radius: 3px;
+  }
+
+  .lg-frame-caption {
+    font-family: var(--f-mono); font-size: var(--fs-xs);
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .lg-frame-caption .theme-tag {
+    padding: 2px 7px; border-radius: var(--r-sm);
+    background: var(--bg-muted); border: 1px solid var(--border);
+    color: var(--text-sec); letter-spacing: 0; text-transform: none;
+  }
+
+  /* Single phone column on small screens */
+  @media (max-width: 800px) {
+    .lg-state-grid { grid-template-columns: 1fr; justify-items: center; }
+  }
+
+  /* ─── Header & lead ─── */
+  .lg-head h1 { font-size: var(--fs-3xl); margin-bottom: var(--s-2); }
+  .lg-head .lead {
+    color: var(--text-sec); font-size: var(--fs-md);
+    max-width: 820px; margin-bottom: var(--s-6);
+  }
+  .lg-head .meta-row {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 26px;
+    font-family: var(--f-mono); font-size: var(--fs-xs);
+  }
+  .lg-head .tag {
+    padding: 3px 9px; border-radius: var(--r-sm);
+    background: hsl(var(--c-agent) / 0.14); color: hsl(var(--c-agent));
+    font-weight: 700;
+  }
+  .lg-head .tag.kb { background: hsl(var(--c-kb) / 0.14); color: hsl(var(--c-kb)); }
+  .lg-head .tag.game { background: hsl(var(--c-game) / 0.14); color: hsl(var(--c-game)); }
+  .lg-head .tag.session { background: hsl(var(--c-session) / 0.14); color: hsl(var(--c-session)); }
+  .lg-head .tag.event { background: hsl(var(--c-event) / 0.14); color: hsl(var(--c-event)); }
+  .lg-head .tag.warn { background: hsl(var(--c-warning) / 0.14); color: hsl(var(--c-warning)); }
+  .lg-head .tag.muted {
+    background: var(--bg-muted); color: var(--text-muted);
+    border: 1px solid var(--border-light); font-weight: 600;
+  }
+
+  /* ─── Tweaks panel ─── */
+  #tweaks-panel {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    display: none;
+    background: var(--glass-bg); backdrop-filter: blur(16px);
+    border: 1px solid var(--border); border-radius: var(--r-xl);
+    box-shadow: var(--shadow-lg); padding: 16px 18px; min-width: 240px;
+    font-family: var(--f-display); font-size: 13px; color: var(--text);
+  }
+  #tweaks-panel h4 {
+    font-size: 11px; font-weight: 700; margin: 0 0 12px;
+    text-transform: uppercase; letter-spacing: .07em;
+    color: var(--text-muted); font-family: var(--f-mono);
+  }
+  #tweaks-panel label {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; font-size: 12px; margin-bottom: 10px; color: var(--text-sec);
+  }
+  #tweaks-panel select {
+    font-family: inherit; font-size: 12px; padding: 3px 6px;
+    border-radius: var(--r-sm); border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); cursor: pointer;
+  }
+
+  .theme-toggle {
+    position: fixed; top: 20px; right: 20px; z-index: 9998;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: var(--r-pill);
+    background: var(--glass-bg); backdrop-filter: blur(12px);
+    border: 1px solid var(--border); color: var(--text);
+    font-size: var(--fs-sm); font-weight: var(--fw-semi);
+    box-shadow: var(--shadow-md); cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" id="themeToggle">🌗 <span id="themeLabel">Light</span></button>
+
+<div class="lg-stage">
+  <div class="lg-wrap">
+    <div class="lg-head">
+      <h1>SP6 · G · Resume state — Libro game</h1>
+      <p class="lead">
+        Punto di ingresso <code>/library/games/[gameId]/play</code> con resume awareness.
+        Persona <strong>Aaron (badsworm@gmail.com)</strong>, project owner MeepleAI in dogfooding —
+        istanza della family Sara con bypass quota superadmin, tono UI identico a Sara.
+        Quality bar dogfood: <em>"non rovinare la sera con gli amici"</em>. 4 stati mobile + 2 desktop variants.
+      </p>
+      <div class="meta-row">
+        <span class="tag">@N4.1 resume</span>
+        <span class="tag">@N4.4 multi-campagna</span>
+        <span class="tag warn">@N4.5 stale &gt; 90gg</span>
+        <span class="tag game">entity=game (campagna primaria)</span>
+        <span class="tag session">entity=session (pulse attiva)</span>
+        <span class="tag kb">entity=kb (glossary chip)</span>
+        <span class="tag muted">FREEZE v2 #807/#808 compliant</span>
+        <span class="tag muted">.phone-sp6 light/dark/sepia</span>
+      </div>
+    </div>
+
+    <div id="root"></div>
+  </div>
+</div>
+
+<div id="tweaks-panel">
+  <h4>Tweaks</h4>
+  <label>
+    <span>Tema</span>
+    <select id="tweak-theme">
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </select>
+  </label>
+  <label>
+    <span>Stato attivo</span>
+    <select id="tweak-state">
+      <option value="all">Tutti</option>
+      <option value="state-01">01 First time</option>
+      <option value="state-02">02 Single resume</option>
+      <option value="state-03">03 Multi-campagna</option>
+      <option value="state-04">04 Stale &gt; 90gg</option>
+    </select>
+  </label>
+  <label>
+    <span>Frame</span>
+    <select id="tweak-frame">
+      <option value="both">Mobile + Desktop</option>
+      <option value="mobile">Solo mobile</option>
+      <option value="desktop">Solo desktop</option>
+    </select>
+  </label>
+  <label>
+    <span>Sepia preview</span>
+    <select id="tweak-sepia">
+      <option value="off">Off</option>
+      <option value="on">On (state-02)</option>
+    </select>
+  </label>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const saved = localStorage.getItem('mai-theme') || 'light';
+  root.setAttribute('data-theme', saved);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const lbl = document.getElementById('themeLabel');
+    if (lbl) lbl.textContent = saved === 'dark' ? 'Dark' : 'Light';
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('mai-theme', next);
+      document.getElementById('themeLabel').textContent = next === 'dark' ? 'Dark' : 'Light';
+      const ts = document.getElementById('tweak-theme'); if (ts) ts.value = next;
+    });
+  });
+
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "theme": "light",
+    "state": "all",
+    "frame": "both",
+    "sepia": "off"
+  }/*EDITMODE-END*/;
+
+  window.addEventListener('message', e => {
+    if (e.data?.type === '__activate_edit_mode')
+      document.getElementById('tweaks-panel').style.display = 'block';
+    if (e.data?.type === '__deactivate_edit_mode')
+      document.getElementById('tweaks-panel').style.display = 'none';
+  });
+  window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const tt = document.getElementById('tweak-theme');
+    if (tt) {
+      tt.value = saved;
+      tt.addEventListener('change', e => {
+        const next = e.target.value;
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('mai-theme', next);
+        document.getElementById('themeLabel').textContent = next === 'dark' ? 'Dark' : 'Light';
+        window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { theme: next } }, '*');
+      });
+    }
+    const ts = document.getElementById('tweak-state');
+    if (ts) {
+      ts.addEventListener('change', e => {
+        document.dispatchEvent(new CustomEvent('lg-tweak-state', { detail: e.target.value }));
+        window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { state: e.target.value } }, '*');
+      });
+    }
+    const tf = document.getElementById('tweak-frame');
+    if (tf) {
+      tf.addEventListener('change', e => {
+        document.dispatchEvent(new CustomEvent('lg-tweak-frame', { detail: e.target.value }));
+        window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { frame: e.target.value } }, '*');
+      });
+    }
+    const tse = document.getElementById('tweak-sepia');
+    if (tse) {
+      tse.addEventListener('change', e => {
+        document.dispatchEvent(new CustomEvent('lg-tweak-sepia', { detail: e.target.value }));
+        window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { sepia: e.target.value } }, '*');
+      });
+    }
+  });
+</script>
+
+<script type="text/babel" src="sp6-libro-game-resume-state.jsx"></script>
+
+</body>
+</html>

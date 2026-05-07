@@ -59,6 +59,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameToolkitEntity> GameToolkits => Set<GameToolkitEntity>(); // ISSUE-4753: Game toolkit configs
     public DbSet<BoundedContexts.GameToolkit.Domain.Entities.Toolkit> Toolkits => Set<BoundedContexts.GameToolkit.Domain.Entities.Toolkit>(); // ISSUE-5144: Epic B — user toolkit dashboard
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState> ToolkitSessionStates => Set<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState>(); // ISSUE-5148: Epic B5 — toolkit session state
+    public DbSet<BoundedContexts.SessionTracking.Domain.Entities.GamebookCampaignSession> GamebookCampaignSessions => Set<BoundedContexts.SessionTracking.Domain.Entities.GamebookCampaignSession>(); // Iter 1.A — Libro Game gamebook campaigns
     public DbSet<SessionParticipantEntity> SessionParticipants => Set<SessionParticipantEntity>(); // Game Night: Multi-device session participants
     public DbSet<SessionInviteEntity> SessionInvites => Set<SessionInviteEntity>(); // E3-1: Session invite links/PINs
     public DbSet<SessionPlayerEntity> SessionPlayers => Set<SessionPlayerEntity>(); // ISSUE-4750: Live session players

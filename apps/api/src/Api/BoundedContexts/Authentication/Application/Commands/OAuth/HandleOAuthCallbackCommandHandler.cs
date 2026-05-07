@@ -194,33 +194,13 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
             {
                 _logger.LogError(ex, "Failed to create session for user {UserId} during OAuth callback", user.Id);
 
-                // Rollback changes (transaction for real DB, manual cleanup for InMemory)
-                if (transaction != null)
-                {
-                    await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
-                }
-                else
-                {
-                    // Manual rollback for InMemory database (Issue #2600)
-                    // Remove OAuth account that was just created (works for both new and existing users)
-                    var providerLower = command.Provider.ToLowerInvariant();
-                    var oauthAccountToRemove = await _db.OAuthAccounts
-                        .FirstOrDefaultAsync(o => o.UserId == user.Id && o.Provider == providerLower, cancellationToken)
-                        .ConfigureAwait(false);
-
-                    if (oauthAccountToRemove != null)
-                    {
-                        _db.OAuthAccounts.Remove(oauthAccountToRemove);
-                    }
-
-                    // Only remove user if it was newly created in this request
-                    if (isNewUser)
-                    {
-                        _db.Users.Remove(user);
-                    }
-
-                    await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                }
+                // I6 (auth security fixes): single compensation path covers
+                // both real-DB (transaction rollback) and InMemory (manual
+                // cleanup of just-created user/oauth-account) — see
+                // RollbackOAuthAttemptAsync.
+                await RollbackOAuthAttemptAsync(
+                    transaction, command.Provider, user.Id, isNewUser, cancellationToken)
+                    .ConfigureAwait(false);
 
                 return new HandleOAuthCallbackResult
                 {
@@ -248,10 +228,14 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         catch (OAuthTokenExchangeException ex)
         {
             _logger.LogError(ex, "OAuth token exchange failed for provider {Provider}", command.Provider);
-            if (transaction != null)
-            {
-                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
-            }
+            // I6: unified compensation path. The other catches fire BEFORE
+            // FindOrCreateUserAsync mutates the DB, so the InMemory branch
+            // is a no-op there; the helper centralises the transaction
+            // rollback so we don't duplicate the "if transaction != null"
+            // dance in every catch.
+            await RollbackOAuthAttemptAsync(
+                transaction, command.Provider, userIdToClean: null, isNewUserToClean: false, cancellationToken)
+                .ConfigureAwait(false);
             return new HandleOAuthCallbackResult
             {
                 Success = false,
@@ -261,10 +245,14 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         catch (OAuthUserInfoException ex)
         {
             _logger.LogError(ex, "OAuth user info retrieval failed for provider {Provider}", command.Provider);
-            if (transaction != null)
-            {
-                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
-            }
+            // I6: unified compensation path. The other catches fire BEFORE
+            // FindOrCreateUserAsync mutates the DB, so the InMemory branch
+            // is a no-op there; the helper centralises the transaction
+            // rollback so we don't duplicate the "if transaction != null"
+            // dance in every catch.
+            await RollbackOAuthAttemptAsync(
+                transaction, command.Provider, userIdToClean: null, isNewUserToClean: false, cancellationToken)
+                .ConfigureAwait(false);
             return new HandleOAuthCallbackResult
             {
                 Success = false,
@@ -274,10 +262,14 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         catch (SharedKernel.Domain.Exceptions.ValidationException ex)
         {
             _logger.LogError(ex, "Validation failed during OAuth callback for provider {Provider}", command.Provider);
-            if (transaction != null)
-            {
-                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
-            }
+            // I6: unified compensation path. The other catches fire BEFORE
+            // FindOrCreateUserAsync mutates the DB, so the InMemory branch
+            // is a no-op there; the helper centralises the transaction
+            // rollback so we don't duplicate the "if transaction != null"
+            // dance in every catch.
+            await RollbackOAuthAttemptAsync(
+                transaction, command.Provider, userIdToClean: null, isNewUserToClean: false, cancellationToken)
+                .ConfigureAwait(false);
             return new HandleOAuthCallbackResult
             {
                 Success = false,
@@ -287,10 +279,14 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         catch (DomainException ex)
         {
             _logger.LogError(ex, "Domain validation failed during OAuth callback for provider {Provider}", command.Provider);
-            if (transaction != null)
-            {
-                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
-            }
+            // I6: unified compensation path. The other catches fire BEFORE
+            // FindOrCreateUserAsync mutates the DB, so the InMemory branch
+            // is a no-op there; the helper centralises the transaction
+            // rollback so we don't duplicate the "if transaction != null"
+            // dance in every catch.
+            await RollbackOAuthAttemptAsync(
+                transaction, command.Provider, userIdToClean: null, isNewUserToClean: false, cancellationToken)
+                .ConfigureAwait(false);
             return new HandleOAuthCallbackResult
             {
                 Success = false,
@@ -307,10 +303,14 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during OAuth callback for provider {Provider}", command.Provider);
-            if (transaction != null)
-            {
-                await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
-            }
+            // I6: unified compensation path. The other catches fire BEFORE
+            // FindOrCreateUserAsync mutates the DB, so the InMemory branch
+            // is a no-op there; the helper centralises the transaction
+            // rollback so we don't duplicate the "if transaction != null"
+            // dance in every catch.
+            await RollbackOAuthAttemptAsync(
+                transaction, command.Provider, userIdToClean: null, isNewUserToClean: false, cancellationToken)
+                .ConfigureAwait(false);
             return new HandleOAuthCallbackResult
             {
                 Success = false,
@@ -320,6 +320,62 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
 #pragma warning restore CA1031
         // Note: Transaction disposal is handled by 'await using' in the ExecuteAsync wrapper
         // No finally block needed - this avoids double-disposal issues
+    }
+
+    /// <summary>
+    /// I6 — unified compensation for an OAuth callback that fails after the
+    /// DB has been touched. For the real-DB path, the open transaction is
+    /// rolled back. For the InMemory provider (used by unit tests, where
+    /// transactions are no-ops) we manually undo the user / OAuth-account
+    /// creation if those landed before the failure point.
+    ///
+    /// Calling with <paramref name="userIdToClean"/> = null is the safe
+    /// no-op for catches that fire before any DB mutation (token exchange,
+    /// user-info retrieval); they only need the transaction rollback.
+    /// </summary>
+    private async Task RollbackOAuthAttemptAsync(
+        IDbContextTransaction? transaction,
+        string provider,
+        Guid? userIdToClean,
+        bool isNewUserToClean,
+        CancellationToken cancellationToken)
+    {
+        if (transaction != null)
+        {
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        // InMemory path (Issue #2600): no transactions, so undo by hand.
+        if (userIdToClean is null)
+        {
+            return; // nothing was persisted yet
+        }
+
+        var providerLower = provider.ToLowerInvariant();
+        var oauthAccountToRemove = await _db.OAuthAccounts
+            .FirstOrDefaultAsync(
+                o => o.UserId == userIdToClean.Value && o.Provider == providerLower,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (oauthAccountToRemove != null)
+        {
+            _db.OAuthAccounts.Remove(oauthAccountToRemove);
+        }
+
+        if (isNewUserToClean)
+        {
+            var userToRemove = await _db.Users
+                .FirstOrDefaultAsync(u => u.Id == userIdToClean.Value, cancellationToken)
+                .ConfigureAwait(false);
+            if (userToRemove != null)
+            {
+                _db.Users.Remove(userToRemove);
+            }
+        }
+
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

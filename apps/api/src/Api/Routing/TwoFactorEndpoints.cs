@@ -193,6 +193,7 @@ internal static class TwoFactorEndpoints
             logger.LogInformation("2FA disabled for user {UserId}", userId);
             return Results.Ok(new { message = "Two-factor authentication disabled successfully" });
         })
+        .AddEndpointFilter<Api.Infrastructure.Filters.AntiforgeryEndpointFilter>() // C8: CSRF
         .RequireAuthorization()
         .WithName("Disable2FA")
         .WithTags("Authentication");

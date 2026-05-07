@@ -169,6 +169,7 @@ internal static class UserProfileEndpoints
 
             return Results.Json(new { ok = true, message = "Password changed successfully" });
         })
+        .AddEndpointFilter<Api.Infrastructure.Filters.AntiforgeryEndpointFilter>() // C8: CSRF
         .RequireSession() // Issue #1446: Automatic session validation
         .RequireAuthorization()
         .WithName("ChangePassword")

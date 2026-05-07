@@ -230,6 +230,7 @@ Rate limited to 10 requests per minute per IP address.
                 userId, LogValueSanitizer.Sanitize(provider));
             return Results.NoContent();
         })
+        .AddEndpointFilter<Api.Infrastructure.Filters.AntiforgeryEndpointFilter>() // C8: CSRF
         .WithName("UnlinkOAuthAccount")
         .WithTags("Authentication", "OAuth", "User Profile")
         .WithSummary("Unlink OAuth provider from user account")

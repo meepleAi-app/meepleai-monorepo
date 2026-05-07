@@ -49,6 +49,7 @@ internal static class AuthenticationEndpoints
         MapLoginEndpoint(group);
         MapLogoutEndpoint(group);
         MapMeEndpoint(group);
+        MapCsrfTokenEndpoint(group);
 
         // Map session management endpoints
         MapSessionEndpoints(group);
@@ -215,6 +216,27 @@ internal static class AuthenticationEndpoints
             }
 
             return Results.Json(new { user, expiresAt = session.ExpiresAt });
+        });
+    }
+
+    /// <summary>
+    /// C8 — CSRF bootstrap. Issues an antiforgery token pair: the request
+    /// token is returned in the JSON body, and the matching cookie
+    /// (X-XSRF-TOKEN, non-HttpOnly) is set as a side effect by
+    /// <see cref="Microsoft.AspNetCore.Antiforgery.IAntiforgery.GetAndStoreTokens"/>.
+    /// The JS client reads the cookie and echoes the value in an
+    /// X-XSRF-TOKEN header on every state-changing request.
+    /// </summary>
+    private static void MapCsrfTokenEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/auth/csrf-token", (HttpContext context, Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery) =>
+        {
+            var tokens = antiforgery.GetAndStoreTokens(context);
+            return Results.Json(new
+            {
+                token = tokens.RequestToken,
+                headerName = tokens.HeaderName,
+            });
         });
     }
 
@@ -451,7 +473,9 @@ internal static class AuthenticationEndpoints
             }
 
             return Results.Json(new { ok = true, message = "Session revoked successfully" });
-        }).RequireAuthorization();
+        })
+        .AddEndpointFilter<Api.Infrastructure.Filters.AntiforgeryEndpointFilter>() // C8: CSRF
+        .RequireAuthorization();
     }
 
     private static void MapRevokeAllSessionsEndpoint(RouteGroupBuilder group)
@@ -522,7 +546,9 @@ internal static class AuthenticationEndpoints
                     ? $"Successfully logged out of {result.RevokedSessionCount} device(s)"
                     : "No other active sessions to revoke"
             });
-        }).RequireAuthorization()
+        })
+        .AddEndpointFilter<Api.Infrastructure.Filters.AntiforgeryEndpointFilter>() // C8: CSRF
+        .RequireAuthorization()
         .WithName("LogoutAllDevices")
         .WithTags("Authentication", "Sessions")
         .WithSummary("Logout from all devices")

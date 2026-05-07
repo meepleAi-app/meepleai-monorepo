@@ -269,6 +269,24 @@ builder.Services.Configure<IndexingSettings>(builder.Configuration.GetSection(In
 // Issue #1447: Security headers middleware configuration
 builder.Services.AddSecurityHeaders(builder.Configuration);
 
+// C8 (auth security fixes): antiforgery / CSRF protection on state-changing
+// endpoints. Uses the double-submit cookie pattern — the X-XSRF-TOKEN cookie
+// is non-HttpOnly so the JS client can read it and echo the value in the
+// X-XSRF-TOKEN request header; AntiforgeryEndpointFilter then verifies the
+// header equals the server-side request token. The session cookie itself
+// stays HttpOnly + SameSite=Lax; this is layered defence against top-level
+// cross-origin form POSTs.
+builder.Services.AddAntiforgery(opt =>
+{
+    opt.HeaderName = "X-XSRF-TOKEN";
+    opt.Cookie.Name = "X-XSRF-TOKEN";
+    opt.Cookie.HttpOnly = false; // intentional: JS reads to echo in the header
+    opt.Cookie.SameSite = SameSiteMode.Lax;
+    opt.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+});
+
 // BGAI-021 (Issue #963): AI provider configuration with startup validation
 builder.Services.Configure<AiProviderSettings>(builder.Configuration.GetSection(AiProviderSettings.SectionName));
 builder.Services.AddSingleton<IValidateOptions<AiProviderSettings>, AiProviderValidator>();

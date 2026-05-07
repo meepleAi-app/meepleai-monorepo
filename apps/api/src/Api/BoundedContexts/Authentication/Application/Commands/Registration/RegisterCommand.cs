@@ -14,7 +14,13 @@ internal record RegisterCommand(
     string DisplayName,
     string? Role = null,
     string? IpAddress = null,
-    string? UserAgent = null
+    string? UserAgent = null,
+    // C5: explicit bootstrap-admin token. When equal (constant-time) to the
+    // configured Authentication:BootstrapAdminToken AND the single-use flag
+    // hasn't been set yet, the resulting user is provisioned as Admin. All
+    // other inputs land Role.User regardless of the registration order
+    // (replaces the race-prone HasAnyUsersAsync first-user-is-admin path).
+    string? BootstrapToken = null
 ) : ICommand<RegisterResponse>;
 
 /// <summary>

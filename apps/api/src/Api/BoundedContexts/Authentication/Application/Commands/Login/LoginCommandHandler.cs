@@ -129,11 +129,18 @@ internal class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse
                 command.IpAddress
             ).ConfigureAwait(false);
 
+            // F5 (auth security review): on the 2FA-required branch we expose
+            // the temp-session expiration through ExpiresAt so the client
+            // can time out the 2FA prompt. The temp-session lifetime is
+            // managed by ITempSessionService (5 minutes by default); we
+            // reflect that bound via the time provider.
+            var tempSessionExpiresAt = DateTime.UtcNow.AddMinutes(5);
             return new LoginResponse(
                 RequiresTwoFactor: true,
                 TempSessionToken: tempSessionToken,
                 User: null,
-                SessionToken: null
+                SessionToken: null,
+                ExpiresAt: tempSessionExpiresAt
             );
         }
 

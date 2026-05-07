@@ -405,7 +405,7 @@ builder.Services.AddSharedGameCatalogContext(builder.Configuration);
 builder.Services.AddSharedGameCatalogPolicies();
 
 // Authentication services (Auth, OAuth, 2FA, API keys, Sessions)
-builder.Services.AddAuthenticationServices(builder.Configuration);
+builder.Services.AddAuthenticationServices(builder.Configuration, builder.Environment);
 
 // Observability services (OpenTelemetry, Health checks, Swagger)
 builder.Services.AddObservabilityServices(builder.Configuration, builder.Environment);

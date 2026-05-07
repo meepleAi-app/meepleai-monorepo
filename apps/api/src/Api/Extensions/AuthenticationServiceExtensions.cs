@@ -12,9 +12,10 @@ internal static class AuthenticationServiceExtensions
 {
     public static IServiceCollection AddAuthenticationServices(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
-        services.AddDataProtectionServices(configuration);
+        services.AddDataProtectionServices(configuration, environment);
         services.AddAuthServices();
         services.AddSessionServices();
         services.AddPasswordResetServices();
@@ -60,7 +61,8 @@ internal static class AuthenticationServiceExtensions
 
     private static IServiceCollection AddDataProtectionServices(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         // AUTH-06: Data Protection API for OAuth token encryption.
         // C4: same key ring is used for the meepleai_user_role_v2 cookie HMAC.
@@ -78,6 +80,30 @@ internal static class AuthenticationServiceExtensions
         {
             Directory.CreateDirectory(keysPath);
             dp.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        }
+        else
+        {
+            // F4 (auth security review): persisted keys are mandatory in
+            // Production / Staging. Without them every restart generates a
+            // fresh key ring and invalidates every meepleai_user_role_v2
+            // cookie in the wild — users silently lose admin role gating
+            // until they re-login. The previous behaviour failed silently
+            // (just no persistence). We now hard-fail at startup so
+            // misconfigured deployments don't ship.
+            //
+            // Development / Testing / CI keep ephemeral keys (current
+            // behaviour) so unit tests and local dev don't need a writable
+            // path.
+            if (environment.IsProduction() || environment.IsStaging())
+            {
+                throw new InvalidOperationException(
+                    "DataProtection:KeysPath is required in Production and Staging. " +
+                    "Set it to a writable directory mounted on a persistent volume " +
+                    "(env var: DATAPROTECTION__KEYSPATH). Without persisted keys, " +
+                    "every API restart invalidates every meepleai_user_role_v2 " +
+                    "cookie. Multi-instance deployments must point all replicas " +
+                    "at the same volume (or use PersistKeysToStackExchangeRedis).");
+            }
         }
 
         return services;

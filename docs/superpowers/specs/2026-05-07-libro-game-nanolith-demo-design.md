@@ -52,6 +52,7 @@ expert-panel-applied: [Wiegers, Adzic, Cockburn, Fowler, Newman, Nygard, Crispin
 - [10. Decisions Log](#10-decisions-log)
 - [11. Open Questions Carry-forward](#11-open-questions-carry-forward)
 - [12. Riferimenti](#12-riferimenti)
+- [13bis. Mockup Inventory (asset visivi Iter 1)](#13bis-mockup-inventory-asset-visivi-iter-1)
 - [13. Glossario Terminologia Tecnica](#13-glossario-terminologia-tecnica)
 
 ---
@@ -1052,6 +1053,7 @@ Decisioni prese durante la sessione di brainstorming socratico (2026-05-07):
 | D14 | Tag `@dogfood` su scenari Gherkin per setup reale Aaron + Nanolith reali. Seed E2E solo per CI | Risposta utente: "s7 reali". Revert su decisione precedente fixture-only |
 | D15 | Aaron email = `badsworm@gmail.com` (non `@libero.it` che è email Claude/sistema) | Risposta utente: "@gmail.com, badsworm@gmail.com" |
 | D16 | sc:spec-panel review applicata (Wiegers, Adzic, Cockburn, Fowler, Newman, Nygard, Crispin, Doumont). 23 fix applicati: 3 critical + 12 major + 8 minor | Risposta utente: "b e minor issue anche". Quality score pre-fix: 7.1/10. Tracking fix in §0, §1.2bis, §2.0, §3 (split N3.1, new N3.8/N3.9/N3.10, fix N4.1), §4.2 (Mermaid), §4.3 (REST naming), §4.4 (API versioning), §5.1 (TranslatedParagraph aggregate), §6 (rename + R2 backpressure + §6.4 resilience), §7 (privacy + consistency tests), §12 (OpenAPI), §13 (glossario tech) |
+| D17 | Phase 0 mockup generation aggiunta al plan: 2 nuovi mockup hi-fi (G resume-state + H glossary-editor) via `claude.ai/design/` workflow, oltre a 3 commit di mockup untracked (C, D, E). G blocca Iter 1.B, H blocca Iter 1.A. FREEZE-compliance enforced via grep gate | Risposta utente: "aggiungiamo al piano la produzione di mock con claude design web". §13bis Mockup Inventory aggiunta al doc |
 
 ---
 
@@ -1098,6 +1100,56 @@ Da prioritizzare DOPO feedback dogfooding sessione 1.
 
 **Tracking dogfooding**:
 - Google Sheet `nanolith-dogfood-eval.gsheet` (Aaron-managed) — riferito in §0.1, §0.3, §0.5
+
+---
+
+## 13bis. Mockup Inventory (asset visivi Iter 1)
+
+> Mockup hi-fi generati via `claude.ai/design/` workflow (vedi MEMORY `project_sp6_libro_game_mockups_wip.md`). Tutti FREEZE-compliant (verificato grep: zero pattern `hsl(*, 89%, 48%)` hardcoded, solo `var(--c-*)` semantic tokens).
+
+### 13bis.1 Mockup esistenti riusabili per Iter 1
+
+| ID | Mockup | File | Stato git | Coverage Iter 1 |
+|---|---|---|---|---|
+| A | `sp6-libro-game-index` | `admin-mockups/design_files/sp6-libro-game-index.html`+`.jsx` | committed | Entry point shell. **Manca resume card** |
+| B | `sp6-libro-game-photo-upload` | idem | committed | Acquisizione manuale (G1 vision) — non usato Iter 1 (KB pre-indicizzato). Riutilizzabile come reference layout |
+| C | `sp6-libro-game-play-session` | idem | untracked, da committare | Shell `/play` route — **usato per Iter 1.A** |
+| D | `sp6-libro-game-translation-viewer` | idem | untracked, da committare | Viewer fullscreen N3 — **usato per Iter 1.A core** (font 26px, lh 1.6, max-w 60ch) |
+| E | `sp6-libro-game-quota-credits` | idem | untracked | N3.6 cost indicator — superadmin bypass, usabile come reference UI |
+| F | `sp6-libro-game-house-rule` | n.d. | pending | NON usato Iter 1 (house rules out of scope) |
+
+### 13bis.2 Mockup NUOVI necessari Iter 1 (da generare via claude.ai/design/)
+
+| ID | Mockup proposto | Coverage scenario | Priority | Note |
+|---|---|---|---|---|
+| **G** | `sp6-libro-game-resume-state` | N4.1 (resume card 1 campagna), N4.4 (multi-campagna list 2+ card), N4.5 (warning > 90 giorni) | **HIGH** (Iter 1.B blocker) | Estensione/sostituzione del mockup A index. Stati: 0 sessioni · 1 sessione resume · 2+ campagne · 1 campagna stale |
+| **H** | `sp6-libro-game-glossary-editor` | N3.5 (inline pill edit modal con override traduzione) | **HIGH** (Iter 1.A core, glossary loop) | Modal popup sopra viewer D. Stati: edit pristine · edited · save error · existing term collision |
+
+**Mockup non necessari** (riuso primitive v2 esistenti, no nuovo design):
+- Confidence banner amber (N3.2, N3.8) → riuso `OfflineBanner` pattern
+- Q&A chat panel laterale (N1, N2) → riuso `drawer` + `chat-stream` esistenti
+- Cost indicator bottom-right (N3.6) → riuso primitive `auth-card` + `var(--c-warning)` token
+
+### 13bis.3 Workflow generazione mockup G + H
+
+Sessione fresca su `claude.ai/design/` con:
+- **Files riallegati**: tokens.css + components.css + brief SP6 + 5 mockup esistenti A-E + design doc 2026-05-07 (questo)
+- **Brief specifico per G**: stati 4-5 elencati sopra, persona Aaron al tavolo single-device, riuso primitive v2 (auth-card, btn, drawer)
+- **Brief specifico per H**: modal popup, input text edit, save/cancel, error state collision con term esistente
+- **Output atteso**: `sp6-libro-game-resume-state.html` + `.jsx` (file 1500-2500 righe ciascuno, pattern A-E) + `sp6-libro-game-glossary-editor.html` + `.jsx`
+- **FREEZE-compliance check** post-gen: `grep -E "hsl\([0-9]+,?\s*89%,\s*48%\)" sp6-libro-game-{resume-state,glossary-editor}.html` deve restituire zero match
+
+### 13bis.4 Path nel plan implementativo
+
+Phase 0 del writing-plans (precedente Iter 1.A) include:
+1. **Task 0.1**: commit mockup C, D, E (untracked) sul branch corrente
+2. **Task 0.2**: generazione mockup G via claude.ai/design/ (~30 min sessione + commit)
+3. **Task 0.3**: generazione mockup H via claude.ai/design/ (~30 min sessione + commit)
+4. **Task 0.4**: FREEZE compliance grep su tutti i mockup
+5. **Task 0.5**: aggiornamento `admin-mockups/briefs/SP6-libro-game.md` con G+H entries
+6. **Task 0.6**: aggiornamento `MEMORY.md` `project_sp6_libro_game_mockups_wip.md` da "A+B+C+D+E ✅, F pending" a "A+B+C+D+E+G+H ✅, F pending (vision)"
+
+Dopo Phase 0, Iter 1.A può iniziare wiring `useTranslateParagraph` ai mockup C, D, H. Iter 1.B usa mockup G per resume.
 
 ---
 

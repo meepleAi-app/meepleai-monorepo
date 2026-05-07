@@ -97,6 +97,11 @@ jobs:
             --
             $(cat .lychee-targets.txt | tr '\n' ' ')
           fail: true
+          # failIfEmpty must be false under --offline: external HTTP links
+          # are skipped, so docs that contain only http(s) URLs legitimately
+          # produce a 0-link report. The check should fail only on real
+          # broken links, not on the absence of relative-path links.
+          failIfEmpty: false
           format: markdown
           output: ./lychee-report.md
 

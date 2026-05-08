@@ -18,7 +18,8 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+ENV PIP_DEFAULT_TIMEOUT=300
+RUN pip install --no-cache-dir --retries 5 -r requirements.txt
 
 # Pre-download NLTK datasets
 ENV NLTK_DATA=/nltk_data

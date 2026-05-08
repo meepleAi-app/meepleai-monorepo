@@ -25,6 +25,13 @@ internal class RegisterPayload
     /// </summary>
     public string? DisplayName { get; set; }
 
+    /// <summary>
+    /// Optional bootstrap-admin token (C5). When equal (constant-time) to the
+    /// configured Authentication:BootstrapAdminToken, the registered user is
+    /// elevated to Admin. Single-use: subsequent valid-token registrations
+    /// fall back to User role. Accepts both casing variants.
+    /// </summary>
+    public string? BootstrapToken { get; set; }
 }
 
 /// <summary>

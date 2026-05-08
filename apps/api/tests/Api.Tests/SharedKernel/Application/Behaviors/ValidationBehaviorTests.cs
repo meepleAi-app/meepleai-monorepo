@@ -23,7 +23,7 @@ public sealed class ValidationBehaviorTests
         // Arrange
         var command = new LoginCommand(
             Email: "test@example.com",
-            Password: "Password123!"
+            Password: "UnusualPwd123!"
         );
 
         var nextCalled = false;
@@ -50,7 +50,7 @@ public sealed class ValidationBehaviorTests
         // Arrange
         var command = new LoginCommand(
             Email: "test@example.com",
-            Password: "Password123!"
+            Password: "UnusualPwd123!"
         );
 
         var mockValidator = new Mock<IValidator<LoginCommand>>();
@@ -120,7 +120,7 @@ public sealed class ValidationBehaviorTests
         // Arrange
         var command = new LoginCommand(
             Email: "test@example.com",
-            Password: "Password123!"
+            Password: "UnusualPwd123!"
         );
 
         var mockValidator1 = new Mock<IValidator<LoginCommand>>();
@@ -214,7 +214,7 @@ public sealed class ValidationBehaviorTests
         // Arrange
         var command = new LoginCommand(
             Email: "test@example.com",
-            Password: "Password123!"
+            Password: "UnusualPwd123!"
         );
 
         using var cts = new CancellationTokenSource();

@@ -23,7 +23,7 @@ public sealed class UserTests
         var id = Guid.NewGuid();
         var email = new Email("test@example.com");
         var displayName = "Test User";
-        var passwordHash = PasswordHash.Create("SecurePassword123!");
+        var passwordHash = PasswordHash.Create("SecureUnusualPwd123!");
         var role = Role.User;
 
         // Act
@@ -51,7 +51,7 @@ public sealed class UserTests
         // Arrange
         var id = Guid.NewGuid();
         var email = new Email("premium@example.com");
-        var passwordHash = PasswordHash.Create("SecurePassword123!");
+        var passwordHash = PasswordHash.Create("SecureUnusualPwd123!");
 
         // Act
         var user = new User(id, email, "Premium User", passwordHash, Role.User, UserTier.Premium);
@@ -68,7 +68,7 @@ public sealed class UserTests
             Guid.NewGuid(),
             null!,
             "Test User",
-            PasswordHash.Create("SecurePassword123!"),
+            PasswordHash.Create("SecureUnusualPwd123!"),
             Role.User);
 
         // Assert
@@ -84,7 +84,7 @@ public sealed class UserTests
             Guid.NewGuid(),
             new Email("test@example.com"),
             null!,
-            PasswordHash.Create("SecurePassword123!"),
+            PasswordHash.Create("SecureUnusualPwd123!"),
             Role.User);
 
         // Assert
@@ -116,7 +116,7 @@ public sealed class UserTests
             Guid.NewGuid(),
             new Email("test@example.com"),
             "Test User",
-            PasswordHash.Create("SecurePassword123!"),
+            PasswordHash.Create("SecureUnusualPwd123!"),
             null!);
 
         // Assert
@@ -132,7 +132,7 @@ public sealed class UserTests
     public void VerifyPassword_WithCorrectPassword_ReturnsTrue()
     {
         // Arrange
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
         var user = CreateValidUser(password);
 
         // Act
@@ -146,10 +146,10 @@ public sealed class UserTests
     public void VerifyPassword_WithIncorrectPassword_ReturnsFalse()
     {
         // Arrange
-        var user = CreateValidUser("SecurePassword123!");
+        var user = CreateValidUser("SecureUnusualPwd123!");
 
         // Act
-        var result = user.VerifyPassword("WrongPassword123!");
+        var result = user.VerifyPassword("WrongUnusualPwd123!");
 
         // Assert
         result.Should().BeFalse();
@@ -163,9 +163,9 @@ public sealed class UserTests
     public void ChangePassword_WithCorrectCurrentPassword_UpdatesPassword()
     {
         // Arrange
-        var currentPassword = "SecurePassword123!";
+        var currentPassword = "SecureUnusualPwd123!";
         var user = CreateValidUser(currentPassword);
-        var newPasswordHash = PasswordHash.Create("NewSecurePassword456!");
+        var newPasswordHash = PasswordHash.Create("NewSecureUnusualPwd456!");
         user.ClearDomainEvents();
 
         // Act
@@ -181,8 +181,8 @@ public sealed class UserTests
     public void ChangePassword_WithIncorrectCurrentPassword_ThrowsDomainException()
     {
         // Arrange
-        var user = CreateValidUser("SecurePassword123!");
-        var newPasswordHash = PasswordHash.Create("NewSecurePassword456!");
+        var user = CreateValidUser("SecureUnusualPwd123!");
+        var newPasswordHash = PasswordHash.Create("NewSecureUnusualPwd456!");
 
         // Act
         var action = () => user.ChangePassword("WrongPassword", newPasswordHash);
@@ -200,8 +200,8 @@ public sealed class UserTests
     public void UpdatePassword_UpdatesPasswordWithoutVerification()
     {
         // Arrange
-        var user = CreateValidUser("OldPassword123!");
-        var newPasswordHash = PasswordHash.Create("NewPassword456!");
+        var user = CreateValidUser("OldUnusualPwd123!");
+        var newPasswordHash = PasswordHash.Create("NewUnusualPwd456!");
         user.ClearDomainEvents();
 
         // Act
@@ -1211,7 +1211,7 @@ public sealed class UserTests
 
     #region Helper Methods
 
-    private static User CreateValidUser(string password = "SecurePassword123!")
+    private static User CreateValidUser(string password = "SecureUnusualPwd123!")
     {
         return new User(
             Guid.NewGuid(),
@@ -1227,7 +1227,7 @@ public sealed class UserTests
             Guid.NewGuid(),
             new Email("admin@example.com"),
             "Admin User",
-            PasswordHash.Create("AdminPassword123!"),
+            PasswordHash.Create("AdminUnusualPwd123!"),
             Role.Admin);
     }
 

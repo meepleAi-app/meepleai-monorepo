@@ -256,7 +256,7 @@ public class RequireFeatureFilterTests
             id: userId,
             email: new Email("test@example.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Test123!"),
+            passwordHash: PasswordHash.Create("T3stPwd1234!"),
             role: role,
             tier: tier
         );

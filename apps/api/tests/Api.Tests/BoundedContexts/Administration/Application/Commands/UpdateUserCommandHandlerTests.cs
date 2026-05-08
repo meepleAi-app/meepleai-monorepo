@@ -41,7 +41,7 @@ public class UpdateUserCommandHandlerTests
             userId,
             new Email("old@example.com"),
             "Test User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User
         );
 
@@ -77,7 +77,7 @@ public class UpdateUserCommandHandlerTests
             userId,
             new Email("user@example.com"),
             "Old Name",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User
         );
 
@@ -110,7 +110,7 @@ public class UpdateUserCommandHandlerTests
             userId,
             new Email("user@example.com"),
             "Test User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User
         );
 
@@ -166,7 +166,7 @@ public class UpdateUserCommandHandlerTests
             userId,
             new Email("user@example.com"),
             "Test User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User
         );
 
@@ -174,7 +174,7 @@ public class UpdateUserCommandHandlerTests
             otherUserId,
             new Email("other@example.com"),
             "Other User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User
         );
 
@@ -210,7 +210,7 @@ public class UpdateUserCommandHandlerTests
             userId,
             new Email("old@example.com"),
             "Old Name",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User
         );
 
@@ -243,7 +243,7 @@ public class UpdateUserCommandHandlerTests
             userId,
             new Email("user@example.com"),
             "Old Name",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User
         );
 
@@ -275,7 +275,7 @@ public class UpdateUserCommandHandlerTests
             userId,
             new Email("same@example.com"),
             "Test User",
-            PasswordHash.Create("Password123!"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User
         );
 

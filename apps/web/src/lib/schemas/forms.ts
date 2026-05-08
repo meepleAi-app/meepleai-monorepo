@@ -13,9 +13,8 @@ import { z } from 'zod';
 const errorMessages = {
   required: 'Campo obbligatorio',
   email: 'Email non valida',
-  passwordMin: 'La password deve contenere almeno 8 caratteri',
-  passwordPattern:
-    'La password deve contenere maiuscole, minuscole e numeri',
+  passwordMin: 'La password deve contenere almeno 12 caratteri',
+  passwordPattern: 'La password deve contenere maiuscole, minuscole e numeri',
   passwordMatch: 'Le password non coincidono',
 } as const;
 
@@ -28,9 +27,7 @@ export const loginFormSchema = z.object({
     .string({ message: errorMessages.required })
     .min(1, errorMessages.required)
     .email(errorMessages.email),
-  password: z
-    .string({ message: errorMessages.required })
-    .min(1, errorMessages.required),
+  password: z.string({ message: errorMessages.required }).min(1, errorMessages.required),
 });
 
 export type LoginFormData = z.infer<typeof loginFormSchema>;
@@ -41,11 +38,8 @@ export type LoginFormData = z.infer<typeof loginFormSchema>;
 
 const passwordSchema = z
   .string({ message: errorMessages.required })
-  .min(8, errorMessages.passwordMin)
-  .regex(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-    errorMessages.passwordPattern
-  );
+  .min(12, errorMessages.passwordMin)
+  .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, errorMessages.passwordPattern);
 
 export const registerFormSchema = z
   .object({
@@ -55,11 +49,9 @@ export const registerFormSchema = z
       .email(errorMessages.email),
     displayName: z.string().optional(),
     password: passwordSchema,
-    confirmPassword: z
-      .string({ message: errorMessages.required })
-      .min(1, errorMessages.required),
+    confirmPassword: z.string({ message: errorMessages.required }).min(1, errorMessages.required),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine(data => data.password === data.confirmPassword, {
     message: errorMessages.passwordMatch,
     path: ['confirmPassword'],
   });

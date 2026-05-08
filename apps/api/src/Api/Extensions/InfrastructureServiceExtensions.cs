@@ -443,6 +443,29 @@ internal static class InfrastructureServiceExtensions
         // Issue #3695: Daily database metrics snapshots for growth tracking
         services.AddHostedService<Infrastructure.BackgroundServices.DatabaseMetricsSnapshotService>();
 
+        // R6 (auth security fixes): periodic cleanup of expired / used temp
+        // 2FA sessions. Without this the temp_sessions table grows
+        // monotonically and slows the C6 atomic-update path over time.
+        services.AddHostedService<Infrastructure.BackgroundServices.CleanupExpiredTempSessionsService>();
+
+        // I10 (auth security fixes): security audit logger writes to the
+        // dedicated security_audit_logs table. Resolves a fresh DbContext
+        // from a child scope on each LogAsync call so audit rows do NOT
+        // participate in the caller's UnitOfWork transaction (a rollback
+        // there would otherwise silently lose the audit row).
+        services.AddScoped<
+            BoundedContexts.SecurityAudit.Application.Services.IAuditLogger,
+            BoundedContexts.SecurityAudit.Infrastructure.Services.AuditLogger>();
+
+        // I5 (auth security fixes): email outbox + drainer. The service is
+        // scoped (per-request DbContext); the drainer is hosted (singleton
+        // via BackgroundService and uses IServiceScopeFactory to spin up a
+        // scope on each tick).
+        services.AddScoped<
+            BoundedContexts.UserNotifications.Application.Services.IEmailOutboxService,
+            BoundedContexts.UserNotifications.Infrastructure.Services.EmailOutboxService>();
+        services.AddHostedService<Infrastructure.BackgroundServices.EmailOutboxBackgroundService>();
+
         // Issue #936: Infisical secrets management client (POC)
         services.AddHttpClient("Infisical", client =>
         {

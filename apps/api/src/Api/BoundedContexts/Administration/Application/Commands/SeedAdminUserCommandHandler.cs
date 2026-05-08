@@ -86,8 +86,8 @@ internal sealed class SeedAdminUserCommandHandler : ICommandHandler<SeedAdminUse
         if (string.IsNullOrWhiteSpace(adminPassword))
             throw new InvalidOperationException("INITIAL_ADMIN_PASSWORD (or ADMIN_PASSWORD) is not configured");
 
-        if (adminPassword.Length < 8)
-            throw new InvalidOperationException("INITIAL_ADMIN_PASSWORD must be at least 8 characters");
+        if (adminPassword.Length < 12)
+            throw new InvalidOperationException("INITIAL_ADMIN_PASSWORD must be at least 12 characters");
 
         if (!adminPassword.Any(char.IsUpper))
             throw new InvalidOperationException("INITIAL_ADMIN_PASSWORD must contain at least one uppercase letter");

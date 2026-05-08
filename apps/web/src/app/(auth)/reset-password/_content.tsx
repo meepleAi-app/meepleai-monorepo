@@ -46,7 +46,7 @@ interface PasswordValidation {
 }
 
 function validatePassword(password: string): PasswordValidation {
-  const minLength = password.length >= 8;
+  const minLength = password.length >= 12;
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);

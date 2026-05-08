@@ -12,6 +12,31 @@
 
 ---
 
+## ⚡ Plan Amendments (post-merge discovery 2026-05-08)
+
+**Scoperta durante esecuzione Task 0**: durante il pull `main-dev` ho rilevato fast-forward `71eab98e5..ed4f26830` con 144 file changes. **PR #828 + #837 sono stati mergiati in main-dev** mentre brainstormavamo + R5 Resume card UX (4 stati) è già implementato.
+
+**Impact su plan**:
+
+| Task | Stato originale | Stato aggiornato |
+|---|---|---|
+| Task 1 (review+merge PR #828) | pending | ✅ **COMPLETATO** fuori sessione — Path A primary won |
+| Task 2 (review+merge PR #837) | pending | ✅ **COMPLETATO** fuori sessione |
+| Task 3 (T-10d checkpoint) | pending | RIDOTTO — solo doc log §0 outcome "Path A, both PRs merged" |
+| Task 4 (R5 ResumeCard state-02) | pending | ⛔ **SKIP** — `ResumeHero.tsx` (78 LOC, `data-testid="gamebook-resume-hero"`) esiste in `apps/web/src/app/(authenticated)/library/games/[gameId]/play/_components/`, copre 1:1 scope state-02 |
+| Task 5-15 | pending | invariati, possono partire immediato (no merge timeline blocker) |
+
+**Timeline collapsa**: 14gg → ~3-4gg perché tutto pre-T-2d è già done. Esecuzione possible da subito.
+
+**Esisting E2E specs gamebook (verificate)**:
+- `apps/web/e2e/gamebook-iter1a.spec.ts` — Iter 1.A play page mocked
+- `apps/web/e2e/gamebook-iter1b.spec.ts` — Iter 1.B translate mocked
+- `apps/web/e2e/gamebook-resume-states.spec.ts` — 4 stati R5 mocked
+
+Nessuno copre flow [1]-[6] integrato → **Task 9 (Playwright @demo-runthrough) NON ridondante**, copre gap E2E reale.
+
+---
+
 ## File Structure
 
 ### File da creare

@@ -17,7 +17,8 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+ENV PIP_DEFAULT_TIMEOUT=300
+RUN pip install --no-cache-dir --retries 5 -r /tmp/requirements.txt
 
 # Download model weights at build time (speeds up first startup)
 ENV HF_HOME=/opt/model-cache

@@ -17,7 +17,10 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# PyPI/pythonhosted occasionally times out on large packages (torch ~700MB).
+# Extend pip's 15s socket timeout and add resumable retries.
+ENV PIP_DEFAULT_TIMEOUT=300
+RUN pip install --no-cache-dir --retries 5 -r requirements.txt
 
 # Pre-download the model so runtime container starts fast
 ARG EMBEDDING_MODEL=intfloat/multilingual-e5-base

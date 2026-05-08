@@ -1,6 +1,9 @@
 using System.Security.Claims;
 using System.Diagnostics;
+using Api.BoundedContexts.Authentication.Application.Services;
+using Api.BoundedContexts.Authentication.Infrastructure.Middleware;
 using Api.Middleware;
+using Microsoft.Extensions.DependencyInjection;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -161,6 +164,25 @@ internal static class WebApplicationExtensions
 
         // ISSUE #3672: Email verification enforcement middleware (must be after session quota)
         app.UseEmailVerificationEnforcement();
+
+        // DevOps wave 1 (2026-05-08): staging email allowlist gate.
+        // Active only when ASPNETCORE_ENVIRONMENT=Staging to match compose.staging.yml.
+        // Empty allowlist = pass-through (default safe). Logs warning at startup if
+        // Staging+empty (misconfiguration window detection). See devops-policy.md §4.
+        if (app.Environment.IsEnvironment("Staging"))
+        {
+            using (var scope = app.Services.CreateScope())
+            {
+                var guard = scope.ServiceProvider.GetRequiredService<IStagingAccessGuard>();
+                if (!guard.HasNonEmptyAllowlist)
+                {
+                    app.Logger.LogWarning(
+                        "STAGING_ACCESS: middleware active but STAGING_ALLOWED_EMAILS is empty. " +
+                        "All authenticated users will pass through. Set STAGING_ALLOWED_EMAILS to enable allowlist.");
+                }
+            }
+            app.UseStagingAccessGuard();
+        }
 
         // Reset body stream position for [FromBody] parameter binding.
         // .NET 9 issue: the body stream position may advance during the middleware pipeline

@@ -220,7 +220,7 @@ else
     '{
       title: $title,
       yearPublished: 2024,
-      description: "Nanolith — campaign-driven gamebook for the Iter 1 dogfooding demo (multi-day storybook + on-demand encounter book).",
+      description: "Nanolith - campaign-driven gamebook for the Iter 1 dogfooding demo (multi-day storybook + on-demand encounter book).",
       minPlayers: 1,
       maxPlayers: 4,
       playingTimeMinutes: 240,
@@ -329,7 +329,10 @@ upload_or_skip_pdf() {
   fi
 
   local pdf_id
-  pdf_id=$(echo "$up_body" | jq -r '.documentId // .id // .Id // empty' 2>/dev/null || true)
+  # Idempotency: when the same PDF was already uploaded in a previous run,
+  # the API returns {"existingKbFound": true, "existingKb": {"pdfDocumentId": "..."}}
+  # instead of {"documentId": "..."}. Accept both response shapes.
+  pdf_id=$(echo "$up_body" | jq -r '.documentId // .id // .Id // .existingKb.pdfDocumentId // empty' 2>/dev/null || true)
   [ -z "$pdf_id" ] && fail "  Upload OK but documentId missing in response: $up_body"
   ok "  Upload accepted: $pdf_id"
 

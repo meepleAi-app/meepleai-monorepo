@@ -13,6 +13,21 @@
     <!-- Suppress warnings: 1591=missing XML comments, code quality warnings temporarily disabled for build -->
     <NoWarn>$(NoWarn);1591;MA0016;MA0051;CA1859;CA1309;S1199;S1172;S3267;MA0048;S4144;S4136;S101;S3358;S6677;MA0132;S2139;S2971;S1066;S3263;CA1873</NoWarn>
   </PropertyGroup>
+
+  <!--
+    Patch 1 (Iter 2 Docker OOM): consente di disabilitare gli analyzer durante
+    `dotnet publish` Docker (peak memory ~800MB-1.5GB per SonarAnalyzer +
+    NetAnalyzers + Meziantou combinati). Gli analyzer continuano a girare in:
+      - `dotnet build` Debug locale (default)
+      - GitHub Actions CI workflow (Release senza SkipAnalyzers=true)
+    Attivazione via `-p:SkipAnalyzers=true` solo nel Dockerfile build stage.
+  -->
+  <PropertyGroup Condition="'$(SkipAnalyzers)' == 'true'">
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+    <RunAnalyzers>false</RunAnalyzers>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+  </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Api.Tests" />
     <!-- Required for Moq to create proxies of internal types in generic contexts (e.g., ILogger<InternalService>) -->

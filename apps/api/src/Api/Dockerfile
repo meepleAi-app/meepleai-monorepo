@@ -1,10 +1,45 @@
+# Dockerfile API — multi-stage build con OOM mitigation (Iter 2 Patch 1+2+3).
+#
+# Memory profile pre-Iter 2: peak ~2-3GB durante `dotnet publish` Release.
+# Cause primarie:
+#   - 3 analyzer suites attivi simultaneamente (SonarAnalyzer dominante ~600-1000MB)
+#   - Server GC default Release (high-throughput, high-memory)
+#   - NuGet restore graph re-download ogni build
+#
+# Mitigations applicati (~1-1.8GB peak savings):
+#   - Patch 1: -p:SkipAnalyzers=true → disabilita analyzer durante publish
+#              (analyzer girano in CI Release + dev locale Debug)
+#   - Patch 2: --mount=type=cache NuGet → riduce I/O memory pressure
+#   - Patch 3: DOTNET_GCServer=0 → workstation GC (lower peak vs higher throughput)
+
+# syntax=docker/dockerfile:1.6
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
+
+# Patch 3: workstation GC mode durante build (memory peak ridotto ~30%)
+ENV DOTNET_GCServer=0
+ENV DOTNET_GCConcurrent=1
+
 COPY apps/api/src/Api/Api.csproj ./apps/api/src/Api/
-RUN dotnet restore ./apps/api/src/Api/Api.csproj
+
+# Patch 2: NuGet cache mount (BuildKit) → restore reuse cross-build
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet restore ./apps/api/src/Api/Api.csproj
+
 COPY apps/api/src/Api ./apps/api/src/Api
 COPY data ./data
-RUN dotnet publish ./apps/api/src/Api/Api.csproj -c Release -o /app/publish
+
+# Patch 1: SkipAnalyzers=true durante publish (analyzer suite consumer
+#          principale di memory peak — SonarAnalyzer + NetAnalyzers + Meziantou).
+# Patch 2: --no-restore + cache reuse.
+# GenerateDocumentationFile=false: -10MB image size + minor memory savings.
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet publish ./apps/api/src/Api/Api.csproj \
+        -c Release \
+        -o /app/publish \
+        --no-restore \
+        -p:SkipAnalyzers=true \
+        -p:GenerateDocumentationFile=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app

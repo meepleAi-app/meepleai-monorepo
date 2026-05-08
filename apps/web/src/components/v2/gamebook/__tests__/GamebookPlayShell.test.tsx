@@ -6,6 +6,22 @@ import type { ReactNode } from 'react';
 import * as hookModule from '@/lib/gamebook/hooks/useGamebookCampaign';
 import * as mutModule from '@/lib/gamebook/hooks/useUpdateGamebookProgress';
 
+vi.mock('next/link', () => ({
+  default: ({
+    href,
+    children,
+    ...rest
+  }: {
+    href: string;
+    children: ReactNode;
+    [k: string]: unknown;
+  }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}));
+
 import { GamebookPlayShell } from '../GamebookPlayShell';
 
 vi.mock('@/lib/gamebook/hooks/useGamebookCampaign');
@@ -72,5 +88,18 @@ describe('GamebookPlayShell', () => {
     } as never);
     wrap(<GamebookPlayShell campaignId="c1" gameId="g1" />);
     expect(screen.getByTestId('gamebook-play-shell-skeleton')).toBeInTheDocument();
+  });
+
+  it('renders Translate CTA with correct href', () => {
+    vi.mocked(hookModule.useGamebookCampaign).mockReturnValue({
+      data: fakeCampaign,
+      isLoading: false,
+    } as never);
+
+    wrap(<GamebookPlayShell campaignId="c1" gameId="g1" />);
+
+    const link = screen.getByTestId('gamebook-open-translate');
+    expect(link).toBeInTheDocument();
+    expect(link.closest('a')?.href).toContain('/library/games/g1/play/c1/translate');
   });
 });

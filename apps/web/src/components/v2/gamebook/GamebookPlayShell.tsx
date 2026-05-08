@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 
+import Link from 'next/link';
+
 import { useGamebookCampaign } from '@/lib/gamebook/hooks/useGamebookCampaign';
 import { useUpdateGamebookProgress } from '@/lib/gamebook/hooks/useUpdateGamebookProgress';
 import { useChatPanelStore } from '@/lib/stores/chat-panel-store';
@@ -15,7 +17,7 @@ export interface GamebookPlayShellProps {
 
 export function GamebookPlayShell({
   campaignId,
-  gameId: _gameId,
+  gameId,
   agentId: _agentId,
 }: GamebookPlayShellProps): ReactElement {
   const { data, isLoading } = useGamebookCampaign(campaignId);
@@ -61,14 +63,23 @@ export function GamebookPlayShell({
           <h1 className="text-lg font-semibold text-[var(--c-game)]">{data.title}</h1>
           <span className="text-sm text-muted-foreground">{currentDisplay}</span>
         </div>
-        <button
-          type="button"
-          onClick={handleOpenChat}
-          className="rounded-md border border-[var(--c-agent)]/40 bg-[var(--c-agent)]/10 px-3 py-1.5 text-sm font-medium text-[var(--c-agent)] hover:bg-[var(--c-agent)]/20"
-          data-testid="gamebook-open-chat"
-        >
-          Apri chat con agente
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/library/games/${gameId}/play/${campaignId}/translate`}
+            className="rounded-md border border-[var(--c-game)]/40 bg-[var(--c-game)]/10 px-3 py-1.5 text-sm font-medium text-[var(--c-game)] hover:bg-[var(--c-game)]/20"
+            data-testid="gamebook-open-translate"
+          >
+            📸 Traduci pagina
+          </Link>
+          <button
+            type="button"
+            onClick={handleOpenChat}
+            className="rounded-md border border-[var(--c-agent)]/40 bg-[var(--c-agent)]/10 px-3 py-1.5 text-sm font-medium text-[var(--c-agent)] hover:bg-[var(--c-agent)]/20"
+            data-testid="gamebook-open-chat"
+          >
+            Apri chat con agente
+          </button>
+        </div>
       </header>
 
       <main className="px-6 py-8 space-y-6">

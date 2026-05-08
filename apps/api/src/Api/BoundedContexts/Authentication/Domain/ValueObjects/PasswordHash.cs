@@ -1,6 +1,7 @@
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Domain.ValueObjects;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -27,6 +28,7 @@ public sealed class PasswordHash : ValueObject
     // (NIST SP 800-63B Rev 4) prioritises length over composition rules;
     // 12 chars makes brute-force pricing meaningfully harder for any
     // policy-compliant password.
+    [SuppressMessage("SonarAnalyzer.CSharp", "S125", Justification = "Explanatory comment about NIST SP 800-63B Rev 4 password guidance, false-positive on parenthetical citation.")]
     private const int MinPasswordLength = 12;
 
     // I7: maximum password length capped at 128 to prevent

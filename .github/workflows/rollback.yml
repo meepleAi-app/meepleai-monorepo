@@ -90,8 +90,8 @@ jobs:
             export API_IMAGE="${{ env.API_IMAGE }}:${{ inputs.image_tag }}"
             export WEB_IMAGE="${{ env.WEB_IMAGE }}:${{ inputs.image_tag }}"
 
-            # Rollback containers
-            docker compose -f docker-compose.yml -f compose.staging.yml -f compose.staging-traefik.yml \
+            # Rollback containers (post-PR #738 — Traefik decommissioned, edge=CF Tunnel)
+            docker compose -f docker-compose.yml -f compose.staging.yml \
               --profile minimal up -d --no-deps api web
 
             # Health check

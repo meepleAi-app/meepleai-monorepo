@@ -242,12 +242,9 @@ services:
   n8n:
     restart: always
 
-  # ===========================================================================
-  # Traefik overrides — basic auth middleware + staging config mount
-  # ===========================================================================
-
-# Traefik service definition removed (post CF Tunnel cutover, T18 Phase 6).
-# For rollback see docs/operations/cf-tunnel-rollback.md (compose.traefik.yml is preserved).
+# Traefik service definition removed (PR #738, post CF Tunnel cutover, T18 Phase 6).
+# Edge is now Cloudflare Tunnel (cloudflared on VPS). For rollback see
+# docs/operations/cf-tunnel-rollback.md (compose.traefik.yml backup in /tmp/traefik-backup-*.tgz on VPS).
 
 # =============================================================================
 # Preserve existing staging volume names to avoid data loss

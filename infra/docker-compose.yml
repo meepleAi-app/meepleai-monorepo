@@ -491,7 +491,7 @@ services:
           cpus: '0.25'
           memory: 256M
 
-  # docker-socket-proxy is defined in compose.traefik.yml (Linux-only, staging/prod)
+  # docker-socket-proxy: previously defined in compose.traefik.yml (removed PR #738, edge migrated to CF Tunnel)
 
   # ---------------------------------------------------------------------------
   # Automation services (profile: automation)

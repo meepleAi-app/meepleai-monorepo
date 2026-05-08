@@ -64,9 +64,9 @@ public sealed class SeedBadswormUserCommandHandlerTests
 
         _userRepositoryMock.Verify(
             x => x.AddAsync(It.Is<User>(u =>
-                u.Email.Value == "badsworm@alice.it" &&
+                u.Email.Value == "badsworm@gmail.com" &&
                 u.DisplayName == "Badsworm" &&
-                u.Role == Role.User &&
+                u.Role == Role.SuperAdmin &&
                 u.EmailVerified
             ), It.IsAny<CancellationToken>()),
             Times.Once
@@ -114,7 +114,7 @@ public sealed class SeedBadswormUserCommandHandlerTests
     {
         return new User(
             Guid.NewGuid(),
-            new Email("badsworm@alice.it"),
+            new Email("badsworm@gmail.com"),
             "Badsworm",
             PasswordHash.Create(BadswormPassword),
             Role.User

@@ -13,14 +13,18 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 
 /// <summary>
 /// Handler for SeedBadswormUserCommand.
-/// Creates demo user (badsworm@alice.it) with password from SEED_BADSWORM_PASSWORD secret.
+/// Creates project owner account (badsworm@gmail.com, role=SuperAdmin) with
+/// password from SEED_BADSWORM_PASSWORD secret. Used for Nanolith demo runthrough
+/// (docs/superpowers/specs/2026-05-07-libro-game-nanolith-demo-design.md) and as
+/// the staging allowlist whitelisted user (DevOps wave 1, devops-policy.md §4).
+///
 /// Idempotent: Only executes if user doesn't exist.
 /// Runs in all environments (Dev, Staging, Prod) when SEED_BADSWORM_PASSWORD secret is present.
 /// Remove or leave the secret absent in environments where this account should not exist.
 /// </summary>
 internal sealed class SeedBadswormUserCommandHandler : ICommandHandler<SeedBadswormUserCommand>
 {
-    private const string BadswormEmail = "badsworm@alice.it";
+    private const string BadswormEmail = "badsworm@gmail.com";
     private const string BadswormDisplayName = "Badsworm";
 
     private readonly IUserRepository _userRepository;
@@ -69,7 +73,7 @@ internal sealed class SeedBadswormUserCommandHandler : ICommandHandler<SeedBadsw
             email: emailValue,
             displayName: BadswormDisplayName,
             passwordHash: PasswordHash.Create(password),
-            role: Role.User
+            role: Role.SuperAdmin
         );
         user.VerifyEmail(); // Developer account: pre-verified, no email flow required
 

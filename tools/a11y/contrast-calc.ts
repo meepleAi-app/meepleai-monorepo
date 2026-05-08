@@ -46,12 +46,12 @@ if (require.main === module) {
     game:    { light: { h: 25,  s: 95, l: 38 }, dark: { h: 28,  s: 95, l: 58 } },
     player:  { light: { h: 262, s: 83, l: 45 }, dark: { h: 262, s: 75, l: 70 } },
     session: { light: { h: 240, s: 60, l: 35 }, dark: { h: 235, s: 70, l: 70 } },
-    agent:   { light: { h: 38,  s: 92, l: 38 }, dark: { h: 38,  s: 92, l: 62 } },
-    kb:      { light: { h: 174, s: 60, l: 40 }, dark: { h: 174, s: 60, l: 55 } },
+    agent:   { light: { h: 38,  s: 92, l: 32 }, dark: { h: 38,  s: 92, l: 62 } },
+    kb:      { light: { h: 174, s: 60, l: 30 }, dark: { h: 174, s: 60, l: 55 } },
     chat:    { light: { h: 220, s: 80, l: 40 }, dark: { h: 218, s: 80, l: 68 } },
     event:   { light: { h: 350, s: 89, l: 38 }, dark: { h: 350, s: 85, l: 70 } },
-    toolkit: { light: { h: 142, s: 70, l: 35 }, dark: { h: 142, s: 60, l: 58 } },
-    tool:    { light: { h: 195, s: 80, l: 38 }, dark: { h: 195, s: 75, l: 62 } },
+    toolkit: { light: { h: 142, s: 70, l: 30 }, dark: { h: 142, s: 60, l: 58 } },
+    tool:    { light: { h: 195, s: 80, l: 32 }, dark: { h: 195, s: 75, l: 62 } },
   };
 
   console.log('Token | Light Ratio (vs #fff) | Dark Ratio (vs #1e1710)');

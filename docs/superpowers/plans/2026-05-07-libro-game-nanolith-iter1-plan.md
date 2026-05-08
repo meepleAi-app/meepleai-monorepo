@@ -275,8 +275,8 @@ Verifiche state prima di iniziare:
 - `state-04-complete` — preview chunk count + average confidence score + first 3 chunks expandable
 - `state-05-error` — variants: parse error / upload failure (network) / quota exceeded / file too large / not a PDF
 
-- [ ] Step 1: scrivi brief in `SP5-admin-tools.md` con stati + persona admin (superadmin Aaron, single-device desktop, gestisce 50-200 PDF/anno) + accessibility notes (WCAG, keyboard navigable, screen reader announce stage transitions)
-- [ ] Step 2: commit `docs(sp5): brief admin KB upload flow (5 states)`
+- [x] Step 1: brief scritto come sezione **A5b** in `SP5-admin-tools.md` (tra A5 e A6). Coverage: 5 stati FSM (empty/uploading/processing/complete/error) + 2 sub-stati idempotency-guard + persona admin desktop + accessibility notes WCAG/aria-live/role + 5 component v2 da progettare allineati ai 4 component reali esistenti (`KbIdempotencyGuard`/`UploadZone`/`UploadSettings`/`ProcessingQueue`).
+- [x] Step 2: commit incluso in branch `chore/sp5-kb-upload-brief`
 
 ### Task 0.2: Generate mockup via claude.ai/design (modalità SP6 §13bis.3)
 

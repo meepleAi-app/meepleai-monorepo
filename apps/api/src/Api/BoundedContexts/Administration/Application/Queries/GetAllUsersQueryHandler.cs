@@ -27,13 +27,15 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
             .Include(u => u.Sessions)
             .AsNoTracking();
 
-        // Search filter (email or display name)
+        // Search filter (email or display name) — use EF.Functions.ILike for
+        // PostgreSQL case-insensitive match. string.Contains(StringComparison)
+        // is NOT translatable by EF Core (only the single-arg overload is).
         if (!string.IsNullOrWhiteSpace(query.SearchTerm))
         {
-            var term = query.SearchTerm;
+            var pattern = $"%{query.SearchTerm}%";
             dbQuery = dbQuery.Where(u =>
-                (u.Email != null && u.Email.Contains(term, StringComparison.InvariantCultureIgnoreCase)) ||
-                (u.DisplayName != null && u.DisplayName.Contains(term, StringComparison.InvariantCultureIgnoreCase)));
+                (u.Email != null && EF.Functions.ILike(u.Email, pattern)) ||
+                (u.DisplayName != null && EF.Functions.ILike(u.DisplayName, pattern)));
         }
 
         // Role filter
@@ -51,9 +53,12 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
         }
 
         // Tier filter - Issue #3698
+        // Use EF.Functions.ILike for case-insensitive match (string.Equals
+        // with StringComparison is NOT EF-translatable).
         if (!string.IsNullOrWhiteSpace(query.TierFilter) && !string.Equals(query.TierFilter, "all", StringComparison.OrdinalIgnoreCase))
         {
-            dbQuery = dbQuery.Where(u => u.Tier.Equals(query.TierFilter, StringComparison.OrdinalIgnoreCase));
+            var tierPattern = query.TierFilter;
+            dbQuery = dbQuery.Where(u => EF.Functions.ILike(u.Tier, tierPattern));
         }
 
         // Sorting - Issue #3698: Added tier sorting

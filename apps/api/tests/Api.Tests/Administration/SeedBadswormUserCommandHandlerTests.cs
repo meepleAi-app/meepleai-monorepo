@@ -41,16 +41,47 @@ public sealed class SeedBadswormUserCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenBadswormUserExists_ShouldSkipSeed()
+    public async Task Handle_WhenBadswormUserExistsWithMatchingPassword_ShouldSkipUpdate()
     {
+        // Existing user has a password that matches the configured secret —
+        // no DB write should happen.
         _userRepositoryMock
             .Setup(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreateBadswormUser());
+            .ReturnsAsync(CreateBadswormUser(BadswormPassword));
 
         await _handler.Handle(new SeedBadswormUserCommand(), CancellationToken.None);
 
         _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+        _userRepositoryMock.Verify(x => x.UpdateAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenBadswormUserExistsWithDifferentPassword_ShouldUpdatePassword()
+    {
+        // Issue #870: secret has rotated since user creation (or the local DB
+        // was seeded with a stale value) — handler must update the password
+        // so the secret remains the source of truth.
+        const string staleStoredPassword = "OldPasswordRotated2025!"; // gitguardian:ignore
+        var existingUser = CreateBadswormUser(staleStoredPassword);
+
+        _userRepositoryMock
+            .Setup(x => x.GetByEmailAsync(It.IsAny<Email>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingUser);
+
+        await _handler.Handle(new SeedBadswormUserCommand(), CancellationToken.None);
+
+        // Repository AddAsync should NOT be called — user already exists.
+        _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
+        // UpdateAsync called once with the same existing user instance.
+        _userRepositoryMock.Verify(
+            x => x.UpdateAsync(It.Is<User>(u => u.Id == existingUser.Id), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        // Domain side-effect: VerifyPassword should now succeed against the
+        // configured secret (not the stale stored password).
+        existingUser.VerifyPassword(BadswormPassword).Should().BeTrue();
+        existingUser.VerifyPassword(staleStoredPassword).Should().BeFalse();
     }
 
     [Fact]
@@ -110,13 +141,13 @@ public sealed class SeedBadswormUserCommandHandlerTests
         _userRepositoryMock.Verify(x => x.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    private static User CreateBadswormUser()
+    private static User CreateBadswormUser(string password = BadswormPassword)
     {
         return new User(
             Guid.NewGuid(),
             new Email("badsworm@gmail.com"),
             "Badsworm",
-            PasswordHash.Create(BadswormPassword),
+            PasswordHash.Create(password),
             Role.User
         );
     }

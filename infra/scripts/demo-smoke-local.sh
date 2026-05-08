@@ -44,14 +44,24 @@ COOKIE_JAR="/tmp/meepleai-${TARGET}-smoke-cookies.txt"
 RESULTS_FILE="/tmp/demo-smoke-${TARGET}-results.csv"
 SMOKE_FIXTURE="/tmp/smoke-photo-fixture.png"
 
-USER_EMAIL="badsworm@gmail.com"
-USER_PASSWORD="TestNanolith2026!"
+USER_EMAIL="${USER_EMAIL:-badsworm@gmail.com}"
+USER_PASSWORD="${USER_PASSWORD:-TestNanolith2026!}"
 NANOLITH_GAME_TITLE="Nanolith"
 AGENT_NAME="Nanolith Tutor"
 
 # SSE bounds (seconds)
 SSE_CHAT_TIMEOUT=10
 SSE_TRANSLATE_TIMEOUT=15
+
+# Cleanup on EXIT (success OR fail) — auth cookies + body dumps must NOT persist in /tmp.
+# RESULTS_FILE intentionally preserved (deliverable for Task 8 / G1 runthrough log).
+cleanup() {
+  rm -f "$COOKIE_JAR" "$SMOKE_FIXTURE" \
+        /tmp/smoke-login.json /tmp/smoke-library.json /tmp/smoke-game.json \
+        /tmp/smoke-campaign.json /tmp/smoke-photo.json \
+        /tmp/smoke-sse-chat.txt /tmp/smoke-sse-translate.txt
+}
+trap cleanup EXIT
 
 # -----------------------------------------------------------------------------
 # Helpers
@@ -123,7 +133,6 @@ log "Pre-flight checks (target: $TARGET, API_BASE: $API_BASE)"
 require_cmd jq
 require_cmd curl
 require_cmd timeout
-require_cmd printf
 
 # Reset cookie jar + results CSV
 rm -f "$COOKIE_JAR" "$SMOKE_FIXTURE"

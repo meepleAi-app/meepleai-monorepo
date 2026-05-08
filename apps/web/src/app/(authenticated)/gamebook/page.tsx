@@ -7,6 +7,15 @@
  * Pattern: thin Suspense shell. All hook composition + URL state SSOT live in
  * the client orchestrator (Wave D.3 blueprint).
  *
+ * Scope distinction (issue #836 Task 3):
+ * - `/gamebook` (questa pagina): index globale dei manuali fotografati
+ *   (collezione di gamebook caricati dall'utente, indipendenti da game/campagna).
+ * - `/library/games/[gameId]/play`: resume picker delle campagne attive
+ *   per un gioco specifico (4 stati mockup G — issue #835).
+ * - `/library/games/[gameId]/play/[campaignId]`: shell di gioco in-campaign.
+ *
+ * Le tre route servono use case differenti e NON sono sovrapponibili.
+ *
  * @see docs/superpowers/specs/2026-05-06-sp6-libro-game.md
  */
 

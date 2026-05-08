@@ -25,8 +25,13 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Middleware;
 /// Why TestServer instead of WebApplicationFactory&lt;Program&gt;: Program.cs has heavy startup
 /// dependencies (DbContext, Redis, embedding services). For testing JUST the env-based gate
 /// activation, TestServer with replicated wiring logic gives identical coverage without the
-/// startup cost. The wiring code under test (the `if (env.IsEnvironment("Staging")) ...` block)
-/// is mirrored verbatim from <c>WebApplicationExtensions.ConfigureAuthMiddleware</c>.
+/// startup cost.
+///
+/// What is replicated from production: the env check (<c>IsEnvironment("Staging")</c>) and
+/// the <c>app.UseMiddleware&lt;StagingAccessMiddleware&gt;()</c> call. What is NOT replicated:
+/// the eager root-container resolve of <see cref="IStagingAccessGuard"/> at startup and the
+/// empty-allowlist warning log (those are tested via unit tests). If you change the
+/// production wiring, this test should be updated to keep the mirror accurate.
 /// </remarks>
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Authentication")]

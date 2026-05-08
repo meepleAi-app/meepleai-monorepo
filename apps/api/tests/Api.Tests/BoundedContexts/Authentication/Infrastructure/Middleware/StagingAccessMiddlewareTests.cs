@@ -157,16 +157,22 @@ public class StagingAccessMiddlewareTests
         payload.ContactEmail.Should().Be("admin@meepleai.app");
     }
 
-    [Fact]
-    public async Task InvokeAsync_WhenContactEmailMissingFromConfig_FallsBackToProjectOwner()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task InvokeAsync_WhenContactEmailNullEmptyOrWhitespace_FallsBackToProjectOwner(
+        string? contactEmail)
     {
-        // Defensive: if Staging:ContactEmail is unset, fall back to project owner so
-        // the user always has a way to request access. Operators see WARN at startup.
+        // Defensive: if Staging:ContactEmail is unset (null), empty, or whitespace-only,
+        // fall back to project owner so the user always has a way to request access.
+        // Operators see WARN at startup. The triangle null/empty/whitespace is covered
+        // by `string.IsNullOrWhiteSpace` in the middleware constructor.
         var context = CreateAuthenticatedContext("hacker@evil.com");
         var nextCalled = false;
         var middleware = new StagingAccessMiddleware(
             _ => { nextCalled = true; return Task.CompletedTask; },
-            ConfigWithContact(contactEmail: null));
+            ConfigWithContact(contactEmail));
 
         await middleware.InvokeAsync(context, new StubGuard("badsworm@gmail.com"));
 
@@ -179,7 +185,7 @@ public class StagingAccessMiddlewareTests
         });
 
         payload!.ContactEmail.Should().Be("badsworm@gmail.com",
-            "fallback to project owner when Staging:ContactEmail unset");
+            "fallback to project owner when Staging:ContactEmail null/empty/whitespace");
     }
 
     [Fact]

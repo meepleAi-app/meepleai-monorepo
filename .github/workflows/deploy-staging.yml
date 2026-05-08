@@ -270,10 +270,16 @@ jobs:
           NEXT_PUBLIC_API_BASE: http://localhost:8080
           NODE_OPTIONS: '--max-old-space-size=4096'
 
-  # Build and push Docker images (only changed components)
+  # Build and push Docker images (only changed components).
+  # ALWAYS runs on ubuntu-latest (cloud) — never on self-hosted runner.
+  # The self-hosted runner is the staging VPS itself (CAX31, 7.5GB RAM); when
+  # build runs there the dotnet publish + next build inside docker buildx
+  # ARM64 cross-compile drove the VPS into swap thrashing (load avg >90,
+  # SSH unresponsive). Cloud runner has more RAM and isolates build pressure.
+  # See incident 2026-05-08: deploy run 25563055758.
   build:
     name: Build Images
-    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 90
     needs: [pre-deploy-check, detect-changes]
     if: always() && (needs.pre-deploy-check.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true)) && (needs.detect-changes.outputs.deploy_api == 'true' || needs.detect-changes.outputs.deploy_web == 'true')

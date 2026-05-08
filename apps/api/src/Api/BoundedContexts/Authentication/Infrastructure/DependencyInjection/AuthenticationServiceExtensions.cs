@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Application.Services;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.Authentication.Infrastructure.Repositories;
@@ -31,6 +32,11 @@ internal static class AuthenticationServiceExtensions
 
         // Admin Invitation Flow: singleton channel for game suggestion processing
         services.AddSingleton<GameSuggestionChannel>();
+
+        // DevOps wave 1: staging email allowlist guard.
+        // Singleton: parses STAGING_ALLOWED_EMAILS once at construction, immutable HashSet read-only.
+        // Used by StagingAccessMiddleware (active only when ASPNETCORE_ENVIRONMENT=Staging).
+        services.AddSingleton<IStagingAccessGuard, StagingAccessGuard>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

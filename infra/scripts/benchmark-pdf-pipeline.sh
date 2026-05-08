@@ -51,7 +51,7 @@ check_deps() {
 setup_auth() {
     log "Setting up authentication..."
 
-    # Basic auth for services (Traefik integration-auth)
+    # Basic auth for services (legacy Traefik integration-auth — preserved for benchmark continuity post-CF Tunnel cutover)
     if [[ -z "${STAGING_USER:-}" ]] || [[ -z "${STAGING_PASS:-}" ]]; then
         echo -n "Staging basic auth username: "
         read -r STAGING_USER

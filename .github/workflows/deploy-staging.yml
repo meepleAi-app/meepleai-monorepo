@@ -609,7 +609,7 @@ jobs:
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
             # Sync /opt/meepleai/repo to the deploy SHA so compose files
-            # match the workflow context (compose.traefik.yml, etc.)
+            # match the workflow context (post-#738: docker-compose.yml + compose.staging.yml)
             cd /opt/meepleai/repo
             git fetch origin main-staging
             git reset --hard ${{ env.DEPLOY_SHA }}
@@ -667,11 +667,11 @@ jobs:
             done
 
             # Deploy only changed services (--force-recreate ensures container restarts even if image digest unchanged)
-            # Single-tester profiles: ai-essential (embedding+reranker) + monitoring-essential
-            # + proxy (traefik). NO orchestration, NO n8n, NO seq/cadvisor.
+            # Single-tester profiles: ai-essential (embedding+reranker) + monitoring-essential.
+            # Edge: Cloudflare Tunnel (post-PR #738 cutover, Traefik decommissioned).
             # See docs/superpowers/specs/2026-05-05-infrastructure-single-tester-design.md G3
-            docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml \
-              --profile ai-essential --profile monitoring-essential --profile proxy \
+            docker compose -f docker-compose.yml -f compose.staging.yml \
+              --profile ai-essential --profile monitoring-essential \
               up -d --no-deps --force-recreate $SERVICES
 
             # Health check via docker exec (port not exposed on host)

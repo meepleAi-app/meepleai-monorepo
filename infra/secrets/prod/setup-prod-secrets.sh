@@ -13,7 +13,6 @@
 #   1. Review generated secrets
 #   2. Update openrouter-api-key.txt with your actual API key
 #   3. Update email credentials if using Gmail
-#   4. Generate Traefik dashboard password hash
 #
 # =============================================================================
 
@@ -135,28 +134,9 @@ else
 fi
 
 # =============================================================================
-# Traefik Dashboard Password
+# Traefik Dashboard Password — REMOVED (PR #738 cutover to CF Tunnel)
+# Edge ingress now handled by cloudflared on VPS, no Traefik dashboard needed.
 # =============================================================================
-echo "📦 Generating Traefik dashboard password..."
-
-if [ ! -f traefik-dashboard-password.txt ]; then
-    TRAEFIK_PASS=$(generate_password)
-    echo "$TRAEFIK_PASS" > traefik-dashboard-password.txt
-
-    # Generate bcrypt hash for Traefik
-    if command -v htpasswd &> /dev/null; then
-        HASH=$(htpasswd -nbB admin "$TRAEFIK_PASS" | sed -e 's/\$/\$\$/g')
-        echo "$HASH" > traefik-dashboard-users.txt
-        echo "   ✅ traefik-dashboard-password.txt"
-        echo "   ✅ traefik-dashboard-users.txt (bcrypt hash)"
-    else
-        echo "   ✅ traefik-dashboard-password.txt"
-        echo "   ⚠️  htpasswd not found - run this to generate hash:"
-        echo "      htpasswd -nbB admin \"\$(cat traefik-dashboard-password.txt)\""
-    fi
-else
-    echo "   ⏭️  traefik-dashboard-password.txt (exists)"
-fi
 
 # =============================================================================
 # Set permissions
@@ -177,12 +157,10 @@ echo ""
 echo "⚠️  ACTION REQUIRED:"
 echo "   1. Edit openrouter-api-key.txt with your OpenRouter API key"
 echo "   2. Edit gmail-app-password.txt if using email notifications"
-echo "   3. Update traefik dashboard hash in middlewares.prod.yml"
 echo ""
 echo "📋 Generated credentials:"
 echo "   - Admin password: $(cat initial-admin-password.txt)"
 echo "   - Grafana admin: $(cat grafana-admin-password.txt)"
-echo "   - Traefik dashboard: $(cat traefik-dashboard-password.txt)"
 echo ""
 echo "🔐 Keep these credentials secure!"
 echo ""

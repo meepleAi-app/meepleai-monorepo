@@ -40,7 +40,6 @@ This directory contains **template files** for the secret management system.
 - `email.secret` - SMTP server settings
 - `storage.secret` - S3-compatible storage credentials
 - `monitoring.secret` - Grafana/Prometheus passwords
-- `traefik.secret` - Traefik dashboard credentials
 - `smoldocling-service.secret` - Document intelligence API key
 - `reranker-service.secret` - Reranker API key
 

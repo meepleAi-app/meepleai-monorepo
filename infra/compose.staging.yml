@@ -123,7 +123,7 @@ services:
       options: { max-size: "10m", max-file: "3" }
 
   # ===========================================================================
-  # AI Services — Traefik basic auth for integration access
+  # AI Services — internal-only (post-PR #738: CF Tunnel handles edge, no public exposure)
   # Resource limits are reduced vs base compose (CAX21 has 8GB total).
   # Use 'make staging' only when AI features are needed; prefer 'make staging-core' otherwise.
   # ===========================================================================
@@ -200,7 +200,7 @@ services:
     profiles: [ollama-local-dev-only]
 
   # ===========================================================================
-  # Monitoring — Traefik basic auth
+  # Monitoring — exposed via CF Tunnel ingress (configured separately on VPS)
   # ===========================================================================
 
   grafana:
@@ -242,12 +242,9 @@ services:
   n8n:
     restart: always
 
-  # ===========================================================================
-  # Traefik overrides — basic auth middleware + staging config mount
-  # ===========================================================================
-
-# Traefik service definition removed (post CF Tunnel cutover, T18 Phase 6).
-# For rollback see docs/operations/cf-tunnel-rollback.md (compose.traefik.yml is preserved).
+# Traefik service definition removed (PR #738, post CF Tunnel cutover, T18 Phase 6).
+# Edge is now Cloudflare Tunnel (cloudflared on VPS). For rollback see
+# docs/operations/cf-tunnel-rollback.md (compose.traefik.yml backup in /tmp/traefik-backup-*.tgz on VPS).
 
 # =============================================================================
 # Preserve existing staging volume names to avoid data loss

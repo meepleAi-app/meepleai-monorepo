@@ -2,8 +2,11 @@
 # Requires PROD_DOMAIN env var (e.g., PROD_DOMAIN=meepleai.com)
 # Secrets from ./secrets/prod/, stricter resource limits
 #
-# Usage: docker compose -f docker-compose.yml -f compose.prod.yml -f compose.traefik.yml \
-#          --profile ai --profile monitoring --profile proxy up -d
+# Edge: Cloudflare Tunnel (cloudflared on VPS, post-PR #738 cutover, T18 Phase 6).
+# Public routing handled by CF Tunnel ingress config — no service-level labels required.
+#
+# Usage: docker compose -f docker-compose.yml -f compose.prod.yml \
+#          --profile ai --profile monitoring up -d
 
 services:
   # ===========================================================================
@@ -86,12 +89,6 @@ services:
       Frontend__BaseUrl: "https://${PROD_DOMAIN}"
       Authentication__SessionCookie__Secure: "true"
       Authentication__SessionCookie__SameSite: "Lax"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`${PROD_DOMAIN}`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.api.entrypoints=websecure"
-      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.api.loadbalancer.server.port=8080"
     logging:
       driver: "json-file"
       options: { max-size: "50m", max-file: "10" }
@@ -115,12 +112,6 @@ services:
       NEXT_PUBLIC_API_BASE: "https://${PROD_DOMAIN}"
       NEXT_PUBLIC_APP_URL: "https://${PROD_DOMAIN}"
       API_BASE_URL: http://api:8080
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.web.rule=Host(`${PROD_DOMAIN}`)"
-      - "traefik.http.routers.web.entrypoints=websecure"
-      - "traefik.http.routers.web.tls.certresolver=letsencrypt"
-      - "traefik.http.services.web.loadbalancer.server.port=3000"
     logging:
       driver: "json-file"
       options: { max-size: "50m", max-file: "10" }
@@ -134,19 +125,11 @@ services:
           memory: 2G
 
   # ===========================================================================
-  # AI Services — Traefik routing with basic auth
+  # AI Services — internal-only (CF Tunnel does not expose these publicly)
   # ===========================================================================
 
   embedding-service:
     restart: always
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.embedding.rule=Host(`${PROD_DOMAIN}`) && PathPrefix(`/services/embedding`)"
-      - "traefik.http.routers.embedding.entrypoints=websecure"
-      - "traefik.http.routers.embedding.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.embedding.middlewares=integration-auth,strip-services-embedding"
-      - "traefik.http.middlewares.strip-services-embedding.stripprefix.prefixes=/services/embedding"
-      - "traefik.http.services.embedding.loadbalancer.server.port=8000"
     deploy:
       resources:
         limits:
@@ -158,25 +141,9 @@ services:
 
   reranker-service:
     restart: always
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.reranker.rule=Host(`${PROD_DOMAIN}`) && PathPrefix(`/services/reranker`)"
-      - "traefik.http.routers.reranker.entrypoints=websecure"
-      - "traefik.http.routers.reranker.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.reranker.middlewares=integration-auth,strip-services-reranker"
-      - "traefik.http.middlewares.strip-services-reranker.stripprefix.prefixes=/services/reranker"
-      - "traefik.http.services.reranker.loadbalancer.server.port=8003"
 
   unstructured-service:
     restart: always
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.unstructured.rule=Host(`${PROD_DOMAIN}`) && PathPrefix(`/services/unstructured`)"
-      - "traefik.http.routers.unstructured.entrypoints=websecure"
-      - "traefik.http.routers.unstructured.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.unstructured.middlewares=integration-auth,strip-services-unstructured"
-      - "traefik.http.middlewares.strip-services-unstructured.stripprefix.prefixes=/services/unstructured"
-      - "traefik.http.services.unstructured.loadbalancer.server.port=8001"
     deploy:
       resources:
         limits:
@@ -188,14 +155,6 @@ services:
 
   smoldocling-service:
     restart: always
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.smoldocling.rule=Host(`${PROD_DOMAIN}`) && PathPrefix(`/services/smoldocling`)"
-      - "traefik.http.routers.smoldocling.entrypoints=websecure"
-      - "traefik.http.routers.smoldocling.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.smoldocling.middlewares=integration-auth,strip-services-smoldocling"
-      - "traefik.http.middlewares.strip-services-smoldocling.stripprefix.prefixes=/services/smoldocling"
-      - "traefik.http.services.smoldocling.loadbalancer.server.port=8002"
     deploy:
       resources:
         limits:
@@ -207,14 +166,6 @@ services:
 
   ollama:
     restart: always
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.ollama.rule=Host(`${PROD_DOMAIN}`) && PathPrefix(`/services/ollama`)"
-      - "traefik.http.routers.ollama.entrypoints=websecure"
-      - "traefik.http.routers.ollama.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.ollama.middlewares=integration-auth,strip-services-ollama"
-      - "traefik.http.middlewares.strip-services-ollama.stripprefix.prefixes=/services/ollama"
-      - "traefik.http.services.ollama.loadbalancer.server.port=11434"
     deploy:
       resources:
         limits:
@@ -225,19 +176,12 @@ services:
           memory: 4G
 
   # ===========================================================================
-  # Monitoring — Traefik routing with basic auth
+  # Monitoring — exposed via CF Tunnel ingress (configured separately on VPS)
   # ===========================================================================
 
   grafana:
     restart: always
     env_file: [./secrets/prod/monitoring.secret]
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`${PROD_DOMAIN}`) && PathPrefix(`/grafana`)"
-      - "traefik.http.routers.grafana.entrypoints=websecure"
-      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.grafana.middlewares=integration-auth"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     environment:
       GF_SERVER_ROOT_URL: "https://${PROD_DOMAIN}/grafana"
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
@@ -249,13 +193,6 @@ services:
 
   prometheus:
     restart: always
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.prometheus.rule=Host(`${PROD_DOMAIN}`) && PathPrefix(`/prometheus`)"
-      - "traefik.http.routers.prometheus.entrypoints=websecure"
-      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.prometheus.middlewares=integration-auth"
-      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -288,18 +225,6 @@ services:
 
   n8n:
     restart: always
-
-  # ===========================================================================
-  # Traefik overrides — basic auth middleware + prod config mount
-  # ===========================================================================
-
-  traefik:
-    volumes:
-      - ./traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
-    labels:
-      - "traefik.http.middlewares.integration-auth.basicauth.users=${INTEGRATION_BASIC_AUTH}"
-      - "traefik.http.middlewares.rate-limit.ratelimit.average=100"
-      - "traefik.http.middlewares.rate-limit.ratelimit.burst=50"
 
 # =============================================================================
 # Production volumes

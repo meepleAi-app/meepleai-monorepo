@@ -37,6 +37,7 @@ import {
  *                                 data-testid="new-campaign-submit"
  *   - GamebookPlayShell:          data-testid="gamebook-open-chat",
  *                                 data-testid="gamebook-open-translate"
+ *   - ChatInputBar:               data-testid="gamebook-chat-input"
  *   - TranslateViewer:            data-testid="page-type-select",
  *                                 data-testid="open-camera-button",
  *                                 data-testid="photo-input"
@@ -51,7 +52,10 @@ import {
  */
 
 test.describe("@demo-runthrough Nanolith caso d'uso end-to-end", () => {
-  // 2 minuti di budget complessivo (segmentazione OCR può richiedere 30s+).
+  // 120s budget per il flow [1]-[6] reale: login (3s) + library (5s) + game (5s) +
+  // CTA (5s) + chat SSE first chunk (15s) + photo upload + segmentation (30s) +
+  // translate SSE first chunk (15s) + buffer 40s. Override locale via
+  // playwright.config.ts projects[].timeout se serve.
   test.setTimeout(120_000);
 
   test('flow [1]-[6] happy path locale post-seed', async ({ page }) => {
@@ -112,8 +116,10 @@ test.describe("@demo-runthrough Nanolith caso d'uso end-to-end", () => {
     // that calls useChatPanelStore.open()
     await page.getByTestId('gamebook-open-chat').click();
 
-    // Chat slide-over renders ChatInputBar — textarea is the only one in panel
-    const chatTextarea = page.locator('textarea[placeholder*="regola" i]').first();
+    // Chat slide-over renders ChatInputBar — textarea exposes
+    // data-testid="gamebook-chat-input" for locale-independent targeting
+    // (placeholder text is i18n-coupled and would silently break if it.json changes).
+    const chatTextarea = page.getByTestId('gamebook-chat-input');
     await expect(chatTextarea).toBeVisible({ timeout: 5_000 });
     await chatTextarea.fill(SETUP_PROMPT_4_PLAYERS);
     await chatTextarea.press('Enter');

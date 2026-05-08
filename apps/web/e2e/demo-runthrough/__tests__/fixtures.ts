@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 /**
  * @demo-runthrough fixtures — credentials + sample data references for the
  * Nanolith caso d'uso end-to-end Playwright spec.
@@ -26,8 +28,11 @@ export const NANOLITH_AGENT_NAME = 'Nanolith Tutor';
 export const SETUP_PROMPT_4_PLAYERS = 'come si imposta la partita per 4 giocatori?';
 
 /**
- * Path (relative to apps/web/) to a sample storybook page PNG used to exercise
- * the photo upload + segment + translate flow.
+ * Absolute path to a sample storybook page PNG used to exercise the photo
+ * upload + segment + translate flow. Resolved via path.resolve(__dirname,
+ * ...) so the spec runs correctly regardless of the cwd from which Playwright
+ * is invoked (avoids brittleness when running from monorepo root vs
+ * apps/web/).
  *
  * Phase A note: this is currently a 1×1 transparent PNG fallback (Option B in
  * Task 9 spec). The real OCR/segmentation flow requires a multi-page PDF page
@@ -40,4 +45,7 @@ export const SETUP_PROMPT_4_PLAYERS = 'come si imposta la partita per 4 giocator
  * If/when a real fixture is added, replace the path target — no spec change
  * needed beyond updating expectations on segment count.
  */
-export const STORYBOOK_FIXTURE_PATH = 'e2e/fixtures/storybook-page-sample.png';
+export const STORYBOOK_FIXTURE_PATH = path.resolve(
+  __dirname,
+  '../../fixtures/storybook-page-sample.png'
+);

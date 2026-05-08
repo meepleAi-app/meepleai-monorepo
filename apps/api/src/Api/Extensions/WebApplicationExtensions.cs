@@ -171,15 +171,15 @@ internal static class WebApplicationExtensions
         // Staging+empty (misconfiguration window detection). See devops-policy.md §4.
         if (app.Environment.IsEnvironment("Staging"))
         {
-            using (var scope = app.Services.CreateScope())
+            // Resolve singleton directly from root container — no scope needed since
+            // IStagingAccessGuard is registered as Singleton and has no IDisposable
+            // dependencies. Startup code, no concurrency hazard.
+            var guard = app.Services.GetRequiredService<IStagingAccessGuard>();
+            if (!guard.HasNonEmptyAllowlist)
             {
-                var guard = scope.ServiceProvider.GetRequiredService<IStagingAccessGuard>();
-                if (!guard.HasNonEmptyAllowlist)
-                {
-                    app.Logger.LogWarning(
-                        "STAGING_ACCESS: middleware active but STAGING_ALLOWED_EMAILS is empty. " +
-                        "All authenticated users will pass through. Set STAGING_ALLOWED_EMAILS to enable allowlist.");
-                }
+                app.Logger.LogWarning(
+                    "STAGING_ACCESS: middleware active but STAGING_ALLOWED_EMAILS is empty. " +
+                    "All authenticated users will pass through. Set STAGING_ALLOWED_EMAILS to enable allowlist.");
             }
             app.UseStagingAccessGuard();
         }

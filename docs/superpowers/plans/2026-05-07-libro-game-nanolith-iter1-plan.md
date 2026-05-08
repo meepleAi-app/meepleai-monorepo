@@ -20,6 +20,44 @@
 
 ---
 
+## ⚠️ Cross-Branch Reconciliation (2026-05-08)
+
+> **Stato post-discovery**: durante l'audit del 2026-05-08 è emerso un secondo tracciato implementativo parallelo su `feature/libro-game-iter-1a` con 12 commit pushati + iter-1b in progress locale. Vedi audit completo in [`docs/superpowers/specs/2026-05-08-libro-game-iter1-cross-branch-audit.md`](../specs/2026-05-08-libro-game-iter1-cross-branch-audit.md) (PR #831).
+
+### Naming inversion da ricordare
+
+| Questo plan dice | L'altro plan dice | Scope |
+|------------------|-------------------|-------|
+| **Iter 1.A** | **iter-1b** (in progress) | N3 photo translate-on-the-fly |
+| **Iter 1.B** | **iter-1a** (12 commit shipped) | N4 resume cross-day + campaign shell |
+
+Quando si discute "Iter 1.A/1.B" senza contesto, citare il plan d'origine (`2026-05-07-libro-game-nanolith-iter1-plan.md` per questo, `iter-1a.md`/`iter-1b.md` per l'altro).
+
+### Cosa rimane utile di questo plan dopo merge dell'altro tracciato
+
+| Sezione di questo plan | Status post-merge altro tracciato | Azione |
+|------------------------|-----------------------------------|--------|
+| **Phase 0** — SP5 KB upload mockup | ✅ unique value (PR #830) | mantenere, eseguire Tasks 0.2-0.4 |
+| **Sprint -1** — Seed automation | ✅ unique value (PR #829) | mantenere, smoke test live deferred |
+| **Phase 1.A.1-1.A.8** (Iter 1.A code) | 🟡 ~80% coperto da iter-1b in progress + production-ready details mancanti | da abbandonare e sostituire con 4 follow-up PR (vedi audit §5) |
+| **Phase 1.A.3** (Polly + 9 metrics) | ❌ **NON nel piano dell'altro tracciato** — gap residuo R1+R2+R3 | spostare in **PR Follow-up #1** post-merge |
+| **Task 1.A.6.3** (EXIF stripper) | ❌ **NON nel piano dell'altro tracciato** — gap residuo R4 | spostare in **PR Follow-up #2** post-merge |
+| **Phase 1.B.1-1.B.6** (Iter 1.B code) | ✅ ~95% coperto da iter-1a (shipped) | da abbandonare salvo Task 1.B.4.4 (resume card states completi) |
+| **Task 1.B.4.4** (4 stati resume mockup G) | ❌ iter-1a ha shell ma non i 4 stati specifici | spostare in **PR Follow-up #3** post-merge — gap residuo R5 |
+| **Phase 1.A.9** — Legacy routing cleanup | ✅ unique value | mantenere, eseguire post-merge altro tracciato — gap residuo R7 |
+
+### Decisione operativa
+
+Dopo merge di `feature/libro-game-iter-1a`:
+
+1. **Mantenere mergiata questa estensione plan + Sprint -1 + Phase 0 + Phase 1.A.9** (PRs #829 + #830 + #831).
+2. **Abbandonare le Phase 1.A.1-1.A.8 + Phase 1.B.1-1.B.6** di questo plan (sostituite dall'altro tracciato).
+3. **Aprire 4 follow-up PR** (R1+R2+R3, R4, R5, R7) per chiudere il gap residuo (~3-4 giorni effort, vedi audit §5).
+
+Il plan rimane utile come **production-ready reference** per i 4 follow-up + come **historical record** della pianificazione iniziale.
+
+---
+
 ## Top-level Acceptance Criteria
 
 Hoisted ACs cross-phase, validati end-to-end al merge finale:

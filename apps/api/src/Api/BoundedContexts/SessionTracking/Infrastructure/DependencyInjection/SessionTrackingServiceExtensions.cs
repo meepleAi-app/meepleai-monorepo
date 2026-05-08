@@ -70,6 +70,12 @@ internal static class SessionTrackingServiceExtensions
         // Session Vision AI
         services.AddScoped<IGameStateExtractor, GameStateExtractor>();
 
+        // Iter 1.B — Libro Game photo storage (EXIF strip adapter over IBlobStorageService)
+        services.AddScoped<IGamebookPhotoStorage, GamebookPhotoStorageService>(); // Iter 1.B
+
+        // Iter 1.B — Tesseract OCR engine (singleton: engine is thread-safe, pages are per-call)
+        services.AddSingleton<IOcrService, TesseractOcrService>(); // Iter 1.B
+
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 
         return services;

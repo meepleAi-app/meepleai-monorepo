@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Api.BoundedContexts.Authentication.Application.Services;
+using Microsoft.Extensions.Configuration;
 
 #pragma warning disable MA0048 // File name must match type name - middleware folder convention groups class + extensions
 
@@ -35,11 +36,20 @@ namespace Api.BoundedContexts.Authentication.Infrastructure.Middleware;
 /// </remarks>
 internal sealed class StagingAccessMiddleware
 {
-    private readonly RequestDelegate _next;
+    /// <summary>
+    /// Fallback contact when <c>Staging:ContactEmail</c> is not configured.
+    /// Project owner per <c>devops-policy.md §4</c>.
+    /// </summary>
+    private const string DefaultContactEmail = "badsworm@gmail.com";
 
-    public StagingAccessMiddleware(RequestDelegate next)
+    private readonly RequestDelegate _next;
+    private readonly string _contactEmail;
+
+    public StagingAccessMiddleware(RequestDelegate next, IConfiguration configuration)
     {
         _next = next;
+        var configured = configuration["Staging:ContactEmail"];
+        _contactEmail = string.IsNullOrWhiteSpace(configured) ? DefaultContactEmail : configured;
     }
 
     public async Task InvokeAsync(HttpContext context, IStagingAccessGuard guard)
@@ -61,19 +71,20 @@ internal sealed class StagingAccessMiddleware
         await _next(context).ConfigureAwait(false);
     }
 
-    private static async Task WriteDeniedAsync(HttpContext context)
+    private async Task WriteDeniedAsync(HttpContext context)
     {
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
         context.Response.ContentType = "application/json; charset=utf-8";
-        // Wave 1 simplification: contact email embedded in the user-facing message so
-        // the existing frontend error handler (login _content.tsx:93 setError(err.message))
-        // displays it without code-specific branching. The structured `code` and
-        // `contactEmail` fields remain for future wave-2 typed handling.
+        // Contact email comes from Staging:ContactEmail config (fallback: project owner).
+        // Embedded in user-facing message so existing frontend error handler
+        // (login _content.tsx:93 setError(err.message)) displays it without
+        // code-specific branching. The structured `code` and `contactEmail` fields
+        // remain for future typed handling.
         var payload = JsonSerializer.Serialize(new
         {
             code = "STAGING_ACCESS_DENIED",
-            message = "Staging access by invite only — contact badsworm@gmail.com to request access.",
-            contactEmail = "badsworm@gmail.com"
+            message = $"Staging access by invite only — contact {_contactEmail} to request access.",
+            contactEmail = _contactEmail
         });
         await context.Response.WriteAsync(payload).ConfigureAwait(false);
     }

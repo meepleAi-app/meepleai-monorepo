@@ -6,6 +6,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Middleware;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Middleware;
@@ -59,12 +60,24 @@ public class StagingAccessMiddlewareTests
         public bool HasNonEmptyAllowlist => _allowed.Count > 0;
     }
 
+    private static IConfiguration ConfigWithContact(string? contactEmail)
+    {
+        return new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "Staging:ContactEmail", contactEmail }
+            })
+            .Build();
+    }
+
     [Fact]
     public async Task InvokeAsync_WhenUnauthenticated_PassesThrough()
     {
         var context = CreateUnauthenticatedContext();
         var nextCalled = false;
-        var middleware = new StagingAccessMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
+        var middleware = new StagingAccessMiddleware(
+            _ => { nextCalled = true; return Task.CompletedTask; },
+            ConfigWithContact("badsworm@gmail.com"));
 
         await middleware.InvokeAsync(context, new StubGuard("badsworm@gmail.com"));
 
@@ -77,7 +90,9 @@ public class StagingAccessMiddlewareTests
     {
         var context = CreateAuthenticatedContext("badsworm@gmail.com");
         var nextCalled = false;
-        var middleware = new StagingAccessMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
+        var middleware = new StagingAccessMiddleware(
+            _ => { nextCalled = true; return Task.CompletedTask; },
+            ConfigWithContact("badsworm@gmail.com"));
 
         await middleware.InvokeAsync(context, new StubGuard("badsworm@gmail.com"));
 
@@ -90,7 +105,9 @@ public class StagingAccessMiddlewareTests
     {
         var context = CreateAuthenticatedContext("hacker@evil.com");
         var nextCalled = false;
-        var middleware = new StagingAccessMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
+        var middleware = new StagingAccessMiddleware(
+            _ => { nextCalled = true; return Task.CompletedTask; },
+            ConfigWithContact("badsworm@gmail.com"));
 
         await middleware.InvokeAsync(context, new StubGuard("badsworm@gmail.com"));
 
@@ -109,8 +126,60 @@ public class StagingAccessMiddlewareTests
         payload!.Code.Should().Be("STAGING_ACCESS_DENIED");
         payload.Message.Should().Contain("invite only", "user-facing message must explain access policy");
         payload.Message.Should().Contain("badsworm@gmail.com",
-            "wave 1 simplification: contact email embedded in message for direct frontend display");
-        payload.ContactEmail.Should().NotBeNullOrWhiteSpace();
+            "contact email from Staging:ContactEmail config is embedded in message for direct frontend display");
+        payload.ContactEmail.Should().Be("badsworm@gmail.com");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WhenContactEmailFromConfig_UsesConfiguredAddress()
+    {
+        var context = CreateAuthenticatedContext("hacker@evil.com");
+        var nextCalled = false;
+        var middleware = new StagingAccessMiddleware(
+            _ => { nextCalled = true; return Task.CompletedTask; },
+            ConfigWithContact("admin@meepleai.app"));
+
+        await middleware.InvokeAsync(context, new StubGuard("badsworm@gmail.com"));
+
+        nextCalled.Should().BeFalse();
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.Forbidden);
+
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        var payload = JsonSerializer.Deserialize<DeniedResponse>(body, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        payload!.Message.Should().Contain("admin@meepleai.app",
+            "configured contact email must be used (no hardcoded fallback when config present)");
+        payload.Message.Should().NotContain("badsworm@gmail.com");
+        payload.ContactEmail.Should().Be("admin@meepleai.app");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WhenContactEmailMissingFromConfig_FallsBackToProjectOwner()
+    {
+        // Defensive: if Staging:ContactEmail is unset, fall back to project owner so
+        // the user always has a way to request access. Operators see WARN at startup.
+        var context = CreateAuthenticatedContext("hacker@evil.com");
+        var nextCalled = false;
+        var middleware = new StagingAccessMiddleware(
+            _ => { nextCalled = true; return Task.CompletedTask; },
+            ConfigWithContact(contactEmail: null));
+
+        await middleware.InvokeAsync(context, new StubGuard("badsworm@gmail.com"));
+
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.Forbidden);
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        var payload = JsonSerializer.Deserialize<DeniedResponse>(body, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        payload!.ContactEmail.Should().Be("badsworm@gmail.com",
+            "fallback to project owner when Staging:ContactEmail unset");
     }
 
     [Fact]
@@ -118,7 +187,9 @@ public class StagingAccessMiddlewareTests
     {
         var context = CreateAuthenticatedContext(email: null);
         var nextCalled = false;
-        var middleware = new StagingAccessMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
+        var middleware = new StagingAccessMiddleware(
+            _ => { nextCalled = true; return Task.CompletedTask; },
+            ConfigWithContact("badsworm@gmail.com"));
 
         await middleware.InvokeAsync(context, new StubGuard("badsworm@gmail.com"));
 
@@ -134,7 +205,9 @@ public class StagingAccessMiddlewareTests
         // accidental lockout if STAGING_ALLOWED_EMAILS is misconfigured.
         var context = CreateAuthenticatedContext("anyone@example.com");
         var nextCalled = false;
-        var middleware = new StagingAccessMiddleware(_ => { nextCalled = true; return Task.CompletedTask; });
+        var middleware = new StagingAccessMiddleware(
+            _ => { nextCalled = true; return Task.CompletedTask; },
+            ConfigWithContact("badsworm@gmail.com"));
 
         await middleware.InvokeAsync(context, new StubGuard(/* empty allowlist */));
 

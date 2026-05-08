@@ -263,17 +263,19 @@ public class SessionTokenTests
     }
 
     [Fact]
-    public void ImplicitConversion_ToStringWorks()
+    public void Value_ExposesUnderlyingString()
     {
-        // Arrange
+        // R1 (auth security fixes): the implicit operator string(SessionToken)
+        // was removed because it silently bypassed ToString() = "[REDACTED]"
+        // (any string-typed sink — logger, interpolated message — would
+        // accidentally leak the raw token). Callers must reach for .Value
+        // explicitly so leak paths are visible at the call site.
         var token = SessionToken.Generate();
-        var expectedValue = token.Value;
 
-        // Act
-        string tokenString = token;
-
-        // Assert
-        tokenString.Should().Be(expectedValue);
+        token.Value.Should().NotBeNullOrEmpty();
+        token.ToString().Should().Be("[REDACTED]",
+            "ToString() must NEVER expose the raw token — only .Value does, " +
+            "and only at call sites that explicitly opt in.");
     }
 
     private static bool TryDecodeBase64(string base64String, out byte[]? bytes)

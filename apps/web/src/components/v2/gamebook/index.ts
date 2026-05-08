@@ -67,3 +67,24 @@ export type { CancelModalLabels, CancelModalProps } from './CancelModal';
 
 export { DesktopDropFallback } from './DesktopDropFallback';
 export type { DesktopDropFallbackLabels, DesktopDropFallbackProps } from './DesktopDropFallback';
+
+// Iter 1.A — /play/[campaignId] shell
+export { GamebookPlayShell } from './GamebookPlayShell';
+export type { GamebookPlayShellProps } from './GamebookPlayShell';
+
+// Iter 1.A — New campaign dialog + Nanolith CTA
+export { NewCampaignDialog } from './NewCampaignDialog';
+export type { NewCampaignDialogProps } from './NewCampaignDialog';
+
+export { NanolithCampaignCTA } from './NanolithCampaignCTA';
+export type { NanolithCampaignCTAProps } from './NanolithCampaignCTA';
+
+// Iter 1.B — translate viewer + sub-components
+export { TranslateViewer } from './TranslateViewer';
+export type { TranslateViewerProps } from './TranslateViewer';
+
+export { SegmentPicker } from './SegmentPicker';
+export type { SegmentPickerProps } from './SegmentPicker';
+
+export { TranslationPane } from './TranslationPane';
+export type { TranslationPaneProps } from './TranslationPane';

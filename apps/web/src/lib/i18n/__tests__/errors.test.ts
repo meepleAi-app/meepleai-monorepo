@@ -166,7 +166,7 @@ describe('i18n errors', () => {
     it('should have password validation messages', () => {
       expect(validationMessages.passwordRequired).toBe('La password è obbligatoria.');
       expect(validationMessages.passwordTooShort).toBe(
-        'La password deve contenere almeno 8 caratteri.'
+        'La password deve contenere almeno 12 caratteri.'
       );
       expect(validationMessages.passwordTooWeak).toBeTruthy();
       expect(validationMessages.passwordsDoNotMatch).toBe('Le password non corrispondono.');

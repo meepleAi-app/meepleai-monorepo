@@ -74,7 +74,7 @@
       "users": "utenti",
       "validationDisplayName": "Nome visualizzato richiesto",
       "validationEmail": "Email valida richiesta",
-      "validationPassword": "La password deve essere di almeno 8 caratteri"
+      "validationPassword": "La password deve essere di almeno 12 caratteri"
     },
     "workflows": "Flussi di lavoro"
   },
@@ -616,8 +616,8 @@
     "passwordComplexity": "La password deve contenere almeno una lettera maiuscola, una minuscola e un numero",
     "passwordConfirmRequired": "Conferma la tua password",
     "passwordMatch": "Le password non coincidono",
-    "passwordMax": "La password non può superare 100 caratteri",
-    "passwordMin": "La password deve essere di almeno 8 caratteri",
+    "passwordMax": "La password non può superare 128 caratteri",
+    "passwordMin": "La password deve essere di almeno 12 caratteri",
     "required": "Questo campo è obbligatorio"
   },
   "privateGames": {

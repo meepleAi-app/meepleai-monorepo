@@ -150,7 +150,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
             id: Guid.NewGuid(),
             email: Email.Parse($"user-{Guid.NewGuid()}@test.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("TestPassword123!"),
+            passwordHash: PasswordHash.Create("UniqueT3stPwd!"),
             role: role ?? AuthRole.User,
             tier: tier);
 

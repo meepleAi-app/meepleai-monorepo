@@ -35,7 +35,7 @@ export type SuspendUserRequest = z.infer<typeof SuspendUserRequestSchema>;
 
 export const CreateUserRequestSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(12).max(128),
   displayName: z.string().min(1),
   role: z.string().min(1),
 });

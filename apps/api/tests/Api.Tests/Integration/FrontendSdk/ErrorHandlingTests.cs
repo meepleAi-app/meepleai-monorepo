@@ -115,7 +115,7 @@ public class ErrorHandlingTests : IAsyncLifetime
         var loginRequest = new
         {
             email = "nonexistent@example.com",
-            password = "WrongPassword123!"
+            password = "WrongUnusualPwd123!"
         };
 
         // Act

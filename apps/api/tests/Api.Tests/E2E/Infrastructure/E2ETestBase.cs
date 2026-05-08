@@ -372,6 +372,14 @@ internal static class E2ESharedInfrastructure
             return;
         }
 
+        // F7 (auth security review): SystemConfiguration.CreatedByUserId is a
+        // Restrict FK on users.Id. Seeding with Guid.Empty fails the FK as
+        // soon as the column has a real users row to validate against
+        // (post-Phase-A foundation migration). Seed a deterministic system
+        // user FIRST and reuse its Id for the SystemConfiguration row, in
+        // the SAME SaveChanges so both commit atomically.
+        var systemUserId = await EnsureSystemSeederUserAsync(dbContext);
+
         dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Add(
             new Api.Infrastructure.Entities.SystemConfigurationEntity
             {
@@ -387,10 +395,48 @@ internal static class E2ESharedInfrastructure
                 Version = 1,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                CreatedByUserId = Guid.Empty,
+                CreatedByUserId = systemUserId,
             });
 
         await dbContext.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// F7 — idempotent seed of a deterministic system user that owns
+    /// E2E-fixture-created SystemConfiguration rows. Uses a fixed GUID so
+    /// repeated test runs reuse the same row instead of accumulating
+    /// orphans. Returns the user's id.
+    /// </summary>
+    private static async Task<Guid> EnsureSystemSeederUserAsync(MeepleAiDbContext dbContext)
+    {
+        // Stable GUID generated once for this seeding path; do NOT reuse for
+        // anything else. Email is namespaced under .invalid (RFC 6761) so it
+        // can never collide with a real user.
+        var systemUserId = new Guid("e2e1ed00-5eed-4e2e-aaaa-000000000001");
+        const string systemUserEmail = "e2e-system-seeder@e2e.invalid";
+
+        var exists = await dbContext.Users.AnyAsync(u => u.Id == systemUserId);
+        if (exists)
+        {
+            return systemUserId;
+        }
+
+        var systemUser = new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = systemUserId,
+            Email = systemUserEmail,
+            DisplayName = "E2E System Seeder",
+            // Random base64 placeholder — this user can never log in
+            // (they're not exposed via any auth surface; the column is
+            // non-nullable post-Phase-A so a real string is needed).
+            PasswordHash = "v1.0.placeholder.E2ESystemSeederNeverLogsIn",
+            Role = "User",
+            Tier = "free",
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        dbContext.Users.Add(systemUser);
+        return systemUserId;
     }
 
     /// <summary>
@@ -492,11 +538,11 @@ internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
                 ["Qdrant:Port"] = "6333",
                 ["Authentication:SessionManagement:SessionExpirationDays"] = "30",
                 ["Admin:Email"] = "admin@test.local",
-                ["Admin:Password"] = "TestAdmin123!",
+                ["Admin:Password"] = "TestUnusualAdm123!",
                 ["Admin:DisplayName"] = "Test Admin",
                 // CI environment admin seeding configuration
                 ["INITIAL_ADMIN_EMAIL"] = "admin@test.local",
-                ["INITIAL_ADMIN_PASSWORD"] = "TestAdmin123!",
+                ["INITIAL_ADMIN_PASSWORD"] = "TestUnusualAdm123!",
                 ["INITIAL_ADMIN_DISPLAY_NAME"] = "Test Admin",
                 ["Observability:Enabled"] = "false",
                 ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "",

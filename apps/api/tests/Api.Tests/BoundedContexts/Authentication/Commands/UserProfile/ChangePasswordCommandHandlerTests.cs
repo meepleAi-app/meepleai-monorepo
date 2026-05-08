@@ -30,7 +30,7 @@ public class ChangePasswordCommandHandlerTests
     {
         _mockRepository = new Mock<IUserRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
-        _handler = new ChangePasswordCommandHandler(_mockRepository.Object, _mockUnitOfWork.Object);
+        _handler = new ChangePasswordCommandHandler(_mockRepository.Object, Mock.Of<ISessionRepository>(), _mockUnitOfWork.Object);
     }
 
     [Fact]
@@ -38,8 +38,8 @@ public class ChangePasswordCommandHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var currentPassword = "OldPassword123!";
-        var newPassword = "NewPassword456!";
+        var currentPassword = "OldUnusualPwd123!";
+        var newPassword = "NewUnusualPwd456!";
 
         var user = new User(
             id: userId,
@@ -76,7 +76,7 @@ public class ChangePasswordCommandHandlerTests
         var command = new ChangePasswordCommand
         {
             UserId = userId,
-            CurrentPassword = "OldPassword123!",
+            CurrentPassword = "OldUnusualPwd123!",
             NewPassword = ""
         };
 
@@ -97,7 +97,7 @@ public class ChangePasswordCommandHandlerTests
         var command = new ChangePasswordCommand
         {
             UserId = userId,
-            CurrentPassword = "OldPassword123!",
+            CurrentPassword = "OldUnusualPwd123!",
             NewPassword = "   "
         };
 
@@ -118,8 +118,8 @@ public class ChangePasswordCommandHandlerTests
         var command = new ChangePasswordCommand
         {
             UserId = userId,
-            CurrentPassword = "OldPassword123!",
-            NewPassword = "NewPassword456!"
+            CurrentPassword = "OldUnusualPwd123!",
+            NewPassword = "NewUnusualPwd456!"
         };
 
         _mockRepository.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
@@ -140,8 +140,8 @@ public class ChangePasswordCommandHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var correctPassword = "CorrectPassword123!";
-        var wrongPassword = "WrongPassword456!";
+        var correctPassword = "CorrectUnusualPwd123!";
+        var wrongPassword = "WrongUnusualPwd456!";
         var newPassword = "NewPassword789!";
 
         var user = new User(

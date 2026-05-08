@@ -77,7 +77,7 @@ public sealed class SeedAdminUserCommandHandlerTests
             .ReturnsAsync(0);
 
         _configurationMock.Setup(x => x["INITIAL_ADMIN_EMAIL"]).Returns("admin@test.com");
-        _configurationMock.Setup(x => x["ADMIN_PASSWORD"]).Returns("Admin123!");
+        _configurationMock.Setup(x => x["ADMIN_PASSWORD"]).Returns("UnusualAdm123!");
         _configurationMock.Setup(x => x["INITIAL_ADMIN_DISPLAY_NAME"]).Returns("Test Admin");
 
         var command = new SeedAdminUserCommand();
@@ -147,7 +147,7 @@ public sealed class SeedAdminUserCommandHandlerTests
         var act2 = async () => await _handler.Handle(command, CancellationToken.None);
         var exception = (await act2.Should().ThrowAsync<InvalidOperationException>()).Which;
 
-        exception.Message.Should().Contain("at least 8 characters");
+        exception.Message.Should().Contain("at least 12 characters");
     }
 
     [Fact]
@@ -179,7 +179,7 @@ public sealed class SeedAdminUserCommandHandlerTests
             .ReturnsAsync(0);
 
         _configurationMock.Setup(x => x["INITIAL_ADMIN_EMAIL"]).Returns("admin@test.com");
-        _configurationMock.Setup(x => x["ADMIN_PASSWORD"]).Returns("NoDigitPass");
+        _configurationMock.Setup(x => x["ADMIN_PASSWORD"]).Returns("NoDigitPasswd");
 
         var command = new SeedAdminUserCommand();
 

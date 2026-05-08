@@ -9,6 +9,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameDocuments;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunkById;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbDocumentById;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetRecentKbDocs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchKbChunks;
 using Api.Extensions;
 using Api.Helpers;
@@ -896,39 +897,70 @@ internal static class KnowledgeBaseEndpoints
 
     private static void MapKbDocumentEndpoints(RouteGroupBuilder group)
     {
-        // Issue #730: G4 single doc metadata
+        // Wave 3 Phase 1 (#805 / PR #732 §4.3.5): /discover "Recent KB docs" rail.
+        // Registered before the {id:guid} route so the literal "recent" segment is
+        // matched first; the :guid constraint also disambiguates at the matcher
+        // level but explicit ordering keeps intent obvious (mirror /agents/recent).
+        group.MapGet("/kb-docs/recent", HandleGetRecentKbDocs)
+            .WithName("GetRecentKbDocs")
+            .RequireSession()
+            .WithTags("Discover", "KnowledgeBase")
+            .WithSummary("Get recently indexed KB documents")
+            .WithDescription(
+                "Returns the most recently indexed KB documents (ProcessingState == Ready) "
+                + "sorted by lastIngestedAt DESC. Powers the SP4 /discover \"Recent KB docs\" "
+                + "rail. Cache: 5min via HybridCache. Wave 3 Phase 1 (Issue #805 / PR #732 §4.3.5).")
+            .Produces<DiscoverItemsEnvelope<RecentKbDocDto>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status400BadRequest);
+
+        // Wave 3 Phase 3 (Issue #805 / PR #732 §6.3.1): doc detail with 423 Locked.
         group.MapGet("/kb-docs/{id:guid}", HandleGetKbDocumentById)
             .WithName("GetKbDocumentById")
             .RequireSession()
             .WithTags("KnowledgeBase")
-            .WithSummary("Get KB document metadata")
-            .WithDescription("Returns metadata for a single KB document (title, processing state, total chunks, page count). Admin users see additional diagnostic fields.")
-            .Produces<KbDocumentDto>()
+            .WithSummary("Get KB document detail (spec §6.3.1)")
+            .WithDescription(
+                "Returns spec-conformant document detail with gameName + uploaderName joins. "
+                + "Returns 423 Locked when processingStatus != 'ready' (Nygard semantic distinct from 404). "
+                + "Cache: HybridCache 1h per-viewer, tags ['kb', 'kbDoc:{id}'].")
+            .Produces<KbDocumentDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status403Forbidden);
+            .Produces(StatusCodes.Status423Locked);
 
-        // Issue #730: G1 paginated chunks list
+        // Wave 3 Phase 3 (Issue #805 / PR #732 §6.3.2): cursor-paginated chunks list.
         group.MapGet("/kb-docs/{id:guid}/chunks", HandleGetKbChunks)
             .WithName("GetKbChunks")
             .RequireSession()
             .WithTags("KnowledgeBase")
-            .WithSummary("Get paginated chunks list with hierarchical headings")
-            .WithDescription("Returns chunks ordered by position with breadcrumb headingPath. Admin users see vectorId, characterCount, elementType, embeddingStatus.")
-            .Produces<KbChunkListDto>()
+            .WithSummary("Get cursor-paginated chunks list (spec §6.3.2)")
+            .WithDescription(
+                "Returns chunks ordered by position with breadcrumb headingPath, opaque cursor "
+                + "pagination ((Position, Id) tuple base64-encoded). nextCursor null on last page. "
+                + "Cache: HybridCache 30min per-viewer.")
+            .Produces<KbChunksListResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status403Forbidden);
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
 
-        // Issue #730: G2 single chunk full content
+        // Wave 3 Phase 3 (Issue #805 / PR #732 §6.3.3): chunk detail w/ markdown subset.
         group.MapGet("/kb-docs/{id:guid}/chunks/{chunkId:guid}", HandleGetKbChunkById)
             .WithName("GetKbChunkById")
             .RequireSession()
             .WithTags("KnowledgeBase")
-            .WithSummary("Get a single chunk with full content + prev/next navigation")
-            .WithDescription("Returns chunk content as markdown, with hierarchical breadcrumb and prev/next chunk IDs for navigation.")
-            .Produces<KbChunkDetailDto>()
-            .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status403Forbidden);
+            .WithSummary("Get chunk detail with prev/next navigation (spec §6.3.3)")
+            .WithDescription(
+                "Returns chunk content sanitized to spec markdown subset (H4-H6 demoted, "
+                + "raw HTML stripped, images replaced, footnotes stripped) with prev/nextChunkId "
+                + "navigation. Cache: HybridCache 24h (chunks immutable post-ingest).")
+            .Produces<KbChunkDetailDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
 
         // Issue #730: G3 in-document FTS
         group.MapPost("/kb-docs/{id:guid}/chunks/search", HandleSearchKbChunks)
@@ -941,6 +973,28 @@ internal static class KnowledgeBaseEndpoints
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status403Forbidden);
+    }
+
+    /// <summary>
+    /// Wave 3 Phase 1 (PR #732 §4.3.5 / Issue #805): handler for
+    /// <c>GET /api/v1/kb-docs/recent</c>. Clamps the <c>limit</c> query
+    /// parameter to <c>[1, 50]</c> with a default of 10. Returns a
+    /// <c>{ items: RecentKbDocDto[] }</c> envelope per PR #732 §3.4 empty-state
+    /// contract (200 with empty array rather than 404 / 204).
+    /// </summary>
+    private static async Task<IResult> HandleGetRecentKbDocs(
+        [FromQuery] int? limit,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var safeLimit = limit.GetValueOrDefault(10);
+        if (safeLimit < 1) safeLimit = 10;
+        if (safeLimit > 50) safeLimit = 50;
+
+        var query = new GetRecentKbDocsQuery(safeLimit);
+        var items = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+
+        return Results.Ok(new DiscoverItemsEnvelope<RecentKbDocDto>(items));
     }
 
     private static async Task<IResult> HandleGetKbDocumentById(
@@ -957,26 +1011,44 @@ internal static class KnowledgeBaseEndpoints
         return Results.Ok(dto);
     }
 
+    /// <summary>
+    /// Wave 3 Phase 3 handler for cursor-paginated chunks list.
+    /// Decodes opaque cursor; malformed cursor → 400 Bad Request.
+    /// </summary>
     private static async Task<IResult> HandleGetKbChunks(
         Guid id,
-        int? skip,
-        int? take,
+        [FromQuery] string? cursor,
+        [FromQuery] int? limit,
         HttpContext httpContext,
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        var skipValue = skip ?? 0;
-        var takeValue = take ?? 50;
+        var limitValue = limit ?? 50;
 
-        if (takeValue < 1 || takeValue > 100)
+        if (limitValue < 1 || limitValue > 100)
         {
-            return Results.BadRequest(new { error = "take must be between 1 and 100" });
+            return Results.BadRequest(new { error = "limit must be between 1 and 100" });
+        }
+
+        KbChunksCursor.CursorPayload? decodedCursor;
+        try
+        {
+            decodedCursor = KbChunksCursor.Decode(cursor);
+        }
+        catch (FormatException ex)
+        {
+            return Results.BadRequest(new { error = $"Invalid cursor: {ex.Message}" });
         }
 
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
         var userId = session.User!.Id;
         var isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
-        var query = new GetKbChunksQuery(id, RequestingUserId: userId, Skip: skipValue, Take: takeValue, UserIsAdmin: isAdmin);
+        var query = new GetKbChunksQuery(
+            id,
+            RequestingUserId: userId,
+            Cursor: decodedCursor,
+            Limit: limitValue,
+            UserIsAdmin: isAdmin);
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }

@@ -23,11 +23,14 @@ internal sealed class RegisterCommandValidator : AbstractValidator<RegisterComma
             .MaximumLength(255)
             .WithMessage("Email must not exceed 255 characters");
 
+        // I7 (auth security fixes): minimum length raised to 12. Mirrors the
+        // PasswordHash.Create domain check so FluentValidation surfaces a
+        // 422 before the handler dispatches.
         RuleFor(x => x.Password)
             .NotEmpty()
             .WithMessage("Password is required")
-            .MinimumLength(8)
-            .WithMessage("Password must be at least 8 characters")
+            .MinimumLength(12)
+            .WithMessage("Password must be at least 12 characters")
             .MaximumLength(128)
             .WithMessage("Password must not exceed 128 characters")
             .Matches(@"[A-Z]")

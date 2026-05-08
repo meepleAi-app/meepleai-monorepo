@@ -3,17 +3,30 @@ using Api.SharedKernel.Application.Interfaces;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
 
 /// <summary>
-/// Query to retrieve a paginated list of text chunks for a single KB document.
-/// Used by <c>GET /api/v1/kb-docs/{id}/chunks</c> (G1 goal).
-/// Admin-only fields (VectorId, CharacterCount, ElementType, EmbeddingStatus) are gated via <see cref="UserIsAdmin"/>.
-/// headingPath returns an empty array in this skeleton — recursive CTE populated in next commit.
-/// Access is denied (ForbiddenException) when the document is not public, not owned by
-/// <see cref="RequestingUserId"/>, and the requester is not an admin.
+/// Query to retrieve a cursor-paginated list of chunk summaries for a single
+/// KB document. Used by <c>GET /api/v1/kb-docs/{id}/chunks</c>.
+/// Wave 3 Phase 3 (Issue #805 / PR #732 §6.3.2).
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>Cursor</b>: opaque base64-encoded <c>(Position, Id)</c> tuple. <c>null</c>
+/// for first page. Caller decodes via <see cref="KbChunksCursor.Decode"/> and
+/// returns 400 Bad Request on <see cref="FormatException"/>.
+/// </para>
+///
+/// <para>
+/// <b>Limit</b>: clamped 1..100 by validator; FE default is 50 per spec.
+/// </para>
+///
+/// <para>
+/// Access denied (<c>ForbiddenException</c>) when the document is private,
+/// not owned by <see cref="RequestingUserId"/>, and the requester is not admin.
+/// </para>
+/// </remarks>
 internal sealed record GetKbChunksQuery(
     Guid DocumentId,
     Guid RequestingUserId,
-    int Skip,
-    int Take,
+    KbChunksCursor.CursorPayload? Cursor,
+    int Limit,
     bool UserIsAdmin
-) : IQuery<KbChunkListDto>;
+) : IQuery<KbChunksListResponse>;

@@ -21,7 +21,7 @@ public class UserDomainTests
         // Arrange
         var id = Guid.NewGuid();
         var email = new Email("test@example.com");
-        var passwordHash = PasswordHash.Create("SecurePassword123!");
+        var passwordHash = PasswordHash.Create("SecureUnusualPwd123!");
         var role = Role.User;
 
         // Act
@@ -38,7 +38,7 @@ public class UserDomainTests
     public void User_VerifyPassword_WithCorrectPassword_ReturnsTrue()
     {
         // Arrange
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
         var user = CreateTestUser(password);
 
         // Act & Assert
@@ -49,7 +49,7 @@ public class UserDomainTests
     public void User_VerifyPassword_WithWrongPassword_ReturnsFalse()
     {
         // Arrange
-        var user = CreateTestUser("CorrectPassword123!");
+        var user = CreateTestUser("CorrectUnusualPwd123!");
 
         // Act & Assert
         user.VerifyPassword("WrongPassword!").Should().BeFalse();
@@ -128,15 +128,15 @@ public class UserDomainTests
     public void User_ChangePassword_WithCorrectCurrentPassword_Succeeds()
     {
         // Arrange
-        var currentPassword = "OldPassword123!";
+        var currentPassword = "OldUnusualPwd123!";
         var user = CreateTestUser(currentPassword);
-        var newPasswordHash = PasswordHash.Create("NewPassword456!");
+        var newPasswordHash = PasswordHash.Create("NewUnusualPwd456!");
 
         // Act
         user.ChangePassword(currentPassword, newPasswordHash);
 
         // Assert
-        user.VerifyPassword("NewPassword456!").Should().BeTrue();
+        user.VerifyPassword("NewUnusualPwd456!").Should().BeTrue();
         user.VerifyPassword(currentPassword).Should().BeFalse();
     }
 
@@ -144,8 +144,8 @@ public class UserDomainTests
     public void User_ChangePassword_WithIncorrectCurrentPassword_ThrowsException()
     {
         // Arrange
-        var user = CreateTestUser("CorrectPassword123!");
-        var newPasswordHash = PasswordHash.Create("NewPassword456!");
+        var user = CreateTestUser("CorrectUnusualPwd123!");
+        var newPasswordHash = PasswordHash.Create("NewUnusualPwd456!");
 
         // Act & Assert
         var act = () =>
@@ -159,15 +159,15 @@ public class UserDomainTests
     public void User_UpdatePassword_AsAdmin_UpdatesWithoutVerification()
     {
         // Arrange
-        var user = CreateTestUser("OldPassword123!");
-        var newPasswordHash = PasswordHash.Create("NewPassword456!");
+        var user = CreateTestUser("OldUnusualPwd123!");
+        var newPasswordHash = PasswordHash.Create("NewUnusualPwd456!");
 
         // Act
         user.UpdatePassword(newPasswordHash);
 
         // Assert
-        user.VerifyPassword("NewPassword456!").Should().BeTrue();
-        user.VerifyPassword("OldPassword123!").Should().BeFalse();
+        user.VerifyPassword("NewUnusualPwd456!").Should().BeTrue();
+        user.VerifyPassword("OldUnusualPwd123!").Should().BeFalse();
     }
 
     // UpdateEmail Tests
@@ -415,7 +415,7 @@ public class UserDomainTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var passwordHash = PasswordHash.Create("Password123!");
+        var passwordHash = PasswordHash.Create("UnusualPwd123!");
 
         // Act & Assert
         var act = () =>
@@ -429,7 +429,7 @@ public class UserDomainTests
         // Arrange
         var id = Guid.NewGuid();
         var email = new Email("test@example.com");
-        var passwordHash = PasswordHash.Create("Password123!");
+        var passwordHash = PasswordHash.Create("UnusualPwd123!");
 
         // Act & Assert
         var act = () =>
@@ -456,7 +456,7 @@ public class UserDomainTests
         // Arrange
         var id = Guid.NewGuid();
         var email = new Email("test@example.com");
-        var passwordHash = PasswordHash.Create("Password123!");
+        var passwordHash = PasswordHash.Create("UnusualPwd123!");
 
         // Act & Assert
         var act = () =>
@@ -470,7 +470,7 @@ public class UserDomainTests
         // Arrange
         var id = Guid.NewGuid();
         var email = new Email("test@example.com");
-        var passwordHash = PasswordHash.Create("Password123!");
+        var passwordHash = PasswordHash.Create("UnusualPwd123!");
         var beforeCreate = DateTime.UtcNow;
 
         // Act
@@ -497,17 +497,20 @@ public class UserDomainTests
     [Fact]
     public void User_MultiplePasswordChanges_WorksCorrectly()
     {
-        // Arrange
-        var user = CreateTestUser("Password1!");
+        // Arrange — I7 (auth security fixes) raised the minimum to 12 chars
+        // and added a top-N common-password blocklist. Picking values that
+        // satisfy both length and blocklist gates so the test exercises the
+        // domain method, not the policy.
+        var user = CreateTestUser("UnusualPwdAlpha1!");
 
         // Act
-        user.ChangePassword("Password1!", PasswordHash.Create("Password2!"));
-        user.ChangePassword("Password2!", PasswordHash.Create("Password3!"));
+        user.ChangePassword("UnusualPwdAlpha1!", PasswordHash.Create("UnusualPwdBeta2!"));
+        user.ChangePassword("UnusualPwdBeta2!", PasswordHash.Create("UnusualPwdGamma3!"));
 
         // Assert
-        user.VerifyPassword("Password3!").Should().BeTrue();
-        user.VerifyPassword("Password1!").Should().BeFalse();
-        user.VerifyPassword("Password2!").Should().BeFalse();
+        user.VerifyPassword("UnusualPwdGamma3!").Should().BeTrue();
+        user.VerifyPassword("UnusualPwdAlpha1!").Should().BeFalse();
+        user.VerifyPassword("UnusualPwdBeta2!").Should().BeFalse();
     }
 
     [Fact]
@@ -837,7 +840,7 @@ public class UserDomainTests
         // Arrange
         var id = Guid.NewGuid();
         var email = new Email("test@example.com");
-        var passwordHash = PasswordHash.Create("Password123!");
+        var passwordHash = PasswordHash.Create("UnusualPwd123!");
 
         // Act
         var user = new User(id, email, "Test User", passwordHash, Role.User, UserTier.Premium);
@@ -846,7 +849,7 @@ public class UserDomainTests
         user.Tier.Should().Be(UserTier.Premium);
     }
     private static User CreateTestUser(
-        string password = "TestPassword123!",
+        string password = "UniqueT3stPwd!",
         Role? role = null,
         UserTier? tier = null)
     {

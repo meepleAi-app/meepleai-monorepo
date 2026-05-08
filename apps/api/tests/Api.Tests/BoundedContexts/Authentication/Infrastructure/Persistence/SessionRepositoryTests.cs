@@ -616,7 +616,7 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
             id: userId,
             email: new Email(email),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("TestPassword123!"),
+            passwordHash: PasswordHash.Create("UniqueT3stPwd!"),
             role: Role.User
         );
 

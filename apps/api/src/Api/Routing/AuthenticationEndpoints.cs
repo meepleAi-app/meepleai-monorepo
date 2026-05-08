@@ -20,6 +20,7 @@ using RevokeSessionCommand = Api.BoundedContexts.Authentication.Application.Comm
 using GetUserSessionsQuery = Api.BoundedContexts.Authentication.Application.Queries.GetUserSessionsQuery;
 using LogoutAllDevicesCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutAllDevicesCommand;
 using GetSessionByTokenHashQuery = Api.BoundedContexts.Authentication.Application.Queries.GetSessionByTokenHashQuery;
+using GetCurrentUserQuery = Api.BoundedContexts.Authentication.Application.Queries.GetCurrentUserQuery;
 using AcceptInvitationCommand = Api.BoundedContexts.Authentication.Application.Commands.Invitation.AcceptInvitationCommand;
 using ActivateInvitedAccountCommand = Api.BoundedContexts.Authentication.Application.Commands.Invitation.ActivateInvitedAccountCommand;
 using ValidateInvitationTokenQuery = Api.BoundedContexts.Authentication.Application.Queries.Invitation.ValidateInvitationTokenQuery;
@@ -48,6 +49,7 @@ internal static class AuthenticationEndpoints
         MapLoginEndpoint(group);
         MapLogoutEndpoint(group);
         MapMeEndpoint(group);
+        MapCsrfTokenEndpoint(group);
 
         // Map session management endpoints
         MapSessionEndpoints(group);
@@ -62,7 +64,10 @@ internal static class AuthenticationEndpoints
         MapAcceptInvitationEndpoint(group);
         MapValidateInvitationEndpoint(group);
         MapActivateAccountEndpoint(group);
-        MapValidateInvitationGetEndpoint(group);
+        // I1 (auth security fixes): GET /auth/validate-invitation removed —
+        // tokens in query strings leak via server access logs, browser
+        // history, and Referer headers. POST /auth/validate-invitation
+        // (mapped above) carries the token in the request body instead.
 
         return group;
     }
@@ -92,8 +97,16 @@ internal static class AuthenticationEndpoints
                 return Results.BadRequest(new { error = "Email and password are required" });
             }
 
+            // R3 (auth security fixes): generate a random "Player-{ShortGuid}"
+            // when the client doesn't supply a display name. The legacy
+            // fallback used the email-prefix (e.g. "alice" from
+            // "alice@example.com"), which exposed the local-part of the
+            // address to anyone who could see the user's profile — a low-
+            // grade enumeration vector and a privacy leak. The random
+            // fallback is opaque and the user can change it later via
+            // /users/profile.
             var displayName = string.IsNullOrWhiteSpace(payload.DisplayName)
-                ? payload.Email.Split('@')[0]
+                ? $"Player-{Guid.NewGuid():N}"[..14]
                 : payload.DisplayName.Trim();
 
             var command = new DddRegisterCommand(
@@ -102,7 +115,8 @@ internal static class AuthenticationEndpoints
                 DisplayName: displayName,
                 Role: null,
                 IpAddress: context.Connection.RemoteIpAddress?.ToString(),
-                UserAgent: context.Request.Headers.UserAgent.ToString());
+                UserAgent: context.Request.Headers.UserAgent.ToString(),
+                BootstrapToken: payload.BootstrapToken);
 
             logger.LogInformation("User registration attempt for {Email}", DataMasking.MaskEmail(payload.Email));
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -163,8 +177,12 @@ internal static class AuthenticationEndpoints
                 return Results.Json(new { error = "Invalid email or password" }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
-            var sessionExpirationDays = (await configService.GetValueAsync<int?>("Authentication:SessionManagement:SessionExpirationDays", 30).ConfigureAwait(false)) ?? 30;
-            var expiresAt = DateTime.UtcNow.AddDays(sessionExpirationDays);
+            // I2 + F5 (auth security fixes): the Session aggregate is the
+            // source of truth for ExpiresAt. The handler returns it as a
+            // non-nullable field on LoginResponse, so the endpoint no
+            // longer falls back to a config-recomputed value (which could
+            // diverge from the persisted user_sessions.expires_at row).
+            var expiresAt = result.ExpiresAt;
             CookieHelpers.WriteSessionCookie(context, result.SessionToken, expiresAt);
             CookieHelpers.WriteUserRoleCookie(context, result.User.Role, expiresAt);
             logger.LogInformation("User {UserId} logged in successfully with role {Role}", result.User.Id, result.User.Role);
@@ -179,13 +197,23 @@ internal static class AuthenticationEndpoints
         {
             var sessionCookieName = CookieHelpers.GetSessionCookieName(context);
 
-            if (context.Request.Cookies.TryGetValue(sessionCookieName, out var token) &&
-                !string.IsNullOrWhiteSpace(token))
+            // R5 (auth security fixes): a logout call without a session
+            // cookie is either a bug in the client or a probe — there is
+            // nothing to log out. Returning 200 OK was misleading because
+            // the response was indistinguishable from "I had a session and
+            // it's been revoked". Surface as 401 so clients (and metrics)
+            // can distinguish.
+            if (!context.Request.Cookies.TryGetValue(sessionCookieName, out var token) ||
+                string.IsNullOrWhiteSpace(token))
             {
-                var command = new DddLogoutCommand(SessionToken: token);
-                await mediator.Send(command, ct).ConfigureAwait(false);
-                logger.LogInformation("User logged out successfully");
+                CookieHelpers.RemoveSessionCookie(context);
+                CookieHelpers.RemoveUserRoleCookie(context);
+                return Results.Unauthorized();
             }
+
+            var command = new DddLogoutCommand(SessionToken: token);
+            await mediator.Send(command, ct).ConfigureAwait(false);
+            logger.LogInformation("User logged out successfully");
 
             CookieHelpers.RemoveSessionCookie(context);
             CookieHelpers.RemoveUserRoleCookie(context);
@@ -195,15 +223,45 @@ internal static class AuthenticationEndpoints
 
     private static void MapMeEndpoint(RouteGroupBuilder group)
     {
-        group.MapGet("/auth/me", (HttpContext context) =>
+        group.MapGet("/auth/me", async (HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
             var (authenticated, session, _) = context.TryGetActiveSession();
-            if (authenticated)
+            if (!authenticated || session.SessionId is null)
             {
-                return Results.Json(new { user = session.User, expiresAt = session.ExpiresAt });
+                return Results.Unauthorized();
             }
 
-            return Results.Unauthorized();
+            // CQRS: materialize the user DTO via MediatR (replaces inline session.User).
+            var user = await mediator
+                .Send(new GetCurrentUserQuery(session.SessionId.Value), ct)
+                .ConfigureAwait(false);
+            if (user is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            return Results.Json(new { user, expiresAt = session.ExpiresAt });
+        });
+    }
+
+    /// <summary>
+    /// C8 — CSRF bootstrap. Issues an antiforgery token pair: the request
+    /// token is returned in the JSON body, and the matching cookie
+    /// (X-XSRF-TOKEN, non-HttpOnly) is set as a side effect by
+    /// <see cref="Microsoft.AspNetCore.Antiforgery.IAntiforgery.GetAndStoreTokens"/>.
+    /// The JS client reads the cookie and echoes the value in an
+    /// X-XSRF-TOKEN header on every state-changing request.
+    /// </summary>
+    private static void MapCsrfTokenEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/auth/csrf-token", (HttpContext context, Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery) =>
+        {
+            var tokens = antiforgery.GetAndStoreTokens(context);
+            return Results.Json(new
+            {
+                token = tokens.RequestToken,
+                headerName = tokens.HeaderName,
+            });
         });
     }
 
@@ -265,8 +323,19 @@ internal static class AuthenticationEndpoints
                 return Results.Unauthorized();
             }
 
-            var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
-            var tokenHash = Convert.ToBase64String(hash);
+            // C1 fix: use SessionTokenHasher (single source of truth) so the lookup hash
+            // matches Session.TokenHash storage. Inline SHA256 over UTF-8(cookie) was a bug
+            // because storage hashes the *decoded* random bytes, not the Base-64 string.
+            string tokenHash;
+            try
+            {
+                tokenHash = Api.BoundedContexts.Authentication.Domain.ValueObjects.SessionTokenHasher
+                    .HashFromCookie(token);
+            }
+            catch (Api.SharedKernel.Domain.Exceptions.ValidationException)
+            {
+                return Results.Unauthorized();
+            }
 
             // Look up session by token hash via CQRS query
             var dbSession = await mediator.Send(new GetSessionByTokenHashQuery(tokenHash), ct).ConfigureAwait(false);
@@ -381,13 +450,34 @@ internal static class AuthenticationEndpoints
                 return Results.BadRequest(new { error = result.ErrorMessage });
             }
 
-            // Refresh session cookie with new expiration if this is the current session
-            var sessionCookieName = CookieHelpers.GetSessionCookieName(context);
-            var currentSessionToken = context.Request.Cookies[sessionCookieName];
-            if (!string.IsNullOrEmpty(currentSessionToken) && result.NewExpiresAt.HasValue)
+            // R4 (auth security fixes): only refresh the response cookie when
+            // the {sessionId} in the URL matches the session the request was
+            // authenticated with. Pre-fix the cookie was rewritten on every
+            // successful extend regardless of which session was extended —
+            // so extending a "phone" session from a "laptop" tab would
+            // overwrite the laptop's cookie expiration with the phone's
+            // (or, more subtly, leave the cookie value pointing at the
+            // current session but with the phone's new ExpiresAt — a
+            // mis-attributed lifetime). Now: extend always succeeds at the
+            // DB level (the handler already verifies ownership via userId),
+            // but the cookie refresh is gated on currentSession.SessionId == sessionId.
+            var (authenticated, currentSession, _) = context.TryGetActiveSession();
+            var isCurrentSession = authenticated
+                && currentSession.SessionId.HasValue
+                && currentSession.SessionId.Value == sessionId;
+
+            if (isCurrentSession && result.NewExpiresAt.HasValue)
             {
-                CookieHelpers.WriteSessionCookie(context, currentSessionToken, result.NewExpiresAt.Value);
-                logger.LogInformation("Session cookie refreshed for session {SessionId}, new expiration: {ExpiresAt}", sessionId, result.NewExpiresAt.Value);
+                var sessionCookieName = CookieHelpers.GetSessionCookieName(context);
+                var currentSessionToken = context.Request.Cookies[sessionCookieName];
+                if (!string.IsNullOrEmpty(currentSessionToken))
+                {
+                    CookieHelpers.WriteSessionCookie(context, currentSessionToken, result.NewExpiresAt.Value);
+                    logger.LogInformation(
+                        "Session cookie refreshed for current session {SessionId}, new expiration: {ExpiresAt}",
+                        sessionId,
+                        result.NewExpiresAt.Value);
+                }
             }
 
             return Results.Json(new { ok = true, expiresAt = result.NewExpiresAt });
@@ -429,7 +519,9 @@ internal static class AuthenticationEndpoints
             }
 
             return Results.Json(new { ok = true, message = "Session revoked successfully" });
-        }).RequireAuthorization();
+        })
+        .AddEndpointFilter<Api.Infrastructure.Filters.AntiforgeryEndpointFilter>() // C8: CSRF
+        .RequireAuthorization();
     }
 
     private static void MapRevokeAllSessionsEndpoint(RouteGroupBuilder group)
@@ -449,12 +541,21 @@ internal static class AuthenticationEndpoints
             var userId = session!.User!.Id;
 
             // Get current session token hash for optional exclusion
+            // C1 fix: SessionTokenHasher is the single source of truth — must match Session.TokenHash storage.
             string? currentTokenHash = null;
             var sessionCookieName = CookieHelpers.GetSessionCookieName(context);
             if (context.Request.Cookies.TryGetValue(sessionCookieName, out var token) && !string.IsNullOrWhiteSpace(token))
             {
-                var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token));
-                currentTokenHash = Convert.ToBase64String(hash);
+                try
+                {
+                    currentTokenHash = Api.BoundedContexts.Authentication.Domain.ValueObjects.SessionTokenHasher
+                        .HashFromCookie(token);
+                }
+                catch (Api.SharedKernel.Domain.Exceptions.ValidationException)
+                {
+                    // Malformed cookie — treat as "no current session to exclude".
+                    currentTokenHash = null;
+                }
             }
 
             // Execute command via CQRS
@@ -491,7 +592,9 @@ internal static class AuthenticationEndpoints
                     ? $"Successfully logged out of {result.RevokedSessionCount} device(s)"
                     : "No other active sessions to revoke"
             });
-        }).RequireAuthorization()
+        })
+        .AddEndpointFilter<Api.Infrastructure.Filters.AntiforgeryEndpointFilter>() // C8: CSRF
+        .RequireAuthorization()
         .WithName("LogoutAllDevices")
         .WithTags("Authentication", "Sessions")
         .WithSummary("Logout from all devices")
@@ -557,7 +660,7 @@ internal static class AuthenticationEndpoints
         .WithTags("Authentication", "Invitations")
         .WithSummary("Accept an invitation and create an account")
         .WithDescription("Validates the invitation token, creates the user account, and returns a session for immediate login.")
-        .RequireRateLimiting("AuthRegister")
+        .RequireRateLimiting("AuthInvitation") // I11: dedicated invitation policy (20/min/IP)
         .Produces(200)
         .Produces(400);
     }
@@ -597,7 +700,7 @@ internal static class AuthenticationEndpoints
         .WithTags("Authentication", "Invitations")
         .WithSummary("Validate an invitation token")
         .WithDescription("Checks whether an invitation token is valid without consuming it. Returns email and display name for valid tokens, or a uniform error reason (\"invalid\" or \"already_used\") to prevent state enumeration.")
-        .RequireRateLimiting("AuthRegister")
+        .RequireRateLimiting("AuthInvitation") // I11: dedicated invitation policy (20/min/IP)
         .Produces(200)
         .Produces(400);
     }
@@ -650,40 +753,15 @@ internal static class AuthenticationEndpoints
         .WithTags("Authentication", "Invitations")
         .WithSummary("Activate an invited account by setting a password")
         .WithDescription("Activates a pending invited user account. Sets the password, transitions the user to Active status, creates a session, and returns a session token for immediate login.")
-        .RequireRateLimiting("AuthRegister")
+        .RequireRateLimiting("AuthInvitation") // I11: dedicated invitation policy (20/min/IP)
         .Produces(200)
         .Produces(400);
     }
 
-    // ISSUE-124: Validate invitation token via GET (public, unauthenticated)
-    private static void MapValidateInvitationGetEndpoint(RouteGroupBuilder group)
-    {
-        group.MapGet("/auth/validate-invitation", async (
-            string token,
-            IMediator mediator,
-            ILogger<Program> logger,
-            CancellationToken ct) =>
-        {
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                return Results.BadRequest(new { error = "Token is required" });
-            }
-
-            logger.LogInformation("Invitation token validation attempt (GET)");
-
-            var query = new ValidateInvitationTokenQuery(token);
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            return Results.Ok(result);
-        })
-        .WithName("ValidateInvitationTokenGet")
-        .WithTags("Authentication", "Invitations")
-        .WithSummary("Validate an invitation token (GET)")
-        .WithDescription("Checks whether an invitation token is valid without consuming it. Accepts token as query parameter. Returns email and display name for valid tokens.")
-        .RequireRateLimiting("AuthRegister")
-        .Produces(200)
-        .Produces(400);
-    }
+    // I1 (auth security fixes): the GET /auth/validate-invitation endpoint
+    // was removed — tokens in URL query strings leak via server access logs,
+    // browser history, and Referer headers. The POST variant (token in
+    // request body) is the canonical way to validate an invitation.
 }
 
 /// <summary>

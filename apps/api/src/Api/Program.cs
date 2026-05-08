@@ -10,7 +10,9 @@ using Api.Middleware;
 using Api.Models;
 using Api.Observability;
 using Api.Routing;
+using Api.Routing.AdministrationDiscover;
 using Api.Routing.GameManagement;
+using Api.Routing.GameToolkit;
 using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
 using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.AgentMemory.Infrastructure.DependencyInjection;
@@ -269,6 +271,24 @@ builder.Services.Configure<IndexingSettings>(builder.Configuration.GetSection(In
 // Issue #1447: Security headers middleware configuration
 builder.Services.AddSecurityHeaders(builder.Configuration);
 
+// C8 (auth security fixes): antiforgery / CSRF protection on state-changing
+// endpoints. Uses the double-submit cookie pattern — the X-XSRF-TOKEN cookie
+// is non-HttpOnly so the JS client can read it and echo the value in the
+// X-XSRF-TOKEN request header; AntiforgeryEndpointFilter then verifies the
+// header equals the server-side request token. The session cookie itself
+// stays HttpOnly + SameSite=Lax; this is layered defence against top-level
+// cross-origin form POSTs.
+builder.Services.AddAntiforgery(opt =>
+{
+    opt.HeaderName = "X-XSRF-TOKEN";
+    opt.Cookie.Name = "X-XSRF-TOKEN";
+    opt.Cookie.HttpOnly = false; // intentional: JS reads to echo in the header
+    opt.Cookie.SameSite = SameSiteMode.Lax;
+    opt.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+});
+
 // BGAI-021 (Issue #963): AI provider configuration with startup validation
 builder.Services.Configure<AiProviderSettings>(builder.Configuration.GetSection(AiProviderSettings.SectionName));
 builder.Services.AddSingleton<IValidateOptions<AiProviderSettings>, AiProviderValidator>();
@@ -387,7 +407,7 @@ builder.Services.AddSharedGameCatalogContext(builder.Configuration);
 builder.Services.AddSharedGameCatalogPolicies();
 
 // Authentication services (Auth, OAuth, 2FA, API keys, Sessions)
-builder.Services.AddAuthenticationServices(builder.Configuration);
+builder.Services.AddAuthenticationServices(builder.Configuration, builder.Environment);
 
 // Observability services (OpenTelemetry, Health checks, Swagger)
 builder.Services.AddObservabilityServices(builder.Configuration, builder.Environment);
@@ -710,6 +730,9 @@ v1Api.MapAgentsEndpoints(); // Issue #641 (Wave B.2 hotfix): user-facing agent l
 v1Api.MapAgentTypologiesEndpoints(); // Issue #649: user-facing typology dropdown
 v1Api.MapRulebookAnalysisEndpoints(); // ISSUE-2402: Rulebook analysis service
 
+// Discover surface (cross-BC aggregation)
+TopUserContributorsEndpoints.Map(v1Api); // Wave 3 Phase 4a (#805): /users/top-contributors
+
 // User Library
 v1Api.MapUserLibraryEndpoints();       // User game library
 v1Api.MapCollectionWizardEndpoints();  // Issue #4823: Collection wizard game preview
@@ -748,6 +771,7 @@ if (!isAlphaMode)
     v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
     v1Api.MapSessionAttachmentEndpoints(); // Issue #5365: Session photo attachment endpoints
     v1Api.MapGameToolkitEndpoints(); // Issue #4753: Game toolkit CQRS endpoints
+    v1Api.MapToolkitMarketplaceEndpoints(); // Wave 3 Phase 2 (#805): /toolkits/[id] marketplace
     v1Api.MapGameToolboxEndpoints(); // Epic #412: Game toolbox per-game containers
     v1Api.MapToolStateEndpoints(); // Issue #4754: Tool state CQRS endpoints
     v1Api.MapTurnOrderEndpoints(); // Issue #4970: TurnOrder base toolkit endpoints
@@ -835,6 +859,8 @@ if (!isAlphaMode)
     v1Api.MapWishlistEndpoints();          // Wishlist management (Issue #3917)
     v1Api.MapUserHandEndpoints();          // My Hand quick-access slots (La Mia Mano)
     v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)
+    v1Api.MapGamebookCampaignEndpoints();  // Iter 1.A — Libro Game gamebook campaigns
+    v1Api.MapGamebookPhotoEndpoints();    // Iter 1.B — Libro Game photo translate pipeline
 
     // Audit & Analytics
     v1Api.MapAuditEndpoints();             // Audit log retrieval & search

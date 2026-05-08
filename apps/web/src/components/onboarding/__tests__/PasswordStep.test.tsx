@@ -81,7 +81,7 @@ describe('PasswordStep', () => {
 
     const rules = screen.getByTestId('password-rules');
     expect(rules).toBeInTheDocument();
-    expect(screen.getByText('At least 8 characters')).toBeInTheDocument();
+    expect(screen.getByText('At least 12 characters')).toBeInTheDocument();
     expect(screen.getByText('At least 1 uppercase letter')).toBeInTheDocument();
     expect(screen.getByText('At least 1 lowercase letter')).toBeInTheDocument();
     expect(screen.getByText('At least 1 number')).toBeInTheDocument();
@@ -90,7 +90,7 @@ describe('PasswordStep', () => {
   it('shows strong strength for valid password', async () => {
     renderWithQuery(<PasswordStep token="test-token" onComplete={onComplete} />);
 
-    await user.type(screen.getByLabelText(/^Password/), 'StrongPass1');
+    await user.type(screen.getByLabelText(/^Password/), 'StrongPassword1');
 
     expect(screen.getByText('Strong')).toBeInTheDocument();
   });
@@ -98,7 +98,7 @@ describe('PasswordStep', () => {
   it('shows password mismatch error', async () => {
     renderWithQuery(<PasswordStep token="test-token" onComplete={onComplete} />);
 
-    await user.type(screen.getByLabelText(/^Password/), 'StrongPass1');
+    await user.type(screen.getByLabelText(/^Password/), 'StrongPassword1');
     await user.type(screen.getByLabelText(/Confirm Password/), 'Different1');
 
     expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
@@ -119,12 +119,16 @@ describe('PasswordStep', () => {
 
     renderWithQuery(<PasswordStep token="test-token" onComplete={onComplete} />);
 
-    await user.type(screen.getByLabelText(/^Password/), 'StrongPass1');
-    await user.type(screen.getByLabelText(/Confirm Password/), 'StrongPass1');
+    await user.type(screen.getByLabelText(/^Password/), 'StrongPassword1');
+    await user.type(screen.getByLabelText(/Confirm Password/), 'StrongPassword1');
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     await waitFor(() => {
-      expect(mockAcceptInvitation).toHaveBeenCalledWith('test-token', 'StrongPass1', 'StrongPass1');
+      expect(mockAcceptInvitation).toHaveBeenCalledWith(
+        'test-token',
+        'StrongPassword1',
+        'StrongPassword1'
+      );
     });
 
     await waitFor(() => {
@@ -137,8 +141,8 @@ describe('PasswordStep', () => {
 
     renderWithQuery(<PasswordStep token="test-token" onComplete={onComplete} />);
 
-    await user.type(screen.getByLabelText(/^Password/), 'StrongPass1');
-    await user.type(screen.getByLabelText(/Confirm Password/), 'StrongPass1');
+    await user.type(screen.getByLabelText(/^Password/), 'StrongPassword1');
+    await user.type(screen.getByLabelText(/Confirm Password/), 'StrongPassword1');
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     await waitFor(() => {

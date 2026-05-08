@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.Middleware.Exceptions; // C3: ConflictException (HTTP 409 mapping)
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Enums; // Epic #4068: UserAccountStatus (moved to SharedKernel)
 using Api.SharedKernel.Domain.Entities;
@@ -15,7 +16,10 @@ public sealed class User : AggregateRoot<Guid>
 {
     public Email Email { get; private set; }
     public string DisplayName { get; private set; }
-    public PasswordHash PasswordHash { get; private set; }
+    /// <summary>
+    /// User's password hash. Null for OAuth-only users that have never set a password (C2/C3 fix).
+    /// </summary>
+    public PasswordHash? PasswordHash { get; private set; }
     public Role Role { get; private set; }
     public UserTier Tier { get; private set; }
     public UserAccountStatus Status { get; private set; } // Epic #4068 (replaces IsSuspended)
@@ -166,7 +170,7 @@ public sealed class User : AggregateRoot<Guid>
             Id = Guid.NewGuid(),
             Email = email,
             DisplayName = displayName,
-            PasswordHash = null!,
+            PasswordHash = null,
             Role = role,
             Tier = tier,
             Status = UserAccountStatus.Pending,
@@ -209,6 +213,70 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Creates a new user authenticated through an OAuth provider (C3+I8).
+    /// PasswordHash is left null as the canonical "OAuth-only" marker — the legacy
+    /// behaviour of stamping a 32-byte random Base64 string into PasswordHash is
+    /// removed because that value was never a valid PBKDF2 hash and made the
+    /// account silently non-recoverable via local password change.
+    /// EmailVerified is true: the OAuth provider has already validated the address.
+    /// </summary>
+    public static User CreateForOAuth(
+        Guid id,
+        Email email,
+        string displayName,
+        Role role,
+        UserTier? tier,
+        string oauthProvider,
+        TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(email);
+        ArgumentNullException.ThrowIfNull(displayName);
+        ArgumentNullException.ThrowIfNull(role);
+        ArgumentException.ThrowIfNullOrWhiteSpace(oauthProvider);
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var user = new User
+        {
+            Id = id,
+            Email = email,
+            DisplayName = displayName,
+            PasswordHash = null,                // OAuth-only marker (C3)
+            Role = role,
+            Tier = tier ?? UserTier.Free,
+            Status = UserAccountStatus.Active,
+            CreatedAt = now,
+            EmailVerified = true,               // Provider has already verified
+            EmailVerifiedAt = now,
+            VerificationGracePeriodEndsAt = null,
+
+            // Default preferences (mirror standard User ctor defaults)
+            Language = "en",
+            EmailNotifications = true,
+            Theme = "system",
+            DataRetentionDays = 90,
+
+            // Default privacy settings
+            ShowProfile = true,
+            ShowActivity = true,
+            ShowLibrary = true,
+
+            // Default gamification (Issue #3141)
+            Level = 1,
+            ExperiencePoints = 0,
+
+            // Default lockout state (Issue #3339)
+            FailedLoginAttempts = 0,
+            LockedUntil = null,
+
+            IsTwoFactorEnabled = false,
+        };
+
+        user.AddDomainEvent(new UserCreatedViaOAuthEvent(id, email.Value, oauthProvider));
+        return user;
+    }
+
+    /// <summary>
     /// Activates a pending user account from an invitation.
     /// Transitions the user from Pending to Active, sets their password, and marks email as verified.
     /// </summary>
@@ -239,17 +307,36 @@ public sealed class User : AggregateRoot<Guid>
 
     /// <summary>
     /// Verifies if the provided password is correct.
+    /// Returns false for OAuth-only users that have no password set (C2 fix).
     /// </summary>
     public bool VerifyPassword(string plaintextPassword)
     {
+        if (PasswordHash is null)
+        {
+            return false;
+        }
+
         return PasswordHash.Verify(plaintextPassword);
     }
 
     /// <summary>
     /// Changes the user's password (requires current password verification).
     /// </summary>
+    /// <exception cref="ConflictException">Thrown when the user is OAuth-only
+    /// (PasswordHash is null), so there is no current password to compare against.
+    /// Maps to HTTP 409 with an actionable message instead of a misleading 400
+    /// "Current password is incorrect".</exception>
     public void ChangePassword(string currentPassword, PasswordHash newPasswordHash)
     {
+        // C3: short-circuit OAuth-only users (PasswordHash == null) before
+        // VerifyPassword. Without this guard, VerifyPassword returns false
+        // (null-safe since #01) and the user gets the misleading
+        // "Current password is incorrect" error.
+        if (PasswordHash is null)
+            throw new ConflictException(
+                "Cannot change password for an OAuth-only account. " +
+                "Set a password via account settings first.");
+
         if (!VerifyPassword(currentPassword))
             throw new DomainException("Current password is incorrect");
 
@@ -280,7 +367,7 @@ public sealed class User : AggregateRoot<Guid>
     /// Suspends the user account. Suspended users cannot login.
     /// Epic #4068: Updated to use UserAccountStatus
     /// </summary>
-    public void Suspend(string? reason = null)
+    public void Suspend(string? reason = null, TimeProvider? timeProvider = null)
     {
         if (Status == UserAccountStatus.Suspended)
             throw new DomainException("User is already suspended");
@@ -289,7 +376,10 @@ public sealed class User : AggregateRoot<Guid>
 
         Status = UserAccountStatus.Suspended;
         IsSuspended = true;
-        SuspendedAt = DateTime.UtcNow;
+        // R2: optional TimeProvider; defaults to TimeProvider.System for
+        // backward compatibility with the 100+ existing call sites that
+        // don't pass one.
+        SuspendedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         SuspendReason = reason;
         AddDomainEvent(new UserSuspendedEvent(Id, reason));
     }
@@ -297,14 +387,15 @@ public sealed class User : AggregateRoot<Guid>
     /// <summary>
     /// Bans the user account permanently (Epic #4068)
     /// </summary>
-    public void Ban(string reason)
+    public void Ban(string reason, TimeProvider? timeProvider = null)
     {
         if (Status == UserAccountStatus.Banned)
             throw new DomainException("User is already banned");
 
         Status = UserAccountStatus.Banned;
         IsSuspended = true; // Maintain backward compat
-        SuspendedAt = DateTime.UtcNow;
+        // R2: optional TimeProvider for testability.
+        SuspendedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         SuspendReason = reason;
         AddDomainEvent(new UserSuspendedEvent(Id, reason)); // Reuse event
     }
@@ -566,9 +657,10 @@ public sealed class User : AggregateRoot<Guid>
     /// </summary>
     /// <param name="totpSecret">Encrypted TOTP secret value object.</param>
     /// <param name="backupCodes">List of backup code value objects (optional for testing).</param>
+    /// <param name="timeProvider">Optional TimeProvider for testability (R2). Defaults to TimeProvider.System.</param>
     /// <exception cref="ArgumentNullException">Thrown when totpSecret is null.</exception>
     /// <exception cref="DomainException">Thrown when 2FA is already enabled or backup codes are invalid.</exception>
-    public void Enable2FA(TotpSecret totpSecret, List<BackupCode>? backupCodes = null)
+    public void Enable2FA(TotpSecret totpSecret, List<BackupCode>? backupCodes = null, TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(totpSecret);
 
@@ -582,7 +674,8 @@ public sealed class User : AggregateRoot<Guid>
 
         TotpSecret = totpSecret;
         IsTwoFactorEnabled = true;
-        TwoFactorEnabledAt = DateTime.UtcNow;
+        // R2: optional TimeProvider for testability.
+        TwoFactorEnabledAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
 
         // Replace backup codes if provided
         _backupCodes.Clear();
@@ -1029,7 +1122,7 @@ public sealed class User : AggregateRoot<Guid>
     /// </summary>
     internal void RestorePasswordHash(PasswordHash? passwordHash)
     {
-        PasswordHash = passwordHash!;
+        PasswordHash = passwordHash;
     }
 
     /// <summary>

@@ -126,7 +126,7 @@ public sealed class PdfKbLinkFlowIntegrationTests : IAsyncLifetime
                 id: userId,
                 email: new Email($"user{userId:N}@test.com"),
                 displayName: "Test User",
-                passwordHash: PasswordHash.Create("TestPassword123!"),
+                passwordHash: PasswordHash.Create("UniqueT3stPwd!"),
                 role: Role.User,
                 tier: UserTier.Free);
             await userRepo.AddAsync(user, TestCancellationToken);

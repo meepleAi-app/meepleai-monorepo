@@ -206,7 +206,7 @@ public sealed class UserEmailVerificationTests
             id: Guid.NewGuid(),
             email: Email.Parse("test@example.com"),
             displayName: "Test User",
-            passwordHash: PasswordHash.Create("Test123!@#"),
+            passwordHash: PasswordHash.Create("T3stPwd1234!"),
             role: Role.User,
             tier: UserTier.Free
         );

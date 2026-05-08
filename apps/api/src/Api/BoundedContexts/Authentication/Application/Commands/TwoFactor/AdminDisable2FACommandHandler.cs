@@ -45,6 +45,24 @@ internal class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FACo
                 return new AdminDisable2FAResult(Success: false, ErrorMessage: "Unauthorized: Admin role required");
             }
 
+            // I4: re-authenticate the admin with their own password before
+            // letting a high-impact action (removing 2FA on another user)
+            // through. A valid session cookie alone is not enough — it could
+            // belong to an unattended browser, a hijacked OAuth flow, etc.
+            // Empty password short-circuits to a clean "Unauthorized"
+            // without consuming the PBKDF2 cost.
+            if (string.IsNullOrWhiteSpace(command.AdminPassword)
+                || !adminUser.VerifyPassword(command.AdminPassword))
+            {
+                _logger.LogWarning(
+                    "Admin {AdminUserId} failed re-auth on admin 2FA disable for target {TargetUserId}",
+                    command.AdminUserId,
+                    command.TargetUserId);
+                return new AdminDisable2FAResult(
+                    Success: false,
+                    ErrorMessage: "Unauthorized: admin re-authentication failed");
+            }
+
             // Verify target user exists
             var targetUser = await _userRepository.GetByIdAsync(command.TargetUserId, cancellationToken).ConfigureAwait(false);
             if (targetUser == null)

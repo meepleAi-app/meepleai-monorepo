@@ -35,6 +35,7 @@
  * requestCameraStream; useTranslation via IntlProvider.
  */
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, act } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import type { ReactElement } from 'react';
@@ -65,6 +66,17 @@ const useGamesMock = vi.fn();
 vi.mock('@/hooks/queries/useGames', () => ({
   useGames: (filters?: { search?: string }, sort?: unknown, page?: number, pageSize?: number) =>
     useGamesMock(filters, sort, page, pageSize),
+}));
+
+// ─── useBggSearch mock ────────────────────────────────────────────────────
+// Wave 3 Phase 0 (Issue #805): the orchestrator now wires `useBggSearch`
+// against the public-tier BGG endpoint. Mocked here so unit tests do not
+// hit the network even with the BGG tab inactive (hook still imported).
+
+const useBggSearchMock = vi.fn();
+
+vi.mock('@/hooks/queries/useBggSearch', () => ({
+  useBggSearch: (opts: { query: string; enabled?: boolean }) => useBggSearchMock(opts),
 }));
 
 // ─── usePhotoBatchUpload + usePhotoBatchStatus mocks ──────────────────────
@@ -222,10 +234,18 @@ const MESSAGES: Record<string, string> = {
 import { GamebookUploadView } from '../GamebookUploadView';
 
 function renderView(): ReactElement {
+  // Wave 3 Phase 0 (Issue #805): orchestrator now consumes `useBggSearch` —
+  // a TanStack Query hook — so a fresh QueryClient is required per render.
+  // Tests still mock `@/lib/api`, so no actual network requests fire.
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
   return render(
-    <IntlProvider locale="it" messages={MESSAGES} defaultLocale="it">
-      <GamebookUploadView />
-    </IntlProvider>
+    <QueryClientProvider client={queryClient}>
+      <IntlProvider locale="it" messages={MESSAGES} defaultLocale="it">
+        <GamebookUploadView />
+      </IntlProvider>
+    </QueryClientProvider>
   );
 }
 
@@ -250,6 +270,15 @@ beforeEach(() => {
 
   // Default: empty results, idle states.
   useGamesMock.mockReturnValue(defaultGamesQuery());
+
+  // Default BGG: idle (tab not active in most tests).
+  useBggSearchMock.mockReturnValue({
+    data: undefined,
+    isPending: true,
+    isError: false,
+    fetchStatus: 'idle',
+  });
+
   statusQueryResult = {
     data: null,
     isPending: false,

@@ -9,8 +9,11 @@ namespace Api.Routing;
 
 /// <summary>
 /// BoardGameGeek API integration endpoints.
-/// Issue #3120: Provides admin-only search and game details lookup from BGG.
-/// Restricted to admin due to BGG commercial use licensing.
+/// Issue #3120: Originally provided admin-only search and game details lookup from BGG.
+/// Issue #805 (Wave 3 Phase 0): Endpoints now require any authenticated user (not just admin)
+/// so SP6 wizard step 1 BGG tab + future user-facing flows can consume the catalog.
+/// BGG data is publicly available; the per-user rate limiter (BggSearch policy:
+/// 60 req/hour/user) preserves the BGG external-API quota and prevents abuse.
 /// Unified: Uses IBggApiService (rich DTOs with categories, mechanics, etc.)
 /// </summary>
 internal static class BggEndpoints
@@ -46,13 +49,13 @@ internal static class BggEndpoints
                 totalPages = (int)Math.Ceiling((double)total / pageSize)
             });
         })
-        .RequireAdminSession()
+        .RequireAuthenticatedUser()
         .RequireRateLimiting("BggSearch")
-        .WithName("BggAdminSearch")
+        .WithName("BggSearch")
         .WithOpenApi(operation =>
         {
-            operation.Summary = "Search BoardGameGeek catalog (Admin only)";
-            operation.Description = "Admin-only search for board games on BoardGameGeek. Restricted due to BGG commercial use licensing. Rate limited to 60 searches per hour per user.";
+            operation.Summary = "Search BoardGameGeek catalog";
+            operation.Description = "Search for board games on BoardGameGeek. Requires authentication. Rate limited to 60 searches per hour per user (per-user sliding window).";
             return operation;
         });
 
@@ -72,13 +75,13 @@ internal static class BggEndpoints
 
             return Results.Ok(details);
         })
-        .RequireAdminSession()
+        .RequireAuthenticatedUser()
         .RequireRateLimiting("BggSearch")
         .WithName("GetBggGameDetails")
         .WithOpenApi(operation =>
         {
-            operation.Summary = "Get BoardGameGeek game details (Admin only)";
-            operation.Description = "Admin-only retrieval of detailed information about a specific board game from BoardGameGeek by its BGG ID. Restricted due to BGG commercial use licensing. Rate limited to 60 requests per hour per user.";
+            operation.Summary = "Get BoardGameGeek game details";
+            operation.Description = "Retrieve detailed information about a specific board game from BoardGameGeek by its BGG ID. Requires authentication. Rate limited to 60 requests per hour per user (shared with /bgg/search).";
             return operation;
         });
 

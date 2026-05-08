@@ -239,8 +239,8 @@ describe('ResetPasswordPageContent — reset mode', () => {
       expect(submitBtn).not.toHaveAttribute('aria-busy', 'true');
     });
 
-    fireEvent.change(pwd, { target: { value: 'StrongPass1' } });
-    fireEvent.change(confirm, { target: { value: 'StrongPass1' } });
+    fireEvent.change(pwd, { target: { value: 'StrongPassword1' } });
+    fireEvent.change(confirm, { target: { value: 'StrongPassword1' } });
 
     // Wait for the button to become enabled after state has propagated.
     await waitFor(() => {
@@ -252,7 +252,7 @@ describe('ResetPasswordPageContent — reset mode', () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(mockConfirmPasswordReset).toHaveBeenCalledWith('tok-123', 'StrongPass1');
+      expect(mockConfirmPasswordReset).toHaveBeenCalledWith('tok-123', 'StrongPassword1');
     });
 
     expect(
@@ -274,8 +274,8 @@ describe('ResetPasswordPageContent — reset mode', () => {
       expect(submitBtn).not.toHaveAttribute('aria-busy', 'true');
     });
 
-    fireEvent.change(pwd, { target: { value: 'StrongPass1' } });
-    fireEvent.change(confirm, { target: { value: 'StrongPass1' } });
+    fireEvent.change(pwd, { target: { value: 'StrongPassword1' } });
+    fireEvent.change(confirm, { target: { value: 'StrongPassword1' } });
 
     await waitFor(() => {
       expect(submitBtn).not.toBeDisabled();

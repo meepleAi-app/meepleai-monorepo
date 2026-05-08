@@ -624,7 +624,7 @@ public class FirstAccuracyBaselineTest
     private async Task AuthenticateAsync()
     {
         var email = Environment.GetEnvironmentVariable("BASELINE_TEST_EMAIL") ?? "admin@meepleai.dev";
-        var password = Environment.GetEnvironmentVariable("BASELINE_TEST_PASSWORD") ?? "Admin123!ChangeMe";
+        var password = Environment.GetEnvironmentVariable("BASELINE_TEST_PASSWORD") ?? "UnusualAdm123!ChangeMe";
 
         var loginRequest = new { email, password };
 
@@ -657,7 +657,7 @@ public class FirstAccuracyBaselineTest
             _output.WriteLine($"❌ Authentication failed for {email}: {ex.Message}");
             _output.WriteLine("Prerequisites:");
             _output.WriteLine("  - Set BASELINE_TEST_EMAIL and BASELINE_TEST_PASSWORD environment variables");
-            _output.WriteLine("  - Or ensure admin@meepleai.dev/Admin123!ChangeMe user exists (default)");
+            _output.WriteLine("  - Or ensure admin@meepleai.dev/UnusualAdm123!ChangeMe user exists (default)");
             throw new InvalidOperationException($"Authentication failed. Ensure valid credentials are configured.", ex);
         }
     }

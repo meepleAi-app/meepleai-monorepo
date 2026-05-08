@@ -262,7 +262,7 @@
     "openapi-zod-client": "^1.18.3",
     "playwright-lighthouse": "^4.0.0",
     "playwright-prometheus-remote-write-reporter": "^0.2.6",
-    "postcss": "^8.5.8",
+    "postcss": "^8.5.10",
     "prettier": "^3.8.1",
     "react-joyride": "^2.9.3",
     "storybook": "10.2.16",

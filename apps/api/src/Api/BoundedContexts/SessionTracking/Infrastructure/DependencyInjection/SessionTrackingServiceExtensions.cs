@@ -36,6 +36,9 @@ internal static class SessionTrackingServiceExtensions
         services.AddScoped<ISessionCheckpointRepository, SessionCheckpointRepository>(); // ISSUE-278: Session Checkpoint / Deep Save
         services.AddScoped<IVisionSnapshotRepository, VisionSnapshotRepository>(); // Session Vision AI
         services.AddScoped<IGamebookCampaignSessionRepository, GamebookCampaignSessionRepository>(); // Iter 1.A — Libro Game gamebook campaigns
+        services.AddScoped<IGamebookPhotoArtifactRepository, GamebookPhotoArtifactRepository>(); // Iter 1.B
+        services.AddScoped<ITranslatedParagraphRepository, TranslatedParagraphRepository>(); // Iter 1.B
+        services.AddScoped<IGamebookGlossaryRepository, GamebookGlossaryRepository>(); // Iter 1.B
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
@@ -66,6 +69,12 @@ internal static class SessionTrackingServiceExtensions
 
         // Session Vision AI
         services.AddScoped<IGameStateExtractor, GameStateExtractor>();
+
+        // Iter 1.B — Libro Game photo storage (EXIF strip adapter over IBlobStorageService)
+        services.AddScoped<IGamebookPhotoStorage, GamebookPhotoStorageService>(); // Iter 1.B
+
+        // Iter 1.B — Tesseract OCR engine (singleton: engine is thread-safe, pages are per-call)
+        services.AddSingleton<IOcrService, TesseractOcrService>(); // Iter 1.B
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

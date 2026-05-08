@@ -3,6 +3,7 @@ using Api.Models;
 using Api.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 
 namespace Api.Routing;
@@ -17,6 +18,7 @@ internal static class CookieHelpers
 
     // C4: legacy plaintext role cookie. Read-only during the grace period;
     // every WriteUserRoleCookie call lazy-deletes it.
+    [SuppressMessage("SonarAnalyzer.CSharp", "S125", Justification = "Explanatory comment about C4 legacy cookie semantics — false-positive on semicolon punctuation.")]
     private const string UserRoleCookieNameV1 = "meepleai_user_role";
 
     // C4: HMAC-protected role cookie. Always issued on login / role change.

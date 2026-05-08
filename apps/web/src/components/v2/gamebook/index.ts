@@ -78,3 +78,13 @@ export type { NewCampaignDialogProps } from './NewCampaignDialog';
 
 export { NanolithCampaignCTA } from './NanolithCampaignCTA';
 export type { NanolithCampaignCTAProps } from './NanolithCampaignCTA';
+
+// Iter 1.B — translate viewer + sub-components
+export { TranslateViewer } from './TranslateViewer';
+export type { TranslateViewerProps } from './TranslateViewer';
+
+export { SegmentPicker } from './SegmentPicker';
+export type { SegmentPickerProps } from './SegmentPicker';
+
+export { TranslationPane } from './TranslationPane';
+export type { TranslationPaneProps } from './TranslationPane';

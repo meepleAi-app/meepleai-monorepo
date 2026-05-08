@@ -50,7 +50,7 @@ export function LoginForm({ onSubmit, loading = false, error, onErrorDismiss }: 
   // Validation Schema with i18n
   const loginSchema = z.object({
     email: z.string().min(1, t('validation.emailRequired')).email(t('validation.invalidEmail')),
-    password: z.string().min(12, t("validation.passwordMin")).max(128, t("validation.passwordMax")),
+    password: z.string().min(12, t('validation.passwordMin')).max(128, t('validation.passwordMax')),
   });
 
   const {

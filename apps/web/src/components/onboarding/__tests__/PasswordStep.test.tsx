@@ -124,7 +124,11 @@ describe('PasswordStep', () => {
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     await waitFor(() => {
-      expect(mockAcceptInvitation).toHaveBeenCalledWith('test-token', 'StrongPassword1', 'StrongPassword1');
+      expect(mockAcceptInvitation).toHaveBeenCalledWith(
+        'test-token',
+        'StrongPassword1',
+        'StrongPassword1'
+      );
     });
 
     await waitFor(() => {

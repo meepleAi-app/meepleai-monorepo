@@ -35,6 +35,7 @@ internal static class SessionTrackingServiceExtensions
         services.AddScoped<ISessionEventRepository, SessionEventRepository>(); // ISSUE-276: Session Diary / Timeline
         services.AddScoped<ISessionCheckpointRepository, SessionCheckpointRepository>(); // ISSUE-278: Session Checkpoint / Deep Save
         services.AddScoped<IVisionSnapshotRepository, VisionSnapshotRepository>(); // Session Vision AI
+        services.AddScoped<IGamebookCampaignSessionRepository, GamebookCampaignSessionRepository>(); // Iter 1.A — Libro Game gamebook campaigns
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

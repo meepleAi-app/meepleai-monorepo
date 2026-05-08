@@ -67,7 +67,7 @@ export function RegisterForm({
 
   const registerSchema = z.object({
     email: z.string().min(1, t('validation.emailRequired')).email(t('validation.invalidEmail')),
-    password: z.string().min(12, t("validation.passwordMin")).max(128, t("validation.passwordMax")),
+    password: z.string().min(12, t('validation.passwordMin')).max(128, t('validation.passwordMax')),
     termsAccepted: z
       .boolean()
       .refine(v => v === true, { message: t('auth.register.termsRequired') }),

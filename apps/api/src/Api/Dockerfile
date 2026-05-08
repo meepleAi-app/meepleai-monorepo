@@ -31,13 +31,15 @@ COPY data ./data
 
 # Patch 1: SkipAnalyzers=true durante publish (analyzer suite consumer
 #          principale di memory peak — SonarAnalyzer + NetAnalyzers + Meziantou).
-# Patch 2: --no-restore + cache reuse.
+# Patch 2: NuGet cache mount riusato dal restore step → no re-download packages.
+#          NB: NO --no-restore qui — il publish ha bisogno di project's obj/
+#          (project.assets.json) che NON persiste cross-layer; cache mount copre
+#          solo /root/.nuget/packages. Il restore con cache è veloce comunque.
 # GenerateDocumentationFile=false: -10MB image size + minor memory savings.
 RUN --mount=type=cache,target=/root/.nuget/packages \
     dotnet publish ./apps/api/src/Api/Api.csproj \
         -c Release \
         -o /app/publish \
-        --no-restore \
         -p:SkipAnalyzers=true \
         -p:GenerateDocumentationFile=false
 

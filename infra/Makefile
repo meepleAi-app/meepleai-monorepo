@@ -111,6 +111,14 @@ seed-nanolith-demo: ## Sprint -1: seed Nanolith libro game demo (account + game 
 seed-nanolith-demo-staging: ## Same, against staging tunnel (requires SSH key + INITIAL_ADMIN_* secrets)
 	bash scripts/seed-nanolith-demo.sh staging
 
+# === Demo Runthrough Phase A ===
+
+demo-smoke-local: ## Stadio 1 G1: smoke test 7 endpoint /api/v1/* contro stack locale (richiede make dev + make seed-nanolith-demo)
+	bash scripts/demo-smoke-local.sh local
+
+demo-smoke-staging: ## Stadio 3 G3: smoke test 7 endpoint contro https://meepleai.app (richiede seed-nanolith-demo-staging eseguito)
+	bash scripts/demo-smoke-local.sh staging
+
 # === RAG Backup ===
 rag-export: ## Full RAG export (one-shot for production go-live)
 	@echo "📦 Running full RAG data export..."

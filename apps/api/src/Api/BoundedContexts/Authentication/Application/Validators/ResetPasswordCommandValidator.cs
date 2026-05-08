@@ -18,11 +18,13 @@ internal sealed class ResetPasswordCommandValidator : AbstractValidator<ResetPas
             .Must(BeValidGuid)
             .WithMessage("Reset token must be a valid GUID");
 
+        // I7 (auth security fixes): the new password must satisfy the
+        // 12-char minimum enforced by PasswordHash.Create.
         RuleFor(x => x.NewPassword)
             .NotEmpty()
             .WithMessage("New password is required")
-            .MinimumLength(8)
-            .WithMessage("New password must be at least 8 characters")
+            .MinimumLength(12)
+            .WithMessage("New password must be at least 12 characters")
             .MaximumLength(128)
             .WithMessage("New password must not exceed 128 characters")
             .Matches(@"[A-Z]")

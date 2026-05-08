@@ -22,8 +22,8 @@ public sealed class ChangePasswordCommandValidatorTests
         var command = new ChangePasswordCommand
         {
             UserId = Guid.NewGuid(),
-            CurrentPassword = "CurrentPassword123!",
-            NewPassword = "NewPassword123!"
+            CurrentPassword = "CurrentUnusualPwd123!",
+            NewPassword = "NewUnusualPwd123!"
         };
 
         // Act
@@ -39,8 +39,8 @@ public sealed class ChangePasswordCommandValidatorTests
         var command = new ChangePasswordCommand
         {
             UserId = Guid.Empty,
-            CurrentPassword = "CurrentPassword123!",
-            NewPassword = "NewPassword123!"
+            CurrentPassword = "CurrentUnusualPwd123!",
+            NewPassword = "NewUnusualPwd123!"
         };
 
         // Act
@@ -61,7 +61,7 @@ public sealed class ChangePasswordCommandValidatorTests
         {
             UserId = Guid.NewGuid(),
             CurrentPassword = currentPassword!,
-            NewPassword = "NewPassword123!"
+            NewPassword = "NewUnusualPwd123!"
         };
 
         // Act
@@ -82,7 +82,7 @@ public sealed class ChangePasswordCommandValidatorTests
         {
             UserId = Guid.NewGuid(),
             CurrentPassword = currentPassword,
-            NewPassword = "NewPassword123!"
+            NewPassword = "NewUnusualPwd123!"
         };
 
         // Act
@@ -102,7 +102,7 @@ public sealed class ChangePasswordCommandValidatorTests
         var command = new ChangePasswordCommand
         {
             UserId = Guid.NewGuid(),
-            CurrentPassword = "CurrentPassword123!",
+            CurrentPassword = "CurrentUnusualPwd123!",
             NewPassword = newPassword!
         };
 
@@ -123,7 +123,7 @@ public sealed class ChangePasswordCommandValidatorTests
         var command = new ChangePasswordCommand
         {
             UserId = Guid.NewGuid(),
-            CurrentPassword = "CurrentPassword123!",
+            CurrentPassword = "CurrentUnusualPwd123!",
             NewPassword = newPassword
         };
 
@@ -132,7 +132,7 @@ public sealed class ChangePasswordCommandValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.NewPassword)
-            .WithErrorMessage("New password must be at least 8 characters");
+            .WithErrorMessage("New password must be at least 12 characters");
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public sealed class ChangePasswordCommandValidatorTests
         var command = new ChangePasswordCommand
         {
             UserId = Guid.NewGuid(),
-            CurrentPassword = "CurrentPassword123!",
+            CurrentPassword = "CurrentUnusualPwd123!",
             NewPassword = longPassword
         };
 
@@ -162,7 +162,7 @@ public sealed class ChangePasswordCommandValidatorTests
         var command = new ChangePasswordCommand
         {
             UserId = Guid.NewGuid(),
-            CurrentPassword = "CurrentPassword123!",
+            CurrentPassword = "CurrentUnusualPwd123!",
             NewPassword = "password123!"
         };
 
@@ -181,7 +181,7 @@ public sealed class ChangePasswordCommandValidatorTests
         var command = new ChangePasswordCommand
         {
             UserId = Guid.NewGuid(),
-            CurrentPassword = "CurrentPassword123!",
+            CurrentPassword = "CurrentUnusualPwd123!",
             NewPassword = "PASSWORD123!"
         };
 
@@ -200,7 +200,7 @@ public sealed class ChangePasswordCommandValidatorTests
         var command = new ChangePasswordCommand
         {
             UserId = Guid.NewGuid(),
-            CurrentPassword = "CurrentPassword123!",
+            CurrentPassword = "CurrentUnusualPwd123!",
             NewPassword = "PasswordTest!"
         };
 
@@ -219,7 +219,7 @@ public sealed class ChangePasswordCommandValidatorTests
         var command = new ChangePasswordCommand
         {
             UserId = Guid.NewGuid(),
-            CurrentPassword = "CurrentPassword123!",
+            CurrentPassword = "CurrentUnusualPwd123!",
             NewPassword = "PasswordTest123"
         };
 
@@ -234,7 +234,7 @@ public sealed class ChangePasswordCommandValidatorTests
     public void Should_Fail_When_NewPassword_Is_Same_As_CurrentPassword()
     {
         // Arrange
-        var samePassword = "SamePassword123!";
+        var samePassword = "SameUnusualPwd123!";
         var command = new ChangePasswordCommand
         {
             UserId = Guid.NewGuid(),

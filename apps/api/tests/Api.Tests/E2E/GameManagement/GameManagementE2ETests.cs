@@ -131,7 +131,7 @@ public sealed class GameManagementE2ETests : E2ETestBase
     {
         // Arrange - Need authentication for session endpoints
         var email = $"sessiontest_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, userId) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, userId) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var payload = new
@@ -184,7 +184,7 @@ public sealed class GameManagementE2ETests : E2ETestBase
     {
         // Arrange - Create session first
         var email = $"complete_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var createPayload = new
@@ -218,7 +218,7 @@ public sealed class GameManagementE2ETests : E2ETestBase
     {
         // Arrange - Create session first
         var email = $"abandon_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var createPayload = new
@@ -251,7 +251,7 @@ public sealed class GameManagementE2ETests : E2ETestBase
     {
         // Arrange - Create session first
         var email = $"pauseresume_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var createPayload = new
@@ -304,7 +304,7 @@ public sealed class GameManagementE2ETests : E2ETestBase
 
         // Step 3: Register/Login to play
         var email = $"gamejourney_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, userId) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, userId) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Step 4: Start a game session
@@ -346,7 +346,7 @@ public sealed class GameManagementE2ETests : E2ETestBase
     {
         // Arrange - Create session first
         var email = $"addplayer_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var createPayload = new

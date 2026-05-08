@@ -110,7 +110,7 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
             AdminUserId,
             new Api.BoundedContexts.Authentication.Domain.ValueObjects.Email("admin@test.meepleai.dev"),
             "Test Admin",
-            Api.BoundedContexts.Authentication.Domain.ValueObjects.PasswordHash.Create("AdminPassword123!"),
+            Api.BoundedContexts.Authentication.Domain.ValueObjects.PasswordHash.Create("AdminUnusualPwd123!"),
             Api.SharedKernel.Domain.ValueObjects.Role.Admin);
         await userRepo.AddAsync(adminUser, TestCancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
@@ -277,7 +277,7 @@ public sealed class InvitationFlowIntegrationTests : IAsyncLifetime
         // Act: Activate using the known raw token
         var activationResult = await mediator.Send(new ActivateInvitedAccountCommand(
             Token: knownRawToken,
-            Password: "SecurePassword123!"
+            Password: "SecureUnusualPwd123!"
         ), TestCancellationToken);
 
         // Assert

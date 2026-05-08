@@ -26,7 +26,7 @@ export function getLocalizedError(
     return {
       type: 'network',
       message: 'Impossibile connettersi al server. Verifica la tua connessione.',
-      field
+      field,
     };
   }
 
@@ -36,30 +36,32 @@ export function getLocalizedError(
       return {
         type: 'validation',
         message: errorMessage || 'Dati non validi. Controlla i campi inseriti.',
-        field
+        field,
       };
 
     case 401:
       // Distinguish between invalid credentials and expired session
-      if (errorMessage?.toLowerCase().includes('session') ||
-          errorMessage?.toLowerCase().includes('sessione')) {
+      if (
+        errorMessage?.toLowerCase().includes('session') ||
+        errorMessage?.toLowerCase().includes('sessione')
+      ) {
         return {
           type: 'auth',
           message: 'Sessione scaduta. Effettua nuovamente il login.',
-          field
+          field,
         };
       }
       return {
         type: 'auth',
         message: 'Email o password non corretti.',
-        field
+        field,
       };
 
     case 403:
       return {
         type: 'forbidden',
         message: 'Accesso negato. Non hai i permessi necessari.',
-        field
+        field,
       };
 
     case 409:
@@ -67,21 +69,21 @@ export function getLocalizedError(
       if (field === 'email' || errorMessage?.toLowerCase().includes('email')) {
         return {
           type: 'conflict',
-          message: 'Questa email è già registrata. Prova con un\'altra email o effettua il login.',
-          field: 'email'
+          message: "Questa email è già registrata. Prova con un'altra email o effettua il login.",
+          field: 'email',
         };
       }
       return {
         type: 'conflict',
         message: errorMessage || 'Conflitto: risorsa già esistente.',
-        field
+        field,
       };
 
     case 422:
       return {
         type: 'validation',
         message: errorMessage || 'Dati non validi. Controlla il formato dei campi.',
-        field
+        field,
       };
 
     case 500:
@@ -91,14 +93,14 @@ export function getLocalizedError(
       return {
         type: 'server',
         message: 'Errore del server. Riprova più tardi.',
-        field
+        field,
       };
 
     default:
       return {
         type: 'server',
         message: errorMessage || 'Si è verificato un errore imprevisto.',
-        field
+        field,
       };
   }
 }
@@ -107,11 +109,12 @@ export function getLocalizedError(
  * Validation error messages (Italian)
  */
 export const validationMessages = {
-  emailRequired: 'L\'email è obbligatoria.',
+  emailRequired: "L'email è obbligatoria.",
   emailInvalid: 'Inserisci un indirizzo email valido.',
   passwordRequired: 'La password è obbligatoria.',
-  passwordTooShort: 'La password deve contenere almeno 8 caratteri.',
-  passwordTooWeak: 'La password deve contenere lettere maiuscole, minuscole, numeri e caratteri speciali.',
+  passwordTooShort: 'La password deve contenere almeno 12 caratteri.',
+  passwordTooWeak:
+    'La password deve contenere lettere maiuscole, minuscole, numeri e caratteri speciali.',
   displayNameRequired: 'Il nome visualizzato è obbligatorio.',
   displayNameTooShort: 'Il nome deve contenere almeno 2 caratteri.',
   displayNameTooLong: 'Il nome non può superare i 50 caratteri.',

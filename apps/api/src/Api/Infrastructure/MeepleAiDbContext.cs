@@ -59,6 +59,10 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameToolkitEntity> GameToolkits => Set<GameToolkitEntity>(); // ISSUE-4753: Game toolkit configs
     public DbSet<BoundedContexts.GameToolkit.Domain.Entities.Toolkit> Toolkits => Set<BoundedContexts.GameToolkit.Domain.Entities.Toolkit>(); // ISSUE-5144: Epic B — user toolkit dashboard
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState> ToolkitSessionStates => Set<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState>(); // ISSUE-5148: Epic B5 — toolkit session state
+    public DbSet<BoundedContexts.SessionTracking.Domain.Entities.GamebookCampaignSession> GamebookCampaignSessions => Set<BoundedContexts.SessionTracking.Domain.Entities.GamebookCampaignSession>(); // Iter 1.A — Libro Game gamebook campaigns
+    public DbSet<BoundedContexts.SessionTracking.Domain.Entities.GamebookPhotoArtifact> GamebookPhotoArtifacts => Set<BoundedContexts.SessionTracking.Domain.Entities.GamebookPhotoArtifact>(); // Iter 1.B — photo upload artifacts (24h retention)
+    public DbSet<BoundedContexts.SessionTracking.Domain.Entities.TranslatedParagraph> TranslatedParagraphs => Set<BoundedContexts.SessionTracking.Domain.Entities.TranslatedParagraph>(); // Iter 1.B — translated paragraph history
+    public DbSet<BoundedContexts.SessionTracking.Domain.Entities.GamebookGlossaryEntry> GamebookGlossaryEntries => Set<BoundedContexts.SessionTracking.Domain.Entities.GamebookGlossaryEntry>(); // Iter 1.B — per-campaign glossary
     public DbSet<SessionParticipantEntity> SessionParticipants => Set<SessionParticipantEntity>(); // Game Night: Multi-device session participants
     public DbSet<SessionInviteEntity> SessionInvites => Set<SessionInviteEntity>(); // E3-1: Session invite links/PINs
     public DbSet<SessionPlayerEntity> SessionPlayers => Set<SessionPlayerEntity>(); // ISSUE-4750: Live session players
@@ -85,6 +89,9 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget> UserBudgets => Set<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget>(); // Phase 6: Budget/tier projection
     public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences> UserPreferences => Set<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences>(); // Phase 6: User preferences projection
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
+    // Auth security fixes (hotfix 2026-05-06): SecurityAudit BC immutable event log (I10 prep)
+    public DbSet<BoundedContexts.SecurityAudit.Infrastructure.Entities.AuditLogEntity> SecurityAuditLogs
+        => Set<BoundedContexts.SecurityAudit.Infrastructure.Entities.AuditLogEntity>();
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();
     public DbSet<AgentSessionEntity> AgentSessions => Set<AgentSessionEntity>(); // ISSUE-3183: Agent session state persistence
@@ -234,6 +241,10 @@ public class MeepleAiDbContext : DbContext
 
     // Issue #4417: Email notification queue
     public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailQueueEntity> EmailQueueItems => Set<Api.Infrastructure.Entities.UserNotifications.EmailQueueEntity>();
+
+    // Auth security fixes (hotfix 2026-05-06): outbox pattern for idempotent transactional mail (I5 prep)
+    public DbSet<BoundedContexts.UserNotifications.Infrastructure.Entities.EmailOutboxEntity> EmailOutbox
+        => Set<BoundedContexts.UserNotifications.Infrastructure.Entities.EmailOutboxEntity>();
 
     // Issue #52: Email template admin management
     public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity> EmailTemplates => Set<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity>();

@@ -39,7 +39,7 @@ public class ResetUserPasswordCommandHandlerTests
         var user = new UserBuilder()
             .WithId(userId)
             .WithEmail("user@example.com")
-            .WithPassword("OldPassword123!")
+            .WithPassword("OldUnusualPwd123!")
             .Build();
 
         _userRepositoryMock
@@ -48,7 +48,7 @@ public class ResetUserPasswordCommandHandlerTests
 
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
-            NewPassword: "NewPassword456!");
+            NewPassword: "NewUnusualPwd456!");
 
         // Act
         await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -127,7 +127,7 @@ public class ResetUserPasswordCommandHandlerTests
 
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
-            NewPassword: "NewPassword123!");
+            NewPassword: "NewUnusualPwd123!");
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -191,7 +191,7 @@ public class ResetUserPasswordCommandHandlerTests
 
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
-            NewPassword: "NewPassword123!");
+            NewPassword: "NewUnusualPwd123!");
 
         // Act
         await _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -217,7 +217,7 @@ public class ResetUserPasswordCommandHandlerTests
 
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
-            NewPassword: "NewPassword123!");
+            NewPassword: "NewUnusualPwd123!");
 
         using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
@@ -244,7 +244,7 @@ public class ResetUserPasswordCommandHandlerTests
         // Arrange
         var command = new ResetUserPasswordCommand(
             UserId: emptyUserId,
-            NewPassword: "NewPassword123!");
+            NewPassword: "NewUnusualPwd123!");
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -277,7 +277,7 @@ public class ResetUserPasswordCommandHandlerTests
         // Arrange
         var command = new ResetUserPasswordCommand(
             UserId: "not-a-guid",
-            NewPassword: "NewPassword123!");
+            NewPassword: "NewUnusualPwd123!");
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
@@ -293,7 +293,7 @@ public class ResetUserPasswordCommandHandlerTests
         var userId = Guid.NewGuid();
         var command = new ResetUserPasswordCommand(
             UserId: userId.ToString(),
-            NewPassword: "NewPassword123!");
+            NewPassword: "NewUnusualPwd123!");
 
         _userRepositoryMock
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))

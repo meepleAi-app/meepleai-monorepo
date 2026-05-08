@@ -35,7 +35,7 @@ internal static class AdminSecretsEndpoints
         ["monitoring.secret"] = "Monitoring",
         ["storage.secret"] = "Storage",
         ["slack.secret"] = "Slack",
-        ["traefik.secret"] = "Traefik",
+        // ["traefik.secret"] removed (PR #738 cutover to CF Tunnel)
         ["n8n.secret"] = "n8n",
     };
 

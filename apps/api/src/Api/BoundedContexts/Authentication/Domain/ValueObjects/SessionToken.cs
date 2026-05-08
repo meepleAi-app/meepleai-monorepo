@@ -61,12 +61,12 @@ public sealed class SessionToken : ValueObject
     /// <summary>
     /// Computes SHA256 hash of this token for secure storage.
     /// Tokens should be stored hashed, not in plaintext.
+    /// Delegates to <see cref="SessionTokenHasher.HashFromCookie"/> to keep a single source of truth
+    /// shared with endpoints that hash the raw cookie value (C1 fix).
     /// </summary>
     public string ComputeHash()
     {
-        var tokenBytes = Convert.FromBase64String(Value);
-        var hashBytes = SHA256.HashData(tokenBytes);
-        return Convert.ToBase64String(hashBytes);
+        return SessionTokenHasher.HashFromCookie(Value);
     }
 
     /// <summary>
@@ -95,9 +95,10 @@ public sealed class SessionToken : ValueObject
 
     public override string ToString() => "[REDACTED]"; // Never expose token value
 
-    public static implicit operator string(SessionToken token)
-    {
-        ArgumentNullException.ThrowIfNull(token);
-        return token.Value;
-    }
+    // R1 (auth security fixes): implicit string conversion removed. The
+    // operator made it too easy to log or interpolate a session token by
+    // mistake (e.g. `$"token={sessionToken}"` would silently coerce, but
+    // ToString() returns "[REDACTED]" — the implicit operator bypasses
+    // that guard). Callers must now reach for .Value explicitly, which
+    // makes the leak path visible at the call site.
 }

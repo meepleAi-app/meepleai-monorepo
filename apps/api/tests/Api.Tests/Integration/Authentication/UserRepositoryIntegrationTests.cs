@@ -110,7 +110,7 @@ public sealed class UserRepositoryIntegrationTests : IAsyncLifetime
             id: id,
             email: new Email(email),
             displayName: displayName,
-            passwordHash: PasswordHash.Create("TestPassword123!"),
+            passwordHash: PasswordHash.Create("UniqueT3stPwd!"),
             role: role ?? Role.User,
             tier: tier ?? UserTier.Free
         );

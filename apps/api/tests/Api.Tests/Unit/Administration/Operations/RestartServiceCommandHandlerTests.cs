@@ -133,7 +133,7 @@ public sealed class RestartServiceCommandHandlerTests
             id: id,
             email: Email.Parse("superadmin@test.com"),
             displayName: "Super Admin",
-            passwordHash: PasswordHash.Create("hashedPassword"),
+            passwordHash: PasswordHash.Create("hashedPwd1234"),
             role: Role.SuperAdmin,
             tier: UserTier.Premium
         );
@@ -145,7 +145,7 @@ public sealed class RestartServiceCommandHandlerTests
             id: id,
             email: Email.Parse("admin@test.com"),
             displayName: "Regular Admin",
-            passwordHash: PasswordHash.Create("hashedPassword"),
+            passwordHash: PasswordHash.Create("hashedPwd1234"),
             role: Role.Admin,
             tier: UserTier.Premium
         );

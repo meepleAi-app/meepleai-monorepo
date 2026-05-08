@@ -183,26 +183,26 @@ public class UserProfileHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var currentPassword = "OldPassword123!";
+        var currentPassword = "OldUnusualPwd123!";
         var user = CreateTestUser(userId, currentPassword);
 
         _userRepositoryMock
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, _unitOfWorkMock.Object);
+        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, Mock.Of<Api.BoundedContexts.Authentication.Infrastructure.Persistence.ISessionRepository>(), _unitOfWorkMock.Object);
         var command = new ChangePasswordCommand
         {
             UserId = userId,
             CurrentPassword = currentPassword,
-            NewPassword = "NewPassword456!"
+            NewPassword = "NewUnusualPwd456!"
         };
 
         // Act
         await handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        user.VerifyPassword("NewPassword456!").Should().BeTrue();
+        user.VerifyPassword("NewUnusualPwd456!").Should().BeTrue();
         user.VerifyPassword(currentPassword).Should().BeFalse();
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -212,18 +212,18 @@ public class UserProfileHandlerTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = CreateTestUser(userId, "OldPassword123!");
+        var user = CreateTestUser(userId, "OldUnusualPwd123!");
 
         _userRepositoryMock
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, _unitOfWorkMock.Object);
+        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, Mock.Of<Api.BoundedContexts.Authentication.Infrastructure.Persistence.ISessionRepository>(), _unitOfWorkMock.Object);
         var command = new ChangePasswordCommand
         {
             UserId = userId,
             CurrentPassword = "WrongPassword!",
-            NewPassword = "NewPassword456!"
+            NewPassword = "NewUnusualPwd456!"
         };
 
         // Act & Assert
@@ -244,11 +244,11 @@ public class UserProfileHandlerTests
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, _unitOfWorkMock.Object);
+        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, Mock.Of<Api.BoundedContexts.Authentication.Infrastructure.Persistence.ISessionRepository>(), _unitOfWorkMock.Object);
         var command = new ChangePasswordCommand
         {
             UserId = userId,
-            CurrentPassword = "OldPassword123!",
+            CurrentPassword = "OldUnusualPwd123!",
             NewPassword = ""
         };
 
@@ -267,12 +267,12 @@ public class UserProfileHandlerTests
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
-        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, _unitOfWorkMock.Object);
+        var handler = new ChangePasswordCommandHandler(_userRepositoryMock.Object, Mock.Of<Api.BoundedContexts.Authentication.Infrastructure.Persistence.ISessionRepository>(), _unitOfWorkMock.Object);
         var command = new ChangePasswordCommand
         {
             UserId = userId,
-            CurrentPassword = "OldPassword123!",
-            NewPassword = "NewPassword456!"
+            CurrentPassword = "OldUnusualPwd123!",
+            NewPassword = "NewUnusualPwd456!"
         };
 
         // Act & Assert
@@ -281,7 +281,7 @@ public class UserProfileHandlerTests
         var exception = (await act.Should().ThrowAsync<DomainException>()).Which;
         exception.Message.Should().Contain("User not found");
     }
-    private static User CreateTestUser(Guid? userId = null, string password = "TestPassword123!")
+    private static User CreateTestUser(Guid? userId = null, string password = "UniqueT3stPwd!")
     {
         return new User(
             id: userId ?? Guid.NewGuid(),

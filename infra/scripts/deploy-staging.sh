@@ -27,9 +27,9 @@ GRAFANA_URL="https://${DOMAIN}/grafana"
 HEALTH_URL="https://${DOMAIN}/api/health"
 WEB_URL="https://${DOMAIN}"
 
-# Compose command on server
-COMPOSE_CMD="docker compose -f docker-compose.yml -f compose.staging.yml -f compose.traefik.yml"
-COMPOSE_PROFILES="--profile ai --profile monitoring --profile proxy"
+# Compose command on server (post-PR #738 — Traefik decommissioned, edge=CF Tunnel)
+COMPOSE_CMD="docker compose -f docker-compose.yml -f compose.staging.yml"
+COMPOSE_PROFILES="--profile ai --profile monitoring"
 
 # Timeouts
 HEALTH_TIMEOUT=120  # seconds to wait for health check

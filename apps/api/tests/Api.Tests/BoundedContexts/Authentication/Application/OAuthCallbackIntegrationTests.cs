@@ -5,6 +5,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -26,13 +27,18 @@ public sealed class OAuthCallbackIntegrationTests : IDisposable
     public OAuthCallbackIntegrationTests()
     {
         _helper = new OAuthIntegrationTestBase();
+        var userRepository = new UserRepository(
+            _helper.DbContext,
+            TestDbContextFactory.CreateMockEventCollector().Object);
+
         _handler = new HandleOAuthCallbackCommandHandler(
             _helper.OAuthServiceMock.Object,
             _helper.MediatorMock.Object,
             _helper.CallbackLoggerMock.Object,
             _helper.EncryptionServiceMock.Object,
             _helper.TimeProviderMock.Object,
-            _helper.DbContext);
+            _helper.DbContext,
+            userRepository);
     }
 
     [Theory]

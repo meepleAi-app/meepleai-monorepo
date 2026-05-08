@@ -1,5 +1,4 @@
 'use client';
-/* eslint-disable @typescript-eslint/no-non-null-assertion -- pre-existing pattern: array/object access guarded by length/key check or by upstream validator; assertion is correct by construction. Cleanup tracked for follow-up audit. */
 
 /**
  * Setup Account Page Content (Issue #124)
@@ -47,7 +46,7 @@ interface InvitationValidation {
 // ──────────────────────────────────────────────
 
 const validatePassword = (password: string): PasswordValidation => {
-  const minLength = password.length >= 8;
+  const minLength = password.length >= 12;
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
@@ -115,11 +114,15 @@ export function SetupAccountContent() {
     async function validateToken() {
       try {
         const baseUrl = getApiBase();
-        const url = `${baseUrl}/api/v1/auth/validate-invitation?token=${encodeURIComponent(token!)}`;
+        // I1 (auth security fixes): use POST so the invitation token never
+        // ends up in URL query strings (server access logs, browser history,
+        // Referer header on outbound links).
+        const url = `${baseUrl}/api/v1/auth/validate-invitation`;
         const response = await fetch(url, {
-          method: 'GET',
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
+          body: JSON.stringify({ token }),
         });
 
         if (cancelled) return;

@@ -141,11 +141,7 @@ internal static class SecretDefinitions
             "SLACK_WEBHOOK_URL"
         ),
 
-        ["traefik"] = new(
-            SecretLevel.Optional,
-            "TRAEFIK_DASHBOARD_USER",
-            "TRAEFIK_DASHBOARD_PASSWORD"
-        ),
+        // Traefik secret definition removed (PR #738 cutover to CF Tunnel).
 
         ["smoldocling-service"] = new(
             SecretLevel.Optional,

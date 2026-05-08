@@ -171,14 +171,14 @@ describe('LoginPageContent (v2 AuthCard)', () => {
       target: { value: 'user@example.com' },
     });
     fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
-      target: { value: 'password123' },
+      target: { value: 'StrongPassword1' },
     });
     fireEvent.submit(screen.getByTestId('login-form'));
 
     await waitFor(() => {
       expect(loginMock).toHaveBeenCalledWith({
         email: 'user@example.com',
-        password: 'password123',
+        password: 'StrongPassword1',
       });
     });
 
@@ -199,7 +199,7 @@ describe('LoginPageContent (v2 AuthCard)', () => {
       target: { value: 'user@example.com' },
     });
     fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
-      target: { value: 'password123' },
+      target: { value: 'StrongPassword1' },
     });
     fireEvent.submit(screen.getByTestId('login-form'));
 
@@ -221,7 +221,7 @@ describe('LoginPageContent (v2 AuthCard)', () => {
       target: { value: 'user@example.com' },
     });
     fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
-      target: { value: 'password123' },
+      target: { value: 'StrongPassword1' },
     });
     fireEvent.submit(screen.getByTestId('login-form'));
 
@@ -244,7 +244,7 @@ describe('LoginPageContent (v2 AuthCard)', () => {
       target: { value: 'admin@example.com' },
     });
     fireEvent.change(screen.getByLabelText(/auth\.login\.passwordLabel/i), {
-      target: { value: 'password123' },
+      target: { value: 'StrongPassword1' },
     });
     fireEvent.submit(screen.getByTestId('login-form'));
 

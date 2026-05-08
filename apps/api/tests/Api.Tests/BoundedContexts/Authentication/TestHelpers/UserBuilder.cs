@@ -13,7 +13,7 @@ internal class UserBuilder
     private Guid _id = Guid.NewGuid();
     private Email _email = new("test@example.com");
     private string _displayName = "Test User";
-    private PasswordHash _passwordHash = PasswordHash.Create("DefaultPassword123!");
+    private PasswordHash _passwordHash = PasswordHash.Create("DefaultUnusualPwd123!");
     private Role _role = Role.User;
     private UserTier? _tier;
     private bool _enable2FA;

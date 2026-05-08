@@ -242,7 +242,7 @@ Feedback is used to calculate accuracy metrics (target: >75% relevance).
             context.Response.Headers.Append("Content-Type", "text/event-stream");
             context.Response.Headers.Append("Cache-Control", "no-cache");
             context.Response.Headers.Append("Connection", "keep-alive");
-            context.Response.Headers.Append("X-Accel-Buffering", "no"); // Disable nginx/Traefik buffering
+            context.Response.Headers.Append("X-Accel-Buffering", "no"); // Disable reverse proxy buffering (CF Tunnel, nginx, etc.)
 
             // Create heartbeat task for keep-alive (30s interval)
             using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);

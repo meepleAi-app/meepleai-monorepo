@@ -50,9 +50,9 @@ smoke-staging: ## Run automated smoke set against staging (https://meepleai.app)
 smoke-pg-readback: ## Run pg-readback.sh DB-direct migration validation (requires open tunnel)
 	bash scripts/pg-readback.sh
 
-staging: ## Deploy staging — core + AI + monitoring (CAX31+ recommended, ~14GB reservation)
-	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
-		--profile ai --profile monitoring --profile proxy up -d
+staging: ## Deploy staging — core + AI + monitoring (CAX31+ recommended, ~14GB reservation, edge via CF Tunnel)
+	$(COMPOSE) -f compose.staging.yml \
+		--profile ai --profile monitoring up -d
 
 staging-minimal: ## Deploy staging single-tester profile (~3GB RAM) — edge via Cloudflare Tunnel (cloudflared on VPS, not Traefik)
 	$(COMPOSE) -f compose.staging.yml \
@@ -67,21 +67,21 @@ staging-tutor-down: ## Stop only orchestration-service (keep rest of staging run
 	$(COMPOSE) -f compose.staging.yml --profile tutor-agents rm -f orchestration-service
 
 staging-core: ## (Deprecated, use staging-minimal) Deploy staging core only — no AI services
-	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
-		--profile monitoring --profile proxy up -d
+	$(COMPOSE) -f compose.staging.yml \
+		--profile monitoring up -d
 
 staging-down: ## Stop staging (all profiles)
-	$(COMPOSE) -f compose.staging.yml -f compose.traefik.yml \
-		--profile ai --profile monitoring --profile proxy down
+	$(COMPOSE) -f compose.staging.yml \
+		--profile ai --profile monitoring down
 
-prod: ## Deploy production (requires PROD_DOMAIN env var)
+prod: ## Deploy production (requires PROD_DOMAIN env var, edge via CF Tunnel)
 	@test -n "$(PROD_DOMAIN)" || (echo "Error: PROD_DOMAIN is required" && exit 1)
-	$(COMPOSE) -f compose.prod.yml -f compose.traefik.yml \
-		--profile ai --profile monitoring --profile proxy up -d
+	$(COMPOSE) -f compose.prod.yml \
+		--profile ai --profile monitoring up -d
 
 prod-down: ## Stop production
-	$(COMPOSE) -f compose.prod.yml -f compose.traefik.yml \
-		--profile ai --profile monitoring --profile proxy down
+	$(COMPOSE) -f compose.prod.yml \
+		--profile ai --profile monitoring down
 
 # === Secrets ===
 
@@ -104,6 +104,12 @@ restore-local: ## Restore local dev DB from latest snapshot (requires make dev r
 
 seed-games: ## Seed test games on staging via API (requires SSH access)
 	bash scripts/seed-all-games-staging.sh
+
+seed-nanolith-demo: ## Sprint -1: seed Nanolith libro game demo (account + game + 2 KBs + agent), against local stack
+	bash scripts/seed-nanolith-demo.sh local
+
+seed-nanolith-demo-staging: ## Same, against staging tunnel (requires SSH key + INITIAL_ADMIN_* secrets)
+	bash scripts/seed-nanolith-demo.sh staging
 
 # === RAG Backup ===
 rag-export: ## Full RAG export (one-shot for production go-live)

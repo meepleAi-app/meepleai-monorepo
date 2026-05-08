@@ -1,6 +1,6 @@
 # Caddy reverse proxy — used by compose.mvp.yml (Hetzner CAX31 MVP stack).
-# For full/production deployments, Traefik is the primary reverse proxy
-# (see traefik/ directory and compose.traefik.yml).
+# For staging/production deployments edge ingress is via Cloudflare Tunnel
+# (cloudflared on VPS, post-PR #738 cutover). This Caddyfile is MVP/dev only.
 {
     email admin@meepleai.com
 }

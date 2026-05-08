@@ -625,8 +625,8 @@
     "passwordComplexity": "Password must contain at least one uppercase letter, one lowercase letter, and one number",
     "passwordConfirmRequired": "Please confirm your password",
     "passwordMatch": "Passwords do not match",
-    "passwordMax": "Password must not exceed 100 characters",
-    "passwordMin": "Password must be at least 8 characters",
+    "passwordMax": "Password must not exceed 128 characters",
+    "passwordMin": "Password must be at least 12 characters",
     "required": "This field is required"
   },
   "wizard": {

@@ -34,7 +34,7 @@ interface PasswordValidation {
 }
 
 function validatePassword(password: string): PasswordValidation {
-  const minLength = password.length >= 8;
+  const minLength = password.length >= 12;
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
@@ -178,7 +178,7 @@ export function PasswordStep({ token, onComplete }: PasswordStepProps) {
         {password && (
           <div className="space-y-1 text-sm" data-testid="password-rules">
             {[
-              { key: 'minLength', label: 'At least 8 characters' },
+              { key: 'minLength', label: 'At least 12 characters' },
               { key: 'hasUppercase', label: 'At least 1 uppercase letter' },
               { key: 'hasLowercase', label: 'At least 1 lowercase letter' },
               { key: 'hasNumber', label: 'At least 1 number' },

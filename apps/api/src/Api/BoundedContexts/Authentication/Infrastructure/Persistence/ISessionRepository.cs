@@ -48,4 +48,15 @@ public interface ISessionRepository
     /// Revokes all sessions for a user.
     /// </summary>
     Task RevokeAllUserSessionsAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// C7: revokes every session for the user except the one identified by
+    /// <paramref name="excludedSessionId"/>. Used by the password-change flow
+    /// to invalidate other devices while keeping the user logged in on the
+    /// device that issued the change.
+    /// </summary>
+    Task RevokeAllUserSessionsExceptAsync(
+        Guid userId,
+        Guid excludedSessionId,
+        CancellationToken cancellationToken = default);
 }

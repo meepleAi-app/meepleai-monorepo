@@ -142,6 +142,14 @@ internal static class WebApplicationExtensions
         // AUTH-03: Authorization middleware (must be after all authentication middleware)
         app.UseAuthorization();
 
+        // C8: antiforgery middleware. Must come after auth so token validation
+        // runs against an already-authenticated request, but before rate
+        // limiting so a missing CSRF token short-circuits with 400 without
+        // burning the rate-limit budget. AntiforgeryEndpointFilter actually
+        // performs the per-endpoint validation; UseAntiforgery wires the
+        // cookie/token plumbing.
+        app.UseAntiforgery();
+
         // ISSUE #2424: Rate limiting middleware (must be after authorization)
         app.UseRateLimiter();
 

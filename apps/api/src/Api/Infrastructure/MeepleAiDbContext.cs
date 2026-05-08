@@ -89,6 +89,9 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget> UserBudgets => Set<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget>(); // Phase 6: Budget/tier projection
     public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences> UserPreferences => Set<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences>(); // Phase 6: User preferences projection
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
+    // Auth security fixes (hotfix 2026-05-06): SecurityAudit BC immutable event log (I10 prep)
+    public DbSet<BoundedContexts.SecurityAudit.Infrastructure.Entities.AuditLogEntity> SecurityAuditLogs
+        => Set<BoundedContexts.SecurityAudit.Infrastructure.Entities.AuditLogEntity>();
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();
     public DbSet<AgentSessionEntity> AgentSessions => Set<AgentSessionEntity>(); // ISSUE-3183: Agent session state persistence
@@ -238,6 +241,10 @@ public class MeepleAiDbContext : DbContext
 
     // Issue #4417: Email notification queue
     public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailQueueEntity> EmailQueueItems => Set<Api.Infrastructure.Entities.UserNotifications.EmailQueueEntity>();
+
+    // Auth security fixes (hotfix 2026-05-06): outbox pattern for idempotent transactional mail (I5 prep)
+    public DbSet<BoundedContexts.UserNotifications.Infrastructure.Entities.EmailOutboxEntity> EmailOutbox
+        => Set<BoundedContexts.UserNotifications.Infrastructure.Entities.EmailOutboxEntity>();
 
     // Issue #52: Email template admin management
     public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity> EmailTemplates => Set<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity>();

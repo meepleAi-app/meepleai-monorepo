@@ -187,7 +187,7 @@ describe('RegisterPageContent (v2 AuthCard)', () => {
         target: { value: 'new@example.com' },
       });
       fireEvent.change(screen.getByLabelText(/auth\.register\.passwordLabel/i), {
-        target: { value: 'password123' },
+        target: { value: 'StrongPassword1' },
       });
       fireEvent.click(screen.getByTestId('register-terms'));
       fireEvent.submit(screen.getByTestId('register-form'));
@@ -195,7 +195,7 @@ describe('RegisterPageContent (v2 AuthCard)', () => {
       await waitFor(() => {
         expect(mockAuth.register).toHaveBeenCalledWith({
           email: 'new@example.com',
-          password: 'password123',
+          password: 'StrongPassword1',
         });
       });
 
@@ -217,7 +217,7 @@ describe('RegisterPageContent (v2 AuthCard)', () => {
         target: { value: 'dup@example.com' },
       });
       fireEvent.change(screen.getByLabelText(/auth\.register\.passwordLabel/i), {
-        target: { value: 'password123' },
+        target: { value: 'StrongPassword1' },
       });
       fireEvent.click(screen.getByTestId('register-terms'));
       fireEvent.submit(screen.getByTestId('register-form'));

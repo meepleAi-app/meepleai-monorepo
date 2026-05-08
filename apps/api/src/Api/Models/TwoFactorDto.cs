@@ -30,11 +30,18 @@ internal class TwoFactorDisableRequest
 }
 
 /// <summary>
-/// Admin request to disable two-factor authentication for a locked-out user
+/// Admin request to disable two-factor authentication for a locked-out user.
+/// I4 (auth security fixes): admins must re-authenticate by supplying their
+/// own current password before this high-impact action lands. The admin
+/// password is verified server-side; an admin session cookie alone is not
+/// enough because the action removes a security control on another user.
 /// </summary>
 internal class AdminDisable2FARequest
 {
     public string TargetUserId { get; set; } = string.Empty;
+
+    /// <summary>I4: admin re-authentication password (verified by handler).</summary>
+    public string AdminPassword { get; set; } = string.Empty;
 }
 
 /// <summary>

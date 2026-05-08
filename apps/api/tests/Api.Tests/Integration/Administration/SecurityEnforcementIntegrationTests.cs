@@ -96,7 +96,7 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
             SuperAdminId,
             new Email("superadmin@test.com"),
             "Super Admin",
-            PasswordHash.Create("password123"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.SuperAdmin
         );
 
@@ -105,7 +105,7 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
             AdminId,
             new Email("admin@test.com"),
             "Admin User",
-            PasswordHash.Create("password123"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.Admin
         );
 
@@ -114,7 +114,7 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
             EditorId,
             new Email("editor@test.com"),
             "Editor User",
-            PasswordHash.Create("password123"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.Editor
         );
 
@@ -123,7 +123,7 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
             RegularUserId,
             new Email("user@test.com"),
             "Regular User",
-            PasswordHash.Create("password123"),
+            PasswordHash.Create("UnusualPwd123!"),
             Role.User
         );
 

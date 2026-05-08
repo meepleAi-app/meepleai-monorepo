@@ -151,6 +151,7 @@ internal static class TwoFactorEndpoints
             // Issue #1676 Phase 2: Return UserDto directly (no legacy conversion)
             return Results.Ok(new { message = "2FA verification successful", user = sessionResult.User });
         })
+        .RequireRateLimiting("AuthVerify2FA") // C6: IP-based throttle on top of per-session-token limit
         .WithName("Verify2FA")
         .WithTags("Authentication");
     }
@@ -192,6 +193,7 @@ internal static class TwoFactorEndpoints
             logger.LogInformation("2FA disabled for user {UserId}", userId);
             return Results.Ok(new { message = "Two-factor authentication disabled successfully" });
         })
+        .AddEndpointFilter<Api.Infrastructure.Filters.AntiforgeryEndpointFilter>() // C8: CSRF
         .RequireAuthorization()
         .WithName("Disable2FA")
         .WithTags("Authentication");
@@ -252,10 +254,21 @@ internal static class TwoFactorEndpoints
                 return Results.BadRequest(new { error = "invalid_target_user_id", message = "Invalid target user ID format" });
             }
 
+            // I4 (auth security fixes): admin re-auth with their own password.
+            if (string.IsNullOrWhiteSpace(request.AdminPassword))
+            {
+                return Results.BadRequest(new
+                {
+                    error = "admin_password_required",
+                    message = "Admin password is required to disable two-factor authentication for another user."
+                });
+            }
+
             // Execute admin 2FA disable via CQRS handler
             var command = new AdminDisable2FACommand(
                 AdminUserId: adminUserId,
-                TargetUserId: targetUserId
+                TargetUserId: targetUserId,
+                AdminPassword: request.AdminPassword
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);

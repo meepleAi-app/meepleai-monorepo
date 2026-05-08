@@ -66,7 +66,7 @@ public sealed class UserLibraryE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"library_add_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Act - Add game to library
@@ -102,7 +102,7 @@ public sealed class UserLibraryE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"library_dup_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // First add
@@ -124,7 +124,7 @@ public sealed class UserLibraryE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"library_update_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Add game first
@@ -156,7 +156,7 @@ public sealed class UserLibraryE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"library_status_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Add game
@@ -185,7 +185,7 @@ public sealed class UserLibraryE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"library_remove_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Add game first
@@ -208,7 +208,7 @@ public sealed class UserLibraryE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"library_remove_nf_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         var nonExistentGameId = Guid.NewGuid();
@@ -229,7 +229,7 @@ public sealed class UserLibraryE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"library_stats_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Add game to have stats
@@ -251,7 +251,7 @@ public sealed class UserLibraryE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"library_stats_empty_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Act
@@ -274,7 +274,7 @@ public sealed class UserLibraryE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"library_quota_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Act
@@ -299,7 +299,7 @@ public sealed class UserLibraryE2ETests : E2ETestBase
     {
         // Step 1: Register user
         var email = $"library_journey_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Step 2: Check initial empty library
@@ -342,7 +342,7 @@ public sealed class UserLibraryE2ETests : E2ETestBase
     {
         // Arrange
         var email = $"library_check_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidPassword123!");
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
         // Add game

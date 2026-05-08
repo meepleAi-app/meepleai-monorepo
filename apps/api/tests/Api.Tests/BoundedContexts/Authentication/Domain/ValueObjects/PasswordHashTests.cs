@@ -19,7 +19,7 @@ public sealed class PasswordHashTests
     public void Create_WithValidPassword_CreatesHash()
     {
         // Arrange
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
 
         // Act
         var hash = PasswordHash.Create(password);
@@ -52,31 +52,65 @@ public sealed class PasswordHashTests
     }
 
     [Fact]
-    public void Create_WithPasswordLessThan8Characters_ThrowsValidationException()
+    public void Create_WithPasswordLessThan12Characters_ThrowsValidationException()
     {
-        // Act
+        // I7 (auth security fixes): minimum length raised from 8 to 12.
         var action = () => PasswordHash.Create("Short1!");
 
-        // Assert
         action.Should().Throw<ValidationException>()
-            .WithMessage("*Password must be at least 8 characters*");
+            .WithMessage("*Password must be at least 12 characters*");
     }
 
     [Fact]
-    public void Create_WithPasswordExactly8Characters_Succeeds()
+    public void Create_WithPasswordExactly12Characters_Succeeds()
     {
-        // Act
-        var hash = PasswordHash.Create("Exactly8");
+        // I7: 12 chars is the new minimum. The plaintext must also avoid
+        // the common-password blocklist — "Exactly12abc" satisfies both.
+        var hash = PasswordHash.Create("Exactly12abc");
 
-        // Assert
         hash.Value.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void Create_WithPasswordExceeding128Characters_ThrowsValidationException()
+    {
+        // I7: max length 128 caps PBKDF2 input cost.
+        var tooLong = new string('A', 129);
+
+        var action = () => PasswordHash.Create(tooLong);
+
+        action.Should().Throw<ValidationException>()
+            .WithMessage("*Password cannot exceed 128 characters*");
+    }
+
+    [Fact]
+    public void Create_WithCommonPassword_ThrowsValidationException()
+    {
+        // I7: top-N common-password blocklist. "password1234" is in the
+        // shipped seed AND is length-compliant (12 chars), so the blocklist
+        // is the gate that catches it (length passes, blocklist rejects).
+        var action = () => PasswordHash.Create("password1234");
+
+        action.Should().Throw<ValidationException>()
+            .WithMessage("*compromised passwords*");
+    }
+
+    [Fact]
+    public void Create_WithCommonPasswordCaseVariant_ThrowsValidationException()
+    {
+        // I7: blocklist lookup is case-insensitive — "PASSWORD1234" and
+        // "password1234" are both equally trivial to brute-force.
+        var action = () => PasswordHash.Create("PASSWORD1234");
+
+        action.Should().Throw<ValidationException>()
+            .WithMessage("*compromised passwords*");
     }
 
     [Fact]
     public void Create_ProducesUniqueHashesForSamePassword()
     {
         // Arrange - same password
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
 
         // Act - create multiple hashes
         var hash1 = PasswordHash.Create(password);
@@ -90,7 +124,7 @@ public sealed class PasswordHashTests
     public void Create_HashContainsFourParts()
     {
         // Arrange
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
 
         // Act
         var hash = PasswordHash.Create(password);
@@ -108,7 +142,7 @@ public sealed class PasswordHashTests
     public void FromStored_WithValidStoredHash_ReturnsPasswordHash()
     {
         // Arrange
-        var originalHash = PasswordHash.Create("SecurePassword123!");
+        var originalHash = PasswordHash.Create("SecureUnusualPwd123!");
         var storedValue = originalHash.Value;
 
         // Act
@@ -148,7 +182,7 @@ public sealed class PasswordHashTests
     public void Verify_WithCorrectPassword_ReturnsTrue()
     {
         // Arrange
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
         var hash = PasswordHash.Create(password);
 
         // Act
@@ -162,7 +196,7 @@ public sealed class PasswordHashTests
     public void Verify_WithIncorrectPassword_ReturnsFalse()
     {
         // Arrange
-        var hash = PasswordHash.Create("SecurePassword123!");
+        var hash = PasswordHash.Create("SecureUnusualPwd123!");
 
         // Act
         var result = hash.Verify("WrongPassword!");
@@ -175,7 +209,7 @@ public sealed class PasswordHashTests
     public void Verify_WithEmptyPassword_ReturnsFalse()
     {
         // Arrange
-        var hash = PasswordHash.Create("SecurePassword123!");
+        var hash = PasswordHash.Create("SecureUnusualPwd123!");
 
         // Act
         var result = hash.Verify("");
@@ -188,7 +222,7 @@ public sealed class PasswordHashTests
     public void Verify_WithWhitespacePassword_ReturnsFalse()
     {
         // Arrange
-        var hash = PasswordHash.Create("SecurePassword123!");
+        var hash = PasswordHash.Create("SecureUnusualPwd123!");
 
         // Act
         var result = hash.Verify("   ");
@@ -201,7 +235,7 @@ public sealed class PasswordHashTests
     public void Verify_WithCaseSensitivePassword_ReturnsFalseForWrongCase()
     {
         // Arrange
-        var hash = PasswordHash.Create("SecurePassword123!");
+        var hash = PasswordHash.Create("SecureUnusualPwd123!");
 
         // Act - wrong case
         var result = hash.Verify("SECUREPASSWORD123!");
@@ -214,7 +248,7 @@ public sealed class PasswordHashTests
     public void Verify_WithReconstructedHash_WorksCorrectly()
     {
         // Arrange
-        var password = "SecurePassword123!";
+        var password = "SecureUnusualPwd123!";
         var original = PasswordHash.Create(password);
         var reconstructed = PasswordHash.FromStored(original.Value);
 
@@ -259,7 +293,7 @@ public sealed class PasswordHashTests
     public void Equals_WithSameHashValue_ReturnsTrue()
     {
         // Arrange
-        var originalHash = PasswordHash.Create("SecurePassword123!");
+        var originalHash = PasswordHash.Create("SecureUnusualPwd123!");
         var hash1 = PasswordHash.FromStored(originalHash.Value);
         var hash2 = PasswordHash.FromStored(originalHash.Value);
 
@@ -270,9 +304,10 @@ public sealed class PasswordHashTests
     [Fact]
     public void Equals_WithDifferentHashValues_ReturnsFalse()
     {
-        // Arrange
-        var hash1 = PasswordHash.Create("Password123!");
-        var hash2 = PasswordHash.Create("Password123!");
+        // Arrange — "UnusualPwd123!" is in the I7 blocklist; pick a
+        // length-compliant non-common password instead.
+        var hash1 = PasswordHash.Create("UnusualUniqueP4ssword!");
+        var hash2 = PasswordHash.Create("UnusualUniqueP4ssword!");
 
         // Assert - different due to random salt
         hash1.Should().NotBe(hash2);
@@ -282,7 +317,7 @@ public sealed class PasswordHashTests
     public void GetHashCode_WithSameValue_ReturnsSameHash()
     {
         // Arrange
-        var originalHash = PasswordHash.Create("SecurePassword123!");
+        var originalHash = PasswordHash.Create("SecureUnusualPwd123!");
         var hash1 = PasswordHash.FromStored(originalHash.Value);
         var hash2 = PasswordHash.FromStored(originalHash.Value);
 
@@ -298,7 +333,7 @@ public sealed class PasswordHashTests
     public void ToString_ReturnsRedacted()
     {
         // Arrange
-        var hash = PasswordHash.Create("SecurePassword123!");
+        var hash = PasswordHash.Create("SecureUnusualPwd123!");
 
         // Act
         var result = hash.ToString();
@@ -312,17 +347,17 @@ public sealed class PasswordHashTests
     #region Implicit Conversion Tests
 
     [Fact]
-    public void ImplicitConversion_ToString_ReturnsHashValue()
+    public void Value_ReturnsStoredHashString()
     {
-        // Arrange
-        var hash = PasswordHash.Create("SecurePassword123!");
+        // R1 (auth security fixes): the implicit operator string(PasswordHash)
+        // was removed because it silently bypassed ToString() = "[REDACTED]"
+        // and could leak the stored hash through any string-typed sink.
+        // Callers must reach for .Value explicitly.
+        var hash = PasswordHash.Create("SecureUnusualPwd123!");
 
-        // Act
-        string value = hash;
-
-        // Assert
-        value.Should().Be(hash.Value);
-        value.Should().StartWith("v1.");
+        hash.Value.Should().StartWith("v1.");
+        hash.ToString().Should().Be("[REDACTED]",
+            "ToString() must NEVER expose the stored hash — only .Value does.");
     }
 
     #endregion

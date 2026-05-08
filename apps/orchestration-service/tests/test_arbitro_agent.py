@@ -17,8 +17,16 @@ class TestArbitroAgent:
 
     @pytest.fixture
     def arbitro_agent(self):
-        """Create arbitro agent instance."""
-        return ArbitroAgent()
+        """Create arbitro agent instance with mocked LLM constructor.
+
+        Patching ``ChatOpenAI`` at the module level prevents the LangChain
+        OpenAI-compatible client from being instantiated at construction
+        time. Tests that exercise the workflow then mock ``ainvoke``
+        on the chain itself, so no network call is ever made and no
+        API key (OpenAI or OpenRouter) is required during unit tests.
+        """
+        with patch('src.application.arbitro_agent.ChatOpenAI'):
+            return ArbitroAgent()
 
     @pytest.fixture
     def base_state(self):

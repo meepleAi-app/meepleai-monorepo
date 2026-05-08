@@ -710,6 +710,7 @@ v1Api.MapGamePhaseTemplateEndpoints(); // Game phase templates for session setup
 v1Api.MapBggEndpoints(); // ISSUE-3120: BoardGameGeek integration
 v1Api.MapGameManagementEndpoints(); // Issue #4273: Game search autocomplete
 v1Api.MapPrivateGameEndpoints();       // Private games (Issue #3663)
+v1Api.MapUserGamebooksEndpoints();     // SP6 libro game /gamebook index (Issue #869)
 v1Api.MapRuleSpecEndpoints();
 v1Api.MapGameNightEndpoints(); // Issue #46/#607: Game Night Event + public token-based RSVP (Wave A.5)
 

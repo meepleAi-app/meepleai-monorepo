@@ -108,6 +108,8 @@ public class StagingAccessMiddlewareTests
         payload.Should().NotBeNull();
         payload!.Code.Should().Be("STAGING_ACCESS_DENIED");
         payload.Message.Should().Contain("invite only", "user-facing message must explain access policy");
+        payload.Message.Should().Contain("badsworm@gmail.com",
+            "wave 1 simplification: contact email embedded in message for direct frontend display");
         payload.ContactEmail.Should().NotBeNullOrWhiteSpace();
     }
 

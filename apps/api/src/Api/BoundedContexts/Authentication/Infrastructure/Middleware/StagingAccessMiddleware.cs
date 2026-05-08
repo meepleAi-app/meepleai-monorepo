@@ -65,10 +65,14 @@ internal sealed class StagingAccessMiddleware
     {
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
         context.Response.ContentType = "application/json; charset=utf-8";
+        // Wave 1 simplification: contact email embedded in the user-facing message so
+        // the existing frontend error handler (login _content.tsx:93 setError(err.message))
+        // displays it without code-specific branching. The structured `code` and
+        // `contactEmail` fields remain for future wave-2 typed handling.
         var payload = JsonSerializer.Serialize(new
         {
             code = "STAGING_ACCESS_DENIED",
-            message = "Staging access by invite only",
+            message = "Staging access by invite only — contact badsworm@gmail.com to request access.",
             contactEmail = "badsworm@gmail.com"
         });
         await context.Response.WriteAsync(payload).ConfigureAwait(false);

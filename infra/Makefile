@@ -105,6 +105,12 @@ restore-local: ## Restore local dev DB from latest snapshot (requires make dev r
 seed-games: ## Seed test games on staging via API (requires SSH access)
 	bash scripts/seed-all-games-staging.sh
 
+seed-nanolith-demo: ## Sprint -1: seed Nanolith libro game demo (account + game + 2 KBs + agent), against local stack
+	bash scripts/seed-nanolith-demo.sh local
+
+seed-nanolith-demo-staging: ## Same, against staging tunnel (requires SSH key + INITIAL_ADMIN_* secrets)
+	bash scripts/seed-nanolith-demo.sh staging
+
 # === RAG Backup ===
 rag-export: ## Full RAG export (one-shot for production go-live)
 	@echo "📦 Running full RAG data export..."

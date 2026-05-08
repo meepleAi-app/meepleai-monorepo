@@ -20,6 +20,44 @@
 
 ---
 
+## ⚠️ Cross-Branch Reconciliation (2026-05-08)
+
+> **Stato post-discovery**: durante l'audit del 2026-05-08 è emerso un secondo tracciato implementativo parallelo su `feature/libro-game-iter-1a` con 12 commit pushati + iter-1b in progress locale. Vedi audit completo in [`docs/superpowers/specs/2026-05-08-libro-game-iter1-cross-branch-audit.md`](../specs/2026-05-08-libro-game-iter1-cross-branch-audit.md) (PR #831).
+
+### Naming inversion da ricordare
+
+| Questo plan dice | L'altro plan dice | Scope |
+|------------------|-------------------|-------|
+| **Iter 1.A** | **iter-1b** (in progress) | N3 photo translate-on-the-fly |
+| **Iter 1.B** | **iter-1a** (12 commit shipped) | N4 resume cross-day + campaign shell |
+
+Quando si discute "Iter 1.A/1.B" senza contesto, citare il plan d'origine (`2026-05-07-libro-game-nanolith-iter1-plan.md` per questo, `iter-1a.md`/`iter-1b.md` per l'altro).
+
+### Cosa rimane utile di questo plan dopo merge dell'altro tracciato
+
+| Sezione di questo plan | Status post-merge altro tracciato | Azione |
+|------------------------|-----------------------------------|--------|
+| **Phase 0** — SP5 KB upload mockup | ✅ unique value (PR #830) | mantenere, eseguire Tasks 0.2-0.4 |
+| **Sprint -1** — Seed automation | ✅ unique value (PR #829) | mantenere, smoke test live deferred |
+| **Phase 1.A.1-1.A.8** (Iter 1.A code) | 🟡 ~80% coperto da iter-1b in progress + production-ready details mancanti | da abbandonare e sostituire con 4 follow-up PR (vedi audit §5) |
+| **Phase 1.A.3** (Polly + 9 metrics) | ❌ **NON nel piano dell'altro tracciato** — gap residuo R1+R2+R3 | spostare in **PR Follow-up #1** post-merge |
+| **Task 1.A.6.3** (EXIF stripper) | ❌ **NON nel piano dell'altro tracciato** — gap residuo R4 | spostare in **PR Follow-up #2** post-merge |
+| **Phase 1.B.1-1.B.6** (Iter 1.B code) | ✅ ~95% coperto da iter-1a (shipped) | da abbandonare salvo Task 1.B.4.4 (resume card states completi) |
+| **Task 1.B.4.4** (4 stati resume mockup G) | ❌ iter-1a ha shell ma non i 4 stati specifici | spostare in **PR Follow-up #3** post-merge — gap residuo R5 |
+| **Phase 1.A.9** — Legacy routing cleanup | ✅ unique value | mantenere, eseguire post-merge altro tracciato — gap residuo R7 |
+
+### Decisione operativa
+
+Dopo merge di `feature/libro-game-iter-1a`:
+
+1. **Mantenere mergiata questa estensione plan + Sprint -1 + Phase 0 + Phase 1.A.9** (PRs #829 + #830 + #831).
+2. **Abbandonare le Phase 1.A.1-1.A.8 + Phase 1.B.1-1.B.6** di questo plan (sostituite dall'altro tracciato).
+3. **Aprire 4 follow-up PR** (R1+R2+R3, R4, R5, R7) per chiudere il gap residuo (~3-4 giorni effort, vedi audit §5).
+
+Il plan rimane utile come **production-ready reference** per i 4 follow-up + come **historical record** della pianificazione iniziale.
+
+---
+
 ## Top-level Acceptance Criteria
 
 Hoisted ACs cross-phase, validati end-to-end al merge finale:
@@ -34,6 +72,9 @@ Hoisted ACs cross-phase, validati end-to-end al merge finale:
 - **AC-8** (FREEZE): zero nuovi component v2 con `hsl(*, 89%, 48%)` hardcoded — `apps/web/src/components/v2/gamebook/*` resta com'è, nuove UI sono page composition o legacy `ui/*` paths
 - **AC-9** (Bundle): bundle delta frontend ≤ +120 KB per Iter 1 (verificato `pnpm build` size-limit gate)
 - **AC-10** (Dogfood readiness): pre-condition checklist spec §8.1 tutta ✓ + Aaron può aprire `/library/games/nanolith/play` e completare 1 sessione mock 30 min E2E
+- **AC-11** (Seed automation): `make seed-nanolith-demo` su DB pulito → 4 precondizioni Sprint 0 SO.1 PASS senza intervento manuale (G8+G9+G10+G11)
+- **AC-12** (Legacy cleanup): zero referenze attive a `/library/games/:gameId/translate` e `/gamebook/[gameId]/play/_components/TranslationViewer` post-merge Phase 1.A.9 (G13+G14)
+- **AC-13** (Mockup admin coverage): `admin-mockups/design_files/sp5-kb-upload-flow.{html,jsx}` presenti + FREEZE-compliance grep zero match (G12)
 
 ---
 
@@ -214,6 +255,233 @@ Verifiche state prima di iniziare:
 
 ---
 
+## Phase 0 — Generate SP5 Admin KB Upload Mockup (parallel)
+
+> **Goal**: copertura design del flusso admin di upload+indicizzazione PDF, prerequisito UX per il seed automation (Sprint -1) e per qualsiasi futuro miglioramento dell'admin KB ingestion. Modalità di generazione **identica a SP6** (spec design `2026-05-07` §13bis.3): sessione fresca `claude.ai/design/` + tokens.css + components.css + brief + mockup di riferimento + grep gate FREEZE-compliance.
+
+**Quando**: parallelo a Sprint 0 (non blocca Iter 1.A). Output committato su branch dedicato `docs/sp5-kb-upload-mockup` e mergiato indipendentemente.
+
+### Task 0.1: Brief SP5 KB upload flow
+
+**Files:**
+- Modify: `admin-mockups/briefs/SP5-admin-tools.md` — aggiungi sezione "KB Upload Flow"
+
+**Coverage**: i prerequisiti del seed automation (G10 indicizzazione 2 PDF Nanolith) hanno bisogno di una UX di reference per `/admin/(dashboard)/knowledge-base/upload/page.tsx`. Oggi non esiste mockup di confronto (SP5 admin batch è "pending Claude Design production resumption post 2026-05-10" per `v2-migration-matrix.md`).
+
+**States to include** (5 stati canonici per upload flow):
+- `state-01-empty` — drop zone vuota, "Trascina PDF qui o clicca per scegliere"
+- `state-02-uploading` — progress bar + filename + size + cancel button
+- `state-03-processing` — multi-stage progressive: parsing → chunking → embedding con percentuale per stage
+- `state-04-complete` — preview chunk count + average confidence score + first 3 chunks expandable
+- `state-05-error` — variants: parse error / upload failure (network) / quota exceeded / file too large / not a PDF
+
+- [ ] Step 1: scrivi brief in `SP5-admin-tools.md` con stati + persona admin (superadmin Aaron, single-device desktop, gestisce 50-200 PDF/anno) + accessibility notes (WCAG, keyboard navigable, screen reader announce stage transitions)
+- [ ] Step 2: commit `docs(sp5): brief admin KB upload flow (5 states)`
+
+### Task 0.2: Generate mockup via claude.ai/design (modalità SP6 §13bis.3)
+
+**Files:**
+- Create: `admin-mockups/design_files/sp5-kb-upload-flow.html`
+- Create: `admin-mockups/design_files/sp5-kb-upload-flow.jsx`
+
+- [ ] **Step 1**: apri sessione fresca `claude.ai/design/` e riallegare:
+  - `admin-mockups/design_files/tokens.css`
+  - `admin-mockups/design_files/components.css`
+  - `admin-mockups/briefs/SP5-admin-tools.md` (con sezione Task 0.1)
+  - `admin-mockups/design_files/sp4-kb-detail.html` come baseline visuale admin
+  - Optional reference: `admin-mockups/design_files/sp6-libro-game-photo-upload.html` (pattern di upload UX)
+
+- [ ] **Step 2**: brief specifico nel prompt:
+  ```
+  Genera mockup hi-fi sp5-kb-upload-flow.html + .jsx (file 1500-2500 righe, pattern A-E SP6).
+  5 stati elencati nel brief SP5-admin-tools.md sezione "KB Upload Flow".
+  Persona: admin superadmin desktop (sidebar menu admin attiva).
+  Token semantic only — usa var(--c-*), zero hsl(*, 89%, 48%) hardcoded.
+  Layout: drop zone centrale + sidebar admin (riuso pattern sp4-kb-detail).
+  ```
+
+- [ ] **Step 3**: salva output in `admin-mockups/design_files/`:
+  ```bash
+  ls admin-mockups/design_files/sp5-kb-upload-flow.{html,jsx}
+  # Expected: 2 file
+  ```
+
+- [ ] **Step 4**: FREEZE-compliance grep gate
+  ```bash
+  grep -E "hsl\([0-9]+,?\s*89%,\s*48%\)" admin-mockups/design_files/sp5-kb-upload-flow.html
+  # Expected: zero match (exit code 1 = OK)
+  ```
+
+- [ ] **Step 5**: commit `docs(sp5): mockup sp5-kb-upload-flow (admin KB ingestion, 5 states)`
+
+### Task 0.3: Update v2-migration-matrix.md
+
+**Files:**
+- Modify: `docs/for-developers/frontend/v2-migration-matrix.md`
+
+- [ ] **Step 1**: aggiungi row in sezione SP5 admin batch:
+  | Mockup | Component path | Route | Status | PR |
+  |---|---|---|---|---|
+  | `sp5-kb-upload-flow` | `apps/web/src/app/admin/(dashboard)/knowledge-base/upload/_components/KbUploadFlow.tsx` | `/admin/knowledge-base/upload` | `pending` | — |
+
+- [ ] **Step 2**: nota esplicita: row resta `pending` finché token redesign #807 Fase 2 non sblocca SP5 batch (FREEZE #808). Mockup è asset di design, NOT actionable per implementazione finché lift-criteria #808 not met.
+
+- [ ] **Step 3**: commit `docs(v2-migration): add sp5-kb-upload-flow row (pending under FREEZE #808)`
+
+### Task 0.4: Update MEMORY
+
+**Files:**
+- Create: `memory/project_sp5_kb_upload_mockup.md`
+- Modify: `memory/MEMORY.md`
+
+Mirror del pattern `project_sp6_libro_game_mockups_wip.md`. Una riga in MEMORY.md sotto sezione progetti attivi.
+
+- [ ] **Step 1**: scrivi memory file (frontmatter type=project, why=copertura design admin KB ingestion, how to apply=quando si tocca `/admin/.../knowledge-base/upload`)
+- [ ] **Step 2**: 1 riga in `MEMORY.md`
+- [ ] **Step 3**: commit `docs(memory): track SP5 KB upload mockup`
+
+---
+
+## Sprint -1 — Demo Seed Automation
+
+> **Goal**: automatizzare le 4 precondizioni di Sprint 0 SO.1 (G8 account + G9 game + G10 PDF indicizzati + G11 agent) eliminando il fallback manuale "create via admin UI". Riusa 4 asset esistenti per minimizzare codice nuovo.
+
+**Asset esistenti riusabili** (verificato):
+- `infra/scripts/seed-all-games-staging.sh` — pattern cookie jar + curl al `API_BASE` + iterazione su `games-metadata.json`
+- `infra/scripts/games-metadata.json` — schema `{title, year, ...}` per ogni gioco
+- `data/rulebook/nanolith_datasource/Nanolith Rules ENG.pdf` + `Press Start ENG.pdf` (verifica PF-4)
+- `infra/scripts/seed-index-wait.sh` — polling `processing_jobs` fino a terminale
+- Pattern bake/consume da `.docs-archive/superpowers/plans/archived/2026-04-10-seed-pdf-pre-indexed.md`
+
+**Quando**: prima di Sprint 0 (sblocca SO.1 → SO.2 → SO.3 senza intervento manuale).
+
+### Task S-1.1: Create seed-nanolith-demo.sh
+
+**Files:**
+- Create: `infra/scripts/seed-nanolith-demo.sh`
+- Modify (se Nanolith assente): `infra/scripts/games-metadata.json`
+
+**Pattern**: estende `seed-all-games-staging.sh` ma scoped a Nanolith + adds account/agent seeding.
+
+- [ ] **Step 1**: shebang + safety + variabili
+  ```bash
+  #!/usr/bin/env bash
+  # seed-nanolith-demo.sh — Idempotent seed for Nanolith libro game demo dogfooding.
+  # Prerequisites: API stack up (`make dev` or staging tunnel), curl, jq, python3.
+  # Usage: ./seed-nanolith-demo.sh [--target=local|staging]
+
+  set -euo pipefail
+
+  TARGET="${1:-local}"
+  case "$TARGET" in
+    local)   API_BASE="http://localhost:8080/api/v1" ;;
+    staging) API_BASE="https://meepleai.app/api/v1" ;;
+    *) echo "ERROR: TARGET must be local|staging"; exit 1 ;;
+  esac
+
+  COOKIE_JAR="/tmp/meepleai-${TARGET}-cookies.txt"
+  RESULTS_FILE="/tmp/nanolith-demo-seed-results.csv"
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  RULEBOOK_DIR="$SCRIPT_DIR/../../data/rulebook/nanolith_datasource"
+  ```
+
+- [ ] **Step 2**: precondition — verifica i 2 PDF presenti (PF-4 reuse)
+  ```bash
+  for pdf in "Nanolith Rules ENG.pdf" "Nanolith Press Start ENG.pdf"; do
+    [[ -f "$RULEBOOK_DIR/$pdf" ]] || { echo "ERROR: $pdf missing in $RULEBOOK_DIR"; exit 2; }
+  done
+  ```
+
+- [ ] **Step 3**: ensure account `badsworm@gmail.com` con role=SuperAdmin (idempotent)
+  - Per **local**: SQL diretto via psql `meepleai` DB se possibile, fallback `POST /api/v1/admin/users` con admin bootstrap token
+  - Per **staging**: `POST /api/v1/admin/users` con cookie superadmin esistente
+  - Password seed: `TestNanolith2026!` (hash via API endpoint, no DB writes raw)
+  - Risultato salvato in `$RESULTS_FILE` con `account_id`
+
+- [ ] **Step 4**: ensure Nanolith in `shared_games` (idempotent)
+  - Check via `GET /api/v1/shared-games?search=nanolith`
+  - Se assente: `POST /api/v1/shared-games` con payload `{title:"Nanolith", yearPublished:2024, status:"Published"}` (riusa schema da `games-metadata.json`)
+  - Salva `game_id` in $RESULTS_FILE
+
+- [ ] **Step 5**: upload 2 PDF (idempotent — skip se già `embedding_status=complete`)
+  - Riusa pattern `seed-all-games-staging.sh` curl multipart
+  - Endpoint: `POST /api/v1/admin/knowledge-base/upload?gameId=$game_id`
+  - 2 chiamate sequenziali (Rules + Press Start)
+  - Salva `pdf_id_rules`, `pdf_id_press_start` in $RESULTS_FILE
+
+- [ ] **Step 6**: poll `processing_jobs` fino a `embedding_status=complete` per entrambi
+  - Riusa `seed-index-wait.sh` con timeout 30 min totali (15 min per PDF)
+  - Verifica confidence ≥ 0.85 (spec N1.1 precondition)
+  - Se timeout o confidence < 0.85: log error + exit 3
+
+- [ ] **Step 7**: ensure agent "Nanolith Tutor" linkato ai 2 KB (idempotent)
+  - Check via `GET /api/v1/admin/agent-definitions?name=Nanolith%20Tutor`
+  - Se assente: `POST /api/v1/admin/agent-definitions` con `{name:"Nanolith Tutor", isActive:true, kbLinks:[pdf_id_rules, pdf_id_press_start]}`
+  - Salva `agent_id` in $RESULTS_FILE
+
+- [ ] **Step 8**: final state CSV `/tmp/nanolith-demo-seed-results.csv`:
+  ```csv
+  step,resource,id,status
+  account,badsworm@gmail.com,$account_id,OK
+  game,Nanolith,$game_id,OK
+  pdf_rules,Nanolith Rules ENG.pdf,$pdf_id_rules,COMPLETE
+  pdf_press_start,Nanolith Press Start ENG.pdf,$pdf_id_press_start,COMPLETE
+  agent,Nanolith Tutor,$agent_id,ACTIVE
+  ```
+
+- [x] **Step 9**: chmod +x + commit (eseguito su branch `feature/nanolith-iter1-plan-extension`)
+
+### Task S-1.2: Add Makefile target
+
+**Files:**
+- Modify: `infra/Makefile`
+
+- [x] **Step 1**: target aggiunto in `infra/Makefile` (vicino a `seed-games`):
+  ```makefile
+  seed-nanolith-demo: ## Sprint -1: seed Nanolith libro game demo
+  	bash scripts/seed-nanolith-demo.sh local
+
+  seed-nanolith-demo-staging: ## Same, against staging tunnel (requires SSH key + secrets)
+  	bash scripts/seed-nanolith-demo.sh staging
+  ```
+
+- [x] **Step 2**: `make help` raccoglie i nuovi target dalla docstring `##`
+- [ ] **Step 3**: smoke test su local stack pulito (richiede `make dev` attivo): `make seed-nanolith-demo`
+- [x] **Step 4**: commit incluso in `feature/nanolith-iter1-plan-extension`
+
+### Task S-1.3: bats test del seed script
+
+**Files:**
+- Create: `infra/scripts/tests/seed-nanolith-demo.bats`
+
+Riusa pattern `snapshot-verify.bats`. Verifica che dopo `make seed-nanolith-demo` su DB pulito le 4 precondizioni Sprint 0 SO.1 passino (account, game, 2 PDF complete, agent active).
+
+- [x] **Step 1**: 6 test case scritti in `infra/scripts/tests/seed-nanolith-demo.bats`:
+  - `exit 1 on invalid TARGET argument`
+  - `fail when Nanolith Rules PDF is missing`
+  - `fail when Nanolith Press Start PDF is missing`
+  - `fail when admin credentials are not configured`
+  - `credentials sourced from infra/secrets/admin.secret when env vars empty`
+  - `syntax: bash -n parses the script`
+
+  > **Scope nota**: i test coprono solo le pre-flight failure paths (dipendenze dichiarate, PDF presenti, credenziali admin). Il flusso live (login → create user → create game → upload PDF → poll → create agent) richiede stack attivo ed è validato manualmente via `make seed-nanolith-demo` con `make dev` running.
+
+- [ ] **Step 2**: opzionale aggiunta a CI matrix (richiede `bats-core` installato sull'agent)
+- [x] **Step 3**: commit incluso in `feature/nanolith-iter1-plan-extension`
+
+### Task S-1.4: Update Sprint 0 SO.1 step "If missing: create via admin UI"
+
+**Files:**
+- Modify (in questo plan, sezione Sprint 0 SO.1)
+
+- [ ] **Step 1**: sostituisci 4 occorrenze di `# If missing: create via admin UI ...` con:
+  ```
+  # If missing: run `make seed-nanolith-demo` (Sprint -1 Task S-1.1) — automatizza tutte le 4 precondizioni
+  ```
+- [ ] **Step 2**: commit `docs(plan): point Sprint 0 SO.1 at seed-nanolith-demo automation`
+
+---
+
 ## Sprint 0 — Pre-condition Validation
 
 **Goal**: validare che N1 (Q&A setup Press Start) e N2 (Q&A regole Rules) funzionino su KB Nanolith pre-indicizzato + agente preesistente. Riuso 100%, zero nuovo codice. Se Sprint 0 fallisce, Iter 1.A è bloccato (significa che la baseline LLM/RAG non funziona).
@@ -232,14 +500,14 @@ Verifiche state prima di iniziare:
   SELECT id, email, role, is_active FROM auth_users WHERE email = 'badsworm@gmail.com';
   -- Expected: 1 row, role='SuperAdmin', is_active=true
   ```
-  If missing: create via admin UI or seed script. Block Iter 1.A until present.
+  If missing: run `make seed-nanolith-demo` (Sprint -1 Task S-1.1) — automatizza tutte le 4 precondizioni. Block Iter 1.A until present.
 
 - [ ] **Step 2**: Nanolith in `shared_games` catalog
   ```sql
   SELECT id, name, status FROM shared_games WHERE LOWER(name) = 'nanolith';
   -- Expected: 1 row, status=Published
   ```
-  If missing: create via admin UI `/admin/shared-games` (NEW Game button).
+  If missing: run `make seed-nanolith-demo` (Sprint -1) — fallback manuale: admin UI `/admin/shared-games` (NEW Game button).
 
 - [ ] **Step 3**: Press Start KB + Rules KB indicizzati con confidence ≥ 0.85
   ```sql
@@ -248,7 +516,7 @@ Verifiche state prima di iniziare:
   WHERE shared_game_id = (SELECT id FROM shared_games WHERE LOWER(name)='nanolith');
   -- Expected: 2 rows, embedding_status='complete', chunk_count > 0
   ```
-  If missing or status != complete: upload via admin UI `/admin/knowledge-base` and wait for embedding.
+  If missing or status != complete: run `make seed-nanolith-demo` (Sprint -1) — fallback manuale: admin UI `/admin/knowledge-base` upload + wait embedding.
 
 - [ ] **Step 4**: AgentDefinition `Nanolith Tutor` linked + active
   ```sql
@@ -256,7 +524,7 @@ Verifiche state prima di iniziare:
   WHERE LOWER(name) LIKE '%nanolith%' AND is_active = true;
   -- Expected: 1 row, kb_links contains both PDF document ids
   ```
-  If missing: create via admin UI `/admin/agents/builder` → New Agent → KB Nanolith → Activate.
+  If missing: run `make seed-nanolith-demo` (Sprint -1) — fallback manuale: admin UI `/admin/agents/builder` → New Agent → KB Nanolith → Activate.
 
 - [ ] **Step 5**: documenta esiti su Google Sheet `nanolith-dogfood-eval.gsheet` foglio "Sprint 0"
   - Colonne: precondition_id, status (PASS/FAIL), notes, owner, date
@@ -1887,6 +2155,130 @@ test.describe('N3.1a Photo Segments — Happy Path', () => {
   git branch -D feature/issue-$ITER1A-nanolith-iter1a-photo-translate
   ```
 
+### Phase 1.A.9 — Legacy routing cleanup (consolidamento)
+
+> **Goal**: deprecare le 2 implementazioni parallele di "play/translate" non integrate (audit gap G13+G14). Eseguito **dopo merge Iter 1.A** in modo che la nuova route `/library/games/[gameId]/play/paragraph/[num]` sia già su `main-dev` e i redirect siano sicuri.
+
+**Quando**: branch separato `chore/gamebook-legacy-cleanup`, PR piccola post-merge Iter 1.A. Non blocca Iter 1.B.
+
+#### Task 1.A.9.1: Deprecate /library/games/[gameId]/translate/page.tsx (DEMO-ONLY)
+
+**Files:**
+- Delete: `apps/web/src/app/(authenticated)/library/games/[gameId]/translate/page.tsx`
+- Delete (se presente): `apps/web/src/app/(authenticated)/library/games/[gameId]/translate/__tests__/`
+- Modify: `apps/web/src/components/v2/gamebook/TranslateParagraphDemo.tsx` — valuta se mantenere come dev fixture o rimuovere
+
+Razionale: la pagina è marcata "DEMO-ONLY" con `DEMO_AGENT_LOOKUP: Record<string, string> = {}` hardcoded. Richiede edit codice prima di ogni demo. Superseded da `/library/games/[gameId]/play/paragraph/[num]/page.tsx` che risolve `agentId` server-side via `useCampaignSession`/agent lookup runtime.
+
+- [ ] **Step 1**: branch
+  ```bash
+  git checkout main-dev && git pull --ff-only
+  git checkout -b chore/gamebook-legacy-cleanup
+  ```
+
+- [ ] **Step 2**: grep cross-references prima di delete
+  ```bash
+  grep -rn "DEMO_AGENT_LOOKUP" apps/web/src/ tests/
+  grep -rn "library/games.*translate" apps/web/src/ docs/
+  # Update or remove all references
+  ```
+
+- [ ] **Step 3**: delete page + tests
+  ```bash
+  rm -rf apps/web/src/app/\(authenticated\)/library/games/\[gameId\]/translate/
+  ```
+
+- [ ] **Step 4**: optional 301 redirect in `next.config.ts` per back-compat URL temporanea (2 settimane)
+  ```ts
+  async redirects() {
+    return [
+      {
+        source: '/library/games/:gameId/translate',
+        destination: '/library/games/:gameId/play',
+        permanent: false, // 307 temp, rimuovi dopo 2 settimane
+      },
+    ];
+  }
+  ```
+
+- [ ] **Step 5**: `pnpm build` verde + `pnpm test` verde
+- [ ] **Step 6**: commit `chore(gamebook): remove DEMO-ONLY translate page (superseded by /play/paragraph/[num])`
+
+#### Task 1.A.9.2: Deprecate orphan TranslationViewer in /gamebook/[gameId]/play/
+
+**Files:**
+- Delete: `apps/web/src/app/(authenticated)/gamebook/[gameId]/play/_components/TranslationViewer.tsx`
+- Delete: `apps/web/src/app/(authenticated)/gamebook/[gameId]/play/__tests__/TranslationViewer.test.tsx`
+- Delete: `apps/web/src/app/(authenticated)/gamebook/[gameId]/play/` (intera directory — non c'è `page.tsx`, è orfana)
+
+Razionale: il componente `TranslationViewer.tsx` esiste sotto `/gamebook/[gameId]/play/_components/` ma non c'è `page.tsx` corrispondente — quindi è non-routable, testato solo in unit, mai esposto come pagina. Codice morto. La nuova `/library/games/[gameId]/play/paragraph/[num]/_components/TranslationViewer.tsx` (Task 1.A.6.4) lo sostituisce.
+
+- [ ] **Step 1**: grep zero import del vecchio TranslationViewer
+  ```bash
+  grep -rn "from.*gamebook/\[gameId\]/play/_components/TranslationViewer" apps/web/src/
+  # Expected: zero match (orfano confermato)
+  ```
+
+- [ ] **Step 2**: delete directory
+  ```bash
+  rm -rf apps/web/src/app/\(authenticated\)/gamebook/\[gameId\]/play/
+  ```
+
+- [ ] **Step 3**: verifica nessun routing punta lì
+  ```bash
+  grep -rn "/gamebook/.*play" apps/web/src/ docs/
+  # Expected: solo riferimenti SP6 spec (storici, OK), nessun routing attivo
+  ```
+
+- [ ] **Step 4**: `pnpm build` verde + `pnpm test` verde
+- [ ] **Step 5**: commit `chore(gamebook): remove orphan TranslationViewer in /gamebook/[gameId]/play (no page.tsx, dead code)`
+
+#### Task 1.A.9.3: Mantenere /gamebook/page.tsx + /gamebook/upload/page.tsx (SP6 Phase B)
+
+> **Decisione esplicita**: questi NON sono orfani — sono "I tuoi manuali" index + upload (issue #788, Wave D.3 blueprint). Servono use case differenti dalla user story Nanolith dogfooding (ingestion fotografica generica vs play+translate session-based).
+
+- [ ] **Step 1**: aggiungi commento in `/gamebook/page.tsx` JSDoc:
+  ```tsx
+  /**
+   * Gamebook Index Page — `/gamebook` (SP6 Phase B Tier M, Issue #788).
+   * 
+   * NOTE: distinct from `/library/games/[gameId]/play` (Iter 1 Nanolith dogfooding,
+   * spec 2026-05-07). This index is for user-uploaded photo gamebooks (G1 vision);
+   * the /library/games/.../play route is for session-based KB-indexed gamebooks.
+   * No consolidation planned — they serve different user goals.
+   */
+  ```
+
+- [ ] **Step 2**: commit `docs(gamebook): clarify scope distinction /gamebook vs /library/games/[gameId]/play`
+
+#### Task 1.A.9.4: PR cleanup
+
+- [ ] **Step 1**: push + PR (small, fast review)
+  ```bash
+  git push -u origin chore/gamebook-legacy-cleanup
+  gh pr create --base main-dev \
+    --title "chore(gamebook): legacy routing cleanup (post Iter 1.A)" \
+    --body "$(cat <<'EOF'
+  ## Summary
+  - Remove DEMO-ONLY /library/games/[gameId]/translate (superseded by /play/paragraph/[num])
+  - Remove orphan TranslationViewer.tsx in /gamebook/[gameId]/play (no page.tsx, dead code)
+  - Clarify /gamebook scope distinction (SP6 Phase B kept)
+
+  ## Resolves
+  Audit gaps G13 + G14 from spec-panel review of nanolith demo design.
+
+  ## Test plan
+  - [x] grep zero references to removed paths
+  - [x] pnpm build + pnpm test green
+  - [x] 307 redirect in next.config (2-week back-compat for /library/games/:id/translate)
+
+  Co-authored-by: Claude Opus 4.7 <noreply@anthropic.com>
+  EOF
+  )"
+  ```
+
+- [ ] **Step 2**: merge dopo CI green + 1 review
+
 ---
 
 ## Iter 1.B — N4 Resume Cross-day + Glossary
@@ -2629,6 +3021,8 @@ Same pattern come Iter 1.A.
 Prima della prima sessione reale Aaron:
 
 - [ ] Both PR Iter 1.A + Iter 1.B merged on `main-dev`
+- [ ] Phase 1.A.9 cleanup PR merged on `main-dev` (legacy routing deprecated)
+- [ ] `make seed-nanolith-demo` runs green su DB pulito (Sprint -1 automation)
 - [ ] Sprint 0 pre-condition validation passed (vedi spec §8.1)
 - [ ] `make dev` locale: stack up + healthchecks green
 - [ ] N1 + N2 manual smoke test: ≥ 4/5 setup queries actionable + ≥ 17/20 in-game queries useful

@@ -609,7 +609,7 @@ jobs:
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
             # Sync /opt/meepleai/repo to the deploy SHA so compose files
-            # match the workflow context (compose.traefik.yml, etc.)
+            # match the workflow context (post-#738: docker-compose.yml + compose.staging.yml)
             cd /opt/meepleai/repo
             git fetch origin main-staging
             git reset --hard ${{ env.DEPLOY_SHA }}

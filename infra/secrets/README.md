@@ -23,7 +23,7 @@
 | **reranker-service.secret** | 🟢 OPTIONAL | `RERANKER_API_KEY` | `change_me_reranker...` | `infra/secrets/reranker-service.secret` |
 | **smoldocling-service.secret** | 🟢 OPTIONAL | `SMOLDOCLING_API_KEY` | `change_me_smoldocling...` | `infra/secrets/smoldocling-service.secret` |
 | **storage.secret** | 🟢 OPTIONAL | `S3_ACCESS_KEY`<br>`S3_SECRET_KEY`<br>`S3_BUCKET_NAME`<br>`S3_REGION` | `your_s3_access_key`<br>`your_s3_secret_key`<br>`meepleai-uploads`<br>`us-east-1` | `infra/secrets/storage.secret` |
-| **traefik.secret** | 🟢 OPTIONAL | `TRAEFIK_DASHBOARD_USER`<br>`TRAEFIK_DASHBOARD_PASSWORD` | `admin`<br>`change_me_traefik...` | `infra/secrets/traefik.secret` |
+<!-- traefik.secret removed (PR #738 cutover to CF Tunnel) -->
 
 ---
 
@@ -673,7 +673,7 @@ The `setup-secrets.ps1` script **automatically generates** secure values for the
 | `ADMIN_PASSWORD` | admin.secret | 16 chars | Upper + digit + symbol |
 | `GRAFANA_ADMIN_PASSWORD` | monitoring.secret | 16 chars | Upper + digit + symbol |
 | `PROMETHEUS_PASSWORD` | monitoring.secret | 16 chars | Upper + digit + symbol |
-| `TRAEFIK_DASHBOARD_PASSWORD` | traefik.secret | 16 chars | Upper + digit + symbol |
+<!-- TRAEFIK_DASHBOARD_PASSWORD removed (PR #738 cutover to CF Tunnel) -->
 
 ### 📋 Manual Configuration Still Required
 
@@ -720,7 +720,7 @@ BoardGameGeek integration disabled. Game catalog limited to manual entries.
 ```
 
 ### 🟢 OPTIONAL - Info Logged
-**Files**: `email.secret`, `monitoring.secret`, `oauth.secret`, `reranker-service.secret`, `smoldocling-service.secret`, `storage.secret`, `traefik.secret`
+**Files**: `email.secret`, `monitoring.secret`, `oauth.secret`, `reranker-service.secret`, `smoldocling-service.secret`, `storage.secret`
 
 **Behavior**:
 - Application **STARTS** normally with fallback defaults
@@ -965,18 +965,7 @@ S3_REGION=us-east-1                       # AWS region
 
 **Fallback**: If missing, uses local file storage in `uploads/` directory
 
-#### traefik.secret
-**Purpose**: Traefik reverse proxy dashboard access
-
-**Variables**:
-```bash
-TRAEFIK_DASHBOARD_USER=admin              # Dashboard username
-TRAEFIK_DASHBOARD_PASSWORD=your_password  # Dashboard password
-```
-
-**Validation**:
-- Username: Non-empty string
-- Password: ≥8 chars
+<!-- traefik.secret section removed (PR #738 cutover to CF Tunnel — edge ingress now via cloudflared on VPS, no traefik dashboard) -->
 
 ---
 

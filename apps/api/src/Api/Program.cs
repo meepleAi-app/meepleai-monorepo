@@ -842,6 +842,7 @@ if (!isAlphaMode)
     v1Api.MapUserHandEndpoints();          // My Hand quick-access slots (La Mia Mano)
     v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)
     v1Api.MapGamebookCampaignEndpoints();  // Iter 1.A — Libro Game gamebook campaigns
+    v1Api.MapGamebookPhotoEndpoints();    // Iter 1.B — Libro Game photo translate pipeline
 
     // Audit & Analytics
     v1Api.MapAuditEndpoints();             // Audit log retrieval & search

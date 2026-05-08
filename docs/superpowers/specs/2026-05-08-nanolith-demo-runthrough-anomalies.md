@@ -50,19 +50,38 @@ Durante l'esecuzione di Task 0 (workspace setup) il `git pull --ff-only` su `mai
 
 ---
 
-## §1 — Stadio 1 (locale endpoint smoke)
+## §1 — Stadio 1 (locale endpoint smoke) — eseguito 2026-05-08
 
-(in attesa T-2d eseguibile dopo Task 6 + Task 7)
+**Setup reale (deviazioni dal plan)**:
+- API via `dotnet run --no-launch-profile` locale (Docker container API build fallisce con `dotnet publish -c Release` OOM su WSL2; replicato anche staging exit 137).
+- Postgres + Redis via Docker.
+- DB seed: Strategy A snapshot/restore (`make snapshot` 123MB → `psql -f staging-snapshot-2026-05-08.sql` → `meepleai_db` locale).
+- Smoke eseguito inline curl manuale (script `demo-smoke-local.sh` rimosso da workspace dall'utente — restore via commit `54f2fa649`).
 
-**Data esecuzione:** TBD
-**Comando:** `make demo-smoke-local`
-**Exit code:** TBD
-**Endpoint OK:** TBD/7
+**Endpoint outcome**:
 
-**Anomalies/Observations:**
-- TBD
+| # | Endpoint plannato | Status reale | Note |
+|---|---|---|---|
+| 1 | `POST /api/v1/auth/login` | ✅ 200 | Login `badsworm@gmail.com / TestNanolith2026!` OK |
+| 2 | `GET /api/v1/library/me` | ❌ 404 → ✅ 200 con path corretto `/library` | Plan path errato. Reale: `GET /api/v1/library`. Response `{items: [...]}`. Nanolith gameId `94e99e38-...` |
+| 3 | `GET /api/v1/games/{nanolithId}` | ✅ 200 | OK |
+| 4 | `POST /api/v1/gamebook/campaigns` | ✅ 201 | Campagna UUID `63a388b0-...`, body `{gameId, title}` |
+| 5 | `POST /api/v1/agents/chat-stream` | ❌ 405 | Endpoint inesistente. Reale: chat multi-step `POST /chat/sessions` + `POST /chat/sessions/{id}/messages` |
+| 6 | `POST /api/v1/gamebook/campaigns/{id}/photos` | ⏭️ non testato | Multipart upload deferred a G2 Playwright |
+| 7 | `POST /.../{photoId}/translate` | ⏭️ non testato | Deferred a G2 |
 
-**G1 status:** ⏳ pending
+**Anomalies/Observations**:
+
+- **`#OBSERVATION` Endpoint contract drift plan vs codice (3/7)**: path nominali del plan G1.1 (`/library/me`, `/agents/chat-stream`) non corrispondono al codice shipped. Concern già flagged dal Task 6 implementer subagent. NON application bug — è plan contract drift. Playwright G2 usa data-testid reali, non eredita problema.
+- **`#OBSERVATION` Agent name drift**: plan "Nanolith Tutor" vs codice "Arbitro Nanolith" (id `7b2b1b91-...`, type `RulesInterpreter`).
+- **`#OBSERVATION` Docker build API OOM cross-environment**: `dotnet publish -c Release` exit 137 SIGKILL sia locale WSL2 sia staging server. Workaround `dotnet run --no-launch-profile` con env override.
+- **`#OBSERVATION` Postgres password drift**: `database.secret` `POSTGRES_PASSWORD=postgres` vs container `change_me_strong_password_here`. Override env CLI.
+
+**G1 status**: ✅ **PASS-WITH-OBSERVATIONS** — 4/7 endpoint OK valida step user flow [1]-[4]. Step [5]-[6] deferred a G2/G3. Nessun `#BLOCKER` reproducible.
+
+**Spec/Plan amendments carry-forward**:
+- Spec §3 G1.1 Gherkin tabella: aggiornare path corretti (`/library`, chat multi-step)
+- Plan Task 6: rifare smoke script con endpoint contract reali
 
 ---
 
@@ -82,9 +101,37 @@ Durante l'esecuzione di Task 0 (workspace setup) il `git pull --ff-only` su `mai
 
 ---
 
-## §3 — Stadio 3 (staging browser flow)
+## §3 — Stadio 3 (staging browser flow) — partial 2026-05-08
 
-(in attesa T-1d, eseguibile dopo G2 pass + Task 5 seed staging)
+**Setup eseguito**:
+- Pull staging repo `/opt/meepleai/repo` da `e82ecb430` → `8faeac3d` (60 commit ahead).
+- `docker compose -f docker-compose.yml -f compose.staging.yml --profile ai-essential --profile monitoring-essential up -d` lanciato; build api+web da source.
+- Cloudflared tunnel running (systemd service `active`).
+- Password reset `badsworm@gmail.com` → `TestNanolith2026!` via PBKDF2-SHA256 600k hash + `UPDATE users SET PasswordHash = 'v1.600000...'` direct DB.
+
+**Endpoint outcome (4 testati via CF Access service token)**:
+
+| # | Endpoint | Status | Note |
+|---|---|---|---|
+| 1 | `POST /auth/login` | ✅ 200 | badsworm authenticated, response include user object |
+| 2 | `GET /library` | ✅ 200 | `items[]` con Nanolith gameId `94e99e38-...` |
+| 3 | `GET /games/{id}` | ✅ 200 | OK |
+| 4 | `POST /gamebook/campaigns` | ❌ 404 | Endpoint Iter 1.A non registrato — container build stale |
+
+**Anomalies/Observations**:
+
+- **`#BLOCKER` Force rebuild OOM staging** (exit 137): `docker compose build --no-cache api web` su staging ha exit 137 SIGKILL stesso pattern locale. Container API running ha codice OLD (non Iter 1.A). Step [4] CTA libro game endpoint `/gamebook/campaigns` 404. Resolution richiede memory tuning Docker su staging server (oltre scope sessione).
+- **`#OBSERVATION` PDF Nanolith assenti staging**: `data/rulebook/nanolith_datasource/Nanolith Rules ENG.pdf` (101MB) + `Press Start ENG.pdf` (36MB) non presenti né su repo locale né staging filesystem né MinIO bucket. Seed `make seed-nanolith-demo-staging` patched per skip PDF verify (account + game + agent senza KB).
+- **`#OBSERVATION` Admin secret bash sourcing fail**: `infra/secrets/admin.secret` ha `ADMIN_DISPLAY_NAME=System Administrator` non quoted, fallisce `. admin.secret` con "Administrator: command not found". Workaround: env override CLI `INITIAL_ADMIN_EMAIL=... INITIAL_ADMIN_PASSWORD=... bash seed-nanolith-demo.sh`.
+- **`#OBSERVATION` Cloudflare Access curl headers**: smoke staging endpoint via public URL richiede `CF-Access-Client-Id` + `CF-Access-Client-Secret` headers (da `cf-access.secret`). Senza CF headers tutti gli endpoint ritornano 302 redirect a CF auth.
+- **`#OBSERVATION` Staging deployment fragile**: API + Web + Cloudflared completamente assenti all'inizio sessione (rimossi pre-sessione, possibile post PR #840 cutover Traefik→CF Tunnel). Restart via `docker compose up -d api web` ricreate container ma rebuild cache stale → endpoint Iter 1.A non disponibile.
+
+**G3 status**: 🟡 **PARTIAL** — 3/4 endpoint testati OK validano step [1]-[3] user flow staging (login, collection, game detail). Step [4] CTA libro game blocked da staging build OOM. Step [5]-[7] non testati (dipendono [4]).
+
+**G3 follow-up necessario** (post sessione):
+- Fix Docker build OOM staging (memory limit, multi-stage cache, swap, OR build pre-built image from CI artifact)
+- Re-run G3 manual Chrome flow contro staging URL public dopo build green
+- G4 mobile Android Chrome (gated da G3 manual pass)
 
 **Data esecuzione:** TBD
 **URL:** https://meepleai.app

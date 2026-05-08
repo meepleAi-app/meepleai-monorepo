@@ -56,6 +56,9 @@ services:
       ASPNETCORE_ENVIRONMENT: Staging
       ASPNETCORE_URLS: http://+:8080
       SEED_PROFILE: Staging
+      # DevOps wave 1: STAGING_ALLOWED_EMAILS loaded from admin.secret env_file above.
+      # Empty value = open access (warning logged at startup). To populate:
+      # echo "STAGING_ALLOWED_EMAILS=badsworm@gmail.com" >> infra/secrets/admin.secret
       SEED_BUCKET_NAME: ${SEED_BUCKET_NAME:-}
       SEED_BUCKET_ENDPOINT: ${SEED_BUCKET_ENDPOINT:-}
       SEED_BUCKET_REGION: ${SEED_BUCKET_REGION:-auto}

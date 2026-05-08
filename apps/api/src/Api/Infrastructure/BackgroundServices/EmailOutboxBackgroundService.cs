@@ -2,6 +2,7 @@ using Api.BoundedContexts.UserNotifications.Infrastructure.Entities;
 using Api.Infrastructure;
 using Api.Services;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Api.Infrastructure.BackgroundServices;
 
@@ -98,6 +99,7 @@ internal sealed class EmailOutboxBackgroundService : BackgroundService
         }
     }
 
+    [SuppressMessage("SonarAnalyzer.CSharp", "S125", Justification = "Explanatory comments about flush-per-row semantics — false-positive on parentheticals like 'Sent / AttemptCount++' and inline em-dashes.")]
     private async Task DrainOnceAsync(CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
@@ -138,6 +140,7 @@ internal sealed class EmailOutboxBackgroundService : BackgroundService
         }
     }
 
+    [SuppressMessage("SonarAnalyzer.CSharp", "S125", Justification = "Explanatory comment about ScheduledAt mutation strategy — false-positive on em-dashes and semicolons.")]
     private async Task TrySendAsync(
         EmailOutboxEntity row,
         MeepleAiDbContext dbContext,

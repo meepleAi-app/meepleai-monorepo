@@ -5,8 +5,7 @@ import { listMyCampaigns, type GamebookCampaign } from '@/lib/api/gamebook-campa
 import { gamebookCampaignKeys } from './useGamebookCampaign';
 
 export const userCampaignsKeys = {
-  list: (gameId?: string) =>
-    [...gamebookCampaignKeys.detail('list'), gameId ?? 'all'] as const,
+  list: (gameId?: string) => [...gamebookCampaignKeys.detail('list'), gameId ?? 'all'] as const,
 };
 
 const STALE_AFTER_DAYS = 90;

@@ -9,9 +9,7 @@ import type { UserCampaignWithStale } from '@/lib/gamebook/hooks/useUserCampaign
 import { GamebookResumeShell } from '../GamebookResumeShell';
 
 vi.mock('@/lib/gamebook/hooks/useUserCampaigns', async () => {
-  const actual = await vi.importActual<typeof hookModule>(
-    '@/lib/gamebook/hooks/useUserCampaigns'
-  );
+  const actual = await vi.importActual<typeof hookModule>('@/lib/gamebook/hooks/useUserCampaigns');
   return { ...actual, useUserCampaigns: vi.fn() };
 });
 

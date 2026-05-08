@@ -63,11 +63,7 @@ export function GamebookResumeShell({
 
   if (data.length === 0) {
     return (
-      <EmptyFirstTime
-        gameId={gameId}
-        gameTitle={gameTitle}
-        onCreateCampaign={onCreateCampaign}
-      />
+      <EmptyFirstTime gameId={gameId} gameTitle={gameTitle} onCreateCampaign={onCreateCampaign} />
     );
   }
 
@@ -83,20 +79,8 @@ export function GamebookResumeShell({
         />
       );
     }
-    return (
-      <ResumeHero
-        campaign={campaign}
-        gameId={gameId}
-        onCreateNew={onCreateCampaign}
-      />
-    );
+    return <ResumeHero campaign={campaign} gameId={gameId} onCreateNew={onCreateCampaign} />;
   }
 
-  return (
-    <MultiCampaignList
-      campaigns={data}
-      gameId={gameId}
-      onCreateNew={onCreateCampaign}
-    />
-  );
+  return <MultiCampaignList campaigns={data} gameId={gameId} onCreateNew={onCreateCampaign} />;
 }

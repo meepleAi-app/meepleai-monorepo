@@ -34,20 +34,22 @@ export function EmptyFirstTime({
       </div>
 
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          Inizia la tua prima campagna
-        </h2>
+        <h2 className="text-2xl font-bold tracking-tight">Inizia la tua prima campagna</h2>
         <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
           {gameTitle ? `${gameTitle} è una campagna mista lunga. ` : ''}
-          Crea un party, fotografa le pagine narrative man mano e l&apos;app
-          terrà il segno paragrafo per paragrafo, sera dopo sera.
+          Crea un party, fotografa le pagine narrative man mano e l&apos;app terrà il segno
+          paragrafo per paragrafo, sera dopo sera.
         </p>
       </div>
 
       <ul className="flex flex-col gap-2.5">
         {[
           { ic: '§', label: "Riprendi all'ultimo paragrafo", sub: 'Anche dopo settimane' },
-          { ic: '⊜', label: 'Glossario coerente', sub: 'I termini restano stabili sessione dopo sessione' },
+          {
+            ic: '⊜',
+            label: 'Glossario coerente',
+            sub: 'I termini restano stabili sessione dopo sessione',
+          },
           { ic: '◑', label: 'Più campagne in parallelo', sub: 'Un party per gruppo di amici' },
         ].map(row => (
           <li

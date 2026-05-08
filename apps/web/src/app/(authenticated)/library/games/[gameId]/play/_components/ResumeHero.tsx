@@ -43,9 +43,7 @@ export function ResumeHero({ campaign, gameId, onCreateNew }: ResumeHeroProps): 
         <div className="px-5 py-5 space-y-4">
           <header>
             <h2 className="text-xl font-bold leading-tight">{campaign.title}</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Ultima sessione {lastLabel}
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">Ultima sessione {lastLabel}</p>
           </header>
 
           <div className="flex items-baseline gap-3">

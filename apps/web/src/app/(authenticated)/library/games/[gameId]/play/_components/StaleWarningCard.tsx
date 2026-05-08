@@ -52,14 +52,16 @@ export function StaleWarningCard({
           role="status"
           className="flex items-start gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-3"
         >
-          <span aria-hidden className="text-lg leading-tight">⚠️</span>
+          <span aria-hidden className="text-lg leading-tight">
+            ⚠️
+          </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
               Ultima sessione {days} giorni fa
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
-              Potrebbe volerci qualche minuto per ricordare la trama. Nessuna fretta —
-              il glossario e il party sono ancora qui.
+              Potrebbe volerci qualche minuto per ricordare la trama. Nessuna fretta — il glossario
+              e il party sono ancora qui.
             </p>
           </div>
         </div>

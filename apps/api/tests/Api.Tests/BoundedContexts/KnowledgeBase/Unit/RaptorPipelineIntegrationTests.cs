@@ -190,9 +190,11 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task ProcessAsync_WithNullGameId_PassesGuidEmpty()
+    public async Task ProcessAsync_WithNoGameLink_SkipsRaptor()
     {
-        // Arrange — seed PDF with null GameId
+        // Arrange — PDF without PrivateGameId or SharedGameId.
+        // Without a games-table peer, RAPTOR.RaptorSummaries.GameId would
+        // violate FK_RaptorSummaries_games_GameId, so the pipeline must skip.
         var pdfDoc = new PdfDocumentEntity
         {
             Id = _pdfDocumentId,
@@ -212,25 +214,66 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
         SetupEmbeddingsToReturn(4);
         SetupBlobStorageToReturn();
 
-        _raptorIndexerMock
-            .Setup(r => r.BuildTreeAsync(
-                _pdfDocumentId, Guid.Empty,
-                It.IsAny<IReadOnlyList<string>>(), 3,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new RaptorTreeResult(0, 0, new List<RaptorSummaryNode>()));
+        var sut = CreatePipelineService(withRaptor: true);
+
+        // Act
+        await sut.ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        // Assert: RAPTOR was skipped (no FK violation), pipeline still completes
+        _raptorIndexerMock.Verify(
+            r => r.BuildTreeAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid>(),
+                It.IsAny<IReadOnlyList<string>>(), It.IsAny<int>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
+        doc!.ProcessingState.Should().Be("Ready");
+    }
+
+    [Fact]
+    public async Task ProcessAsync_SharedGameWithoutMatchingGameRow_SkipsRaptor()
+    {
+        // Arrange — SharedGame PDF whose SharedGameId has NO matching games row.
+        // Reproduces the FK violation observed during Nanolith dogfood seed:
+        // FK_RaptorSummaries_games_GameId would fail at SaveChangesAsync.
+        var sharedGameId = Guid.NewGuid();
+        var pdfDoc = new PdfDocumentEntity
+        {
+            Id = _pdfDocumentId,
+            SharedGameId = sharedGameId,
+            FileName = "test.pdf",
+            FilePath = "/fake/path/test.pdf",
+            ContentType = "application/pdf",
+            FileSizeBytes = 1024,
+            UploadedByUserId = Guid.NewGuid(),
+            ProcessingState = "Uploading",
+            UploadedAt = DateTime.UtcNow
+        };
+        _db.PdfDocuments.Add(pdfDoc);
+        _db.SaveChanges();
+
+        SetupExtractorToReturn("chunk1. chunk2. chunk3. chunk4.", 4);
+        SetupChunkingToReturn(4);
+        SetupEmbeddingsToReturn(4);
+        SetupBlobStorageToReturn();
 
         var sut = CreatePipelineService(withRaptor: true);
 
         // Act
         await sut.ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
 
-        // Assert: called with Guid.Empty for null GameId
+        // Assert: RAPTOR skipped, no summaries persisted, PDF reaches Ready
         _raptorIndexerMock.Verify(
             r => r.BuildTreeAsync(
-                _pdfDocumentId, Guid.Empty,
-                It.IsAny<IReadOnlyList<string>>(), 3,
+                It.IsAny<Guid>(), It.IsAny<Guid>(),
+                It.IsAny<IReadOnlyList<string>>(), It.IsAny<int>(),
                 It.IsAny<CancellationToken>()),
-            Times.Once);
+            Times.Never);
+
+        (await _db.RaptorSummaries.ToListAsync()).Should().BeEmpty();
+        var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
+        doc!.ProcessingState.Should().Be("Ready");
     }
 
     private PdfProcessingPipelineService CreatePipelineService(bool withRaptor)
@@ -259,10 +302,12 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
 
     private PdfDocumentEntity SeedPdfDocument(string state)
     {
+        // Use PrivateGameId so PdfGameIdResolver returns _gameId directly without a games-table lookup.
+        // SharedGameId path is exercised by dedicated tests below.
         var pdfDoc = new PdfDocumentEntity
         {
             Id = _pdfDocumentId,
-            SharedGameId = _gameId,
+            PrivateGameId = _gameId,
             FileName = "test.pdf",
             FilePath = "/fake/path/test.pdf",
             ContentType = "application/pdf",

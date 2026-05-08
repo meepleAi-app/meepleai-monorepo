@@ -92,6 +92,7 @@ export function ChatInputBar({
           placeholder={placeholder}
           rows={1}
           className="min-h-6 flex-1 resize-none border-none bg-transparent py-2 font-nunito text-[0.9rem] leading-relaxed text-[var(--nh-text-primary)] outline-none placeholder:text-[var(--nh-text-muted)]"
+          data-testid="gamebook-chat-input"
         />
         <div className="flex items-center gap-1">
           <button

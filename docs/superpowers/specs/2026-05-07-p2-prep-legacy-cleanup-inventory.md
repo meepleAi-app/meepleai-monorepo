@@ -49,9 +49,8 @@ gh pr create --base main-dev --title "chore(cleanup): P2 prep Tier 1 — remove 
 ```
 
 DoD:
-- [ ] 5 file rimossi (3 components + 1 paired test + index re-export edit)
-- [ ] 1 file modificato (`shared-games/index.ts` re-export removal)
-- [ ] 1 file modificato (`components/v2/agents/index.ts` commento orphan stubs cleanup)
+- [ ] 4 file eliminati: `AgentDetailPanel.tsx`, `AgentsSidebarList.tsx`, `SharedGameDetailModal.tsx`, `SharedGameDetailModal.test.tsx`
+- [ ] 2 file modificati: `shared-games/index.ts` (re-export removal), `components/v2/agents/index.ts` (commento orphan stubs cleanup)
 - [ ] `pnpm typecheck` green
 - [ ] `pnpm test` green
 - [ ] PR review approva con 0 obiezioni (zero consumer = zero risk)
@@ -99,39 +98,59 @@ Comment `kept as no-ops to avoid compile errors` suggerisce il backend non imple
 
 **Tempo stimato**: 3-5 giorni (verifica backend + decisione + cleanup esteso)
 
-### Tier 2c — `useGameImportWizardStore.documentId` alias
+### Tier 2c — `UploadedPdf.id` deprecated alias (`stores/useGameImportWizardStore.ts`)
 
-**Status**: 🟡 **MEDIUM RISK — 6 consumer in admin wizard flow**
+**Status**: 🟢 **LOW RISK — alias non letto da nessun consumer del tipo store**
 
-Verified via grep post-review (2026-05-07): `useGameImportWizardStore()` chiamato in 6 file:
-- `apps/web/src/app/admin/(dashboard)/shared-games/import/client.tsx:65`
-- `apps/web/src/app/admin/(dashboard)/shared-games/import/steps/Step2MetadataReview.tsx:29`
-- `apps/web/src/app/admin/(dashboard)/shared-games/import/steps/Step3PreviewConfirm.tsx:20`
-- `apps/web/src/app/admin/(dashboard)/shared-games/import/steps/Step4CreationProgress.tsx:38`
-- `apps/web/src/app/admin/(dashboard)/shared-games/import/steps/Step5RagTest.tsx:45`
-- `apps/web/src/hooks/wizard/useWizardAutoSave.ts:108`
+Errata corrige post-review (2026-05-07): la review iniziale ha mis-named l'alias come `useGameImportWizardStore.documentId`. Il vero alias deprecato è `UploadedPdf.id` definito in `stores/useGameImportWizardStore.ts:23-24`:
+
+```ts
+export interface UploadedPdf {
+  pdfDocumentId: string;
+  fileName: string;
+  /** @deprecated alias for pdfDocumentId — kept for client.tsx compatibility */
+  id: string;
+}
+```
+
+Lo `Step1UploadPdf.tsx:138` valorizza l'alias (`id: result.pdfDocumentId, // deprecated alias`) ma `client.tsx:53` destrutturizza `_uploadedPdf` con underscore prefix (unused).
+
+Verifica grep `uploadedPdf.id` (2026-05-07): 3 reads production esistono ma su un **tipo `UploadedPdf` diverso** definito in `components/admin/shared-games/PdfUploadSection.tsx:41` (stand-alone, niente `pdfDocumentId`, l'`id` qui non è alias). Cross-check tipi via `interface UploadedPdf` grep:
+- `stores/useGameImportWizardStore.ts:20` — pdfDocumentId + id alias deprecato
+- `components/admin/shared-games/PdfUploadSection.tsx:41` — `{ id, fileName, fileSize }` (canonico in quel modulo)
+- `GameForm.tsx:48` importa il tipo da `PdfUploadSection`, non dallo store
+
+⇒ Lo store's `UploadedPdf.id` ha **0 reader production**. La rimozione è equivalente Tier 1 risk (pulire setter in `Step1UploadPdf.tsx:138` + drop campo dall'interface store).
 
 **Removal plan**:
-1. Per ognuno dei 6 file: ispeziona destrutturazione → verifica se accede `documentId` (deprecato) vs `pdfDocumentId` (canonico)
-2. Refactor 6 consumer al nome canonico `pdfDocumentId`
-3. Rimuovi alias `documentId` getter dallo store
+1. Rimuovi campo `id` da `UploadedPdf` interface in `stores/useGameImportWizardStore.ts:20-25`
+2. Rimuovi riga `id: result.pdfDocumentId, // deprecated alias` da `Step1UploadPdf.tsx:138`
+3. Rimuovi `type UploadedPdf` import dal test `stores/__tests__/useGameImportWizardStore.test.ts:22` se diventa unused
 4. `pnpm typecheck` + `pnpm test` green
 
-**Tempo stimato**: 1-2 giorni (refactor 6 file + test re-run)
+**Tempo stimato**: 1-2 ore (3 edit puntuali + verify)
 
-### Tier 2d — `Citation` deprecated alias (`chat/shared/types.ts`)
+### Tier 2d — `CitationData` deprecated alias (`chat/shared/types.ts`)
 
-**Status**: 🟢 **LOW RISK — alias type, no direct consumers found via grep**
+**Status**: 🟢 **LOW RISK — alias structural type, no direct consumers found via grep**
 
-Verified via grep post-review (2026-05-07): `from '@/components/chat/shared/types'` ha 0 import diretti production. L'alias type è probabilmente importato via re-export indirect.
+Errata corrige post-review (2026-05-07): la review iniziale ha mis-named il target come `Citation`. In realtà `chat/shared/types.ts:33` definisce `export type Citation = DomainCitation` (re-export pulito, NON deprecato). L'alias deprecato è `CitationData` (riga 40):
+
+```ts
+export type Citation = DomainCitation;        // re-export, KEEP
+/** @deprecated structural alias of Citation, kept per compat */
+export type CitationData = Citation;          // ← target removal
+```
+
+`Citation` è invece importato come domain type via `@/types` (mantenere — è il tipo canonico).
 
 **Pre-removal investigation needed**:
-1. Trova path import effettivo del type (`grep -rEn "Citation" apps/web/src/components/chat`)
-2. Identifica il "legacy module" target citato nel comment
-3. Verifica se cleanup chat-unified Phase-0 è completo (cerca PR / issue Phase-0)
-4. Se completo, rimuovi alias + `chat/shared/types.ts` se vuoto
+1. Grep import `CitationData` (`grep -rEn "CitationData" apps/web/src`) per consumer count
+2. Se 0 consumer: rimuovi solo riga 39-40 di `chat/shared/types.ts`
+3. Se >0 consumer: refactor a `Citation` (assignable bidirezionale per design)
+4. NON rimuovere `Citation` re-export — è il path canonico domain type
 
-**Tempo stimato**: 0.5-1 giorno (investigation + atomic removal)
+**Tempo stimato**: 0.5 giorno (investigation + atomic removal)
 
 ## Tier 3 — DO NOT touch
 
@@ -173,8 +192,8 @@ Verified via grep post-review (2026-05-07): `from '@/components/chat/shared/type
 - **PR #1**: Tier 1 cleanup (4 file delete). Effort: 1 giorno. Risk: minimal.
 
 ### Short-term (P2 in progress)
-- **PR #2**: Tier 2c `documentId` alias removal. Effort: 1 giorno. Risk: low.
-- **PR #3**: Tier 2d `Citation` alias removal (subordinate a chat-unified Phase-0 verify). Effort: 1 giorno.
+- **PR #2**: Tier 2c `UploadedPdf.id` alias removal (3 edit puntuali, 0 reader production). Effort: 1-2 ore. Risk: low.
+- **PR #3**: Tier 2d `CitationData` alias removal (verify 0 consumer prima di rimuovere). Effort: 0.5 giorno. Risk: low.
 
 ### Medium-term (P2 critical-path cleanup)
 - **PR #4**: Tier 2a `ArbitroModal.useV2` finalize migration. Effort: 1-2 giorni + product decision.

@@ -40,6 +40,10 @@ public sealed class GraphRagExtractionTests : IDisposable
 
     private readonly Guid _pdfDocumentId = Guid.NewGuid();
     private readonly Guid _gameId = Guid.NewGuid();
+    // Issue #890 (review concern): keep games.Id distinct from shared_games.id so the
+    // resolver test exercises the real cross-table mapping rather than a degenerate
+    // case where the two Guids collapse to the same value.
+    private readonly Guid _sharedGameId = Guid.NewGuid();
 
     public GraphRagExtractionTests()
     {
@@ -280,19 +284,21 @@ public sealed class GraphRagExtractionTests : IDisposable
         // Issue #890: PdfGameIdResolver looks up Games by SharedGameId. Without a matching
         // GameEntity, the resolver returns null and the pipeline skips entity extraction —
         // which makes any Verify(_gameId) on the entity-extractor mock fail. Seed the Game
-        // so the resolver returns _gameId.
+        // with distinct Id (_gameId) and SharedGameId (_sharedGameId) so the resolver path
+        // games.Where(g => g.SharedGameId == pdf.SharedGameId).Select(g => g.Id) is
+        // exercised — not collapsed via Guid identity (review feedback on PR #891).
         var game = new GameEntity
         {
             Id = _gameId,
             Name = "Catan",
-            SharedGameId = _gameId,
+            SharedGameId = _sharedGameId,
         };
         _db.Games.Add(game);
 
         var pdfDoc = new PdfDocumentEntity
         {
             Id = _pdfDocumentId,
-            SharedGameId = _gameId,
+            SharedGameId = _sharedGameId,
             FileName = "Catan Rules.pdf",
             FilePath = "/fake/path/test.pdf",
             ContentType = "application/pdf",

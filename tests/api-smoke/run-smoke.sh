@@ -49,11 +49,21 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --env)
-      ENV_NAME="${2:-}"
+      if [[ $# -lt 2 || -z "${2:-}" || "${2:-}" == --* ]]; then
+        echo "Error: --env requires a value" >&2
+        usage >&2
+        exit 2
+      fi
+      ENV_NAME="$2"
       shift 2
       ;;
     --collection)
-      SUB_COLLECTION="${2:-}"
+      if [[ $# -lt 2 || -z "${2:-}" || "${2:-}" == --* ]]; then
+        echo "Error: --collection requires a value" >&2
+        usage >&2
+        exit 2
+      fi
+      SUB_COLLECTION="$2"
       shift 2
       ;;
     --help|-h)

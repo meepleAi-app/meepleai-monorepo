@@ -21,6 +21,8 @@ internal static class GamebookCampaignEndpoints
         MapListCampaignsEndpoint(group);
         MapGetCampaignEndpoint(group);
         MapUpdateProgressEndpoint(group);
+        MapRenameCampaignEndpoint(group);
+        MapDeleteCampaignEndpoint(group);
 
         return group;
     }
@@ -154,6 +156,71 @@ internal static class GamebookCampaignEndpoints
         .WithOpenApi();
     }
 
+    private static void MapRenameCampaignEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPatch("/gamebook/campaigns/{id:guid}", async (
+            Guid id,
+            [FromBody] RenameGamebookCampaignRequest body,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var dto = await mediator.Send(
+                new RenameGamebookCampaignCommand(id, userId, body.Title), ct
+            ).ConfigureAwait(false);
+
+            return Results.Ok(dto);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<GamebookCampaignDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status409Conflict)
+        .WithTags("Gamebook")
+        .WithSummary("Rename a gamebook campaign")
+        .WithDescription("Updates the title of the campaign. Only the owner may rename.")
+        .WithOpenApi();
+    }
+
+    private static void MapDeleteCampaignEndpoint(RouteGroupBuilder group)
+    {
+        group.MapDelete("/gamebook/campaigns/{id:guid}", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            await mediator.Send(new DeleteGamebookCampaignCommand(id, userId), ct).ConfigureAwait(false);
+            return Results.NoContent();
+        })
+        .RequireAuthenticatedUser()
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status409Conflict)
+        .WithTags("Gamebook")
+        .WithSummary("Soft-delete a gamebook campaign")
+        .WithDescription("Marks the campaign as deleted (IsDeleted=true). Only the owner may delete. Photos and glossary entries are retained for audit but become unreachable.")
+        .WithOpenApi();
+    }
+
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)
     {
         userId = Guid.Empty;
@@ -178,3 +245,6 @@ public sealed record CreateGamebookCampaignRequest(Guid GameId, string Title);
 
 /// <summary>Request body for updating the current paragraph progress.</summary>
 public sealed record UpdateGamebookProgressRequest(int CurrentParagraph);
+
+/// <summary>Request body for renaming a gamebook campaign.</summary>
+public sealed record RenameGamebookCampaignRequest(string Title);

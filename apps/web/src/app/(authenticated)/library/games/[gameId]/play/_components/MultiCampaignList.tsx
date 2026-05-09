@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 
 import Link from 'next/link';
 
@@ -10,6 +10,10 @@ export interface MultiCampaignListProps {
   campaigns: UserCampaignWithStale[];
   gameId: string;
   onCreateNew?: () => void;
+  /** Inline rename — handler resolves with new title or rejects on cancel/error. */
+  onRename?: (campaignId: string, newTitle: string) => Promise<void> | void;
+  /** Soft-delete with explicit user confirm (caller is responsible for the confirmation UI cue). */
+  onDelete?: (campaignId: string) => Promise<void> | void;
 }
 
 function daysSince(iso: string, now: Date = new Date()): number {
@@ -29,7 +33,35 @@ export function MultiCampaignList({
   campaigns,
   gameId,
   onCreateNew,
+  onRename,
+  onDelete,
 }: MultiCampaignListProps): ReactElement {
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const handleRename = async (campaignId: string, currentTitle: string) => {
+    if (!onRename) return;
+    const next = window.prompt('Nuovo titolo della campagna:', currentTitle);
+    const trimmed = next?.trim();
+    if (!trimmed || trimmed === currentTitle) return;
+    try {
+      setBusyId(campaignId);
+      await onRename(campaignId, trimmed);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDelete = async (campaignId: string, currentTitle: string) => {
+    if (!onDelete) return;
+    if (!window.confirm(`Eliminare la campagna "${currentTitle}"? Questa azione è reversibile solo lato server (soft-delete).`)) return;
+    try {
+      setBusyId(campaignId);
+      await onDelete(campaignId);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <section
       data-testid="gamebook-resume-multi-list"
@@ -85,6 +117,32 @@ export function MultiCampaignList({
                 >
                   Riprendi → §{next}
                 </Link>
+                {(onRename || onDelete) && (
+                  <div className="flex items-center justify-end gap-1 pt-1">
+                    {onRename && (
+                      <button
+                        type="button"
+                        onClick={() => handleRename(campaign.id, campaign.title)}
+                        disabled={busyId === campaign.id}
+                        data-testid={`gamebook-resume-multi-rename-${campaign.id}`}
+                        className="rounded px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted disabled:opacity-50"
+                      >
+                        Rinomina
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(campaign.id, campaign.title)}
+                        disabled={busyId === campaign.id}
+                        data-testid={`gamebook-resume-multi-delete-${campaign.id}`}
+                        className="rounded px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                      >
+                        Elimina
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </li>
           );

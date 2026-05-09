@@ -18,7 +18,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { logger } from '@/lib/logger';
-import { isAdminRole } from '@/lib/utils/roles';
 
 // ============================================================================
 // Fallback (Suspense boundary)
@@ -55,8 +54,12 @@ export function LoginPageContent() {
   const [twoFactorError, setTwoFactorError] = useState<string>('');
 
   const redirectAfterAuth = useCallback(
-    async (role: string | null | undefined) => {
-      const targetUrl = isAdminRole(role ?? undefined) ? '/admin' : from;
+    async (_role: string | null | undefined) => {
+      // Issue #893 demo follow-up: admins/superadmins land on the user app by
+      // default (consistent with role experience). Admin pages remain
+      // accessible via the navigation menu. Honors `?from=` redirect when
+      // present (set by middleware on protected-route login bounces).
+      const targetUrl = from;
       // Small delay to ensure session cookie is persisted before navigation
       await new Promise(resolve => setTimeout(resolve, 100));
       router.refresh();

@@ -1,0 +1,26 @@
+meta {
+  name: meepleai-api-smoke
+  type: collection
+  version: 1
+}
+
+vars {
+  apiBase: {{apiBase}}
+  smokeUserEmail: {{smokeUserEmail}}
+  smokeUserPassword: {{smokeUserPassword}}
+}
+
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+script:pre-request {
+  // Auto-login if no authToken yet (set after login script in env)
+  if (!bru.getEnvVar("authToken")) {
+    bru.setVar("authToken", "");
+  }
+}

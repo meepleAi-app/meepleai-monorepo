@@ -64,6 +64,8 @@ I 4 issue P0 nightly recenti (#884, #877, #832, #821) NON impattano
 completato in T7 di [sg0-foundation-implementation](
 ../../../superpowers/plans/2026-05-09-sg0-foundation-implementation.md).
 
+**Audit 2026-05-09**: confermato no overlap (vedi commento su #884). I 4 P0 nightly OPEN (#884, #877, #832, #821) non bloccano l'attivazione di api-smoke.yml.
+
 ## Persona override mechanism
 
 ⚠️ **NON usare** Aaron `badsworm@alice.it` nei smoke test API. Aaron è **superadmin**

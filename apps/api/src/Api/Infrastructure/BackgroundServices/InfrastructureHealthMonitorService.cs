@@ -95,6 +95,42 @@ internal sealed class InfrastructureHealthMonitorService : BackgroundService
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
+            // Issue #885: clean up orphan rows for services that are no longer registered.
+            // Optional providers (Unstructured, SmolDocling, Ollama after #883) become
+            // unregistered between deploys. Without cleanup their rows remain frozen at
+            // the last persisted state forever — see the staging investigation that found
+            // 3 rows stuck in "Degraded since 2026-04-11" after a month of no monitor writes.
+            var healthOptions = scope.ServiceProvider
+                .GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value;
+            var registeredNames = healthOptions.Registrations
+                .Select(r => r.Name)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            // Code-review safeguard on PR #895: an empty Registrations set is suspicious —
+            // it can happen during DI startup races or in misconfigured hosting paths, and
+            // the helper would treat ALL rows as orphans and wipe the table. Skip cleanup
+            // and log loudly so ops can investigate. The hydration step continues normally.
+            if (registeredNames.Count == 0)
+            {
+                _logger.LogWarning(
+                    "[HealthMonitor] HealthCheckServiceOptions.Registrations is empty; "
+                    + "skipping orphan cleanup to avoid wiping all rows. "
+                    + "Investigate the host's health-check registration path.");
+            }
+            else
+            {
+                var removedNames = await HealthStateOrphanCleanup.RemoveOrphansAsync(
+                    db, registeredNames, cancellationToken).ConfigureAwait(false);
+
+                if (removedNames.Count > 0)
+                {
+                    _logger.LogInformation(
+                        "[HealthMonitor] Removed {OrphanCount} orphan service_health_states rows: {Names}",
+                        removedNames.Count,
+                        string.Join(", ", removedNames));
+                }
+            }
+
             var entities = await db.ServiceHealthStates
                 .AsNoTracking()
                 .ToListAsync(cancellationToken)

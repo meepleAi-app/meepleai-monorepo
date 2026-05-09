@@ -85,6 +85,7 @@ cd apps/web && pnpm test:e2e
 - [Backend Testing](../testing/backend/) - xUnit + Testcontainers
 - [Frontend Testing](../testing/frontend/) - Vitest patterns
 - [E2E Testing](../testing/e2e/) - Playwright guides
+- [API Smoke Tests (Bruno)](./api-smoke/README.md) - HTTP contract smoke per CRUD 4 domini. Trigger CI: PR `main-dev → main-staging`. Persona: `smoke-aaron@meepleai.test` (free-tier).
 - [Accessibility Guidelines](./accessibility-guidelines.md) - WCAG 2.1 AA compliance
 
 ---

@@ -4,7 +4,7 @@
 
 **Goal:** Permettere a un utente Alpha di raggiungere la chat-in-game di un gioco recente in ≤2 tap dalla dashboard, montando un nuovo widget `GamesRecentRail` in cima al Games Hub.
 
-**Architecture:** Frontend-only PR su `apps/web`. Aggiunge un nuovo componente puro `GamesRecentRail` v2 + un nuovo hook `useRecentLibraryGames` (Zustand `useRecentsStore` filtrato a entity=game, con fallback a `useRecentlyAddedGames`). Wiring minimo nel `DashboardClient.tsx`: monta il rail in cima per i tab `library` e `catalog` senza modificare il rendering interno dei tab.
+**Architecture:** Frontend-only PR su `apps/web`. Aggiunge un nuovo componente puro `GamesRecentRail` v2 + un nuovo hook `useRecentLibraryGames` (Zustand `useRecentsStore` filtrato a entity=game, con fallback a `useRecentlyAddedGames`). Wiring minimo in `apps/web/src/app/(authenticated)/games/page.tsx` (`GamesHubContent`): monta il rail in cima per i tab `library`, `catalog` e `kb` senza modificare il rendering interno dei tab. **NB**: il file target è `games/page.tsx`, NON `dashboard/DashboardClient.tsx` (che ha struttura diversa con `EntityZone` ed è fuori scope).
 
 **Tech Stack:** React 19 + Next.js 16 App Router, TypeScript strict, Tailwind 4, Zustand, TanStack Query, Vitest. Pattern di riferimento: `RecentActivityRail` (PR #574), `GamesHero` (PR #635).
 
@@ -23,7 +23,7 @@
 | Create | `apps/web/src/components/v2/games/GamesRecentRail.tsx` | Componente v2 puro — riceve `items[]`, label e callback; rende rail orizzontale di 1-N card |
 | Create | `apps/web/src/components/v2/games/__tests__/GamesRecentRail.test.tsx` | Test rendering: empty, 1, N card, click handler, a11y region |
 | Modify | `apps/web/src/components/v2/games/index.ts` | Aggiungere export di `GamesRecentRail` e tipi correlati |
-| Modify | `apps/web/src/app/(authenticated)/dashboard/DashboardClient.tsx` | Inserire `<GamesRecentRail>` in cima a tutti i branch di rendering (sopra `GamesLibraryView` e sopra il blocco `HubLayout` per catalog/kb) |
+| Modify | `apps/web/src/app/(authenticated)/games/page.tsx` | Inserire `<GamesRecentRail>` in cima a tutti i branch di rendering (sopra `GamesLibraryView` e sopra il blocco `HubLayout` per catalog/kb). **NB**: questo è il vero file dei tab `library/catalog/kb` (non `dashboard/DashboardClient.tsx`, che ha altra struttura `EntityZone`) |
 | Modify | `docs/for-developers/frontend/v2-migration-matrix.md` | Aggiungere row `GamesRecentRail` nella sezione `/games` (status done) |
 
 **Decomposition decision:** componente puro + hook separato dal wiring per facilitare testing isolato. Il rail è agnostico rispetto al `tab` attivo (mostra sempre i recent games dell'utente, in qualunque vista del hub).
@@ -52,21 +52,31 @@ cd apps/web && pnpm typecheck && pnpm lint
 ```
 Expected: nessun errore. Se ci sono errori preesistenti, registrarli come baseline per non confonderli con quelli introdotti.
 
-- [ ] **Step 0.3: Verifica shape effettiva di `useRecentsStore`**
+- [ ] **Step 0.3: Shape di `useRecentsStore` (verificata in fase di plan-review)**
 
-Run: `grep -n "items\|RecentItem\|addedAt\|visitedAt\|entity" apps/web/src/stores/use-recents.ts | head -30`
+La shape reale del file `apps/web/src/stores/use-recents.ts:10-23` è:
 
-Annota qui sotto la shape effettiva di un item del store (es. nome del campo timestamp: `addedAt`? `visitedAt`? Nome del campo entity-id: `id`? Forma del campo `entity`?). Questo è critico perché i test del Task 1 usano questa shape.
-
+```ts
+const MAX_RECENTS = 4;  // <-- store cap
+interface RecentItem {
+  id: string;
+  entity: MeepleEntityType;  // 'game' | 'player' | 'collection' | 'event' | ...
+  title: string;
+  href: string;
+  visitedAt: number;  // <-- Unix ms (Date.now()), NON ISO string
+}
+interface RecentsState {
+  items: RecentItem[];
+  push: (item: Omit<RecentItem, 'visitedAt'>) => void;  // assegna Date.now() internamente
+  remove: (id: string) => void;
+  clear: () => void;
+}
 ```
-Shape effettiva (compila l'engineer dopo grep):
-- Campo timestamp: ___
-- Campo entity-id: ___
-- Campo entity-type: ___
-- Forma store API: useRecentsStore(state => state.___)
-```
 
-Se la shape differisce dai test del Task 1, **aggiorna i test nello Step 1.1 prima di proseguire**.
+Implicazioni per il Task 1:
+- I test usano `visitedAt: <number>` (es. `Date.now() - 3600_000`), MAI stringhe ISO
+- I test fanno `useRecentsStore.setState({ items: [...] })` per bypass del cap MAX_RECENTS
+- Il limite reale dello store è **4 item** — l'hook deve gestire richieste `limit > 4` con fallback a `useRecentlyAddedGames`
 
 ---
 
@@ -89,13 +99,9 @@ Se la shape differisce dai test del Task 1, **aggiorna i test nello Step 1.1 pri
 - `isLoading: true` se `useLibrary.isLoading`
 - `isError: true` se `useLibrary.isError && recents.length === 0` (errore non recuperabile)
 
-- [ ] **Step 1.1: Allinea i test alla shape effettiva (se necessario)**
+- [ ] **Step 1.1: Conferma shape (già documentata in Step 0.3)**
 
-In base allo Step 0.3, se i campi del recents store differiscono dal test sotto (es. campo si chiama `addedAt` invece di `visitedAt`), aggiorna il test prima di scriverlo. Il test sotto assume:
-- `useRecentsStore.setState({ items: [...] })`
-- Ogni item: `{ id, entity: 'game', title, href, visitedAt }`
-
-Se differente, sostituire `visitedAt` (e `items` se serve) con i nomi reali.
+La shape è confermata: `visitedAt: number`, `items: RecentItem[]`. I test sotto sono già allineati. Procedi.
 
 - [ ] **Step 1.2: Scrivi il test failing**
 
@@ -171,8 +177,8 @@ describe('useRecentLibraryGames', () => {
     } as any);
     useRecentsStore.setState({
       items: [
-        { id: 'bbb', entity: 'game', title: 'Game bbb', href: '/library/games/bbb', visitedAt: '2026-05-09T10:00:00Z' },
-        { id: 'aaa', entity: 'game', title: 'Game aaa', href: '/library/games/aaa', visitedAt: '2026-05-09T09:00:00Z' },
+        { id: 'bbb', entity: 'game', title: 'Game bbb', href: '/library/games/bbb', visitedAt: 1731147600000 /* 2026-05-09T10:00:00Z */ },
+        { id: 'aaa', entity: 'game', title: 'Game aaa', href: '/library/games/aaa', visitedAt: 1731144000000 /* 2026-05-09T09:00:00Z */ },
       ],
     });
 
@@ -196,24 +202,27 @@ describe('useRecentLibraryGames', () => {
     expect(result.current.entries.map(e => e.gameId)).toEqual(['xxx']);
   });
 
-  it('truncates to limit', async () => {
-    const items = ['a', 'b', 'c', 'd', 'e', 'f'].map(id => entry(id));
+  it('truncates to limit (≤ MAX_RECENTS=4 in real store; setState bypasses cap)', async () => {
+    // NB: store cap is MAX_RECENTS=4, but setState bypasses push() so we can
+    // simulate any number of items. Test uses 4 to stay within the realistic
+    // range while still exercising truncation.
+    const items = ['a', 'b', 'c', 'd'].map(id => entry(id));
     vi.mocked(useLibrary).mockReturnValue({
-      data: { ...emptyPaginated, items, totalCount: 6, totalPages: 1 },
+      data: { ...emptyPaginated, items, totalCount: 4, totalPages: 1 },
       isLoading: false,
       isError: false,
     } as any);
     useRecentsStore.setState({
       items: items.map(e => ({
         id: e.gameId, entity: 'game' as const, title: e.gameTitle,
-        href: `/library/games/${e.gameId}`, visitedAt: '2026-05-09T10:00:00Z',
+        href: `/library/games/${e.gameId}`, visitedAt: 1731147600000 /* 2026-05-09T10:00:00Z */,
       })),
     });
 
-    const { result } = renderHook(() => useRecentLibraryGames(3), { wrapper });
+    const { result } = renderHook(() => useRecentLibraryGames(2), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.entries).toHaveLength(3);
+    expect(result.current.entries).toHaveLength(2);
   });
 
   it('skips recents whose game is no longer in library', async () => {
@@ -225,8 +234,8 @@ describe('useRecentLibraryGames', () => {
     } as any);
     useRecentsStore.setState({
       items: [
-        { id: 'removed', entity: 'game', title: 'Removed', href: '/library/games/removed', visitedAt: '2026-05-09T10:00:00Z' },
-        { id: 'inlib', entity: 'game', title: 'In Lib', href: '/library/games/inlib', visitedAt: '2026-05-09T09:00:00Z' },
+        { id: 'removed', entity: 'game', title: 'Removed', href: '/library/games/removed', visitedAt: 1731147600000 /* 2026-05-09T10:00:00Z */ },
+        { id: 'inlib', entity: 'game', title: 'In Lib', href: '/library/games/inlib', visitedAt: 1731144000000 /* 2026-05-09T09:00:00Z */ },
       ],
     });
 
@@ -572,10 +581,12 @@ git commit -m "feat(web): GamesRecentRail v2 component for game-night entry poin
 
 ---
 
-## Task 3: Wiring nel `DashboardClient.tsx`
+## Task 3: Wiring nel `games/page.tsx` (NON dashboard/DashboardClient.tsx!)
 
 **Files:**
-- Modify: `apps/web/src/app/(authenticated)/dashboard/DashboardClient.tsx`
+- Modify: `apps/web/src/app/(authenticated)/games/page.tsx`
+
+> ⚠️ **File target rettificato post plan-review**: i tab `library/catalog/kb` e l'early-return `if (activeTab === 'library') return <GamesLibraryView />` vivono in `games/page.tsx` (`GamesHubContent`), NON in `dashboard/DashboardClient.tsx`. Il dashboard usa una struttura diversa (`EntityZone` + `GreetingStrip`) ed è fuori scope per G3. Le route servite sono entrambe utili all'utente ma G3 punta esplicitamente a `/games?tab=library` come entry point primario (vedi spec §G3).
 
 **Contract:**
 - Mantieni intatto il branch `tab === 'library'` (delega `GamesLibraryView`)
@@ -584,15 +595,19 @@ git commit -m "feat(web): GamesRecentRail v2 component for game-night entry poin
 
 - [ ] **Step 3.1: Identifica i blocchi da modificare**
 
-Run: `grep -n "activeTab === 'library'\|return (" apps/web/src/app/\(authenticated\)/dashboard/DashboardClient.tsx | head -10`
+Run (PowerShell-friendly):
+```bash
+grep -n "activeTab === 'library'" "apps/web/src/app/(authenticated)/games/page.tsx"
+grep -n "return (" "apps/web/src/app/(authenticated)/games/page.tsx"
+```
 
 Annota i numeri di riga del:
-- Early return su `library` (oggi riga ~109-111)
-- Return finale del component (oggi riga ~129)
+- Early return su `library` (oggi riga ~109-111 confermata da `Read` precedente)
+- Return finale del component `GamesHubContent` (oggi riga ~129)
 
 - [ ] **Step 3.2: Aggiungi import**
 
-In testa al file, dopo gli import esistenti (mantieni l'ordine alfabetico se il progetto lo segue):
+In testa a `apps/web/src/app/(authenticated)/games/page.tsx`, dopo gli import esistenti (`useGames`, `useMiniNavConfig`, ecc.), aggiungi:
 
 ```ts
 import { useRouter } from 'next/navigation';
@@ -600,11 +615,11 @@ import { GamesRecentRail } from '@/components/v2/games';
 import { useRecentLibraryGames } from '@/hooks/queries/useRecentLibraryGames';
 ```
 
-> Se `useRouter` è già importato dal file, NON duplicare. `useMemo` dovrebbe essere già importato (verifica).
+> **Verifica preliminare**: `useSearchParams` è già importato. `useRouter` NON è importato in `games/page.tsx` — va aggiunto. `useMemo` è già importato.
 
 - [ ] **Step 3.3: Aggiungi il rail come variabile locale**
 
-Subito dopo la riga `const { data: catalogData, isLoading: catalogLoading } = useGames(...)` (oggi riga ~70), aggiungi:
+All'interno della funzione `GamesHubContent()`, subito dopo la riga `const { data: catalogData, isLoading: catalogLoading } = useGames(undefined, undefined, 1, 20);` (oggi riga ~70), aggiungi:
 
 ```ts
 const router = useRouter();
@@ -700,14 +715,17 @@ Se appare warning per import non usati o `useMemo` non importato, sistema l'impo
 
 - [ ] **Step 3.7: Run test esistenti per regressioni**
 
-Run: `cd apps/web && pnpm vitest run src/app/\(authenticated\)/dashboard src/app/\(authenticated\)/games`
-Expected: tutti i test passano. Se test esistenti del dashboard fanno snapshot del DOM, andranno aggiornati per includere il rail (questo è atteso, NON una regressione).
+Run (path quotato per shell-agnostic):
+```bash
+cd apps/web && pnpm vitest run "src/app/(authenticated)/games"
+```
+Expected: tutti i test esistenti passano. Se test esistenti del games hub fanno snapshot del DOM, andranno aggiornati per includere il rail (questo è atteso, NON una regressione).
 
 - [ ] **Step 3.8: Commit**
 
 ```bash
-git add apps/web/src/app/\(authenticated\)/dashboard/DashboardClient.tsx
-git commit -m "feat(web): mount GamesRecentRail at top of dashboard hub (G3)"
+git add "apps/web/src/app/(authenticated)/games/page.tsx"
+git commit -m "feat(web): mount GamesRecentRail at top of games hub tabs (G3)"
 ```
 
 ---
@@ -731,13 +749,15 @@ Avvia l'ambiente:
 cd infra && make dev-core
 ```
 
-Apri `http://localhost:3000/dashboard` o `/games?tab=library`:
+Apri `http://localhost:3000/games?tab=library` (URL primaria di G3):
 - Deve apparire `GamesRecentRail` in cima al contenuto
 - Stato vuoto (utente nuovo, recents store vuoto, libreria vuota): mostra empty hint
 - Stato popolato (utente con giochi in libreria): mostra fino a 5 card
 - Click su una card → naviga a `/library/games/[id]?tab=aiChat`
 - Naviga in `/games?tab=catalog` → il rail appare anche qui
-- Naviga in `/games?tab=library` → il rail appare anche qui
+- Naviga in `/games?tab=kb` → il rail appare anche qui
+
+> NB: `http://localhost:3000/dashboard` ha **struttura diversa** (EntityZone, GreetingStrip) e **NON** è oggetto di questo PR. Il rail NON appare lì. Se la spec richiederà successivamente di estendere il rail al `/dashboard`, sarà un follow-up plan dedicato.
 
 Annota differenze visive (spacing, colori) come issue follow-up: NON correggere in questa PR salvo regressioni gravi (es. layout shift, overlap, scroll bloccato).
 
@@ -806,19 +826,28 @@ git push
 
 ---
 
-## Spec Self-Review (effettuato — risultati)
+## Spec Self-Review (post indipendent review pass — fix applicati)
 
-**Spec coverage**: questo plan copre **solo G3** parzialmente — il widget recents (valore principale) è incluso; il wiring catalog v2 è stato spostato in plan separato dopo il review (vedi scope reduction in alto). I goal G1, G2, G4, G5 hanno plan separati.
+**Plan-review history**:
+1. **Self-review #1** (autore): catturato lo scope reduction su catalog v2 wiring. Mancato di verificare il file target del wiring e la shape esatta di `useRecentsStore`.
+2. **Independent review** (subagent code-reviewer): VERDETTO **REJECT** su Task 3 + 3 critical issue (file target sbagliato, shape `visitedAt` sbagliata, `MAX_RECENTS=4` ignorato).
+3. **Fix applicati inline**:
+   - Task 3 ri-targettato a `apps/web/src/app/(authenticated)/games/page.tsx` (NON `dashboard/DashboardClient.tsx`)
+   - Tutti i `visitedAt` nei test convertiti da ISO string a Unix ms (`number`)
+   - Test di troncamento ridotto da 6→4 item con nota esplicita su `MAX_RECENTS=4`
+   - Step 0.3 trasformato da "verifica e annota" a "shape già documentata, procedi"
+   - Smoke test (Step 4.3) corretto: `/games?tab=library` è la URL primaria, NON `/dashboard`
+   - Comandi shell con path `(authenticated)` quotati invece di escapati per shell-agnostic
 
-**Placeholder scan**: rimasti solo i placeholder intenzionali `XXX` (numero issue) e `YYY` (numero PR), che vanno sostituiti dall'engineer eseguente al momento dell'apertura issue/PR. Nessun TBD/TODO/etc. nel codice.
+**Spec coverage residua**: questo plan copre G3 limitatamente al widget recents su `/games?tab=*`. Catalog v2 wiring rimane in backlog (vedi Out of scope). G3.2 (resume da background) non coperto qui — accettato come scope reduction documentata. G3.1 (`≤2 tap`) non ha test E2E Playwright — accettato per ridurre scope; va aggiunto nel plan separato G2 (fast-resume audit) che già toccherà E2E.
 
-**Type consistency** (verificata contro file reali):
-- `GamesRecentRailItem.kbBadge: 'ready' | 'processing' | 'none'` — re-esportato come `RecentKbBadge` dal barrel ed usato nello stesso modo in Task 3.3. ✓
-- `useRecentLibraryGames(limit)` ritorna `{ entries, isLoading, isError }` — Task 3.3 mappa `entries` su `recentRailItems` con shape compatibile con `GamesRecentRailItem`. ✓
-- `UserLibraryEntry` ha campi `gameId`, `gameTitle`, `gameImageUrl`, `kbIndexedCount`, `kbProcessingCount` (verificati in `library.schemas.ts:32-63`). ✓
-- `useLibrary({ page, pageSize })` segnatura — verificata in `useLibrary.ts:69`. Step 1.4 ha warning esplicito per riallineare se differente. ✓
-- `useRecentsStore` shape — Step 0.3 forza l'engineer a verificarla prima di scrivere i test. ✓
+**Placeholder scan finale**: rimasti solo `XXX` (issue#) e `YYY` (PR#) intenzionali. Nessun TBD/TODO/etc. nel codice.
 
-**Ambiguity check**: l'unica ambiguità residua è la shape di `useRecentsStore` (campo `visitedAt` vs `addedAt`, `items` vs `entries`). Step 0.3 esiste apposta per risolverla prima di iniziare il Task 1.
+**Type consistency finale** (verificata contro file reali post-review):
+- `RecentItem.visitedAt: number` — confermato `apps/web/src/stores/use-recents.ts:15`. Test allineati. ✓
+- `MAX_RECENTS = 4` — confermato `apps/web/src/stores/use-recents.ts:7`. Test usa 4 item con nota. ✓
+- `UserLibraryEntry` campi — confermato `library.schemas.ts:32-63`. ✓
+- File target wiring `games/page.tsx` — confermato presenza di `if (activeTab === 'library') return <GamesLibraryView />` a riga ~109 (lettura precedente). ✓
+- Import set in `games/page.tsx`: `useSearchParams` ✓ presente, `useRouter` ✗ assente (va aggiunto), `useMemo` ✓ presente. ✓
 
-**Risk noted**: lo spec a monte assumeva che i componenti v2 Wave B.1 fossero riusabili anche per il catalog tab — questa assunzione è stata invalidata dal review. Il plan riduce lo scope di conseguenza e documenta esplicitamente il follow-up necessario, senza promettere ciò che lo spec assumeva.
+**Risk residuo**: lo spec a monte assumeva di poter wire-are catalog v2 con Wave B.1 components — assunzione invalidata. Spec richiederà revisione (annotare il fatto in §G3 dello spec come amendment).

@@ -234,6 +234,38 @@
     <p>L'app React desktop/mobile già in corso: Dashboard, Library, Detail, Graph, Chat, Session. Punto di partenza — il design system qui documentato la estende e raffina.</p>
     <div class="tags"><span class="tag">React</span><span class="tag">Tweakable</span><span class="tag">Baseline</span></div>
   </a>
+
+  <a class="hub-card e-game" href="sp4-add-game-bgg-step.html">
+    <div class="arrow">→</div>
+    <div class="num">SG · #911</div>
+    <h3>AddGameDrawer — BGG search step</h3>
+    <p>6 stati per la ricerca BoardGameGeek nel wizard PrivateGame: empty, loading, results (6 card), throttled HTTP 202 con countdown, auto-redirect a SharedGameCatalog, tier-quota lock free-tier 3/3. Consumer SG1 #902 smoke test.</p>
+    <div class="tags"><span class="tag">6 stati</span><span class="tag">BGG sync</span><span class="tag">Tier-quota</span></div>
+  </a>
+
+  <a class="hub-card e-kb" href="sp4-add-game-pdf-dedup.html">
+    <div class="arrow">→</div>
+    <div class="num">SG · #912</div>
+    <h3>AddGameDrawer — PDF dedup/riuso</h3>
+    <p>6 stati per dedup SHA256 hash PDF: source shared catalog / propria libreria / altro utente (privacy-safe), confirm reuse, force re-upload con progress 4-stage, AGENT_CREATION_FAILED toast. Consumer SG1 #902.</p>
+    <div class="tags"><span class="tag">6 stati</span><span class="tag">SHA256 dedup</span><span class="tag">Privacy</span></div>
+  </a>
+
+  <a class="hub-card e-kb" href="sp4-kb-hub.html">
+    <div class="arrow">→</div>
+    <div class="num">SG · #913</div>
+    <h3>KB hub overview (per game)</h3>
+    <p>7 stati gestione KB: hub default 5 PDF rows con status badge, empty state, row actions menu, re-index modal con cost preview, RAPTOR rebuild free vs pro tier-locked, coverage stats card riusabile, delete dialog con cleanup orfani RAPTOR+graph. Consumer SG2 #903.</p>
+    <div class="tags"><span class="tag">7 stati</span><span class="tag">RAPTOR rebuild</span><span class="tag">Cleanup orfani</span></div>
+  </a>
+
+  <a class="hub-card e-kb" href="sp4-upload-wizard-extended.html">
+    <div class="arrow">→</div>
+    <div class="num">SG · #914</div>
+    <h3>Upload wizard estensione</h3>
+    <p>4 stati extra wizard upload: source picker 4 card (file/BGG/riusa/URL coming-soon), pre-upload dedup check con hash SHA256, cost preview con 3 provider option (OpenAI/Cohere/local), indexing async progress 5-step timeline + failed variant retry. Consumer SG1 #902 + SG2 #903.</p>
+    <div class="tags"><span class="tag">4 stati</span><span class="tag">Cost preview</span><span class="tag">Async progress</span></div>
+  </a>
 </div>
 
 <section class="palette-row">

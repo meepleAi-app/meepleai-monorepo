@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,9 @@ namespace Api.Tests.Integration.Smoke;
 /// Issue #910 (SG0) — Foundation: Bruno setup + smoke persona.
 /// </summary>
 [Collection("Integration-GroupA")]
+[Trait("Category", TestCategories.Integration)]
+[Trait("BoundedContext", "Authentication")]
+[Trait("Dependency", "PostgreSQL")]
 public sealed class SmokeAaronFixtureTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
@@ -57,8 +61,10 @@ public sealed class SmokeAaronFixtureTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        _dbContext?.Dispose();
-        (_serviceProvider as IDisposable)?.Dispose();
+        if (_dbContext is not null)
+        {
+            await _dbContext.DisposeAsync();
+        }
 
         if (!string.IsNullOrEmpty(_databaseName))
         {
@@ -70,6 +76,11 @@ public sealed class SmokeAaronFixtureTests : IAsyncLifetime
             {
                 // Ignore cleanup errors
             }
+        }
+
+        if (_serviceProvider is IDisposable disposable)
+        {
+            disposable.Dispose();
         }
     }
 
@@ -106,5 +117,6 @@ public sealed class SmokeAaronFixtureTests : IAsyncLifetime
         aaron.EmailVerified.Should().BeTrue("avoid grace-period gating in smoke tests");
         aaron.Status.Should().Be("Active");
         aaron.PasswordHash.Should().NotBeNullOrEmpty("must be able to login");
+        aaron.PasswordHash.Should().StartWith("v1.", "must use PBKDF2 versioned hash format from PasswordHashingService (NOT BCrypt)");
     }
 }

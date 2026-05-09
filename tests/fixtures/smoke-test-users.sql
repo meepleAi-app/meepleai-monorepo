@@ -8,10 +8,14 @@
 -- ⚠️  DO NOT confuse with badsworm@alice.it (Aaron, real superadmin in DB)
 -- ⚠️  DO NOT confuse with smoke-user@meepleai.test (admin, used by nightly E2E)
 --
--- BCrypt hash regenerable with:
---   python -c "import bcrypt; print(bcrypt.hashpw(b'SmokeAaron1!!', bcrypt.gensalt(12)).decode())"
--- (committed once — DO NOT regenerate per run or integration tests will break;
---  the hash below was generated with Python bcrypt, cost factor 12)
+-- PBKDF2-HMAC-SHA256 hash (matches PasswordHashingService exactly).
+-- Format: v1.<iterations>.<base64Salt>.<base64Hash>
+-- Parameters: 210 000 iterations | SHA-256 | 16-byte salt | 32-byte hash | UTF-8 password encoding
+-- To regenerate, use a standalone C# console app with Rfc2898DeriveBytes.Pbkdf2:
+--   var salt = RandomNumberGenerator.GetBytes(16);
+--   var hash = Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes("SmokeAaron1!!"), salt, 210_000, HashAlgorithmName.SHA256, 32);
+--   Console.WriteLine("v1.210000." + Convert.ToBase64String(salt) + "." + Convert.ToBase64String(hash));
+-- (committed once — DO NOT regenerate per run or integration tests will break)
 --
 -- UUID note: "Id" column is PostgreSQL uuid type (strict RFC-4122).
 -- We use a memorable but valid v4 UUID: version nibble = 4, variant nibble = 8.
@@ -48,7 +52,7 @@ VALUES (
     '00000000-0000-4000-8000-000000005a01',
     'smoke-aaron@meepleai.test',
     'Smoke Aaron Free-Tier',
-    '$2b$12$67gcjKPZeNs3ZRyiR2u0duROna5jW0RAwSN2GWQOjjw3Bu0/vbmk6',
+    'v1.210000.tHsjIM/Tr5TZr/5g06Cniw==.BItsiXLcDjIEvCl0VvzcvTjzAHpTrF1A7HROlLrqKJY=',
     'user',
     'free',
     NOW(),

@@ -131,7 +131,7 @@ jobs:
         ports:
           - 6379:6379
 
-    # Note: Qdrant removed (Issue #4861) - vector search uses pgvector inside PostgreSQL.
+    # Note: pgvector removed (Issue #4861) - vector search uses pgvector inside PostgreSQL.
 
     steps:
       - name: Checkout code

@@ -238,9 +238,6 @@ jobs:
           --health-retries 10
         ports:
           - 6379:6379
-
-    # Note: Qdrant removed (Issue #4861) — vector search uses pgvector inside PostgreSQL.
-
     defaults:
       run:
         working-directory: apps/api
@@ -436,9 +433,6 @@ jobs:
           --health-retries 5
         ports:
           - 6379:6379
-
-    # Note: Qdrant removed (Issue #4861) — vector search uses pgvector inside PostgreSQL.
-
     defaults:
       run:
         working-directory: apps/web

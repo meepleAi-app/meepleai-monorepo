@@ -26,12 +26,14 @@ internal sealed class TranslatedParagraphConfiguration : IEntityTypeConfiguratio
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").IsRequired();
 
+        // Issue #886: AppliedGlossaryTerms is mapped natively as a primitive collection.
+        // Npgsql translates `string[]` ↔ Postgres `text[]` directly, no value converter needed.
+        // The previous HasConversion(IReadOnlyList<string> → string[]) failed at model
+        // finalization because EF Core 8+ auto-inserts an `IEnumerable<string> → string`
+        // element converter that cannot be composed with the entity-level converter.
         builder.Property(e => e.AppliedGlossaryTerms)
             .HasColumnName("applied_glossary_terms")
-            .HasColumnType("text[]")
-            .HasConversion(
-                v => v.ToArray(),
-                v => (IReadOnlyList<string>)v.ToList().AsReadOnly());
+            .HasColumnType("text[]");
 
         builder.HasIndex(e => new { e.CampaignId, e.ParagraphNumber })
             .HasDatabaseName("ix_translated_paragraphs_campaign_paragraph");

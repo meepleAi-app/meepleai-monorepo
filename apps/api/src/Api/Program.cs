@@ -756,6 +756,10 @@ v1Api.MapMonitoringEndpoints();        // Issues #891 + #893: Infrastructure hea
 v1Api.MapSessionEndpoints();           // Session management
 v1Api.MapSessionFlowEndpoints();       // Session Flow v2.1 (T9): KB readiness, pause/resume, turn-order, score+diary, diary reads
 
+// ALPHA + non-alpha: public shared-games search/list (needed by AddGameDrawer catalog tab)
+// Issue #893: was gated under !isAlphaMode causing 404s in alpha-mode demo.
+Api.Routing.SharedGameCatalogPublicEndpoints.Map(v1Api);
+
 // ═══ NON-ALPHA: Extended endpoints (gated behind ALPHA_MODE) ═══
 if (!isAlphaMode)
 {

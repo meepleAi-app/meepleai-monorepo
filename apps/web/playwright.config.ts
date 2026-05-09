@@ -190,6 +190,48 @@ export default defineConfig({
       },
     },
 
+    // Demo Alpha Happy Path - Mobile (Pixel 5) - local + staging targets
+    // Run: pnpm exec playwright test --project=demo-mobile-local --headed
+    {
+      name: 'demo-mobile-local',
+      testDir: './e2e/demo',
+      testMatch: /alpha-happy-path\.spec\.ts/,
+      use: {
+        ...devices['Pixel 5'],
+        viewport: { width: 390, height: 844 },
+        baseURL: 'http://localhost:3000',
+        screenshot: 'on',
+        video: 'retain-on-failure',
+        trace: 'retain-on-failure',
+      },
+      fullyParallel: false,
+      workers: 1,
+      timeout: 15 * 60_000,
+      retries: 0,
+    },
+    {
+      name: 'demo-mobile-staging',
+      testDir: './e2e/demo',
+      testMatch: /alpha-happy-path\.spec\.ts/,
+      use: {
+        ...devices['Pixel 5'],
+        viewport: { width: 390, height: 844 },
+        baseURL: 'https://meepleai.app',
+        screenshot: 'on',
+        video: 'retain-on-failure',
+        trace: 'retain-on-failure',
+        // Cloudflare Access Service Token headers (required for meepleai.app SSO bypass)
+        extraHTTPHeaders: {
+          'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID ?? '',
+          'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET ?? '',
+        },
+      },
+      fullyParallel: false,
+      workers: 1,
+      timeout: 20 * 60_000, // staging più lento + slowMo
+      retries: 0,
+    },
+
     // Admin First-Time Setup - Serial execution for first-time deployment validation
     {
       name: 'admin-first-time-setup',

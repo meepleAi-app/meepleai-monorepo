@@ -16,6 +16,12 @@ public sealed class TranslatedParagraph
     public GamebookPageType PageType { get; private set; }
     public string SourceTextEn { get; private set; } = default!;
     public string TranslatedTextIt { get; private set; } = default!;
+    // Issue #886: typed as string[] (not IReadOnlyList<string>) because Npgsql maps string[]
+    // natively to Postgres text[]. EF Core 8+ infers IReadOnlyList<string> as a primitive
+    // collection and inserts an element converter that conflicts with any user HasConversion.
+    // Treat the array as immutable: the private setter prevents reassignment, but callers
+    // holding the reference must not mutate elements in place. DTO projections correctly
+    // widen back to IReadOnlyList<string> at the boundary.
     public string[] AppliedGlossaryTerms { get; private set; } = Array.Empty<string>();
     public DateTimeOffset CreatedAt { get; private set; }
     public Guid CreatedBy { get; private set; }

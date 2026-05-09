@@ -101,7 +101,6 @@ test.describe('Iter 1.A — Gamebook campaign play page', () => {
     await expect(page.getByText(/§\s*—/)).toBeVisible();
   });
 
-  // eslint-disable-next-line playwright/no-skipped-test
   test.skip('@dogfood Aaron full setup tutorial flow with Nanolith real KB', () => {
     // Manual run by Aaron — NOT in CI. See design doc §3 N1.1 scenario.
     // Prerequisites:

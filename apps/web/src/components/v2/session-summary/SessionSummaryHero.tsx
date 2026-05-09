@@ -282,9 +282,8 @@ export function SessionSummaryHero({
         className
       )}
       style={{
-        // TODO #807-followup: two-entity radial+linear gradient (session+toolkit) — keep inline
-        // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: two-entity radial+linear gradient (session+toolkit); CSS vars cannot carry alpha stops in style string
         background:
+          // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: two-entity radial+linear gradient (session+toolkit); CSS vars cannot carry alpha stops in style string
           'radial-gradient(ellipse at 50% 0%, hsla(240,60%,55%,0.2) 0%, transparent 60%), linear-gradient(180deg, hsla(142,70%,31%,0.04) 0%, transparent 100%)',
       }}
     >

@@ -110,7 +110,7 @@ flowchart TD
     subgraph "Indexing Pipeline"
         Indexing --> Chunking[TextChunkingService<br/>Sentence-level chunking]
         Chunking --> Embedding[EmbeddingService<br/>Generate embeddings<br/>Ollama: nomic-embed-text]
-        Embedding --> Qdrant[QdrantService<br/>Index vector chunks]
+        Embedding --> pgvector[pgvector<br/>Index vector chunks]
         Qdrant --> Complete[✓ Indexing Complete<br/>Ready for RAG queries]
     end
 

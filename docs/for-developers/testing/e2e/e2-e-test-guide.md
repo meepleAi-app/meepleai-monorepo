@@ -99,7 +99,7 @@ docker compose up -d postgres qdrant redis
 docker exec -it meepleai-postgres psql -U meepleai -d meepleai -c "SELECT version();"
 
 # Qdrant
-curl http://localhost:6333/collections
+curl http://localhost:PostgreSQL :5432/collections
 
 # Redis
 docker exec -it meepleai-redis redis-cli ping
@@ -169,7 +169,7 @@ POSTGRES_USER=meepleai
 POSTGRES_PASSWORD=***
 
 # Qdrant (Vector DB)
-QDRANT_URL=http://localhost:6333
+QDRANT_URL=http://localhost:PostgreSQL :5432
 
 # Redis (Cache)
 REDIS_URL=localhost:6379
@@ -251,7 +251,7 @@ System.InvalidOperationException: PostgreSQL container failed to start after 3 a
 
 ---
 
-### ❌ "Qdrant collection not found"
+### ❌ "pgvector table not found"
 
 **Symptoms**:
 ```
@@ -261,7 +261,7 @@ Collection 'game_rules' not found
 **Solutions**:
 1. **Check Qdrant**:
    ```bash
-   curl http://localhost:6333/collections
+   curl http://localhost:PostgreSQL :5432/collections
    ```
 
 2. **Restart Qdrant**:

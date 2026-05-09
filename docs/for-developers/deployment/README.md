@@ -165,7 +165,7 @@ ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69
 | Unstructured | https://meepleai.app/services/unstructured | 8001 |
 | SmolDocling | https://meepleai.app/services/smoldocling | 8002 |
 | Ollama | https://meepleai.app/services/ollama | 11434 |
-| Qdrant | https://meepleai.app/services/qdrant | 6333 |
+| pgvector | https://meepleai.app/services/qdrant | PostgreSQL :5432 |
 | Grafana | https://meepleai.app/grafana | 3000 |
 | Prometheus | https://meepleai.app/prometheus | 9090 |
 
@@ -398,7 +398,7 @@ sudo ufw allow 22/tcp 80/tcp 443/tcp && sudo ufw enable
 ```bash
 curl http://localhost:8080/health                     # API
 docker exec meepleai-postgres pg_isready -U postgres  # DB
-curl http://localhost:6333/healthz                     # Qdrant
+curl http://localhost:PostgreSQL :5432/healthz                     # Qdrant
 docker exec meepleai-redis redis-cli ping             # Redis
 ```
 

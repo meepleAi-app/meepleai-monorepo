@@ -67,7 +67,7 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
     public async Task ProcessAsync_WithRaptorIndexer_AndMoreThan3Chunks_CallsBuildTreeAsync()
     {
         // Arrange
-        var pdfDoc = SeedPdfDocument("Uploading");
+        var pdfDoc = SeedPdfDocument("Pending");
         SetupExtractorToReturn("chunk1 text. chunk2 text. chunk3 text. chunk4 text.", 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
@@ -116,7 +116,7 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
     public async Task ProcessAsync_WithoutRaptorIndexer_DoesNotThrow()
     {
         // Arrange
-        var pdfDoc = SeedPdfDocument("Uploading");
+        var pdfDoc = SeedPdfDocument("Pending");
         SetupExtractorToReturn("chunk1. chunk2. chunk3. chunk4.", 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
@@ -140,7 +140,7 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
     public async Task ProcessAsync_WhenBuildTreeAsyncThrows_ContinuesProcessing()
     {
         // Arrange
-        var pdfDoc = SeedPdfDocument("Uploading");
+        var pdfDoc = SeedPdfDocument("Pending");
         SetupExtractorToReturn("chunk1. chunk2. chunk3. chunk4.", 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
@@ -168,7 +168,7 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
     public async Task ProcessAsync_With3OrFewerChunks_SkipsRaptor()
     {
         // Arrange
-        var pdfDoc = SeedPdfDocument("Uploading");
+        var pdfDoc = SeedPdfDocument("Pending");
         SetupExtractorToReturn("chunk1. chunk2. chunk3.", 3);
         SetupChunkingToReturn(3); // Exactly 3 chunks — threshold not met
         SetupEmbeddingsToReturn(3);
@@ -203,7 +203,7 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
             ContentType = "application/pdf",
             FileSizeBytes = 1024,
             UploadedByUserId = Guid.NewGuid(),
-            ProcessingState = "Uploading",
+            ProcessingState = "Pending",
             UploadedAt = DateTime.UtcNow
         };
         _db.PdfDocuments.Add(pdfDoc);
@@ -247,7 +247,7 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
             ContentType = "application/pdf",
             FileSizeBytes = 1024,
             UploadedByUserId = Guid.NewGuid(),
-            ProcessingState = "Uploading",
+            ProcessingState = "Pending",
             UploadedAt = DateTime.UtcNow
         };
         _db.PdfDocuments.Add(pdfDoc);

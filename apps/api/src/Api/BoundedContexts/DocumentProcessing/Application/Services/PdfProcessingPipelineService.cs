@@ -83,33 +83,40 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
         try
         {
-            // Load and validate
+            // Atomic claim: transition Pending → Extracting in a single UPDATE.
+            // - Returns 1 row if this worker successfully claimed the job.
+            // - Returns 0 rows if any other state (Uploading, Ready, Failed, …)
+            //   meaning another worker (e.g. the upload-time background task) owns it
+            //   or the PDF is already terminal. Stuck-state recovery is handled
+            //   separately by RetryFailedPdfsJob, not here.
+            // FindAsync would suffer L1-cache staleness when another scope writes the
+            // row mid-flight; an atomic UPDATE bypasses that entirely.
+            var rowsClaimed = await _db.Database.ExecuteSqlInterpolatedAsync(
+                $@"UPDATE pdf_documents
+                   SET processing_state = 'Extracting', ""ProcessingError"" = NULL
+                   WHERE ""Id"" = {pdfDocumentId} AND processing_state = 'Pending'",
+                cancellationToken).ConfigureAwait(false);
+
+            if (rowsClaimed == 0)
+            {
+                _logger.LogInformation(
+                    "[PdfPipeline] PDF {PdfId} not in Pending state (already claimed or terminal), skipping",
+                    pdfId);
+                return;
+            }
+
+            // Re-load with tracked entity for the rest of the pipeline.
             var pdfDoc = await _db.PdfDocuments
                 .FindAsync(new object[] { pdfDocumentId }, cancellationToken)
                 .ConfigureAwait(false);
 
             if (pdfDoc == null)
             {
-                _logger.LogError("[PdfPipeline] PDF document {PdfId} not found in database", pdfId);
+                _logger.LogError("[PdfPipeline] PDF document {PdfId} disappeared after claim", pdfId);
                 return;
             }
-
-            // Idempotency: skip if already completed or failed
-            var readyState = nameof(PdfProcessingState.Ready);
-            var failedState = nameof(PdfProcessingState.Failed);
-            if (string.Equals(pdfDoc.ProcessingState, readyState, StringComparison.Ordinal)
-                || string.Equals(pdfDoc.ProcessingState, failedState, StringComparison.Ordinal))
-            {
-                _logger.LogInformation(
-                    "[PdfPipeline] PDF {PdfId} already in terminal state ({Status}), skipping",
-                    pdfId, pdfDoc.ProcessingState);
-                return;
-            }
-
-            // Issue #4215: Transition to Extracting state
-            pdfDoc.ProcessingState = "Extracting";
-            pdfDoc.ProcessingError = null;
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            // Refresh tracked entity to reflect the UPDATE we just executed.
+            await _db.Entry(pdfDoc).ReloadAsync(cancellationToken).ConfigureAwait(false);
 
             // Step 1: Extract text
             _logger.LogInformation("[PdfPipeline] Step 1/4: Extracting text from {PdfId}", pdfId);

@@ -11,6 +11,7 @@ using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
@@ -79,7 +80,11 @@ internal partial class UploadPdfCommandHandler
 
             // Complete processing
             _logger.LogInformation("🎉 [PDF-DEBUG] Step 5: Finalizing processing for {PdfId}", pdfId);
-            await FinalizeProcessingAsync(pdfId, pdfDoc, userId, db, quotaService, startTime, cancellationToken).ConfigureAwait(false);
+            // Resolve mediator from the local async scope. The handler-injected `_mediator`
+            // belongs to the original HTTP request scope, which has long since been disposed
+            // by the time this background task reaches finalize for a multi-MB PDF.
+            var scopedMediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            await FinalizeProcessingAsync(pdfId, pdfDoc, userId, db, quotaService, scopedMediator, startTime, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("✅ [PDF-DEBUG] ProcessPdfAsync COMPLETE for {PdfId}", pdfId);
         }
         catch (OperationCanceledException)
@@ -126,7 +131,14 @@ internal partial class UploadPdfCommandHandler
         }
 
         _logger.LogInformation("🔍 [PDF-DEBUG-VALIDATE] Querying database for PDF {PdfId}", pdfId);
-        var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
+        // AsTracking required: DbContext default is NoTracking (PERF-06), and FindAsync
+        // does not override per-DbContext default behavior — entity would otherwise be
+        // returned untracked and all mutations to it during the pipeline would be silently
+        // dropped at SaveChangesAsync.
+        var pdfDoc = await db.PdfDocuments
+            .AsTracking()
+            .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken)
+            .ConfigureAwait(false);
         if (pdfDoc == null)
         {
             _logger.LogError("❌ [PDF-DEBUG-VALIDATE] PDF document {PdfId} NOT FOUND in database", pdfId);
@@ -499,7 +511,11 @@ internal partial class UploadPdfCommandHandler
         CancellationToken cancellationToken)
     {
         var pdfGuid = Guid.Parse(pdfId);
-        var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken).ConfigureAwait(false);
+        // AsTracking required (DbContext default is NoTracking — PERF-06).
+        var vectorDoc = await db.VectorDocuments
+            .AsTracking()
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken)
+            .ConfigureAwait(false);
 
         if (vectorDoc == null)
         {
@@ -601,8 +617,9 @@ internal partial class UploadPdfCommandHandler
         var gameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
         var language = pdfDoc.Language ?? "en";
 
-        // Find VectorDocument for this PDF
+        // Find VectorDocument for this PDF (read-only here — no AsTracking needed)
         var vectorDoc = await db.VectorDocuments
+            .AsTracking()
             .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken)
             .ConfigureAwait(false);
 
@@ -667,6 +684,7 @@ internal partial class UploadPdfCommandHandler
         Guid userId,
         MeepleAiDbContext db,
         IPdfUploadQuotaService quotaService,
+        IMediator scopedMediator,
         DateTime startTime,
         CancellationToken cancellationToken)
     {
@@ -680,9 +698,11 @@ internal partial class UploadPdfCommandHandler
         // Publish PdfStateChangedEvent so downstream handlers fire:
         // AutoCreateAgentOnPdfReadyHandler (admin PDFs), PdfNotificationEventHandler, PdfStateChangedMetricsEventHandler.
         // Must be published after SaveChanges so handlers can query the updated entity.
+        // Use scopedMediator (resolved from the live async scope), not the handler's _mediator
+        // field which references the disposed HTTP request scope.
         if (Guid.TryParse(pdfId, out var pdfGuidForEvent))
         {
-            await _mediator.Publish(
+            await scopedMediator.Publish(
                 new PdfStateChangedEvent(pdfGuidForEvent, PdfProcessingState.Indexing, PdfProcessingState.Ready, userId),
                 CancellationToken.None).ConfigureAwait(false);
         }
@@ -713,7 +733,10 @@ internal partial class UploadPdfCommandHandler
 
         if (Guid.TryParse(pdfId, out var cancelledPdfGuid))
         {
-            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { cancelledPdfGuid }, CancellationToken.None).ConfigureAwait(false);
+            var pdfDoc = await db.PdfDocuments
+                .AsTracking()
+                .FirstOrDefaultAsync(p => p.Id == cancelledPdfGuid, CancellationToken.None)
+                .ConfigureAwait(false);
             if (pdfDoc != null)
             {
                 pdfDoc.ProcessingState = "Failed";
@@ -744,7 +767,10 @@ internal partial class UploadPdfCommandHandler
 
         if (Guid.TryParse(pdfId, out var errorPdfGuid))
         {
-            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { errorPdfGuid }, cancellationToken).ConfigureAwait(false);
+            var pdfDoc = await db.PdfDocuments
+                .AsTracking()
+                .FirstOrDefaultAsync(p => p.Id == errorPdfGuid, cancellationToken)
+                .ConfigureAwait(false);
             if (pdfDoc != null)
             {
                 pdfDoc.ProcessingState = "Failed";
@@ -773,7 +799,11 @@ internal partial class UploadPdfCommandHandler
                 return;
             }
 
-            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
+            // AsTracking required (DbContext default is NoTracking — PERF-06).
+            var pdfDoc = await db.PdfDocuments
+                .AsTracking()
+                .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken)
+                .ConfigureAwait(false);
             if (pdfDoc == null) return;
 
             var elapsed = _timeProvider.GetUtcNow().UtcDateTime - startTime;

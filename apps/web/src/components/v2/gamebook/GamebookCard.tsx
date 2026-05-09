@@ -216,6 +216,7 @@ interface CoverProps {
 function Cover({ cover, emoji, pagesLabel, status }: CoverProps): ReactElement {
   // Default fallback gradient (game→agent warm tone for visual brand consistency).
   // TODO #807-followup: two-hue warm gradient (hue 28/38) — near game entity but distinct shade; keep inline
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: two-hue warm gradient (game+agent); template literal, CSS vars cannot carry multi-stop gradients
   const fallbackGradient = `linear-gradient(155deg, hsl(28, 80%, 38%) 0%, hsl(38, 92%, 60%) 100%)`;
   const background = cover ?? fallbackGradient;
 

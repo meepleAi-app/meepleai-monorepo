@@ -178,6 +178,7 @@ function PodiumPlace({ entry, tied, podiumPlaceAriaLabel }: PodiumPlaceProps): R
         <span
           aria-hidden="true"
           className={clsx(
+            // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: toolkit glow in Tailwind arbitrary drop-shadow; no entity-token drop-shadow utility exists
             'mb-[-4px] leading-none drop-shadow-[0_0_12px_hsla(142,70%,31%,0.6)]',
             'text-2xl sm:text-3xl'
           )}
@@ -195,7 +196,8 @@ function PodiumPlace({ entry, tied, podiumPlaceAriaLabel }: PodiumPlaceProps): R
             ? '3px solid var(--color-entity-toolkit)'
             : '2px solid var(--bg-card, white)',
           boxShadow: isWinner
-            ? '0 0 30px hsla(142,70%,31%,0.4), 0 4px 14px hsla(142,70%,31%,0.3)'
+            ? // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: toolkit glow boxShadow with alpha; JS style prop, Tailwind shadow utilities cannot target alpha entity colors
+              '0 0 30px hsla(142,70%,31%,0.4), 0 4px 14px hsla(142,70%,31%,0.3)'
             : '0 4px 12px rgba(0,0,0,.18)',
           fontSize: place === 1 ? '1.5rem' : '1.125rem',
         }}
@@ -243,7 +245,8 @@ function PodiumPlace({ entry, tied, podiumPlaceAriaLabel }: PodiumPlaceProps): R
           height: PEDESTAL_HEIGHT_PX[place],
           // TODO #807-followup: entity alpha gradient — keep inline (JS style, alpha stops)
           background: isWinner
-            ? 'linear-gradient(180deg, hsla(142,70%,31%,0.18), hsla(142,70%,31%,0.08))'
+            ? // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: toolkit alpha gradient (pedestal); CSS vars cannot carry alpha stops in style string
+              'linear-gradient(180deg, hsla(142,70%,31%,0.18), hsla(142,70%,31%,0.08))'
             : 'linear-gradient(180deg, var(--bg-muted, #f8fafc), var(--bg-hover, #f1f5f9))',
         }}
       >
@@ -280,6 +283,7 @@ export function SessionSummaryHero({
       )}
       style={{
         // TODO #807-followup: two-entity radial+linear gradient (session+toolkit) — keep inline
+        // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: two-entity radial+linear gradient (session+toolkit); CSS vars cannot carry alpha stops in style string
         background:
           'radial-gradient(ellipse at 50% 0%, hsla(240,60%,55%,0.2) 0%, transparent 60%), linear-gradient(180deg, hsla(142,70%,31%,0.04) 0%, transparent 100%)',
       }}

@@ -51,25 +51,42 @@ const ENTITY_TEXT: Record<ConnectionBarEntity, string> = ENTITY_TEXT_HSL;
 // P2 #807 Task 6+7+8: ENTITY_TEXT already uses ENTITY_TEXT_HSL (token-aligned).
 // ENTITY_BG_ALPHA + ENTITY_RING_ALPHA remain inline HSL — fed into JS style objects
 // (background + border CSS properties with alpha). Cannot use Tailwind utilities here.
+// TODO #807-followup: replace with CSS vars when entity color vars gain alpha-stop support
 const ENTITY_BG_ALPHA: Record<ConnectionBarEntity, string> = {
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
   game: 'hsla(25, 95%, 39%, 0.1)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
   player: 'hsla(262, 83%, 58%, 0.1)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
   agent: 'hsla(38, 92%, 33%, 0.1)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
   chat: 'hsla(220, 80%, 55%, 0.1)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
   kb: 'hsla(210, 40%, 48%, 0.1)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
   event: 'hsla(350, 89%, 48%, 0.1)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
   session: 'hsla(240, 60%, 45%, 0.1)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
   toolkit: 'hsla(142, 70%, 31%, 0.1)',
 };
 
 const ENTITY_RING_ALPHA: Record<ConnectionBarEntity, string> = {
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
   game: 'hsla(25, 95%, 39%, 0.3)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
   player: 'hsla(262, 83%, 58%, 0.3)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
   agent: 'hsla(38, 92%, 33%, 0.3)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
   chat: 'hsla(220, 80%, 55%, 0.3)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
   kb: 'hsla(210, 40%, 48%, 0.3)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
   event: 'hsla(350, 89%, 48%, 0.3)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
   session: 'hsla(240, 60%, 45%, 0.3)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
   toolkit: 'hsla(142, 70%, 31%, 0.3)',
 };
 

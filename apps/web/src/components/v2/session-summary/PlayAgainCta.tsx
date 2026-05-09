@@ -66,6 +66,7 @@ export function PlayAgainCta({
       )}
       style={{
         /* TODO #807-followup: two-entity gradient (game+session) — keep inline until CSS vars support alpha stops */
+        // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: two-entity alpha gradient (game+session); CSS vars cannot carry alpha stops in style string
         background: 'linear-gradient(135deg, hsla(25,95%,45%,0.1) 0%, hsla(240,60%,55%,0.1) 100%)',
       }}
     >

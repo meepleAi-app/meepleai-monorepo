@@ -124,6 +124,7 @@ export function PhotosGallery({
                 // TODO #807-followup: two-entity gradient (session+toolkit) — keep inline until CSS vars support alpha stops
                 <div
                   aria-hidden="true"
+                  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: two-entity alpha gradient in Tailwind arbitrary class; CSS vars cannot carry alpha in from-[]/to-[]
                   className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[hsla(240,60%,55%,0.18)] to-[hsla(142,70%,31%,0.1)] text-3xl"
                 >
                   📷

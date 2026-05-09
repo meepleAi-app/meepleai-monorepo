@@ -89,6 +89,7 @@ function tokensFor(source: 'catalog' | 'bgg'): SourceTokens {
     return {
       borderCls: 'border-entity-document',
       shadowCls: 'ring-4 ring-entity-document/15',
+      // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: kb+tool two-hue gradient; CSS vars cannot carry multi-stop gradients in style string
       coverGradient: 'linear-gradient(155deg, hsl(210, 50%, 28%), hsl(195, 80%, 50%))',
       accentBgCls: 'bg-entity-document',
       fallbackEmoji: '🌐',
@@ -97,6 +98,7 @@ function tokensFor(source: 'catalog' | 'bgg'): SourceTokens {
   return {
     borderCls: 'border-entity-game',
     shadowCls: 'ring-4 ring-entity-game/15',
+    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: game+agent two-hue warm gradient; CSS vars cannot carry multi-stop gradients in style string
     coverGradient: 'linear-gradient(155deg, hsl(28, 80%, 38%), hsl(38, 92%, 60%))',
     accentBgCls: 'bg-entity-game',
     fallbackEmoji: '📖',

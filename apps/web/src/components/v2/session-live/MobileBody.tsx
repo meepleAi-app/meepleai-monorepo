@@ -89,9 +89,11 @@ export function MobileBody({
                 className={[
                   'flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5',
                   'text-xs font-medium transition-colors focus-visible:outline-none',
+                  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: session hue in Tailwind arbitrary classes (ring/text/border); no dark-bg light-text entity token exists
                   'focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[hsl(240,60%,70%)]',
                   isActive
-                    ? 'text-[hsl(240,60%,70%)] border-t-2 border-[hsl(240,60%,70%)] -mt-0.5'
+                    ? // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: session hue in Tailwind arbitrary classes (active state); no dark-bg light-text entity token exists
+                      'text-[hsl(240,60%,70%)] border-t-2 border-[hsl(240,60%,70%)] -mt-0.5'
                     : 'text-slate-500 hover:text-slate-300 border-t-2 border-transparent -mt-0.5',
                 ].join(' ')}
               >

@@ -205,8 +205,10 @@ export function SessionShareCard({
           // TODO #807-followup: two-entity radial gradient (session+toolkit) — keep inline until CSS vars support alpha stops
           backgroundImage:
             theme === 'dark'
-              ? 'radial-gradient(circle at 20% 0%, hsla(240,60%,55%,0.3) 0%, transparent 60%), radial-gradient(circle at 80% 100%, hsla(142,70%,31%,0.18) 0%, transparent 50%)'
-              : 'radial-gradient(circle at 20% 0%, hsla(240,60%,55%,0.18) 0%, transparent 60%), radial-gradient(circle at 80% 100%, hsla(142,70%,31%,0.1) 0%, transparent 50%)',
+              ? // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: dark theme two-entity radial gradient (session+toolkit) with alpha stops; CSS vars cannot express this
+                'radial-gradient(circle at 20% 0%, hsla(240,60%,55%,0.3) 0%, transparent 60%), radial-gradient(circle at 80% 100%, hsla(142,70%,31%,0.18) 0%, transparent 50%)'
+              : // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: light theme two-entity radial gradient (session+toolkit) with alpha stops; CSS vars cannot express this
+                'radial-gradient(circle at 20% 0%, hsla(240,60%,55%,0.18) 0%, transparent 60%), radial-gradient(circle at 80% 100%, hsla(142,70%,31%,0.1) 0%, transparent 50%)',
         }}
       >
         <span aria-hidden="true" className="absolute right-4 top-3 text-5xl opacity-20">
@@ -214,6 +216,7 @@ export function SessionShareCard({
         </span>
         <div className="relative z-10 flex h-full flex-col justify-between p-6">
           <div>
+            {/* eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: toolkit dark text in Tailwind arbitrary class; no dark-text toolkit entity token exists */}
             <div className="inline-flex items-center gap-1 rounded-full bg-entity-toolkit/18 px-2 py-0.5 font-mono text-[9px] font-extrabold uppercase tracking-wider text-[hsl(142,70%,25%)]">
               <span aria-hidden="true">🏆</span>
             </div>
@@ -250,6 +253,7 @@ export function SessionShareCard({
               {/* TODO #807-followup: two-entity brand gradient (game+event) — keep inline */}
               <span
                 aria-hidden="true"
+                // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: two-entity brand gradient (game+event) in Tailwind arbitrary class; CSS vars cannot carry multi-hue gradient
                 className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm bg-gradient-to-br from-[hsl(25,95%,39%)] to-[hsl(350,89%,48%)] text-[8px] font-extrabold text-white"
               >
                 M

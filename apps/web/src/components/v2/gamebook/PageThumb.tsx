@@ -192,6 +192,7 @@ export function PageThumb({
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 rounded-md"
+          // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: event entity inset ring with alpha; JS style prop, Tailwind ring utilities cannot target inset with alpha
           style={{ boxShadow: 'inset 0 0 0 1px hsla(350,89%,48%,0.4)' }}
         />
       )}

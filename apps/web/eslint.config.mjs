@@ -14,6 +14,8 @@ import importPlugin from "eslint-plugin-import";
 import noIncompleteSanitization from "./eslint-rules/no-incomplete-sanitization.js";
 // V2 design system rule (Issue #572)
 import noHardcodedHex from "./eslint-rules/no-hardcoded-hex.js";
+// V2 entity HSL regression guard (P2 Issue #807 Task 9)
+import noInlineHslV2 from "./eslint-rules/no-inline-hsl-v2.js";
 
 export default [
   {
@@ -94,6 +96,7 @@ export default [
         rules: {
           "no-incomplete-sanitization": noIncompleteSanitization,
           "no-hardcoded-hex": noHardcodedHex,
+          "no-inline-hsl-v2": noInlineHslV2,
         },
       },
     },
@@ -514,7 +517,7 @@ export default [
       ],
     },
   },
-  // V2 design system: forbid hardcoded color literals in v2 components.
+  // V2 design system: forbid hardcoded color literals in v2 UI primitives.
   // V2 components must consume design tokens via entityHsl() or hsl(var(--c-*)).
   // Issue #572 — see docs/frontend/token-audit-2026-04-26.md.
   // The rule does not apply outside src/components/ui/v2/ — V1 components,
@@ -524,6 +527,27 @@ export default [
     files: ["src/components/ui/v2/**/*.{ts,tsx}"],
     rules: {
       "local/no-hardcoded-hex": "error",
+    },
+  },
+  // V2 entity HSL regression guard: forbid inline hsl()/hsla() literals whose
+  // hue matches a known entity color signature in v2 feature compositions.
+  // Applies to src/components/v2/** (feature comps, distinct from ui/v2 primitives).
+  // Use getEntityToken() from @/components/ui/v2/entity-tokens or Tailwind utilities
+  // (text-entity-game, bg-entity-event/10) instead.
+  // Unavoidable JS style props (multi-entity alpha gradients) must be silenced with:
+  //   // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- <reason>
+  // P2 Issue #807 Task 9 — see docs/for-developers/frontend/v2-token-system.md.
+  {
+    files: ["src/components/v2/**/*.{ts,tsx}"],
+    plugins: {
+      "meepleai": {
+        rules: {
+          "no-inline-hsl-v2": noInlineHslV2,
+        },
+      },
+    },
+    rules: {
+      "meepleai/no-inline-hsl-v2": "error",
     },
   },
   // Configuration for components rendering user-uploaded images.

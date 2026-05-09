@@ -58,6 +58,7 @@ function typeLabel(type: ActionLogEntry['type'], labels: ActionLogTimelineLabels
 function typeColor(type: ActionLogEntry['type']): string {
   const map: Record<ActionLogEntry['type'], string> = {
     score: 'text-emerald-400',
+    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: session hue in Tailwind arbitrary class; no `text-entity-session/light` token exists for dark-bg variant
     tool: 'text-[hsl(240,60%,70%)]',
     agent: 'text-amber-400',
     chat: 'text-sky-400',

@@ -62,6 +62,7 @@ export function EmptyGamebooks({
         className="flex h-24 w-24 items-center justify-center rounded-3xl border border-dashed border-entity-game/40 sm:h-28 sm:w-28"
         style={{
           /* TODO #807-followup: two-entity gradient (game+event) — keep inline until CSS vars support alpha stops */
+          // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: two-entity alpha gradient (game+event); CSS vars cannot carry alpha stops in style string
           background: 'linear-gradient(155deg, hsla(25,95%,45%,0.18), hsla(350,89%,60%,0.14))',
         }}
       >

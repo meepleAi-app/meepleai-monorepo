@@ -43,4 +43,11 @@ public static class HealthCheckTags
     /// Failure results in overall status = Degraded.
     /// </summary>
     public const string NonCritical = "non-critical";
+
+    /// <summary>
+    /// Optional service - registered only when an opt-in provider is selected at runtime.
+    /// Used by readiness/liveness predicates to exclude pluggable providers from probe
+    /// aggregation, so swapping the active backend does not pollute the global health signal.
+    /// </summary>
+    public const string Optional = "optional";
 }

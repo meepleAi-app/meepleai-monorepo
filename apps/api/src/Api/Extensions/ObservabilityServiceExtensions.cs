@@ -124,7 +124,7 @@ internal static class ObservabilityServiceExtensions
         AddExternalHealthChecks(healthChecksBuilder, configuration);
 
         // Add comprehensive health checks for AI, External APIs, and Monitoring
-        healthChecksBuilder.AddComprehensiveHealthChecks();
+        healthChecksBuilder.AddComprehensiveHealthChecks(configuration);
 
         return services;
     }

@@ -1,10 +1,11 @@
 # V2 Migration Component Matrix
 
-> 🔒 **FREEZE 2026-05-06**: SP6 v2 expansion (and any new v2 component using current
-> design tokens) is FROZEN until [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807)
-> Fase 2 (token redesign) lands. See [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808)
-> for the freeze policy. `pending` rows in this matrix are NOT pickable until lift-criteria
-> in #808 are met. Bugfix/perf/tests on existing `done` rows are still allowed.
+> ✅ **FREEZE LIFTED 2026-05-09** (post P2 #807 token redesign — was issued 2026-05-06 via [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808)):
+> SP6 v2 expansion e nuovi v2 components ora **pickable**.
+> CSS vars `--c-*` + `--e-*` AA-aligned (audit Iter 2: tutti 18 ratios ≥ 4.5:1 light + dark).
+> Tailwind utilities `text-entity-*`, `bg-entity-event/10`, etc. generano colori AA-compliant.
+> [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807) e [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808) entrambi closed via questa PR.
+> Reference: `docs/for-developers/frontend/v2-token-system.md` + audit `v2-a11y-token-audit.md`.
 
 > Wave A closeout — Step 5 (Issue #573).
 > Pre-requisite for Phase 1+2 of the v2 design migration ([spec](../superpowers/specs/2026-04-26-v2-design-migration.md), section 3.3).

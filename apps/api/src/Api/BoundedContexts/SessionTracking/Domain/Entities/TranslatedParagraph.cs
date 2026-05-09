@@ -16,7 +16,7 @@ public sealed class TranslatedParagraph
     public GamebookPageType PageType { get; private set; }
     public string SourceTextEn { get; private set; } = default!;
     public string TranslatedTextIt { get; private set; } = default!;
-    public IReadOnlyList<string> AppliedGlossaryTerms { get; private set; } = Array.Empty<string>();
+    public string[] AppliedGlossaryTerms { get; private set; } = Array.Empty<string>();
     public DateTimeOffset CreatedAt { get; private set; }
     public Guid CreatedBy { get; private set; }
 
@@ -55,7 +55,7 @@ public sealed class TranslatedParagraph
             PageType = pageType,
             SourceTextEn = sourceEn.Trim(),
             TranslatedTextIt = translatedIt.Trim(),
-            AppliedGlossaryTerms = appliedTerms != null ? appliedTerms.ToList().AsReadOnly() : (IReadOnlyList<string>)Array.Empty<string>(),
+            AppliedGlossaryTerms = appliedTerms != null ? appliedTerms.ToArray() : Array.Empty<string>(),
             CreatedAt = DateTimeOffset.UtcNow,
             CreatedBy = createdBy,
         };

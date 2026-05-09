@@ -28,6 +28,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { EditGameDrawer } from '@/components/admin/shared-games/EditGameDrawer';
 import { GameProcessingQueue } from '@/components/admin/shared-games/GameProcessingQueue';
 import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
 import { PdfUploadSection } from '@/components/admin/shared-games/PdfUploadSection';
@@ -187,6 +188,9 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
   // ── Agent linking state ──────────────────────────────────────────────────
   const [selectedAgentId, setSelectedAgentId] = useState('');
 
+  // ── Edit Game drawer ─────────────────────────────────────────────────────
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+
   const { data: linkedAgent, isLoading: linkedAgentLoading } = useQuery({
     queryKey: ['admin', 'shared-games', gameId, 'linked-agent'],
     queryFn: () => api.sharedGames.getLinkedAgent(gameId),
@@ -310,7 +314,12 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
               RAG Setup
             </Button>
           </Link>
-          <Button variant="outline" size="sm" disabled title="Edit functionality coming soon">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditDrawerOpen(true)}
+            data-testid="edit-game-trigger"
+          >
             Edit Game
           </Button>
         </div>
@@ -705,6 +714,10 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {game && (
+        <EditGameDrawer open={editDrawerOpen} onOpenChange={setEditDrawerOpen} game={game} />
+      )}
     </div>
   );
 }

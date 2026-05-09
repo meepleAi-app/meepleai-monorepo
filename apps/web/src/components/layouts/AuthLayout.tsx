@@ -88,7 +88,10 @@ export function AuthLayout({
       </header>
 
       {/* Main Content - Centered Card */}
-      <main className="flex-1 flex items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
+      <main
+        id="main-content"
+        className="flex-1 flex items-center justify-center px-4 py-8 sm:px-6 lg:px-8"
+      >
         <div className={cn('w-full max-w-md', className)}>
           {/* Optional Title Section */}
           {(title || subtitle) && (

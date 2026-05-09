@@ -18,7 +18,9 @@ export const GameSchema = z.object({
   maxPlayers: z.number().int().positive().nullable(),
   minPlayTimeMinutes: z.number().int().positive().nullable(),
   maxPlayTimeMinutes: z.number().int().positive().nullable(),
-  bggId: z.number().int().positive().nullable(),
+  // API returns 0 for unknown/unsynced bgg ids (not nullable on the wire);
+  // accept 0 as a sentinel rather than rejecting it via .positive().
+  bggId: z.number().int().nonnegative().nullable(),
   createdAt: z.string().datetime({ offset: true }),
   // Issue #1830: UI-003 GameCard enhancements
   imageUrl: z.string().url().nullable().optional(),

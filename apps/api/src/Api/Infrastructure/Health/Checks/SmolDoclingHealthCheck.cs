@@ -30,7 +30,9 @@ public class SmolDoclingHealthCheck : IHealthCheck
         var smoldoclingUrl = _configuration["PdfProcessing:Extractor:SmolDocling:ApiUrl"];
         if (string.IsNullOrWhiteSpace(smoldoclingUrl))
         {
-            return HealthCheckResult.Degraded("SmolDocling API not configured");
+            // Provider selected but URL missing — real misconfiguration, surface as Unhealthy
+            // so monitoring catches it (consistent with OllamaHealthCheck handling).
+            return HealthCheckResult.Unhealthy("SmolDocling API URL missing — provider selected but PdfProcessing:Extractor:SmolDocling:ApiUrl unset");
         }
 
         try

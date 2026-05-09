@@ -30,7 +30,9 @@ public class UnstructuredHealthCheck : IHealthCheck
         var unstructuredUrl = _configuration["PdfProcessing:Extractor:Unstructured:ApiUrl"];
         if (string.IsNullOrWhiteSpace(unstructuredUrl))
         {
-            return HealthCheckResult.Degraded("Unstructured API not configured");
+            // Provider selected but URL missing — real misconfiguration, surface as Unhealthy
+            // so monitoring catches it (consistent with OllamaHealthCheck handling).
+            return HealthCheckResult.Unhealthy("Unstructured API URL missing — provider selected but PdfProcessing:Extractor:Unstructured:ApiUrl unset");
         }
 
         try

@@ -69,7 +69,10 @@ public static class HealthCheckServiceExtensions
         // provider is actually in use. The "Orchestrator" provider routes to both
         // Unstructured and SmolDocling; explicit single-provider settings register
         // only that one. Other values (e.g. "Docnet") register neither.
-        var pdfProvider = configuration["PdfProcessing:Extractor:Provider"] ?? "Orchestrator";
+        // Null/empty/whitespace falls back to "Orchestrator" to keep dev defaults
+        // working when the key is absent or blank in configuration.
+        var pdfProviderRaw = configuration["PdfProcessing:Extractor:Provider"];
+        var pdfProvider = string.IsNullOrWhiteSpace(pdfProviderRaw) ? "Orchestrator" : pdfProviderRaw;
         var registerUnstructured = pdfProvider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase) ||
                                    pdfProvider.Equals("Unstructured", StringComparison.OrdinalIgnoreCase);
         var registerSmolDocling = pdfProvider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase) ||

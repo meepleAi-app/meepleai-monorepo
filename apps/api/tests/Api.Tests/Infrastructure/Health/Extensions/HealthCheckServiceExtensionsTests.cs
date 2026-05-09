@@ -73,6 +73,23 @@ public sealed class HealthCheckServiceExtensionsTests
     }
 
     [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void PdfProvider_Null_Or_Whitespace_Falls_Back_To_Default_Orchestrator(string? value)
+    {
+        // Defensive: an explicitly null/empty/whitespace key must behave like an absent key
+        // so we never silently disable both extractors due to a config glitch.
+        var registrations = RegisterAndCollect(new()
+        {
+            ["PdfProcessing:Extractor:Provider"] = value
+        });
+
+        registrations.Should().Contain(r => r.Name == "unstructured");
+        registrations.Should().Contain(r => r.Name == "smoldocling");
+    }
+
+    [Theory]
     [InlineData(null, false)]
     [InlineData("", false)]
     [InlineData("   ", false)]

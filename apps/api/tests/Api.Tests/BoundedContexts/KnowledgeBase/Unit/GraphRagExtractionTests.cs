@@ -67,7 +67,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WithEntityExtractor_CallsExtractAndSavesRelations()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         var longText = new string('A', 300); // >= 200 char threshold
         SetupExtractorToReturn(longText, 4);
         SetupChunkingToReturn(4);
@@ -117,7 +117,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WithoutEntityExtractor_DoesNotThrow()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         SetupExtractorToReturn(new string('A', 300), 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
@@ -141,7 +141,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WhenEntityExtractionThrows_ContinuesProcessing()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         SetupExtractorToReturn(new string('A', 300), 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
@@ -168,7 +168,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WithShortText_SkipsEntityExtraction()
     {
         // Arrange — text shorter than 200 chars
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         SetupExtractorToReturn("Short text.", 1);
         SetupChunkingToReturn(1);
         SetupEmbeddingsToReturn(1);
@@ -192,7 +192,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WithEmptyExtractionResult_DoesNotSaveRelations()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         SetupExtractorToReturn(new string('A', 300), 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
@@ -223,7 +223,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_TruncatesTextTo8000Chars()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         var longText = new string('A', 15000); // Much longer than 8000
         SetupExtractorToReturn(longText, 4);
         SetupChunkingToReturn(4);
@@ -277,6 +277,18 @@ public sealed class GraphRagExtractionTests : IDisposable
 
     private void SeedPdfDocument(string state)
     {
+        // Issue #890: PdfGameIdResolver looks up Games by SharedGameId. Without a matching
+        // GameEntity, the resolver returns null and the pipeline skips entity extraction —
+        // which makes any Verify(_gameId) on the entity-extractor mock fail. Seed the Game
+        // so the resolver returns _gameId.
+        var game = new GameEntity
+        {
+            Id = _gameId,
+            Name = "Catan",
+            SharedGameId = _gameId,
+        };
+        _db.Games.Add(game);
+
         var pdfDoc = new PdfDocumentEntity
         {
             Id = _pdfDocumentId,

@@ -91,11 +91,38 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             //   separately by RetryFailedPdfsJob, not here.
             // FindAsync would suffer L1-cache staleness when another scope writes the
             // row mid-flight; an atomic UPDATE bypasses that entirely.
-            var rowsClaimed = await _db.Database.ExecuteSqlInterpolatedAsync(
-                $@"UPDATE pdf_documents
-                   SET processing_state = 'Extracting', ""ProcessingError"" = NULL
-                   WHERE ""Id"" = {pdfDocumentId} AND processing_state = 'Pending'",
-                cancellationToken).ConfigureAwait(false);
+            //
+            // Issue #890: ExecuteSqlInterpolatedAsync is relational-only. Unit tests
+            // that exercise this pipeline use the InMemory provider (no concurrency,
+            // no L1-cache staleness concern), where the equivalent operation is a
+            // tracked Find + SaveChanges. Production paths still go through the
+            // atomic SQL UPDATE.
+            int rowsClaimed;
+            if (_db.Database.IsRelational())
+            {
+                rowsClaimed = await _db.Database.ExecuteSqlInterpolatedAsync(
+                    $@"UPDATE pdf_documents
+                       SET processing_state = 'Extracting', ""ProcessingError"" = NULL
+                       WHERE ""Id"" = {pdfDocumentId} AND processing_state = 'Pending'",
+                    cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                var existing = await _db.PdfDocuments
+                    .FindAsync(new object[] { pdfDocumentId }, cancellationToken)
+                    .ConfigureAwait(false);
+                if (existing != null && string.Equals(existing.ProcessingState, "Pending", StringComparison.Ordinal))
+                {
+                    existing.ProcessingState = "Extracting";
+                    existing.ProcessingError = null;
+                    await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                    rowsClaimed = 1;
+                }
+                else
+                {
+                    rowsClaimed = 0;
+                }
+            }
 
             if (rowsClaimed == 0)
             {

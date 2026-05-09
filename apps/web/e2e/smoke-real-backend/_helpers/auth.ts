@@ -14,7 +14,7 @@ import type { APIRequestContext, Page } from '@playwright/test';
 
 const API_BASE = process.env.SMOKE_API_BASE ?? 'http://localhost:8080';
 const SEED_EMAIL = process.env.SMOKE_USER_EMAIL ?? 'smoke-user@meepleai.test';
-const SEED_PASSWORD = process.env.SMOKE_USER_PASSWORD ?? 'SmokeUser1!';
+const SEED_PASSWORD = process.env.SMOKE_USER_PASSWORD ?? 'SmokeUser1!!';
 
 export async function smokeLogin(request: APIRequestContext): Promise<{ cookieHeader: string }> {
   const res = await request.post(`${API_BASE}/api/v1/auth/login`, {

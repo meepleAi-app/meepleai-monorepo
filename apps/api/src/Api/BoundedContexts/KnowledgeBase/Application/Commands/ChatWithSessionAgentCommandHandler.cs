@@ -27,7 +27,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <summary>
 /// Handler for ChatWithSessionAgentCommand.
 /// Implements SSE streaming for session-based agent chat with full RAG pipeline:
-/// embedding → Qdrant search → prompt assembly → LLM streaming → persistence.
+/// embedding → pgvector search → prompt assembly → LLM streaming → persistence.
 /// Issue #3184 (AGT-010): Session-Based Agent Lifecycle.
 /// Issue #4386: SSE Stream → ChatThread Persistence Hook
 /// Issue #5313: Wired to real HybridLlmService for LLM streaming.

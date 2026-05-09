@@ -11,7 +11,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// Handles VectorSemanticSearchQuery.
 /// Embeds the query string via IEmbeddingService, then searches pgvector via IVectorStoreAdapter.
 /// Supports single-game (GameId provided) and cross-game (all completed documents) search.
-/// Task 4: Qdrant → pgvector migration.
+/// Task 4: pgvector vector search.
 /// </summary>
 internal sealed class VectorSemanticSearchQueryHandler
     : IQueryHandler<VectorSemanticSearchQuery, VectorSemanticSearchResultDto>

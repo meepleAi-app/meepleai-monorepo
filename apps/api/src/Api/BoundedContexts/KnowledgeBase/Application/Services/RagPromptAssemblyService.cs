@@ -18,7 +18,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
 /// <summary>
 /// Orchestrates the full RAG prompt assembly pipeline.
-/// Phase 0: embedding → Qdrant search → prompt assembly.
+/// Phase 0: embedding → pgvector search → prompt assembly.
 /// Phase 1: + reranking, query expansion, enhanced confidence scoring.
 /// Phase 2: + chain-of-thought, sentence window, hybrid search (vector + FTS).
 /// </summary>
@@ -248,8 +248,6 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
             // Step 2: Generate embeddings for all queries
             var allChunks = new List<SearchResultItem>();
-
-            // Vector search removed (Qdrant dependency removed).
             // Embeddings are still generated for potential future use.
             foreach (var query in queries)
             {

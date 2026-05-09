@@ -4,7 +4,7 @@
 namespace Api.Services;
 
 /// <summary>
-/// Interface for hybrid search combining vector similarity (Qdrant) with keyword matching (PostgreSQL).
+/// Interface for hybrid search combining vector similarity (pgvector) with keyword matching (PostgreSQL FTS).
 /// Uses Reciprocal Rank Fusion (RRF) algorithm to merge and rank results.
 /// Part of AI-14 implementation.
 /// </summary>
@@ -41,7 +41,7 @@ internal interface IHybridSearchService
 internal enum SearchMode
 {
     /// <summary>
-    /// Vector similarity search only (semantic search via Qdrant embeddings).
+    /// Vector similarity search only (semantic search via pgvector embeddings).
     /// Best for: Natural language questions, conceptual queries.
     /// </summary>
     Semantic,
@@ -80,7 +80,7 @@ internal record HybridSearchResult
     public required float HybridScore { get; init; }
 
     /// <summary>
-    /// Vector similarity score from Qdrant (0-1 range, cosine similarity).
+    /// Vector similarity score from pgvector (0-1 range, cosine similarity).
     /// Null if SearchMode.Keyword used.
     /// </summary>
     public float? VectorScore { get; init; }

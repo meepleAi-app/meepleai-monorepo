@@ -71,7 +71,7 @@ internal partial class UploadPdfCommandHandler
             }
             _logger.LogInformation("✅ [PDF-DEBUG] Embeddings SUCCESS: {EmbeddingCount} vectors generated", embeddings!.Count);
 
-            // Step 4: Index in Qdrant (80-100%)
+            // Step 4: Index in pgvector (80-100%)
             _logger.LogInformation("🔍 [PDF-DEBUG] Step 4: Starting IndexInVectorStoreAsync for {PdfId}", pdfId);
             await IndexInVectorStoreAsync(
                 pdfId, userId, pdfDoc, allDocumentChunks, embeddings!,
@@ -602,7 +602,7 @@ internal partial class UploadPdfCommandHandler
 
     /// <summary>
     /// Persists embeddings to the pgvector_embeddings table for semantic search.
-    /// Replaces the removed Qdrant indexing path.
+    /// Replaces the removed pgvector indexing path.
     /// </summary>
     private async Task SaveEmbeddingsToPgVectorAsync(
         string pdfId,

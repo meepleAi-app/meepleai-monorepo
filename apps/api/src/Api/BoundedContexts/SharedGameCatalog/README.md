@@ -340,7 +340,7 @@ psql -f ../../../docs/05-testing/shared-catalog-fts-performance-validation.sql
 ## Architecture Decisions
 
 - **ADR-016**: Bounded Context Separation (SharedGameCatalog vs GameManagement)
-- **ADR-018**: PostgreSQL FTS Technology Choice (vs Elasticsearch/Qdrant)
+- **ADR-018**: PostgreSQL FTS Technology Choice (vs Elasticsearch)
 - **ADR-019**: Two-Step Delete Workflow Governance
 
 See: `docs/01-architecture/adr/`
@@ -457,7 +457,7 @@ See: `docs/05-testing/performance/pdf-wizard-performance-report.md`
 
 ## Future Enhancements
 
-- **Semantic Search**: "Find similar games" using Qdrant vector similarity
+- **Semantic Search**: "Find similar games" using pgvector vector similarity
 - **Advanced Filters**: Designer, publisher, year range, complexity rating
 - **User Contributions**: Allow users to suggest FAQs/errata for admin review
 - **Localization**: Multi-language support (EN, IT, DE, FR)

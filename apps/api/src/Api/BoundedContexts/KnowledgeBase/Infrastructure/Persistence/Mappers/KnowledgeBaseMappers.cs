@@ -97,8 +97,8 @@ internal static class KnowledgeBaseMappers
     }
 
     /// <summary>
-    /// Creates domain Embedding from Qdrant search result data.
-    /// Note: This is a simplified mapping - real Qdrant results would need proper deserialization.
+    /// Creates domain Embedding from pgvector search result data.
+    /// Note: This is a simplified mapping - real pgvector results would need proper deserialization.
     /// </summary>
     public static Embedding CreateEmbeddingFromQdrant(
         Guid embeddingId,
@@ -122,8 +122,8 @@ internal static class KnowledgeBaseMappers
     }
 
     /// <summary>
-    /// Converts domain Embedding to Qdrant point format.
-    /// Returns tuple with data needed for Qdrant indexing.
+    /// Converts domain Embedding to pgvector point format.
+    /// Returns tuple with data needed for pgvector indexing.
     /// </summary>
     public static (Guid id, float[] vector, Dictionary<string, object> payload) ToQdrantPoint(
         this Embedding embedding)

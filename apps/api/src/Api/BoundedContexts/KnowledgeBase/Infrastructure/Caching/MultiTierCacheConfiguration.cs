@@ -54,15 +54,15 @@ internal class MultiTierCacheConfiguration
     /// </summary>
     public TimeSpan L2Timeout { get; set; } = TimeSpan.FromSeconds(2);
 
-    // === L3: Qdrant Vector Store ===
+    // === L3: pgvector Vector Store ===
 
     /// <summary>
-    /// Enable L3 Qdrant cache tier.
+    /// Enable L3 pgvector cache tier.
     /// </summary>
     public bool L3Enabled { get; set; } = true;
 
     /// <summary>
-    /// Timeout for L3 Qdrant operations.
+    /// Timeout for L3 pgvector operations.
     /// Default: 5 seconds.
     /// </summary>
     public TimeSpan L3Timeout { get; set; } = TimeSpan.FromSeconds(5);

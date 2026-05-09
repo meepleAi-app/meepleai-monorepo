@@ -111,12 +111,12 @@ internal static partial class MeepleAiMetrics
         description: "Embedding generation duration");
 
     /// <summary>
-    /// Histogram for Qdrant indexing duration in milliseconds
+    /// Histogram for pgvector indexing duration in milliseconds
     /// </summary>
     public static readonly Histogram<double> PdfIndexingDuration = Meter.CreateHistogram<double>(
         name: "meepleai.pdf.indexing.duration",
         unit: "ms",
-        description: "Qdrant indexing duration");
+        description: "pgvector indexing duration");
 
     /// <summary>
     /// Records PDF upload attempt with status

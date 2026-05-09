@@ -4,7 +4,7 @@ namespace Api.Infrastructure.Entities;
 
 /// <summary>
 /// Represents a text chunk extracted from a PDF document for hybrid search.
-/// This table mirrors the data stored in Qdrant vector database but enables PostgreSQL full-text search.
+/// This table mirrors the data stored in pgvector vector database but enables PostgreSQL full-text search.
 /// </summary>
 public class TextChunkEntity
 {

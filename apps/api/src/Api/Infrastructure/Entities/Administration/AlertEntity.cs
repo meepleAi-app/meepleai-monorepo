@@ -15,7 +15,7 @@ public class AlertEntity
     public Guid Id { get; set; } = Guid.NewGuid();
 
     /// <summary>
-    /// Type of alert (e.g., "HighErrorRate", "DatabaseDown", "QdrantDown").
+    /// Type of alert (e.g., "HighErrorRate", "DatabaseDown", "VectorStoreDown").
     /// </summary>
     [Required]
     [MaxLength(100)]

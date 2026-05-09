@@ -5,7 +5,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <summary>
 /// Query to retrieve pgvector statistics grouped by game.
 /// Returns total chunk counts, health percentages, and per-game breakdown.
-/// Task 3: Qdrant → pgvector migration.
+/// Task 3: pgvector vector search.
 /// </summary>
 internal sealed record GetVectorStatsQuery() : IQuery<VectorStatsDto>;
 

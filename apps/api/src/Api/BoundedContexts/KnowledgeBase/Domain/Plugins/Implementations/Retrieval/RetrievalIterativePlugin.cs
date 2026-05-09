@@ -240,7 +240,7 @@ public sealed class RetrievalIterativePlugin : RagPluginBase
         int iteration,
         CancellationToken cancellationToken)
     {
-        // Simulated retrieval - in production, this integrates with Qdrant
+        // Simulated retrieval - in production, this integrates with pgvector
         var documents = new List<RetrievedDocument>();
         var random = new Random(StringComparer.Ordinal.GetHashCode(query) + iteration);
 

@@ -7,7 +7,7 @@ public static class HealthCheckTags
 {
     // Service categories
     /// <summary>
-    /// Core infrastructure services (PostgreSQL, Redis, Qdrant).
+    /// Core infrastructure services (PostgreSQL, Redis).
     /// </summary>
     public const string Core = "core";
 

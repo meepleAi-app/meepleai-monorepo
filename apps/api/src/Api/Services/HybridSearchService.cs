@@ -9,7 +9,7 @@ using KbEntities = Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 namespace Api.Services;
 
 /// <summary>
-/// Hybrid search service combining vector similarity (Qdrant) with keyword matching (PostgreSQL).
+/// Hybrid search service combining vector similarity (pgvector) with keyword matching (PostgreSQL FTS).
 /// Implements Reciprocal Rank Fusion (RRF) algorithm for score merging.
 /// Part of AI-14 implementation.
 /// </summary>
@@ -86,7 +86,7 @@ internal class HybridSearchService : IHybridSearchService
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
-        // SERVICE BOUNDARY: Coordinates vector (Qdrant) and keyword (PostgreSQL) search with centralized exception logging
+        // SERVICE BOUNDARY: Coordinates vector (pgvector) and keyword (PostgreSQL FTS) search with centralized exception logging
 #pragma warning restore S125
         catch (Exception ex)
         {

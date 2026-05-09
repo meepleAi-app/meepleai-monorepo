@@ -133,12 +133,12 @@ public class RagPromptAssemblyServiceTests
         };
     }
 
-    #region AssemblePromptAsync - With Chunks (FTS-only after Qdrant removal)
+    #region AssemblePromptAsync - With Chunks (FTS-only post pgvector migration)
 
     [Fact]
     public async Task AssemblePrompt_WithChunks_FtsOnlyScoresBelowThreshold_ReturnsEmptyContext()
     {
-        // Arrange — After Qdrant removal, FTS results go through RRF scoring.
+        // Arrange — After legacy vector removal, FTS results go through RRF scoring.
         // With no vector results, RRF-normalized FTS scores max out at ~0.49,
         // which is below the DefaultMinScore (0.55), so all chunks are filtered out.
         SetupSuccessfulEmbedding();
@@ -167,7 +167,7 @@ public class RagPromptAssemblyServiceTests
     [Fact]
     public async Task AssemblePrompt_WithChunks_FtsOnlyScoresBelowThreshold_CreateNoCitations()
     {
-        // Arrange — After Qdrant removal, FTS-only RRF scores are below MinScore threshold.
+        // Arrange — After legacy vector removal, FTS-only RRF scores are below MinScore threshold.
         SetupSuccessfulEmbedding();
         SetupTextSearchResults(
             CreateChunk("doc1", 0, 0.90f, "Pawns move forward one square.", page: 5),
@@ -392,7 +392,7 @@ public class RagPromptAssemblyServiceTests
     [Fact]
     public async Task AssemblePrompt_RerankerFails_FtsOnlyScoresBelowThreshold_ReturnsEmptyContext()
     {
-        // Arrange — After Qdrant removal, FTS results go through RRF scoring only.
+        // Arrange — After legacy vector removal, FTS results go through RRF scoring only.
         // RRF-normalized FTS scores are below the 0.55 threshold, so reranker
         // is never reached (no chunks pass the filter to be reranked).
         SetupSuccessfulEmbedding();
@@ -593,7 +593,7 @@ public class RagPromptAssemblyServiceTests
 
         // Assert - embedding called for original + 2 expansions = 3 times
         _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
-        // After Qdrant removal, FTS-only RRF scores are below threshold — no citations
+        // After legacy vector removal, FTS-only RRF scores are below threshold — no citations
         result.Citations.Should().BeEmpty();
     }
 
@@ -619,7 +619,7 @@ public class RagPromptAssemblyServiceTests
 
         // Assert - should still work with original query only
         _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
-        // After Qdrant removal, FTS-only RRF scores are below threshold — no citations
+        // After legacy vector removal, FTS-only RRF scores are below threshold — no citations
         result.Citations.Should().BeEmpty();
     }
 
@@ -630,7 +630,7 @@ public class RagPromptAssemblyServiceTests
     [Fact]
     public async Task AssemblePrompt_DuplicateChunks_DeduplicatedAfterRrfFusion()
     {
-        // Arrange — After Qdrant removal, FTS results go through RRF-only scoring.
+        // Arrange — After legacy vector removal, FTS results go through RRF-only scoring.
         // Duplicate FTS entries for the same PdfId+ChunkIndex cause double-counting in RRF,
         // which can boost the normalized score above the 0.55 MinScore threshold.
         // After deduplication, only unique PdfId+ChunkIndex combinations remain.
@@ -926,7 +926,7 @@ public class RagPromptAssemblyServiceTests
     [Fact]
     public async Task AssemblePrompt_WithExpansions_SearchesBaseGame()
     {
-        // Arrange — After Qdrant removal, the hybrid search still calls FTS for the base game.
+        // Arrange — After legacy vector removal, the hybrid search still calls FTS for the base game.
         // Expansion game FTS is no longer triggered because the expansion search was
         // part of the vector search loop which has been removed.
         var expansionGameId = Guid.NewGuid();
@@ -1012,7 +1012,7 @@ public class RagPromptAssemblyServiceTests
             "tutor", "Catan", null, "Question?",
             TestGameId, null, null, "it", CancellationToken.None);
 
-        // Assert — After Qdrant removal, FTS-only RRF scores are below threshold
+        // Assert — After legacy vector removal, FTS-only RRF scores are below threshold
         result.Citations.Should().BeEmpty();
         result.SystemPrompt.Should().NotContain("Expansion Priority");
     }

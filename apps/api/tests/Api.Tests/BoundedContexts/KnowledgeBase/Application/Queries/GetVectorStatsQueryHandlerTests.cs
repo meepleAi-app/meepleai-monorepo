@@ -14,7 +14,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <summary>
 /// Unit tests for GetVectorStatsQueryHandler.
 /// Verifies pgvector stats aggregation by game from VectorDocuments.
-/// Task 3: Qdrant → pgvector migration.
+/// Task 3: pgvector vector search.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public sealed class GetVectorStatsQueryHandlerTests

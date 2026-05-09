@@ -74,9 +74,6 @@ internal static class IntegrationWebApplicationFactory
                         ["BoardGameGeek:Enabled"] = "false",
                         ["Embedding:Enabled"] = "false",
                         ["Embedding:Url"] = "http://localhost:8000",
-                        ["Qdrant:Enabled"] = "false",
-                        ["Qdrant:Host"] = "localhost",
-                        ["Qdrant:Port"] = "6333",
                         // Redis
                         ["Redis:Enabled"] = redisConnectionString != null ? "true" : "false",
                         ["Redis:ConnectionString"] = redisConnectionString ?? "localhost:6379",

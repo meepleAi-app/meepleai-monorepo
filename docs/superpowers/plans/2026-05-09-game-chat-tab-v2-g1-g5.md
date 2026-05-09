@@ -1999,27 +1999,29 @@ interface UseGameChatResult {
 export function useGameChat(gameId: string, initialAgent?: AgentKind): UseGameChatResult;
 ```
 
-**Pre-step**: identifica l'API endpoint backend per "ask agent". Cerca:
+**API endpoint verificato (post review)**: l'unico endpoint QA disponibile è **`POST /api/v1/agents/qa/stream`** (SSE), wrappato da `qaStream()` in `apps/web/src/lib/api/clients/chatClient.ts:399`. NON esiste un endpoint `/qa` non-streaming.
 
-```bash
-grep -rn "POST.*ask\|/api/v1/qa\|askQuestion" apps/web/src/lib --include="*.ts" | head -10
-```
+**Strategia**: l'hook `useGameChat` consuma `qaStream` ma **accumula** tutti i token e mostra il messaggio agent solo quando arriva l'evento `Complete` (type=4). Coerente con Q6 brainstorm "atomica con spinner" — l'utente vede typing indicator finché `Complete` non arriva con answer + citations + confidence.
 
-Se l'API è già wrappata da un client (es. `api.qa.ask()` o `api.agents.ask()`), riusa quello. Altrimenti chiama direttamente con `fetch` o il pattern client esistente.
+Eventi SSE rilevanti:
+- `type=0` StateUpdate (status, chatThreadId) — ignorato
+- `type=4` Complete (answer, snippets, totalTokens, followUpQuestions) — **usato**, contiene tutti i campi
+- `type=5` Error (message) — propaga errore
+- `type=7` Token (string) — ignorato (atomic UX, no streaming token)
 
-- [ ] **Step 9.1: Verifica endpoint API**
+⚠️ **Verifica `QaStreamRequest` shape**: leggi `chatClient.ts:380-400` per vedere i campi accettati. Probabilmente: `{ gameId, agentId?, agentType?, question, chatThreadId? }`.
+
+- [ ] **Step 9.1: Conferma `QaStreamRequest` + `Complete` event shape**
 
 Run:
 ```bash
-grep -rn "qa.ask\|askQuestion\|/api/v1/qa\|/api/v1/agents.*ask" apps/web/src --include="*.ts" | head -15
+grep -B 2 -A 15 "interface QaStreamRequest\|interface QaStreamEvent\|type QaStreamEvent" apps/web/src/lib/api/clients/chatClient.ts
 ```
 
 Annota:
-- Endpoint URL completo
-- Request body shape (deve includere `gameId`, `agentType` o `agentId`, `question`)
-- Response shape (`QaResponse` da `domain.ts:179`)
-
-> ⚠️ Se non trovi un client wrapper, usa `fetch('/api/v1/qa', { method: 'POST', body: JSON.stringify({...}) })`. Il plan TDD assumerà l'API client `api.qa.askQuestion(...)` — adatta al pattern reale del progetto.
+- Campi obbligatori del request
+- Shape esatta del payload `data` per event `type=4` (Complete)
+- Se il payload Complete include `overallConfidence` e `isLowQuality`
 
 - [ ] **Step 9.2: Test failing**
 
@@ -2035,33 +2037,39 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ReactNode } from 'react';
 
-vi.mock('@/lib/api', () => ({
-  api: {
-    qa: {
-      askQuestion: vi.fn(),
-    },
-  },
+vi.mock('@/lib/api/clients/chatClient', () => ({
+  qaStream: vi.fn(),
 }));
 
-import { api } from '@/lib/api';
+import { qaStream } from '@/lib/api/clients/chatClient';
 import { useGameChat } from '../useGameChat';
+
+// Helper: trasforma una lista di event objects in un async generator (mockable)
+async function* mockStream(events: Array<{ type: number; data: unknown }>) {
+  for (const e of events) {
+    yield e;
+  }
+}
 
 function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
 }
 
-const fakeResponse = {
+// Payload del SSE event Complete (type=4) — shape da verificare in Step 9.1
+const fakeCompletePayload = {
   answer: 'Sì, ogni potere si attiva ogni volta…',
   overallConfidence: 0.92,
   isLowQuality: false,
-  citations: [{ pageNumber: 12, snippet: 'Ogni potere…' }],
+  citations: [{ pageNumber: 12, snippet: 'Ogni potere…', documentId: 'd1', relevanceScore: 0.95, copyrightTier: 'full' as const }],
   messageId: 'm-1',
 };
 
+const fakeCompleteEvent = { type: 4, data: fakeCompletePayload };
+
 describe('useGameChat', () => {
   beforeEach(() => {
-    vi.mocked(api.qa.askQuestion).mockReset();
+    vi.mocked(qaStream).mockReset();
   });
 
   it('starts with empty messages and tutor agent', () => {
@@ -2072,7 +2080,7 @@ describe('useGameChat', () => {
   });
 
   it('ask appends user + agent messages on success', async () => {
-    vi.mocked(api.qa.askQuestion).mockResolvedValueOnce(fakeResponse as any);
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream([fakeCompleteEvent]) as any);
     const { result } = renderHook(() => useGameChat('wingspan'), { wrapper });
     await act(async () => {
       await result.current.ask('posso usare potere?');
@@ -2086,21 +2094,29 @@ describe('useGameChat', () => {
   });
 
   it('isLoading transitions correctly during ask', async () => {
-    let resolveResp: (v: any) => void = () => {};
-    vi.mocked(api.qa.askQuestion).mockReturnValueOnce(new Promise(r => { resolveResp = r; }) as any);
+    // Generator che yield-a dopo un await esterno — simula stream lento
+    let releaseStream: () => void = () => {};
+    const slowStream = async function* () {
+      await new Promise<void>(r => { releaseStream = r; });
+      yield fakeCompleteEvent;
+    };
+    vi.mocked(qaStream).mockReturnValueOnce(slowStream() as any);
     const { result } = renderHook(() => useGameChat('wingspan'), { wrapper });
 
     act(() => { void result.current.ask('q'); });
     await waitFor(() => expect(result.current.isLoading).toBe(true));
 
-    await act(async () => {
-      resolveResp(fakeResponse);
-    });
+    await act(async () => { releaseStream(); });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
   });
 
-  it('isError true when API rejects', async () => {
-    vi.mocked(api.qa.askQuestion).mockRejectedValueOnce(new Error('500'));
+  it('isError true when stream throws', async () => {
+    const errorStream = async function* () {
+      throw new Error('500');
+      // unreachable but TS needs yield for generator inference
+      yield fakeCompleteEvent;
+    };
+    vi.mocked(qaStream).mockReturnValueOnce(errorStream() as any);
     const { result } = renderHook(() => useGameChat('wingspan'), { wrapper });
     await act(async () => {
       try {
@@ -2119,7 +2135,7 @@ describe('useGameChat', () => {
   });
 
   it('switchAgent does NOT clear message history', async () => {
-    vi.mocked(api.qa.askQuestion).mockResolvedValueOnce(fakeResponse as any);
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream([fakeCompleteEvent]) as any);
     const { result } = renderHook(() => useGameChat('wingspan'), { wrapper });
     await act(async () => { await result.current.ask('q'); });
     expect(result.current.messages).toHaveLength(2);
@@ -2152,8 +2168,10 @@ Crea `apps/web/src/hooks/queries/useGameChat.ts`:
  * della spec §4.1 sono renderizzati dall'orchestrator in base ai campi
  * della risposta (isLowQuality, outOfContext) — non sono stati hook.
  *
- * Backend: zero modifiche. Usa l'API existente `api.qa.askQuestion()`
- * che ritorna QaResponse (overallConfidence, isLowQuality, citations).
+ * Backend: zero modifiche. Usa l'API existente `qaStream()` (SSE) da
+ * `apps/web/src/lib/api/clients/chatClient.ts` e accumula solo l'evento
+ * `Complete` (type=4) — UX atomica, no streaming token (Q6 brainstorm).
+ * Il payload Complete contiene answer + citations + overallConfidence + isLowQuality.
  *
  * Spec: docs/superpowers/specs/2026-05-09-game-chat-tab-v1-g5-design.md §3.4
  */
@@ -2161,12 +2179,10 @@ Crea `apps/web/src/hooks/queries/useGameChat.ts`:
 
 import { useCallback, useState } from 'react';
 
-import { useMutation } from '@tanstack/react-query';
-
-import { api } from '@/lib/api';
+import { qaStream } from '@/lib/api/clients/chatClient';
 import type { Citation } from '@/types';
 
-import type { AgentKind } from '@/components/v2/game-chat';
+import type { AgentKind } from '@/components/v2/game-chat/GameChatHeader';
 
 export interface ChatMessage {
   readonly id: string;
@@ -2188,24 +2204,27 @@ export interface UseGameChatResult {
   readonly switchAgent: (next: AgentKind) => void;
 }
 
+// Module-private id counter for ephemeral chat message ids (test-mockable).
 let messageIdCounter = 0;
 const nextId = (prefix: string) => `${prefix}-${++messageIdCounter}-${Date.now()}`;
+
+const COMPLETE_EVENT_TYPE = 4;
+const ERROR_EVENT_TYPE = 5;
+
+interface CompletePayload {
+  readonly answer: string;
+  readonly overallConfidence?: number;
+  readonly isLowQuality?: boolean;
+  readonly outOfContext?: boolean;
+  readonly citations?: ReadonlyArray<Citation>;
+  readonly messageId?: string;
+}
 
 export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): UseGameChatResult {
   const [messages, setMessages] = useState<readonly ChatMessage[]>([]);
   const [currentAgent, setCurrentAgent] = useState<AgentKind>(initialAgent);
-
-  const mutation = useMutation({
-    mutationFn: async (question: string) => {
-      // L'API client effettivo va verificato in Step 9.1.
-      // Adatta la firma se differente (es. richiede agentId invece di agentType).
-      return await api.qa.askQuestion({
-        gameId,
-        agentType: currentAgent,
-        question,
-      });
-    },
-  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
 
   const ask = useCallback(async (question: string) => {
     const userMsg: ChatMessage = {
@@ -2215,25 +2234,42 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
       createdAt: new Date().toISOString(),
     };
     setMessages(prev => [...prev, userMsg]);
+    setIsLoading(true);
+    setIsError(false);
 
     try {
-      const response = await mutation.mutateAsync(question);
-      const agentMsg: ChatMessage = {
-        id: response.messageId ?? nextId('a'),
-        role: 'agent',
-        content: response.answer,
-        citations: response.citations,
-        overallConfidence: response.overallConfidence,
-        isLowQuality: response.isLowQuality,
-        outOfContext: (response as any).outOfContext === true,
-        createdAt: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, agentMsg]);
+      const stream = qaStream({
+        gameId,
+        agentType: currentAgent,
+        question,
+      } as any /* QaStreamRequest shape verificato in Step 9.1 */);
+
+      for await (const event of stream) {
+        if (event.type === COMPLETE_EVENT_TYPE) {
+          const payload = event.data as CompletePayload;
+          const agentMsg: ChatMessage = {
+            id: payload.messageId ?? nextId('a'),
+            role: 'agent',
+            content: payload.answer,
+            citations: payload.citations,
+            overallConfidence: payload.overallConfidence,
+            isLowQuality: payload.isLowQuality,
+            outOfContext: payload.outOfContext === true,
+            createdAt: new Date().toISOString(),
+          };
+          setMessages(prev => [...prev, agentMsg]);
+        } else if (event.type === ERROR_EVENT_TYPE) {
+          throw new Error(String((event.data as { message?: string })?.message ?? 'QA stream error'));
+        }
+        // Ignora type=0 (StateUpdate) e type=7 (Token streaming): UX atomica per Q6.
+      }
     } catch (e) {
-      // L'errore viene esposto via mutation.isError; rilancialo per chi vuole catturarlo
+      setIsError(true);
       throw e;
+    } finally {
+      setIsLoading(false);
     }
-  }, [mutation, gameId, currentAgent]);
+  }, [gameId, currentAgent]);
 
   const switchAgent = useCallback((next: AgentKind) => {
     setCurrentAgent(next);
@@ -2241,8 +2277,8 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
 
   return {
     messages,
-    isLoading: mutation.isPending,
-    isError: mutation.isError,
+    isLoading,
+    isError,
     currentAgent,
     ask,
     switchAgent,
@@ -2250,7 +2286,9 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
 }
 ```
 
-> ⚠️ **Adatta a Step 9.1**: se l'API reale è diversa (es. `api.agents.ask({agentId, question})` invece di `api.qa.askQuestion(...)`), aggiorna sia il mock test che la chiamata mutation. Il contract pubblico dell'hook NON cambia.
+> ⚠️ **Adatta a Step 9.1**: se `QaStreamRequest` ha campi diversi (es. richiede `agentId` invece di `agentType`), aggiorna la chiamata `qaStream({...})` rimuovendo il `as any`. Il contract pubblico dell'hook NON cambia.
+>
+> ⚠️ Se il backend espone `Complete` payload SENZA `overallConfidence`/`isLowQuality`/`outOfContext`, alcune feature G5 non saranno funzionanti. **STOP & ESCALATE**: serve coordinamento backend prima di proseguire (oppure mock con valori sintetici per UI demo).
 
 - [ ] **Step 9.5: Run test fino a passare**
 
@@ -2295,46 +2333,68 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ReactNode } from 'react';
 
-vi.mock('@/lib/api', () => ({
-  api: { qa: { askQuestion: vi.fn() } },
+vi.mock('@/lib/api/clients/chatClient', () => ({
+  qaStream: vi.fn(),
 }));
 
-import { api } from '@/lib/api';
+import { qaStream } from '@/lib/api/clients/chatClient';
 import { GameChatTabV2 } from '../GameChatTabV2';
+
+async function* mockStream(events: Array<{ type: number; data: unknown }>) {
+  for (const e of events) yield e;
+}
 
 function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
 }
 
-const happyResp = {
-  answer: 'Sì, ogni potere si attiva ogni volta.',
-  overallConfidence: 0.92,
-  isLowQuality: false,
-  citations: [{ pageNumber: 12, snippet: 'ogni potere…' }],
-  messageId: 'a-1',
+// Citation shape verificata: documentId + pageNumber + snippet + relevanceScore + copyrightTier
+const sampleCitation = {
+  documentId: 'd1',
+  pageNumber: 12,
+  snippet: 'ogni potere…',
+  relevanceScore: 0.95,
+  copyrightTier: 'full' as const,
 };
 
-const lowConfResp = {
-  answer: 'Non sono certo, probabilmente si rimescolano gli scarti.',
-  overallConfidence: 0.42,
-  isLowQuality: true,
-  citations: [{ pageNumber: 6, snippet: 'fine mazzo' }],
-  messageId: 'a-2',
+const happyComplete = {
+  type: 4,
+  data: {
+    answer: 'Sì, ogni potere si attiva ogni volta.',
+    overallConfidence: 0.92,
+    isLowQuality: false,
+    citations: [sampleCitation],
+    messageId: 'a-1',
+  },
 };
 
-const oocResp = {
-  answer: 'Non ho informazioni su Tainted Grail.',
-  overallConfidence: 0.0,
-  isLowQuality: true,
-  citations: [],
-  messageId: 'a-3',
-  outOfContext: true,
-} as any;
+const lowConfComplete = {
+  type: 4,
+  data: {
+    answer: 'Non sono certo, probabilmente si rimescolano gli scarti.',
+    overallConfidence: 0.42,
+    isLowQuality: true,
+    citations: [{ ...sampleCitation, pageNumber: 6, snippet: 'fine mazzo', documentId: 'd2' }],
+    messageId: 'a-2',
+  },
+};
+
+const oocComplete = {
+  type: 4,
+  data: {
+    answer: 'Non ho informazioni su Tainted Grail.',
+    overallConfidence: 0.0,
+    isLowQuality: true,
+    citations: [],
+    messageId: 'a-3',
+    outOfContext: true,
+  },
+};
 
 describe('GameChatTabV2', () => {
   beforeEach(() => {
-    vi.mocked(api.qa.askQuestion).mockReset();
+    vi.mocked(qaStream).mockReset();
   });
 
   it('renders empty state with input bar and suggested prompts', () => {
@@ -2343,7 +2403,7 @@ describe('GameChatTabV2', () => {
   });
 
   it('happy path: ask → user bubble + agent bubble + citation chip + alta badge', async () => {
-    vi.mocked(api.qa.askQuestion).mockResolvedValueOnce(happyResp as any);
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream([happyComplete]) as any);
     render(<GameChatTabV2 gameId="wingspan" />, { wrapper });
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q?' } });
     fireEvent.click(screen.getByRole('button', { name: /invia/i }));
@@ -2354,7 +2414,7 @@ describe('GameChatTabV2', () => {
   });
 
   it('low confidence path: shows disclaimer + bassa badge', async () => {
-    vi.mocked(api.qa.askQuestion).mockResolvedValueOnce(lowConfResp as any);
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream([lowConfComplete]) as any);
     render(<GameChatTabV2 gameId="wingspan" />, { wrapper });
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'edge?' } });
     fireEvent.click(screen.getByRole('button', { name: /invia/i }));
@@ -2363,7 +2423,7 @@ describe('GameChatTabV2', () => {
   });
 
   it('out-of-context path: shows action pills, no confidence color', async () => {
-    vi.mocked(api.qa.askQuestion).mockResolvedValueOnce(oocResp);
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream([oocComplete]) as any);
     render(<GameChatTabV2 gameId="wingspan" />, { wrapper });
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'tg?' } });
     fireEvent.click(screen.getByRole('button', { name: /invia/i }));
@@ -2372,7 +2432,7 @@ describe('GameChatTabV2', () => {
   });
 
   it('citation chip click opens CitationModal', async () => {
-    vi.mocked(api.qa.askQuestion).mockResolvedValueOnce(happyResp as any);
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream([happyComplete]) as any);
     render(<GameChatTabV2 gameId="wingspan" />, { wrapper });
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q?' } });
     fireEvent.click(screen.getByRole('button', { name: /invia/i }));
@@ -2489,15 +2549,23 @@ export function GameChatTabV2({
       <>
         {msg.citations && msg.citations.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2 border-t border-dashed border-[hsl(var(--c-agent)/0.25)] pt-3">
-            {msg.citations.map((c, i) => (
-              <CitationChip
-                key={i}
-                pageNumber={c.pageNumber}
-                sectionTitle={(c as any).sectionTitle ?? `Capitolo ${i + 1}`}
-                snippet={(c as any).snippet}
-                onClick={() => setSelectedCitation(c)}
-              />
-            ))}
+            {msg.citations.map((c, i) => {
+              // Citation type (domain.ts:134) ha pageNumber + snippet ma NO sectionTitle.
+              // Usiamo il primo segmento dello snippet (max 60 char) come "section title".
+              // Se serve un sectionTitle reale in futuro, va aggiunto al QaResponse backend.
+              const previewTitle = c.snippet
+                ? c.snippet.length > 60 ? c.snippet.slice(0, 57) + '…' : c.snippet
+                : `Documento ${i + 1}`;
+              return (
+                <CitationChip
+                  key={`${c.documentId}-${c.pageNumber}-${i}`}
+                  pageNumber={c.pageNumber}
+                  sectionTitle={previewTitle}
+                  snippet={c.snippet}
+                  onClick={() => setSelectedCitation(c)}
+                />
+              );
+            })}
           </div>
         )}
         {msg.isLowQuality && !showOoc && (
@@ -2687,12 +2755,21 @@ git commit -m "feat(web): #915 wire GameChatTabV2 inside GameAiChatTab (V1→V2 
 **Files:**
 - Modify (DELETE): file V1 chat-unified usati esclusivamente da `?tab=aiChat` (lista determinata dall'audit)
 
-- [ ] **Step 12.1: Audit script**
+- [ ] **Step 12.1: Audit script (PowerShell-friendly)**
 
-Run:
+> Su Windows usa Git Bash o PowerShell — entrambi i comandi sono forniti. Su Linux/macOS usa bash.
+
+**Bash (Git Bash, Linux, macOS):**
 ```bash
-grep -rn "from '@/components/chat-unified" apps/web/src --include="*.tsx" --include="*.ts" > /tmp/chat-unified-imports.txt
-cat /tmp/chat-unified-imports.txt
+grep -rn "from '@/components/chat-unified" apps/web/src --include="*.tsx" --include="*.ts" > chat-unified-imports.txt
+cat chat-unified-imports.txt
+```
+
+**PowerShell:**
+```powershell
+Get-ChildItem -Recurse -Path apps/web/src -Include *.ts,*.tsx |
+  Select-String "from '@/components/chat-unified" |
+  Tee-Object -FilePath chat-unified-imports.txt
 ```
 
 Categorizza ogni risultato:
@@ -2703,17 +2780,30 @@ Categorizza ogni risultato:
 
 - [ ] **Step 12.2: Genera lista candidate per delete**
 
-Per ogni componente in `apps/web/src/components/chat-unified/`, conta gli import:
+Per ogni componente in `apps/web/src/components/chat-unified/`, conta gli import esterni:
 
+**Bash (Git Bash, Linux, macOS):**
 ```bash
 for f in apps/web/src/components/chat-unified/*.tsx; do
   name=$(basename "$f" .tsx)
-  count=$(grep -rn "chat-unified/${name}\|from '@/components/chat-unified'" apps/web/src --include="*.tsx" --include="*.ts" | grep -v "chat-unified/${name}\.test\|__tests__" | wc -l)
+  count=$(grep -rln "chat-unified/${name}\b" apps/web/src --include="*.tsx" --include="*.ts" \
+    | grep -v "chat-unified/" | wc -l)
   echo "$count  $name"
 done | sort -n
 ```
 
-I componenti con `count = 0` (importati solo dai loro test, oppure dal barrel non importato altrove) sono candidate per delete sicuro. Fai DOUBLE CHECK manualmente.
+**PowerShell:**
+```powershell
+Get-ChildItem apps/web/src/components/chat-unified -Filter *.tsx -File | ForEach-Object {
+  $name = $_.BaseName
+  $count = (Get-ChildItem -Recurse -Path apps/web/src -Include *.ts,*.tsx |
+            Where-Object { $_.FullName -notmatch 'chat-unified' } |
+            Select-String -Pattern "chat-unified/$name\b" -List).Count
+  "{0,3}  {1}" -f $count, $name
+} | Sort-Object
+```
+
+I componenti con `count = 0` sono candidate per delete sicuro. Fai DOUBLE CHECK manualmente: aprire il file, vedere chi lo importa effettivamente — il barrel `chat-unified/index.ts` (se esiste) potrebbe re-esportare in massa.
 
 - [ ] **Step 12.3: Esegui delete con cautela**
 
@@ -2853,23 +2943,34 @@ git push
 
 ---
 
-## Spec Self-Review (eseguito)
+## Spec Self-Review + Independent Review (storia)
 
-**Spec coverage**: tutti i 12 componenti dello spec §3 sono coperti da Task 1-10 + barrel Task 8 + orchestrator Task 10. Hook §3.4 in Task 9. Wiring §1.1 in Task 11. Removal V1 §5 in Task 12. Matrix update §6.4 in Task 13.4.
+**Plan-review history**:
+1. **Self-review autore** (writing-plans skill): coverage spec OK, 0 placeholder accidentali, type consistency verificata.
+2. **Independent code-reviewer** (subagent): VERDICT **ACCEPT WITH MODIFICATIONS** — 2 critical + 4 major fix richiesti.
+3. **Fix applicati inline**:
+   - **C1**: API `api.qa.askQuestion` non esiste. Riscritto Task 9 per usare `qaStream` (SSE da `chatClient.ts:399`) accumulando solo evento `Complete` (type=4). Test mock usa async generator. UX atomica preservata (Q6 brainstorm).
+   - **C2**: `Citation` type NON ha `sectionTitle`. Task 10 orchestrator ora deriva il "section title" del chip dal primo segmento dello `snippet` (max 60 char), con fallback `Documento ${i+1}` se snippet vuoto. Niente `as any` cast.
+   - **M2**: Step 12.1+12.2 ora forniscono comandi shell sia Bash (Git Bash/Linux/macOS) che PowerShell (Windows nativo).
+   - **M4 (circular import potenziale)**: hook `useGameChat` ora importa `AgentKind` direttamente da `./GameChatHeader` (NON dal barrel) per evitare ciclo barrel↔hook.
+   - **M1 (GameAiChatTab.tsx)**: file confermato esistere (reviewer aveva torto). Plan corretto, no fix necessario.
+   - **M3 (PdfPageModal/Skeleton)**: entrambi confermati esistere. No fix necessario.
 
-**Placeholder scan**: zero `TBD/TODO/...later`. Placeholder intenzionali:
-- `XXX` (issue #) — già 915 hardcoded
+**Spec coverage finale**: tutti i 12 componenti dello spec §3 sono coperti da Task 1-10 + barrel Task 8 + orchestrator Task 10. Hook §3.4 in Task 9. Wiring §1.1 in Task 11. Removal V1 §5 in Task 12. Matrix update §6.4 in Task 13.4.
+
+**Placeholder scan finale**: zero `TBD/TODO/...later` accidentali. Placeholder intenzionali:
 - `YYY` (PR #) — sostituito a Step 13.6
 - `// TODO: enable when G4 lands` nel CitationModal hybrid C — pattern intenzionale documentato
+- `as any` su `QaStreamRequest` in Step 9.4 — esplicitato come "verifica Step 9.1, rimuovi cast quando shape confermato"
 
-**Type consistency**:
+**Type consistency finale**:
 - `AgentKind = 'tutor' | 'arbitro'` definito in `GameChatHeader`, riusato da `GameChatSidebar` + `useGameChat` + `GameChatTabV2` ✓
-- `Citation` type importato da `@/types` (esistente in V1) — coerente ✓
+- `Citation` type importato da `@/types` con campi reali confermati: `documentId`, `pageNumber`, `snippet`, `relevanceScore`, `copyrightTier`, `paraphrasedSnippet?`, `isPublic?` ✓
 - `ConfidenceTier = 'alta' | 'media' | 'bassa'` definito in `ConfidenceBadge`, esposto via barrel ✓
 - `PromptCategory = 'A' | 'B' | 'C' | 'E' | 'F'` (NO 'D' — Q4 brainstorm escluso strategia) ✓
 - `OutOfContextActionKind` enum coerente in test e implementazione ✓
+- API endpoint: `qaStream` con SSE event `type=4` Complete confermato in `chatClient.ts:389-410` ✓
 
-**Risk noted**:
-- API endpoint backend per `useGameChat.ask()` non verificato (Step 9.1 forza la verifica all'engineer). Se l'endpoint reale è diverso da `api.qa.askQuestion(...)`, l'engineer deve adattare l'hook + i test mock. Contract pubblico stabile.
-- `Citation` type shape (Step 7.1): se il campo `sectionTitle` non esiste nello schema reale, l'orchestrator usa fallback `Capitolo ${i+1}` (vedi `GameChatTabV2` Step 10.3). Da rivedere insieme a backend team se serve metadata più ricco.
-- Removal V1 (Task 12): l'audit script può lasciare orfani che vanno categorizzati manualmente. STOP-AND-ASK è esplicito nello Step 12.3.
+**Risk residuo**:
+- Step 9.1 chiede verifica del payload `Complete` event: se backend NON espone `overallConfidence`/`isLowQuality`/`outOfContext`, alcune feature G5 non funzionano. STOP & ESCALATE esplicito (richiede coordinamento backend).
+- Removal V1 (Task 12): audit puo lasciare orfani da categorizzare manualmente. STOP-AND-ASK esplicito nello Step 12.3.

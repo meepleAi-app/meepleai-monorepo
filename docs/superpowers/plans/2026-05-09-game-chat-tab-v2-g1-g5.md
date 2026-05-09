@@ -1999,7 +1999,56 @@ interface UseGameChatResult {
 export function useGameChat(gameId: string, initialAgent?: AgentKind): UseGameChatResult;
 ```
 
-**API endpoint verificato (post review)**: l'unico endpoint QA disponibile è **`POST /api/v1/agents/qa/stream`** (SSE), wrappato da `qaStream()` in `apps/web/src/lib/api/clients/chatClient.ts:399`. NON esiste un endpoint `/qa` non-streaming.
+**API endpoint VERIFICATO (post Step 9.1 esecuzione)**: l'unico endpoint QA disponibile è **`POST /api/v1/agents/qa/stream`** (SSE), wrappato da `qaStream()` in `apps/web/src/lib/api/clients/chatClient.ts:399`. NON esiste un endpoint `/qa` non-streaming.
+
+### Shape REALI verificate (apps/api/src/Api/Models/Contracts.cs:109)
+
+```ts
+// QaStreamRequest (chatClient.ts:351)
+interface QaStreamRequest {
+  gameId: string;
+  query: string;          // ⚠️ "query" NON "question"
+  chatId?: string;
+  responseStyle?: 'concise' | 'detailed';
+  continuationToken?: string;
+  // ❌ NESSUN agentType / agentId — è system agent
+}
+
+// StreamingComplete payload (event type=4)
+interface StreamingComplete {
+  estimatedReadingTimeMinutes: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  confidence: number | null;       // ⚠️ "confidence" NON "overallConfidence"
+  chatThreadId?: string;
+  routingIntent?: string;
+  routingLatencyMs?: number;
+  strategyTier?: string;
+  executionId?: string;
+  Citations?: CitationDto[];       // ⚠️ NOTA: PascalCase nel record C# → JSON serializza come "citations" (camelCase config standard) MA da verificare
+
+  // ❌ NESSUN isLowQuality
+  // ❌ NESSUN outOfContext
+  // ❌ NESSUN answer field
+}
+```
+
+### Gap rispetto allo spec/brainstorm
+
+1. **`answer` arriva via eventi `Token` (type=7)** accumulati — NON nel payload Complete. L'hook DEVE accumulare i token per costruire la risposta completa, poi al Complete fissa il messaggio finale.
+2. **`isLowQuality` NON esiste backend** — derivare frontend: `isLowQuality = confidence !== null && confidence < 0.70` (soglia spec G5).
+3. **`outOfContext` NON esiste backend** — derivare frontend: `outOfContext = Citations.length === 0 && confidence < 0.30` (euristica conservativa).
+4. **`agentType` NON è supportato dall'endpoint** — l'agent switch UI funziona ma NON viene propagato al backend (system agent unico). UX preserva il toggle visivo.
+
+### Decisione architetturale (post-verifica)
+
+L'hook `useGameChat`:
+1. Avvia `qaStream({gameId, query: question})`
+2. Accumula stringhe da eventi `type=7` (Token) in un buffer
+3. Su evento `type=4` (Complete): legge `confidence` + `Citations` + buffer accumulato → costruisce `ChatMessage` agent + applica derivation `isLowQuality`/`outOfContext`
+4. Su evento `type=5` (Error): propaga errore
+5. UX atomica: il `bubble agent` con risposta NON appare finché Complete non è ricevuto (typing indicator visibile fino a quel momento)
 
 **Strategia**: l'hook `useGameChat` consuma `qaStream` ma **accumula** tutti i token e mostra il messaggio agent solo quando arriva l'evento `Complete` (type=4). Coerente con Q6 brainstorm "atomica con spinner" — l'utente vede typing indicator finché `Complete` non arriva con answer + citations + confidence.
 
@@ -2056,16 +2105,22 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
 }
 
-// Payload del SSE event Complete (type=4) — shape da verificare in Step 9.1
+// Backend StreamingComplete payload (shape verificata Contracts.cs:109)
 const fakeCompletePayload = {
-  answer: 'Sì, ogni potere si attiva ogni volta…',
-  overallConfidence: 0.92,
-  isLowQuality: false,
-  citations: [{ pageNumber: 12, snippet: 'Ogni potere…', documentId: 'd1', relevanceScore: 0.95, copyrightTier: 'full' as const }],
-  messageId: 'm-1',
+  estimatedReadingTimeMinutes: 0,
+  promptTokens: 0,
+  completionTokens: 0,
+  totalTokens: 0,
+  confidence: 0.92,
+  Citations: [{ documentId: 'd1', pageNumber: 12, snippet: 'Ogni potere…', relevanceScore: 0.95, copyrightTier: 'full' as const }],
 };
 
-const fakeCompleteEvent = { type: 4, data: fakeCompletePayload };
+// Stream completo: tokens accumulano l'answer, poi Complete fissa il messaggio
+const happyEvents = [
+  { type: 7, data: 'Sì, ' },
+  { type: 7, data: 'ogni potere si attiva ogni volta.' },
+  { type: 4, data: fakeCompletePayload },
+];
 
 describe('useGameChat', () => {
   beforeEach(() => {
@@ -2080,7 +2135,7 @@ describe('useGameChat', () => {
   });
 
   it('ask appends user + agent messages on success', async () => {
-    vi.mocked(qaStream).mockReturnValueOnce(mockStream([fakeCompleteEvent]) as any);
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
     const { result } = renderHook(() => useGameChat('wingspan'), { wrapper });
     await act(async () => {
       await result.current.ask('posso usare potere?');
@@ -2089,8 +2144,34 @@ describe('useGameChat', () => {
     expect(result.current.messages[0].role).toBe('user');
     expect(result.current.messages[0].content).toBe('posso usare potere?');
     expect(result.current.messages[1].role).toBe('agent');
+    expect(result.current.messages[1].content).toBe('Sì, ogni potere si attiva ogni volta.');
     expect(result.current.messages[1].overallConfidence).toBe(0.92);
     expect(result.current.messages[1].citations).toHaveLength(1);
+    expect(result.current.messages[1].isLowQuality).toBe(false);  // 0.92 >= 0.70
+  });
+
+  it('derives isLowQuality=true when confidence < 0.70', async () => {
+    const lowConfEvents = [
+      { type: 7, data: 'Non sono certo.' },
+      { type: 4, data: { ...fakeCompletePayload, confidence: 0.42 } },
+    ];
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(lowConfEvents) as any);
+    const { result } = renderHook(() => useGameChat('wingspan'), { wrapper });
+    await act(async () => { await result.current.ask('edge?'); });
+    expect(result.current.messages[1].isLowQuality).toBe(true);
+    expect(result.current.messages[1].outOfContext).toBe(false);  // citations present
+  });
+
+  it('derives outOfContext=true when no citations + confidence < 0.30', async () => {
+    const oocEvents = [
+      { type: 7, data: 'Non ho informazioni.' },
+      { type: 4, data: { ...fakeCompletePayload, confidence: 0.0, Citations: [] } },
+    ];
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(oocEvents) as any);
+    const { result } = renderHook(() => useGameChat('wingspan'), { wrapper });
+    await act(async () => { await result.current.ask('tg?'); });
+    expect(result.current.messages[1].outOfContext).toBe(true);
+    expect(result.current.messages[1].citations).toBeUndefined();
   });
 
   it('isLoading transitions correctly during ask', async () => {
@@ -2098,7 +2179,7 @@ describe('useGameChat', () => {
     let releaseStream: () => void = () => {};
     const slowStream = async function* () {
       await new Promise<void>(r => { releaseStream = r; });
-      yield fakeCompleteEvent;
+      yield happyEvents[2];  // Complete event
     };
     vi.mocked(qaStream).mockReturnValueOnce(slowStream() as any);
     const { result } = renderHook(() => useGameChat('wingspan'), { wrapper });
@@ -2114,7 +2195,7 @@ describe('useGameChat', () => {
     const errorStream = async function* () {
       throw new Error('500');
       // unreachable but TS needs yield for generator inference
-      yield fakeCompleteEvent;
+      yield happyEvents[2];
     };
     vi.mocked(qaStream).mockReturnValueOnce(errorStream() as any);
     const { result } = renderHook(() => useGameChat('wingspan'), { wrapper });
@@ -2135,7 +2216,7 @@ describe('useGameChat', () => {
   });
 
   it('switchAgent does NOT clear message history', async () => {
-    vi.mocked(qaStream).mockReturnValueOnce(mockStream([fakeCompleteEvent]) as any);
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
     const { result } = renderHook(() => useGameChat('wingspan'), { wrapper });
     await act(async () => { await result.current.ask('q'); });
     expect(result.current.messages).toHaveLength(2);
@@ -2208,16 +2289,29 @@ export interface UseGameChatResult {
 let messageIdCounter = 0;
 const nextId = (prefix: string) => `${prefix}-${++messageIdCounter}-${Date.now()}`;
 
+// Event types from chatClient.ts QA_EVENT_TYPES
+const TOKEN_EVENT_TYPE = 7;
 const COMPLETE_EVENT_TYPE = 4;
 const ERROR_EVENT_TYPE = 5;
 
-interface CompletePayload {
-  readonly answer: string;
-  readonly overallConfidence?: number;
-  readonly isLowQuality?: boolean;
-  readonly outOfContext?: boolean;
-  readonly citations?: ReadonlyArray<Citation>;
-  readonly messageId?: string;
+// Soglie derivate frontend (backend non espone isLowQuality/outOfContext)
+const LOW_QUALITY_THRESHOLD = 0.70;     // < soglia → mostra disclaimer (spec G5)
+const OUT_OF_CONTEXT_THRESHOLD = 0.30;  // confidence sotto + 0 citations → out-of-context
+
+// Backend StreamingComplete shape (Contracts.cs:109)
+interface StreamingCompletePayload {
+  readonly estimatedReadingTimeMinutes?: number;
+  readonly promptTokens?: number;
+  readonly completionTokens?: number;
+  readonly totalTokens?: number;
+  readonly confidence?: number | null;
+  readonly chatThreadId?: string;
+  readonly Citations?: ReadonlyArray<Citation>;  // PascalCase nel record — verifica JSON serialization
+  readonly citations?: ReadonlyArray<Citation>;  // fallback camelCase
+}
+
+interface ErrorPayload {
+  readonly message?: string;
 }
 
 export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): UseGameChatResult {
@@ -2237,31 +2331,50 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
     setIsLoading(true);
     setIsError(false);
 
+    // Backend non espone "agentType" — system agent unico.
+    // currentAgent resta UI-only (badge nell'header + filtro suggested prompts in futuro).
+    let answerBuffer = '';
+
     try {
       const stream = qaStream({
         gameId,
-        agentType: currentAgent,
-        question,
-      } as any /* QaStreamRequest shape verificato in Step 9.1 */);
+        query: question,
+      });
 
       for await (const event of stream) {
-        if (event.type === COMPLETE_EVENT_TYPE) {
-          const payload = event.data as CompletePayload;
+        if (event.type === TOKEN_EVENT_TYPE) {
+          // Accumula token nel buffer; UX atomica = no rendering parziale.
+          const tokenData = event.data;
+          if (typeof tokenData === 'string') {
+            answerBuffer += tokenData;
+          } else if (typeof tokenData === 'object' && tokenData !== null && 'content' in tokenData) {
+            answerBuffer += String((tokenData as { content?: unknown }).content ?? '');
+          }
+        } else if (event.type === COMPLETE_EVENT_TYPE) {
+          const payload = event.data as StreamingCompletePayload;
+          const confidence = payload.confidence ?? undefined;
+          const citations = payload.Citations ?? payload.citations ?? [];
+          // Derivation frontend (backend non espone questi flag)
+          const isLowQuality = confidence !== undefined && confidence < LOW_QUALITY_THRESHOLD;
+          const outOfContext =
+            citations.length === 0 && (confidence === undefined || confidence < OUT_OF_CONTEXT_THRESHOLD);
+
           const agentMsg: ChatMessage = {
-            id: payload.messageId ?? nextId('a'),
+            id: nextId('a'),
             role: 'agent',
-            content: payload.answer,
-            citations: payload.citations,
-            overallConfidence: payload.overallConfidence,
-            isLowQuality: payload.isLowQuality,
-            outOfContext: payload.outOfContext === true,
+            content: answerBuffer,
+            citations: citations.length > 0 ? citations : undefined,
+            overallConfidence: confidence,
+            isLowQuality,
+            outOfContext,
             createdAt: new Date().toISOString(),
           };
           setMessages(prev => [...prev, agentMsg]);
         } else if (event.type === ERROR_EVENT_TYPE) {
-          throw new Error(String((event.data as { message?: string })?.message ?? 'QA stream error'));
+          const errPayload = event.data as ErrorPayload;
+          throw new Error(errPayload?.message ?? 'QA stream error');
         }
-        // Ignora type=0 (StateUpdate) e type=7 (Token streaming): UX atomica per Q6.
+        // Ignora type=0 (StateUpdate), type=1 (Citations early), type=8 (Follow-up).
       }
     } catch (e) {
       setIsError(true);
@@ -2269,7 +2382,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
     } finally {
       setIsLoading(false);
     }
-  }, [gameId, currentAgent]);
+  }, [gameId]);  // currentAgent intentionally NOT in deps (UI-only)
 
   const switchAgent = useCallback((next: AgentKind) => {
     setCurrentAgent(next);
@@ -2349,7 +2462,8 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
 }
 
-// Citation shape verificata: documentId + pageNumber + snippet + relevanceScore + copyrightTier
+// Backend StreamingComplete shape (Contracts.cs:109): no isLowQuality/outOfContext
+// Frontend hook deriva: isLowQuality = confidence < 0.70, outOfContext = no citations + confidence < 0.30
 const sampleCitation = {
   documentId: 'd1',
   pageNumber: 12,
@@ -2358,39 +2472,22 @@ const sampleCitation = {
   copyrightTier: 'full' as const,
 };
 
-const happyComplete = {
-  type: 4,
-  data: {
-    answer: 'Sì, ogni potere si attiva ogni volta.',
-    overallConfidence: 0.92,
-    isLowQuality: false,
-    citations: [sampleCitation],
-    messageId: 'a-1',
-  },
-};
+// Stream completo: tokens accumulano answer, Complete fissa confidence + citations
+const happyEvents = [
+  { type: 7, data: 'Sì, ' },
+  { type: 7, data: 'ogni potere si attiva ogni volta.' },
+  { type: 4, data: { confidence: 0.92, Citations: [sampleCitation] } },
+];
 
-const lowConfComplete = {
-  type: 4,
-  data: {
-    answer: 'Non sono certo, probabilmente si rimescolano gli scarti.',
-    overallConfidence: 0.42,
-    isLowQuality: true,
-    citations: [{ ...sampleCitation, pageNumber: 6, snippet: 'fine mazzo', documentId: 'd2' }],
-    messageId: 'a-2',
-  },
-};
+const lowConfEvents = [
+  { type: 7, data: 'Non sono certo, probabilmente si rimescolano gli scarti.' },
+  { type: 4, data: { confidence: 0.42, Citations: [{ ...sampleCitation, pageNumber: 6, snippet: 'fine mazzo', documentId: 'd2' }] } },
+];
 
-const oocComplete = {
-  type: 4,
-  data: {
-    answer: 'Non ho informazioni su Tainted Grail.',
-    overallConfidence: 0.0,
-    isLowQuality: true,
-    citations: [],
-    messageId: 'a-3',
-    outOfContext: true,
-  },
-};
+const oocEvents = [
+  { type: 7, data: 'Non ho informazioni su Tainted Grail.' },
+  { type: 4, data: { confidence: 0.0, Citations: [] } },
+];
 
 describe('GameChatTabV2', () => {
   beforeEach(() => {
@@ -2403,7 +2500,7 @@ describe('GameChatTabV2', () => {
   });
 
   it('happy path: ask → user bubble + agent bubble + citation chip + alta badge', async () => {
-    vi.mocked(qaStream).mockReturnValueOnce(mockStream([happyComplete]) as any);
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
     render(<GameChatTabV2 gameId="wingspan" />, { wrapper });
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q?' } });
     fireEvent.click(screen.getByRole('button', { name: /invia/i }));
@@ -2414,7 +2511,7 @@ describe('GameChatTabV2', () => {
   });
 
   it('low confidence path: shows disclaimer + bassa badge', async () => {
-    vi.mocked(qaStream).mockReturnValueOnce(mockStream([lowConfComplete]) as any);
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(lowConfEvents) as any);
     render(<GameChatTabV2 gameId="wingspan" />, { wrapper });
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'edge?' } });
     fireEvent.click(screen.getByRole('button', { name: /invia/i }));
@@ -2423,7 +2520,7 @@ describe('GameChatTabV2', () => {
   });
 
   it('out-of-context path: shows action pills, no confidence color', async () => {
-    vi.mocked(qaStream).mockReturnValueOnce(mockStream([oocComplete]) as any);
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(oocEvents) as any);
     render(<GameChatTabV2 gameId="wingspan" />, { wrapper });
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'tg?' } });
     fireEvent.click(screen.getByRole('button', { name: /invia/i }));
@@ -2432,7 +2529,7 @@ describe('GameChatTabV2', () => {
   });
 
   it('citation chip click opens CitationModal', async () => {
-    vi.mocked(qaStream).mockReturnValueOnce(mockStream([happyComplete]) as any);
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
     render(<GameChatTabV2 gameId="wingspan" />, { wrapper });
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q?' } });
     fireEvent.click(screen.getByRole('button', { name: /invia/i }));

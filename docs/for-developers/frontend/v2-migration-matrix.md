@@ -131,7 +131,7 @@ the PR review.
 | `sp4-games-index.jsx` | `AdvancedFiltersDrawer` | `apps/web/src/components/v2/games/AdvancedFiltersDrawer.tsx` | `/games` | pending | — | T A M V |
 | `sp4-games-index.jsx` | `GamesResultsGrid` | `apps/web/src/components/v2/games/GamesResultsGrid.tsx` | `/games` | pending | — | T A V |
 | `sp4-games-index.jsx` | `GamesEmptyState` | `apps/web/src/components/v2/games/GamesEmptyState.tsx` | `/games` | pending | — | T A V |
-| (extension G3) | `GamesRecentRail` | `apps/web/src/components/v2/games/GamesRecentRail.tsx` | `/games?tab=*` | done | TBD | T A V |
+| (extension G3) | `GamesRecentRail` | `apps/web/src/components/v2/games/GamesRecentRail.tsx` | `/games?tab=*` | done | #907 | T A V |
 
 ### Game detail — `/games/[id]` — 8 components — **Tier L** ⚠️ Phase 0.5 required
 

@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Citation PDF Viewer (G4 v3)</title>
+<!--
+  Mockup: sp4-citation-pdf-viewer
+  Trigger: tap su CitationChip nel chat-tab (G1+G5 PR #918) → si apre questo modal
+  Scope:  G4 v3 (post pivot legale 2026-05-10) — estensione del CitationModal con
+          tab Snippet (default) + tab PDF originale (lazy, gated by ownership)
+
+  Modello legale (rivelato in socratic v3):
+  - PDF protetti da copyright per-documentId (NON per-gameId)
+  - Utente vede PDF SOLO se l'ha caricato lui (ownership reale, non dichiarata)
+  - Anti-leak: niente download, niente right-click save
+  - BGG: solo metadati pubblici, mai PDF
+
+  Stati (4):
+    1. snippet-default     (tab attivo Snippet, blockquote del citation.snippet)
+    2. pdf-owner           (tab PDF, isPublic=true OR utente possiede documentId)
+                           → react-pdf viewer alla pageNumber, prev/next, no download
+    3. pdf-non-owner       (tab PDF, isPublic=false AND non ha caricato il PDF)
+                           → upsell card "Carica la tua copia" + CTA /upload?gameId=X
+    4. pdf-loading         (tab PDF appena attivato, fetch blob in corso)
+
+  Persona: Aaron (badsworm@gmail.com), serata Wingspan, ha cliccato chip
+           "📖 Manuale p.12 §3.2" sulla risposta del Tutor.
+
+  Vincoli SMART (da spec G4 v3):
+    - G4.2: tab "PDF originale" sempre visibile (anche non-owner)
+    - G4.3: upsell render <100ms (no fetch)
+    - G4.4: PDF caricato + seek to pageNumber < 3s su 4G
+    - G4.5: niente download button visibile, no link diretto a /download endpoint
+
+  Riusi tecnici:
+    - PdfViewerModal.tsx esistente (estraiamo body Document+Page, embed inline)
+    - useGameDocuments (knowledgeBaseClient.getGameDocuments)
+    - Citation.isPublic (campo già esistente in domain.ts:144)
+
+  Sorgente CSS: nanolith-runthrough-setup-chat.html + sp4-game-chat-tab.html
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  .top {
+    position: sticky; top: 0; z-index: var(--z-sticky);
+    backdrop-filter: blur(12px); background: var(--glass-bg);
+    border-bottom: 1px solid var(--border);
+    padding: var(--s-4) var(--s-6);
+    display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap;
+  }
+  .top h1 { font-family: var(--f-display); font-size: var(--fs-lg); margin: 0; font-weight: var(--fw-bold); }
+  .top .route { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); padding: 2px var(--s-2); border-radius: var(--r-sm); background: var(--bg-muted); }
+  .top .spacer { flex: 1; }
+  .top button {
+    background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
+    border-radius: var(--r-pill); padding: var(--s-1) var(--s-3);
+    font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer;
+  }
+
+  .stage { padding: var(--s-7) var(--s-6); max-width: 1700px; margin: 0 auto; }
+
+  .state-section { margin-bottom: var(--s-10); }
+  .state-section .label {
+    display: inline-block; padding: var(--s-1) var(--s-3);
+    background: hsl(var(--c-kb) / 0.12); color: hsl(var(--c-kb));
+    border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: var(--s-2);
+  }
+  .state-section h2 {
+    font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold);
+    margin: 0 0 var(--s-2);
+  }
+  .state-section .desc { color: var(--text-sec); margin: 0 0 var(--s-6); font-size: var(--fs-md); }
+
+  .frames { display: flex; gap: var(--s-9); flex-wrap: wrap; align-items: flex-start; }
+
+  /* ─── Phone frame (mobile fullscreen modal) ─── */
+  .phone {
+    width: 375px; min-height: 740px; background: var(--bg);
+    border-radius: 36px; overflow: hidden;
+    border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; position: relative;
+  }
+  .phone .frame-label {
+    position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+  }
+  .phone-sbar {
+    height: 32px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 22px 0;
+    font-size: 12px; font-weight: var(--fw-bold);
+    font-family: var(--f-display); color: var(--text-sec);
+  }
+
+  /* ─── Backdrop simulated for desktop modal ─── */
+  .desktop-backdrop {
+    width: 880px; height: 600px;
+    background: linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.4) 100%);
+    border-radius: var(--r-lg); overflow: hidden;
+    border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    backdrop-filter: blur(2px);
+  }
+  .desktop-backdrop::before {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      45deg, transparent, transparent 10px,
+      rgba(255,255,255,0.04) 10px, rgba(255,255,255,0.04) 12px);
+    pointer-events: none;
+  }
+  .desktop-backdrop .frame-label {
+    position: absolute; top: -28px; left: 0;
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+  }
+
+  /* ─── Modal body (the actual citation modal — desktop centered, mobile fullscreen) ─── */
+  .modal {
+    width: 100%; max-width: 600px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    display: flex; flex-direction: column;
+    max-height: 90%;
+    overflow: hidden;
+    z-index: 1;
+  }
+  .phone .modal {
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    flex: 1;
+    max-height: none;
+  }
+
+  .modal-header {
+    padding: var(--s-3) var(--s-4);
+    border-bottom: 1px solid var(--border-light);
+    display: flex; align-items: center; gap: var(--s-3);
+    flex-shrink: 0;
+  }
+  .modal-header h3 {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-lg);
+    margin: 0;
+  }
+  .modal-header .spacer { flex: 1; }
+  .modal-header .close {
+    background: transparent; border: 0; color: var(--text-sec);
+    font-size: 20px; cursor: pointer; padding: 4px;
+    border-radius: var(--r-sm);
+  }
+  .modal-header .close:hover { background: var(--bg-muted); }
+
+  /* ─── Tabs Snippet | PDF ─── */
+  .tabs {
+    display: flex; gap: 0; padding: 0 var(--s-4);
+    border-bottom: 1px solid var(--border-light); flex-shrink: 0;
+  }
+  .tab {
+    padding: var(--s-3) var(--s-4); position: relative;
+    font-family: var(--f-display); font-size: var(--fs-sm); font-weight: var(--fw-semi);
+    color: var(--text-sec); cursor: pointer;
+    background: transparent; border: 0;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .tab[aria-selected="true"] { color: hsl(var(--c-kb)); }
+  .tab[aria-selected="true"]::after {
+    content: ""; position: absolute; left: var(--s-3); right: var(--s-3); bottom: -1px;
+    height: 2px; background: hsl(var(--c-kb)); border-radius: var(--r-pill);
+  }
+  .tab .lock {
+    font-size: 10px; opacity: 0.7;
+  }
+
+  .modal-body {
+    flex: 1; overflow-y: auto;
+    padding: var(--s-4);
+    display: flex; flex-direction: column; gap: var(--s-3);
+  }
+
+  /* ─── Snippet tab body ─── */
+  .snippet-block {
+    border-left: 4px solid hsl(var(--c-kb));
+    padding: var(--s-3) var(--s-4);
+    background: hsl(var(--c-kb) / 0.05);
+    border-radius: 0 var(--r-md) var(--r-md) 0;
+    font-size: var(--fs-md); line-height: var(--lh-body);
+    font-style: italic;
+  }
+  .snippet-meta {
+    display: flex; gap: var(--s-2); font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+    align-items: center;
+  }
+  .copyright-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+    background: hsl(var(--c-warning) / 0.15); color: hsl(var(--c-warning));
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+
+  /* ─── PDF tab — owner viewer ─── */
+  .pdf-toolbar {
+    display: flex; align-items: center; gap: var(--s-2);
+    padding: var(--s-2) var(--s-3); background: var(--bg-muted);
+    border-radius: var(--r-md);
+    font-family: var(--f-mono); font-size: var(--fs-xs);
+    flex-wrap: wrap;
+  }
+  .pdf-toolbar .nav-btn {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--r-sm); padding: 4px var(--s-2);
+    cursor: pointer; font-family: inherit; font-size: inherit;
+    color: var(--text);
+  }
+  .pdf-toolbar .nav-btn:hover { background: var(--bg-hover); border-color: hsl(var(--c-kb)); }
+  .pdf-toolbar .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .pdf-toolbar .page-info {
+    flex: 1; text-align: center;
+    color: var(--text);
+  }
+  .pdf-toolbar .anti-leak {
+    color: hsl(var(--c-success));
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px;
+  }
+
+  .pdf-canvas {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    aspect-ratio: 210/297; /* A4 */
+    width: 100%;
+    max-height: 60vh;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    overflow: hidden;
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .pdf-canvas-content {
+    padding: 32px;
+    font-family: 'Times New Roman', serif;
+    color: #222;
+    font-size: 11px;
+    line-height: 1.5;
+    height: 100%;
+    overflow: hidden;
+  }
+  .pdf-canvas-content h2 {
+    font-family: 'Times New Roman', serif;
+    font-size: 16px;
+    margin: 0 0 8px;
+    color: #000;
+    border-bottom: 2px solid #444;
+    padding-bottom: 4px;
+  }
+  .pdf-canvas-content h3 {
+    font-family: 'Times New Roman', serif;
+    font-size: 12px;
+    margin: 12px 0 6px;
+    color: #000;
+  }
+  .pdf-canvas-content p { margin: 0 0 6px; }
+  .pdf-canvas-content table {
+    border-collapse: collapse; margin: 6px 0; font-size: 10px;
+  }
+  .pdf-canvas-content th, .pdf-canvas-content td {
+    border: 1px solid #888; padding: 2px 8px; text-align: left;
+  }
+  .pdf-canvas-content th { background: #eee; }
+  .pdf-canvas-content .highlight {
+    background: hsl(var(--c-warning) / 0.4);
+    padding: 1px 2px;
+    border-radius: 2px;
+  }
+  .pdf-canvas-content .pageno {
+    position: absolute; bottom: 12px; right: 24px;
+    font-size: 9px; color: #888;
+  }
+
+  /* ─── PDF tab — non-owner upsell ─── */
+  .upsell-card {
+    border: 2px dashed hsl(var(--c-warning) / 0.5);
+    border-radius: var(--r-lg);
+    padding: var(--s-6);
+    text-align: center;
+    background: hsl(var(--c-warning) / 0.04);
+    display: flex; flex-direction: column; align-items: center; gap: var(--s-3);
+  }
+  .upsell-card .icon {
+    font-size: 48px; line-height: 1;
+  }
+  .upsell-card h4 {
+    font-family: var(--f-display); font-weight: var(--fw-bold);
+    font-size: var(--fs-lg); margin: 0;
+    color: hsl(var(--c-warning));
+  }
+  .upsell-card p {
+    margin: 0; color: var(--text-sec);
+    font-size: var(--fs-sm); line-height: var(--lh-body);
+    max-width: 380px;
+  }
+  .upsell-card .cta {
+    background: hsl(var(--c-chat));
+    color: white;
+    border: 0;
+    padding: var(--s-3) var(--s-5);
+    border-radius: var(--r-pill);
+    font-family: var(--f-display); font-weight: var(--fw-bold);
+    font-size: var(--fs-md);
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    text-decoration: none;
+    margin-top: var(--s-2);
+  }
+  .upsell-card .cta:hover { opacity: 0.9; }
+  .upsell-card .footnote {
+    font-family: var(--f-mono); font-size: 10px;
+    color: var(--text-muted);
+    margin-top: var(--s-3);
+    max-width: 380px;
+  }
+
+  /* ─── PDF tab — loading ─── */
+  .loading-block {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: var(--s-3);
+    padding: var(--s-9);
+    min-height: 300px;
+  }
+  .loading-block .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid hsl(var(--c-kb) / 0.2);
+    border-top-color: hsl(var(--c-kb));
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-block .meta {
+    font-family: var(--f-mono); font-size: var(--fs-xs);
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  /* ─── Modal footer ─── */
+  .modal-footer {
+    padding: var(--s-3) var(--s-4);
+    border-top: 1px solid var(--border-light);
+    display: flex; align-items: center; gap: var(--s-2);
+    flex-shrink: 0;
+    background: var(--bg-card);
+  }
+  .modal-footer .footer-info {
+    flex: 1; font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+  }
+  .modal-footer .btn-close {
+    background: hsl(var(--c-chat));
+    color: white;
+    border: 0;
+    padding: var(--s-2) var(--s-4);
+    border-radius: var(--r-pill);
+    font-family: var(--f-display); font-weight: var(--fw-semi);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+  }
+
+  *:focus-visible { outline: 2px solid hsl(var(--c-kb)); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    .loading-block .spinner { animation: none; }
+  }
+</style>
+</head>
+
+<body>
+
+<header class="top">
+  <h1>Citation PDF Viewer — G4 v3 (sp4-citation-pdf-viewer)</h1>
+  <span class="route">CitationModal sopra /library/games/{gameId}?tab=aiChat</span>
+  <span class="spacer"></span>
+  <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
+</header>
+
+<main class="stage">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 1 · DEFAULT (tab Snippet attivo, blockquote citation)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s1">
+    <span class="label">Stato 1 · Default · Snippet tab</span>
+    <h2 id="s1">Tap su CitationChip → modal apre con tab Snippet attivo</h2>
+    <p class="desc">Tab default <strong>Snippet</strong> (lazy mount: tab PDF non ha ancora fatto fetch). User può sempre switchare a <strong>PDF originale</strong>. Il copyright tag indica se il backend ha sostituito il testo originale con paraphrasedSnippet (caso copyrightTier='protected').</p>
+
+    <div class="frames">
+      <!-- ─── Mobile ─── -->
+      <div class="phone" role="region" aria-label="Mobile – snippet tab">
+        <span class="frame-label">Mobile · 375px (fullscreen)</span>
+        <div class="phone-sbar"><span>20:14</span><span>📶 🔋 92%</span></div>
+
+        <div class="modal">
+          <div class="modal-header">
+            <h3>📖 p. 12</h3>
+            <span class="spacer"></span>
+            <button class="close" aria-label="Chiudi">×</button>
+          </div>
+
+          <nav class="tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="true">📝 Snippet</button>
+            <button class="tab" role="tab" aria-selected="false">📄 PDF originale</button>
+          </nav>
+
+          <div class="modal-body">
+            <div class="snippet-meta">
+              <span>Manuale base · §3.2 — Poteri "quando attivato"</span>
+            </div>
+            <blockquote class="snippet-block">
+              Ogni potere di tipo "quando attivato" si attiva ogni volta che esegui l'azione del relativo habitat. Non c'è limite per turno: se hai 2 uccelli con questo potere nello stesso habitat, attivando l'azione li triggeri entrambi.
+            </blockquote>
+            <div class="snippet-meta">
+              <span class="copyright-tag">📋 Verbatim</span>
+              <span>Citato dall'agente Tutor in chat</span>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <span class="footer-info">Wingspan · Manuale base v1.2</span>
+            <button class="btn-close">Chiudi</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Desktop ─── -->
+      <div class="desktop-backdrop" role="region" aria-label="Desktop – snippet tab">
+        <span class="frame-label">Desktop · 1440px (modal centered + backdrop)</span>
+        <div class="modal">
+          <div class="modal-header">
+            <h3>📖 p. 12 — Poteri "quando attivato"</h3>
+            <span class="spacer"></span>
+            <button class="close" aria-label="Chiudi">×</button>
+          </div>
+          <nav class="tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="true">📝 Snippet</button>
+            <button class="tab" role="tab" aria-selected="false">📄 PDF originale</button>
+          </nav>
+          <div class="modal-body">
+            <div class="snippet-meta">
+              <span>Manuale base · §3.2 — Poteri "quando attivato"</span>
+              <span class="copyright-tag">📋 Verbatim · copyright='full'</span>
+            </div>
+            <blockquote class="snippet-block">
+              Ogni potere di tipo "quando attivato" si attiva ogni volta che esegui l'azione del relativo habitat. Non c'è limite per turno: se hai 2 uccelli con questo potere nello stesso habitat, attivando l'azione li triggeri entrambi.
+            </blockquote>
+          </div>
+          <div class="modal-footer">
+            <span class="footer-info">Wingspan · Manuale base v1.2 · Citato in chat alle 20:14</span>
+            <button class="btn-close">Chiudi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 2 · PDF tab · OWNER (utente ha caricato il PDF, viewer renders page)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s2">
+    <span class="label">Stato 2 · PDF tab · Owner</span>
+    <h2 id="s2">User ha caricato il PDF → viewer renders pagina con highlight</h2>
+    <p class="desc">Hook <code>useCanViewPdf</code>: <code>Citation.isPublic === true</code> oppure documentId nei <code>getGameDocuments(gameId)</code>. PDF.js renderizza la pagina; toolbar prev/next; <strong>NESSUN download button</strong>; right-click disabilitato; testo della citation evidenziato in giallo per orientare l'utente.</p>
+
+    <div class="frames">
+      <!-- ─── Mobile ─── -->
+      <div class="phone" role="region" aria-label="Mobile – PDF owner">
+        <span class="frame-label">Mobile · 375px (fullscreen)</span>
+        <div class="phone-sbar"><span>20:15</span><span>📶 🔋 91%</span></div>
+        <div class="modal">
+          <div class="modal-header">
+            <h3>📖 p. 12</h3>
+            <span class="spacer"></span>
+            <button class="close" aria-label="Chiudi">×</button>
+          </div>
+          <nav class="tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="false">📝 Snippet</button>
+            <button class="tab" role="tab" aria-selected="true">📄 PDF originale</button>
+          </nav>
+          <div class="modal-body">
+            <div class="pdf-toolbar">
+              <button class="nav-btn" disabled>← Prev</button>
+              <span class="page-info">Pagina <strong>12</strong> / 24</span>
+              <button class="nav-btn">Next →</button>
+              <span class="anti-leak">🔒 Solo visualizzazione</span>
+            </div>
+            <div class="pdf-canvas">
+              <div class="pdf-canvas-content" oncontextmenu="return false;">
+                <h2>3. Sistema dei poteri</h2>
+                <h3>3.2 Poteri "quando attivato"</h3>
+                <p><span class="highlight">Ogni potere di tipo "quando attivato" si attiva ogni volta che esegui l'azione del relativo habitat. Non c'è limite per turno: se hai 2 uccelli con questo potere nello stesso habitat, attivando l'azione li triggeri entrambi.</span></p>
+                <p>Esempio pratico: un giocatore ha posato due uccelli con potere "guadagna 1 cibo dall'offerta" nel bosco. Quando esegue l'azione bosco, ottiene 2 cibi (uno per ciascun uccello), oltre alle tessere normalmente disponibili.</p>
+                <h3>3.3 Poteri "quando giocato"</h3>
+                <p>Si attivano una sola volta, nel momento in cui l'uccello viene messo sul tabellone…</p>
+                <span class="pageno">12</span>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <span class="footer-info">📄 Manuale base · 2.4 MB · Caricato da te</span>
+            <button class="btn-close">Chiudi</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Desktop ─── -->
+      <div class="desktop-backdrop" role="region" aria-label="Desktop – PDF owner">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="modal">
+          <div class="modal-header">
+            <h3>📖 p. 12 — PDF originale</h3>
+            <span class="spacer"></span>
+            <button class="close" aria-label="Chiudi">×</button>
+          </div>
+          <nav class="tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="false">📝 Snippet</button>
+            <button class="tab" role="tab" aria-selected="true">📄 PDF originale</button>
+          </nav>
+          <div class="modal-body">
+            <div class="pdf-toolbar">
+              <button class="nav-btn">← Prev (p.11)</button>
+              <span class="page-info">Pagina <strong>12</strong> / 24</span>
+              <button class="nav-btn">Next (p.13) →</button>
+              <span class="anti-leak">🔒 Solo visualizzazione · No download</span>
+            </div>
+            <div class="pdf-canvas">
+              <div class="pdf-canvas-content" oncontextmenu="return false;">
+                <h2>3. Sistema dei poteri</h2>
+                <h3>3.2 Poteri "quando attivato"</h3>
+                <p><span class="highlight">Ogni potere di tipo "quando attivato" si attiva ogni volta che esegui l'azione del relativo habitat. Non c'è limite per turno: se hai 2 uccelli con questo potere nello stesso habitat, attivando l'azione li triggeri entrambi.</span></p>
+                <p>Esempio pratico: un giocatore ha posato due uccelli con potere "guadagna 1 cibo dall'offerta" nel bosco. Quando esegue l'azione bosco, ottiene 2 cibi (uno per ciascun uccello), oltre alle tessere normalmente disponibili.</p>
+                <h3>3.3 Poteri "quando giocato"</h3>
+                <p>Si attivano una sola volta, nel momento in cui l'uccello viene messo sul tabellone. La fenice (carta XYZ) ne è un esempio: pesca 2 carte e tienine 1 al momento del posizionamento.</p>
+                <h3>3.4 Poteri "all'inizio del round"</h3>
+                <p>Trigger automatico per ogni uccello con questo modificatore, all'inizio di ognuna delle 4 fasi…</p>
+                <span class="pageno">12</span>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <span class="footer-info">📄 Manuale base v1.2 · 2.4 MB · Caricato da te il 8 Mar 2026</span>
+            <button class="btn-close">Chiudi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 3 · PDF tab · NON-OWNER (upsell card)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s3">
+    <span class="label">Stato 3 · PDF tab · Non-owner</span>
+    <h2 id="s3">Utente non ha caricato il PDF → upsell "Carica la tua copia"</h2>
+    <p class="desc">Hook <code>useCanViewPdf</code> ritorna <code>canView=false</code> (isPublic=false E documentId NON in <code>getGameDocuments</code>). NO fetch del PDF. Render upsell card immediato (&lt;100ms). CTA porta a <code>/upload?gameId=X</code>. Disclaimer legale chiaro: backend rifiuta upload duplicati.</p>
+
+    <div class="frames">
+      <!-- ─── Mobile ─── -->
+      <div class="phone" role="region" aria-label="Mobile – non-owner upsell">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:16</span><span>📶 🔋 90%</span></div>
+        <div class="modal">
+          <div class="modal-header">
+            <h3>📖 p. 12</h3>
+            <span class="spacer"></span>
+            <button class="close" aria-label="Chiudi">×</button>
+          </div>
+          <nav class="tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="false">📝 Snippet</button>
+            <button class="tab" role="tab" aria-selected="true">📄 PDF originale <span class="lock">🔒</span></button>
+          </nav>
+          <div class="modal-body">
+            <div class="upsell-card">
+              <span class="icon" aria-hidden="true">🔒</span>
+              <h4>PDF originale protetto da copyright</h4>
+              <p>Per visualizzare la pagina del manuale, devi caricare la <strong>tua copia personale</strong> del PDF che possiedi.</p>
+              <a href="/upload?gameId=wingspan" class="cta">📤 Carica il mio PDF</a>
+              <p class="footnote">⚙️ L'app rifiuta upload di PDF già indicizzati con hash identico (anti-duplicazione). Una volta caricato, vedrai automaticamente questa pagina.</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <span class="footer-info">Snippet disponibile in tab "Snippet" ←</span>
+            <button class="btn-close">Chiudi</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Desktop ─── -->
+      <div class="desktop-backdrop" role="region" aria-label="Desktop – non-owner upsell">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="modal">
+          <div class="modal-header">
+            <h3>📖 p. 12 — PDF originale</h3>
+            <span class="spacer"></span>
+            <button class="close" aria-label="Chiudi">×</button>
+          </div>
+          <nav class="tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="false">📝 Snippet</button>
+            <button class="tab" role="tab" aria-selected="true">📄 PDF originale <span class="lock">🔒</span></button>
+          </nav>
+          <div class="modal-body">
+            <div class="upsell-card">
+              <span class="icon" aria-hidden="true">🔒</span>
+              <h4>PDF originale protetto da copyright</h4>
+              <p>Per visualizzare la pagina del manuale di <strong>Wingspan</strong>, devi caricare la <strong>tua copia personale</strong> del PDF che possiedi. È un requisito legale: non distribuiamo PDF di altri utenti.</p>
+              <a href="/upload?gameId=wingspan" class="cta">📤 Carica il mio PDF di Wingspan</a>
+              <p class="footnote">⚙️ <strong>Anti-duplicazione</strong>: l'app rifiuta upload di PDF già indicizzati con hash identico — non sprecherai banda se è lo stesso file di un altro utente. <strong>Privacy</strong>: il tuo PDF resta privato a te, viene solo indicizzato per la chat AI.</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <span class="footer-info">💡 Lo snippet testuale resta disponibile nel tab "Snippet" ←</span>
+            <button class="btn-close">Chiudi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 4 · PDF tab · LOADING (fetch blob in corso)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s4">
+    <span class="label">Stato 4 · PDF tab · Loading</span>
+    <h2 id="s4">Utente ha switchato al tab PDF → fetch blob via PdfViewerModal logic</h2>
+    <p class="desc">Tab PDF appena attivato (lazy mount). Ownership check in corso (<code>useCanViewPdf</code>) E/O fetch del blob PDF da <code>/api/v1/pdfs/{documentId}/download</code>. Spinner +meta latenza ("Carico p.12 di 24"). Budget P95 &lt; 3s su 4G (G4.4).</p>
+
+    <div class="frames">
+      <!-- ─── Mobile ─── -->
+      <div class="phone" role="region" aria-label="Mobile – PDF loading">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:15</span><span>📶 🔋 91%</span></div>
+        <div class="modal">
+          <div class="modal-header">
+            <h3>📖 p. 12</h3>
+            <span class="spacer"></span>
+            <button class="close" aria-label="Chiudi">×</button>
+          </div>
+          <nav class="tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="false">📝 Snippet</button>
+            <button class="tab" role="tab" aria-selected="true">📄 PDF originale</button>
+          </nav>
+          <div class="modal-body">
+            <div class="loading-block" aria-busy="true" aria-label="Caricamento PDF">
+              <div class="spinner" aria-hidden="true"></div>
+              <div class="meta">
+                ⏱️ Carico PDF (2.4 MB)<br/>
+                Salto a pagina 12/24<br/>
+                <strong>1.2s</strong> elapsed
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <span class="footer-info">📄 Manuale base · 2.4 MB</span>
+            <button class="btn-close">Chiudi</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Desktop ─── -->
+      <div class="desktop-backdrop" role="region" aria-label="Desktop – PDF loading">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="modal">
+          <div class="modal-header">
+            <h3>📖 p. 12 — PDF originale</h3>
+            <span class="spacer"></span>
+            <button class="close" aria-label="Chiudi">×</button>
+          </div>
+          <nav class="tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="false">📝 Snippet</button>
+            <button class="tab" role="tab" aria-selected="true">📄 PDF originale</button>
+          </nav>
+          <div class="modal-body">
+            <div class="loading-block" aria-busy="true" aria-label="Caricamento PDF">
+              <div class="spinner" aria-hidden="true"></div>
+              <div class="meta">
+                ⏱️ Caricamento PDF in corso (2.4 MB · pdfjs-dist v5)<br/>
+                Verifica ownership · Fetch blob credentials='include' · Salto a p.12<br/>
+                <strong>1.2s / 3s budget P95 (G4.4)</strong>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <span class="footer-info">📄 Manuale base v1.2 · 2.4 MB · Caricato da te</span>
+            <button class="btn-close">Chiudi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const root = document.documentElement;
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+  // Disabilita right-click sul mockup per simulare anti-leak
+  document.querySelectorAll('.pdf-canvas').forEach(el => {
+    el.addEventListener('contextmenu', e => e.preventDefault());
+  });
+</script>
+
+</body>
+</html>

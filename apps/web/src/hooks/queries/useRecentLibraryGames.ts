@@ -29,7 +29,7 @@ export function useRecentLibraryGames(limit: number = 5): UseRecentLibraryGamesR
   const recents = useRecentsStore(state => state.items);
 
   return useMemo<UseRecentLibraryGamesResult>(() => {
-    const isLoading = libraryQuery.isLoading;
+    const isLoading = libraryQuery.isLoading || recentlyAdded.isLoading;
     const isError = libraryQuery.isError && recents.length === 0;
 
     const libIndex = new Map<string, UserLibraryEntry>();
@@ -59,5 +59,5 @@ export function useRecentLibraryGames(limit: number = 5): UseRecentLibraryGamesR
     }
 
     return { entries: result, isLoading, isError };
-  }, [libraryQuery.data, libraryQuery.isLoading, libraryQuery.isError, recentlyAdded.data, recents, limit]);
+  }, [libraryQuery.data, libraryQuery.isLoading, libraryQuery.isError, recentlyAdded.data, recentlyAdded.isLoading, recents, limit]);
 }

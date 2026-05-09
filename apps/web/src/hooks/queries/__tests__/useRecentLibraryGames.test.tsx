@@ -57,6 +57,24 @@ describe('useRecentLibraryGames', () => {
     } as any);
   });
 
+  it('reports loading when library resolved but recently-added still pending', async () => {
+    vi.mocked(useLibrary).mockReturnValue({
+      data: emptyPaginated,
+      isLoading: false,
+      isError: false,
+    } as any);
+    vi.mocked(useRecentlyAddedGames).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+    } as any);
+
+    const { result } = renderHook(() => useRecentLibraryGames(5), { wrapper });
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.entries).toEqual([]);
+  });
+
   it('returns recents-store games in order, mapped to library entries', async () => {
     const e1 = entry('aaa');
     const e2 = entry('bbb');

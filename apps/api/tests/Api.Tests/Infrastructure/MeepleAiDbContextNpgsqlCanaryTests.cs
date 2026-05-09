@@ -13,14 +13,33 @@ namespace Api.Tests.Infrastructure;
 
 /// <summary>
 /// Npgsql-backed counterpart to <see cref="MeepleAiDbContextModelCanaryTests"/>. Catches
-/// provider-specific failures that the InMemory canary cannot — e.g. Postgres-only type
-/// converters, pgvector mappings, JSON column mappings, schema/migration mismatches
-/// (Issue #889).
+/// provider-specific failures that the InMemory canary cannot.
 ///
 /// <para>
-/// Runs once per CI shard: spins up a Postgres+pgvector container, applies all
-/// migrations, and asserts the model is consistent end-to-end. Cost: ~10–20s startup;
-/// pays for itself the first time a Postgres-only converter regresses.
+/// <b>This canary catches (Postgres-only):</b>
+/// <list type="bullet">
+///   <item>Type-mapping errors specific to Npgsql: <c>text[]</c> vs <c>string[]</c>,
+///         pgvector dimension mismatches, jsonb converter conflicts</item>
+///   <item>Migration drift: when a Designer snapshot diverges from
+///         <c>OnModelCreating</c>, <c>EnsureCreated</c>/<c>Migrate</c> fails</item>
+///   <item>Composite-key/FK constraint violations during DDL</item>
+/// </list>
+/// </para>
+///
+/// <para>
+/// <b>This canary does NOT replace <see cref="MeepleAiDbContextModelCanaryTests"/></b> —
+/// the two are complementary, not redundant:
+/// <list type="bullet">
+///   <item>The InMemory canary catches model-finalization errors in &lt;100ms with no
+///         Docker dependency, fast feedback for the most common failure (Issue #886).
+///         It runs in every CI shard and on every developer machine.</item>
+///   <item>This Npgsql canary runs only in the Integration shard (~10–20s startup,
+///         requires Docker), and exercises the actual provider type system that the
+///         InMemory canary cannot reach.</item>
+/// </list>
+/// Disabling either weakens coverage. Removing this canary would mean a Postgres-only
+/// regression slips to the integration suite proper (slow, noisy). Removing the InMemory
+/// canary would mean the next #886-style mass failure has no fast diagnostic again.
 /// </para>
 /// </summary>
 [Trait("Category", TestCategories.Integration)]

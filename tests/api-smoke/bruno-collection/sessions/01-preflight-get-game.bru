@@ -1,0 +1,31 @@
+meta {
+  name: SG4 — Preflight: fetch first available shared game
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{apiBase}}/api/v1/shared-games?pageNumber=1&pageSize=1
+  body: none
+  auth: none
+}
+
+script:post-response {
+  // Capture the first available shared game UUID for use in GameSession + ChatSession + ChatThread scenarios.
+  // SearchSharedGames returns { items: [...], totalCount, pageNumber, pageSize }.
+  // If no games are seeded the smokeGameId stays empty and subsequent scenarios will surface 404/403.
+  const body = res.getBody();
+  const items = body && body.items;
+  if (items && items.length > 0) {
+    bru.setVar("smokeGameId", items[0].id);
+  }
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("smokeGameId captured (shared games must be seeded)", function() {
+    expect(bru.getVar("smokeGameId")).to.exist;
+  });
+}

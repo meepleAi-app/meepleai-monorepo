@@ -1,0 +1,32 @@
+meta {
+  name: SG4-CS1c — ChatSession get (verify message persisted)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{apiBase}}/api/v1/chat/sessions/{{chatSessionId}}
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  if (!bru.getVar("chatSessionId")) {
+    throw new Error("chatSessionId not set — run 04-lifecycle-create first");
+  }
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("session id matches", function() {
+    const body = res.getBody();
+    expect(body.id).to.equal(bru.getVar("chatSessionId"));
+  });
+  test("messages array is non-empty", function() {
+    const body = res.getBody();
+    expect(body.messages).to.be.an("array");
+    expect(body.messages.length).to.be.greaterThan(0);
+  });
+}

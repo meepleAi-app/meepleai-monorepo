@@ -9,7 +9,7 @@
  */
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
@@ -29,8 +29,12 @@ export function CitationModal({
   onClose,
   onOpenInKb,
 }: CitationModalProps): ReactElement | null {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!open) return;
+    // focus il container all'apertura per a11y
+    containerRef.current?.focus();
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
@@ -59,7 +63,9 @@ export function CitationModal({
       onClick={onClose}
     >
       <div
-        className="max-w-lg w-full mx-4 rounded-lg bg-card border border-border shadow-xl"
+        ref={containerRef}
+        tabIndex={-1}
+        className="max-w-lg w-full mx-4 rounded-lg bg-card border border-border shadow-xl outline-none"
         onClick={e => e.stopPropagation()}
       >
         <header className="border-b border-border-light px-4 py-3">

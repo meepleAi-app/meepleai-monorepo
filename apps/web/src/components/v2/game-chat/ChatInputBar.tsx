@@ -48,6 +48,7 @@ export function ChatInputBar({
     >
       <input
         type="text"
+        aria-label="Messaggio"
         value={value}
         onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
         onKeyDown={handleKey}

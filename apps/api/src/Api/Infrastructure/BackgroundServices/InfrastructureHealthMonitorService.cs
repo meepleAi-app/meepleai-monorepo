@@ -106,15 +106,29 @@ internal sealed class InfrastructureHealthMonitorService : BackgroundService
                 .Select(r => r.Name)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var removedNames = await HealthStateOrphanCleanup.RemoveOrphansAsync(
-                db, registeredNames, cancellationToken).ConfigureAwait(false);
-
-            if (removedNames.Count > 0)
+            // Code-review safeguard on PR #895: an empty Registrations set is suspicious —
+            // it can happen during DI startup races or in misconfigured hosting paths, and
+            // the helper would treat ALL rows as orphans and wipe the table. Skip cleanup
+            // and log loudly so ops can investigate. The hydration step continues normally.
+            if (registeredNames.Count == 0)
             {
-                _logger.LogInformation(
-                    "[HealthMonitor] Removed {OrphanCount} orphan service_health_states rows: {Names}",
-                    removedNames.Count,
-                    string.Join(", ", removedNames));
+                _logger.LogWarning(
+                    "[HealthMonitor] HealthCheckServiceOptions.Registrations is empty; "
+                    + "skipping orphan cleanup to avoid wiping all rows. "
+                    + "Investigate the host's health-check registration path.");
+            }
+            else
+            {
+                var removedNames = await HealthStateOrphanCleanup.RemoveOrphansAsync(
+                    db, registeredNames, cancellationToken).ConfigureAwait(false);
+
+                if (removedNames.Count > 0)
+                {
+                    _logger.LogInformation(
+                        "[HealthMonitor] Removed {OrphanCount} orphan service_health_states rows: {Names}",
+                        removedNames.Count,
+                        string.Join(", ", removedNames));
+                }
             }
 
             var entities = await db.ServiceHealthStates

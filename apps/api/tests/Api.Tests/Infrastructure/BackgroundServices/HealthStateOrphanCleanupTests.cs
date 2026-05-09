@@ -125,8 +125,20 @@ public sealed class HealthStateOrphanCleanupTests
     }
 
     [Fact]
-    public async Task RemoveOrphansAsync_With_All_Unregistered_Removes_All()
+    public async Task RemoveOrphansAsync_With_Empty_Registered_Set_Wipes_All_Rows_And_Caller_Must_Guard()
     {
+        // CONTRACT: the helper does NOT special-case an empty registeredNames set —
+        // it removes every row, by design. This is *correct* mathematically (no row
+        // matches an empty whitelist) but DANGEROUS in production where an empty set
+        // can result from a DI startup race or misconfigured host.
+        //
+        // The consumer (InfrastructureHealthMonitorService.HydrateStateFromDatabaseAsync)
+        // guards against this case explicitly. This test pins the helper's contract so a
+        // future refactor that "fixes" the helper to skip empty sets does not silently
+        // change the contract assumed by the consumer.
+        //
+        // See the matching guard:
+        //   InfrastructureHealthMonitorService.cs — "if (registeredNames.Count == 0)".
         using var db = CreateContext();
         db.ServiceHealthStates.AddRange(SeedRow("foo"), SeedRow("bar"));
         await db.SaveChangesAsync();

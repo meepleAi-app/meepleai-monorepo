@@ -39,11 +39,7 @@ export interface EmptyGamebooksProps {
   readonly className?: string;
 }
 
-const GAME_HSL_SOLID = 'hsl(25, 95%, 39%)';
-const GAME_HSL_HOVER = 'hsl(25, 95%, 32%)';
-const GAME_HSL_BORDER = 'hsla(25, 95%, 45%, 0.40)';
-const GAME_HSL_BG_TOP = 'hsla(25, 95%, 45%, 0.18)';
-const EVENT_HSL_BG_BOTTOM = 'hsla(350, 89%, 60%, 0.14)';
+// game + event entity colours replaced with Tailwind entity-token classes (P2 #807 Task 6+7+8)
 
 export function EmptyGamebooks({
   onAddManualClick,
@@ -63,10 +59,11 @@ export function EmptyGamebooks({
       <div
         aria-hidden="true"
         data-slot="empty-gamebooks-illustration"
-        className="flex h-24 w-24 items-center justify-center rounded-3xl border border-dashed sm:h-28 sm:w-28"
+        className="flex h-24 w-24 items-center justify-center rounded-3xl border border-dashed border-entity-game/40 sm:h-28 sm:w-28"
         style={{
-          background: `linear-gradient(155deg, ${GAME_HSL_BG_TOP}, ${EVENT_HSL_BG_BOTTOM})`,
-          borderColor: GAME_HSL_BORDER,
+          /* TODO #807-followup: two-entity gradient (game+event) — keep inline until CSS vars support alpha stops */
+          // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: two-entity alpha gradient (game+event); CSS vars cannot carry alpha stops in style string
+          background: 'linear-gradient(155deg, hsla(25,95%,45%,0.18), hsla(350,89%,60%,0.14))',
         }}
       >
         <span className="text-4xl sm:text-5xl">📖</span>
@@ -92,12 +89,9 @@ export function EmptyGamebooks({
         data-slot="empty-gamebooks-cta"
         className={clsx(
           'mt-2 inline-flex h-11 items-center justify-center gap-1.5 rounded-lg px-5 text-sm font-bold text-white shadow-sm',
-          'transition-colors motion-reduce:transition-none',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+          'bg-entity-game transition-colors motion-reduce:transition-none',
+          'hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
         )}
-        style={{ backgroundColor: GAME_HSL_SOLID }}
-        onMouseEnter={e => (e.currentTarget.style.backgroundColor = GAME_HSL_HOVER)}
-        onMouseLeave={e => (e.currentTarget.style.backgroundColor = GAME_HSL_SOLID)}
       >
         {labels.cta}
       </button>

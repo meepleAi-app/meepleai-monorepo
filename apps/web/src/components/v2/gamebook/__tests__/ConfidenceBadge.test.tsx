@@ -90,11 +90,13 @@ describe('ConfidenceBadge', () => {
     expect(badge?.className).toContain('w-5');
   });
 
-  it('applies inline-style backgroundColor and color from palette', () => {
+  it('applies entity-token Tailwind classes from palette (P2 #807)', () => {
     render(<ConfidenceBadge level="high" labels={LABELS} />);
     const badge = document.querySelector('[data-slot="confidence-badge"]') as HTMLElement;
-    expect(badge.style.backgroundColor).toBeTruthy();
-    expect(badge.style.color).toBeTruthy();
+    // Post-#807: inline style replaced with Tailwind entity-token utilities.
+    // high → toolkit entity; medium → agent; low → event.
+    expect(badge.className).toMatch(/bg-entity-toolkit\/15/);
+    expect(badge.className).toMatch(/text-entity-toolkit/);
   });
 
   it('applies className when provided', () => {

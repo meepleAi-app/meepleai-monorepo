@@ -54,12 +54,21 @@ const PIECE_COUNT = 24;
  * in sync with `tokens.ts` entityColors but inlined here so this component
  * stays self-contained.
  */
+// PIECE_COLORS: CSS string array used as canvas animation fill colors.
+// Tailwind entity tokens not applicable — no DOM element to apply classes to.
+// TODO #807-followup: replace with CSS vars when entity color vars gain alpha-stop support
 const PIECE_COLORS = [
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: canvas fill color, Tailwind not applicable
   'hsla(240, 60%, 55%, 0.85)', // session
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: canvas fill color, Tailwind not applicable
   'hsla(142, 70%, 31%, 0.85)', // toolkit
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: canvas fill color, Tailwind not applicable
   'hsla(25, 95%, 39%, 0.85)', // game
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: canvas fill color, Tailwind not applicable
   'hsla(38, 92%, 33%, 0.85)', // agent
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: canvas fill color, Tailwind not applicable
   'hsla(220, 80%, 55%, 0.85)', // chat
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: canvas fill color, Tailwind not applicable
   'hsla(350, 89%, 48%, 0.85)', // event
 ] as const;
 

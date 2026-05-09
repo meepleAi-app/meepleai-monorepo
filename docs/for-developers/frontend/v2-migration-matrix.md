@@ -1,13 +1,14 @@
 # V2 Migration Component Matrix
 
-> 🔒 **FREEZE 2026-05-06**: SP6 v2 expansion (and any new v2 component using current
-> design tokens) is FROZEN until [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807)
-> Fase 2 (token redesign) lands. See [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808)
-> for the freeze policy. `pending` rows in this matrix are NOT pickable until lift-criteria
-> in #808 are met. Bugfix/perf/tests on existing `done` rows are still allowed.
+> ✅ **FREEZE LIFTED 2026-05-09** (post P2 #807 token redesign — was issued 2026-05-06 via [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808)):
+> SP6 v2 expansion e nuovi v2 components ora **pickable**.
+> CSS vars `--c-*` + `--e-*` AA-aligned (audit Iter 2: tutti 18 ratios ≥ 4.5:1 light + dark).
+> Tailwind utilities `text-entity-*`, `bg-entity-event/10`, etc. generano colori AA-compliant.
+> [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807) e [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808) entrambi closed via questa PR.
+> Reference: `docs/for-developers/frontend/v2-token-system.md` + audit `v2-a11y-token-audit.md`.
 
 > Wave A closeout — Step 5 (Issue #573).
-> Pre-requisite for Phase 1+2 of the v2 design migration ([spec](../superpowers/specs/2026-04-26-v2-design-migration.md), section 3.3).
+> Pre-requisite for Phase 1+2 of the v2 design migration ([spec](../specs/2026-04-26-v2-design-migration.md), section 3.3).
 > **Tier classification added 2026-05-04** post spec-panel critique Wave C.1 fail RCA — see [Tier classification](#tier-classification) section.
 
 This matrix is the **single source of truth** for the ~80 v2 feature components that the
@@ -71,7 +72,7 @@ ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch st
 
 ## Tier classification
 
-> Added 2026-05-04 post spec-panel critique Wave C.1 fail (PR #697 closed). See [v2 spec section 3.4](../superpowers/specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only) for Phase 0.5 sub-hook contract gate.
+> Added 2026-05-04 post spec-panel critique Wave C.1 fail (PR #697 closed). See [v2 spec section 3.4](../specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only) for Phase 0.5 sub-hook contract gate.
 
 Each route is classified by **Tier** (S/M/L) which gates implementation strategy:
 
@@ -89,13 +90,13 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 | `/agents` | **S** | useAgentList single hook, grid pattern | ✅ done (B.2, PR #637) |
 | `/library` | **S** | useLibrary single hook, hybrid grid | ✅ done (B.3, PR #638) |
 | `/players` | **S** | usePlayerStatistics single hook, games-as-players grid (Wave 4 D1) — v1 carryover anti-pattern preserved | ✅ done (Wave 4 D1, PR #717) |
-| `/games/[id]` | **L** | useGame + useAgents/Faqs/KbDocs by gameId — Phase 0.5 contract enforced | ✅ done (Wave C.1, PR #702) — [`docs/for-developers/frontend/contracts/games-id-hooks.md`](contracts/games-id-hooks.md) |
-| `/agents/[id]` | **L** | useAgent + chat history + KB docs cross-resource (2-step chain agent.gameId) | ✅ done (Wave C.2, PR #711) — [`docs/for-developers/frontend/contracts/agents-id-hooks.md`](contracts/agents-id-hooks.md) |
+| `/games/[id]` | **L** | useGame + useAgents/Faqs/KbDocs by gameId — Phase 0.5 contract enforced | ✅ done (Wave C.1, PR #702) — `contracts/games-id-hooks.md` (TBD) |
+| `/agents/[id]` | **L** | useAgent + chat history + KB docs cross-resource (2-step chain agent.gameId) | ✅ done (Wave C.2, PR #711) — `contracts/agents-id-hooks.md` (TBD) |
 | `/sessions/[id]/live` | **L+** | Real-time SSE + multi-hook + dialog states | pending — Phase 0.5 + sub-PR split |
 | `/discover` | **L** | Multiple horizontal-row hooks | pending — Phase 0.5 required |
 | `/game-nights` | **L** | Calendar + day-detail drawer + filters | pending — Phase 0.5 required |
 | `/sessions` | **M** | Sessions list + filters composition | pending |
-| `/sessions/[id]` | **M-L** | Post-game summary: podium + KPI + diary + photos + share + tie-group computation | ✅ done (Wave D.3, PR #762) — [`docs/for-developers/frontend/contracts/sessions-id-summary-hooks.md`](contracts/sessions-id-summary-hooks.md) |
+| `/sessions/[id]` | **M-L** | Post-game summary: podium + KPI + diary + photos + share + tie-group computation | ✅ done (Wave D.3, PR #762) — `contracts/sessions-id-summary-hooks.md` (TBD) |
 | `/players/[id]` | **M** | usePlayerStatistics single hook (current user only — schema reality v1 carryover) | ✅ done (Wave 3, PR #724) |
 | `/toolkits/[id]` | **M** | Toolkit summary + version timeline | pending |
 | `/gamebook` | **M** | Libro-game index: Hero + QuotaWidget + Card grid + EmptyState | ✅ done (SP6 Phase B, PR #792) |
@@ -103,7 +104,7 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 | `/library/games/[gameId]/translate` | **S** | Nanolith demo — paragraph translate via chat-stream workaround | ✅ done (SP6 Phase A, PR #790) |
 | `/kb/[id]` | **M** | KB header + chunks + search | pending |
 
-**Anti-pattern**: dispatchare implementation subagent senza Phase 0.5 per route Tier L. Wave C.1 PR #697 ha esattamente questo come root cause (vedi [post-mortem](../superpowers/specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only)).
+**Anti-pattern**: dispatchare implementation subagent senza Phase 0.5 per route Tier L. Wave C.1 PR #697 ha esattamente questo come root cause (vedi [post-mortem](../specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only)).
 
 ## Acceptance criteria abbreviations
 
@@ -368,6 +369,6 @@ instead.
 
 - Issue #573 — *[V2 Phase 0] Migration contract matrix + 46 component stub*.
 - Wave A umbrella #579.
-- v2 design migration spec: [`docs/for-developers/specs/2026-04-26-v2-design-migration.md`](../superpowers/specs/2026-04-26-v2-design-migration.md).
-- Existing v2 primitives index: [`apps/web/src/components/ui/v2/`](../../apps/web/src/components/ui/v2/).
-- Mockups: [`admin-mockups/design_files/`](../../admin-mockups/design_files/) (sp4-* wave 1+2).
+- v2 design migration spec: [`docs/for-developers/specs/2026-04-26-v2-design-migration.md`](../specs/2026-04-26-v2-design-migration.md).
+- Existing v2 primitives index: [`apps/web/src/components/ui/v2/`](../../../apps/web/src/components/ui/v2/).
+- Mockups: [`admin-mockups/design_files/`](../../../admin-mockups/design_files/) (sp4-* wave 1+2).

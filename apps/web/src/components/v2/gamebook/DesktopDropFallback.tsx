@@ -77,9 +77,8 @@ export interface DesktopDropFallbackProps {
   readonly className?: string;
 }
 
-const GAME_HSL_SOLID = 'hsl(25, 95%, 39%)';
-const GAME_HSL_DIM = 'hsla(25, 95%, 45%, 0.4)';
-const GAME_HSL_BG = 'hsla(25, 95%, 45%, 0.04)';
+// game entity colours replaced with Tailwind entity-token classes (P2 #807 Task 6+7+8)
+// 'var(--color-entity-game)' → text-entity-game, GAME_HSL_DIM → border dynamic (kept inline), GAME_HSL_BG → bg-entity-game/[0.04]
 
 export function DesktopDropFallback({
   onFilesSelected,
@@ -160,14 +159,11 @@ export function DesktopDropFallback({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       className={clsx(
-        'flex flex-col items-center gap-3 rounded-xl border-2 border-dashed px-8 py-14 text-center',
+        'flex flex-col items-center gap-3 rounded-xl border-2 border-dashed bg-entity-game/[0.04] px-8 py-14 text-center',
         'transition-colors motion-reduce:transition-none',
+        isDragging ? 'border-entity-game' : 'border-entity-game/40',
         className
       )}
-      style={{
-        borderColor: isDragging ? GAME_HSL_SOLID : GAME_HSL_DIM,
-        backgroundColor: GAME_HSL_BG,
-      }}
     >
       {/* Hidden file input — keyboard-activated via Browse button */}
       <input
@@ -185,8 +181,7 @@ export function DesktopDropFallback({
       <div
         aria-hidden="true"
         data-slot="desktop-drop-fallback-icon"
-        className="text-6xl leading-none"
-        style={{ color: GAME_HSL_SOLID }}
+        className="text-6xl leading-none text-entity-game"
       >
         📁
       </div>
@@ -218,7 +213,7 @@ export function DesktopDropFallback({
           'cursor-pointer transition-opacity motion-reduce:transition-none',
           'hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500'
         )}
-        style={{ backgroundColor: GAME_HSL_SOLID }}
+        style={{ backgroundColor: 'var(--color-entity-game)' }}
       >
         🖼️ {labels.cta}
       </button>
@@ -234,12 +229,12 @@ export function DesktopDropFallback({
             data-slot="desktop-drop-fallback-phone-handoff"
             onClick={onPhoneHandoffClick}
             className="cursor-pointer underline transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
-            style={{ color: GAME_HSL_SOLID }}
+            style={{ color: 'var(--color-entity-game)' }}
           >
             {labels.phoneHandoffText}
           </button>
         ) : (
-          <span style={{ color: GAME_HSL_SOLID }}>{labels.phoneHandoffText}</span>
+          <span style={{ color: 'var(--color-entity-game)' }}>{labels.phoneHandoffText}</span>
         )}
       </p>
     </div>

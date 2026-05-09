@@ -73,9 +73,8 @@ export interface OfflineBannerProps {
   readonly className?: string;
 }
 
-const EVENT_HSL_SOLID = 'hsl(350, 89%, 50%)';
-const EVENT_HSL_BG = 'hsla(350, 89%, 60%, 0.12)';
-const EVENT_HSL_BORDER = 'hsla(350, 89%, 60%, 0.4)';
+// event entity colours replaced with Tailwind entity-token classes (P2 #807 Task 6+7+8)
+// EVENT_HSL_SOLID → bg-entity-event / EVENT_HSL_BG → bg-entity-event/12 / EVENT_HSL_BORDER → border-entity-event/40
 
 export function OfflineBanner({
   attempt,
@@ -102,11 +101,10 @@ export function OfflineBanner({
       role="alert"
       aria-live="polite"
       className={clsx(
-        'flex flex-col gap-2 rounded-lg border px-3 py-2.5',
+        'flex flex-col gap-2 rounded-lg border border-entity-event/40 bg-entity-event/12 px-3 py-2.5',
         'transition-colors motion-reduce:transition-none',
         className
       )}
-      style={{ backgroundColor: EVENT_HSL_BG, borderColor: EVENT_HSL_BORDER }}
     >
       {/* Top row: icon + title + countdown */}
       <div className="flex items-center gap-2.5">
@@ -138,9 +136,8 @@ export function OfflineBanner({
             className={clsx(
               'rounded-md border-none px-2.5 py-1 text-[11px] font-bold text-white',
               'cursor-pointer transition-opacity motion-reduce:transition-none',
-              'hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80'
+              'bg-entity-event hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80'
             )}
-            style={{ backgroundColor: EVENT_HSL_SOLID }}
           >
             {labels.retryNow}
           </button>
@@ -171,15 +168,10 @@ export function OfflineBanner({
         className="h-1 w-full overflow-hidden rounded-full bg-slate-200"
       >
         <div
-          className="h-full transition-[width] duration-300 motion-reduce:transition-none"
-          style={{ width: `${pct}%`, backgroundColor: EVENT_HSL_SOLID }}
+          className="h-full bg-entity-event transition-[width] duration-300 motion-reduce:transition-none"
+          style={{ width: `${pct}%` }}
         />
       </div>
     </aside>
   );
 }
-
-// Test-only re-export: also expose total elapsed % for E2E hook scoping.
-export const __OFFLINE_BANNER_TEST_HOOKS__ = {
-  EVENT_HSL_SOLID,
-};

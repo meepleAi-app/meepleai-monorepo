@@ -88,6 +88,7 @@ export function PlayerRosterLive({
               data-player-id={player.id}
               className={[
                 'flex items-center justify-between gap-2 rounded-lg px-2 py-1.5',
+                // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: session dark-bg variant in Tailwind arbitrary class; no dark-bg entity token exists
                 isViewer ? 'bg-[hsl(240,60%,20%)]' : 'bg-slate-800/50',
               ].join(' ')}
             >

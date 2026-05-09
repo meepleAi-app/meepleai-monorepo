@@ -34,15 +34,16 @@ Risolvere le 30+ axe-core color-contrast violations sistemiche su SP6 v2 design 
 ```css
 :root {
   /* Entity color palette — AA-compliant L values for foreground use on bg-card #FFFFFF */
-  --c-game:    25 95% 38%;
-  --c-player:  262 83% 45%;
-  --c-session: 240 60% 35%;
-  --c-agent:   38 92% 38%;
-  --c-kb:      174 60% 40%;   /* unchanged, was passing AA */
-  --c-chat:    220 80% 40%;
-  --c-event:   350 89% 38%;
-  --c-toolkit: 142 70% 35%;
-  --c-tool:    195 80% 38%;
+  /* Final values from audit Iter 2 (2026-05-09): tutti 18 ratios pass ≥ 4.5:1 */
+  --c-game:    25 95% 38%;   /* 4.82:1 */
+  --c-player:  262 83% 45%;  /* 8.55:1 */
+  --c-session: 240 60% 35%;  /* 12.22:1 */
+  --c-agent:   38 92% 32%;   /* 4.87:1 (was L=38, FAIL 3.61:1) */
+  --c-kb:      174 60% 30%;  /* 5.12:1 (was L=40, FAIL 3.09:1 — cyan hue requires lower L) */
+  --c-chat:    220 80% 40%;  /* 7.72:1 */
+  --c-event:   350 89% 38%;  /* 6.79:1 */
+  --c-toolkit: 142 70% 30%;  /* 4.88:1 (was L=35, FAIL 3.74:1) */
+  --c-tool:    195 80% 32%;  /* 5.44:1 (was L=38, FAIL 4.08:1) */
 }
 
 .dark {
@@ -108,21 +109,21 @@ Component callers esistenti continuano a funzionare senza touch (zero breaking c
 
 ## 2. AA target values + audit deliverable
 
-### 2.1 Target table (estimated, raffinabile in audit)
+### 2.1 Target table (FINAL — post audit Iter 2 verification)
 
-| Token | HANDOFF L | Status | Estimated Ratio (white bg) | New L target | Estimated Ratio post-fix |
-|-------|-----------|--------|----------------------------|--------------|--------------------------|
-| `--c-game` | 45% | FAIL | 3.62:1 | **38%** | ~5.12:1 |
-| `--c-player` | 58% | FAIL | 3.18:1 | **45%** | ~5.05:1 |
-| `--c-session` | 55% | FAIL | 3.95:1 | **35%** | ~6.51:1 |
-| `--c-agent` | 50% | FAIL | 2.81:1 | **38%** | ~5.06:1 |
-| `--c-kb` | 40% | PASS | 5.62:1 | **40%** unchanged | ✅ |
-| `--c-chat` | 55% | FAIL | 3.71:1 | **40%** | ~5.50:1 |
-| `--c-event` | 60% | FAIL | 3.45:1 | **38%** | ~5.51:1 |
-| `--c-toolkit` | 45% | FAIL | 4.02:1 | **35%** | ~6.04:1 |
-| `--c-tool` | 50% | FAIL | 2.95:1 | **38%** | ~5.08:1 |
+| Token | HANDOFF L | New L target | Real Ratio (#FFFFFF) | Status |
+|-------|-----------|--------------|----------------------|--------|
+| `--c-game` | 45% | **38%** | 4.82:1 | ✅ |
+| `--c-player` | 58% | **45%** | 8.55:1 | ✅ |
+| `--c-session` | 55% | **35%** | 12.22:1 | ✅ |
+| `--c-agent` | 50% | **32%** | 4.87:1 | ✅ |
+| `--c-kb` | 40% | **30%** | 5.12:1 | ✅ |
+| `--c-chat` | 55% | **40%** | 7.72:1 | ✅ |
+| `--c-event` | 60% | **38%** | 6.79:1 | ✅ |
+| `--c-toolkit` | 45% | **30%** | 4.88:1 | ✅ |
+| `--c-tool` | 50% | **32%** | 5.44:1 | ✅ |
 
-> Note: ratios sono stime calcolate. Audit Fase 1 verifica con tool reale (es. APCA/WCAG21 calculator) e può aggiustare ±2 L points per garantire AA su tutti i background usati (bg-card, bg-muted, dark variants).
+> Iter 2 fix: kb (40→30), agent (38→32), toolkit (35→30), tool (38→32) — Iter 1 stime troppo ottimistiche per cyan/teal/yellow hues (perceptually light, richiedono L significativamente più basso). Vedi `docs/for-developers/frontend/v2-a11y-token-audit.md` per iteration history.
 
 ### 2.2 Dark mode AA verification (target ratios)
 

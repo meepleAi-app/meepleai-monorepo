@@ -249,15 +249,15 @@ Edit `apps/web/src/styles/design-tokens.css`. Find the closing `}` of `:root` in
      * AA-compliant L values for foreground use on bg-card #FFFFFF
      * Audit: docs/for-developers/frontend/v2-a11y-token-audit.md
      * ============================================================================ */
-    --c-game:    25 95% 38%;
-    --c-player:  262 83% 45%;
-    --c-session: 240 60% 35%;
-    --c-agent:   38 92% 38%;
-    --c-kb:      174 60% 40%;
-    --c-chat:    220 80% 40%;
-    --c-event:   350 89% 38%;
-    --c-toolkit: 142 70% 35%;
-    --c-tool:    195 80% 38%;
+    --c-game:    25 95% 38%;   /* 4.82:1 ✅ */
+    --c-player:  262 83% 45%;  /* 8.55:1 ✅ */
+    --c-session: 240 60% 35%;  /* 12.22:1 ✅ */
+    --c-agent:   38 92% 32%;   /* 4.87:1 ✅ (Iter 2: was L=38, FAIL 3.61:1) */
+    --c-kb:      174 60% 30%;  /* 5.12:1 ✅ (Iter 2: was L=40, FAIL 3.09:1 — cyan) */
+    --c-chat:    220 80% 40%;  /* 7.72:1 ✅ */
+    --c-event:   350 89% 38%;  /* 6.79:1 ✅ */
+    --c-toolkit: 142 70% 30%;  /* 4.88:1 ✅ (Iter 2: was L=35, FAIL 3.74:1) */
+    --c-tool:    195 80% 32%;  /* 5.44:1 ✅ (Iter 2: was L=38, FAIL 4.08:1) */
 ```
 
 - [ ] **Step 2.3: Add dark mode variants**

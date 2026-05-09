@@ -54,8 +54,8 @@ const KIND_ICON: Readonly<Record<EmptySessionsKind, string>> = {
 
 const SESSION_CTA_CLASS = clsx(
   'mt-2 inline-flex h-10 items-center justify-center rounded-full px-5 text-sm font-semibold',
-  'bg-[hsl(240,60%,45%)] text-white shadow-sm transition-colors',
-  'hover:bg-[hsl(240,60%,38%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+  'bg-entity-session text-white shadow-sm transition-colors',
+  'hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
 );
 
 function SkeletonRow(): ReactElement {

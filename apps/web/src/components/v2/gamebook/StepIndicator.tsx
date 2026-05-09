@@ -46,9 +46,7 @@ export interface StepIndicatorProps {
   readonly className?: string;
 }
 
-// game entity HSL — l=39% gives ~4.6:1 vs white WCAG AA SC 1.4.3
-const GAME_HSL_SOLID = 'hsl(25, 95%, 39%)';
-const GAME_HSL_DIM = 'hsl(25, 95%, 45%)';
+// game entity colours replaced with Tailwind entity-token classes (P2 #807 Task 6+7+8)
 
 type StepState = 'done' | 'active' | 'pending';
 
@@ -80,13 +78,11 @@ function StepCircle({ stepNumber, state, label, ariaCurrent }: StepCircleProps):
         data-slot="wizard-step-indicator-circle"
         className={clsx(
           'flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-bold tabular-nums',
-          'transition-colors motion-reduce:transition-none'
+          'transition-colors motion-reduce:transition-none',
+          isDone || isActive
+            ? 'border-entity-game bg-entity-game text-white'
+            : 'border-slate-300 bg-transparent text-slate-500'
         )}
-        style={{
-          backgroundColor: isDone || isActive ? GAME_HSL_SOLID : 'transparent',
-          color: isDone || isActive ? '#fff' : 'hsl(215, 20%, 50%)',
-          borderColor: isDone || isActive ? GAME_HSL_SOLID : 'hsl(215, 16%, 80%)',
-        }}
       >
         {isDone ? '✓' : stepNumber}
       </span>
@@ -109,10 +105,10 @@ function StepLine({ highlighted }: StepLineProps): ReactElement {
     <span
       data-slot="wizard-step-indicator-line"
       aria-hidden="true"
-      className="h-0.5 flex-1 self-start mt-4 transition-colors motion-reduce:transition-none"
-      style={{
-        backgroundColor: highlighted ? GAME_HSL_DIM : 'hsl(215, 16%, 88%)',
-      }}
+      className={clsx(
+        'h-0.5 flex-1 self-start mt-4 transition-colors motion-reduce:transition-none',
+        highlighted ? 'bg-entity-game/80' : 'bg-slate-200'
+      )}
     />
   );
 }

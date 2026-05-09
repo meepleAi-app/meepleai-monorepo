@@ -81,19 +81,8 @@ export interface GamebookCardProps {
   readonly className?: string;
 }
 
-// Tokens (entity HSL — see tokens.ts for AA-compliant lightness)
-const TOOLKIT_HSL = 'hsl(142, 70%, 31%)';
-const TOOLKIT_HSL_BG = 'hsla(142, 70%, 31%, 0.12)';
-const GAME_HSL = 'hsl(25, 95%, 39%)';
-const GAME_HSL_BG = 'hsla(25, 95%, 45%, 0.12)';
-const EVENT_HSL = 'hsl(350, 89%, 48%)';
-const EVENT_HSL_BG = 'hsla(350, 89%, 48%, 0.10)';
-const KB_HSL = 'hsl(210, 40%, 48%)';
-const KB_HSL_BG = 'hsla(210, 40%, 48%, 0.12)';
-const CHAT_HSL = 'hsl(220, 80%, 55%)';
-const CHAT_HSL_BG = 'hsla(220, 80%, 55%, 0.12)';
-const SESSION_HSL = 'hsl(240, 60%, 45%)';
-const SESSION_HSL_BG = 'hsla(240, 60%, 55%, 0.12)';
+// Entity colours replaced with Tailwind entity-token classes (P2 #807 Task 6+7+8)
+// Status pill and pip colours are now Tailwind classes (see below)
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -117,14 +106,9 @@ function StatusPill({
       <span
         data-slot="gamebook-card-status"
         data-status="ready"
-        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
-        style={{ backgroundColor: TOOLKIT_HSL_BG, color: TOOLKIT_HSL }}
+        className="inline-flex items-center gap-1.5 rounded-full bg-entity-toolkit/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-entity-toolkit"
       >
-        <span
-          aria-hidden="true"
-          className="h-1.5 w-1.5 rounded-full"
-          style={{ backgroundColor: TOOLKIT_HSL }}
-        />
+        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-entity-toolkit" />
         {readyLabel}
       </span>
     );
@@ -134,8 +118,7 @@ function StatusPill({
       <span
         data-slot="gamebook-card-status"
         data-status="indexing"
-        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
-        style={{ backgroundColor: GAME_HSL_BG, color: GAME_HSL }}
+        className="inline-flex items-center gap-1.5 rounded-full bg-entity-game/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-entity-game"
       >
         <span
           aria-hidden="true"
@@ -150,8 +133,7 @@ function StatusPill({
     <span
       data-slot="gamebook-card-status"
       data-status="error"
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
-      style={{ backgroundColor: EVENT_HSL_BG, color: EVENT_HSL }}
+      className="inline-flex items-center gap-1.5 rounded-full bg-entity-event/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-entity-event"
     >
       <span aria-hidden="true">⚠️</span>
       {errorLabel}
@@ -182,8 +164,7 @@ function PipStrip({
           key: 'chunks',
           icon: '📄',
           label: chunksLabel,
-          color: KB_HSL,
-          bg: KB_HSL_BG,
+          cls: 'bg-entity-document/12 text-entity-document',
         }
       : null,
     qaCount > 0
@@ -191,8 +172,7 @@ function PipStrip({
           key: 'qa',
           icon: '💬',
           label: qaLabel,
-          color: CHAT_HSL,
-          bg: CHAT_HSL_BG,
+          cls: 'bg-entity-chat/12 text-entity-chat',
         }
       : null,
     sessionsCount > 0
@@ -200,8 +180,7 @@ function PipStrip({
           key: 'sessions',
           icon: '🎯',
           label: sessionsLabel,
-          color: SESSION_HSL,
-          bg: SESSION_HSL_BG,
+          cls: 'bg-entity-session/12 text-entity-session',
         }
       : null,
   ].filter((p): p is NonNullable<typeof p> => p !== null);
@@ -214,8 +193,10 @@ function PipStrip({
         <span
           key={p.key}
           data-slot={`gamebook-card-pip-${p.key}`}
-          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums"
-          style={{ backgroundColor: p.bg, color: p.color }}
+          className={clsx(
+            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums',
+            p.cls
+          )}
         >
           <span aria-hidden="true">{p.icon}</span>
           <span>{p.label}</span>
@@ -233,7 +214,9 @@ interface CoverProps {
 }
 
 function Cover({ cover, emoji, pagesLabel, status }: CoverProps): ReactElement {
-  // Default fallback gradient (orange game tone for visual brand consistency).
+  // Default fallback gradient (game→agent warm tone for visual brand consistency).
+  // TODO #807-followup: two-hue warm gradient (hue 28/38) — near game entity but distinct shade; keep inline
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: two-hue warm gradient (game+agent); template literal, CSS vars cannot carry multi-stop gradients
   const fallbackGradient = `linear-gradient(155deg, hsl(28, 80%, 38%) 0%, hsl(38, 92%, 60%) 100%)`;
   const background = cover ?? fallbackGradient;
 
@@ -356,7 +339,7 @@ export function GamebookCard({
             <div aria-hidden="true" className="h-1 overflow-hidden rounded-full bg-slate-200">
               <div
                 className="h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
-                style={{ width: `${indexingPct}%`, backgroundColor: GAME_HSL }}
+                style={{ width: `${indexingPct}%`, backgroundColor: 'var(--color-entity-game)' }}
               />
             </div>
           </div>
@@ -379,8 +362,7 @@ export function GamebookCard({
           <div
             data-slot="gamebook-card-error-msg"
             role="alert"
-            className="flex flex-col gap-2 rounded-md px-2.5 py-2 text-[11px]"
-            style={{ backgroundColor: EVENT_HSL_BG, color: EVENT_HSL }}
+            className="flex flex-col gap-2 rounded-md px-2.5 py-2 text-[11px] bg-entity-event/10 text-entity-event"
           >
             <p>{gamebook.errorMsg}</p>
             <button
@@ -391,9 +373,9 @@ export function GamebookCard({
                 'self-start rounded-full border px-3 py-0.5 text-[10px] font-bold uppercase tracking-wide',
                 'transition-colors motion-reduce:transition-none',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                'hover:bg-white/40'
+                'hover:bg-white/40',
+                'border-entity-event text-entity-event'
               )}
-              style={{ borderColor: EVENT_HSL, color: EVENT_HSL }}
             >
               {labels.errorRetry}
             </button>

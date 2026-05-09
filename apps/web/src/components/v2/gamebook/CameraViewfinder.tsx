@@ -128,20 +128,20 @@ export interface CameraViewfinderProps {
   readonly className?: string;
 }
 
-const TOOLKIT_HSL_SOLID = 'hsl(142, 70%, 35%)';
-const TOOLKIT_HSL_FILL = 'hsl(142, 70%, 45%)';
-const EVENT_HSL_SOLID = 'hsl(350, 89%, 50%)';
-const AGENT_HSL_SOLID = 'hsl(38, 92%, 38%)';
+// Entity CSS vars (P2 #807 Task 6+7+8): replace inline HSL with CSS variable references
+const ENTITY_TOOLKIT = 'var(--color-entity-toolkit)';
+const ENTITY_EVENT = 'var(--color-entity-event)';
+const ENTITY_AGENT = 'var(--color-entity-agent)';
 
 function lightMeterFillColor(level: LightMeterReading['level'] | null): string {
-  if (level === 'ok') return TOOLKIT_HSL_FILL;
-  if (level === 'low' || level === 'too-dark') return EVENT_HSL_SOLID;
-  return AGENT_HSL_SOLID;
+  if (level === 'ok') return ENTITY_TOOLKIT;
+  if (level === 'low' || level === 'too-dark') return ENTITY_EVENT;
+  return ENTITY_AGENT;
 }
 
 function frameBorderColor(detectionFailed: boolean, pageDetected: boolean): string {
-  if (detectionFailed) return EVENT_HSL_SOLID;
-  if (pageDetected) return TOOLKIT_HSL_SOLID;
+  if (detectionFailed) return ENTITY_EVENT;
+  if (pageDetected) return ENTITY_TOOLKIT;
   return 'rgba(255, 255, 255, 0.4)';
 }
 
@@ -317,16 +317,9 @@ export function CameraViewfinder({
             role="status"
             aria-live="polite"
             className={clsx(
-              'absolute -bottom-9 left-1/2 -translate-x-1/2 rounded-full px-3.5 py-1.5 text-xs font-bold text-white whitespace-nowrap',
-              'font-display'
+              'absolute -bottom-9 left-1/2 -translate-x-1/2 rounded-full px-3.5 py-1.5 text-xs font-bold text-white whitespace-nowrap font-display',
+              detectionFailed ? 'bg-entity-event/95' : isOk ? 'bg-entity-toolkit/95' : 'bg-black/70'
             )}
-            style={{
-              backgroundColor: detectionFailed
-                ? 'hsla(350, 89%, 60%, 0.95)'
-                : isOk
-                  ? 'hsla(142, 70%, 45%, 0.95)'
-                  : 'rgba(0, 0, 0, 0.7)',
-            }}
           >
             {hintText}
           </div>
@@ -360,10 +353,10 @@ export function CameraViewfinder({
           </div>
           <span
             data-slot="camera-viewfinder-light-value"
-            className="font-mono text-[9px] font-bold tabular-nums"
-            style={{
-              color: isLow ? EVENT_HSL_SOLID : '#fff',
-            }}
+            className={clsx(
+              'font-mono text-[9px] font-bold tabular-nums',
+              isLow ? 'text-entity-event' : 'text-white'
+            )}
           >
             {lightValueText}
           </span>
@@ -472,7 +465,7 @@ export function CameraViewfinder({
               : 'cursor-pointer hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white'
           )}
           style={{
-            backgroundColor: doneDisabled ? 'rgba(255,255,255,0.15)' : TOOLKIT_HSL_SOLID,
+            backgroundColor: doneDisabled ? 'rgba(255,255,255,0.15)' : ENTITY_TOOLKIT,
           }}
         >
           ✓

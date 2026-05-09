@@ -46,35 +46,51 @@ export type KpiEntityHint = 'session' | 'toolkit' | 'game' | 'agent' | 'kb' | 'c
  * Splitting `text` from `accent` minimises visual baseline drift to the
  * value text only.
  */
+// P2 #807 Task 6+7+8: `text` already uses ENTITY_TEXT_HSL tokens.
+// `accent` + `alpha` remain inline HSL — they feed JS style props (borderLeft, borderColor)
+// where Tailwind utilities are not applicable. CSS vars cannot carry alpha in style strings.
+// TODO #807-followup: entity accent/alpha color map fed into JS style props (borderLeft/borderColor with alpha); Tailwind utilities not applicable
 const ENTITY_HSL: Record<KpiEntityHint, { text: string; accent: string; alpha: string }> = {
   session: {
     text: ENTITY_TEXT_HSL.session,
+    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: session accent/alpha for JS borderColor; Tailwind not applicable
     accent: 'hsl(240, 60%, 45%)',
+    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: session accent/alpha for JS borderColor; Tailwind not applicable
     alpha: 'hsla(240, 60%, 55%, 0.22)',
   },
   toolkit: {
     text: ENTITY_TEXT_HSL.toolkit,
+    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: toolkit accent/alpha for JS borderColor; Tailwind not applicable
     accent: 'hsl(142, 70%, 31%)',
+    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: toolkit accent/alpha for JS borderColor; Tailwind not applicable
     alpha: 'hsla(142, 70%, 31%, 0.22)',
   },
   game: {
     text: ENTITY_TEXT_HSL.game,
+    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: game accent/alpha for JS borderColor; Tailwind not applicable
     accent: 'hsl(25, 95%, 39%)',
+    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: game accent/alpha for JS borderColor; Tailwind not applicable
     alpha: 'hsla(25, 95%, 45%, 0.22)',
   },
   agent: {
     text: ENTITY_TEXT_HSL.agent,
+    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: agent accent/alpha for JS borderColor; Tailwind not applicable
     accent: 'hsl(38, 92%, 33%)',
+    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: agent accent/alpha for JS borderColor; Tailwind not applicable
     alpha: 'hsla(38, 92%, 33%, 0.22)',
   },
   kb: {
     text: ENTITY_TEXT_HSL.kb,
+    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: kb accent/alpha for JS borderColor; Tailwind not applicable
     accent: 'hsl(210, 40%, 48%)',
+    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: kb accent/alpha for JS borderColor; Tailwind not applicable
     alpha: 'hsla(210, 40%, 48%, 0.22)',
   },
   chat: {
     text: ENTITY_TEXT_HSL.chat,
+    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: chat accent/alpha for JS borderColor; Tailwind not applicable
     accent: 'hsl(220, 80%, 55%)',
+    // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: chat accent/alpha for JS borderColor; Tailwind not applicable
     alpha: 'hsla(220, 80%, 55%, 0.22)',
   },
 };

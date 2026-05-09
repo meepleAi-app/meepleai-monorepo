@@ -35,6 +35,7 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
+import { entityTextHslClass } from '@/lib/sessions-summary/entity-text-tokens';
 import type { AchievementDto } from '@/lib/sessions-summary/schemas';
 
 export interface AchievementsCarouselLabels {
@@ -127,7 +128,7 @@ export function AchievementsCarousel({
                 'flex min-w-[220px] shrink-0 items-center gap-2.5 rounded-md p-3',
                 '[scroll-snap-align:start]',
                 unlocked
-                  ? 'border border-[hsla(142,70%,31%,0.3)] bg-[hsla(142,70%,31%,0.06)]'
+                  ? 'border border-entity-toolkit/30 bg-entity-toolkit/[0.06]'
                   : 'border border-dashed border-border bg-muted/40 opacity-60'
               )}
             >
@@ -135,7 +136,7 @@ export function AchievementsCarousel({
                 aria-hidden="true"
                 className={clsx(
                   'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base',
-                  unlocked ? 'bg-[hsla(142,70%,31%,0.18)]' : 'bg-card'
+                  unlocked ? 'bg-entity-toolkit/18' : 'bg-card'
                 )}
               >
                 {unlocked ? a.iconEmoji : '🔒'}
@@ -146,7 +147,7 @@ export function AchievementsCarousel({
                     'truncate font-display text-xs font-extrabold',
                     // a11y (Issue #756): darkened toolkit text for WCAG AA SC 1.4.3
                     // contrast on the entity-tinted bg (≥ 4.5:1).
-                    unlocked ? 'text-[hsl(142,70%,25%)]' : 'text-muted-foreground'
+                    unlocked ? entityTextHslClass('toolkit') : 'text-muted-foreground'
                   )}
                 >
                   {titleResolved}

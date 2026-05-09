@@ -158,7 +158,7 @@ export function SessionDiaryTimeline({
                 'rounded-full border px-3 py-1 font-display text-[11px] font-bold transition-colors',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 active
-                  ? 'border-[hsla(240,60%,55%,0.4)] bg-[hsla(240,60%,55%,0.14)] text-[hsl(240,60%,45%)]'
+                  ? 'border-entity-session/40 bg-entity-session/14 text-entity-session'
                   : 'border-border bg-card text-muted-foreground hover:bg-muted/40'
               )}
             >
@@ -199,7 +199,7 @@ export function SessionDiaryTimeline({
                   className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-foreground hover:bg-muted/30"
                   data-slot="diary-turn-toggle"
                 >
-                  <span className="rounded-full bg-[hsla(240,60%,55%,0.12)] px-2 py-0.5 font-mono text-[10px] font-extrabold uppercase tracking-wide text-[hsl(240,60%,45%)]">
+                  <span className="rounded-full bg-entity-session/12 px-2 py-0.5 font-mono text-[10px] font-extrabold uppercase tracking-wide text-entity-session">
                     {labels.turnLabel(t.turn)}
                   </span>
                   <span className="font-mono text-[11px] font-bold text-muted-foreground">
@@ -226,7 +226,7 @@ export function SessionDiaryTimeline({
                       >
                         <span
                           aria-hidden="true"
-                          className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[hsla(240,60%,55%,0.14)] text-[10px]"
+                          className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-entity-session/14 text-[10px]"
                         >
                           •
                         </span>

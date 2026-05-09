@@ -267,6 +267,7 @@ export function AgentHero(props: AgentHeroProps): ReactElement {
                 type="button"
                 onClick={ctaPlay}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2.5 font-display text-[13px] font-extrabold text-white shadow-md hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
+                // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: decorative green glow (hue 140, sat 60%) — near toolkit but distinct shade; JS style boxShadow
                 style={{ boxShadow: '0 4px 14px hsla(140, 60%, 35%, 0.4)' }}
               >
                 <span aria-hidden="true">💬</span>

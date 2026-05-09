@@ -81,6 +81,7 @@ export function TurnIndicator({
         className="h-1.5 w-full overflow-hidden rounded-full bg-slate-700"
       >
         <div
+          // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: session hue in Tailwind arbitrary class (progress bar); no dark-bg light entity token exists
           className="h-full rounded-full bg-[hsl(240,60%,65%)] transition-[width]"
           style={{ width: `${progressPercent}%` }}
           aria-hidden="true"

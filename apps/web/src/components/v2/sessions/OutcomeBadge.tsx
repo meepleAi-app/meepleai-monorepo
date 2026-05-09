@@ -70,13 +70,13 @@ export function OutcomeBadge({
         data-status="live"
         className={clsx(
           PILL_BASE,
-          'mai-pulse bg-[hsla(240,60%,55%,0.14)] text-[hsl(240,60%,45%)] ring-1 ring-[hsla(240,60%,55%,0.3)]',
+          'mai-pulse bg-entity-session/14 text-entity-session ring-1 ring-entity-session/30',
           className
         )}
       >
         <span
           aria-hidden="true"
-          className="inline-block h-1.5 w-1.5 rounded-full bg-[hsl(240,60%,55%)]"
+          className="inline-block h-1.5 w-1.5 rounded-full bg-entity-session"
         />
         {labels.statusLive}
       </span>

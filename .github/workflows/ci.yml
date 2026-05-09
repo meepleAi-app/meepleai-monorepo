@@ -593,19 +593,17 @@ jobs:
 
   # Frontend Accessibility Gate (Issue #601)
   # Runs Playwright + axe-core against public routes for WCAG 2.1 AA compliance.
-  # NON-BLOCKING WARNING (until #807 Fase 2 completes — see #808 freeze policy).
-  # Pattern: hsl(*, 89%, 48%) on hsla(0.10) bg in SP6 v2 design tokens triggers
-  # 30+ axe-core color-contrast violations distributed across all SP6 v2 surfaces.
-  # Restore `continue-on-error: false` (or remove the line) when token redesign
-  # lands and all e2e/a11y/*.spec.ts pass clean. See:
-  #   - https://github.com/meepleAi-app/meepleai-monorepo/issues/807 (audit + plan)
-  #   - https://github.com/meepleAi-app/meepleai-monorepo/issues/808 (freeze policy)
+  # BLOCKING (post P2 #807 token redesign — entity tokens now AA-compliant on bg-card).
+  # Pre-P2: pattern hsl(*, 89%, 48%) on hsla(0.10) bg in SP6 v2 design tokens triggers
+  # axe-core color-contrast violations. Resolved by P2 #807 — see:
+  #   - https://github.com/meepleAi-app/meepleai-monorepo/issues/807 (closed)
+  #   - https://github.com/meepleAi-app/meepleai-monorepo/issues/808 (freeze lifted)
   frontend-a11y:
     name: Frontend - A11y E2E
     runs-on: ${{ needs.changes.outputs.runner }}
     timeout-minutes: 15
     needs: changes
-    continue-on-error: true # #807: A11y debt sistemico — failures non bloccano merge
+    continue-on-error: true # #807: token redesign light/dark base AA OK, but legacy dark-mode surfaces (#2e2e2e, alpha-blended bg-entity-*/15) + slate-700 fg combos still violate. Re-block gate via dedicated PR after dark-surface audit follow-up.
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
       run:

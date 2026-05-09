@@ -93,7 +93,7 @@ export function SessionCardList({
       className={clsx(
         'group relative w-full text-left',
         'flex items-stretch gap-0 overflow-hidden rounded-xl border border-border bg-card',
-        'border-l-[3px] border-l-[hsl(240,60%,55%)]',
+        'border-l-[3px] border-l-entity-session',
         'cursor-pointer transition-shadow hover:shadow-md',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         isAbandoned && 'opacity-70',
@@ -104,7 +104,7 @@ export function SessionCardList({
       {/* Cover placeholder */}
       <div
         aria-hidden="true"
-        className="flex w-[72px] shrink-0 items-center justify-center bg-[hsla(240,60%,55%,0.12)] text-3xl"
+        className="flex w-[72px] shrink-0 items-center justify-center bg-entity-session/12 text-3xl"
       >
         <span className="drop-shadow-sm">🎯</span>
       </div>
@@ -128,7 +128,7 @@ export function SessionCardList({
               labels={outcomeBadgeLabels}
             />
             {(isInProgress || isPaused) && turnLabel && (
-              <span className="rounded-full bg-[hsla(240,60%,55%,0.1)] px-1.5 py-px font-mono text-[9.5px] font-extrabold uppercase tracking-wider text-[hsl(240,60%,45%)]">
+              <span className="rounded-full bg-entity-session/10 px-1.5 py-px font-mono text-[9.5px] font-extrabold uppercase tracking-wider text-entity-session">
                 {turnLabel}
               </span>
             )}

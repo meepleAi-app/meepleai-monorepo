@@ -99,13 +99,13 @@ export function SessionCardGrid({
       {/* Top accent bar */}
       <div
         aria-hidden="true"
-        className="absolute left-0 right-0 top-0 z-10 h-[3px] bg-[hsl(240,60%,55%)]"
+        className="absolute left-0 right-0 top-0 z-10 h-[3px] bg-entity-session"
       />
 
       {/* Cover area */}
       <div
         aria-hidden="true"
-        className="relative flex h-[110px] items-center justify-center bg-[hsla(240,60%,55%,0.12)] text-[44px]"
+        className="relative flex h-[110px] items-center justify-center bg-entity-session/12 text-[44px]"
       >
         <span className="drop-shadow-md">🎯</span>
 

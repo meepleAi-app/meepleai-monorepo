@@ -125,9 +125,24 @@ ADR-054 (post-MVP) proporrà di rinominare gli endpoint a
 `play-session/chat-thread/chat-history/game-night` per eliminare l'ambiguità.
 Out of scope per #906 (EPIC).
 
+### Naming-confusion guard (since SG4)
+
+POST `/chat/sessions/{id}/rename` include un **400 INVALID_ENTITY_TYPE hint** difensivo: se il UUID fornito appartiene a un `ChatThread` (che ha il proprio endpoint di rename), l'API risponde con:
+
+```json
+{
+  "error": "INVALID_ENTITY_TYPE",
+  "hint": "The provided UUID belongs to a ChatThread (use POST /chat/threads/{id}/title) not a ChatSession"
+}
+```
+
+Questo guard è **solo sull'endpoint rename** per evitare rumore su ogni GET — è una disambiguazione opportunistica quando l'utente sta facendo un errore chiaro (rename su entità sbagliata).
+
+ADR-054 (post-MVP) rinominerà gli endpoint a `play-session/chat-thread/chat-history/game-night` per eliminare l'overload di naming in modo strutturale.
+
 ## Sub-collection consumers
 
 - `private-game/` ← scenari implementati in #902 (SG1)
 - `kb/` ← scenari implementati in #903 (SG2)
 - `agents/` ← scenari implementati in #904 (SG3)
-- `sessions/` ← scenari implementati in #905 (SG4)
+- `sessions/` ← scenari implementati in #905 (SG4) — 4 sub-folder: game-session/ chat-session/ chat-thread/ naming-disambiguation/

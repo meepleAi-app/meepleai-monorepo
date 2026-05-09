@@ -31,3 +31,11 @@ export type {
   GamesEmptyStateLabels,
   GamesEmptyStateProps,
 } from './GamesEmptyState';
+
+export { GamesRecentRail } from './GamesRecentRail';
+export type {
+  GamesRecentRailItem,
+  GamesRecentRailLabels,
+  GamesRecentRailProps,
+  RecentKbBadge,
+} from './GamesRecentRail';

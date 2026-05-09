@@ -61,8 +61,8 @@ Questo workflow è **distinto** da `e2e-smoke-real-backend.yml`:
 
 I 4 issue P0 nightly recenti (#884, #877, #832, #821) NON impattano
 `api-smoke.yml` perché la pipeline è separata. Audit nightly E2E vs
-api-smoke completato in T7 di
-[sg0-foundation-implementation](../../../superpowers/plans/2026-05-09-sg0-foundation-implementation.md).
+api-smoke completato in T7 del plan
+`docs/superpowers/plans/2026-05-09-sg0-foundation-implementation.md`.
 
 **Audit 2026-05-09**: confermato no overlap (vedi commento su #884). I 4 P0 nightly OPEN (#884, #877, #832, #821) non bloccano l'attivazione di api-smoke.yml.
 

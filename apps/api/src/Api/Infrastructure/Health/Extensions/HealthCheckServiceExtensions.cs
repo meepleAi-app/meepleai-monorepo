@@ -15,8 +15,17 @@ public static class HealthCheckServiceExtensions
     /// Registers all comprehensive health checks for Core, AI, External, and Monitoring services.
     /// </summary>
     /// <param name="builder">Health checks builder</param>
+    /// <param name="configuration">Application configuration used to skip registration of optional providers that are not selected</param>
     /// <returns>The builder for chaining</returns>
-    public static IHealthChecksBuilder AddComprehensiveHealthChecks(this IHealthChecksBuilder builder)
+    /// <remarks>
+    /// Optional providers (Unstructured, SmolDocling, Ollama) are registered conditionally based on
+    /// runtime configuration. When a provider is not the active selection, its health check is not
+    /// registered at all — this prevents the global /health endpoint from reporting Degraded for
+    /// services that are intentionally not deployed (avoiding alert fatigue and SLA noise).
+    /// </remarks>
+    public static IHealthChecksBuilder AddComprehensiveHealthChecks(
+        this IHealthChecksBuilder builder,
+        IConfiguration configuration)
     {
         // Core Infrastructure (Critical)
         // PostgreSQL, Redis already registered in ObservabilityServiceExtensions
@@ -56,17 +65,33 @@ public static class HealthCheckServiceExtensions
             tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
-        builder.AddCheck<UnstructuredHealthCheck>(
-            "unstructured",
-            HealthStatus.Degraded,
-            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
+        // Conditional: PDF extractor providers — only register the check when the
+        // provider is actually in use. The "Orchestrator" provider routes to both
+        // Unstructured and SmolDocling; explicit single-provider settings register
+        // only that one. Other values (e.g. "Docnet") register neither.
+        var pdfProvider = configuration["PdfProcessing:Extractor:Provider"] ?? "Orchestrator";
+        var registerUnstructured = pdfProvider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase) ||
+                                   pdfProvider.Equals("Unstructured", StringComparison.OrdinalIgnoreCase);
+        var registerSmolDocling = pdfProvider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase) ||
+                                  pdfProvider.Equals("SmolDocling", StringComparison.OrdinalIgnoreCase);
 
-        builder.AddCheck<SmolDoclingHealthCheck>(
-            "smoldocling",
-            HealthStatus.Degraded,
-            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
+        if (registerUnstructured)
+        {
+            builder.AddCheck<UnstructuredHealthCheck>(
+                "unstructured",
+                HealthStatus.Degraded,
+                tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical, HealthCheckTags.Optional },
+                timeout: TimeSpan.FromSeconds(5));
+        }
+
+        if (registerSmolDocling)
+        {
+            builder.AddCheck<SmolDoclingHealthCheck>(
+                "smoldocling",
+                HealthStatus.Degraded,
+                tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical, HealthCheckTags.Optional },
+                timeout: TimeSpan.FromSeconds(5));
+        }
 
         builder.AddCheck<OrchestrationHealthCheck>(
             "orchestrator",
@@ -74,11 +99,16 @@ public static class HealthCheckServiceExtensions
             tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
             timeout: TimeSpan.FromSeconds(5));
 
-        builder.AddCheck<OllamaHealthCheck>(
-            "ollama",
-            HealthStatus.Degraded,
-            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
+        // Conditional: Ollama is opt-in — register only when OLLAMA_URL is set.
+        var ollamaUrl = configuration["OLLAMA_URL"];
+        if (!string.IsNullOrWhiteSpace(ollamaUrl))
+        {
+            builder.AddCheck<OllamaHealthCheck>(
+                "ollama",
+                HealthStatus.Degraded,
+                tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical, HealthCheckTags.Optional },
+                timeout: TimeSpan.FromSeconds(5));
+        }
 
         // External APIs
         builder.AddCheck<BggApiHealthCheck>(

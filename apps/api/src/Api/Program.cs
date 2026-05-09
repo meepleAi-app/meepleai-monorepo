@@ -648,14 +648,17 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
     }
 });
 
+// Readiness probe: tagged Critical → application is ready to serve traffic.
+// Excludes Optional providers so swapping a pluggable backend does not flap the probe.
 app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
-    Predicate = check => check.Tags.Contains("db") || check.Tags.Contains("cache") || check.Tags.Contains("vector")
+    Predicate = check => check.Tags.Contains(Api.Infrastructure.Health.Models.HealthCheckTags.Critical)
 });
 
+// Liveness probe: process is alive (no dependency checks).
 app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
-    Predicate = _ => false // Just check if the app is running
+    Predicate = _ => false
 });
 
 // CA1869: Cache JsonSerializerOptions for health check endpoints

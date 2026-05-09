@@ -24,7 +24,6 @@ export interface GamesRecentRailItem {
 export interface GamesRecentRailLabels {
   readonly sectionTitle: string;
   readonly emptyHint: string;
-  readonly viewAllHref: string;
 }
 
 export interface GamesRecentRailProps {
@@ -57,9 +56,7 @@ export function GamesRecentRail({
       data-slot="games-recent-rail"
       className={clsx('w-full px-4 py-3', className)}
     >
-      <div className="flex items-baseline justify-between mb-3">
-        <h2 className="text-base font-semibold text-foreground">{labels.sectionTitle}</h2>
-      </div>
+      <h2 className="text-base font-semibold text-foreground mb-3">{labels.sectionTitle}</h2>
 
       {isLoading ? (
         <div className="flex gap-3 overflow-x-auto pb-1">

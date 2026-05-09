@@ -10,7 +10,6 @@ import { GamesRecentRail } from '../GamesRecentRail';
 const labels = {
   sectionTitle: 'Giochi recenti',
   emptyHint: 'Inizia a giocare per vedere qui i tuoi titoli recenti.',
-  viewAllHref: '/library',
 };
 
 describe('GamesRecentRail', () => {
@@ -24,16 +23,22 @@ describe('GamesRecentRail', () => {
     expect(screen.getByText(labels.emptyHint)).toBeInTheDocument();
   });
 
-  it('renders 1 to 5 cards in order', () => {
-    const items = ['a', 'b', 'c'].map(id => ({
+  it('renders single card when items has length 1', () => {
+    const items = [{ id: 'solo', title: 'Solo Game', kbBadge: 'ready' as const }];
+    render(<GamesRecentRail items={items} labels={labels} onSelect={vi.fn()} />);
+    const cards = screen.getAllByRole('button', { name: /Solo Game/ });
+    expect(cards).toHaveLength(1);
+  });
+
+  it('renders 5 cards in order', () => {
+    const items = ['a', 'b', 'c', 'd', 'e'].map(id => ({
       id, title: `Game ${id}`, kbBadge: 'ready' as const,
     }));
     render(<GamesRecentRail items={items} labels={labels} onSelect={vi.fn()} />);
-    const cards = screen.getAllByRole('button', { name: /Game [abc]/ });
-    expect(cards).toHaveLength(3);
+    const cards = screen.getAllByRole('button', { name: /Game [a-e]/ });
+    expect(cards).toHaveLength(5);
     expect(cards[0].textContent).toContain('Game a');
-    expect(cards[1].textContent).toContain('Game b');
-    expect(cards[2].textContent).toContain('Game c');
+    expect(cards[4].textContent).toContain('Game e');
   });
 
   it('calls onSelect with game id when card clicked', () => {

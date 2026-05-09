@@ -484,7 +484,9 @@ export function GameDetailViewV2({ gameId }: GameDetailViewV2Props): ReactElemen
         onPlay={
           heroVariant === 'own' ? () => router.push(`/sessions/new?gameId=${gameId}`) : undefined
         }
-        onEdit={heroVariant === 'own' ? () => router.push(`/library/${gameId}/edit`) : undefined}
+        // Edit is admin-only; on /games/{id} (catalog/library view) we don't expose it
+        // (the route /library/{id}/edit doesn't exist, and SharedGame edit is in /admin/shared-games/{id})
+        onEdit={undefined}
         onShare={() => {
           if (typeof navigator !== 'undefined' && navigator.share) {
             void navigator.share({ title: safeDetail.gameTitle, url: window.location.href });

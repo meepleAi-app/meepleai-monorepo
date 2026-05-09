@@ -154,6 +154,7 @@ function AdminGameCard({
       badge={STATUS_LABELS[game.status]}
       onClick={() => router.push(`/admin/shared-games/${game.id}`)}
       actions={actions}
+      showQuickActions
       data-testid={`admin-game-card-${game.id}`}
     />
   );

@@ -144,6 +144,7 @@ the PR review.
 | `sp4-game-detail.jsx` | `GameDetailSessionsRail` | `apps/web/src/components/v2/game-detail/GameDetailSessionsRail.tsx` | `/games/[id]` | done | #702 | T A V |
 | `sp4-game-detail.jsx` | `GameDetailAgentsList` | `apps/web/src/components/v2/game-detail/GameDetailAgentsList.tsx` | `/games/[id]` | done | #702 | T A V |
 | `sp4-game-detail.jsx` | `GameDetailKbDocList` | `apps/web/src/components/v2/game-detail/GameDetailKbDocList.tsx` | `/games/[id]` | done | #702 | T A V |
+| `sp4-game-chat-tab.html` (G1+G5) | `GameChatTabV2 + 11 game-chat components` | `apps/web/src/components/v2/game-chat/` | `/library/games/[id]?tab=aiChat` | done | TBD | T A V |
 
 ### Agents index — `/agents` — 4 components — **Tier S**
 

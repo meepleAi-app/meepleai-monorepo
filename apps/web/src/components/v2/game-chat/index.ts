@@ -42,3 +42,6 @@ export type { GameChatHeaderProps, AgentKind } from './GameChatHeader';
 
 export { GameChatSidebar } from './GameChatSidebar';
 export type { GameChatSidebarProps, ChatHistoryItem } from './GameChatSidebar';
+
+export { GameChatTabV2 } from './GameChatTabV2';
+export type { GameChatTabV2Props } from './GameChatTabV2';

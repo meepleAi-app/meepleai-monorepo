@@ -84,7 +84,7 @@ $BrunoVersion = if (Test-Path $BrunoVersionFile) {
     '2.15.1'
 }
 
-$EnvFile = Join-Path $CollectionRoot "environments\$Env.bru"
+$EnvFile = Join-Path $CollectionRoot "environments" "$Env.bru"
 if (-not (Test-Path $EnvFile)) {
     [Console]::Error.WriteLine("Error: env file not found: $EnvFile")
     exit 2

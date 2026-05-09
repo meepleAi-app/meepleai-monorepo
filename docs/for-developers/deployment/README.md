@@ -93,16 +93,13 @@ COMPOSE_FILE=docker-compose.yml;compose.dev.yml
 ### Branch Strategy
 
 ```
-feature/*  --PR-->  main-dev  --merge-->  main-staging  (auto-deploy meepleai.app)
-                        |
-                   frontend-dev  (frontend features)
+feature/*  --PR-->  main-dev  --merge-->  main-staging  (auto-deploy meepleai.app)  --PR-->  main
 ```
 
 | Branch | Scopo | Deploy | CI |
 |--------|-------|--------|-----|
 | `feature/*` | Sviluppo feature | Nessuno | PR check |
 | `main-dev` | Integrazione sviluppo | Nessuno | CI completa |
-| `frontend-dev` | Feature frontend | Nessuno | CI completa |
 | `main-staging` | Ambiente attivo | meepleai.app (auto) | CI + Deploy |
 | `main` | Futuro production | Non attivo | Predisposta |
 

@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [main, main-dev, main-staging, frontend-dev, backend-dev]
+    branches: [main, main-dev, main-staging]
   push:
     # Spec R2 — CI optimization (2026-04-09): ci.yml must run on push to
     # main-staging so deploy-staging.yml can gate on its conclusion via

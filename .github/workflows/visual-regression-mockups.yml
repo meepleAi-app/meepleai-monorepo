@@ -17,7 +17,7 @@ name: Visual Regression — Mockup Baseline
 
 on:
   pull_request:
-    branches: [main, main-dev, main-staging, frontend-dev]
+    branches: [main, main-dev, main-staging]
     paths:
       - 'admin-mockups/design_files/**'
       - 'apps/web/e2e/visual-mockups/**'

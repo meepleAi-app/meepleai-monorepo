@@ -1,8 +1,11 @@
 'use client';
 
-import type { ReactElement } from 'react';
+import { useCallback, type ReactElement } from 'react';
 
-import { useUserCampaigns } from '@/lib/gamebook/hooks/useUserCampaigns';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+import { deleteCampaign, renameCampaign } from '@/lib/api/gamebook-campaigns';
+import { useUserCampaigns, userCampaignsKeys } from '@/lib/gamebook/hooks/useUserCampaigns';
 
 import { EmptyFirstTime } from './EmptyFirstTime';
 import { MultiCampaignList } from './MultiCampaignList';
@@ -35,6 +38,35 @@ export function GamebookResumeShell({
   onArchive,
 }: GamebookResumeShellProps): ReactElement {
   const { data, isLoading, isError } = useUserCampaigns(gameId);
+  const queryClient = useQueryClient();
+
+  const renameMutation = useMutation({
+    mutationFn: ({ id, title }: { id: string; title: string }) => renameCampaign(id, title),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: userCampaignsKeys.list(gameId) });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteCampaign(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: userCampaignsKeys.list(gameId) });
+    },
+  });
+
+  const handleRename = useCallback(
+    async (id: string, title: string) => {
+      await renameMutation.mutateAsync({ id, title });
+    },
+    [renameMutation]
+  );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      await deleteMutation.mutateAsync(id);
+    },
+    [deleteMutation]
+  );
 
   if (isLoading) {
     return (
@@ -82,5 +114,13 @@ export function GamebookResumeShell({
     return <ResumeHero campaign={campaign} gameId={gameId} onCreateNew={onCreateCampaign} />;
   }
 
-  return <MultiCampaignList campaigns={data} gameId={gameId} onCreateNew={onCreateCampaign} />;
+  return (
+    <MultiCampaignList
+      campaigns={data}
+      gameId={gameId}
+      onCreateNew={onCreateCampaign}
+      onRename={handleRename}
+      onDelete={handleDelete}
+    />
+  );
 }

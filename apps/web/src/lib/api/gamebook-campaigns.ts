@@ -2,10 +2,12 @@
  * Gamebook Campaigns API client — Iter 1.A.
  *
  * Endpoints exposed by `GamebookCampaignEndpoints`:
- *   - POST /api/v1/gamebook/campaigns
- *   - GET  /api/v1/gamebook/campaigns?gameId=<guid>
- *   - GET  /api/v1/gamebook/campaigns/{id}
- *   - PUT  /api/v1/gamebook/campaigns/{id}/progress
+ *   - POST   /api/v1/gamebook/campaigns
+ *   - GET    /api/v1/gamebook/campaigns?gameId=<guid>
+ *   - GET    /api/v1/gamebook/campaigns/{id}
+ *   - PUT    /api/v1/gamebook/campaigns/{id}/progress
+ *   - PATCH  /api/v1/gamebook/campaigns/{id}        (rename — owner only)
+ *   - DELETE /api/v1/gamebook/campaigns/{id}        (soft-delete — owner only)
  *
  * All endpoints require authentication via session cookie (`credentials: 'include'`).
  */
@@ -90,4 +92,32 @@ export async function updateProgress(
     }
   );
   return parseJson(res, GamebookCampaignSchema);
+}
+
+export async function renameCampaign(id: string, title: string): Promise<GamebookCampaign> {
+  const res = await fetch(`${API_BASE}/api/v1/gamebook/campaigns/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+    credentials: 'include',
+  });
+  return parseJson(res, GamebookCampaignSchema);
+}
+
+export async function deleteCampaign(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/v1/gamebook/campaigns/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    let detail = '';
+    try {
+      detail = await res.text();
+    } catch {
+      /* ignore */
+    }
+    throw new Error(
+      `Gamebook campaigns API error ${res.status}: ${detail || res.statusText}`
+    );
+  }
 }

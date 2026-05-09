@@ -49,6 +49,16 @@ public sealed class GamebookCampaignSession
         UpdatedBy = OwnerUserId;
     }
 
+    public void Rename(string newTitle, Guid updatedBy)
+    {
+        if (string.IsNullOrWhiteSpace(newTitle))
+            throw new ArgumentException("title required", nameof(newTitle));
+
+        Title = newTitle.Trim();
+        UpdatedAt = DateTimeOffset.UtcNow;
+        UpdatedBy = updatedBy;
+    }
+
     public void SoftDelete(Guid deletedBy)
     {
         IsDeleted = true;

@@ -72,7 +72,7 @@ function GamesHubContent() {
   const { data: catalogData, isLoading: catalogLoading } = useGames(undefined, undefined, 1, 20);
 
   const router = useRouter();
-  const recentGames = useRecentLibraryGames(5);
+  const recentGames = useRecentLibraryGames(5, activeTab === 'library');
 
   const recentRailItems = useMemo(
     () => recentGames.entries.map(e => ({

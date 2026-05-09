@@ -20,11 +20,25 @@ export interface UseRecentLibraryGamesResult {
   readonly isError: boolean;
 }
 
+/**
+ * Numero massimo di entry della libreria pre-fetchate per indicizzare i recents.
+ *
+ * **Limite noto**: per librerie utente >50 giochi, i recents store entries
+ * con `gameId` non presenti nella prima pagina della libreria verranno
+ * filtrati come "missing" (vedi algoritmo §G3 step 4). Un utente con 100
+ * giochi potrebbe vedere meno recents di quelli reali.
+ *
+ * Se questo diventa un problema in produzione: aumentare a 200 o
+ * implementare paginazione trasparente con accumulo client-side.
+ */
 const LIBRARY_FETCH_SIZE = 50;
 
-export function useRecentLibraryGames(limit: number = 5): UseRecentLibraryGamesResult {
-  const libraryQuery = useLibrary({ page: 1, pageSize: LIBRARY_FETCH_SIZE });
-  const recentlyAdded = useRecentlyAddedGames(limit);
+export function useRecentLibraryGames(
+  limit: number = 5,
+  enabled: boolean = true
+): UseRecentLibraryGamesResult {
+  const libraryQuery = useLibrary({ page: 1, pageSize: LIBRARY_FETCH_SIZE }, enabled);
+  const recentlyAdded = useRecentlyAddedGames(limit, enabled);
 
   const recents = useRecentsStore(state => state.items);
 

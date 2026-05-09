@@ -149,4 +149,55 @@ describe('useRecentLibraryGames', () => {
 
     expect(result.current.entries.map(e => e.gameId)).toEqual(['inlib']);
   });
+
+  it('returns empty entries when disabled', async () => {
+    vi.mocked(useLibrary).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+    } as any);
+    vi.mocked(useRecentlyAddedGames).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+    } as any);
+
+    const { result } = renderHook(() => useRecentLibraryGames(5, false), { wrapper });
+
+    expect(result.current.entries).toEqual([]);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('reports isError when library errors and recents store is empty', async () => {
+    vi.mocked(useLibrary).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    } as any);
+    // recentlyAdded mock già emptyPaginated da beforeEach
+    useRecentsStore.setState({ items: [] });
+
+    const { result } = renderHook(() => useRecentLibraryGames(5), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.entries).toEqual([]);
+  });
+
+  it('does NOT report isError when library errors but recents store has items', async () => {
+    vi.mocked(useLibrary).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    } as any);
+    useRecentsStore.setState({
+      items: [
+        { id: 'cached-game', entity: 'game', title: 'Cached', href: '/library/games/cached-game', visitedAt: 1731147600000 },
+      ],
+    });
+
+    const { result } = renderHook(() => useRecentLibraryGames(5), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.isError).toBe(false);
+  });
 });

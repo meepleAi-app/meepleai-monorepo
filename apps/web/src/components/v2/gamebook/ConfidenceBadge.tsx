@@ -59,14 +59,14 @@ export interface ConfidenceBadgeProps {
   readonly className?: string;
 }
 
-// CONF_COLORS palette (mockup §):
-//   high   green: bg=hsl(142 70% 45% / .15)  fg=hsl(142 70% 35%)
-//   medium amber: bg=hsl(38  92% 50% / .18)  fg=hsl(38  92% 38%)
-//   low    rose:  bg=hsl(350 89% 60% / .15)  fg=hsl(350 89% 50%)
-const PALETTE: Record<ConfidenceLevel, { bg: string; fg: string }> = {
-  high: { bg: 'hsla(142, 70%, 45%, 0.15)', fg: 'hsl(142, 70%, 30%)' },
-  medium: { bg: 'hsla(38, 92%, 50%, 0.18)', fg: 'hsl(38, 92%, 32%)' },
-  low: { bg: 'hsla(350, 89%, 60%, 0.15)', fg: 'hsl(350, 89%, 42%)' },
+// CONF_COLORS palette (mockup §) — replaced inline HSL with Tailwind entity-token classes (P2 #807 Task 6+7+8):
+//   high   green: toolkit entity (bg-entity-toolkit/15 + text-entity-toolkit)
+//   medium amber: agent entity  (bg-entity-agent/18  + text-entity-agent)
+//   low    rose:  event entity  (bg-entity-event/15  + text-entity-event)
+const PALETTE: Record<ConfidenceLevel, { cls: string }> = {
+  high: { cls: 'bg-entity-toolkit/15 text-entity-toolkit' },
+  medium: { cls: 'bg-entity-agent/18 text-entity-agent' },
+  low: { cls: 'bg-entity-event/15 text-entity-event' },
 };
 
 const GLYPH: Record<ConfidenceLevel, string> = {
@@ -100,9 +100,9 @@ export function ConfidenceBadge({
       className={clsx(
         'inline-flex items-center justify-center rounded-full font-bold tabular-nums leading-none',
         SIZE_CLASS[size],
+        palette.cls,
         className
       )}
-      style={{ backgroundColor: palette.bg, color: palette.fg }}
     >
       {glyph}
     </span>

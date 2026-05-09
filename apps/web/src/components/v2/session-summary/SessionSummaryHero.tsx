@@ -38,6 +38,7 @@ import { useId } from 'react';
 
 import clsx from 'clsx';
 
+import { entityTextHslClass } from '@/lib/sessions-summary/entity-text-tokens';
 import type { RankedParticipant } from '@/lib/sessions-summary/tie-groups';
 
 import { Confetti } from './Confetti';
@@ -190,7 +191,9 @@ function PodiumPlace({ entry, tied, podiumPlaceAriaLabel }: PodiumPlaceProps): R
           width: AVATAR_SIZE_PX[place],
           height: AVATAR_SIZE_PX[place],
           background: `linear-gradient(135deg, hsl(${hue}, 70%, 65%), hsl(${hue}, 60%, 42%))`,
-          border: isWinner ? '3px solid hsl(142, 70%, 31%)' : '2px solid var(--bg-card, white)',
+          border: isWinner
+            ? '3px solid var(--color-entity-toolkit)'
+            : '2px solid var(--bg-card, white)',
           boxShadow: isWinner
             ? '0 0 30px hsla(142,70%,31%,0.4), 0 4px 14px hsla(142,70%,31%,0.3)'
             : '0 4px 12px rgba(0,0,0,.18)',
@@ -208,7 +211,7 @@ function PodiumPlace({ entry, tied, podiumPlaceAriaLabel }: PodiumPlaceProps): R
             data-slot="podium-tied-badge"
             className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
             style={{
-              background: 'hsl(142, 70%, 31%)',
+              background: 'var(--color-entity-toolkit)',
               border: '2px solid var(--bg-card, white)',
             }}
             aria-hidden="true"
@@ -223,7 +226,7 @@ function PodiumPlace({ entry, tied, podiumPlaceAriaLabel }: PodiumPlaceProps): R
       <div
         className={clsx(
           'tabular-nums leading-none font-extrabold',
-          isWinner ? 'text-3xl text-[hsl(142,70%,25%)]' : 'text-xl text-foreground'
+          isWinner ? `text-3xl ${entityTextHslClass('toolkit')}` : 'text-xl text-foreground'
         )}
       >
         {participant.totalScore}
@@ -233,11 +236,12 @@ function PodiumPlace({ entry, tied, podiumPlaceAriaLabel }: PodiumPlaceProps): R
         className={clsx(
           'mt-1 flex w-[88%] items-center justify-center rounded-t-md text-base font-extrabold',
           isWinner
-            ? 'border-t-[3px] border-x border-t-[hsl(142,70%,31%)] border-x-border text-[hsl(142,70%,25%)]'
+            ? `border-t-[3px] border-x border-t-entity-toolkit border-x-border ${entityTextHslClass('toolkit')}`
             : 'border border-border text-muted-foreground'
         )}
         style={{
           height: PEDESTAL_HEIGHT_PX[place],
+          // TODO #807-followup: entity alpha gradient — keep inline (JS style, alpha stops)
           background: isWinner
             ? 'linear-gradient(180deg, hsla(142,70%,31%,0.18), hsla(142,70%,31%,0.08))'
             : 'linear-gradient(180deg, var(--bg-muted, #f8fafc), var(--bg-hover, #f1f5f9))',
@@ -271,10 +275,11 @@ export function SessionSummaryHero({
       data-solo={isSolo || undefined}
       className={clsx(
         'relative overflow-hidden px-4 py-6 sm:px-8 sm:py-8',
-        'border-b border-[hsla(240,60%,55%,0.2)]',
+        'border-b border-entity-session/20',
         className
       )}
       style={{
+        // TODO #807-followup: two-entity radial+linear gradient (session+toolkit) — keep inline
         background:
           'radial-gradient(ellipse at 50% 0%, hsla(240,60%,55%,0.2) 0%, transparent 60%), linear-gradient(180deg, hsla(142,70%,31%,0.04) 0%, transparent 100%)',
       }}
@@ -310,7 +315,7 @@ export function SessionSummaryHero({
       {isTied && labels.tiedBanner && (
         <div
           data-slot="hero-tied-banner"
-          className="relative z-10 mx-auto mb-4 flex max-w-md items-center justify-center gap-1.5 rounded-full border border-[hsla(142,70%,31%,0.3)] bg-[hsla(142,70%,31%,0.12)] px-3 py-1.5 text-center text-xs font-extrabold uppercase tracking-wide text-[hsl(142,70%,25%)]"
+          className={`relative z-10 mx-auto mb-4 flex max-w-md items-center justify-center gap-1.5 rounded-full border border-entity-toolkit/30 bg-entity-toolkit/12 px-3 py-1.5 text-center text-xs font-extrabold uppercase tracking-wide ${entityTextHslClass('toolkit')}`}
         >
           {labels.tiedBanner}
         </div>

@@ -83,10 +83,7 @@ export interface PageThumbProps {
   readonly className?: string;
 }
 
-// Solid event-rose for retake border + CTA bg.
-const EVENT_HSL_SOLID = 'hsl(350, 89%, 50%)';
-const EVENT_HSL_DIM = 'hsla(350, 89%, 60%, 0.4)';
-const TOOLKIT_HSL_SOLID = 'hsl(142, 70%, 35%)';
+// event + toolkit entity colours replaced with Tailwind entity-token classes (P2 #807 Task 6+7+8)
 
 /**
  * Generate a deterministic placeholder gradient seeded by page number, mirror
@@ -108,7 +105,7 @@ export function PageThumb({
   className,
 }: PageThumbProps): ReactElement {
   const showRetakeCta = retake && typeof onRetakeClick === 'function';
-  const borderColor = retake ? EVENT_HSL_SOLID : 'hsl(215, 16%, 88%)';
+  // border set via className below — dynamic on retake
   const confidenceLevel = confidence ?? null;
 
   return (
@@ -123,9 +120,9 @@ export function PageThumb({
       className={clsx(
         'relative flex flex-col overflow-hidden rounded-md border bg-card',
         'transition-colors motion-reduce:transition-none',
+        retake ? 'border-entity-event' : 'border-slate-200',
         className
       )}
-      style={{ borderColor }}
     >
       {/* Cover (3:4 aspect ratio) */}
       <div
@@ -145,10 +142,9 @@ export function PageThumb({
             data-slot="page-thumb-spinner"
             aria-hidden="true"
             className={clsx(
-              'h-3.5 w-3.5 rounded-full border-[2px] border-slate-300',
+              'h-3.5 w-3.5 rounded-full border-[2px] border-slate-300 [border-top-color:var(--color-entity-toolkit)]',
               'motion-safe:animate-spin motion-reduce:animate-none'
             )}
-            style={{ borderTopColor: TOOLKIT_HSL_SOLID }}
           />
         )}
       </div>
@@ -184,7 +180,7 @@ export function PageThumb({
             'transition-opacity motion-reduce:transition-none',
             'hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80'
           )}
-          style={{ backgroundColor: EVENT_HSL_SOLID }}
+          style={{ backgroundColor: 'var(--color-entity-event)' }}
         >
           <span aria-hidden="true">📷</span>
           <span>{labels.retakeCta}</span>
@@ -196,7 +192,7 @@ export function PageThumb({
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 rounded-md"
-          style={{ boxShadow: `inset 0 0 0 1px ${EVENT_HSL_DIM}` }}
+          style={{ boxShadow: 'inset 0 0 0 1px hsla(350,89%,48%,0.4)' }}
         />
       )}
     </li>

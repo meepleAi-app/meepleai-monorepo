@@ -131,7 +131,7 @@ export function SessionsFilters({
             className={clsx(
               'flex h-9 w-9 items-center justify-center transition-colors',
               view === 'list'
-                ? 'bg-[hsla(240,60%,55%,0.14)] text-[hsl(240,60%,45%)]'
+                ? 'bg-entity-session/14 text-entity-session'
                 : 'text-muted-foreground hover:bg-muted',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
             )}
@@ -147,7 +147,7 @@ export function SessionsFilters({
             className={clsx(
               'flex h-9 w-9 items-center justify-center transition-colors',
               view === 'grid'
-                ? 'bg-[hsla(240,60%,55%,0.14)] text-[hsl(240,60%,45%)]'
+                ? 'bg-entity-session/14 text-entity-session'
                 : 'text-muted-foreground hover:bg-muted',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
             )}
@@ -188,7 +188,7 @@ export function SessionsFilters({
               className={clsx(
                 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition-colors whitespace-nowrap',
                 isActive
-                  ? 'bg-[hsla(240,60%,55%,0.14)] text-[hsl(240,60%,45%)] ring-1 ring-[hsla(240,60%,55%,0.3)]'
+                  ? 'bg-entity-session/14 text-entity-session ring-1 ring-entity-session/30'
                   : 'bg-slate-50 text-slate-700 hover:bg-slate-100',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
               )}
@@ -198,7 +198,7 @@ export function SessionsFilters({
                 <span
                   className={clsx(
                     'rounded-full px-1.5 py-px font-mono text-[9px] font-extrabold',
-                    isActive ? 'bg-[hsl(240,60%,45%)] text-white' : 'bg-muted text-muted-foreground'
+                    isActive ? 'bg-entity-session text-white' : 'bg-muted text-muted-foreground'
                   )}
                 >
                   {count}

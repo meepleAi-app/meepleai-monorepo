@@ -125,8 +125,8 @@ export function ChatHighlights({
                 className={clsx(
                   'rounded-2xl border px-3 py-1.5 text-sm leading-snug text-foreground',
                   agent
-                    ? 'border-[hsla(38,92%,33%,0.25)] bg-[hsla(38,92%,33%,0.1)] rounded-tl-sm'
-                    : 'border-[hsla(220,80%,55%,0.25)] bg-[hsla(220,80%,55%,0.12)] rounded-tr-sm'
+                    ? 'border-entity-agent/25 bg-entity-agent/10 rounded-tl-sm'
+                    : 'border-entity-chat/25 bg-entity-chat/12 rounded-tr-sm'
                 )}
               >
                 {h.message}

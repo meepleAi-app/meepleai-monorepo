@@ -66,13 +66,7 @@ function computeFillPercent(used: number, total: number): number {
   return Math.min(100, Math.round((used / total) * 100));
 }
 
-// Tokens-aligned palette (entity HSL pulled from MeepleCard tokens.ts).
-//   default → toolkit l31 (green, ~4.6:1 vs white).
-//   soft+hard → event l48 (red, ~4.7:1 vs white).
-const TOOLKIT_HSL = 'hsl(142, 70%, 31%)';
-const EVENT_HSL = 'hsl(350, 89%, 48%)';
-const EVENT_HSL_BG = 'hsla(350, 89%, 48%, 0.10)';
-const EVENT_HSL_BORDER = 'hsla(350, 89%, 48%, 0.35)';
+// toolkit + event entity colours replaced with Tailwind entity-token classes (P2 #807 Task 6+7+8)
 
 export function QuotaWidget({
   quota,
@@ -85,7 +79,7 @@ export function QuotaWidget({
   const isHard = variant === 'hard';
   const isSoft = variant === 'soft';
   const showUpgrade = isSoft || isHard;
-  const fillColor = variant === 'default' ? TOOLKIT_HSL : EVENT_HSL;
+  const fillClass = variant === 'default' ? 'bg-entity-toolkit' : 'bg-entity-event';
 
   return (
     <section
@@ -94,13 +88,10 @@ export function QuotaWidget({
       role="status"
       aria-label={`${labels.title}: ${labels.usedLabel}`}
       className={clsx(
-        'flex flex-col gap-3 rounded-lg border bg-card p-4 sm:p-5',
-        isHard ? 'border-2' : 'border',
+        'flex flex-col gap-3 rounded-lg bg-card p-4 sm:p-5',
+        isHard ? 'border-2 border-entity-event/35' : 'border',
         className
       )}
-      style={{
-        borderColor: isHard ? EVENT_HSL_BORDER : undefined,
-      }}
     >
       {/* Header row — title + counter */}
       <div className="flex items-center justify-between gap-3">
@@ -113,8 +104,10 @@ export function QuotaWidget({
         </h2>
         <span
           data-slot="quota-widget-counter"
-          className="font-mono text-sm font-bold tabular-nums"
-          style={{ color: isHard ? EVENT_HSL : undefined }}
+          className={clsx(
+            'font-mono text-sm font-bold tabular-nums',
+            isHard && 'text-entity-event'
+          )}
         >
           {labels.usedLabel}
         </span>
@@ -128,11 +121,11 @@ export function QuotaWidget({
       >
         <div
           data-slot="quota-widget-fill"
-          className="h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
-          style={{
-            width: `${fillPct}%`,
-            backgroundColor: fillColor,
-          }}
+          className={clsx(
+            'h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none',
+            fillClass
+          )}
+          style={{ width: `${fillPct}%` }}
         />
       </div>
 
@@ -147,11 +140,10 @@ export function QuotaWidget({
             onClick={onUpgradeClick}
             data-slot="quota-widget-upgrade-cta"
             className={clsx(
-              'inline-flex items-center text-xs font-bold',
+              'inline-flex items-center text-xs font-bold text-entity-event',
               'transition-opacity motion-reduce:transition-none hover:opacity-80',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded'
             )}
-            style={{ color: EVENT_HSL }}
           >
             {labels.upgrade}
             <span aria-hidden="true" className="ml-1">
@@ -165,8 +157,7 @@ export function QuotaWidget({
       {isSoft && (
         <div
           data-slot="quota-widget-soft-banner"
-          className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium"
-          style={{ backgroundColor: EVENT_HSL_BG, color: EVENT_HSL }}
+          className="flex items-center gap-2 rounded-md bg-entity-event/10 px-3 py-2 text-xs font-medium text-entity-event"
         >
           <span aria-hidden="true">⚠️</span>
           <span>{labels.softWarning}</span>
@@ -178,8 +169,7 @@ export function QuotaWidget({
         <div
           data-slot="quota-widget-hard-banner"
           role="alert"
-          className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-bold"
-          style={{ backgroundColor: EVENT_HSL_BG, color: EVENT_HSL }}
+          className="flex items-center gap-2 rounded-md bg-entity-event/10 px-3 py-2 text-xs font-bold text-entity-event"
         >
           <span aria-hidden="true">⚠️</span>
           <span>{labels.hardLimit}</span>

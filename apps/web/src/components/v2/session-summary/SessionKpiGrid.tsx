@@ -46,6 +46,9 @@ export type KpiEntityHint = 'session' | 'toolkit' | 'game' | 'agent' | 'kb' | 'c
  * Splitting `text` from `accent` minimises visual baseline drift to the
  * value text only.
  */
+// P2 #807 Task 6+7+8: `text` already uses ENTITY_TEXT_HSL tokens.
+// `accent` + `alpha` remain inline HSL — they feed JS style props (borderLeft, borderColor)
+// where Tailwind utilities are not applicable. CSS vars cannot carry alpha in style strings.
 const ENTITY_HSL: Record<KpiEntityHint, { text: string; accent: string; alpha: string }> = {
   session: {
     text: ENTITY_TEXT_HSL.session,

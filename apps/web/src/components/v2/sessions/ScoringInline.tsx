@@ -62,7 +62,7 @@ export function ScoringInline({
             compact ? 'text-[10.5px]' : 'text-[11.5px]',
             'font-mono tabular-nums',
             entry.winner
-              ? 'font-extrabold text-[hsl(240,60%,45%)]'
+              ? 'font-extrabold text-entity-session'
               : 'font-semibold text-muted-foreground'
           )}
         >
@@ -76,7 +76,7 @@ export function ScoringInline({
             <span
               className={clsx(
                 'rounded px-1 py-px font-extrabold',
-                entry.winner ? 'bg-[hsla(240,60%,55%,0.14)]' : 'bg-muted text-muted-foreground'
+                entry.winner ? 'bg-entity-session/14' : 'bg-muted text-muted-foreground'
               )}
             >
               {entry.score}

@@ -61,10 +61,11 @@ export function PlayAgainCta({
       data-session-id={sessionId}
       className={clsx(
         'flex flex-wrap items-center justify-between gap-3 rounded-xl border px-5 py-4',
-        'border-[hsla(25,95%,45%,0.3)]',
+        'border-entity-game/30',
         className
       )}
       style={{
+        /* TODO #807-followup: two-entity gradient (game+session) — keep inline until CSS vars support alpha stops */
         background: 'linear-gradient(135deg, hsla(25,95%,45%,0.1) 0%, hsla(240,60%,55%,0.1) 100%)',
       }}
     >
@@ -90,7 +91,7 @@ export function PlayAgainCta({
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           disabled
             ? 'cursor-not-allowed bg-muted-foreground/40'
-            : 'bg-[hsl(240,60%,38%)] hover:bg-[hsl(240,60%,32%)]'
+            : 'bg-entity-session hover:opacity-90'
         )}
       >
         <span aria-hidden="true">▶</span>

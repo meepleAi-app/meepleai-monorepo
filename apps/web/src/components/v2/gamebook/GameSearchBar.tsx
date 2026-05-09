@@ -59,8 +59,7 @@ export interface GameSearchBarProps {
 
 const TAB_ORDER: ReadonlyArray<GameSearchTab> = ['catalog', 'bgg'];
 
-const GAME_HSL_SOLID = 'hsl(25, 95%, 39%)';
-const KB_HSL_SOLID = 'hsl(210, 40%, 48%)';
+// game + kb entity colours replaced with Tailwind entity-token classes (P2 #807 Task 6+7+8)
 
 export function GameSearchBar({
   query,
@@ -88,10 +87,10 @@ export function GameSearchBar({
   const tabConfigs: ReadonlyArray<{
     readonly key: GameSearchTab;
     readonly label: string;
-    readonly accentColor: string;
+    readonly activeCls: string;
   }> = [
-    { key: 'catalog', label: labels.tabsCatalog, accentColor: GAME_HSL_SOLID },
-    { key: 'bgg', label: labels.tabsBgg, accentColor: KB_HSL_SOLID },
+    { key: 'catalog', label: labels.tabsCatalog, activeCls: 'border-entity-game text-entity-game' },
+    { key: 'bgg', label: labels.tabsBgg, activeCls: 'border-entity-document text-entity-document' },
   ];
 
   return (
@@ -129,7 +128,7 @@ export function GameSearchBar({
         aria-label="Sorgente catalogo"
         className="flex items-center gap-1 border-b border-border"
       >
-        {tabConfigs.map(({ key, label, accentColor }) => {
+        {tabConfigs.map(({ key, label, activeCls }) => {
           const isActive = activeTab === key;
           return (
             <button
@@ -151,12 +150,8 @@ export function GameSearchBar({
                 '-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold',
                 'transition-colors motion-reduce:transition-none',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                isActive ? 'text-foreground' : 'text-slate-700'
+                isActive ? activeCls : 'border-transparent text-slate-700'
               )}
-              style={{
-                borderBottomColor: isActive ? accentColor : 'transparent',
-                color: isActive ? accentColor : undefined,
-              }}
             >
               {label}
             </button>

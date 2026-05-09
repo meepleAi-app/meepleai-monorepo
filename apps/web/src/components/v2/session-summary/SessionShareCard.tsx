@@ -103,7 +103,7 @@ function PreviewPodiumCell({ participant, place, theme }: PreviewPodiumCellProps
           width: size,
           height: size,
           background: `linear-gradient(135deg, hsl(${hue}, 70%, 65%), hsl(${hue}, 60%, 42%))`,
-          border: isWinner ? '2px solid hsl(142, 70%, 31%)' : 'none',
+          border: isWinner ? `2px solid var(--color-entity-toolkit)` : 'none',
           fontSize,
         }}
         aria-hidden="true"
@@ -117,7 +117,7 @@ function PreviewPodiumCell({ participant, place, theme }: PreviewPodiumCellProps
         )}
         style={{
           color: isWinner
-            ? 'hsl(142, 70%, 31%)'
+            ? 'var(--color-entity-toolkit)'
             : theme === 'dark'
               ? 'rgba(255,255,255,0.92)'
               : '#0f0c1e',
@@ -185,7 +185,7 @@ export function SessionShareCard({
                 className={clsx(
                   'px-3 py-1 font-mono text-[10px] font-extrabold uppercase tracking-wide',
                   active
-                    ? 'bg-[hsla(240,60%,55%,0.14)] text-[hsl(240,60%,45%)]'
+                    ? 'bg-entity-session/14 text-entity-session'
                     : 'bg-transparent text-muted-foreground hover:text-foreground'
                 )}
               >
@@ -199,9 +199,10 @@ export function SessionShareCard({
       <div
         data-slot="share-preview"
         data-preview-theme={theme}
-        className="relative mx-auto w-full max-w-xl overflow-hidden rounded-lg border-2 border-[hsla(240,60%,55%,0.3)] aspect-[4/3]"
+        className="relative mx-auto w-full max-w-xl overflow-hidden rounded-lg border-2 border-entity-session/30 aspect-[4/3]"
         style={{
           background: theme === 'dark' ? '#0f0c1e' : '#fff',
+          // TODO #807-followup: two-entity radial gradient (session+toolkit) — keep inline until CSS vars support alpha stops
           backgroundImage:
             theme === 'dark'
               ? 'radial-gradient(circle at 20% 0%, hsla(240,60%,55%,0.3) 0%, transparent 60%), radial-gradient(circle at 80% 100%, hsla(142,70%,31%,0.18) 0%, transparent 50%)'
@@ -213,7 +214,7 @@ export function SessionShareCard({
         </span>
         <div className="relative z-10 flex h-full flex-col justify-between p-6">
           <div>
-            <div className="inline-flex items-center gap-1 rounded-full bg-[hsla(142,70%,31%,0.18)] px-2 py-0.5 font-mono text-[9px] font-extrabold uppercase tracking-wider text-[hsl(142,70%,25%)]">
+            <div className="inline-flex items-center gap-1 rounded-full bg-entity-toolkit/18 px-2 py-0.5 font-mono text-[9px] font-extrabold uppercase tracking-wider text-[hsl(142,70%,25%)]">
               <span aria-hidden="true">🏆</span>
             </div>
             <h4
@@ -246,6 +247,7 @@ export function SessionShareCard({
             style={{ color: theme === 'dark' ? 'rgba(255,255,255,0.5)' : 'hsl(220, 8%, 46%)' }}
           >
             <span className="inline-flex items-center gap-1">
+              {/* TODO #807-followup: two-entity brand gradient (game+event) — keep inline */}
               <span
                 aria-hidden="true"
                 className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm bg-gradient-to-br from-[hsl(25,95%,39%)] to-[hsl(350,89%,48%)] text-[8px] font-extrabold text-white"
@@ -265,7 +267,7 @@ export function SessionShareCard({
           onClick={() => onShare('twitter')}
           data-slot="share-button"
           data-channel="twitter"
-          className="inline-flex items-center gap-1.5 rounded-md border border-[hsla(240,60%,55%,0.3)] bg-card px-3 py-1.5 font-display text-[11px] font-bold text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex items-center gap-1.5 rounded-md border border-entity-session/30 bg-card px-3 py-1.5 font-display text-[11px] font-bold text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span aria-hidden="true">𝕏</span>
           {labels.shareTwitter}
@@ -275,7 +277,7 @@ export function SessionShareCard({
           onClick={() => onShare('instagram')}
           data-slot="share-button"
           data-channel="instagram"
-          className="inline-flex items-center gap-1.5 rounded-md border border-[hsla(240,60%,55%,0.3)] bg-card px-3 py-1.5 font-display text-[11px] font-bold text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex items-center gap-1.5 rounded-md border border-entity-session/30 bg-card px-3 py-1.5 font-display text-[11px] font-bold text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span aria-hidden="true">📸</span>
           {labels.shareInstagram}
@@ -285,7 +287,7 @@ export function SessionShareCard({
           onClick={() => onShare('whatsapp')}
           data-slot="share-button"
           data-channel="whatsapp"
-          className="inline-flex items-center gap-1.5 rounded-md border border-[hsla(240,60%,55%,0.3)] bg-card px-3 py-1.5 font-display text-[11px] font-bold text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex items-center gap-1.5 rounded-md border border-entity-session/30 bg-card px-3 py-1.5 font-display text-[11px] font-bold text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span aria-hidden="true">💬</span>
           {labels.shareWhatsApp}
@@ -295,7 +297,7 @@ export function SessionShareCard({
           onClick={() => onShare('copy')}
           data-slot="share-button"
           data-channel="copy"
-          className="inline-flex items-center gap-1.5 rounded-md border border-[hsla(240,60%,55%,0.3)] bg-card px-3 py-1.5 font-display text-[11px] font-bold text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex items-center gap-1.5 rounded-md border border-entity-session/30 bg-card px-3 py-1.5 font-display text-[11px] font-bold text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span aria-hidden="true">🔗</span>
           {labels.copyLink}

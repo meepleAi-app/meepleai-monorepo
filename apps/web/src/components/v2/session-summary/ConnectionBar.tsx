@@ -48,6 +48,9 @@ export type ConnectionBarEntity =
  */
 const ENTITY_TEXT: Record<ConnectionBarEntity, string> = ENTITY_TEXT_HSL;
 
+// P2 #807 Task 6+7+8: ENTITY_TEXT already uses ENTITY_TEXT_HSL (token-aligned).
+// ENTITY_BG_ALPHA + ENTITY_RING_ALPHA remain inline HSL — fed into JS style objects
+// (background + border CSS properties with alpha). Cannot use Tailwind utilities here.
 const ENTITY_BG_ALPHA: Record<ConnectionBarEntity, string> = {
   game: 'hsla(25, 95%, 39%, 0.1)',
   player: 'hsla(262, 83%, 58%, 0.1)',

@@ -63,8 +63,7 @@ export interface NoResultsPanelProps {
   readonly className?: string;
 }
 
-const GAME_HSL_BG = 'hsla(25, 95%, 45%, 0.12)';
-const GAME_HSL_BORDER = 'hsla(25, 95%, 45%, 0.40)';
+// game entity colours replaced with Tailwind entity-token classes (P2 #807 Task 6+7+8)
 
 export function NoResultsPanel({
   query,
@@ -86,11 +85,7 @@ export function NoResultsPanel({
       <div
         data-slot="no-results-panel-illustration"
         aria-hidden="true"
-        className="flex h-20 w-20 items-center justify-center rounded-2xl border border-dashed"
-        style={{
-          background: GAME_HSL_BG,
-          borderColor: GAME_HSL_BORDER,
-        }}
+        className="flex h-20 w-20 items-center justify-center rounded-2xl border border-dashed border-entity-game/40 bg-entity-game/12"
       >
         <span className="text-4xl">🔭</span>
       </div>

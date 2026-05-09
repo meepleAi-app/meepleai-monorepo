@@ -71,40 +71,34 @@ export interface GameSearchCardProps {
   readonly className?: string;
 }
 
-const GAME_HSL_SOLID = 'hsl(25, 95%, 39%)';
-const GAME_HSL_RING = 'hsla(25, 95%, 45%, 0.15)';
-const GAME_HSL_BG_FROM = 'hsl(28, 80%, 38%)';
-const GAME_HSL_BG_TO = 'hsl(38, 92%, 60%)';
-const KB_HSL_SOLID = 'hsl(210, 40%, 48%)';
-const KB_HSL_RING = 'hsla(210, 40%, 48%, 0.15)';
-const KB_HSL_BG_FROM = 'hsl(210, 50%, 28%)';
-const KB_HSL_BG_TO = 'hsl(195, 80%, 50%)';
-const TOOLKIT_HSL_BG = 'hsla(142, 70%, 31%, 0.12)';
-const TOOLKIT_HSL_FG = 'hsl(142, 70%, 31%)';
+// Entity colours replaced with Tailwind entity-token classes (P2 #807 Task 6+7+8)
+// Cover gradients (multi-hue): kept inline with TODO — complex gradient stops not expressible via Tailwind entity tokens
+// TODO #807-followup: GAME_HSL_BG_FROM hsl(28,80%,38%) + TO hsl(38,92%,60%) — warm game gradient, keep inline
+// TODO #807-followup: KB_HSL_BG_FROM hsl(210,50%,28%) + TO hsl(195,80%,50%) — kb/tool gradient, keep inline
 
 interface SourceTokens {
-  readonly accent: string;
-  readonly ring: string;
-  readonly coverFrom: string;
-  readonly coverTo: string;
+  readonly borderCls: string;
+  readonly shadowCls: string;
+  readonly coverGradient: string;
+  readonly accentBgCls: string;
   readonly fallbackEmoji: string;
 }
 
 function tokensFor(source: 'catalog' | 'bgg'): SourceTokens {
   if (source === 'bgg') {
     return {
-      accent: KB_HSL_SOLID,
-      ring: KB_HSL_RING,
-      coverFrom: KB_HSL_BG_FROM,
-      coverTo: KB_HSL_BG_TO,
+      borderCls: 'border-entity-document',
+      shadowCls: 'ring-4 ring-entity-document/15',
+      coverGradient: 'linear-gradient(155deg, hsl(210, 50%, 28%), hsl(195, 80%, 50%))',
+      accentBgCls: 'bg-entity-document',
       fallbackEmoji: '🌐',
     };
   }
   return {
-    accent: GAME_HSL_SOLID,
-    ring: GAME_HSL_RING,
-    coverFrom: GAME_HSL_BG_FROM,
-    coverTo: GAME_HSL_BG_TO,
+    borderCls: 'border-entity-game',
+    shadowCls: 'ring-4 ring-entity-game/15',
+    coverGradient: 'linear-gradient(155deg, hsl(28, 80%, 38%), hsl(38, 92%, 60%))',
+    accentBgCls: 'bg-entity-game',
     fallbackEmoji: '📖',
   };
 }
@@ -142,9 +136,7 @@ export function GameSearchCard({
   const ariaLabel = isSelected ? `${title} — ${labels.selectedAria}` : title;
 
   const coverBackground =
-    coverImageUrl != null
-      ? `url(${coverImageUrl}) center/cover`
-      : `linear-gradient(155deg, ${tokens.coverFrom}, ${tokens.coverTo})`;
+    coverImageUrl != null ? `url(${coverImageUrl}) center/cover` : tokens.coverGradient;
 
   return (
     <button
@@ -161,12 +153,9 @@ export function GameSearchCard({
         'transition-shadow motion-reduce:transition-none',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         'hover:shadow-md',
+        isSelected ? [tokens.borderCls, tokens.shadowCls] : 'border-slate-200',
         className
       )}
-      style={{
-        borderColor: isSelected ? tokens.accent : 'hsl(215, 16%, 88%)',
-        boxShadow: isSelected ? `0 0 0 4px ${tokens.ring}` : undefined,
-      }}
     >
       {/* Cover */}
       <div
@@ -219,8 +208,7 @@ export function GameSearchCard({
             {showAlreadyIndexed && (
               <span
                 data-slot="game-search-card-indexed-badge"
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-                style={{ backgroundColor: TOOLKIT_HSL_BG, color: TOOLKIT_HSL_FG }}
+                className="inline-flex items-center gap-1 rounded-full bg-entity-toolkit/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-entity-toolkit"
               >
                 {labels.alreadyIndexedBadge}
               </span>
@@ -234,8 +222,10 @@ export function GameSearchCard({
         <span
           data-slot="game-search-card-check"
           aria-hidden="true"
-          className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm"
-          style={{ backgroundColor: tokens.accent }}
+          className={clsx(
+            'absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm',
+            tokens.accentBgCls
+          )}
         >
           ✓
         </span>

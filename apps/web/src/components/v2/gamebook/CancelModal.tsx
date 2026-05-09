@@ -90,8 +90,8 @@ function getFocusables(container: HTMLElement): HTMLElement[] {
   );
 }
 
-const EVENT_HSL_SOLID = 'hsl(350, 89%, 50%)';
-const EVENT_HSL_BG = 'hsla(350, 89%, 60%, 0.12)';
+// event entity colours — replaced inline HSL with Tailwind entity-token classes (P2 #807 Task 6+7+8)
+// EVENT_HSL_SOLID → bg-entity-event / EVENT_HSL_BG → bg-entity-event/12
 
 export function CancelModal({
   isOpen,
@@ -199,8 +199,7 @@ export function CancelModal({
         {/* Icon */}
         <div
           aria-hidden="true"
-          className="flex h-14 w-14 items-center justify-center rounded-full"
-          style={{ backgroundColor: EVENT_HSL_BG, color: EVENT_HSL_SOLID }}
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-entity-event/12 text-entity-event"
         >
           <AlertTriangle className="h-6 w-6" aria-hidden="true" />
         </div>
@@ -247,9 +246,8 @@ export function CancelModal({
             className={clsx(
               'flex-1 rounded-lg border-none px-4 py-3 text-sm font-bold text-white',
               'cursor-pointer transition-opacity motion-reduce:transition-none',
-              'hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500'
+              'bg-entity-event hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500'
             )}
-            style={{ backgroundColor: EVENT_HSL_SOLID }}
           >
             {labels.confirm}
           </button>

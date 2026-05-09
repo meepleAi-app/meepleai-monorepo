@@ -42,7 +42,7 @@ export function SessionsHero({ onNewSession, labels, className }: SessionsHeroPr
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
         {/* Text block */}
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold tracking-tight text-[hsl(240,60%,45%)] sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-entity-session sm:text-3xl">
             {labels.title}
           </h1>
           <p className="text-sm text-slate-600">{labels.subtitle}</p>
@@ -55,8 +55,8 @@ export function SessionsHero({ onNewSession, labels, className }: SessionsHeroPr
           aria-label={labels.ctaNew}
           className={clsx(
             'inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg px-5 text-sm font-semibold text-white shadow-sm',
-            'bg-[hsl(240,60%,38%)] transition-colors',
-            'hover:bg-[hsl(240,60%,32%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+            'bg-entity-session transition-colors',
+            'hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
           )}
           data-slot="sessions-hero-cta"
         >

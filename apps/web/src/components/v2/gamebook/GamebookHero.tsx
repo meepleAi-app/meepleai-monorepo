@@ -51,9 +51,7 @@ export interface GamebookHeroProps {
   readonly className?: string;
 }
 
-// game entity from `tokens.ts` — l=39% (4.6:1 on white WCAG AA).
-const GAME_HSL_SOLID = 'hsl(25, 95%, 39%)';
-const GAME_HSL_HOVER = 'hsl(25, 95%, 32%)';
+// game entity colours replaced with Tailwind entity-token classes (P2 #807 Task 6+7+8)
 
 export function GamebookHero({
   totalGamebooks,
@@ -72,8 +70,7 @@ export function GamebookHero({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
         <div className="flex flex-col gap-1">
           <h1
-            className="text-2xl font-bold tracking-tight sm:text-3xl"
-            style={{ color: GAME_HSL_SOLID }}
+            className="text-2xl font-bold tracking-tight text-entity-game sm:text-3xl"
             data-slot="gamebook-hero-title"
           >
             {labels.title}
@@ -89,12 +86,9 @@ export function GamebookHero({
           data-slot="gamebook-hero-cta"
           className={clsx(
             'inline-flex h-10 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg px-5 text-sm font-semibold text-white shadow-sm sm:w-auto',
-            'transition-colors motion-reduce:transition-none',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+            'bg-entity-game transition-colors motion-reduce:transition-none',
+            'hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
           )}
-          style={{ backgroundColor: GAME_HSL_SOLID }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = GAME_HSL_HOVER)}
-          onMouseLeave={e => (e.currentTarget.style.backgroundColor = GAME_HSL_SOLID)}
         >
           <span aria-hidden="true">+</span>
           <span>{labels.ctaAddManual}</span>
@@ -138,10 +132,7 @@ function KpiTile({ slot, value, label }: KpiTileProps): ReactElement {
       <dt className="order-2 font-mono text-[10px] font-bold uppercase tracking-wide text-slate-700">
         {label}
       </dt>
-      <dd
-        className="order-1 text-2xl font-extrabold leading-none tabular-nums"
-        style={{ color: GAME_HSL_SOLID }}
-      >
+      <dd className="order-1 text-2xl font-extrabold leading-none tabular-nums text-entity-game">
         {value}
       </dd>
     </div>

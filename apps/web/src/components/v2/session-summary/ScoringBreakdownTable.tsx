@@ -28,6 +28,7 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
+import { entityTextHslClass } from '@/lib/sessions-summary/entity-text-tokens';
 import type { RankedParticipant } from '@/lib/sessions-summary/tie-groups';
 
 export interface ScoringBreakdownTableLabels {
@@ -92,7 +93,7 @@ export function ScoringBreakdownTable({
                   data-tied={p.isTied || undefined}
                   className={clsx(
                     'border-t border-border/60 transition-colors',
-                    isWinner && 'bg-[hsla(142,70%,31%,0.06)]'
+                    isWinner && 'bg-entity-toolkit/[0.06]'
                   )}
                 >
                   <td className="whitespace-nowrap px-3 py-2.5 font-mono text-xs font-extrabold tabular-nums">
@@ -106,7 +107,10 @@ export function ScoringBreakdownTable({
                       {p.isTied && (
                         <span
                           aria-label={labels.tied}
-                          className="ml-1 inline-flex items-center text-[hsl(142,70%,25%)]"
+                          className={clsx(
+                            'ml-1 inline-flex items-center',
+                            entityTextHslClass('toolkit')
+                          )}
                           data-slot="scoring-tied-indicator"
                         >
                           =
@@ -127,7 +131,10 @@ export function ScoringBreakdownTable({
                     className={clsx(
                       'px-3 py-2.5 text-right tabular-nums',
                       isWinner
-                        ? 'font-display text-base font-extrabold text-[hsl(142,70%,25%)]'
+                        ? clsx(
+                            'font-display text-base font-extrabold',
+                            entityTextHslClass('toolkit')
+                          )
                         : 'font-display text-base font-extrabold text-foreground'
                     )}
                   >

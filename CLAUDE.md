@@ -122,27 +122,29 @@ cd ../../infra && make dev        # All services (make dev-core = no AI/monitori
 
 ### Git Workflow
 
-**Branches**: `main-dev` (dev) | `frontend-dev` (frontend) | `main` (prod) | `feature/issue-{n}-{desc}`
+**Branches**: `main-dev` (dev) | `main-staging` (release) | `main` (prod) | `feature/issue-{n}-{desc}`
 
-**🔴 PR Target Rule**: Feature branches MUST merge to their parent branch
+**🔴 PR Target Rule**: Feature branches MUST merge to their parent branch (typically `main-dev`)
 
 ```bash
-git checkout frontend-dev && git pull
+git checkout main-dev && git pull
 git checkout -b feature/issue-123-desc
-git config branch.feature/issue-123-desc.parent frontend-dev
+git config branch.feature/issue-123-desc.parent main-dev
 # work → commit → test → push
 git push -u origin feature/issue-123-desc
-# PR to frontend-dev (NOT main!) → merge → git branch -D feature/issue-123-desc
+# PR to main-dev → merge (auto-deletes branch on merge)
 ```
+
+> **Note**: `frontend-dev` and `backend-dev` were retired on 2026-05-09 (issue #897). All feature branches now target `main-dev` directly. Auto-delete on merge is enabled at repo level — no need to `git branch -D` after PR merge.
 
 **🔴 Branch Hygiene Rule** (issue #806): ALWAYS switch to the parent branch BEFORE creating a feature branch. Never run `git checkout -b feature/...` while HEAD is on another in-progress feature branch — it absorbs the other branch's commits into your new branch's ancestry. Concurrent multi-terminal workflows (incl. AI agentic sessions) are particularly prone to this.
 
 **Pre-creation safety check** — run before `git checkout -b`:
 
 ```bash
-# Verify HEAD is on the intended parent (main-dev / frontend-dev / main),
+# Verify HEAD is on the intended parent (main-dev / main),
 # NOT on another feature/* branch
-git branch --show-current  # MUST print main-dev, frontend-dev, or main
+git branch --show-current  # MUST print main-dev or main
 git status                 # MUST show clean tree
 git pull --ff-only         # MUST succeed (no divergence)
 git checkout -b feature/issue-{n}-{desc}

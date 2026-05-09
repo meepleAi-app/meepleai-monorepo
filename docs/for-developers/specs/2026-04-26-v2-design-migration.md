@@ -5,6 +5,8 @@
 **Scope**: Migrazione frontend `apps/web/` al design system v2 usando i mockup SP3 + SP4 wave 1+2+3+4 come fonte di verità.
 **Status**: APPROVED (utente sign-off 2026-04-26 + amendment 2026-05-04 post Wave C.1 fail RCA)
 
+> **Nota storica (2026-05-09, issue #897)**: questa spec menziona `frontend-dev` come parent branch per le PR delle wave. Il branch `frontend-dev` è stato ritirato; tutte le wave residue/follow-up devono ora targettare `main-dev`.
+
 ---
 
 ## 1. Context & Decisioni utente

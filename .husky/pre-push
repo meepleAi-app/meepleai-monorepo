@@ -12,7 +12,7 @@ echo "📌 Pushing from branch: $CURRENT_BRANCH"
 # Protected Branch Safety (delete & force-push)
 # ============================================
 
-PROTECTED_BRANCHES="main main-staging main-dev backend-dev frontend-dev"
+PROTECTED_BRANCHES="main main-staging main-dev"
 
 # Read stdin: pre-push hook receives lines of "local_ref local_sha remote_ref remote_sha"
 while read local_ref local_sha remote_ref remote_sha; do
@@ -55,7 +55,7 @@ done
 if [ "$CURRENT_BRANCH" = "main" ]; then
   echo ""
   echo "⚠️  WARNING: Pushing directly to main!"
-  echo "   Recommended flow: feature → frontend-dev → main-dev → main"
+  echo "   Recommended flow: feature → main-dev → main-staging → main"
   echo ""
 fi
 
@@ -134,20 +134,18 @@ fi
 # ============================================
 
 if [ -n "$CURRENT_BRANCH" ]; then
-  # Expected patterns based on parent branch:
-  # - feature/frontend-dev-{issue}-{desc} for frontend-dev children
-  # - feature/{type}-{desc} for main-dev children
-  # - main, main-dev, frontend-dev for main branches
+  # Expected patterns:
+  # - feature/issue-{n}-{desc} or feature/{descriptive-name}
+  # - main, main-dev, main-staging for main branches
 
-  VALID_PATTERN='^(feature|fix|docs|test|refactor|chore|release)/|^main$|^main-dev$|^frontend-dev$'
+  VALID_PATTERN='^(feature|fix|docs|test|refactor|chore|release|hotfix|merge)/|^main$|^main-dev$|^main-staging$'
 
   if ! echo "$CURRENT_BRANCH" | grep -qE "$VALID_PATTERN"; then
     echo ""
     echo "Warning: Branch name $CURRENT_BRANCH does not follow naming convention."
     echo "   Expected patterns:"
-    echo "     - feature/frontend-dev-{issue}-{desc}  (from frontend-dev)"
-    echo "     - feature/{issue}-{desc}              (from main-dev)"
-    echo "     - fix/*, docs/*, test/*, refactor/*, chore/*, release/*"
+    echo "     - feature/issue-{n}-{desc}  (from main-dev)"
+    echo "     - fix/*, docs/*, test/*, refactor/*, chore/*, release/*, hotfix/*"
     echo "   This is a warning only - push will continue."
     echo ""
   fi

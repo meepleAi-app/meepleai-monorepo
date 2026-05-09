@@ -262,7 +262,7 @@ Generated: $(date)" || exit 1
         echo "🌿 Branch Status:"
         git fetch origin --quiet
 
-        for branch in main main-staging main-dev frontend-dev backend-dev; do
+        for branch in main main-staging main-dev; do
             if git show-ref --verify --quiet "refs/heads/$branch" || git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
                 LOCAL_COMMIT=$(git rev-parse "$branch" 2>/dev/null || echo "N/A")
                 REMOTE_COMMIT=$(git rev-parse "origin/$branch" 2>/dev/null || echo "N/A")

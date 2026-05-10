@@ -45,7 +45,7 @@ jobs:
           # Override OpenRouter secret with real CI key (backend uses OPENROUTER_API_KEY,
           # NOT Anthropic — see apps/api/src/Api/.../OpenRouterService.cs)
           cat > secrets/openrouter.secret <<EOF
-          OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY_SMOKE }}
+          OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_DEFAULT_MODEL=${{ vars.OPENROUTER_DEFAULT_MODEL || 'meta-llama/llama-3.3-70b-instruct:free' }}
           EOF
 

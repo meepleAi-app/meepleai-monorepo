@@ -1,5 +1,6 @@
 # G2 Fast Resume Audit — Implementation Plan
 
+**Status**: ✅ COMPLETED (PR #933)
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Estendere `useGameChat` per fetchare il thread chat più recente per (user, gameId) on mount, hydrate `messages[]` (text-only), persist `chatThreadId` per qaStream successive, e renderizzare skeleton + history banner + scroll-bottom in `GameChatTabV2`. Backend zero modifiche.

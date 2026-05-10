@@ -1,5 +1,7 @@
 # Libro Game Nanolith — Iter 1.A Implementation Plan
 
+**Status**: ✅ COMPLETED (PR #828 — feature/libro-game-iter-1a)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Consegnare il fondamento dogfooding di Aaron per Nanolith — campagna persistente (`GamebookCampaignSession`) + chat unificata che riusa l'agent `Nanolith Tutor` esistente per setup tutorial (G1/N1) e Q&A regole in-game (G2/N2). Nessun photo-translate qui (Iter 1.B).

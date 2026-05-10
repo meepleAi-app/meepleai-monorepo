@@ -8,7 +8,7 @@
 **A11y prerequisite**: PR #602 (`frontend-a11y` axe-core CI gate, in progress) — eredita evidenza diagnostica per #587
 **Issue absorbed**: #588 (CategoryTabs Arrow keys a11y) — risolta dal nuovo `Tabs` v2 component WAI-ARIA tablist
 **Pilot reference**: `2026-04-28-v2-migration-wave-a-3b-shared-games-fe.md` (PR #600 MERGED)
-**Status**: DRAFT 2026-04-28 — pending kickoff
+**Status**: ✅ COMPLETED — issue #603 CLOSED
 
 ---
 

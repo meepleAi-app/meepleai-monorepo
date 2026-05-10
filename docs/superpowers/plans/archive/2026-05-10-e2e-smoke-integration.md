@@ -1,5 +1,7 @@
 # E2E Smoke Game-Night Integration Implementation Plan
 
+**Status**: ✅ COMPLETED (PR #956 — nightly integration + weekly real-LLM)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Migrare i 4 spec game-night da workflow isolato a struttura nightly esistente (3 mock) + workflow weekly free-LLM (1 real), eliminare workflow obsoleto.

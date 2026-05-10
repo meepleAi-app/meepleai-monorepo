@@ -1,5 +1,7 @@
 # Provider Token Observability — PR1 Implementation Plan (G1 + G3)
 
+**Status**: 🟡 IN PROGRESS — issue #936 OPEN (PR1 G1+G3); G2/G4/G5 plans pending
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Espone `POST /api/v1/admin/providers/{name}/probe` per validare on-demand i token configurati dei provider LLM, con audit log e rate limit, riusando i client esistenti.

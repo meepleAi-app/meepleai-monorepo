@@ -1,5 +1,7 @@
 # P2 #807 — v2 Token redesign + a11y AA Implementation Plan
 
+**Status**: ✅ COMPLETED 2026-05-10 (PR #876)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Centralizzare 194 inline HSL/HSLA in v2 components in CSS variables AA-compliant + Tailwind v4 `@theme` registration, sbloccando freeze #808 e raggiungendo zero axe color-contrast violations su 13 rotte v2.

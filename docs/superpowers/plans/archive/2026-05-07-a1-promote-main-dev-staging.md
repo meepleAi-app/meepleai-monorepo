@@ -1,5 +1,7 @@
 # A1 — Promote main-dev → main-staging (visibilità v2 su meepleai.app) Implementation Plan
 
+**Status**: 📦 SUPERSEDED by docs/superpowers/specs/2026-05-07-v2-meepleai-deploy-goals.md
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Sincronizzare `main-staging` con `main-dev` (6 commit Wave 3 backend) e verificare che le 16+ rotte v2 siano effettivamente raggiungibili e funzionanti su `https://meepleai.app`. Goal A1 dello SMART set 2026-05-07.

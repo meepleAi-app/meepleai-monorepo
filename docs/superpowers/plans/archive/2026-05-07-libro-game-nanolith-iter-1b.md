@@ -1,5 +1,7 @@
 # Libro Game Nanolith — Iter 1.B Implementation Plan
 
+**Status**: ✅ COMPLETED (PR #837 — feature/libro-game-iter-1b + #888 ef-core fix)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 > **Prerequisite**: Iter 1.A merged on `main-dev` (PR `feat(gamebook): Iter 1.A`). This plan extends `GamebookCampaignSession` and adds the photo-translate pipeline.

@@ -1,5 +1,6 @@
 # E2E Smoke Game-Night — Integration into Nightly + Free LLM Weekly
 
+**Status**: ✅ COMPLETED 2026-05-10 (PR #956 — nightly integration + weekly real-LLM)
 **Date**: 2026-05-10
 **Author**: Refactor session post #948
 **Status**: APPROVED — B+ ibrida (3 mock nightly + 1 real-LLM weekly free tier)

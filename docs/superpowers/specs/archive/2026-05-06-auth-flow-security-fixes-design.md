@@ -3,7 +3,7 @@
 **Data**: 2026-05-06
 **Autore**: Claude (sc:spec-panel review)
 **Scope**: Risolvere 22 issue identificati nella security review del bounded context Authentication: 7 critici (security bugs), 9 importanti (production hardening), 6 raccomandazioni (code quality).
-**Status**: APPROVED + REVIEWED (3 expert agents 2026-05-06)
+**Status**: ✅ COMPLETED (PR #818 hotfix Phase A+B+C+D + #888/#931 follow-up UpdateAsync mutations)
 **Branch target**: `main` (hotfix per critici di sicurezza) — caveat: security reviewer raccomanda `main-dev` con cherry-pick selettivo, utente ha confermato `main` direct
 **Review history**:
 - v1.0 — initial spec (utente approval 2026-05-06)

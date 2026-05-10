@@ -1,7 +1,7 @@
 # Mock Mode Removal — Design Spec
 
 **Date**: 2026-04-25
-**Status**: Draft (awaiting approval)
+**Status**: ✅ COMPLETED — frontend removed (PR #555), Makefile dev-fast targets + scripts removed (verified absent 2026-05-10), backend DevTools intentionally retained per scope decision
 **Author**: Claude (subagent-driven controller)
 **Decision authority**: User confirmed scope on 2026-04-25
 

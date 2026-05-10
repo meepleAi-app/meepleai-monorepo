@@ -1,5 +1,6 @@
 # Citation PDF Viewer (G4 v3) — Design Spec
 
+**Status**: ✅ COMPLETED 2026-05-10 (issue #921, PR #926)
 **Date**: 2026-05-10
 **Author**: Brainstorming session (visual + socratic) post-G1+G5
 **Issue**: [#921](https://github.com/meepleAi-app/meepleai-monorepo/issues/921) (riformulato)

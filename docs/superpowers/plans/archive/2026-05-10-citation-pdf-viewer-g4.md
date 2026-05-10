@@ -1,5 +1,6 @@
 # Citation PDF Viewer (G4 v3) — Implementation Plan
 
+**Status**: ✅ COMPLETED (PR #926)
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Estendere il `CitationModal` (PR #918) con tab `Snippet | PDF originale`, ownership gate via `Citation.isPublic` + `getGameDocuments` fallback, embed `react-pdf` viewer per owner / upsell card per non-owner, sblocco di `onOpenInKb` in `GameChatTabV2`.

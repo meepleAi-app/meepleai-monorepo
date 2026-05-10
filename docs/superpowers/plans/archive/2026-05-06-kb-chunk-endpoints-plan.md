@@ -1,5 +1,6 @@
 # KB Chunk-Level Retrieval Endpoints — Implementation Plan
 
+**Status**: ✅ COMPLETED (PR #805/#815)
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement 5 backend endpoints (4 queries + 1 search) for chunk-level retrieval to unblock V2 migration Wave 3 child #684 (`/kb/[id]` split-view).

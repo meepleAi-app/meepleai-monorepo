@@ -2,7 +2,7 @@
 
 > **Date**: 2026-05-09
 > **Owner**: @DegrassiAaron
-> **Status**: design (pre-implementation, awaiting plan)
+> **Status**: ✅ COMPLETED 2026-05-10 (PR #876 — AA-compliant CSS vars + entity Tailwind utilities, sblocca #808)
 > **Parent spec**: `docs/superpowers/specs/2026-05-07-v2-meepleai-deploy-goals.md` (Goal P2)
 > **Issues**: #807 (audit) + #808 (freeze policy lift)
 

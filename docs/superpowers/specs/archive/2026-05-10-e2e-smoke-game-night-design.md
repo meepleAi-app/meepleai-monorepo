@@ -3,7 +3,7 @@
 **Date**: 2026-05-10
 **Author**: Brainstorming session post-G2 merge
 **Issue**: [#938](https://github.com/meepleAi-app/meepleai-monorepo/issues/938)
-**Status**: DRAFT — pending user review
+**Status**: ✅ COMPLETED — issue #938 CLOSED, PR #944 (4 specs G1-G5) + #956 (nightly integration)
 
 ---
 

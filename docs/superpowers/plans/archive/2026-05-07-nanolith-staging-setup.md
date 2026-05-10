@@ -1,5 +1,7 @@
 # Nanolith Staging E2E Setup Implementation Plan
 
+**Status**: ✅ COMPLETED (PR #839 + #863 + #866 — seed-nanolith automation + fixes)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Configure Nanolith on staging so badsworm@gmail.com can run E2E smoke tests anytime: 2 indexed PDFs, 2 active agents (Tutor + Arbitro), working chat with citations.

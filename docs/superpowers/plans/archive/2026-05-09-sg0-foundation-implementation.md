@@ -1,5 +1,7 @@
 # SG0 Foundation — Bruno Smoke Test Infrastructure Implementation Plan
 
+**Status**: ✅ COMPLETED (PR #919 — Bruno smoke test infrastructure)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Costruire l'infrastruttura comune per le 4 sub-issue di smoke test API CRUD (#902-905) — Bruno collection scaffold, runner cross-platform, CI workflow soft-launch, persona test dedicata `smoke-aaron@meepleai.test` (free-tier), README guida — così che le successive SG possano focalizzarsi solo sui propri scenari.

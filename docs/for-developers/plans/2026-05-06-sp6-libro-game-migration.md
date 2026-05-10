@@ -1,5 +1,7 @@
 # SP6 Libro Game Migration Implementation Plan
 
+**Status**: 🟡 IN PROGRESS — Iter 1.A/1.B done; SP6 Iter 1B follow-ups OPEN (#950-#954)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Migrate libro-game (game-book) modality to v2 design. Ship Nanolith self-demo + `/gamebook` index Tier M + `/gamebook/upload` Tier L wizard. Add SP6 routes to v2-migration-matrix.md.

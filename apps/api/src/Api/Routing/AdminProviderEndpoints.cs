@@ -30,7 +30,7 @@ internal static class AdminProviderEndpoints
 
                 try
                 {
-                    var result = await mediator.Send(new ProbeProviderCommand(name, actorId), ct);
+                    var result = await mediator.Send(new ProbeProviderCommand(name, actorId), ct).ConfigureAwait(false);
                     return Results.Ok(result);
                 }
                 catch (UnknownProviderException ex)

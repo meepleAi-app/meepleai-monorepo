@@ -1,0 +1,75 @@
+name: E2E Smoke G1-G5
+
+on:
+  push:
+    branches: [main-dev, main]
+    paths:
+      - 'apps/web/src/components/v2/game-chat/**'
+      - 'apps/web/src/hooks/queries/useGameChat.ts'
+      - 'apps/web/e2e/smoke/**'
+      - 'apps/api/src/Api/BoundedContexts/KnowledgeBase/**'
+      - '.github/workflows/e2e-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Install web dependencies
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Start full stack with snapshot DB
+        working-directory: infra
+        run: make dev-from-snapshot
+
+      - name: Apply smoke fixtures
+        run: |
+          docker exec -i meepleai-postgres psql -U postgres -d meepleai \
+            < tests/fixtures/smoke-test-users.sql
+
+      - name: Wait for API ready
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8080/health 2>/dev/null; then
+              echo "API ready"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Verify snapshot data
+        run: bash apps/web/e2e/smoke/_verify-snapshot.sh
+
+      - name: Run smoke tests
+        working-directory: apps/web
+        env:
+          BASE_URL: http://localhost:3000
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY_SMOKE }}
+        run: pnpm exec playwright test e2e/smoke/
+
+      - name: Upload Playwright report on fail
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-report
+          path: apps/web/playwright-report/
+          retention-days: 7

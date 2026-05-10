@@ -359,29 +359,68 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Rate limit test — SKIPPED.
-    ///
-    /// The IntegrationWebApplicationFactory always sets DISABLE_RATE_LIMITING=true to prevent
-    /// rate limit interference across the shared test suite. Testing the rate limit policy
-    /// would require a second WebApplicationFactory instance with rate limiting re-enabled,
-    /// which adds significant setup complexity for a middleware concern that is:
-    /// (a) already validated by the rate limiting extension unit tests (Task 11), and
-    /// (b) verified manually during smoke testing of the endpoint.
-    ///
-    /// To enable this test locally: build a second factory with RateLimiting:Enabled=true
-    /// and DISABLE_RATE_LIMITING=null, send 11 requests in rapid succession, assert the 11th
-    /// returns HTTP 429.
+    /// G3: Rate limit policy AdminProviderProbe (10 req/min per user) returns 429 on 11th call.
+    /// Builds a dedicated factory with rate limiting re-enabled (default IntegrationWebApplicationFactory
+    /// disables it globally to prevent cross-test interference).
     /// </summary>
-    [Fact(Skip = "Rate limit testing requires a dedicated factory with rate limiting enabled; " +
-                 "covered by unit tests in Task 11 and manual smoke testing.")]
-    public Task Probe_RateLimitExceeded_Returns429()
+    [Fact(Timeout = 60_000)]
+    public async Task Probe_RateLimitExceeded_Returns429()
     {
-        // Implementation sketch (for reference):
-        // using var rlFactory = IntegrationWebApplicationFactory.Create(connStr,
-        //     extraConfig: new() { ["RateLimiting:Enabled"] = "true" });
-        // Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", null);
-        // for (int i = 0; i < 11; i++) { await client.SendAsync(BuildProbeRequest(...)); }
-        // last response.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
-        return Task.CompletedTask;
+        _wireMock
+            .Given(Request.Create().WithPath("/api/v1/models").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody("""{"data":[]}"""));
+
+        var dbName = $"probe_ratelimit_{Guid.NewGuid():N}";
+        var connStr = await _fixture.CreateIsolatedDatabaseAsync(dbName);
+
+        var prevDisable = Environment.GetEnvironmentVariable("DISABLE_RATE_LIMITING");
+        var prevRateLimitEnv = Environment.GetEnvironmentVariable("RateLimiting__Enabled");
+        Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", null);
+        Environment.SetEnvironmentVariable("RateLimiting__Enabled", "true");
+
+        try
+        {
+            using var factory = IntegrationWebApplicationFactory.Create(
+                connStr,
+                extraConfig: new Dictionary<string, string?>
+                {
+                    ["RateLimiting:Enabled"] = "true",
+                    ["Providers:OpenRouter:BaseUrl"] = $"{_wireMock.Url}/api/v1"
+                },
+                enableRateLimiting: true);
+
+            using var scope = factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            await db.Database.MigrateAsync();
+            var (_, token) = await TestSessionHelper.CreateSuperAdminSessionAsync(db);
+
+            using var client = factory.CreateClient();
+
+            int allowedCount = 0;
+            HttpStatusCode? lastStatus = null;
+            for (int i = 0; i < 11; i++)
+            {
+                var request = TestSessionHelper.CreateAuthenticatedRequest(
+                    HttpMethod.Post,
+                    "/api/v1/admin/providers/openrouter/probe",
+                    token);
+                var response = await client.SendAsync(request);
+                lastStatus = response.StatusCode;
+                if (response.StatusCode == HttpStatusCode.OK) allowedCount++;
+                else break;
+            }
+
+            allowedCount.Should().BeLessThanOrEqualTo(10);
+            lastStatus.Should().Be(HttpStatusCode.TooManyRequests);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", prevDisable);
+            Environment.SetEnvironmentVariable("RateLimiting__Enabled", prevRateLimitEnv);
+            await _fixture.DropIsolatedDatabaseAsync(dbName);
+        }
     }
 }

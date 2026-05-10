@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -46,9 +47,22 @@ internal static class AdminProviderEndpoints
                     return Results.NotFound(new { errorCode = "unknown_provider", provider = ex.ProviderName });
                 }
             })
+            // NOTE: only one .RequireRateLimiting() takes effect (the last call wins);
+            // we apply the per-user policy (10/min). Global per-provider cap (60/h) is
+            // available as the named policy "AdminProviderProbeGlobal" if needed via a
+            // ChainedRateLimiter in the future.
             .RequireAuthorization("RequireSuperAdmin")
             .RequireRateLimiting("AdminProviderProbe")
-            .RequireRateLimiting("AdminProviderProbeGlobal")
+            .WithOpenApi();
+
+        // GET /api/v1/admin/providers/{name}/quota — Issue #936 (G2). Admin-or-above.
+        // Cache 5min server-side. 200 with QuotaSupported:false for unknown / unsupported providers.
+        group.MapGet("/{name}/quota", async (string name, IMediator mediator, CancellationToken ct) =>
+            {
+                var dto = await mediator.Send(new GetProviderQuotaQuery(name), ct).ConfigureAwait(false);
+                return Results.Ok(dto);
+            })
+            .RequireAuthorization("RequireAdminOrAbove")
             .WithOpenApi();
     }
 }

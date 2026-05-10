@@ -15,6 +15,7 @@ using Api.Infrastructure.BackgroundTasks;
 using Api.Infrastructure.Http;
 using Api.Services;
 using Api.Services.Providers.Probe;
+using Api.Services.Providers.Quota;
 using Api.Configuration;
 using Api.Models;
 using Api.SharedKernel.Application.Services;
@@ -81,6 +82,12 @@ internal static class InfrastructureServiceExtensions
         services.AddSingleton<ProviderProbeExecutorFactory>();
         services.AddScoped<IProviderProbeAuditRepository, ProviderProbeAuditRepository>();
         services.AddScoped<IProviderProbeService, ProviderProbeService>();
+
+        // Issue #936 (G2): Provider quota providers — OpenRouter + DeepSeek only.
+        services.AddSingleton<IProviderQuotaProvider, OpenRouterQuotaProvider>();
+        services.AddSingleton<IProviderQuotaProvider, DeepSeekQuotaProvider>();
+        services.AddSingleton<ProviderQuotaProviderFactory>();
+        services.AddScoped<IProviderQuotaService, ProviderQuotaService>();
 
         return services;
     }

@@ -163,9 +163,38 @@ The reindex endpoint is intentionally idempotent for unknown or empty gameIds. I
 
 - `kb/` ← scenari implementati in #903 (SG2) — 6 .bru: login + preflight + reindex (happy path) + raptor tier-gated (403) + cascade verify (smoke) + read PDFs + idempotent unknown gameId
 
+## SG3 — Agent CRUD lifecycle (since 2026-05-10)
+
+### Endpoints (5 nuovi user-facing)
+
+- `DELETE /api/v1/agents/{agentId:guid}` — soft-delete con cascade ChatThread.CloseThread()
+- `POST /api/v1/agents/{agentId:guid}/restore` — un-soft-delete (thread restano Closed per spec)
+- `POST /api/v1/agents/{agentId:guid}/start-testing` — Draft → Testing
+- `POST /api/v1/agents/{agentId:guid}/publish` — Testing → Published
+- `POST /api/v1/agents/{agentId:guid}/unpublish` — Published → Draft
+
+### Cascade strategy (cross-aggregate)
+
+`SoftDeleteUserAgentCommandHandler` orchestra cross-aggregate cleanup nell'application layer (DDD: domain entities NON reach across):
+
+1. Carica agent (HasQueryFilter esclude soft-deleted)
+2. Guard: `IsSystemDefined=true` → `SystemAgentProtectedException` → 403
+3. `agent.SoftDelete()` (sets IsDeleted=true, raises domain event)
+4. Trova `ChatThread` attivi via `IChatThreadRepository.FindActiveByAgentIdAsync(agentId)`
+5. `thread.CloseThread()` su ognuno
+6. Persist via `IUnitOfWork.SaveChangesAsync` (ChatThreadRepository usa Unit-of-Work pattern, non auto-save)
+
+### Tier quota gate
+
+`CreateUserAgentCommandHandler` pre-check: se user ha già `MaxAgentSlots` agenti attivi (free-tier=1) → `TierQuotaExceededException` → 402 con `error="AGENT_SLOT_QUOTA_EXCEEDED"`.
+
+### System-agent guard
+
+`AgentDefinition.IsSystemDefined` (true per agenti seedati: arbitro, game-master, chat) blocca DELETE → 403 `SYSTEM_AGENT_PROTECTED`.
+
 ## Sub-collection consumers
 
 - `private-game/` ← scenari implementati in #902 (SG1)
 - `kb/` ← scenari implementati in #903 (SG2) — 6 .bru: reindex, raptor (tier-gated), cascade verify, list PDFs, idempotent unknown gameId
-- `agents/` ← scenari implementati in #904 (SG3)
+- `agents/` ← scenari implementati in #904 (SG3) — 10 .bru: login + preflight + create user-agent + lifecycle (start-testing/publish/unpublish) + soft-delete cascade + restore + builder filters + tier quota
 - `sessions/` ← scenari implementati in #905 (SG4) — 4 sub-folder: game-session/ chat-session/ chat-thread/ naming-disambiguation/

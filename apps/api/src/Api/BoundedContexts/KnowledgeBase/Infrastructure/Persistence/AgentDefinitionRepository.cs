@@ -83,6 +83,14 @@ public sealed class AgentDefinitionRepository : RepositoryBase, IAgentDefinition
 
     public async Task UpdateAsync(AgentDefinition agentDefinition, CancellationToken cancellationToken = default)
     {
+        // Avoid IdentityConflict: another entity with same Id may already be tracked from prior reads
+        // (test seeding, EF caching). Detach it before re-attaching the modified version.
+        var tracked = DbContext.ChangeTracker.Entries<AgentDefinition>()
+            .FirstOrDefault(e => e.Entity.Id == agentDefinition.Id);
+        if (tracked != null && !ReferenceEquals(tracked.Entity, agentDefinition))
+        {
+            tracked.State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+        }
         DbContext.Set<AgentDefinition>().Update(agentDefinition);
         await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -102,5 +110,30 @@ public sealed class AgentDefinitionRepository : RepositoryBase, IAgentDefinition
         return await DbContext.Set<AgentDefinition>()
             .AsNoTracking()
             .AnyAsync(a => a.Name == name, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<AgentDefinition?> GetByIdIgnoreDeletedAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        // IgnoreQueryFilters bypasses the global HasQueryFilter(a => !a.IsDeleted) filter,
+        // allowing restore operations to fetch soft-deleted aggregates.
+        return await DbContext.Set<AgentDefinition>()
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> CountActiveByGameIdsAsync(IReadOnlyList<Guid> gameIds, CancellationToken cancellationToken = default)
+    {
+        if (gameIds is null || gameIds.Count == 0)
+            return 0;
+
+        // Count agents linked to any of the provided gameIds.
+        // The global HasQueryFilter ensures soft-deleted agents are excluded automatically.
+        return await DbContext.Set<AgentDefinition>()
+            .AsNoTracking()
+            .CountAsync(a => a.GameId != null && gameIds.Contains(a.GameId.Value), cancellationToken)
+            .ConfigureAwait(false);
     }
 }

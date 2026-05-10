@@ -24,6 +24,13 @@ internal interface IChatThreadRepository : IRepository<ChatThread, Guid>
     Task<IReadOnlyList<ChatThread>> FindByUserIdAndGameIdAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds all active (non-closed) threads associated with a specific AgentDefinition.
+    /// Used by the soft-delete cascade to close threads when an agent is deleted.
+    /// Issue #904: SG3 — cascade ChatThread.CloseThread() on agent soft-delete.
+    /// </summary>
+    Task<IReadOnlyList<ChatThread>> FindActiveByAgentIdAsync(Guid agentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds recent threads (ordered by last message).
     /// </summary>
     /// <summary>

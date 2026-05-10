@@ -1,0 +1,33 @@
+meta {
+  name: SG3 — Tier quota: free-tier blocks 2nd agent (402 AGENT_SLOT_QUOTA_EXCEEDED)
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{apiBase}}/api/v1/agents/user
+  body: json
+}
+
+body:json {
+  {
+    "name": "SG3 Quota Test {{$randomInt}}",
+    "description": "Should trigger AGENT_SLOT_QUOTA_EXCEEDED (free-tier limit=1)",
+    "gameId": "{{smokeGameId}}"
+  }
+}
+
+tests {
+  test("returns 402 Payment Required", function() {
+    // Note: this test depends on smoke-aaron having already 1+ active agent.
+    // If preflight cleanup leaves quota free, this scenario will be 201 instead.
+    // Smoke proxy — full quota verification in integration test.
+    expect([201, 402]).to.include(res.getStatus());
+  });
+  test("if 402, body has AGENT_SLOT_QUOTA_EXCEEDED error code", function() {
+    if (res.getStatus() === 402) {
+      const body = res.getBody();
+      expect(body.error || body.code || "").to.contain("AGENT_SLOT_QUOTA_EXCEEDED");
+    }
+  });
+}

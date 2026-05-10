@@ -1,0 +1,15 @@
+meta {
+  name: SG3 — Soft-delete user-agent (cascade ChatThread.Close)
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{apiBase}}/api/v1/agents/{{agentId}}
+}
+
+tests {
+  test("returns 204 NoContent", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}

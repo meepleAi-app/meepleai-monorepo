@@ -37,6 +37,18 @@ jobs:
         working-directory: apps/web
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Setup secret files (LLM provider for backend)
+        working-directory: infra
+        run: |
+          # Bootstrap placeholder secret files from .example templates
+          make secrets-setup
+          # Override OpenRouter secret with real CI key (backend uses OPENROUTER_API_KEY,
+          # NOT Anthropic — see apps/api/src/Api/.../OpenRouterService.cs)
+          cat > secrets/openrouter.secret <<EOF
+          OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY_SMOKE }}
+          OPENROUTER_DEFAULT_MODEL=${{ vars.OPENROUTER_DEFAULT_MODEL || 'meta-llama/llama-3.3-70b-instruct:free' }}
+          EOF
+
       - name: Start full stack with snapshot DB
         working-directory: infra
         run: make dev-from-snapshot
@@ -63,7 +75,6 @@ jobs:
         working-directory: apps/web
         env:
           BASE_URL: http://localhost:3000
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY_SMOKE }}
         run: pnpm exec playwright test e2e/smoke/
 
       - name: Upload Playwright report on fail

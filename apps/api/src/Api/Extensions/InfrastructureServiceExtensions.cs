@@ -76,14 +76,14 @@ internal static class InfrastructureServiceExtensions
                 ?? OllamaLocalDefaultBaseUrl,
             apiKeyEnvVar: null));
 
-        services.AddSingleton<ProviderProbeExecutorFactory>();
+        services.AddSingleton<IProviderProbeExecutorFactory, ProviderProbeExecutorFactory>();
         services.AddScoped<IProviderProbeAuditRepository, ProviderProbeAuditRepository>();
         services.AddScoped<IProviderProbeService, ProviderProbeService>();
 
         // Issue #936 (G2): Provider quota providers — OpenRouter + DeepSeek only.
         services.AddSingleton<IProviderQuotaProvider, OpenRouterQuotaProvider>();
         services.AddSingleton<IProviderQuotaProvider, DeepSeekQuotaProvider>();
-        services.AddSingleton<ProviderQuotaProviderFactory>();
+        services.AddSingleton<IProviderQuotaProviderFactory, ProviderQuotaProviderFactory>();
         services.AddScoped<IProviderQuotaService, ProviderQuotaService>();
 
         return services;

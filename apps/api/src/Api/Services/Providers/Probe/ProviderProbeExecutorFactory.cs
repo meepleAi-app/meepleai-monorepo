@@ -3,7 +3,7 @@ namespace Api.Services.Providers.Probe;
 /// <summary>
 /// Resolves an <see cref="IProviderProbeExecutor"/> by provider name (case-insensitive).
 /// </summary>
-internal sealed class ProviderProbeExecutorFactory
+internal sealed class ProviderProbeExecutorFactory : IProviderProbeExecutorFactory
 {
     private readonly Dictionary<string, IProviderProbeExecutor> _executors;
     private readonly IReadOnlyCollection<string> _knownProviderNames;

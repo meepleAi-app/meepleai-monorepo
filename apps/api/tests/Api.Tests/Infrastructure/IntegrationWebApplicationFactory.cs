@@ -39,11 +39,17 @@ internal static class IntegrationWebApplicationFactory
     public static WebApplicationFactory<Program> Create(
         string connectionString,
         string? redisConnectionString = null,
-        Dictionary<string, string?>? extraConfig = null)
+        Dictionary<string, string?>? extraConfig = null,
+        bool enableRateLimiting = false)
     {
-        // Must be set before factory creation — middleware checks these env vars directly
-        Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
-        Environment.SetEnvironmentVariable("RateLimiting__Enabled", "false");
+        // Must be set before factory creation — middleware checks these env vars directly.
+        // Tests that need rate limiting (e.g., AdminProviderProbe rate-limit verification)
+        // pass enableRateLimiting:true to opt out of the global disable.
+        if (!enableRateLimiting)
+        {
+            Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
+            Environment.SetEnvironmentVariable("RateLimiting__Enabled", "false");
+        }
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Testing");
 
         return new WebApplicationFactory<Program>()

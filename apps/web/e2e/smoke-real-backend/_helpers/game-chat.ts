@@ -116,10 +116,7 @@ export async function mockNoChatHistory(page: Page, gameId: string): Promise<voi
  * useCanViewPdf vede documents=[] → canView=false → CitationOwnershipUpsell.
  */
 export async function mockNoDocuments(page: Page, gameId: string): Promise<void> {
-  await page.route(
-    `**/api/v1/knowledge-base/${gameId}/documents`,
-    async (route: Route) => {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
-    }
-  );
+  await page.route(`**/api/v1/knowledge-base/${gameId}/documents`, async (route: Route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
 }

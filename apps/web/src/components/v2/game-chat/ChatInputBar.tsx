@@ -6,6 +6,7 @@
 'use client';
 
 import type { ChangeEvent, KeyboardEvent, ReactElement } from 'react';
+
 import clsx from 'clsx';
 
 export interface ChatInputBarProps {
@@ -41,10 +42,7 @@ export function ChatInputBar({
   return (
     <div
       data-slot="chat-input-bar"
-      className={clsx(
-        'flex items-center gap-2 border-t border-border-light px-4 py-3',
-        className
-      )}
+      className={clsx('flex items-center gap-2 border-t border-border-light px-4 py-3', className)}
     >
       <input
         type="text"

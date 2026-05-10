@@ -33,11 +33,18 @@ export async function applySessionToPage(page: Page, cookieHeader: string): Prom
   const eq = cookieHeader.indexOf('=');
   const name = cookieHeader.slice(0, eq);
   const value = cookieHeader.slice(eq + 1);
+  // Cookie cross-port (#960 H4): tests run frontend on :3000 + backend on :8080.
+  // Using `url: API_BASE` binds the cookie to :8080 only — browser does NOT send
+  // it during hydration fetches initiated by pages loaded from :3000. Switching
+  // to `domain: 'localhost'` makes the cookie shared across all ports of the
+  // host, matching how a real browser receives Set-Cookie from the backend
+  // (where domain is the eTLD+1).
   await page.context().addCookies([
     {
       name,
       value,
-      url: API_BASE,
+      domain: 'localhost',
+      path: '/',
       httpOnly: true,
       secure: false,
       sameSite: 'Lax',

@@ -152,6 +152,23 @@ jobs:
           curl -s http://localhost:8080/health || true
           echo ""
           echo "::endgroup::"
+          echo "::group::Smoke fixture verification (DB row + API response)"
+          docker exec -i meepleai-postgres psql -U meepleai -d meepleai_db -c \
+            "SELECT id, title, status, is_deleted, has_knowledge_base FROM shared_games WHERE id = '00000000-0000-4000-8000-000000053e1d';" || true
+          docker exec -i meepleai-postgres psql -U meepleai -d meepleai_db -c \
+            "SELECT \"Id\", \"UserId\", shared_game_id, \"OwnershipDeclaredAt\" FROM user_library_entries WHERE \"Id\" = '00000000-0000-4000-8000-000000053e1e';" || true
+          echo "--- API login + library detail probe ---"
+          curl -sS -X POST http://localhost:8080/api/v1/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"smoke-user@meepleai.test","password":"SmokeUser1!!"}' \
+            -c /tmp/cookies.txt -o /tmp/login.json -w "login HTTP %{http_code}\n" || true
+          head -c 200 /tmp/login.json 2>/dev/null
+          echo ""
+          curl -sS -X GET http://localhost:8080/api/v1/library/games/00000000-0000-4000-8000-000000053e1d \
+            -b /tmp/cookies.txt -o /tmp/detail.json -w "library detail HTTP %{http_code}\n" || true
+          head -c 800 /tmp/detail.json 2>/dev/null
+          echo ""
+          echo "::endgroup::"
 
       - name: Run smoke specs
         working-directory: apps/web

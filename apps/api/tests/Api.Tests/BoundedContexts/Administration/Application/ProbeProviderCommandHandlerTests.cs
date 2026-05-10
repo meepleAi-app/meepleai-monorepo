@@ -25,19 +25,30 @@ public sealed class ProbeProviderCommandHandlerTests
     }
 
     [Fact]
-    public void Validator_UnknownProvider_Fails()
+    public void Validator_EmptyProviderName_Fails()
     {
         var v = new ProbeProviderCommandValidator();
-        var r = v.Validate(new ProbeProviderCommand("cohere", Guid.NewGuid()));
+        var r = v.Validate(new ProbeProviderCommand(string.Empty, Guid.NewGuid()));
         r.IsValid.Should().BeFalse();
     }
 
+    [Fact]
+    public void Validator_TooLongProviderName_Fails()
+    {
+        var v = new ProbeProviderCommandValidator();
+        var r = v.Validate(new ProbeProviderCommand(new string('x', 65), Guid.NewGuid()));
+        r.IsValid.Should().BeFalse();
+    }
+
+    // Unknown-but-syntactically-valid provider names pass the validator and are
+    // rejected later by ProviderProbeExecutorFactory → UnknownProviderException → HTTP 404.
     [Theory]
     [InlineData("openrouter")]
     [InlineData("openai")]
     [InlineData("deepseek")]
     [InlineData("ollama")]
-    public void Validator_AllowedProviders_Pass(string name)
+    [InlineData("cohere")]
+    public void Validator_NonEmptyProviderName_Passes(string name)
     {
         var v = new ProbeProviderCommandValidator();
         v.Validate(new ProbeProviderCommand(name, Guid.NewGuid())).IsValid.Should().BeTrue();

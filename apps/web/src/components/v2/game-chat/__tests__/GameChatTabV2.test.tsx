@@ -11,7 +11,16 @@ vi.mock('@/lib/api/clients/chatClient', () => ({
   qaStream: vi.fn(),
 }));
 
+vi.mock('@/lib/api', () => ({
+  api: {
+    chat: {
+      getThreadsByGame: vi.fn().mockResolvedValue([]),
+    },
+  },
+}));
+
 import { qaStream } from '@/lib/api/clients/chatClient';
+import { api } from '@/lib/api';
 import { GameChatTabV2 } from '../GameChatTabV2';
 
 async function* mockStream(events: Array<{ type: number; data: unknown }>) {
@@ -45,6 +54,8 @@ const oocEvents = [
 describe('GameChatTabV2', () => {
   beforeEach(() => {
     vi.mocked(qaStream).mockReset();
+    vi.mocked(api.chat.getThreadsByGame).mockReset();
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValue([]);
   });
 
   it('renders empty state with input bar and suggested prompts', () => {
@@ -92,5 +103,63 @@ describe('GameChatTabV2', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     // KB button hidden until G4 → onOpenInKb undefined
     expect(screen.queryByRole('button', { name: /apri nella kb/i })).not.toBeInTheDocument();
+  });
+
+  // ─── G2 fast resume tests ───────────────────────────────
+
+  it('shows skeleton bubbles while hydrating', () => {
+    // Make getThreadsByGame never resolve → isHydrating stays true
+    vi.mocked(api.chat.getThreadsByGame).mockReturnValueOnce(new Promise(() => {}));
+    render(<GameChatTabV2 gameId="wingspan" />);
+    expect(screen.getAllByTestId('chat-bubble-skeleton').length).toBeGreaterThan(0);
+  });
+
+  it('shows ChatHistoryBanner when historical messages + new messages exist', async () => {
+    const thread = {
+      id: 'thread-1',
+      gameId: 'wingspan',
+      agentId: null,
+      agentType: null,
+      title: 'Test',
+      createdAt: '2026-05-10T00:00:00Z',
+      lastMessageAt: '2026-05-10T10:00:00Z',
+      messageCount: 1,
+      messages: [{ content: 'old historical', role: 'user', timestamp: '2026-05-10T10:00:00Z' }],
+    };
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([thread] as any);
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+
+    render(<GameChatTabV2 gameId="wingspan" />);
+    await waitFor(() => expect(screen.getByText('old historical')).toBeInTheDocument());
+
+    // No banner yet (only historical, no new)
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+
+    // User asks new question
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'new q?' } });
+    fireEvent.click(screen.getByRole('button', { name: /invia/i }));
+    await waitFor(() => expect(screen.getByText(/Sì, ogni potere/)).toBeInTheDocument());
+
+    // Banner now visible
+    expect(screen.getByRole('note')).toBeInTheDocument();
+  });
+
+  it('does NOT show ChatHistoryBanner when only historical messages (no new yet)', async () => {
+    const thread = {
+      id: 'thread-1',
+      gameId: 'wingspan',
+      agentId: null,
+      agentType: null,
+      title: 'Test',
+      createdAt: '2026-05-10T00:00:00Z',
+      lastMessageAt: '2026-05-10T10:00:00Z',
+      messageCount: 1,
+      messages: [{ content: 'old only', role: 'user', timestamp: '2026-05-10T10:00:00Z' }],
+    };
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([thread] as any);
+
+    render(<GameChatTabV2 gameId="wingspan" />);
+    await waitFor(() => expect(screen.getByText('old only')).toBeInTheDocument());
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
   });
 });

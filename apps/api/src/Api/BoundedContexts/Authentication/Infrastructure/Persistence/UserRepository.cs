@@ -139,8 +139,11 @@ public class UserRepository : RepositoryBase, IUserRepository
 
         // Load the existing user with backup codes for update
         // Note: We don't need to track OAuthAccounts here since they're managed via OAuthAccountRepository
+        // Issue #888: AsTracking() is REQUIRED — DbContext default is NoTracking (PERF-06),
+        // so without it EF won't detect mutations and SaveChangesAsync returns 0 affected rows.
         var existingUser = await DbContext.Users
             .Include(u => u.BackupCodes)
+            .AsTracking()
             .FirstOrDefaultAsync(u => u.Id == entity.Id, cancellationToken).ConfigureAwait(false);
 
         if (existingUser == null)

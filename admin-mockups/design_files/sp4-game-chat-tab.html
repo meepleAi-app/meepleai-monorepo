@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Game Chat Tab (G1+G5)</title>
+<!--
+  Mockup: sp4-game-chat-tab
+  Route:  /library/games/{gameId}?tab=aiChat
+  Scope:  G1 (citazione autoritativa) + G5 (disclosure incertezza) per il flusso
+          "serata di gioco" — utente Alpha chiede chiarimenti su regole durante
+          la partita. NO campaign / NO setup wizard / NO Storybook+Toolbox tab.
+
+  Differenze vs nanolith-runthrough-setup-chat:
+  - Tab esterni Library/AI Chat/FAQ/Rules sono GIA' nella page parent → il mockup
+    NON include tabs interni Chat/Storybook/Toolbox.
+  - Session header semplificato: "<game> · <agente attivo>" (no §-counter, no campaign).
+  - Sidebar desktop: switch agente Tutor/Arbitro + chat history per quel gioco
+    (riuso pattern sp4-agent-detail.jsx ChatHistoryTimeline).
+  - Suggested prompts categorizzati per Q4 brainstorm: A regole · B ambiguità ·
+    C setup · E scoring · F edge case (NO D strategia, fuori scope serata).
+
+  Stati:
+    default            (Aaron query "azione carta uccello + 2 cibo" su Wingspan,
+                       risposta IT + citation Manuale p.12 + confidence alta verde)
+    confidence-bassa   (edge "mazzo finisce a metà partita", disclaimer
+                       "non sono certo" + suggerimento BGG)
+    out-of-context     (utente chiede regole di Tainted Grail mentre è su Wingspan,
+                       agente declina + propone switch gioco/agente)
+    loading            (typing indicator + meta latency live, budget P95 ≤ 10s da Q6)
+
+  Persona: Aaron (badsworm@gmail.com), serata Wingspan con amici, agente "Tutor Wingspan".
+  Vincoli SMART (da spec G1+G5):
+    - 90% query con citazione esplicita (pagina+sezione)
+    - confidence < 70% → marker incertezza obbligatorio
+    - latency P95 ≤ 10s con spinner accettabile
+    - chat handoff <3s (G2 — non coperto qui ma compatibile con UX)
+
+  Sorgente: admin-mockups/design_files/nanolith-runthrough-setup-chat.html
+  CSS pattern riusato 1:1 (token --c-chat/--c-agent/--c-kb/--c-success/--c-warning/--c-danger).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  .top {
+    position: sticky; top: 0; z-index: var(--z-sticky);
+    backdrop-filter: blur(12px); background: var(--glass-bg);
+    border-bottom: 1px solid var(--border);
+    padding: var(--s-4) var(--s-6);
+    display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap;
+  }
+  .top h1 { font-family: var(--f-display); font-size: var(--fs-lg); margin: 0; font-weight: var(--fw-bold); }
+  .top .route { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); padding: 2px var(--s-2); border-radius: var(--r-sm); background: var(--bg-muted); }
+  .top .spacer { flex: 1; }
+  .top button {
+    background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
+    border-radius: var(--r-pill); padding: var(--s-1) var(--s-3);
+    font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer;
+  }
+
+  .stage { padding: var(--s-7) var(--s-6); max-width: 1700px; margin: 0 auto; }
+
+  .state-section { margin-bottom: var(--s-10); }
+  .state-section .label {
+    display: inline-block; padding: var(--s-1) var(--s-3);
+    background: hsl(var(--c-chat) / 0.12); color: hsl(var(--c-chat));
+    border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: var(--s-2);
+  }
+  .state-section h2 {
+    font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold);
+    margin: 0 0 var(--s-2);
+  }
+  .state-section .desc { color: var(--text-sec); margin: 0 0 var(--s-6); font-size: var(--fs-md); }
+
+  .frames { display: flex; gap: var(--s-9); flex-wrap: wrap; align-items: flex-start; }
+
+  .phone {
+    width: 375px; min-height: 740px; background: var(--bg);
+    border-radius: 36px; overflow: hidden;
+    border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; position: relative;
+  }
+  .desktop {
+    width: 880px; height: 600px; background: var(--bg);
+    border-radius: var(--r-lg); overflow: hidden;
+    border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; position: relative;
+  }
+  .phone .frame-label, .desktop .frame-label {
+    position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+  }
+  .desktop .frame-label { left: 0; transform: none; }
+
+  .phone-sbar {
+    height: 32px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 22px 0;
+    font-size: 12px; font-weight: var(--fw-bold);
+    font-family: var(--f-display); color: var(--text-sec);
+  }
+  .titlebar {
+    height: 28px; background: var(--bg-muted); flex-shrink: 0;
+    display: flex; align-items: center; padding: 0 var(--s-3); gap: 6px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .titlebar .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .titlebar .dot.r { background: #ff605c; } .titlebar .dot.y { background: #ffbd44; } .titlebar .dot.g { background: #00ca4e; }
+  .titlebar .url {
+    margin-left: var(--s-3); padding: 2px var(--s-3);
+    background: var(--bg-card); border-radius: var(--r-sm);
+    font-family: var(--f-mono); font-size: 11px; color: var(--text-muted);
+    flex: 1;
+  }
+
+  /* ─── Session header (no tabs interni) ─── */
+  .session-head {
+    padding: var(--s-3) var(--s-4);
+    border-bottom: 1px solid var(--border-light); flex-shrink: 0;
+    display: flex; align-items: center; gap: var(--s-3);
+  }
+  .session-head .game-icon {
+    width: 36px; height: 36px; border-radius: var(--r-md);
+    background: hsl(var(--c-game) / 0.15); display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .session-head .title {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md);
+    line-height: 1.2;
+  }
+  .session-head .sub {
+    font-size: var(--fs-xs); color: var(--text-muted); font-family: var(--f-mono);
+    display: flex; align-items: center; gap: var(--s-2);
+  }
+  .session-head .agent-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+    background: hsl(var(--c-agent) / 0.15); color: hsl(var(--c-agent));
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+
+  /* ─── Chat conversation ─── */
+  .conv { flex: 1; overflow-y: auto; padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-4); }
+
+  .bubble {
+    max-width: 85%; padding: var(--s-3) var(--s-4); border-radius: var(--r-lg);
+    font-size: var(--fs-md); line-height: var(--lh-body);
+  }
+  .bubble.user {
+    align-self: flex-end;
+    background: hsl(var(--c-chat));
+    color: #fff;
+    border-bottom-right-radius: var(--r-xs);
+  }
+  .bubble.agent {
+    align-self: flex-start;
+    background: hsl(var(--c-agent) / 0.08);
+    color: var(--text);
+    border: 1px solid hsl(var(--c-agent) / 0.18);
+    border-bottom-left-radius: var(--r-xs);
+  }
+  .bubble.agent .header {
+    display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-2);
+  }
+  .bubble.agent .avatar {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: hsl(var(--c-agent) / 0.25); display: flex; align-items: center; justify-content: center;
+    font-size: 12px; flex-shrink: 0;
+  }
+  .bubble.agent .name {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm); color: hsl(var(--c-agent));
+  }
+
+  .bubble ol, .bubble ul { margin: var(--s-2) 0; padding-left: var(--s-5); }
+  .bubble ol li, .bubble ul li { margin-bottom: var(--s-2); }
+  .bubble ol li:last-child, .bubble ul li:last-child { margin-bottom: 0; }
+  .bubble strong { font-weight: var(--fw-bold); }
+
+  /* ─── Citation row ─── */
+  .citation-row {
+    margin-top: var(--s-3); padding-top: var(--s-3);
+    border-top: 1px dashed hsl(var(--c-agent) / 0.25);
+    display: flex; gap: var(--s-2); flex-wrap: wrap;
+  }
+  .citation-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px var(--s-3); border-radius: var(--r-pill);
+    background: hsl(var(--c-kb) / 0.12); color: hsl(var(--c-kb));
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-semi);
+    cursor: pointer; border: 1px solid transparent;
+    transition: background var(--dur-sm) var(--ease-out);
+  }
+  .citation-chip:hover { background: hsl(var(--c-kb) / 0.2); border-color: hsl(var(--c-kb) / 0.3); }
+
+  /* ─── Confidence badge ─── */
+  .conf-row {
+    margin-top: var(--s-2); display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); flex-wrap: wrap;
+  }
+  .conf-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .conf-badge.alta { background: hsl(var(--c-success) / 0.15); color: hsl(var(--c-success)); }
+  .conf-badge.media { background: hsl(var(--c-warning) / 0.18); color: hsl(var(--c-warning)); }
+  .conf-badge.bassa { background: hsl(var(--c-danger) / 0.15); color: hsl(var(--c-danger)); }
+
+  .actions-mini { display: flex; gap: var(--s-1); }
+  .action-mini {
+    background: transparent; border: 1px solid var(--border); border-radius: var(--r-pill);
+    padding: 2px var(--s-2); font-family: var(--f-mono); font-size: 10px; color: var(--text-sec);
+    cursor: pointer;
+  }
+  .action-mini:hover { background: var(--bg-hover); }
+
+  /* ─── Disclaimer (low confidence) ─── */
+  .disclaimer {
+    margin-top: var(--s-3); padding: var(--s-3);
+    background: hsl(var(--c-warning) / 0.08); border-left: 3px solid hsl(var(--c-warning));
+    border-radius: var(--r-sm); font-size: var(--fs-sm); color: var(--text);
+  }
+  .disclaimer strong { color: hsl(var(--c-warning)); font-weight: var(--fw-bold); }
+
+  .out-of-context-actions {
+    margin-top: var(--s-3); display: flex; flex-direction: column; gap: var(--s-2);
+  }
+  .action-pill {
+    padding: var(--s-2) var(--s-3); border-radius: var(--r-pill);
+    background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--f-display); font-size: var(--fs-sm); font-weight: var(--fw-semi);
+    cursor: pointer; text-align: left;
+    display: flex; align-items: center; gap: var(--s-2);
+  }
+  .action-pill:hover { background: var(--bg-hover); border-color: hsl(var(--c-chat) / 0.4); }
+
+  /* ─── Input bar ─── */
+  .input-bar {
+    padding: var(--s-3) var(--s-4); border-top: 1px solid var(--border-light); flex-shrink: 0;
+    display: flex; gap: var(--s-2); align-items: center;
+  }
+  .input-bar input[type="text"] {
+    flex: 1; padding: var(--s-3) var(--s-4); border-radius: var(--r-pill);
+    background: var(--bg-muted); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--f-body); font-size: var(--fs-md);
+  }
+  .input-bar input:focus {
+    outline: none; border-color: hsl(var(--c-chat) / 0.5);
+    box-shadow: 0 0 0 3px hsl(var(--c-chat) / 0.1);
+  }
+  .input-bar .send {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: hsl(var(--c-chat)); color: #fff; border: 0;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  /* ─── Suggested prompts categorizzati (Q4 brainstorm) ─── */
+  .suggested-row {
+    display: flex; gap: var(--s-2); padding: 0 var(--s-4) var(--s-3);
+    flex-wrap: wrap; flex-shrink: 0;
+  }
+  .suggested-row .group-label {
+    width: 100%; font-family: var(--f-mono); font-size: 10px;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: var(--s-1);
+  }
+  .suggested {
+    padding: var(--s-2) var(--s-3); border-radius: var(--r-pill);
+    background: hsl(var(--c-chat) / 0.08); color: hsl(var(--c-chat));
+    border: 1px solid hsl(var(--c-chat) / 0.2);
+    font-family: var(--f-display); font-size: var(--fs-xs); font-weight: var(--fw-semi);
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .suggested:hover { background: hsl(var(--c-chat) / 0.15); }
+  .suggested .cat { font-family: var(--f-mono); font-size: 9px; opacity: 0.7; }
+
+  /* ─── Typing indicator ─── */
+  .typing { display: inline-flex; gap: 4px; padding: var(--s-2) var(--s-3); }
+  .typing span {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: hsl(var(--c-agent));
+    animation: typing 1.2s ease-in-out infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.15s; }
+  .typing span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes typing {
+    0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-4px); }
+  }
+  .typing-meta {
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+    margin-top: var(--s-1);
+  }
+
+  /* ─── Desktop split layout ─── */
+  .desktop-body { display: flex; flex: 1; overflow: hidden; }
+  .desktop-side {
+    width: 260px; flex-shrink: 0;
+    border-right: 1px solid var(--border-light);
+    padding: var(--s-3); overflow-y: auto;
+  }
+  .desktop-side h4 {
+    font-family: var(--f-display); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);
+    margin: 0 0 var(--s-2);
+  }
+  .desktop-side .game-mini {
+    padding: var(--s-3); border-radius: var(--r-md); background: var(--bg-card);
+    border: 1px solid var(--border-light); margin-bottom: var(--s-3);
+    display: flex; align-items: center; gap: var(--s-2);
+  }
+  .desktop-side .game-mini .game-icon {
+    width: 32px; height: 32px; border-radius: var(--r-sm);
+    background: hsl(var(--c-game) / 0.18); display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .desktop-side .game-mini .nm {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm);
+    line-height: 1.2;
+  }
+  .desktop-side .game-mini .sub { font-size: 10px; color: var(--text-muted); font-family: var(--f-mono); }
+
+  /* Agent switcher */
+  .agent-switch {
+    display: flex; gap: 0; margin-bottom: var(--s-3);
+    background: var(--bg-muted); border-radius: var(--r-pill); padding: 2px;
+  }
+  .agent-switch button {
+    flex: 1; padding: var(--s-2) var(--s-2); border: 0; background: transparent;
+    border-radius: var(--r-pill);
+    font-family: var(--f-display); font-size: var(--fs-xs); font-weight: var(--fw-semi);
+    color: var(--text-sec); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  }
+  .agent-switch button[aria-pressed="true"] {
+    background: hsl(var(--c-agent)); color: #fff;
+  }
+
+  /* Chat history item */
+  .history-item {
+    padding: var(--s-2) var(--s-3); border-radius: var(--r-md);
+    background: transparent; border: 1px solid transparent;
+    cursor: pointer; margin-bottom: var(--s-1);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .history-item:hover { background: var(--bg-hover); border-color: var(--border-light); }
+  .history-item.active { background: hsl(var(--c-chat) / 0.08); border-color: hsl(var(--c-chat) / 0.3); }
+  .history-item .q { font-size: var(--fs-xs); color: var(--text); line-height: 1.3; }
+  .history-item .when { font-size: 10px; color: var(--text-muted); font-family: var(--f-mono); }
+
+  .desktop-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  *:focus-visible { outline: 2px solid hsl(var(--c-chat)); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    .typing span { animation: none; }
+  }
+</style>
+</head>
+
+<body>
+
+<header class="top">
+  <h1>Game Chat Tab — G1 Citazione + G5 Confidenza (sp4-game-chat-tab)</h1>
+  <span class="route">/library/games/{gameId}?tab=aiChat</span>
+  <span class="spacer"></span>
+  <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
+</header>
+
+<main class="stage">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 1 · DEFAULT (G1 happy: regola puntuale, conf alta)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s1">
+    <span class="label">Stato 1 · Default · G1 happy</span>
+    <h2 id="s1">Lookup regola — Risposta + citazione + confidence alta</h2>
+    <p class="desc">Aaron in serata Wingspan chiede "posso usare il potere di un uccello già attivato in un turno precedente?". Risposta breve, citazione Manuale base p.12 §3.2, confidence badge alta (verde 0.92). DoD G1: ≥ 90% query con almeno 1 citazione esplicita.</p>
+
+    <div class="frames">
+      <!-- ─── Mobile ─── -->
+      <div class="phone" role="region" aria-label="Mobile – default chat">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:14</span><span class="ind">📶 🔋 92%</span></div>
+
+        <div class="session-head">
+          <span class="game-icon" aria-hidden="true">🦤</span>
+          <div>
+            <div class="title">Wingspan</div>
+            <div class="sub">
+              <span class="agent-badge">🧙 Tutor</span>
+              <span>· Domanda al regolamento</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="conv" role="log" aria-live="polite">
+          <div class="bubble user">posso usare il potere di un uccello già attivato in un turno precedente?</div>
+
+          <div class="bubble agent">
+            <div class="header">
+              <span class="avatar" aria-hidden="true">🧙</span>
+              <span class="name">Tutor Wingspan</span>
+            </div>
+            <p><strong>Sì</strong>, ogni potere di tipo "quando attivato" si attiva ogni volta che esegui l'azione del relativo habitat — non c'è limite per turno.</p>
+            <p>Esempio: se hai 2 uccelli con potere "guadagna 1 cibo" nel bosco, attivando l'azione bosco ottieni 2 cibi (uno per uccello).</p>
+            <div class="citation-row" aria-label="Pagine sorgente">
+              <span class="citation-chip">📖 Manuale p.12 §3.2 — Poteri "quando attivato"</span>
+              <span class="citation-chip">📖 FAQ p.4 Q7 — Cumulo poteri habitat</span>
+            </div>
+            <div class="conf-row">
+              <span class="conf-badge alta">🟢 Confidence alta · 0.92</span>
+              <div class="actions-mini">
+                <button class="action-mini" type="button" aria-label="Risposta utile">👍</button>
+                <button class="action-mini" type="button" aria-label="Copia risposta">📋</button>
+                <button class="action-mini" type="button" aria-label="Rigenera">🔁</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="suggested-row">
+          <span class="group-label">Continua a chiedere</span>
+          <button class="suggested" type="button"><span class="cat">A</span> E se sono 2 uccelli stessa carta?</button>
+          <button class="suggested" type="button"><span class="cat">F</span> Edge case carta "predatore"</button>
+        </div>
+
+        <div class="input-bar">
+          <input type="text" placeholder="Chiedi una regola di Wingspan…" aria-label="Domanda all'agente"/>
+          <button class="send" aria-label="Invia">↑</button>
+        </div>
+      </div>
+
+      <!-- ─── Desktop split layout ─── -->
+      <div class="desktop" role="region" aria-label="Desktop – default chat split">
+        <span class="frame-label">Desktop · 1440px (split-view)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/wingspan?tab=aiChat</span></div>
+
+        <div class="desktop-body">
+          <aside class="desktop-side">
+            <div class="game-mini">
+              <span class="game-icon">🦤</span>
+              <div>
+                <div class="nm">Wingspan</div>
+                <div class="sub">Stonemaier · 2019</div>
+              </div>
+            </div>
+
+            <h4>Agente attivo</h4>
+            <div class="agent-switch" role="group" aria-label="Cambia agente">
+              <button type="button" aria-pressed="true">🧙 Tutor</button>
+              <button type="button" aria-pressed="false">⚖️ Arbitro</button>
+            </div>
+
+            <h4>Conversazioni recenti</h4>
+            <div class="history-item active">
+              <span class="q">Posso usare il potere di un uccello già attivato?</span>
+              <span class="when">⏱️ ora</span>
+            </div>
+            <div class="history-item">
+              <span class="q">Bonus fine partita "ornitologo"</span>
+              <span class="when">10m fa</span>
+            </div>
+            <div class="history-item">
+              <span class="q">Setup 4 giocatori</span>
+              <span class="when">25m fa</span>
+            </div>
+            <div class="history-item">
+              <span class="q">Combo motore foresta</span>
+              <span class="when">ieri</span>
+            </div>
+          </aside>
+
+          <div class="desktop-main">
+            <div class="session-head">
+              <span class="game-icon">🦤</span>
+              <div>
+                <div class="title">Wingspan · Domanda al regolamento</div>
+                <div class="sub">
+                  <span class="agent-badge">🧙 Tutor</span>
+                  <span>· KB: Manuale base + FAQ + Espansione Europa</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="conv" role="log" aria-live="polite">
+              <div class="bubble user">posso usare il potere di un uccello già attivato in un turno precedente?</div>
+              <div class="bubble agent">
+                <div class="header"><span class="avatar">🧙</span><span class="name">Tutor Wingspan</span></div>
+                <p><strong>Sì</strong>, ogni potere di tipo "quando attivato" si attiva ogni volta che esegui l'azione del relativo habitat — non c'è limite per turno.</p>
+                <p>Esempio: se hai 2 uccelli con potere "guadagna 1 cibo" nel bosco, attivando l'azione bosco ottieni 2 cibi (uno per uccello).</p>
+                <div class="citation-row">
+                  <span class="citation-chip">📖 Manuale p.12 §3.2 — Poteri "quando attivato"</span>
+                  <span class="citation-chip">📖 FAQ p.4 Q7 — Cumulo poteri habitat</span>
+                </div>
+                <div class="conf-row">
+                  <span class="conf-badge alta">🟢 Confidence alta · 0.92</span>
+                  <div class="actions-mini">
+                    <button class="action-mini">👍 Utile</button>
+                    <button class="action-mini">📋 Copia</button>
+                    <button class="action-mini">🔁 Rigenera</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="suggested-row">
+              <span class="group-label">Continua a chiedere</span>
+              <button class="suggested"><span class="cat">A</span> E se sono 2 uccelli stessa carta?</button>
+              <button class="suggested"><span class="cat">F</span> Edge case carta "predatore"</button>
+              <button class="suggested"><span class="cat">E</span> Punteggio fine partita</button>
+              <button class="suggested"><span class="cat">C</span> Setup 5 giocatori</button>
+            </div>
+
+            <div class="input-bar">
+              <input type="text" placeholder="Chiedi una regola di Wingspan…" aria-label="Domanda all'agente"/>
+              <button class="send" aria-label="Invia">↑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 2 · CONFIDENCE BASSA (G5: edge case raro, disclaimer)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s2">
+    <span class="label">Stato 2 · Edge · Confidence bassa (G5)</span>
+    <h2 id="s2">Edge case raro — Disclaimer "non sono certo" + suggerimenti</h2>
+    <p class="desc">Aaron chiede "cosa succede se il mazzo finisce a metà partita?" — caso edge non chiaramente coperto dal manuale base. Confidence retrieval &lt; 0.7. Risposta esplicita di non-certezza + alternative (BGG forum, controlla appendice). Hallucination guard. DoD G5: 100% delle risposte con conf &lt; 0.7 hanno marker incertezza.</p>
+
+    <div class="frames">
+      <!-- ─── Mobile ─── -->
+      <div class="phone" role="region" aria-label="Mobile – low confidence">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:18</span><span class="ind">📶 🔋 91%</span></div>
+        <div class="session-head">
+          <span class="game-icon">🦤</span>
+          <div>
+            <div class="title">Wingspan</div>
+            <div class="sub"><span class="agent-badge">🧙 Tutor</span> · Edge case</div>
+          </div>
+        </div>
+        <div class="conv" role="log">
+          <div class="bubble user">cosa succede se il mazzo uccelli finisce a metà partita?</div>
+          <div class="bubble agent">
+            <div class="header"><span class="avatar">🧙</span><span class="name">Tutor Wingspan</span></div>
+            <p>Non sono certo — il regolamento base copre la situazione standard ma non specifica esplicitamente il caso "mazzo esaurito durante un turno".</p>
+            <div class="disclaimer">
+              <strong>⚠️ Non sono certo.</strong> Probabilmente si rimescolano gli scarti, ma il manuale non lo dice esplicitamente. Verifica:
+              <ul style="margin: var(--s-2) 0 0; padding-left: var(--s-5);">
+                <li>FAQ ufficiale p.6-7 (sezione "fine mazzo")</li>
+                <li>BGG forum thread "deck depletion"</li>
+              </ul>
+            </div>
+            <div class="citation-row">
+              <span class="citation-chip">📖 FAQ p.6-7 (suggerito)</span>
+              <span class="citation-chip">🔗 BGG · ricerca esterna</span>
+            </div>
+            <div class="conf-row">
+              <span class="conf-badge bassa">🔴 Confidence bassa · 0.42</span>
+              <div class="actions-mini">
+                <button class="action-mini">📖 Apri FAQ</button>
+                <button class="action-mini">🔁</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="input-bar">
+          <input type="text" placeholder="Chiedi una regola di Wingspan…"/>
+          <button class="send" aria-label="Invia">↑</button>
+        </div>
+      </div>
+
+      <!-- ─── Desktop ─── -->
+      <div class="desktop" role="region" aria-label="Desktop – low confidence">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/wingspan?tab=aiChat</span></div>
+        <div class="desktop-body">
+          <aside class="desktop-side">
+            <div class="game-mini">
+              <span class="game-icon">🦤</span>
+              <div><div class="nm">Wingspan</div><div class="sub">Edge case raro</div></div>
+            </div>
+            <h4>Agente attivo</h4>
+            <div class="agent-switch" role="group">
+              <button type="button" aria-pressed="true">🧙 Tutor</button>
+              <button type="button" aria-pressed="false">⚖️ Arbitro</button>
+            </div>
+            <h4>Conversazioni recenti</h4>
+            <div class="history-item active"><span class="q">Mazzo esaurito a metà partita</span><span class="when">⏱️ ora</span></div>
+            <div class="history-item"><span class="q">Cumulo poteri habitat</span><span class="when">5m fa</span></div>
+          </aside>
+          <div class="desktop-main">
+            <div class="session-head">
+              <span class="game-icon">🦤</span>
+              <div>
+                <div class="title">Wingspan · Edge case</div>
+                <div class="sub"><span class="agent-badge">🧙 Tutor</span> · KB confidence bassa</div>
+              </div>
+            </div>
+            <div class="conv">
+              <div class="bubble user">cosa succede se il mazzo uccelli finisce a metà partita?</div>
+              <div class="bubble agent">
+                <div class="header"><span class="avatar">🧙</span><span class="name">Tutor Wingspan</span></div>
+                <p>Non sono certo — il regolamento base copre la situazione standard ma non specifica esplicitamente il caso "mazzo esaurito durante un turno".</p>
+                <div class="disclaimer">
+                  <strong>⚠️ Non sono certo.</strong> Probabilmente si rimescolano gli scarti, ma il manuale non lo dice esplicitamente. Verifica:
+                  <ul style="margin: var(--s-2) 0 0; padding-left: var(--s-5);">
+                    <li>FAQ ufficiale p.6-7 (sezione "fine mazzo")</li>
+                    <li>BGG forum thread "deck depletion" (esterno, conferma community)</li>
+                    <li>Manuale espansione Europa p.18 (variante con mazzo extra)</li>
+                  </ul>
+                </div>
+                <div class="citation-row">
+                  <span class="citation-chip">📖 FAQ p.6-7 (suggerito)</span>
+                  <span class="citation-chip">📖 Espansione Europa p.18</span>
+                  <span class="citation-chip">🔗 BGG · ricerca esterna</span>
+                </div>
+                <div class="conf-row">
+                  <span class="conf-badge bassa">🔴 Confidence bassa · 0.42</span>
+                  <div class="actions-mini">
+                    <button class="action-mini">📖 Apri FAQ</button>
+                    <button class="action-mini">🔁 Rigenera</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="input-bar"><input type="text" placeholder="Chiedi una regola di Wingspan…"/><button class="send" aria-label="Invia">↑</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 3 · OUT OF CONTEXT (utente chiede regole di altro gioco)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s3">
+    <span class="label">Stato 3 · Edge · Out of Context</span>
+    <h2 id="s3">Domanda fuori contesto — Decline + suggerimento switch</h2>
+    <p class="desc">Aaron per errore mentre è su Wingspan chiede regole di Tainted Grail. L'agente Tutor Wingspan declina (KB scope = solo Wingspan), NON inventa, propone switch gioco/agente. Tipico caso "telefono passato di mano e l'altro non sa che gioco è caricato".</p>
+
+    <div class="frames">
+      <!-- ─── Mobile ─── -->
+      <div class="phone" role="region" aria-label="Mobile – out of context">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:24</span><span class="ind">📶 🔋 90%</span></div>
+        <div class="session-head">
+          <span class="game-icon">🦤</span>
+          <div>
+            <div class="title">Wingspan</div>
+            <div class="sub"><span class="agent-badge">🧙 Tutor</span> · Out of scope</div>
+          </div>
+        </div>
+        <div class="conv" role="log">
+          <div class="bubble user">qual è il setup di Tainted Grail?</div>
+          <div class="bubble agent">
+            <div class="header"><span class="avatar">🧙</span><span class="name">Tutor Wingspan</span></div>
+            <p><strong>Non ho informazioni su Tainted Grail nel mio knowledge base.</strong> Sono il Tutor di <strong>Wingspan</strong>. Cosa vuoi fare?</p>
+            <div class="out-of-context-actions">
+              <button class="action-pill" type="button">🎲 Cambia gioco a Tainted Grail</button>
+              <button class="action-pill" type="button">🤖 Cerca un agente Tainted Grail</button>
+              <button class="action-pill" type="button">↩️ Resta su Wingspan</button>
+            </div>
+            <div class="conf-row">
+              <span class="conf-badge bassa">🔴 Out of scope · 0.0</span>
+              <div class="actions-mini">
+                <button class="action-mini">👍 Honest</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="input-bar">
+          <input type="text" placeholder="Chiedi una regola di Wingspan…"/>
+          <button class="send" aria-label="Invia">↑</button>
+        </div>
+      </div>
+
+      <!-- ─── Desktop ─── -->
+      <div class="desktop" role="region" aria-label="Desktop – out of context">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/wingspan?tab=aiChat</span></div>
+        <div class="desktop-body">
+          <aside class="desktop-side">
+            <div class="game-mini">
+              <span class="game-icon">🦤</span>
+              <div><div class="nm">Wingspan</div><div class="sub">Scope agente</div></div>
+            </div>
+            <h4>KB collegati</h4>
+            <div style="font-size: var(--fs-xs); color: var(--text-muted); padding: var(--s-2);">
+              📖 Manuale base ✓<br/>
+              📖 FAQ ufficiale ✓<br/>
+              📖 Espansione Europa ✓<br/>
+              <span style="color: hsl(var(--c-danger));">✕ NO Tainted Grail</span>
+            </div>
+            <h4 style="margin-top: var(--s-3);">Agente attivo</h4>
+            <div class="agent-switch" role="group">
+              <button type="button" aria-pressed="true">🧙 Tutor</button>
+              <button type="button" aria-pressed="false">⚖️ Arbitro</button>
+            </div>
+          </aside>
+          <div class="desktop-main">
+            <div class="session-head">
+              <span class="game-icon">🦤</span>
+              <div>
+                <div class="title">Wingspan · scope agente</div>
+                <div class="sub"><span class="agent-badge">🧙 Tutor</span> · Domanda fuori scope</div>
+              </div>
+            </div>
+            <div class="conv">
+              <div class="bubble user">qual è il setup di Tainted Grail?</div>
+              <div class="bubble agent">
+                <div class="header"><span class="avatar">🧙</span><span class="name">Tutor Wingspan</span></div>
+                <p><strong>Non ho informazioni su Tainted Grail nel mio knowledge base.</strong> Sono il Tutor di <strong>Wingspan</strong>. Cosa vuoi fare?</p>
+                <div class="out-of-context-actions">
+                  <button class="action-pill">🎲 Cambia gioco a Tainted Grail</button>
+                  <button class="action-pill">🤖 Cerca un agente Tainted Grail</button>
+                  <button class="action-pill">↩️ Resta su Wingspan</button>
+                </div>
+                <div class="conf-row">
+                  <span class="conf-badge bassa">🔴 Out of scope · 0.0</span>
+                  <div class="actions-mini"><button class="action-mini">👍 Honest answer</button></div>
+                </div>
+              </div>
+            </div>
+            <div class="input-bar"><input type="text" placeholder="Chiedi una regola di Wingspan…"/><button class="send" aria-label="Invia">↑</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 4 · LOADING (typing indicator + budget P95 ≤ 10s da Q6)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s4">
+    <span class="label">Stato 4 · Loading</span>
+    <h2 id="s4">Spinner — Typing indicator + budget P95 ≤ 10s</h2>
+    <p class="desc">Aaron ha appena premuto invio. L'agente sta cercando in KB + reranker cross-encoder + LLM (P95 budget 10s da brainstorm Q6: utente accetta spinner se risposta accurata). Typing indicator + meta latency live. NB: il brainstorm Q6 ha scelto "atomica con spinner" (D), NON streaming token-by-token.</p>
+
+    <div class="frames">
+      <!-- ─── Mobile ─── -->
+      <div class="phone" role="region" aria-label="Mobile – loading">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:14</span><span class="ind">📶 🔋 92%</span></div>
+        <div class="session-head">
+          <span class="game-icon">🦤</span>
+          <div>
+            <div class="title">Wingspan</div>
+            <div class="sub"><span class="agent-badge">🧙 Tutor</span> · Sto cercando…</div>
+          </div>
+        </div>
+        <div class="conv" role="log" aria-live="polite" aria-busy="true">
+          <div class="bubble user">posso usare il potere di un uccello già attivato in un turno precedente?</div>
+          <div class="bubble agent" aria-label="Agente sta cercando">
+            <div class="header"><span class="avatar">🧙</span><span class="name">Tutor Wingspan</span></div>
+            <div class="typing" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="typing-meta">⏱️ Cerco in 3 KB · 2.4s elapsed (budget 10s)</div>
+          </div>
+        </div>
+        <div class="input-bar">
+          <input type="text" placeholder="Chiedi una regola di Wingspan…" disabled value="posso usare il potere di un uccello già attivato in un turno precedente?"/>
+          <button class="send" aria-label="In corso" disabled style="opacity: 0.5;">⏳</button>
+        </div>
+      </div>
+
+      <!-- ─── Desktop ─── -->
+      <div class="desktop" role="region" aria-label="Desktop – loading">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/wingspan?tab=aiChat</span></div>
+        <div class="desktop-body">
+          <aside class="desktop-side">
+            <div class="game-mini">
+              <span class="game-icon">🦤</span>
+              <div><div class="nm">Wingspan</div><div class="sub">Sto cercando…</div></div>
+            </div>
+            <h4>Agente attivo</h4>
+            <div class="agent-switch" role="group">
+              <button type="button" aria-pressed="true">🧙 Tutor</button>
+              <button type="button" aria-pressed="false">⚖️ Arbitro</button>
+            </div>
+            <h4>Conversazioni recenti</h4>
+            <div class="history-item"><span class="q">Cumulo poteri habitat</span><span class="when">5m fa</span></div>
+            <div class="history-item"><span class="q">Setup 4 giocatori</span><span class="when">25m fa</span></div>
+          </aside>
+          <div class="desktop-main">
+            <div class="session-head">
+              <span class="game-icon">🦤</span>
+              <div>
+                <div class="title">Wingspan · Sto cercando…</div>
+                <div class="sub"><span class="agent-badge">🧙 Tutor</span> · 2.4s elapsed · budget 10s</div>
+              </div>
+            </div>
+            <div class="conv" aria-busy="true">
+              <div class="bubble user">posso usare il potere di un uccello già attivato in un turno precedente?</div>
+              <div class="bubble agent">
+                <div class="header"><span class="avatar">🧙</span><span class="name">Tutor Wingspan</span></div>
+                <div class="typing"><span></span><span></span><span></span></div>
+                <div class="typing-meta">⏱️ Cerco in 3 KB · 2.4s / 10s budget · reranker cross-encoder + LLM Sonnet 4</div>
+              </div>
+            </div>
+            <div class="input-bar"><input type="text" disabled value="posso usare il potere di un uccello già attivato in un turno precedente?"/><button class="send" disabled style="opacity: 0.5;">⏳</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const root = document.documentElement;
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+</script>
+
+</body>
+</html>

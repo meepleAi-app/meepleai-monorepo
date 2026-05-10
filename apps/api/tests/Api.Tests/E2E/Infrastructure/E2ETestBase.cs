@@ -200,7 +200,7 @@ public abstract class E2ETestBase : IAsyncLifetime
 
     /// <summary>
     /// Asserts the response is successful (2xx). If the endpoint returned 500
-    /// due to unconfigured external services (embedding, LLM, Qdrant), the test
+    /// due to unconfigured external services (embedding, LLM, pgvector), the test
     /// is skipped with a descriptive message instead of silently passing.
     /// Uses xUnit v3's Assert.Skip() for dynamic test skipping.
     /// </summary>
@@ -533,9 +533,6 @@ internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
                 ["Embedding:Url"] = "http://localhost:8000",
                 ["Redis:Enabled"] = "true",
                 ["Redis:ConnectionString"] = _redisConnectionString,
-                ["Qdrant:Enabled"] = "false",
-                ["Qdrant:Host"] = "localhost",
-                ["Qdrant:Port"] = "6333",
                 ["Authentication:SessionManagement:SessionExpirationDays"] = "30",
                 ["Admin:Email"] = "admin@test.local",
                 ["Admin:Password"] = "TestUnusualAdm123!",

@@ -19,13 +19,13 @@ namespace Api.Tests.Integration;
 
 /// <summary>
 /// Custom WebApplicationFactory for CORS tests that runs in Testing environment
-/// without requiring external dependencies (Postgres, Redis, Qdrant).
+/// without requiring external dependencies (Postgres, Redis, pgvector).
 /// </summary>
 /// <remarks>
 /// This factory configures the test host to:
-/// 1. Run in "Testing" environment (skips Postgres/Qdrant initialization in InfrastructureServiceExtensions.cs:38)
+/// 1. Run in "Testing" environment (skips Postgres/pgvector initialization in InfrastructureServiceExtensions.cs:38)
 /// 2. Replace DbContext with EF Core InMemory provider (no database required)
-/// 3. Mock external services (Redis, Qdrant, Embedding) that aren't used by CORS tests
+/// 3. Mock external services (Redis, pgvector, Embedding) that aren't used by CORS tests
 /// 4. Maintain correct service lifetimes matching production configuration
 /// </remarks>
 public class CorsTestFactory : WebApplicationFactory<Program>

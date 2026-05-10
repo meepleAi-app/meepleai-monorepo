@@ -18,7 +18,7 @@ namespace Api.Tests.E2E.SharedGameCatalog;
 /// Tests the full workflow an admin follows to populate the shared game catalog
 /// with BGG data, upload rulebook PDFs, monitor processing, and test AI chat.
 ///
-/// Note: External services (BGG API, Embedding, Qdrant, LLM) are disabled in E2E.
+/// Note: External services (BGG API, Embedding, pgvector, LLM) are disabled in E2E.
 /// Tests verify endpoint availability, request/response contracts, and HTTP pipeline.
 /// Steps requiring external services gracefully degrade with status code checks.
 /// </summary>
@@ -420,7 +420,7 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         // Act
         var response = await Client.GetAsync("/api/v1/admin/kb/vector-collections");
 
-        // Assert - Qdrant disabled in E2E, may return error
+        // Assert - vector services may be disabled in E2E, may return error
         if (response.StatusCode == HttpStatusCode.InternalServerError)
             Assert.Skip("AdminKb_GetVectorCollections returned 500 — service likely unavailable");
         response.StatusCode.Should().BeOneOf(

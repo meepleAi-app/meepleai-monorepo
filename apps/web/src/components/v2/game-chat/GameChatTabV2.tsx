@@ -206,7 +206,7 @@ export function GameChatTabV2({
         citation={selectedCitation}
         open={selectedCitation !== null}
         onClose={() => setSelectedCitation(null)}
-        onOpenInKb={undefined /* TODO: enable when G4 lands — () => router.push(`/kb/${gameId}#page-${selectedCitation?.pageNumber}`) */}
+        gameId={gameId}
       />
     </div>
   );

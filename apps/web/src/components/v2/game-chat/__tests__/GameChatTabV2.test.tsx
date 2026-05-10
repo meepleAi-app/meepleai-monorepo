@@ -1,6 +1,12 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Mock CitationPdfTab to avoid cascading imports of react-pdf + api.knowledgeBase
+// (CitationModal lazy-mounts it only when user clicks PDF tab — not exercised here)
+vi.mock('../CitationPdfTab', () => ({
+  CitationPdfTab: () => null,
+}));
+
 vi.mock('@/lib/api/clients/chatClient', () => ({
   qaStream: vi.fn(),
 }));

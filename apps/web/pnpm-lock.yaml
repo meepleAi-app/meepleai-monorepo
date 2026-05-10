@@ -285,8 +285,8 @@ importers:
         specifier: ^4.7.2
         version: 4.7.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react-virtualized-auto-sizer:
-        specifier: ^1.0.26
-        version: 1.0.26(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        specifier: ^2.0.3
+        version: 2.0.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react-window:
         specifier: ^2.2.7
         version: 2.2.7(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -8755,6 +8755,12 @@ packages:
       react: ^15.3.0 || ^16.0.0-alpha || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^15.3.0 || ^16.0.0-alpha || ^17.0.0 || ^18.0.0 || ^19.0.0
 
+  react-virtualized-auto-sizer@2.0.3:
+    resolution: {integrity: sha512-nonmCSUIh5HtbzazGcQ1NhnMFps/ZBu/UKJyhCt0Fhi7ondLAUZNETtRCWM8RWYZDzVlMYOQGgBmIxUutIhqgw==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
+
   react-window@1.8.11:
     resolution: {integrity: sha512-+SRbUVT2scadgFSWx+R1P754xHPEqvcfSfVX10QYg6POOz+WNgkN48pS+BtZNIMGiL1HYrSEiCkwsMS15QogEQ==}
     engines: {node: '>8.0.0'}
@@ -14508,7 +14514,7 @@ snapshots:
 
   '@types/react-virtualized-auto-sizer@1.0.8(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
-      react-virtualized-auto-sizer: 1.0.26(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react-virtualized-auto-sizer: 2.0.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
     transitivePeerDependencies:
       - react
       - react-dom
@@ -19536,6 +19542,11 @@ snapshots:
       '@types/react': 19.2.14
 
   react-virtualized-auto-sizer@1.0.26(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+    dependencies:
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+
+  react-virtualized-auto-sizer@2.0.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
     dependencies:
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)

@@ -1,5 +1,7 @@
 # Game Chat Tab V2 — G1+G5 Implementation Plan
 
+**Status**: ✅ COMPLETED (PR #918)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Sostituire il rendering V1 chat-unified per la route `/library/games/[gameId]?tab=aiChat` con 12 nuovi componenti V2 puri sotto `apps/web/src/components/v2/game-chat/`, hook `useGameChat`, e rimozione audit-first dei componenti V1 chat-unified usati esclusivamente da quella route.

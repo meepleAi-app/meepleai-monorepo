@@ -1,5 +1,6 @@
 # P1 — Pipeline staging trustworthy Implementation Plan
 
+**Status**: ✅ COMPLETED (PR #824 — CF Access bypass + runbook)
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Rendere `deploy-staging.yml` end-to-end fidato: trigger fires consistentemente, tutti job critici eseguono (no vacuum success da gate skip), smoke test job verifica HTTP 200 reale dietro CF Access. Goal P1 dello SMART set 2026-05-07.

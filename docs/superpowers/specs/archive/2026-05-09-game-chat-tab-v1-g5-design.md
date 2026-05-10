@@ -5,7 +5,7 @@
 **Issue**: [#915](https://github.com/meepleAi-app/meepleai-monorepo/issues/915)
 **Mockup**: [`admin-mockups/design_files/sp4-game-chat-tab.html`](../../../admin-mockups/design_files/sp4-game-chat-tab.html)
 **Parent spec**: [`2026-05-09-game-night-user-flow-design.md`](./2026-05-09-game-night-user-flow-design.md) §G1, §G5
-**Status**: DRAFT — pending user review
+**Status**: ✅ COMPLETED 2026-05-10 (issue #915 CLOSED, PR #918 — Game Chat Tab V2 G1+G5)
 
 ---
 

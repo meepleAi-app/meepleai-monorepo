@@ -1,5 +1,7 @@
 # Auth Flow Security Fixes — Implementation Plan (Phase A + B)
 
+**Status**: ✅ COMPLETED (PR #818 hotfix Phase A+B+C+D)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Fixare i 7 bug critici (C1-C7) + 1 critical aggiunto (C8 CSRF) della security review del bounded context Authentication, preceduti da foundation work (commit #01-#02) per setup schema + test infrastructure.

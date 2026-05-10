@@ -1,6 +1,6 @@
 ---
 title: Libro Game Nanolith Iter 1 — Cross-Branch Audit
-status: draft
+status: 📒 HISTORICAL — Iter 1.A (PR #828) + Iter 1.B (PR #837) merged, audit context preserved
 type: audit
 date: 2026-05-08
 authors: [DegrassiAaron]

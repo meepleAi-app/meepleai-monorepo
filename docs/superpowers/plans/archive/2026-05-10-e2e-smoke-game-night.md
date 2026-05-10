@@ -1,5 +1,7 @@
 # E2E Smoke G1-G5 — Implementation Plan
 
+**Status**: ✅ COMPLETED (PR #944 — smoke G1-G5 4 spec)
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Aggiungere 4 smoke spec Playwright (`apps/web/e2e/smoke/`) + workflow CI post-merge `main-dev` per validare end-to-end il flusso "serata di gioco" (G1+G2+G3+G4+G5).

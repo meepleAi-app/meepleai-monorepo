@@ -1,5 +1,6 @@
 # Nanolith Demo Runthrough Phase A — Implementation Plan
 
+**Status**: ✅ COMPLETED (PR #856 — Phase A spec + plan + smoke + Playwright + G1/G3 partial)
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Eseguire la pipeline 4-stadi (locale endpoint → locale browser → staging browser → smartphone Android Chrome) del caso d'uso Nanolith libro game entro 2026-05-22, raccogliendo evidence lightweight e classificando ogni anomalia per abilitare go/no-go Fase B.

@@ -1,5 +1,6 @@
 # Design: Migrazione Qdrant → pgvector-only
 
+**Status**: ✅ COMPLETED 2026-05-10 (PR #901, #908, #909, #916, #917 — Phases 1-5)
 **Data**: 2026-03-29
 **Branch target**: `main-dev`
 **Tipo**: Rimozione componente + cleanup tecnico

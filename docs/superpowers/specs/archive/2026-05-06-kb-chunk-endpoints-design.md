@@ -1,5 +1,6 @@
 # KB Chunk-Level Retrieval Endpoints — Design
 
+**Status**: ✅ COMPLETED (PR #805 → #815 — Wave 3 Phase 3 spec-conformant rewrite)
 **Issue**: #730 (Backend audit prerequisite for #684 `/kb/[id]` Wave 3 v2 migration)
 **Branch**: `feature/issue-730-kb-chunk-endpoints` (parent: `main-dev`)
 **Author**: brainstorming session 2026-05-06

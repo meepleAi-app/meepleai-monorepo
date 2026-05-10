@@ -73,7 +73,7 @@ Crea `docs/for-developers/operations/devops-policy.md` con questo contenuto esat
 ````markdown
 # DevOps Policy — 3-Branch Strategy
 
-> **Status**: Draft 2026-05-08 · **Owner**: badsworm@gmail.com · **Last review**: 2026-05-08
+> **Status**: 🟡 IN PROGRESS — Epic #842 OPEN, 9 sub-issues #843-#850 pending
 
 Documento di policy che fissa target numerici, gating, e responsabilità per i 3 branch long-lived.
 

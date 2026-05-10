@@ -1,5 +1,7 @@
 # Libro Game Nanolith — Iter 1 Implementation Plan
 
+**Status**: ✅ COMPLETED — Iter 1.A (PR #828) + Iter 1.B (PR #837/#888); SP6 Iter 1B follow-ups in #950-#954
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implementare la demo dogfooding Nanolith (4 user goal N1-N4 dello spec `2026-05-07-libro-game-nanolith-demo-design.md`) in 2 PR sequenziali — Iter 1.A (N3 photo translate-on-the-fly) + Iter 1.B (N4 resume cross-day + glossary) — riusando 70% asset esistenti (`KnowledgeBase` BC, `useTranslateParagraph` hook, mockup SP6 A/C/D/E/G/H).

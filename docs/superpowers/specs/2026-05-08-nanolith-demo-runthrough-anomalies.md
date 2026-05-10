@@ -1,5 +1,7 @@
 # Nanolith Demo Runthrough — Anomalies Live Log
 
+**Status**: 📒 LIVE LOG — operational runthrough log for Phase A (companion to archived spec)
+
 > Live MD compilato durante la pipeline runthrough Fase A. Tag classification per ogni entry:
 > - `#BLOCKER` — failure reproducible 3× consecutivi che impedisce stadio
 > - `#ANOMALY` — comportamento sub-target ma non bloccante (latenza, UX rough)

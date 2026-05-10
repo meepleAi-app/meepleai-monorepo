@@ -2,7 +2,7 @@
 
 > **Date**: 2026-05-07
 > **Owner**: @DegrassiAaron (badsworm@gmail.com — single tester / decision authority)
-> **Status**: design (pre-implementation, awaiting plan)
+> **Status**: ✅ COMPLETED (PR #839 + #863 + #866 — staging setup automated, design realized)
 > **Brainstorming output** of 2026-05-07 spec-panel + 3 multi-choice decisions
 > **Cross-refs**: #78 (S3 retrieve key bug), #807 (A11y audit), #808 (SP6 v2 expansion freeze), #79x (PR-A pdf game id resolver, merged), #799 (PR-B chat typing indicator, merged), #810 (PR A11y stop-gap, merged)
 

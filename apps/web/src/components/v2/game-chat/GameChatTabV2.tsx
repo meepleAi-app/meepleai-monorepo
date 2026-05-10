@@ -15,11 +15,13 @@
  */
 'use client';
 
-import { useState, type ReactElement, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 
 import type { Citation } from '@/types';
 
 import { ChatBubble } from './ChatBubble';
+import { ChatBubbleSkeleton } from './ChatBubbleSkeleton';
+import { ChatHistoryBanner } from './ChatHistoryBanner';
 import { ChatInputBar } from './ChatInputBar';
 import { CitationChip } from './CitationChip';
 import { CitationModal } from './CitationModal';
@@ -65,6 +67,13 @@ export function GameChatTabV2({
   const chat = useGameChat(gameId, initialAgent);
   const [inputValue, setInputValue] = useState('');
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // G2: auto-scroll to bottom on hydrate complete + new message
+  useEffect(() => {
+    if (chat.isHydrating) return;
+    messagesEndRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'end' });
+  }, [chat.isHydrating, chat.messages.length]);
 
   const handleSubmit = (q: string) => {
     setInputValue('');
@@ -162,33 +171,49 @@ export function GameChatTabV2({
 
         <div className="flex flex-1 flex-col overflow-hidden">
           <div role="log" aria-live="polite" className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-            {chat.messages.map(msg =>
-              msg.role === 'user' ? (
-                <ChatBubble key={msg.id} role="user" content={msg.content} />
-              ) : (
-                <ChatBubble
-                  key={msg.id}
-                  role="agent"
-                  // Quando isLowQuality === true, il content della risposta è
-                  // mostrato dentro il LowConfidenceDisclaimer come summary —
-                  // sopprimiamo qui per evitare duplicazione UX.
-                  content={msg.isLowQuality ? '' : msg.content}
-                  agentName={AGENT_NAME[chat.currentAgent]}
-                  avatar={AGENT_AVATAR[chat.currentAgent]}
-                >
-                  {renderAgentExtras(msg)}
-                </ChatBubble>
-              )
-            )}
-            {chat.isLoading && (
-              <ChatBubble
-                role="agent"
-                content=""
-                agentName={AGENT_NAME[chat.currentAgent]}
-                avatar={AGENT_AVATAR[chat.currentAgent]}
-              >
-                <TypingIndicator hint="Cerco nella KB" />
-              </ChatBubble>
+            {chat.isHydrating ? (
+              <ChatBubbleSkeleton count={3} />
+            ) : (
+              <>
+                {chat.hasHistoricalMessages && chat.messages.some(m => !m.isHistorical) && (
+                  <ChatHistoryBanner />
+                )}
+                {chat.messages.map(msg =>
+                  msg.role === 'user' ? (
+                    <ChatBubble
+                      key={msg.id}
+                      role="user"
+                      content={msg.content}
+                      isHistorical={msg.isHistorical}
+                    />
+                  ) : (
+                    <ChatBubble
+                      key={msg.id}
+                      role="agent"
+                      // Quando isLowQuality === true, il content della risposta è
+                      // mostrato dentro il LowConfidenceDisclaimer come summary —
+                      // sopprimiamo qui per evitare duplicazione UX.
+                      content={msg.isLowQuality ? '' : msg.content}
+                      agentName={AGENT_NAME[chat.currentAgent]}
+                      avatar={AGENT_AVATAR[chat.currentAgent]}
+                      isHistorical={msg.isHistorical}
+                    >
+                      {renderAgentExtras(msg)}
+                    </ChatBubble>
+                  )
+                )}
+                {chat.isLoading && (
+                  <ChatBubble
+                    role="agent"
+                    content=""
+                    agentName={AGENT_NAME[chat.currentAgent]}
+                    avatar={AGENT_AVATAR[chat.currentAgent]}
+                  >
+                    <TypingIndicator hint="Cerco nella KB" />
+                  </ChatBubble>
+                )}
+                <div ref={messagesEndRef} aria-hidden="true" />
+              </>
             )}
           </div>
           <SuggestedPrompts prompts={suggested} groupLabel="Domande comuni" />

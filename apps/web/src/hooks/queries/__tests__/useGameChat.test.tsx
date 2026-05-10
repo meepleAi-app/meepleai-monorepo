@@ -9,7 +9,16 @@ vi.mock('@/lib/api/clients/chatClient', () => ({
   qaStream: vi.fn(),
 }));
 
+vi.mock('@/lib/api', () => ({
+  api: {
+    chat: {
+      getThreadsByGame: vi.fn(),
+    },
+  },
+}));
+
 import { qaStream } from '@/lib/api/clients/chatClient';
+import { api } from '@/lib/api';
 import { useGameChat } from '../useGameChat';
 
 async function* mockStream(events: Array<{ type: number; data: unknown }>) {
@@ -33,6 +42,8 @@ const happyEvents = [
 describe('useGameChat', () => {
   beforeEach(() => {
     vi.mocked(qaStream).mockReset();
+    vi.mocked(api.chat.getThreadsByGame).mockReset();
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValue([]);
   });
 
   it('starts with empty messages and tutor agent', () => {
@@ -129,5 +140,105 @@ describe('useGameChat', () => {
   it('initialAgent overrides default tutor', () => {
     const { result } = renderHook(() => useGameChat('wingspan', 'arbitro'));
     expect(result.current.currentAgent).toBe('arbitro');
+  });
+
+  // ─── G2 hydrate tests ───────────────────────────────
+
+  const sampleThreadMessage = (role: string, content: string, ts: string) => ({
+    content,
+    role,
+    timestamp: ts,
+  });
+
+  const sampleThread = (id: string, lastMessageAt: string | null, messages: any[] = []) => ({
+    id,
+    gameId: 'wingspan',
+    agentId: null,
+    agentType: null,
+    title: 'Test thread',
+    createdAt: '2026-05-10T00:00:00Z',
+    lastMessageAt,
+    messageCount: messages.length,
+    messages,
+  });
+
+  it('hydrates messages from latest thread on mount', async () => {
+    const thread = sampleThread('thread-1', '2026-05-10T10:00:00Z', [
+      sampleThreadMessage('user', 'old question', '2026-05-10T09:00:00Z'),
+      sampleThreadMessage('agent', 'old answer', '2026-05-10T09:01:00Z'),
+    ]);
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([thread]);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+    expect(result.current.messages).toHaveLength(2);
+    expect(result.current.messages[0].content).toBe('old question');
+    expect(result.current.messages[0].isHistorical).toBe(true);
+    expect(result.current.chatThreadId).toBe('thread-1');
+    expect(result.current.hasHistoricalMessages).toBe(true);
+  });
+
+  it('selects most recent thread when multiple exist (lastMessageAt desc)', async () => {
+    const older = sampleThread('thread-old', '2026-05-09T10:00:00Z', [
+      sampleThreadMessage('user', 'older', '2026-05-09T10:00:00Z'),
+    ]);
+    const newer = sampleThread('thread-new', '2026-05-10T10:00:00Z', [
+      sampleThreadMessage('user', 'newer', '2026-05-10T10:00:00Z'),
+    ]);
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([older, newer]);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+    expect(result.current.chatThreadId).toBe('thread-new');
+    expect(result.current.messages[0].content).toBe('newer');
+  });
+
+  it('starts empty when no threads exist (no error)', async () => {
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([]);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+    expect(result.current.messages).toEqual([]);
+    expect(result.current.chatThreadId).toBeNull();
+    expect(result.current.hasHistoricalMessages).toBe(false);
+    expect(result.current.isError).toBe(false);
+  });
+
+  it('silent fail when getThreadsByGame rejects', async () => {
+    vi.mocked(api.chat.getThreadsByGame).mockRejectedValueOnce(new Error('500'));
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result.current.isHydrating).toBe(false));
+    expect(result.current.messages).toEqual([]);
+    expect(result.current.isError).toBe(false);
+  });
+
+  it('passes chatId in subsequent qaStream calls after hydrate', async () => {
+    const thread = sampleThread('thread-existing', '2026-05-10T10:00:00Z', [
+      sampleThreadMessage('user', 'old', '2026-05-10T10:00:00Z'),
+    ]);
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([thread]);
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result.current.chatThreadId).toBe('thread-existing'));
+
+    await act(async () => { await result.current.ask('new question'); });
+
+    expect(qaStream).toHaveBeenCalledWith(expect.objectContaining({
+      chatId: 'thread-existing',
+    }));
+  });
+
+  it('preserves messages across remount (audit trigger A)', async () => {
+    const thread = sampleThread('thread-1', '2026-05-10T10:00:00Z', [
+      sampleThreadMessage('user', 'cached', '2026-05-10T10:00:00Z'),
+    ]);
+    vi.mocked(api.chat.getThreadsByGame).mockResolvedValue([thread]);
+
+    const { result, unmount } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result.current.messages.length).toBeGreaterThan(0));
+
+    unmount();
+
+    const { result: result2 } = renderHook(() => useGameChat('wingspan'));
+    await waitFor(() => expect(result2.current.messages.length).toBeGreaterThan(0));
+    expect(result2.current.messages[0].content).toBe('cached');
   });
 });

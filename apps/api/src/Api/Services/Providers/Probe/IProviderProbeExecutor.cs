@@ -6,6 +6,8 @@ namespace Api.Services.Providers.Probe;
 /// </summary>
 internal interface IProviderProbeExecutor
 {
+    /// <summary>Unique identifier for this provider (e.g., "openrouter", "openai").</summary>
     string ProviderName { get; }
+
     Task<ProbeExecutionResult> ExecuteAsync(string apiKey, string? expectedModel, CancellationToken cancellationToken);
 }

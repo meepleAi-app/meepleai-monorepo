@@ -8,10 +8,10 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 
 internal sealed class ProviderProbeService : IProviderProbeService
 {
-    private readonly ProviderProbeExecutorFactory _factory;
+    private readonly IProviderProbeExecutorFactory _factory;
     private readonly IProviderProbeAuditRepository _auditRepo;
 
-    public ProviderProbeService(ProviderProbeExecutorFactory factory, IProviderProbeAuditRepository auditRepo)
+    public ProviderProbeService(IProviderProbeExecutorFactory factory, IProviderProbeAuditRepository auditRepo)
     {
         _factory = factory;
         _auditRepo = auditRepo;

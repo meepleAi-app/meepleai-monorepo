@@ -8,7 +8,7 @@ internal static class SharedGameCatalogEndpoints
 {
     public static RouteGroupBuilder MapSharedGameCatalogEndpoints(this RouteGroupBuilder group)
     {
-        SharedGameCatalogPublicEndpoints.Map(group);
+        // SharedGameCatalogPublicEndpoints registered separately in Program.cs (alpha-mode-aware)
         SharedGameCatalogUserEndpoints.Map(group);
         SharedGameCatalogAdminEndpoints.Map(group);
         SharedGameCatalogAdminShareRequestEndpoints.Map(group);

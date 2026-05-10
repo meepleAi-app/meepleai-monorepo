@@ -88,6 +88,19 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             .ConfigureAwait(false);
     }
 
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<ChatThread>> FindActiveByAgentIdAsync(Guid agentId, CancellationToken cancellationToken = default)
+    {
+        // "active" means Status != "closed" (see ThreadStatus.IsClosed in the domain)
+        var threadEntities = await DbContext.ChatThreads
+            .AsNoTracking()
+            .Where(t => t.AgentId == agentId && t.Status != "closed")
+            .OrderByDescending(t => t.LastMessageAt)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return threadEntities.Select(MapToDomain).ToList();
+    }
+
     public async Task<IReadOnlyList<ChatThread>> GetRecentAsync(int limit = 20, CancellationToken cancellationToken = default)
     {
         var threadEntities = await DbContext.ChatThreads

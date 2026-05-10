@@ -2682,7 +2682,6 @@ Frontend feature flags surface as `NEXT_PUBLIC_*` environment variables. Because
 
 | Flag | Default | Purpose | Owner |
 |------|---------|---------|-------|
-| `NEXT_PUBLIC_MOCK_MODE` | `false` (dev: `true`) | Serves MSW mocks when backend is unavailable. | Frontend |
 | `NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED` | `false` (dev: `true`) | ADR-051 M2.1 admin-only Mechanic Extractor AI validation surfaces (`/admin/knowledge-base/mechanic-extractor/{dashboard,golden,review}`). Strict equality on the literal `'true'` — no truthy coercion. When off the routes return 404 and embedded gates render nothing. | Knowledge Base |
 
 To enable a flag in staging without touching `compose.staging.yml`, export it on the host shell before running `make staging`:

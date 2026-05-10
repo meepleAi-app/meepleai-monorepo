@@ -9,7 +9,6 @@
 | Start Dev (full) | `make dev` | `infra/` |
 | Start Dev (core) | `make dev-core` | `infra/` |
 | Dev from Snapshot | `make dev-from-snapshot` | `infra/` — [guide](./docs/for-developers/workflows/snapshot-seed-workflow.md) |
-| Alpha Mode | `make alpha` | `infra/` |
 | Bake Snapshot | `make seed-index` | `infra/` — raro, indicizza tutti i PDF |
 | Integration | `make tunnel && make integration` | `infra/` — **Git Bash only (Windows)** |
 | Deploy Staging | `make staging` | `infra/` (on server) |
@@ -26,16 +25,9 @@
 - **Docker commands**: always use `pwsh -c "docker logs meepleai-api --tail=50"` — piping in bash breaks
 - **Integration scripts**: run in **Git Bash** (not PowerShell/CMD). Requires SSH key `~/.ssh/meepleai-staging`
 
-### Alpha Mode
+### Invite-only Registration
 
-Set `ALPHA_MODE=true` (backend) and `NEXT_PUBLIC_ALPHA_MODE=true` (frontend) to enable Alpha Zero.
-`NEXT_PUBLIC_ALPHA_MODE` is **build-time** — requires rebuild, not just restart.
-
-| Aspect | Alpha Scope |
-|--------|------------|
-| Features | Auth → Games + BGG → PDF upload → RAG Chat → Library |
-| Active BCs | Authentication, GameManagement, DocumentProcessing, KnowledgeBase, UserLibrary |
-| Admin | Overview, Users, Content (trimmed) only |
+Controlled at runtime via admin toggle (`/admin/config` → General → Registration Mode), backed by `RegistrationMode` config (DB-persisted). When `publicRegistrationEnabled=false`, `/register` shows the request-access popup (`RequestAccessForm`) instead of the standard form. No env var, no redeploy.
 
 ## Stack
 
@@ -266,14 +258,9 @@ tests/Api.Tests/          # Backend test suite
 
 ### 🔒 Active Freezes
 
-**SP6 v2 expansion FREEZE** (issued 2026-05-06, see [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808))
+_No active freezes._
 
-- ❌ NO new components under `apps/web/src/components/v2/**` using `hsl(*, 89%, 48%)` + `hsla(*, 89%, *, 0.10)` token pattern
-- ❌ NO new SP6 v2 routes (`/gamebook/**`, `/agents/**`) until A11y token redesign ([#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807) Fase 2) lands on `main-dev`
-- ❌ NO migration of legacy components to current v2 design tokens
-- ✅ ALLOWED: bugfix on existing v2 surfaces, performance, tests, i18n, docs, A11y fixes
-- 🟡 CASE-BY-CASE: bugfix that *adds* new v2 component (e.g. error boundary), hot-fix
-- A11y CI job (`Frontend - A11y E2E`) is now `continue-on-error: true` until token redesign — restore blocking when [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807) Fase 2 completes
+> **Historical**: SP6 v2 expansion FREEZE (issued 2026-05-06 per [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808), tied to A11y audit [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807)) was **lifted on 2026-05-10** by PR #876 (token redesign — AA-compliant CSS vars + entity Tailwind utilities). Issues #807 and #808 are both CLOSED. Restore A11y CI job (`Frontend - A11y E2E`) to blocking (`continue-on-error: false`) when verified green on `main-dev`.
 
 ### DDD Rules
 

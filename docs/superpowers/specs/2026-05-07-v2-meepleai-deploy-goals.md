@@ -1,5 +1,7 @@
 # MeepleAI v2 deploy goals — design (process-focused redesign)
 
+**Status**: 🟢 ACTIVE reference — supersedes a1-promote-main-dev-staging plan
+
 > **Date**: 2026-05-07
 > **Owner**: @DegrassiAaron (single dev / decision authority)
 > **Supersedes**: `docs/superpowers/plans/2026-05-07-a1-promote-main-dev-staging.md` (plan basato su assunzioni invalidate)

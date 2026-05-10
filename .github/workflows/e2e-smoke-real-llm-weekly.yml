@@ -1,0 +1,178 @@
+name: E2E Smoke Real LLM (free tier, on-demand)
+
+# On-demand canary against real LLM (free OpenRouter tier) on snapshot DB.
+# Mitigation Crispin: retries: 3 + timeout 180s + tag @flaky-by-design (legitimate flake).
+# Mitigation Nygard: free-model availability check + fallback chain (deprecation guard).
+# NO auto-issue creation — free tier flake non deve spammare bug tracker.
+#
+# ⚠️ Cron schedule DISABILITATO: il workflow dipende da `make dev-from-snapshot`
+# che ha un compat-gate fail-stop quando le migration HEAD del working tree non
+# matchano lo snapshot DB cached. Quando arriva una migration nuova, lo snapshot
+# va rigenerato manualmente via `make seed-index` (~20 min, richiede ambiente con
+# tutti i PDF + LLM). Eseguire questo workflow on-demand pre-staging deploy.
+#
+# Pre-requisito ogni run:
+#   1. Verificare che lo snapshot sia allineato (`make dev-from-snapshot` localmente)
+#   2. Se compat-gate fail → `make seed-index` per rigenerare → push del nuovo snapshot
+#   3. Trigger manuale di questo workflow
+#
+# Spec: docs/superpowers/specs/2026-05-10-e2e-smoke-game-night-integration-design.md §4.3 + §5.2
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-real-llm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+
+      - name: Generate placeholder secrets
+        working-directory: infra
+        run: make secrets-setup
+
+      - name: Verify free model availability + select with fallback chain
+        id: select-model
+        run: |
+          set -e
+          # Try primary → secondary → tertiary free models. Exit early if NONE available.
+          AVAILABLE=$(curl -fsS https://openrouter.ai/api/v1/models | jq -r '.data[].id' | grep -E ':free$' || echo "")
+          echo "Available free models:"
+          echo "$AVAILABLE"
+          PRIMARY="meta-llama/llama-3.3-70b-instruct:free"
+          SECONDARY="deepseek/deepseek-chat:free"
+          TERTIARY="google/gemini-2.0-flash-exp:free"
+          if echo "$AVAILABLE" | grep -qx "$PRIMARY"; then
+            MODEL="$PRIMARY"
+          elif echo "$AVAILABLE" | grep -qx "$SECONDARY"; then
+            MODEL="$SECONDARY"
+          elif echo "$AVAILABLE" | grep -qx "$TERTIARY"; then
+            MODEL="$TERTIARY"
+          else
+            echo "::error::No free model available — aborting weekly smoke"
+            exit 1
+          fi
+          echo "Selected model: $MODEL"
+          echo "model=$MODEL" >> "$GITHUB_OUTPUT"
+
+      - name: Setup OpenRouter secret with selected model
+        working-directory: infra
+        run: |
+          cat > secrets/openrouter.secret <<EOF
+          OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_DEFAULT_MODEL=${{ steps.select-model.outputs.model }}
+          EOF
+
+      - name: Generate placeholder env files for CI
+        working-directory: infra/env
+        run: |
+          cat > web.env.dev <<'WEBENV'
+          NEXT_PUBLIC_API_URL=http://localhost:8080
+          NEXT_PUBLIC_WS_URL=ws://localhost:8080
+          API_BASE_URL=http://api:8080
+          NODE_ENV=production
+          NEXT_TELEMETRY_DISABLED=1
+          NEXT_PUBLIC_HYPERDX_API_KEY=demo
+          NEXT_PUBLIC_ALPHA_MODE=true
+          WEBENV
+          cat > api.env.dev <<'APIENV'
+          POSTGRES_HOST=postgres
+          POSTGRES_PORT=5432
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+          OLLAMA_URL=http://ollama:11434
+          EMBEDDING_SERVICE_URL=http://embedding-service:8000
+          UNSTRUCTURED_SERVICE_URL=http://unstructured-service:8001
+          SMOLDOCLING_SERVICE_URL=http://smoldocling-service:8002
+          RERANKER_SERVICE_URL=http://reranker-service:8003
+          N8N_URL=http://n8n:5678
+          Email__EnableSsl=false
+          HYPERDX_OTLP_ENDPOINT=http://meepleai-hyperdx:4317
+          HYPERDX_API_KEY=demo
+          ALPHA_MODE=true
+          APIENV
+          cat > n8n.env.dev <<'N8NENV'
+          N8N_HOST=0.0.0.0
+          N8N_PORT=5678
+          N8N_PROTOCOL=http
+          WEBHOOK_URL=http://localhost:5678/
+          N8N_EDITOR_BASE_URL=http://localhost:5678/
+          GENERIC_TIMEZONE=Europe/Rome
+          N8NENV
+
+      - name: Boot full snapshot stack (Catan + rulebook indicizzati)
+        working-directory: infra
+        run: |
+          make dev-from-snapshot
+          for i in {1..60}; do
+            if curl -fsS http://localhost:8080/health 2>/dev/null; then
+              echo "API up"
+              break
+            fi
+            sleep 5
+          done
+
+      - name: Apply smoke-aaron fixture
+        run: |
+          docker exec -i meepleai-postgres psql -U meepleai -d meepleai_staging \
+            < tests/fixtures/smoke-test-users.sql
+
+      - name: Dump API logs on stack-up failure
+        if: failure()
+        working-directory: infra
+        run: docker compose -f docker-compose.yml -f compose.dev.yml logs --tail=200 api postgres redis || true
+
+      - name: Setup pnpm + Node
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d  # v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Install web deps
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: apps/web
+        run: pnpm playwright install --with-deps chromium
+
+      - name: Wait for web container ready
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:3000 2>/dev/null; then
+              echo "Web up on :3000"
+              break
+            fi
+            sleep 5
+          done
+
+      - name: Run real-LLM smoke specs
+        working-directory: apps/web
+        env:
+          SMOKE_API_BASE: http://localhost:8080
+          SMOKE_USER_EMAIL: smoke-aaron@meepleai.test
+          SMOKE_USER_PASSWORD: SmokeAaron1!!
+          SMOKE_GAME_ID: 3d54901d-fe9d-4d00-a7ae-e9865bb764f7
+          PLAYWRIGHT_SKIP_WEB_SERVER: '1'
+        run: pnpm playwright test smoke-real-llm/ --project=desktop-chrome --retries=3
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-real-llm-weekly
+          path: apps/web/playwright-report
+          retention-days: 14
+      # NB: NO auto-issue creation — free tier flake legittimo non deve spammare issues.
+      # Lo sviluppatore di guardia controlla manualmente il report il lunedì mattina.

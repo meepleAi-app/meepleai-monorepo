@@ -138,17 +138,6 @@ rag-snapshots: ## List all available RAG backup snapshots
 
 .PHONY: rag-export rag-export-dry rag-backup-status rag-snapshots
 
-# === Alpha Zero ===
-
-alpha: ## Start Alpha Zero with AI services
-	$(COMPOSE) -f compose.dev.yml -f compose.alpha.yml --profile ai up -d
-
-alpha-core: ## Start Alpha Zero core only (no AI services)
-	$(COMPOSE) -f compose.dev.yml -f compose.alpha.yml up -d
-
-alpha-down: ## Stop Alpha Zero environment
-	$(COMPOSE) -f compose.dev.yml -f compose.alpha.yml --profile ai down
-
 # === Backup & Disaster Recovery ===
 
 backup: ## Run full backup (PostgreSQL + PDFs → local + R2)

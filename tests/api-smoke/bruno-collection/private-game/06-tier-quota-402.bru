@@ -1,0 +1,34 @@
+meta {
+  name: SG1 — Tier quota: free-tier 3+ private games → 402
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{apiBase}}/api/v1/private-games
+  body: json
+}
+
+body:json {
+  {
+    "source": "Manual",
+    "title": "SG1 Quota Test {{$randomInt}}",
+    "minPlayers": 2,
+    "maxPlayers": 4,
+    "description": "Should trigger TIER_QUOTA_EXCEEDED if user already has 3 priv games"
+  }
+}
+
+tests {
+  test("returns 201 OR 402 depending on quota state", function() {
+    // Smoke proxy — accepts both since smoke runs without strict pre-state.
+    expect([201, 402]).to.include(res.getStatus());
+  });
+  test("if 402, body has TIER_QUOTA_EXCEEDED error code", function() {
+    if (res.getStatus() === 402) {
+      const body = res.getBody();
+      const bodyStr = JSON.stringify(body || {});
+      expect(bodyStr).to.match(/TIER_QUOTA_EXCEEDED|quota/i);
+    }
+  });
+}

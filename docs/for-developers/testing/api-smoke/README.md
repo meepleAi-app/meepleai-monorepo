@@ -192,9 +192,24 @@ The reindex endpoint is intentionally idempotent for unknown or empty gameIds. I
 
 `AgentDefinition.IsSystemDefined` (true per agenti seedati: arbitro, game-master, chat) blocca DELETE → 403 `SYSTEM_AGENT_PROTECTED`.
 
+## SG1 — Private Game lifecycle (since 2026-05-10)
+
+### Backend changes
+
+- `AutoCreateAgentOnPdfReadyHandler` no longer swallows agent-creation failures silently. The catch block now publishes `AutoAgentCreationFailedEvent` (MediatR `INotification`) with structured fields:
+  - `PdfDocumentId` / `GameId` / `UserId`
+  - `ErrorCode`: maps known exceptions → `AGENT_SLOT_QUOTA_EXCEEDED` (TierQuotaExceededException), `TIER_FEATURE_LOCKED` (TierFeatureLockedException), or generic `AGENT_CREATION_FAILED`
+  - `Reason`: original exception message
+
+Downstream consumers (UserNotifications BC) can subscribe to surface this to the user via in-app notification or email. **Carry-forward**: actual user-visible notification delivery is a follow-up enhancement — this PR establishes the observability contract.
+
+### Catalog endpoint (#893 already merged)
+
+`GET /api/v1/shared-games?search=…&pageNumber=…&pageSize=…` — public paginated catalog. Mergiato in PR #899 (commit `d7408be94`) prima di SG1, quindi questo PR aggiunge solo Bruno smoke verification.
+
 ## Sub-collection consumers
 
-- `private-game/` ← scenari implementati in #902 (SG1)
+- `private-game/` ← scenari implementati in #902 (SG1) — 9 .bru: login + catalog search (#893 fix verified) + manual create + list + tier quota + BGG throttle + delete cleanup + BGG-id conflict redirect — 9 .bru: login + catalog search (#893 fix verified) + manual create + list + tier quota + BGG throttle + delete cleanup + BGG-id conflict redirect
 - `kb/` ← scenari implementati in #903 (SG2) — 6 .bru: reindex, raptor (tier-gated), cascade verify, list PDFs, idempotent unknown gameId
 - `agents/` ← scenari implementati in #904 (SG3) — 10 .bru: login + preflight + create user-agent + lifecycle (start-testing/publish/unpublish) + soft-delete cascade + restore + builder filters + tier quota
 - `sessions/` ← scenari implementati in #905 (SG4) — 4 sub-folder: game-session/ chat-session/ chat-thread/ naming-disambiguation/

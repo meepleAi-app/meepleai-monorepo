@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Nanolith Runthrough · Resume Picker</title>
+<!--
+  Mockup: nanolith-runthrough-resume-picker
+  Route:  /library/games/{gameId}/play  (gameId = nanolith)
+  Scope:  Phase A runthrough — dispatcher 4 stati di campagna (issue #835/#838)
+  Stati:  state-01-first-time      (EmptyFirstTime,  data.length === 0)
+          state-02-single-resume   (ResumeHero,      data.length === 1 && !isStale)
+          state-03-multi-campaign  (MultiCampaignList, data.length >= 2)
+          state-04-stale-warning   (StaleWarningCard, data.length === 1 && isStale)
+  Persona: Aaron (badsworm@gmail.com), gioca con Marco/Giulia/Luca (gruppo A) e con la fidanzata (gruppo B).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  .top {
+    position: sticky; top: 0; z-index: var(--z-sticky);
+    backdrop-filter: blur(12px); background: var(--glass-bg);
+    border-bottom: 1px solid var(--border);
+    padding: var(--s-4) var(--s-6);
+    display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap;
+  }
+  .top h1 { font-family: var(--f-display); font-size: var(--fs-lg); margin: 0; font-weight: var(--fw-bold); }
+  .top .route { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); padding: 2px var(--s-2); border-radius: var(--r-sm); background: var(--bg-muted); }
+  .top .spacer { flex: 1; }
+  .top button {
+    background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
+    border-radius: var(--r-pill); padding: var(--s-1) var(--s-3);
+    font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer;
+  }
+
+  .stage { padding: var(--s-7) var(--s-6); max-width: 1600px; margin: 0 auto; }
+  .state-section { margin-bottom: var(--s-10); }
+  .state-section .label {
+    display: inline-block; padding: var(--s-1) var(--s-3);
+    background: hsl(var(--c-session) / 0.12); color: hsl(var(--c-session));
+    border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: var(--s-2);
+  }
+  .state-section .label .cmp {
+    margin-left: var(--s-2); padding: 1px var(--s-2);
+    background: var(--bg); color: hsl(var(--c-session));
+    border-radius: var(--r-sm); font-size: 10px;
+  }
+  .state-section h2 {
+    font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold);
+    margin: 0 0 var(--s-2);
+  }
+  .state-section .desc { color: var(--text-sec); margin: 0 0 var(--s-6); font-size: var(--fs-md); }
+
+  .frames { display: flex; gap: var(--s-9); flex-wrap: wrap; align-items: flex-start; }
+
+  .phone {
+    width: 375px; min-height: 740px; background: var(--bg);
+    border-radius: 36px; overflow: hidden;
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; position: relative;
+  }
+  .phone-sbar {
+    height: 32px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 22px 0;
+    font-size: 12px; font-weight: var(--fw-bold);
+    font-family: var(--f-display); color: var(--text-sec);
+  }
+  .phone .frame-label, .desktop .frame-label {
+    position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+  }
+  .desktop .frame-label { left: 0; transform: none; }
+
+  .desktop {
+    width: 720px; height: 540px; background: var(--bg);
+    border-radius: var(--r-lg); overflow: hidden;
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; position: relative;
+  }
+  .desktop .titlebar {
+    height: 28px; background: var(--bg-muted); flex-shrink: 0;
+    display: flex; align-items: center; padding: 0 var(--s-3); gap: 6px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .desktop .titlebar .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .desktop .titlebar .dot.r { background: #ff605c; }
+  .desktop .titlebar .dot.y { background: #ffbd44; }
+  .desktop .titlebar .dot.g { background: #00ca4e; }
+  .desktop .titlebar .url {
+    margin-left: var(--s-3); padding: 2px var(--s-3);
+    background: var(--bg-card); border-radius: var(--r-sm);
+    font-family: var(--f-mono); font-size: 11px; color: var(--text-muted);
+    flex: 1;
+  }
+
+  .appbar {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-3) var(--s-4);
+    border-bottom: 1px solid var(--border-light); flex-shrink: 0;
+  }
+  .appbar .back {
+    width: 36px; height: 36px; border-radius: var(--r-md);
+    background: var(--bg-muted); display: flex; align-items: center; justify-content: center;
+    font-size: 18px; cursor: pointer;
+  }
+  .appbar .crumbs { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+  .appbar .crumbs strong { color: var(--text-sec); font-weight: var(--fw-semi); }
+
+  /* ─── Content area ─── */
+  .content { flex: 1; overflow-y: auto; padding: var(--s-4); }
+
+  /* ─── State 01: First time empty ─── */
+  .first-time {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: var(--s-9) var(--s-5); min-height: 420px;
+  }
+  .first-time .illust {
+    width: 140px; height: 140px; border-radius: 50%;
+    background:
+      radial-gradient(circle at 35% 35%, hsl(var(--c-session) / 0.4), transparent 60%),
+      radial-gradient(circle at 70% 70%, hsl(var(--c-game) / 0.35), transparent 60%),
+      hsl(var(--c-session) / 0.08);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 56px; margin-bottom: var(--s-5);
+  }
+  .first-time h2 {
+    font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold);
+    margin: 0 0 var(--s-2);
+  }
+  .first-time p {
+    color: var(--text-sec); font-size: var(--fs-md); line-height: var(--lh-body);
+    max-width: 320px; margin: 0 0 var(--s-6);
+  }
+  .first-time .features {
+    display: flex; flex-direction: column; gap: var(--s-2); margin-bottom: var(--s-7);
+    text-align: left; width: 100%; max-width: 320px;
+  }
+  .first-time .feat {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-3); border-radius: var(--r-md);
+    background: var(--bg-card); border: 1px solid var(--border-light);
+  }
+  .first-time .feat .ico {
+    width: 32px; height: 32px; border-radius: var(--r-sm);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 16px;
+  }
+  .first-time .feat.kb .ico { background: hsl(var(--c-kb) / 0.15); }
+  .first-time .feat.chat .ico { background: hsl(var(--c-chat) / 0.15); }
+  .first-time .feat.tool .ico { background: hsl(var(--c-tool) / 0.15); }
+  .first-time .feat .l { font-family: var(--f-display); font-size: var(--fs-md); font-weight: var(--fw-semi); color: var(--text); }
+  .first-time .feat .s { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+
+  .cta-primary {
+    width: 100%; max-width: 320px; padding: var(--s-4) var(--s-5);
+    background: hsl(var(--c-session)); color: #fff; border: 0;
+    border-radius: var(--r-lg);
+    font-family: var(--f-display); font-size: var(--fs-lg); font-weight: var(--fw-bold);
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: var(--s-2);
+    box-shadow: 0 6px 20px hsl(var(--c-session) / 0.35);
+  }
+  .cta-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px hsl(var(--c-session) / 0.45); }
+
+  /* ─── State 02: Single resume hero ─── */
+  .resume-hero {
+    margin: var(--s-4); padding: var(--s-5); border-radius: var(--r-xl);
+    background: linear-gradient(135deg, hsl(var(--c-session) / 0.08), hsl(var(--c-game) / 0.06));
+    border: 1px solid hsl(var(--c-session) / 0.25);
+  }
+  .resume-hero .header { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-4); }
+  .resume-hero .pulse {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: hsl(var(--c-session));
+    box-shadow: 0 0 0 0 hsl(var(--c-session) / 0.5);
+    animation: pulse 2s cubic-bezier(0.66,0,0.34,1) infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 hsl(var(--c-session) / 0.5); }
+    70% { box-shadow: 0 0 0 10px hsl(var(--c-session) / 0); }
+    100% { box-shadow: 0 0 0 0 hsl(var(--c-session) / 0); }
+  }
+  .resume-hero .label {
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    color: hsl(var(--c-session)); text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .resume-hero h2 {
+    font-family: var(--f-display); font-size: var(--fs-xl); font-weight: var(--fw-bold);
+    margin: 0 0 var(--s-2);
+  }
+  .resume-hero .meta {
+    display: flex; gap: var(--s-3); flex-wrap: wrap;
+    margin-bottom: var(--s-4);
+    font-size: var(--fs-xs); color: var(--text-sec); font-family: var(--f-mono);
+  }
+  .resume-hero .meta-item { display: inline-flex; align-items: center; gap: 4px; }
+  .resume-hero .progress {
+    background: var(--bg); border-radius: var(--r-md); padding: var(--s-3);
+    margin-bottom: var(--s-4); display: flex; align-items: center; gap: var(--s-3);
+  }
+  .resume-hero .progress .num { font-family: var(--f-mono); font-size: var(--fs-2xl); font-weight: var(--fw-bold); color: hsl(var(--c-kb)); font-variant-numeric: tabular-nums; }
+  .resume-hero .progress .lbl { flex: 1; }
+  .resume-hero .progress .lbl .v { font-family: var(--f-display); font-weight: var(--fw-semi); }
+  .resume-hero .progress .lbl .s { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+  .resume-hero .pips { display: flex; gap: var(--s-2); margin-bottom: var(--s-4); flex-wrap: wrap; }
+
+  .pip {
+    display: inline-flex; align-items: center; gap: var(--s-1);
+    padding: 4px var(--s-3); border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-semi);
+    border: 1px solid transparent; font-variant-numeric: tabular-nums;
+  }
+  .pip.kb { background: hsl(var(--c-kb) / 0.12); color: hsl(var(--c-kb)); }
+  .pip.chat { background: hsl(var(--c-chat) / 0.12); color: hsl(var(--c-chat)); }
+  .pip.player { background: hsl(var(--c-player) / 0.12); color: hsl(var(--c-player)); }
+  .pip.session { background: hsl(var(--c-session) / 0.12); color: hsl(var(--c-session)); }
+  .pip.agent { background: hsl(var(--c-agent) / 0.12); color: hsl(var(--c-agent)); }
+
+  .resume-actions { display: flex; gap: var(--s-2); }
+  .btn-out {
+    padding: var(--s-3) var(--s-4); border-radius: var(--r-md);
+    background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--f-display); font-weight: var(--fw-semi);
+    cursor: pointer; font-size: var(--fs-md); flex: 1;
+  }
+  .btn-out:hover { background: var(--bg-hover); }
+  .btn-fill {
+    padding: var(--s-3) var(--s-5); border-radius: var(--r-md);
+    background: hsl(var(--c-session)); border: 0; color: #fff;
+    font-family: var(--f-display); font-weight: var(--fw-bold);
+    cursor: pointer; font-size: var(--fs-md); flex: 2;
+  }
+  .btn-fill:hover { box-shadow: 0 4px 14px hsl(var(--c-session) / 0.35); }
+
+  .secondary-row {
+    margin: 0 var(--s-4) var(--s-4); padding: var(--s-3);
+    border-top: 1px dashed var(--border); display: flex; align-items: center; gap: var(--s-3);
+  }
+  .secondary-row .ico {
+    width: 32px; height: 32px; border-radius: var(--r-md);
+    background: var(--bg-muted); display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .secondary-row .l { flex: 1; font-size: var(--fs-md); color: var(--text-sec); }
+  .secondary-row .l strong { color: var(--text); font-weight: var(--fw-semi); }
+  .link-btn {
+    background: transparent; border: 0; color: hsl(var(--c-game));
+    font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm);
+    cursor: pointer; padding: var(--s-1) var(--s-2);
+  }
+
+  /* ─── State 03: Multi campaign list ─── */
+  .multi-header { padding: var(--s-4) var(--s-4) var(--s-2); }
+  .multi-header h2 { font-family: var(--f-display); font-size: var(--fs-xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-1); }
+  .multi-header .sub { color: var(--text-sec); font-size: var(--fs-sm); margin: 0; }
+  .campaign-list { padding: 0 var(--s-4) var(--s-4); display: flex; flex-direction: column; gap: var(--s-3); }
+  .campaign-card {
+    border-radius: var(--r-lg); overflow: hidden;
+    border: 1px solid var(--border-light); background: var(--bg-card);
+    padding: var(--s-4); cursor: pointer;
+    transition: transform var(--dur-sm) var(--ease-out), box-shadow var(--dur-sm) var(--ease-out);
+  }
+  .campaign-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .campaign-card.active { border-color: hsl(var(--c-session) / 0.4); }
+  .campaign-card .top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-3); margin-bottom: var(--s-3); }
+  .campaign-card .name {
+    font-family: var(--f-display); font-size: var(--fs-md); font-weight: var(--fw-bold);
+    color: var(--text); margin: 0;
+  }
+  .campaign-card .when { font-size: var(--fs-xs); color: var(--text-muted); font-family: var(--f-mono); margin-top: 2px; }
+  .campaign-card .progress { font-family: var(--f-mono); font-size: var(--fs-md); font-weight: var(--fw-bold); color: hsl(var(--c-kb)); font-variant-numeric: tabular-nums; }
+  .campaign-card .pips { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-bottom: var(--s-3); }
+  .campaign-card .actions { display: flex; gap: var(--s-2); }
+  .btn-sm-fill {
+    padding: var(--s-2) var(--s-3); border-radius: var(--r-md);
+    background: hsl(var(--c-session)); border: 0; color: #fff;
+    font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm);
+    cursor: pointer; flex: 1;
+  }
+  .btn-sm-out {
+    padding: var(--s-2) var(--s-3); border-radius: var(--r-md);
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-sec); font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm);
+    cursor: pointer;
+  }
+
+  .new-campaign-row {
+    margin: 0 var(--s-4) var(--s-4); padding: var(--s-4);
+    border: 2px dashed var(--border); border-radius: var(--r-lg);
+    text-align: center; cursor: pointer;
+    transition: background var(--dur-sm) var(--ease-out);
+  }
+  .new-campaign-row:hover { background: var(--bg-hover); border-color: hsl(var(--c-session) / 0.4); }
+  .new-campaign-row .lbl { font-family: var(--f-display); font-weight: var(--fw-bold); color: hsl(var(--c-session)); font-size: var(--fs-md); }
+  .new-campaign-row .sub { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+
+  /* ─── State 04: Stale warning ─── */
+  .stale-warning {
+    margin: var(--s-4); padding: var(--s-5); border-radius: var(--r-xl);
+    background: hsl(var(--c-warning) / 0.06);
+    border: 1px solid hsl(var(--c-warning) / 0.3);
+  }
+  .stale-warning .badge {
+    display: inline-flex; align-items: center; gap: var(--s-1);
+    padding: 4px var(--s-3); border-radius: var(--r-pill);
+    background: hsl(var(--c-warning) / 0.18); color: hsl(var(--c-warning));
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: var(--s-3);
+  }
+  .stale-warning h2 {
+    font-family: var(--f-display); font-size: var(--fs-xl); font-weight: var(--fw-bold);
+    margin: 0 0 var(--s-2);
+  }
+  .stale-warning .info {
+    background: var(--bg-card); border-radius: var(--r-md);
+    padding: var(--s-3); margin-bottom: var(--s-4);
+  }
+  .stale-warning .info .row { display: flex; justify-content: space-between; padding: var(--s-1) 0; font-size: var(--fs-sm); }
+  .stale-warning .info .row .k { color: var(--text-muted); font-family: var(--f-mono); }
+  .stale-warning .info .row .v { font-weight: var(--fw-semi); font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+  .stale-warning .question {
+    font-size: var(--fs-md); color: var(--text); margin-bottom: var(--s-4);
+  }
+  .stale-actions { display: flex; flex-direction: column; gap: var(--s-2); }
+
+  /* ─── Skeleton ─── */
+  .sk {
+    background: linear-gradient(90deg, var(--bg-muted) 25%, var(--bg-sunken) 50%, var(--bg-muted) 75%);
+    background-size: 200% 100%; animation: sk 1.5s linear infinite;
+    border-radius: var(--r-sm);
+  }
+  @keyframes sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  *:focus-visible { outline: 2px solid hsl(var(--c-game)); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    .sk, .resume-hero .pulse { animation: none; }
+    .resume-hero .pulse { box-shadow: none; }
+  }
+</style>
+</head>
+
+<body>
+
+<header class="top">
+  <h1>Nanolith Runthrough · Resume Picker (4 stati)</h1>
+  <span class="route">/library/games/nanolith/play</span>
+  <span class="spacer"></span>
+  <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
+</header>
+
+<main class="stage">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 01 · FIRST TIME (EmptyFirstTime, data.length === 0)
+       Mai giocato: 0 campagne. Onboarding-grade illustrazione + CTA.
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s1">
+    <span class="label">Stato 01 · First Time<span class="cmp">EmptyFirstTime</span></span>
+    <h2 id="s1">Mai giocato — Inizia la tua prima campagna</h2>
+    <p class="desc">Aaron apre `/library/games/nanolith/play` per la prima volta. Nessuna campagna esistente. Onboarding-grade hero + 3 feature card + CTA primary "Inizia campagna".</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – first time">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:42</span><span class="ind">📶 🔋 91%</span></div>
+        <div class="appbar">
+          <button class="back" aria-label="Torna a Nanolith">←</button>
+          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+        </div>
+        <div class="content">
+          <div class="first-time">
+            <div class="illust" aria-hidden="true">📖</div>
+            <h2>Pronti per la prima sera?</h2>
+            <p>L'app ti guida nel setup, risponde alle domande sulle regole e traduce i paragrafi narrativi dello Storybook fotografando le pagine.</p>
+
+            <div class="features">
+              <div class="feat kb">
+                <span class="ico">📄</span>
+                <div>
+                  <div class="l">Tutorial dal Press Start</div>
+                  <div class="s">24 pagine indicizzate</div>
+                </div>
+              </div>
+              <div class="feat chat">
+                <span class="ico">💬</span>
+                <div>
+                  <div class="l">Q&A regole in IT</div>
+                  <div class="s">Citation pagina · &lt;5s</div>
+                </div>
+              </div>
+              <div class="feat tool">
+                <span class="ico">📷</span>
+                <div>
+                  <div class="l">Traduci Storybook</div>
+                  <div class="s">Foto pagina → IT</div>
+                </div>
+              </div>
+            </div>
+
+            <button class="cta-primary" type="button">📖 Inizia campagna</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – first time">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+        </div>
+        <div class="content" style="display: flex; align-items: center; justify-content: center;">
+          <div class="first-time" style="padding: var(--s-7);">
+            <div class="illust" aria-hidden="true">📖</div>
+            <h2>Pronti per la prima sera?</h2>
+            <p>L'app ti guida nel setup, risponde alle domande sulle regole e traduce i paragrafi narrativi dello Storybook fotografando le pagine.</p>
+            <div class="features" style="flex-direction: row; max-width: none;">
+              <div class="feat kb"><span class="ico">📄</span><div><div class="l">Press Start</div><div class="s">24 pag</div></div></div>
+              <div class="feat chat"><span class="ico">💬</span><div><div class="l">Q&A IT</div><div class="s">&lt;5s</div></div></div>
+              <div class="feat tool"><span class="ico">📷</span><div><div class="l">Foto → IT</div><div class="s">storybook</div></div></div>
+            </div>
+            <button class="cta-primary" type="button">📖 Inizia campagna</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 02 · SINGLE RESUME (ResumeHero, 1 campagna non-stale)
+       Aaron ha 1 campagna attiva, ultimo accesso recente (≤ 7 giorni).
+       Hero card grande "Riprendi" + secondary "Inizia nuova".
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s2">
+    <span class="label">Stato 02 · Single Resume<span class="cmp">ResumeHero</span></span>
+    <h2 id="s2">1 campagna attiva — Riprendi dove avevi lasciato</h2>
+    <p class="desc">Aaron ha 1 campagna con Marco/Giulia/Luca, ultimo paragrafo §289, glossario 12 termini, ultima sessione 7 giorni fa (non stale). Pulsing dot session-color.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – single resume">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:42</span><span class="ind">📶 🔋 91%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+        </div>
+        <div class="content" style="padding: 0;">
+          <article class="resume-hero" aria-labelledby="rh1">
+            <div class="header">
+              <span class="pulse" aria-hidden="true"></span>
+              <span class="label">In corso</span>
+            </div>
+            <h2 id="rh1">Campagna con i ragazzi</h2>
+            <div class="meta">
+              <span class="meta-item">📅 Iniziata 23 giorni fa</span>
+              <span class="meta-item">⏱️ Ultima sessione 7 giorni fa</span>
+            </div>
+
+            <div class="progress">
+              <span class="num">§289</span>
+              <div class="lbl">
+                <div class="v">Ultimo paragrafo letto</div>
+                <div class="s">Capitolo 4 — La grotta dei Reaver</div>
+              </div>
+            </div>
+
+            <div class="pips">
+              <span class="pip player">👤 Marco · Giulia · Luca · Aaron</span>
+              <span class="pip kb">📄 12 termini glossario</span>
+              <span class="pip chat">💬 47 Q&amp;A</span>
+            </div>
+
+            <div class="resume-actions">
+              <button class="btn-fill" type="button" aria-describedby="rh1">▶ Riprendi</button>
+              <button class="btn-out" type="button">⋯ Opzioni</button>
+            </div>
+          </article>
+
+          <div class="secondary-row">
+            <span class="ico" aria-hidden="true">+</span>
+            <span class="l">Vuoi giocare con un altro gruppo?</span>
+            <button class="link-btn">Nuova campagna</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – single resume">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+        </div>
+        <div class="content" style="max-width: 720px; margin: 0 auto;">
+          <article class="resume-hero">
+            <div class="header"><span class="pulse"></span><span class="label">In corso</span></div>
+            <h2>Campagna con i ragazzi</h2>
+            <div class="meta">
+              <span class="meta-item">📅 Iniziata 23 giorni fa</span>
+              <span class="meta-item">⏱️ Ultima sessione 7 giorni fa</span>
+            </div>
+            <div class="progress">
+              <span class="num">§289</span>
+              <div class="lbl">
+                <div class="v">Ultimo paragrafo letto</div>
+                <div class="s">Capitolo 4 — La grotta dei Reaver</div>
+              </div>
+            </div>
+            <div class="pips">
+              <span class="pip player">👤 Marco · Giulia · Luca · Aaron</span>
+              <span class="pip kb">📄 12 termini glossario</span>
+              <span class="pip chat">💬 47 Q&amp;A</span>
+            </div>
+            <div class="resume-actions">
+              <button class="btn-fill" type="button">▶ Riprendi</button>
+              <button class="btn-out" type="button">⋯ Opzioni</button>
+            </div>
+          </article>
+          <div class="secondary-row">
+            <span class="ico">+</span>
+            <span class="l">Vuoi giocare con un altro gruppo?</span>
+            <button class="link-btn">Nuova campagna</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 03 · MULTI CAMPAIGN (MultiCampaignList, 2+ campagne)
+       Aaron ha 2 campagne parallele: gruppo amici + fidanzata.
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s3">
+    <span class="label">Stato 03 · Multi Campaign<span class="cmp">MultiCampaignList</span></span>
+    <h2 id="s3">2 campagne attive — Scegli quale riprendere</h2>
+    <p class="desc">Aaron ha 2 campagne in corso: una con Marco/Giulia/Luca (gruppo A, §289), una con la fidanzata (gruppo B, §47, più recente). Lista verticale ordinata per ultimo accesso.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – multi campaign">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:42</span><span class="ind">📶 🔋 91%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+        </div>
+        <div class="content" style="padding: 0;">
+          <div class="multi-header">
+            <h2>Le tue campagne</h2>
+            <p class="sub">2 attive · ordinate per ultimo accesso</p>
+          </div>
+
+          <div class="campaign-list" role="list">
+            <article class="campaign-card active" role="listitem">
+              <div class="top-row">
+                <div>
+                  <h3 class="name">Sera con Sara</h3>
+                  <div class="when">⏱️ ieri sera</div>
+                </div>
+                <span class="progress" aria-label="paragrafo 47">§47</span>
+              </div>
+              <div class="pips">
+                <span class="pip player">👤 Sara · Aaron</span>
+                <span class="pip kb">📄 4 termini</span>
+                <span class="pip session">🎯 attiva</span>
+              </div>
+              <div class="actions">
+                <button class="btn-sm-fill" type="button">▶ Riprendi</button>
+                <button class="btn-sm-out" type="button" aria-label="Altre opzioni">⋯</button>
+              </div>
+            </article>
+
+            <article class="campaign-card" role="listitem">
+              <div class="top-row">
+                <div>
+                  <h3 class="name">Campagna con i ragazzi</h3>
+                  <div class="when">⏱️ 7 giorni fa</div>
+                </div>
+                <span class="progress">§289</span>
+              </div>
+              <div class="pips">
+                <span class="pip player">👤 Marco · Giulia · Luca · Aaron</span>
+                <span class="pip kb">📄 12 termini</span>
+                <span class="pip chat">💬 47</span>
+              </div>
+              <div class="actions">
+                <button class="btn-sm-fill" type="button">▶ Riprendi</button>
+                <button class="btn-sm-out" type="button" aria-label="Altre opzioni">⋯</button>
+              </div>
+            </article>
+          </div>
+
+          <div class="new-campaign-row" role="button" tabindex="0">
+            <div class="lbl">+ Nuova campagna</div>
+            <div class="sub">Glossario e progresso saranno separati</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – multi campaign">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+        </div>
+        <div class="content" style="padding: 0; max-width: 720px; margin: 0 auto;">
+          <div class="multi-header">
+            <h2>Le tue campagne</h2>
+            <p class="sub">2 attive · ordinate per ultimo accesso</p>
+          </div>
+          <div class="campaign-list" role="list" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3);">
+            <article class="campaign-card active" role="listitem">
+              <div class="top-row">
+                <div><h3 class="name">Sera con Sara</h3><div class="when">⏱️ ieri sera</div></div>
+                <span class="progress">§47</span>
+              </div>
+              <div class="pips">
+                <span class="pip player">👤 Sara · Aaron</span>
+                <span class="pip kb">📄 4 termini</span>
+                <span class="pip session">🎯 attiva</span>
+              </div>
+              <div class="actions">
+                <button class="btn-sm-fill">▶ Riprendi</button>
+                <button class="btn-sm-out">⋯</button>
+              </div>
+            </article>
+            <article class="campaign-card" role="listitem">
+              <div class="top-row">
+                <div><h3 class="name">Campagna con i ragazzi</h3><div class="when">⏱️ 7 giorni fa</div></div>
+                <span class="progress">§289</span>
+              </div>
+              <div class="pips">
+                <span class="pip player">👤 Marco · Giulia · Luca · Aaron</span>
+                <span class="pip kb">📄 12 termini</span>
+                <span class="pip chat">💬 47</span>
+              </div>
+              <div class="actions">
+                <button class="btn-sm-fill">▶ Riprendi</button>
+                <button class="btn-sm-out">⋯</button>
+              </div>
+            </article>
+          </div>
+          <div class="new-campaign-row" role="button" tabindex="0">
+            <div class="lbl">+ Nuova campagna</div>
+            <div class="sub">Glossario e progresso saranno separati</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 04 · STALE WARNING (StaleWarningCard, 1 stale)
+       Aaron aveva 1 campagna ma > 60 giorni di inattività.
+       Domanda: continuare o archiviare?
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s4">
+    <span class="label">Stato 04 · Stale Warning<span class="cmp">StaleWarningCard</span></span>
+    <h2 id="s4">Campagna inattiva — Continuare o archiviare?</h2>
+    <p class="desc">Aaron aveva 1 campagna ma sono passati 60 giorni dall'ultima sessione (soglia stale). Warning amber + 3 azioni: Riprendi, Archivia + Nuova, Solo nuova.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – stale warning">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:42</span><span class="ind">📶 🔋 91%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+        </div>
+        <div class="content" style="padding: 0;">
+          <article class="stale-warning" role="alert" aria-labelledby="sw1">
+            <span class="badge">⚠️ Inattiva da 60 giorni</span>
+            <h2 id="sw1">Campagna con i ragazzi</h2>
+
+            <div class="info">
+              <div class="row"><span class="k">Iniziata</span><span class="v">5 marzo 2026</span></div>
+              <div class="row"><span class="k">Ultima sessione</span><span class="v">9 marzo 2026</span></div>
+              <div class="row"><span class="k">Ultimo paragrafo</span><span class="v">§289</span></div>
+              <div class="row"><span class="k">Glossario</span><span class="v">12 termini</span></div>
+              <div class="row"><span class="k">Party</span><span class="v">Marco · Giulia · Luca · Aaron</span></div>
+            </div>
+
+            <p class="question">Vuoi riprenderla, archiviarla, o iniziare una nuova campagna pulita?</p>
+
+            <div class="stale-actions">
+              <button class="btn-fill" type="button">▶ Riprendi comunque</button>
+              <button class="btn-out" type="button">📦 Archivia + Nuova campagna</button>
+              <button class="btn-out" type="button">✨ Solo nuova (mantieni archivio)</button>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – stale warning">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+        </div>
+        <div class="content" style="display: flex; align-items: center; justify-content: center; padding: 0;">
+          <article class="stale-warning" role="alert" style="max-width: 480px; margin: 0;">
+            <span class="badge">⚠️ Inattiva da 60 giorni</span>
+            <h2>Campagna con i ragazzi</h2>
+            <div class="info">
+              <div class="row"><span class="k">Iniziata</span><span class="v">5 marzo 2026</span></div>
+              <div class="row"><span class="k">Ultima sessione</span><span class="v">9 marzo 2026</span></div>
+              <div class="row"><span class="k">Ultimo paragrafo</span><span class="v">§289</span></div>
+              <div class="row"><span class="k">Glossario</span><span class="v">12 termini</span></div>
+              <div class="row"><span class="k">Party</span><span class="v">Marco · Giulia · Luca · Aaron</span></div>
+            </div>
+            <p class="question">Vuoi riprenderla, archiviarla, o iniziare una nuova campagna pulita?</p>
+            <div class="stale-actions">
+              <button class="btn-fill">▶ Riprendi comunque</button>
+              <button class="btn-out">📦 Archivia + Nuova campagna</button>
+              <button class="btn-out">✨ Solo nuova (mantieni archivio)</button>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const root = document.documentElement;
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+</script>
+
+</body>
+</html>

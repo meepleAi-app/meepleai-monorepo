@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Nanolith Runthrough · Setup Chat Panel</title>
+<!--
+  Mockup: nanolith-runthrough-setup-chat
+  Route:  /library/games/{gameId}/play/{campaignId}?tab=chat
+  Scope:  Phase A runthrough — chat panel laterale per setup pre-sessione (N1 baseline)
+  Stati:  default            (Aaron query setup 4 giocatori + risposta IT 5 step + citation Press Start + confidence alta)
+          confidence-bassa   (Aaron edge "setup variante 5 giocatori" + disclaimer "non sono sicuro")
+          out-of-context     (Aaron chiede setup di Tainted Grail, agente declina con suggestion change game)
+          loading            (skeleton bubble agent typing)
+  Persona: Aaron (badsworm@gmail.com), 30 minuti prima dell'arrivo amici, agente "Nanolith Tutor" con KB Press Start.
+  Vincolo: SMART N1 P95 ≤ 8s, citation accuracy ≥ 90%, confidence badge visibile.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  .top {
+    position: sticky; top: 0; z-index: var(--z-sticky);
+    backdrop-filter: blur(12px); background: var(--glass-bg);
+    border-bottom: 1px solid var(--border);
+    padding: var(--s-4) var(--s-6);
+    display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap;
+  }
+  .top h1 { font-family: var(--f-display); font-size: var(--fs-lg); margin: 0; font-weight: var(--fw-bold); }
+  .top .route { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); padding: 2px var(--s-2); border-radius: var(--r-sm); background: var(--bg-muted); }
+  .top .spacer { flex: 1; }
+  .top button {
+    background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
+    border-radius: var(--r-pill); padding: var(--s-1) var(--s-3);
+    font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer;
+  }
+
+  .stage { padding: var(--s-7) var(--s-6); max-width: 1700px; margin: 0 auto; }
+
+  .state-section { margin-bottom: var(--s-10); }
+  .state-section .label {
+    display: inline-block; padding: var(--s-1) var(--s-3);
+    background: hsl(var(--c-chat) / 0.12); color: hsl(var(--c-chat));
+    border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: var(--s-2);
+  }
+  .state-section h2 {
+    font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold);
+    margin: 0 0 var(--s-2);
+  }
+  .state-section .desc { color: var(--text-sec); margin: 0 0 var(--s-6); font-size: var(--fs-md); }
+
+  .frames { display: flex; gap: var(--s-9); flex-wrap: wrap; align-items: flex-start; }
+
+  .phone {
+    width: 375px; min-height: 740px; background: var(--bg);
+    border-radius: 36px; overflow: hidden;
+    border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; position: relative;
+  }
+  .desktop {
+    width: 880px; height: 600px; background: var(--bg);
+    border-radius: var(--r-lg); overflow: hidden;
+    border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; position: relative;
+  }
+  .phone .frame-label, .desktop .frame-label {
+    position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+  }
+  .desktop .frame-label { left: 0; transform: none; }
+
+  .phone-sbar {
+    height: 32px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 22px 0;
+    font-size: 12px; font-weight: var(--fw-bold);
+    font-family: var(--f-display); color: var(--text-sec);
+  }
+  .titlebar {
+    height: 28px; background: var(--bg-muted); flex-shrink: 0;
+    display: flex; align-items: center; padding: 0 var(--s-3); gap: 6px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .titlebar .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .titlebar .dot.r { background: #ff605c; } .titlebar .dot.y { background: #ffbd44; } .titlebar .dot.g { background: #00ca4e; }
+  .titlebar .url {
+    margin-left: var(--s-3); padding: 2px var(--s-3);
+    background: var(--bg-card); border-radius: var(--r-sm);
+    font-family: var(--f-mono); font-size: 11px; color: var(--text-muted);
+    flex: 1;
+  }
+
+  /* ─── Session header (tabs) ─── */
+  .session-head {
+    padding: var(--s-3) var(--s-4);
+    border-bottom: 1px solid var(--border-light); flex-shrink: 0;
+    display: flex; align-items: center; gap: var(--s-3);
+  }
+  .session-head .pulse {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: hsl(var(--c-session));
+    box-shadow: 0 0 0 0 hsl(var(--c-session) / 0.5);
+    animation: pulse 2s cubic-bezier(0.66,0,0.34,1) infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 hsl(var(--c-session) / 0.5); }
+    70% { box-shadow: 0 0 0 8px hsl(var(--c-session) / 0); }
+    100% { box-shadow: 0 0 0 0 hsl(var(--c-session) / 0); }
+  }
+  .session-head .title {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md);
+  }
+  .session-head .sub { font-size: var(--fs-xs); color: var(--text-muted); font-family: var(--f-mono); }
+
+  .tabs {
+    display: flex; gap: var(--s-1); padding: 0 var(--s-3);
+    border-bottom: 1px solid var(--border-light); flex-shrink: 0; overflow-x: auto;
+  }
+  .tab {
+    padding: var(--s-3) var(--s-4); position: relative;
+    font-family: var(--f-display); font-size: var(--fs-sm); font-weight: var(--fw-semi);
+    color: var(--text-sec); cursor: pointer; flex-shrink: 0;
+    background: transparent; border: 0;
+  }
+  .tab[aria-selected="true"] { color: var(--text); }
+  .tab[aria-selected="true"]::after {
+    content: ""; position: absolute; left: var(--s-3); right: var(--s-3); bottom: -1px;
+    height: 2px; background: hsl(var(--c-chat)); border-radius: var(--r-pill);
+  }
+
+  /* ─── Chat conversation ─── */
+  .conv { flex: 1; overflow-y: auto; padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-4); }
+
+  .bubble {
+    max-width: 85%; padding: var(--s-3) var(--s-4); border-radius: var(--r-lg);
+    font-size: var(--fs-md); line-height: var(--lh-body);
+  }
+  .bubble.user {
+    align-self: flex-end;
+    background: hsl(var(--c-chat));
+    color: #fff;
+    border-bottom-right-radius: var(--r-xs);
+  }
+  .bubble.agent {
+    align-self: flex-start;
+    background: hsl(var(--c-agent) / 0.08);
+    color: var(--text);
+    border: 1px solid hsl(var(--c-agent) / 0.18);
+    border-bottom-left-radius: var(--r-xs);
+  }
+  .bubble.agent .header {
+    display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-2);
+  }
+  .bubble.agent .avatar {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: hsl(var(--c-agent) / 0.25); display: flex; align-items: center; justify-content: center;
+    font-size: 12px; flex-shrink: 0;
+  }
+  .bubble.agent .name {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm); color: hsl(var(--c-agent));
+  }
+
+  .bubble ol { margin: var(--s-2) 0; padding-left: var(--s-5); }
+  .bubble ol li { margin-bottom: var(--s-2); }
+  .bubble ol li:last-child { margin-bottom: 0; }
+  .bubble strong { font-weight: var(--fw-bold); }
+
+  /* ─── Citation row ─── */
+  .citation-row {
+    margin-top: var(--s-3); padding-top: var(--s-3);
+    border-top: 1px dashed hsl(var(--c-agent) / 0.25);
+    display: flex; gap: var(--s-2); flex-wrap: wrap;
+  }
+  .citation-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px var(--s-3); border-radius: var(--r-pill);
+    background: hsl(var(--c-kb) / 0.12); color: hsl(var(--c-kb));
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-semi);
+    cursor: pointer; border: 1px solid transparent;
+    transition: background var(--dur-sm) var(--ease-out);
+  }
+  .citation-chip:hover { background: hsl(var(--c-kb) / 0.2); border-color: hsl(var(--c-kb) / 0.3); }
+
+  /* ─── Confidence badge ─── */
+  .conf-row {
+    margin-top: var(--s-2); display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+  }
+  .conf-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .conf-badge.alta { background: hsl(var(--c-success) / 0.15); color: hsl(var(--c-success)); }
+  .conf-badge.media { background: hsl(var(--c-warning) / 0.18); color: hsl(var(--c-warning)); }
+  .conf-badge.bassa { background: hsl(var(--c-danger) / 0.15); color: hsl(var(--c-danger)); }
+
+  .actions-mini { display: flex; gap: var(--s-1); }
+  .action-mini {
+    background: transparent; border: 1px solid var(--border); border-radius: var(--r-pill);
+    padding: 2px var(--s-2); font-family: var(--f-mono); font-size: 10px; color: var(--text-sec);
+    cursor: pointer;
+  }
+  .action-mini:hover { background: var(--bg-hover); }
+
+  /* ─── Disclaimer (low confidence) ─── */
+  .disclaimer {
+    margin-top: var(--s-3); padding: var(--s-3);
+    background: hsl(var(--c-warning) / 0.08); border-left: 3px solid hsl(var(--c-warning));
+    border-radius: var(--r-sm); font-size: var(--fs-sm); color: var(--text);
+  }
+  .disclaimer strong { color: hsl(var(--c-warning)); font-weight: var(--fw-bold); }
+
+  .out-of-context-actions {
+    margin-top: var(--s-3); display: flex; flex-direction: column; gap: var(--s-2);
+  }
+  .action-pill {
+    padding: var(--s-2) var(--s-3); border-radius: var(--r-pill);
+    background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--f-display); font-size: var(--fs-sm); font-weight: var(--fw-semi);
+    cursor: pointer; text-align: left;
+    display: flex; align-items: center; gap: var(--s-2);
+  }
+  .action-pill:hover { background: var(--bg-hover); border-color: hsl(var(--c-chat) / 0.4); }
+
+  /* ─── Input bar ─── */
+  .input-bar {
+    padding: var(--s-3) var(--s-4); border-top: 1px solid var(--border-light); flex-shrink: 0;
+    display: flex; gap: var(--s-2); align-items: center;
+  }
+  .input-bar input[type="text"] {
+    flex: 1; padding: var(--s-3) var(--s-4); border-radius: var(--r-pill);
+    background: var(--bg-muted); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--f-body); font-size: var(--fs-md);
+  }
+  .input-bar input:focus {
+    outline: none; border-color: hsl(var(--c-chat) / 0.5);
+    box-shadow: 0 0 0 3px hsl(var(--c-chat) / 0.1);
+  }
+  .input-bar .send {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: hsl(var(--c-chat)); color: #fff; border: 0;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  /* ─── Suggested prompts (empty/first state) ─── */
+  .suggested-row { display: flex; gap: var(--s-2); padding: 0 var(--s-4) var(--s-3); flex-wrap: wrap; flex-shrink: 0; }
+  .suggested {
+    padding: var(--s-2) var(--s-3); border-radius: var(--r-pill);
+    background: hsl(var(--c-chat) / 0.08); color: hsl(var(--c-chat));
+    border: 1px solid hsl(var(--c-chat) / 0.2);
+    font-family: var(--f-display); font-size: var(--fs-xs); font-weight: var(--fw-semi);
+    cursor: pointer;
+  }
+  .suggested:hover { background: hsl(var(--c-chat) / 0.15); }
+
+  /* ─── Typing indicator ─── */
+  .typing { display: inline-flex; gap: 4px; padding: var(--s-2) var(--s-3); }
+  .typing span {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: hsl(var(--c-agent));
+    animation: typing 1.2s ease-in-out infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.15s; }
+  .typing span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes typing {
+    0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-4px); }
+  }
+  .typing-meta {
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+    margin-top: var(--s-1);
+  }
+
+  /* ─── Desktop split layout ─── */
+  .desktop-body { display: flex; flex: 1; overflow: hidden; }
+  .desktop-side {
+    width: 260px; flex-shrink: 0;
+    border-right: 1px solid var(--border-light);
+    padding: var(--s-3); overflow-y: auto;
+  }
+  .desktop-side h4 {
+    font-family: var(--f-display); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);
+    margin: 0 0 var(--s-2);
+  }
+  .desktop-side .game-mini {
+    padding: var(--s-3); border-radius: var(--r-md); background: var(--bg-card);
+    border: 1px solid var(--border-light); margin-bottom: var(--s-3);
+  }
+  .desktop-side .game-mini .nm {
+    font-family: var(--f-display); font-weight: var(--fw-bold); margin-bottom: 2px;
+  }
+  .desktop-side .game-mini .sub { font-size: var(--fs-xs); color: var(--text-muted); font-family: var(--f-mono); }
+  .desktop-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  *:focus-visible { outline: 2px solid hsl(var(--c-chat)); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    .typing span, .session-head .pulse { animation: none; }
+    .session-head .pulse { box-shadow: none; }
+  }
+</style>
+</head>
+
+<body>
+
+<header class="top">
+  <h1>Nanolith Runthrough · Setup Chat Panel</h1>
+  <span class="route">/library/games/nanolith/play/{campaignId}?tab=chat</span>
+  <span class="spacer"></span>
+  <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
+</header>
+
+<main class="stage">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 1 · DEFAULT (N1 happy: setup 4 giocatori, confidence alta)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s1">
+    <span class="label">Stato 1 · Default · N1 happy</span>
+    <h2 id="s1">Setup 4 giocatori — Risposta IT actionable, confidence alta</h2>
+    <p class="desc">Aaron 30 minuti pre-arrivo amici chiede "come si setupa Nanolith per 4 giocatori?". Risposta IT 5 step, citation Press Start pag.4-7, confidence badge alta (verde). DoD N1: ≥ 4/5 step actionable, citation accuracy ≥ 90%.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – default chat">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:14</span><span class="ind">📶 🔋 92%</span></div>
+
+        <div class="session-head">
+          <span class="pulse" aria-hidden="true"></span>
+          <div>
+            <div class="title">Sera con i ragazzi</div>
+            <div class="sub">🎯 Setup pre-sessione · §1</div>
+          </div>
+        </div>
+
+        <nav class="tabs" role="tablist">
+          <button class="tab" role="tab" aria-selected="true">💬 Chat</button>
+          <button class="tab" role="tab" aria-selected="false">📖 Storybook</button>
+          <button class="tab" role="tab" aria-selected="false">🧰 Toolbox</button>
+        </nav>
+
+        <div class="conv" role="log" aria-live="polite">
+          <div class="bubble user">come si setupa Nanolith per 4 giocatori?</div>
+
+          <div class="bubble agent">
+            <div class="header">
+              <span class="avatar" aria-hidden="true">🤖</span>
+              <span class="name">Nanolith Tutor</span>
+            </div>
+            <p>Per una partita a 4 giocatori, segui questi step:</p>
+            <ol>
+              <li><strong>Tabellone Avalon</strong> al centro del tavolo, lato A in alto.</li>
+              <li>Distribuisci <strong>4 carte personaggio</strong> casuali — uno per giocatore.</li>
+              <li>Posiziona <strong>5 dadi neri</strong> sulla pista combattimento e <strong>3 dadi bianchi</strong> sulla pista esplorazione.</li>
+              <li>Mescola il mazzo <strong>Encounter</strong> (24 carte) e mettilo coperto vicino al tabellone.</li>
+              <li>Il giocatore con la carta <strong>"Iniziativa"</strong> apre la prima fase.</li>
+            </ol>
+            <div class="citation-row" aria-label="Pagine sorgente">
+              <span class="citation-chip">📖 pag. 4 — Setup base</span>
+              <span class="citation-chip">📖 pag. 7 — Iniziativa</span>
+            </div>
+            <div class="conf-row">
+              <span class="conf-badge alta">🟢 Confidence alta · 0.92</span>
+              <div class="actions-mini">
+                <button class="action-mini" type="button">👍</button>
+                <button class="action-mini" type="button">📋 Copia</button>
+                <button class="action-mini" type="button">🔁</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="suggested-row">
+          <button class="suggested" type="button">Componenti necessari?</button>
+          <button class="suggested" type="button">Chi inizia?</button>
+        </div>
+
+        <div class="input-bar">
+          <input type="text" placeholder="Chiedi una regola o setup…" aria-label="Domanda all'agente"/>
+          <button class="send" aria-label="Invia">↑</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – default chat split">
+        <span class="frame-label">Desktop · 1440px (split-view)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play/cmp-1234?tab=chat</span></div>
+
+        <div class="desktop-body">
+          <aside class="desktop-side">
+            <div class="game-mini">
+              <div class="nm">🎲 Nanolith</div>
+              <div class="sub">Sera con i ragazzi · §1</div>
+            </div>
+            <h4>Conversazioni</h4>
+            <div style="font-size: var(--fs-sm); color: var(--text-sec); padding: var(--s-2);">💬 Setup 4 giocatori</div>
+            <h4 style="margin-top: var(--s-4);">Knowledge base</h4>
+            <div style="font-size: var(--fs-xs); color: var(--text-muted); padding: var(--s-2);">📄 Press Start (24p)<br/>📄 Rules (118p)</div>
+          </aside>
+
+          <div class="desktop-main">
+            <div class="session-head">
+              <span class="pulse"></span>
+              <div><div class="title">Sera con i ragazzi · Chat regole</div><div class="sub">🎯 Setup pre-sessione · §1 · agente: Nanolith Tutor</div></div>
+            </div>
+            <div class="conv" role="log" aria-live="polite">
+              <div class="bubble user">come si setupa Nanolith per 4 giocatori?</div>
+              <div class="bubble agent">
+                <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
+                <p>Per una partita a 4 giocatori, segui questi step:</p>
+                <ol>
+                  <li><strong>Tabellone Avalon</strong> al centro del tavolo, lato A in alto.</li>
+                  <li>Distribuisci <strong>4 carte personaggio</strong> casuali — uno per giocatore.</li>
+                  <li>Posiziona <strong>5 dadi neri</strong> sulla pista combattimento e <strong>3 dadi bianchi</strong> sulla pista esplorazione.</li>
+                  <li>Mescola il mazzo <strong>Encounter</strong> (24 carte) e mettilo coperto vicino al tabellone.</li>
+                  <li>Il giocatore con la carta <strong>"Iniziativa"</strong> apre la prima fase.</li>
+                </ol>
+                <div class="citation-row">
+                  <span class="citation-chip">📖 pag. 4 — Setup base</span>
+                  <span class="citation-chip">📖 pag. 7 — Iniziativa</span>
+                </div>
+                <div class="conf-row">
+                  <span class="conf-badge alta">🟢 Confidence alta · 0.92</span>
+                  <div class="actions-mini">
+                    <button class="action-mini">👍 Utile</button>
+                    <button class="action-mini">📋 Copia</button>
+                    <button class="action-mini">🔁 Rigenera</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="suggested-row">
+              <button class="suggested">Componenti necessari?</button>
+              <button class="suggested">Chi inizia?</button>
+              <button class="suggested">Regola dadi neri</button>
+            </div>
+            <div class="input-bar">
+              <input type="text" placeholder="Chiedi una regola o setup…" aria-label="Domanda all'agente"/>
+              <button class="send" aria-label="Invia">↑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 2 · CONFIDENCE BASSA (edge: variante 5 giocatori)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s2">
+    <span class="label">Stato 2 · Edge · Confidence bassa</span>
+    <h2 id="s2">Domanda edge — Disclaimer "non sono certo"</h2>
+    <p class="desc">Aaron chiede una variante non coperta dal Press Start (5 giocatori). Confidence retrieval &lt; 0.7. Risposta esplicita di non-conoscenza + suggerimento di consultare Rules KB. Hallucination guard.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – low confidence">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:18</span><span class="ind">📶 🔋 92%</span></div>
+        <div class="session-head">
+          <span class="pulse"></span>
+          <div><div class="title">Sera con i ragazzi</div><div class="sub">🎯 Setup pre-sessione</div></div>
+        </div>
+        <nav class="tabs" role="tablist">
+          <button class="tab" role="tab" aria-selected="true">💬 Chat</button>
+          <button class="tab" role="tab" aria-selected="false">📖 Storybook</button>
+          <button class="tab" role="tab" aria-selected="false">🧰 Toolbox</button>
+        </nav>
+        <div class="conv" role="log">
+          <div class="bubble user">e per 5 giocatori?</div>
+          <div class="bubble agent">
+            <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
+            <p>Non sono sicuro — il quickstart Press Start copre solo configurazioni 2-4 giocatori. Per varianti 5+ ti suggerisco di:</p>
+            <div class="disclaimer">
+              <strong>⚠️ Non sono certo.</strong> Controlla pag. 18 del regolamento completo (Rules KB) per la variante "Avventura epica" che potrebbe estendere a 5-6 giocatori.
+            </div>
+            <div class="citation-row">
+              <span class="citation-chip">📖 Rules pag. 18 (suggerito)</span>
+            </div>
+            <div class="conf-row">
+              <span class="conf-badge bassa">🔴 Confidence bassa · 0.42</span>
+              <div class="actions-mini">
+                <button class="action-mini">📖 Rules KB</button>
+                <button class="action-mini">🔁</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="input-bar">
+          <input type="text" placeholder="Chiedi una regola o setup…"/>
+          <button class="send" aria-label="Invia">↑</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – low confidence">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play/cmp-1234?tab=chat</span></div>
+        <div class="desktop-body">
+          <aside class="desktop-side">
+            <div class="game-mini">
+              <div class="nm">🎲 Nanolith</div>
+              <div class="sub">Sera con i ragazzi</div>
+            </div>
+          </aside>
+          <div class="desktop-main">
+            <div class="session-head"><span class="pulse"></span><div><div class="title">Chat regole</div><div class="sub">🎯 Setup · agente: Nanolith Tutor</div></div></div>
+            <div class="conv">
+              <div class="bubble user">come si setupa Nanolith per 4 giocatori?</div>
+              <div class="bubble agent" style="opacity: 0.65;">
+                <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
+                <p>Per una partita a 4 giocatori… <em>(risposta confidence alta, vedi stato 1)</em></p>
+                <div class="conf-row" style="margin-top: var(--s-2);">
+                  <span class="conf-badge alta">🟢 Alta · 0.92</span>
+                </div>
+              </div>
+              <div class="bubble user">e per 5 giocatori?</div>
+              <div class="bubble agent">
+                <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
+                <p>Non sono sicuro — il quickstart Press Start copre solo configurazioni 2-4 giocatori.</p>
+                <div class="disclaimer">
+                  <strong>⚠️ Non sono certo.</strong> Controlla pag. 18 del regolamento completo (Rules KB) per la variante "Avventura epica" che potrebbe estendere a 5-6 giocatori.
+                </div>
+                <div class="citation-row">
+                  <span class="citation-chip">📖 Rules pag. 18 (suggerito)</span>
+                </div>
+                <div class="conf-row">
+                  <span class="conf-badge bassa">🔴 Confidence bassa · 0.42</span>
+                  <div class="actions-mini">
+                    <button class="action-mini">📖 Rules KB</button>
+                    <button class="action-mini">🔁 Rigenera</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="input-bar">
+              <input type="text" placeholder="Chiedi una regola o setup…"/>
+              <button class="send" aria-label="Invia">↑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 3 · OUT OF CONTEXT (Aaron chiede setup di altro gioco)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s3">
+    <span class="label">Stato 3 · Edge · Out of Context</span>
+    <h2 id="s3">Domanda fuori contesto — Decline + suggerimento switch</h2>
+    <p class="desc">Aaron per errore chiede setup di Tainted Grail (gioco diverso, KB non collegato). L'agente declina esplicitamente, NON inventa, suggerisce di cambiare gioco o agente.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – out of context">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:24</span><span class="ind">📶 🔋 91%</span></div>
+        <div class="session-head"><span class="pulse"></span><div><div class="title">Sera con i ragazzi</div><div class="sub">🎯 Setup pre-sessione</div></div></div>
+        <nav class="tabs" role="tablist">
+          <button class="tab" role="tab" aria-selected="true">💬 Chat</button>
+          <button class="tab" role="tab" aria-selected="false">📖 Storybook</button>
+          <button class="tab" role="tab" aria-selected="false">🧰 Toolbox</button>
+        </nav>
+        <div class="conv" role="log">
+          <div class="bubble user">qual è il setup ottimale di Tainted Grail?</div>
+          <div class="bubble agent">
+            <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
+            <p><strong>Non ho informazioni su Tainted Grail nel mio knowledge base.</strong> Il mio scope è il gioco Nanolith (Press Start + Rules). Cosa vuoi fare?</p>
+            <div class="out-of-context-actions">
+              <button class="action-pill" type="button">🎲 Cambia gioco a Tainted Grail</button>
+              <button class="action-pill" type="button">🤖 Cerca un agente Tainted Grail</button>
+              <button class="action-pill" type="button">↩️ Resta su Nanolith</button>
+            </div>
+            <div class="conf-row">
+              <span class="conf-badge bassa">🔴 Out of scope · 0.0</span>
+              <div class="actions-mini">
+                <button class="action-mini">👍 Honest</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="input-bar">
+          <input type="text" placeholder="Chiedi una regola o setup…"/>
+          <button class="send" aria-label="Invia">↑</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – out of context">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play/cmp-1234?tab=chat</span></div>
+        <div class="desktop-body">
+          <aside class="desktop-side">
+            <div class="game-mini"><div class="nm">🎲 Nanolith</div><div class="sub">Scope agente</div></div>
+            <h4>KB collegati</h4>
+            <div style="font-size: var(--fs-xs); color: var(--text-muted); padding: var(--s-2);">📄 Press Start ✓<br/>📄 Rules ✓<br/><span style="color: hsl(var(--c-danger));">✕ NO Tainted Grail</span></div>
+          </aside>
+          <div class="desktop-main">
+            <div class="session-head"><span class="pulse"></span><div><div class="title">Chat regole · scope: Nanolith</div><div class="sub">🤖 agente: Nanolith Tutor</div></div></div>
+            <div class="conv">
+              <div class="bubble user">qual è il setup ottimale di Tainted Grail?</div>
+              <div class="bubble agent">
+                <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
+                <p><strong>Non ho informazioni su Tainted Grail nel mio knowledge base.</strong> Il mio scope è il gioco Nanolith (Press Start + Rules). Cosa vuoi fare?</p>
+                <div class="out-of-context-actions">
+                  <button class="action-pill">🎲 Cambia gioco a Tainted Grail</button>
+                  <button class="action-pill">🤖 Cerca un agente Tainted Grail</button>
+                  <button class="action-pill">↩️ Resta su Nanolith</button>
+                </div>
+                <div class="conf-row">
+                  <span class="conf-badge bassa">🔴 Out of scope · 0.0</span>
+                  <div class="actions-mini"><button class="action-mini">👍 Honest answer</button></div>
+                </div>
+              </div>
+            </div>
+            <div class="input-bar"><input type="text" placeholder="Chiedi una regola…"/><button class="send" aria-label="Invia">↑</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO 4 · LOADING (typing indicator agent)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" aria-labelledby="s4">
+    <span class="label">Stato 4 · Loading</span>
+    <h2 id="s4">Streaming — Typing indicator durante retrieval+LLM</h2>
+    <p class="desc">Aaron ha appena premuto invio. L'agente sta cercando in KB + generando risposta (P95 budget 8s N1 / 5s N2). Typing indicator + meta latency live.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – loading">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:14</span><span class="ind">📶 🔋 92%</span></div>
+        <div class="session-head"><span class="pulse"></span><div><div class="title">Sera con i ragazzi</div><div class="sub">🎯 Setup pre-sessione</div></div></div>
+        <nav class="tabs" role="tablist">
+          <button class="tab" role="tab" aria-selected="true">💬 Chat</button>
+          <button class="tab" role="tab" aria-selected="false">📖 Storybook</button>
+          <button class="tab" role="tab" aria-selected="false">🧰 Toolbox</button>
+        </nav>
+        <div class="conv" role="log" aria-live="polite" aria-busy="true">
+          <div class="bubble user">come si setupa Nanolith per 4 giocatori?</div>
+          <div class="bubble agent" aria-label="Agente sta scrivendo">
+            <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
+            <div class="typing" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="typing-meta">⏱️ Cerco in 24 pag · 1.8s elapsed (budget 8s)</div>
+          </div>
+        </div>
+        <div class="input-bar">
+          <input type="text" placeholder="Chiedi una regola o setup…" disabled value="come si setupa Nanolith per 4 giocatori?"/>
+          <button class="send" aria-label="In corso" disabled style="opacity: 0.5;">⏳</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – loading">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play/cmp-1234?tab=chat</span></div>
+        <div class="desktop-body">
+          <aside class="desktop-side">
+            <div class="game-mini"><div class="nm">🎲 Nanolith</div><div class="sub">Sera con i ragazzi</div></div>
+          </aside>
+          <div class="desktop-main">
+            <div class="session-head"><span class="pulse"></span><div><div class="title">Chat regole</div><div class="sub">🎯 Streaming risposta · 1.8s elapsed</div></div></div>
+            <div class="conv" aria-busy="true">
+              <div class="bubble user">come si setupa Nanolith per 4 giocatori?</div>
+              <div class="bubble agent">
+                <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
+                <div class="typing"><span></span><span></span><span></span></div>
+                <div class="typing-meta">⏱️ Cerco in 24 pag Press Start · 1.8s / 8s budget · streaming SSE</div>
+              </div>
+            </div>
+            <div class="input-bar"><input type="text" disabled value="come si setupa Nanolith per 4 giocatori?"/><button class="send" disabled style="opacity: 0.5;">⏳</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const root = document.documentElement;
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+</script>
+
+</body>
+</html>

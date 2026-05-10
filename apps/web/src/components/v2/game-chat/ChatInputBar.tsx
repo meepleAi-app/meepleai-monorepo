@@ -6,6 +6,7 @@
 'use client';
 
 import type { ChangeEvent, KeyboardEvent, ReactElement } from 'react';
+
 import clsx from 'clsx';
 
 export interface ChatInputBarProps {
@@ -41,13 +42,11 @@ export function ChatInputBar({
   return (
     <div
       data-slot="chat-input-bar"
-      className={clsx(
-        'flex items-center gap-2 border-t border-border-light px-4 py-3',
-        className
-      )}
+      className={clsx('flex items-center gap-2 border-t border-border-light px-4 py-3', className)}
     >
       <input
         type="text"
+        data-testid="message-input"
         aria-label="Messaggio"
         value={value}
         onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
@@ -63,6 +62,7 @@ export function ChatInputBar({
       />
       <button
         type="button"
+        data-testid="send-message-button"
         aria-label="Invia"
         onClick={trySubmit}
         disabled={disabled}

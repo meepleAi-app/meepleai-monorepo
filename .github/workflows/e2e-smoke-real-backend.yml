@@ -3,6 +3,13 @@ name: E2E Smoke Real Backend (nightly)
 on:
   schedule:
     - cron: '0 3 * * *'
+  push:
+    branches: [main-dev]
+    paths:
+      - 'apps/web/src/components/v2/game-chat/**'
+      - 'apps/web/src/hooks/queries/useGameChat.ts'
+      - 'apps/web/e2e/smoke-real-backend/**'
+      - '.github/workflows/e2e-smoke-real-backend.yml'
   workflow_dispatch:
 
 permissions:
@@ -79,6 +86,11 @@ jobs:
             sleep 5
           done
 
+      - name: Apply smoke chat fixture (SharedGame + UserLibraryEntry for game-night specs)
+        run: |
+          docker exec -i meepleai-postgres psql -U meepleai -d meepleai_db \
+            < tests/fixtures/smoke-test-games.sql
+
       - name: Dump API logs on stack-up failure
         if: failure()
         working-directory: infra
@@ -116,6 +128,47 @@ jobs:
             sleep 5
           done
 
+      # N1 (#960): always-on pre-test diagnostics — exposes container health
+      # and HTTP probe so investigation doesn't need local repro.
+      # Hightower CRITICAL: 30s of structured logs > hours of remote bisect.
+      - name: Pre-test diagnostics (always run)
+        if: always()
+        run: |
+          echo "::group::Web container status"
+          docker ps -a -f name=meepleai-web --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || true
+          echo "::endgroup::"
+          echo "::group::Web container logs (last 100 lines)"
+          docker logs meepleai-web --tail=100 2>&1 || echo "Container not present"
+          echo "::endgroup::"
+          echo "::group::Web HTTP probe (root + sample route)"
+          curl -sv http://localhost:3000 --max-time 10 -o /tmp/root.html 2>&1 | head -25 || true
+          echo "--- root response head:"
+          head -c 500 /tmp/root.html 2>/dev/null || true
+          curl -sv http://localhost:3000/library --max-time 10 -o /tmp/library.html 2>&1 | head -15 || true
+          echo "--- /library response head:"
+          head -c 500 /tmp/library.html 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::API health"
+          curl -s http://localhost:8080/health || true
+          echo ""
+          echo "::endgroup::"
+          echo "::group::Smoke fixture verification (DB row + API response)"
+          docker exec -i meepleai-postgres psql -U meepleai -d meepleai_db -c \
+            "SELECT id, title, status, is_deleted, has_knowledge_base FROM shared_games WHERE id = '00000000-0000-4000-8000-000000053e1d';" || true
+          docker exec -i meepleai-postgres psql -U meepleai -d meepleai_db -c \
+            "SELECT \"Id\", \"UserId\", shared_game_id, \"OwnershipDeclaredAt\" FROM user_library_entries WHERE \"Id\" = '00000000-0000-4000-8000-000000053e1e';" || true
+          echo "--- API login + library detail probe ---"
+          curl -sS -X POST http://localhost:8080/api/v1/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"smoke-user@meepleai.test","password":"SmokeUser1!!"}' \
+            -c /tmp/cookies.txt -o /tmp/login.json -w "login HTTP %{http_code}\n" || true
+          head -c 200 /tmp/login.json 2>/dev/null
+          echo ""
+          curl -sS -X GET http://localhost:8080/api/v1/library/games/00000000-0000-4000-8000-000000053e1d \
+            -b /tmp/cookies.txt -o /tmp/detail.json -w "library detail HTTP %{http_code}\n" || true
+          head -c 800 /tmp/detail.json 2>/dev/null
+          echo ""
+          echo "::endgroup::"
 
       - name: Run smoke specs
         working-directory: apps/web
@@ -136,16 +189,30 @@ jobs:
           path: apps/web/playwright-report
           retention-days: 7
 
-      - name: Open issue on failure
+      # N2 (#960): dedup — skip auto-issue if a smoke-failure issue is already
+      # open. Hightower MAJOR: avoids spam when a known regression keeps the
+      # workflow red across multiple runs (e.g. #960 itself).
+      - name: Open issue on failure (deduped)
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'smoke-failure',
+              state: 'open',
+              per_page: 5,
+            });
+            if (existing.data.length > 0) {
+              core.notice(`Skipping auto-issue: ${existing.data.length} open smoke-failure issue(s) already exist (#${existing.data.map(i => i.number).join(', #')}).`);
+              return;
+            }
             const today = new Date().toISOString().slice(0, 10);
-            github.rest.issues.create({
+            await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `[SMOKE FAILURE] Nightly E2E smoke real backend — ${today}`,
               labels: ['bug', 'P0', 'smoke-failure'],
-              body: `Nightly smoke run failed. See [run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).\n\nCheck attached \`playwright-report-smoke\` artifact.`
+              body: `Nightly smoke run failed. See [run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).\n\nCheck attached \`playwright-report-smoke\` artifact + the new \`Pre-test diagnostics\` step output for container/HTTP probe data.`
             });

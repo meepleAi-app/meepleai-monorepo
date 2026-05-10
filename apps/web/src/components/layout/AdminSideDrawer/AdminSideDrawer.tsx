@@ -21,6 +21,7 @@ import {
   BookOpen,
   UserCheck,
   Heart,
+  Globe,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -103,6 +104,7 @@ const SECTIONS: NavSection[] = [
 
 const SYSTEM_ITEMS: NavItem[] = [
   { label: 'Monitor', href: '/admin/monitor', icon: MonitorCheck },
+  { label: 'Providers', href: '/admin/providers', icon: Globe },
   { label: 'Config', href: '/admin/config', icon: Settings },
   { label: 'Notifications', href: '/admin/notifications/compose', icon: BellRing },
 ];

@@ -17,7 +17,6 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useGame } from '@/hooks/queries/useGames';
-import { IS_ALPHA_MODE } from '@/lib/alpha-mode';
 import type { SessionSummaryDto } from '@/lib/api/dashboard-client';
 import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
 
@@ -178,9 +177,7 @@ interface DashboardSessionHeroProps {
 }
 
 export function DashboardSessionHero({ lastSession }: DashboardSessionHeroProps) {
-  const { data, isLoading } = useActiveSessions(1, !IS_ALPHA_MODE);
-
-  if (IS_ALPHA_MODE) return null;
+  const { data, isLoading } = useActiveSessions(1);
 
   if (isLoading) return <SessionHeroSkeleton />;
 

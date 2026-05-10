@@ -6,15 +6,12 @@ import { CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/primitives/button';
-import { IS_ALPHA_MODE } from '@/lib/alpha-mode';
 
 interface GameNightHeroProps {
   gameNight: { id: string; title: string; scheduledAt: string };
 }
 
 export function GameNightHero({ gameNight }: GameNightHeroProps) {
-  if (IS_ALPHA_MODE) return null;
-
   const timeUntil = formatDistanceToNow(new Date(gameNight.scheduledAt), {
     addSuffix: false,
     locale: itLocale,

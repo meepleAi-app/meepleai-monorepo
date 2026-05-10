@@ -9,7 +9,6 @@
 | Start Dev (full) | `make dev` | `infra/` |
 | Start Dev (core) | `make dev-core` | `infra/` |
 | Dev from Snapshot | `make dev-from-snapshot` | `infra/` — [guide](./docs/for-developers/workflows/snapshot-seed-workflow.md) |
-| Alpha Mode | `make alpha` | `infra/` |
 | Bake Snapshot | `make seed-index` | `infra/` — raro, indicizza tutti i PDF |
 | Integration | `make tunnel && make integration` | `infra/` — **Git Bash only (Windows)** |
 | Deploy Staging | `make staging` | `infra/` (on server) |
@@ -26,16 +25,9 @@
 - **Docker commands**: always use `pwsh -c "docker logs meepleai-api --tail=50"` — piping in bash breaks
 - **Integration scripts**: run in **Git Bash** (not PowerShell/CMD). Requires SSH key `~/.ssh/meepleai-staging`
 
-### Alpha Mode
+### Invite-only Registration
 
-Set `ALPHA_MODE=true` (backend) and `NEXT_PUBLIC_ALPHA_MODE=true` (frontend) to enable Alpha Zero.
-`NEXT_PUBLIC_ALPHA_MODE` is **build-time** — requires rebuild, not just restart.
-
-| Aspect | Alpha Scope |
-|--------|------------|
-| Features | Auth → Games + BGG → PDF upload → RAG Chat → Library |
-| Active BCs | Authentication, GameManagement, DocumentProcessing, KnowledgeBase, UserLibrary |
-| Admin | Overview, Users, Content (trimmed) only |
+Controlled at runtime via admin toggle (`/admin/config` → General → Registration Mode), backed by `RegistrationMode` config (DB-persisted). When `publicRegistrationEnabled=false`, `/register` shows the request-access popup (`RequestAccessForm`) instead of the standard form. No env var, no redeploy.
 
 ## Stack
 

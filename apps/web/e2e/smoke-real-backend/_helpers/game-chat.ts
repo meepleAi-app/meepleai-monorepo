@@ -32,81 +32,24 @@ interface MockQaV2Options {
 }
 
 /**
- * Idempotent inline game seeding for chat smoke specs.
+ * Deterministic SharedGame ID seeded via SQL fixture (tests/fixtures/smoke-test-games.sql).
  *
- * Creates a game with a run-id-suffixed title (unique per CI run), then adds
- * it to the admin's library so /library/games/{id} route renders. Returns the
- * gameId. The smoke-user is admin (INITIAL_ADMIN_* env in CI workflow), so
- * has authority to create games.
+ * Inline runtime seeding via API was attempted (PR #956) but failed because
+ * POST /api/v1/games creates a Game (GameManagement BC), while the library
+ * route requires a SharedGame (SharedGameCatalog BC) — different aggregates,
+ * no public admin endpoint for SharedGame creation. SQL fixture is applied
+ * by the workflow before specs run.
  *
- * Throws on any non-2xx status (except 409 conflict on create, which is
- * tolerated — but we still need the id, so re-fetch via list query).
+ * The `request` and `cookieHeader` parameters are unused but kept for API
+ * stability across spec call sites — future migrations may need real seeding.
+ *
+ * @returns deterministic UUID matching tests/fixtures/smoke-test-games.sql
  */
-export async function seedGameForChat(
-  request: APIRequestContext,
-  cookieHeader: string
+export function seedGameForChat(
+  _request: APIRequestContext,
+  _cookieHeader: string
 ): Promise<string> {
-  const runId = process.env.GITHUB_RUN_ID ?? 'local';
-  const title = `Smoke Chat Game ${runId}`;
-
-  const createRes = await request.post(`${API_BASE}/api/v1/games`, {
-    headers: { Cookie: cookieHeader },
-    data: {
-      title,
-      publisher: 'smoke',
-      minPlayers: 2,
-      maxPlayers: 4,
-    },
-  });
-
-  let gameId: string;
-
-  if (createRes.status() === 201 || createRes.status() === 200) {
-    const body = (await createRes.json()) as { id: string };
-    if (!body.id) {
-      throw new Error(`seedGameForChat: create returned no id (status=${createRes.status()})`);
-    }
-    gameId = body.id;
-  } else if (createRes.status() === 409) {
-    // Conflict — game with this title already exists from a prior run on
-    // the same GITHUB_RUN_ID. Re-fetch to recover the id.
-    const listRes = await request.get(
-      `${API_BASE}/api/v1/games?title=${encodeURIComponent(title)}`,
-      { headers: { Cookie: cookieHeader } }
-    );
-    if (!listRes.ok()) {
-      throw new Error(
-        `seedGameForChat: create=409 but list re-fetch failed ${listRes.status()}`
-      );
-    }
-    const listBody = (await listRes.json()) as { id: string; title: string }[] | { items: { id: string; title: string }[] };
-    const items = Array.isArray(listBody) ? listBody : listBody.items;
-    const found = items.find(g => g.title === title);
-    if (!found) {
-      throw new Error(`seedGameForChat: create=409 but no game with title="${title}" in list`);
-    }
-    gameId = found.id;
-  } else {
-    const errBody = await createRes.text();
-    throw new Error(
-      `seedGameForChat: create failed status=${createRes.status()} body=${errBody}`
-    );
-  }
-
-  // Add to library so /library/games/{id} renders. Idempotent on backend (or
-  // tolerate 409 if already present).
-  const libRes = await request.post(
-    `${API_BASE}/api/v1/library/games/${gameId}`,
-    { headers: { Cookie: cookieHeader } }
-  );
-  if (!libRes.ok() && libRes.status() !== 409) {
-    const errBody = await libRes.text();
-    throw new Error(
-      `seedGameForChat: library add failed status=${libRes.status()} body=${errBody}`
-    );
-  }
-
-  return gameId;
+  return Promise.resolve('00000000-0000-4000-8000-000000053e1d');
 }
 
 /**

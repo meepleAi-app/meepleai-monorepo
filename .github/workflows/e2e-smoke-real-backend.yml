@@ -86,6 +86,11 @@ jobs:
             sleep 5
           done
 
+      - name: Apply smoke chat fixture (SharedGame + UserLibraryEntry for game-night specs)
+        run: |
+          docker exec -i meepleai-postgres psql -U meepleai -d meepleai \
+            < tests/fixtures/smoke-test-games.sql
+
       - name: Dump API logs on stack-up failure
         if: failure()
         working-directory: infra

@@ -1,0 +1,40 @@
+meta {
+  name: SG2 — Login smoke-aaron
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{apiBase}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{smokeUserEmail}}",
+    "password": "{{smokeUserPassword}}"
+  }
+}
+
+script:post-response {
+  // Cookie-based auth: the API sets meepleai_session cookie.
+  // Bruno automatically propagates cookies across requests in the same run.
+  // We also capture userId from the response body so subsequent scenarios can
+  // build routes like /users/{userId}/... if needed.
+  const body = res.getBody();
+  if (body && body.user) {
+    bru.setVar("smokeUserId", body.user.id);
+  }
+}
+
+tests {
+  test("login returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("response contains user object", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("user");
+    expect(body.user).to.have.property("id");
+  });
+}

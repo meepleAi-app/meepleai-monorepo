@@ -33,7 +33,13 @@ public enum TierAction
     SessionAgentQuery,
     UploadSessionPhoto,
     SaveSession,
-    ProposeToSharedCatalog
+    ProposeToSharedCatalog,
+    /// <summary>
+    /// Rebuild the RAPTOR hierarchical summary tree for a game's KB.
+    /// Free-tier users are blocked (returns false from CanPerformAsync).
+    /// Issue #903: SG2 — KB lifecycle smoke tests.
+    /// </summary>
+    RaptorRebuild
 }
 
 /// <summary>

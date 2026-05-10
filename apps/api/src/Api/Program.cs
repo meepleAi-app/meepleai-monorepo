@@ -727,6 +727,7 @@ v1Api.MapPhotoIngestionEndpoints(); // Libro Game AI Assistant MVP Phase 1: phot
 v1Api.MapKnowledgeBaseEndpoints();
 v1Api.MapChatSessionEndpoints(); // Issue #3483: Chat session persistence endpoints
 v1Api.MapUserGameKbEndpoints(); // KB-06: User feedback on KB chat responses
+v1Api.MapKbManagementEndpoints(); // Issue #903: SG2 — KB reindex + RAPTOR rebuild lifecycle endpoints
 v1Api.MapModelEndpoints(); // Issue #3377: AI model configuration endpoints
 v1Api.MapLlmEndpoints(); // ISSUE-2391: Sprint 2 - LLM provider management
 v1Api.MapAiEndpoints();

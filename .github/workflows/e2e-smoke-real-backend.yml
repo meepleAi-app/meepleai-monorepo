@@ -62,6 +62,11 @@ jobs:
           INITIAL_ADMIN_EMAIL=smoke-user@meepleai.test
           INITIAL_ADMIN_PASSWORD=SmokeUser1!!
           INITIAL_ADMIN_DISPLAY_NAME=Smoke User
+          # #960 H4: SessionCookie.Secure=false because CI runs frontend+backend
+          # on http://localhost:* — browsers refuse to attach cookies marked
+          # secure to non-HTTPS origins, blocking authenticated smoke specs.
+          # Production / Staging keep the default Secure=true (HTTPS enforced).
+          Authentication__SessionCookie__Secure=false
           APIENV
           # n8n.env.dev — minimal (n8n unused by smoke specs but referenced by compose)
           cat > n8n.env.dev <<'N8NENV'

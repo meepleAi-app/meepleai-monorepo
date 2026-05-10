@@ -3,12 +3,14 @@
 import { Suspense, useState, useMemo } from 'react';
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { HubLayout, type FilterChip } from '@/components/layout/HubLayout';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
+import { GamesRecentRail } from '@/components/v2/games';
 import { useGames } from '@/hooks/queries/useGames';
+import { useRecentLibraryGames } from '@/hooks/queries/useRecentLibraryGames';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 
 import { GamesLibraryView } from './_components/GamesLibraryView';
@@ -69,6 +71,35 @@ function GamesHubContent() {
 
   const { data: catalogData, isLoading: catalogLoading } = useGames(undefined, undefined, 1, 20);
 
+  const router = useRouter();
+  const recentGames = useRecentLibraryGames(5, activeTab === 'library');
+
+  const recentRailItems = useMemo(
+    () => recentGames.entries.map(e => ({
+      id: e.gameId,
+      title: e.gameTitle,
+      imageUrl: e.gameImageUrl ?? undefined,
+      kbBadge: (e.kbIndexedCount > 0
+        ? 'ready'
+        : e.kbProcessingCount > 0
+          ? 'processing'
+          : 'none') as 'ready' | 'processing' | 'none',
+    })),
+    [recentGames.entries]
+  );
+
+  const recentRail = (
+    <GamesRecentRail
+      items={recentRailItems}
+      isLoading={recentGames.isLoading}
+      labels={{
+        sectionTitle: 'Giochi recenti',
+        emptyHint: 'Inizia a giocare per vedere qui i tuoi titoli recenti.',
+      }}
+      onSelect={(id) => router.push(`/library/games/${id}?tab=aiChat`)}
+    />
+  );
+
   useMiniNavConfig({
     breadcrumb: 'Giochi',
     tabs: [
@@ -107,7 +138,12 @@ function GamesHubContent() {
 
   // ---- Library tab uses dedicated v2 orchestrator (Wave B.1 Issue #633) ----
   if (activeTab === 'library') {
-    return <GamesLibraryView />;
+    return (
+      <>
+        {recentRail}
+        <GamesLibraryView />
+      </>
+    );
   }
 
   // ---- Determine active tab state (library handled by early return above) ----
@@ -127,18 +163,20 @@ function GamesHubContent() {
   );
 
   return (
-    <HubLayout
-      searchPlaceholder="Cerca giochi..."
-      filterChips={currentFilters}
-      activeFilterId={activeFilter}
-      onFilterChange={setActiveFilter}
-      searchValue={search}
-      onSearchChange={setSearch}
-      viewMode={viewMode}
-      onViewModeChange={setViewMode}
-      showViewToggle
-      topActions={topActions}
-    >
+    <>
+      {recentRail}
+      <HubLayout
+        searchPlaceholder="Cerca giochi..."
+        filterChips={currentFilters}
+        activeFilterId={activeFilter}
+        onFilterChange={setActiveFilter}
+        searchValue={search}
+        onSearchChange={setSearch}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        showViewToggle
+        topActions={topActions}
+      >
       {isLoading ? (
         <LoadingSkeleton />
       ) : items.length === 0 ? (
@@ -160,7 +198,8 @@ function GamesHubContent() {
           ))}
         </div>
       )}
-    </HubLayout>
+      </HubLayout>
+    </>
   );
 }
 

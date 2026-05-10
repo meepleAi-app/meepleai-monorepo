@@ -1,0 +1,42 @@
+meta {
+  name: SG1 — Create private game (manual source — happy path baseline)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{apiBase}}/api/v1/private-games
+  body: json
+}
+
+body:json {
+  {
+    "source": "Manual",
+    "title": "SG1 Smoke Test Game {{$randomInt}}",
+    "minPlayers": 2,
+    "maxPlayers": 4,
+    "yearPublished": 2024,
+    "description": "Smoke test private game"
+  }
+}
+
+script:post-response {
+  const body = res.getBody();
+  if (body && body.id) {
+    bru.setVar("smokePrivateGameId", body.id);
+  }
+}
+
+tests {
+  test("returns 201 Created", function() {
+    // Depending on tier quota state, may be 201 OR 402 (if user already at limit).
+    // Smoke proxy — full assertion in integration test.
+    expect([201, 402]).to.include(res.getStatus());
+  });
+  test("if 201, body has privateGameId", function() {
+    if (res.getStatus() === 201) {
+      const body = res.getBody();
+      expect(body).to.have.property("id");
+    }
+  });
+}

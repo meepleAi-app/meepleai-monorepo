@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using MediatR;
@@ -123,6 +124,43 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler : INotificationHandler<Pd
                 "AutoCreateAgent: Failed to auto-create agent for PDF {PdfId}. Error: {Message}",
                 notification.PdfDocumentId,
                 ex.Message);
+
+            // Issue #902 SG1: emit explicit AGENT_CREATION_FAILED notification (no silent swallow).
+            // Downstream consumers (UserNotifications BC) can surface this to the user.
+            var errorCode = ex switch
+            {
+                Api.Middleware.Exceptions.TierQuotaExceededException => "AGENT_SLOT_QUOTA_EXCEEDED",
+                Api.Middleware.Exceptions.TierFeatureLockedException => "TIER_FEATURE_LOCKED",
+                _ => "AGENT_CREATION_FAILED"
+            };
+
+            try
+            {
+                // Resolve gameId again (defensive — the original lookup may have failed before reaching this point)
+                var gameIdForEvent = await _dbContext.PdfDocuments
+                    .AsNoTracking()
+                    .Where(p => p.Id == notification.PdfDocumentId)
+                    .Select(p => (Guid?)(p.PrivateGameId ?? p.SharedGameId ?? Guid.Empty))
+                    .FirstOrDefaultAsync(cancellationToken)
+                    .ConfigureAwait(false) ?? Guid.Empty;
+
+                await _mediator.Publish(
+                    new AutoAgentCreationFailedEvent(
+                        PdfDocumentId: notification.PdfDocumentId,
+                        GameId: gameIdForEvent,
+                        UserId: notification.UploadedByUserId,
+                        ErrorCode: errorCode,
+                        Reason: ex.Message),
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception publishEx)
+            {
+                // Notification publish itself failed — log but never re-throw (pipeline stability).
+                _logger.LogError(
+                    publishEx,
+                    "AutoCreateAgent: Failed to publish AutoAgentCreationFailedEvent for PDF {PdfId}",
+                    notification.PdfDocumentId);
+            }
         }
 #pragma warning restore CA1031
     }

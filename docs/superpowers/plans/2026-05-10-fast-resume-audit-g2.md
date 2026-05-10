@@ -512,7 +512,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
   const [currentAgent, setCurrentAgent] = useState<AgentKind>(initialAgent);
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
-  const [isHydrating, setIsHydrating] = useState(true);  // NEW
+  const [isHydrating, setIsHydrating] = useState(false);  // NEW — default false, set true in effect (G2 review fix C1)
   const [chatThreadId, setChatThreadId] = useState<string | null>(null);  // NEW
   const [hasHistoricalMessages, setHasHistoricalMessages] = useState(false);  // NEW
 
@@ -527,9 +527,11 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
         const latest = [...threads]
           .filter(t => t.lastMessageAt !== null)
           .sort((a, b) => {
+            // Robusto su timezone offset (G2 review fix m2):
+            // confronto numerico via getTime() invece di lessicografico
             if (a.lastMessageAt === null) return 1;
             if (b.lastMessageAt === null) return -1;
-            return b.lastMessageAt > a.lastMessageAt ? 1 : -1;
+            return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
           })[0];
 
         if (latest && latest.messages.length > 0) {

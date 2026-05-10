@@ -10,9 +10,11 @@
  *   - If `SMOKE_AGENT_ID` env var is set (seeded staging agent), navigate
  *     to that real id and assert the default render shell appears.
  *
- * Auth: the `(authenticated)` layout does NOT gate server-side; `PLAYWRIGHT_AUTH_BYPASS=true`
- * (set in `playwright.config.ts` webServer env) allows Playwright to access the
- * route. No seedAuthSession needed for the shell render assertion.
+ * Auth (#960 → Smoke RCA-2): the `(authenticated)` layout requires a session
+ * cookie. Even with `PLAYWRIGHT_AUTH_BYPASS=true` the `proxy.ts:386` bypass
+ * branch is only taken when `sessionCookieValue` is present. So we MUST
+ * `smokeLogin` + `applySessionToPage` before navigation, even for not-found
+ * shell tests.
  *
  * data-slot selectors match committed Task 3 orchestrator shells:
  *   - default:   `[data-slot="agent-detail-view"]`
@@ -22,6 +24,8 @@
  *   `gh workflow run smoke.yml --ref main-dev -f SMOKE_AGENT_ID=<uuid>`
  */
 import { test, expect } from '@playwright/test';
+
+import { applySessionToPage, smokeLogin } from './_helpers/auth';
 
 /**
  * Deterministic UUID that NEVER exists in any environment — drives the
@@ -34,6 +38,11 @@ import { test, expect } from '@playwright/test';
 const NEVER_EXISTS_ID = '00000000-0000-4000-8000-000000000581' as const;
 
 test.describe('SMOKE — /agents/[id] real backend', () => {
+  test.beforeEach(async ({ page, request }) => {
+    const { cookieHeaders } = await smokeLogin(request);
+    await applySessionToPage(page, cookieHeaders);
+  });
+
   test('frontend /agents/{id} renders not-found shell for deterministic UUID', async ({ page }) => {
     // NEVER_EXISTS_ID ensures the backend returns 404 → frontend renders not-found shell.
     // Validates the FSM Cell 4 path (detail success(null)) against real backend.

@@ -48,6 +48,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      SECRETS_DIRECTORY: /app/infra/secrets
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
       OLLAMA_URL: http://ollama:11434

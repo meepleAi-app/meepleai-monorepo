@@ -36,7 +36,7 @@ public enum PdfProcessingState
     Embedding = 4,
 
     /// <summary>
-    /// Embeddings are being indexed in Qdrant vector database.
+    /// Embeddings are being indexed in pgvector vector database.
     /// Transition: Embedding → Indexing
     /// </summary>
     Indexing = 5,

@@ -523,8 +523,6 @@ using (var scope = app.Services.CreateScope())
     {
         await db.Database.MigrateAsync().ConfigureAwait(false);
 
-        // Qdrant initialization removed — pgvector is the sole vector store
-
         // Validate embedding configuration consistency
         var embedding = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
         var embeddingDimensions = embedding.GetEmbeddingDimensions();
@@ -908,7 +906,6 @@ if (!isAlphaMode)
     v1Api.MapBatchJobEndpoints();          // Batch job system & operations (Issue #3693)
     v1Api.MapBatchJobLogsEndpoints();      // Batch job real-time logs SSE (Issue #3693 Task 3)
     v1Api.MapAdminResourcesEndpoints();    // Resources monitoring (Issue #3695)
-    // Qdrant admin endpoints removed — pgvector is the sole vector store
     v1Api.MapAdminEmbeddingEndpoints();    // Embedding service dashboard (Issue #4878)
     v1Api.MapAdminPipelineEndpoints();     // Pipeline health overview (Issue #4879)
     v1Api.MapAdminKBSettingsEndpoints();   // KB settings read-only (Issue #4881)

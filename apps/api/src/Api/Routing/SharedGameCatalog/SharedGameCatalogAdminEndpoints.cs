@@ -325,7 +325,7 @@ internal static class SharedGameCatalogAdminEndpoints
             .RequireAuthorization("AdminPolicy")
             .WithName("RemoveRagFromSharedGame")
             .WithSummary("Remove document with full PDF cleanup (Admin only)")
-            .WithDescription("Removes SharedGameDocument link and deletes PDF with cascade cleanup (VectorDoc, TextChunks, Qdrant, blob).")
+            .WithDescription("Removes SharedGameDocument link and deletes PDF with cascade cleanup (VectorDoc, TextChunks, pgvector, blob).")
             .Produces(StatusCodes.Status204NoContent);
 
         // Game State Template Management (Issue #2400)

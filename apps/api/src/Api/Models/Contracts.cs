@@ -1020,7 +1020,7 @@ internal record HotKeyDto(
 );
 
 /// <summary>
-/// Vector store (Qdrant) metrics
+/// Vector store (pgvector) metrics
 /// </summary>
 internal record VectorStoreMetricsDto(
     int TotalCollections,

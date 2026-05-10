@@ -18,6 +18,6 @@ public enum ProcessingStepType
     /// <summary>Vector embedding generation via embedding service.</summary>
     Embed = 3,
 
-    /// <summary>Indexing embeddings into Qdrant vector database.</summary>
+    /// <summary>Indexing embeddings into pgvector vector database.</summary>
     Index = 4
 }

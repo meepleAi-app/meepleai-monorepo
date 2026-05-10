@@ -44,7 +44,7 @@ public sealed class CacheSemanticPlugin : RagPluginBase
     /// <inheritdoc />
     protected override IReadOnlyList<string> Capabilities => ["semantic-matching", "embedding-search", "ttl-management"];
 
-    // In-memory cache for demonstration (production uses Redis + Qdrant)
+    // In-memory cache for demonstration (production uses Redis + pgvector)
     private static readonly Dictionary<string, CacheEntry> _cache = new(StringComparer.Ordinal);
     private static readonly System.Threading.Lock _cacheLock = new();
 

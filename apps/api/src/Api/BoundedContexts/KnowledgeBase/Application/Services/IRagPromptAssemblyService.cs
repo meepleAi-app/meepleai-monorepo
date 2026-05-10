@@ -20,7 +20,7 @@ internal interface IRagPromptAssemblyService
     /// <param name="gameTitle">Title of the game being played</param>
     /// <param name="gameState">Current game state (nullable if no active session)</param>
     /// <param name="userQuestion">The user's current question</param>
-    /// <param name="gameId">Game ID for scoping Qdrant search</param>
+    /// <param name="gameId">Game ID for scoping pgvector search</param>
     /// <param name="chatThread">Chat thread for history inclusion (nullable for first message)</param>
     /// <param name="userTier">User subscription tier for RAG enhancement routing (nullable for backward compatibility)</param>
     /// <param name="agentLanguage">Normalized ISO 639-1 language code for the agent (e.g., "it", "en"). Drives copyright instruction localization.</param>

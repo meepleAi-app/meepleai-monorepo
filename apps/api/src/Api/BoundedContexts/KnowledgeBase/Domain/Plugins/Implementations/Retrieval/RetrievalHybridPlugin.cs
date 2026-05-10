@@ -131,7 +131,7 @@ public sealed class RetrievalHybridPlugin : RagPluginBase
         HybridConfig config,
         CancellationToken cancellationToken)
     {
-        // Simulate vector search (production integrates with Qdrant)
+        // Simulate vector search (production integrates with pgvector)
         await Task.Delay(20, cancellationToken).ConfigureAwait(false);
 
         var results = new List<RetrievedDocument>();
@@ -429,7 +429,7 @@ public sealed class RetrievalHybridPlugin : RagPluginBase
                 "collections": {
                     "type": "array",
                     "items": { "type": "string" },
-                    "description": "Qdrant collections to search"
+                    "description": "pgvector collection to search"
                 }
             }
         }

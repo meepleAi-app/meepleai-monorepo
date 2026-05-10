@@ -285,8 +285,6 @@ internal static class InfrastructureServiceExtensions
             EnableMultipleHttp2Connections = true
         });
 
-        // Qdrant HttpClient removed — pgvector is the sole vector store (no external Qdrant needed)
-
         // ADR-016 Phase 2: HuggingFace embedding client
         services.AddHttpClient("HuggingFace", client =>
         {

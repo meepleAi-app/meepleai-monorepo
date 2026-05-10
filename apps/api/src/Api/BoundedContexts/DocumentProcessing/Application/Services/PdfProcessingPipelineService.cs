@@ -350,9 +350,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             pdfDoc.ProcessingState = "Indexing";
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            // Step 4b: Index in Qdrant
+            // Step 4b: Index in pgvector
             _logger.LogInformation("[PdfPipeline] Step 4b/5: Indexing {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
-            await IndexInQdrantAsync(pdfDoc, translatedChunks, embeddings, cancellationToken).ConfigureAwait(false);
+            await IndexInVectorStoreAsync(pdfDoc, translatedChunks, embeddings, cancellationToken).ConfigureAwait(false);
             await SaveTextChunksAsync(pdfDoc, allChunkInputs, cancellationToken).ConfigureAwait(false);
 
             // Issue #4215: Mark as Ready (final state)
@@ -550,7 +550,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         return allEmbeddings;
     }
 
-    private async Task IndexInQdrantAsync(
+    private async Task IndexInVectorStoreAsync(
         PdfDocumentEntity pdfDoc,
         List<(DocumentChunkInput chunk, string lang, bool isTranslation)> translatedChunks,
         List<float[]> embeddings,

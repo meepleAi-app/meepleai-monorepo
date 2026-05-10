@@ -2,13 +2,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Indexing;
 
 /// <summary>
 /// ADR-016 Phase 3: Domain entity representing an indexed chunk in the vector store.
-/// Maps hierarchical chunks (from Phase 1) to Qdrant points with enhanced metadata payload.
+/// Maps hierarchical chunks (from Phase 1) to pgvector points with enhanced metadata payload.
 /// Entity - identity by Id.
 /// </summary>
 internal sealed class ChunkIndexEntry
 {
     /// <summary>
-    /// Unique identifier for this index entry (maps to Qdrant point ID).
+    /// Unique identifier for this index entry (maps to pgvector point ID).
     /// </summary>
     public string Id { get; private set; }
 
@@ -38,7 +38,7 @@ internal sealed class ChunkIndexEntry
     public float[] Vector { get; private set; }
 
     /// <summary>
-    /// Payload metadata for Qdrant storage and retrieval.
+    /// Payload metadata for pgvector storage and retrieval.
     /// </summary>
     public ChunkPayload Payload { get; private set; }
 

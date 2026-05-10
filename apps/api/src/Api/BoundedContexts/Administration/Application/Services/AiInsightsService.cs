@@ -8,7 +8,7 @@ namespace Api.BoundedContexts.Administration.Application.Services;
 
 /// <summary>
 /// Service for generating AI-powered insights for dashboard.
-/// Issue #4308: RAG-based recommendations with Qdrant, backlog detection, rules reminders, streak nudges.
+/// Issue #4308: RAG-based recommendations with pgvector, backlog detection, rules reminders, streak nudges.
 /// Upgraded from rule-based (Issue #3916) to full RAG integration with domain analyzers.
 /// </summary>
 internal class AiInsightsService : IAiInsightsService

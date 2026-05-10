@@ -1,7 +1,7 @@
 namespace Api.Infrastructure.Entities;
 
 /// <summary>
-/// Tracks which PDF documents have been indexed in Qdrant
+/// Tracks which PDF documents have been indexed in pgvector
 /// </summary>
 public class VectorDocumentEntity
 {

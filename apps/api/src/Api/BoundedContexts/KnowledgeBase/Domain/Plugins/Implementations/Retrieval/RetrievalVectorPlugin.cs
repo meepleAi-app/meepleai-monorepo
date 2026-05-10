@@ -134,7 +134,7 @@ public sealed class RetrievalVectorPlugin : RagPluginBase
         VectorConfig config,
         CancellationToken cancellationToken)
     {
-        // Simulate vector search (production integrates with Qdrant)
+        // Simulate vector search (production integrates with pgvector)
         await Task.Delay(15, cancellationToken).ConfigureAwait(false);
 
         var results = new List<RetrievedDocument>();
@@ -277,7 +277,7 @@ public sealed class RetrievalVectorPlugin : RagPluginBase
                 },
                 "collection": {
                     "type": "string",
-                    "description": "Qdrant collection to search",
+                    "description": "pgvector collection to search",
                     "default": "default"
                 }
             }

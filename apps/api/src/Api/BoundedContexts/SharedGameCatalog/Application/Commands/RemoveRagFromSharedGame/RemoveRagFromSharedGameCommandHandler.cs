@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.RemoveRagFr
 /// 2. Resolve PdfDocumentId
 /// 3. Auto-promote next version if removing active document
 /// 4. Remove SharedGameDocument link (via RemoveDocumentFromSharedGameCommand)
-/// 5. Delete PDF with full cleanup (via DeletePdfCommand — cascades VectorDoc, TextChunks, Qdrant, blob)
+/// 5. Delete PDF with full cleanup (via DeletePdfCommand — cascades VectorDoc, TextChunks, pgvector, blob)
 /// </summary>
 internal sealed class RemoveRagFromSharedGameCommandHandler
     : ICommandHandler<RemoveRagFromSharedGameCommand, RemoveRagFromSharedGameResult>

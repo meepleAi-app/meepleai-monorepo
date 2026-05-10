@@ -10,7 +10,7 @@ internal interface IPdfProcessingPipelineService
     /// <summary>
     /// Processes a PDF document through the full pipeline:
     /// validate &amp; set "processing" → extract text → extract tables →
-    /// chunk → batch embed → index in Qdrant → save text chunks → mark "completed".
+    /// chunk → batch embed → index in pgvector → save text chunks → mark "completed".
     /// </summary>
     /// <param name="pdfDocumentId">The PDF document ID.</param>
     /// <param name="filePath">Path to the PDF file on disk.</param>

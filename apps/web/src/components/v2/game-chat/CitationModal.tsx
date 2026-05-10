@@ -1,39 +1,55 @@
 /**
- * CitationModal — preview citation con snippet + page number.
+ * CitationModal — preview citation con tab Snippet (default) + PDF originale (lazy).
  *
- * Hybrid C (Q4 brainstorm): footer button "Apri nella KB" condizionale —
- * hidden quando `onOpenInKb === undefined` (G4 non ancora atterrato).
- * Quando G4 sarà pronto, basta passare il callback dal consumer.
+ * Tab Snippet (default): rendering testo della citation (snippet o paraphrasedSnippet
+ * se copyrightTier='protected'). Pattern PR #918 invariato per il body Snippet.
  *
- * Spec: §3.3 §4.3
+ * Tab PDF originale (lazy mount): delega a <CitationPdfTab> che gestisce ownership
+ * gate via useCanViewPdf + isPublic shortcut. Il contenuto NON viene montato finché
+ * l'utente non clicca il tab (anti-fetch).
+ *
+ * Spec: docs/superpowers/specs/2026-05-10-citation-pdf-viewer-design.md §3.1 §4.4
  */
 'use client';
 
-import { useEffect, useRef } from 'react';
-import type { ReactElement } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 import clsx from 'clsx';
 
 import type { Citation } from '@/types';
 
+import { CitationPdfTab } from './CitationPdfTab';
+
 export interface CitationModalProps {
   readonly citation: Citation | null;
   readonly open: boolean;
   readonly onClose: () => void;
-  readonly onOpenInKb?: () => void;
+  readonly gameId?: string;
 }
+
+type TabKind = 'snippet' | 'pdf';
 
 export function CitationModal({
   citation,
   open,
   onClose,
-  onOpenInKb,
+  gameId,
 }: CitationModalProps): ReactElement | null {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<TabKind>('snippet');
+  const [pdfTabEverOpened, setPdfTabEverOpened] = useState(false);
+
+  // Reset state on each open
+  useEffect(() => {
+    if (open) {
+      setActiveTab('snippet');
+      setPdfTabEverOpened(false);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
-    // focus il container all'apertura per a11y
     containerRef.current?.focus();
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -44,7 +60,11 @@ export function CitationModal({
 
   if (!open || !citation) return null;
 
-  // Per copyright 'protected', preferisci il paraphrasedSnippet se disponibile
+  const handleTabChange = (tab: TabKind) => {
+    setActiveTab(tab);
+    if (tab === 'pdf') setPdfTabEverOpened(true);
+  };
+
   const displayedSnippet =
     citation.copyrightTier === 'protected' && citation.paraphrasedSnippet
       ? citation.paraphrasedSnippet
@@ -65,42 +85,109 @@ export function CitationModal({
       <div
         ref={containerRef}
         tabIndex={-1}
-        className="max-w-lg w-full mx-4 rounded-lg bg-card border border-border shadow-xl outline-none"
+        className={clsx(
+          'mx-4 flex max-h-[90%] w-full max-w-[600px] flex-col',
+          'overflow-hidden rounded-lg border border-border bg-card shadow-xl outline-none'
+        )}
         onClick={e => e.stopPropagation()}
       >
-        <header className="border-b border-border-light px-4 py-3">
-          <h2 id="citation-modal-title" className="font-bold text-lg">
+        {/* Header */}
+        <header className="flex items-center gap-3 border-b border-border-light px-4 py-3">
+          <h2 id="citation-modal-title" className="text-lg font-bold">
             📖 p. {citation.pageNumber}
           </h2>
+          <span className="flex-1" />
+          <button
+            type="button"
+            aria-label="Chiudi"
+            onClick={onClose}
+            className="rounded-sm p-1 text-muted-foreground hover:bg-muted"
+          >
+            ×
+          </button>
         </header>
-        <div className="p-4">
-          {displayedSnippet ? (
-            <blockquote className="border-l-4 border-[hsl(var(--c-kb))] pl-4 text-sm text-foreground">
-              {displayedSnippet}
+
+        {/* Tabs */}
+        <nav className="flex gap-0 border-b border-border-light px-4" role="tablist">
+          <TabButton kind="snippet" active={activeTab} onSelect={handleTabChange}>
+            📝 Snippet
+          </TabButton>
+          <TabButton kind="pdf" active={activeTab} onSelect={handleTabChange}>
+            📄 PDF originale
+          </TabButton>
+        </nav>
+
+        {/* Tab body */}
+        <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+          {activeTab === 'snippet' && (
+            <blockquote
+              className={clsx(
+                'rounded-r-md border-l-4 px-4 py-3 italic',
+                'border-l-[hsl(var(--c-kb))] bg-[hsl(var(--c-kb)/0.05)]',
+                'text-base leading-relaxed text-foreground'
+              )}
+            >
+              {displayedSnippet || (
+                <span className="text-sm not-italic text-muted-foreground">
+                  Nessuna anteprima disponibile.
+                </span>
+              )}
             </blockquote>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">Nessuna anteprima disponibile.</p>
+          )}
+
+          {activeTab === 'pdf' && pdfTabEverOpened && (
+            <CitationPdfTab
+              documentId={citation.documentId}
+              gameId={gameId}
+              initialPage={citation.pageNumber}
+              isPublic={citation.isPublic}
+            />
           )}
         </div>
-        <footer className="flex items-center justify-end gap-2 border-t border-border-light px-4 py-3">
-          {onOpenInKb && (
-            <button
-              type="button"
-              onClick={onOpenInKb}
-              className="rounded-full border border-[hsl(var(--c-kb))] px-3 py-1.5 text-sm font-semibold text-[hsl(var(--c-kb))] hover:bg-[hsl(var(--c-kb)/0.1)]"
-            >
-              📖 Apri nella KB
-            </button>
-          )}
+
+        {/* Footer */}
+        <footer className="flex items-center gap-2 border-t border-border-light bg-card px-4 py-3">
+          <span className="flex-1" />
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-[hsl(var(--c-chat))] px-4 py-1.5 text-sm font-semibold text-white hover:opacity-90"
+            className={clsx(
+              'rounded-full bg-[hsl(var(--c-chat))] px-4 py-1.5',
+              'text-sm font-semibold text-white hover:opacity-90'
+            )}
           >
             Chiudi
           </button>
         </footer>
       </div>
     </div>
+  );
+}
+
+interface TabButtonProps {
+  readonly kind: TabKind;
+  readonly active: TabKind;
+  readonly onSelect: (kind: TabKind) => void;
+  readonly children: ReactNode;
+}
+
+function TabButton({ kind, active, onSelect, children }: TabButtonProps): ReactElement {
+  const isSelected = active === kind;
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={isSelected}
+      onClick={() => onSelect(kind)}
+      className={clsx(
+        'relative inline-flex items-center gap-1.5 px-4 py-3',
+        'font-semibold text-sm transition-colors',
+        isSelected
+          ? 'text-[hsl(var(--c-kb))] after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-[hsl(var(--c-kb))]'
+          : 'text-muted-foreground hover:text-foreground'
+      )}
+    >
+      {children}
+    </button>
   );
 }

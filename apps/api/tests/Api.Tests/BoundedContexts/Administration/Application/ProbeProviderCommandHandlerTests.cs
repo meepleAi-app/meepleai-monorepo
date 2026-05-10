@@ -14,21 +14,60 @@ public sealed class ProbeProviderCommandHandlerTests
     public async Task Handle_DelegatesToProbeService()
     {
         var actorId = Guid.NewGuid();
-        var expected = new ProviderProbeResultDto("openrouter", true, true, true, "abcd1234", null, null, 250, DateTime.UtcNow);
+        var expected = new ProviderProbeResultDto(
+            ProviderName: "openrouter",
+            TokenConfigured: true,
+            TokenAuthenticated: true,
+            ModelAvailable: null,
+            ExpectedModel: null,
+            TokenFingerprint: "abcd1234",
+            ErrorCode: null,
+            ErrorMessage: null,
+            LatencyMs: 250,
+            ProbedAt: DateTime.UtcNow);
+
         var svc = new Mock<IProviderProbeService>();
-        svc.Setup(s => s.ProbeAsync("openrouter", actorId, It.IsAny<CancellationToken>())).ReturnsAsync(expected);
+        svc.Setup(s => s.ProbeAsync("openrouter", actorId, null, It.IsAny<CancellationToken>()))
+           .ReturnsAsync(expected);
         var handler = new ProbeProviderCommandHandler(svc.Object);
 
-        var result = await handler.Handle(new ProbeProviderCommand("openrouter", actorId), CancellationToken.None);
+        var result = await handler.Handle(new ProbeProviderCommand("openrouter", actorId, null), CancellationToken.None);
 
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task Handle_PropagatesExpectedModel()
+    {
+        var actorId = Guid.NewGuid();
+        var expected = new ProviderProbeResultDto(
+            ProviderName: "openrouter",
+            TokenConfigured: true,
+            TokenAuthenticated: true,
+            ModelAvailable: false,
+            ExpectedModel: "missing-model",
+            TokenFingerprint: "abcd1234",
+            ErrorCode: null,
+            ErrorMessage: null,
+            LatencyMs: 200,
+            ProbedAt: DateTime.UtcNow);
+
+        var svc = new Mock<IProviderProbeService>();
+        svc.Setup(s => s.ProbeAsync("openrouter", actorId, "missing-model", It.IsAny<CancellationToken>()))
+           .ReturnsAsync(expected);
+        var handler = new ProbeProviderCommandHandler(svc.Object);
+
+        var result = await handler.Handle(new ProbeProviderCommand("openrouter", actorId, "missing-model"), CancellationToken.None);
+
+        result.ModelAvailable.Should().BeFalse();
+        result.ExpectedModel.Should().Be("missing-model");
     }
 
     [Fact]
     public void Validator_EmptyProviderName_Fails()
     {
         var v = new ProbeProviderCommandValidator();
-        var r = v.Validate(new ProbeProviderCommand(string.Empty, Guid.NewGuid()));
+        var r = v.Validate(new ProbeProviderCommand(string.Empty, Guid.NewGuid(), null));
         r.IsValid.Should().BeFalse();
     }
 
@@ -36,7 +75,7 @@ public sealed class ProbeProviderCommandHandlerTests
     public void Validator_TooLongProviderName_Fails()
     {
         var v = new ProbeProviderCommandValidator();
-        var r = v.Validate(new ProbeProviderCommand(new string('x', 65), Guid.NewGuid()));
+        var r = v.Validate(new ProbeProviderCommand(new string('x', 65), Guid.NewGuid(), null));
         r.IsValid.Should().BeFalse();
     }
 
@@ -44,21 +83,20 @@ public sealed class ProbeProviderCommandHandlerTests
     // rejected later by ProviderProbeExecutorFactory → UnknownProviderException → HTTP 404.
     [Theory]
     [InlineData("openrouter")]
-    [InlineData("openai")]
     [InlineData("deepseek")]
-    [InlineData("ollama")]
+    [InlineData("ollama-local")]
     [InlineData("cohere")]
     public void Validator_NonEmptyProviderName_Passes(string name)
     {
         var v = new ProbeProviderCommandValidator();
-        v.Validate(new ProbeProviderCommand(name, Guid.NewGuid())).IsValid.Should().BeTrue();
+        v.Validate(new ProbeProviderCommand(name, Guid.NewGuid(), null)).IsValid.Should().BeTrue();
     }
 
     [Fact]
     public void Validator_EmptyActorId_Fails()
     {
         var v = new ProbeProviderCommandValidator();
-        var r = v.Validate(new ProbeProviderCommand("openrouter", Guid.Empty));
+        var r = v.Validate(new ProbeProviderCommand("openrouter", Guid.Empty, null));
         r.IsValid.Should().BeFalse();
     }
 }

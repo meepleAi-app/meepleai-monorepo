@@ -22,15 +22,23 @@ internal static class AdminProviderEndpoints
                 string name,
                 IMediator mediator,
                 ClaimsPrincipal user,
+                HttpRequest request,
                 CancellationToken ct) =>
             {
                 var actorIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (!Guid.TryParse(actorIdClaim, out var actorId))
                     return Results.Unauthorized();
 
+                // Optional ?model=X query parameter to also verify availability of a specific model.
+                var expectedModel = request.Query.TryGetValue("model", out var modelValues)
+                    ? modelValues.ToString()
+                    : null;
+                if (string.IsNullOrWhiteSpace(expectedModel))
+                    expectedModel = null;
+
                 try
                 {
-                    var result = await mediator.Send(new ProbeProviderCommand(name, actorId), ct).ConfigureAwait(false);
+                    var result = await mediator.Send(new ProbeProviderCommand(name, actorId, expectedModel), ct).ConfigureAwait(false);
                     return Results.Ok(result);
                 }
                 catch (UnknownProviderException ex)

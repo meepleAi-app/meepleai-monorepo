@@ -83,7 +83,7 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
             extraConfig: new Dictionary<string, string?>
             {
                 // ASP.NET Core binds Providers__OpenRouter__ListModelsUrl → Providers:OpenRouter:ListModelsUrl
-                ["Providers:OpenRouter:ListModelsUrl"] = $"{_wireMock.Url}/api/v1/models"
+                ["Providers:OpenRouter:BaseUrl"] = $"{_wireMock.Url}/api/v1"
             });
 
         // 5. Migrate DB + seed users
@@ -201,61 +201,33 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
 
     /// <summary>
     /// G1-S3: API key env var not set → 200 with tokenConfigured:false + errorCode:not_configured,
-    ///         no upstream HTTP request made (WireMock has no stubs registered — any call would throw).
+    ///         no upstream HTTP request made.
+    /// ProviderProbeService reads env var at probe-time, so we can toggle it on the existing factory
+    /// without rebuilding. Restored in finally.
     /// </summary>
     [Fact(Timeout = 30_000)]
     public async Task Probe_NoToken_Returns200WithNotConfigured()
     {
-        // Arrange — remove the env var so ProviderProbeService sees an empty key
-        // Use a fresh factory with a separate DB so this doesn't pollute other tests
-        var dbName = $"probe_notoken_{Guid.NewGuid():N}";
-        var connStr = await _fixture.CreateIsolatedDatabaseAsync(dbName);
+        // Snapshot current WireMock log size — assert no NEW requests after probe.
+        var initialLogCount = _wireMock.LogEntries.Count();
 
-        // Build a separate WireMock instance with NO stubs — any unexpected call would fail
-        using var noCallWireMock = WireMockServer.Start();
-
+        Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", null);
         try
         {
-            Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", null);
+            var request = BuildProbeRequest("openrouter", _superAdminToken);
+            var response = await _superAdminClient.SendAsync(request);
 
-            using var factory = IntegrationWebApplicationFactory.Create(
-                connStr,
-                extraConfig: new Dictionary<string, string?>
-                {
-                    ["Providers:OpenRouter:ListModelsUrl"] = $"{noCallWireMock.Url}/api/v1/models"
-                });
-
-            using var scope = factory.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await db.Database.MigrateAsync();
-
-            var (_, token) = await TestSessionHelper.CreateSuperAdminSessionAsync(db);
-
-            using var client = factory.CreateClient();
-            var request = TestSessionHelper.CreateAuthenticatedRequest(
-                HttpMethod.Post,
-                "/api/v1/admin/providers/openrouter/probe",
-                token);
-
-            // Act
-            var response = await client.SendAsync(request);
-
-            // Assert
             response.StatusCode.Should().Be(HttpStatusCode.OK);
-
             var result = await ReadJsonAsync<JsonElement>(response);
             result.GetProperty("tokenConfigured").GetBoolean().Should().BeFalse();
             result.GetProperty("errorCode").GetString().Should().Be("not_configured");
 
-            // WireMock should have received zero requests
-            noCallWireMock.LogEntries.Should().BeEmpty(
+            _wireMock.LogEntries.Count().Should().Be(initialLogCount,
                 because: "no upstream HTTP call should be made when API key is not configured");
         }
         finally
         {
-            // Restore env var for subsequent tests
             Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", "test-token-valid-secret");
-            await _fixture.DropIsolatedDatabaseAsync(dbName);
         }
     }
 

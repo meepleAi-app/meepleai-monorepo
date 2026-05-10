@@ -7,4 +7,4 @@ internal sealed record ProbeExecutionResult(
     string? ErrorCode,
     string? ErrorMessage,
     int LatencyMs,
-    bool ModelAvailable);
+    bool? ModelAvailable);   // null when expectedModel was not provided

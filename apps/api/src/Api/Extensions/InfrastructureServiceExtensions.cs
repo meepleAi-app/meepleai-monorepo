@@ -42,11 +42,42 @@ internal static class InfrastructureServiceExtensions
             options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
         services.AddStorageServices(); // Issue #2732: Storage services
 
-        // Issue #936: Provider token probe (G1+G3) — 4 executor strategies + factory + service + repository
-        services.AddSingleton<IProviderProbeExecutor, OpenRouterProbeExecutor>();
-        services.AddSingleton<IProviderProbeExecutor, OpenAiProbeExecutor>();
-        services.AddSingleton<IProviderProbeExecutor, DeepSeekProbeExecutor>();
-        services.AddSingleton<IProviderProbeExecutor, OllamaProbeExecutor>();
+        // Issue #936: Provider token probe (G1+G3).
+        // Single OpenAiCompatibleProbeExecutor handles any /v1/models endpoint
+        // (OpenRouter, DeepSeek, OpenAI cloud, Ollama local, LocalAI, vLLM, …).
+#pragma warning disable S1075 // URIs should not be hardcoded - Default fallback URLs for provider probe targets
+        const string OpenRouterDefaultBaseUrl = "https://openrouter.ai/api/v1";
+        const string DeepSeekDefaultBaseUrl = "https://api.deepseek.com/v1";
+        const string OllamaLocalDefaultBaseUrl = "http://localhost:11434/v1";
+#pragma warning restore S1075
+
+        services.AddSingleton<IProviderProbeExecutor>(sp => new OpenAiCompatibleProbeExecutor(
+            sp.GetRequiredService<IHttpClientFactory>(),
+            sp.GetRequiredService<ILogger<OpenAiCompatibleProbeExecutor>>(),
+            providerName: "openrouter",
+            baseUrl: sp.GetRequiredService<IConfiguration>()["Providers:OpenRouter:BaseUrl"]
+                ?? OpenRouterDefaultBaseUrl,
+            requiresAuth: true,
+            apiKeyEnvVar: "OPENROUTER_API_KEY"));
+
+        services.AddSingleton<IProviderProbeExecutor>(sp => new OpenAiCompatibleProbeExecutor(
+            sp.GetRequiredService<IHttpClientFactory>(),
+            sp.GetRequiredService<ILogger<OpenAiCompatibleProbeExecutor>>(),
+            providerName: "deepseek",
+            baseUrl: sp.GetRequiredService<IConfiguration>()["Providers:DeepSeek:BaseUrl"]
+                ?? DeepSeekDefaultBaseUrl,
+            requiresAuth: true,
+            apiKeyEnvVar: "DEEPSEEK_API_KEY"));
+
+        services.AddSingleton<IProviderProbeExecutor>(sp => new OpenAiCompatibleProbeExecutor(
+            sp.GetRequiredService<IHttpClientFactory>(),
+            sp.GetRequiredService<ILogger<OpenAiCompatibleProbeExecutor>>(),
+            providerName: "ollama-local",
+            baseUrl: sp.GetRequiredService<IConfiguration>()["Providers:OllamaLocal:BaseUrl"]
+                ?? OllamaLocalDefaultBaseUrl,
+            requiresAuth: false,
+            apiKeyEnvVar: null));
+
         services.AddSingleton<ProviderProbeExecutorFactory>();
         services.AddScoped<IProviderProbeAuditRepository, ProviderProbeAuditRepository>();
         services.AddScoped<IProviderProbeService, ProviderProbeService>();

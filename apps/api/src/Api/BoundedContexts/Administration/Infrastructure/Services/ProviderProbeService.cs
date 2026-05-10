@@ -11,34 +11,26 @@ internal sealed class ProviderProbeService : IProviderProbeService
     private readonly ProviderProbeExecutorFactory _factory;
     private readonly IProviderProbeAuditRepository _auditRepo;
 
-    private static readonly Dictionary<string, (string EnvVar, string DefaultModel)> ProviderConfig = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["openrouter"] = ("OPENROUTER_API_KEY", "google/gemma-2-9b-it:free"),
-        ["openai"]     = ("OPENAI_API_KEY",     "gpt-4o-mini"),
-        ["deepseek"]   = ("DEEPSEEK_API_KEY",   "deepseek-chat"),
-        ["ollama"]     = ("OLLAMA_API_KEY",     "llama3.2"),     // env unused, kept for symmetry
-    };
-
     public ProviderProbeService(ProviderProbeExecutorFactory factory, IProviderProbeAuditRepository auditRepo)
     {
         _factory = factory;
         _auditRepo = auditRepo;
     }
 
-    public async Task<ProviderProbeResultDto> ProbeAsync(string providerName, Guid actorId, CancellationToken cancellationToken)
+    public async Task<ProviderProbeResultDto> ProbeAsync(string providerName, Guid actorId, string? expectedModel, CancellationToken cancellationToken)
     {
         var probedAt = DateTime.UtcNow;
         var executor = _factory.GetExecutor(providerName);
-        if (executor is null || !ProviderConfig.TryGetValue(providerName, out var cfg))
+        if (executor is null)
             throw new UnknownProviderException(providerName);
 
-        var apiKey = Environment.GetEnvironmentVariable(cfg.EnvVar) ?? string.Empty;
+        var apiKey = executor.ApiKeyEnvVar is { } envVar
+            ? Environment.GetEnvironmentVariable(envVar) ?? string.Empty
+            : string.Empty;
         var fingerprint = TokenFingerprint.Compute(apiKey);
+        var requiresAuth = executor.ApiKeyEnvVar is not null;
 
-        // Ollama is local — doesn't require API key
-        var requiresKey = !string.Equals(providerName, "ollama", StringComparison.OrdinalIgnoreCase);
-
-        if (string.IsNullOrEmpty(apiKey) && requiresKey)
+        if (requiresAuth && string.IsNullOrEmpty(apiKey))
         {
             await _auditRepo.AddAsync(ProviderProbeAuditEntry.Create(
                 providerName, actorId, fingerprint, ProbeOutcome.NotConfigured, "not_configured", 0), cancellationToken).ConfigureAwait(false);
@@ -46,7 +38,8 @@ internal sealed class ProviderProbeService : IProviderProbeService
                 ProviderName: providerName,
                 TokenConfigured: false,
                 TokenAuthenticated: false,
-                ModelAvailable: false,
+                ModelAvailable: null,
+                ExpectedModel: expectedModel,
                 TokenFingerprint: null,
                 ErrorCode: "not_configured",
                 ErrorMessage: "API key environment variable not set",
@@ -54,18 +47,19 @@ internal sealed class ProviderProbeService : IProviderProbeService
                 ProbedAt: probedAt);
         }
 
-        var result = await executor.ExecuteAsync(apiKey, cfg.DefaultModel, cancellationToken).ConfigureAwait(false);
+        var result = await executor.ExecuteAsync(apiKey, expectedModel, cancellationToken).ConfigureAwait(false);
 
         await _auditRepo.AddAsync(ProviderProbeAuditEntry.Create(
             providerName, actorId, fingerprint, result.Outcome, result.ErrorCode, result.LatencyMs), cancellationToken).ConfigureAwait(false);
 
-        var authenticated = result.Outcome is ProbeOutcome.Success or ProbeOutcome.ModelMissing;
+        var authenticated = result.Outcome is ProbeOutcome.Success;
 
         return new ProviderProbeResultDto(
             ProviderName: providerName,
-            TokenConfigured: !string.IsNullOrEmpty(apiKey) || !requiresKey,
+            TokenConfigured: !requiresAuth || !string.IsNullOrEmpty(apiKey),
             TokenAuthenticated: authenticated,
             ModelAvailable: result.ModelAvailable,
+            ExpectedModel: expectedModel,
             TokenFingerprint: fingerprint,
             ErrorCode: result.ErrorCode,
             ErrorMessage: result.ErrorMessage,

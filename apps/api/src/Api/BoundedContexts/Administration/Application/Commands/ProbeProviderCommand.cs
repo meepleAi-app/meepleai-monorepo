@@ -3,4 +3,4 @@ using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Administration.Application.Commands;
 
-internal sealed record ProbeProviderCommand(string ProviderName, Guid ActorId) : ICommand<ProviderProbeResultDto>;
+internal sealed record ProbeProviderCommand(string ProviderName, Guid ActorId, string? ExpectedModel) : ICommand<ProviderProbeResultDto>;

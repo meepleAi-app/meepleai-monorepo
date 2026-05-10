@@ -14,6 +14,7 @@ public sealed class ProviderProbeExecutorFactoryTests
     {
         public FakeExec(string name) => ProviderName = name;
         public string ProviderName { get; }
+        public string? ApiKeyEnvVar => null;
         public Task<ProbeExecutionResult> ExecuteAsync(string apiKey, string? expectedModel, CancellationToken cancellationToken)
             => throw new NotImplementedException();
     }

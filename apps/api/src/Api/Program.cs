@@ -808,6 +808,7 @@ if (!isAlphaMode)
     if (!app.Environment.IsProduction())
         app.MapAdminSecretsEndpoints();      // Admin secrets management (non-prod only)
     app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing
+    app.MapAdminProviderEndpoints();         // Issue #936: Provider token probe observability
     v1Api.MapGroup("/admin/catalog-ingestion").MapAdminCatalogIngestionEndpoints(); // Admin bulk Excel import + enrichment
     app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
     app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard

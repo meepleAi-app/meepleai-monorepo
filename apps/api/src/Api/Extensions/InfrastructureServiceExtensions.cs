@@ -86,6 +86,9 @@ internal static class InfrastructureServiceExtensions
         services.AddSingleton<IProviderQuotaProviderFactory, ProviderQuotaProviderFactory>();
         services.AddScoped<IProviderQuotaService, ProviderQuotaService>();
 
+        // Issue #985 (G4): static metrics registrar wired with DI-resolved IProviderQuotaService at startup.
+        services.AddHostedService<Api.Observability.ProviderQuotaMetricsHostedService>();
+
         return services;
     }
 

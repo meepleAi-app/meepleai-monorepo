@@ -168,6 +168,25 @@ jobs:
             -b /tmp/cookies.txt -o /tmp/detail.json -w "library detail HTTP %{http_code}\n" || true
           head -c 800 /tmp/detail.json 2>/dev/null
           echo ""
+          echo "--- Set-Cookie response headers (login) ---"
+          curl -sS -D - -X POST http://localhost:8080/api/v1/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"smoke-user@meepleai.test","password":"SmokeUser1!!"}' \
+            -o /dev/null 2>&1 | grep -iE "set-cookie|access-control" | head -10 || true
+          echo "--- CORS preflight OPTIONS from origin :3000 ---"
+          curl -sS -D - -X OPTIONS http://localhost:8080/api/v1/library/games/00000000-0000-4000-8000-000000053e1d \
+            -H "Origin: http://localhost:3000" \
+            -H "Access-Control-Request-Method: GET" \
+            -H "Access-Control-Request-Headers: cookie" \
+            -o /dev/null -w "preflight HTTP %{http_code}\n" 2>&1 | grep -iE "access-control|allow|^HTTP|preflight" | head -10 || true
+          echo "--- Browser-like GET with Origin :3000 + cookie ---"
+          curl -sS -D - -X GET http://localhost:8080/api/v1/library/games/00000000-0000-4000-8000-000000053e1d \
+            -H "Origin: http://localhost:3000" \
+            -b /tmp/cookies.txt -o /tmp/browser-detail.json \
+            -w "browser-like GET HTTP %{http_code}\n" 2>&1 | grep -iE "access-control|^HTTP|browser-like" | head -10 || true
+          echo "--- Browser-like GET response body (first 400 chars) ---"
+          head -c 400 /tmp/browser-detail.json 2>/dev/null
+          echo ""
           echo "::endgroup::"
 
       - name: Run smoke specs

@@ -1,15 +1,24 @@
-name: E2E Smoke Real LLM Weekly (free tier)
+name: E2E Smoke Real LLM (free tier, on-demand)
 
-# Weekly canary against real LLM (free OpenRouter tier) on snapshot DB.
+# On-demand canary against real LLM (free OpenRouter tier) on snapshot DB.
 # Mitigation Crispin: retries: 3 + timeout 180s + tag @flaky-by-design (legitimate flake).
 # Mitigation Nygard: free-model availability check + fallback chain (deprecation guard).
 # NO auto-issue creation — free tier flake non deve spammare bug tracker.
 #
+# ⚠️ Cron schedule DISABILITATO: il workflow dipende da `make dev-from-snapshot`
+# che ha un compat-gate fail-stop quando le migration HEAD del working tree non
+# matchano lo snapshot DB cached. Quando arriva una migration nuova, lo snapshot
+# va rigenerato manualmente via `make seed-index` (~20 min, richiede ambiente con
+# tutti i PDF + LLM). Eseguire questo workflow on-demand pre-staging deploy.
+#
+# Pre-requisito ogni run:
+#   1. Verificare che lo snapshot sia allineato (`make dev-from-snapshot` localmente)
+#   2. Se compat-gate fail → `make seed-index` per rigenerare → push del nuovo snapshot
+#   3. Trigger manuale di questo workflow
+#
 # Spec: docs/superpowers/specs/2026-05-10-e2e-smoke-game-night-integration-design.md §4.3 + §5.2
 
 on:
-  schedule:
-    - cron: '0 4 * * 0'  # Domenica 04:00 UTC
   workflow_dispatch:
 
 permissions:

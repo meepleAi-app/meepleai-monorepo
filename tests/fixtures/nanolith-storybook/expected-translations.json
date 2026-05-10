@@ -1,0 +1,23 @@
+{
+  "$schema": "./expected-translations.schema.json",
+  "fixture_set": "nanolith-storybook-phase-a",
+  "version": "0.1.0",
+  "ground_truth_reviewer": "badsworm@gmail.com",
+  "review_date": null,
+  "translations": [
+    {
+      "paragraph_id": "§147",
+      "fixture_ref": "nano-§147-happy",
+      "source_en": "TBD — Aaron compilerà post-runthrough con citazione fair-use ≤600 char",
+      "expected_it": "TBD — traduzione IT giudicata corretta da Aaron (gold standard)",
+      "glossary_terms": [
+        { "en": "Voidstone", "it": "Pietra del Vuoto" },
+        { "en": "Reaver", "it": "Razziatore" },
+        { "en": "Niamh", "it": "Niamh" }
+      ],
+      "min_bleu_score": 0.6,
+      "read_fluent": null,
+      "notes": "Annotare post-runthrough: read_fluent TRUE se Aaron legge senza pause >2s"
+    }
+  ]
+}

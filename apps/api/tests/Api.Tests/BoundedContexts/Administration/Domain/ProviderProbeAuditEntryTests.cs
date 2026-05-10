@@ -4,7 +4,8 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.Administration.Domain;
 
-public class ProviderProbeAuditEntryTests
+[Trait("Category", "Unit")]
+public sealed class ProviderProbeAuditEntryTests
 {
     [Fact]
     public void Create_ValidArgs_SetsAllFields()

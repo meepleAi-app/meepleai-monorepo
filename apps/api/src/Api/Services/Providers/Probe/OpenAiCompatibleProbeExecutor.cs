@@ -21,23 +21,23 @@ internal sealed class OpenAiCompatibleProbeExecutor : IProviderProbeExecutor
     private readonly HttpClient _httpClient;
     private readonly ILogger<OpenAiCompatibleProbeExecutor> _logger;
     private readonly string _listModelsUrl;
-    private readonly bool _requiresAuth;
 
     public string ProviderName { get; }
     public string? ApiKeyEnvVar { get; }
 
+    /// <summary>
+    /// Auth requirement is implicit in <see cref="ApiKeyEnvVar"/>: non-null = required, null = no auth.
+    /// </summary>
     public OpenAiCompatibleProbeExecutor(
         IHttpClientFactory httpClientFactory,
         ILogger<OpenAiCompatibleProbeExecutor> logger,
         string providerName,
         string baseUrl,
-        bool requiresAuth,
         string? apiKeyEnvVar)
     {
         _httpClient = httpClientFactory.CreateClient("provider-probe");
         _logger = logger;
         _listModelsUrl = $"{baseUrl.TrimEnd('/')}/models";
-        _requiresAuth = requiresAuth;
         ProviderName = providerName;
         ApiKeyEnvVar = apiKeyEnvVar;
     }
@@ -51,8 +51,11 @@ internal sealed class OpenAiCompatibleProbeExecutor : IProviderProbeExecutor
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get, _listModelsUrl);
-            if (_requiresAuth || !string.IsNullOrEmpty(apiKey))
-                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", string.IsNullOrEmpty(apiKey) ? "n/a" : apiKey);
+            // Set Bearer header only when we have a real key. Caller must guard against
+            // "requiresAuth + empty key" — ProviderProbeService.ProbeAsync does this via
+            // the NotConfigured early-exit before reaching ExecuteAsync.
+            if (!string.IsNullOrEmpty(apiKey))
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
             using var resp = await _httpClient.SendAsync(req, cts.Token).ConfigureAwait(false);
             sw.Stop();

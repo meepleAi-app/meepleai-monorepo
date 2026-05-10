@@ -58,7 +58,6 @@ internal static class InfrastructureServiceExtensions
             providerName: "openrouter",
             baseUrl: sp.GetRequiredService<IConfiguration>()["Providers:OpenRouter:BaseUrl"]
                 ?? OpenRouterDefaultBaseUrl,
-            requiresAuth: true,
             apiKeyEnvVar: "OPENROUTER_API_KEY"));
 
         services.AddSingleton<IProviderProbeExecutor>(sp => new OpenAiCompatibleProbeExecutor(
@@ -67,7 +66,6 @@ internal static class InfrastructureServiceExtensions
             providerName: "deepseek",
             baseUrl: sp.GetRequiredService<IConfiguration>()["Providers:DeepSeek:BaseUrl"]
                 ?? DeepSeekDefaultBaseUrl,
-            requiresAuth: true,
             apiKeyEnvVar: "DEEPSEEK_API_KEY"));
 
         services.AddSingleton<IProviderProbeExecutor>(sp => new OpenAiCompatibleProbeExecutor(
@@ -76,7 +74,6 @@ internal static class InfrastructureServiceExtensions
             providerName: "ollama-local",
             baseUrl: sp.GetRequiredService<IConfiguration>()["Providers:OllamaLocal:BaseUrl"]
                 ?? OllamaLocalDefaultBaseUrl,
-            requiresAuth: false,
             apiKeyEnvVar: null));
 
         services.AddSingleton<ProviderProbeExecutorFactory>();

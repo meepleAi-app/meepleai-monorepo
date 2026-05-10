@@ -68,8 +68,13 @@ internal sealed class ProviderProbeService : IProviderProbeService
     }
 }
 
-/// <summary>Thrown when probing an unknown provider name. Maps to 404.</summary>
-public sealed class UnknownProviderException : Exception
+/// <summary>
+/// Thrown when probing an unknown provider name. Maps to 404.
+/// Scope: bounded-context-internal — only thrown by ProviderProbeService and caught by AdminProviderEndpoints.
+/// </summary>
+#pragma warning disable S3871 // Exceptions should be public — internal here is intentional (BC-private contract)
+internal sealed class UnknownProviderException : Exception
+#pragma warning restore S3871
 {
     public string ProviderName { get; }
     public UnknownProviderException(string name) : base($"Unknown provider: {name}") => ProviderName = name;

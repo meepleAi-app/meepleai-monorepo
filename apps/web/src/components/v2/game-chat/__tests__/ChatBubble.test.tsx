@@ -40,4 +40,16 @@ describe('ChatBubble', () => {
     render(<ChatBubble role="user" content="x" />);
     expect(screen.getByTestId('chat-bubble')).toHaveAttribute('data-role', 'user');
   });
+
+  it('applies historical visual variant when isHistorical=true', () => {
+    render(<ChatBubble role="agent" content="old" agentName="Tutor" isHistorical />);
+    const bubble = screen.getByTestId('chat-bubble');
+    expect(bubble).toHaveAttribute('data-historical', 'true');
+  });
+
+  it('does not apply historical variant by default', () => {
+    render(<ChatBubble role="agent" content="new" agentName="Tutor" />);
+    const bubble = screen.getByTestId('chat-bubble');
+    expect(bubble).not.toHaveAttribute('data-historical');
+  });
 });

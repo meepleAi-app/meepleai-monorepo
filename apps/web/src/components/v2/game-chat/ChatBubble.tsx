@@ -14,6 +14,8 @@ export interface ChatBubbleProps {
   readonly avatar?: string;
   readonly children?: ReactNode;
   readonly className?: string;
+  /** G2: messaggio storico ricaricato da hydrate — visual variant attenuato */
+  readonly isHistorical?: boolean;
 }
 
 export function ChatBubble({
@@ -23,17 +25,20 @@ export function ChatBubble({
   avatar,
   children,
   className,
+  isHistorical,
 }: ChatBubbleProps): ReactElement {
   const isAgent = role === 'agent';
   return (
     <div
       data-testid="chat-bubble"
       data-role={role}
+      data-historical={isHistorical ? 'true' : undefined}
       className={clsx(
         'max-w-[85%] rounded-2xl px-4 py-3 text-base leading-relaxed',
         isAgent
           ? 'self-start rounded-bl-sm border border-[hsl(var(--c-agent)/0.18)] bg-[hsl(var(--c-agent)/0.08)] text-foreground'
           : 'self-end rounded-br-sm bg-[hsl(var(--c-chat))] text-white',
+        isHistorical && 'opacity-90',
         className
       )}
     >

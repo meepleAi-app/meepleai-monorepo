@@ -1,0 +1,19 @@
+meta {
+  name: SG3 — BuilderFilters: GET /agents?status=Testing
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{apiBase}}/api/v1/agents?status=Testing
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("response is array (filtered by status)", function() {
+    const body = res.getBody();
+    expect(Array.isArray(body) || (body && Array.isArray(body.items))).to.be.true;
+  });
+}

@@ -1,0 +1,15 @@
+meta {
+  name: SG3 — Lifecycle: Testing → Published
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{apiBase}}/api/v1/agents/{{agentId}}/publish
+}
+
+tests {
+  test("returns 204 NoContent", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}

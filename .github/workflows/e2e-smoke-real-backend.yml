@@ -128,6 +128,30 @@ jobs:
             sleep 5
           done
 
+      # N1 (#960): always-on pre-test diagnostics — exposes container health
+      # and HTTP probe so investigation doesn't need local repro.
+      # Hightower CRITICAL: 30s of structured logs > hours of remote bisect.
+      - name: Pre-test diagnostics (always run)
+        if: always()
+        run: |
+          echo "::group::Web container status"
+          docker ps -a -f name=meepleai-web --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || true
+          echo "::endgroup::"
+          echo "::group::Web container logs (last 100 lines)"
+          docker logs meepleai-web --tail=100 2>&1 || echo "Container not present"
+          echo "::endgroup::"
+          echo "::group::Web HTTP probe (root + sample route)"
+          curl -sv http://localhost:3000 --max-time 10 -o /tmp/root.html 2>&1 | head -25 || true
+          echo "--- root response head:"
+          head -c 500 /tmp/root.html 2>/dev/null || true
+          curl -sv http://localhost:3000/library --max-time 10 -o /tmp/library.html 2>&1 | head -15 || true
+          echo "--- /library response head:"
+          head -c 500 /tmp/library.html 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::API health"
+          curl -s http://localhost:8080/health || true
+          echo ""
+          echo "::endgroup::"
 
       - name: Run smoke specs
         working-directory: apps/web
@@ -148,16 +172,30 @@ jobs:
           path: apps/web/playwright-report
           retention-days: 7
 
-      - name: Open issue on failure
+      # N2 (#960): dedup — skip auto-issue if a smoke-failure issue is already
+      # open. Hightower MAJOR: avoids spam when a known regression keeps the
+      # workflow red across multiple runs (e.g. #960 itself).
+      - name: Open issue on failure (deduped)
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'smoke-failure',
+              state: 'open',
+              per_page: 5,
+            });
+            if (existing.data.length > 0) {
+              core.notice(`Skipping auto-issue: ${existing.data.length} open smoke-failure issue(s) already exist (#${existing.data.map(i => i.number).join(', #')}).`);
+              return;
+            }
             const today = new Date().toISOString().slice(0, 10);
-            github.rest.issues.create({
+            await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `[SMOKE FAILURE] Nightly E2E smoke real backend — ${today}`,
               labels: ['bug', 'P0', 'smoke-failure'],
-              body: `Nightly smoke run failed. See [run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).\n\nCheck attached \`playwright-report-smoke\` artifact.`
+              body: `Nightly smoke run failed. See [run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).\n\nCheck attached \`playwright-report-smoke\` artifact + the new \`Pre-test diagnostics\` step output for container/HTTP probe data.`
             });

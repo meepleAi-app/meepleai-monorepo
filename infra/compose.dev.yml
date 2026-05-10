@@ -73,7 +73,6 @@ services:
     build:
       args:
         NEXT_PUBLIC_API_BASE: http://localhost:8080
-        NEXT_PUBLIC_ALPHA_MODE: "true"
         NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED: "true"
     environment:
       API_BASE_URL: http://api:8080

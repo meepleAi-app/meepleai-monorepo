@@ -151,9 +151,9 @@ curl http://localhost:3000       # 200 (landing), no redirect a /admin senza ses
 
 - Rimuovere `apps/api/src/Api/DevTools/` o i mock backend services (`MockLlmService`, `MockBggApiService`, etc.)
 - Rimuovere i test backend `apps/api/tests/Api.Tests/DevTools/`
-- Toccare logica Alpha mode (`NEXT_PUBLIC_ALPHA_MODE`) — sistema separato
+- ~~Toccare logica Alpha mode (`NEXT_PUBLIC_ALPHA_MODE`) — sistema separato~~ *(nota retroattiva: ALPHA_MODE rimosso in PR #949, 2026-05-10)*
 - Toccare `src/__tests__/mocks/` (vitest test infrastructure indipendente)
-- Toccare `make alpha`, `make dev`, `make dev-core` (workflow non-fast restano standard)
+- ~~Toccare `make alpha`, `make dev`, `make dev-core`~~ → solo `make dev` / `make dev-core` rimangono (target `alpha*` rimossi in PR #949)
 
 ## Acceptance criteria
 

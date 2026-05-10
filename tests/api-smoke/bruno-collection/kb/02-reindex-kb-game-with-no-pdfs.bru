@@ -1,0 +1,53 @@
+meta {
+  name: SG2-KB1 — Reindex KB (happy path, no PDFs — fast and deterministic)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{apiBase}}/api/v1/games/{{smokeGameId}}/kb/reindex
+  body: json
+  auth: none
+}
+
+body:json {
+  {}
+}
+
+script:pre-request {
+  if (!bru.getVar("smokeGameId")) {
+    throw new Error("smokeGameId not set — run 01-preflight-get-game first");
+  }
+}
+
+script:post-response {
+  // Capture the jobId for informational purposes.
+  const body = res.getBody();
+  if (body && body.jobId) {
+    bru.setVar("kbReindexJobId", body.jobId);
+  }
+}
+
+tests {
+  test("returns 202 Accepted", function() {
+    expect(res.getStatus()).to.equal(202);
+  });
+
+  test("body contains jobId", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("jobId");
+    expect(body.jobId).to.be.a("string");
+    expect(body.jobId.length).to.be.greaterThan(0);
+  });
+
+  test("status is completed (synchronous implementation)", function() {
+    const body = res.getBody();
+    expect(body.status).to.equal("completed");
+  });
+
+  test("pdfCount is a non-negative number", function() {
+    const body = res.getBody();
+    expect(body.pdfCount).to.be.a("number");
+    expect(body.pdfCount).to.be.at.least(0);
+  });
+}

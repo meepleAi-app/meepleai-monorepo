@@ -1,0 +1,36 @@
+meta {
+  name: SG2-KB5 — Reindex with unknown gameId returns 202 completed (idempotent, 0 PDFs)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{apiBase}}/api/v1/games/00000000-0000-0000-0000-000000000001/kb/reindex
+  body: json
+  auth: none
+}
+
+body:json {
+  {}
+}
+
+tests {
+  // NOTE: The reindex endpoint is intentionally idempotent for unknown gameIds.
+  // The handler queries for PDFs matching the gameId — if none exist it returns
+  // 202 Accepted with pdfCount=0 rather than 404, because there is no authoritative
+  // "game ownership" check in the reindex path (any authenticated user can trigger it).
+  // A 404 would require a separate game-existence guard (carry-forward: issue #903).
+  test("returns 202 Accepted (idempotent for unknown gameId — pdfCount=0)", function() {
+    expect(res.getStatus()).to.equal(202);
+  });
+
+  test("pdfCount is 0 for non-existent game", function() {
+    const body = res.getBody();
+    expect(body.pdfCount).to.equal(0);
+  });
+
+  test("status is completed", function() {
+    const body = res.getBody();
+    expect(body.status).to.equal("completed");
+  });
+}

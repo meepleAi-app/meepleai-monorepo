@@ -1,0 +1,46 @@
+meta {
+  name: SG2-KB2 — RAPTOR rebuild blocked for free-tier (403 TIER_FEATURE_LOCKED)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{apiBase}}/api/v1/games/{{smokeGameId}}/kb/raptor/rebuild
+  body: json
+  auth: none
+}
+
+body:json {
+  {}
+}
+
+script:pre-request {
+  // smoke-aaron is a free-tier user (see tests/fixtures/smoke-test-users.sql).
+  // This scenario verifies that free-tier users receive 403 TIER_FEATURE_LOCKED
+  // instead of triggering RAPTOR rebuild (which requires premium subscription).
+  if (!bru.getVar("smokeGameId")) {
+    throw new Error("smokeGameId not set — run 01-preflight-get-game first");
+  }
+}
+
+tests {
+  test("returns 403 Forbidden", function() {
+    expect(res.getStatus()).to.equal(403);
+  });
+
+  test("error code is TIER_FEATURE_LOCKED", function() {
+    const body = res.getBody();
+    expect(body.error).to.equal("TIER_FEATURE_LOCKED");
+  });
+
+  test("feature is RaptorRebuild", function() {
+    const body = res.getBody();
+    expect(body.feature).to.equal("RaptorRebuild");
+  });
+
+  test("message is present", function() {
+    const body = res.getBody();
+    expect(body.message).to.be.a("string");
+    expect(body.message.length).to.be.greaterThan(0);
+  });
+}

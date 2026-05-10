@@ -1,0 +1,36 @@
+meta {
+  name: SG4-CS2 — ChatSession free-tier limit (GET limit endpoint)
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{apiBase}}/api/v1/users/{{smokeUserId}}/chat-sessions/limit
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  if (!bru.getVar("smokeUserId")) {
+    throw new Error("smokeUserId not set — run 00-login first");
+  }
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("free-tier limit is 5", function() {
+    const body = res.getBody();
+    expect(body.limit).to.equal(5);
+  });
+  test("tier is free", function() {
+    const body = res.getBody();
+    expect(body.tier).to.equal("free");
+  });
+  test("used count is a non-negative number", function() {
+    const body = res.getBody();
+    expect(body.used).to.be.a("number");
+    expect(body.used).to.be.at.least(0);
+  });
+}

@@ -17,9 +17,10 @@
  *   For smoke purposes we assert that EITHER the populated hero (data present) OR
  *   the not-found shell renders — both confirm graceful frontend rendering.
  *
- * Auth: the `(authenticated)` layout does NOT gate server-side; `PLAYWRIGHT_AUTH_BYPASS=true`
- * (set in `playwright.config.ts` webServer env) allows Playwright to access the
- * route. No seedAuthSession needed for the shell render assertion.
+ * Auth (#960 → Smoke RCA-2): the `(authenticated)` layout requires a session
+ * cookie. Even with `PLAYWRIGHT_AUTH_BYPASS=true` the `proxy.ts:386` bypass
+ * branch is only taken when `sessionCookieValue` is present. We MUST
+ * `smokeLogin` + `applySessionToPage` before navigation.
  *
  * data-slot selectors match committed Task 3 orchestrator shells:
  *   - default:   `[data-slot="player-detail-view"]`
@@ -30,6 +31,8 @@
  */
 import { test, expect } from '@playwright/test';
 
+import { applySessionToPage, smokeLogin } from './_helpers/auth';
+
 /**
  * Deterministic slug that NEVER maps to a real player in any environment.
  * Drives the frontend not-found shell without needing a seeded player.
@@ -39,6 +42,11 @@ import { test, expect } from '@playwright/test';
 const NEVER_EXISTS_ID = 'never-exists-player-id-smoke-test' as const;
 
 test.describe('SMOKE — /players/[id] real backend', () => {
+  test.beforeEach(async ({ page, request }) => {
+    const { cookieHeaders } = await smokeLogin(request);
+    await applySessionToPage(page, cookieHeaders);
+  });
+
   test('frontend /players/{id} renders not-found shell for deterministic slug', async ({
     page,
   }) => {

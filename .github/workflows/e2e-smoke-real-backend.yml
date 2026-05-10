@@ -3,6 +3,13 @@ name: E2E Smoke Real Backend (nightly)
 on:
   schedule:
     - cron: '0 3 * * *'
+  push:
+    branches: [main-dev]
+    paths:
+      - 'apps/web/src/components/v2/game-chat/**'
+      - 'apps/web/src/hooks/queries/useGameChat.ts'
+      - 'apps/web/e2e/smoke-real-backend/**'
+      - '.github/workflows/e2e-smoke-real-backend.yml'
   workflow_dispatch:
 
 permissions:

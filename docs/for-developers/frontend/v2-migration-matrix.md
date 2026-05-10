@@ -102,7 +102,7 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 | `/gamebook` | **M** | Libro-game index: Hero + QuotaWidget + Card grid + EmptyState | ✅ done (SP6 Phase B, PR #792) |
 | `/gamebook/upload` | **L** | 3-step wizard: game search + camera + indexing — 14-state FSM + camera permission matrix + offline retry | ✅ done (SP6 Phase C, contract PR #794 + Foundation PR #796 + Interactions PR #800) — [`contracts/gamebook-upload-hooks.md`](contracts/gamebook-upload-hooks.md) |
 | `/library/games/[gameId]/translate` | **S** | Nanolith demo — paragraph translate via chat-stream workaround | ✅ done (SP6 Phase A, PR #790) |
-| `/kb/[id]` | **M** | KB header + chunks + search | pending |
+| `/kb/[id]` | **M** | KB header + chunks + search | **deferred** — pivot legale 2026-05-10, vedi `2026-05-10-citation-pdf-viewer-design.md` (G4 v3) |
 
 **Anti-pattern**: dispatchare implementation subagent senza Phase 0.5 per route Tier L. Wave C.1 PR #697 ha esattamente questo come root cause (vedi [post-mortem](../specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only)).
 
@@ -277,12 +277,12 @@ the PR review.
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
-| `sp4-kb-detail.jsx` | `KbHeader` | `apps/web/src/components/v2/kb-detail/KbHeader.tsx` | `/kb/[id]` | pending | — | T A V |
-| `sp4-kb-detail.jsx` | `KbChunkListPanel` | `apps/web/src/components/v2/kb-detail/KbChunkListPanel.tsx` | `/kb/[id]` | pending | — | T A V |
-| `sp4-kb-detail.jsx` | `KbChunkPreview` | `apps/web/src/components/v2/kb-detail/KbChunkPreview.tsx` | `/kb/[id]` | pending | — | T A V |
-| `sp4-kb-detail.jsx` | `ChunkSearchBox` | `apps/web/src/components/v2/kb-detail/ChunkSearchBox.tsx` | `/kb/[id]` | pending | — | T A V |
-| `sp4-kb-detail.jsx` | `MarkdownRenderBlock` | `apps/web/src/components/v2/kb-detail/MarkdownRenderBlock.tsx` | `/kb/[id]` | pending | — | T A V |
-| `sp4-kb-detail.jsx` | `KbProcessingState` | `apps/web/src/components/v2/kb-detail/KbProcessingState.tsx` | `/kb/[id]` | pending | — | T A V |
+| `sp4-kb-detail.jsx` | `KbHeader` | `apps/web/src/components/v2/kb-detail/KbHeader.tsx` | `/kb/[id]` | deferred (G4 v3) | — | T A V |
+| `sp4-kb-detail.jsx` | `KbChunkListPanel` | `apps/web/src/components/v2/kb-detail/KbChunkListPanel.tsx` | `/kb/[id]` | deferred (G4 v3) | — | T A V |
+| `sp4-kb-detail.jsx` | `KbChunkPreview` | `apps/web/src/components/v2/kb-detail/KbChunkPreview.tsx` | `/kb/[id]` | deferred (G4 v3) | — | T A V |
+| `sp4-kb-detail.jsx` | `ChunkSearchBox` | `apps/web/src/components/v2/kb-detail/ChunkSearchBox.tsx` | `/kb/[id]` | deferred (G4 v3) | — | T A V |
+| `sp4-kb-detail.jsx` | `MarkdownRenderBlock` | `apps/web/src/components/v2/kb-detail/MarkdownRenderBlock.tsx` | `/kb/[id]` | deferred (G4 v3) | — | T A V |
+| `sp4-kb-detail.jsx` | `KbProcessingState` | `apps/web/src/components/v2/kb-detail/KbProcessingState.tsx` | `/kb/[id]` | deferred (G4 v3) | — | T A V |
 
 ### Game nights index — `/game-nights` — 8 components — **Tier L** ⚠️ Phase 0.5 required
 

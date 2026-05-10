@@ -4,6 +4,19 @@ import type { Citation } from '@/types';
 
 import { CitationModal } from '../CitationModal';
 
+vi.mock('../CitationPdfTab', () => ({
+  CitationPdfTab: (props: any) => (
+    <div
+      data-testid="citation-pdf-tab-mounted"
+      data-document-id={props.documentId}
+      data-game-id={props.gameId}
+      data-initial-page={props.initialPage}
+    >
+      PDF tab mock
+    </div>
+  ),
+}));
+
 const sampleCitation: Citation = {
   documentId: 'd1',
   pageNumber: 12,
@@ -28,22 +41,37 @@ describe('CitationModal', () => {
   it('calls onClose when close button clicked', () => {
     const onClose = vi.fn();
     render(<CitationModal citation={sampleCitation} open onClose={onClose} />);
-    fireEvent.click(screen.getByRole('button', { name: /chiudi/i }));
+    const closeButtons = screen.getAllByRole('button', { name: /chiudi/i });
+    fireEvent.click(closeButtons[closeButtons.length - 1]);
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('hides "Apri nella KB" footer when onOpenInKb is undefined', () => {
-    render(<CitationModal citation={sampleCitation} open onClose={vi.fn()} />);
-    expect(screen.queryByRole('button', { name: /apri nella kb/i })).not.toBeInTheDocument();
+  it('renders snippet tab content by default', () => {
+    render(<CitationModal citation={sampleCitation} open onClose={vi.fn()} gameId="game-1" />);
+    expect(screen.getByRole('tab', { name: /snippet/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText(/Ogni potere/)).toBeInTheDocument();
   });
 
-  it('shows "Apri nella KB" when onOpenInKb provided + calls it on click', () => {
-    const onOpenInKb = vi.fn();
-    render(
-      <CitationModal citation={sampleCitation} open onClose={vi.fn()} onOpenInKb={onOpenInKb} />
-    );
-    const kbBtn = screen.getByRole('button', { name: /apri nella kb/i });
-    fireEvent.click(kbBtn);
-    expect(onOpenInKb).toHaveBeenCalledOnce();
+  it('renders both tabs (Snippet + PDF originale) always visible', () => {
+    render(<CitationModal citation={sampleCitation} open onClose={vi.fn()} gameId="game-1" />);
+    expect(screen.getByRole('tab', { name: /snippet/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /pdf originale/i })).toBeInTheDocument();
+  });
+
+  it('switching to PDF tab triggers lazy mount of CitationPdfTab', () => {
+    render(<CitationModal citation={sampleCitation} open onClose={vi.fn()} gameId="game-1" />);
+    expect(screen.queryByTestId('citation-pdf-tab-mounted')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: /pdf originale/i }));
+    expect(screen.getByRole('tab', { name: /pdf originale/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('citation-pdf-tab-mounted')).toBeInTheDocument();
+  });
+
+  it('passes gameId and citation fields to CitationPdfTab', () => {
+    render(<CitationModal citation={sampleCitation} open onClose={vi.fn()} gameId="wingspan" />);
+    fireEvent.click(screen.getByRole('tab', { name: /pdf originale/i }));
+    const tab = screen.getByTestId('citation-pdf-tab-mounted');
+    expect(tab).toHaveAttribute('data-document-id', sampleCitation.documentId);
+    expect(tab).toHaveAttribute('data-game-id', 'wingspan');
+    expect(tab).toHaveAttribute('data-initial-page', String(sampleCitation.pageNumber));
   });
 });

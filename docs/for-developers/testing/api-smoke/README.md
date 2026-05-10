@@ -140,9 +140,32 @@ Questo guard è **solo sull'endpoint rename** per evitare rumore su ogni GET —
 
 ADR-054 (post-MVP) rinominerà gli endpoint a `play-session/chat-thread/chat-history/game-night` per eliminare l'overload di naming in modo strutturale.
 
+## SG2 — KB lifecycle (since 2026-05-10)
+
+### KB management endpoints
+
+- `POST /games/{gameId:guid}/kb/reindex` — synchronous re-embed all chunks of all PDFs (returns 202 + jobId + status="completed"; future enhancement: true async background job).
+- `POST /games/{gameId:guid}/kb/raptor/rebuild` — rebuild RAPTOR summary tree, **tier-gated**: free-tier → 403 with `{ "error": "TIER_FEATURE_LOCKED", "feature": "RaptorRebuild" }`.
+
+### Cascade-delete (existing, verified by SG2)
+
+`DELETE /pdf/{pdfId}` triggers DB-level cascade for `raptor_summaries.pdf_document_id` (foreign key with `ON DELETE CASCADE`). Verified by integration test `DeletePdf_CascadeDeletesOrphanRaptorSummaries`.
+
+### Schema finding (SG2 spec adjustment)
+
+The original SG2 spec referenced `game_entity_relations.source_document_id` for orphan cleanup. **The actual schema does NOT have this FK** — `GameEntityRelationEntity` has only a `GameId` FK (no PDF reference). No orphan issue exists for that table. Cleanup migration was not needed.
+
+### Idempotent reindex (SG2 implementation detail)
+
+The reindex endpoint is intentionally idempotent for unknown or empty gameIds. If no PDFs are found for the given gameId, the handler returns 202 with `pdfCount=0` rather than 404. A dedicated game-existence guard is a carry-forward improvement (see #903).
+
+### Sub-collection consumer
+
+- `kb/` ← scenari implementati in #903 (SG2) — 6 .bru: login + preflight + reindex (happy path) + raptor tier-gated (403) + cascade verify (smoke) + read PDFs + idempotent unknown gameId
+
 ## Sub-collection consumers
 
 - `private-game/` ← scenari implementati in #902 (SG1)
-- `kb/` ← scenari implementati in #903 (SG2)
+- `kb/` ← scenari implementati in #903 (SG2) — 6 .bru: reindex, raptor (tier-gated), cascade verify, list PDFs, idempotent unknown gameId
 - `agents/` ← scenari implementati in #904 (SG3)
 - `sessions/` ← scenari implementati in #905 (SG4) — 4 sub-folder: game-session/ chat-session/ chat-thread/ naming-disambiguation/

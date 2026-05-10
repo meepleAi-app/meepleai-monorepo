@@ -203,6 +203,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<RaptorSummaryEntity> RaptorSummaries => Set<RaptorSummaryEntity>(); // RAG Enhancement: RAPTOR hierarchical summaries
     public DbSet<GameEntityRelationEntity> GameEntityRelations => Set<GameEntityRelationEntity>(); // RAG Enhancement: Graph RAG entity relations
     public DbSet<BoundedContexts.Administration.Domain.Entities.ServiceCallLogEntry> ServiceCallLogs => Set<BoundedContexts.Administration.Domain.Entities.ServiceCallLogEntry>(); // Admin logging: external service call history
+    internal DbSet<BoundedContexts.Administration.Domain.Aggregates.ProviderProbeAudit.ProviderProbeAuditEntry> ProviderProbeAuditEntries => Set<BoundedContexts.Administration.Domain.Aggregates.ProviderProbeAudit.ProviderProbeAuditEntry>(); // ISSUE-936: Provider token probe audit log
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();

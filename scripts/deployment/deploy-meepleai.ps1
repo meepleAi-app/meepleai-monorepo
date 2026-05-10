@@ -165,13 +165,9 @@ function Backup-Databases {
     New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
 
     # PostgreSQL backup
-    Write-Info "Backing up PostgreSQL..."
+    Write-Info "Backing up PostgreSQL (includes pgvector data)..."
     docker compose @ComposeFiles exec -T postgres pg_dumpall -U meeple |
         Out-File -FilePath "$backupDir/postgres_backup.sql" -Encoding UTF8
-
-    # Qdrant backup note
-    Write-Info "Backing up Qdrant..."
-    Write-Warning "Qdrant CLI backup requires manual configuration"
 
     Write-Success "Backup completed: $backupDir"
 }

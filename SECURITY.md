@@ -168,7 +168,7 @@ We rely on the following third-party services:
 - **OpenRouter**: [Security Policy](https://openrouter.ai/security)
 - **PostgreSQL**: [Security Documentation](https://www.postgresql.org/support/security/)
 - **Redis**: [Security Documentation](https://redis.io/docs/management/security/)
-- **Qdrant**: [Security Best Practices](https://qdrant.tech/documentation/guides/security/)
+- **pgvector**: vector similarity search via PostgreSQL extension — covered by PostgreSQL security guidance above
 
 ## Compliance & Standards
 

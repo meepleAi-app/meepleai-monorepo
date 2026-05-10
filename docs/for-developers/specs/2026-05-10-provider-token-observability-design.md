@@ -1,9 +1,20 @@
 # Provider Token & Quota Observability — Design Spec
 
 **Date**: 2026-05-10
-**Status**: Approved (decisions Q1-Q5 confirmed 2026-05-10)
+**Status**: Approved (decisions Q1-Q5 confirmed 2026-05-10) — **Revision 1 (2026-05-10): findings collaterali implementati**
 **Author**: Claude (spec-panel + brainstorming)
 **Decision authority**: User confirmed all 5 default recommendations on 2026-05-10
+
+## Revision 1 changelog (2026-05-10)
+
+Findings collaterali emersi dal smoke live contro OpenRouter+DeepSeek hanno richiesto 4 correzioni:
+
+| ID | Change | Rationale |
+|----|--------|-----------|
+| R1 | **Probe semantic fix**: `Outcome=Success` quando token autentica + provider raggiungibile (non più legato a model availability). `ModelAvailable: bool?` nullable, popolato solo se caller passa `?model=X` | Default model hardcoded può andare drift quando provider rinomina/ritira modelli — falso negativo |
+| R2 | **Architectural collapse**: 4 executor specifici (OpenRouter/OpenAi/DeepSeek/Ollama) → 1 `OpenAiCompatibleProbeExecutor` parametrico. 3 istanze registrate via DI: `openrouter`, `deepseek`, `ollama-local`. OpenAI cloud rimosso dallo scope (non utilizzato in Alpha) | DRY + permette future OpenAI-compat endpoints (LocalAI, vLLM, etc.) con zero codice |
+| R3 | **Quota endpoint anticipato a PR1** (era PR2): `GET /api/v1/admin/providers/{name}/quota` per OpenRouter (`/auth/key`) + DeepSeek (`/user/balance`). HybridCache 5min TTL | Findings utente: vorrebbe vedere subito il credito residuo |
+| R4 | **Rate limit bug fix**: `.RequireRateLimiting()` chiamato due volte applica solo l'ultimo (sovrascrittura silenziosa). Endpoint riduce a singolo `.RequireRateLimiting("AdminProviderProbe")`. Test integration un-skipped (factory accetta `enableRateLimiting:true`) | Smoke live mostrava 11 probe consecutive tutte 200 — rate limit non scattava |
 
 ---
 

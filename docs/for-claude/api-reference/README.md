@@ -30,7 +30,7 @@ POC Implemented ████████████░░░░░░░░ ~55
 | Component | POC Status | TOMAC-RAG Plan |
 |-----------|------------|----------------|
 | **Hybrid Search** | Implemented | Same |
-| **Vector Search (Qdrant)** | Implemented | Same |
+| **Vector Search (pgvector)** | Implemented | Same |
 | **Keyword Search (PostgreSQL)** | Implemented | Same |
 | **RRF Fusion** | Implemented | Same |
 | **LLM Generation** | Implemented | Enhanced |
@@ -57,7 +57,7 @@ User Query
 │ HYBRID SEARCH                                           │
 │ ┌─────────────────┐    ┌─────────────────┐             │
 │ │ SEMANTIC        │    │ KEYWORD         │             │
-│ │ Qdrant :6333    │    │ PostgreSQL :5432│             │
+│ │ pgvector (PostgreSQL)    │    │ PostgreSQL :5432│             │
 │ │ cosine sim      │    │ tsvector FTS    │             │
 │ │ HNSW index      │    │ ts_rank_cd      │             │
 │ └────────┬────────┘    └────────┬────────┘             │
@@ -133,7 +133,7 @@ Response (Streaming)
 ├─────────────────────────────────────────────────────────┤
 │ L3: RETRIEVAL                                           │
 │ Vector + Keyword + RRF Fusion (adaptive depth)          │
-│ Qdrant + PostgreSQL + Optional Reranker                 │
+│ PostgreSQL (with pgvector) + Optional Reranker                 │
 ├─────────────────────────────────────────────────────────┤
 │ L4: CRAG EVALUATION                                     │
 │ T5-Large evaluator + Web search fallback                │
@@ -198,7 +198,7 @@ Response (Streaming)
 | Service | Port | Purpose | Status |
 |---------|------|---------|--------|
 | PostgreSQL | 5432 | FTS + Storage | Running |
-| Qdrant | 6333 | Vector DB | Running |
+| pgvector | PostgreSQL :5432 | extension | Running |
 | Redis | 6379 | Cache | Running |
 | Ollama | 11434 | Local LLM | Running |
 | Embedding | 8000 | text-embedding-3-large | Running |

@@ -282,7 +282,7 @@ Workflow di performance testing con K6 per load testing, stress testing e smoke 
 flowchart TB
     START([📊 K6 Start]) --> SETUP
 
-    SETUP[Setup Services<br/>✓ PostgreSQL<br/>✓ Redis<br/>✓ Qdrant<br/>✓ Build API<br/>✓ Apply Migrations<br/>✓ Seed Test Data]
+    SETUP[Setup Services<br/>✓ PostgreSQL (with pgvector)<br/>✓ Redis<br/>✓ Build API<br/>✓ Apply Migrations<br/>✓ Seed Test Data]
 
     SETUP --> TEST_TYPE{Test Type}
 
@@ -702,7 +702,7 @@ sequenceDiagram
     CI->>CI: Run LLM integration tests (Ollama)
     CI->>CI: Upload coverage + RAG evaluation
 
-    K6->>K6: Setup services (PG, Redis, Qdrant)
+    K6->>K6: Setup services (PG+pgvector, Redis)
     K6->>K6: Build API + apply migrations
     K6->>K6: Run smoke tests (default)
     K6->>K6: Generate HTML reports

@@ -1,0 +1,24 @@
+meta {
+  name: SG1 — BGG search endpoint health (rate-limit aware)
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{apiBase}}/api/v1/bgg/search?q=Catan
+}
+
+tests {
+  test("returns 200 (success) OR 429/503 (rate-limited)", function() {
+    // BGG external API is unreliable + rate-limited (60 req/h/user).
+    // Smoke accepts both healthy + degraded responses.
+    expect([200, 429, 503]).to.include(res.getStatus());
+  });
+  test("if 503, body has BGG_THROTTLED hint", function() {
+    if (res.getStatus() === 503) {
+      const body = res.getBody();
+      const bodyStr = JSON.stringify(body || {});
+      expect(bodyStr).to.match(/throttled|rate|retry/i);
+    }
+  });
+}

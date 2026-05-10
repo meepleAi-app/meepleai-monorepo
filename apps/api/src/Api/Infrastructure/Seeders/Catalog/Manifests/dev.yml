@@ -12165,6 +12165,34 @@ catalog:
     pdfVersion: '1.0'
     fallbackImageUrl: https://placehold.co/400x300?text=Disney%20Villainous
     fallbackThumbnailUrl: https://placehold.co/150x150?text=Disney%20Villainous
+  - title: Nanolith
+    bggId: null
+    language: it
+    seedAgent: true
+    yearPublished: 2026
+    minPlayers: 1
+    maxPlayers: 1
+    playingTime: 120
+    minAge: 12
+    averageRating: 8.0
+    description: Nanolith è un libro game narrativo con paragrafi numerati e glossario fotografabile.
+      Il giocatore esplora una storia ramificata, registra scelte e oggetti tramite l'AI assistant
+      di MeepleAI. Pensato come dogfood demo della modalità Libro Game (campagne, photo-translate,
+      glossary editor, resume picker).
+    categories:
+    - Gamebook
+    - Adventure
+    - Narrative Choice / Paragraph
+    mechanics:
+    - Solo / Single-Player
+    - Storytelling
+    - Variable Set-up
+    designers:
+    - MeepleAI Studio
+    publishers:
+    - MeepleAI
+    fallbackImageUrl: https://placehold.co/400x300?text=Nanolith
+    fallbackThumbnailUrl: https://placehold.co/150x150?text=Nanolith
   defaultAgent:
     name: MeepleAssistant POC
     model: anthropic/claude-3-haiku

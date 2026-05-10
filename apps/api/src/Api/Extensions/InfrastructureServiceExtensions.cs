@@ -5,11 +5,16 @@ using StackExchange.Redis;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Extensions.Http;
+using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.BoundedContexts.Administration.Domain.Services;
+using Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs;
+using Api.BoundedContexts.Administration.Infrastructure.Repositories;
 using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundTasks;
 using Api.Infrastructure.Http;
 using Api.Services;
+using Api.Services.Providers.Probe;
 using Api.Configuration;
 using Api.Models;
 using Api.SharedKernel.Application.Services;
@@ -36,6 +41,15 @@ internal static class InfrastructureServiceExtensions
         services.Configure<HostOptions>(options =>
             options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
         services.AddStorageServices(); // Issue #2732: Storage services
+
+        // Issue #936: Provider token probe (G1+G3) — 4 executor strategies + factory + service + repository
+        services.AddSingleton<IProviderProbeExecutor, OpenRouterProbeExecutor>();
+        services.AddSingleton<IProviderProbeExecutor, OpenAiProbeExecutor>();
+        services.AddSingleton<IProviderProbeExecutor, DeepSeekProbeExecutor>();
+        services.AddSingleton<IProviderProbeExecutor, OllamaProbeExecutor>();
+        services.AddSingleton<ProviderProbeExecutorFactory>();
+        services.AddScoped<IProviderProbeAuditRepository, ProviderProbeAuditRepository>();
+        services.AddScoped<IProviderProbeService, ProviderProbeService>();
 
         return services;
     }
@@ -386,6 +400,13 @@ internal static class InfrastructureServiceExtensions
         // Configure BGG settings from appsettings.json
         services.Configure<BggConfiguration>(configuration.GetSection("Bgg"));
 
+        // Issue #936: Provider probe HttpClient — soft 10s timeout; per-executor enforces hard 5s via CancellationTokenSource
+        services.AddHttpClient("provider-probe", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-ProviderProbe/1.0");
+        });
+
         return services;
     }
 
@@ -474,6 +495,9 @@ internal static class InfrastructureServiceExtensions
             policy.WaitAndRetryAsync(2, retryAttempt =>
                 TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))))
         .AddServiceCallLogging("Infisical");
+
+        // Issue #936: Probe audit retention job (Task 14) — runs daily, default 365-day window
+        services.AddHostedService<ProbeAuditRetentionJob>();
 
         // ISSUE-3499: Orchestration service client for Tutor agent
         services.AddHttpClient("OrchestrationService", client =>

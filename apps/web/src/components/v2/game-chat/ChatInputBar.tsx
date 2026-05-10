@@ -48,6 +48,7 @@ export function ChatInputBar({
     >
       <input
         type="text"
+        data-testid="message-input"
         aria-label="Messaggio"
         value={value}
         onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
@@ -63,6 +64,7 @@ export function ChatInputBar({
       />
       <button
         type="button"
+        data-testid="send-message-button"
         aria-label="Invia"
         onClick={trySubmit}
         disabled={disabled}

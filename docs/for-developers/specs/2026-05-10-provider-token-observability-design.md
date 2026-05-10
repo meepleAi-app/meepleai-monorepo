@@ -1,9 +1,9 @@
 # Provider Token & Quota Observability — Design Spec
 
 **Date**: 2026-05-10
-**Status**: Draft (awaiting approval)
+**Status**: Approved (decisions Q1-Q5 confirmed 2026-05-10)
 **Author**: Claude (spec-panel + brainstorming)
-**Decision authority**: pending user review on 5 open questions (§ 9)
+**Decision authority**: User confirmed all 5 default recommendations on 2026-05-10
 
 ---
 
@@ -227,15 +227,15 @@ internal record ProviderQuotaDto(
 ### 8.4 Coverage target
 Backend ≥ 90% (allineato a target progetto). Frontend ≥ 85%.
 
-## 9. Decisioni aperte da confermare prima dell'implementazione
+## 9. Decisioni confermate (2026-05-10)
 
-| # | Domanda | Raccomandazione | Bloccante? |
-|---|---------|-----------------|-----------|
-| Q1 | Auth scope: SuperAdmin only, Admin only, o split read/write? | **Split**: probe = SuperAdmin (write); quota + health = Admin (read) | ✅ blocca routing |
-| Q2 | Probe usa list-models (zero-cost) o chat-completion (deep)? | **list-models default** + `?deep=true` opzionale | ⚠️ blocca executor |
-| Q3 | Audit storage: nuova entità `ProviderProbeAuditEntry` o riuso `AuditLog` generico? | **Nuova entità** (query frequenti su providerName + actorId), interfaccia `IAuditableEvent` per future consolidazione | ⚠️ blocca migration |
-| Q4 | MVP quota providers? | **OpenRouter + DeepSeek**. OpenAI/Anthropic → 501. Ollama → N/A | ✅ blocca strategy |
-| Q5 | Frontend: pagina dedicata, sezione overview, o entrambe? | **Card riassuntiva in overview + drill-down** `/admin/providers/[name]` | ⚠️ blocca FE plan |
+| # | Domanda | Decisione |
+|---|---------|-----------|
+| Q1 | Auth scope | ✅ **Split**: `POST /probe` = SuperAdmin; `GET /quota` + `GET /llm-health` = Admin |
+| Q2 | Probe model | ✅ **list-models default** (zero quota cost); `?deep=true` opzionale per chat-completion `max_tokens:1` |
+| Q3 | Audit storage | ✅ **Nuova entità** `ProviderProbeAuditEntry` con index `(providerName, probedAt DESC)`; interfaccia `IAuditableEvent` per consolidazione futura |
+| Q4 | MVP quota providers | ✅ **OpenRouter + DeepSeek**. OpenAI/Anthropic → `501 quotaSupported:false`. Ollama → N/A |
+| Q5 | Frontend placement | ✅ **Card riassuntiva in `/admin/overview`** + drill-down `/admin/providers/[name]` |
 
 ## 10. Open question secondarie (chiusura proposta)
 

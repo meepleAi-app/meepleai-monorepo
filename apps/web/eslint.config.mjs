@@ -561,8 +561,8 @@ export default [
   },
   // V2 entity HSL regression guard: forbid inline hsl()/hsla() literals whose
   // hue matches a known entity color signature in v2 feature compositions.
-  // Applies to src/components/v2/** (feature comps, distinct from ui/v2 primitives).
-  // Use getEntityToken() from @/components/ui/v2/entity-tokens or Tailwind utilities
+  // Applies to src/components/features/** (feature comps, distinct from ui/ primitives).
+  // Use getEntityToken() from @/components/ui/entity-tokens or Tailwind utilities
   // (text-entity-game, bg-entity-event/10) instead.
   // Unavoidable JS style props (multi-entity alpha gradients) must be silenced with:
   //   // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- <reason>

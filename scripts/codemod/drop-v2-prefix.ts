@@ -795,8 +795,14 @@ async function main(): Promise<number> {
   let plans = buildPlans(audit);
 
   // Filesystem sweep — capture co-located tests, barrels, helpers not in audit.
-  // Skip in reverse mode (the sweep targets are already renamed in normal mode;
-  // reverse uses the inverted plan from buildPlans/reversePlans only).
+  //
+  // ⚠️ --reverse limitation: sweep is skipped in reverse mode. This means
+  // `--reverse --apply` only inverts the audit-derived renames (130), NOT
+  // the ~192 swept files. For a full Stage 2 rollback prefer:
+  //   git checkout <commit-before-stage-2> -- apps/web/
+  //   git clean -fd apps/web/
+  // The codemod's --reverse is intended for partial debugging only, not
+  // production rollback of an applied Stage 2 PR.
   if (!REVERSE) {
     const swept = await sweepFilesystem(audit, plans.renames);
     plans.renames.push(...swept);

@@ -84,9 +84,14 @@ jobs:
           N8NENV
           ls -la
 
-      - name: Boot dev stack (postgres + redis + api)
+      - name: Boot dev stack (postgres + redis + api + web — fresh build)
         working-directory: infra
         run: |
+          # #1004 root cause: docker compose up with cached web image rendered
+          # stale GameAiChatTab (pre-#918) → State-3 CTA fallback instead of inline
+          # GameChatTabV2 → message-input never appears → 30s timeout. Force rebuild
+          # every smoke run so the image matches HEAD source.
+          docker compose -f docker-compose.yml -f compose.dev.yml build web
           make dev-core
           for i in {1..40}; do
             if curl -fs http://localhost:8080/health 2>/dev/null; then
@@ -223,7 +228,10 @@ jobs:
           # docker compose already provides web on :3000 (see infra/compose.dev.yml:72)
           # — skip Playwright's own webServer to avoid port collision
           PLAYWRIGHT_SKIP_WEB_SERVER: '1'
-        run: pnpm playwright test smoke-real-backend/ --project=desktop-chrome
+        # Force html reporter so apps/web/playwright-report/ exists for the
+        # always-run upload step (#1004 debug: dot-only reporter was producing
+        # 0 artifacts → couldn't inspect error-context.md remotely).
+        run: pnpm playwright test smoke-real-backend/ --project=desktop-chrome --reporter=html
 
       - name: Upload report on failure
         if: failure()

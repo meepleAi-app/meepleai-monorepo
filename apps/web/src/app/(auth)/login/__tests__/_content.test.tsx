@@ -232,7 +232,10 @@ describe('LoginPageContent (v2 AuthCard)', () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it('redirects admins to /admin after successful login', async () => {
+  it('redirects admins to /library (user app) after successful login', async () => {
+    // Issue #893 demo follow-up: admins/superadmins land on the user app by
+    // default (consistent with role experience). Admin pages remain accessible
+    // via the navigation menu. See _content.tsx:56-69.
     loginMock.mockResolvedValueOnce({
       user: { id: 'u2', email: 'a@e.com', role: 'Admin' },
       requiresTwoFactor: false,
@@ -249,7 +252,7 @@ describe('LoginPageContent (v2 AuthCard)', () => {
     fireEvent.submit(screen.getByTestId('login-form'));
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith('/admin');
+      expect(pushMock).toHaveBeenCalledWith('/library');
     });
   });
 });

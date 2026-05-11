@@ -36,10 +36,20 @@ public sealed class CatalogSeederTests
     {
         var manifest = CatalogSeeder.LoadManifest(SeedProfile.Dev);
 
+        // BggId is nullable: libro games (e.g. Nanolith, PR #971) are not catalogued
+        // on BoardGameGeek by design. Standard published board games MUST have a
+        // positive BggId; libro/narrative games may have null.
         manifest.Catalog.Games.Should().AllSatisfy(g =>
         {
-            g.BggId.Should().BeGreaterThan(0, $"game '{g.Title}' should have a valid BggId");
             g.Title.Should().NotBeNullOrWhiteSpace();
+            var isGamebook = g.Categories?.Contains("Gamebook") ?? false;
+            if (isGamebook)
+            {
+                // Libro game: BggId may be null. No assertion on BggId value.
+                return;
+            }
+            g.BggId.Should().BeGreaterThan(0,
+                $"non-gamebook game '{g.Title}' should have a valid BggId");
         });
     }
 

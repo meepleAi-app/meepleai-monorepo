@@ -122,7 +122,7 @@ export default function GameToolkitLandingPage() {
       await store.startSession();
 
       toast.success(`${game?.name || 'Game'} session started!`);
-      router.push(`/library/games/${gameId}/toolkit/${sessionId}`);
+      router.push(`/library/${gameId}/toolkit/${sessionId}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to start session');
     }

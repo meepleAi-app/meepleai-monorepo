@@ -171,10 +171,10 @@ export function GamebookIndexView(): ReactElement {
       const gamebooks = extractGamebooks(fsmCell);
       const gamebook = gamebooks.find(g => g.id === gamebookId);
       if (gamebook && gamebook.status === 'ready') {
-        // Navigate to the existing play route under /library/games/[gameId]/play.
+        // Navigate to the existing play route under /library/[gameId]/play.
         // The /gamebook/[id] route was never implemented (issue #865) — the play
         // surface lives under /library/games for historical reasons (PR #794+).
-        router.push(`/library/games/${gamebook.gameId}/play`);
+        router.push(`/library/${gamebook.gameId}/play`);
       }
     },
     [fsmCell, router]

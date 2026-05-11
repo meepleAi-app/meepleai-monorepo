@@ -5,7 +5,7 @@
  * by the "Toolbox" tab of the unified game detail page. We perform a
  * server-side 307 redirect so bookmarks and shared URLs keep working.
  *
- * Note: the /library/games/[gameId]/toolkit route is NOT redirected — it's a
+ * Note: the /library/[gameId]/toolkit route is NOT redirected — it's a
  * different feature (session template + live session launcher).
  *
  * Reference: docs/superpowers/specs/2026-04-09-library-to-game-epic-design.md §4.4 CR-I4
@@ -19,5 +19,5 @@ export default async function ToolboxLegacyRedirect({
   params: Promise<{ gameId: string }>;
 }) {
   const { gameId } = await params;
-  redirect(`/library/games/${gameId}?tab=toolbox`);
+  redirect(`/library/${gameId}?tab=toolbox`);
 }

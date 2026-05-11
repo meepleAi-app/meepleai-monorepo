@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Nav · Bottom Mobile (D6)</title>
+<!--
+  Mockup: nanolith-nav-bottom-mobile
+  Scope:  N2 — bottom navigation mobile, 3+1 slot dinamico.
+          Implementa decisione D6 (3 fissi + 1 contestuale) e D8 (compact su mobile).
+  Stati:  state-01-no-session     — slot 3 = "💬 Chat"
+          state-02-session-live   — slot 3 = "● Live §289" pulse session-color
+          state-03-admin-extras   — slot 3 = "🛠 Admin" se Aaron superadmin
+          state-04-in-session     — bottom-nav nasconde, lascia SessionBottomNav-toolbar
+  Slot:   [📚 Libreria] [🌐 Discover] [● contextual] [👤 Profilo]
+  Persona: Aaron (badsworm@gmail.com), superadmin. Sostituisce SessionBottomNav attuale.
+  Decisione D6: lo slot 3 è la "valvola di pressione" UX — risolve discoverability problem
+                tra Chat (sempre utile) e Session (only when live).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  .stage-top { position: sticky; top: 0; z-index: var(--z-sticky); backdrop-filter: blur(12px); background: var(--glass-bg); border-bottom: 1px solid var(--border); padding: var(--s-4) var(--s-6); display: flex; align-items: center; gap: var(--s-4); }
+  .stage-top h1 { font-family: var(--f-display); font-size: var(--fs-lg); margin: 0; font-weight: var(--fw-bold); }
+  .stage-top .spacer { flex: 1; }
+  .stage-top button { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-pill); padding: var(--s-1) var(--s-3); font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer; color: var(--text); }
+
+  .stage { padding: var(--s-7) var(--s-6); max-width: 1700px; margin: 0 auto; }
+  .state-section { margin-bottom: var(--s-9); }
+  .state-section .label { display: inline-block; padding: var(--s-1) var(--s-3); background: hsl(var(--c-session) / 0.12); color: hsl(var(--c-session)); border-radius: var(--r-pill); font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--s-2); }
+  .state-section .label .cmp { margin-left: var(--s-2); padding: 1px var(--s-2); background: var(--bg); color: hsl(var(--c-session)); border-radius: var(--r-sm); font-size: 10px; }
+  .state-section h2 { font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-2); }
+  .state-section .desc { color: var(--text-sec); margin: 0 0 var(--s-6); font-size: var(--fs-md); }
+  .frames { display: flex; gap: var(--s-9); flex-wrap: wrap; align-items: flex-start; }
+
+  .phone { width: 375px; min-height: 720px; background: var(--bg); border-radius: 36px; overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; position: relative; }
+  .phone-sbar { height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 6px 22px 0; font-size: 12px; font-weight: var(--fw-bold); font-family: var(--f-display); color: var(--text-sec); }
+  .phone .frame-label { position: absolute; top: -28px; left: 50%; transform: translateX(-50%); font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+
+  /* App body (placeholder content) */
+  .app-body { flex: 1; padding: var(--s-4); overflow-y: auto; background: var(--bg-muted); }
+  .app-body .placeholder-card { padding: var(--s-3); border-radius: var(--r-md); background: var(--bg-card); border: 1px solid var(--border-light); margin-bottom: var(--s-2); display: flex; align-items: center; gap: var(--s-2); }
+  .app-body .placeholder-card .sk { flex: 1; height: 10px; background: var(--bg-muted); border-radius: var(--r-sm); }
+  .app-body .placeholder-card .sk.short { max-width: 60%; }
+
+  /* Compact breadcrumb (D8 compact su mobile) */
+  .breadcrumb-compact { padding: var(--s-2) var(--s-4); border-bottom: 1px solid var(--border-light); background: var(--bg-card); flex-shrink: 0; font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+  .breadcrumb-compact .em { color: hsl(var(--c-session)); }
+  .breadcrumb-compact .para { color: hsl(var(--c-session)); font-weight: var(--fw-bold); }
+
+  /* ─── Bottom nav (the main subject) ─── */
+  .bottom-nav {
+    display: flex; border-top: 1px solid var(--border-light); padding: var(--s-2) var(--s-2) var(--s-3);
+    justify-content: space-around; flex-shrink: 0; background: var(--bg-card);
+  }
+  .bnav {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: var(--s-1) var(--s-2); cursor: pointer; min-width: 64px;
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+    border-radius: var(--r-md); transition: background var(--dur-xs) var(--ease-out);
+  }
+  .bnav:active { background: var(--bg-hover); }
+  .bnav .em { font-size: 22px; line-height: 1; }
+  .bnav .lbl { font-weight: var(--fw-semi); }
+  .bnav.active { color: hsl(var(--c-game)); }
+  .bnav.active .em { transform: scale(1.05); }
+
+  /* Live slot variant — session color, pulse */
+  .bnav.live { color: hsl(var(--c-session)); }
+  .bnav.live .em-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; }
+  .bnav.live .em-wrap .dot {
+    width: 12px; height: 12px; border-radius: 50%; background: hsl(var(--c-session));
+    box-shadow: 0 0 0 0 hsl(var(--c-session) / 0.5);
+    animation: pulse 2s cubic-bezier(0.66,0,0.34,1) infinite;
+  }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 hsl(var(--c-session) / 0.5); } 70% { box-shadow: 0 0 0 10px hsl(var(--c-session) / 0); } 100% { box-shadow: 0 0 0 0 hsl(var(--c-session) / 0); } }
+  .bnav.live .lbl { color: hsl(var(--c-session)); font-weight: var(--fw-bold); }
+  .bnav.live .sub { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Admin slot variant */
+  .bnav.admin { color: hsl(var(--c-warning)); }
+
+  /* Badge (chat unread, etc.) */
+  .bnav .badge {
+    position: absolute; top: -2px; right: -8px;
+    min-width: 16px; height: 16px; border-radius: var(--r-pill);
+    background: hsl(var(--c-event)); color: #fff;
+    font-family: var(--f-mono); font-size: 9px; font-weight: var(--fw-bold);
+    display: inline-flex; align-items: center; justify-content: center; padding: 0 4px;
+  }
+  .bnav .em-wrap { position: relative; }
+
+  /* In-session bottom toolbar (state 04) */
+  .session-toolbar {
+    display: flex; border-top: 1px solid var(--border-light); padding: var(--s-2);
+    justify-content: space-around; flex-shrink: 0; background: var(--bg-card);
+    gap: var(--s-1);
+  }
+  .stool {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: var(--s-2); cursor: pointer; border-radius: var(--r-md);
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-sec);
+    background: var(--bg-muted); border: 1px solid var(--border-light);
+  }
+  .stool .em { font-size: 18px; }
+  .stool.primary { background: hsl(var(--c-session)); color: #fff; border-color: hsl(var(--c-session)); box-shadow: 0 4px 10px hsl(var(--c-session) / 0.3); }
+  .stool.kb { border-color: hsl(var(--c-kb) / 0.4); color: hsl(var(--c-kb)); background: hsl(var(--c-kb) / 0.08); }
+  .stool.event { border-color: hsl(var(--c-event) / 0.4); color: hsl(var(--c-event)); background: hsl(var(--c-event) / 0.08); }
+  .stool.toolkit { border-color: hsl(var(--c-toolkit) / 0.4); color: hsl(var(--c-toolkit)); background: hsl(var(--c-toolkit) / 0.08); }
+
+  /* Notes */
+  .note { padding: var(--s-3); border-left: 3px solid hsl(var(--c-info)); background: hsl(var(--c-info) / 0.05); border-radius: 0 var(--r-md) var(--r-md) 0; margin-top: var(--s-4); font-size: var(--fs-sm); color: var(--text-sec); max-width: 600px; }
+  .note strong { color: hsl(var(--c-info)); font-family: var(--f-display); font-weight: var(--fw-bold); }
+
+  *:focus-visible { outline: 2px solid hsl(var(--c-session)); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .bnav.live .em-wrap .dot { animation: none; } }
+</style>
+</head>
+<body>
+
+<header class="stage-top">
+  <h1>Nanolith Nav · Bottom Mobile (D6)</h1>
+  <span class="spacer"></span>
+  <button id="theme-btn" type="button">🌗 Tema</button>
+</header>
+
+<main class="stage">
+
+  <section class="state-section">
+    <span class="label">Stato 01 · No session<span class="cmp">BottomNav · IdleSlot</span></span>
+    <h2>Aaron in /library, nessuna sessione attiva — slot 3 = "💬 Chat"</h2>
+    <p class="desc">Default. 4 slot: Libreria (attiva) · Discover · <strong>Chat</strong> (fallback non-session) · Profilo. Chat badge mostra unread count se presenti.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · no session">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>15:42</span><span>📶 🔋 91%</span></div>
+        <div class="app-body">
+          <div class="placeholder-card"><div class="sk"></div></div>
+          <div class="placeholder-card"><div class="sk short"></div></div>
+          <div class="placeholder-card"><div class="sk"></div></div>
+          <div class="placeholder-card"><div class="sk short"></div></div>
+          <div class="placeholder-card"><div class="sk"></div></div>
+        </div>
+        <nav class="bottom-nav" role="navigation" aria-label="Navigazione principale">
+          <button class="bnav active"><span class="em">📚</span><span class="lbl">Libreria</span></button>
+          <button class="bnav"><span class="em">🌐</span><span class="lbl">Discover</span></button>
+          <button class="bnav"><span class="em-wrap"><span class="em">💬</span><span class="badge">2</span></span><span class="lbl">Chat</span></button>
+          <button class="bnav"><span class="em">👤</span><span class="lbl">Profilo</span></button>
+        </nav>
+      </div>
+    </div>
+  </section>
+
+  <section class="state-section">
+    <span class="label">Stato 02 · Session live<span class="cmp">BottomNav · LiveSlot</span></span>
+    <h2>Aaron ha sessione attiva ma è momentaneamente su /discover — slot 3 = "● Live §289"</h2>
+    <p class="desc">Slot 3 si trasforma in <strong>pulse dot session-color</strong> con etichetta "● Live" e sub-label "§289". Tap → torna in sessione. Pattern coerente con D5 (TopBar live pill desktop).</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · session live">
+        <span class="frame-label">Mobile · 375px · /discover ma session attiva</span>
+        <div class="phone-sbar"><span>22:54</span><span>📶 🔋 58%</span></div>
+        <div class="app-body">
+          <div class="placeholder-card"><div class="sk"></div></div>
+          <div class="placeholder-card"><div class="sk short"></div></div>
+          <div class="placeholder-card"><div class="sk"></div></div>
+        </div>
+        <nav class="bottom-nav">
+          <button class="bnav"><span class="em">📚</span><span class="lbl">Libreria</span></button>
+          <button class="bnav active"><span class="em">🌐</span><span class="lbl">Discover</span></button>
+          <button class="bnav live" aria-label="Riprendi sessione Nanolith paragrafo 289">
+            <span class="em-wrap"><span class="dot"></span></span>
+            <span class="lbl">● Live</span>
+            <span class="sub">§289</span>
+          </button>
+          <button class="bnav"><span class="em">👤</span><span class="lbl">Profilo</span></button>
+        </nav>
+      </div>
+    </div>
+
+    <div class="note"><strong>💡 Pattern chiave (D6):</strong> "Live" slot è solo durante session attiva. Quando session ends/pauses, slot torna automatico a "💬 Chat".</div>
+  </section>
+
+  <section class="state-section">
+    <span class="label">Stato 03 · Admin extras<span class="cmp">BottomNav · AdminSlot</span></span>
+    <h2>Aaron superadmin — slot 3 può swappare con "🛠 Admin" via long-press</h2>
+    <p class="desc">Solo per role=admin/superadmin. Long-press su slot 3 mostra picker per swap rapido tra Chat/Live/Admin. Default resta Chat (o Live se session attiva).</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · admin">
+        <span class="frame-label">Mobile · 375px · superadmin (Aaron)</span>
+        <div class="phone-sbar"><span>16:08</span><span>📶 🔋 88%</span></div>
+        <div class="app-body">
+          <div class="placeholder-card"><div class="sk"></div></div>
+          <div class="placeholder-card"><div class="sk short"></div></div>
+        </div>
+        <nav class="bottom-nav">
+          <button class="bnav"><span class="em">📚</span><span class="lbl">Libreria</span></button>
+          <button class="bnav"><span class="em">🌐</span><span class="lbl">Discover</span></button>
+          <button class="bnav admin"><span class="em">🛠</span><span class="lbl">Admin</span></button>
+          <button class="bnav active"><span class="em">👤</span><span class="lbl">Profilo</span></button>
+        </nav>
+      </div>
+    </div>
+  </section>
+
+  <section class="state-section">
+    <span class="label">Stato 04 · In session<span class="cmp">SessionToolbar · ReplaceBottomNav</span></span>
+    <h2>Aaron <strong>dentro</strong> la play-session — bottom-nav nasconde, appare session-toolbar</h2>
+    <p class="desc">Quando il route è /library/nanolith/play/{cmp}, la bottom-nav globale viene sostituita da una toolbar contestuale 4-slot: <strong>📷 Foto</strong> (kb) · <strong>⚔️ Encounter</strong> (event) · <strong>📚 Glossary</strong> (toolkit) · <strong>💬 Chat</strong> (primary). Breadcrumb compact in alto. D8=compact mobile.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · in session">
+        <span class="frame-label">Mobile · 375px · in play-session</span>
+        <div class="phone-sbar"><span>22:33</span><span>📶 🔋 56%</span></div>
+        <div class="breadcrumb-compact">
+          <span class="em">📖</span> Nanolith · <span class="para">§289</span> · Cap 4
+        </div>
+        <div class="app-body" style="background: var(--bg);">
+          <div style="padding: var(--s-3); border: 1px solid var(--border-light); border-radius: var(--r-md); background: var(--bg-card); margin-bottom: var(--s-3);">
+            <div style="font-family: var(--f-mono); color: hsl(var(--c-session)); font-weight: var(--fw-bold); margin-bottom: var(--s-2);">§289</div>
+            <p style="font-size: var(--fs-md); line-height: var(--lh-relax); margin: 0;">L'aria nella caverna si fa pesante. Davanti a voi, tre <span style="background: hsl(var(--c-toolkit) / 0.15); color: hsl(var(--c-toolkit)); padding: 1px 4px; border-radius: 3px;">Pietre del Vuoto</span> emettono un bagliore violaceo…</p>
+          </div>
+        </div>
+        <nav class="session-toolbar" role="navigation" aria-label="Toolbar sessione">
+          <button class="stool kb"><span class="em">📷</span><span>Foto</span></button>
+          <button class="stool event"><span class="em">⚔️</span><span>Encounter</span></button>
+          <button class="stool toolkit"><span class="em">📚</span><span>Glossary</span></button>
+          <button class="stool primary"><span class="em">💬</span><span>Chat</span></button>
+        </nav>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>💡 Pattern chiave:</strong> swap bottom-nav → session-toolbar quando si entra in play-session è l'<em>unica</em> eccezione al pattern globale. La toolbar mostra le 4 azioni primarie del job "stare giocando" (foto, encounter, glossary, chat) — corrisponde ai JTBD J1/J2/J3/J4 della spec. Header breadcrumb compact (D8 mobile) garantisce orientamento minimo senza occupare verticale.
+    </div>
+  </section>
+
+</main>
+
+<script>
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const r = document.documentElement;
+    r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+</script>
+</body>
+</html>

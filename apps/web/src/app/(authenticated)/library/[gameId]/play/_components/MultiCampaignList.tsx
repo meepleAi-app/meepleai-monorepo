@@ -53,7 +53,12 @@ export function MultiCampaignList({
 
   const handleDelete = async (campaignId: string, currentTitle: string) => {
     if (!onDelete) return;
-    if (!window.confirm(`Eliminare la campagna "${currentTitle}"? Questa azione è reversibile solo lato server (soft-delete).`)) return;
+    if (
+      !window.confirm(
+        `Eliminare la campagna "${currentTitle}"? Questa azione è reversibile solo lato server (soft-delete).`
+      )
+    )
+      return;
     try {
       setBusyId(campaignId);
       await onDelete(campaignId);
@@ -111,7 +116,7 @@ export function MultiCampaignList({
                   ultima lettura {lastLabel}
                 </p>
                 <Link
-                  href={`/library/games/${gameId}/play/${campaign.id}`}
+                  href={`/library/${gameId}/play/${campaign.id}`}
                   className="inline-flex w-full items-center justify-center rounded-md px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-95"
                   style={{ background: accent }}
                 >

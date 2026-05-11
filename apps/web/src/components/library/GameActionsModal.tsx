@@ -34,12 +34,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/overlays/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
 import type { GameStateType } from '@/lib/api/schemas/library.schemas';
 import { cn } from '@/lib/utils';
 
@@ -114,9 +109,7 @@ export function GameActionsModal({
                 />
               )}
               <div>
-                <DialogTitle className="font-quicksand text-2xl font-bold">
-                  {gameTitle}
-                </DialogTitle>
+                <DialogTitle className="font-quicksand text-2xl font-bold">{gameTitle}</DialogTitle>
                 <p className="text-sm text-muted-foreground mt-1">Azioni Rapide</p>
               </div>
             </div>
@@ -125,7 +118,7 @@ export function GameActionsModal({
 
         <div className="space-y-2 mt-4">
           {/* Primary Action: Chatta (navigate to game detail page) */}
-          <Link href={`/library/games/${gameId}`} onClick={handleClose}>
+          <Link href={`/library/${gameId}`} onClick={handleClose}>
             <button className="w-full flex items-center gap-4 p-4 rounded-xl bg-blue-50 border-2 border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-all group text-left">
               <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <MessageCircle className="w-5 h-5 text-white" />
@@ -142,7 +135,7 @@ export function GameActionsModal({
 
           {/* Use Agent (if configured) */}
           {hasAgent && (
-            <Link href={`/library/games/${gameId}?autoStart=true`} onClick={handleClose}>
+            <Link href={`/library/${gameId}?autoStart=true`} onClick={handleClose}>
               <button className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all group text-left">
                 <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Play className="w-4 h-4 text-green-700" />

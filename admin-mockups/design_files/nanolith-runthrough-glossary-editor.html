@@ -1,20 +1,22 @@
 <!doctype html>
 <!--
   ===================================================================
-  SP6 Libro Game — Glossary Editor (sp6-libro-game-glossary-editor.html)
-  Coverage: scenario N3.5 inline pill edit (design doc 2026-05-07).
-  Modale che si apre SOPRA il viewer D translation-viewer quando Aaron
-  tappa una glossary pill cliccabile inline al testo.
-
-  Stati (4 mobile + 2 desktop variants):
-    state-01-edit-pristine    — Voidstone → Pietra del Vuoto, Salva disabled
-    state-02-edited           — input dirty → "Pietra del Caos", Salva enabled
-    state-03-save-error       — banner amber + Retry, value preservato
-    state-04-collision        — banner red, [Sovrascrivi destructive] + [Cambia traduzione]
-    state-01-desktop          — modal centered 480px
-    state-04-desktop-conflict — modal centered + pannello laterale 200px "Reaver → Razziatore"
-
-  Vincolo FREEZE v2 #807/#808: solo entityHsl() o var(--c-*) tokens.
+  Mockup: nanolith-runthrough-glossary-editor
+  Route:  /library/nanolith/play/{campaignId}?glossary=add  (inline sheet)
+  Scope:  Phase A runthrough — modale glossary che si apre SOPRA il viewer
+          translate (nanolith-runthrough-translate-viewer) o inline sopra
+          play-session quando Aaron tappa una glossary pill nel testo.
+          Migrato da sp6-libro-game-glossary-editor.html (persona Sara → Aaron,
+          route /gamebook/* → /library/*/play, issue #871 chiusa).
+  Stati:  state-01-edit-pristine    — Voidstone → Pietra del Vuoto, Salva disabled
+          state-02-edited           — input dirty → "Pietra del Caos", Salva enabled
+          state-03-save-error       — banner amber + Retry, value preservato
+          state-04-collision        — banner red, [Sovrascrivi] + [Cambia traduzione]
+          state-01-desktop          — modal centered 480px
+          state-04-desktop-conflict — modal centered + pannello laterale "Reaver → Razziatore"
+  UI:     entityHsl() o var(--c-toolkit) tokens. MeepleCard + ManaPips compatibili.
+  Persona: Aaron (badsworm@gmail.com), durante sessione gruppo A.
+  Issue:  #952 (FE implementation pending).
   ===================================================================
 -->
 <html lang="it" data-theme="light">

@@ -155,40 +155,9 @@ const nextConfig = {
   // Permanent redirects
   async redirects() {
     return [
-      // ── Issue #5039: Consolidate User Routes ──────────────────────────────
-      // Library sub-routes → query-param tabs (more specific first)
-      {
-        source: '/library/games/:id/agent',
-        destination: '/library/:id?tab=agent',
-        permanent: true,
-      },
-      {
-        source: '/library/games/:id/toolkit',
-        destination: '/library/:id?tab=toolkit',
-        permanent: true,
-      },
-      { source: '/library/games/:id/faqs', destination: '/library/:id?tab=faq', permanent: true },
-      {
-        source: '/library/games/:id/reviews',
-        destination: '/library/:id?tab=reviews',
-        permanent: true,
-      },
-      {
-        source: '/library/games/:id/rules',
-        destination: '/library/:id?tab=rules',
-        permanent: true,
-      },
-      {
-        source: '/library/games/:id/sessions',
-        destination: '/library/:id?tab=sessions',
-        permanent: true,
-      },
-      {
-        source: '/library/games/:id/strategies',
-        destination: '/library/:id?tab=strategies',
-        permanent: true,
-      },
-      { source: '/library/games/:id', destination: '/library/:id', permanent: true },
+      // ── Issue #5039 + #871 (closed): Library route consolidation ─────────
+      // Legacy /library/games/* redirects REMOVED — canonical path is /library/[gameId].
+      // Source tree migrated; no legacy URLs to support.
       { source: '/library/wishlist', destination: '/library?tab=wishlist', permanent: true },
       { source: '/library/private', destination: '/library?tab=private', permanent: true },
       { source: '/library/proposals', destination: '/discover?tab=proposals', permanent: true },

@@ -20,7 +20,7 @@ export interface GamebookResumeShellProps {
 }
 
 /**
- * Resume picker shell per `/library/games/[gameId]/play` (issue #835).
+ * Resume picker shell per `/library/[gameId]/play` (issue #835).
  *
  * Dispatch logic sui 4 stati di mockup G:
  *   - state-01-first-time      : data.length === 0

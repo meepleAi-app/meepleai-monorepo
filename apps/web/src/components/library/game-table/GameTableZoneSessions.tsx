@@ -154,7 +154,7 @@ export function GameTableZoneSessions({
       </div>
 
       {/* New session CTA */}
-      <Link href={`/library/games/${gameId}/sessions/new`} className="block">
+      <Link href={`/library/${gameId}/sessions/new`} className="block">
         <Button
           className="w-full bg-amber-600 hover:bg-amber-500 text-white font-quicksand"
           data-testid="new-session-btn"

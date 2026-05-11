@@ -65,7 +65,7 @@ export function GamebookPlayShell({
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href={`/library/games/${gameId}/play/${campaignId}/translate`}
+            href={`/library/${gameId}/play/${campaignId}/translate`}
             className="rounded-md border border-[var(--c-game)]/40 bg-[var(--c-game)]/10 px-3 py-1.5 text-sm font-medium text-[var(--c-game)] hover:bg-[var(--c-game)]/20"
             data-testid="gamebook-open-translate"
           >

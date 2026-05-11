@@ -43,7 +43,7 @@ describe('GameStrategiesPage', () => {
     renderWithQuery(<GameStrategiesPage />);
     const backLink = screen.getByRole('link', { name: /Back to Game/i });
     expect(backLink).toBeInTheDocument();
-    expect(backLink).toHaveAttribute('href', '/library/games/game-123');
+    expect(backLink).toHaveAttribute('href', '/library/game-123');
   });
 
   it('shows loading skeletons initially', () => {

@@ -411,13 +411,6 @@ export async function proxy(request: NextRequest) {
   }
   const isAdmin = isAuthenticated && isAdminRole(userRole);
 
-  // Read view mode cookie — admin users can switch to 'user' shell via toggle.
-  // When view mode is 'user', treat the admin as a regular user for redirect
-  // purposes (home → /library instead of /admin) to prevent redirect loops when
-  // the layout guard detects view_mode=user and sends the user back to '/'.
-  const viewModeCookie = request.cookies.get('meepleai_view_mode');
-  const isAdminViewMode = isAdmin && viewModeCookie?.value !== 'user';
-
   // Check if the current route is protected or public auth route
   const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
   const isPublicAuthRoute = PUBLIC_AUTH_ROUTES.some(route => pathname === route);
@@ -440,11 +433,14 @@ export async function proxy(request: NextRequest) {
     return addSecurityHeaders(response, requestOrigin);
   }
 
-  // Redirect authenticated users from login/register pages to dashboard
+  // Redirect authenticated users from login/register pages to dashboard.
+  // Default landing is /dashboard for ALL roles — admin features remain
+  // reachable via the navigation menu. View-mode cookie is preserved but
+  // no longer drives the post-login destination.
   if (isPublicAuthRoute && isAuthenticated) {
     // Check if there's a 'from' parameter to redirect back to
     const fromParam = request.nextUrl.searchParams.get('from');
-    const defaultDest = isAdminViewMode ? '/admin' : '/library';
+    const defaultDest = '/dashboard';
     const redirectUrl =
       fromParam && PROTECTED_ROUTES.some(route => fromParam.startsWith(route))
         ? new URL(fromParam, request.url)
@@ -453,16 +449,10 @@ export async function proxy(request: NextRequest) {
     return addSecurityHeaders(response, requestOrigin);
   }
 
-  // Redirect authenticated users from homepage to dashboard.
-  // Skip if admin has switched to 'user' view mode — the layout guard already
-  // sent them here and we must not bounce them back to /admin.
-  if (isHomePage && isAuthenticated && isAdminViewMode) {
-    const response = NextResponse.redirect(new URL('/admin', request.url));
-    return addSecurityHeaders(response, requestOrigin);
-  }
-
-  if (isHomePage && isAuthenticated && !isAdmin) {
-    const response = NextResponse.redirect(new URL('/library', request.url));
+  // Redirect authenticated users from homepage to /dashboard (all roles).
+  // Admin shell is opt-in via the navigation menu, not auto-routed.
+  if (isHomePage && isAuthenticated) {
+    const response = NextResponse.redirect(new URL('/dashboard', request.url));
     return addSecurityHeaders(response, requestOrigin);
   }
 

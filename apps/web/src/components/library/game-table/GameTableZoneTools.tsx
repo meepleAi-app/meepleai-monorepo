@@ -167,7 +167,7 @@ export function GameTableZoneTools({
     <div className="space-y-3">
       {/* Toolkit link */}
       <Link
-        href={`/library/games/${gameId}/toolkit`}
+        href={`/library/${gameId}/toolkit`}
         className={`${CARD_ROW} flex items-center gap-3 text-[#e6edf3] hover:border-amber-500/50 transition-colors`}
         data-testid="toolkit-link"
       >

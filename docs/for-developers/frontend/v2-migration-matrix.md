@@ -101,7 +101,7 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 | `/toolkits/[id]` | **M** | Toolkit summary + version timeline | pending |
 | `/gamebook` | **M** | Libro-game index: Hero + QuotaWidget + Card grid + EmptyState | ✅ done (SP6 Phase B, PR #792) |
 | `/gamebook/upload` | **L** | 3-step wizard: game search + camera + indexing — 14-state FSM + camera permission matrix + offline retry | ✅ done (SP6 Phase C, contract PR #794 + Foundation PR #796 + Interactions PR #800) — [`contracts/gamebook-upload-hooks.md`](contracts/gamebook-upload-hooks.md) |
-| `/library/games/[gameId]/translate` | **S** | Nanolith demo — paragraph translate via chat-stream workaround | ✅ done (SP6 Phase A, PR #790) |
+| `/library/[gameId]/play/[campaignId]/translate` | **S** | Nanolith demo — paragraph translate via chat-stream workaround. Route consolidated from `/library/games/[gameId]/translate` under campaign in IA refactor #871. | ✅ done (SP6 Phase A, PR #790; route refactored in #871) |
 | `/kb/[id]` | **M** | KB header + chunks + search | **deferred** — pivot legale 2026-05-10, vedi `2026-05-10-citation-pdf-viewer-design.md` (G4 v3) |
 
 **Anti-pattern**: dispatchare implementation subagent senza Phase 0.5 per route Tier L. Wave C.1 PR #697 ha esattamente questo come root cause (vedi [post-mortem](../specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only)).

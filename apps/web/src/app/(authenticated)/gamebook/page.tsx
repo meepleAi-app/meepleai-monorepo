@@ -10,9 +10,9 @@
  * Scope distinction (issue #836 Task 3):
  * - `/gamebook` (questa pagina): index globale dei manuali fotografati
  *   (collezione di gamebook caricati dall'utente, indipendenti da game/campagna).
- * - `/library/games/[gameId]/play`: resume picker delle campagne attive
+ * - `/library/[gameId]/play`: resume picker delle campagne attive
  *   per un gioco specifico (4 stati mockup G — issue #835).
- * - `/library/games/[gameId]/play/[campaignId]`: shell di gioco in-campaign.
+ * - `/library/[gameId]/play/[campaignId]`: shell di gioco in-campaign.
  *
  * Le tre route servono use case differenti e NON sono sovrapponibili.
  *

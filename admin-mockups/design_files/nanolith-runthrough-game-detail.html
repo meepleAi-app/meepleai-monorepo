@@ -6,7 +6,7 @@
 <title>MeepleAI — Nanolith Runthrough · Game Detail</title>
 <!--
   Mockup: nanolith-runthrough-game-detail
-  Route:  /library/games/{gameId}  (gameId = nanolith)
+  Route:  /library/{gameId}  (gameId = nanolith)
   Scope:  Phase A runthrough — gating page con CTA primary "Avvia libro game"
   Stati:  default · loading · error · not-found
   Persona: Aaron (badsworm@gmail.com), superadmin, ha Nanolith in collection,
@@ -324,7 +324,7 @@
 <!-- ───────────── Top header & theme toggle ───────────── -->
 <header class="top">
   <h1>Nanolith Runthrough · Game Detail</h1>
-  <span class="route">/library/games/nanolith</span>
+  <span class="route">/library/nanolith</span>
   <span class="spacer"></span>
   <span class="theme-tog">
     <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
@@ -418,7 +418,7 @@
       <!-- Desktop 1440px (scaled 0.5) -->
       <div class="desktop" role="region" aria-label="Desktop 1440px – default">
         <span class="frame-label">Desktop · 1440px (scale)</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith</span></div>
 
         <div class="appbar">
           <button class="back" aria-label="Torna alla libreria">←</button>
@@ -512,7 +512,7 @@
 
       <div class="desktop" role="region" aria-busy="true" aria-label="Desktop – loading">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs">Caricamento…</span></div>
         <div class="desktop-body">
           <aside class="desktop-side">
@@ -561,7 +561,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – error">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Libreria</strong> · Errore</span></div>
         <div class="desktop-body">
           <aside class="desktop-side"></aside>
@@ -611,7 +611,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – not found">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Libreria</strong> · 404</span></div>
         <div class="desktop-body">
           <aside class="desktop-side"></aside>

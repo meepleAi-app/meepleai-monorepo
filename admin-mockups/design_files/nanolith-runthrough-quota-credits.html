@@ -1,9 +1,16 @@
 <!DOCTYPE html>
 <!--
   ===================================================================
-  SP6 Libro Game — Quota Credits Checkout (sp6-libro-game-quota-credits.html)
-  Route: modale centrale + /gamebook/checkout/success
-  Persona: Sara, 32, casual italian gamer / GM al tavolo (mobile-first).
+  Mockup: nanolith-runthrough-quota-credits
+  Route:  /library/nanolith/play/{campaignId}  (modal overlay)
+          + /account/checkout/success (post-payment redirect)
+  Scope:  Phase A runthrough — quota chat esaurita (10/giorno free tier)
+          durante la sessione game night. Modal blocca chat input,
+          propone upgrade tier o wait next day. Migrato da
+          sp6-libro-game-quota-credits.html (persona Sara → Aaron,
+          route /gamebook/* → /library + /account, issue #871 chiusa).
+  Persona: Aaron (badsworm@gmail.com) — superadmin tier free in dogfooding
+           per testare il paywall. Gruppo A (Marco/Giulia/Luca) al tavolo.
 
   Gherkin: @G4.6 quota raggiunta + checkout flow.
 
@@ -101,7 +108,7 @@
       <div>
         <h1>SP6 · Quota Credits Checkout</h1>
         <div class="meta">
-          /gamebook/checkout · multi-step modal · <b>@G4.6</b> ·
+          /account/checkout · multi-step modal · <b>@G4.6</b> ·
           7 stati V5 + light/dark + mobile/desktop
         </div>
       </div>

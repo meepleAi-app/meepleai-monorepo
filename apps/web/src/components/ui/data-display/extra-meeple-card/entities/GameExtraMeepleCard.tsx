@@ -265,7 +265,7 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
                   </p>
                 </div>
                 <a
-                  href={`/library/games/${data.id}`}
+                  href={`/library/${data.id}`}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 font-nunito text-xs font-semibold text-white hover:bg-orange-600 transition-colors"
                   data-testid="game-kb-upload-cta"
                 >
@@ -334,7 +334,7 @@ export const GameExtraMeepleCard = React.memo(function GameExtraMeepleCard({
                   </p>
                 </div>
                 <a
-                  href={`/library/games/${data.id}/agent`}
+                  href={`/library/${data.id}/agent`}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-1.5 font-nunito text-xs font-semibold text-white hover:bg-orange-600 transition-colors"
                   data-testid="game-agent-create-cta"
                 >
@@ -376,7 +376,7 @@ function GameAgentCard({ agent, gameId }: { agent: GameAgentPreview; gameId: str
       {/* CTAs */}
       <div className="flex gap-2">
         <a
-          href={agent.id ? `/chat/new?agentId=${agent.id}` : `/library/games/${gameId}/agent`}
+          href={agent.id ? `/chat/new?agentId=${agent.id}` : `/library/${gameId}/agent`}
           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-orange-500 px-3 py-2 font-nunito text-xs font-semibold text-white hover:bg-orange-600 transition-colors"
           data-testid="game-agent-start-chat"
         >
@@ -384,7 +384,7 @@ function GameAgentCard({ agent, gameId }: { agent: GameAgentPreview; gameId: str
           Avvia Chat
         </a>
         <a
-          href={`/library/games/${gameId}/agent`}
+          href={`/library/${gameId}/agent`}
           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50/60 px-3 py-2 font-nunito text-xs font-semibold text-orange-700 hover:bg-orange-100 transition-colors"
           data-testid="game-agent-configure"
         >

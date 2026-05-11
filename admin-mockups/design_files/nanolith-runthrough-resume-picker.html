@@ -6,7 +6,7 @@
 <title>MeepleAI — Nanolith Runthrough · Resume Picker</title>
 <!--
   Mockup: nanolith-runthrough-resume-picker
-  Route:  /library/games/{gameId}/play  (gameId = nanolith)
+  Route:  /library/{gameId}/play  (gameId = nanolith)
   Scope:  Phase A runthrough — dispatcher 4 stati di campagna (issue #835/#838)
   Stati:  state-01-first-time      (EmptyFirstTime,  data.length === 0)
           state-02-single-resume   (ResumeHero,      data.length === 1 && !isStale)
@@ -355,7 +355,7 @@
 
 <header class="top">
   <h1>Nanolith Runthrough · Resume Picker (4 stati)</h1>
-  <span class="route">/library/games/nanolith/play</span>
+  <span class="route">/library/nanolith/play</span>
   <span class="spacer"></span>
   <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
 </header>
@@ -369,7 +369,7 @@
   <section class="state-section" aria-labelledby="s1">
     <span class="label">Stato 01 · First Time<span class="cmp">EmptyFirstTime</span></span>
     <h2 id="s1">Mai giocato — Inizia la tua prima campagna</h2>
-    <p class="desc">Aaron apre `/library/games/nanolith/play` per la prima volta. Nessuna campagna esistente. Onboarding-grade hero + 3 feature card + CTA primary "Inizia campagna".</p>
+    <p class="desc">Aaron apre `/library/nanolith/play` per la prima volta. Nessuna campagna esistente. Onboarding-grade hero + 3 feature card + CTA primary "Inizia campagna".</p>
 
     <div class="frames">
       <div class="phone" role="region" aria-label="Mobile – first time">
@@ -416,7 +416,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – first time">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play</span></div>
         <div class="appbar">
           <button class="back">←</button>
           <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
@@ -498,7 +498,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – single resume">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play</span></div>
         <div class="appbar">
           <button class="back">←</button>
           <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
@@ -610,7 +610,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – multi campaign">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play</span></div>
         <div class="appbar">
           <button class="back">←</button>
           <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
@@ -705,7 +705,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – stale warning">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play</span></div>
         <div class="appbar">
           <button class="back">←</button>
           <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>

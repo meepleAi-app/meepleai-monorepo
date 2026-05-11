@@ -154,7 +154,7 @@ describe('AgentCharacterSheet', () => {
     const link = screen.getByTestId('agent-game-link');
     expect(link).toBeInTheDocument();
     expect(link).toHaveTextContent('Collegato a Pandemic');
-    expect(link).toHaveAttribute('href', '/library/games/game-1');
+    expect(link).toHaveAttribute('href', '/library/game-1');
   });
 
   it('does not render game link when gameName is absent', () => {
@@ -195,6 +195,6 @@ describe('AgentCharacterSheet', () => {
 
     const btn = screen.getByTestId('agent-configure-btn');
     expect(btn).toBeInTheDocument();
-    expect(btn).toHaveAttribute('href', '/library/games/game-1/agent');
+    expect(btn).toHaveAttribute('href', '/library/game-1/agent');
   });
 });

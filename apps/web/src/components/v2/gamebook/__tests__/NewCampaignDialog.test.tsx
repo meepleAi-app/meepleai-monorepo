@@ -50,7 +50,7 @@ describe('NewCampaignDialog', () => {
     await waitFor(() =>
       expect(client.createCampaign).toHaveBeenCalledWith({ gameId: 'g1', title: 'My Title' })
     );
-    await waitFor(() => expect(pushSpy).toHaveBeenCalledWith('/library/games/g1/play/new-c1'));
+    await waitFor(() => expect(pushSpy).toHaveBeenCalledWith('/library/g1/play/new-c1'));
   });
 
   it('disables submit when title is empty', () => {

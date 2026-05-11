@@ -53,7 +53,7 @@ export function AgentDrawerSheet({ open, onOpenChange, gameId, gameTitle }: Agen
               size="sm"
               onClick={() => {
                 onOpenChange(false);
-                window.location.href = `/library/games/${gameId}/agent`;
+                window.location.href = `/library/${gameId}/agent`;
               }}
               className="h-7 gap-1.5 text-xs font-nunito"
             >
@@ -98,7 +98,7 @@ export function AgentDrawerSheet({ open, onOpenChange, gameId, gameTitle }: Agen
                 size="sm"
                 onClick={() => {
                   onOpenChange(false);
-                  window.location.href = `/library/games/${gameId}/agent`;
+                  window.location.href = `/library/${gameId}/agent`;
                 }}
                 className="mt-2 gap-1.5"
               >

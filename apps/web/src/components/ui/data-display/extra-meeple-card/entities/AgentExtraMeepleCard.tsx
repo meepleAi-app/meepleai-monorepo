@@ -245,7 +245,7 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
                 )}
                 {data.gameId && (
                   <a
-                    href={`/library/games/${data.gameId}/agent`}
+                    href={`/library/${data.gameId}/agent`}
                     className={cn(
                       'flex items-center justify-center gap-1.5 rounded-lg border py-2.5 px-3',
                       'bg-white border-blue-200 text-blue-700',
@@ -318,7 +318,7 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
                 <FileText className="h-8 w-8 text-slate-300" aria-hidden="true" />
                 <p className="font-nunito text-xs text-slate-400 mb-2">Nessun documento KB</p>
                 <a
-                  href={`/library/games/${data.gameId}/agent`}
+                  href={`/library/${data.gameId}/agent`}
                   className="font-nunito text-xs text-blue-600 underline hover:text-blue-700"
                 >
                   Aggiungi documento

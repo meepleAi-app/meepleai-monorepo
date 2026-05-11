@@ -42,7 +42,7 @@ export function LoginPageContent() {
   const { t } = useTranslation();
   const { loadCurrentUser } = useAuth();
 
-  const from = searchParams?.get('from') ?? '/library';
+  const from = searchParams?.get('from') ?? '/dashboard';
   const isSessionExpired = searchParams?.get('reason') === 'session_expired';
 
   const [isAuthenticating, setIsAuthenticating] = useState(false);

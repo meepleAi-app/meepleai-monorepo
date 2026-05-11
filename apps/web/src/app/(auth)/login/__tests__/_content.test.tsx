@@ -187,7 +187,7 @@ describe('LoginPageContent (v2 AuthCard)', () => {
     });
   });
 
-  it('redirects to /library when ?from is not provided', async () => {
+  it('redirects to /dashboard when ?from is not provided', async () => {
     loginMock.mockResolvedValueOnce({
       user: { id: 'u1', email: 't@e.com', role: 'User' },
       requiresTwoFactor: false,
@@ -204,7 +204,7 @@ describe('LoginPageContent (v2 AuthCard)', () => {
     fireEvent.submit(screen.getByTestId('login-form'));
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith('/library');
+      expect(pushMock).toHaveBeenCalledWith('/dashboard');
     });
   });
 
@@ -232,7 +232,7 @@ describe('LoginPageContent (v2 AuthCard)', () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it('redirects admins to /admin after successful login', async () => {
+  it('redirects admins to /dashboard after successful login (issue #893: unified landing)', async () => {
     loginMock.mockResolvedValueOnce({
       user: { id: 'u2', email: 'a@e.com', role: 'Admin' },
       requiresTwoFactor: false,
@@ -249,7 +249,7 @@ describe('LoginPageContent (v2 AuthCard)', () => {
     fireEvent.submit(screen.getByTestId('login-form'));
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith('/admin');
+      expect(pushMock).toHaveBeenCalledWith('/dashboard');
     });
   });
 });

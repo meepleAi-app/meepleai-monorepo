@@ -32,7 +32,7 @@ export function NewCampaignDialog({ gameId, trigger }: NewCampaignDialogProps): 
     onSuccess: campaign => {
       setOpen(false);
       setTitle('');
-      router.push(`/library/games/${gameId}/play/${campaign.id}`);
+      router.push(`/library/${gameId}/play/${campaign.id}`);
     },
   });
 

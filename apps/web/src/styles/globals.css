@@ -677,6 +677,21 @@
   --color-neutral-400: hsl(0 0% 34%);
   --color-neutral-600: hsl(0 0% 46%);
 
+  /* Entity color utilities — dark mode overrides.
+     Lighter HSLs to maintain WCAG AA contrast on dark bg (#0f0a1a).
+     Mirrors --c-* tokens in design-tokens.css .dark block.
+     Issue #807 follow-up: A11y dark theme contrast fix (sessions-index, gamebook,
+     session-live, session-summary specs). */
+  --e-game: 28 95% 58%;
+  --e-player: 262 75% 70%;
+  --e-session: 235 70% 70%;
+  --e-agent: 38 92% 62%;
+  --e-document: 174 60% 55%;
+  --e-chat: 218 80% 68%;
+  --e-event: 350 85% 70%;
+  --e-toolkit: 142 60% 58%;
+  --e-tool: 195 75% 62%;
+
   /* NOTE: --bg-base, --bg-elevated, --text-primary, --text-secondary, --text-tertiary
      are unified tokens from design-tokens.css. Do NOT redefine here. */
   --bg-primary: var(--bg-base);

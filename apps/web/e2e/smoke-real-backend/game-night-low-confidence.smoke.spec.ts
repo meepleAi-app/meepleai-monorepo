@@ -12,7 +12,12 @@
 import { test, expect } from '@playwright/test';
 
 import { smokeLogin, applySessionToPage } from './_helpers/auth';
-import { mockNoChatHistory, mockQaStreamV2, seedGameForChat } from './_helpers/game-chat';
+import {
+  mockHasIndexedDocument,
+  mockNoChatHistory,
+  mockQaStreamV2,
+  seedGameForChat,
+} from './_helpers/game-chat';
 
 test.describe('SMOKE — game-chat low confidence (G5)', () => {
   test('shows LowConfidenceDisclaimer + bassa badge when confidence < 0.50', async ({
@@ -22,6 +27,10 @@ test.describe('SMOKE — game-chat low confidence (G5)', () => {
     const { cookieHeader } = await smokeLogin(request);
     await applySessionToPage(page, cookieHeader);
     const gameId = await seedGameForChat(request, cookieHeader);
+    // Mock at least 1 indexed PDF so GameAiChatTab renders GameChatTabV2
+    // (and therefore ChatInputBar with data-testid=message-input). Without
+    // this the tab shows the "Carica un PDF" placeholder instead.
+    await mockHasIndexedDocument(page, gameId);
     await mockNoChatHistory(page, gameId);
     await mockQaStreamV2(page, {
       tokens: ['Non sono certo: ', 'questa è una risposta a confidenza bassa.'],

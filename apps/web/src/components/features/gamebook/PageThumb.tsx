@@ -49,9 +49,11 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
-import { ConfidenceBadge, type ConfidenceBadgeLabels } from '@/components/features/gamebook/ConfidenceBadge';
+import {
+  ConfidenceBadge,
+  type ConfidenceBadgeLabels,
+} from '@/components/features/gamebook/ConfidenceBadge';
 import type { ConfidenceLevel } from '@/lib/gamebook-upload';
-
 
 export interface PageThumbLabels {
   /** Pre-resolved screenreader text "Pagina {n}" — orchestrator interpolates. */

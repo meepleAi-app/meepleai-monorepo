@@ -746,7 +746,7 @@ export function useSharedLibrary(
 /**
  * Combined library game detail for Game Detail page (Issue #3513)
  *
- * Uses the backend's GET /library/games/{gameId} endpoint for efficient
+ * Uses the backend's GET /library/{gameId} endpoint for efficient
  * single-request data fetching with all metadata and play statistics.
  */
 export interface LibraryGameDetail {
@@ -802,7 +802,7 @@ export interface LibraryGameDetail {
 /**
  * Hook to fetch library game detail for Game Detail page (Issue #3513)
  *
- * Uses the efficient GET /library/games/{gameId} endpoint that returns
+ * Uses the efficient GET /library/{gameId} endpoint that returns
  * all game metadata and play statistics in a single request.
  *
  * For extended data (categories, mechanics, designers), fetches SharedGame in parallel.
@@ -825,8 +825,50 @@ export function useLibraryGameDetail(
       ]);
 
       if (!gameDetail) {
-        // Game not in user's library
-        return null;
+        // Game not in user's library → fall back to catalog-only view (G1).
+        // The detail page must render for ANY shared_game so the user can
+        // see metadata and click "Aggiungi alla libreria". The sentinel
+        // libraryEntryId === '' signals heroVariant === 'community' downstream
+        // (GameDetailViewV2 uses truthy check on libraryEntryId).
+        if (!sharedGame) {
+          // Genuine not-found: neither library entry nor catalog record.
+          return null;
+        }
+        return {
+          libraryEntryId: '',
+          userId: '',
+          gameId: sharedGame.id,
+          addedAt: '',
+          notes: null,
+          isFavorite: false,
+          currentState: 'Nuovo',
+          stateChangedAt: null,
+          stateNotes: null,
+          isAvailableForPlay: false,
+          hasCustomPdf: false,
+          hasRagAccess: false,
+          gameTitle: sharedGame.title,
+          gamePublisher: sharedGame.publishers?.[0]?.name ?? null,
+          gameYearPublished: sharedGame.yearPublished ?? null,
+          gameIconUrl: sharedGame.thumbnailUrl ?? null,
+          gameImageUrl: sharedGame.imageUrl ?? null,
+          description: sharedGame.description ?? null,
+          minPlayers: sharedGame.minPlayers ?? null,
+          maxPlayers: sharedGame.maxPlayers ?? null,
+          playingTimeMinutes: sharedGame.playingTimeMinutes ?? null,
+          minAge: sharedGame.minAge,
+          complexityRating: sharedGame.complexityRating ?? null,
+          averageRating: sharedGame.averageRating ?? null,
+          timesPlayed: 0,
+          lastPlayed: null,
+          winRate: null,
+          avgDuration: null,
+          categories: sharedGame.categories,
+          mechanics: sharedGame.mechanics,
+          designers: sharedGame.designers,
+          publishers: sharedGame.publishers,
+          bggId: sharedGame.bggId,
+        };
       }
 
       // Map GameDetailDto to LibraryGameDetail

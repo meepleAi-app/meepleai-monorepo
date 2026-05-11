@@ -179,7 +179,7 @@ export function SuccessState({
 
         {gameId && (
           <Button variant="outline" className="w-full gap-2" asChild>
-            <Link href={`/library/games/${gameId}`}>
+            <Link href={`/library/${gameId}`}>
               <ExternalLink className="h-4 w-4" />
               Vedi dettaglio gioco
             </Link>

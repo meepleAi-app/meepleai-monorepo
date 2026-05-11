@@ -9,8 +9,12 @@ import { CitationChip } from '../CitationChip';
 
 describe('CitationChip', () => {
   it('renders page number and section title', () => {
-    render(<CitationChip pageNumber={12} sectionTitle="Poteri quando attivato" onClick={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /p\. ?12.*Poteri quando attivato/i })).toBeInTheDocument();
+    render(
+      <CitationChip pageNumber={12} sectionTitle="Poteri quando attivato" onClick={vi.fn()} />
+    );
+    expect(
+      screen.getByRole('button', { name: /p\. ?12.*Poteri quando attivato/i })
+    ).toBeInTheDocument();
   });
 
   it('calls onClick when clicked', () => {

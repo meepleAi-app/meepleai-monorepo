@@ -68,15 +68,9 @@ describe('CitationPdfTab', () => {
   });
 
   it('renders PDF viewer immediately when isPublic=true (no ownership fetch)', async () => {
-    render(
-      <CitationPdfTab
-        documentId="pdf-public-1"
-        gameId="game-1"
-        initialPage={12}
-        isPublic
-      />,
-      { wrapper }
-    );
+    render(<CitationPdfTab documentId="pdf-public-1" gameId="game-1" initialPage={12} isPublic />, {
+      wrapper,
+    });
     await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
     expect(api.knowledgeBase.getGameDocuments).not.toHaveBeenCalled();
   });
@@ -84,11 +78,7 @@ describe('CitationPdfTab', () => {
   it('renders PDF viewer when ownership confirmed (canView=true)', async () => {
     vi.mocked(api.knowledgeBase.getGameDocuments).mockResolvedValueOnce([sampleDocument]);
     render(
-      <CitationPdfTab
-        documentId="pdf-wingspan-123"
-        gameId="game-wingspan"
-        initialPage={12}
-      />,
+      <CitationPdfTab documentId="pdf-wingspan-123" gameId="game-wingspan" initialPage={12} />,
       { wrapper }
     );
     await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
@@ -100,11 +90,7 @@ describe('CitationPdfTab', () => {
       { ...sampleDocument, id: 'pdf-OTHER' },
     ]);
     render(
-      <CitationPdfTab
-        documentId="pdf-wingspan-123"
-        gameId="game-wingspan"
-        initialPage={12}
-      />,
+      <CitationPdfTab documentId="pdf-wingspan-123" gameId="game-wingspan" initialPage={12} />,
       { wrapper }
     );
     await waitFor(() =>
@@ -114,15 +100,9 @@ describe('CitationPdfTab', () => {
   });
 
   it('renders loading state while ownership check in flight', () => {
-    vi.mocked(api.knowledgeBase.getGameDocuments).mockReturnValueOnce(
-      new Promise(() => {})
-    );
+    vi.mocked(api.knowledgeBase.getGameDocuments).mockReturnValueOnce(new Promise(() => {}));
     render(
-      <CitationPdfTab
-        documentId="pdf-wingspan-123"
-        gameId="game-wingspan"
-        initialPage={12}
-      />,
+      <CitationPdfTab documentId="pdf-wingspan-123" gameId="game-wingspan" initialPage={12} />,
       { wrapper }
     );
     expect(screen.getByRole('status', { name: /caricamento|loading/i })).toBeInTheDocument();
@@ -131,11 +111,7 @@ describe('CitationPdfTab', () => {
   it('renders upsell as fallback when ownership API errors', async () => {
     vi.mocked(api.knowledgeBase.getGameDocuments).mockRejectedValueOnce(new Error('500'));
     render(
-      <CitationPdfTab
-        documentId="pdf-wingspan-123"
-        gameId="game-wingspan"
-        initialPage={12}
-      />,
+      <CitationPdfTab documentId="pdf-wingspan-123" gameId="game-wingspan" initialPage={12} />,
       { wrapper }
     );
     await waitFor(() =>

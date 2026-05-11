@@ -115,7 +115,7 @@ describe('GameTableZoneTools', () => {
 
     const link = screen.getByTestId('toolkit-link');
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', '/library/games/g-1/toolkit');
+    expect(link).toHaveAttribute('href', '/library/g-1/toolkit');
     expect(link).toHaveTextContent('Toolkit');
   });
 

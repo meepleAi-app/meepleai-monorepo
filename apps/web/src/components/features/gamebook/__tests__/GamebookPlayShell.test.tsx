@@ -100,6 +100,6 @@ describe('GamebookPlayShell', () => {
 
     const link = screen.getByTestId('gamebook-open-translate');
     expect(link).toBeInTheDocument();
-    expect(link.closest('a')?.href).toContain('/library/games/g1/play/c1/translate');
+    expect(link.closest('a')?.href).toContain('/library/g1/play/c1/translate');
   });
 });

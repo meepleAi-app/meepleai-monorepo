@@ -27,4 +27,7 @@ export { InviteHostCard } from '@/components/ui/invites/invite-host-card';
 export type { InviteHostCardProps } from '@/components/ui/invites/invite-host-card';
 
 export { SessionMetaGrid } from '@/components/ui/invites/session-meta-grid';
-export type { SessionMetaGridProps, SessionMetaItem } from '@/components/ui/invites/session-meta-grid';
+export type {
+  SessionMetaGridProps,
+  SessionMetaItem,
+} from '@/components/ui/invites/session-meta-grid';

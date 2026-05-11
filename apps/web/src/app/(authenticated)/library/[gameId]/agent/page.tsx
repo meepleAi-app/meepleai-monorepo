@@ -17,5 +17,5 @@ export default async function AgentLegacyRedirect({
   params: Promise<{ gameId: string }>;
 }) {
   const { gameId } = await params;
-  redirect(`/library/games/${gameId}?tab=aiChat`);
+  redirect(`/library/${gameId}?tab=aiChat`);
 }

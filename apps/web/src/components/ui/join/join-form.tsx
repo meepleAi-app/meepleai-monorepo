@@ -39,7 +39,6 @@ import type { JoinFormState, UseWaitlistSubmitReturn } from '@/hooks/useWaitlist
 import { GAME_OTHER_ID, isAllowedGameId } from '@/lib/join/games';
 import type { GamePreference } from '@/lib/join/games';
 
-
 export interface JoinFormLabels {
   readonly emailLabel: string;
   readonly emailPlaceholder: string;

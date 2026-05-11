@@ -8,10 +8,17 @@
  */
 
 export { AchievementsCarousel } from '@/components/features/session-summary/AchievementsCarousel';
-export type { AchievementsCarouselLabels, AchievementsCarouselProps } from '@/components/features/session-summary/AchievementsCarousel';
+export type {
+  AchievementsCarouselLabels,
+  AchievementsCarouselProps,
+} from '@/components/features/session-summary/AchievementsCarousel';
 
 export { ChatHighlights } from '@/components/features/session-summary/ChatHighlights';
-export type { ChatHighlight, ChatHighlightsLabels, ChatHighlightsProps } from '@/components/features/session-summary/ChatHighlights';
+export type {
+  ChatHighlight,
+  ChatHighlightsLabels,
+  ChatHighlightsProps,
+} from '@/components/features/session-summary/ChatHighlights';
 
 export { Confetti } from '@/components/features/session-summary/Confetti';
 export type { ConfettiProps } from '@/components/features/session-summary/Confetti';
@@ -25,10 +32,16 @@ export type {
 } from '@/components/features/session-summary/ConnectionBar';
 
 export { PhotosGallery } from '@/components/features/session-summary/PhotosGallery';
-export type { PhotosGalleryLabels, PhotosGalleryProps } from '@/components/features/session-summary/PhotosGallery';
+export type {
+  PhotosGalleryLabels,
+  PhotosGalleryProps,
+} from '@/components/features/session-summary/PhotosGallery';
 
 export { PlayAgainCta } from '@/components/features/session-summary/PlayAgainCta';
-export type { PlayAgainCtaLabels, PlayAgainCtaProps } from '@/components/features/session-summary/PlayAgainCta';
+export type {
+  PlayAgainCtaLabels,
+  PlayAgainCtaProps,
+} from '@/components/features/session-summary/PlayAgainCta';
 
 export { ScoringBreakdownTable } from '@/components/features/session-summary/ScoringBreakdownTable';
 export type {
@@ -45,7 +58,11 @@ export type {
 } from '@/components/features/session-summary/SessionDiaryTimeline';
 
 export { SessionKpiGrid } from '@/components/features/session-summary/SessionKpiGrid';
-export type { KpiEntityHint, KpiEntry, SessionKpiGridProps } from '@/components/features/session-summary/SessionKpiGrid';
+export type {
+  KpiEntityHint,
+  KpiEntry,
+  SessionKpiGridProps,
+} from '@/components/features/session-summary/SessionKpiGrid';
 
 export { SessionShareCard } from '@/components/features/session-summary/SessionShareCard';
 export type {
@@ -56,4 +73,7 @@ export type {
 } from '@/components/features/session-summary/SessionShareCard';
 
 export { SessionSummaryHero } from '@/components/features/session-summary/SessionSummaryHero';
-export type { SessionSummaryHeroLabels, SessionSummaryHeroProps } from '@/components/features/session-summary/SessionSummaryHero';
+export type {
+  SessionSummaryHeroLabels,
+  SessionSummaryHeroProps,
+} from '@/components/features/session-summary/SessionSummaryHero';

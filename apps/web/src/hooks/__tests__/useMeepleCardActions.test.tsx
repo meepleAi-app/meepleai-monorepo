@@ -104,7 +104,7 @@ describe('useMeepleCardActions — catalog context (S3)', () => {
       expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) })
     );
     expect(mockToastSuccess).toHaveBeenCalledWith('Aggiunto alla libreria');
-    expect(mockPush).toHaveBeenCalledWith(`/library/games/${GAME_ID}`);
+    expect(mockPush).toHaveBeenCalledWith(`/library/${GAME_ID}`);
   });
 
   it('clicking Add triggers error toast on failure', () => {
@@ -129,7 +129,7 @@ describe('useMeepleCardActions — catalog context (S3)', () => {
     const goTo = result.current.find(a => a.label === 'Vai al gioco')!;
     goTo.onClick?.();
 
-    expect(mockPush).toHaveBeenCalledWith(`/library/games/${GAME_ID}`);
+    expect(mockPush).toHaveBeenCalledWith(`/library/${GAME_ID}`);
     expect(mockAddMutate).not.toHaveBeenCalled();
   });
 

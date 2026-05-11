@@ -11,7 +11,9 @@ import { SuccessState } from '../SuccessState';
 // Mock next/link
 vi.mock('next/link', () => ({
   default: ({ children, href, ...props }: React.PropsWithChildren<{ href: string }>) => (
-    <a href={href} {...props}>{children}</a>
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -98,6 +100,6 @@ describe('SuccessState', () => {
     render(<SuccessState {...defaultProps} />);
 
     const link = screen.getByText('Vedi dettaglio gioco').closest('a');
-    expect(link).toHaveAttribute('href', '/library/games/game-abc');
+    expect(link).toHaveAttribute('href', '/library/game-abc');
   });
 });

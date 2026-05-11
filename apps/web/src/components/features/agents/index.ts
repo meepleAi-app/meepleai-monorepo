@@ -11,7 +11,11 @@
  */
 
 export { AgentsHero } from '@/components/features/agents/AgentsHero';
-export type { AgentsHeroLabels, AgentsHeroProps, AgentsHeroStat } from '@/components/features/agents/AgentsHero';
+export type {
+  AgentsHeroLabels,
+  AgentsHeroProps,
+  AgentsHeroStat,
+} from '@/components/features/agents/AgentsHero';
 
 export { AgentFilters } from '@/components/features/agents/AgentFilters';
 export type {

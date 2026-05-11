@@ -42,7 +42,6 @@ import { Confetti } from '@/components/features/session-summary/Confetti';
 import { entityTextHslClass } from '@/lib/sessions-summary/entity-text-tokens';
 import type { RankedParticipant } from '@/lib/sessions-summary/tie-groups';
 
-
 export interface SessionSummaryHeroLabels {
   /** Heading text — already resolved by orchestrator (e.g., "Riepilogo partita"). */
   readonly title: string;

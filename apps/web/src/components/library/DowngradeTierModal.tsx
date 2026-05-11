@@ -53,7 +53,7 @@ export function DowngradeTierModal({
   /**
    * We deliberately track selections by `gameId` (not `entryId`) because the
    * backend endpoint for removal is `DELETE /api/v1/library/games/{gameId}` —
-   * see UserLibraryCoreEndpoints.cs → MapDelete("/library/games/{gameId:guid}").
+   * see UserLibraryCoreEndpoints.cs → MapDelete("/library/{gameId:guid}").
    * `bulkRemoveFromLibrary` fires one DELETE per gameId, so we must pass gameIds.
    */
   function toggleRemove(gameId: string) {

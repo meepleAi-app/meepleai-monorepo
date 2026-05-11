@@ -55,7 +55,7 @@ export function ResumeHero({ campaign, gameId, onCreateNew }: ResumeHeroProps): 
 
           <div className="flex flex-col gap-2">
             <Link
-              href={`/library/games/${gameId}/play/${campaign.id}`}
+              href={`/library/${gameId}/play/${campaign.id}`}
               data-testid="gamebook-resume-hero-cta"
               className="inline-flex items-center justify-center rounded-md bg-[var(--c-game)] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:opacity-95"
             >

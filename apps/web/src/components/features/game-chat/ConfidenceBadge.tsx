@@ -19,8 +19,8 @@ export interface ConfidenceBadgeProps {
 }
 
 export function getConfidenceTier(score: number): ConfidenceTier {
-  if (score >= 0.80) return 'alta';
-  if (score >= 0.50) return 'media';
+  if (score >= 0.8) return 'alta';
+  if (score >= 0.5) return 'media';
   return 'bassa';
 }
 

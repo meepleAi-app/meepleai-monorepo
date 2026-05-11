@@ -6,13 +6,22 @@
  */
 
 export { PlayersHero } from '@/components/features/players/PlayersHero';
-export type { PlayersHeroProps, PlayersHeroLabels } from '@/components/features/players/PlayersHero';
+export type {
+  PlayersHeroProps,
+  PlayersHeroLabels,
+} from '@/components/features/players/PlayersHero';
 
 export { PlayersFiltersInline } from '@/components/features/players/PlayersFiltersInline';
-export type { PlayersFiltersInlineProps, PlayersFiltersInlineLabels } from '@/components/features/players/PlayersFiltersInline';
+export type {
+  PlayersFiltersInlineProps,
+  PlayersFiltersInlineLabels,
+} from '@/components/features/players/PlayersFiltersInline';
 
 export { PlayersResultsGrid } from '@/components/features/players/PlayersResultsGrid';
-export type { PlayersResultsGridProps, PlayersResultsGridLabels } from '@/components/features/players/PlayersResultsGrid';
+export type {
+  PlayersResultsGridProps,
+  PlayersResultsGridLabels,
+} from '@/components/features/players/PlayersResultsGrid';
 
 export { EmptyPlayers } from '@/components/features/players/EmptyPlayers';
 export type {

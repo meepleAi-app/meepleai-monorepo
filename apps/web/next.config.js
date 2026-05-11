@@ -188,16 +188,35 @@ const nextConfig = {
         destination: '/library/:id?tab=strategies',
         permanent: true,
       },
+      // ── Issue #871 (closed): SP6 libro-game play routes consolidation ────
+      // `/library/games/:id/play/**` legacy paths from PR #794+ are bookmarkable
+      // dogfood URLs; redirect to the new shorter canonical path under
+      // `/library/:id/play/**`. Map deepest first so Next.js matches them
+      // before any prefix-only rule.
+      {
+        source: '/library/games/:id/play/:campaignId/translate',
+        destination: '/library/:id/play/:campaignId/translate',
+        permanent: true,
+      },
+      {
+        source: '/library/games/:id/play/:campaignId',
+        destination: '/library/:id/play/:campaignId',
+        permanent: true,
+      },
+      {
+        source: '/library/games/:id/play',
+        destination: '/library/:id/play',
+        permanent: true,
+      },
       // Issue #1004: removed `/library/games/:id` → `/library/:id` redirect.
       // The legacy `/library/[gameId]/layout.tsx` only knows 4 tabs
       // (Dettagli/Agente/Toolkit/FAQ) and silently falls back to a CTA when an
-      // unknown `?tab=aiChat` arrives. The S4 GameDetailDesktop on the new path
-      // `/library/games/[gameId]/page.tsx` is the canonical surface for the
-      // 5-tab game detail (incl. aiChat). Keep sub-route redirects above (they
-      // map specific tab paths) but stop the catch-all that rerouted aiChat
-      // traffic into the placeholder layout. Issue #5039 (consolidation)
-      // remains tracked separately — to be revisited by extending the legacy
-      // layout to mount the v2 tabs OR by deprecating `/library/[id]` entirely.
+      // unknown `?tab=aiChat` arrives. After #871 the canonical 5-tab surface
+      // (incl. aiChat) lives at `/library/[gameId]/page.tsx` directly; the
+      // intermediate `/library/games/[gameId]/page.tsx` path is gone. Keep
+      // sub-route redirects above (they map specific tab paths) but do not
+      // add a catch-all here — rely on the explicit list to avoid the
+      // aiChat regression that motivated #1004.
       { source: '/library/wishlist', destination: '/library?tab=wishlist', permanent: true },
       { source: '/library/private', destination: '/library?tab=private', permanent: true },
       { source: '/library/proposals', destination: '/discover?tab=proposals', permanent: true },

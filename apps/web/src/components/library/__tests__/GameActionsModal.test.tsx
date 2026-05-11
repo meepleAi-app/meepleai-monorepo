@@ -75,9 +75,7 @@ describe('GameActionsModal', () => {
     });
 
     it('renders game image when provided', () => {
-      render(
-        <GameActionsModal {...defaultProps} gameImageUrl="https://example.com/catan.jpg" />
-      );
+      render(<GameActionsModal {...defaultProps} gameImageUrl="https://example.com/catan.jpg" />);
 
       const img = screen.getByRole('img', { name: 'Settlers of Catan' });
       expect(img).toBeInTheDocument();
@@ -109,7 +107,7 @@ describe('GameActionsModal', () => {
       render(<GameActionsModal {...defaultProps} />);
 
       const link = screen.getByRole('link', { name: /chatta/i });
-      expect(link).toHaveAttribute('href', '/library/games/game-123');
+      expect(link).toHaveAttribute('href', '/library/game-123');
     });
   });
 
@@ -130,7 +128,7 @@ describe('GameActionsModal', () => {
       render(<GameActionsModal {...defaultProps} hasAgent={true} />);
 
       const link = screen.getByRole('link', { name: /usa agente/i });
-      expect(link).toHaveAttribute('href', '/library/games/game-123?autoStart=true');
+      expect(link).toHaveAttribute('href', '/library/game-123?autoStart=true');
     });
 
     it('calls onConfigureAgent when clicking Config agente', () => {

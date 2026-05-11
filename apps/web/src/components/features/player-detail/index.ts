@@ -6,10 +6,16 @@
  */
 
 export { PlayerHero } from '@/components/features/player-detail/PlayerHero';
-export type { PlayerHeroProps, PlayerHeroLabels } from '@/components/features/player-detail/PlayerHero';
+export type {
+  PlayerHeroProps,
+  PlayerHeroLabels,
+} from '@/components/features/player-detail/PlayerHero';
 
 export { PlayerStatsGrid } from '@/components/features/player-detail/PlayerStatsGrid';
-export type { PlayerStatsGridProps, PlayerStatsGridLabels } from '@/components/features/player-detail/PlayerStatsGrid';
+export type {
+  PlayerStatsGridProps,
+  PlayerStatsGridLabels,
+} from '@/components/features/player-detail/PlayerStatsGrid';
 
 export { PlayerLeaderboardCard } from '@/components/features/player-detail/PlayerLeaderboardCard';
 export type {
@@ -18,7 +24,13 @@ export type {
 } from '@/components/features/player-detail/PlayerLeaderboardCard';
 
 export { FavoriteAgentCard } from '@/components/features/player-detail/FavoriteAgentCard';
-export type { FavoriteAgentCardProps, FavoriteAgentCardLabels } from '@/components/features/player-detail/FavoriteAgentCard';
+export type {
+  FavoriteAgentCardProps,
+  FavoriteAgentCardLabels,
+} from '@/components/features/player-detail/FavoriteAgentCard';
 
 export { AchievementBadgeGrid } from '@/components/features/player-detail/AchievementBadgeGrid';
-export type { AchievementBadgeGridProps, AchievementBadgeGridLabels } from '@/components/features/player-detail/AchievementBadgeGrid';
+export type {
+  AchievementBadgeGridProps,
+  AchievementBadgeGridLabels,
+} from '@/components/features/player-detail/AchievementBadgeGrid';

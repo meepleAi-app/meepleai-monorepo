@@ -75,7 +75,7 @@ export interface GamebookCardLabels {
 
 export interface GamebookCardProps {
   readonly gamebook: GamebookCardData;
-  /** Click handler — orchestrator navigates to /library/games/[gameId]/play. */
+  /** Click handler — orchestrator navigates to /library/[gameId]/play. */
   readonly onClick: (gamebookId: string) => void;
   readonly labels: GamebookCardLabels;
   readonly className?: string;

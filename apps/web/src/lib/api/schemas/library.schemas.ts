@@ -279,7 +279,7 @@ export const LibraryCustomPdfSchema = z.object({
 
 export type LibraryCustomPdf = z.infer<typeof LibraryCustomPdfSchema>;
 
-// Comprehensive game detail DTO (GET /library/games/{gameId})
+// Comprehensive game detail DTO (GET /library/{gameId})
 export const GameDetailDtoSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),

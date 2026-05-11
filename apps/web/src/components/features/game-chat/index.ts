@@ -9,8 +9,14 @@ export type { CitationChipProps } from '@/components/features/game-chat/Citation
 export { CitationModal } from '@/components/features/game-chat/CitationModal';
 export type { CitationModalProps } from '@/components/features/game-chat/CitationModal';
 
-export { ConfidenceBadge, getConfidenceTier } from '@/components/features/game-chat/ConfidenceBadge';
-export type { ConfidenceBadgeProps, ConfidenceTier } from '@/components/features/game-chat/ConfidenceBadge';
+export {
+  ConfidenceBadge,
+  getConfidenceTier,
+} from '@/components/features/game-chat/ConfidenceBadge';
+export type {
+  ConfidenceBadgeProps,
+  ConfidenceTier,
+} from '@/components/features/game-chat/ConfidenceBadge';
 
 export { LowConfidenceDisclaimer } from '@/components/features/game-chat/LowConfidenceDisclaimer';
 export type {
@@ -32,16 +38,26 @@ export { ChatBubble } from '@/components/features/game-chat/ChatBubble';
 export type { ChatBubbleProps } from '@/components/features/game-chat/ChatBubble';
 
 export { SuggestedPrompts } from '@/components/features/game-chat/SuggestedPrompts';
-export type { SuggestedPromptsProps, SuggestedPrompt, PromptCategory } from '@/components/features/game-chat/SuggestedPrompts';
+export type {
+  SuggestedPromptsProps,
+  SuggestedPrompt,
+  PromptCategory,
+} from '@/components/features/game-chat/SuggestedPrompts';
 
 export { ChatInputBar } from '@/components/features/game-chat/ChatInputBar';
 export type { ChatInputBarProps } from '@/components/features/game-chat/ChatInputBar';
 
 export { GameChatHeader } from '@/components/features/game-chat/GameChatHeader';
-export type { GameChatHeaderProps, AgentKind } from '@/components/features/game-chat/GameChatHeader';
+export type {
+  GameChatHeaderProps,
+  AgentKind,
+} from '@/components/features/game-chat/GameChatHeader';
 
 export { GameChatSidebar } from '@/components/features/game-chat/GameChatSidebar';
-export type { GameChatSidebarProps, ChatHistoryItem } from '@/components/features/game-chat/GameChatSidebar';
+export type {
+  GameChatSidebarProps,
+  ChatHistoryItem,
+} from '@/components/features/game-chat/GameChatSidebar';
 
 export { GameChatTabV2 } from '@/components/features/game-chat/GameChatTab';
 export type { GameChatTabV2Props } from '@/components/features/game-chat/GameChatTab';

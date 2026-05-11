@@ -45,9 +45,8 @@ export async function applySessionToPage(
 ): Promise<void> {
   // Accept either a single header string (legacy) or the array form returned by
   // the updated smokeLogin. Convert to array for uniform processing.
-  const headers = typeof cookieHeaderOrHeaders === 'string'
-    ? [cookieHeaderOrHeaders]
-    : cookieHeaderOrHeaders;
+  const headers =
+    typeof cookieHeaderOrHeaders === 'string' ? [cookieHeaderOrHeaders] : cookieHeaderOrHeaders;
 
   // Cookie cross-port (#960 H4): tests run frontend on :3000 + backend on :8080.
   // Using `url: API_BASE` binds the cookie to :8080 only — browser does NOT send

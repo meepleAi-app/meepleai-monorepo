@@ -33,10 +33,7 @@ export function GameChatHeader({
     <header
       data-testid="game-chat-header"
       data-agent={agent}
-      className={clsx(
-        'flex items-center gap-3 border-b border-border-light px-4 py-3',
-        className
-      )}
+      className={clsx('flex items-center gap-3 border-b border-border-light px-4 py-3', className)}
     >
       <span
         aria-hidden="true"

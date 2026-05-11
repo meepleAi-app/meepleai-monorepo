@@ -61,8 +61,8 @@ const COMPLETE_EVENT_TYPE = 4;
 const ERROR_EVENT_TYPE = 5;
 
 // Soglie derivate frontend (backend non espone isLowQuality/outOfContext)
-const LOW_QUALITY_THRESHOLD = 0.70;
-const OUT_OF_CONTEXT_THRESHOLD = 0.30;
+const LOW_QUALITY_THRESHOLD = 0.7;
+const OUT_OF_CONTEXT_THRESHOLD = 0.3;
 
 interface StreamingCompletePayload {
   readonly estimatedReadingTimeMinutes?: number;
@@ -162,7 +162,11 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
             const tokenData = event.data;
             if (typeof tokenData === 'string') {
               answerBuffer += tokenData;
-            } else if (typeof tokenData === 'object' && tokenData !== null && 'content' in tokenData) {
+            } else if (
+              typeof tokenData === 'object' &&
+              tokenData !== null &&
+              'content' in tokenData
+            ) {
               answerBuffer += String((tokenData as { content?: unknown }).content ?? '');
             }
           } else if (event.type === COMPLETE_EVENT_TYPE) {

@@ -14,7 +14,11 @@ export type {
   GameDetailHeroVariant,
 } from '@/components/features/game-detail/GameDetailHero';
 
-export { GameDetailTabsAnimated, tabIdFor, panelIdFor } from '@/components/features/game-detail/GameDetailTabsAnimated';
+export {
+  GameDetailTabsAnimated,
+  tabIdFor,
+  panelIdFor,
+} from '@/components/features/game-detail/GameDetailTabsAnimated';
 export type {
   GameDetailTabConfig,
   GameDetailTabsAnimatedProps,
@@ -22,7 +26,10 @@ export type {
 } from '@/components/features/game-detail/GameDetailTabsAnimated';
 
 export { GameDetailKpiCards } from '@/components/features/game-detail/GameDetailKpiCards';
-export type { GameDetailKpiCard, GameDetailKpiCardsProps } from '@/components/features/game-detail/GameDetailKpiCards';
+export type {
+  GameDetailKpiCard,
+  GameDetailKpiCardsProps,
+} from '@/components/features/game-detail/GameDetailKpiCards';
 
 export { GameDetailFaqList } from '@/components/features/game-detail/GameDetailFaqList';
 export type {

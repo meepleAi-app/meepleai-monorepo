@@ -9,7 +9,6 @@ import { usePhotoUpload } from '@/lib/gamebook/hooks/usePhotoUpload';
 import { useSegmentPhoto } from '@/lib/gamebook/hooks/useSegmentPhoto';
 import { useTranslateSegmentSSE } from '@/lib/gamebook/hooks/useTranslateSegmentSSE';
 
-
 export interface TranslateViewerProps {
   campaignId: string;
 }

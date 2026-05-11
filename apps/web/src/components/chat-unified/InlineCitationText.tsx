@@ -61,7 +61,11 @@ export function InlineCitationText({ text, citations, snippets }: InlineCitation
         >
           {citedText}
           <span className="inline-flex items-center ml-1 text-amber-600 dark:text-amber-400">
-            {isExpanded ? <ChevronUp className="h-3 w-3 inline" /> : <ChevronDown className="h-3 w-3 inline" />}
+            {isExpanded ? (
+              <ChevronUp className="h-3 w-3 inline" />
+            ) : (
+              <ChevronDown className="h-3 w-3 inline" />
+            )}
           </span>
         </span>
         <a

@@ -105,7 +105,9 @@ const PauseOverlay = lazy(() =>
 );
 
 const EndgameDialog = lazy(() =>
-  import('@/components/features/session-live/EndgameDialog').then(m => ({ default: m.EndgameDialog }))
+  import('@/components/features/session-live/EndgameDialog').then(m => ({
+    default: m.EndgameDialog,
+  }))
 );
 
 // ─── SessionId validation ─────────────────────────────────────────────────────

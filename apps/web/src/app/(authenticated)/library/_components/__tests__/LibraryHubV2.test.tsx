@@ -445,15 +445,18 @@ describe('LibraryHubV2 (Wave B.3)', () => {
 
   // ─── Click dispatcher: browse → router.push ────────────────────────────
 
-  it('clicking a card in browse mode navigates to /games/{id} via router.push', () => {
+  it('clicking a card in browse mode navigates to /library/{gameId} via router.push', () => {
     const { container } = renderWithIntl(<LibraryHubV2 />);
     const firstCard = container.querySelector(
       '[data-slot="library-grid-card"]'
     ) as HTMLButtonElement;
     expect(firstCard).not.toBeNull();
     const entryId = firstCard.getAttribute('data-entry-id');
+    // LibraryHubV2 maps entryId → entry.gameId for navigation (#871 IA refactor).
+    // Fixture: entry-N → game-N (see ENTRIES above).
+    const gameId = entryId?.replace('entry-', 'game-');
     fireEvent.click(firstCard);
-    expect(routerPush).toHaveBeenCalledWith(`/games/${entryId}`);
+    expect(routerPush).toHaveBeenCalledWith(`/library/${gameId}`);
   });
 
   // ─── Click dispatcher: select → toggles Set membership ─────────────────

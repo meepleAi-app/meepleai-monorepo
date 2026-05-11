@@ -10,7 +10,11 @@
  */
 
 export { GamesHero } from '@/components/features/games/GamesHero';
-export type { GamesHeroLabels, GamesHeroProps, GamesHeroStat } from '@/components/features/games/GamesHero';
+export type {
+  GamesHeroLabels,
+  GamesHeroProps,
+  GamesHeroStat,
+} from '@/components/features/games/GamesHero';
 
 export { GamesFiltersInline } from '@/components/features/games/GamesFiltersInline';
 export type {
@@ -22,7 +26,10 @@ export type {
 } from '@/components/features/games/GamesFiltersInline';
 
 export { GamesResultsGrid } from '@/components/features/games/GamesResultsGrid';
-export type { GamesResultsGridProps, GamesResultsView } from '@/components/features/games/GamesResultsGrid';
+export type {
+  GamesResultsGridProps,
+  GamesResultsView,
+} from '@/components/features/games/GamesResultsGrid';
 
 export { GamesEmptyState } from '@/components/features/games/GamesEmptyState';
 export type {

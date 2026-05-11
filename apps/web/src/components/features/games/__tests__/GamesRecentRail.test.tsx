@@ -32,7 +32,9 @@ describe('GamesRecentRail', () => {
 
   it('renders 5 cards in order', () => {
     const items = ['a', 'b', 'c', 'd', 'e'].map(id => ({
-      id, title: `Game ${id}`, kbBadge: 'ready' as const,
+      id,
+      title: `Game ${id}`,
+      kbBadge: 'ready' as const,
     }));
     render(<GamesRecentRail items={items} labels={labels} onSelect={vi.fn()} />);
     const cards = screen.getAllByRole('button', { name: /Game [a-e]/ });

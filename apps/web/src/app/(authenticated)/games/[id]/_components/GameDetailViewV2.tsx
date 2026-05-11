@@ -42,8 +42,13 @@ import {
   type GameDetailHeroMeta,
   type TabKey,
 } from '@/components/features/game-detail';
+import { toast } from '@/components/layout/Toast';
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
-import { useLibraryGameDetail, type LibraryGameDetail } from '@/hooks/queries/useLibrary';
+import {
+  useAddGameToLibrary,
+  useLibraryGameDetail,
+  type LibraryGameDetail,
+} from '@/hooks/queries/useLibrary';
 import { useTranslation } from '@/hooks/useTranslation';
 import { deriveGameDetailUiState } from '@/lib/games/game-detail-state';
 import {
@@ -305,6 +310,11 @@ export function GameDetailViewV2({ gameId }: GameDetailViewV2Props): ReactElemen
   // keeping the null-safe gate. The empty string is falsy → enabled=false.
   const detailQuery = useLibraryGameDetail(gameId ?? '');
 
+  // G1 SMART goal · POST /api/v1/library/games/{gameId} con toast + redirect
+  // alla canonical detail page. Idempotency: heroVariant === 'community' è già
+  // false quando l'utente possiede già l'entry (libraryEntryId presente).
+  const addToLibrary = useAddGameToLibrary();
+
   // ── Sub-hook (Phase 0.5 sez. 2.2 — lazy, gated by parent + tab) ─────────
   // ⚠️ CRITICAL: enabled MUST be: !!gameId && detailQuery.isSuccess && detailQuery.data != null && tab === 'agents'
   // Cell 4 guard: even if isSuccess=true and tab='agents', do NOT fetch agents
@@ -492,7 +502,29 @@ export function GameDetailViewV2({ gameId }: GameDetailViewV2Props): ReactElemen
             void navigator.share({ title: safeDetail.gameTitle, url: window.location.href });
           }
         }}
-        onAddToLibrary={heroVariant === 'community' ? () => router.push('/library') : undefined}
+        onAddToLibrary={
+          heroVariant === 'community' && gameId
+            ? () => {
+                if (addToLibrary.isPending) return;
+                addToLibrary.mutate(
+                  { gameId },
+                  {
+                    onSuccess: () => {
+                      toast.success(`${safeDetail.gameTitle} aggiunto alla tua libreria.`);
+                      router.push(`/library/${gameId}`);
+                    },
+                    onError: error => {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : 'Impossibile aggiungere il gioco. Riprova.'
+                      );
+                    },
+                  }
+                );
+              }
+            : undefined
+        }
       />
 
       {/* Tab navigation — A11y: role=tablist inside component, role=tabpanel on panels below */}

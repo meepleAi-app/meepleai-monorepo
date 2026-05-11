@@ -24,7 +24,6 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
-
 import { ConnectionChipStripFooter } from '@/components/features/sessions/ConnectionChipStripFooter';
 import { OutcomeBadge } from '@/components/features/sessions/OutcomeBadge';
 import type { OutcomeBadgeLabels } from '@/components/features/sessions/OutcomeBadge';

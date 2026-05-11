@@ -12,7 +12,7 @@ export interface EmptyFirstTimeProps {
  * Stato 01 (mockup G state-01-first-time) — Aaron mai giocato a questo gioco.
  * Hero "Inizia la tua prima campagna" + 3 reassurance row + CTA primary.
  *
- * FREEZE-compliant: solo var(--c-game) / var(--c-agent) / token semantici.
+ * FREEZE-compliant: solo var(--c-session) / var(--c-agent) / token semantici.
  * Riferimento: admin-mockups/design_files/sp6-libro-game-resume-state.{html,jsx}
  */
 export function EmptyFirstTime({
@@ -28,9 +28,9 @@ export function EmptyFirstTime({
     >
       <div
         aria-hidden
-        className="aspect-[4/3] rounded-2xl border border-[var(--c-game)]/20 bg-[var(--c-game)]/5 flex items-center justify-center"
+        className="aspect-[4/3] rounded-2xl border border-[hsl(var(--c-session)/0.2)] bg-gradient-to-br from-[hsl(var(--c-session)/0.15)] to-[hsl(var(--c-game)/0.1)] flex items-center justify-center"
       >
-        <span className="text-6xl font-bold text-[var(--c-game)]/80">§</span>
+        <span className="text-6xl">📖</span>
       </div>
 
       <div>
@@ -58,7 +58,7 @@ export function EmptyFirstTime({
           >
             <span
               aria-hidden
-              className="flex h-8 w-8 flex-none items-center justify-center rounded-md bg-[var(--c-game)]/10 text-lg font-bold text-[var(--c-game)]"
+              className="flex h-8 w-8 flex-none items-center justify-center rounded-md bg-[var(--c-session)]/10 text-lg font-bold text-[var(--c-session)]"
             >
               {row.ic}
             </span>
@@ -74,9 +74,9 @@ export function EmptyFirstTime({
         type="button"
         onClick={onCreateCampaign}
         data-testid="gamebook-resume-empty-cta"
-        className="rounded-md bg-[var(--c-game)] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:opacity-95 disabled:opacity-50"
+        className="rounded-lg bg-[hsl(var(--c-session))] px-5 py-3.5 font-quicksand text-base font-bold text-white shadow-[0_6px_20px_hsl(var(--c-session)/0.35)] transition-transform duration-[180ms] ease-out hover:-translate-y-px hover:shadow-[0_8px_24px_hsl(var(--c-session)/0.45)] motion-reduce:transition-none disabled:opacity-50"
       >
-        + Crea nuova campagna
+        📖 Inizia campagna
       </button>
     </section>
   );

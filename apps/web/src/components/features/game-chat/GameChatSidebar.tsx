@@ -75,9 +75,7 @@ export function GameChatSidebar({
               className={clsx(
                 'flex flex-1 items-center justify-center gap-1 rounded-full px-2 py-2',
                 'font-semibold text-xs transition-colors',
-                currentAgent === k
-                  ? 'bg-[hsl(var(--c-agent))] text-white'
-                  : 'text-muted-foreground'
+                currentAgent === k ? 'bg-[hsl(var(--c-agent))] text-white' : 'text-muted-foreground'
               )}
             >
               {AGENT_LABEL[k]}

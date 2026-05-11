@@ -27,6 +27,7 @@ import { libraryKeys } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 import type { UserLibraryEntry, GameStateType } from '@/lib/api';
 import { useViewTransition } from '@/lib/domain-hooks/useViewTransition';
+import { isLibroGame } from '@/lib/games/is-libro-game';
 
 import { DeclareOwnershipButton } from './DeclareOwnershipButton';
 
@@ -215,7 +216,13 @@ export function MeepleLibraryGameCard({
     game.gamePublisher || `Aggiunto il ${new Date(game.addedAt).toLocaleDateString('it-IT')}`;
 
   const mappedStatus = mapGameStateToStatus(game.currentState);
-  const badge = game.isFavorite ? '❤️ Preferito' : undefined;
+
+  // Iter 2 · storyboard step 01 — libro-game badge on catalog card.
+  // Priority: 📖 Libro (storyboard primary entity) > ❤️ Preferito.
+  // When/if backend exposes a category/metadata flag, swap isLibroGame()
+  // input — UI semantics stay identical.
+  const libroGame = isLibroGame({ gameTitle: game.gameTitle });
+  const badge = libroGame ? '📖 Libro' : game.isFavorite ? '❤️ Preferito' : undefined;
 
   const connections = useMemo(
     () =>
@@ -264,7 +271,7 @@ export function MeepleLibraryGameCard({
             ? undefined
             : flippable
               ? undefined
-              : () => navigateWithTransition(`/library/games/${game.gameId}`)
+              : () => navigateWithTransition(`/library/${game.gameId}`)
         }
         flippable={flippable}
         className={className}

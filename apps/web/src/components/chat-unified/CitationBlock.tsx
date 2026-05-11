@@ -34,7 +34,7 @@ export function CitationBlock({ snippets, excludeIndices }: CitationBlockProps) 
 
   return (
     <div className="mt-3 flex flex-wrap gap-2" data-testid="citation-block">
-      {visible.map((snippet) => {
+      {visible.map(snippet => {
         const pdfId = extractPdfId(snippet.source);
         const isExpanded = expanded === snippet.originalIndex;
 
@@ -54,7 +54,11 @@ export function CitationBlock({ snippets, excludeIndices }: CitationBlockProps) 
               >
                 <FileText className="h-3 w-3" />
                 Pagina {snippet.page}
-                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                {isExpanded ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
+                )}
               </button>
               <a
                 href={`/api/v1/pdfs/${pdfId}/download#page=${snippet.page}`}
@@ -68,8 +72,13 @@ export function CitationBlock({ snippets, excludeIndices }: CitationBlockProps) 
               </a>
             </div>
             {isExpanded && (
-              <div className="mt-1.5 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 text-sm max-w-md" data-testid={`citation-expanded-${snippet.originalIndex}`}>
-                <p className="text-muted-foreground font-nunito whitespace-pre-wrap">{snippet.text}</p>
+              <div
+                className="mt-1.5 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 text-sm max-w-md"
+                data-testid={`citation-expanded-${snippet.originalIndex}`}
+              >
+                <p className="text-muted-foreground font-nunito whitespace-pre-wrap">
+                  {snippet.text}
+                </p>
               </div>
             )}
           </div>

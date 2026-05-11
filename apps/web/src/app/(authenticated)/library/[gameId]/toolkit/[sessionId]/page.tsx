@@ -101,7 +101,7 @@ export default function GameSpecificSessionPage() {
         }
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to load session');
-        router.push(`/library/games/${gameId}`);
+        router.push(`/library/${gameId}`);
       }
     };
 
@@ -139,7 +139,7 @@ export default function GameSpecificSessionPage() {
       toast.success('Session finalized');
 
       setTimeout(() => {
-        router.push(`/library/games/${gameId}`);
+        router.push(`/library/${gameId}`);
       }, 2000);
     },
     onError: err => {

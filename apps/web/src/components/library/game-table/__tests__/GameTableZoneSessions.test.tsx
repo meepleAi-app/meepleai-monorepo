@@ -104,7 +104,7 @@ describe('GameTableZoneSessions', () => {
 
     // The button is wrapped in a Link
     const link = btn.closest('a');
-    expect(link).toHaveAttribute('href', '/library/games/g-1/sessions/new');
+    expect(link).toHaveAttribute('href', '/library/g-1/sessions/new');
   });
 
   it('handles empty sessions gracefully', () => {

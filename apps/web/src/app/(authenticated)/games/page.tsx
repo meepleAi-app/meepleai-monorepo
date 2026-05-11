@@ -75,16 +75,17 @@ function GamesHubContent() {
   const recentGames = useRecentLibraryGames(5, activeTab === 'library');
 
   const recentRailItems = useMemo(
-    () => recentGames.entries.map(e => ({
-      id: e.gameId,
-      title: e.gameTitle,
-      imageUrl: e.gameImageUrl ?? undefined,
-      kbBadge: (e.kbIndexedCount > 0
-        ? 'ready'
-        : e.kbProcessingCount > 0
-          ? 'processing'
-          : 'none') as 'ready' | 'processing' | 'none',
-    })),
+    () =>
+      recentGames.entries.map(e => ({
+        id: e.gameId,
+        title: e.gameTitle,
+        imageUrl: e.gameImageUrl ?? undefined,
+        kbBadge: (e.kbIndexedCount > 0
+          ? 'ready'
+          : e.kbProcessingCount > 0
+            ? 'processing'
+            : 'none') as 'ready' | 'processing' | 'none',
+      })),
     [recentGames.entries]
   );
 
@@ -96,7 +97,7 @@ function GamesHubContent() {
         sectionTitle: 'Giochi recenti',
         emptyHint: 'Inizia a giocare per vedere qui i tuoi titoli recenti.',
       }}
-      onSelect={(id) => router.push(`/library/games/${id}?tab=aiChat`)}
+      onSelect={id => router.push(`/library/${id}?tab=aiChat`)}
     />
   );
 
@@ -177,27 +178,27 @@ function GamesHubContent() {
         showViewToggle
         topActions={topActions}
       >
-      {isLoading ? (
-        <LoadingSkeleton />
-      ) : items.length === 0 ? (
-        activeTab === 'catalog' ? (
-          <EmptyCatalog />
+        {isLoading ? (
+          <LoadingSkeleton />
+        ) : items.length === 0 ? (
+          activeTab === 'catalog' ? (
+            <EmptyCatalog />
+          ) : (
+            <EmptyKB />
+          )
         ) : (
-          <EmptyKB />
-        )
-      ) : (
-        <div
-          className={
-            viewMode === 'list'
-              ? 'flex flex-col gap-2 px-4 pb-24'
-              : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-4 pb-24'
-          }
-        >
-          {items.map(item => (
-            <MeepleCard key={item.id} {...item} />
-          ))}
-        </div>
-      )}
+          <div
+            className={
+              viewMode === 'list'
+                ? 'flex flex-col gap-2 px-4 pb-24'
+                : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-4 pb-24'
+            }
+          >
+            {items.map(item => (
+              <MeepleCard key={item.id} {...item} />
+            ))}
+          </div>
+        )}
       </HubLayout>
     </>
   );

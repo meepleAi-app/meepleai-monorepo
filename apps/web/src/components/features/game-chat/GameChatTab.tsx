@@ -17,7 +17,6 @@
 
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 
-
 import { ChatBubble } from '@/components/features/game-chat/ChatBubble';
 import { ChatBubbleSkeleton } from '@/components/features/game-chat/ChatBubbleSkeleton';
 import { ChatHistoryBanner } from '@/components/features/game-chat/ChatHistoryBanner';
@@ -35,7 +34,10 @@ import {
   OutOfContextActions,
   type OutOfContextAction,
 } from '@/components/features/game-chat/OutOfContextActions';
-import { SuggestedPrompts, type SuggestedPrompt } from '@/components/features/game-chat/SuggestedPrompts';
+import {
+  SuggestedPrompts,
+  type SuggestedPrompt,
+} from '@/components/features/game-chat/SuggestedPrompts';
 import { TypingIndicator } from '@/components/features/game-chat/TypingIndicator';
 import { useGameChat, type ChatMessage } from '@/hooks/queries/useGameChat';
 import type { Citation } from '@/types';
@@ -94,12 +96,13 @@ export function GameChatTabV2({
         ]
       : [];
 
-    const lowConfAlts: DisclaimerAlternative[] = msg.isLowQuality && !showOoc
-      ? [
-          { label: 'Verifica nel manuale', kind: 'kb' },
-          { label: 'Cerca su BGG', kind: 'external', url: 'https://boardgamegeek.com/' },
-        ]
-      : [];
+    const lowConfAlts: DisclaimerAlternative[] =
+      msg.isLowQuality && !showOoc
+        ? [
+            { label: 'Verifica nel manuale', kind: 'kb' },
+            { label: 'Cerca su BGG', kind: 'external', url: 'https://boardgamegeek.com/' },
+          ]
+        : [];
 
     return (
       <>
@@ -109,7 +112,9 @@ export function GameChatTabV2({
               // Citation type (domain.ts:134) ha pageNumber + snippet ma NO sectionTitle.
               // Usiamo il primo segmento dello snippet (max 60 char) come "section title".
               const previewTitle = c.snippet
-                ? c.snippet.length > 60 ? c.snippet.slice(0, 57) + '…' : c.snippet
+                ? c.snippet.length > 60
+                  ? c.snippet.slice(0, 57) + '…'
+                  : c.snippet
                 : `Documento ${i + 1}`;
               return (
                 <CitationChip
@@ -149,11 +154,7 @@ export function GameChatTabV2({
 
   return (
     <div className="flex h-full flex-col">
-      <GameChatHeader
-        gameTitle={gameTitle}
-        gameIcon={gameIcon}
-        agent={chat.currentAgent}
-      />
+      <GameChatHeader gameTitle={gameTitle} gameIcon={gameIcon} agent={chat.currentAgent} />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar — hidden under lg */}
@@ -169,7 +170,11 @@ export function GameChatTabV2({
         </div>
 
         <div className="flex flex-1 flex-col overflow-hidden">
-          <div role="log" aria-live="polite" className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+          <div
+            role="log"
+            aria-live="polite"
+            className="flex flex-1 flex-col gap-4 overflow-y-auto p-4"
+          >
             {chat.isHydrating ? (
               <ChatBubbleSkeleton count={3} />
             ) : (

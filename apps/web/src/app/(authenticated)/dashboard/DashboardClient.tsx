@@ -280,7 +280,7 @@ function NewUserGamesBlock({
             return next;
           });
           setConfirmGame(null);
-          router.push(`/games/${confirmGame.id}`);
+          router.push(`/library/${confirmGame.id}`);
         },
         onError: () => {
           setAddingIds(prev => {
@@ -436,7 +436,7 @@ export function DashboardClient() {
         {
           entityType: 'kb',
           count: 0,
-          onCreate: () => router.push(`/games/${gameId}`),
+          onCreate: () => router.push(`/library/${gameId}`),
           createLabel: 'Carica documento',
         },
         {
@@ -447,7 +447,10 @@ export function DashboardClient() {
         },
       ];
       return {
-        id: entry.id,
+        // MeepleCard.id must be the canonical gameId (used by ENTITY_NAVIGATION_GRAPH
+        // to build /library/${id}?tab=agent hrefs). Using entry.id here breaks
+        // navigation because /library expects the gameId, not the library entry pk.
+        id: gameId,
         entity: 'game' as MeepleEntityType,
         title: entry.gameTitle,
         subtitle: entry.gamePublisher ?? undefined,
@@ -485,7 +488,7 @@ export function DashboardClient() {
             {
               id: session.gameId,
               label: session.gameId.slice(0, 8),
-              href: `/games/${session.gameId}`,
+              href: `/library/${session.gameId}`,
             },
           ],
         },
@@ -553,7 +556,7 @@ export function DashboardClient() {
             {
               id: agent.gameId,
               label: agent.gameName ?? agent.gameId.slice(0, 8),
-              href: `/games/${agent.gameId}`,
+              href: `/library/${agent.gameId}`,
             },
           ],
         });

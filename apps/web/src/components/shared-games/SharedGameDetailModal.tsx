@@ -163,7 +163,7 @@ export function SharedGameDetailModal({
   const handleShare = useCallback(() => {
     if (gameId) {
       // Copy link to clipboard
-      const url = `${window.location.origin}/library/games/${gameId}`;
+      const url = `${window.location.origin}/library/${gameId}`;
       navigator.clipboard.writeText(url).then(() => {
         onShare?.(gameId);
       });

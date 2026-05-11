@@ -47,9 +47,7 @@ test.describe('SMOKE — /players/[id] real backend', () => {
     await applySessionToPage(page, cookieHeaders);
   });
 
-  test('frontend /players/{id} renders shell for deterministic slug', async ({
-    page,
-  }) => {
+  test('frontend /players/{id} renders shell for deterministic slug', async ({ page }) => {
     // NEVER_EXISTS_ID is decorative — content derives from
     // /api/v1/play-records/statistics for the CURRENT user. With
     // PLAYWRIGHT_AUTH_BYPASS=true the page may render the default

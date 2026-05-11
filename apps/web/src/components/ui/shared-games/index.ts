@@ -18,7 +18,10 @@ export { ErrorState } from '@/components/ui/shared-games/error-state';
 export type { ErrorStateProps } from '@/components/ui/shared-games/error-state';
 
 export { MeepleCardGame } from '@/components/ui/shared-games/meeple-card-game';
-export type { MeepleCardGameLabels, MeepleCardGameProps } from '@/components/ui/shared-games/meeple-card-game';
+export type {
+  MeepleCardGameLabels,
+  MeepleCardGameProps,
+} from '@/components/ui/shared-games/meeple-card-game';
 
 export { SharedGamesFilters } from '@/components/ui/shared-games/shared-games-filters';
 export type {

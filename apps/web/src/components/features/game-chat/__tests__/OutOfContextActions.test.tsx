@@ -20,7 +20,9 @@ describe('OutOfContextActions', () => {
   });
 
   it('calls correct onClick when each action clicked', () => {
-    const a = vi.fn(); const b = vi.fn(); const c = vi.fn();
+    const a = vi.fn();
+    const b = vi.fn();
+    const c = vi.fn();
     render(
       <OutOfContextActions
         actions={[

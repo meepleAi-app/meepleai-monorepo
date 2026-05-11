@@ -14,7 +14,9 @@ describe('GameChatHeader', () => {
     expect(screen.getByText(/Arbitro/i)).toBeInTheDocument();
   });
   it('renders subtitle when provided', () => {
-    render(<GameChatHeader gameTitle="Wingspan" gameIcon="🦤" agent="tutor" subtitle="Edge case" />);
+    render(
+      <GameChatHeader gameTitle="Wingspan" gameIcon="🦤" agent="tutor" subtitle="Edge case" />
+    );
     expect(screen.getByText(/Edge case/)).toBeInTheDocument();
   });
   it('exposes agent via data attribute', () => {

@@ -21,7 +21,10 @@ export type {
 } from '@/components/ui/join/game-preference-select';
 
 export { JoinSuccessCard } from '@/components/ui/join/join-success-card';
-export type { JoinSuccessCardLabels, JoinSuccessCardProps } from '@/components/ui/join/join-success-card';
+export type {
+  JoinSuccessCardLabels,
+  JoinSuccessCardProps,
+} from '@/components/ui/join/join-success-card';
 
 export { JoinForm } from '@/components/ui/join/join-form';
 export type { JoinFormLabels, JoinFormProps } from '@/components/ui/join/join-form';

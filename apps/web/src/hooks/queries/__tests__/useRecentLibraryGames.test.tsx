@@ -40,7 +40,15 @@ const entry = (id: string, addedAt = '2026-05-01T00:00:00Z') => ({
   canProposeToCatalog: false,
 });
 
-const emptyPaginated = { items: [], page: 1, pageSize: 50, totalCount: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false };
+const emptyPaginated = {
+  items: [],
+  page: 1,
+  pageSize: 50,
+  totalCount: 0,
+  totalPages: 0,
+  hasNextPage: false,
+  hasPreviousPage: false,
+};
 
 describe('useRecentLibraryGames', () => {
   beforeEach(() => {
@@ -85,8 +93,20 @@ describe('useRecentLibraryGames', () => {
     } as any);
     useRecentsStore.setState({
       items: [
-        { id: 'bbb', entity: 'game', title: 'Game bbb', href: '/library/games/bbb', visitedAt: 1731147600000 /* 2026-05-09T10:00:00Z */ },
-        { id: 'aaa', entity: 'game', title: 'Game aaa', href: '/library/games/aaa', visitedAt: 1731144000000 /* 2026-05-09T09:00:00Z */ },
+        {
+          id: 'bbb',
+          entity: 'game',
+          title: 'Game bbb',
+          href: '/library/bbb',
+          visitedAt: 1731147600000 /* 2026-05-09T10:00:00Z */,
+        },
+        {
+          id: 'aaa',
+          entity: 'game',
+          title: 'Game aaa',
+          href: '/library/aaa',
+          visitedAt: 1731144000000 /* 2026-05-09T09:00:00Z */,
+        },
       ],
     });
 
@@ -119,8 +139,11 @@ describe('useRecentLibraryGames', () => {
     } as any);
     useRecentsStore.setState({
       items: items.map(e => ({
-        id: e.gameId, entity: 'game' as const, title: e.gameTitle,
-        href: `/library/games/${e.gameId}`, visitedAt: 1731147600000 /* 2026-05-09T10:00:00Z */,
+        id: e.gameId,
+        entity: 'game' as const,
+        title: e.gameTitle,
+        href: `/library/${e.gameId}`,
+        visitedAt: 1731147600000 /* 2026-05-09T10:00:00Z */,
       })),
     });
 
@@ -139,8 +162,20 @@ describe('useRecentLibraryGames', () => {
     } as any);
     useRecentsStore.setState({
       items: [
-        { id: 'removed', entity: 'game', title: 'Removed', href: '/library/games/removed', visitedAt: 1731147600000 /* 2026-05-09T10:00:00Z */ },
-        { id: 'inlib', entity: 'game', title: 'In Lib', href: '/library/games/inlib', visitedAt: 1731144000000 /* 2026-05-09T09:00:00Z */ },
+        {
+          id: 'removed',
+          entity: 'game',
+          title: 'Removed',
+          href: '/library/removed',
+          visitedAt: 1731147600000 /* 2026-05-09T10:00:00Z */,
+        },
+        {
+          id: 'inlib',
+          entity: 'game',
+          title: 'In Lib',
+          href: '/library/inlib',
+          visitedAt: 1731144000000 /* 2026-05-09T09:00:00Z */,
+        },
       ],
     });
 
@@ -191,7 +226,13 @@ describe('useRecentLibraryGames', () => {
     } as any);
     useRecentsStore.setState({
       items: [
-        { id: 'cached-game', entity: 'game', title: 'Cached', href: '/library/games/cached-game', visitedAt: 1731147600000 },
+        {
+          id: 'cached-game',
+          entity: 'game',
+          title: 'Cached',
+          href: '/library/cached-game',
+          visitedAt: 1731147600000,
+        },
       ],
     });
 

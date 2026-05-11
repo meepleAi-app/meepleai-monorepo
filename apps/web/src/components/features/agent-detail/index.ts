@@ -25,7 +25,11 @@ export {
 } from '@/components/features/agent-detail/AgentTabs';
 
 // PersonaCard — pure identity display
-export { PersonaCard, type PersonaCardProps, type PersonaCardLabels } from '@/components/features/agent-detail/PersonaCard';
+export {
+  PersonaCard,
+  type PersonaCardProps,
+  type PersonaCardLabels,
+} from '@/components/features/agent-detail/PersonaCard';
 
 // SystemPromptViewer — system prompt display
 export {

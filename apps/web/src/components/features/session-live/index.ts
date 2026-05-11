@@ -40,10 +40,17 @@ export type {
 } from '@/components/features/session-live/LiveScoringPanel';
 
 export { LiveTopBar } from '@/components/features/session-live/LiveTopBar';
-export type { LiveTopBarLabels, LiveTopBarProps } from '@/components/features/session-live/LiveTopBar';
+export type {
+  LiveTopBarLabels,
+  LiveTopBarProps,
+} from '@/components/features/session-live/LiveTopBar';
 
 export { MobileBody } from '@/components/features/session-live/MobileBody';
-export type { MobileBodyLabels, MobileBodyProps, MobileTab } from '@/components/features/session-live/MobileBody';
+export type {
+  MobileBodyLabels,
+  MobileBodyProps,
+  MobileTab,
+} from '@/components/features/session-live/MobileBody';
 
 export { PlayerRosterLive } from '@/components/features/session-live/PlayerRosterLive';
 export type {
@@ -53,7 +60,10 @@ export type {
 } from '@/components/features/session-live/PlayerRosterLive';
 
 export { TurnIndicator } from '@/components/features/session-live/TurnIndicator';
-export type { TurnIndicatorLabels, TurnIndicatorProps } from '@/components/features/session-live/TurnIndicator';
+export type {
+  TurnIndicatorLabels,
+  TurnIndicatorProps,
+} from '@/components/features/session-live/TurnIndicator';
 
 // ─── Interactions sub-PR (Issue #750) ─────────────────────────────────────────
 
@@ -65,19 +75,41 @@ export type {
 } from '@/components/features/session-live/ConnectionLostBanner';
 
 export { EndgameDialog } from '@/components/features/session-live/EndgameDialog';
-export type { EndgameDialogLabels, EndgameDialogProps, FinalScoreEntry } from '@/components/features/session-live/EndgameDialog';
+export type {
+  EndgameDialogLabels,
+  EndgameDialogProps,
+  FinalScoreEntry,
+} from '@/components/features/session-live/EndgameDialog';
 
 export { LiveAgentChat } from '@/components/features/session-live/LiveAgentChat';
-export type { ChatMessage, LiveAgentChatLabels, LiveAgentChatProps } from '@/components/features/session-live/LiveAgentChat';
+export type {
+  ChatMessage,
+  LiveAgentChatLabels,
+  LiveAgentChatProps,
+} from '@/components/features/session-live/LiveAgentChat';
 
 export { LiveSessionNotes } from '@/components/features/session-live/LiveSessionNotes';
-export type { LiveSessionNotesLabels, LiveSessionNotesProps, NoteEntry } from '@/components/features/session-live/LiveSessionNotes';
+export type {
+  LiveSessionNotesLabels,
+  LiveSessionNotesProps,
+  NoteEntry,
+} from '@/components/features/session-live/LiveSessionNotes';
 
 export { PauseOverlay } from '@/components/features/session-live/PauseOverlay';
-export type { PauseOverlayLabels, PauseOverlayProps } from '@/components/features/session-live/PauseOverlay';
+export type {
+  PauseOverlayLabels,
+  PauseOverlayProps,
+} from '@/components/features/session-live/PauseOverlay';
 
 export { RightColumnTabs } from '@/components/features/session-live/RightColumnTabs';
-export type { LiveTab, RightColumnTabsLabels, RightColumnTabsProps } from '@/components/features/session-live/RightColumnTabs';
+export type {
+  LiveTab,
+  RightColumnTabsLabels,
+  RightColumnTabsProps,
+} from '@/components/features/session-live/RightColumnTabs';
 
 export { SessionToolsRail } from '@/components/features/session-live/SessionToolsRail';
-export type { SessionToolsRailLabels, SessionToolsRailProps } from '@/components/features/session-live/SessionToolsRail';
+export type {
+  SessionToolsRailLabels,
+  SessionToolsRailProps,
+} from '@/components/features/session-live/SessionToolsRail';

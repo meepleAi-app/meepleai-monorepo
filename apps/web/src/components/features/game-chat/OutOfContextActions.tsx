@@ -32,10 +32,7 @@ export function OutOfContextActions({
 }: OutOfContextActionsProps): ReactElement | null {
   if (actions.length === 0) return null;
   return (
-    <div
-      data-slot="out-of-context-actions"
-      className={clsx('mt-3 flex flex-col gap-2', className)}
-    >
+    <div data-slot="out-of-context-actions" className={clsx('mt-3 flex flex-col gap-2', className)}>
       {actions.map((a, i) => (
         <button
           key={i}

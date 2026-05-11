@@ -6,7 +6,7 @@
 <title>MeepleAI — Nanolith Runthrough · Photo Translate Viewer</title>
 <!--
   Mockup: nanolith-runthrough-translate-viewer
-  Route:  /library/games/{gameId}/play/{campaignId}/translate
+  Route:  /library/{gameId}/play/{campaignId}/translate
   Scope:  Phase A runthrough — pipeline foto → segmentazione → traduzione fullscreen (N3 baseline)
   Stati:  A · camera-ready    (CameraViewfinder primitive, frame tratteggiato + scatto button)
           B · segmenting      (loading OCR + segmentation in corso)
@@ -413,7 +413,7 @@
 
 <header class="top">
   <h1>Nanolith Runthrough · Photo Translate Viewer</h1>
-  <span class="route">/library/games/nanolith/play/{campaignId}/translate</span>
+  <span class="route">/library/nanolith/play/{campaignId}/translate</span>
   <span class="spacer"></span>
   <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
 </header>
@@ -462,7 +462,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – camera ready (drop zone)">
         <span class="frame-label">Desktop · 1440px (drop zone fallback)</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play/cmp-1234/translate</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate</span></div>
         <div class="appbar">
           <button class="back">←</button>
           <span class="crumbs"><strong>Sera con i ragazzi</strong> · 📷 Carica pagina · §147</span>
@@ -523,7 +523,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – segmenting" aria-busy="true">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play/cmp-1234/translate</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Analisi pagina…</span></div>
         <div style="flex: 1; padding: var(--s-7); display: flex; gap: var(--s-7); align-items: flex-start;">
           <div class="photo-preview" style="width: 280px; flex-shrink: 0;"><span class="scan"></span></div>
@@ -588,7 +588,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – segments list">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play/cmp-1234/translate</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · 3 paragrafi trovati</span><button class="right-tool" aria-label="Rifotografa">📷</button></div>
         <div style="flex: 1; display: flex; overflow: hidden;">
           <aside style="width: 240px; flex-shrink: 0; border-right: 1px solid var(--border-light); padding: var(--s-4);">
@@ -644,7 +644,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – translating">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play/cmp-1234/translate</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>§147</strong> · traduzione in corso · streaming</span></div>
         <div class="translating-shell" style="flex-direction: row; gap: var(--s-7); padding: var(--s-7);">
           <div style="flex-shrink: 0; width: 280px;">
@@ -715,7 +715,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – fullscreen viewer">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play/cmp-1234/translate?p=147</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate?p=147</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs">§147 · traduzione · 30/47 paragrafi</span><button class="right-tool" aria-label="Menu">⋯</button></div>
         <div class="viewer-page" style="padding: var(--s-7) var(--s-9);">
           <header class="viewer-header">
@@ -788,7 +788,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – low confidence">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/games/nanolith/play/cmp-1234/translate</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Foto poco leggibile</span></div>
         <div style="flex: 1; padding: var(--s-7); display: flex; gap: var(--s-7); align-items: flex-start;">
           <div style="width: 280px; flex-shrink: 0;">

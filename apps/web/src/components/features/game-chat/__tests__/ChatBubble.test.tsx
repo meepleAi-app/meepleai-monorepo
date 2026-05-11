@@ -29,7 +29,12 @@ describe('ChatBubble', () => {
       <ChatBubble
         role="agent"
         agentName="X"
-        content={<><p>p1</p><p>p2</p></>}
+        content={
+          <>
+            <p>p1</p>
+            <p>p2</p>
+          </>
+        }
       />
     );
     expect(screen.getByText('p1')).toBeInTheDocument();

@@ -20,7 +20,6 @@ import clsx from 'clsx';
 import { CitationPdfTab } from '@/components/features/game-chat/CitationPdfTab';
 import type { Citation } from '@/types';
 
-
 export interface CitationModalProps {
   readonly citation: Citation | null;
   readonly open: boolean;

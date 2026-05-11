@@ -70,7 +70,7 @@ export function KbStatusBadge({ gameId }: KbStatusBadgeProps) {
         <CheckCircle2 className="h-3 w-3 flex-shrink-0" />
         <span className="flex-1 truncate">{t('kbStatus.indexed')}</span>
         <Link
-          href={`/library/games/${gameId}/agent`}
+          href={`/library/${gameId}/agent`}
           className="ml-auto underline underline-offset-2 hover:text-teal-600"
           onClick={e => e.stopPropagation()}
           aria-label={t('kbStatus.createAgent')}

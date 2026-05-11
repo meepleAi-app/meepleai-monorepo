@@ -8,7 +8,10 @@
  */
 
 export { BulkSelectionBar } from '@/components/features/library/BulkSelectionBar';
-export type { BulkSelectionBarLabels, BulkSelectionBarProps } from '@/components/features/library/BulkSelectionBar';
+export type {
+  BulkSelectionBarLabels,
+  BulkSelectionBarProps,
+} from '@/components/features/library/BulkSelectionBar';
 
 export { EmptyLibrary } from '@/components/features/library/EmptyLibrary';
 export type {
@@ -34,7 +37,15 @@ export type {
 } from '@/components/features/library/LibraryHybridGrid';
 
 export { LibraryTabs } from '@/components/features/library/LibraryTabs';
-export type { LibraryEntityKey, LibraryTabConfig, LibraryTabsProps } from '@/components/features/library/LibraryTabs';
+export type {
+  LibraryEntityKey,
+  LibraryTabConfig,
+  LibraryTabsProps,
+} from '@/components/features/library/LibraryTabs';
 
 export { RecentActivityRail } from '@/components/features/library/RecentActivityRail';
-export type { ActivityItem, ActivityKind, RecentActivityRailProps } from '@/components/features/library/RecentActivityRail';
+export type {
+  ActivityItem,
+  ActivityKind,
+  RecentActivityRailProps,
+} from '@/components/features/library/RecentActivityRail';

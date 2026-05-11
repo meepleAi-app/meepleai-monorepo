@@ -32,7 +32,6 @@ import { CitationOwnershipUpsell } from '@/components/features/game-chat/Citatio
 import { useCanViewPdf } from '@/hooks/queries/useCanViewPdf';
 import { api } from '@/lib/api';
 
-
 // pdfjs worker setup (mirror of PdfViewerModal.tsx:17-20)
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -79,9 +78,7 @@ export function CitationPdfTab({
             'border-t-[hsl(var(--c-kb))] motion-safe:animate-spin'
           )}
         />
-        <div className="font-mono text-xs text-muted-foreground">
-          Verifica accesso al PDF…
-        </div>
+        <div className="font-mono text-xs text-muted-foreground">Verifica accesso al PDF…</div>
       </div>
     );
   }
@@ -90,13 +87,7 @@ export function CitationPdfTab({
     return <CitationOwnershipUpsell gameId={gameId} className={className} />;
   }
 
-  return (
-    <PdfRenderer
-      documentId={documentId}
-      initialPage={initialPage}
-      className={className}
-    />
-  );
+  return <PdfRenderer documentId={documentId} initialPage={initialPage} className={className} />;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -234,11 +225,7 @@ function PdfRenderer({ documentId, initialPage, className }: PdfRendererProps): 
             loading={null}
             error={null}
           >
-            <Page
-              pageNumber={currentPage}
-              renderAnnotationLayer={false}
-              renderTextLayer={false}
-            />
+            <Page pageNumber={currentPage} renderAnnotationLayer={false} renderTextLayer={false} />
           </Document>
         )}
       </div>

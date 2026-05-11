@@ -18,11 +18,11 @@ describe('ConfidenceBadge', () => {
     expect(screen.getByRole('status')).toHaveAttribute('data-tier', 'bassa');
   });
   it('boundary 0.80 = alta', () => {
-    render(<ConfidenceBadge score={0.80} />);
+    render(<ConfidenceBadge score={0.8} />);
     expect(screen.getByRole('status')).toHaveAttribute('data-tier', 'alta');
   });
   it('boundary 0.50 = media (not bassa)', () => {
-    render(<ConfidenceBadge score={0.50} />);
+    render(<ConfidenceBadge score={0.5} />);
     expect(screen.getByRole('status')).toHaveAttribute('data-tier', 'media');
   });
   it('edge 0.0 = bassa', () => {

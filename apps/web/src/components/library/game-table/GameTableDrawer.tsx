@@ -122,7 +122,7 @@ function DrawerContentRenderer({ content }: { content: DrawerContent }) {
             Gestisci timer, dadi, segnapunti e altri strumenti di gioco.
           </p>
           <Button asChild variant="outline" size="sm" className="text-[#e6edf3] border-[#30363d]">
-            <Link href={`/library/games/${content.gameId}/toolkit`}>
+            <Link href={`/library/${content.gameId}/toolkit`}>
               <ExternalLink className="mr-2 h-3 w-3" />
               Apri Toolkit
             </Link>

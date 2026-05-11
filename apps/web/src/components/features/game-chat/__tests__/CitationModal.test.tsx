@@ -62,7 +62,10 @@ describe('CitationModal', () => {
     render(<CitationModal citation={sampleCitation} open onClose={vi.fn()} gameId="game-1" />);
     expect(screen.queryByTestId('citation-pdf-tab-mounted')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab', { name: /pdf originale/i }));
-    expect(screen.getByRole('tab', { name: /pdf originale/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /pdf originale/i })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
     expect(screen.getByTestId('citation-pdf-tab-mounted')).toBeInTheDocument();
   });
 

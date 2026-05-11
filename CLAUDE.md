@@ -258,7 +258,17 @@ tests/Api.Tests/          # Backend test suite
 
 ### 🔒 Active Freezes
 
-_No active freezes._
+**Design System De-versioning FREEZE** (active 2026-05-11, umbrella #1023 / Stage 1 audit #1024)
+
+Until Stage 2 path-migration PR lands, **no new files** may be added under:
+- `apps/web/src/components/v2/**`
+- `apps/web/src/components/ui/v2/**`
+
+Implementations of `missing` components (per [audit report](./docs/for-developers/audits/2026-05-11-mockup-conformity.md)) MUST wait for the post-Stage-2 canonical paths:
+- Feature compositions → `apps/web/src/components/features/<feature>/`
+- Primitives → `apps/web/src/components/ui/<primitive>/`
+
+Stage 2 codemod (atomic rename + import fix) is the unblocker. Exceptions require explicit user sign-off in the PR description. Reference: [`docs/for-developers/specs/2026-05-11-design-system-deversioning.md`](./docs/for-developers/specs/2026-05-11-design-system-deversioning.md).
 
 > **Historical**: SP6 v2 expansion FREEZE (issued 2026-05-06 per [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808), tied to A11y audit [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807)) was **lifted on 2026-05-10** by PR #876 (token redesign — AA-compliant CSS vars + entity Tailwind utilities). Issues #807 and #808 are both CLOSED. Restore A11y CI job (`Frontend - A11y E2E`) to blocking (`continue-on-error: false`) when verified green on `main-dev`.
 

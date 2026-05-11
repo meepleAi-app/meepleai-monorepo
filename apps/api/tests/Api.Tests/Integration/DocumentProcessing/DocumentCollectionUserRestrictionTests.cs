@@ -158,10 +158,15 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "cleanup@test.com", DisplayName = "Cleanup", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "Pandemic" };
+        // DocumentCollection.SharedGameId FKs to shared_games (not games), so seed a SharedGameEntity.
+        var sharedGame = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
+        {
+            Id = gameId,
+            Title = "Pandemic",
+        };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(sharedGame);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var collectionId = Guid.NewGuid();

@@ -150,11 +150,38 @@ export async function mockHasIndexedDocument(page: Page, gameId: string): Promis
     category: 'Rulebook',
     versionLabel: null,
   };
-  await page.route(`**/api/v1/knowledge-base/${gameId}/documents`, async (route: Route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify([doc]),
-    });
+
+  // #1004 debug instrumentation: log when mock fires + when un-mocked
+  // /documents request slips through. CI artifact will surface this in
+  // test stdout (visible in HTML report). Remove after root cause identified.
+  await page.route('**/api/v1/knowledge-base/**/documents', async (route: Route) => {
+    const url = route.request().url();
+    if (url.includes(gameId)) {
+      console.log(`[mockHasIndexedDocument] HIT ${url}`);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([doc]),
+      });
+    } else {
+      console.log(`[mockHasIndexedDocument] PASS (other gameId): ${url}`);
+      await route.continue();
+    }
+  });
+
+  // Capture all /knowledge-base/*/documents requests at network level too —
+  // page.route handler runs only if the URL matches its glob; this listener
+  // shows the actual URL shape regardless of pattern match.
+  page.on('request', req => {
+    if (req.url().includes('/api/v1/knowledge-base/') && req.url().includes('/documents')) {
+      console.log(`[network REQ] ${req.method()} ${req.url()}`);
+    }
+  });
+  page.on('response', async resp => {
+    const url = resp.url();
+    if (url.includes('/api/v1/knowledge-base/') && url.includes('/documents')) {
+      const body = (await resp.text().catch(() => '')).slice(0, 150);
+      console.log(`[network RES] ${resp.status()} ${url} → ${body}`);
+    }
   });
 }

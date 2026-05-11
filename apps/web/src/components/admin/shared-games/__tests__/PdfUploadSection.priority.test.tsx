@@ -61,7 +61,11 @@ beforeEach(() => {
     responseText: JSON.stringify({ documentId: 'doc-123', fileName: 'rules.pdf' }),
   };
   vi.clearAllMocks();
-  global.XMLHttpRequest = vi.fn(() => mockXHR) as unknown as typeof XMLHttpRequest;
+  // Vitest 2+/Node 24 made global.XMLHttpRequest read-only — mirror fix #1031.
+  vi.stubGlobal(
+    'XMLHttpRequest',
+    vi.fn(() => mockXHR)
+  );
 });
 
 afterEach(() => {

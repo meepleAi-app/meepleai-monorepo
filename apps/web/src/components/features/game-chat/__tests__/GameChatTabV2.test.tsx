@@ -21,7 +21,7 @@ vi.mock('@/lib/api', () => ({
 
 import { qaStream } from '@/lib/api/clients/chatClient';
 import { api } from '@/lib/api';
-import { GameChatTabV2 } from '../GameChatTabV2';
+import { GameChatTabV2 } from '../GameChatTab';
 
 async function* mockStream(events: Array<{ type: number; data: unknown }>) {
   for (const e of events) yield e;
@@ -43,7 +43,13 @@ const happyEvents = [
 
 const lowConfEvents = [
   { type: 7, data: 'Non sono certo, probabilmente si rimescolano gli scarti.' },
-  { type: 4, data: { confidence: 0.42, Citations: [{ ...sampleCitation, pageNumber: 6, snippet: 'fine mazzo', documentId: 'd2' }] } },
+  {
+    type: 4,
+    data: {
+      confidence: 0.42,
+      Citations: [{ ...sampleCitation, pageNumber: 6, snippet: 'fine mazzo', documentId: 'd2' }],
+    },
+  },
 ];
 
 const oocEvents = [
@@ -88,7 +94,9 @@ describe('GameChatTabV2', () => {
     render(<GameChatTabV2 gameId="wingspan" />);
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'tg?' } });
     fireEvent.click(screen.getByRole('button', { name: /invia/i }));
-    await waitFor(() => expect(screen.getByRole('button', { name: /cambia gioco/i })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /cambia gioco/i })).toBeInTheDocument()
+    );
     expect(screen.getByRole('button', { name: /cerca un agente/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /resta/i })).toBeInTheDocument();
   });

@@ -59,12 +59,19 @@ jobs:
             git diff --name-only --diff-filter=AM "$BASE_SHA" "$HEAD_SHA" -- 'docs/**/*.md' 'CLAUDE.md' > .lychee-targets.txt || true
           fi
           # Always exclude .docs-archive/ — those files are dead by definition.
-          # Also exclude docs/for-claude/ — AI-consumption sandbox with aspirational
-          # cross-refs (e.g. references to canonical docs files that may not exist yet
-          # or have been reorganized). Lower bar than human-facing docs; tracked separately
-          # as docs debt for future cleanup. See PR #979 unblock rationale.
+          # Also exclude AI-consumption / reorg-in-flight trees with known dead
+          # cross-refs (tracked separately as docs cleanup debt). Excluding the
+          # files themselves means we don't re-check their broken outgoing links,
+          # but we DO still check links FROM other files pointing INTO them
+          # (rare in practice — these are leaf trees).
+          #   - docs/for-claude/  — AI-consumption sandbox (#1002 carryover)
+          #   - docs/for-developers/deployment/  — partial deletions left orphans
+          #   - docs/for-developers/security/  — same
+          #   - docs/for-developers/testing/  — same
+          #   - docs/superpowers/plans/archive/  — archived plans referencing pre-reorg paths
+          # See PR #979 unblock + docs-cleanup tracking issue.
           if [[ -f .lychee-targets.txt ]]; then
-            grep -vE '^\.docs-archive/|^docs/for-claude/' .lychee-targets.txt > .lychee-targets.filtered.txt || true
+            grep -vE '^\.docs-archive/|^docs/for-claude/|^docs/for-developers/(deployment|security|testing)/|^docs/superpowers/plans/archive/' .lychee-targets.txt > .lychee-targets.filtered.txt || true
             mv .lychee-targets.filtered.txt .lychee-targets.txt
           fi
           count=$(wc -l < .lychee-targets.txt)

@@ -45,7 +45,7 @@ export function SessionsHero({ onNewSession, labels, className }: SessionsHeroPr
           <h1 className="text-2xl font-bold tracking-tight text-entity-session sm:text-3xl">
             {labels.title}
           </h1>
-          <p className="text-sm text-slate-600">{labels.subtitle}</p>
+          <p className="text-sm text-muted-foreground">{labels.subtitle}</p>
         </div>
 
         {/* CTA */}

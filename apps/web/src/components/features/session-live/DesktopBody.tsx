@@ -58,7 +58,7 @@ export function DesktopBody({
             className="flex h-full items-center justify-center p-4"
           >
             {/* RightColumnTabs (tools/chat/notes) added in Interactions sub-PR */}
-            <div className="text-center text-xs text-slate-600">Tools, Chat &amp; Notes</div>
+            <div className="text-center text-xs text-muted-foreground">Tools, Chat &amp; Notes</div>
           </div>
         )}
       </aside>

@@ -116,7 +116,7 @@ export function ActionLogTimeline({
               {/* Timestamp */}
               <time
                 dateTime={entry.timestamp}
-                className="shrink-0 tabular-nums text-xs text-slate-600"
+                className="shrink-0 tabular-nums text-xs text-muted-foreground"
               >
                 {formatTime(entry.timestamp)}
               </time>

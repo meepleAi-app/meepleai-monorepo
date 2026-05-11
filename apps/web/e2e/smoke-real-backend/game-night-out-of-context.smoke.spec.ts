@@ -12,7 +12,12 @@
 import { test, expect } from '@playwright/test';
 
 import { smokeLogin, applySessionToPage } from './_helpers/auth';
-import { mockNoChatHistory, mockQaStreamV2, seedGameForChat } from './_helpers/game-chat';
+import {
+  mockNoChatHistory,
+  mockQaStreamV2,
+  mockReadyKbDocuments,
+  seedGameForChat,
+} from './_helpers/game-chat';
 
 test.describe('SMOKE — game-chat out of context', () => {
   test('shows OutOfContextActions when confidence=0 and no citations', async ({
@@ -23,6 +28,7 @@ test.describe('SMOKE — game-chat out of context', () => {
     await applySessionToPage(page, cookieHeader);
     const gameId = await seedGameForChat(request, cookieHeader);
     await mockNoChatHistory(page, gameId);
+    await mockReadyKbDocuments(page, gameId);
     await mockQaStreamV2(page, {
       tokens: ['Non ho informazioni su questo argomento.'],
       citations: [],

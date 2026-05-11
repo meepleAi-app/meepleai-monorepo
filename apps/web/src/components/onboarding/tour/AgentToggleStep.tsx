@@ -1,6 +1,6 @@
 import type { JSX } from 'react';
 
-import { ToggleSwitch } from '@/components/ui/v2/toggle-switch';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 
 import { AGENTS } from './data';
 

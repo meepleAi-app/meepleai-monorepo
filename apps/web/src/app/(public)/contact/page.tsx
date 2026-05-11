@@ -16,10 +16,10 @@ import { useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { Btn } from '@/components/ui/btn';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Separator } from '@/components/ui/navigation/separator';
 import { Button } from '@/components/ui/primitives/button';
-import { Btn } from '@/components/ui/v2/btn';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 

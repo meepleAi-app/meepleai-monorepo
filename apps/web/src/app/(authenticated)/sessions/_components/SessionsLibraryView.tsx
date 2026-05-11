@@ -40,7 +40,7 @@ import {
   type SessionCardListLabels,
   type SessionsFiltersLabels,
   type SessionsHeroLabels,
-} from '@/components/v2/sessions';
+} from '@/components/features/sessions';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useTranslation } from '@/hooks/useTranslation';
 import {

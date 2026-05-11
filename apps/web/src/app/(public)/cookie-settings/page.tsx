@@ -5,11 +5,11 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
-import { Btn } from '@/components/ui/v2/btn';
-import { HeroGradient } from '@/components/ui/v2/hero-gradient';
-import { SettingsList } from '@/components/ui/v2/settings-list';
-import { SettingsRow } from '@/components/ui/v2/settings-row';
-import { ToggleSwitch } from '@/components/ui/v2/toggle-switch';
+import { Btn } from '@/components/ui/btn';
+import { HeroGradient } from '@/components/ui/hero-gradient';
+import { SettingsList } from '@/components/ui/settings-list';
+import { SettingsRow } from '@/components/ui/settings-row';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { useTranslation } from '@/hooks/useTranslation';
 import { getStoredConsent, setStoredConsent } from '@/lib/cookie-consent';
 

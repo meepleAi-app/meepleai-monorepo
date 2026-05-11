@@ -58,7 +58,7 @@ import {
   type GamebookHeroLabels,
   type QuotaWidgetLabels,
   type QuotaWidgetVariant,
-} from '@/components/v2/gamebook';
+} from '@/components/features/gamebook';
 import { useGamebooks, useQuotaInfo } from '@/hooks/queries/useGamebooks';
 import { useTranslation } from '@/hooks/useTranslation';
 import {

@@ -20,8 +20,8 @@ import {
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { SettingsList } from '@/components/ui/v2/settings-list';
-import { SettingsRow } from '@/components/ui/v2/settings-row';
+import { SettingsList } from '@/components/ui/settings-list';
+import { SettingsRow } from '@/components/ui/settings-row';
 import { api } from '@/lib/api';
 
 export default function SecuritySettingsPage() {

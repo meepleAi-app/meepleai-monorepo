@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { GameChatTabV2 } from '@/components/v2/game-chat';
+import { GameChatTabV2 } from '@/components/features/game-chat';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 

@@ -21,12 +21,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { qaStream } from '@/lib/api/clients/chatClient';
+import type { AgentKind } from '@/components/features/game-chat/GameChatHeader';
 import { api } from '@/lib/api';
+import { qaStream } from '@/lib/api/clients/chatClient';
 import type { ChatThreadMessageDto } from '@/lib/api/schemas/chat.schemas';
 import type { Citation } from '@/types';
-
-import type { AgentKind } from '@/components/v2/game-chat/GameChatHeader';
 
 export interface ChatMessage {
   readonly id: string;

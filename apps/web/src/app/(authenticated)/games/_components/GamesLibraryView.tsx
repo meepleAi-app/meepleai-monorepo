@@ -35,7 +35,7 @@ import {
   type GamesSortKey,
   type GamesStatusKey,
   type GamesViewKey,
-} from '@/components/v2/games';
+} from '@/components/features/games';
 import { useLibrary } from '@/hooks/queries/useLibrary';
 import { useTranslation } from '@/hooks/useTranslation';
 import {

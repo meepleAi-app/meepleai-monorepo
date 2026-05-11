@@ -3,9 +3,9 @@
 
 import Link from 'next/link';
 
-import { Btn } from '@/components/ui/v2/btn';
-import { Divider } from '@/components/ui/v2/divider';
-import { HeroGradient } from '@/components/ui/v2/hero-gradient';
+import { Btn } from '@/components/ui/btn';
+import { Divider } from '@/components/ui/divider';
+import { HeroGradient } from '@/components/ui/hero-gradient';
 import { useTranslation } from '@/hooks/useTranslation';
 
 const STEPS = ['step1', 'step2', 'step3'] as const;

@@ -135,18 +135,20 @@ export async function mockNoDocuments(page: Page, gameId: string): Promise<void>
  * fields are present for type safety against PdfDocumentResponseSchema.
  */
 export async function mockHasIndexedDocument(page: Page, gameId: string): Promise<void> {
+  // Schema reference: apps/web/src/lib/api/schemas/game-documents.schemas.ts
+  // GameDocumentSchema requires: id (uuid), title, status (indexed|processing|failed),
+  // pageCount (int >=0), createdAt (datetime with offset), category (Rulebook|...),
+  // versionLabel (string|null). Mismatch causes httpClient zod parse to throw,
+  // useQuery returns empty array, GameAiChatTab shows the "Carica un PDF"
+  // placeholder, and ChatInputBar never mounts (#960 Cat B real residual).
   const doc = {
     id: '00000000-0000-4000-8000-000000053edd',
-    fileName: 'smoke-fixture-rulebook.pdf',
-    fileSizeBytes: 1024,
-    contentType: 'application/pdf',
-    pageCount: 1,
-    uploadedAt: new Date().toISOString(),
-    uploadedByUserId: '00000000-0000-4000-8000-000000000001',
-    processingStatus: 'Ready',
+    title: 'Smoke Fixture Rulebook',
     status: 'indexed',
-    chunkCount: 1,
-    isPublic: false,
+    pageCount: 1,
+    createdAt: new Date().toISOString(),
+    category: 'Rulebook',
+    versionLabel: null,
   };
   await page.route(`**/api/v1/knowledge-base/${gameId}/documents`, async (route: Route) => {
     await route.fulfill({

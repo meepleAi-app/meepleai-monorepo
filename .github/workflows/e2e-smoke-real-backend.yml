@@ -204,6 +204,17 @@ jobs:
           echo "--- Browser-like GET response body (first 400 chars) ---"
           head -c 400 /tmp/browser-detail.json 2>/dev/null
           echo ""
+          echo "--- Game-night endpoint probes (#960 Cat B) ---"
+          curl -sS -X GET http://localhost:8080/api/v1/knowledge-base/00000000-0000-4000-8000-000000053e1d/documents \
+            -b /tmp/cookies.txt -o /tmp/kb-docs.json \
+            -w "kb-documents HTTP %{http_code}\n" 2>&1 || true
+          head -c 300 /tmp/kb-docs.json 2>/dev/null
+          echo ""
+          curl -sS -X GET "http://localhost:8080/api/v1/chat-threads?gameId=00000000-0000-4000-8000-000000053e1d" \
+            -b /tmp/cookies.txt -o /tmp/chat-threads.json \
+            -w "chat-threads HTTP %{http_code}\n" 2>&1 || true
+          head -c 300 /tmp/chat-threads.json 2>/dev/null
+          echo ""
           echo "::endgroup::"
 
       - name: Run smoke specs

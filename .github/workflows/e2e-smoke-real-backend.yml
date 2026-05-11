@@ -223,7 +223,11 @@ jobs:
           # docker compose already provides web on :3000 (see infra/compose.dev.yml:72)
           # — skip Playwright's own webServer to avoid port collision
           PLAYWRIGHT_SKIP_WEB_SERVER: '1'
-        run: pnpm playwright test smoke-real-backend/ --project=desktop-chrome
+        # #1004 investigation: html reporter captures screenshot + error-context.md
+        # per failed test. Required to debug Cat B residual without local repro
+        # (artifact upload uses apps/web/playwright-report dir which dot reporter
+        # doesn't create).
+        run: pnpm playwright test smoke-real-backend/ --project=desktop-chrome --reporter=html,list
 
       - name: Upload report on failure
         if: failure()

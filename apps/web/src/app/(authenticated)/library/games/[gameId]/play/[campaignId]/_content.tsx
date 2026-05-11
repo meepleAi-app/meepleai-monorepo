@@ -2,7 +2,7 @@
 
 import type { ReactElement } from 'react';
 
-import { GamebookPlayShell } from '@/components/v2/gamebook';
+import { GamebookPlayShell } from '@/components/features/gamebook';
 
 export function Content({
   campaignId,

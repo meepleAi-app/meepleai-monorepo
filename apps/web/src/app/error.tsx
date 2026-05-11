@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 
-import { HeroGradient } from '@/components/ui/v2/hero-gradient';
+import { HeroGradient } from '@/components/ui/hero-gradient';
 import { useTranslation } from '@/hooks/useTranslation';
 
 export default function GlobalError({

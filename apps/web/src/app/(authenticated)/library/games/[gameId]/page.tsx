@@ -15,12 +15,12 @@ import { useCallback } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
+import { NanolithCampaignCTA } from '@/components/features/gamebook/NanolithCampaignCTA';
 import { GameDetailDesktop } from '@/components/game-detail/GameDetailDesktop';
 import { isGameTabId, type GameTabId } from '@/components/game-detail/tabs';
 import { GameTableSkeleton } from '@/components/library/game-table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
-import { NanolithCampaignCTA } from '@/components/v2/gamebook/NanolithCampaignCTA';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 
 import GameDetailMobile from './game-detail-mobile';

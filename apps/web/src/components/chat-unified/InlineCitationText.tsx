@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import { ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+
 import type { InlineCitationMatch } from '@/lib/api/clients/chatClient';
 import { cn } from '@/lib/utils';
 

@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-import { getEntityToken } from '@/components/ui/v2/entity-tokens';
+import { getEntityToken } from '@/components/ui/entity-tokens';
 
 export interface GameDrawerGame {
   readonly id: string;

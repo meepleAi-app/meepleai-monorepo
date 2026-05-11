@@ -84,7 +84,7 @@ import {
   type OfflineBannerLabels,
   type PageThumbLabels,
   type StepIndicatorLabels,
-} from '@/components/v2/gamebook';
+} from '@/components/features/gamebook';
 import { useBggSearch } from '@/hooks/queries/useBggSearch';
 import { useGames } from '@/hooks/queries/useGames';
 import { useTranslation } from '@/hooks/useTranslation';

@@ -18,9 +18,9 @@ import clsx from 'clsx';
 import { useRouter } from 'next/navigation';
 
 import { AccessibleModal } from '@/components/accessible';
+import { Divider } from '@/components/ui/divider';
+import { OAuthButton } from '@/components/ui/oauth-buttons';
 import { Button } from '@/components/ui/primitives/button';
-import { Divider } from '@/components/ui/v2/divider';
-import { OAuthButton } from '@/components/ui/v2/oauth-buttons';
 import { useAuth, type AuthUser } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { trackSignUp } from '@/lib/analytics/flywheel-events';

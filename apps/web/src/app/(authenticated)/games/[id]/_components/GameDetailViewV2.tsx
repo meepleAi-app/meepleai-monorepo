@@ -41,7 +41,7 @@ import {
   type GameDetailAgentEntry,
   type GameDetailHeroMeta,
   type TabKey,
-} from '@/components/v2/game-detail';
+} from '@/components/features/game-detail';
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { useLibraryGameDetail, type LibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { useTranslation } from '@/hooks/useTranslation';

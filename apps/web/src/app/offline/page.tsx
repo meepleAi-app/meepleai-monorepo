@@ -4,8 +4,8 @@ import { useEffect } from 'react';
 
 import { WifiOff } from 'lucide-react';
 
-import { Divider } from '@/components/ui/v2/divider';
-import { HeroGradient } from '@/components/ui/v2/hero-gradient';
+import { Divider } from '@/components/ui/divider';
+import { HeroGradient } from '@/components/ui/hero-gradient';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePWA } from '@/lib/domain-hooks/usePWA';
 

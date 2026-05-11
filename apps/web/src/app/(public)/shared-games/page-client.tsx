@@ -29,7 +29,7 @@ import {
   type SharedGamesFiltersOption,
   type SharedGamesGridGame,
   type SharedGamesGridState,
-} from '@/components/ui/v2/shared-games';
+} from '@/components/ui/shared-games';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useSharedGames } from '@/hooks/useSharedGames';
 import { useTranslation } from '@/hooks/useTranslation';

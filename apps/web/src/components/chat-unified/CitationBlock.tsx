@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import { FileText, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 interface SnippetData {

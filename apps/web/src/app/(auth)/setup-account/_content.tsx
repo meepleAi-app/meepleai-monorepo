@@ -17,9 +17,9 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { AuthLayout } from '@/components/layouts';
-import { Btn } from '@/components/ui/v2/btn';
-import { InputField } from '@/components/ui/v2/input-field';
-import { PwdInput } from '@/components/ui/v2/pwd-input';
+import { Btn } from '@/components/ui/btn';
+import { InputField } from '@/components/ui/input-field';
+import { PwdInput } from '@/components/ui/pwd-input';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 // ──────────────────────────────────────────────

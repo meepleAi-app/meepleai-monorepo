@@ -11,9 +11,9 @@ import {
   TwoFactorVerification,
   type TwoFactorVerificationData,
 } from '@/components/auth/TwoFactorVerification';
-import { AuthCard } from '@/components/ui/v2/auth-card';
-import { Divider } from '@/components/ui/v2/divider';
-import { OAuthButton } from '@/components/ui/v2/oauth-buttons';
+import { AuthCard } from '@/components/ui/auth-card';
+import { Divider } from '@/components/ui/divider';
+import { OAuthButton } from '@/components/ui/oauth-buttons';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';

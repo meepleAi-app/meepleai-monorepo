@@ -9,7 +9,7 @@ import { Suspense } from 'react';
 
 import { Metadata } from 'next';
 
-import { AuthCard } from '@/components/ui/v2/auth-card';
+import { AuthCard } from '@/components/ui/auth-card';
 
 import { VerifyEmailContent } from './_content';
 

@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { PartyPopper, ArrowRight, Sparkles } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { Btn } from '@/components/ui/v2/btn';
+import { Btn } from '@/components/ui/btn';
 
 const REDIRECT_DELAY_MS = 2000;
 const PROGRESS_INTERVAL_MS = 50;

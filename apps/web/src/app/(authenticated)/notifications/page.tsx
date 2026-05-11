@@ -21,16 +21,16 @@ import { it } from 'date-fns/locale';
 import { Bell, CheckCheck, Loader2 } from 'lucide-react';
 
 import { CatalogPagination } from '@/components/catalog/CatalogPagination';
-import { Btn } from '@/components/ui/v2/btn';
+import { Btn } from '@/components/ui/btn';
 import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
   DrawerDescription,
-} from '@/components/ui/v2/drawer';
-import type { EntityType } from '@/components/ui/v2/entity-tokens';
-import { NotificationCard } from '@/components/ui/v2/notification-card';
+} from '@/components/ui/drawer';
+import type { EntityType } from '@/components/ui/entity-tokens';
+import { NotificationCard } from '@/components/ui/notification-card';
 import type { NotificationDto, NotificationType } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useNotificationStore, selectNotifications } from '@/stores/notification/store';

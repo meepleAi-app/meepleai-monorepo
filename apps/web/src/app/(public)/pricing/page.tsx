@@ -9,9 +9,9 @@
 
 import { useRouter } from 'next/navigation';
 
+import { HeroGradient } from '@/components/ui/hero-gradient';
+import { PricingCard, type PricingCardProps } from '@/components/ui/pricing-card/pricing-card';
 import { Button } from '@/components/ui/primitives/button';
-import { HeroGradient } from '@/components/ui/v2/hero-gradient';
-import { PricingCard, type PricingCardProps } from '@/components/ui/v2/pricing-card/pricing-card';
 
 type Tier = Omit<PricingCardProps, 'className'>;
 

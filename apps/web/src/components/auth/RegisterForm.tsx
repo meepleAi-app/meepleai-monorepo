@@ -14,9 +14,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import * as z from 'zod';
 
-import { Btn } from '@/components/ui/v2/btn';
-import { InputField } from '@/components/ui/v2/input-field';
-import { PwdInput } from '@/components/ui/v2/pwd-input';
+import { Btn } from '@/components/ui/btn';
+import { InputField } from '@/components/ui/input-field';
+import { PwdInput } from '@/components/ui/pwd-input';
 import { useTranslation } from '@/hooks/useTranslation';
 
 // ============================================================================

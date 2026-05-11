@@ -25,7 +25,7 @@ import { useEffect, useState, useRef } from 'react';
 
 import { CheckCircle2, ArrowRight } from 'lucide-react';
 
-import { Btn } from '@/components/ui/v2/btn';
+import { Btn } from '@/components/ui/btn';
 import { useTranslation } from '@/hooks/useTranslation';
 
 export interface VerificationSuccessProps {

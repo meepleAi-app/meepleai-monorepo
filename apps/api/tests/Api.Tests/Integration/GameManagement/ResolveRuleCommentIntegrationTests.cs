@@ -387,7 +387,7 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         result.IsResolved.Should().BeTrue();
     }
     [Fact]
-    public async Task ResolveNonExistentComment_ThrowsInvalidOperation()
+    public async Task ResolveNonExistentComment_ThrowsNotFoundException()
     {
         // Arrange
         await ResetDatabaseAsync();
@@ -403,8 +403,8 @@ public sealed class ResolveRuleCommentIntegrationTests : IAsyncLifetime
         // Act
         Func<Task> act = async () => await handler.Handle(command, TestCancellationToken);
 
-        // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*not found*");
+        // Assert — see CLAUDE.md #2568: exceptions are NotFoundException (404), never InvalidOperationException (500)
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>()
+            .WithMessage("*RuleComment*not found*");
     }
 }

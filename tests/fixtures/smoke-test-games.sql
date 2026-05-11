@@ -51,8 +51,8 @@ SELECT
     8,
     '',
     '',
-    1,  -- 1 = Published
-    5,  -- 5 = Complete
+    2,  -- GameStatus enum: 0=Draft, 1=PendingApproval, 2=Published, 3=Archived
+    5,  -- GameDataStatus enum: 5 = Complete
     false,
     u."Id",
     NOW(),

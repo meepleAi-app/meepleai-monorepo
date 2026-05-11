@@ -14,9 +14,9 @@ import { useMemo } from 'react';
 
 import { BookOpen } from 'lucide-react';
 
+import { getEventMeta, parseSummary } from '@/components/session/diary-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
-import { getEventMeta, parseSummary } from '@/components/session/diary-utils';
 import { useGameNightDiaryQuery } from '@/hooks/queries/useSessionFlow';
 import { cn } from '@/lib/utils';
 

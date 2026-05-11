@@ -59,13 +59,13 @@ describe('useViewMode', () => {
     expect(result.current.viewMode).toBe('admin');
   });
 
-  it('toggle navigates to /dashboard when switching to user mode', () => {
+  it('toggle navigates to /library when switching to user mode', () => {
     document.cookie = `${VIEW_MODE_COOKIE}=admin`;
     const { result } = renderHook(() => useViewMode());
     act(() => {
       result.current.toggle();
     });
-    expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    expect(mockPush).toHaveBeenCalledWith('/library');
   });
 
   it('toggle navigates to /admin/overview when switching to admin mode', () => {

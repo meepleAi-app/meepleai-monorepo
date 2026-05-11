@@ -67,7 +67,7 @@ import {
   type LibrarySelectionMode,
   type LibraryTabConfig,
   type LibraryViewMode,
-} from '@/components/v2/library';
+} from '@/components/features/library';
 import {
   useLibrary,
   useLibraryActivity,

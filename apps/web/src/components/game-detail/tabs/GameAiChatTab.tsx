@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { GameChatTabV2 } from '@/components/v2/game-chat';
+import { GameChatTabV2 } from '@/components/features/game-chat';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -70,11 +70,7 @@ export function GameAiChatTab({ gameId, variant, isNotInLibrary }: GameTabProps)
   // ---- Stato 3: KB ready or processing → chat V2 inline ----
   return (
     <div role="tabpanel" aria-labelledby="game-tab-aiChat" className="flex h-full flex-col">
-      <GameChatTabV2
-        gameId={gameId}
-        gameTitle={gameDetail?.title ?? 'Gioco'}
-        gameIcon="🎲"
-      />
+      <GameChatTabV2 gameId={gameId} gameTitle={gameDetail?.title ?? 'Gioco'} gameIcon="🎲" />
     </div>
   );
 }

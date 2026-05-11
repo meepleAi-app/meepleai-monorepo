@@ -17,11 +17,11 @@ import { useEffect, useState, type FormEvent, type JSX } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { AuthCard } from '@/components/ui/v2/auth-card';
-import { Btn } from '@/components/ui/v2/btn';
-import { InputField } from '@/components/ui/v2/input-field';
-import { PwdInput } from '@/components/ui/v2/pwd-input';
-import { SuccessCard } from '@/components/ui/v2/success-card';
+import { AuthCard } from '@/components/ui/auth-card';
+import { Btn } from '@/components/ui/btn';
+import { InputField } from '@/components/ui/input-field';
+import { PwdInput } from '@/components/ui/pwd-input';
+import { SuccessCard } from '@/components/ui/success-card';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils/errorHandler';

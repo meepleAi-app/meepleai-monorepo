@@ -62,8 +62,9 @@ jobs:
           # - hotfix/* branches (urgent security/bug fixes; still flow
           #   through main-dev → main-staging → main, no direct-to-main)
           # - fix/*, docs/*, refactor/*, chore/* branches
+          # - dependabot/* branches (automated dependency updates)
           if [[ "$BASE_BRANCH" == "main-dev" ]]; then
-            ALLOWED_PATTERNS="^(feature/|fix/|hotfix/|docs/|test/|refactor/|chore/|release/|merge/)"
+            ALLOWED_PATTERNS="^(feature/|fix/|hotfix/|docs/|test/|refactor/|chore/|release/|merge/|dependabot/)"
 
             if ! echo "$SOURCE_BRANCH" | grep -qE "$ALLOWED_PATTERNS"; then
               echo "::error::Branch 'main-dev' can only be updated from allowed branches"
@@ -79,6 +80,7 @@ jobs:
               echo "  - chore/*"
               echo "  - release/*"
               echo "  - merge/*"
+              echo "  - dependabot/*"
               exit 1
             fi
             echo "✅ Valid: $SOURCE_BRANCH -> main-dev"

@@ -51,8 +51,8 @@ SELECT
     8,
     '',
     '',
-    1,  -- 1 = Published
-    5,  -- 5 = Complete
+    2,  -- GameStatus enum: 0=Draft, 1=PendingApproval, 2=Published, 3=Archived
+    5,  -- GameDataStatus enum: 5 = Complete
     false,
     u."Id",
     NOW(),
@@ -87,4 +87,114 @@ SELECT
     false
 FROM users u
 WHERE u."Email" = 'smoke-user@meepleai.test'
+ON CONFLICT ("Id") DO NOTHING;
+
+-- ============================================================================
+-- KB FK chain (#960 Cat B): unblock GameAiChatTab Stato 3 → GameChatTabV2
+-- ============================================================================
+-- GameAiChatTab gates rendering of <GameChatTabV2/> on
+-- `kbDocs.some(d => d.status === 'indexed' || 'processing')`. Without indexed
+-- docs the tab shows the "Carica un PDF" placeholder and ChatInputBar never
+-- mounts (data-testid=message-input invisible → smoke specs timeout 30s).
+--
+-- Backend handler GetGameDocumentsHandler (KnowledgeBase BC) joins:
+--   vector_documents vd JOIN pdf_documents pdf ON vd.PdfDocumentId = pdf.Id
+--   WHERE vd.GameId == query.GameId
+--
+-- vector_documents.GameId FK → games.Id (NOT shared_games — schema reality).
+-- The smoke endpoint is called with the URL gameId, which we use as both
+-- shared_games.id and games.Id (same UUID for fixture symmetry).
+
+-- 1) Game row mirroring SharedGame (FK target for vector_documents.GameId).
+--    games.Name has UNIQUE constraint — suffix avoids collisions if rerun.
+INSERT INTO games (
+    "Id",
+    "Name",
+    "CreatedAt",
+    "SharedGameId",
+    "MinPlayers",
+    "MaxPlayers",
+    approval_status
+)
+VALUES (
+    '00000000-0000-4000-8000-000000053e1d'::uuid,  -- same as SharedGame.id
+    'Smoke Chat Fixture Game (smoke)',
+    NOW(),
+    '00000000-0000-4000-8000-000000053e1d'::uuid,
+    2,
+    4,
+    2  -- Approved (mirrors SharedGameStatus.Published)
+)
+ON CONFLICT ("Id") DO NOTHING;
+
+-- 2) PdfDocument with all NOT NULL columns + processing_state='Ready' so the
+--    backend treats it as indexed-source. UploadedByUserId resolves to
+--    smoke-user (admin) via subquery. Path/file are placeholders — not
+--    served by any real PDF endpoint in smoke flow.
+INSERT INTO pdf_documents (
+    "Id",
+    "FileName",
+    "FilePath",
+    "FileSizeBytes",
+    "ContentType",
+    "UploadedByUserId",
+    "UploadedAt",
+    processing_state,
+    "PageCount",
+    "Language",
+    "DocumentType",
+    "SortOrder",
+    "IsPublic",
+    document_category,
+    is_active_for_rag,
+    license_type,
+    processing_priority
+)
+SELECT
+    '00000000-0000-4000-8000-000000053edd'::uuid,
+    'smoke-fixture-rulebook.pdf',
+    '/tmp/smoke-fixture-rulebook.pdf',
+    1024,
+    'application/pdf',
+    u."Id",
+    NOW(),
+    'Ready',
+    1,
+    'it',
+    'base',
+    0,
+    false,
+    'Rulebook',
+    true,
+    0,
+    'Normal'
+FROM users u
+WHERE u."Email" = 'smoke-user@meepleai.test'
+ON CONFLICT ("Id") DO NOTHING;
+
+-- 3) VectorDocument linking PDF + Game with IndexingStatus='completed'
+--    (handler MapIndexingStatus maps 'completed' → 'indexed' = the value
+--    GameAiChatTab checks). Embedding fields are placeholders.
+INSERT INTO vector_documents (
+    "Id",
+    "GameId",
+    "PdfDocumentId",
+    "ChunkCount",
+    "TotalCharacters",
+    "IndexingStatus",
+    "IndexedAt",
+    "EmbeddingModel",
+    "EmbeddingDimensions"
+)
+VALUES (
+    '00000000-0000-4000-8000-000000053ede'::uuid,
+    '00000000-0000-4000-8000-000000053e1d'::uuid,
+    '00000000-0000-4000-8000-000000053edd'::uuid,
+    1,
+    100,
+    'completed',
+    NOW(),
+    'intfloat/multilingual-e5-base',
+    768
+)
 ON CONFLICT ("Id") DO NOTHING;

@@ -63,7 +63,7 @@ import {
   type MobileTab,
   type PlayerRosterLiveLabels,
   type TurnIndicatorLabels,
-} from '@/components/v2/session-live';
+} from '@/components/features/session-live';
 import {
   ConnectionLostBanner,
   LiveAgentChat,
@@ -75,7 +75,7 @@ import {
   type LiveSessionNotesLabels,
   type RightColumnTabsLabels,
   type SessionToolsRailLabels,
-} from '@/components/v2/session-live';
+} from '@/components/features/session-live';
 import { useSession } from '@/hooks/queries/useActiveSessions';
 import { useTranslation } from '@/hooks/useTranslation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
@@ -101,11 +101,13 @@ import { useSessionLiveStream } from '@/lib/session-live/use-session-live-stream
 // ─── Lazy dialogs (orchestrator-side lazy import per Task 3 spec) ──────────────
 
 const PauseOverlay = lazy(() =>
-  import('@/components/v2/session-live/PauseOverlay').then(m => ({ default: m.PauseOverlay }))
+  import('@/components/features/session-live/PauseOverlay').then(m => ({ default: m.PauseOverlay }))
 );
 
 const EndgameDialog = lazy(() =>
-  import('@/components/v2/session-live/EndgameDialog').then(m => ({ default: m.EndgameDialog }))
+  import('@/components/features/session-live/EndgameDialog').then(m => ({
+    default: m.EndgameDialog,
+  }))
 );
 
 // ─── SessionId validation ─────────────────────────────────────────────────────

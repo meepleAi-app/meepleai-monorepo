@@ -103,6 +103,10 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         // Agent Slots (Issue #417)
         yield return ["GET", "/api/v1/user/agent-slots"];
 
+        // Agents (Issues #654, #655 — handlers implemented in Wave B.2 / β.3)
+        yield return ["POST", "/api/v1/agents/user"];
+        yield return ["POST", "/api/v1/agents/create-with-setup"];
+
         // Contact (public, no auth)
         yield return ["POST", "/api/v1/contact"];
     }
@@ -120,9 +124,9 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["GET",  "/api/v1/agents/00000000-0000-0000-0000-000000000001/status",                   "agent status"];
         yield return ["GET",  "/api/v1/agent-typologies",                                                     "typology listing"];
         yield return ["GET",  "/api/v1/agents/recent?limit=10",                                               "recent agents"];
-        yield return ["POST", "/api/v1/agents/user",                                                          "create user agent"];
+        // agents/user: moved to KnownRoutes (Issue #654 — Wave B.2 handler implemented)
         // agent-slots: moved to KnownRoutes (Issue #417 — handler implemented)
-        yield return ["POST", "/api/v1/agents/create-with-setup",                                             "create with setup"];
+        // agents/create-with-setup: moved to KnownRoutes (Issue #655 — Phase β.3 handler implemented)
         yield return ["POST", "/api/v1/agents/quick-create",                                                  "quick create tutor"];
         yield return ["PUT",  "/api/v1/agents/00000000-0000-0000-0000-000000000001/configure",                "configure agent"];
         yield return ["GET",  "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration",            "get agent config"];

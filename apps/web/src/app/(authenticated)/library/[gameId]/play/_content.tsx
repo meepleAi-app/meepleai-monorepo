@@ -2,7 +2,7 @@
 
 import { useState, type ReactElement } from 'react';
 
-import { CampaignSetupDrawer } from '@/components/v2/gamebook/CampaignSetupDrawer';
+import { CampaignSetupDrawer } from '@/components/features/gamebook/CampaignSetupDrawer';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 
 import { GamebookResumeShell } from './_components/GamebookResumeShell';

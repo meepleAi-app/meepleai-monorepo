@@ -14,3 +14,4 @@ export {
   type AdminMechanicExtractorValidationClient,
   ADMIN_MECHANIC_EXTRACTOR_VALIDATION_ROUTES,
 } from './adminMechanicExtractorValidationClient';
+export { createAdminProvidersClient, type AdminProvidersClient } from './adminProvidersClient';

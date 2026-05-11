@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react';
 import { Mail, RefreshCw } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { AuthCard } from '@/components/ui/v2/auth-card';
-import { Btn } from '@/components/ui/v2/btn';
+import { AuthCard } from '@/components/ui/auth-card';
+import { Btn } from '@/components/ui/btn';
 import { useEmailVerification } from '@/hooks/useEmailVerification';
 import { useTranslation } from '@/hooks/useTranslation';
 

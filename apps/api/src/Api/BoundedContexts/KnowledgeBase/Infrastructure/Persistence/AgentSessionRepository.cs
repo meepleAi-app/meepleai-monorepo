@@ -61,7 +61,10 @@ internal class AgentSessionRepository : RepositoryBase, IAgentSessionRepository
 
     public async Task UpdateAsync(AgentSession agentSession, CancellationToken cancellationToken = default)
     {
+        // #930: explicit AsTracking() — DbContext default is NoTracking (PERF-06),
+        // without this the property mutations below would not be persisted.
         var entity = await DbContext.Set<AgentSessionEntity>()
+            .AsTracking()
             .FirstOrDefaultAsync(a => a.Id == agentSession.Id, cancellationToken).ConfigureAwait(false);
 
         if (entity == null)

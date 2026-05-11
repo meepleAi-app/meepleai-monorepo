@@ -76,7 +76,10 @@ internal class AgentGameStateSnapshotRepository : RepositoryBase, IAgentGameStat
 
     public async Task UpdateAsync(AgentGameStateSnapshot snapshot, CancellationToken cancellationToken = default)
     {
+        // #930: explicit AsTracking() — DbContext default is NoTracking (PERF-06),
+        // without this the property mutations below would not be persisted.
         var entity = await DbContext.Set<AgentGameStateSnapshotEntity>()
+            .AsTracking()
             .FirstOrDefaultAsync(s => s.Id == snapshot.Id, cancellationToken).ConfigureAwait(false);
 
         if (entity is null) return;

@@ -18,8 +18,8 @@ import {
   type AgentStates,
   type FirstSessionChoice,
 } from '@/components/onboarding/tour';
-import { Btn } from '@/components/ui/v2/btn';
-import { StepProgress, type StepEntityKey } from '@/components/ui/v2/step-progress';
+import { Btn } from '@/components/ui/btn';
+import { StepProgress, type StepEntityKey } from '@/components/ui/step-progress';
 import { createApiClient } from '@/lib/api';
 
 const STORAGE_KEY = 'mai-onboarding-step';

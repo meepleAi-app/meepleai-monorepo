@@ -48,7 +48,7 @@ import {
   type PlayerHeroLabels,
   type PlayerLeaderboardCardLabels,
   type PlayerStatsGridLabels,
-} from '@/components/v2/player-detail';
+} from '@/components/features/player-detail';
 import { usePlayerStatistics } from '@/hooks/queries/usePlayersFromRecords';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { PlayerStatistics } from '@/lib/api/schemas/play-records.schemas';

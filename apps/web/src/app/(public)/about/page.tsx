@@ -16,9 +16,9 @@
 import { useRouter } from 'next/navigation';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { HeroGradient } from '@/components/ui/hero-gradient';
 import { Separator } from '@/components/ui/navigation/separator';
 import { Button } from '@/components/ui/primitives/button';
-import { HeroGradient } from '@/components/ui/v2/hero-gradient';
 import { useTranslation } from '@/hooks/useTranslation';
 
 // Value keys for the values section (must match i18n keys in pages.about.values.*)

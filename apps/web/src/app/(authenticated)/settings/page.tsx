@@ -11,8 +11,8 @@
 
 import { useRouter } from 'next/navigation';
 
-import { SettingsList } from '@/components/ui/v2/settings-list';
-import { SettingsRow } from '@/components/ui/v2/settings-row';
+import { SettingsList } from '@/components/ui/settings-list';
+import { SettingsRow } from '@/components/ui/settings-row';
 
 type Category = {
   readonly id: string;

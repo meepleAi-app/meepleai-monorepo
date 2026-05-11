@@ -4,7 +4,7 @@ namespace Api.Services.Providers.Quota;
 /// Resolves an <see cref="IProviderQuotaProvider"/> by provider name (case-insensitive).
 /// Issue #936 (G2).
 /// </summary>
-internal sealed class ProviderQuotaProviderFactory
+internal sealed class ProviderQuotaProviderFactory : IProviderQuotaProviderFactory
 {
     private readonly Dictionary<string, IProviderQuotaProvider> _providers;
     private readonly IReadOnlyCollection<string> _supportedProviderNames;

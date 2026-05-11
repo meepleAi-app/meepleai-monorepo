@@ -26,7 +26,6 @@ import { useMemo, useState, type ReactElement } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { toast } from '@/components/layout/Toast';
 import {
   GameDetailAgentsList,
   GameDetailFaqList,
@@ -42,7 +41,8 @@ import {
   type GameDetailAgentEntry,
   type GameDetailHeroMeta,
   type TabKey,
-} from '@/components/v2/game-detail';
+} from '@/components/features/game-detail';
+import { toast } from '@/components/layout/Toast';
 import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import {
   useAddGameToLibrary,

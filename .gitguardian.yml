@@ -6,5 +6,12 @@ paths-ignore:
   - "**/__tests__/**"
   - "**/*.test.ts"
   - "**/*.test.tsx"
+  # Demo persona test credentials for badsworm staging dogfood (PR #971).
+  # NOT production secrets — see .gitguardian.yaml ignore-paths comment.
+  - "apps/web/e2e/**"
+  - "infra/scripts/demo-smoke-*.sh"
+  # Audit reports list UI component paths (e.g. pwd-input) flagged as false
+  # positives by GG generic-password detector.
+  - "docs/for-developers/audits/**"
   # I7: common-password blocklist (rejection list, not credential leak)
   - "**/CommonPasswords.txt"

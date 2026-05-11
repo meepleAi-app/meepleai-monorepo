@@ -34,7 +34,7 @@ import {
   InviteHostCard,
   SessionMetaGrid,
   type SessionMetaItem,
-} from '@/components/ui/v2/invites';
+} from '@/components/ui/invites';
 import { useAuthUser } from '@/hooks/useAuthUser';
 import { useGameNightInvitation } from '@/hooks/useGameNightInvitation';
 import { useRespondToInvitation } from '@/hooks/useRespondToInvitation';

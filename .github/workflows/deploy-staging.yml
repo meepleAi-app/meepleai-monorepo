@@ -367,7 +367,7 @@ jobs:
 
       - name: Build and Push API Image
         if: needs.detect-changes.outputs.deploy_api == 'true'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7.1.0
         with:
           context: .
           file: ./apps/api/src/Api/Dockerfile
@@ -383,7 +383,7 @@ jobs:
 
       - name: Build and Push Web Image
         if: needs.detect-changes.outputs.deploy_web == 'true'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7.1.0
         with:
           context: ./apps/web
           file: ./apps/web/Dockerfile

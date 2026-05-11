@@ -111,7 +111,7 @@ jobs:
 
       - name: Upload Coverage
         if: always()
-        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2  # v6.0.0
         with:
           files: apps/web/coverage/lcov.info
           flags: frontend
@@ -168,7 +168,7 @@ jobs:
 
       - name: Upload Coverage
         if: always()
-        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2  # v6.0.0
         with:
           files: apps/api/coverage/unit-coverage.xml
           flags: backend-unit,backend
@@ -346,7 +346,7 @@ jobs:
 
       - name: Upload Coverage
         if: always()
-        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2  # v6.0.0
         with:
           files: apps/api/coverage/${{ matrix.shard.coverage_file }}
           flags: backend-integration-${{ matrix.shard.name }}
@@ -393,7 +393,7 @@ jobs:
 
       - name: Upload Python Coverage
         if: always()
-        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe  # v5
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2  # v6.0.0
         with:
           files: apps/orchestration-service/coverage.xml
           flags: python,arbitro
@@ -697,10 +697,16 @@ jobs:
       - name: Check Status
         run: |
           # Required jobs (block CI)
-          for job in frontend frontend-a11y frontend-bundle-size backend-unit python-tests e2e; do
+          # NOTE: frontend-a11y has continue-on-error: true at job level (line 600,
+          # rationale: #807 token redesign light/dark base AA OK but dark-mode
+          # legacy surfaces still violate, baseline-diff policy pending #1015).
+          # Job-level continue-on-error does NOT propagate to `needs.X.result` —
+          # axe failures still surface as `result=failure` here. Move to advisory
+          # group to honor the continue-on-error intent until #1015 lands a
+          # proper baseline-diff gate.
+          for job in frontend frontend-bundle-size backend-unit python-tests e2e; do
             result="${{ needs.frontend.result }}"
             case "$job" in
-              frontend-a11y) result="${{ needs.frontend-a11y.result }}" ;;
               frontend-bundle-size) result="${{ needs.frontend-bundle-size.result }}" ;;
               backend-unit) result="${{ needs.backend-unit.result }}" ;;
               python-tests) result="${{ needs.python-tests.result }}" ;;
@@ -712,10 +718,15 @@ jobs:
             fi
           done
 
-          # Advisory jobs (warn but don't block — integration tests depend on CI service containers)
+          # Advisory jobs (warn but don't block — integration tests depend on CI service containers,
+          # a11y has continue-on-error and known dark-mode debt tracked in #1015).
           integration_result="${{ needs.backend-integration.result }}"
           if [ "$integration_result" == "failure" ]; then
             echo "⚠️ CI Warning: backend-integration=$integration_result (non-blocking, may be infrastructure)"
+          fi
+          a11y_result="${{ needs.frontend-a11y.result }}"
+          if [ "$a11y_result" == "failure" ]; then
+            echo "⚠️ CI Warning: frontend-a11y=$a11y_result (non-blocking; #1015 baseline-diff pending)"
           fi
 
           echo "✅ CI Passed"

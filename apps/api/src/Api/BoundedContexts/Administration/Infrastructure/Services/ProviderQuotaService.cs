@@ -14,10 +14,10 @@ internal sealed class ProviderQuotaService : IProviderQuotaService
     private const int CacheTtlSeconds = 300; // 5 minutes
     private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(CacheTtlSeconds);
 
-    private readonly ProviderQuotaProviderFactory _factory;
+    private readonly IProviderQuotaProviderFactory _factory;
     private readonly IHybridCacheService _cache;
 
-    public ProviderQuotaService(ProviderQuotaProviderFactory factory, IHybridCacheService cache)
+    public ProviderQuotaService(IProviderQuotaProviderFactory factory, IHybridCacheService cache)
     {
         _factory = factory;
         _cache = cache;

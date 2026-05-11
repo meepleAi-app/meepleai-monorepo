@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { GameDrawerContent, type GameDrawerGame } from '@/components/library/v2/GameDrawerContent';
 import { LibraryDesktop, type LibraryDesktopItem } from '@/components/library/v2/LibraryDesktop';
 import { LibraryMobile, type LibraryGameItem } from '@/components/library/v2/LibraryMobile';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/v2/drawer/drawer';
-import { useDrawerBreakpoint } from '@/components/ui/v2/drawer/use-drawer-breakpoint';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer/drawer';
+import { useDrawerBreakpoint } from '@/components/ui/drawer/use-drawer-breakpoint';
 
 export interface LibraryV2Item extends LibraryGameItem, GameDrawerGame {}
 

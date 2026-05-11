@@ -2,7 +2,7 @@
 
 import type { ReactElement } from 'react';
 
-import { TranslateViewer } from '@/components/v2/gamebook';
+import { TranslateViewer } from '@/components/features/gamebook';
 
 export function Content({ campaignId }: { gameId: string; campaignId: string }): ReactElement {
   return (

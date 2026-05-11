@@ -517,28 +517,58 @@ export default [
       ],
     },
   },
-  // V2 design system: forbid hardcoded color literals in v2 UI primitives.
-  // V2 components must consume design tokens via entityHsl() or hsl(var(--c-*)).
+  // Design-system: forbid hardcoded color literals in ex-v2 UI primitives.
+  // Components must consume design tokens via entityHsl() or hsl(var(--c-*)).
   // Issue #572 — see docs/frontend/token-audit-2026-04-26.md.
-  // The rule does not apply outside src/components/ui/v2/ — V1 components,
-  // app routes, and admin pages may still contain hex/hsl literals pending
-  // Phase 1+ migrations.
+  // Scope was originally src/components/ui/v2/**; after Stage 2 de-versioning
+  // (#1025) the v2/ prefix was dropped, so the glob enumerates the ex-v2
+  // primitive subdirs explicitly. Pre-existing src/components/ui/ subdirs
+  // (data-display, cards, etc.) remain unaffected — they may still contain
+  // hex/hsl literals pending Phase 1+ migrations.
   {
-    files: ["src/components/ui/v2/**/*.{ts,tsx}"],
+    files: [
+      "src/components/ui/auth-card/**/*.{ts,tsx}",
+      "src/components/ui/btn/**/*.{ts,tsx}",
+      "src/components/ui/detail-layout/**/*.{ts,tsx}",
+      "src/components/ui/divider/**/*.{ts,tsx}",
+      "src/components/ui/drawer/**/*.{ts,tsx}",
+      "src/components/ui/entity-card/**/*.{ts,tsx}",
+      "src/components/ui/entity-chip/**/*.{ts,tsx}",
+      "src/components/ui/entity-pip/**/*.{ts,tsx}",
+      "src/components/ui/entity-tokens.{ts,tsx}",
+      "src/components/ui/entity-tokens.test.{ts,tsx}",
+      "src/components/ui/faq/**/*.{ts,tsx}",
+      "src/components/ui/hero-gradient/**/*.{ts,tsx}",
+      "src/components/ui/input-field/**/*.{ts,tsx}",
+      "src/components/ui/invites/**/*.{ts,tsx}",
+      "src/components/ui/join/**/*.{ts,tsx}",
+      "src/components/ui/notification-card/**/*.{ts,tsx}",
+      "src/components/ui/oauth-buttons/**/*.{ts,tsx}",
+      "src/components/ui/pricing-card/**/*.{ts,tsx}",
+      "src/components/ui/pwd-input/**/*.{ts,tsx}",
+      "src/components/ui/settings-list/**/*.{ts,tsx}",
+      "src/components/ui/settings-row/**/*.{ts,tsx}",
+      "src/components/ui/shared-games/**/*.{ts,tsx}",
+      "src/components/ui/step-progress/**/*.{ts,tsx}",
+      "src/components/ui/strength-meter/**/*.{ts,tsx}",
+      "src/components/ui/success-card/**/*.{ts,tsx}",
+      "src/components/ui/theme-toggle/**/*.{ts,tsx}",
+      "src/components/ui/toggle-switch/**/*.{ts,tsx}",
+    ],
     rules: {
       "local/no-hardcoded-hex": "error",
     },
   },
   // V2 entity HSL regression guard: forbid inline hsl()/hsla() literals whose
   // hue matches a known entity color signature in v2 feature compositions.
-  // Applies to src/components/v2/** (feature comps, distinct from ui/v2 primitives).
-  // Use getEntityToken() from @/components/ui/v2/entity-tokens or Tailwind utilities
+  // Applies to src/components/features/** (feature comps, distinct from ui/ primitives).
+  // Use getEntityToken() from @/components/ui/entity-tokens or Tailwind utilities
   // (text-entity-game, bg-entity-event/10) instead.
   // Unavoidable JS style props (multi-entity alpha gradients) must be silenced with:
   //   // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- <reason>
   // P2 Issue #807 Task 9 — see docs/for-developers/frontend/v2-token-system.md.
   {
-    files: ["src/components/v2/**/*.{ts,tsx}"],
+    files: ["src/components/features/**/*.{ts,tsx}"],
     plugins: {
       "meepleai": {
         rules: {

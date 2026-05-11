@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { entityHsl, hexToHsl } from './color-utils';
-import type { EntityType } from '@/components/ui/v2/entity-tokens';
+import type { EntityType } from '@/components/ui/entity-tokens';
 
 const ENTITY_TYPES: readonly EntityType[] = [
   'game',

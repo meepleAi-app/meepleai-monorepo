@@ -120,3 +120,68 @@ export async function mockNoDocuments(page: Page, gameId: string): Promise<void>
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
 }
+
+/**
+ * Mock getGameDocuments with at least one indexed document.
+ *
+ * Required for game-night specs that need ChatInputBar to mount: GameAiChatTab
+ * gates rendering of GameChatTabV2 on `kbDocs.some(d => d.status === 'indexed' || 'processing')`.
+ * If kbDocs is empty (real backend with no PDFs uploaded for the seed game),
+ * the tab renders the "Carica un PDF" placeholder and message-input never appears,
+ * causing waitForSelector to time out (#960 Cat B real root cause).
+ *
+ * The doc shape mirrors what /api/v1/knowledge-base/{gameId}/documents returns
+ * in production. Only `id` and `status` are consumed by GameAiChatTab; other
+ * fields are present for type safety against PdfDocumentResponseSchema.
+ */
+export async function mockHasIndexedDocument(page: Page, gameId: string): Promise<void> {
+  // Schema reference: apps/web/src/lib/api/schemas/game-documents.schemas.ts
+  // GameDocumentSchema requires: id (uuid), title, status (indexed|processing|failed),
+  // pageCount (int >=0), createdAt (datetime with offset), category (Rulebook|...),
+  // versionLabel (string|null). Mismatch causes httpClient zod parse to throw,
+  // useQuery returns empty array, GameAiChatTab shows the "Carica un PDF"
+  // placeholder, and ChatInputBar never mounts (#960 Cat B real residual).
+  const doc = {
+    id: '00000000-0000-4000-8000-000000053edd',
+    title: 'Smoke Fixture Rulebook',
+    status: 'indexed',
+    pageCount: 1,
+    createdAt: new Date().toISOString(),
+    category: 'Rulebook',
+    versionLabel: null,
+  };
+
+  // #1004 debug instrumentation: log when mock fires + when un-mocked
+  // /documents request slips through. CI artifact will surface this in
+  // test stdout (visible in HTML report). Remove after root cause identified.
+  await page.route('**/api/v1/knowledge-base/**/documents', async (route: Route) => {
+    const url = route.request().url();
+    if (url.includes(gameId)) {
+      console.log(`[mockHasIndexedDocument] HIT ${url}`);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([doc]),
+      });
+    } else {
+      console.log(`[mockHasIndexedDocument] PASS (other gameId): ${url}`);
+      await route.continue();
+    }
+  });
+
+  // Capture all /knowledge-base/*/documents requests at network level too —
+  // page.route handler runs only if the URL matches its glob; this listener
+  // shows the actual URL shape regardless of pattern match.
+  page.on('request', req => {
+    if (req.url().includes('/api/v1/knowledge-base/') && req.url().includes('/documents')) {
+      console.log(`[network REQ] ${req.method()} ${req.url()}`);
+    }
+  });
+  page.on('response', async resp => {
+    const url = resp.url();
+    if (url.includes('/api/v1/knowledge-base/') && url.includes('/documents')) {
+      const body = (await resp.text().catch(() => '')).slice(0, 150);
+      console.log(`[network RES] ${resp.status()} ${url} → ${body}`);
+    }
+  });
+}

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo } from 'react';
 
-import { EntityCard } from '@/components/ui/v2/entity-card/entity-card';
+import { EntityCard } from '@/components/ui/entity-card/entity-card';
 
 import { LibraryFilterTabs, type LibraryFilter } from './LibraryFilterTabs';
 

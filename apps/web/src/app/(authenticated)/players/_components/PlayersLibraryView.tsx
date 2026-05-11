@@ -39,7 +39,7 @@ import {
   type PlayersFiltersInlineLabels,
   type PlayersHeroLabels,
   type PlayersResultsGridLabels,
-} from '@/components/v2/players';
+} from '@/components/features/players';
 import { usePlayerStatistics } from '@/hooks/queries/usePlayersFromRecords';
 import { useTranslation } from '@/hooks/useTranslation';
 import {

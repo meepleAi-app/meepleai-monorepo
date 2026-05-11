@@ -37,7 +37,7 @@ import {
   type AgentsSortKey,
   type AgentsStatusKey,
   type EmptyAgentsLabels,
-} from '@/components/v2/agents';
+} from '@/components/features/agents';
 import { useAgents } from '@/hooks/queries/useAgents';
 import { useTranslation } from '@/hooks/useTranslation';
 import { deriveStats, filterByStatus, matchQuery, sortAgents } from '@/lib/agents/library-filters';

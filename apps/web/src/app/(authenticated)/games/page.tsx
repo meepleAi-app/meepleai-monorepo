@@ -5,10 +5,10 @@ import { Suspense, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { GamesRecentRail } from '@/components/features/games';
 import { HubLayout, type FilterChip } from '@/components/layout/HubLayout';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
-import { GamesRecentRail } from '@/components/v2/games';
 import { useGames } from '@/hooks/queries/useGames';
 import { useRecentLibraryGames } from '@/hooks/queries/useRecentLibraryGames';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';

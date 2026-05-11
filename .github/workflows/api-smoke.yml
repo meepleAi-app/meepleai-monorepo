@@ -1,9 +1,14 @@
-name: API Smoke (Bruno) — PR main-dev → main-staging
+name: API Smoke (Bruno) — PR main-staging → main (prod promotion)
 
 on:
+  # Gate on staging → prod promotion only. Running on main-dev → main-staging
+  # was too eager: real-API smoke + 1 shared runner IP × cumulative login retries
+  # exceeds AuthLogin rate limit (10/min) and produces noise unrelated to the
+  # release diff. Nightly cron on main-dev (e2e-smoke-real-backend.yml) catches
+  # regressions earlier without gating the release flow.
   pull_request:
     branches:
-      - main-staging
+      - main
     paths:
       - 'apps/api/**'
       - 'tests/api-smoke/**'

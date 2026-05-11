@@ -2,7 +2,10 @@ name: E2E Tests
 
 on:
   pull_request:
-    branches: [main, main-staging]
+    # Scope to prod-promotion only (main-staging → main). Real-API E2E checks
+    # produce noise on dev releases (main-dev → main-staging). See companion
+    # change in api-smoke.yml + #979 release-PR triage.
+    branches: [main]
     paths:
       - 'apps/web/**'
       - 'apps/api/**'

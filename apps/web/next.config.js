@@ -188,7 +188,16 @@ const nextConfig = {
         destination: '/library/:id?tab=strategies',
         permanent: true,
       },
-      { source: '/library/games/:id', destination: '/library/:id', permanent: true },
+      // Issue #1004: removed `/library/games/:id` → `/library/:id` redirect.
+      // The legacy `/library/[gameId]/layout.tsx` only knows 4 tabs
+      // (Dettagli/Agente/Toolkit/FAQ) and silently falls back to a CTA when an
+      // unknown `?tab=aiChat` arrives. The S4 GameDetailDesktop on the new path
+      // `/library/games/[gameId]/page.tsx` is the canonical surface for the
+      // 5-tab game detail (incl. aiChat). Keep sub-route redirects above (they
+      // map specific tab paths) but stop the catch-all that rerouted aiChat
+      // traffic into the placeholder layout. Issue #5039 (consolidation)
+      // remains tracked separately — to be revisited by extending the legacy
+      // layout to mount the v2 tabs OR by deprecating `/library/[id]` entirely.
       { source: '/library/wishlist', destination: '/library?tab=wishlist', permanent: true },
       { source: '/library/private', destination: '/library?tab=private', permanent: true },
       { source: '/library/proposals', destination: '/discover?tab=proposals', permanent: true },

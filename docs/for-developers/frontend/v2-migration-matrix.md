@@ -324,6 +324,22 @@ the PR review.
 | `sp4-players-index.jsx` | `PlayersResultsGrid` | `apps/web/src/components/v2/players/PlayersResultsGrid.tsx` | `/players` | done | #717 | T A V |
 | `sp4-players-index.jsx` | `EmptyPlayers` | `apps/web/src/components/v2/players/EmptyPlayers.tsx` | `/players` | done | #717 | T A V |
 
+## SP6 — Nanolith libro-game (Iter 1.B / Iter 4) — 2 components
+
+> Surfaces the Nanolith runthrough dogfood flow on the canonical
+> `/library/[gameId]` page when the game qualifies as a "libro game"
+> (helper at `apps/web/src/lib/games/is-libro-game.ts`). Mockups from the
+> Aaron Iter 1 / Iter 4 storyboard batch (2026-05-07+). Route lives under
+> `/library/[gameId]` after IA consolidation in #871 (was previously planned
+> under `/library/games/[gameId]`).
+
+### Libro-game detail surface — `/library/[gameId]` (libro variant) — 2 components — **Tier M**
+
+| Mockup | Component | Path | Route | Status | PR | AC |
+|--------|-----------|------|-------|--------|----|----|
+| `nanolith-runthrough-game-detail.html` | `LibroGameDetailView` | `apps/web/src/components/v2/gamebook/LibroGameDetailView.tsx` | `/library/[gameId]` (libro variant) | done | #1037 | T A V |
+| `nanolith-runthrough-setup-wizard.html` | `CampaignSetupDrawer` | `apps/web/src/components/v2/gamebook/CampaignSetupDrawer.tsx` | `/library/[gameId]` (libro variant — drawer) | done | #1037 | T A V |
+
 ## Stub format (informational)
 
 Each stub follows this minimal contract so `pnpm typecheck` stays green and downstream

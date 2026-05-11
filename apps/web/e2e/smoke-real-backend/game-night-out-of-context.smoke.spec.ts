@@ -12,7 +12,12 @@
 import { test, expect } from '@playwright/test';
 
 import { smokeLogin, applySessionToPage } from './_helpers/auth';
-import { mockNoChatHistory, mockQaStreamV2, seedGameForChat } from './_helpers/game-chat';
+import {
+  mockHasIndexedDocument,
+  mockNoChatHistory,
+  mockQaStreamV2,
+  seedGameForChat,
+} from './_helpers/game-chat';
 
 test.describe('SMOKE — game-chat out of context', () => {
   test('shows OutOfContextActions when confidence=0 and no citations', async ({
@@ -22,6 +27,8 @@ test.describe('SMOKE — game-chat out of context', () => {
     const { cookieHeader } = await smokeLogin(request);
     await applySessionToPage(page, cookieHeader);
     const gameId = await seedGameForChat(request, cookieHeader);
+    // Mock at least 1 indexed PDF so GameAiChatTab renders GameChatTabV2.
+    await mockHasIndexedDocument(page, gameId);
     await mockNoChatHistory(page, gameId);
     await mockQaStreamV2(page, {
       tokens: ['Non ho informazioni su questo argomento.'],

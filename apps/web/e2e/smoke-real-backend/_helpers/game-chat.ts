@@ -120,3 +120,39 @@ export async function mockNoDocuments(page: Page, gameId: string): Promise<void>
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
 }
+
+/**
+ * Mock getGameDocuments with at least one indexed document.
+ *
+ * Required for game-night specs that need ChatInputBar to mount: GameAiChatTab
+ * gates rendering of GameChatTabV2 on `kbDocs.some(d => d.status === 'indexed' || 'processing')`.
+ * If kbDocs is empty (real backend with no PDFs uploaded for the seed game),
+ * the tab renders the "Carica un PDF" placeholder and message-input never appears,
+ * causing waitForSelector to time out (#960 Cat B real root cause).
+ *
+ * The doc shape mirrors what /api/v1/knowledge-base/{gameId}/documents returns
+ * in production. Only `id` and `status` are consumed by GameAiChatTab; other
+ * fields are present for type safety against PdfDocumentResponseSchema.
+ */
+export async function mockHasIndexedDocument(page: Page, gameId: string): Promise<void> {
+  const doc = {
+    id: '00000000-0000-4000-8000-000000053edd',
+    fileName: 'smoke-fixture-rulebook.pdf',
+    fileSizeBytes: 1024,
+    contentType: 'application/pdf',
+    pageCount: 1,
+    uploadedAt: new Date().toISOString(),
+    uploadedByUserId: '00000000-0000-4000-8000-000000000001',
+    processingStatus: 'Ready',
+    status: 'indexed',
+    chunkCount: 1,
+    isPublic: false,
+  };
+  await page.route(`**/api/v1/knowledge-base/${gameId}/documents`, async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([doc]),
+    });
+  });
+}

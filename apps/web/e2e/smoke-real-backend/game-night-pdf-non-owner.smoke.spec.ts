@@ -13,8 +13,8 @@ import { test, expect } from '@playwright/test';
 
 import { smokeLogin, applySessionToPage } from './_helpers/auth';
 import {
+  mockHasIndexedDocument,
   mockNoChatHistory,
-  mockNoDocuments,
   mockQaStreamV2,
   seedGameForChat,
 } from './_helpers/game-chat';
@@ -28,7 +28,11 @@ test.describe('SMOKE — game-chat PDF non-owner upsell (G4)', () => {
     await applySessionToPage(page, cookieHeader);
     const gameId = await seedGameForChat(request, cookieHeader);
     await mockNoChatHistory(page, gameId);
-    await mockNoDocuments(page, gameId);
+    // Mock 1 indexed doc with id 053edd. The citation below uses id 0001
+    // (different) → useCanViewPdf cerca doc 0001 nei kbDocs returned (053edd)
+    // → not found → canView=false → CitationOwnershipUpsell mostrato.
+    // Same single mock satisfies both: GameAiChatTab gate (kbDocs > 0) + non-owner state.
+    await mockHasIndexedDocument(page, gameId);
     await mockQaStreamV2(page, {
       tokens: ['Risposta con citazione.'],
       citations: [

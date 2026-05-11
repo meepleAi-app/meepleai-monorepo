@@ -13,6 +13,9 @@ ignore-paths:
   # demo persona on staging), not production secrets. Same rationale as src test files.
   - apps/web/e2e/
   - infra/scripts/demo-smoke-*.sh
+  # Audit reports list UI component paths (e.g. `pwd-input/pwd-input.tsx`)
+  # that GG generic-password detector flags as false positives.
+  - docs/for-developers/audits/
   - infra/secrets/*.secret.example
   # I7 (auth security fixes): blocklist of common passwords used to REJECT
   # weak choices at registration. The literals are the very strings users

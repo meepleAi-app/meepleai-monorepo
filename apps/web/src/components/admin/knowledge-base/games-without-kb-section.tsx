@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13b admin scope (see token-bridge-map.md for --admin-* decision deferred to DS-15). */
 'use client';
 
 import { useState } from 'react';
@@ -59,7 +60,7 @@ export function GamesWithoutKbSection({ onUploadClick }: GamesWithoutKbSectionPr
       />
 
       {items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-16 text-slate-400 dark:text-zinc-500">
+        <div className="flex flex-col items-center gap-3 py-16 text-muted-foreground dark:text-muted-foreground">
           <CheckCircle2 className="h-10 w-10 text-emerald-400" />
           <p className="text-sm">Tutti i giochi hanno una KB attiva</p>
         </div>
@@ -113,13 +114,13 @@ export function GamesWithoutKbSection({ onUploadClick }: GamesWithoutKbSectionPr
                 type="button"
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="rounded border border-slate-200 px-3 py-1 text-sm disabled:opacity-40 dark:border-zinc-700"
+                className="rounded border border-border px-3 py-1 text-sm disabled:opacity-40 dark:border-zinc-700"
                 aria-label="Pagina precedente"
               >
                 ‹
               </button>
               <span
-                className="px-3 py-1 text-sm text-slate-500 dark:text-zinc-400"
+                className="px-3 py-1 text-sm text-muted-foreground dark:text-muted-foreground"
                 aria-live="polite"
               >
                 {page} / {totalPages}
@@ -128,7 +129,7 @@ export function GamesWithoutKbSection({ onUploadClick }: GamesWithoutKbSectionPr
                 type="button"
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="rounded border border-slate-200 px-3 py-1 text-sm disabled:opacity-40 dark:border-zinc-700"
+                className="rounded border border-border px-3 py-1 text-sm disabled:opacity-40 dark:border-zinc-700"
                 aria-label="Pagina successiva"
               >
                 ›

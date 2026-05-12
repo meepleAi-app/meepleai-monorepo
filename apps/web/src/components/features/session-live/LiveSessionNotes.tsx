@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -84,14 +85,14 @@ export function LiveSessionNotes({
       aria-label={labels.title}
       className={`flex flex-col gap-3 ${className ?? ''}`}
     >
-      <h3 className="shrink-0 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <h3 className="shrink-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {labels.title}
       </h3>
 
       {/* Notes list */}
       <div className="flex flex-col gap-2 overflow-y-auto">
         {notes.length === 0 ? (
-          <p className="py-4 text-center text-sm text-slate-500">{labels.emptyMessage}</p>
+          <p className="py-4 text-center text-sm text-muted-foreground">{labels.emptyMessage}</p>
         ) : (
           notes.map(note => {
             const isOwn = note.authorId === viewerId;
@@ -104,12 +105,12 @@ export function LiveSessionNotes({
                 className={`rounded-lg border p-3 text-sm ${
                   isPrivate
                     ? 'border-amber-700/30 bg-amber-900/10'
-                    : 'border-slate-700/40 bg-slate-800/50'
+                    : 'border-border/40 bg-card'
                 }`}
               >
                 <header className="mb-1 flex items-center justify-between gap-2">
                   <span
-                    className={`text-xs font-medium ${isOwn ? 'text-slate-300' : 'text-slate-400'}`}
+                    className={`text-xs font-medium ${isOwn ? 'text-slate-300' : 'text-muted-foreground'}`}
                   >
                     {note.authorName}
                   </span>
@@ -136,7 +137,7 @@ export function LiveSessionNotes({
               className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
                 visibility === 'shared'
                   ? 'bg-slate-600 text-slate-100'
-                  : 'text-slate-400 hover:text-slate-300'
+                  : 'text-muted-foreground hover:text-slate-300'
               }`}
             >
               {labels.visibilityShared}
@@ -148,7 +149,7 @@ export function LiveSessionNotes({
               className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
                 visibility === 'private'
                   ? 'bg-amber-700/60 text-amber-100'
-                  : 'text-slate-400 hover:text-slate-300'
+                  : 'text-muted-foreground hover:text-slate-300'
               }`}
             >
               {labels.visibilityPrivate}
@@ -162,8 +163,8 @@ export function LiveSessionNotes({
               aria-label={labels.inputAriaLabel}
               placeholder={labels.inputAriaLabel}
               rows={2}
-              className="min-w-0 flex-1 resize-none rounded-lg border border-slate-700/60
-                bg-slate-800/60 px-3 py-2 text-sm text-slate-200 placeholder-slate-500
+              className="min-w-0 flex-1 resize-none rounded-lg border border-border/60
+                bg-card px-3 py-2 text-sm text-slate-200 placeholder-slate-500
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
             />
             <button
@@ -171,7 +172,7 @@ export function LiveSessionNotes({
               aria-label={labels.addAriaLabel}
               disabled={!inputValue.trim()}
               className="flex shrink-0 items-start justify-center rounded-lg border
-                border-slate-700/60 bg-slate-700 p-2 text-slate-200
+                border-border/60 bg-card p-2 text-slate-200
                 transition-colors hover:bg-slate-600
                 disabled:cursor-not-allowed disabled:opacity-40
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"

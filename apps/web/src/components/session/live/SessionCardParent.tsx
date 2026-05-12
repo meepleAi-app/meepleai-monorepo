@@ -35,7 +35,7 @@ function StatusBadge({ status }: StatusBadgeProps) {
     },
     Completed: {
       label: 'Completata',
-      className: 'bg-gray-100 text-gray-700 border-gray-200',
+      className: 'bg-muted text-foreground border-border',
     },
   };
 
@@ -55,9 +55,9 @@ interface InfoCardProps {
 
 function InfoCard({ label, value }: InfoCardProps) {
   return (
-    <div className="rounded-xl bg-white/70 backdrop-blur-md border border-white/40 p-3 text-center shadow-sm">
-      <p className="text-xs text-gray-500 font-nunito mb-1">{label}</p>
-      <p className="text-lg font-quicksand font-bold text-gray-900">{value}</p>
+    <div className="rounded-xl bg-card/70 backdrop-blur-md border border-border p-3 text-center shadow-sm">
+      <p className="text-xs text-muted-foreground font-nunito mb-1">{label}</p>
+      <p className="text-lg font-quicksand font-bold text-foreground">{value}</p>
     </div>
   );
 }
@@ -92,7 +92,7 @@ export function SessionCardParent({ sessionId }: SessionCardParentProps) {
 
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-quicksand font-bold text-gray-900 truncate">
+        <h1 className="text-2xl font-quicksand font-bold text-foreground truncate">
           {gameName || 'Sessione'}
         </h1>
         <StatusBadge status={status} />

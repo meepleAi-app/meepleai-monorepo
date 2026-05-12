@@ -47,7 +47,7 @@ function PlayerScoreCard({
         'rounded-xl border p-3 space-y-2 transition-shadow',
         isLeader
           ? 'bg-amber-50 border-amber-300 shadow-md shadow-amber-100'
-          : 'bg-white/70 backdrop-blur-md border-white/40 shadow-sm',
+          : 'bg-card/70 backdrop-blur-md border-border shadow-sm',
         player.isOnline ? '' : 'opacity-60',
       ]
         .filter(Boolean)
@@ -55,7 +55,7 @@ function PlayerScoreCard({
     >
       {/* Player name + leader badge */}
       <div className="flex items-center justify-between gap-1">
-        <span className="font-quicksand font-semibold text-sm truncate text-gray-900">
+        <span className="font-quicksand font-semibold text-sm truncate text-foreground">
           {player.name}
         </span>
         {isLeader && <Crown className="h-4 w-4 shrink-0 text-amber-500" aria-label="Leader" />}
@@ -64,7 +64,7 @@ function PlayerScoreCard({
       {/* Score */}
       <p
         data-testid={`player-score-${player.id}`}
-        className="text-2xl font-quicksand font-bold text-gray-900"
+        className="text-2xl font-quicksand font-bold text-foreground"
       >
         {score}
       </p>
@@ -74,10 +74,10 @@ function PlayerScoreCard({
         <span
           className={[
             'h-2 w-2 rounded-full',
-            player.isOnline ? 'bg-green-400' : 'bg-gray-300',
+            player.isOnline ? 'bg-green-400' : 'bg-muted',
           ].join(' ')}
         />
-        <span className="text-xs text-gray-500 font-nunito">
+        <span className="text-xs text-muted-foreground font-nunito">
           {player.isOnline ? 'Online' : 'Offline'}
         </span>
       </div>
@@ -123,12 +123,12 @@ function ProposalCard({ proposal, onApprove, onReject }: ProposalCardProps) {
   const deltaLabel = proposal.delta >= 0 ? `+${proposal.delta}` : String(proposal.delta);
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg bg-white border border-gray-200 px-3 py-2 shadow-sm">
+    <div className="flex items-center justify-between gap-3 rounded-lg bg-card border border-border px-3 py-2 shadow-sm">
       <div className="flex items-center gap-2 min-w-0">
         <Badge variant="outline" className="shrink-0 font-mono text-xs">
           {deltaLabel}
         </Badge>
-        <span className="text-sm font-nunito text-gray-700 truncate">{proposal.playerName}</span>
+        <span className="text-sm font-nunito text-foreground truncate">{proposal.playerName}</span>
       </div>
 
       <div className="flex gap-1 shrink-0">
@@ -192,11 +192,11 @@ export function ScoreBoard({ sessionId, isHost = false }: ScoreBoardProps) {
 
   return (
     <div className="space-y-6 p-4">
-      <h2 className="text-xl font-quicksand font-bold text-gray-900">Punteggi</h2>
+      <h2 className="text-xl font-quicksand font-bold text-foreground">Punteggi</h2>
 
       {/* Empty state */}
       {players.length === 0 && (
-        <p className="text-sm text-gray-500 font-nunito text-center py-8">
+        <p className="text-sm text-muted-foreground font-nunito text-center py-8">
           Nessun giocatore ancora registrato.
         </p>
       )}
@@ -221,7 +221,7 @@ export function ScoreBoard({ sessionId, isHost = false }: ScoreBoardProps) {
       {/* Pending proposals — host only */}
       {isHost && pendingProposals.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-500 font-nunito uppercase tracking-wide">
+          <h3 className="text-sm font-semibold text-muted-foreground font-nunito uppercase tracking-wide">
             Proposte in attesa
           </h3>
           <div className="space-y-2">

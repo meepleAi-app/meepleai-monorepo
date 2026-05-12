@@ -44,7 +44,7 @@ export function TurnStateHeader({
   return (
     <div
       className={cn(
-        'flex items-center gap-3 px-4 py-2.5 bg-white/5 border-b border-white/10',
+        'flex items-center gap-3 px-4 py-2.5 bg-card/5 border-b border-border',
         className
       )}
     >
@@ -56,7 +56,7 @@ export function TurnStateHeader({
         </span>
       </div>
 
-      <div className="w-px h-8 bg-white/10 shrink-0" />
+      <div className="w-px h-8 bg-card/10 shrink-0" />
 
       {/* Phase info */}
       {phaseCount > 0 && (
@@ -72,7 +72,7 @@ export function TurnStateHeader({
               </span>
             </div>
           </div>
-          <div className="w-px h-8 bg-white/10 shrink-0" />
+          <div className="w-px h-8 bg-card/10 shrink-0" />
         </>
       )}
 

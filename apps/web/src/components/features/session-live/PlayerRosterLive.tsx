@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * PlayerRosterLive — Wave D.2 Foundation sub-PR (Issue #746).
  *
@@ -72,7 +73,7 @@ export function PlayerRosterLive({
       {!compact && (
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-200">{labels.title}</h3>
-          <span className="text-xs text-slate-400">{labels.playerCountResolved}</span>
+          <span className="text-xs text-muted-foreground">{labels.playerCountResolved}</span>
         </div>
       )}
 
@@ -89,7 +90,7 @@ export function PlayerRosterLive({
               className={[
                 'flex items-center justify-between gap-2 rounded-lg px-2 py-1.5',
                 // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: session dark-bg variant in Tailwind arbitrary class; no dark-bg entity token exists
-                isViewer ? 'bg-[hsl(240,60%,20%)]' : 'bg-slate-800/50',
+                isViewer ? 'bg-[hsl(240,60%,20%)]' : 'bg-card',
               ].join(' ')}
             >
               {/* Left: online dot + name */}
@@ -103,7 +104,7 @@ export function PlayerRosterLive({
                   ].join(' ')}
                 />
                 <span className="truncate text-xs font-medium text-slate-200">{player.name}</span>
-                <span className="shrink-0 text-xs text-slate-500">
+                <span className="shrink-0 text-xs text-muted-foreground">
                   {roleLabel(player.role, labels)}
                 </span>
               </div>

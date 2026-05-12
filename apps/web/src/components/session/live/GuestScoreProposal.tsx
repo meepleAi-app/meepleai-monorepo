@@ -75,9 +75,9 @@ export function GuestScoreProposal({ guestName, onPropose }: GuestScoreProposalP
   }
 
   return (
-    <div className="rounded-xl bg-white/70 backdrop-blur-md border border-white/40 shadow-sm p-4 space-y-3">
+    <div className="rounded-xl bg-card/70 backdrop-blur-md border border-border shadow-sm p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-quicksand font-semibold text-gray-900 text-sm">Proponi punteggio</h3>
+        <h3 className="font-quicksand font-semibold text-foreground text-sm">Proponi punteggio</h3>
         {myPendingCount > 0 && (
           <Badge variant="outline" className="text-xs">
             {myPendingCount}/{MAX_PENDING} in attesa
@@ -121,7 +121,7 @@ export function GuestScoreProposal({ guestName, onPropose }: GuestScoreProposalP
               {error}
             </p>
           )}
-          <p className="text-xs text-gray-500 font-nunito">
+          <p className="text-xs text-muted-foreground font-nunito">
             Proposta per: <span className="font-semibold">{guestName}</span>
           </p>
         </form>

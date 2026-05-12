@@ -307,7 +307,7 @@ export function ArbitroModal({
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-10 gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-            <p className="text-sm text-gray-500 font-nunito">
+            <p className="text-sm text-muted-foreground font-nunito">
               L&apos;arbitro sta analizzando il regolamento...
             </p>
           </div>
@@ -340,13 +340,13 @@ export function ArbitroModal({
                 <div className="space-y-1.5">
                   <label
                     htmlFor="arbitro-description"
-                    className="text-sm font-nunito font-medium text-gray-700"
+                    className="text-sm font-nunito font-medium text-foreground"
                   >
                     Descrivi la disputa
                   </label>
                   <textarea
                     id="arbitro-description"
-                    className="w-full min-h-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm font-nunito text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent resize-none"
+                    className="w-full min-h-[100px] rounded-lg border border-border px-3 py-2 text-sm font-nunito text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent resize-none"
                     placeholder="Es: È possibile giocare questa carta durante il turno dell'avversario?"
                     value={description}
                     onChange={e => setDescription(e.target.value)}
@@ -357,13 +357,13 @@ export function ArbitroModal({
                 <div className="space-y-1.5">
                   <label
                     htmlFor="arbitro-raised-by"
-                    className="text-sm font-nunito font-medium text-gray-700"
+                    className="text-sm font-nunito font-medium text-foreground"
                   >
                     Sollevata da
                   </label>
                   <select
                     id="arbitro-raised-by"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-nunito text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-white"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm font-nunito text-foreground focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-card"
                     value={raisedBy}
                     onChange={e => setRaisedBy(e.target.value)}
                     required
@@ -406,13 +406,13 @@ export function ArbitroModal({
                 <div className="space-y-1.5">
                   <label
                     htmlFor="arbitro-v2-description"
-                    className="text-sm font-nunito font-medium text-gray-700"
+                    className="text-sm font-nunito font-medium text-foreground"
                   >
                     La tua argomentazione
                   </label>
                   <textarea
                     id="arbitro-v2-description"
-                    className="w-full min-h-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm font-nunito text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent resize-none"
+                    className="w-full min-h-[100px] rounded-lg border border-border px-3 py-2 text-sm font-nunito text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent resize-none"
                     placeholder="Es: Secondo me questa carta non può essere giocata ora perché..."
                     value={description}
                     onChange={e => setDescription(e.target.value)}
@@ -423,13 +423,13 @@ export function ArbitroModal({
                 <div className="space-y-1.5">
                   <label
                     htmlFor="arbitro-v2-raised-by"
-                    className="text-sm font-nunito font-medium text-gray-700"
+                    className="text-sm font-nunito font-medium text-foreground"
                   >
                     Chi solleva la disputa
                   </label>
                   <select
                     id="arbitro-v2-raised-by"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-nunito text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-white"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm font-nunito text-foreground focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-card"
                     value={raisedBy}
                     onChange={e => setRaisedBy(e.target.value)}
                     required
@@ -448,13 +448,13 @@ export function ArbitroModal({
                 <div className="space-y-1.5">
                   <label
                     htmlFor="arbitro-v2-respondent"
-                    className="text-sm font-nunito font-medium text-gray-700"
+                    className="text-sm font-nunito font-medium text-foreground"
                   >
                     Rispondente (opzionale)
                   </label>
                   <select
                     id="arbitro-v2-respondent"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-nunito text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-white"
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm font-nunito text-foreground focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent bg-card"
                     value={respondent}
                     onChange={e => setRespondent(e.target.value)}
                   >
@@ -496,7 +496,7 @@ export function ArbitroModal({
                     className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-nunito font-medium ${
                       respondentTimer <= 30
                         ? 'bg-red-100 text-red-700'
-                        : 'bg-gray-100 text-gray-600'
+                        : 'bg-muted text-muted-foreground'
                     }`}
                     data-testid="respondent-timer"
                   >
@@ -510,13 +510,13 @@ export function ArbitroModal({
                   <div className="space-y-1.5">
                     <label
                       htmlFor="arbitro-v2-respondent-claim"
-                      className="text-sm font-nunito font-medium text-gray-700"
+                      className="text-sm font-nunito font-medium text-foreground"
                     >
                       Risposta di {respondent}
                     </label>
                     <textarea
                       id="arbitro-v2-respondent-claim"
-                      className="w-full min-h-[80px] rounded-lg border border-gray-300 px-3 py-2 text-sm font-nunito text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent resize-none"
+                      className="w-full min-h-[80px] rounded-lg border border-border px-3 py-2 text-sm font-nunito text-foreground placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent resize-none"
                       placeholder="La mia contro-argomentazione è..."
                       value={respondentClaim}
                       onChange={e => setRespondentClaim(e.target.value)}
@@ -583,7 +583,7 @@ export function ArbitroModal({
                       ? 'Verdetto accettato'
                       : 'Verdetto respinto'}
                   </p>
-                  <p className="text-sm font-nunito text-gray-600 mt-1">
+                  <p className="text-sm font-nunito text-muted-foreground mt-1">
                     {votingOutcome === 'VerdictAccepted'
                       ? "I giocatori hanno accettato il verdetto dell'arbitro."
                       : "I giocatori hanno respinto il verdetto dell'arbitro."}

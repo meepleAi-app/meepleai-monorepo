@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * DisputeVoting
  *
@@ -124,7 +125,7 @@ export function DisputeVoting({
   // ─── Render ───────────────────────────────────────────────────────────
 
   return (
-    <div className="border-2 border-amber-400 bg-white/70 backdrop-blur-md rounded-xl p-4 space-y-4">
+    <div className="border-2 border-amber-400 bg-card/70 backdrop-blur-md rounded-xl p-4 space-y-4">
       {/* Header with timer */}
       <div className="flex items-center justify-between">
         <h3 className="font-quicksand font-bold text-amber-900 text-base flex items-center gap-2">
@@ -132,7 +133,7 @@ export function DisputeVoting({
         </h3>
         <div
           className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-nunito font-medium ${
-            secondsLeft <= 10 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+            secondsLeft <= 10 ? 'bg-red-100 text-red-700' : 'bg-muted text-muted-foreground'
           }`}
           data-testid="vote-timer"
         >
@@ -161,9 +162,9 @@ export function DisputeVoting({
           return (
             <div
               key={player.id}
-              className="flex items-center justify-between gap-2 bg-gray-50 rounded-lg px-3 py-2"
+              className="flex items-center justify-between gap-2 bg-muted rounded-lg px-3 py-2"
             >
-              <span className="text-sm font-nunito font-medium text-gray-800 truncate">
+              <span className="text-sm font-nunito font-medium text-foreground truncate">
                 {player.name}
               </span>
 

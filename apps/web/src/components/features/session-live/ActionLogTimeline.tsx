@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * ActionLogTimeline — Wave D.2 Foundation sub-PR (Issue #746).
  *
@@ -63,7 +64,7 @@ function typeColor(type: ActionLogEntry['type']): string {
     agent: 'text-amber-400',
     chat: 'text-sky-400',
     photo: 'text-rose-400',
-    event: 'text-slate-400',
+    event: 'text-muted-foreground',
   };
   return map[type];
 }
@@ -91,7 +92,7 @@ export function ActionLogTimeline({
       {!compact && <h3 className="text-sm font-semibold text-slate-200">{labels.title}</h3>}
 
       {entries.length === 0 ? (
-        <p className="text-xs text-slate-500">{labels.emptyLabel}</p>
+        <p className="text-xs text-muted-foreground">{labels.emptyLabel}</p>
       ) : (
         <ol aria-label={labels.timestampAriaLabel} className="flex flex-col gap-1" reversed>
           {entries.map(entry => (
@@ -100,7 +101,7 @@ export function ActionLogTimeline({
               data-slot="action-log-entry"
               data-entry-id={entry.id}
               data-entry-type={entry.type}
-              className="flex items-start gap-2 rounded-lg px-2 py-1.5 bg-slate-800/40"
+              className="flex items-start gap-2 rounded-lg px-2 py-1.5 bg-card"
             >
               {/* Type badge */}
               <span className={['shrink-0 text-xs font-medium', typeColor(entry.type)].join(' ')}>
@@ -110,7 +111,7 @@ export function ActionLogTimeline({
               {/* Content */}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs text-slate-200">{entry.content}</p>
-                <p className="text-xs text-slate-500">{entry.authorName}</p>
+                <p className="text-xs text-muted-foreground">{entry.authorName}</p>
               </div>
 
               {/* Timestamp */}

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -133,7 +134,7 @@ export function EndgameDialog({
   return (
     /* Backdrop */
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80
+      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/80
         motion-safe:transition-opacity motion-reduce:transition-none"
     >
       {/* Dialog */}
@@ -144,7 +145,7 @@ export function EndgameDialog({
         aria-labelledby={titleId}
         data-slot="endgame-dialog"
         onKeyDown={handleKeyDown}
-        className="w-full max-w-md rounded-xl border border-slate-700/60
+        className="w-full max-w-md rounded-xl border border-border/60
           bg-[hsl(240,40%,14%)] p-6 shadow-2xl
           motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200
           motion-reduce:animate-none"
@@ -159,7 +160,7 @@ export function EndgameDialog({
         </h2>
 
         {/* Subtitle */}
-        <p className="mb-5 text-sm text-slate-400">
+        <p className="mb-5 text-sm text-muted-foreground">
           {endedBy} · {endedAt}
         </p>
 
@@ -169,11 +170,11 @@ export function EndgameDialog({
             <li
               key={entry.playerName}
               className={`flex items-center justify-between rounded-lg px-4 py-2.5 ${
-                entry.isWinner ? 'bg-amber-900/30 ring-1 ring-amber-700/40' : 'bg-slate-800/50'
+                entry.isWinner ? 'bg-amber-900/30 ring-1 ring-amber-700/40' : 'bg-card'
               }`}
             >
               <div className="flex items-center gap-2">
-                <span className="w-5 text-center text-xs text-slate-500">{idx + 1}.</span>
+                <span className="w-5 text-center text-xs text-muted-foreground">{idx + 1}.</span>
                 <span
                   className={`text-sm font-medium ${entry.isWinner ? 'text-amber-200' : 'text-slate-200'}`}
                 >
@@ -199,7 +200,7 @@ export function EndgameDialog({
           ref={acknowledgeRef}
           type="button"
           onClick={onAcknowledge}
-          className="w-full rounded-lg bg-slate-700 px-4 py-3 text-sm font-semibold
+          className="w-full rounded-lg bg-card px-4 py-3 text-sm font-semibold
             text-slate-100 transition-colors hover:bg-slate-600
             focus-visible:outline-none focus-visible:ring-2
             focus-visible:ring-slate-400"

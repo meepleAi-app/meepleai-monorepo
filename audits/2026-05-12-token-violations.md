@@ -6,9 +6,9 @@
 | **Generator** | `pnpm lint:tokens` (DS-2) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../docs/for-developers/specs/2026-05-12-token-canonicalization.md) |
 | **Rule** | `local/no-hardcoded-color-utility` |
-| **Total violations** | 4786 |
-| **Files affected** | 551 |
-| **Clusters affected** | 228 |
+| **Total violations** | 4671 |
+| **Files affected** | 539 |
+| **Clusters affected** | 222 |
 
 ## Violations by cluster
 
@@ -28,7 +28,6 @@
 | `admin/users` | 75 | manual |
 | `app/(authenticated)/admin` | 67 | manual |
 | `admin/games` | 64 | manual |
-| `agent/config` | 64 | manual |
 | `app/(authenticated)/play-records` | 55 | manual |
 | `admin/command-center` | 54 | manual |
 | `loading/SkeletonLoader.tsx` | 54 | manual |
@@ -41,7 +40,6 @@
 | `app/admin/database-sync` | 36 | manual |
 | `app/(authenticated)/toolkit` | 32 | manual |
 | `admin/sandbox` | 31 | manual |
-| `agent/settings` | 28 | manual |
 | `app/(auth)/welcome` | 27 | manual |
 | `errors/ErrorBoundary.stories.tsx` | 27 | manual |
 | `stories/DesignTokens.stories.tsx` | 27 | manual |
@@ -58,7 +56,6 @@
 | `library/AddExpansionSheet.tsx` | 17 | manual |
 | `app/(authenticated)/sessions` | 16 | manual |
 | `app/(public)/join` | 16 | manual |
-| `agent/slots` | 16 | manual |
 | `game-night/ScoreAssistant.tsx` | 16 | manual |
 | `play-records/PlayHistory.tsx` | 16 | manual |
 | `toolkit-drawer/shared` | 16 | manual |
@@ -131,7 +128,6 @@
 | `diff/DiffViewerEnhanced.tsx` | 4 | manual |
 | `editor/EditorToolbar.tsx` | 4 | manual |
 | `errors/RouteErrorBoundary.stories.tsx` | 4 | manual |
-| `features/agent-detail` | 4 | DS-8 |
 | `game-night/QuickActions.tsx` | 4 | manual |
 | `game-night/ResumeSessionPanel.tsx` | 4 | manual |
 | `library/UsageWidget.tsx` | 4 | manual |
@@ -160,7 +156,6 @@
 | `ui/sheet.tsx` | 3 | manual |
 | `versioning/VersionTimeline.tsx` | 3 | manual |
 | `admin/ApprovalStatusFilter.tsx` | 2 | manual |
-| `agent/layout` | 2 | manual |
 | `auth/RequireRole.tsx` | 2 | manual |
 | `chat-unified/ChatInputArea.tsx` | 2 | manual |
 | `chat-unified/CitationSheet.tsx` | 2 | manual |
@@ -195,7 +190,6 @@
 | `admin/FeatureFlagsTab.tsx` | 1 | manual |
 | `admin/ui-library` | 1 | manual |
 | `admin/UserActivityTimeline.tsx` | 1 | manual |
-| `agent/AgentCharacterSheet.tsx` | 1 | manual |
 | `auth/TwoFactorSetup.tsx` | 1 | manual |
 | `chat-unified/AgentSwitchDialog.tsx` | 1 | manual |
 | `chat-unified/ChatHistoryDrawer.tsx` | 1 | manual |

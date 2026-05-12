@@ -6,9 +6,9 @@
 | **Generator** | `pnpm lint:tokens` (DS-2) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../docs/for-developers/specs/2026-05-12-token-canonicalization.md) |
 | **Rule** | `local/no-hardcoded-color-utility` |
-| **Total violations** | 4671 |
-| **Files affected** | 539 |
-| **Clusters affected** | 222 |
+| **Total violations** | 4589 |
+| **Files affected** | 527 |
+| **Clusters affected** | 212 |
 
 ## Violations by cluster
 
@@ -47,7 +47,6 @@
 | `empty-state/EmptyState.stories.tsx` | 22 | manual |
 | `stories/BackgroundTexture.stories.tsx` | 22 | manual |
 | `admin/infrastructure` | 20 | manual |
-| `game-night/SessionChatWidget.tsx` | 19 | manual |
 | `app/(public)/contact` | 18 | manual |
 | `modals/ErrorModal.tsx` | 18 | manual |
 | `app/(authenticated)/n8n` | 17 | manual |
@@ -56,7 +55,6 @@
 | `library/AddExpansionSheet.tsx` | 17 | manual |
 | `app/(authenticated)/sessions` | 16 | manual |
 | `app/(public)/join` | 16 | manual |
-| `game-night/ScoreAssistant.tsx` | 16 | manual |
 | `play-records/PlayHistory.tsx` | 16 | manual |
 | `toolkit-drawer/shared` | 16 | manual |
 | `upload/UploadSummary.tsx` | 16 | manual |
@@ -64,7 +62,6 @@
 | `errors/ErrorBoundary.tsx` | 15 | manual |
 | `admin/notifications` | 14 | manual |
 | `app/join/[inviteToken]` | 13 | manual |
-| `game-night/steps` | 13 | manual |
 | `toolkit/Scoreboard.tsx` | 13 | manual |
 | `app/(authenticated)/editor` | 12 | manual |
 | `editor/ConflictResolutionModal.tsx` | 12 | manual |
@@ -83,7 +80,6 @@
 | `app/(authenticated)/setup` | 8 | manual |
 | `chat/panel` | 8 | manual |
 | `diff/DiffSummary.tsx` | 8 | manual |
-| `features/game-detail` | 8 | DS-7 |
 | `game-detail/game-hero-section.tsx` | 8 | manual |
 | `game-detail/stats-grid.tsx` | 8 | manual |
 | `library/DocumentSelectionPanel.tsx` | 8 | manual |
@@ -92,13 +88,11 @@
 | `accessible/Accessibility.stories.tsx` | 7 | manual |
 | `auth/VerificationError.stories.tsx` | 7 | manual |
 | `editor/RichTextEditor.tsx` | 7 | manual |
-| `game-night/SessionHeader.tsx` | 7 | manual |
 | `profile/ClaimGuestGames.tsx` | 7 | manual |
 | `upload/UploadQueue.tsx` | 7 | manual |
 | `versioning/ChangeItem.tsx` | 7 | manual |
 | `auth/LoginForm.stories.tsx` | 6 | manual |
 | `empty-state/EmptyState.tsx` | 6 | manual |
-| `game-night/LiveScoreboard.tsx` | 6 | manual |
 | `legal/LegalPageLayout.tsx` | 6 | manual |
 | `library/game-table` | 6 | manual |
 | `library/KbStatusPanel.tsx` | 6 | manual |
@@ -128,8 +122,6 @@
 | `diff/DiffViewerEnhanced.tsx` | 4 | manual |
 | `editor/EditorToolbar.tsx` | 4 | manual |
 | `errors/RouteErrorBoundary.stories.tsx` | 4 | manual |
-| `game-night/QuickActions.tsx` | 4 | manual |
-| `game-night/ResumeSessionPanel.tsx` | 4 | manual |
 | `library/UsageWidget.tsx` | 4 | manual |
 | `loading/TypingIndicator.tsx` | 4 | manual |
 | `onboarding/FirstAgentStep.tsx` | 4 | manual |
@@ -146,7 +138,6 @@
 | `comments/InlineCommentIndicator.tsx` | 3 | manual |
 | `features/game-chat` | 3 | DS-10 |
 | `game-detail/TypingIndicator.tsx` | 3 | manual |
-| `game-night/GameKbBadge.tsx` | 3 | manual |
 | `layout/UserShell` | 3 | manual |
 | `library/PdfUploadSheet.tsx` | 3 | manual |
 | `prompt/LazyPromptEditor.tsx` | 3 | manual |
@@ -164,7 +155,6 @@
 | `comments/CommentThread.tsx` | 2 | manual |
 | `errors/RouteErrorBoundary.tsx` | 2 | manual |
 | `forms/FormDescription.tsx` | 2 | manual |
-| `game-night/SaveCompleteDialog.tsx` | 2 | manual |
 | `game-state/MeeplePlayerStateCard.tsx` | 2 | manual |
 | `layout/AdminSideDrawer` | 2 | manual |
 | `layout/HubLayout` | 2 | manual |

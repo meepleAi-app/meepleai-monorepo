@@ -42,7 +42,7 @@ export function GameKbBadge({
     <span
       data-testid="game-kb-badge"
       data-indexed="false"
-      className="inline-flex items-center gap-1 rounded-full bg-gray-50 px-2 py-0.5 text-xs font-nunito font-medium text-gray-600 border border-gray-200"
+      className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-nunito font-medium text-muted-foreground border border-border"
     >
       <FileText className="h-3 w-3" aria-hidden="true" />
       Solo manuale

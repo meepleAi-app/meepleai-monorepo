@@ -116,8 +116,8 @@ export function ScoreAssistant({ sessionId, onScoreRecorded, className }: ScoreA
   return (
     <section
       className={cn(
-        'rounded-xl border border-slate-200 dark:border-slate-700',
-        'bg-white/80 dark:bg-slate-800/60 backdrop-blur-sm p-3',
+        'rounded-xl border border-border',
+        'bg-card/80 dark:bg-card backdrop-blur-sm p-3',
         className
       )}
       data-testid="score-assistant"
@@ -125,7 +125,7 @@ export function ScoreAssistant({ sessionId, onScoreRecorded, className }: ScoreA
       {/* Header */}
       <div className="flex items-center gap-2 mb-2">
         <Mic className="h-4 w-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />
-        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <span className="text-sm font-semibold text-foreground">
           Assistente punteggi
         </span>
       </div>
@@ -211,8 +211,8 @@ function ResultCard({ result, onConfirm, onDismiss }: ResultCardProps) {
     },
     unrecognized: {
       icon: XCircle,
-      color: 'text-slate-500 dark:text-slate-400',
-      bg: 'bg-slate-50 dark:bg-slate-800/40',
+      color: 'text-muted-foreground',
+      bg: 'bg-muted',
     },
   };
 
@@ -228,11 +228,11 @@ function ResultCard({ result, onConfirm, onDismiss }: ResultCardProps) {
       <div className="flex items-start gap-2">
         <Icon className={cn('h-4 w-4 mt-0.5 flex-shrink-0', config.color)} aria-hidden="true" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-slate-800 dark:text-slate-200">{result.message}</p>
+          <p className="text-sm text-foreground">{result.message}</p>
 
           {/* Confidence indicator */}
           <div className="flex items-center gap-1 mt-1">
-            <span className="text-xs text-slate-500">Confidenza:</span>
+            <span className="text-xs text-muted-foreground">Confidenza:</span>
             <span
               className={cn(
                 'text-xs font-medium',
@@ -250,12 +250,12 @@ function ResultCard({ result, onConfirm, onDismiss }: ResultCardProps) {
           {/* Ambiguous candidates */}
           {result.status === 'ambiguous' && result.ambiguousCandidates && (
             <div className="mt-1.5">
-              <span className="text-xs text-slate-500">Giocatori possibili:</span>
+              <span className="text-xs text-muted-foreground">Giocatori possibili:</span>
               <div className="flex flex-wrap gap-1 mt-1">
                 {result.ambiguousCandidates.map(name => (
                   <span
                     key={name}
-                    className="inline-flex items-center rounded-full bg-white dark:bg-slate-700 px-2 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600"
+                    className="inline-flex items-center rounded-full bg-card px-2 py-0.5 text-xs font-medium text-foreground border border-border dark:border-border"
                   >
                     {name}
                   </span>

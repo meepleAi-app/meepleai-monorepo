@@ -110,7 +110,7 @@ export function SaveCompleteDialog({
               Vuoi salvare lo stato della partita? Potrai riprendere in un secondo momento.
             </p>
             <div className="space-y-2">
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <p className="text-xs font-medium text-muted-foreground">
                 Il salvataggio include:
               </p>
               <ul className="text-xs space-y-1 ml-4 list-disc text-muted-foreground">

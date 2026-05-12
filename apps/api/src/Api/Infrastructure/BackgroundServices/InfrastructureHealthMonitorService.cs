@@ -239,11 +239,37 @@ internal sealed class InfrastructureHealthMonitorService : BackgroundService
             // Update in-memory cache
             _states[serviceName] = newState;
 
-            // Persist to database (upsert by ServiceName)
-            await UpsertStateAsync(db, newState, tags, cancellationToken).ConfigureAwait(false);
-        }
+            // Persist to database — issue #896: commit per service so a single-row
+            // failure (concurrency conflict, transient connection, constraint) does
+            // NOT roll back the other services in this poll cycle. Previously the
+            // batched SaveChangesAsync at the end of the foreach meant one bad
+            // upsert silently kept every service stuck at its DB-hydrated status
+            // (memory said Unhealthy, DB stayed Degraded — see #896 evidence).
+#pragma warning disable CA1031 // Per-service catch — must not abort the poll loop
+            try
+            {
+                await UpsertStateAsync(db, newState, tags, cancellationToken).ConfigureAwait(false);
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                _logger.LogDebug(
+                    "[HealthMonitor] {Service}: persisted {Status} (failures={Failures}, successes={Successes})",
+                    serviceName, newState.CurrentStatus, newState.ConsecutiveFailures, newState.ConsecutiveSuccesses);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogError(
+                    ex,
+                    "[HealthMonitor] {Service}: persist failed (status={Status}); in-memory cache updated, DB out of sync until next successful save",
+                    serviceName, newState.CurrentStatus);
 
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                // EF Core guidance: after SaveChanges throws, the change tracker may
+                // hold the failed entity in Modified/Added state. Without a clear, the
+                // NEXT iteration's UpsertStateAsync would re-attempt persisting that
+                // entity alongside the new one, cascading the failure across services
+                // and defeating the per-iteration isolation we want here.
+                db.ChangeTracker.Clear();
+            }
+#pragma warning restore CA1031
+        }
     }
 
     private static async Task UpsertStateAsync(

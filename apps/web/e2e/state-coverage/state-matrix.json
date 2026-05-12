@@ -1,0 +1,581 @@
+{
+  "generated_at": "2026-05-12T14:38:00.257Z",
+  "total_mockups": 61,
+  "enforced_count": 0,
+  "entries": [
+    {
+      "mockup_path": "admin-mockups/design_files/00-hub.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/01-screens.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/02-desktop-patterns.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/03-drawer-variants.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/04-design-system.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/05-dark-mode.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/auth-flow.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-game-night-storyboard.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-nav-bottom-mobile.html",
+      "route": null,
+      "declared_states": [
+        "state-01-no-session"
+      ],
+      "covered_states": [],
+      "missing": [
+        "state-01-no-session"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-nav-chat-panel.html",
+      "route": null,
+      "declared_states": [
+        "state-01-closed"
+      ],
+      "covered_states": [],
+      "missing": [
+        "state-01-closed"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-nav-topbar.html",
+      "route": null,
+      "declared_states": [
+        "state-01-idle"
+      ],
+      "covered_states": [],
+      "missing": [
+        "state-01-idle"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-runthrough-encounter-cheatsheet.html",
+      "route": "/library/{gameId}/play/{campaignId}/encounter",
+      "declared_states": [
+        "A",
+        "entry-from-story  (paragrafo Storybook §147 chiama \"→ Encounter §218\", CTA \"Apri Encounter Book\")"
+      ],
+      "covered_states": [],
+      "missing": [
+        "A",
+        "entry-from-story  (paragrafo Storybook §147 chiama \"→ Encounter §218\", CTA \"Apri Encounter Book\")"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-runthrough-error-states.html",
+      "route": "trasversale",
+      "declared_states": [
+        "A",
+        "stream-timeout      (chat agente N2: nessun token > 30s",
+        "retry/cambia agent/copy)"
+      ],
+      "covered_states": [],
+      "missing": [
+        "A",
+        "stream-timeout      (chat agente N2: nessun token > 30s",
+        "retry/cambia agent/copy)"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-runthrough-game-detail.html",
+      "route": "/library/{gameId}",
+      "declared_states": [
+        "default",
+        "loading",
+        "error",
+        "not-found"
+      ],
+      "covered_states": [],
+      "missing": [
+        "default",
+        "loading",
+        "error",
+        "not-found"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-runthrough-game-onboarding.html",
+      "route": "/library/{gameId}",
+      "declared_states": [
+        "A",
+        "prereq-missing   (3 step todo: PDF upload, KB indexing, agente Tutor)"
+      ],
+      "covered_states": [],
+      "missing": [
+        "A",
+        "prereq-missing   (3 step todo: PDF upload, KB indexing, agente Tutor)"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-runthrough-glossary-editor.html",
+      "route": "/library/nanolith/play/{campaignId}?glossary=add",
+      "declared_states": [
+        "state-01-edit-pristine"
+      ],
+      "covered_states": [],
+      "missing": [
+        "state-01-edit-pristine"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-runthrough-library-search.html",
+      "route": "/library",
+      "declared_states": [
+        "state-01-default-grid"
+      ],
+      "covered_states": [],
+      "missing": [
+        "state-01-default-grid"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-runthrough-play-session.html",
+      "route": "/library/nanolith/play/{campaignId}",
+      "declared_states": [
+        "state-01-story-tab"
+      ],
+      "covered_states": [],
+      "missing": [
+        "state-01-story-tab"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-runthrough-quota-credits.html",
+      "route": "/library/nanolith/play/{campaignId}",
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-runthrough-resume-picker.html",
+      "route": "/library/{gameId}/play",
+      "declared_states": [
+        "state-01-first-time"
+      ],
+      "covered_states": [],
+      "missing": [
+        "state-01-first-time"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-runthrough-session-end.html",
+      "route": "overlay",
+      "declared_states": [
+        "state-01-paused"
+      ],
+      "covered_states": [],
+      "missing": [
+        "state-01-paused"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-runthrough-setup-chat.html",
+      "route": "/library/{gameId}/play/{campaignId}?tab=chat",
+      "declared_states": [
+        "default"
+      ],
+      "covered_states": [],
+      "missing": [
+        "default"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-runthrough-setup-wizard.html",
+      "route": "/library/{gameId}",
+      "declared_states": [
+        "state-01-step1-name"
+      ],
+      "covered_states": [],
+      "missing": [
+        "state-01-step1-name"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/nanolith-runthrough-translate-viewer.html",
+      "route": "/library/{gameId}/play/{campaignId}/translate",
+      "declared_states": [
+        "A",
+        "camera-ready    (CameraViewfinder primitive, frame tratteggiato + scatto button)"
+      ],
+      "covered_states": [],
+      "missing": [
+        "A",
+        "camera-ready    (CameraViewfinder primitive, frame tratteggiato + scatto button)"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/notifications.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/onboarding.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/public.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/settings.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp3-accept-invite.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp3-faq-enhanced.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp3-how-it-works.html",
+      "route": "/how-it-works",
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp3-join.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp3-legal.html",
+      "route": "/terms",
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp3-library-public.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp3-shared-game-detail.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp3-shared-games.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-add-game-bgg-step.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-add-game-pdf-dedup.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-agent-detail.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-agents-index.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-citation-pdf-viewer.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-discover.html",
+      "route": "/discover",
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-game-chat-tab.html",
+      "route": "/library/games/{gameId}?tab=aiChat",
+      "declared_states": [
+        "default",
+        "confidence-bassa",
+        "out-of-context",
+        "loading"
+      ],
+      "covered_states": [],
+      "missing": [
+        "default",
+        "confidence-bassa",
+        "out-of-context",
+        "loading"
+      ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-game-detail.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-game-nights-index.html",
+      "route": "/game-nights",
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-games-index.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-kb-detail.html",
+      "route": "/kb/[id]",
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-kb-hub.html",
+      "route": "/library/private/[gameId]/kb",
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-library-desktop.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-player-detail.html",
+      "route": "/players/[id]",
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-players-index.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-session-live.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-session-summary.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-sessions-index.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-toolkit-detail.html",
+      "route": "/toolkits/[id]",
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-upload-wizard-extended.html",
+      "route": "/kb/upload",
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp6-libro-game-index.html",
+      "route": "/gamebook",
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp6-libro-game-photo-upload.html",
+      "route": "/gamebook/upload",
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp6-libro-game-resume-state.html",
+      "route": "/library/games/[gameId]/play",
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-create.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-detail-rsvp.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    }
+  ]
+}

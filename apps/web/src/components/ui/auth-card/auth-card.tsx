@@ -14,8 +14,8 @@ export interface AuthCardProps {
 
 const BRAND_MARK_STYLE: CSSProperties = {
   background:
-    'linear-gradient(135deg, hsl(var(--e-game)), hsl(var(--e-event)) 60%, hsl(var(--e-player)))',
-  boxShadow: '0 6px 20px hsl(var(--e-game) / 0.35)',
+    'linear-gradient(135deg, hsl(var(--c-game)), hsl(var(--c-event)) 60%, hsl(var(--c-player)))',
+  boxShadow: '0 6px 20px hsl(var(--c-game) / 0.35)',
 };
 
 function BrandBlock(): ReactNode {

@@ -84,7 +84,7 @@ export function CitationExpander({ pdfId, pageNumber, docName }: CitationExpande
           )}
         >
           {loading && (
-            <div className="flex items-center gap-2 text-[0.78rem] text-[var(--nh-text-muted)]">
+            <div className="flex items-center gap-2 text-[0.78rem] text-[var(--text-muted)]">
               <Loader2 className="h-3.5 w-3.5 animate-spin" data-testid="citation-loading" />
               Caricamento...
             </div>
@@ -106,7 +106,7 @@ export function CitationExpander({ pdfId, pageNumber, docName }: CitationExpande
               </div>
               <p
                 data-testid="citation-text"
-                className="whitespace-pre-wrap text-[0.78rem] leading-relaxed text-[var(--nh-text-secondary)]"
+                className="whitespace-pre-wrap text-[0.78rem] leading-relaxed text-[var(--text-sec)]"
               >
                 {pageText}
               </p>

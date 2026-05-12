@@ -45,7 +45,7 @@ export function SessionSummaryCard({
       <div className="flex flex-col items-center gap-2">
         <Trophy className="h-10 w-10 text-amber-400" aria-hidden="true" />
         <h2 className="text-xl font-bold text-white">Partita Terminata!</h2>
-        <p className="text-sm text-[var(--gaming-text-secondary,#aaa)]">{gameName}</p>
+        <p className="text-sm text-[var(--text-sec,#aaa)]">{gameName}</p>
       </div>
 
       {/* Ranked player list */}
@@ -67,7 +67,7 @@ export function SessionSummaryCard({
       </ol>
 
       {/* Duration */}
-      <p className="text-sm text-[var(--gaming-text-secondary,#aaa)]">Durata: {durationLabel}</p>
+      <p className="text-sm text-[var(--text-sec,#aaa)]">Durata: {durationLabel}</p>
 
       {/* Actions */}
       <div className="flex w-full flex-col gap-3">
@@ -78,7 +78,7 @@ export function SessionSummaryCard({
         )}
         <Link
           href="/"
-          className="text-center text-sm text-[var(--gaming-text-secondary,#aaa)] underline-offset-4 hover:underline"
+          className="text-center text-sm text-[var(--text-sec,#aaa)] underline-offset-4 hover:underline"
         >
           Torna alla Home
         </Link>

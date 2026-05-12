@@ -41,8 +41,8 @@ export function SegmentedControl({
             className={cn(
               'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all',
               active
-                ? 'bg-white/10 text-[var(--gaming-text-primary)] shadow-sm'
-                : 'text-[var(--gaming-text-secondary)] hover:text-[var(--gaming-text-primary)]'
+                ? 'bg-white/10 text-[var(--text)] shadow-sm'
+                : 'text-[var(--text-sec)] hover:text-[var(--text)]'
             )}
           >
             {seg.label}

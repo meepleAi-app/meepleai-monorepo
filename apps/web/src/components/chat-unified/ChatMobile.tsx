@@ -77,8 +77,8 @@ function MessageBubble({
         className={cn(
           'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm font-nunito',
           isUser
-            ? 'bg-[var(--gaming-bg-elevated)] text-white rounded-br-md'
-            : 'bg-[var(--gaming-bg-glass)] backdrop-blur-sm border border-[var(--gaming-border-glass)] text-[var(--gaming-text-primary)] rounded-bl-md'
+            ? 'bg-[var(--bg-card)] text-white rounded-br-md'
+            : 'bg-[var(--glass-bg)] backdrop-blur-sm border border-[var(--glass-border)] text-[var(--text)] rounded-bl-md'
         )}
       >
         {!isUser && message.inlineCitations && message.inlineCitations.length > 0 ? (
@@ -125,7 +125,7 @@ function StreamingBubble({ content }: { content: string }) {
       <div
         className={cn(
           'max-w-[85%] rounded-2xl rounded-bl-md px-4 py-2.5 text-sm font-nunito',
-          'bg-[var(--gaming-bg-glass)] backdrop-blur-sm border border-[var(--gaming-border-glass)] text-[var(--gaming-text-primary)]'
+          'bg-[var(--glass-bg)] backdrop-blur-sm border border-[var(--glass-border)] text-[var(--text)]'
         )}
       >
         <p className="whitespace-pre-wrap break-words">{content}</p>
@@ -140,14 +140,14 @@ function StreamingBubble({ content }: { content: string }) {
 function StreamingLoadingDots({ message }: { message: string }) {
   return (
     <div className="flex justify-start">
-      <div className="max-w-[85%] rounded-2xl rounded-bl-md px-4 py-3 bg-[var(--gaming-bg-glass)] border border-[var(--gaming-border-glass)]">
+      <div className="max-w-[85%] rounded-2xl rounded-bl-md px-4 py-3 bg-[var(--glass-bg)] border border-[var(--glass-border)]">
         <div className="flex items-center gap-2">
           <div className="flex gap-1">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-bounce" />
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-bounce [animation-delay:0.15s]" />
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-bounce [animation-delay:0.3s]" />
           </div>
-          <span className="text-xs text-[var(--gaming-text-secondary)] font-nunito">{message}</span>
+          <span className="text-xs text-[var(--text-sec)] font-nunito">{message}</span>
         </div>
       </div>
     </div>
@@ -484,7 +484,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   // Loading
   if (isLoading) {
     return (
-      <div className="flex flex-col h-dvh bg-[var(--gaming-bg-base)]">
+      <div className="flex flex-col h-dvh bg-[var(--bg)]">
         <MobileHeader title="Caricamento..." onBack={() => router.push('/chat')} />
         <div className="flex-1 flex items-center justify-center">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-500" />
@@ -496,7 +496,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   // Load error
   if (loadError) {
     return (
-      <div className="flex flex-col h-dvh bg-[var(--gaming-bg-base)]">
+      <div className="flex flex-col h-dvh bg-[var(--bg)]">
         <MobileHeader title="Errore" onBack={() => router.push('/chat')} />
         <div className="flex-1 flex items-center justify-center px-6">
           <div className="text-center">
@@ -514,14 +514,14 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   }
 
   return (
-    <div className="flex flex-col h-dvh bg-[var(--gaming-bg-base)]">
+    <div className="flex flex-col h-dvh bg-[var(--bg)]">
       {/* Header */}
       <MobileHeader title={headerTitle} onBack={() => router.push('/chat')} />
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
         {messages.length === 0 && !streamState.isStreaming && (
-          <div className="text-center py-12 text-[var(--gaming-text-secondary)] font-nunito">
+          <div className="text-center py-12 text-[var(--text-sec)] font-nunito">
             <p className="text-sm">Inizia la conversazione inviando un messaggio.</p>
           </div>
         )}
@@ -559,7 +559,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
       )}
 
       {/* Input area */}
-      <div className="border-t border-[var(--gaming-border-glass)] px-3 py-3 bg-[var(--gaming-bg-elevated)] backdrop-blur-sm">
+      <div className="border-t border-[var(--glass-border)] px-3 py-3 bg-[var(--bg-card)] backdrop-blur-sm">
         <div className="flex items-end gap-2">
           <textarea
             value={inputValue}
@@ -568,9 +568,9 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
             placeholder="Scrivi un messaggio..."
             rows={1}
             className={cn(
-              'flex-1 resize-none rounded-xl border border-[var(--gaming-border-glass)] px-4 py-2.5',
-              'bg-[var(--gaming-bg-glass)] text-sm font-nunito',
-              'placeholder:text-[var(--gaming-text-secondary)] focus:outline-none focus:ring-2 focus:ring-amber-500/40',
+              'flex-1 resize-none rounded-xl border border-[var(--glass-border)] px-4 py-2.5',
+              'bg-[var(--glass-bg)] text-sm font-nunito',
+              'placeholder:text-[var(--text-sec)] focus:outline-none focus:ring-2 focus:ring-amber-500/40',
               'max-h-24'
             )}
             disabled={streamState.isStreaming}
@@ -582,7 +582,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
               'p-2.5 rounded-xl transition-all duration-200 shrink-0',
               inputValue.trim() && !streamState.isStreaming
                 ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                : 'bg-[var(--gaming-bg-glass)] text-[var(--gaming-text-secondary)]'
+                : 'bg-[var(--glass-bg)] text-[var(--text-sec)]'
             )}
             aria-label="Invia messaggio"
           >

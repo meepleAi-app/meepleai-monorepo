@@ -23,7 +23,7 @@ export function TopBarChatButton({ onOpen, hasUnread = false }: TopBarChatButton
       type="button"
       aria-label="Chat agente"
       onClick={handleClick}
-      className="relative flex h-10 w-10 items-center justify-center rounded-[10px] border border-[var(--border-glass)] bg-[var(--bg-elevated)] text-base shrink-0 hover:bg-[var(--bg-glass)] hover:shadow-[var(--shadow-warm-sm)] hover:-translate-y-px transition-all"
+      className="relative flex h-10 w-10 items-center justify-center rounded-[10px] border border-[var(--glass-border)] bg-[var(--bg-card)] text-base shrink-0 hover:bg-[var(--glass-bg)] hover:shadow-[var(--shadow-warm-sm)] hover:-translate-y-px transition-all"
     >
       <span aria-hidden>💬</span>
       {hasUnread && (
@@ -33,7 +33,7 @@ export function TopBarChatButton({ onOpen, hasUnread = false }: TopBarChatButton
           className="absolute top-[7px] right-[7px] h-2 w-2 rounded-full"
           style={{
             background: 'hsl(350 89% 58%)',
-            boxShadow: '0 0 0 2px var(--bg-elevated)',
+            boxShadow: '0 0 0 2px var(--bg-card)',
           }}
         />
       )}

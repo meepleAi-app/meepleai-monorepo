@@ -19,7 +19,7 @@ export function DesktopShell({ children }: DesktopShellProps) {
   const [searchOpen, setSearchOpen] = useState(false);
 
   return (
-    <div className="min-h-dvh flex flex-col bg-[var(--bg-base)]">
+    <div className="min-h-dvh flex flex-col bg-[var(--bg)]">
       <TopBarV2
         onHamburgerClick={() => setDrawerOpen(true)}
         onSearchClick={() => setSearchOpen(true)}

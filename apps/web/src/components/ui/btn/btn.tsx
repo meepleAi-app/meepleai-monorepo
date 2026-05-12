@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import type { EntityType } from '@/components/ui/entity-tokens';
 
 // Map EntityType -> CSS variable key. Mirrors entity-card mapping
-// so `kb` resolves to `--e-document` (pre-existing naming from design tokens).
+// so `kb` resolves to `--c-kb` (pre-existing naming from design tokens).
 const ENTITY_CSS_VAR_KEY: Record<EntityType, string> = {
   game: 'game',
   player: 'player',

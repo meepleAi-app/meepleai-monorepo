@@ -58,7 +58,7 @@ export default function StatisticsPage() {
     : [];
 
   return (
-    <div className="flex flex-col min-h-full bg-[var(--gaming-bg-base)]" data-testid="stats-page">
+    <div className="flex flex-col min-h-full bg-[var(--bg)]" data-testid="stats-page">
       <MobileHeader title="Le mie statistiche" onBack={() => router.back()} />
 
       <div className="flex-1 px-4 pt-3 pb-12 flex flex-col gap-5">

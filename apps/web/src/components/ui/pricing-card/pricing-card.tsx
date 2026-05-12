@@ -37,7 +37,7 @@ function CheckIcon(): JSX.Element {
       strokeWidth="2.5"
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ color: 'hsl(var(--e-toolkit))' }}
+      style={{ color: 'hsl(var(--c-toolkit))' }}
     >
       <polyline points="20 6 9 17 4 12" />
     </svg>
@@ -70,7 +70,7 @@ export function PricingCard({
   className,
 }: PricingCardProps): JSX.Element {
   const rootStyle: CSSProperties | undefined = highlighted
-    ? { borderColor: 'hsl(var(--e-game))' }
+    ? { borderColor: 'hsl(var(--c-game))' }
     : undefined;
 
   const ctaEl = cta.href ? (
@@ -102,7 +102,7 @@ export function PricingCard({
       {highlighted && (
         <span
           className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-semibold text-white"
-          style={{ backgroundColor: 'hsl(var(--e-game))' }}
+          style={{ backgroundColor: 'hsl(var(--c-game))' }}
         >
           Consigliato
         </span>

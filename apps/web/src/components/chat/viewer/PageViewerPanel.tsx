@@ -195,7 +195,7 @@ export function PageViewerPanel({ pdfId, pageNumber, isOpen, onClose }: PageView
         {pageText !== null && !loading && !error && (
           <p
             data-testid="page-viewer-text"
-            className="whitespace-pre-wrap text-[0.82rem] leading-relaxed text-[var(--nh-text-secondary)] font-nunito"
+            className="whitespace-pre-wrap text-[0.82rem] leading-relaxed text-[var(--text-sec)] font-nunito"
           >
             {pageText}
           </p>

@@ -47,7 +47,7 @@ export function ChatCitationCard({ citation }: ChatCitationCardProps) {
           ))}
         </div>
         <p
-          className="border-l-2 pl-2.5 text-[0.78rem] italic leading-relaxed text-[var(--nh-text-secondary)]"
+          className="border-l-2 pl-2.5 text-[0.78rem] italic leading-relaxed text-[var(--text-sec)]"
           style={{ borderLeftColor: 'hsla(210, 40%, 55%, 0.3)' }}
         >
           &ldquo;{citation.excerpt}&rdquo;

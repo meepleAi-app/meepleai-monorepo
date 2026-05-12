@@ -50,7 +50,7 @@ export function LibraryFilterSheet({
     <BottomSheet open={open} onOpenChange={onOpenChange} title="Filtra">
       <div className="flex flex-col gap-6">
         <div>
-          <p className="mb-2 text-xs font-medium uppercase text-[var(--gaming-text-secondary)]">
+          <p className="mb-2 text-xs font-medium uppercase text-[var(--text-sec)]">
             Stato
           </p>
           <div className="flex flex-wrap gap-2">
@@ -63,7 +63,7 @@ export function LibraryFilterSheet({
                   'rounded-full px-3 py-1.5 text-sm transition-colors',
                   local.state === opt.id
                     ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                    : 'bg-white/5 text-[var(--gaming-text-secondary)] border border-transparent'
+                    : 'bg-white/5 text-[var(--text-sec)] border border-transparent'
                 )}
               >
                 {opt.label}
@@ -72,7 +72,7 @@ export function LibraryFilterSheet({
           </div>
         </div>
         <div>
-          <p className="mb-2 text-xs font-medium uppercase text-[var(--gaming-text-secondary)]">
+          <p className="mb-2 text-xs font-medium uppercase text-[var(--text-sec)]">
             Ordina per
           </p>
           <div className="flex flex-wrap gap-2">
@@ -85,7 +85,7 @@ export function LibraryFilterSheet({
                   'rounded-full px-3 py-1.5 text-sm transition-colors',
                   local.sortBy === opt.id
                     ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                    : 'bg-white/5 text-[var(--gaming-text-secondary)] border border-transparent'
+                    : 'bg-white/5 text-[var(--text-sec)] border border-transparent'
                 )}
               >
                 {opt.label}

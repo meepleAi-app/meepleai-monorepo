@@ -61,7 +61,7 @@ export function ChatInputBar({
   };
 
   return (
-    <div className="flex-shrink-0 border-t border-[var(--nh-border-default)] bg-[rgba(255,252,248,0.8)] px-5 py-4 backdrop-blur-md">
+    <div className="flex-shrink-0 border-t border-[var(--border)] bg-[rgba(255,252,248,0.8)] px-5 py-4 backdrop-blur-md">
       {/* Image previews */}
       {hasImages && (
         <div className="mb-3 flex flex-wrap gap-2">
@@ -70,7 +70,7 @@ export function ChatInputBar({
               <img
                 src={img.previewUrl}
                 alt={`Allegato ${idx + 1}`}
-                className="h-16 w-20 rounded-lg border border-[var(--nh-border-default)] object-cover shadow-sm"
+                className="h-16 w-20 rounded-lg border border-[var(--border)] object-cover shadow-sm"
               />
               <button
                 type="button"
@@ -85,21 +85,21 @@ export function ChatInputBar({
         </div>
       )}
 
-      <div className="flex items-end gap-2.5 rounded-2xl border border-[var(--nh-border-default)] bg-[var(--nh-bg-elevated)] py-2 pl-4 pr-2 shadow-[var(--shadow-warm-sm)] transition-all focus-within:border-[hsla(220,80%,55%,0.3)] focus-within:bg-card focus-within:shadow-[0_0_0_3px_hsla(220,80%,55%,0.1),var(--shadow-warm-md)]">
+      <div className="flex items-end gap-2.5 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] py-2 pl-4 pr-2 shadow-[var(--shadow-warm-sm)] transition-all focus-within:border-[hsla(220,80%,55%,0.3)] focus-within:bg-card focus-within:shadow-[0_0_0_3px_hsla(220,80%,55%,0.1),var(--shadow-warm-md)]">
         <textarea
           value={value}
           onChange={e => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           rows={1}
-          className="min-h-6 flex-1 resize-none border-none bg-transparent py-2 font-nunito text-[0.9rem] leading-relaxed text-[var(--nh-text-primary)] outline-none placeholder:text-[var(--nh-text-muted)]"
+          className="min-h-6 flex-1 resize-none border-none bg-transparent py-2 font-nunito text-[0.9rem] leading-relaxed text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
           data-testid="gamebook-chat-input"
         />
         <div className="flex items-center gap-1">
           <button
             type="button"
             aria-label="Allega PDF"
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-[var(--nh-text-muted)] transition-all hover:bg-[var(--nh-bg-base)] hover:text-[var(--nh-text-primary)]"
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-[var(--text-muted)] transition-all hover:bg-[var(--bg)] hover:text-[var(--text)]"
           >
             📎
           </button>
@@ -107,7 +107,7 @@ export function ChatInputBar({
             type="button"
             aria-label="Allega immagine"
             onClick={() => canAddMore && fileInputRef.current?.click()}
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-[var(--nh-text-muted)] transition-all hover:bg-[var(--nh-bg-base)] hover:text-[var(--nh-text-primary)] disabled:opacity-40"
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-[var(--text-muted)] transition-all hover:bg-[var(--bg)] hover:text-[var(--text)] disabled:opacity-40"
             disabled={!canAddMore}
           >
             🖼️
@@ -115,7 +115,7 @@ export function ChatInputBar({
           <button
             type="button"
             aria-label="Dettatura"
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-[var(--nh-text-muted)] transition-all hover:bg-[var(--nh-bg-base)] hover:text-[var(--nh-text-primary)]"
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-[var(--text-muted)] transition-all hover:bg-[var(--bg)] hover:text-[var(--text)]"
           >
             🎤
           </button>
@@ -145,16 +145,16 @@ export function ChatInputBar({
         data-testid="chat-image-input"
       />
 
-      <div className="mt-2 flex items-center justify-between px-1.5 text-[0.68rem] text-[var(--nh-text-muted)]">
+      <div className="mt-2 flex items-center justify-between px-1.5 text-[0.68rem] text-[var(--text-muted)]">
         <div className="flex gap-3">
           <span>
-            <kbd className="rounded border border-[var(--nh-border-default)] bg-[var(--nh-bg-base)] px-1.5 py-0.5 font-mono text-[9px] font-bold">
+            <kbd className="rounded border border-[var(--border)] bg-[var(--bg)] px-1.5 py-0.5 font-mono text-[9px] font-bold">
               Enter
             </kbd>{' '}
             invia
           </span>
           <span>
-            <kbd className="rounded border border-[var(--nh-border-default)] bg-[var(--nh-bg-base)] px-1.5 py-0.5 font-mono text-[9px] font-bold">
+            <kbd className="rounded border border-[var(--border)] bg-[var(--bg)] px-1.5 py-0.5 font-mono text-[9px] font-bold">
               ⇧ Enter
             </kbd>{' '}
             nuova riga

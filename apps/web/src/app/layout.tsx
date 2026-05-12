@@ -13,13 +13,13 @@ import { Quicksand, Nunito } from 'next/font/google';
 import { AppProviders } from './providers';
 
 import type { Metadata, Viewport } from 'next';
-// Token system load order (DS-1, 2026-05-12-token-canonicalization.md):
+// Token system load order (DS-16, 2026-05-12-token-canonicalization.md):
 //   1. design-tokens-canonical.css — single source of truth (mockup-faithful)
-//   2. token-bridge.css            — v1 → canonical aliases (removed in DS-12)
-//   3. globals.css                 — Tailwind layer + component utilities
-//   4. domain-specific stylesheets
+//   2. globals.css                 — Tailwind layer + component utilities
+//   3. domain-specific stylesheets
+// Bridge layer (token-bridge.css) was removed in DS-16 after the codemod
+// renamed all consumer references to canonical names.
 import '../styles/design-tokens-canonical.css';
-import '../styles/token-bridge.css';
 import '../styles/globals.css';
 import '../styles/diff-viewer.css';
 import '../styles/agent-theme.css';

@@ -300,7 +300,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
             {/* Timer */}
             <div className="flex flex-col items-center gap-1">
               <Timer className="h-5 w-5 text-amber-500" />
-              <span className="text-3xl font-mono font-bold tabular-nums text-[var(--gaming-text-primary,white)]">
+              <span className="text-3xl font-mono font-bold tabular-nums text-[var(--text,white)]">
                 {formatTime(elapsedSeconds)}
               </span>
               <span className="text-xs text-muted-foreground">Tempo di gioco</span>
@@ -328,7 +328,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
 
             {/* Scoreboard summary */}
             <div>
-              <h3 className="text-sm font-semibold mb-2 text-[var(--gaming-text-secondary,#ccc)]">
+              <h3 className="text-sm font-semibold mb-2 text-[var(--text-sec,#ccc)]">
                 Classifica
               </h3>
               <LiveScoreboard players={scoreboardPlayers} isRealTime />
@@ -339,7 +339,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
         {/* ——— Tab: Punteggi ——— */}
         {activeTab === 'scores' && (
           <div className="p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-[var(--gaming-text-secondary,#ccc)]">
+            <h3 className="text-sm font-semibold text-[var(--text-sec,#ccc)]">
               Tocca un giocatore per aggiornare il punteggio
             </h3>
             <div className="space-y-2">
@@ -394,7 +394,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
         {/* ——— Tab: Giocatori ——— */}
         {activeTab === 'players' && (
           <div className="p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-[var(--gaming-text-secondary,#ccc)]">
+            <h3 className="text-sm font-semibold text-[var(--text-sec,#ccc)]">
               Giocatori ({players.filter(p => p.isActive).length})
             </h3>
             <div className="space-y-2">

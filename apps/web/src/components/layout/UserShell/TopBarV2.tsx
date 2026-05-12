@@ -21,7 +21,7 @@ export function TopBarV2({ onHamburgerClick, onSearchClick, adminMode }: TopBarV
       style={{
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        backgroundColor: 'color-mix(in srgb, var(--bg-base) 80%, transparent)',
+        backgroundColor: 'color-mix(in srgb, var(--bg) 80%, transparent)',
         borderBottom: '1px solid color-mix(in srgb, var(--border) 50%, transparent)',
       }}
     >

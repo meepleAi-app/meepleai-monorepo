@@ -51,7 +51,7 @@ export function QrInviteSheet({
 
         {/* Session code */}
         <div className="flex flex-col items-center gap-1">
-          <span className="text-xs text-[var(--gaming-text-secondary,#aaa)]">Codice sessione</span>
+          <span className="text-xs text-[var(--text-sec,#aaa)]">Codice sessione</span>
           <span className="font-mono text-2xl font-bold tracking-widest text-white">
             {sessionCode}
           </span>

@@ -4,7 +4,7 @@ import clsx from 'clsx';
 
 import type { EntityType } from '@/components/ui/entity-tokens';
 
-// Mirror entity-card / btn ENTITY_CSS_VAR_KEY mapping so `kb` resolves to `--e-document`
+// Mirror entity-card / btn ENTITY_CSS_VAR_KEY mapping so `kb` resolves to `--c-kb`
 const ENTITY_CSS_VAR_KEY: Record<EntityType, string> = {
   game: 'game',
   player: 'player',

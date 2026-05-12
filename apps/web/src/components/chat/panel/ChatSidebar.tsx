@@ -40,7 +40,7 @@ export function ChatSidebar({
   onSelectGame,
 }: ChatSidebarProps) {
   return (
-    <aside className="flex w-[220px] flex-shrink-0 flex-col gap-1 overflow-y-auto border-r border-[var(--nh-border-default)] bg-[rgba(255,252,248,0.5)] px-2.5 py-3.5">
+    <aside className="flex w-[220px] flex-shrink-0 flex-col gap-1 overflow-y-auto border-r border-[var(--border)] bg-[rgba(255,252,248,0.5)] px-2.5 py-3.5">
       <button
         type="button"
         onClick={onNewChat}
@@ -53,7 +53,7 @@ export function ChatSidebar({
         ＋ Nuova chat
       </button>
 
-      <div className="mt-2 px-2.5 pb-1 text-[0.64rem] font-extrabold uppercase tracking-wider text-[var(--nh-text-muted)]">
+      <div className="mt-2 px-2.5 pb-1 text-[0.64rem] font-extrabold uppercase tracking-wider text-[var(--text-muted)]">
         ▾ Chat recenti
       </div>
       {chats.map(chat => (
@@ -65,7 +65,7 @@ export function ChatSidebar({
             'relative flex items-start gap-2.5 rounded-[10px] px-2.5 py-2.5 text-left transition-all',
             chat.active
               ? 'bg-[hsla(220,80%,55%,0.08)] shadow-[inset_0_0_0_1px_hsla(220,80%,55%,0.2)]'
-              : 'hover:bg-[var(--nh-bg-elevated)]'
+              : 'hover:bg-[var(--bg-card)]'
           )}
         >
           {chat.active && (
@@ -79,17 +79,17 @@ export function ChatSidebar({
             {chat.emoji}
           </span>
           <div className="min-w-0 flex-1">
-            <div className="truncate font-quicksand text-[0.76rem] font-bold leading-tight text-[var(--nh-text-primary)]">
+            <div className="truncate font-quicksand text-[0.76rem] font-bold leading-tight text-[var(--text)]">
               {chat.title}
             </div>
-            <div className="mt-0.5 text-[0.66rem] text-[var(--nh-text-muted)]">
+            <div className="mt-0.5 text-[0.66rem] text-[var(--text-muted)]">
               {chat.timestamp}
             </div>
           </div>
         </button>
       ))}
 
-      <div className="mt-4 px-2.5 pb-1 text-[0.64rem] font-extrabold uppercase tracking-wider text-[var(--nh-text-muted)]">
+      <div className="mt-4 px-2.5 pb-1 text-[0.64rem] font-extrabold uppercase tracking-wider text-[var(--text-muted)]">
         ▾ Giochi con KB
       </div>
       {kbGames.map(game => (
@@ -97,7 +97,7 @@ export function ChatSidebar({
           key={game.id}
           type="button"
           onClick={() => onSelectGame(game.id)}
-          className="flex items-center gap-2.5 rounded-[9px] px-2.5 py-1.5 text-left transition-all hover:bg-[var(--nh-bg-elevated)]"
+          className="flex items-center gap-2.5 rounded-[9px] px-2.5 py-1.5 text-left transition-all hover:bg-[var(--bg-card)]"
         >
           <div
             aria-hidden
@@ -113,7 +113,7 @@ export function ChatSidebar({
               <span className="text-[11px]">🎲</span>
             )}
           </div>
-          <span className="min-w-0 flex-1 truncate font-nunito text-[0.74rem] font-bold text-[var(--nh-text-primary)]">
+          <span className="min-w-0 flex-1 truncate font-nunito text-[0.74rem] font-bold text-[var(--text)]">
             {game.name}
           </span>
           <span

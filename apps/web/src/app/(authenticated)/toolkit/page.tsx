@@ -12,7 +12,7 @@ export default function ToolkitHubPage() {
 
   return (
     <HubLayout searchPlaceholder="Cerca tool..." showViewToggle>
-      <div className="flex flex-col items-center gap-3 py-16 px-4 text-center text-[var(--nh-text-muted,#94a3b8)]">
+      <div className="flex flex-col items-center gap-3 py-16 px-4 text-center text-[var(--text-muted,#94a3b8)]">
         <span className="text-5xl">🛠️</span>
         <p className="font-medium">Toolkit in arrivo.</p>
         <p className="text-sm">Qui troverai timer, contatori, mazzi e altri strumenti di gioco.</p>

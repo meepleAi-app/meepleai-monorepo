@@ -18,7 +18,7 @@ import { Drawer as VaulDrawer } from 'vaul';
 import { useDrawerBreakpoint } from '@/components/ui/drawer/use-drawer-breakpoint';
 import type { EntityType } from '@/components/ui/entity-tokens';
 
-// Mirror EntityCard: `kb` -> `--e-document` (pre-existing token name).
+// Mirror EntityCard: `kb` -> `--c-kb` (pre-existing token name).
 const ENTITY_CSS_VAR_KEY: Record<EntityType, string> = {
   game: 'game',
   player: 'player',

@@ -51,9 +51,9 @@ export function ContextualHandBottomBar() {
         aria-label="Azioni partita"
         className={cn(
           'md:hidden fixed bottom-0 inset-x-0 z-30',
-          'border-t border-[var(--border-glass)]',
-          'bg-[var(--bg-base)]/95 backdrop-blur-sm',
-          'supports-[backdrop-filter]:bg-[var(--bg-base)]/60'
+          'border-t border-[var(--glass-border)]',
+          'bg-[var(--bg)]/95 backdrop-blur-sm',
+          'supports-[backdrop-filter]:bg-[var(--bg)]/60'
         )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
@@ -96,20 +96,20 @@ export function ContextualHandBottomBar() {
           <div
             className={cn(
               'absolute bottom-0 inset-x-0 max-h-[50vh] rounded-t-2xl',
-              'border-t border-[var(--border-glass)] bg-[var(--bg-base)]',
+              'border-t border-[var(--glass-border)] bg-[var(--bg)]',
               'animate-in slide-in-from-bottom duration-300',
               'overflow-y-auto'
             )}
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
           >
             {/* Drag handle */}
-            <div className="sticky top-0 z-10 flex items-center justify-center bg-[var(--bg-base)] pt-3 pb-1">
+            <div className="sticky top-0 z-10 flex items-center justify-center bg-[var(--bg)] pt-3 pb-1">
               <div className="h-1.5 w-12 rounded-full bg-muted-foreground/25" />
             </div>
 
             {/* Header */}
             <div className="flex items-center justify-between px-4 pb-2">
-              <h3 className="font-quicksand text-sm font-semibold text-[var(--text-primary)]">
+              <h3 className="font-quicksand text-sm font-semibold text-[var(--text)]">
                 {TABS.find(t => t.type === expandedTab)?.label}
               </h3>
               <button

@@ -38,6 +38,16 @@ test('no-hardcoded-color-utility', () => {
       { code: `const x = <div data-slot="foo" />;` },
       // clsx with semantic tokens
       { code: `const x = <div className={clsx('bg-card', 'text-foreground')} />;` },
+      // DS-4 exemption: text-white on colored bg (entity, gradient, hue, arbitrary)
+      { code: `const x = <div className="bg-entity-game text-white" />;` },
+      { code: `const x = <div className="bg-gradient-to-r from-purple-600 to-purple-500 text-white" />;` },
+      { code: `const x = <div className="bg-[hsl(25,90%,45%)] text-white" />;` },
+      { code: `const x = <button className="bg-blue-500 text-white border-white/20" />;` },
+      { code: `const x = <div className="bg-emerald-500/20 text-white" />;` },
+      // Semantic shadcn colored tokens
+      { code: `const x = <div className="bg-primary text-white" />;` },
+      { code: `const x = <div className="bg-secondary text-white border-white/20" />;` },
+      { code: `const x = <div className="bg-destructive text-white" />;` },
     ],
     invalid: [
       // Plain bg-white

@@ -147,19 +147,19 @@ export function SearchExpander({
   return (
     <div data-testid="search-expander" className="absolute inset-x-4 bottom-20 z-50">
       {/* Search Input */}
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-2xl">
+      <div className="bg-card/40 backdrop-blur-xl border border-border rounded-2xl p-3 shadow-2xl">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Cerca un gioco..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-white/20"
+            className="w-full bg-card/40 border border-border rounded-xl py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
           />
           {isSearching && (
-            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40 animate-spin" />
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
           )}
         </div>
 
@@ -169,7 +169,7 @@ export function SearchExpander({
             {enrichedResults.map(game => (
               <div
                 key={game.id}
-                className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors"
+                className="flex items-center gap-3 p-2 rounded-xl hover:bg-card/40 transition-colors"
               >
                 {/* Thumbnail */}
                 {game.thumbnailUrl && (
@@ -183,14 +183,14 @@ export function SearchExpander({
                 {/* Game Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-white truncate">{game.title}</span>
+                    <span className="text-sm font-medium text-foreground truncate">{game.title}</span>
                     {game.isInLibrary && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 whitespace-nowrap">
                         ✓ In libreria
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-white/40">
+                  <span className="text-xs text-muted-foreground">
                     {formatPlayers(game.minPlayers, game.maxPlayers)}
                   </span>
                 </div>
@@ -221,7 +221,7 @@ export function SearchExpander({
 
         {/* Empty state when searching with no results */}
         {query.trim() && !isSearching && results.length === 0 && (
-          <div className="mt-2 py-4 text-center text-xs text-white/30">Nessun gioco trovato</div>
+          <div className="mt-2 py-4 text-center text-xs text-muted-foreground">Nessun gioco trovato</div>
         )}
       </div>
     </div>

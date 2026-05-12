@@ -184,7 +184,7 @@ function CatalogGameCard({
         )}
         {hasKb !== undefined && (
           <span
-            className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold font-[Quicksand] text-white leading-none ${hasKb ? 'bg-green-500' : 'bg-muted-foreground/60'}`}
+            className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold font-[Quicksand] leading-none ${hasKb ? 'bg-green-500 text-white' : 'bg-muted-foreground/60 text-white'}`}
           >
             {hasKb ? 'KB ✓' : 'KB –'}
           </span>
@@ -215,7 +215,7 @@ function CatalogGameCard({
           inLibrary
             ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-muted text-muted-foreground/60 cursor-default'
             : adding
-              ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-black/20 dark:bg-white/20 text-white cursor-wait'
+              ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-muted text-muted-foreground cursor-wait'
               : 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-amber-600 text-white hover:opacity-90 active:scale-95 transition-transform'
         }
       >

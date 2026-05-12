@@ -14,4 +14,29 @@ describe('extractStatesFromComment', () => {
       Persona: Aaron`;
     expect(extractStatesFromComment(comment)).toEqual(['default', 'loading', 'error', 'not-found']);
   });
+
+  it('parses multi-line Stati with indented continuation', () => {
+    const comment = `
+      Mockup: sp4-game-chat-tab
+      Stati:
+        default            (Aaron query "azione carta uccello + 2 cibo" su Wingspan,
+                           risposta IT + citation Manuale p.12 + confidence alta verde)
+        confidence-bassa   (edge "mazzo finisce a metà partita", disclaimer
+                           "non sono certo" + suggerimento BGG)
+        out-of-context     (utente chiede regole di Tainted Grail mentre è su Wingspan,
+                           agente declina + propone switch gioco/agente)
+        loading            (typing indicator + meta latency live, budget P95 ≤ 10s da Q6)
+      Persona: Aaron`;
+    expect(extractStatesFromComment(comment)).toEqual([
+      'default',
+      'confidence-bassa',
+      'out-of-context',
+      'loading',
+    ]);
+  });
+
+  it('returns empty array when no Stati line present', () => {
+    const comment = `Mockup: foo\nRoute: /bar`;
+    expect(extractStatesFromComment(comment)).toEqual([]);
+  });
 });

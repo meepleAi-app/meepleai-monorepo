@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Nanolith Runthrough · Error States</title>
+<!--
+  Mockup: nanolith-runthrough-error-states
+  Route:  trasversale ai 4 goal (chat N1/N2, photo-translate N3)
+  Scope:  Phase A runthrough — gap coverage error states tecnici NON coperti da low-confidence
+  Stati:  A · stream-timeout      (chat agente N2: nessun token > 30s · retry/cambia agent/copy)
+          B · ocr-fail             (foto pagina: OCR conf < 0.3 → testo illeggibile · rifotografa/manuale/cancella)
+          C · llm-503              (provider down · 3 retry exponential backoff · fallback offline regole base)
+          D · segmentation-fail    (OCR ok ma niente § rilevati · inserisci numero § manuale · alt: range)
+  Vincolo: ogni error state mostra (a) cosa è successo in linguaggio Aaron-friendly, (b) cosa NON
+           verrà addebitato (cost transparency), (c) ≥ 2 azioni di recupero, (d) link a "telemetria
+           invia" per dogfood iter feedback. Pattern banner riuso da translate-viewer state-F + extension.
+  Mobile-first 375px. Desktop 880px.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  .top {
+    position: sticky; top: 0; z-index: var(--z-sticky);
+    backdrop-filter: blur(12px); background: var(--glass-bg);
+    border-bottom: 1px solid var(--border);
+    padding: var(--s-4) var(--s-6);
+    display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap;
+  }
+  .top h1 { font-family: var(--f-display); font-size: var(--fs-lg); margin: 0; font-weight: var(--fw-bold); }
+  .top .route { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); padding: 2px var(--s-2); border-radius: var(--r-sm); background: var(--bg-muted); }
+  .top .spacer { flex: 1; }
+  .top button {
+    background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
+    border-radius: var(--r-pill); padding: var(--s-1) var(--s-3);
+    font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer;
+  }
+
+  .stage { padding: var(--s-7) var(--s-6); max-width: 1700px; margin: 0 auto; }
+
+  .state-section { margin-bottom: var(--s-10); }
+  .state-section .label {
+    display: inline-block; padding: var(--s-1) var(--s-3);
+    background: hsl(var(--c-danger) / 0.12); color: hsl(var(--c-danger));
+    border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: var(--s-2);
+  }
+  .state-section.warn .label { background: hsl(var(--c-warning) / 0.12); color: hsl(var(--c-warning)); }
+  .state-section h2 {
+    font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold);
+    margin: 0 0 var(--s-2);
+  }
+  .state-section .desc { color: var(--text-sec); margin: 0 0 var(--s-6); font-size: var(--fs-md); }
+
+  .frames { display: flex; gap: var(--s-9); flex-wrap: wrap; align-items: flex-start; }
+
+  .phone {
+    width: 375px; min-height: 740px; background: var(--bg);
+    border-radius: 36px; overflow: hidden;
+    border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; position: relative;
+  }
+  .desktop {
+    width: 880px; height: 600px; background: var(--bg);
+    border-radius: var(--r-lg); overflow: hidden;
+    border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; position: relative;
+  }
+  .phone .frame-label, .desktop .frame-label {
+    position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+  }
+  .desktop .frame-label { left: 0; transform: none; }
+
+  .phone-sbar {
+    height: 32px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 22px 0;
+    font-size: 12px; font-weight: var(--fw-bold);
+    font-family: var(--f-display); color: var(--text-sec);
+  }
+  .titlebar {
+    height: 28px; background: var(--bg-muted); flex-shrink: 0;
+    display: flex; align-items: center; padding: 0 var(--s-3); gap: 6px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .titlebar .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .titlebar .dot.r { background: #ff605c; } .titlebar .dot.y { background: #ffbd44; } .titlebar .dot.g { background: #00ca4e; }
+  .titlebar .url {
+    margin-left: var(--s-3); padding: 2px var(--s-3);
+    background: var(--bg-card); border-radius: var(--r-sm);
+    font-family: var(--f-mono); font-size: 11px; color: var(--text-muted);
+    flex: 1;
+  }
+
+  .appbar {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-3) var(--s-4);
+    border-bottom: 1px solid var(--border-light); flex-shrink: 0;
+  }
+  .appbar .back {
+    width: 36px; height: 36px; border-radius: var(--r-md);
+    background: var(--bg-muted); display: flex; align-items: center; justify-content: center;
+    font-size: 18px; cursor: pointer;
+  }
+  .appbar .crumbs { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); flex: 1; }
+  .appbar .crumbs strong { color: var(--text-sec); font-weight: var(--fw-semi); }
+  .appbar .right-tool {
+    width: 36px; height: 36px; border-radius: var(--r-md);
+    background: var(--bg-muted); display: flex; align-items: center; justify-content: center;
+    font-size: 16px; cursor: pointer;
+  }
+
+  /* Error banner shared pattern (extension from translate-viewer low-conf) */
+  .err-banner {
+    margin: var(--s-4); padding: var(--s-4);
+    border-radius: var(--r-lg);
+  }
+  .err-banner.danger { background: hsl(var(--c-danger) / 0.08); border: 1px solid hsl(var(--c-danger) / 0.4); }
+  .err-banner.warn   { background: hsl(var(--c-warning) / 0.1); border: 1px solid hsl(var(--c-warning) / 0.4); }
+  .err-banner .head { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-2); }
+  .err-banner .badge {
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+    color: #fff;
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+  }
+  .err-banner.danger .badge { background: hsl(var(--c-danger)); }
+  .err-banner.warn   .badge { background: hsl(var(--c-warning)); }
+  .err-banner .title {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md);
+  }
+  .err-banner.danger .title { color: hsl(var(--c-danger)); }
+  .err-banner.warn   .title { color: hsl(var(--c-warning)); }
+  .err-banner .msg {
+    font-size: var(--fs-sm); color: var(--text); margin: 0 0 var(--s-3);
+    line-height: var(--lh-snug);
+  }
+  .err-banner .cost-note {
+    margin: 0 0 var(--s-3); padding: var(--s-2) var(--s-3);
+    background: hsl(var(--c-success) / 0.06); border: 1px dashed hsl(var(--c-success) / 0.35);
+    border-radius: var(--r-md);
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-sec);
+    display: flex; align-items: center; gap: var(--s-2);
+  }
+  .err-banner .cost-note strong { color: hsl(var(--c-success)); font-weight: var(--fw-bold); }
+
+  .err-actions { display: flex; flex-direction: column; gap: var(--s-2); }
+  .err-action {
+    padding: var(--s-3) var(--s-4); border-radius: var(--r-md);
+    background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm);
+    cursor: pointer; text-align: left;
+    display: flex; align-items: center; gap: var(--s-3);
+  }
+  .err-action.primary {
+    background: hsl(var(--c-danger)); color: #fff; border: 0;
+  }
+  .err-action.primary-warn {
+    background: hsl(var(--c-warning)); color: #fff; border: 0;
+  }
+  .err-action:hover { border-color: hsl(var(--c-danger) / 0.5); }
+  .err-action .ico { font-size: 18px; flex-shrink: 0; }
+  .err-action .l { flex: 1; }
+  .err-action .l .v { display: block; font-weight: var(--fw-bold); }
+  .err-action .l .s { display: block; font-weight: var(--fw-reg); font-size: var(--fs-xs); opacity: 0.75; margin-top: 2px; font-family: var(--f-mono); }
+  .err-action.primary .l .s, .err-action.primary-warn .l .s { opacity: 0.9; color: rgba(255,255,255,0.85); }
+
+  .err-debug {
+    margin-top: var(--s-3); padding: var(--s-2) var(--s-3);
+    background: rgba(0,0,0,0.04); border-radius: var(--r-sm);
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+    display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap;
+  }
+  .err-debug .lbl { text-transform: uppercase; letter-spacing: 0.06em; font-weight: var(--fw-bold); }
+  .err-debug .v { color: var(--text-sec); }
+
+  /* Chat shell (state A) */
+  .chat-shell {
+    flex: 1; padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-3); overflow-y: auto;
+  }
+  .chat-msg {
+    padding: var(--s-3) var(--s-4); border-radius: var(--r-lg);
+    max-width: 85%; font-size: var(--fs-sm); line-height: var(--lh-snug);
+  }
+  .chat-msg.user {
+    background: hsl(var(--c-chat) / 0.12); align-self: flex-end;
+    border-bottom-right-radius: var(--r-xs);
+  }
+  .chat-msg.assistant {
+    background: var(--bg-card); align-self: flex-start;
+    border: 1px solid var(--border-light); border-bottom-left-radius: var(--r-xs);
+  }
+  .chat-msg.assistant.partial { border-color: hsl(var(--c-warning) / 0.5); }
+  .chat-msg .meta {
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: var(--s-1);
+    display: flex; align-items: center; gap: var(--s-2);
+  }
+  .chat-msg .meta .agent { color: hsl(var(--c-agent)); font-weight: var(--fw-bold); }
+  .chat-msg .stalled-dots {
+    display: inline-flex; align-items: center; gap: 4px; margin-top: var(--s-2);
+    color: hsl(var(--c-warning)); font-family: var(--f-mono); font-size: var(--fs-xs);
+  }
+  .chat-msg .stalled-dots .dot {
+    width: 6px; height: 6px; background: hsl(var(--c-warning)); border-radius: 50%;
+    animation: pulse-dot 1.4s ease-in-out infinite;
+  }
+  .chat-msg .stalled-dots .dot:nth-child(2) { animation-delay: 0.2s; }
+  .chat-msg .stalled-dots .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse-dot { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+  /* Photo preview (state B + D) */
+  .photo-preview {
+    width: 200px; aspect-ratio: 3/4; border-radius: var(--r-md);
+    background:
+      linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)),
+      repeating-linear-gradient(0deg, transparent, transparent 12px, rgba(0,0,0,0.04) 12px, rgba(0,0,0,0.04) 13px),
+      linear-gradient(135deg, #2a2218, #1a140d);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.55); font-family: var(--f-mono); font-size: var(--fs-xs);
+    text-align: center; flex-shrink: 0;
+  }
+  .photo-preview.blurred {
+    filter: blur(1.5px);
+  }
+
+  /* 503 (state C) */
+  .retry-strip {
+    display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap;
+    padding: var(--s-3); border-radius: var(--r-md);
+    background: hsl(var(--c-danger) / 0.04);
+    margin-bottom: var(--s-3);
+  }
+  .retry-strip .lbl {
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-sec); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .retry-strip .pip {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--f-mono); font-size: 11px; font-weight: var(--fw-bold);
+  }
+  .retry-strip .pip.fail { background: hsl(var(--c-danger) / 0.15); color: hsl(var(--c-danger)); }
+  .retry-strip .pip.try  { background: hsl(var(--c-warning)); color: #fff;
+    animation: spin-border 1s linear infinite; }
+  @keyframes spin-border { 0% { box-shadow: 0 0 0 0 hsl(var(--c-warning) / 0.7); } 100% { box-shadow: 0 0 0 8px hsl(var(--c-warning) / 0); } }
+  .retry-strip .pip.todo { background: var(--bg-muted); color: var(--text-muted); }
+  .retry-strip .timing {
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+  }
+
+  .fallback-card {
+    margin-top: var(--s-3); padding: var(--s-4); border-radius: var(--r-lg);
+    background: hsl(var(--c-kb) / 0.06); border: 1px dashed hsl(var(--c-kb) / 0.3);
+  }
+  .fallback-card .head { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-2); }
+  .fallback-card .head .ico { font-size: 18px; color: hsl(var(--c-kb)); }
+  .fallback-card .head .v {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm); color: hsl(var(--c-kb));
+  }
+  .fallback-card .body { font-size: var(--fs-sm); color: var(--text-sec); line-height: var(--lh-snug); }
+
+  /* Manual § input (state D) */
+  .manual-input {
+    margin-top: var(--s-3); padding: var(--s-4); border-radius: var(--r-lg);
+    background: var(--bg-card); border: 1px solid var(--border);
+  }
+  .manual-input .row { display: flex; align-items: center; gap: var(--s-2); }
+  .manual-input .row .pn-prefix {
+    font-family: var(--f-mono); font-size: var(--fs-2xl); font-weight: var(--fw-bold); color: hsl(var(--c-kb));
+  }
+  .manual-input .row input {
+    flex: 1; padding: var(--s-3); border: 1px solid var(--border); border-radius: var(--r-md);
+    font-family: var(--f-mono); font-size: var(--fs-2xl); font-weight: var(--fw-bold);
+    background: var(--bg); color: var(--text);
+  }
+  .manual-input .row input:focus { outline: 2px solid hsl(var(--c-warning)); border-color: hsl(var(--c-warning)); }
+  .manual-input .alt-row {
+    margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px solid var(--border-light);
+  }
+  .manual-input .alt-row .alt-link {
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: hsl(var(--c-kb));
+    background: none; border: 0; cursor: pointer; padding: 0;
+    text-decoration: underline; text-underline-offset: 2px;
+  }
+
+  /* Telemetry footer (shared all states) */
+  .telemetry {
+    padding: var(--s-3) var(--s-4); border-top: 1px solid var(--border-light); flex-shrink: 0;
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+    display: flex; align-items: center; gap: var(--s-2); justify-content: space-between;
+  }
+  .telemetry .send {
+    background: none; border: 0; color: hsl(var(--c-kb)); font-family: inherit; font-size: inherit;
+    cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+  }
+
+  *:focus-visible { outline: 2px solid hsl(var(--c-danger)); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    .retry-strip .pip.try { animation: none; }
+    .chat-msg .stalled-dots .dot { animation: none; opacity: 0.7; }
+  }
+</style>
+</head>
+
+<body>
+
+<header class="top">
+  <h1>Nanolith Runthrough · Error States</h1>
+  <span class="route">trasversale · 4 stati</span>
+  <span class="spacer"></span>
+  <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
+</header>
+
+<main class="stage">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO A · STREAM TIMEOUT (N2 chat in-game)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section warn" id="s1" aria-labelledby="sa">
+    <span class="label">Stato A · Stream Timeout</span>
+    <h2 id="sa">L'agente ha smesso di rispondere mid-stream</h2>
+    <p class="desc">Aaron sta facendo Q&A N2 in-game. SSE stream parte, prime 12 parole arrivano, poi silenzio > 30s. Surfacing inline al messaggio assistant (NON modal blocking — Aaron vuole tornare al gioco). Risposta parziale conservata, banner warn-colored sopra agli action button. Cost: token già consumati NON addebitati su flush incompleto.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – stream timeout">
+        <span class="frame-label">Mobile · 375px (canonical)</span>
+        <div class="phone-sbar"><span>22:14</span><span>📶 🔋 71%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · Chat Arbitro</span>
+          <button class="right-tool">⋯</button>
+        </div>
+        <div class="chat-shell">
+          <div class="chat-msg user">
+            Posso usare lo scudo dopo aver già attaccato in questo turno?
+            <div class="meta">21:14 · 22:14</div>
+          </div>
+          <div class="chat-msg assistant partial">
+            Sì, lo scudo è una reazione e non consuma l'azione principale. Tuttavia, per usarlo dopo un attacco devi avere <em>almeno…</em>
+            <div class="stalled-dots" aria-live="polite">
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              <span style="margin-left: var(--s-1);">in attesa risposta · 32 s</span>
+            </div>
+            <div class="meta"><span class="agent">🤖 Arbitro Nanolith</span> · stream interrotto</div>
+          </div>
+        </div>
+        <div class="err-banner warn" role="alert">
+          <div class="head">
+            <span class="badge">⏱ Timeout</span>
+            <span class="title">L'agente è bloccato</span>
+          </div>
+          <p class="msg">Risposta interrotta dopo 32 s. La parte sopra è quello che siamo riusciti a leggere prima del blocco. Probabile rallentamento provider, riprova tra qualche secondo.</p>
+          <div class="cost-note">
+            💰 <span><strong>Non addebitato</strong> · stream incompleto = 0 token al costo</span>
+          </div>
+          <div class="err-actions">
+            <button class="err-action primary-warn" type="button" autofocus>
+              <span class="ico">🔄</span>
+              <span class="l"><span class="v">Riprova</span><span class="s">stesso prompt · nuovo stream</span></span>
+            </button>
+            <button class="err-action" type="button">
+              <span class="ico">🤖</span>
+              <span class="l"><span class="v">Cambia agente</span><span class="s">prova "Spiega regola base" (più veloce)</span></span>
+            </button>
+            <button class="err-action" type="button">
+              <span class="ico">📋</span>
+              <span class="l"><span class="v">Copia risposta parziale</span><span class="s">e continua a giocare al tavolo</span></span>
+            </button>
+          </div>
+          <div class="err-debug">
+            <span class="lbl">req-id</span><span class="v">chat_msg_8a3b1c</span>
+            <span class="lbl">model</span><span class="v">deepseek-chat</span>
+            <span class="lbl">ttfb</span><span class="v">1.2s</span>
+            <span class="lbl">flush</span><span class="v">12 tokens (parziali)</span>
+          </div>
+        </div>
+        <div class="telemetry">
+          <span>📡 anomalia salvata in telemetry sessione</span>
+          <button class="send" type="button">+ nota dogfood</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – stream timeout">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234?chat=8a3b1c</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Chat Arbitro</span></div>
+        <div style="flex: 1; padding: var(--s-5); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-5); overflow-y: auto;">
+          <div class="chat-shell" style="padding: 0; gap: var(--s-3);">
+            <div class="chat-msg user">Posso usare lo scudo dopo aver già attaccato in questo turno?<div class="meta">22:14</div></div>
+            <div class="chat-msg assistant partial">
+              Sì, lo scudo è una reazione e non consuma l'azione principale. Tuttavia, per usarlo dopo un attacco devi avere <em>almeno…</em>
+              <div class="stalled-dots" aria-live="polite">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span style="margin-left: var(--s-1);">stream bloccato da 32 s</span>
+              </div>
+              <div class="meta"><span class="agent">🤖 Arbitro Nanolith</span> · deepseek-chat · TTFB 1.2 s · 12/~80 token attesi</div>
+            </div>
+          </div>
+          <div class="err-banner warn" style="margin: 0;" role="alert">
+            <div class="head"><span class="badge">⏱ Timeout</span><span class="title">Agente bloccato</span></div>
+            <p class="msg">Stream interrotto dopo 32 s. La risposta parziale è valida fin dove leggi.</p>
+            <div class="cost-note">💰 <span><strong>Non addebitato</strong> · stream incompleto = 0 token al costo</span></div>
+            <div class="err-actions">
+              <button class="err-action primary-warn" type="button" autofocus><span class="ico">🔄</span><span class="l"><span class="v">Riprova</span><span class="s">stesso prompt · nuovo stream</span></span></button>
+              <button class="err-action" type="button"><span class="ico">🤖</span><span class="l"><span class="v">Cambia agente</span><span class="s">prova "Spiega regola base"</span></span></button>
+              <button class="err-action" type="button"><span class="ico">📋</span><span class="l"><span class="v">Copia parziale</span><span class="s">torna al tavolo</span></span></button>
+            </div>
+            <div class="err-debug">
+              <span class="lbl">req</span><span class="v">chat_msg_8a3b1c</span>
+              <span class="lbl">flush</span><span class="v">12 tok</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO B · OCR FAIL (foto illeggibile, conf << 0.5)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" id="s2" aria-labelledby="sb">
+    <span class="label">Stato B · OCR Fail · conf < 0.3</span>
+    <h2 id="sb">Foto troppo poco leggibile — nessun OCR possibile</h2>
+    <p class="desc">Distinto dal low-confidence (0.3-0.5) di translate-viewer state-F: qui la pagina è completamente illeggibile (foto mossa, troppo buia, contrasto insufficiente). Banner danger-colored (NON warn), 3 azioni di recupero esplicite, foto rimasta come preview blurred per context.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – ocr fail">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>22:21</span><span>📶 🔋 70%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · Foto §147</span>
+          <button class="right-tool">✕</button>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: var(--s-4); padding: var(--s-4);">
+          <div class="photo-preview blurred" aria-hidden="true">foto §147<br/>21:14 · 22:21</div>
+          <div class="err-banner danger" style="margin: 0; width: 100%;" role="alert">
+            <div class="head">
+              <span class="badge">⚠ Illeggibile</span>
+              <span class="title">Non riesco a leggere la pagina</span>
+            </div>
+            <p class="msg">L'OCR ha confidence 27% — sotto la soglia minima utile (50%). Probabile foto mossa, troppo buia o controluce. Niente paragrafi traducibili da questo scatto.</p>
+            <div class="cost-note">
+              💰 <span><strong>Non addebitato</strong> · OCR fallito = 0 token traduzione</span>
+            </div>
+            <div class="err-actions">
+              <button class="err-action primary" type="button" autofocus>
+                <span class="ico">📷</span>
+                <span class="l"><span class="v">Rifotografa</span><span class="s">consigliato · cerca luce diretta · tieni telefono fermo</span></span>
+              </button>
+              <button class="err-action" type="button">
+                <span class="ico">🔢</span>
+                <span class="l"><span class="v">Numero § manuale</span><span class="s">se conosci il paragrafo</span></span>
+              </button>
+              <button class="err-action" type="button">
+                <span class="ico">↩</span>
+                <span class="l"><span class="v">Annulla</span><span class="s">torna a Storybook precedente</span></span>
+              </button>
+            </div>
+            <div class="err-debug">
+              <span class="lbl">OCR conf</span><span class="v">0.27</span>
+              <span class="lbl">soglia</span><span class="v">0.50</span>
+              <span class="lbl">size</span><span class="v">380 KB</span>
+              <span class="lbl">brightness</span><span class="v">low</span>
+            </div>
+          </div>
+        </div>
+        <div class="telemetry">
+          <span>📡 telemetry: ocr_fail · brightness_low</span>
+          <button class="send" type="button">+ nota dogfood</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – ocr fail">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate?photo=err</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · OCR §147 fallito</span></div>
+        <div style="flex: 1; padding: var(--s-7); display: flex; gap: var(--s-7); align-items: flex-start;">
+          <div class="photo-preview blurred" style="width: 240px;" aria-hidden="true">foto §147 · illeggibile</div>
+          <div style="flex: 1; max-width: 520px;">
+            <div class="err-banner danger" style="margin: 0;" role="alert">
+              <div class="head"><span class="badge">⚠ Illeggibile</span><span class="title">OCR fallito · confidence 27%</span></div>
+              <p class="msg">La foto è troppo poco leggibile per estrarre testo affidabile. Mossa, buia o controluce. Niente paragrafi traducibili da questo scatto. Procedere con OCR a bassa confidence introdurrebbe errori nella narrativa — preferisco fermarmi.</p>
+              <div class="cost-note">💰 <span><strong>Non addebitato</strong> · OCR fallito = 0 token traduzione consumati</span></div>
+              <div class="err-actions">
+                <button class="err-action primary" type="button" autofocus><span class="ico">📷</span><span class="l"><span class="v">Rifotografa (consigliato)</span><span class="s">cerca luce diretta · tieni il telefono fermo · evita controluce</span></span></button>
+                <button class="err-action" type="button"><span class="ico">🔢</span><span class="l"><span class="v">Numero § manuale</span><span class="s">se conosci il paragrafo · skip OCR</span></span></button>
+                <button class="err-action" type="button"><span class="ico">↩</span><span class="l"><span class="v">Annulla</span><span class="s">torna allo Storybook al paragrafo precedente</span></span></button>
+              </div>
+              <div class="err-debug">
+                <span class="lbl">OCR conf</span><span class="v">0.27</span>
+                <span class="lbl">soglia</span><span class="v">0.50</span>
+                <span class="lbl">brightness</span><span class="v">low (-2.4 EV)</span>
+                <span class="lbl">blur-score</span><span class="v">0.61 (high)</span>
+                <span class="lbl">size</span><span class="v">380 KB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO C · LLM 503 (provider down, 3 retry, fallback regole base)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" id="s3" aria-labelledby="sc">
+    <span class="label">Stato C · LLM 503 · Provider down</span>
+    <h2 id="sc">Servizio AI temporaneamente non disponibile</h2>
+    <p class="desc">Provider primario (DeepSeek) ritorna 503. Strategia: 3 retry exponential backoff (2s · 4s · 8s) → fallback ad OpenRouter → fallback finale "regole base offline" (subset KB chunks pre-cached in IndexedDB per glossario + setup tutorial Press Start). Banner danger-colored, retry strip live, fallback card kb-tinted.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – llm 503">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>22:33</span><span>📶 🔋 68%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · Servizio AI</span>
+          <button class="right-tool">⋯</button>
+        </div>
+        <div style="flex: 1; overflow-y: auto;">
+          <div class="err-banner danger" role="alert">
+            <div class="head">
+              <span class="badge">🚨 503</span>
+              <span class="title">Provider AI non risponde</span>
+            </div>
+            <p class="msg">Il servizio AI sta avendo problemi. Sto provando con un secondo provider, poi ripiego sulle regole base offline (subset Press Start in cache).</p>
+            <div class="retry-strip" aria-live="polite">
+              <span class="lbl">Retry:</span>
+              <span class="pip fail" title="DeepSeek 503 · 2s">1</span>
+              <span class="pip fail" title="DeepSeek 503 · 4s">2</span>
+              <span class="pip try" title="OpenRouter · in corso">3</span>
+              <span class="timing">backoff exp · attesa 6 s</span>
+            </div>
+            <div class="cost-note">💰 <span><strong>Non addebitato</strong> · retry falliti = 0 token</span></div>
+            <div class="err-actions">
+              <button class="err-action primary" type="button"><span class="ico">⏸</span><span class="l"><span class="v">Annulla retry</span><span class="s">passa subito a regole offline</span></span></button>
+              <button class="err-action" type="button"><span class="ico">📡</span><span class="l"><span class="v">Mostra status pubblico</span><span class="s">status.meepleai.app · ultima incident</span></span></button>
+            </div>
+            <div class="err-debug">
+              <span class="lbl">err</span><span class="v">503 Upstream</span>
+              <span class="lbl">provider</span><span class="v">deepseek → openrouter</span>
+              <span class="lbl">incident</span><span class="v">INC-0234</span>
+            </div>
+          </div>
+          <div class="fallback-card" style="margin: 0 var(--s-4) var(--s-4);">
+            <div class="head">
+              <span class="ico">📒</span>
+              <span class="v">Disponibili offline mentre aspetti</span>
+            </div>
+            <div class="body">
+              • Glossario campagna (32 termini) — accesso istantaneo<br/>
+              • Setup tutorial Press Start (24 pag) — solo lookup, no chat<br/>
+              • Stato sessione + paragrafo corrente — sempre disponibile
+            </div>
+          </div>
+        </div>
+        <div class="telemetry">
+          <span>📡 outage in corso · status.meepleai.app</span>
+          <button class="send" type="button">+ nota dogfood</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – llm 503">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234?incident=INC-0234</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Servizio AI in degrado</span></div>
+        <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 360px; gap: var(--s-6); overflow-y: auto;">
+          <div class="err-banner danger" style="margin: 0;" role="alert">
+            <div class="head"><span class="badge">🚨 503</span><span class="title">Provider AI non risponde · sto fallback-ando</span></div>
+            <p class="msg">DeepSeek (provider primario) restituisce 503 da 2 retry. Sto provando OpenRouter; se anche quello fallisce, attivo le regole base offline cached in IndexedDB.</p>
+            <div class="retry-strip" aria-live="polite">
+              <span class="lbl">Retry:</span>
+              <span class="pip fail" title="DeepSeek 503 dopo 2s">1</span>
+              <span class="pip fail" title="DeepSeek 503 dopo 4s">2</span>
+              <span class="pip try" title="OpenRouter · in corso">3</span>
+              <span class="pip todo" title="Fallback offline">⊕</span>
+              <span class="timing">exp backoff · 2s → 4s → 8s · attesa 6 s</span>
+            </div>
+            <div class="cost-note">💰 <span><strong>Non addebitato</strong> · retry falliti = 0 token consumati su ciascun provider</span></div>
+            <div class="err-actions">
+              <button class="err-action primary" type="button"><span class="ico">⏸</span><span class="l"><span class="v">Annulla retry</span><span class="s">passa subito a regole offline (glossario + Press Start cached)</span></span></button>
+              <button class="err-action" type="button"><span class="ico">📡</span><span class="l"><span class="v">Mostra status</span><span class="s">status.meepleai.app · incident INC-0234 attivo da 4 min</span></span></button>
+              <button class="err-action" type="button"><span class="ico">⏰</span><span class="l"><span class="v">Notificami quando torna</span><span class="s">push browser · sessione resta aperta</span></span></button>
+            </div>
+            <div class="err-debug">
+              <span class="lbl">err</span><span class="v">503 Upstream timeout</span>
+              <span class="lbl">primary</span><span class="v">deepseek-chat</span>
+              <span class="lbl">fallback-1</span><span class="v">openrouter:claude-sonnet-4</span>
+              <span class="lbl">fallback-2</span><span class="v">offline-cache</span>
+              <span class="lbl">incident</span><span class="v">INC-0234</span>
+            </div>
+          </div>
+          <div class="fallback-card" style="margin: 0;">
+            <div class="head"><span class="ico">📒</span><span class="v">Disponibili offline mentre aspetti</span></div>
+            <div class="body">
+              <div style="margin-bottom: var(--s-2);">📖 <strong>Glossario campagna</strong> · 32 termini · accesso istantaneo</div>
+              <div style="margin-bottom: var(--s-2);">📋 <strong>Setup tutorial</strong> · 24 pag Press Start · solo lookup, no chat</div>
+              <div style="margin-bottom: var(--s-2);">💾 <strong>Stato sessione</strong> · paragrafo corrente + party · sempre disponibile</div>
+              <div style="margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px dashed hsl(var(--c-kb) / 0.3); font-size: var(--fs-xs); color: var(--text-muted); font-family: var(--f-mono);">
+                Limitazioni offline: niente Q&A nuove, niente traduzione, niente parse Encounter. Torna online quando il provider risponde.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO D · SEGMENTATION FAIL (OCR ok, ma niente § rilevati)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section warn" id="s4" aria-labelledby="sd">
+    <span class="label">Stato D · Segmentation Fail</span>
+    <h2 id="sd">Testo OCR riconosciuto, ma nessun numero § trovato</h2>
+    <p class="desc">OCR confidence alta (0.88) ma il segmenter non ha trovato pattern `§\d+` o equivalenti. Probabile pagina senza header numerati (es. introduzione, glossario integrato, indice). Aaron può inserire il § manualmente, indicare range pagina, o annullare. Pattern manual-input prominent con prefisso "§".</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – segmentation fail">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>22:51</span><span>📶 🔋 66%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · Pagina senza §</span>
+          <button class="right-tool">✕</button>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-3);">
+          <div class="photo-preview" style="align-self: center; width: 160px;" aria-hidden="true">foto pagina<br/>(no § visibili)</div>
+          <div class="err-banner warn" style="margin: 0;" role="alert">
+            <div class="head"><span class="badge">🔍 No §</span><span class="title">Pagina riconosciuta ma senza paragrafi numerati</span></div>
+            <p class="msg">Ho letto il testo (confidence 88%) ma non trovo numeri di paragrafo (§). Forse è una pagina di introduzione, glossario o indice. Inserisci tu il § oppure dimmi che è una pagina speciale.</p>
+            <div class="cost-note">💰 <span><strong>Solo OCR addebitato</strong> · traduzione ancora non partita</span></div>
+          </div>
+          <div class="manual-input">
+            <label for="pn-input" style="font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm); display: block; margin-bottom: var(--s-2);">A che paragrafo è questa pagina?</label>
+            <div class="row">
+              <span class="pn-prefix">§</span>
+              <input id="pn-input" type="text" inputmode="numeric" placeholder="147" value="" autofocus/>
+            </div>
+            <div class="alt-row" style="display: flex; flex-direction: column; gap: var(--s-2);">
+              <button class="alt-link" type="button">📚 È una pagina di glossario / indice (skip §)</button>
+              <button class="alt-link" type="button">📑 È un range (es. §147-149) — inserisci range</button>
+              <button class="alt-link" type="button">↩ Annulla, è una pagina sbagliata</button>
+            </div>
+          </div>
+          <button class="err-action primary-warn" type="button" style="margin-top: var(--s-2);">
+            <span class="ico">→</span>
+            <span class="l"><span class="v">Conferma e traduci</span><span class="s">parte la traduzione N3 standard</span></span>
+          </button>
+          <div class="err-debug">
+            <span class="lbl">OCR conf</span><span class="v">0.88</span>
+            <span class="lbl">tokens</span><span class="v">~420</span>
+            <span class="lbl">regex</span><span class="v">/§\s*\d+/g · 0 match</span>
+          </div>
+        </div>
+        <div class="telemetry">
+          <span>📡 segmentation_fail · ocr_ok</span>
+          <button class="send" type="button">+ nota dogfood</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – segmentation fail">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate?seg=fail</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Segmentazione · nessun § rilevato</span></div>
+        <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-6); overflow-y: auto; align-items: start;">
+          <div style="display: flex; gap: var(--s-5);">
+            <div class="photo-preview" style="width: 200px;" aria-hidden="true">foto pagina<br/>(no § visibili)</div>
+            <div style="flex: 1;">
+              <div class="err-banner warn" style="margin: 0;" role="alert">
+                <div class="head"><span class="badge">🔍 No §</span><span class="title">Pagina senza paragrafi numerati</span></div>
+                <p class="msg">OCR ok (confidence 88%) ma il segmenter non ha trovato pattern <code>§\d+</code>. Probabile pagina speciale (intro, glossario, indice). Indica tu il § per procedere alla traduzione standard, oppure salta.</p>
+                <div class="cost-note">💰 <span><strong>Solo OCR addebitato</strong> · ~0,002 € · traduzione N3 ancora non partita</span></div>
+                <div class="err-debug">
+                  <span class="lbl">OCR conf</span><span class="v">0.88</span>
+                  <span class="lbl">tokens estratti</span><span class="v">~420</span>
+                  <span class="lbl">regex</span><span class="v">/§\s*\d+/g · 0 match</span>
+                  <span class="lbl">fallback regex</span><span class="v">/par\.\s*\d+/i · 0 match</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="manual-input" style="margin: 0;">
+            <label for="pn-input-d" style="font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md); display: block; margin-bottom: var(--s-3);">A che paragrafo è questa pagina?</label>
+            <div class="row">
+              <span class="pn-prefix">§</span>
+              <input id="pn-input-d" type="text" inputmode="numeric" placeholder="147" value="" autofocus/>
+            </div>
+            <div class="alt-row" style="display: flex; flex-direction: column; gap: var(--s-2);">
+              <button class="alt-link" type="button">📚 Pagina di glossario / indice (skip §, archivia testo solo)</button>
+              <button class="alt-link" type="button">📑 È un range (es. §147-149)</button>
+              <button class="alt-link" type="button">↩ Annulla — è la pagina sbagliata</button>
+            </div>
+            <button class="err-action primary-warn" type="button" style="margin-top: var(--s-4); width: 100%;">
+              <span class="ico">→</span>
+              <span class="l"><span class="v">Conferma e traduci</span><span class="s">N3 standard · ~6 s · 0,01 €</span></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const root = document.documentElement;
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+</script>
+
+</body>
+</html>

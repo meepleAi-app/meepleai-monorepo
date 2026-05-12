@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Nanolith Runthrough · Encounter Book Cheatsheet</title>
+<!--
+  Mockup: nanolith-runthrough-encounter-cheatsheet
+  Route:  /library/{gameId}/play/{campaignId}/encounter
+  Scope:  Phase A runthrough — pipeline foto Encounter Book → OCR → cheatsheet card on-demand (N3 + §9.1)
+  Stati:  A · entry-from-story  (paragrafo Storybook §147 chiama "→ Encounter §218", CTA "Apri Encounter Book")
+          B · photo-segmenting   (camera + OCR + parsing stats/options/conditions; budget 4.5s)
+          C · cheatsheet-rendered (card compatta: enemy stats, options, dice CTA, win/loss conditions)
+          D · resolved-back      (outcome banner + consequences applied, ritorno a §147 con conseguenze)
+  Differenza da translate-viewer: stesso scatto/OCR, MA rendering NON-narrative (no fullscreen prose):
+                                  → layout cheatsheet card compatto, stats strutturati, dice roller inline.
+  Vincolo: SMART N3 + §9.1 in-scope. Encounter Book NON indicizzato (privacy + ephemeralità come Storybook).
+           OCR confidence ≥ 0.7. Parse confidence per campo ≥ 0.6 (sotto = forced manual input).
+           Latency P95 < 8s end-to-end. Cheatsheet card NO cache long-term (TTL sessione).
+  Mobile-first 375px CANONICAL (Aaron al tavolo, single-device GM).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  .top {
+    position: sticky; top: 0; z-index: var(--z-sticky);
+    backdrop-filter: blur(12px); background: var(--glass-bg);
+    border-bottom: 1px solid var(--border);
+    padding: var(--s-4) var(--s-6);
+    display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap;
+  }
+  .top h1 { font-family: var(--f-display); font-size: var(--fs-lg); margin: 0; font-weight: var(--fw-bold); }
+  .top .route { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); padding: 2px var(--s-2); border-radius: var(--r-sm); background: var(--bg-muted); }
+  .top .spacer { flex: 1; }
+  .top button {
+    background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
+    border-radius: var(--r-pill); padding: var(--s-1) var(--s-3);
+    font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer;
+  }
+
+  .stage { padding: var(--s-7) var(--s-6); max-width: 1700px; margin: 0 auto; }
+
+  .state-section { margin-bottom: var(--s-10); }
+  .state-section .label {
+    display: inline-block; padding: var(--s-1) var(--s-3);
+    background: hsl(var(--c-event) / 0.12); color: hsl(var(--c-event));
+    border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: var(--s-2);
+  }
+  .state-section h2 {
+    font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold);
+    margin: 0 0 var(--s-2);
+  }
+  .state-section .desc { color: var(--text-sec); margin: 0 0 var(--s-6); font-size: var(--fs-md); }
+
+  .frames { display: flex; gap: var(--s-9); flex-wrap: wrap; align-items: flex-start; }
+
+  .phone {
+    width: 375px; min-height: 740px; background: var(--bg);
+    border-radius: 36px; overflow: hidden;
+    border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; position: relative;
+  }
+  .desktop {
+    width: 880px; height: 600px; background: var(--bg);
+    border-radius: var(--r-lg); overflow: hidden;
+    border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; position: relative;
+  }
+  .phone .frame-label, .desktop .frame-label {
+    position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+  }
+  .desktop .frame-label { left: 0; transform: none; }
+
+  .phone-sbar {
+    height: 32px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 22px 0;
+    font-size: 12px; font-weight: var(--fw-bold);
+    font-family: var(--f-display); color: var(--text-sec);
+  }
+  .titlebar {
+    height: 28px; background: var(--bg-muted); flex-shrink: 0;
+    display: flex; align-items: center; padding: 0 var(--s-3); gap: 6px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .titlebar .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .titlebar .dot.r { background: #ff605c; } .titlebar .dot.y { background: #ffbd44; } .titlebar .dot.g { background: #00ca4e; }
+  .titlebar .url {
+    margin-left: var(--s-3); padding: 2px var(--s-3);
+    background: var(--bg-card); border-radius: var(--r-sm);
+    font-family: var(--f-mono); font-size: 11px; color: var(--text-muted);
+    flex: 1;
+  }
+
+  .appbar {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-3) var(--s-4);
+    border-bottom: 1px solid var(--border-light); flex-shrink: 0;
+  }
+  .appbar .back {
+    width: 36px; height: 36px; border-radius: var(--r-md);
+    background: var(--bg-muted); display: flex; align-items: center; justify-content: center;
+    font-size: 18px; cursor: pointer;
+  }
+  .appbar .crumbs { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); flex: 1; }
+  .appbar .crumbs strong { color: var(--text-sec); font-weight: var(--fw-semi); }
+  .appbar .right-tool {
+    width: 36px; height: 36px; border-radius: var(--r-md);
+    background: var(--bg-muted); display: flex; align-items: center; justify-content: center;
+    font-size: 16px; cursor: pointer;
+  }
+
+  /* ─── A: Entry from story (CTA prompt) ─── */
+  .entry-shell {
+    flex: 1; display: flex; flex-direction: column; padding: var(--s-5); gap: var(--s-4);
+    background: linear-gradient(180deg, hsl(var(--c-event) / 0.04) 0%, var(--bg) 100%);
+  }
+  .story-context {
+    background: var(--bg-card); border: 1px solid var(--border-light);
+    border-radius: var(--r-lg); padding: var(--s-4);
+  }
+  .story-context .pn-row { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-3); }
+  .story-context .pn {
+    font-family: var(--f-mono); font-size: var(--fs-2xl); font-weight: var(--fw-bold); color: hsl(var(--c-kb));
+    font-variant-numeric: tabular-nums;
+  }
+  .story-context .pn-meta { font-size: var(--fs-xs); color: var(--text-muted); font-family: var(--f-mono); }
+  .story-context .excerpt {
+    font-family: 'Georgia', serif; font-style: italic; font-size: var(--fs-md);
+    line-height: var(--lh-relax); color: var(--text-sec);
+  }
+  .story-context .ref-callout {
+    margin-top: var(--s-3); padding: var(--s-3); border-radius: var(--r-md);
+    background: hsl(var(--c-event) / 0.08); border: 1px dashed hsl(var(--c-event) / 0.35);
+    display: flex; align-items: center; gap: var(--s-3);
+  }
+  .story-context .ref-callout .ico { font-size: 24px; }
+  .story-context .ref-callout .l { flex: 1; font-size: var(--fs-sm); }
+  .story-context .ref-callout .l strong { color: hsl(var(--c-event)); font-weight: var(--fw-bold); display: block; margin-bottom: 2px; }
+  .story-context .ref-callout .l span { color: var(--text-muted); }
+
+  .cta-encounter {
+    padding: var(--s-4) var(--s-5); border-radius: var(--r-lg);
+    background: hsl(var(--c-event)); color: #fff; border: 0;
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md);
+    cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+    box-shadow: 0 4px 16px hsl(var(--c-event) / 0.3);
+  }
+  .cta-encounter .l { flex: 1; text-align: left; }
+  .cta-encounter .l .v { display: block; }
+  .cta-encounter .l .s { display: block; font-size: var(--fs-xs); font-weight: var(--fw-reg); opacity: 0.85; margin-top: 2px; }
+  .cta-encounter .ico { font-size: 24px; }
+
+  .secondary-actions { display: flex; gap: var(--s-2); margin-top: var(--s-2); }
+  .secondary-actions button {
+    flex: 1; padding: var(--s-2) var(--s-3); border-radius: var(--r-md);
+    background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--text-sec); font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm);
+    cursor: pointer;
+  }
+
+  /* ─── B: Photo segmenting ─── */
+  .segment-loading {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: var(--s-7); text-align: center; gap: var(--s-5);
+  }
+  .photo-preview {
+    width: 200px; aspect-ratio: 3/4; border-radius: var(--r-md);
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 12px, rgba(0,0,0,0.04) 12px, rgba(0,0,0,0.04) 13px),
+      linear-gradient(135deg, #f4ead7, #e9dcc1);
+    border: 1px solid var(--border);
+    position: relative; overflow: hidden;
+  }
+  .photo-preview.encounter-tinted {
+    background:
+      linear-gradient(135deg, hsl(var(--c-event) / 0.08), hsl(var(--c-event) / 0.02)),
+      repeating-linear-gradient(0deg, transparent, transparent 12px, rgba(0,0,0,0.04) 12px, rgba(0,0,0,0.04) 13px),
+      linear-gradient(135deg, #f4ead7, #e9dcc1);
+  }
+  .photo-preview .scan {
+    position: absolute; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, transparent, hsl(var(--c-event)), transparent);
+    box-shadow: 0 0 12px hsl(var(--c-event));
+    animation: scan 2s ease-in-out infinite;
+  }
+  @keyframes scan {
+    0% { top: 5%; } 50% { top: 95%; } 100% { top: 5%; }
+  }
+  .progress-stages {
+    display: flex; flex-direction: column; gap: var(--s-2);
+    width: 100%; max-width: 320px;
+  }
+  .stage-row {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-2) var(--s-3); border-radius: var(--r-md);
+    background: var(--bg-card); border: 1px solid var(--border-light);
+  }
+  .stage-row .ico { font-size: 14px; }
+  .stage-row .lbl { flex: 1; font-size: var(--fs-sm); text-align: left; }
+  .stage-row .meta { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .stage-row.done { background: hsl(var(--c-success) / 0.06); border-color: hsl(var(--c-success) / 0.25); }
+  .stage-row.active { background: hsl(var(--c-event) / 0.06); border-color: hsl(var(--c-event) / 0.3); }
+
+  /* ─── C: Cheatsheet rendered ─── */
+  .cheatsheet-shell {
+    flex: 1; overflow-y: auto; padding: var(--s-4);
+    display: flex; flex-direction: column; gap: var(--s-3);
+    background: linear-gradient(180deg, hsl(var(--c-event) / 0.04), var(--bg) 200px);
+  }
+  .enemy-card {
+    background: var(--bg-card); border: 1px solid hsl(var(--c-event) / 0.3);
+    border-radius: var(--r-lg); overflow: hidden;
+  }
+  .enemy-card .head {
+    padding: var(--s-3) var(--s-4);
+    background: linear-gradient(135deg, hsl(var(--c-event) / 0.12), hsl(var(--c-event) / 0.04));
+    border-bottom: 1px solid hsl(var(--c-event) / 0.2);
+    display: flex; align-items: center; gap: var(--s-3);
+  }
+  .enemy-card .head .ico { font-size: 32px; }
+  .enemy-card .head .name {
+    flex: 1;
+    font-family: var(--f-display); font-size: var(--fs-xl); font-weight: var(--fw-bold);
+  }
+  .enemy-card .head .pn {
+    font-family: var(--f-mono); font-size: var(--fs-sm); color: hsl(var(--c-event));
+    background: hsl(var(--c-event) / 0.15); padding: 2px var(--s-2); border-radius: var(--r-pill);
+    font-weight: var(--fw-bold);
+  }
+  .enemy-card .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--border-light);
+  }
+  .enemy-card .stat {
+    padding: var(--s-3); background: var(--bg-card); text-align: center;
+  }
+  .enemy-card .stat .v {
+    font-family: var(--f-mono); font-size: var(--fs-2xl); font-weight: var(--fw-bold); color: hsl(var(--c-event));
+    line-height: 1; display: block;
+  }
+  .enemy-card .stat .l {
+    font-family: var(--f-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-muted); margin-top: 4px;
+  }
+
+  .options-list { display: flex; flex-direction: column; gap: var(--s-2); }
+  .option-row {
+    padding: var(--s-3) var(--s-4); border-radius: var(--r-md);
+    background: var(--bg-card); border: 1px solid var(--border-light);
+    display: flex; align-items: center; gap: var(--s-3); cursor: pointer;
+    transition: transform var(--dur-sm) var(--ease-out), border-color var(--dur-sm) var(--ease-out);
+  }
+  .option-row:hover { transform: translateY(-1px); border-color: hsl(var(--c-event) / 0.5); }
+  .option-row .roll {
+    width: 44px; height: 44px; border-radius: var(--r-md);
+    background: hsl(var(--c-event) / 0.1); color: hsl(var(--c-event));
+    font-family: var(--f-mono); font-size: var(--fs-sm); font-weight: var(--fw-bold);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .option-row .text { flex: 1; }
+  .option-row .text .v {
+    display: block; font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm);
+  }
+  .option-row .text .s {
+    display: block; font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px;
+  }
+
+  .conditions {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2);
+  }
+  .cond-card {
+    padding: var(--s-3); border-radius: var(--r-md);
+  }
+  .cond-card.win { background: hsl(var(--c-success) / 0.08); border: 1px solid hsl(var(--c-success) / 0.3); }
+  .cond-card.lose { background: hsl(var(--c-danger) / 0.08); border: 1px solid hsl(var(--c-danger) / 0.3); }
+  .cond-card .l {
+    display: flex; align-items: center; gap: 4px;
+    font-family: var(--f-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: var(--s-1);
+  }
+  .cond-card.win .l { color: hsl(var(--c-success)); }
+  .cond-card.lose .l { color: hsl(var(--c-danger)); }
+  .cond-card .v { font-family: var(--f-body); font-size: var(--fs-sm); line-height: var(--lh-snug); }
+
+  .cheatsheet-toolbar {
+    border-top: 1px solid var(--border-light); padding: var(--s-3) var(--s-4); flex-shrink: 0;
+    display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; justify-content: space-between;
+  }
+  .nav-btn {
+    padding: var(--s-2) var(--s-3); border-radius: var(--r-md);
+    background: var(--bg-muted); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--f-display); font-weight: var(--fw-semi);
+    cursor: pointer; font-size: var(--fs-sm);
+  }
+  .nav-btn.primary { background: hsl(var(--c-event)); color: #fff; border: 0; }
+  .nav-btn.secondary { background: var(--bg-card); }
+
+  .parse-conf {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+    background: hsl(var(--c-success) / 0.15); color: hsl(var(--c-success));
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+  }
+  .parse-conf.med { background: hsl(var(--c-warning) / 0.15); color: hsl(var(--c-warning)); }
+  .parse-conf.low { background: hsl(var(--c-danger) / 0.15); color: hsl(var(--c-danger)); }
+
+  /* ─── D: Resolved → back to story ─── */
+  .resolved-shell {
+    flex: 1; display: flex; flex-direction: column; padding: var(--s-5); gap: var(--s-4);
+  }
+  .outcome-banner {
+    padding: var(--s-4); border-radius: var(--r-lg);
+    border: 1px solid hsl(var(--c-success) / 0.4);
+    background: linear-gradient(135deg, hsl(var(--c-success) / 0.1), hsl(var(--c-success) / 0.03));
+  }
+  .outcome-banner.defeat {
+    border-color: hsl(var(--c-danger) / 0.4);
+    background: linear-gradient(135deg, hsl(var(--c-danger) / 0.1), hsl(var(--c-danger) / 0.03));
+  }
+  .outcome-banner .head { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-3); }
+  .outcome-banner .badge {
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+    background: hsl(var(--c-success)); color: #fff;
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .outcome-banner.defeat .badge { background: hsl(var(--c-danger)); }
+  .outcome-banner .title {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md); color: var(--text);
+  }
+  .outcome-banner .roll-result {
+    font-family: var(--f-mono); font-size: var(--fs-sm); color: var(--text-sec);
+    background: var(--bg-card); padding: var(--s-2) var(--s-3); border-radius: var(--r-md);
+    margin-bottom: var(--s-3); border: 1px solid var(--border-light);
+  }
+  .outcome-banner .roll-result strong { color: hsl(var(--c-event)); }
+
+  .consequences { display: flex; flex-direction: column; gap: var(--s-2); }
+  .conseq-row {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-2) var(--s-3); background: var(--bg-card);
+    border: 1px solid var(--border-light); border-radius: var(--r-md);
+    font-size: var(--fs-sm);
+  }
+  .conseq-row .ico { font-size: 16px; }
+  .conseq-row .l { flex: 1; }
+  .conseq-row .l strong { font-weight: var(--fw-bold); display: block; }
+  .conseq-row .l span { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+  .conseq-row .delta {
+    font-family: var(--f-mono); font-weight: var(--fw-bold); font-size: var(--fs-sm);
+  }
+  .conseq-row .delta.neg { color: hsl(var(--c-danger)); }
+  .conseq-row .delta.pos { color: hsl(var(--c-success)); }
+
+  .return-cta {
+    padding: var(--s-4) var(--s-5); border-radius: var(--r-lg);
+    background: hsl(var(--c-kb)); color: #fff; border: 0;
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md);
+    cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+    box-shadow: 0 4px 16px hsl(var(--c-kb) / 0.3); margin-top: auto;
+  }
+  .return-cta .l { flex: 1; text-align: left; }
+  .return-cta .l .v { display: block; }
+  .return-cta .l .s { display: block; font-size: var(--fs-xs); font-weight: var(--fw-reg); opacity: 0.85; margin-top: 2px; }
+
+  *:focus-visible { outline: 2px solid hsl(var(--c-event)); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    .photo-preview .scan { animation: none; }
+  }
+</style>
+</head>
+
+<body>
+
+<header class="top">
+  <h1>Nanolith Runthrough · Encounter Book Cheatsheet</h1>
+  <span class="route">/library/nanolith/play/{campaignId}/encounter</span>
+  <span class="spacer"></span>
+  <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
+</header>
+
+<main class="stage">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO A · ENTRY FROM STORY (Storybook §147 chiama Encounter §218)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" id="s1" aria-labelledby="sa">
+    <span class="label">Stato A · Entry from Story</span>
+    <h2 id="sa">Storybook chiama Encounter — Aaron sta per scattare</h2>
+    <p class="desc">Durante lettura paragrafo Storybook §147, riferimento "→ Encounter §218 (Reaver Camp)" rilevato. Layout differente da translate-viewer: card story-context con excerpt, CTA event-colored, secondary actions skip/manual entry. Encounter NON è linked da KB indicizzato (Encounter Book è cartaceo on-demand, fresh OCR per ogni call).</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – entry from story">
+        <span class="frame-label">Mobile · 375px (canonical)</span>
+        <div class="phone-sbar"><span>21:48</span><span>📶 🔋 76%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · §147 → Encounter</span>
+          <button class="right-tool">⋯</button>
+        </div>
+        <div class="entry-shell">
+          <div class="story-context">
+            <div class="pn-row">
+              <span class="pn">§147</span>
+              <span class="pn-meta">Storybook · ultimo paragrafo letto</span>
+            </div>
+            <p class="excerpt">…Mentre superi la cresta, vedi tre figure incappucciate raccolte intorno a un fuoco basso. Hanno notato il tuo arrivo.</p>
+            <div class="ref-callout">
+              <span class="ico">⚔️</span>
+              <div class="l">
+                <strong>→ Encounter §218 · Reaver Camp</strong>
+                <span>Servono stats e opzioni — fotografa l'Encounter Book</span>
+              </div>
+            </div>
+          </div>
+          <button class="cta-encounter" type="button" autofocus>
+            <span class="ico">📷</span>
+            <span class="l">
+              <span class="v">Fotografa Encounter §218</span>
+              <span class="s">card pronta in ~6s · nessun salvataggio long-term</span>
+            </span>
+            <span>›</span>
+          </button>
+          <div class="secondary-actions">
+            <button type="button">🔢 §218 manuale</button>
+            <button type="button">↩ Salta encounter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – entry from story">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/encounter?from=147&to=218</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · §147 → Encounter Book §218</span>
+          <button class="right-tool">⋯</button>
+        </div>
+        <div style="flex: 1; padding: var(--s-7); display: grid; grid-template-columns: 1fr 360px; gap: var(--s-7); align-items: start;">
+          <div class="story-context" style="margin: 0;">
+            <div class="pn-row">
+              <span class="pn">§147</span>
+              <span class="pn-meta">Storybook · ultimo paragrafo letto (21:46)</span>
+            </div>
+            <p class="excerpt" style="font-size: var(--fs-lg);">…Mentre superi la cresta, vedi tre figure incappucciate raccolte intorno a un fuoco basso. Hanno notato il tuo arrivo. Le loro armi luccicano nel chiarore — non c'è tempo di nascondersi.</p>
+            <div class="ref-callout">
+              <span class="ico">⚔️</span>
+              <div class="l">
+                <strong>→ Encounter §218 · Reaver Camp</strong>
+                <span>Encounter Book è cartaceo. Le stats, opzioni e condizioni vittoria/sconfitta vanno fotografate adesso. La card sarà valida solo per questa sessione.</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: var(--s-3);">
+            <button class="cta-encounter" type="button" autofocus>
+              <span class="ico">📷</span>
+              <span class="l">
+                <span class="v">Fotografa Encounter §218</span>
+                <span class="s">card pronta in ~6s</span>
+              </span>
+              <span>›</span>
+            </button>
+            <button class="nav-btn">🔢 Inserisci §218 manualmente</button>
+            <button class="nav-btn">↩ Salta encounter (rischio: regole inventate)</button>
+            <p style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin: var(--s-2) 0 0;">Encounter Book non viene salvato long-term: copyright + ephemeralità (vedi spec §9.1).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO B · PHOTO SEGMENTING (OCR + parse stats/options/conditions)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" id="s2" aria-labelledby="sb">
+    <span class="label">Stato B · Photo Segmenting</span>
+    <h2 id="sb">OCR + parsing struttura encounter</h2>
+    <p class="desc">Foto uploaded a `POST /api/v1/gamebook/{gameId}/encounter-parse`. Pipeline: OCR smoldocling → parser strutturato (regex/heuristic per nome/stats/options/conditions) → confidence per campo. Budget ≤ 6s end-to-end. Banner event-tinted per distinguere da translate-viewer narrative scan.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – segmenting encounter" aria-busy="true">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>21:48</span><span>📶 🔋 76%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · Encounter §218…</span>
+        </div>
+        <div class="segment-loading">
+          <div class="photo-preview encounter-tinted" aria-hidden="true">
+            <span class="scan"></span>
+          </div>
+          <div class="progress-stages" role="status">
+            <div class="stage-row done">
+              <span class="ico">✓</span><span class="lbl">Foto caricata</span><span class="meta">412 KB · 1.0s</span>
+            </div>
+            <div class="stage-row done">
+              <span class="ico">✓</span><span class="lbl">EXIF GPS rimosso</span><span class="meta">privacy</span>
+            </div>
+            <div class="stage-row done">
+              <span class="ico">✓</span><span class="lbl">OCR completato</span><span class="meta">conf 0.91 · 2.4s</span>
+            </div>
+            <div class="stage-row active">
+              <span class="ico">⏳</span><span class="lbl">Parsing stats/opzioni</span><span class="meta">1.2s / 2.5s</span>
+            </div>
+            <div class="stage-row">
+              <span class="ico" style="opacity: 0.4;">○</span><span class="lbl" style="opacity: 0.5;">Render cheatsheet</span><span class="meta">in attesa</span>
+            </div>
+          </div>
+          <button class="nav-btn" type="button" aria-label="Annulla">✕ Annulla</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – segmenting encounter" aria-busy="true">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/encounter?to=218</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Encounter §218 — analisi…</span></div>
+        <div style="flex: 1; padding: var(--s-7); display: flex; gap: var(--s-7); align-items: flex-start;">
+          <div class="photo-preview encounter-tinted" style="width: 280px; flex-shrink: 0;"><span class="scan"></span></div>
+          <div style="flex: 1;">
+            <h3 style="font-family: var(--f-display); font-size: var(--fs-xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-2);">Sto analizzando l'Encounter §218</h3>
+            <p style="color: var(--text-sec); margin: 0 0 var(--s-5); font-size: var(--fs-md);">Estraggo nome nemico, stats di combattimento, opzioni con tiri e condizioni vittoria/sconfitta. Budget P95 6s.</p>
+            <div class="progress-stages" style="max-width: none;">
+              <div class="stage-row done"><span class="ico">✓</span><span class="lbl">Foto caricata</span><span class="meta">412 KB · 1.0s</span></div>
+              <div class="stage-row done"><span class="ico">✓</span><span class="lbl">EXIF GPS rimosso (privacy)</span><span class="meta">client-side</span></div>
+              <div class="stage-row done"><span class="ico">✓</span><span class="lbl">OCR completato (smoldocling)</span><span class="meta">conf 0.91 · 2.4s</span></div>
+              <div class="stage-row active"><span class="ico">⏳</span><span class="lbl">Parsing stats / opzioni / condizioni</span><span class="meta">1.2s / 2.5s</span></div>
+              <div class="stage-row"><span class="ico" style="opacity: 0.4;">○</span><span class="lbl" style="opacity: 0.5;">Render cheatsheet card</span><span class="meta">in attesa</span></div>
+            </div>
+            <button class="nav-btn" style="margin-top: var(--s-4);">✕ Annulla</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO C · CHEATSHEET RENDERED (enemy + options + conditions)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" id="s3" aria-labelledby="sc">
+    <span class="label">Stato C · Cheatsheet Rendered</span>
+    <h2 id="sc">Card compatta pronta — Reaver §218</h2>
+    <p class="desc">Layout strutturato (no prose narrative): enemy header con icon + nome + §, grid 4 stats (HP/ATK/DEF/MOV), options-list 3 scelte con dice roll inline (1d6+, ≥ threshold), conditions win/lose split-card. Parse confidence badge per cluster. NO long-term cache: card scompare alla chiusura sessione.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – cheatsheet rendered">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>21:48</span><span>📶 🔋 75%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · ⚔️ §218</span>
+          <button class="right-tool">📷</button>
+        </div>
+        <div class="cheatsheet-shell">
+          <div class="enemy-card">
+            <div class="head">
+              <span class="ico">⚔️</span>
+              <span class="name">Reaver Scout (×3)</span>
+              <span class="pn">§218</span>
+            </div>
+            <div class="stats">
+              <div class="stat"><span class="v">8</span><span class="l">HP</span></div>
+              <div class="stat"><span class="v">+3</span><span class="l">ATK</span></div>
+              <div class="stat"><span class="v">12</span><span class="l">DEF</span></div>
+              <div class="stat"><span class="v">5</span><span class="l">MOV</span></div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 var(--s-1);">
+            <span style="font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm); color: var(--text-sec);">Le tue 3 opzioni</span>
+            <span class="parse-conf">✓ parse 0.94</span>
+          </div>
+          <div class="options-list">
+            <button class="option-row" type="button">
+              <span class="roll">1d6+<br/>≥4</span>
+              <span class="text">
+                <span class="v">⚔️ Attacca subito</span>
+                <span class="s">Successo → §223 · Fallimento → §241</span>
+              </span>
+              <span style="font-size: 20px; color: var(--text-muted);">›</span>
+            </button>
+            <button class="option-row" type="button">
+              <span class="roll">1d6+<br/>≥5</span>
+              <span class="text">
+                <span class="v">🤐 Sgattaiola via</span>
+                <span class="s">Successo → §149 (skip) · Fallimento → §218 forzato</span>
+              </span>
+              <span style="font-size: 20px; color: var(--text-muted);">›</span>
+            </button>
+            <button class="option-row" type="button">
+              <span class="roll">1d6+<br/>≥3</span>
+              <span class="text">
+                <span class="v">💬 Tenta di parlare</span>
+                <span class="s">Successo → §225 · Fallimento → attacca con vantaggio nemico</span>
+              </span>
+              <span style="font-size: 20px; color: var(--text-muted);">›</span>
+            </button>
+          </div>
+          <div class="conditions">
+            <div class="cond-card win">
+              <span class="l">🏆 Vittoria</span>
+              <span class="v">Riduci tutti i Reaver a 0 HP — drop: <strong>Voidstone × 2</strong></span>
+            </div>
+            <div class="cond-card lose">
+              <span class="l">💀 Sconfitta</span>
+              <span class="v">Party HP ≤ 0 → §247 (cattura) · Fuga → §149 con -1 stamina</span>
+            </div>
+          </div>
+        </div>
+        <div class="cheatsheet-toolbar">
+          <button class="nav-btn secondary">🔄 Rifotografa</button>
+          <button class="nav-btn">📒 Glossario</button>
+          <button class="nav-btn primary">✓ Risolvi →</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – cheatsheet rendered">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/encounter?to=218</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · ⚔️ Encounter §218 · Reaver Camp</span>
+          <button class="right-tool">📷</button>
+        </div>
+        <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 360px; gap: var(--s-6); overflow-y: auto;">
+          <div style="display: flex; flex-direction: column; gap: var(--s-4);">
+            <div class="enemy-card">
+              <div class="head">
+                <span class="ico">⚔️</span>
+                <span class="name">Reaver Scout (×3)</span>
+                <span class="pn">§218</span>
+              </div>
+              <div class="stats">
+                <div class="stat"><span class="v">8</span><span class="l">HP each</span></div>
+                <div class="stat"><span class="v">+3</span><span class="l">ATK</span></div>
+                <div class="stat"><span class="v">12</span><span class="l">DEF</span></div>
+                <div class="stat"><span class="v">5</span><span class="l">MOV</span></div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <h3 style="font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md); margin: 0;">Opzioni del party</h3>
+              <span class="parse-conf">✓ parse 0.94 · OCR 0.91</span>
+            </div>
+            <div class="options-list">
+              <button class="option-row" type="button" style="padding: var(--s-4);">
+                <span class="roll" style="width: 56px; height: 56px;">1d6+<br/>≥4</span>
+                <span class="text">
+                  <span class="v" style="font-size: var(--fs-md);">⚔️ Attacca subito</span>
+                  <span class="s">Successo → §223 (vittoria diretta) · Fallimento → §241 (imboscata subita)</span>
+                </span>
+                <span style="font-size: 24px; color: var(--text-muted);">›</span>
+              </button>
+              <button class="option-row" type="button" style="padding: var(--s-4);">
+                <span class="roll" style="width: 56px; height: 56px;">1d6+<br/>≥5</span>
+                <span class="text">
+                  <span class="v" style="font-size: var(--fs-md);">🤐 Sgattaiola via (Stealth)</span>
+                  <span class="s">Successo → §149 (encounter skippato, niente drop) · Fallimento → §218 con svantaggio iniziativa</span>
+                </span>
+                <span style="font-size: 24px; color: var(--text-muted);">›</span>
+              </button>
+              <button class="option-row" type="button" style="padding: var(--s-4);">
+                <span class="roll" style="width: 56px; height: 56px;">1d6+<br/>≥3</span>
+                <span class="text">
+                  <span class="v" style="font-size: var(--fs-md);">💬 Tenta di parlare (Charisma)</span>
+                  <span class="s">Successo → §225 (alleanza temporanea) · Fallimento → combattimento con vantaggio nemico</span>
+                </span>
+                <span style="font-size: 24px; color: var(--text-muted);">›</span>
+              </button>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: var(--s-3);">
+            <div class="cond-card win">
+              <span class="l">🏆 Vittoria</span>
+              <span class="v">Riduci tutti i Reaver a 0 HP — drop: <strong>Voidstone × 2</strong>, esperienza +50</span>
+            </div>
+            <div class="cond-card lose">
+              <span class="l">💀 Sconfitta</span>
+              <span class="v">Party HP ≤ 0 → §247 (cattura, perdi inventario) · Fuga → §149 con -1 stamina party</span>
+            </div>
+            <div style="padding: var(--s-3); border-radius: var(--r-md); background: hsl(var(--c-warning) / 0.06); border: 1px dashed hsl(var(--c-warning) / 0.3); font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-sec);">
+              ⚠ Card ephemeral (TTL sessione) — Encounter Book NON viene cached per copyright. Per riconsultare dopo: rifotografa.
+            </div>
+            <button class="nav-btn primary" style="margin-top: auto;">✓ Risolvi e torna a §147 →</button>
+            <button class="nav-btn secondary">🔄 Rifotografa</button>
+            <button class="nav-btn">📒 Apri glossario</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO D · RESOLVED → BACK TO STORY (outcome + consequences + return CTA)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" id="s4" aria-labelledby="sd">
+    <span class="label">Stato D · Resolved → Back to Story</span>
+    <h2 id="sd">Encounter risolto — applicate conseguenze, ritorno al paragrafo</h2>
+    <p class="desc">Outcome banner (success/defeat color), risultato tiro mostrato (es. "1d6+ → 5"), consequences list applicate al save state (HP party, drops, paragraph next). Return CTA primary kb-colored "Torna a §223". Persistente: cheatsheet card distrutta, ma outcome serializzato in `GamebookCampaignSession.events`.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – resolved victory">
+        <span class="frame-label">Mobile · 375px · Victory branch</span>
+        <div class="phone-sbar"><span>21:54</span><span>📶 🔋 74%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · §218 → §223</span>
+          <button class="right-tool">⋯</button>
+        </div>
+        <div class="resolved-shell">
+          <div class="outcome-banner">
+            <div class="head">
+              <span class="badge">Vittoria</span>
+              <span class="title">Reaver Camp · §218</span>
+            </div>
+            <div class="roll-result">⚔️ Attacca subito · tiro <strong>5</strong> ≥ 4 · successo</div>
+            <div class="consequences">
+              <div class="conseq-row">
+                <span class="ico">❤️</span>
+                <span class="l"><strong>Party HP</strong><span>3 ferite assorbite in combattimento</span></span>
+                <span class="delta neg">-3</span>
+              </div>
+              <div class="conseq-row">
+                <span class="ico">💎</span>
+                <span class="l"><strong>Inventario</strong><span>Voidstone × 2 raccolti</span></span>
+                <span class="delta pos">+2</span>
+              </div>
+              <div class="conseq-row">
+                <span class="ico">📖</span>
+                <span class="l"><strong>Prossimo paragrafo</strong><span>Storybook §223</span></span>
+                <span class="delta pos">→</span>
+              </div>
+            </div>
+          </div>
+          <button class="return-cta" type="button" autofocus>
+            <span class="l">
+              <span class="v">📖 Torna a §223</span>
+              <span class="s">Storybook · prossimo paragrafo narrativo</span>
+            </span>
+            <span style="font-size: 24px;">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – resolved defeat (alt branch)">
+        <span class="frame-label">Desktop · 1440px · Defeat branch (alternate)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/encounter?to=218&outcome=defeat</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · §218 → §241 (imboscata)</span>
+          <button class="right-tool">⋯</button>
+        </div>
+        <div class="resolved-shell" style="padding: var(--s-7); max-width: 720px; margin: 0 auto;">
+          <div class="outcome-banner defeat">
+            <div class="head">
+              <span class="badge">Imboscata</span>
+              <span class="title">Reaver Camp · §218 · tentativo attacco fallito</span>
+            </div>
+            <div class="roll-result">⚔️ Attacca subito · tiro <strong>2</strong> &lt; 4 · fallimento → imboscata</div>
+            <div class="consequences">
+              <div class="conseq-row">
+                <span class="ico">❤️</span>
+                <span class="l"><strong>Party HP</strong><span>Subìti 5 danni (imboscata · vantaggio nemico)</span></span>
+                <span class="delta neg">-5</span>
+              </div>
+              <div class="conseq-row">
+                <span class="ico">🎒</span>
+                <span class="l"><strong>Stamina</strong><span>Equipaggiamento sparso nel terreno</span></span>
+                <span class="delta neg">-1</span>
+              </div>
+              <div class="conseq-row">
+                <span class="ico">💎</span>
+                <span class="l"><strong>Drop</strong><span>Nessuno (Reaver ancora vivi)</span></span>
+                <span class="delta">—</span>
+              </div>
+              <div class="conseq-row">
+                <span class="ico">📖</span>
+                <span class="l"><strong>Prossimo paragrafo</strong><span>Storybook §241 (subìta imboscata, party scappa)</span></span>
+                <span class="delta neg">→</span>
+              </div>
+            </div>
+          </div>
+          <button class="return-cta" type="button" autofocus>
+            <span class="l">
+              <span class="v">📖 Torna a §241</span>
+              <span class="s">Storybook · subìta imboscata, party fugge ferito</span>
+            </span>
+            <span style="font-size: 24px;">›</span>
+          </button>
+          <p style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin: var(--s-3) 0 0; text-align: center;">📝 Outcome serializzato in `GamebookCampaignSession.events` · cheatsheet card distrutta</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const root = document.documentElement;
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+</script>
+
+</body>
+</html>

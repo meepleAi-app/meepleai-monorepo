@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Nanolith Runthrough · Libro Game Onboarding</title>
+<!--
+  Mockup: nanolith-runthrough-game-onboarding
+  Route:  /library/{gameId}  (libro game con prerequisiti non soddisfatti)
+  Scope:  Phase A runthrough — gating prerequisiti pre-CTA "Avvia libro game" (N1 hardening)
+  Stati:  A · prereq-missing   (3 step todo: PDF upload, KB indexing, agente Tutor)
+          B · pdf-uploading    (drag-and-drop attivo + progress 2 PDF: Press Start + Rules)
+          C · kb-indexing      (PDF ok, chunks/embeddings/index in corso; ETA stimato)
+          D · ready            (tutti i pre-step ok; CTA primary session attiva)
+  Vincolo: SMART N1 — Aaron pre-sessione 30min, max 5 click per setup completo.
+           Pre-condizioni dichiarate in spec §1.1 + §8 (seed dataset). UX qui chiude il "happy path
+           detection gap" identificato in gap analysis (era assunto pronto in game-detail).
+  Differenze da game-detail: stesso hero ma CTA primary sostituita da "Prerequisites stepper".
+                             Reuse 100% layout primitives (hero-card, hero-meta).
+  Mobile-first 375px. Desktop 880px.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  .top {
+    position: sticky; top: 0; z-index: var(--z-sticky);
+    backdrop-filter: blur(12px); background: var(--glass-bg);
+    border-bottom: 1px solid var(--border);
+    padding: var(--s-4) var(--s-6);
+    display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap;
+  }
+  .top h1 { font-family: var(--f-display); font-size: var(--fs-lg); margin: 0; font-weight: var(--fw-bold); }
+  .top .route { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); padding: 2px var(--s-2); border-radius: var(--r-sm); background: var(--bg-muted); }
+  .top .spacer { flex: 1; }
+  .top button {
+    background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
+    border-radius: var(--r-pill); padding: var(--s-1) var(--s-3);
+    font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer;
+  }
+
+  .stage { padding: var(--s-7) var(--s-6); max-width: 1700px; margin: 0 auto; }
+
+  .state-section { margin-bottom: var(--s-10); }
+  .state-section .label {
+    display: inline-block; padding: var(--s-1) var(--s-3);
+    background: hsl(var(--c-game) / 0.12); color: hsl(var(--c-game));
+    border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: var(--s-2);
+  }
+  .state-section h2 {
+    font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold);
+    margin: 0 0 var(--s-2);
+  }
+  .state-section .desc { color: var(--text-sec); margin: 0 0 var(--s-6); font-size: var(--fs-md); }
+
+  .frames { display: flex; gap: var(--s-9); flex-wrap: wrap; align-items: flex-start; }
+
+  .phone {
+    width: 375px; min-height: 740px; background: var(--bg);
+    border-radius: 36px; overflow: hidden;
+    border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; position: relative;
+  }
+  .desktop {
+    width: 880px; height: 600px; background: var(--bg);
+    border-radius: var(--r-lg); overflow: hidden;
+    border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; position: relative;
+  }
+  .phone .frame-label, .desktop .frame-label {
+    position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+  }
+  .desktop .frame-label { left: 0; transform: none; }
+
+  .phone-sbar {
+    height: 32px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 22px 0;
+    font-size: 12px; font-weight: var(--fw-bold);
+    font-family: var(--f-display); color: var(--text-sec);
+  }
+  .titlebar {
+    height: 28px; background: var(--bg-muted); flex-shrink: 0;
+    display: flex; align-items: center; padding: 0 var(--s-3); gap: 6px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .titlebar .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .titlebar .dot.r { background: #ff605c; } .titlebar .dot.y { background: #ffbd44; } .titlebar .dot.g { background: #00ca4e; }
+  .titlebar .url {
+    margin-left: var(--s-3); padding: 2px var(--s-3);
+    background: var(--bg-card); border-radius: var(--r-sm);
+    font-family: var(--f-mono); font-size: 11px; color: var(--text-muted);
+    flex: 1;
+  }
+
+  .appbar {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-3) var(--s-4);
+    border-bottom: 1px solid var(--border-light); flex-shrink: 0;
+  }
+  .appbar .back {
+    width: 36px; height: 36px; border-radius: var(--r-md);
+    background: var(--bg-muted); display: flex; align-items: center; justify-content: center;
+    font-size: 18px; cursor: pointer;
+  }
+  .appbar .crumbs { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); flex: 1; }
+  .appbar .crumbs strong { color: var(--text-sec); font-weight: var(--fw-semi); }
+  .appbar .right-tool {
+    width: 36px; height: 36px; border-radius: var(--r-md);
+    background: var(--bg-muted); display: flex; align-items: center; justify-content: center;
+    font-size: 16px; cursor: pointer;
+  }
+
+  /* Hero (riuso pattern game-detail) */
+  .hero { padding: var(--s-4); }
+  .hero-card {
+    background: var(--bg-card); border: 1px solid var(--border-light);
+    border-radius: var(--r-lg); overflow: hidden;
+  }
+  .hero-cover {
+    aspect-ratio: 7/4; position: relative; overflow: hidden;
+    background: linear-gradient(135deg, hsl(var(--c-game)) 0%, hsl(var(--c-event) / 0.8) 100%);
+    padding: var(--s-4); color: #fff;
+    display: flex; flex-direction: column; justify-content: flex-end;
+  }
+  .hero-cover.lg { aspect-ratio: 12/4; }
+  .hero-cover .nano-mark {
+    position: absolute; top: var(--s-3); right: var(--s-3);
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+    background: rgba(255,255,255,0.18); backdrop-filter: blur(8px);
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .hero-cover h2 { font-family: var(--f-display); font-size: var(--fs-3xl); margin: 0; line-height: 1.05; font-weight: var(--fw-bold); }
+  .hero-cover .pub { font-size: var(--fs-sm); opacity: 0.85; margin-top: 2px; font-family: var(--f-mono); }
+  .hero-meta { padding: var(--s-4); display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-2); }
+  .hero-meta .stat { display: flex; flex-direction: column; }
+  .hero-meta .stat .v { font-family: var(--f-mono); font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--text); }
+  .hero-meta .stat .l { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+
+  /* Prerequisites panel */
+  .prereq {
+    padding: 0 var(--s-4) var(--s-4); display: flex; flex-direction: column; gap: var(--s-3);
+  }
+  .prereq-head {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+    padding: var(--s-1) var(--s-1);
+  }
+  .prereq-head h3 {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md); margin: 0;
+  }
+  .prereq-head .counter {
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);
+  }
+  .prereq-head .counter strong { color: hsl(var(--c-game)); }
+
+  .step {
+    background: var(--bg-card); border: 1px solid var(--border-light);
+    border-radius: var(--r-lg); padding: var(--s-3) var(--s-4);
+    display: flex; align-items: flex-start; gap: var(--s-3);
+    position: relative;
+  }
+  .step.done { background: hsl(var(--c-success) / 0.04); border-color: hsl(var(--c-success) / 0.3); }
+  .step.active { background: hsl(var(--c-game) / 0.04); border-color: hsl(var(--c-game) / 0.4); }
+  .step.todo { opacity: 0.7; }
+  .step .ico {
+    width: 32px; height: 32px; flex-shrink: 0;
+    border-radius: var(--r-md); display: flex; align-items: center; justify-content: center;
+    background: var(--bg-muted); font-size: 16px; color: var(--text-muted);
+  }
+  .step.done .ico { background: hsl(var(--c-success) / 0.15); color: hsl(var(--c-success)); }
+  .step.active .ico { background: hsl(var(--c-game) / 0.15); color: hsl(var(--c-game)); }
+  .step .body { flex: 1; }
+  .step .row1 {
+    display: flex; align-items: center; gap: var(--s-2); justify-content: space-between;
+    margin-bottom: 2px;
+  }
+  .step .row1 .name {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm);
+  }
+  .step .row1 .badge {
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .step.done .row1 .badge { background: hsl(var(--c-success) / 0.15); color: hsl(var(--c-success)); }
+  .step.active .row1 .badge { background: hsl(var(--c-game) / 0.15); color: hsl(var(--c-game)); }
+  .step.todo .row1 .badge { background: var(--bg-muted); color: var(--text-muted); }
+  .step .row2 {
+    font-size: var(--fs-xs); color: var(--text-sec); font-family: var(--f-mono);
+  }
+  .step .action {
+    margin-top: var(--s-3);
+    padding: var(--s-2) var(--s-3); border-radius: var(--r-md);
+    background: hsl(var(--c-game)); color: #fff; border: 0;
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm);
+    cursor: pointer; align-self: flex-start;
+  }
+  .step.active .action { background: hsl(var(--c-game)); }
+  .step.todo .action { background: var(--bg-muted); color: var(--text-muted); cursor: not-allowed; }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 2px dashed hsl(var(--c-game) / 0.4); border-radius: var(--r-lg);
+    padding: var(--s-5); text-align: center;
+    background: hsl(var(--c-game) / 0.04);
+  }
+  .drop-zone.active {
+    border-color: hsl(var(--c-game)); background: hsl(var(--c-game) / 0.1);
+  }
+  .drop-zone .ico { font-size: 32px; margin-bottom: var(--s-2); }
+  .drop-zone .v { font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md); margin-bottom: var(--s-1); }
+  .drop-zone .s { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+  .drop-zone .formats { margin-top: var(--s-3); display: flex; gap: var(--s-2); justify-content: center; flex-wrap: wrap; }
+  .drop-zone .formats span {
+    padding: 2px var(--s-2); background: var(--bg-card); border: 1px solid var(--border-light);
+    border-radius: var(--r-pill); font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+  }
+
+  .upload-row {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-3); border-radius: var(--r-md);
+    background: var(--bg-card); border: 1px solid var(--border-light);
+  }
+  .upload-row .file-ico { font-size: 24px; flex-shrink: 0; }
+  .upload-row .body { flex: 1; min-width: 0; }
+  .upload-row .body .name {
+    font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .upload-row .body .meta {
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px;
+  }
+  .upload-row .progress-bar {
+    height: 4px; background: var(--bg-muted); border-radius: var(--r-pill); margin-top: var(--s-2); overflow: hidden;
+  }
+  .upload-row .progress-bar .fill {
+    height: 100%; background: hsl(var(--c-game)); border-radius: var(--r-pill);
+  }
+  .upload-row.done .progress-bar .fill { background: hsl(var(--c-success)); }
+  .upload-row .pct {
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    color: hsl(var(--c-game)); flex-shrink: 0;
+  }
+  .upload-row.done .pct { color: hsl(var(--c-success)); }
+
+  /* Indexing detail (substeps) */
+  .index-detail {
+    margin-top: var(--s-3); padding: var(--s-3);
+    background: hsl(var(--c-kb) / 0.04); border: 1px solid hsl(var(--c-kb) / 0.2);
+    border-radius: var(--r-md);
+    display: flex; flex-direction: column; gap: var(--s-2);
+  }
+  .index-step {
+    display: flex; align-items: center; gap: var(--s-2);
+    font-family: var(--f-mono); font-size: var(--fs-xs);
+  }
+  .index-step .ic { font-size: 12px; }
+  .index-step.done .ic { color: hsl(var(--c-success)); }
+  .index-step.active .ic { color: hsl(var(--c-kb)); }
+  .index-step.todo { opacity: 0.5; }
+  .index-step .lbl { flex: 1; }
+  .index-step .num { color: hsl(var(--c-kb)); font-weight: var(--fw-bold); }
+  .index-step.todo .num { color: var(--text-muted); }
+  .index-eta {
+    margin-top: var(--s-2); font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+    text-align: center;
+  }
+
+  /* CTA play (final state) */
+  .cta-play {
+    padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-2);
+  }
+  .play-btn {
+    padding: var(--s-4) var(--s-5); border-radius: var(--r-lg);
+    background: hsl(var(--c-session)); color: #fff; border: 0;
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md);
+    cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+    box-shadow: 0 4px 16px hsl(var(--c-session) / 0.3);
+  }
+  .play-btn .l { flex: 1; text-align: left; }
+  .play-btn .l .v { display: block; }
+  .play-btn .l .s { display: block; font-size: var(--fs-xs); font-weight: var(--fw-reg); opacity: 0.85; margin-top: 2px; }
+
+  .ready-meta {
+    display: flex; gap: var(--s-2); flex-wrap: wrap; justify-content: center;
+  }
+  .ready-meta .chip {
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+    background: hsl(var(--c-success) / 0.1); color: hsl(var(--c-success));
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+
+  *:focus-visible { outline: 2px solid hsl(var(--c-game)); outline-offset: 2px; }
+</style>
+</head>
+
+<body>
+
+<header class="top">
+  <h1>Nanolith Runthrough · Libro Game Onboarding</h1>
+  <span class="route">/library/{gameId} · prerequisiti</span>
+  <span class="spacer"></span>
+  <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
+</header>
+
+<main class="stage">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO A · PREREQ MISSING (3 step todo: PDF, KB, agente)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" id="s1" aria-labelledby="sa">
+    <span class="label">Stato A · Prerequisiti mancanti</span>
+    <h2 id="sa">Game caricato, ma 3 step prima di poter giocare</h2>
+    <p class="desc">Aaron arriva su `/library/{gameId}` di Nanolith (game è in collezione), ma backend rileva: zero PDF caricati, KB vuota, nessun agente associato. Sostituiamo la CTA "Avvia libro game" con un panel stepper che guida l'onboarding. Step bloccanti in ordine: PDF → KB → Agente.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – prereq missing">
+        <span class="frame-label">Mobile · 375px (canonical)</span>
+        <div class="phone-sbar"><span>18:20</span><span>📶 🔋 92%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Libreria</strong> · Nanolith</span>
+          <button class="right-tool">⋯</button>
+        </div>
+        <div class="hero">
+          <article class="hero-card">
+            <div class="hero-cover">
+              <span class="nano-mark">📖 libro game</span>
+              <h2>Nanolith</h2>
+              <span class="pub">Mythic Games · 2024</span>
+            </div>
+            <div class="hero-meta">
+              <div class="stat"><span class="v">3-4</span><span class="l">giocatori</span></div>
+              <div class="stat"><span class="v">90'</span><span class="l">durata</span></div>
+              <div class="stat"><span class="v">14+</span><span class="l">età</span></div>
+              <div class="stat"><span class="v">EN</span><span class="l">lingua</span></div>
+            </div>
+          </article>
+        </div>
+        <div class="prereq">
+          <div class="prereq-head">
+            <h3>📋 Prepara libro game</h3>
+            <span class="counter"><strong>0</strong> / 3</span>
+          </div>
+          <div class="step active">
+            <span class="ico">📄</span>
+            <div class="body">
+              <div class="row1">
+                <span class="name">Carica regolamento e Press Start</span>
+                <span class="badge">1 di 3</span>
+              </div>
+              <div class="row2">2 PDF necessari · ~140 MB totali</div>
+              <button class="action" type="button">Carica PDF →</button>
+            </div>
+          </div>
+          <div class="step todo">
+            <span class="ico">🧠</span>
+            <div class="body">
+              <div class="row1">
+                <span class="name">Indicizza conoscenza</span>
+                <span class="badge">2 di 3</span>
+              </div>
+              <div class="row2">chunks + embeddings · automatico · ~2 min</div>
+            </div>
+          </div>
+          <div class="step todo">
+            <span class="ico">🤖</span>
+            <div class="body">
+              <div class="row1">
+                <span class="name">Crea agente Tutor</span>
+                <span class="badge">3 di 3</span>
+              </div>
+              <div class="row2">linked a regolamento + Press Start · 1 click</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – prereq missing">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Libreria</strong> · Nanolith</span>
+          <button class="right-tool">⋯</button>
+        </div>
+        <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-6); overflow-y: auto;">
+          <article class="hero-card">
+            <div class="hero-cover lg">
+              <span class="nano-mark">📖 libro game</span>
+              <h2 style="font-size: var(--fs-4xl);">Nanolith</h2>
+              <span class="pub">Mythic Games · 2024 · campaign-driven storybook RPG</span>
+            </div>
+            <div class="hero-meta">
+              <div class="stat"><span class="v">3-4</span><span class="l">giocatori</span></div>
+              <div class="stat"><span class="v">90'</span><span class="l">durata</span></div>
+              <div class="stat"><span class="v">14+</span><span class="l">età</span></div>
+              <div class="stat"><span class="v">EN</span><span class="l">lingua</span></div>
+            </div>
+            <div style="padding: 0 var(--s-4) var(--s-4); color: var(--text-sec); font-size: var(--fs-sm);">
+              Campaign mista (Storybook + Encounter Book), narrativa multi-sessione, paragrafi numerati e branching. Per giocare via app servono: regolamento PDF, Press Start PDF, agente Tutor.
+            </div>
+          </article>
+          <div class="prereq" style="padding: 0;">
+            <div class="prereq-head">
+              <h3>📋 Prepara libro game</h3>
+              <span class="counter"><strong>0</strong> / 3 completati</span>
+            </div>
+            <div class="step active">
+              <span class="ico">📄</span>
+              <div class="body">
+                <div class="row1"><span class="name">Carica regolamento e Press Start</span><span class="badge">1 di 3</span></div>
+                <div class="row2">2 PDF · stima upload + parsing 1-2 min</div>
+                <button class="action" type="button">Carica PDF →</button>
+              </div>
+            </div>
+            <div class="step todo">
+              <span class="ico">🧠</span>
+              <div class="body">
+                <div class="row1"><span class="name">Indicizza conoscenza</span><span class="badge">2 di 3</span></div>
+                <div class="row2">chunks + embeddings · automatico</div>
+              </div>
+            </div>
+            <div class="step todo">
+              <span class="ico">🤖</span>
+              <div class="body">
+                <div class="row1"><span class="name">Crea agente Tutor</span><span class="badge">3 di 3</span></div>
+                <div class="row2">linked a regolamento + Press Start · 1 click</div>
+              </div>
+            </div>
+            <p style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin: var(--s-2) 0 0;">
+              💡 Step compatibili con upload server-side parallel — totale ~3 min end-to-end (Nanolith ~140 MB di PDF).
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO B · PDF UPLOADING (drop-zone attiva + 2 file in progress)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" id="s2" aria-labelledby="sb">
+    <span class="label">Stato B · PDF Uploading</span>
+    <h2 id="sb">Drag-and-drop attivo — Press Start + Rules in upload</h2>
+    <p class="desc">Aaron clicca "Carica PDF" → drawer/sezione si espande con drop-zone. Multi-file upload concorrente: 2 PDF (Nanolith Press Start ENG.pdf 36MB, Nanolith Rules ENG.pdf 101MB). Auto-detect tipo da nome file. Progress per-file + total bar. EXIF GPS stripped client-side prima dell'upload.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – pdf uploading" aria-busy="true">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>18:21</span><span>📶 🔋 92%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Nanolith</strong> · Upload PDF…</span>
+        </div>
+        <div class="hero">
+          <article class="hero-card">
+            <div class="hero-cover"><span class="nano-mark">📖 libro game</span><h2>Nanolith</h2><span class="pub">Mythic Games · 2024</span></div>
+          </article>
+        </div>
+        <div class="prereq">
+          <div class="prereq-head">
+            <h3>📋 Prepara libro game</h3>
+            <span class="counter"><strong>0</strong> / 3 · in corso</span>
+          </div>
+          <div class="step active">
+            <span class="ico">📄</span>
+            <div class="body" style="width: 100%;">
+              <div class="row1"><span class="name">Carica regolamento e Press Start</span><span class="badge">1 di 3</span></div>
+              <div class="row2">EXIF GPS rimosso · upload in corso</div>
+              <div style="display: flex; flex-direction: column; gap: var(--s-2); margin-top: var(--s-3);">
+                <div class="upload-row done">
+                  <span class="file-ico">📑</span>
+                  <div class="body">
+                    <span class="name">Nanolith Press Start ENG.pdf</span>
+                    <span class="meta">36 MB · 24 pag · tipo: Press Start</span>
+                    <div class="progress-bar"><span class="fill" style="width: 100%;"></span></div>
+                  </div>
+                  <span class="pct">✓</span>
+                </div>
+                <div class="upload-row">
+                  <span class="file-ico">📕</span>
+                  <div class="body">
+                    <span class="name">Nanolith Rules ENG.pdf</span>
+                    <span class="meta">101 MB · 248 pag · tipo: Rules</span>
+                    <div class="progress-bar"><span class="fill" style="width: 62%;"></span></div>
+                  </div>
+                  <span class="pct">62%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="step todo">
+            <span class="ico">🧠</span>
+            <div class="body">
+              <div class="row1"><span class="name">Indicizza conoscenza</span><span class="badge">2 di 3</span></div>
+              <div class="row2">in attesa upload completato</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – pdf uploading" aria-busy="true">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/upload</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Nanolith</strong> · Upload PDF in corso…</span></div>
+        <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-6); overflow-y: auto;">
+          <div>
+            <div class="drop-zone active">
+              <div class="ico">📁</div>
+              <div class="v">Trascina altri PDF qui (opzionale)</div>
+              <div class="s">Auto-detect tipo · max 200 MB per file</div>
+              <div class="formats"><span>PDF</span><span>OCR text-layer richiesto</span><span>EXIF stripped</span></div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: var(--s-2); margin-top: var(--s-4);">
+              <div class="upload-row done">
+                <span class="file-ico">📑</span>
+                <div class="body">
+                  <span class="name">Nanolith Press Start ENG.pdf</span>
+                  <span class="meta">36 MB · 24 pag · auto-detect: Press Start tutorial · upload 7s</span>
+                  <div class="progress-bar"><span class="fill" style="width: 100%;"></span></div>
+                </div>
+                <span class="pct">✓</span>
+              </div>
+              <div class="upload-row">
+                <span class="file-ico">📕</span>
+                <div class="body">
+                  <span class="name">Nanolith Rules ENG.pdf</span>
+                  <span class="meta">101 MB · 248 pag · auto-detect: Rules reference · ETA 12s</span>
+                  <div class="progress-bar"><span class="fill" style="width: 62%;"></span></div>
+                </div>
+                <span class="pct">62%</span>
+              </div>
+            </div>
+          </div>
+          <div class="prereq" style="padding: 0;">
+            <div class="prereq-head"><h3>📋 Prepara libro game</h3><span class="counter"><strong>0</strong> / 3 · uploading…</span></div>
+            <div class="step active">
+              <span class="ico">📄</span>
+              <div class="body">
+                <div class="row1"><span class="name">Carica regolamento e Press Start</span><span class="badge">in corso</span></div>
+                <div class="row2">1 di 2 file caricati · seconda in 62%</div>
+              </div>
+            </div>
+            <div class="step todo">
+              <span class="ico">🧠</span>
+              <div class="body"><div class="row1"><span class="name">Indicizza conoscenza</span><span class="badge">2 di 3</span></div><div class="row2">in attesa</div></div>
+            </div>
+            <div class="step todo">
+              <span class="ico">🤖</span>
+              <div class="body"><div class="row1"><span class="name">Crea agente Tutor</span><span class="badge">3 di 3</span></div><div class="row2">in attesa</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO C · KB INDEXING (PDF ok, chunks/embeddings/index in progress)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" id="s3" aria-labelledby="sc">
+    <span class="label">Stato C · KB Indexing</span>
+    <h2 id="sc">PDF parsati, embeddings in costruzione</h2>
+    <p class="desc">Background job KB indexing: parsing PDF text-layer → chunking semantic 800 token → embedding (e5-base sentence-transformers) → pgvector index + tsvector. ETA derivato live da page-count + token-throughput. Sostituibile dal "modal in background" se Aaron lascia la pagina (resume su /admin/jobs).</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – kb indexing" aria-busy="true">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>18:23</span><span>📶 🔋 91%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Nanolith</strong> · Indicizzazione…</span>
+        </div>
+        <div class="hero">
+          <article class="hero-card">
+            <div class="hero-cover"><span class="nano-mark">📖 libro game</span><h2>Nanolith</h2><span class="pub">Mythic Games · 2024</span></div>
+          </article>
+        </div>
+        <div class="prereq">
+          <div class="prereq-head">
+            <h3>📋 Prepara libro game</h3>
+            <span class="counter"><strong>1</strong> / 3 · in corso</span>
+          </div>
+          <div class="step done">
+            <span class="ico">✓</span>
+            <div class="body">
+              <div class="row1"><span class="name">PDF caricati</span><span class="badge">✓ 1 di 3</span></div>
+              <div class="row2">Press Start + Rules · 137 MB totali</div>
+            </div>
+          </div>
+          <div class="step active">
+            <span class="ico">🧠</span>
+            <div class="body" style="width: 100%;">
+              <div class="row1"><span class="name">Indicizza conoscenza</span><span class="badge">2 di 3 · 43%</span></div>
+              <div class="row2">e5-base embeddings · pgvector index</div>
+              <div class="index-detail">
+                <div class="index-step done">
+                  <span class="ic">✓</span><span class="lbl">Parsing PDF text-layer</span><span class="num">272 pag</span>
+                </div>
+                <div class="index-step done">
+                  <span class="ic">✓</span><span class="lbl">Chunking semantic</span><span class="num">1.842 chunks</span>
+                </div>
+                <div class="index-step active">
+                  <span class="ic">⏳</span><span class="lbl">Embedding e5-base</span><span class="num">792 / 1.842</span>
+                </div>
+                <div class="index-step todo">
+                  <span class="ic">○</span><span class="lbl">pgvector index</span><span class="num">attesa</span>
+                </div>
+                <div class="index-eta">⏱ ETA ~70 s · puoi chiudere, ti notifichiamo</div>
+              </div>
+            </div>
+          </div>
+          <div class="step todo">
+            <span class="ico">🤖</span>
+            <div class="body">
+              <div class="row1"><span class="name">Crea agente Tutor</span><span class="badge">3 di 3</span></div>
+              <div class="row2">in attesa indicizzazione</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – kb indexing" aria-busy="true">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/onboarding?step=index</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Nanolith</strong> · Indicizzazione in corso…</span><span style="font-family: var(--f-mono); font-size: var(--fs-xs); color: hsl(var(--c-kb));">job-id <strong>idx_7f3a</strong></span></div>
+        <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-6); overflow-y: auto;">
+          <article class="hero-card">
+            <div class="hero-cover lg">
+              <span class="nano-mark">📖 libro game · indexing</span>
+              <h2 style="font-size: var(--fs-4xl);">Nanolith</h2>
+              <span class="pub">Mythic Games · 2024 · 1.842 chunks / 272 pag</span>
+            </div>
+            <div class="hero-meta" style="grid-template-columns: repeat(3, 1fr);">
+              <div class="stat"><span class="v" style="color: hsl(var(--c-success));">137 MB</span><span class="l">PDF caricati</span></div>
+              <div class="stat"><span class="v" style="color: hsl(var(--c-kb));">1.842</span><span class="l">chunks creati</span></div>
+              <div class="stat"><span class="v" style="color: hsl(var(--c-kb));">792 / 1.842</span><span class="l">embeddings (43%)</span></div>
+            </div>
+            <div style="padding: var(--s-4); border-top: 1px solid var(--border-light);">
+              <div class="index-detail" style="margin-top: 0;">
+                <div class="index-step done"><span class="ic">✓</span><span class="lbl">Parsing PDF text-layer + OCR fallback</span><span class="num">272 pag · 24 s</span></div>
+                <div class="index-step done"><span class="ic">✓</span><span class="lbl">Chunking semantic (800 token, overlap 80)</span><span class="num">1.842 chunks · 9 s</span></div>
+                <div class="index-step active"><span class="ic">⏳</span><span class="lbl">Embedding e5-base sentence-transformers</span><span class="num">792 / 1.842 · 43%</span></div>
+                <div class="index-step todo"><span class="ic">○</span><span class="lbl">pgvector HNSW index + tsvector keyword</span><span class="num">in attesa</span></div>
+                <div class="index-eta">⏱ ETA ~70 s · job in background, puoi chiudere la pagina e ti notifichiamo</div>
+              </div>
+            </div>
+          </article>
+          <div class="prereq" style="padding: 0;">
+            <div class="prereq-head"><h3>📋 Prepara libro game</h3><span class="counter"><strong>1</strong> / 3 · 43%</span></div>
+            <div class="step done">
+              <span class="ico">✓</span>
+              <div class="body"><div class="row1"><span class="name">PDF caricati</span><span class="badge">✓</span></div><div class="row2">Press Start + Rules</div></div>
+            </div>
+            <div class="step active">
+              <span class="ico">🧠</span>
+              <div class="body"><div class="row1"><span class="name">Indicizza conoscenza</span><span class="badge">43%</span></div><div class="row2">embedding in corso · ETA 70 s</div></div>
+            </div>
+            <div class="step todo">
+              <span class="ico">🤖</span>
+              <div class="body"><div class="row1"><span class="name">Crea agente Tutor</span><span class="badge">3 di 3</span></div><div class="row2">attesa indicizzazione</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO D · READY (3 step done, CTA Avvia libro game attiva)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" id="s4" aria-labelledby="sd">
+    <span class="label">Stato D · Ready · CTA primary attiva</span>
+    <h2 id="sd">Tutto pronto — Aaron può avviare la prima sessione</h2>
+    <p class="desc">Prerequisiti completati: 137 MB PDF indicizzati (1.842 chunks), agente "Arbitro Nanolith" creato e linkato. CTA primary session-colored "Avvia libro game" sostituisce lo stepper. Ready meta-chips mostrano metriche di salute KB. Aaron può ora aprire `setup-wizard` per la prima campagna.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – ready">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>18:25</span><span>📶 🔋 90%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Libreria</strong> · Nanolith</span>
+          <button class="right-tool">⋯</button>
+        </div>
+        <div class="hero">
+          <article class="hero-card">
+            <div class="hero-cover">
+              <span class="nano-mark">📖 libro game · pronto</span>
+              <h2>Nanolith</h2>
+              <span class="pub">Mythic Games · 2024</span>
+            </div>
+            <div class="hero-meta">
+              <div class="stat"><span class="v">3-4</span><span class="l">giocatori</span></div>
+              <div class="stat"><span class="v">90'</span><span class="l">durata</span></div>
+              <div class="stat"><span class="v">14+</span><span class="l">età</span></div>
+              <div class="stat"><span class="v">EN</span><span class="l">lingua</span></div>
+            </div>
+          </article>
+        </div>
+        <div class="cta-play">
+          <button class="play-btn" type="button" autofocus>
+            <span class="l">
+              <span class="v">🎲 Avvia libro game</span>
+              <span class="s">prima sessione · setup ~2 min</span>
+            </span>
+            <span style="font-size: 28px;">›</span>
+          </button>
+          <div class="ready-meta">
+            <span class="chip">✓ 137 MB indicizzati</span>
+            <span class="chip">✓ 1.842 chunks</span>
+            <span class="chip">✓ Arbitro Nanolith</span>
+          </div>
+        </div>
+        <div class="prereq" style="padding-top: var(--s-2);">
+          <div class="prereq-head">
+            <h3>✓ Setup completato</h3>
+            <span class="counter"><strong>3</strong> / 3</span>
+          </div>
+          <div class="step done">
+            <span class="ico">✓</span>
+            <div class="body"><div class="row1"><span class="name">PDF caricati</span><span class="badge">✓</span></div><div class="row2">Press Start + Rules · 137 MB · 272 pag</div></div>
+          </div>
+          <div class="step done">
+            <span class="ico">✓</span>
+            <div class="body"><div class="row1"><span class="name">Conoscenza indicizzata</span><span class="badge">✓</span></div><div class="row2">1.842 chunks · pgvector ready</div></div>
+          </div>
+          <div class="step done">
+            <span class="ico">✓</span>
+            <div class="body"><div class="row1"><span class="name">Agente Arbitro Nanolith</span><span class="badge">✓</span></div><div class="row2">RulesInterpreter · linked a 2 KB</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – ready">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Libreria</strong> · Nanolith</span>
+          <button class="right-tool">⋯</button>
+        </div>
+        <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-6); overflow-y: auto;">
+          <article class="hero-card">
+            <div class="hero-cover lg">
+              <span class="nano-mark">📖 libro game · pronto</span>
+              <h2 style="font-size: var(--fs-4xl);">Nanolith</h2>
+              <span class="pub">Mythic Games · 2024 · campaign-driven storybook RPG</span>
+            </div>
+            <div class="hero-meta">
+              <div class="stat"><span class="v">3-4</span><span class="l">giocatori</span></div>
+              <div class="stat"><span class="v">90'</span><span class="l">durata</span></div>
+              <div class="stat"><span class="v">14+</span><span class="l">età</span></div>
+              <div class="stat"><span class="v">EN</span><span class="l">lingua</span></div>
+            </div>
+            <div style="padding: var(--s-4); border-top: 1px solid var(--border-light); display: flex; flex-direction: column; gap: var(--s-3);">
+              <div class="ready-meta">
+                <span class="chip">✓ KB ready · 1.842 chunks</span>
+                <span class="chip">✓ embeddings e5-base</span>
+                <span class="chip">✓ pgvector HNSW</span>
+                <span class="chip">✓ Arbitro Nanolith</span>
+              </div>
+              <p style="margin: 0; color: var(--text-sec); font-size: var(--fs-sm);">
+                Setup completato in <strong>3 min 12 s</strong>. Da ora in poi puoi avviare nuove campagne in 1 click. Storybook e Encounter Book restano fisici — non li carichi mai, li fotograferai pagina per pagina durante il gioco.
+              </p>
+            </div>
+          </article>
+          <div style="display: flex; flex-direction: column; gap: var(--s-3);">
+            <button class="play-btn" type="button" autofocus>
+              <span class="l">
+                <span class="v">🎲 Avvia libro game</span>
+                <span class="s">prima sessione · setup ~2 min</span>
+              </span>
+              <span style="font-size: 28px;">›</span>
+            </button>
+            <button class="action" style="background: var(--bg-card); color: var(--text-sec); border: 1px solid var(--border);" type="button">📒 Apri agente Arbitro Nanolith</button>
+            <button class="action" style="background: var(--bg-card); color: var(--text-sec); border: 1px solid var(--border);" type="button">🔍 Esplora knowledge base</button>
+            <div class="prereq" style="padding: var(--s-3) 0 0; border-top: 1px solid var(--border-light); margin-top: var(--s-2);">
+              <div class="prereq-head"><h3 style="font-size: var(--fs-sm);">✓ Setup completato</h3><span class="counter"><strong>3</strong> / 3</span></div>
+              <div class="step done"><span class="ico">✓</span><div class="body"><div class="row1"><span class="name" style="font-size: var(--fs-xs);">PDF</span></div><div class="row2">137 MB · 272 pag</div></div></div>
+              <div class="step done"><span class="ico">✓</span><div class="body"><div class="row1"><span class="name" style="font-size: var(--fs-xs);">KB</span></div><div class="row2">1.842 chunks</div></div></div>
+              <div class="step done"><span class="ico">✓</span><div class="body"><div class="row1"><span class="name" style="font-size: var(--fs-xs);">Agente</span></div><div class="row2">Arbitro Nanolith</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const root = document.documentElement;
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+</script>
+
+</body>
+</html>

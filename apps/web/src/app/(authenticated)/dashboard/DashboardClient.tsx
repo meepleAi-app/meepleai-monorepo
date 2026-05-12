@@ -6,10 +6,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { useAuth } from '@/components/auth/AuthProvider';
+import { DashboardHero } from '@/components/dashboard/DashboardHero';
+import { DashboardStatsRow } from '@/components/dashboard/DashboardStatsRow';
+import { EmptyCTA } from '@/components/dashboard/EmptyCTA';
 import { EntityZone } from '@/components/dashboard/EntityZone';
-import { GreetingStrip } from '@/components/dashboard/GreetingStrip';
 import { OwnershipConfirmDialog } from '@/components/dialogs/OwnershipConfirmDialog';
 import { HubLayout, type FilterChip } from '@/components/layout/HubLayout';
+import { DiscoverCarousel } from '@/components/ui/data-display/discover-carousel';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import type { MeepleCardProps, MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 import type { ManaPip } from '@/components/ui/data-display/meeple-card/parts/ManaPips';
@@ -17,7 +20,12 @@ import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useAgents } from '@/hooks/queries/useAgents';
 import { useBatchGameStatus } from '@/hooks/queries/useBatchGameStatus';
 import { useGames } from '@/hooks/queries/useGames';
-import { useAddGameToLibrary, useLibrary } from '@/hooks/queries/useLibrary';
+import { useUpcomingGameNights } from '@/hooks/queries/useGameNights';
+import {
+  useAddGameToLibrary,
+  useLibrary,
+  useLibraryStats,
+} from '@/hooks/queries/useLibrary';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 import { useRecentsStore } from '@/stores/use-recents';
 
@@ -65,56 +73,6 @@ function LoadingSkeleton({ count }: { count: number }) {
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="h-40 rounded-xl bg-muted animate-pulse" />
       ))}
-    </div>
-  );
-}
-
-// CTA for empty sections (sessions, agents)
-interface CtaAction {
-  label: string;
-  href: string;
-  primary?: boolean;
-}
-
-function EmptyCTA({
-  icon,
-  title,
-  sub,
-  actions,
-}: {
-  icon: string;
-  title: string;
-  sub: string;
-  actions: CtaAction[];
-}) {
-  return (
-    <div
-      className="flex flex-col items-center gap-3 py-6 px-4 text-center
-                 rounded-xl border border-dashed border-[rgba(180,130,80,0.25)] dark:border-[rgba(180,130,80,0.4)]
-                 bg-card"
-    >
-      <span className="text-3xl">{icon}</span>
-      <div>
-        <p className="font-[Quicksand] font-bold text-sm text-foreground">{title}</p>
-        <p className="text-xs text-muted-foreground/60 mt-1 max-w-[240px] mx-auto leading-relaxed">
-          {sub}
-        </p>
-      </div>
-      <div className="flex gap-2 flex-wrap justify-center">
-        {actions.map(a => (
-          <Link
-            key={a.href}
-            href={a.href}
-            className={
-              a.primary
-                ? 'inline-flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold font-[Quicksand] bg-amber-600 text-white shadow-[0_2px_8px_rgba(180,100,20,.25)]'
-                : 'inline-flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold font-[Quicksand] border border-amber-600 text-amber-600'
-            }
-          >
-            {a.label}
-          </Link>
-        ))}
-      </div>
     </div>
   );
 }
@@ -409,8 +367,34 @@ export function DashboardClient() {
 
   // Data fetching
   const { data: libraryData, isLoading: libraryLoading } = useLibrary({ page: 1, pageSize: 12 });
-  const { data: sessionsData, isLoading: sessionsLoading } = useActiveSessions();
-  const { data: agentsData, isLoading: agentsLoading } = useAgents({ activeOnly: false });
+  const {
+    data: libraryStats,
+    isLoading: statsLoading,
+    isError: statsError,
+    isFetching: statsFetching,
+    refetch: refetchStats,
+  } = useLibraryStats();
+  const {
+    data: sessionsData,
+    isLoading: sessionsLoading,
+    isError: sessionsError,
+    isFetching: sessionsFetching,
+    refetch: refetchSessions,
+  } = useActiveSessions();
+  const {
+    data: agentsData,
+    isLoading: agentsLoading,
+    isError: agentsError,
+    isFetching: agentsFetching,
+    refetch: refetchAgents,
+  } = useAgents({ activeOnly: false });
+  const {
+    data: upcomingNights,
+    isLoading: upcomingLoading,
+    isError: upcomingError,
+    isFetching: upcomingFetching,
+    refetch: refetchUpcoming,
+  } = useUpcomingGameNights({ retry: 1 });
 
   // Detect new user: library loaded with no items
   const isNewUser = !libraryLoading && (libraryData?.items ?? []).length === 0;
@@ -597,16 +581,77 @@ export function DashboardClient() {
   // Render
   // ---------------------------------------------------------------------------
 
-  // Build stats for greeting strip
-  const stats = {
-    games: gameItems.length,
-    sessions: sessionItems.length,
-    agents: agentItems.length,
-  };
+  const statsRowProps = useMemo(
+    () => ({
+      stats: {
+        games: {
+          value: libraryStats?.totalGames ?? 0,
+          isLoading: statsLoading,
+          isError: statsError,
+          isFetching: statsFetching,
+        },
+        sessions: {
+          value: sessionItems.length,
+          isLoading: sessionsLoading,
+          isError: sessionsError,
+          isFetching: sessionsFetching,
+        },
+        agents: {
+          value: agentItems.length,
+          isLoading: agentsLoading,
+          isError: agentsError,
+          isFetching: agentsFetching,
+        },
+        events: {
+          value: upcomingNights?.length ?? 0,
+          isLoading: upcomingLoading,
+          isError: upcomingError,
+          isFetching: upcomingFetching,
+        },
+      },
+      onRetry: {
+        games: () => {
+          refetchStats();
+        },
+        sessions: () => {
+          refetchSessions();
+        },
+        agents: () => {
+          refetchAgents();
+        },
+        events: () => {
+          refetchUpcoming();
+        },
+      },
+    }),
+    [
+      libraryStats,
+      statsLoading,
+      statsError,
+      statsFetching,
+      sessionItems.length,
+      sessionsLoading,
+      sessionsError,
+      sessionsFetching,
+      agentItems.length,
+      agentsLoading,
+      agentsError,
+      agentsFetching,
+      upcomingNights,
+      upcomingLoading,
+      upcomingError,
+      upcomingFetching,
+      refetchStats,
+      refetchSessions,
+      refetchAgents,
+      refetchUpcoming,
+    ]
+  );
 
   return (
     <div className="mx-auto flex max-w-[1200px] flex-col gap-7 px-4 pb-24 pt-4">
-      <GreetingStrip displayName={displayName} stats={stats} />
+      <DashboardHero displayName={displayName} />
+      <DashboardStatsRow {...statsRowProps} />
 
       {/* Games zone (orange) */}
       <EntityZone entity="game" title="Giochi" count={gameItems.length} viewAllHref="/games">
@@ -650,24 +695,20 @@ export function DashboardClient() {
             <LoadingSkeleton count={4} />
           ) : filteredSessionItems.length === 0 ? (
             <EmptyCTA
+              entity="session"
               icon="🎯"
               title="Nessuna sessione"
               sub="Inizia una nuova partita e traccia i tuoi progressi in tempo reale."
               actions={[{ label: '＋ Crea sessione', href: '/sessions/new', primary: true }]}
             />
           ) : (
-            <div
-              role="region"
-              aria-label="Sessioni recenti"
-              tabIndex={0}
-              className="flex gap-3.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg"
-            >
+            <DiscoverCarousel ariaLabel="Carosello sessioni attive" itemWidth={260} gap={14}>
               {filteredSessionItems.map(item => (
                 <div key={item.id ?? item.title} className="w-[260px] shrink-0">
                   <MeepleCard {...item} />
                 </div>
               ))}
-            </div>
+            </DiscoverCarousel>
           )}
         </HubLayout>
       </EntityZone>
@@ -687,6 +728,7 @@ export function DashboardClient() {
             isLoading={agentsLoading}
             emptyNode={
               <EmptyCTA
+                entity="agent"
                 icon="🤖"
                 title="Nessun agente attivo"
                 sub="Avvia una chat con un agente AI per ricevere aiuto durante la partita."

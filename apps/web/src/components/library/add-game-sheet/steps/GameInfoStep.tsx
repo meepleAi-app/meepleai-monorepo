@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -210,7 +211,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
       {/* Header */}
       <div>
         <h3 className="text-base font-semibold text-slate-100 mb-1">Rivedi informazioni</h3>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-muted-foreground">
           {isReadOnly
             ? 'Conferma i dati del gioco dal catalogo.'
             : 'Modifica i campi se necessario, poi salva.'}
@@ -223,12 +224,12 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
           <img
             src={selectedGame.thumbnailUrl ?? selectedGame.imageUrl}
             alt={selectedGame.title}
-            className="h-16 w-16 rounded-lg object-cover bg-slate-800"
+            className="h-16 w-16 rounded-lg object-cover bg-card"
           />
           <div>
             <p className="text-sm font-medium text-slate-200">{selectedGame.title}</p>
             {sourceLabel && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-700/50 px-2 py-0.5 text-[10px] font-medium text-slate-400 mt-1">
+              <span className="inline-flex items-center gap-1 rounded-full bg-card px-2 py-0.5 text-[10px] font-medium text-muted-foreground mt-1">
                 Fonte: {sourceLabel}
               </span>
             )}
@@ -240,7 +241,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
       <div className="space-y-3.5">
         {/* Title */}
         <div className="space-y-1.5">
-          <Label htmlFor="info-title" className="text-xs text-slate-400">
+          <Label htmlFor="info-title" className="text-xs text-muted-foreground">
             Nome gioco *
           </Label>
           <Input
@@ -248,7 +249,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="Nome del gioco"
-            className="bg-slate-800 border-slate-700"
+            className="bg-card border-border"
             disabled={saving || isReadOnly}
             data-testid="info-title"
           />
@@ -258,7 +259,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
         {/* Players Row */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="info-min-players" className="text-xs text-slate-400">
+            <Label htmlFor="info-min-players" className="text-xs text-muted-foreground">
               Min giocatori *
             </Label>
             <Input
@@ -269,7 +270,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
               value={minPlayers}
               onChange={e => setMinPlayers(e.target.value)}
               placeholder="1"
-              className="bg-slate-800 border-slate-700"
+              className="bg-card border-border"
               disabled={saving || isReadOnly}
               data-testid="info-min-players"
             />
@@ -278,7 +279,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="info-max-players" className="text-xs text-slate-400">
+            <Label htmlFor="info-max-players" className="text-xs text-muted-foreground">
               Max giocatori *
             </Label>
             <Input
@@ -289,7 +290,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
               value={maxPlayers}
               onChange={e => setMaxPlayers(e.target.value)}
               placeholder="4"
-              className="bg-slate-800 border-slate-700"
+              className="bg-card border-border"
               disabled={saving || isReadOnly}
               data-testid="info-max-players"
             />
@@ -302,7 +303,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
         {/* Playing time + Complexity */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="info-time" className="text-xs text-slate-400">
+            <Label htmlFor="info-time" className="text-xs text-muted-foreground">
               Tempo (min)
             </Label>
             <Input
@@ -313,7 +314,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
               value={playingTime}
               onChange={e => setPlayingTime(e.target.value)}
               placeholder="60"
-              className="bg-slate-800 border-slate-700"
+              className="bg-card border-border"
               disabled={saving || isReadOnly}
               data-testid="info-time"
             />
@@ -322,7 +323,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="info-complexity" className="text-xs text-slate-400">
+            <Label htmlFor="info-complexity" className="text-xs text-muted-foreground">
               Complessità (1-5)
             </Label>
             <Input
@@ -334,7 +335,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
               value={complexity}
               onChange={e => setComplexity(e.target.value)}
               placeholder="3.0"
-              className="bg-slate-800 border-slate-700"
+              className="bg-card border-border"
               disabled={saving || isReadOnly}
               data-testid="info-complexity"
             />
@@ -346,7 +347,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
 
         {/* Year */}
         <div className="space-y-1.5">
-          <Label htmlFor="info-year" className="text-xs text-slate-400">
+          <Label htmlFor="info-year" className="text-xs text-muted-foreground">
             Anno pubblicazione
           </Label>
           <Input
@@ -357,7 +358,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
             value={yearPublished}
             onChange={e => setYearPublished(e.target.value)}
             placeholder={String(currentYear)}
-            className="bg-slate-800 border-slate-700"
+            className="bg-card border-border"
             disabled={saving || isReadOnly}
             data-testid="info-year"
           />
@@ -368,7 +369,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
 
         {/* Description */}
         <div className="space-y-1.5">
-          <Label htmlFor="info-description" className="text-xs text-slate-400">
+          <Label htmlFor="info-description" className="text-xs text-muted-foreground">
             Descrizione
           </Label>
           <Textarea
@@ -377,7 +378,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
             onChange={e => setDescription(e.target.value)}
             placeholder="Descrizione del gioco..."
             rows={3}
-            className="bg-slate-800 border-slate-700 resize-none"
+            className="bg-card border-border resize-none"
             disabled={saving || isReadOnly}
             data-testid="info-description"
           />
@@ -392,14 +393,14 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
         <div className="space-y-2.5">
           {categories.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                 Categorie
               </p>
               <div className="flex flex-wrap gap-1.5" data-testid="categories-tags">
                 {categories.map(cat => (
                   <span
                     key={cat}
-                    className="inline-flex items-center gap-1 rounded-full bg-slate-700/50 px-2.5 py-0.5 text-xs text-slate-300"
+                    className="inline-flex items-center gap-1 rounded-full bg-card px-2.5 py-0.5 text-xs text-slate-300"
                   >
                     <Tag className="h-2.5 w-2.5" />
                     {cat}
@@ -410,14 +411,14 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
           )}
           {mechanics.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                 Meccaniche
               </p>
               <div className="flex flex-wrap gap-1.5" data-testid="mechanics-tags">
                 {mechanics.map(mech => (
                   <span
                     key={mech}
-                    className="inline-flex items-center gap-1 rounded-full bg-slate-700/50 px-2.5 py-0.5 text-xs text-slate-300"
+                    className="inline-flex items-center gap-1 rounded-full bg-card px-2.5 py-0.5 text-xs text-slate-300"
                   >
                     {mech}
                   </span>

@@ -137,7 +137,7 @@ function DrawerOverlay({
           {/* Backdrop */}
           <motion.div
             data-testid="drawer-backdrop"
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-foreground/60 backdrop-blur-sm"
             variants={DRAWER_BACKDROP_VARIANTS}
             initial="hidden"
             animate="visible"

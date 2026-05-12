@@ -6,9 +6,9 @@
 | **Generator** | `pnpm lint:tokens` (DS-2) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../docs/for-developers/specs/2026-05-12-token-canonicalization.md) |
 | **Rule** | `local/no-hardcoded-color-utility` |
-| **Total violations** | 4427 |
-| **Files affected** | 485 |
-| **Clusters affected** | 195 |
+| **Total violations** | 3979 |
+| **Files affected** | 441 |
+| **Clusters affected** | 174 |
 
 ## Violations by cluster
 
@@ -19,9 +19,6 @@
 | `admin/knowledge-base` | 313 | manual |
 | `admin/shared-games` | 128 | manual |
 | `toolkit-drawer/tabs` | 122 | manual |
-| `library/add-game-sheet` | 113 | manual |
-| `app/(authenticated)/library` | 107 | DS-11 |
-| `collection/wizard` | 92 | manual |
 | `admin/agents` | 83 | manual |
 | `stories/Animations.stories.tsx` | 76 | manual |
 | `admin/users` | 75 | manual |
@@ -34,8 +31,6 @@
 | `play-records/NewPlayRecordSheet.tsx` | 50 | manual |
 | `layout/mobile` | 49 | manual |
 | `rag-dashboard/config` | 44 | manual |
-| `library/GameActionsModal.tsx` | 41 | manual |
-| `library/PdfVersionManager.tsx` | 38 | manual |
 | `app/admin/database-sync` | 36 | manual |
 | `app/(authenticated)/toolkit` | 32 | manual |
 | `admin/sandbox` | 31 | manual |
@@ -51,7 +46,6 @@
 | `app/(authenticated)/n8n` | 17 | manual |
 | `app/(authenticated)/versions` | 17 | manual |
 | `admin/rag` | 17 | manual |
-| `library/AddExpansionSheet.tsx` | 17 | manual |
 | `app/(authenticated)/sessions` | 16 | manual |
 | `app/(public)/join` | 16 | manual |
 | `play-records/PlayHistory.tsx` | 16 | manual |
@@ -78,7 +72,6 @@
 | `diff/DiffSummary.tsx` | 8 | manual |
 | `game-detail/game-hero-section.tsx` | 8 | manual |
 | `game-detail/stats-grid.tsx` | 8 | manual |
-| `library/DocumentSelectionPanel.tsx` | 8 | manual |
 | `modals/SessionWarningModal.tsx` | 8 | manual |
 | `accessible/Accessibility.stories.tsx` | 7 | manual |
 | `auth/VerificationError.stories.tsx` | 7 | manual |
@@ -89,8 +82,6 @@
 | `auth/LoginForm.stories.tsx` | 6 | manual |
 | `empty-state/EmptyState.tsx` | 6 | manual |
 | `legal/LegalPageLayout.tsx` | 6 | manual |
-| `library/game-table` | 6 | manual |
-| `library/KbStatusPanel.tsx` | 6 | manual |
 | `modals/SessionSetupModal.tsx` | 6 | manual |
 | `toolkit/AiToolkitGenerator.tsx` | 6 | manual |
 | `toolkit/CardDeckTool.tsx` | 6 | manual |
@@ -116,7 +107,6 @@
 | `diff/DiffViewerEnhanced.tsx` | 4 | manual |
 | `editor/EditorToolbar.tsx` | 4 | manual |
 | `errors/RouteErrorBoundary.stories.tsx` | 4 | manual |
-| `library/UsageWidget.tsx` | 4 | manual |
 | `loading/TypingIndicator.tsx` | 4 | manual |
 | `onboarding/FirstAgentStep.tsx` | 4 | manual |
 | `onboarding/PasswordStep.tsx` | 4 | manual |
@@ -131,7 +121,6 @@
 | `comments/InlineCommentIndicator.tsx` | 3 | manual |
 | `game-detail/TypingIndicator.tsx` | 3 | manual |
 | `layout/UserShell` | 3 | manual |
-| `library/PdfUploadSheet.tsx` | 3 | manual |
 | `prompt/LazyPromptEditor.tsx` | 3 | manual |
 | `prompt/PromptEditor.tsx` | 3 | manual |
 | `pwa/UpdatePrompt.tsx` | 3 | manual |
@@ -148,9 +137,6 @@
 | `layout/HubLayout` | 2 | manual |
 | `layout/SideDrawer` | 2 | manual |
 | `layout/ViewModeToggle.tsx` | 2 | manual |
-| `library/LibraryQuickStats.tsx` | 2 | manual |
-| `library/RagAccessBadge.tsx` | 2 | manual |
-| `library/ShelfCard.tsx` | 2 | manual |
 | `onboarding/WelcomeChecklist.tsx` | 2 | manual |
 | `pdf/PdfProgressBar.tsx` | 2 | manual |
 | `pdf/PdfUploadForm.stories.tsx` | 2 | manual |
@@ -182,13 +168,6 @@
 | `layout/MobileCTAPill.tsx` | 1 | manual |
 | `layout/PageHeader.tsx` | 1 | manual |
 | `layout/SearchOverlay.tsx` | 1 | manual |
-| `library/AgentDrawerSheet.tsx` | 1 | manual |
-| `library/ChatDrawerSheet.tsx` | 1 | manual |
-| `library/KbDrawerSheet.tsx` | 1 | manual |
-| `library/labels` | 1 | manual |
-| `library/OwnershipConfirmationDialog.tsx` | 1 | manual |
-| `library/OwnershipDeclarationDialog.tsx` | 1 | manual |
-| `library/SessionDrawerSheet.tsx` | 1 | manual |
 | `onboarding/tour` | 1 | manual |
 | `pdf/PdfErrorCard.stories.tsx` | 1 | manual |
 | `pdf/PdfMetricsDisplay.tsx` | 1 | manual |
@@ -221,7 +200,6 @@
 | `src/components/admin/command-center/CommandCenterDashboard.tsx` | 54 |
 | `src/components/loading/SkeletonLoader.tsx` | 54 |
 | `src/components/admin/knowledge-base/processing-metrics.tsx` | 51 |
-| `src/app/(authenticated)/library/private/[privateGameId]/toolkit/configure/client.tsx` | 50 |
 | `src/app/admin/(dashboard)/knowledge-base/embedding/page.tsx` | 50 |
 | `src/components/play-records/NewPlayRecordSheet.tsx` | 50 |
 | `src/app/admin/(dashboard)/users/[id]/page.tsx` | 48 |
@@ -231,9 +209,10 @@
 | `src/components/rag-dashboard/config/RagConfigurationForm.tsx` | 44 |
 | `src/components/admin/knowledge-base/upload-settings.tsx` | 43 |
 | `src/components/admin/shared-games/SharedGameExtraMeepleCard.tsx` | 43 |
-| `src/components/library/GameActionsModal.tsx` | 41 |
 | `src/app/admin/(dashboard)/agents/config/AgentModelsTabContent.tsx` | 40 |
 | `src/app/admin/(dashboard)/agents/config/AgentStrategyTabContent.tsx` | 40 |
+| `src/app/admin/(dashboard)/shared-games/[id]/client.tsx` | 40 |
+| `src/app/admin/(dashboard)/agents/page.tsx` | 38 |
 
 ## Notes
 

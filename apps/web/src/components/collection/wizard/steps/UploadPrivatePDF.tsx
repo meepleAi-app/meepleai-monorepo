@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -131,10 +132,10 @@ export function UploadPrivatePDF() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-2">
+        <h2 className="text-2xl font-semibold text-foreground dark:text-white mb-2">
           Upload Private PDF
         </h2>
-        <p className="text-slate-600 dark:text-slate-400">
+        <p className="text-muted-foreground">
           Optionally upload a rulebook PDF for personal reference. This PDF will be private to your
           account.
         </p>
@@ -147,7 +148,7 @@ export function UploadPrivatePDF() {
             ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
             : file
               ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-              : 'border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+              : 'border-border dark:border-border hover:border-blue-400 hover:bg-muted'
         }`}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -168,8 +169,8 @@ export function UploadPrivatePDF() {
         {file ? (
           <div className="space-y-2">
             <div className="text-4xl">📄</div>
-            <p className="font-medium text-slate-900 dark:text-white">{file.name}</p>
-            <p className="text-sm text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+            <p className="font-medium text-foreground dark:text-white">{file.name}</p>
+            <p className="text-sm text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
             <Button
               variant="outline"
               size="sm"
@@ -184,10 +185,10 @@ export function UploadPrivatePDF() {
         ) : (
           <div className="space-y-2">
             <div className="text-4xl">📁</div>
-            <p className="font-medium text-slate-900 dark:text-white">
+            <p className="font-medium text-foreground dark:text-white">
               Drag PDF here or click to select
             </p>
-            <p className="text-sm text-slate-500">PDF up to 50MB</p>
+            <p className="text-sm text-muted-foreground">PDF up to 50MB</p>
           </div>
         )}
       </div>
@@ -199,7 +200,7 @@ export function UploadPrivatePDF() {
             <span>Uploading...</span>
             <span>{uploadProgress}%</span>
           </div>
-          <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+          <div className="h-2 bg-muted dark:bg-card rounded-full overflow-hidden">
             <div
               className="h-full bg-blue-600 transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}

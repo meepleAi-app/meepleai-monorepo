@@ -37,7 +37,7 @@ export function AgentDrawerSheet({ open, onOpenChange, gameId, gameTitle }: Agen
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className={cn('sm:max-w-lg', 'bg-white/80 backdrop-blur-xl')}>
+      <SheetContent side="right" className={cn('sm:max-w-lg', 'bg-card/80 backdrop-blur-xl')}>
         <SheetHeader className="pb-4 border-b border-border/30">
           <SheetTitle className="font-quicksand text-lg">
             <span className="text-[hsl(220,70%,55%)]">Agents</span>{' '}
@@ -121,7 +121,7 @@ export function AgentDrawerSheet({ open, onOpenChange, gameId, gameTitle }: Agen
               <span
                 className={cn(
                   'h-2.5 w-2.5 rounded-full flex-shrink-0',
-                  agent.isActive ? 'bg-green-500' : 'bg-slate-300'
+                  agent.isActive ? 'bg-green-500' : 'bg-muted'
                 )}
               />
               <div className="flex-1 min-w-0">

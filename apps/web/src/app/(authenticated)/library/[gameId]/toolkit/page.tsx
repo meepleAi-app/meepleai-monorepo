@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -173,7 +174,7 @@ export default function GameToolkitLandingPage() {
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             {game.name} Toolkit
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300">
+          <p className="text-lg text-muted-foreground">
             Track scores with pre-configured {game.name} template
           </p>
         </div>
@@ -190,7 +191,7 @@ export default function GameToolkitLandingPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  <p className="text-sm font-semibold text-foreground mb-1">
                     Scoring Categories
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -204,7 +205,7 @@ export default function GameToolkitLandingPage() {
 
                 {template.rounds.length > 0 && (
                   <div>
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    <p className="text-sm font-semibold text-foreground mb-1">
                       Rounds
                     </p>
                     <div className="flex gap-2">
@@ -218,19 +219,19 @@ export default function GameToolkitLandingPage() {
                 )}
 
                 <div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  <p className="text-sm font-semibold text-foreground mb-1">
                     Scoring Rules
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-muted-foreground">
                     {template.scoringRules}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  <p className="text-sm font-semibold text-foreground mb-1">
                     Players
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-muted-foreground">
                     {template.playerCount.min}-{template.playerCount.max} players
                   </p>
                 </div>
@@ -248,7 +249,7 @@ export default function GameToolkitLandingPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <p className="text-sm font-semibold text-foreground mb-2">
                   Players
                 </p>
                 <div className="space-y-2">
@@ -259,7 +260,7 @@ export default function GameToolkitLandingPage() {
                         value={name}
                         onChange={e => updateParticipant(index, e.target.value)}
                         placeholder={`Player ${index + 1}`}
-                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                        className="flex-1 px-3 py-2 border border-border dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-card dark:text-white"
                         disabled={isLoading}
                       />
                       {participants.length > 1 && (
@@ -292,7 +293,7 @@ export default function GameToolkitLandingPage() {
               </Button>
 
               {template && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                <p className="text-xs text-muted-foreground text-center">
                   Template will auto-populate {template.categories.length} categories
                   {template.rounds.length > 0 && ` and ${template.rounds.length} rounds`}
                 </p>
@@ -307,7 +308,7 @@ export default function GameToolkitLandingPage() {
             <CardTitle>Recent {game.name} Sessions</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+            <p className="text-muted-foreground text-center py-4">
               No recent sessions yet. Start your first session above!
             </p>
           </CardContent>

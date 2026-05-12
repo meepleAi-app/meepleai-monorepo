@@ -56,7 +56,7 @@ function StatusBadge({ status }: { status: 'pending' | 'processing' | 'indexed' 
       );
     case 'pending':
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border/50">
           <Loader2 className="h-3 w-3" />
           In attesa
         </span>

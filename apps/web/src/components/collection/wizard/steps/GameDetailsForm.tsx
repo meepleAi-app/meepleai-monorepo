@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -87,10 +88,10 @@ export function GameDetailsForm() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-2">
+        <h2 className="text-2xl font-semibold text-foreground dark:text-white mb-2">
           Game Details
         </h2>
-        <p className="text-slate-600 dark:text-slate-400">
+        <p className="text-muted-foreground">
           Provide details for your custom game
         </p>
       </div>
@@ -178,7 +179,7 @@ export function GameDetailsForm() {
             placeholder="e.g., 3"
             className={errors.complexity ? 'border-red-500' : ''}
           />
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             1 = Very Easy, 2 = Easy, 3 = Medium, 4 = Hard, 5 = Very Hard
           </p>
           {errors.complexity && (

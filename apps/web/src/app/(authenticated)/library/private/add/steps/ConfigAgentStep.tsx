@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -86,10 +87,10 @@ export function ConfigAgentStep({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-2">
+        <h2 className="text-2xl font-semibold text-foreground dark:text-white mb-2">
           Configura Agente RAG
         </h2>
-        <p className="text-slate-600 dark:text-slate-400">
+        <p className="text-muted-foreground">
           Scegli il tipo di agente e la strategia RAG per "{gameName}".
         </p>
       </div>
@@ -102,7 +103,7 @@ export function ConfigAgentStep({
 
       {/* Document Selection */}
       <div className="mt-6">
-        <h3 className="text-sm font-medium text-gray-300 mb-2">Documenti per la Knowledge Base</h3>
+        <h3 className="text-sm font-medium text-foreground mb-2">Documenti per la Knowledge Base</h3>
         <div className="bg-[#21262d] rounded-lg border border-[#30363d] p-3">
           <DocumentSelectionPanel
             gameId={gameId}

@@ -21,7 +21,7 @@ type AgentStatus = 'active' | 'idle' | 'training' | 'error';
 function AgentStatusBadge({ status }: { status: AgentStatus; size?: string; showLabel?: boolean }) {
   const colors: Record<string, string> = {
     active: 'bg-green-100 text-green-700',
-    idle: 'bg-gray-100 text-gray-600',
+    idle: 'bg-muted text-muted-foreground',
     training: 'bg-blue-100 text-blue-700',
     error: 'bg-red-100 text-red-700',
   };
@@ -37,7 +37,7 @@ function KbStatusBadge({ status }: { status: KbStatus; size?: string }) {
     indexed: 'bg-green-100 text-green-700',
     processing: 'bg-blue-100 text-blue-700',
     failed: 'bg-red-100 text-red-700',
-    none: 'bg-gray-100 text-gray-600',
+    none: 'bg-muted text-muted-foreground',
   };
   return (
     <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${colors[status] ?? ''}`}>
@@ -266,7 +266,7 @@ export function GameTableZoneKnowledge({ gameId }: GameTableZoneKnowledgeProps):
       {/* Agent Document Selection — only when an agent exists */}
       {resolvedAgentId && (
         <details className="mt-3">
-          <summary className="text-xs font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-300 select-none">
+          <summary className="text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground select-none">
             Gestisci documenti agente
           </summary>
           <div className="mt-2 bg-[#21262d] rounded-lg border border-[#30363d] p-3">

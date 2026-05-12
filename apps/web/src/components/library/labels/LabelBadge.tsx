@@ -64,7 +64,7 @@ export function LabelBadge({ label, onRemove, disabled = false, className }: Lab
             e.stopPropagation();
             onRemove(label.id);
           }}
-          className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-black/10"
+          className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-foreground/10"
           aria-label={`Rimuovi etichetta ${label.name}`}
         >
           <X className="h-3 w-3" />

@@ -23,16 +23,37 @@ import { GameTableSkeleton } from '@/components/library/game-table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
+import { tryLoadVisualTestFixture } from '@/lib/games/game-detail-visual-test-fixture';
 import { isLibroGame } from '@/lib/games/is-libro-game';
+import { useStateOverride } from '@/lib/visual-test/state-override';
 
 import GameDetailMobile from './game-detail-mobile';
+
+/**
+ * WS-D Exemplar (Issue #1070, umbrella #1066): canonical states declared in
+ * `admin-mockups/design_files/nanolith-runthrough-game-detail.html` Stati line.
+ * Drives `?state=` URL override via the WS-D Foundation helper
+ * (`useStateOverride`) so visual regression CI can exercise each branch.
+ */
+const LIBRARY_GAME_DETAIL_STATES = ['default', 'loading', 'error', 'not-found'] as const;
 
 export default function LibraryGameDetailPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
   const gameId = params?.gameId as string;
-  const { data: gameDetail, isLoading, error } = useLibraryGameDetail(gameId);
+
+  // WS-D Exemplar: state-override takes precedence over real fetch when the
+  // visual-test build flag is set. In production the hook short-circuits to
+  // null and the real fetch flow runs unchanged.
+  const stateOverride = useStateOverride(LIBRARY_GAME_DETAIL_STATES);
+  const fixtureDetail = stateOverride === 'default' ? tryLoadVisualTestFixture('default') : null;
+
+  const {
+    data: gameDetail,
+    isLoading,
+    error,
+  } = useLibraryGameDetail(gameId, stateOverride === null);
 
   // S4 — parse `?tab=` query param to open a specific tab (deep-link support)
   const tabParam = searchParams?.get('tab');
@@ -52,20 +73,30 @@ export default function LibraryGameDetailPage() {
     [gameId, router, searchParams]
   );
 
-  if (isLoading) return <GameTableSkeleton />;
+  // State-override branches (visual-test build only). AC-D.4: `error` and
+  // `not-found` rendered as visually distinct surfaces (red alert + retry CTA
+  // vs neutral alert + "torna alla libreria" CTA).
+  if (stateOverride === 'loading' || (stateOverride === null && isLoading)) {
+    return <GameTableSkeleton />;
+  }
 
-  if (error) {
+  if (stateOverride === 'error' || (stateOverride === null && error)) {
+    const errorMessage =
+      stateOverride === 'error'
+        ? 'Si è verificato un errore di rete nel caricamento del gioco. Riprova.'
+        : error instanceof Error
+          ? error.message
+          : 'Si è verificato un errore nel caricamento del gioco.';
     return (
       <div className="mx-auto max-w-6xl px-4 py-8" data-testid="error-state">
         <Alert variant="destructive">
-          <AlertTitle>Errore</AlertTitle>
-          <AlertDescription>
-            {error instanceof Error
-              ? error.message
-              : 'Si è verificato un errore nel caricamento del gioco.'}
-          </AlertDescription>
+          <AlertTitle>Errore di caricamento</AlertTitle>
+          <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
-        <Button variant="outline" className="mt-4" onClick={() => router.push('/library')}>
+        <Button variant="outline" className="mt-4" onClick={() => router.refresh()}>
+          Riprova
+        </Button>
+        <Button variant="ghost" className="ml-2 mt-4" onClick={() => router.push('/library')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Torna alla Libreria
         </Button>
@@ -73,7 +104,9 @@ export default function LibraryGameDetailPage() {
     );
   }
 
-  if (!gameDetail) {
+  const effectiveDetail = fixtureDetail ?? gameDetail;
+
+  if (stateOverride === 'not-found' || (stateOverride === null && !effectiveDetail)) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8" data-testid="not-found-state">
         <Alert>
@@ -88,21 +121,26 @@ export default function LibraryGameDetailPage() {
     );
   }
 
+  // Type-narrowing: not-found branch above already returned when effectiveDetail
+  // is falsy. The `if (!effectiveDetail)` guard re-narrows for TypeScript without
+  // a non-null assertion (lint rule no-non-null-assertion compliance).
+  if (!effectiveDetail) {
+    return null;
+  }
+
   // Iter B1 · Libro-game games render the storyboard-compliant detail view
   // (light warm palette, session+game gradient hero, pip bar, inline tabs).
   // Non-libro-game titles keep the legacy GameDetailDesktop until B2/B3.
-  const renderLibroView = isLibroGame({ gameTitle: gameDetail.gameTitle });
-  // eslint-disable-next-line no-console
-  console.log('[LibroView check]', { gameTitle: gameDetail.gameTitle, renderLibroView });
+  const renderLibroView = isLibroGame({ gameTitle: effectiveDetail.gameTitle });
   if (renderLibroView) {
-    return <LibroGameDetailView gameDetail={gameDetail} />;
+    return <LibroGameDetailView gameDetail={effectiveDetail} />;
   }
 
   return (
     <div className="h-full">
       {/* CTA legacy hook — no-op for non-libro-game games (isLibroGame === false) */}
       <div className="mx-auto w-full max-w-2xl px-4 pt-4 pb-1">
-        <NanolithCampaignCTA gameId={gameId} gameTitle={gameDetail.gameTitle} />
+        <NanolithCampaignCTA gameId={gameId} gameTitle={effectiveDetail.gameTitle} />
       </div>
 
       {/* Mobile layout — replaced by S5 */}

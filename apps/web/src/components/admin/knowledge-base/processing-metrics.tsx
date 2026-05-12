@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13b admin scope (see token-bridge-map.md for --admin-* decision deferred to DS-15). */
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
@@ -65,12 +66,12 @@ export function ProcessingMetrics() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-8 w-48 bg-white/40 dark:bg-zinc-800/40 rounded animate-pulse" />
+        <div className="h-8 w-48 bg-card/40 dark:bg-zinc-800/40 rounded animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="h-48 bg-white/40 dark:bg-zinc-800/40 rounded-lg animate-pulse"
+              className="h-48 bg-card/40 dark:bg-zinc-800/40 rounded-lg animate-pulse"
             />
           ))}
         </div>
@@ -80,8 +81,8 @@ export function ProcessingMetrics() {
 
   if (!metrics) {
     return (
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-slate-200/50 dark:border-zinc-700/50">
-        <p className="text-sm text-slate-600 dark:text-zinc-400">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-border/50 dark:border-zinc-700/50">
+        <p className="text-sm text-muted-foreground dark:text-muted-foreground">
           Nessuna metrica di elaborazione disponibile
         </p>
       </div>
@@ -97,13 +98,13 @@ export function ProcessingMetrics() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h2 className="font-quicksand text-xl font-bold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+        <h2 className="font-quicksand text-xl font-bold text-foreground dark:text-zinc-100 flex items-center gap-2">
           <ActivityIcon className="h-5 w-5 text-blue-500" />
           Metriche Elaborazione
         </h2>
         <div className="flex items-center gap-3">
           <time
-            className="text-xs text-slate-500 dark:text-zinc-500"
+            className="text-xs text-muted-foreground dark:text-muted-foreground"
             dateTime={metrics.lastUpdated}
             suppressHydrationWarning
           >
@@ -146,26 +147,26 @@ export function ProcessingMetrics() {
       </div>
 
       {/* Comparison Table */}
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-zinc-700/50 overflow-hidden">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/50 dark:border-zinc-700/50 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200 dark:border-zinc-700">
-              <th className="text-left px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">
+            <tr className="border-b border-border dark:border-zinc-700">
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground dark:text-muted-foreground">
                 Fase
               </th>
-              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">
+              <th className="text-right px-4 py-3 font-medium text-muted-foreground dark:text-muted-foreground">
                 Media
               </th>
-              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">
+              <th className="text-right px-4 py-3 font-medium text-muted-foreground dark:text-muted-foreground">
                 P50
               </th>
-              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">
+              <th className="text-right px-4 py-3 font-medium text-muted-foreground dark:text-muted-foreground">
                 P95
               </th>
-              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">
+              <th className="text-right px-4 py-3 font-medium text-muted-foreground dark:text-muted-foreground">
                 P99
               </th>
-              <th className="text-right px-4 py-3 font-medium text-slate-600 dark:text-zinc-400">
+              <th className="text-right px-4 py-3 font-medium text-muted-foreground dark:text-muted-foreground">
                 Campioni
               </th>
             </tr>
@@ -178,11 +179,11 @@ export function ProcessingMetrics() {
               return (
                 <tr
                   key={stepName}
-                  className={`border-b border-slate-100 dark:border-zinc-800 ${
+                  className={`border-b border-border dark:border-zinc-800 ${
                     isBottleneck ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''
                   }`}
                 >
-                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+                  <td className="px-4 py-3 font-medium text-foreground dark:text-zinc-100 flex items-center gap-2">
                     {isBottleneck && <AlertTriangleIcon className="h-3.5 w-3.5 text-amber-500" />}
                     {avg?.step ?? stepName}
                   </td>
@@ -200,7 +201,7 @@ export function ProcessingMetrics() {
                   <td className={`text-right px-4 py-3 font-mono ${durationColor(pct?.p99 ?? 0)}`}>
                     {formatDuration(pct?.p99 ?? 0)}
                   </td>
-                  <td className="text-right px-4 py-3 text-slate-500 dark:text-zinc-500">
+                  <td className="text-right px-4 py-3 text-muted-foreground dark:text-muted-foreground">
                     {avg?.sampleSize ?? 0}
                   </td>
                 </tr>
@@ -234,15 +235,15 @@ function StepMetricCard({
 }) {
   return (
     <div
-      className={`bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-5 border ${
+      className={`bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-5 border ${
         isBottleneck
           ? 'border-amber-300 dark:border-amber-700 ring-1 ring-amber-200 dark:ring-amber-800'
-          : 'border-slate-200/50 dark:border-zinc-700/50'
+          : 'border-border/50 dark:border-zinc-700/50'
       }`}
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-slate-900 dark:text-zinc-100">{stepName}</h3>
+          <h3 className="font-semibold text-foreground dark:text-zinc-100">{stepName}</h3>
           {isBottleneck && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
               <AlertTriangleIcon className="h-3 w-3" />
@@ -250,7 +251,7 @@ function StepMetricCard({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-zinc-500">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground dark:text-muted-foreground">
           <HashIcon className="h-3 w-3" />
           {sampleSize} campioni
         </div>
@@ -258,8 +259,8 @@ function StepMetricCard({
 
       {/* Average Duration */}
       <div className="flex items-center gap-2 mb-4">
-        <ClockIcon className="h-4 w-4 text-slate-400" />
-        <span className="text-sm text-slate-600 dark:text-zinc-400">Avg:</span>
+        <ClockIcon className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground dark:text-muted-foreground">Avg:</span>
         <span className={`text-lg font-bold font-mono ${durationColor(avgDuration)}`}>
           {formatDuration(avgDuration)}
         </span>
@@ -280,8 +281,8 @@ function PercentileBar({ label, value, max }: { label: string; value: number; ma
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[10px] font-mono text-slate-500 dark:text-zinc-500 w-6">{label}</span>
-      <div className="flex-1 h-2 bg-slate-100 dark:bg-zinc-700 rounded-full overflow-hidden">
+      <span className="text-[10px] font-mono text-muted-foreground dark:text-muted-foreground w-6">{label}</span>
+      <div className="flex-1 h-2 bg-muted dark:bg-zinc-700 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all ${barColor(value)}`}
           style={{ width: `${widthPct}%` }}

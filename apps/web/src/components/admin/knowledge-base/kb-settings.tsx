@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13b admin scope (see token-bridge-map.md for --admin-* decision deferred to DS-15). */
 'use client';
 
 import { useState } from 'react';
@@ -81,12 +82,12 @@ function SettingRow({ label, value }: { label: string; value: string | number | 
     typeof value === 'boolean'
       ? value
         ? 'text-green-600 dark:text-green-400'
-        : 'text-slate-400 dark:text-zinc-500'
-      : 'text-slate-900 dark:text-zinc-100';
+        : 'text-muted-foreground dark:text-muted-foreground'
+      : 'text-foreground dark:text-zinc-100';
 
   return (
-    <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-zinc-800 last:border-0">
-      <span className="text-sm text-slate-600 dark:text-zinc-400">{label}</span>
+    <div className="flex items-center justify-between py-2 border-b border-border dark:border-zinc-800 last:border-0">
+      <span className="text-sm text-muted-foreground dark:text-muted-foreground">{label}</span>
       <span className={`text-sm font-mono ${boolColor}`}>{displayValue}</span>
     </div>
   );
@@ -102,10 +103,10 @@ function SettingsCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-5 border border-slate-200/50 dark:border-zinc-700/50">
+    <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-5 border border-border/50 dark:border-zinc-700/50">
       <div className="flex items-center gap-2 mb-4">
         <Icon className="h-5 w-5 text-blue-500" />
-        <h3 className="font-semibold text-slate-900 dark:text-zinc-100">{title}</h3>
+        <h3 className="font-semibold text-foreground dark:text-zinc-100">{title}</h3>
       </div>
       <div className="space-y-0">{children}</div>
     </div>
@@ -152,7 +153,7 @@ export function KBSettings() {
     return (
       <div className="space-y-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-48 bg-white/40 dark:bg-zinc-800/40 rounded-xl animate-pulse" />
+          <div key={i} className="h-48 bg-card/40 dark:bg-zinc-800/40 rounded-xl animate-pulse" />
         ))}
       </div>
     );
@@ -160,8 +161,8 @@ export function KBSettings() {
 
   if (!settings) {
     return (
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-slate-200/50 dark:border-zinc-700/50">
-        <p className="text-sm text-slate-600 dark:text-zinc-400">Unable to load KB settings</p>
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-border/50 dark:border-zinc-700/50">
+        <p className="text-sm text-muted-foreground dark:text-muted-foreground">Unable to load KB settings</p>
       </div>
     );
   }
@@ -260,7 +261,7 @@ export function KBSettings() {
         {/* Storage */}
         <SettingsCard title="File Storage" icon={HardDriveIcon}>
           <SettingRow label="Provider" value={settings.storage.provider} />
-          <p className="text-xs text-slate-500 dark:text-zinc-500 mt-2">
+          <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-2">
             {settings.storage.provider === 'local'
               ? 'Using local filesystem storage. Set STORAGE_PROVIDER=s3 for cloud storage.'
               : 'Using S3-compatible cloud storage.'}

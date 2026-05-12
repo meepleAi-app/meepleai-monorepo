@@ -130,9 +130,9 @@
 | Type | Count |
 |------|------:|
 | page-mock | 44 |
-| component-mock | 13 |
+| component-mock | 14 |
 | dev-fixture | 10 |
-| **Total** | **67** |
+| **Total** | **68** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

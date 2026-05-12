@@ -126,7 +126,7 @@ export function UploadRulesStep({
   return (
     <div className="space-y-4" data-testid="upload-rules-step">
       <div>
-        <h3 className="font-quicksand font-bold text-lg text-slate-900 dark:text-slate-100">
+        <h3 className="font-quicksand font-bold text-lg text-foreground">
           Regolamento (opzionale)
         </h3>
         <p className="text-sm text-muted-foreground mt-1">
@@ -168,7 +168,7 @@ export function UploadRulesStep({
         <div className="space-y-3">
           <label
             htmlFor="pdf-upload-input"
-            className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 p-8 cursor-pointer hover:border-amber-500/50 transition-colors"
+            className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border dark:border-border p-8 cursor-pointer hover:border-amber-500/50 transition-colors"
           >
             <FileText className="h-8 w-8 text-muted-foreground mb-2" aria-hidden="true" />
             <span className="text-sm font-medium">Seleziona il PDF del regolamento</span>
@@ -194,7 +194,7 @@ export function UploadRulesStep({
             <Loader2 className="h-5 w-5 animate-spin text-amber-600" aria-hidden="true" />
             <div className="flex-1">
               <p className="text-sm font-medium">Upload in corso... {uploadProgress}%</p>
-              <div className="h-2 mt-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+              <div className="h-2 mt-2 rounded-full bg-muted dark:bg-card overflow-hidden">
                 <div
                   className="h-full bg-amber-500 transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}

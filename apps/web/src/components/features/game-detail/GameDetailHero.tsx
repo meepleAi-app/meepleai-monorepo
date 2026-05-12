@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * GameDetailHero - v2 Wave C.1 (Issue #581)
  *
@@ -132,18 +133,18 @@ export function GameDetailHero(props: GameDetailHeroProps): ReactElement {
         {/* Title overlay */}
         <div className="absolute inset-x-0 bottom-0 px-4 pb-4 text-white sm:px-8 sm:pb-5">
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 font-mono text-[9px] font-extrabold uppercase tracking-[0.08em] text-white backdrop-blur-md">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-card/20 px-2.5 py-1 font-mono text-[9px] font-extrabold uppercase tracking-[0.08em] text-white backdrop-blur-md">
               <span aria-hidden="true">🎲</span>
               <span>Game</span>
             </span>
-            <span className="rounded-full bg-white/20 px-2.5 py-1 font-mono text-[9px] font-extrabold uppercase tracking-[0.08em] text-white backdrop-blur-md">
+            <span className="rounded-full bg-card/20 px-2.5 py-1 font-mono text-[9px] font-extrabold uppercase tracking-[0.08em] text-white backdrop-blur-md">
               {variant === 'own' ? labels.ownedBadge : labels.communityBadge}
             </span>
             {isFavorite ? (
               <span
                 aria-label={labels.favoriteAriaLabel}
                 role="img"
-                className="rounded-full bg-white/20 px-2 py-1 text-xs backdrop-blur-md"
+                className="rounded-full bg-card/20 px-2 py-1 text-xs backdrop-blur-md"
               >
                 ★
               </span>

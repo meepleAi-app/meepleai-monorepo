@@ -78,7 +78,7 @@ function GameOption({ result, isSelected, onSelect }: GameOptionProps) {
             className="rounded object-cover flex-shrink-0"
           />
         ) : (
-          <div className="h-12 w-12 rounded bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
+          <div className="h-12 w-12 rounded bg-muted dark:bg-card flex-shrink-0" />
         )}
         <div className="min-w-0 flex-1">
           <p className="font-medium text-sm truncate">{result.title}</p>
@@ -157,7 +157,7 @@ export function SearchGameStep({ onGameFound }: SearchGameStepProps) {
   return (
     <div className="space-y-4" data-testid="search-game-step">
       <div>
-        <h3 className="font-quicksand font-bold text-lg text-slate-900 dark:text-slate-100">
+        <h3 className="font-quicksand font-bold text-lg text-foreground">
           Trova il gioco
         </h3>
         <p className="text-sm text-muted-foreground mt-1">Cerca nel catalogo MeepleAI.</p>

@@ -16,6 +16,9 @@ import noIncompleteSanitization from "./eslint-rules/no-incomplete-sanitization.
 import noHardcodedHex from "./eslint-rules/no-hardcoded-hex.js";
 // V2 entity HSL regression guard (P2 Issue #807 Task 9)
 import noInlineHslV2 from "./eslint-rules/no-inline-hsl-v2.js";
+// DS-2 token canonicalization — forbids hardcoded Tailwind neutral classes
+// (spec: docs/for-developers/specs/2026-05-12-token-canonicalization.md)
+import noHardcodedColorUtility from "./eslint-rules/no-hardcoded-color-utility.js";
 
 export default [
   {
@@ -97,6 +100,7 @@ export default [
           "no-incomplete-sanitization": noIncompleteSanitization,
           "no-hardcoded-hex": noHardcodedHex,
           "no-inline-hsl-v2": noInlineHslV2,
+          "no-hardcoded-color-utility": noHardcodedColorUtility,
         },
       },
     },
@@ -598,6 +602,22 @@ export default [
     ],
     rules: {
       "@next/next/no-img-element": "off",
+    },
+  },
+  // DS-2 (token canonicalization, 2026-05-12):
+  // Forbid hardcoded Tailwind neutral-greyscale utilities (bg-white, bg-slate-*,
+  // text-gray-*, …) in src/. Components must consume semantic tokens from the
+  // canonical design system (bg-background, bg-card, text-muted-foreground, …)
+  // so the mockup palette flows through every surface uniformly.
+  //
+  // Mode: `warn` during DS-3 inventory + DS-4..DS-11 cluster migrations.
+  // Switched to `error` in DS-12 once `pnpm lint:tokens --max-warnings 0` is green.
+  //
+  // Spec: docs/for-developers/specs/2026-05-12-token-canonicalization.md
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "local/no-hardcoded-color-utility": "warn",
     },
   },
 ];

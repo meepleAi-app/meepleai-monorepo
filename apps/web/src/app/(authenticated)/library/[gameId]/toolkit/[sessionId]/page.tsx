@@ -217,7 +217,7 @@ export default function GameSpecificSessionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-muted">
       {/* Session Header */}
       <SessionHeader
         session={activeSession as unknown as import('@/components/session/types').Session}
@@ -242,7 +242,7 @@ export default function GameSpecificSessionPage() {
                   <CardTitle className="text-sm">Scoring Rules</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-muted-foreground">
                     {template.scoringRules}
                   </p>
                 </CardContent>
@@ -258,7 +258,7 @@ export default function GameSpecificSessionPage() {
       </div>
 
       {/* Sticky Bottom: Score Input with Template */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg">
         <div className="container mx-auto px-4 py-4">
           <ScoreInput
             participants={participants}

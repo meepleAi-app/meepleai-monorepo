@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -56,10 +57,10 @@ export function RequestApprovalStep({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-2">
+        <h2 className="text-2xl font-semibold text-foreground dark:text-white mb-2">
           Request Approval
         </h2>
-        <p className="text-slate-600 dark:text-slate-400">
+        <p className="text-muted-foreground">
           Submit your game proposal for admin review.
         </p>
       </div>
@@ -98,7 +99,7 @@ export function RequestApprovalStep({
           rows={4}
           maxLength={1000}
         />
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           {notes.length}/1000 characters
         </p>
       </div>

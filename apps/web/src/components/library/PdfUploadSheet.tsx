@@ -133,7 +133,7 @@ export function PdfUploadSheet({ open, onOpenChange, gameId, onUploaded }: PdfUp
         {/* File selected - show info and upload */}
         {file && !uploading && (
           <div className="space-y-3">
-            <div className="flex items-center gap-3 rounded-lg bg-white/5 p-3">
+            <div className="flex items-center gap-3 rounded-lg bg-card/5 p-3">
               <FileText className="h-5 w-5 shrink-0 text-purple-400" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-[var(--gaming-text-primary)]">
@@ -152,7 +152,7 @@ export function PdfUploadSheet({ open, onOpenChange, gameId, onUploaded }: PdfUp
                   setError(null);
                   if (inputRef.current) inputRef.current.value = '';
                 }}
-                className="flex-1 rounded-lg border border-[var(--gaming-border-glass)] px-4 py-2.5 text-sm text-[var(--gaming-text-secondary)] transition-colors hover:bg-white/5"
+                className="flex-1 rounded-lg border border-[var(--gaming-border-glass)] px-4 py-2.5 text-sm text-[var(--gaming-text-secondary)] transition-colors hover:bg-card/5"
               >
                 Cambia file
               </button>
@@ -169,7 +169,7 @@ export function PdfUploadSheet({ open, onOpenChange, gameId, onUploaded }: PdfUp
           <div className="flex flex-col items-center gap-3 py-4">
             <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
             <p className="text-sm text-[var(--gaming-text-secondary)]">Caricamento in corso...</p>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-card/10">
               <div
                 className="h-full rounded-full bg-purple-500 transition-all duration-300"
                 style={{ width: `${progress}%` }}

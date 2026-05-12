@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -25,7 +26,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof
   Chunking: { label: 'Suddivisione', color: 'text-blue-500 bg-blue-500/10', icon: Loader2 },
   Embedding: { label: 'Embedding', color: 'text-indigo-500 bg-indigo-500/10', icon: Loader2 },
   Failed: { label: 'Errore', color: 'text-red-500 bg-red-500/10', icon: AlertCircle },
-  Pending: { label: 'In attesa', color: 'text-slate-400 bg-slate-400/10', icon: Loader2 },
+  Pending: { label: 'In attesa', color: 'text-muted-foreground bg-muted-foreground/10', icon: Loader2 },
 };
 
 function getStatusConfig(status: string) {
@@ -42,7 +43,7 @@ export function PdfList({ documents, loading, className }: PdfListProps) {
   if (loading) {
     return (
       <div
-        className={cn('flex items-center gap-2 py-4 text-sm text-slate-400', className)}
+        className={cn('flex items-center gap-2 py-4 text-sm text-muted-foreground', className)}
         data-testid="pdf-list-loading"
       >
         <Loader2 className="h-4 w-4 animate-spin" />
@@ -54,7 +55,7 @@ export function PdfList({ documents, loading, className }: PdfListProps) {
   if (documents.length === 0) {
     return (
       <div
-        className={cn('py-4 text-center text-sm text-slate-500', className)}
+        className={cn('py-4 text-center text-sm text-muted-foreground', className)}
         data-testid="pdf-list-empty"
       >
         Nessun PDF disponibile per questo gioco.
@@ -78,13 +79,13 @@ export function PdfList({ documents, loading, className }: PdfListProps) {
         return (
           <div
             key={doc.id}
-            className="flex items-center gap-3 rounded-lg border border-slate-700/50 bg-slate-800/50 px-3 py-2.5"
+            className="flex items-center gap-3 rounded-lg border border-border/50 bg-card px-3 py-2.5"
             data-testid={`pdf-item-${doc.id}`}
           >
-            <FileText className="h-5 w-5 shrink-0 text-slate-400" />
+            <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-slate-200">{doc.fileName}</p>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 {doc.pageCount && <span>{doc.pageCount} pagine</span>}
                 <span>{formatFileSize(doc.fileSizeBytes)}</span>
               </div>

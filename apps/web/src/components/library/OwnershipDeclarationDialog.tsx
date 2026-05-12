@@ -74,7 +74,7 @@ export function OwnershipDeclarationDialog({
         if (!isLoading) onOpenChange(v);
       }}
     >
-      <AlertDialogContent className="bg-white/70 backdrop-blur-md">
+      <AlertDialogContent className="bg-card/70 backdrop-blur-md">
         <AlertDialogHeader>
           <AlertDialogTitle className="font-quicksand text-lg">
             Possiedi {gameName}?

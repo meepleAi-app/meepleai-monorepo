@@ -61,7 +61,7 @@ function KbDocumentList({ gameId }: { gameId: string }) {
     return (
       <div className="space-y-2">
         {[1, 2, 3].map(i => (
-          <Skeleton key={i} className="h-10 w-full bg-white/10 rounded" />
+          <Skeleton key={i} className="h-10 w-full bg-card/10 rounded" />
         ))}
       </div>
     );
@@ -101,7 +101,7 @@ function DrawerContentRenderer({ content }: { content: DrawerContent }) {
   switch (content.type) {
     case 'chat':
       return content.threadId ? (
-        <Suspense fallback={<Skeleton className="h-64 w-full bg-white/10 rounded" />}>
+        <Suspense fallback={<Skeleton className="h-64 w-full bg-card/10 rounded" />}>
           <EmbeddedChatView threadId={content.threadId} agentId={content.agentId} gameId="" />
         </Suspense>
       ) : (

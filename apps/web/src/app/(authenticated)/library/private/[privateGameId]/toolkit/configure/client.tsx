@@ -149,9 +149,9 @@ function ToolkitPreview({ toolkit }: { toolkit: GameToolkitDto | null }) {
   return (
     <section
       aria-label="Anteprima tool rail"
-      className="rounded-lg border border-stone-200 dark:border-stone-700 p-4 bg-stone-50 dark:bg-stone-900"
+      className="rounded-lg border border-border p-4 bg-muted"
     >
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-3">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
         Anteprima — Tool Rail
       </h3>
       <div className="flex flex-wrap gap-2">
@@ -174,7 +174,7 @@ function ToolkitPreview({ toolkit }: { toolkit: GameToolkitDto | null }) {
         ))}
       </div>
       {visibleBaseToolIds.size === 0 && customTools.length === 0 && (
-        <p className="text-xs text-stone-400">Nessun tool visibile.</p>
+        <p className="text-xs text-muted-foreground">Nessun tool visibile.</p>
       )}
     </section>
   );
@@ -185,10 +185,10 @@ function ToolkitPreview({ toolkit }: { toolkit: GameToolkitDto | null }) {
 function AccessDeniedPanel({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
-      <Lock className="w-10 h-10 text-stone-400" />
+      <Lock className="w-10 h-10 text-muted-foreground" />
       <div>
-        <p className="text-base font-semibold text-stone-700 dark:text-stone-300">Accesso negato</p>
-        <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
+        <p className="text-base font-semibold text-foreground">Accesso negato</p>
+        <p className="text-sm text-muted-foreground mt-1">
           Non sei il proprietario di questo gioco.
         </p>
       </div>
@@ -224,7 +224,7 @@ function CreateToolkitPanel({
 
   return (
     <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
-      <p className="text-stone-500 dark:text-stone-400 text-sm">
+      <p className="text-muted-foreground text-sm">
         Nessun toolkit configurato per questo gioco.
       </p>
       <form onSubmit={e => void handleSubmit(e)} className="flex gap-2 w-full max-w-sm">
@@ -300,7 +300,7 @@ function AddDiceToolForm({
   return (
     <form
       onSubmit={e => void handleSubmit(e)}
-      className="mt-2 p-3 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900 space-y-2"
+      className="mt-2 p-3 rounded-lg border border-border bg-muted space-y-2"
     >
       <div className="grid grid-cols-2 gap-2">
         <div>
@@ -399,7 +399,7 @@ function AddCardToolForm({
   return (
     <form
       onSubmit={e => void handleSubmit(e)}
-      className="mt-2 p-3 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900 space-y-2"
+      className="mt-2 p-3 rounded-lg border border-border bg-muted space-y-2"
     >
       <div className="grid grid-cols-2 gap-2">
         <div>
@@ -500,7 +500,7 @@ function AddTimerToolForm({
   return (
     <form
       onSubmit={e => void handleSubmit(e)}
-      className="mt-2 p-3 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900 space-y-2"
+      className="mt-2 p-3 rounded-lg border border-border bg-muted space-y-2"
     >
       <div className="grid grid-cols-2 gap-2">
         <div>
@@ -603,7 +603,7 @@ function AddCounterToolForm({
   return (
     <form
       onSubmit={e => void handleSubmit(e)}
-      className="mt-2 p-3 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900 space-y-2"
+      className="mt-2 p-3 rounded-lg border border-border bg-muted space-y-2"
     >
       <div className="grid grid-cols-2 gap-2">
         <div className="col-span-2">
@@ -685,7 +685,7 @@ function ToolListItem({
   onRemove: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between py-1.5 px-2 rounded bg-stone-100 dark:bg-stone-800">
+    <div className="flex items-center justify-between py-1.5 px-2 rounded bg-muted">
       <div className="flex items-center gap-2 text-sm">
         {icon}
         <span>{label}</span>
@@ -878,18 +878,18 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
         <Button variant="ghost" size="sm" onClick={handleBack} aria-label="Torna ai miei giochi">
           <ChevronLeft className="w-4 h-4" />I miei giochi
         </Button>
-        <h1 className="text-xl font-bold text-stone-900 dark:text-stone-100">
+        <h1 className="text-xl font-bold text-foreground">
           Toolkit Configurator
         </h1>
         {toolkit && (
-          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-400">
+          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-muted dark:bg-card text-muted-foreground">
             v{toolkit.version}
           </span>
         )}
       </div>
       {/* No Publish button for user configurator — toolkit is private and auto-saves */}
       {isSaving && (
-        <span className="flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400">
+        <span className="flex items-center gap-1 text-xs text-muted-foreground">
           <Loader2 className="w-3 h-3 animate-spin" />
           Salvataggio…
         </span>
@@ -955,9 +955,9 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
         {/* LEFT: Override base tools */}
         <section
           aria-label="Override tool base"
-          className="rounded-lg border border-stone-200 dark:border-stone-700 p-4 space-y-1"
+          className="rounded-lg border border-border p-4 space-y-1"
         >
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 mb-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
             Override Tool Base
           </h2>
           <OverrideToggle
@@ -978,7 +978,7 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
             disabled={isSaving}
             onToggle={v => void handleToggle('overridesDiceSet', v)}
           />
-          <p className="text-xs text-stone-400 dark:text-stone-500 pt-2">
+          <p className="text-xs text-muted-foreground pt-2">
             La Lavagna non è mai disattivabile.
           </p>
         </section>
@@ -986,9 +986,9 @@ function UserToolkitConfiguratorContent({ privateGameId }: { privateGameId: stri
         {/* RIGHT: Extra tools */}
         <section
           aria-label="Tool extra"
-          className="rounded-lg border border-stone-200 dark:border-stone-700 p-4 space-y-4"
+          className="rounded-lg border border-border p-4 space-y-4"
         >
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Tool Extra
           </h2>
 

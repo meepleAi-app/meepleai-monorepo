@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * GameSearchResults - Search results list for game source step.
  * Issue #4819: AddGameSheet Step 1 - Game Source
@@ -48,10 +49,10 @@ export function GameSearchResults({ results, loading, onSelect }: GameSearchResu
           key={game.id}
           type="button"
           onClick={() => onSelect(game)}
-          className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800/60 transition-colors text-left"
+          className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-card transition-colors text-left"
         >
           {/* Thumbnail */}
-          <div className="w-12 h-12 rounded-lg bg-slate-800 overflow-hidden flex-shrink-0">
+          <div className="w-12 h-12 rounded-lg bg-card overflow-hidden flex-shrink-0">
             {game.thumbnailUrl ? (
               <img
                 src={game.thumbnailUrl}
@@ -75,7 +76,7 @@ export function GameSearchResults({ results, loading, onSelect }: GameSearchResu
                 {game.source === 'catalog' ? 'Catalogo' : 'Importato'}
               </Badge>
             </div>
-            <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+            <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
               {game.yearPublished && game.yearPublished > 0 && <span>{game.yearPublished}</span>}
               {game.minPlayers && game.maxPlayers && game.minPlayers > 0 && game.maxPlayers > 0 && (
                 <>

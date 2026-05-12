@@ -34,8 +34,8 @@ export function LibraryQuickStats({ className }: LibraryQuickStatsProps) {
     <div
       className={cn(
         'flex items-center gap-4 rounded-xl px-4 py-2.5',
-        'bg-white/50 dark:bg-card/50 backdrop-blur-sm',
-        'border border-white/20 dark:border-border/30',
+        'bg-card/50 dark:bg-card/50 backdrop-blur-sm',
+        'border border-border dark:border-border/30',
         'text-sm text-muted-foreground',
         className
       )}

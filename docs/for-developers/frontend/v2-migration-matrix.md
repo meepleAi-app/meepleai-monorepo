@@ -11,8 +11,9 @@
 > Pre-requisite for Phase 1+2 of the v2 design migration ([spec](../specs/2026-04-26-v2-design-migration.md), section 3.3).
 > **Tier classification added 2026-05-04** post spec-panel critique Wave C.1 fail RCA — see [Tier classification](#tier-classification) section.
 
-This matrix is the **single source of truth** for the ~80 v2 feature components that the
-SP4 wave 1 + 2 + 3 + 4 mockups introduced and that do not yet exist in the codebase. Each
+This matrix is the **single source of truth** for the ~83 v2 feature components that the
+SP4 wave 1 + 2 + 3 + 4 mockups + SP6 Nanolith gap-coverage introduced and that do not yet
+exist in the codebase. Each
 row binds a mockup definition to a target component path, route, and acceptance criteria
 so that downstream PRs can pick up an entry and turn it from `pending` → `done` without
 ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch strategy.
@@ -32,22 +33,29 @@ ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch st
 > · G2 game-night-detail) and SP5 admin batch tracked separately — pending Claude Design
 > production resumption (post 2026-05-10).
 
-> **Updated 2026-05-12** (Nanolith gap-coverage mockups post-storyboard audit): added
+> **Updated 2026-05-12** (Nanolith gap-coverage mockups post-storyboard audit, PR #1056): added
 > 3 new components across 1 new route + 1 existing route extension + 1 cross-cutting —
-> `EncounterCheatsheetView` (new route `/library/[gameId]/play/[campaignId]/encounter`,
-> Tier S, BLOCKER §9.1), `LibroGameOnboardingPanel` (existing route `/library/[gameId]`
-> libro variant prereq gate), `GamebookErrorBanner` (cross-cutting chat/translate/encounter).
+> `EncounterCheatsheetView` (Tier S, new route `/library/[gameId]/play/[campaignId]/encounter`,
+> BLOCKER §9.1), `LibroGameOnboardingPanel` (**Tier L**, existing route `/library/[gameId]`
+> libro variant prereq gate — Phase 0.5 sub-hook contract OBBLIGATORIA, 3 hook indipendenti),
+> `GamebookErrorBanner` (Tier S primitive-like, cross-cutting chat/translate/encounter).
 > Total grew 80 → 83. All `pending` — gated by Design System De-versioning FREEZE
 > (umbrella #1023) until Stage 2 path-migration lands. Target path
 > `apps/web/src/components/features/gamebook/` (NON `components/v2/gamebook/` per nuove
 > implementazioni post-PR #1025). Storyboard iframe references added to
 > `nanolith-game-night-storyboard.html` (step 00 + step 11a + step E4).
 
+> **Updated 2026-05-12 (follow-up cleanup)** post code-review PR #1056: aggiornati
+> count references `~80 → ~83` (intro paragraph L14) e `In scope: 80 → 83` (Scope L48-50)
+> per allineare con totale post gap-coverage. Reclassificato `LibroGameOnboardingPanel`
+> da Tier S blanket erroneo a Tier L (3 hook indipendenti). `MOCKUPS_INDEX.md` synced
+> (page-mock 44→46, component-mock 14→15, Total 68→71).
+
 ## Scope and ground rules
 
-- **In scope**: 80 feature components extracted from `admin-mockups/design_files/sp4-*.jsx`
-  wave 1 + 2 + 3 + 4 partial (16 mockups). Stubs live under
-  `apps/web/src/components/features/<feature>/`.
+- **In scope**: 83 feature components extracted from `admin-mockups/design_files/sp4-*.jsx`
+  wave 1 + 2 + 3 + 4 partial (16 mockups) + SP6 Nanolith gap-coverage (3 mockups).
+  Stubs live under `apps/web/src/components/features/<feature>/`.
 - **Out of scope**: existing v2 primitives at `apps/web/src/components/ui/` (auth-card,
   btn, divider, drawer, entity-card, entity-chip, entity-pip, faq, hero-gradient,
   input-field, invites, join, notification-card, oauth-buttons, pricing-card, pwd-input,
@@ -372,19 +380,24 @@ the PR review.
 > precedenti che puntano a `components/v2/gamebook/` (LibroGameDetailView,
 > CampaignSetupDrawer) rimangono in quel path perché pre-FREEZE shipped.
 
-### Libro-game gap-coverage — 3 components — **Tier S**
+### Libro-game gap-coverage — 3 components — **Mixed Tier (S + L + S-primitive)**
 
-| Mockup | Component | Path | Route | Status | PR | AC |
-|--------|-----------|------|-------|--------|----|----|
-| `nanolith-runthrough-encounter-cheatsheet.html` | `EncounterCheatsheetView` | `apps/web/src/components/features/gamebook/EncounterCheatsheetView.tsx` | `/library/[gameId]/play/[campaignId]/encounter` | pending | — | T A M V |
-| `nanolith-runthrough-game-onboarding.html` | `LibroGameOnboardingPanel` | `apps/web/src/components/features/gamebook/LibroGameOnboardingPanel.tsx` | `/library/[gameId]` (libro variant — prereq gate) | pending | — | T A M V |
-| `nanolith-runthrough-error-states.html` | `GamebookErrorBanner` | `apps/web/src/components/features/gamebook/GamebookErrorBanner.tsx` | cross-cutting (chat, translate, encounter) | pending | — | T A V |
+> **Tier note** (refined post code-review PR #1056): originale section header "Tier S" era
+> blanket-incorrect. `LibroGameOnboardingPanel` ha 3 hook indipendenti
+> (`useGamePrerequisites` + `usePdfUpload` + `useKbIndexing`) → per la Tier table del documento
+> richiede **Tier L** + Phase 0.5 sub-hook contract OBBLIGATORIA (vedi linea 83). Reclassificato.
+
+| Mockup | Component | Tier | Path | Route | Status | PR | AC |
+|--------|-----------|------|------|-------|--------|----|----|
+| `nanolith-runthrough-encounter-cheatsheet.html` | `EncounterCheatsheetView` | **S** | `apps/web/src/components/features/gamebook/EncounterCheatsheetView.tsx` | `/library/[gameId]/play/[campaignId]/encounter` | pending | — | T A M V |
+| `nanolith-runthrough-game-onboarding.html` | `LibroGameOnboardingPanel` | **L** ⚠️ | `apps/web/src/components/features/gamebook/LibroGameOnboardingPanel.tsx` | `/library/[gameId]` (libro variant — prereq gate) | pending | — | T A M V |
+| `nanolith-runthrough-error-states.html` | `GamebookErrorBanner` | **S** (primitive-like) | `apps/web/src/components/features/gamebook/GamebookErrorBanner.tsx` | cross-cutting (chat, translate, encounter) | pending | — | T A V |
 
 **Stato di copertura** (4 stati ciascuno, mobile + desktop parity):
 
-- **`EncounterCheatsheetView`** (BLOCKER): entry-from-story / photo-segmenting / cheatsheet-rendered / resolved-back. Ephemeral card (no long-term cache, §9.1 spec). Single hook `useEncounterParse({photoId, paragraphRef})` + linear FSM 5-state.
-- **`LibroGameOnboardingPanel`** (NICE-TO-HAVE): prereq-missing / pdf-uploading / kb-indexing / ready. Replace della CTA "Avvia libro game" quando prerequisiti non soddisfatti. Composition: drop-zone + upload-row + index-detail + step-list primitives. Multi-hook (`useGamePrerequisites` + `usePdfUpload` + `useKbIndexing`).
-- **`GamebookErrorBanner`** (NICE-TO-HAVE): stream-timeout / ocr-fail / llm-503 / segmentation-fail. Trasversale alle 3 route gamebook (chat, translate, encounter). Cost-note "non addebitato" + ≥2 azioni di recupero + telemetry dogfood. Componente "primitive-like" candidato a `components/ui/error-banner/` se generalizzato post-Iter-1.
+- **`EncounterCheatsheetView`** (BLOCKER · Tier S): entry-from-story / photo-segmenting / cheatsheet-rendered / resolved-back. Ephemeral card (no long-term cache, §9.1 spec). Single hook `useEncounterParse({photoId, paragraphRef})` + linear FSM 5-state. Bundle budget < +50 KB.
+- **`LibroGameOnboardingPanel`** (NICE-TO-HAVE · Tier L): prereq-missing / pdf-uploading / kb-indexing / ready. Replace della CTA "Avvia libro game" quando prerequisiti non soddisfatti. Composition: drop-zone + upload-row + index-detail + step-list primitives. Multi-hook ≥3 (`useGamePrerequisites` + `usePdfUpload` + `useKbIndexing`) → Phase 0.5 sub-hook contract OBBLIGATORIA prima di implementation (vedi `contracts/library-id-onboarding-hooks.md` TBD). Bundle budget < +120 KB.
+- **`GamebookErrorBanner`** (NICE-TO-HAVE · Tier S primitive-like): stream-timeout / ocr-fail / llm-503 / segmentation-fail. Trasversale alle 3 route gamebook (chat, translate, encounter). Cost-note "non addebitato" + ≥2 azioni di recupero + telemetry dogfood. Componente "primitive-like" candidato a `components/ui/error-banner/` se generalizzato post-Iter-1.
 
 ## Stub format (informational)
 

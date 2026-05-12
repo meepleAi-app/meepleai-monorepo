@@ -114,7 +114,10 @@
 | `nanolith-nav-bottom-mobile.html` | component-mock | Mobile bottom-nav primitive (global) |
 | `nanolith-nav-chat-panel.html` | component-mock | Chat slide-over panel (used globally via `useChatPanel`) |
 | `nanolith-nav-topbar.html` | component-mock | Top-bar primitive (global) |
+| `nanolith-runthrough-encounter-cheatsheet.html` | page-mock | `/library/[gameId]/play/[campaignId]/encounter` (gap-coverage 2026-05-12, PR #1056) |
+| `nanolith-runthrough-error-states.html` | component-mock | Trasversale: chat (N1/N2) · translate (N3) · encounter — stream-timeout / OCR-fail / LLM-503 / segmentation-fail (PR #1056) |
 | `nanolith-runthrough-game-detail.html` | page-mock | `/library/[gameId]` (libro variant, PR #1037) |
+| `nanolith-runthrough-game-onboarding.html` | page-mock | `/library/[gameId]` (libro variant — prereq gate, gap-coverage 2026-05-12, PR #1056) |
 | `nanolith-runthrough-glossary-editor.html` | component-mock | Glossary editor (mirror of sp6 jsx) |
 | `nanolith-runthrough-library-search.html` | component-mock | In-library search overlay (not page-level) |
 | `nanolith-runthrough-play-session.html` | page-mock | `/library/[gameId]/play/[campaignId]` |
@@ -129,10 +132,10 @@
 
 | Type | Count |
 |------|------:|
-| page-mock | 44 |
-| component-mock | 14 |
+| page-mock | 46 |
+| component-mock | 15 |
 | dev-fixture | 10 |
-| **Total** | **68** |
+| **Total** | **71** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

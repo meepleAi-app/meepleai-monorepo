@@ -97,7 +97,7 @@ export function QuotaWidget({
       <div className="flex items-center justify-between gap-3">
         <h2
           data-slot="quota-widget-title"
-          className="flex items-center gap-1.5 text-sm font-semibold text-slate-900"
+          className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
         >
           <span aria-hidden="true">📊</span>
           <span>{labels.title}</span>
@@ -117,7 +117,7 @@ export function QuotaWidget({
       <div
         data-slot="quota-widget-bar"
         aria-hidden="true"
-        className="h-2 overflow-hidden rounded-full bg-slate-200"
+        className="h-2 overflow-hidden rounded-full bg-muted"
       >
         <div
           data-slot="quota-widget-fill"
@@ -131,7 +131,7 @@ export function QuotaWidget({
 
       {/* Footer row — reset date + upgrade CTA */}
       <div className="flex items-center justify-between gap-2">
-        <p className="font-mono text-[10px] uppercase tracking-wide text-slate-700">
+        <p className="font-mono text-[10px] uppercase tracking-wide text-foreground">
           {labels.resetIn}
         </p>
         {showUpgrade && onUpgradeClick && (

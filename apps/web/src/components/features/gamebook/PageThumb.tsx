@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * PageThumb — SP6 Phase C.2.B v2 component (Issue #789).
  *
@@ -122,7 +123,7 @@ export function PageThumb({
       className={clsx(
         'relative flex flex-col overflow-hidden rounded-md border bg-card',
         'transition-colors motion-reduce:transition-none',
-        retake ? 'border-entity-event' : 'border-slate-200',
+        retake ? 'border-entity-event' : 'border-border',
         className
       )}
     >
@@ -144,7 +145,7 @@ export function PageThumb({
             data-slot="page-thumb-spinner"
             aria-hidden="true"
             className={clsx(
-              'h-3.5 w-3.5 rounded-full border-[2px] border-slate-300 [border-top-color:var(--color-entity-toolkit)]',
+              'h-3.5 w-3.5 rounded-full border-[2px] border-border [border-top-color:var(--color-entity-toolkit)]',
               'motion-safe:animate-spin motion-reduce:animate-none'
             )}
           />
@@ -158,7 +159,7 @@ export function PageThumb({
       >
         <span
           data-slot="page-thumb-num"
-          className="font-mono text-[10px] font-bold leading-none text-slate-700 tabular-nums"
+          className="font-mono text-[10px] font-bold leading-none text-foreground tabular-nums"
         >
           {pageNumber}
         </span>
@@ -180,7 +181,7 @@ export function PageThumb({
             'cursor-pointer border-none px-1 py-1',
             'text-[9px] font-bold uppercase tracking-wider text-white',
             'transition-opacity motion-reduce:transition-none',
-            'hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80'
+            'hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30'
           )}
           style={{ backgroundColor: 'var(--color-entity-event)' }}
         >

@@ -101,7 +101,7 @@ export function NoResultsPanel({
       {/* Description */}
       <p
         data-slot="no-results-panel-description"
-        className="max-w-md text-sm leading-relaxed text-slate-700"
+        className="max-w-md text-sm leading-relaxed text-foreground"
       >
         {labels.description}
       </p>

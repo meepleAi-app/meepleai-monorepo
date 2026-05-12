@@ -321,7 +321,7 @@ export function ChatMessageList({
       {/* Streaming response bubble */}
       {streamState.isStreaming && streamState.currentAnswer && (
         <div
-          className="max-w-[85%] mr-auto rounded-2xl px-4 py-3 bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50"
+          className="max-w-[85%] mr-auto rounded-2xl px-4 py-3 bg-card/70 dark:bg-card/70 backdrop-blur-md border border-border/50"
           data-testid="message-streaming"
           role="status"
           aria-live="polite"

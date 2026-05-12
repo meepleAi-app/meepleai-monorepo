@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import { AlertCircle, FileQuestion, Loader2 } from 'lucide-react';
@@ -46,7 +47,7 @@ export function AiLoadingState({
           <button
             type="button"
             onClick={onRetry}
-            className="self-start rounded-md bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20 transition-colors"
+            className="self-start rounded-md bg-card/10 px-3 py-1.5 text-sm text-white hover:bg-card/20 transition-colors"
           >
             Riprova
           </button>

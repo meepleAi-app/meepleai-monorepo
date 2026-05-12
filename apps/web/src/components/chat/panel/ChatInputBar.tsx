@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import { useState, useRef, type KeyboardEvent } from 'react';
@@ -84,7 +85,7 @@ export function ChatInputBar({
         </div>
       )}
 
-      <div className="flex items-end gap-2.5 rounded-2xl border border-[var(--nh-border-default)] bg-[var(--nh-bg-elevated)] py-2 pl-4 pr-2 shadow-[var(--shadow-warm-sm)] transition-all focus-within:border-[hsla(220,80%,55%,0.3)] focus-within:bg-white focus-within:shadow-[0_0_0_3px_hsla(220,80%,55%,0.1),var(--shadow-warm-md)]">
+      <div className="flex items-end gap-2.5 rounded-2xl border border-[var(--nh-border-default)] bg-[var(--nh-bg-elevated)] py-2 pl-4 pr-2 shadow-[var(--shadow-warm-sm)] transition-all focus-within:border-[hsla(220,80%,55%,0.3)] focus-within:bg-card focus-within:shadow-[0_0_0_3px_hsla(220,80%,55%,0.1),var(--shadow-warm-md)]">
         <textarea
           value={value}
           onChange={e => setValue(e.target.value)}

@@ -47,7 +47,7 @@ export function AgentSwitchDialog({
         </button>
         <button
           onClick={onCancel}
-          className="px-3 py-1.5 text-xs font-medium bg-white dark:bg-card text-muted-foreground rounded-md border hover:bg-muted/50 transition-colors"
+          className="px-3 py-1.5 text-xs font-medium bg-card text-muted-foreground rounded-md border hover:bg-muted/50 transition-colors"
           data-testid="agent-switch-cancel-btn"
         >
           Annulla

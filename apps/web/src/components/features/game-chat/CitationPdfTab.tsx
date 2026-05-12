@@ -195,7 +195,7 @@ function PdfRenderer({ documentId, initialPage, className }: PdfRendererProps): 
       <div
         onContextMenu={e => e.preventDefault()}
         className={clsx(
-          'relative overflow-hidden rounded-md border border-border bg-white',
+          'relative overflow-hidden rounded-md border border-border bg-card',
           'select-none [&_canvas]:max-w-full',
           'min-h-[400px]'
         )}

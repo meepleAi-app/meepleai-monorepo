@@ -137,7 +137,7 @@ export function EmbeddedChatView({
               'max-w-[90%] rounded-2xl px-3 py-2',
               msg.role === 'user'
                 ? 'ml-auto bg-amber-500 text-white'
-                : 'mr-auto bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50'
+                : 'mr-auto bg-card/70 dark:bg-card/70 backdrop-blur-md border border-border/50'
             )}
             data-testid={`message-${msg.role}`}
           >
@@ -159,7 +159,7 @@ export function EmbeddedChatView({
         {/* Streaming response bubble */}
         {streamState.isStreaming && streamState.currentAnswer && (
           <div
-            className="max-w-[90%] mr-auto rounded-2xl px-3 py-2 bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50"
+            className="max-w-[90%] mr-auto rounded-2xl px-3 py-2 bg-card/70 dark:bg-card/70 backdrop-blur-md border border-border/50"
             data-testid="message-streaming"
           >
             <p className="text-sm whitespace-pre-wrap font-nunito">{streamState.currentAnswer}</p>
@@ -184,7 +184,7 @@ export function EmbeddedChatView({
             disabled={streamState.isStreaming}
             className={cn(
               'flex-1 rounded-xl border border-border/50 px-3 py-2',
-              'bg-white/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito',
+              'bg-card/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito',
               'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/40',
               'disabled:opacity-50 disabled:cursor-not-allowed'
             )}

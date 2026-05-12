@@ -167,7 +167,7 @@ export function VoiceTranscriptOverlay({
             data-testid="voice-transcript-textarea"
             className={cn(
               'w-full resize-none rounded-lg border border-amber-200/50 dark:border-amber-800/50',
-              'bg-white/60 dark:bg-white/5 backdrop-blur-sm',
+              'bg-card/60 dark:bg-card/5 backdrop-blur-sm',
               'px-3 py-2 text-sm text-foreground',
               'focus:outline-none focus:ring-2 focus:ring-amber-400/50',
               'placeholder:text-muted-foreground'

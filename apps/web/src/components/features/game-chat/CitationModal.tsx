@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * CitationModal — preview citation con tab Snippet (default) + PDF originale (lazy).
  *
@@ -77,7 +78,7 @@ export function CitationModal({
       data-slot="citation-modal"
       className={clsx(
         'fixed inset-0 z-50 flex items-center justify-center',
-        'bg-black/50 backdrop-blur-sm'
+        'bg-foreground/50 backdrop-blur-sm'
       )}
       onClick={onClose}
     >

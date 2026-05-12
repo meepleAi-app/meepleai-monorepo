@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * GamebookHero — SP6 Phase B Task 2 v2 component (Issue #788).
  *
@@ -75,7 +76,7 @@ export function GamebookHero({
           >
             {labels.title}
           </h1>
-          <p className="text-sm text-slate-700">{labels.subtitle}</p>
+          <p className="text-sm text-foreground">{labels.subtitle}</p>
         </div>
 
         {/* CTA — full-width mobile, inline desktop */}
@@ -129,7 +130,7 @@ interface KpiTileProps {
 function KpiTile({ slot, value, label }: KpiTileProps): ReactElement {
   return (
     <div data-slot={slot} className="flex flex-col gap-1">
-      <dt className="order-2 font-mono text-[10px] font-bold uppercase tracking-wide text-slate-700">
+      <dt className="order-2 font-mono text-[10px] font-bold uppercase tracking-wide text-foreground">
         {label}
       </dt>
       <dd className="order-1 text-2xl font-extrabold leading-none tabular-nums text-entity-game">

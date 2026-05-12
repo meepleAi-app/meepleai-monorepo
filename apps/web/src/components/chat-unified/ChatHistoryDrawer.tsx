@@ -364,7 +364,7 @@ export function ChatHistoryDrawer({
               placeholder="Cerca conversazioni..."
               className={cn(
                 'w-full pl-9 pr-8 py-2 rounded-lg border border-border/50',
-                'bg-white/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito',
+                'bg-card/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito',
                 'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/40'
               )}
               data-testid="history-search-input"

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * TranslateParagraphDemo — DEMO-ONLY component (Path 5a / Nanolith demo).
  *
@@ -43,7 +44,7 @@ export interface TranslateParagraphDemoProps {
 
 function CitationItem({ citation }: { citation: ParagraphCitation }): ReactElement {
   return (
-    <li className="text-sm text-slate-700">
+    <li className="text-sm text-foreground">
       <span className="font-medium capitalize">{citation.docType}</span>
       {', p. '}
       {citation.pageNumber}
@@ -91,17 +92,17 @@ export function TranslateParagraphDemo({
     <div
       data-slot="translate-paragraph-demo"
       className={clsx(
-        'flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6',
+        'flex flex-col gap-6 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6',
         className
       )}
     >
       {/* Header */}
       <div className="flex flex-col gap-1">
-        <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           DEMO — Traduzione Paragrafo
         </p>
-        <h2 className="text-xl font-semibold text-slate-900">Traduci paragrafo</h2>
-        <p className="text-sm text-slate-600">
+        <h2 className="text-xl font-semibold text-foreground">Traduci paragrafo</h2>
+        <p className="text-sm text-muted-foreground">
           Inserisci il numero del paragrafo per ottenere la traduzione italiana.
         </p>
       </div>
@@ -115,7 +116,7 @@ export function TranslateParagraphDemo({
       >
         {/* Paragraph ref input */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="paragraphRef" className="text-sm font-medium text-slate-700">
+          <label htmlFor="paragraphRef" className="text-sm font-medium text-foreground">
             Numero paragrafo
           </label>
           <input
@@ -128,9 +129,9 @@ export function TranslateParagraphDemo({
             required
             disabled={isStreaming}
             className={clsx(
-              'h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900',
-              'placeholder:text-slate-400',
-              'focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500',
+              'h-10 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground',
+              'placeholder:text-muted-foreground',
+              'focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-border',
               'disabled:cursor-not-allowed disabled:opacity-50'
             )}
           />
@@ -138,7 +139,7 @@ export function TranslateParagraphDemo({
 
         {/* Chapter context input (optional) */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="chapterContext" className="text-sm font-medium text-slate-700">
+          <label htmlFor="chapterContext" className="text-sm font-medium text-foreground">
             Capitolo (opzionale)
           </label>
           <input
@@ -149,9 +150,9 @@ export function TranslateParagraphDemo({
             placeholder="es. Il Mercato"
             disabled={isStreaming}
             className={clsx(
-              'h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900',
-              'placeholder:text-slate-400',
-              'focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500',
+              'h-10 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground',
+              'placeholder:text-muted-foreground',
+              'focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-border',
               'disabled:cursor-not-allowed disabled:opacity-50'
             )}
           />
@@ -163,8 +164,8 @@ export function TranslateParagraphDemo({
           disabled={isStreaming}
           className={clsx(
             'h-10 rounded-full px-5 text-sm font-medium',
-            'bg-slate-900 text-white shadow-sm transition-colors',
-            'hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500',
+            'bg-card text-white shadow-sm transition-colors',
+            'hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500',
             'disabled:cursor-not-allowed disabled:opacity-50'
           )}
         >
@@ -175,27 +176,27 @@ export function TranslateParagraphDemo({
       {/* Translation output */}
       {(translation || isStreaming) && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Traduzione</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Traduzione</p>
           <div
             data-slot="translation-output"
             aria-live="polite"
             aria-busy={isStreaming}
             aria-label="Output traduzione"
             className={clsx(
-              'min-h-[80px] rounded-xl border border-slate-200 bg-slate-50 p-4',
-              'text-sm leading-relaxed text-slate-800',
+              'min-h-[80px] rounded-xl border border-border bg-muted p-4',
+              'text-sm leading-relaxed text-foreground',
               isStreaming && 'animate-pulse'
             )}
           >
-            {translation || <span className="text-slate-400">Traduzione in corso...</span>}
+            {translation || <span className="text-muted-foreground">Traduzione in corso...</span>}
           </div>
         </div>
       )}
 
       {/* Citations panel */}
       {citations.length > 0 && (
-        <details className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <summary className="cursor-pointer text-sm font-medium text-slate-700">
+        <details className="rounded-xl border border-border bg-muted px-4 py-3">
+          <summary className="cursor-pointer text-sm font-medium text-foreground">
             Fonti ({citations.length})
           </summary>
           <ul data-slot="translation-citations" className="mt-3 flex flex-col gap-1 pl-2">

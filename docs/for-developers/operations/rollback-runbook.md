@@ -37,8 +37,9 @@
 │  ROLLBACK IN 4 STEPS (≤ 10 min target RTO)                      │
 ├─────────────────────────────────────────────────────────────────┤
 │  1. IDENTIFY previous-good tag                                   │
-│     gh api /repos/meepleAi-app/meepleai-monorepo/packages \      │
-│        /container/api/versions --jq '.[1].metadata.container.tags[0]' │
+│     gh api /orgs/meepleAi-app/packages/container/\               │
+│        meepleai-monorepo%2Fapi/versions \                        │
+│        --jq '.[1].metadata.container.tags[0]'                    │
 │                                                                  │
 │  2. (Optional) DRAIN Hangfire if migrations were applied         │
 │     ssh staging "docker exec meepleai-api dotnet hangfire-stop"  │
@@ -50,7 +51,7 @@
 │        -f restore_db=false                                       │
 │                                                                  │
 │     OR via wrapper: bash infra/scripts/rollback-trigger.sh \     │
-│                       prod <previous-good-tag>                   │
+│                       production <previous-good-tag>             │
 │                                                                  │
 │  4. VALIDATE (5 min budget)                                      │
 │     - Health: curl -sf https://meepleai.app/health               │

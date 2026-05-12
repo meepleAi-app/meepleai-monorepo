@@ -86,6 +86,8 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 
 ---
 
-**Last Updated**: 2026-04-05
-**Total ADRs**: 24 (22 Accepted/Implemented, 1 Rejected, 1 Deprecated)
+**Last Updated**: 2026-05-12
+**Total ADRs**: 25 (23 Accepted/Implemented, 1 Rejected, 1 Deprecated)
 **Archived**: 12 obsolete ADRs removed (see git history)
+
+> Note: the count reflects ADRs **listed in the tables above**. The on-disk directory currently contains a handful of additional ADRs (051, 052, 053) whose README rows were not added in their respective PRs — that pre-existing drift is tracked outside this file and not adjusted by ADR-054's PR to keep its scope surgical.

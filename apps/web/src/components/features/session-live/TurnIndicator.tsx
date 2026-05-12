@@ -63,7 +63,7 @@ export function TurnIndicator({
         <span
           className={[
             'font-medium',
-            isMyTurn ? 'text-emerald-400' : 'text-slate-400',
+            isMyTurn ? 'text-emerald-400' : 'text-muted-foreground',
             compact ? 'text-xs' : 'text-xs',
           ].join(' ')}
         >
@@ -78,7 +78,7 @@ export function TurnIndicator({
         aria-valuemin={1}
         aria-valuemax={total}
         aria-label={ariaLabel}
-        className="h-1.5 w-full overflow-hidden rounded-full bg-slate-700"
+        className="h-1.5 w-full overflow-hidden rounded-full bg-card"
       >
         <div
           // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: session hue in Tailwind arbitrary class (progress bar); no dark-bg light entity token exists
@@ -90,7 +90,7 @@ export function TurnIndicator({
 
       {/* Active player */}
       {!compact && activePlayerName && (
-        <p className="truncate text-xs text-slate-400" aria-label={playerDisplay}>
+        <p className="truncate text-xs text-muted-foreground" aria-label={playerDisplay}>
           {playerDisplay}
         </p>
       )}

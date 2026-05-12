@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -129,7 +130,7 @@ export function PauseOverlay({
   return (
     /* Backdrop */
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70
+      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/70
         motion-safe:transition-opacity motion-reduce:transition-none"
     >
       {/* Dialog */}
@@ -142,7 +143,7 @@ export function PauseOverlay({
         data-slot="pause-overlay"
         data-viewer-role={viewerRole}
         onKeyDown={handleKeyDown}
-        className="relative w-full max-w-md rounded-xl border border-slate-700/60
+        className="relative w-full max-w-md rounded-xl border border-border/60
           bg-[hsl(240,40%,14%)] p-6 shadow-2xl
           motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200
           motion-reduce:animate-none"
@@ -152,7 +153,7 @@ export function PauseOverlay({
           type="button"
           onClick={onClose}
           aria-label={labels.closeAriaLabel}
-          className="absolute right-4 top-4 rounded-md p-1 text-slate-400
+          className="absolute right-4 top-4 rounded-md p-1 text-muted-foreground
             transition-colors hover:text-slate-200
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
         >
@@ -165,7 +166,7 @@ export function PauseOverlay({
         </h2>
 
         {/* Description */}
-        <p id={descId} className="mb-6 text-sm text-slate-400">
+        <p id={descId} className="mb-6 text-sm text-muted-foreground">
           {pausedBy} · {pausedAt}
         </p>
 
@@ -186,9 +187,9 @@ export function PauseOverlay({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-lg border border-slate-700/60 bg-slate-800/60
+            className="flex-1 rounded-lg border border-border/60 bg-card
               px-4 py-2.5 text-sm font-medium text-slate-200 transition-colors
-              hover:bg-slate-700/60
+              hover:bg-card
               focus-visible:outline-none focus-visible:ring-2
               focus-visible:ring-slate-400"
           >

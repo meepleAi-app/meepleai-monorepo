@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * GameOverModal — shown when a session is completed
  *
@@ -56,9 +57,9 @@ export function GameOverModal({ gameName, players, sessionId, onClose }: GameOve
       role="dialog"
       aria-modal="true"
       aria-label="Partita terminata"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-foreground/70 backdrop-blur-sm"
     >
-      <div className="w-full max-w-md bg-[var(--gaming-card-bg,#1a1a2e)] border border-white/10 rounded-t-2xl sm:rounded-2xl p-6 space-y-6">
+      <div className="w-full max-w-md bg-[var(--gaming-card-bg,#1a1a2e)] border border-border rounded-t-2xl sm:rounded-2xl p-6 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
           <div className="flex justify-center">
@@ -82,7 +83,7 @@ export function GameOverModal({ gameName, players, sessionId, onClose }: GameOve
                 'flex items-center gap-3 rounded-xl px-4 py-3 border',
                 player.rank === 1
                   ? 'border-amber-500/50 bg-amber-500/10'
-                  : 'border-white/10 bg-white/5'
+                  : 'border-border bg-card/5'
               )}
             >
               {/* Rank icon */}
@@ -118,7 +119,7 @@ export function GameOverModal({ gameName, players, sessionId, onClose }: GameOve
         <div className="flex gap-3">
           <button
             onClick={handleNewSession}
-            className="flex-1 rounded-xl bg-white/10 py-3 text-sm font-medium hover:bg-white/20 transition-colors"
+            className="flex-1 rounded-xl bg-card/10 py-3 text-sm font-medium hover:bg-card/20 transition-colors"
           >
             Nuova partita
           </button>

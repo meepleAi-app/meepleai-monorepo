@@ -65,7 +65,7 @@ export function MobileBody({
       {/* Bottom navigation */}
       <nav
         aria-label={labels.bottomNavAriaLabel}
-        className="shrink-0 border-t border-slate-700/60 bg-[hsl(240,40%,10%)]"
+        className="shrink-0 border-t border-border/60 bg-[hsl(240,40%,10%)]"
       >
         <div
           role="tablist"
@@ -94,7 +94,7 @@ export function MobileBody({
                   isActive
                     ? // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: session hue in Tailwind arbitrary classes (active state); no dark-bg light-text entity token exists
                       'text-[hsl(240,60%,70%)] border-t-2 border-[hsl(240,60%,70%)] -mt-0.5'
-                    : 'text-slate-500 hover:text-slate-300 border-t-2 border-transparent -mt-0.5',
+                    : 'text-muted-foreground hover:text-slate-300 border-t-2 border-transparent -mt-0.5',
                 ].join(' ')}
               >
                 {label}

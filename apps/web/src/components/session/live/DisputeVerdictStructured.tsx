@@ -69,7 +69,7 @@ export function DisputeVerdictStructured({
   const conf = confidenceConfig[verdict.confidence];
 
   return (
-    <div className="border-2 border-amber-400 bg-white/70 backdrop-blur-md rounded-xl p-4 space-y-3">
+    <div className="border-2 border-amber-400 bg-card/70 backdrop-blur-md rounded-xl p-4 space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
         <Scale className="h-5 w-5 text-amber-600" />
@@ -77,16 +77,16 @@ export function DisputeVerdictStructured({
       </div>
 
       {/* Ruling indicator */}
-      <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+      <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
         {getRulingIcon(verdict.rulingFor)}
-        <span className="text-sm font-nunito font-semibold text-gray-800">
+        <span className="text-sm font-nunito font-semibold text-foreground">
           {getRulingLabel(verdict.rulingFor, initiatorName, respondentName)}
         </span>
       </div>
 
       {/* Confidence badge */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-nunito text-gray-500">Confidenza:</span>
+        <span className="text-xs font-nunito text-muted-foreground">Confidenza:</span>
         <span
           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-nunito font-medium border ${conf.className}`}
           data-testid="confidence-badge"
@@ -104,8 +104,8 @@ export function DisputeVerdictStructured({
 
       {/* Reasoning */}
       <div className="space-y-1">
-        <p className="text-xs font-nunito font-medium text-gray-500">Ragionamento</p>
-        <p className="text-sm text-gray-800 font-nunito leading-relaxed">{verdict.reasoning}</p>
+        <p className="text-xs font-nunito font-medium text-muted-foreground">Ragionamento</p>
+        <p className="text-sm text-foreground font-nunito leading-relaxed">{verdict.reasoning}</p>
       </div>
     </div>
   );

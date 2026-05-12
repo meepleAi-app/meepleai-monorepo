@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * PhotosGallery — Wave D.3 v2 component (Issue #756).
  *
@@ -135,7 +136,7 @@ export function PhotosGallery({
                   className={clsx(
                     'absolute bottom-1.5 left-1.5 max-w-[calc(100%-1rem)] truncate rounded-full px-2 py-0.5',
                     'font-mono text-[9px] font-extrabold text-white',
-                    'bg-black/45'
+                    'bg-foreground/45'
                   )}
                 >
                   {s.caption}

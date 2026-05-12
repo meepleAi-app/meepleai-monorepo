@@ -65,7 +65,7 @@ export function InviteModal({ inviteCode, shareLink, isOpen, onClose }: InviteMo
         {/* QR Code */}
         <div className="flex justify-center my-2">
           <div
-            className="rounded-2xl bg-white p-4 shadow-md border border-gray-100"
+            className="rounded-2xl bg-card p-4 shadow-md border border-border"
             data-testid="qr-container"
           >
             <QRCodeSVG
@@ -81,11 +81,11 @@ export function InviteModal({ inviteCode, shareLink, isOpen, onClose }: InviteMo
 
         {/* Session code */}
         <div className="space-y-1 mt-1">
-          <p className="text-xs text-gray-500 font-nunito uppercase tracking-wider">
+          <p className="text-xs text-muted-foreground font-nunito uppercase tracking-wider">
             Codice sessione
           </p>
           <p
-            className="text-3xl font-mono font-bold text-gray-900 tracking-widest"
+            className="text-3xl font-mono font-bold text-foreground tracking-widest"
             data-testid="invite-code"
           >
             {inviteCode}
@@ -93,7 +93,7 @@ export function InviteModal({ inviteCode, shareLink, isOpen, onClose }: InviteMo
         </div>
 
         {/* Share link (truncated display) */}
-        <p className="text-xs text-gray-400 font-nunito truncate px-2" title={shareLink}>
+        <p className="text-xs text-muted-foreground font-nunito truncate px-2" title={shareLink}>
           {shareLink}
         </p>
 

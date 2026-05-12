@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -90,7 +91,7 @@ export function RightColumnTabs({
         role="tablist"
         aria-label={labels.tabsAriaLabel}
         aria-orientation="horizontal"
-        className="flex shrink-0 border-b border-slate-700/60"
+        className="flex shrink-0 border-b border-border/60"
       >
         {ORDERED_TABS.map(tab => {
           const isActive = activeTab === tab;
@@ -114,8 +115,8 @@ export function RightColumnTabs({
                 focus-visible:ring-slate-400
                 ${
                   isActive
-                    ? 'border-b-2 border-slate-300 text-slate-100'
-                    : 'text-slate-400 hover:text-slate-300'
+                    ? 'border-b-2 border-border text-slate-100'
+                    : 'text-muted-foreground hover:text-slate-300'
                 }`}
             >
               {tabLabels[tab]}

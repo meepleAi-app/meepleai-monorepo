@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * Photos Child Card — /sessions/live/[sessionId]/photos
  *
@@ -39,21 +40,21 @@ function PhotoCard({ photo, onDelete }: PhotoCardProps) {
   });
 
   return (
-    <div className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-square shadow-sm border border-white/60">
+    <div className="group relative rounded-xl overflow-hidden bg-muted aspect-square shadow-sm border border-border">
       <img
         src={photo.objectUrl}
         alt={`Foto partita ${timeLabel}`}
         className="w-full h-full object-cover"
       />
       {/* Overlay */}
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
+      <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/30 transition-colors" />
       {/* Timestamp */}
       <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2">
         <p className="text-white text-xs font-mono">{timeLabel}</p>
       </div>
       {/* Delete button */}
       <button
-        className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-black/40 hover:bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+        className="absolute top-1.5 right-1.5 h-7 w-7 rounded-full bg-foreground/40 hover:bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
         onClick={() => onDelete(photo.id)}
         aria-label={`Elimina foto ${timeLabel}`}
       >
@@ -142,8 +143,8 @@ export default function PhotosPage({ params }: PhotosPageProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-quicksand font-bold text-gray-900">Foto partita</h2>
-          <p className="text-xs text-gray-500 font-nunito mt-0.5">
+          <h2 className="text-xl font-quicksand font-bold text-foreground">Foto partita</h2>
+          <p className="text-xs text-muted-foreground font-nunito mt-0.5">
             {photos.length === 0 ? 'Nessuna foto ancora' : `${photos.length} foto`}
           </p>
         </div>
@@ -172,7 +173,7 @@ export default function PhotosPage({ params }: PhotosPageProps) {
 
       {/* Empty state */}
       {photos.length === 0 && (
-        <div className="flex flex-col items-center gap-3 py-12 text-gray-400">
+        <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
           <ImageIcon className="h-12 w-12 opacity-30" />
           <p className="text-sm font-nunito text-center">
             Scatta foto per documentare lo stato della partita

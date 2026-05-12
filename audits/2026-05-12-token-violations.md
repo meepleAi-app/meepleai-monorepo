@@ -6,9 +6,9 @@
 | **Generator** | `pnpm lint:tokens` (DS-2) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../docs/for-developers/specs/2026-05-12-token-canonicalization.md) |
 | **Rule** | `local/no-hardcoded-color-utility` |
-| **Total violations** | 5040 |
-| **Files affected** | 590 |
-| **Clusters affected** | 231 |
+| **Total violations** | 4786 |
+| **Files affected** | 551 |
+| **Clusters affected** | 228 |
 
 ## Violations by cluster
 
@@ -19,12 +19,10 @@
 | `admin/knowledge-base` | 313 | manual |
 | `admin/shared-games` | 128 | manual |
 | `toolkit-drawer/tabs` | 122 | manual |
-| `session/live` | 120 | manual |
 | `library/add-game-sheet` | 113 | manual |
 | `app/(authenticated)/library` | 107 | DS-11 |
 | `features/gamebook` | 101 | DS-10 |
 | `collection/wizard` | 92 | manual |
-| `features/session-live` | 90 | DS-6 |
 | `admin/agents` | 83 | manual |
 | `stories/Animations.stories.tsx` | 76 | manual |
 | `admin/users` | 75 | manual |
@@ -32,7 +30,6 @@
 | `admin/games` | 64 | manual |
 | `agent/config` | 64 | manual |
 | `app/(authenticated)/play-records` | 55 | manual |
-| `app/(authenticated)/sessions` | 54 | manual |
 | `admin/command-center` | 54 | manual |
 | `loading/SkeletonLoader.tsx` | 54 | manual |
 | `admin/mechanic-extractor` | 52 | manual |
@@ -59,6 +56,7 @@
 | `app/(authenticated)/versions` | 17 | manual |
 | `admin/rag` | 17 | manual |
 | `library/AddExpansionSheet.tsx` | 17 | manual |
+| `app/(authenticated)/sessions` | 16 | manual |
 | `app/(public)/join` | 16 | manual |
 | `agent/slots` | 16 | manual |
 | `game-night/ScoreAssistant.tsx` | 16 | manual |
@@ -103,7 +101,6 @@
 | `versioning/ChangeItem.tsx` | 7 | manual |
 | `auth/LoginForm.stories.tsx` | 6 | manual |
 | `empty-state/EmptyState.tsx` | 6 | manual |
-| `features/session-summary` | 6 | DS-6 |
 | `game-night/LiveScoreboard.tsx` | 6 | manual |
 | `legal/LegalPageLayout.tsx` | 6 | manual |
 | `library/game-table` | 6 | manual |

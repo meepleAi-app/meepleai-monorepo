@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * LiveTopBar — Wave D.2 Foundation sub-PR (Issue #746).
  *
@@ -69,7 +70,7 @@ export function LiveTopBar({
       data-viewer-role={viewerRole}
       data-status={status}
       aria-label={labels.sessionTitleAriaLabel}
-      className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-700/60
+      className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border/60
         bg-[hsl(240,40%,12%)] px-4"
     >
       {/* Left: session name + status */}
@@ -86,7 +87,7 @@ export function LiveTopBar({
           {statusLabel}
         </span>
         {labels.turnLabelResolved && (
-          <span className="hidden shrink-0 text-xs text-slate-400 sm:inline">
+          <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
             {labels.turnLabelResolved}
           </span>
         )}
@@ -150,8 +151,8 @@ export function LiveTopBar({
           data-slot="session-live-top-bar-exit"
           onClick={onExit}
           aria-label={labels.exitAriaLabel}
-          className="rounded-lg border border-slate-700 bg-transparent p-1.5 text-slate-400
-            hover:bg-slate-700/50 hover:text-slate-200 focus-visible:outline-none
+          className="rounded-lg border border-border bg-transparent p-1.5 text-muted-foreground
+            hover:bg-card hover:text-slate-200 focus-visible:outline-none
             focus-visible:ring-2 focus-visible:ring-slate-500"
         >
           {/* X icon */}

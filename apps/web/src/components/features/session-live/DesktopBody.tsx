@@ -38,7 +38,7 @@ export function DesktopBody({
     >
       {/* Left sidebar: 280px */}
       <aside
-        className="w-[280px] shrink-0 overflow-y-auto border-r border-slate-700/60
+        className="w-[280px] shrink-0 overflow-y-auto border-r border-border/60
           bg-[hsl(240,40%,10%)]"
       >
         {leftSidebar}
@@ -49,7 +49,7 @@ export function DesktopBody({
 
       {/* Right column: 340px — Foundation placeholder */}
       <aside
-        className="w-[340px] shrink-0 overflow-y-auto border-l border-slate-700/60
+        className="w-[340px] shrink-0 overflow-y-auto border-l border-border/60
           bg-[hsl(240,40%,10%)]"
       >
         {rightColumn ?? (

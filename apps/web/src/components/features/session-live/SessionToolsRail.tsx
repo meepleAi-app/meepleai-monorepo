@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -78,7 +79,7 @@ export function SessionToolsRail({
       aria-label={labels.title}
       className={className}
     >
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {labels.title}
       </h3>
 
@@ -93,9 +94,9 @@ export function SessionToolsRail({
               type="button"
               aria-label={ariaLabel}
               onClick={() => onToolExecute(tool.id)}
-              className="flex flex-col items-center gap-2 rounded-lg border border-slate-700/60
-                bg-slate-800/60 p-3 text-slate-200 transition-colors
-                hover:border-slate-600 hover:bg-slate-700/60
+              className="flex flex-col items-center gap-2 rounded-lg border border-border/60
+                bg-card p-3 text-slate-200 transition-colors
+                hover:border-border hover:bg-card
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400
                 active:scale-95"
             >

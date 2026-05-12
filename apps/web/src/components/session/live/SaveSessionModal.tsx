@@ -66,11 +66,11 @@ export function SaveSessionModal({ sessionId, gameName, isOpen, onClose }: SaveS
 
         <div className="space-y-4 py-2">
           {/* Confirmation message */}
-          <p className="text-sm font-nunito text-gray-600">
+          <p className="text-sm font-nunito text-muted-foreground">
             Vuoi salvare lo stato della partita{' '}
-            <span className="font-semibold text-gray-900">{gameName}</span>?
+            <span className="font-semibold text-foreground">{gameName}</span>?
           </p>
-          <p className="text-xs font-nunito text-gray-500">
+          <p className="text-xs font-nunito text-muted-foreground">
             Potrai riprendere da dove hai lasciato in qualsiasi momento.
           </p>
 

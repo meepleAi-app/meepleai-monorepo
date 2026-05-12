@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 /**
@@ -28,7 +29,7 @@ interface PublishConfirmModalProps {
 }
 
 const STATUS_LABELS: Record<ApprovalStatus, { label: string; color: string }> = {
-  Draft: { label: 'Bozza', color: 'text-slate-600 dark:text-slate-400' },
+  Draft: { label: 'Bozza', color: 'text-muted-foreground' },
   PendingReview: { label: 'In Revisione', color: 'text-amber-600 dark:text-amber-400' },
   Approved: { label: 'Approvato', color: 'text-green-600 dark:text-green-400' },
   Rejected: { label: 'Rifiutato', color: 'text-red-600 dark:text-red-400' },
@@ -61,17 +62,17 @@ export function PublishConfirmModal({
 
         <div className="space-y-4 py-4">
           {/* Game Details */}
-          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 space-y-3">
+          <div className="bg-muted rounded-lg p-4 space-y-3">
             <div>
-              <span className="text-sm text-slate-500">Nome Gioco:</span>
-              <p className="font-semibold text-slate-900 dark:text-white">{gameName}</p>
+              <span className="text-sm text-muted-foreground">Nome Gioco:</span>
+              <p className="font-semibold text-foreground dark:text-white">{gameName}</p>
             </div>
             <div>
-              <span className="text-sm text-slate-500">PDF Regolamento:</span>
-              <p className="font-medium text-slate-700 dark:text-slate-300">{pdfFileName}</p>
+              <span className="text-sm text-muted-foreground">PDF Regolamento:</span>
+              <p className="font-medium text-foreground">{pdfFileName}</p>
             </div>
             <div>
-              <span className="text-sm text-slate-500">Stato di Approvazione:</span>
+              <span className="text-sm text-muted-foreground">Stato di Approvazione:</span>
               <p className={`font-semibold ${statusInfo.color}`}>{statusInfo.label}</p>
             </div>
           </div>

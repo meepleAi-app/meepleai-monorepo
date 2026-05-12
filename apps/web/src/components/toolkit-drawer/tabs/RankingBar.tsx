@@ -35,8 +35,8 @@ export function RankingBar({ entries }: RankingBarProps) {
           <span className="font-medium" style={{ color: entry.color }}>
             {entry.name}
           </span>
-          <span className="font-bold text-gray-800">{entry.total}</span>
-          {idx < Math.min(2, sorted.length - 1) && <span className="ml-1 text-gray-300">·</span>}
+          <span className="font-bold text-foreground">{entry.total}</span>
+          {idx < Math.min(2, sorted.length - 1) && <span className="ml-1 text-foreground">·</span>}
         </div>
       ))}
     </div>

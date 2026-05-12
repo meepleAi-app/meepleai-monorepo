@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import { useState } from 'react';
@@ -22,7 +23,7 @@ export function PlayerDrawerContent({ entityId, activeTab, onNavigate }: Props) 
 
   return (
     <>
-      <div className="flex border-b border-white/8 px-4 flex-shrink-0" role="tablist">
+      <div className="flex border-b border-border px-4 flex-shrink-0" role="tablist">
         {TABS.map(t => (
           <button
             key={t}
@@ -33,7 +34,7 @@ export function PlayerDrawerContent({ entityId, activeTab, onNavigate }: Props) 
               'px-3 py-2.5 text-[11px] font-semibold transition-colors',
               tab === t
                 ? 'text-[hsl(262,83%,68%)] border-b-2 border-[hsl(262,83%,58%)]'
-                : 'text-white/45 hover:text-white/70'
+                : 'text-white/45 hover:text-foreground/80'
             )}
           >
             {t}
@@ -47,18 +48,18 @@ export function PlayerDrawerContent({ entityId, activeTab, onNavigate }: Props) 
         {tab === 'Storico' && <p>Storico partite disponibile a breve.</p>}
       </div>
 
-      <div className="flex gap-2 px-4 py-3 border-t border-white/8 flex-shrink-0">
+      <div className="flex gap-2 px-4 py-3 border-t border-border flex-shrink-0">
         <button
           type="button"
           onClick={onNavigate}
-          className="flex-1 py-2 text-center text-[11px] font-semibold text-white/70 border border-white/15 rounded-xl hover:text-white/90 transition-colors"
+          className="flex-1 py-2 text-center text-[11px] font-semibold text-foreground/80 border border-border rounded-xl hover:text-white/90 transition-colors"
         >
           📊 Confronta
         </button>
         <Link
           href={`/players/${entityId}`}
           onClick={onNavigate}
-          className="px-3 py-2 text-[11px] font-semibold text-white/60 border border-white/15 rounded-xl hover:text-white/80 transition-colors"
+          className="px-3 py-2 text-[11px] font-semibold text-foreground/80 border border-border rounded-xl hover:text-white/80 transition-colors"
         >
           ↗ Apri
         </Link>

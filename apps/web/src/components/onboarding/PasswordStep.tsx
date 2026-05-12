@@ -127,10 +127,10 @@ export function PasswordStep({ token, onComplete }: PasswordStepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-quicksand text-lg font-semibold text-slate-900">
+        <h2 className="font-quicksand text-lg font-semibold text-foreground">
           Create Your Password
         </h2>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-muted-foreground">
           Choose a strong password for your new account.
         </p>
       </div>
@@ -160,10 +160,10 @@ export function PasswordStep({ token, onComplete }: PasswordStepProps) {
         {password && (
           <div className="space-y-2" data-testid="password-strength">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600">Password strength:</span>
+              <span className="text-sm text-muted-foreground">Password strength:</span>
               <span className={`text-sm font-medium ${config.textColor}`}>{config.text}</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+            <div className="h-2 overflow-hidden rounded-full bg-muted">
               <motion.div
                 className={`h-full ${config.color}`}
                 initial={{ width: 0 }}
@@ -186,7 +186,7 @@ export function PasswordStep({ token, onComplete }: PasswordStepProps) {
               <div
                 key={key}
                 className={`flex items-center gap-2 ${
-                  validation[key as keyof PasswordValidation] ? 'text-green-600' : 'text-slate-500'
+                  validation[key as keyof PasswordValidation] ? 'text-green-600' : 'text-muted-foreground'
                 }`}
               >
                 <span aria-hidden="true">

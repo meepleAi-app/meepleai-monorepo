@@ -36,7 +36,7 @@ export default function PlayRecordsPage() {
             type="button"
             aria-label="Vai alle statistiche"
             onClick={() => router.push('/play-records/stats')}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--gaming-text-secondary)] hover:bg-white/5"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--gaming-text-secondary)] hover:bg-card/5"
           >
             <BarChart3 className="h-5 w-5" />
           </button>

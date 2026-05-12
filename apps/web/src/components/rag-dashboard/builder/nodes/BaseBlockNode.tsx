@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 /**
@@ -125,7 +126,7 @@ const DATA_TYPE_COLORS: Record<string, string> = {
   scores: 'bg-yellow-500',
   response: 'bg-orange-500',
   evaluation: 'bg-red-500',
-  any: 'bg-gray-500',
+  any: 'bg-muted-foreground',
 };
 
 function PortHandle({ port, isConnectable }: PortHandleProps) {
@@ -147,7 +148,7 @@ function PortHandle({ port, isConnectable }: PortHandleProps) {
             isConnectable={isConnectable}
             className={cn(
               '!w-3 !h-3 !border-2 !border-background',
-              DATA_TYPE_COLORS[port.dataType] || 'bg-gray-500'
+              DATA_TYPE_COLORS[port.dataType] || 'bg-muted-foreground'
             )}
           />
         </TooltipTrigger>

@@ -67,16 +67,16 @@ export function ClaimGuestGames() {
 
   return (
     <div
-      className="rounded-xl border border-white/40 bg-white/70 backdrop-blur-md shadow-sm p-4 space-y-4"
+      className="rounded-xl border border-border bg-card/70 backdrop-blur-md shadow-sm p-4 space-y-4"
       data-testid="claim-guest-games"
     >
       {/* Header */}
       <div className="flex items-center gap-2">
         <UserCheck className="h-4 w-4 text-amber-600" />
-        <h3 className="font-quicksand font-semibold text-sm text-gray-900">Claim Guest Games</h3>
+        <h3 className="font-quicksand font-semibold text-sm text-foreground">Claim Guest Games</h3>
       </div>
 
-      <p className="text-xs text-gray-500 font-nunito">
+      <p className="text-xs text-muted-foreground font-nunito">
         Search for your guest name to link past game history to your account.
       </p>
 
@@ -123,10 +123,10 @@ export function ClaimGuestGames() {
             return (
               <li
                 key={guest.playerMemoryId}
-                className="flex items-center gap-3 rounded-lg bg-white/50 px-3 py-2"
+                className="flex items-center gap-3 rounded-lg bg-card/50 px-3 py-2"
               >
                 <div className="flex-1 min-w-0">
-                  <span className="font-nunito text-sm font-medium text-gray-900">
+                  <span className="font-nunito text-sm font-medium text-foreground">
                     {guest.guestName}
                   </span>
                   {guest.groupName && (
@@ -170,7 +170,7 @@ export function ClaimGuestGames() {
 
       {/* Empty search results */}
       {!searching && guests.length === 0 && searchQuery.trim() && (
-        <p className="text-sm text-gray-500 font-nunito italic">
+        <p className="text-sm text-muted-foreground font-nunito italic">
           No claimable guests found for &ldquo;{searchQuery.trim()}&rdquo;
         </p>
       )}

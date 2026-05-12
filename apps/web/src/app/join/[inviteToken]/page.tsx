@@ -31,7 +31,7 @@ export default function GuestJoinPage({ params }: GuestJoinPageProps) {
     <Suspense
       fallback={
         <main className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center">
-          <p className="font-nunito text-gray-600">Caricamento sessione...</p>
+          <p className="font-nunito text-muted-foreground">Caricamento sessione...</p>
         </main>
       }
     >

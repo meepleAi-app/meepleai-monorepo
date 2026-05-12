@@ -8,22 +8,22 @@
 import type { Meta, StoryObj } from '@storybook/react';
 
 const ColorSwatch = ({ color, name, hex, hsl }: { color: string; name: string; hex: string; hsl: string }) => (
-  <div className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg">
+  <div className="flex items-center gap-4 p-4 border border-border rounded-lg">
     <div
-      className="w-20 h-20 rounded-lg shadow-md border border-gray-300"
+      className="w-20 h-20 rounded-lg shadow-md border border-border"
       style={{ backgroundColor: color }}
     />
     <div className="flex-1">
       <div className="font-bold text-lg">{name}</div>
-      <div className="text-sm text-gray-600 font-mono">{hex}</div>
-      <div className="text-xs text-gray-500 font-mono">HSL: {hsl}</div>
+      <div className="text-sm text-muted-foreground font-mono">{hex}</div>
+      <div className="text-xs text-muted-foreground font-mono">HSL: {hsl}</div>
     </div>
   </div>
 );
 
 const FontSample = ({ family, weights, sample }: { family: string; weights: string; sample: string }) => (
-  <div className="p-6 border border-gray-200 rounded-lg bg-white">
-    <div className="text-sm text-gray-600 mb-2">
+  <div className="p-6 border border-border rounded-lg bg-card">
+    <div className="text-sm text-muted-foreground mb-2">
       {family} ({weights})
     </div>
     <div className="text-4xl mb-4" style={{ fontFamily: family }}>
@@ -32,7 +32,7 @@ const FontSample = ({ family, weights, sample }: { family: string; weights: stri
     <div className="text-sm" style={{ fontFamily: family }}>
       The quick brown fox jumps over the lazy dog
     </div>
-    <div className="text-xs text-gray-500 mt-2" style={{ fontFamily: family }}>
+    <div className="text-xs text-muted-foreground mt-2" style={{ fontFamily: family }}>
       ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789
     </div>
   </div>
@@ -59,10 +59,10 @@ type Story = StoryObj;
  */
 export const ColorPalette: Story = {
   render: () => (
-    <div className="space-y-6 p-8 bg-gray-50">
+    <div className="space-y-6 p-8 bg-muted">
       <div>
         <h2 className="text-3xl font-bold mb-6 font-quicksand">MeepleAI Brand Colors</h2>
-        <p className="text-gray-600 mb-8">
+        <p className="text-muted-foreground mb-8">
           Warm, inviting palette designed for board game enthusiasts. All colors are WCAG 2.1 AA compliant.
         </p>
       </div>
@@ -111,9 +111,9 @@ export const ColorPalette: Story = {
         />
       </div>
 
-      <div className="mt-8 p-6 bg-white rounded-lg border border-gray-200">
+      <div className="mt-8 p-6 bg-card rounded-lg border border-border">
         <h3 className="text-xl font-semibold mb-4 font-quicksand">Usage in Tailwind</h3>
-        <pre className="text-sm bg-gray-100 p-4 rounded-lg overflow-x-auto">
+        <pre className="text-sm bg-muted p-4 rounded-lg overflow-x-auto">
           <code>{`// Primary orange
 <button className="bg-meeple-orange text-white">Button</button>
 
@@ -139,10 +139,10 @@ export const ColorPalette: Story = {
  */
 export const Typography: Story = {
   render: () => (
-    <div className="space-y-8 p-8 bg-gray-50">
+    <div className="space-y-8 p-8 bg-muted">
       <div>
         <h2 className="text-3xl font-bold mb-6 font-quicksand">MeepleAI Typography</h2>
-        <p className="text-gray-600 mb-8">
+        <p className="text-muted-foreground mb-8">
           Dual font system: Quicksand for headings (friendly, bold), Nunito for body text (readable, warm).
         </p>
       </div>
@@ -159,30 +159,30 @@ export const Typography: Story = {
         sample="Your AI board game assistant"
       />
 
-      <div className="mt-8 p-6 bg-white rounded-lg border border-gray-200">
+      <div className="mt-8 p-6 bg-card rounded-lg border border-border">
         <h3 className="text-xl font-semibold mb-4 font-quicksand">Typography Guidelines</h3>
         <ul className="space-y-2 text-sm">
           <li className="flex items-start gap-2">
             <span className="font-bold">Headings (h1-h6):</span>
-            <span className="text-gray-600">Use Quicksand with weights 600-700 for bold, friendly impact</span>
+            <span className="text-muted-foreground">Use Quicksand with weights 600-700 for bold, friendly impact</span>
           </li>
           <li className="flex items-start gap-2">
             <span className="font-bold">Body text:</span>
-            <span className="text-gray-600">Use Nunito with weights 300-700 for optimal readability</span>
+            <span className="text-muted-foreground">Use Nunito with weights 300-700 for optimal readability</span>
           </li>
           <li className="flex items-start gap-2">
             <span className="font-bold">Buttons:</span>
-            <span className="text-gray-600">Quicksand 700 for strong calls-to-action</span>
+            <span className="text-muted-foreground">Quicksand 700 for strong calls-to-action</span>
           </li>
           <li className="flex items-start gap-2">
             <span className="font-bold">Labels:</span>
-            <span className="text-gray-600">Nunito 600 for form labels and UI text</span>
+            <span className="text-muted-foreground">Nunito 600 for form labels and UI text</span>
           </li>
         </ul>
 
         <div className="mt-6">
           <h4 className="font-semibold mb-3 font-quicksand">Tailwind Usage</h4>
-          <pre className="text-sm bg-gray-100 p-4 rounded-lg overflow-x-auto">
+          <pre className="text-sm bg-muted p-4 rounded-lg overflow-x-auto">
             <code>{`// Headings (auto-applied to h1-h6)
 <h1 className="font-quicksand font-bold">Dashboard</h1>
 
@@ -311,12 +311,12 @@ export const CompleteSystem: Story = {
         </div>
 
         {/* Activity Feed Example */}
-        <div className="bg-white rounded-2xl border p-6" style={{ borderColor: '#e8e4d8' }}>
+        <div className="bg-card rounded-2xl border p-6" style={{ borderColor: '#e8e4d8' }}>
           <h3 className="text-xl font-bold mb-4" style={{ fontFamily: 'Quicksand', color: '#2d2d2d' }}>
             Activity Feed
           </h3>
           <div className="space-y-3">
-            <div className="p-4 rounded-lg border hover:bg-gray-50 transition-all" style={{ borderColor: '#e8e4d8' }}>
+            <div className="p-4 rounded-lg border hover:bg-muted transition-all" style={{ borderColor: '#e8e4d8' }}>
               <div className="flex gap-3">
                 <span className="text-2xl">👤</span>
                 <div>
@@ -353,11 +353,11 @@ export const CompleteSystem: Story = {
         </div>
 
         {/* CSS Variables Reference */}
-        <div className="bg-white rounded-2xl border p-6" style={{ borderColor: '#e8e4d8' }}>
+        <div className="bg-card rounded-2xl border p-6" style={{ borderColor: '#e8e4d8' }}>
           <h3 className="text-xl font-bold mb-4" style={{ fontFamily: 'Quicksand' }}>
             CSS Variables Reference
           </h3>
-          <pre className="text-sm bg-gray-100 p-4 rounded-lg overflow-x-auto">
+          <pre className="text-sm bg-muted p-4 rounded-lg overflow-x-auto">
             <code>{`/* MeepleAI Brand Colors (in design-tokens.css) */
 --color-meeple-orange: 25 85% 45%;         /* #d2691e */
 --color-meeple-purple: 262 83% 62%;        /* #8b5cf6 */
@@ -403,7 +403,7 @@ export const DarkModePreview: Story = {
         <h3 className="text-xl font-bold mb-4" style={{ fontFamily: 'Quicksand', color: '#2d2d2d' }}>
           Light Mode
         </h3>
-        <div className="bg-white p-4 rounded-lg border" style={{ borderColor: '#e8e4d8' }}>
+        <div className="bg-card p-4 rounded-lg border" style={{ borderColor: '#e8e4d8' }}>
           <div className="text-sm font-semibold mb-2" style={{ color: '#666' }}>
             Metric Card
           </div>

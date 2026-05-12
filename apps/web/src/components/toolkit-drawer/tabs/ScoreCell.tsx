@@ -94,7 +94,7 @@ export function ScoreCell({ value, onChange, testId }: ScoreCellProps) {
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="w-12 rounded px-1 text-center text-sm font-semibold text-gray-800 hover:bg-gray-100"
+          className="w-12 rounded px-1 text-center text-sm font-semibold text-foreground hover:bg-muted"
           data-testid={`${testId}-value`}
         >
           {value}
@@ -110,8 +110,8 @@ export function ScoreCell({ value, onChange, testId }: ScoreCellProps) {
           onPointerUp={stopHold}
           onPointerLeave={stopHold}
           className={cn(
-            'h-5 w-5 rounded text-[10px] font-bold text-gray-500',
-            'bg-gray-100 hover:bg-gray-200 active:bg-gray-300'
+            'h-5 w-5 rounded text-[10px] font-bold text-muted-foreground',
+            'bg-muted hover:bg-muted active:bg-muted'
           )}
           data-testid={`${testId}-dec`}
         >
@@ -126,8 +126,8 @@ export function ScoreCell({ value, onChange, testId }: ScoreCellProps) {
           onPointerUp={stopHold}
           onPointerLeave={stopHold}
           className={cn(
-            'h-5 w-5 rounded text-[10px] font-bold text-gray-500',
-            'bg-gray-100 hover:bg-gray-200 active:bg-gray-300'
+            'h-5 w-5 rounded text-[10px] font-bold text-muted-foreground',
+            'bg-muted hover:bg-muted active:bg-muted'
           )}
           data-testid={`${testId}-inc`}
         >

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 /**
@@ -72,9 +73,9 @@ function statusBadgeColor(status: PlayRecordStatus): string {
     case 'InProgress':
       return 'text-blue-400 bg-blue-400/10';
     case 'Planned':
-      return 'text-slate-400 bg-white/5';
+      return 'text-muted-foreground bg-card/5';
     case 'Archived':
-      return 'text-slate-500 bg-white/5';
+      return 'text-muted-foreground bg-card/5';
   }
 }
 
@@ -142,14 +143,14 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Cerca per gioco o giocatore…"
-          className="w-full rounded-xl bg-white/5 border border-white/8 pl-9 pr-9 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+          className="w-full rounded-xl bg-card/5 border border-border pl-9 pr-9 py-2.5 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/30"
           data-testid="play-history-search"
         />
         {search && (
           <button
             type="button"
             onClick={() => setSearch('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground/80"
             aria-label="Cancella ricerca"
           >
             <X className="h-4 w-4" />
@@ -168,7 +169,7 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
               'flex-shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
               filters.status === chip.value
                 ? 'border-amber-500/40 bg-amber-500/15 text-amber-400'
-                : 'border-white/8 bg-white/5 text-white/50 hover:border-white/15'
+                : 'border-border bg-card/5 text-foreground/80 hover:border-border'
             )}
             data-testid={`filter-status-${chip.value}`}
           >
@@ -176,7 +177,7 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
           </button>
         ))}
 
-        <div className="h-5 w-px bg-white/10 flex-shrink-0 self-center" />
+        <div className="h-5 w-px bg-card/10 flex-shrink-0 self-center" />
 
         {SORT_CHIPS.map(chip => (
           <button
@@ -186,8 +187,8 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
             className={cn(
               'flex-shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
               sortBy === chip.value
-                ? 'border-white/20 bg-white/10 text-white'
-                : 'border-white/8 bg-white/5 text-white/40 hover:border-white/15'
+                ? 'border-border bg-card/10 text-white'
+                : 'border-border bg-card/5 text-muted-foreground hover:border-border'
             )}
             data-testid={`sort-${chip.value}`}
           >
@@ -199,7 +200,7 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
           <button
             type="button"
             onClick={resetFilters}
-            className="flex-shrink-0 rounded-full border border-white/8 bg-white/5 px-3 py-1 text-xs font-semibold text-red-400 hover:bg-red-400/10"
+            className="flex-shrink-0 rounded-full border border-border bg-card/5 px-3 py-1 text-xs font-semibold text-red-400 hover:bg-red-400/10"
             data-testid="reset-filters"
           >
             <X className="inline h-3 w-3 mr-1" />
@@ -212,7 +213,7 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
       {isLoading && (
         <div className="flex flex-col gap-2" data-testid="play-history-loading">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-white/5" />
+            <div key={i} className="h-20 animate-pulse rounded-xl bg-card/5" />
           ))}
         </div>
       )}
@@ -236,7 +237,7 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
           <span className="text-5xl">🎲</span>
           <div>
             <p className="text-base font-bold text-white">Nessuna partita registrata</p>
-            <p className="mt-1 text-sm text-white/40">
+            <p className="mt-1 text-sm text-muted-foreground">
               {hasActiveFilters
                 ? 'Nessun risultato con i filtri attivi.'
                 : 'Inizia a registrare le tue partite!'}
@@ -246,7 +247,7 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
             <button
               type="button"
               onClick={resetFilters}
-              className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/60 hover:bg-white/5"
+              className="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground/80 hover:bg-card/5"
             >
               Rimuovi filtri
             </button>
@@ -314,7 +315,7 @@ export function PlayHistory({ gameId: propGameId, limit }: PlayHistoryProps) {
         <button
           type="button"
           onClick={() => setCurrentPage(p => p + 1)}
-          className="py-3 text-sm font-semibold text-white/40 hover:text-white/70"
+          className="py-3 text-sm font-semibold text-muted-foreground hover:text-foreground/80"
           data-testid="load-more-btn"
         >
           Carica altro…

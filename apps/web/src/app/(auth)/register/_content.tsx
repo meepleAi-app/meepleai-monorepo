@@ -30,7 +30,7 @@ type RegistrationMode = 'loading' | 'public' | 'invite-only';
 export function RegisterFallback() {
   const { t } = useTranslation();
   return (
-    <main className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+    <main className="min-h-dvh flex items-center justify-center bg-muted text-muted-foreground">
       {t('auth.register.loadingMessage')}
     </main>
   );

@@ -107,9 +107,9 @@ function DefaultErrorFallback({
   const [detailsExpanded, setDetailsExpanded] = React.useState(false);
 
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-dvh flex items-center justify-center bg-muted py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
-        <div className="bg-white shadow-lg rounded-lg p-6">
+        <div className="bg-card shadow-lg rounded-lg p-6">
           <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full">
             <svg
               className="w-6 h-6 text-red-600"
@@ -127,11 +127,11 @@ function DefaultErrorFallback({
             </svg>
           </div>
 
-          <h2 className="mt-4 text-center text-2xl font-bold text-gray-900" data-testid="error-title">
+          <h2 className="mt-4 text-center text-2xl font-bold text-foreground" data-testid="error-title">
             Something went wrong
           </h2>
 
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-muted-foreground">
             We apologize for the inconvenience. The error has been logged and our team has been
             notified.
           </p>
@@ -140,7 +140,7 @@ function DefaultErrorFallback({
             <div className="mt-4">
               <button
                 onClick={() => setDetailsExpanded(!detailsExpanded)}
-                className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-foreground bg-muted hover:bg-muted rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 aria-expanded={detailsExpanded}
                 data-testid="error-details-toggle"
               >
@@ -162,8 +162,8 @@ function DefaultErrorFallback({
               </button>
 
               {detailsExpanded && (
-                <div className="mt-2 p-4 bg-gray-50 rounded-md overflow-auto max-h-96">
-                  <div className="text-xs font-mono text-gray-800">
+                <div className="mt-2 p-4 bg-muted rounded-md overflow-auto max-h-96">
+                  <div className="text-xs font-mono text-foreground">
                     <div className="font-semibold text-red-600 mb-2">
                       {error.name}: {error.message}
                     </div>
@@ -172,8 +172,8 @@ function DefaultErrorFallback({
                     )}
                     {errorInfo?.componentStack && (
                       <div className="mt-4">
-                        <div className="font-semibold text-gray-700 mb-1">Component Stack:</div>
-                        <pre className="whitespace-pre-wrap break-words text-gray-600">
+                        <div className="font-semibold text-foreground mb-1">Component Stack:</div>
+                        <pre className="whitespace-pre-wrap break-words text-muted-foreground">
                           {errorInfo.componentStack}
                         </pre>
                       </div>
@@ -194,7 +194,7 @@ function DefaultErrorFallback({
 
             <button
               onClick={() => (window.location.href = '/')}
-              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="w-full flex justify-center py-2 px-4 border border-border rounded-md shadow-sm text-sm font-medium text-foreground bg-card hover:bg-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Go to Home
             </button>

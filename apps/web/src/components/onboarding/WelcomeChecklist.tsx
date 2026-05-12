@@ -29,7 +29,7 @@ export function WelcomeChecklist() {
 
   if (allComplete) {
     return (
-      <div className="rounded-2xl overflow-hidden border border-green-200 bg-white/70 backdrop-blur-md shadow-sm">
+      <div className="rounded-2xl overflow-hidden border border-green-200 bg-card/70 backdrop-blur-md shadow-sm">
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-5 py-4 flex items-center justify-between">
           <div>
             <h3 className="font-quicksand font-bold text-base">🎉 Tutto completato!</h3>
@@ -59,7 +59,7 @@ export function WelcomeChecklist() {
   }
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-amber-200/50 bg-white/70 backdrop-blur-md shadow-sm">
+    <div className="rounded-2xl overflow-hidden border border-amber-200/50 bg-card/70 backdrop-blur-md shadow-sm">
       {/* Header */}
       <div className="bg-gradient-to-r from-amber-50 to-yellow-50 px-5 py-4 flex items-center justify-between">
         <div>

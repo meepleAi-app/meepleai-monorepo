@@ -32,7 +32,7 @@ export function UploadQueue({
 }: UploadQueueProps) {
   if (items.length === 0) {
     return (
-      <div className="p-8 text-center text-gray-600 text-sm border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+      <div className="p-8 text-center text-muted-foreground text-sm border-2 border-dashed border-border rounded-lg bg-muted">
         No files in queue. Select files to begin uploading.
       </div>
     );
@@ -50,11 +50,11 @@ export function UploadQueue({
   return (
     <div data-testid="upload-queue">
       {/* Aggregate Progress Header */}
-      <div className="p-4 bg-gray-50 rounded-md mb-4 border border-gray-300">
+      <div className="p-4 bg-muted rounded-md mb-4 border border-border">
         <div className="flex justify-between items-center mb-3">
           <div>
-            <div className="text-base font-semibold text-gray-900">Upload Queue</div>
-            <div className="text-xs text-gray-600 mt-1">
+            <div className="text-base font-semibold text-foreground">Upload Queue</div>
+            <div className="text-xs text-muted-foreground mt-1">
               {activeCount > 0 ? (
                 <>
                   Uploading {activeCount} of {stats.total} files ({totalProgress}% total)

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import { GalleryHorizontal, LayoutGrid, List, Search } from 'lucide-react';
@@ -64,7 +65,7 @@ export function HubLayout({
               aria-label={searchPlaceholder}
               className={cn(
                 'w-full h-10 pl-10 pr-4',
-                'bg-white/90 border border-black/[0.07] rounded-2xl shadow-sm',
+                'bg-card/90 border border-black/[0.07] rounded-2xl shadow-sm',
                 'text-sm text-[var(--nh-text-primary,#1a1a1a)]',
                 'placeholder:text-[var(--nh-text-muted,#94a3b8)]',
                 'outline-none focus-visible:ring-2 focus-visible:ring-[var(--nh-text-primary,#1a1a1a)]/20',

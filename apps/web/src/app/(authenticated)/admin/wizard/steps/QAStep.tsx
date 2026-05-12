@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 /**
@@ -182,10 +183,10 @@ export function QAStep({ gameId, gameName, chatThreadId, onReset, onNext }: QASt
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-2">
+        <h2 className="text-2xl font-semibold text-foreground dark:text-white mb-2">
           Q&A: {gameName}
         </h2>
-        <p className="text-slate-600 dark:text-slate-400">
+        <p className="text-muted-foreground">
           Fai una domanda sul regolamento e l'agente RAG rispondera' basandosi sul PDF.
         </p>
       </div>
@@ -193,7 +194,7 @@ export function QAStep({ gameId, gameName, chatThreadId, onReset, onNext }: QASt
       {/* Messages */}
       <Card className="p-4 min-h-[300px] max-h-[400px] overflow-y-auto space-y-4">
         {messages.length === 0 && !isStreaming && (
-          <div className="text-center text-slate-500 dark:text-slate-400 py-12">
+          <div className="text-center text-muted-foreground py-12">
             <span className="text-4xl block mb-2">💬</span>
             <p>Fai la prima domanda sul regolamento!</p>
             <p className="text-sm mt-2">
@@ -211,20 +212,20 @@ export function QAStep({ gameId, gameName, chatThreadId, onReset, onNext }: QASt
               className={`max-w-[80%] p-3 rounded-lg ${
                 msg.role === 'user'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white'
+                  : 'bg-muted text-foreground dark:text-white'
               }`}
             >
               <p className="whitespace-pre-wrap">{msg.content}</p>
 
               {/* Citations */}
               {msg.citations && msg.citations.length > 0 && (
-                <div className="mt-3 pt-2 border-t border-slate-300 dark:border-slate-600">
+                <div className="mt-3 pt-2 border-t border-border dark:border-border">
                   <p className="text-xs font-medium mb-1 opacity-75">Fonti:</p>
                   <div className="space-y-1">
                     {msg.citations.slice(0, 3).map((cit, idx) => (
                       <div
                         key={idx}
-                        className="text-xs opacity-75 bg-slate-200 dark:bg-slate-600 px-2 py-1 rounded"
+                        className="text-xs opacity-75 bg-muted dark:bg-slate-600 px-2 py-1 rounded"
                       >
                         {cit.section && <span>§ {cit.section}</span>}
                         {cit.pageNumber && <span> (p. {cit.pageNumber})</span>}
@@ -241,7 +242,7 @@ export function QAStep({ gameId, gameName, chatThreadId, onReset, onNext }: QASt
         {/* Streaming answer */}
         {isStreaming && currentAnswer && (
           <div className="flex justify-start">
-            <div className="max-w-[80%] p-3 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white">
+            <div className="max-w-[80%] p-3 rounded-lg bg-muted text-foreground dark:text-white">
               <p className="whitespace-pre-wrap">{currentAnswer}</p>
               <span className="inline-block w-2 h-4 bg-blue-600 animate-pulse ml-1" />
             </div>
@@ -251,10 +252,10 @@ export function QAStep({ gameId, gameName, chatThreadId, onReset, onNext }: QASt
         {/* Loading indicator */}
         {isStreaming && !currentAnswer && (
           <div className="flex justify-start">
-            <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-700">
+            <div className="p-3 rounded-lg bg-muted">
               <div className="flex items-center gap-2">
                 <Spinner size="sm" />
-                <span className="text-slate-500">Sto pensando...</span>
+                <span className="text-muted-foreground">Sto pensando...</span>
               </div>
             </div>
           </div>

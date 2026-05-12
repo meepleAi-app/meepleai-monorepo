@@ -66,7 +66,7 @@ export function PdfStatusTimeline({
               <div
                 className={cn(
                   'absolute left-[15px] top-8 w-0.5 h-8',
-                  isCompleted ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700'
+                  isCompleted ? 'bg-green-500' : 'bg-muted dark:bg-card'
                 )}
               />
             )}
@@ -77,12 +77,12 @@ export function PdfStatusTimeline({
                 'relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-all',
                 isCompleted && 'border-green-500 bg-green-500 text-white',
                 isCurrent && 'border-blue-500 bg-blue-500/10 text-blue-600',
-                isPending && 'border-gray-300 bg-white text-gray-400 dark:border-gray-700 dark:bg-gray-900'
+                isPending && 'border-border bg-card text-muted-foreground dark:border-border dark:bg-card'
               )}
             >
               {isCompleted && <Check className="h-4 w-4" />}
               {isCurrent && <Loader2 className="h-4 w-4 animate-spin" />}
-              {isPending && <div className="h-2 w-2 rounded-full bg-gray-400" />}
+              {isPending && <div className="h-2 w-2 rounded-full bg-muted-foreground" />}
             </div>
 
             {/* Step Label */}
@@ -92,7 +92,7 @@ export function PdfStatusTimeline({
                   'text-sm font-medium',
                   isCompleted && 'text-green-600 dark:text-green-400',
                   isCurrent && 'text-blue-600 dark:text-blue-400',
-                  isPending && 'text-gray-500 dark:text-gray-400'
+                  isPending && 'text-muted-foreground'
                 )}
               >
                 {getPdfStateLabel(state)}

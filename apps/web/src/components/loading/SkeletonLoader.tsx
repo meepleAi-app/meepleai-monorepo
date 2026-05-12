@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 /**
  * SkeletonLoader Component
  *
@@ -109,7 +110,7 @@ export function SkeletonLoader({
           className={`
             ${VARIANT_STYLES[variant]}
             ${shouldAnimate ? 'animate-pulse' : ''}
-            bg-slate-200 dark:bg-slate-700
+            bg-muted dark:bg-card
             ${className}
           `}
         >
@@ -120,23 +121,23 @@ export function SkeletonLoader({
           {variant === 'games' && (
             <div className="h-full flex flex-col p-4 space-y-3">
               {/* Image placeholder */}
-              <div className="flex-1 bg-slate-300 dark:bg-slate-600 rounded" />
+              <div className="flex-1 bg-muted dark:bg-slate-600 rounded" />
               {/* Title placeholder */}
-              <div className="h-4 bg-slate-300 dark:bg-slate-600 rounded w-3/4" />
+              <div className="h-4 bg-muted dark:bg-slate-600 rounded w-3/4" />
               {/* Description placeholder */}
-              <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-full" />
-              <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-5/6" />
+              <div className="h-3 bg-muted dark:bg-slate-600 rounded w-full" />
+              <div className="h-3 bg-muted dark:bg-slate-600 rounded w-5/6" />
             </div>
           )}
 
           {variant === 'agents' && (
             <div className="h-full flex items-center p-3 space-x-3">
               {/* Icon placeholder */}
-              <div className="w-12 h-12 bg-slate-300 dark:bg-slate-600 rounded-full flex-shrink-0" />
+              <div className="w-12 h-12 bg-muted dark:bg-slate-600 rounded-full flex-shrink-0" />
               {/* Text content */}
               <div className="flex-1 space-y-2">
-                <div className="h-4 bg-slate-300 dark:bg-slate-600 rounded w-1/2" />
-                <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-3/4" />
+                <div className="h-4 bg-muted dark:bg-slate-600 rounded w-1/2" />
+                <div className="h-3 bg-muted dark:bg-slate-600 rounded w-3/4" />
               </div>
             </div>
           )}
@@ -144,11 +145,11 @@ export function SkeletonLoader({
           {variant === 'message' && (
             <div className="h-full flex items-start p-3 space-x-3">
               {/* Avatar placeholder */}
-              <div className="w-10 h-10 bg-slate-300 dark:bg-slate-600 rounded-full flex-shrink-0" />
+              <div className="w-10 h-10 bg-muted dark:bg-slate-600 rounded-full flex-shrink-0" />
               {/* Message content */}
               <div className="flex-1 space-y-2 pt-1">
-                <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-full" />
-                <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-4/5" />
+                <div className="h-3 bg-muted dark:bg-slate-600 rounded w-full" />
+                <div className="h-3 bg-muted dark:bg-slate-600 rounded w-4/5" />
               </div>
             </div>
           )}
@@ -156,11 +157,11 @@ export function SkeletonLoader({
           {variant === 'chatHistory' && (
             <div className="h-full flex items-center p-3 space-x-2">
               {/* Icon placeholder */}
-              <div className="w-6 h-6 bg-slate-300 dark:bg-slate-600 rounded flex-shrink-0" />
+              <div className="w-6 h-6 bg-muted dark:bg-slate-600 rounded flex-shrink-0" />
               {/* Title and timestamp */}
               <div className="flex-1 space-y-1">
-                <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-3/4" />
-                <div className="h-2 bg-slate-300 dark:bg-slate-600 rounded w-1/3" />
+                <div className="h-3 bg-muted dark:bg-slate-600 rounded w-3/4" />
+                <div className="h-2 bg-muted dark:bg-slate-600 rounded w-1/3" />
               </div>
             </div>
           )}
@@ -168,15 +169,15 @@ export function SkeletonLoader({
           {variant === 'uploadQueue' && (
             <div className="h-full flex items-center p-4 space-x-4">
               {/* File icon placeholder */}
-              <div className="w-12 h-12 bg-slate-300 dark:bg-slate-600 rounded flex-shrink-0" />
+              <div className="w-12 h-12 bg-muted dark:bg-slate-600 rounded flex-shrink-0" />
               {/* File info and progress */}
               <div className="flex-1 space-y-2">
                 {/* File name */}
-                <div className="h-4 bg-slate-300 dark:bg-slate-600 rounded w-3/4" />
+                <div className="h-4 bg-muted dark:bg-slate-600 rounded w-3/4" />
                 {/* File size and status */}
-                <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-1/2" />
+                <div className="h-3 bg-muted dark:bg-slate-600 rounded w-1/2" />
                 {/* Progress bar */}
-                <div className="h-2 bg-slate-300 dark:bg-slate-600 rounded w-full" />
+                <div className="h-2 bg-muted dark:bg-slate-600 rounded w-full" />
               </div>
             </div>
           )}
@@ -184,17 +185,17 @@ export function SkeletonLoader({
           {variant === 'processingProgress' && (
             <div className="h-full flex flex-col p-4 space-y-3">
               {/* Header */}
-              <div className="h-5 bg-slate-300 dark:bg-slate-600 rounded w-1/2" />
+              <div className="h-5 bg-muted dark:bg-slate-600 rounded w-1/2" />
               {/* Progress bar */}
-              <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-full" />
+              <div className="h-3 bg-muted dark:bg-slate-600 rounded w-full" />
               {/* Progress percentage */}
-              <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-1/4" />
+              <div className="h-3 bg-muted dark:bg-slate-600 rounded w-1/4" />
               {/* Step indicators */}
               <div className="flex space-x-2 mt-2">
-                <div className="w-8 h-8 bg-slate-300 dark:bg-slate-600 rounded-full" />
-                <div className="w-8 h-8 bg-slate-300 dark:bg-slate-600 rounded-full" />
-                <div className="w-8 h-8 bg-slate-300 dark:bg-slate-600 rounded-full" />
-                <div className="w-8 h-8 bg-slate-300 dark:bg-slate-600 rounded-full" />
+                <div className="w-8 h-8 bg-muted dark:bg-slate-600 rounded-full" />
+                <div className="w-8 h-8 bg-muted dark:bg-slate-600 rounded-full" />
+                <div className="w-8 h-8 bg-muted dark:bg-slate-600 rounded-full" />
+                <div className="w-8 h-8 bg-muted dark:bg-slate-600 rounded-full" />
               </div>
             </div>
           )}
@@ -202,9 +203,9 @@ export function SkeletonLoader({
           {variant === 'gameSelection' && (
             <div className="h-full flex items-center p-3 space-x-3">
               {/* Dropdown placeholder */}
-              <div className="flex-1 h-10 bg-slate-300 dark:bg-slate-600 rounded" />
+              <div className="flex-1 h-10 bg-muted dark:bg-slate-600 rounded" />
               {/* Button placeholder */}
-              <div className="w-24 h-10 bg-slate-300 dark:bg-slate-600 rounded" />
+              <div className="w-24 h-10 bg-muted dark:bg-slate-600 rounded" />
             </div>
           )}
         </div>

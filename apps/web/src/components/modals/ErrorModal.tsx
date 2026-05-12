@@ -97,7 +97,7 @@ export function ErrorModal({
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+        className="fixed inset-0 bg-muted-foreground bg-opacity-75 transition-opacity"
         aria-hidden="true"
         onClick={onClose}
       />
@@ -109,8 +109,8 @@ export function ErrorModal({
           &#8203;
         </span>
 
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div className="inline-block align-bottom bg-card rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div className="bg-card px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="sm:flex sm:items-start">
               <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
                 <svg
@@ -129,20 +129,20 @@ export function ErrorModal({
                 </svg>
               </div>
               <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
-                <h3 className="text-lg leading-6 font-medium text-gray-900" id="error-modal-title">
+                <h3 className="text-lg leading-6 font-medium text-foreground" id="error-modal-title">
                   {title}
                 </h3>
                 <div className="mt-2">
-                  <p className="text-sm text-gray-500">{getUserMessage()}</p>
+                  <p className="text-sm text-muted-foreground">{getUserMessage()}</p>
                 </div>
 
                 {showDetails && (
                   <div className="mt-4">
                     <details className="text-xs">
-                      <summary className="cursor-pointer font-medium text-gray-700 hover:text-gray-900">
+                      <summary className="cursor-pointer font-medium text-foreground hover:text-foreground">
                         Technical Details
                       </summary>
-                      <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                      <div className="mt-2 p-3 bg-muted rounded-md">
                         <div className="space-y-2">
                           <div>
                             <span className="font-semibold">Type:</span>{' '}
@@ -150,18 +150,18 @@ export function ErrorModal({
                           </div>
                           <div>
                             <span className="font-semibold">Message:</span>{' '}
-                            <span className="font-mono text-gray-700">{error.message}</span>
+                            <span className="font-mono text-foreground">{error.message}</span>
                           </div>
                           {error instanceof ApiError && (
                             <>
                               <div>
                                 <span className="font-semibold">Endpoint:</span>{' '}
-                                <span className="font-mono text-gray-700">{error.endpoint}</span>
+                                <span className="font-mono text-foreground">{error.endpoint}</span>
                               </div>
                               {error.correlationId && (
                                 <div>
                                   <span className="font-semibold">Correlation ID:</span>{' '}
-                                  <span className="font-mono text-gray-700">
+                                  <span className="font-mono text-foreground">
                                     {error.correlationId}
                                   </span>
                                 </div>
@@ -171,13 +171,13 @@ export function ErrorModal({
                           {error instanceof NetworkError && (
                             <div>
                               <span className="font-semibold">Endpoint:</span>{' '}
-                              <span className="font-mono text-gray-700">{error.endpoint}</span>
+                              <span className="font-mono text-foreground">{error.endpoint}</span>
                             </div>
                           )}
                           {error.stack && (
                             <div>
                               <span className="font-semibold">Stack Trace:</span>
-                              <pre className="mt-1 text-xs overflow-auto max-h-32 whitespace-pre-wrap break-words text-gray-600">
+                              <pre className="mt-1 text-xs overflow-auto max-h-32 whitespace-pre-wrap break-words text-muted-foreground">
                                 {error.stack}
                               </pre>
                             </div>
@@ -191,7 +191,7 @@ export function ErrorModal({
             </div>
           </div>
 
-          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
+          <div className="bg-muted px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
             {canRetry() && onRetry && (
               <button
                 type="button"
@@ -207,7 +207,7 @@ export function ErrorModal({
             <button
               type="button"
               onClick={onClose}
-              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm"
+              className="mt-3 w-full inline-flex justify-center rounded-md border border-border shadow-sm px-4 py-2 bg-card text-base font-medium text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm"
             >
               Close
             </button>

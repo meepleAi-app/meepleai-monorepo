@@ -27,11 +27,11 @@ type Game = {
 function CitationModal({ snippets, onClose }: { snippets: Snippet[]; onClose: () => void }) {
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-6"
+      className="fixed inset-0 bg-foreground/50 flex items-center justify-center z-[1000] p-6"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg max-w-[800px] max-h-[80vh] overflow-auto p-6 shadow-[0_4px_24px_rgba(0,0,0,0.15)]"
+        className="bg-card rounded-lg max-w-[800px] max-h-[80vh] overflow-auto p-6 shadow-[0_4px_24px_rgba(0,0,0,0.15)]"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
@@ -291,7 +291,7 @@ export default function SetupPage() {
   return (
     <main className="min-h-dvh bg-muted font-sans">
       {/* Header */}
-      <div className="bg-white border-b border-border p-4 sticky top-0 z-[100]">
+      <div className="bg-card border-b border-border p-4 sticky top-0 z-[100]">
         <div className="max-w-[900px] mx-auto flex justify-between items-center">
           <h1 className="m-0 text-2xl font-semibold">Game Setup Guide</h1>
           <Link
@@ -306,7 +306,7 @@ export default function SetupPage() {
       {/* Content */}
       <div className="max-w-[900px] mx-auto p-6">
         {/* Game Selection Card */}
-        <div className="bg-white border border-border rounded-lg p-6 mb-6">
+        <div className="bg-card border border-border rounded-lg p-6 mb-6">
           <h2 className="m-0 mb-4 text-lg font-semibold">Select Game</h2>
 
           <form onSubmit={loadSetupGuide} className="flex gap-3 items-end">
@@ -322,7 +322,7 @@ export default function SetupPage() {
                 value={selectedGameId ?? ''}
                 onChange={e => setSelectedGameId(e.target.value || null)}
                 disabled={isLoadingGames || isLoadingGuide}
-                className="w-full p-3 text-sm border border-border rounded bg-white"
+                className="w-full p-3 text-sm border border-border rounded bg-card"
               >
                 <option value="">Select a game...</option>
                 {games.map(game => (
@@ -358,7 +358,7 @@ export default function SetupPage() {
 
         {/* Loading State */}
         {isLoadingGuide && (
-          <div className="bg-white border border-border rounded-lg p-12 text-center">
+          <div className="bg-card border border-border rounded-lg p-12 text-center">
             <div className="text-base text-muted-foreground mb-4">
               Generating your setup guide...
             </div>
@@ -372,7 +372,7 @@ export default function SetupPage() {
         {setupGuide && !isLoadingGuide && (
           <>
             {/* Progress Card */}
-            <div className="bg-white border border-border rounded-lg p-6 mb-6">
+            <div className="bg-card border border-border rounded-lg p-6 mb-6">
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <h2 className="m-0 mb-2 text-xl font-semibold">{setupGuide.gameTitle}</h2>
@@ -452,7 +452,7 @@ export default function SetupPage() {
 
         {/* Empty State */}
         {!setupGuide && !isLoadingGuide && !errorMessage && (
-          <div className="bg-white border border-dashed border-border rounded-lg p-12 text-center">
+          <div className="bg-card border border-dashed border-border rounded-lg p-12 text-center">
             <div className="text-5xl mb-4">🎲</div>
             <h3 className="m-0 mb-2 text-lg text-foreground">No Setup Guide Yet</h3>
             <p className="m-0 text-sm text-muted-foreground">

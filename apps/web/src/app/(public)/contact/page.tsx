@@ -80,7 +80,7 @@ export default function ContactPage() {
           <h1 className="text-3xl font-bold text-foreground" data-testid="contact-heading">
             {t('pages.contact.title')}
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-2xl mx-auto">
+          <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
             {t('pages.contact.description')}
           </p>
         </div>
@@ -99,7 +99,7 @@ export default function ContactPage() {
                 <div>
                   <label
                     htmlFor="name"
-                    className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+                    className="block text-sm font-medium text-foreground mb-1"
                   >
                     {t('pages.contact.form.name')}
                   </label>
@@ -119,7 +119,7 @@ export default function ContactPage() {
                 <div>
                   <label
                     htmlFor="email"
-                    className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+                    className="block text-sm font-medium text-foreground mb-1"
                   >
                     {t('pages.contact.form.email')}
                   </label>
@@ -139,7 +139,7 @@ export default function ContactPage() {
                 <div>
                   <label
                     htmlFor="subject"
-                    className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+                    className="block text-sm font-medium text-foreground mb-1"
                   >
                     {t('pages.contact.form.subject')}
                   </label>
@@ -164,7 +164,7 @@ export default function ContactPage() {
                 <div>
                   <label
                     htmlFor="message"
-                    className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+                    className="block text-sm font-medium text-foreground mb-1"
                   >
                     {t('pages.contact.form.message')}
                   </label>
@@ -217,7 +217,7 @@ export default function ContactPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  <p className="text-sm font-medium text-muted-foreground">
                     {t('pages.contact.info.email')}
                   </p>
                   <a
@@ -229,14 +229,14 @@ export default function ContactPage() {
                 </div>
                 <Separator />
                 <div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  <p className="text-sm font-medium text-muted-foreground">
                     {t('pages.contact.info.response')}
                   </p>
                   <p className="text-foreground">{t('pages.contact.info.responseValue')}</p>
                 </div>
                 <Separator />
                 <div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  <p className="text-sm font-medium text-muted-foreground">
                     {t('pages.contact.info.social')}
                   </p>
                   <div className="flex gap-2 mt-2">
@@ -254,7 +254,7 @@ export default function ContactPage() {
         </div>
 
         {/* Footer Navigation */}
-        <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4 pt-8 border-t border-slate-200 dark:border-slate-700">
+        <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4 pt-8 border-t border-border">
           <Button variant="ghost" onClick={() => router.push('/')}>
             ← {locale === 'it' ? 'Torna alla Home' : 'Back to Home'}
           </Button>

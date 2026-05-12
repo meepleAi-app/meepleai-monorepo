@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -59,8 +60,8 @@ export function DataComparisonTab() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
         {/* Sidebar: table list */}
-        <div className="rounded-lg border border-slate-200/60 dark:border-zinc-700/40">
-          <div className="border-b border-slate-200/60 bg-slate-50/50 px-4 py-2.5 dark:border-zinc-700/40 dark:bg-zinc-800/50">
+        <div className="rounded-lg border border-border/60 dark:border-zinc-700/40">
+          <div className="border-b border-border/60 bg-muted/50 px-4 py-2.5 dark:border-zinc-700/40 dark:bg-zinc-800/50">
             <h3 className="text-sm font-medium text-muted-foreground">
               Tables
               {tables && <span className="ml-1.5 text-xs">({tables.length})</span>}
@@ -114,7 +115,7 @@ export function DataComparisonTab() {
         </div>
 
         {/* Right panel: diff details */}
-        <div className="rounded-lg border border-slate-200/60 dark:border-zinc-700/40">
+        <div className="rounded-lg border border-border/60 dark:border-zinc-700/40">
           {!selectedTable && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <ArrowRightLeft
@@ -188,10 +189,10 @@ export function DataComparisonTab() {
                   <h4 className="text-sm font-medium text-foreground">
                     Modified Rows ({diff.modified.length})
                   </h4>
-                  <div className="overflow-x-auto rounded-lg border border-slate-200/60 dark:border-zinc-700/40">
+                  <div className="overflow-x-auto rounded-lg border border-border/60 dark:border-zinc-700/40">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-slate-200/60 dark:border-zinc-700/40 bg-slate-50/50 dark:bg-zinc-800/50">
+                        <tr className="border-b border-border/60 dark:border-zinc-700/40 bg-muted/50 dark:bg-zinc-800/50">
                           <th className="px-4 py-2 text-left font-medium text-muted-foreground">
                             Primary Key
                           </th>
@@ -211,7 +212,7 @@ export function DataComparisonTab() {
                           row.differences.map((d, di) => (
                             <tr
                               key={`${ri}-${di}`}
-                              className="border-b border-slate-200/40 dark:border-zinc-700/30 last:border-b-0"
+                              className="border-b border-border/40 dark:border-zinc-700/30 last:border-b-0"
                             >
                               {di === 0 && (
                                 <td

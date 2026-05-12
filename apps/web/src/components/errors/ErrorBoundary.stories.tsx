@@ -39,10 +39,10 @@ function ConditionalErrorComponent({ shouldError }: { shouldError: boolean }) {
   }
   return (
     <div className="p-8 text-center">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+      <h2 className="text-2xl font-bold text-foreground">
         Component Working Correctly
       </h2>
-      <p className="mt-2 text-gray-600 dark:text-gray-400">
+      <p className="mt-2 text-muted-foreground">
         No errors detected. Everything is functioning normally.
       </p>
     </div>
@@ -93,7 +93,7 @@ export const CustomFallback: Story = {
     <ErrorBoundary
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900">
-          <div className="max-w-md p-8 bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+          <div className="max-w-md p-8 bg-card rounded-lg shadow-xl">
             <div className="flex items-center justify-center w-16 h-16 mx-auto bg-red-100 dark:bg-red-900 rounded-full">
               <svg
                 className="w-8 h-8 text-red-600 dark:text-red-400"
@@ -109,10 +109,10 @@ export const CustomFallback: Story = {
                 />
               </svg>
             </div>
-            <h2 className="mt-4 text-2xl font-bold text-center text-gray-900 dark:text-gray-100">
+            <h2 className="mt-4 text-2xl font-bold text-center text-foreground">
               Custom Error Handler
             </h2>
-            <p className="mt-2 text-center text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-center text-muted-foreground">
               This is a custom fallback UI that provides a branded error experience.
             </p>
             <button
@@ -135,7 +135,7 @@ export const CustomFallback: Story = {
  */
 export const DarkMode: Story = {
   render: () => (
-    <div className="dark bg-gray-900 min-h-screen">
+    <div className="dark bg-card min-h-screen">
       <ErrorBoundary showDetails={true}>
         <ErrorComponent />
       </ErrorBoundary>
@@ -155,10 +155,10 @@ export const InteractiveReset: Story = {
       const [shouldError, setShouldError] = useState(true);
 
       return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="min-h-screen bg-muted p-4">
           <div className="max-w-4xl mx-auto">
-            <div className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            <div className="mb-4 p-4 bg-card rounded-lg shadow">
+              <h3 className="text-lg font-semibold text-foreground mb-2">
                 Error Boundary Controls
               </h3>
               <button
@@ -171,11 +171,11 @@ export const InteractiveReset: Story = {
 
             <ErrorBoundary
               fallback={(error, reset) => (
-                <div className="p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+                <div className="p-8 bg-card rounded-lg shadow-lg">
                   <h2 className="text-xl font-bold text-red-600 dark:text-red-400">
                     Error Caught!
                   </h2>
-                  <p className="mt-2 text-gray-600 dark:text-gray-400">{error.message}</p>
+                  <p className="mt-2 text-muted-foreground">{error.message}</p>
                   <button
                     className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-colors"
                     onClick={() => {
@@ -229,7 +229,7 @@ export const NoError: Story = {
   render: () => (
     <ErrorBoundary>
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
-        <div className="max-w-md p-8 bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+        <div className="max-w-md p-8 bg-card rounded-lg shadow-xl">
           <div className="flex items-center justify-center w-16 h-16 mx-auto bg-green-100 dark:bg-green-900 rounded-full">
             <svg
               className="w-8 h-8 text-green-600 dark:text-green-400"
@@ -245,10 +245,10 @@ export const NoError: Story = {
               />
             </svg>
           </div>
-          <h2 className="mt-4 text-2xl font-bold text-center text-gray-900 dark:text-gray-100">
+          <h2 className="mt-4 text-2xl font-bold text-center text-foreground">
             Everything Working
           </h2>
-          <p className="mt-2 text-center text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-center text-muted-foreground">
             No errors detected. The ErrorBoundary is monitoring this component tree.
           </p>
         </div>

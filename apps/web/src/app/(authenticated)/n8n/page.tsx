@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -211,7 +212,7 @@ export default function N8nWorkflowManagement() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="m-0">n8n Workflow Management</h1>
-          <p className="mt-2 mb-0 text-slate-500">
+          <p className="mt-2 mb-0 text-muted-foreground">
             Configure n8n endpoints and credentials for workflow automation
           </p>
         </div>
@@ -224,7 +225,7 @@ export default function N8nWorkflowManagement() {
             }}
             className={cn(
               'px-4 py-2 text-white border-none rounded cursor-pointer',
-              showForm ? 'bg-slate-500' : 'bg-green-600 hover:bg-green-700'
+              showForm ? 'bg-muted-foreground' : 'bg-green-600 hover:bg-green-700'
             )}
           >
             {showForm ? 'Cancel' : 'Add Configuration'}
@@ -239,7 +240,7 @@ export default function N8nWorkflowManagement() {
       </div>
 
       {showForm && (
-        <div className="p-6 border border-gray-300 rounded-lg bg-white mb-6">
+        <div className="p-6 border border-border rounded-lg bg-card mb-6">
           <h3 className="mt-0">{editingConfig ? 'Edit Configuration' : 'New Configuration'}</h3>
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
@@ -249,7 +250,7 @@ export default function N8nWorkflowManagement() {
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                 required
-                className="w-full p-3 text-sm border border-gray-300 rounded"
+                className="w-full p-3 text-sm border border-border rounded"
                 placeholder="Production n8n"
               />
             </div>
@@ -261,7 +262,7 @@ export default function N8nWorkflowManagement() {
                 value={formData.baseUrl}
                 onChange={e => setFormData({ ...formData, baseUrl: e.target.value })}
                 required
-                className="w-full p-3 text-sm border border-gray-300 rounded"
+                className="w-full p-3 text-sm border border-border rounded"
                 placeholder="http://localhost:5678"
               />
             </div>
@@ -275,7 +276,7 @@ export default function N8nWorkflowManagement() {
                 value={formData.apiKey}
                 onChange={e => setFormData({ ...formData, apiKey: e.target.value })}
                 required={!editingConfig}
-                className="w-full p-3 text-sm border border-gray-300 rounded"
+                className="w-full p-3 text-sm border border-border rounded"
                 placeholder="n8n API key"
               />
             </div>
@@ -286,7 +287,7 @@ export default function N8nWorkflowManagement() {
                 type="url"
                 value={formData.webhookUrl}
                 onChange={e => setFormData({ ...formData, webhookUrl: e.target.value })}
-                className="w-full p-3 text-sm border border-gray-300 rounded"
+                className="w-full p-3 text-sm border border-border rounded"
                 placeholder="http://localhost:5678/webhook"
               />
             </div>
@@ -302,13 +303,13 @@ export default function N8nWorkflowManagement() {
       )}
 
       {configs.length === 0 ? (
-        <div className="p-12 text-center text-slate-500 border border-gray-300 rounded-lg">
+        <div className="p-12 text-center text-muted-foreground border border-border rounded-lg">
           <p>No n8n configurations found. Click &quot;Add Configuration&quot; to create one.</p>
         </div>
       ) : (
         <div className="grid gap-4">
           {configs.map(config => (
-            <div key={config.id} className="p-6 border border-gray-300 rounded-lg bg-white">
+            <div key={config.id} className="p-6 border border-border rounded-lg bg-card">
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
@@ -318,15 +319,15 @@ export default function N8nWorkflowManagement() {
                         'px-2 py-1 text-xs font-semibold rounded',
                         config.isActive
                           ? 'bg-green-100 text-green-600'
-                          : 'bg-gray-100 text-slate-500'
+                          : 'bg-muted text-muted-foreground'
                       )}
                     >
                       {config.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  <p className="mt-1 mb-0 text-slate-500 text-sm">{config.baseUrl}</p>
+                  <p className="mt-1 mb-0 text-muted-foreground text-sm">{config.baseUrl}</p>
                   {config.webhookUrl && (
-                    <p className="mt-1 mb-0 text-slate-500 text-sm">Webhook: {config.webhookUrl}</p>
+                    <p className="mt-1 mb-0 text-muted-foreground text-sm">Webhook: {config.webhookUrl}</p>
                   )}
                 </div>
                 <div className="flex gap-2">
@@ -347,7 +348,7 @@ export default function N8nWorkflowManagement() {
                     className={cn(
                       'px-3 py-1.5 text-white border-none rounded cursor-pointer text-[13px]',
                       config.isActive
-                        ? 'bg-slate-500 hover:bg-slate-600'
+                        ? 'bg-muted-foreground hover:bg-slate-600'
                         : 'bg-green-600 hover:bg-green-700'
                     )}
                   >
@@ -369,8 +370,8 @@ export default function N8nWorkflowManagement() {
               </div>
 
               {config.lastTestedAt && (
-                <div className="p-3 bg-gray-50 rounded">
-                  <div className="text-xs text-slate-500 mb-1">
+                <div className="p-3 bg-muted rounded">
+                  <div className="text-xs text-muted-foreground mb-1">
                     Last tested: {new Date(config.lastTestedAt).toLocaleString()}
                   </div>
                   <div

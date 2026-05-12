@@ -246,7 +246,7 @@ export function GuestJoinView({ inviteToken }: GuestJoinViewProps) {
   if (joinState === 'loading') {
     return (
       <main className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3 text-gray-600">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
           <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
           <p className="font-nunito" data-testid="loading-text">
             Caricamento sessione...
@@ -265,8 +265,8 @@ export function GuestJoinView({ inviteToken }: GuestJoinViewProps) {
           <div className="h-16 w-16 mx-auto rounded-2xl bg-red-100 flex items-center justify-center">
             <Users className="h-8 w-8 text-red-500" />
           </div>
-          <h1 className="text-xl font-quicksand font-bold text-gray-900">Sessione non trovata</h1>
-          <p className="text-sm font-nunito text-gray-600">
+          <h1 className="text-xl font-quicksand font-bold text-foreground">Sessione non trovata</h1>
+          <p className="text-sm font-nunito text-muted-foreground">
             {errorMessage ?? 'Il link potrebbe essere scaduto o non valido.'}
           </p>
           <Button onClick={() => loadSession()} variant="outline" className="w-full">
@@ -287,12 +287,12 @@ export function GuestJoinView({ inviteToken }: GuestJoinViewProps) {
             <div className="h-16 w-16 mx-auto rounded-2xl bg-amber-100 flex items-center justify-center">
               <Users className="h-8 w-8 text-amber-600" />
             </div>
-            <h1 className="text-2xl font-quicksand font-bold text-gray-900">
+            <h1 className="text-2xl font-quicksand font-bold text-foreground">
               Unisciti alla partita
             </h1>
-            <p className="text-sm font-nunito text-gray-600">
-              <span className="font-semibold text-gray-900">{sessionInfo.gameName}</span> ospitata
-              da <span className="font-semibold text-gray-900">{sessionInfo.hostName}</span>
+            <p className="text-sm font-nunito text-muted-foreground">
+              <span className="font-semibold text-foreground">{sessionInfo.gameName}</span> ospitata
+              da <span className="font-semibold text-foreground">{sessionInfo.hostName}</span>
             </p>
             <Badge variant="outline" className="font-mono text-lg px-4 py-1">
               {sessionInfo.inviteCode}
@@ -301,7 +301,7 @@ export function GuestJoinView({ inviteToken }: GuestJoinViewProps) {
 
           <form onSubmit={handleJoin} className="space-y-3">
             <div className="space-y-1.5">
-              <label htmlFor="guest-name" className="text-sm font-nunito font-medium text-gray-700">
+              <label htmlFor="guest-name" className="text-sm font-nunito font-medium text-foreground">
                 Il tuo nome
               </label>
               <Input
@@ -354,15 +354,15 @@ export function GuestJoinView({ inviteToken }: GuestJoinViewProps) {
       <main className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 p-4">
         <div className="max-w-sm mx-auto space-y-4">
           <div className="text-center pt-4 pb-2">
-            <h1 className="text-xl font-quicksand font-bold text-gray-900">
+            <h1 className="text-xl font-quicksand font-bold text-foreground">
               {sessionInfo.gameName}
             </h1>
-            <p className="text-sm font-nunito text-gray-500">
+            <p className="text-sm font-nunito text-muted-foreground">
               Giochi come <span className="font-semibold text-amber-700">{guestName}</span>
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white/70 backdrop-blur-md border border-white/40 shadow-sm overflow-hidden">
+          <div className="rounded-2xl bg-card/70 backdrop-blur-md border border-border shadow-sm overflow-hidden">
             <ScoreBoard sessionId={sessionInfo.sessionId} isHost={false} />
           </div>
 

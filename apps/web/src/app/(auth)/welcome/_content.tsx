@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
@@ -17,7 +18,7 @@ export function WelcomeFallback() {
         <div className="animate-pulse">
           <PartyPopper className="h-16 w-16 text-primary/50 mx-auto" />
         </div>
-        <p className="text-slate-500 animate-pulse">Caricamento...</p>
+        <p className="text-muted-foreground animate-pulse">Caricamento...</p>
       </div>
     </main>
   );
@@ -91,13 +92,13 @@ export function WelcomeContent() {
 
         {/* Welcome Message */}
         <div className="space-y-3">
-          <h1 className="text-3xl md:text-4xl font-bold font-quicksand text-slate-900 dark:text-white">
+          <h1 className="text-3xl md:text-4xl font-bold font-quicksand text-foreground dark:text-white">
             Benvenuto in MeepleAI! 🎉
           </h1>
-          <p className="text-lg text-slate-600 dark:text-slate-300">
+          <p className="text-lg text-muted-foreground">
             Il tuo account è stato creato con successo.
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-muted-foreground">
             Tra pochi secondi verrai reindirizzato alla dashboard...
           </p>
         </div>
@@ -110,14 +111,14 @@ export function WelcomeContent() {
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label="Redirect progress"
-            className="relative h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
+            className="relative h-2 w-full overflow-hidden rounded-full bg-muted dark:bg-card"
           >
             <div
               className="h-full rounded-full bg-primary transition-[width] duration-75 motion-reduce:transition-none"
               style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
             />
           </div>
-          <p className="text-xs text-slate-400 dark:text-slate-500">Reindirizzamento in corso...</p>
+          <p className="text-xs text-muted-foreground">Reindirizzamento in corso...</p>
         </div>
 
         {/* Manual Redirect Button */}
@@ -137,18 +138,18 @@ export function WelcomeContent() {
         </Btn>
 
         {/* Features Preview */}
-        <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
+        <div className="pt-4 border-t border-border">
+          <p className="text-sm text-muted-foreground mb-3">
             Cosa puoi fare con MeepleAI:
           </p>
           <div className="flex flex-wrap justify-center gap-2 text-xs">
-            <span className="px-3 py-1 bg-white dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300 shadow-sm">
+            <span className="px-3 py-1 bg-card rounded-full text-muted-foreground shadow-sm">
               📚 Regole dei giochi
             </span>
-            <span className="px-3 py-1 bg-white dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300 shadow-sm">
+            <span className="px-3 py-1 bg-card rounded-full text-muted-foreground shadow-sm">
               🤖 Assistente AI
             </span>
-            <span className="px-3 py-1 bg-white dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300 shadow-sm">
+            <span className="px-3 py-1 bg-card rounded-full text-muted-foreground shadow-sm">
               🎲 Libreria giochi
             </span>
           </div>

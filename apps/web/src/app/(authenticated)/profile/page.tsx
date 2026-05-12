@@ -364,7 +364,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="container mx-auto max-w-3xl">
         {/* Profile Header */}
-        <div className="flex items-center gap-4 mb-8 p-6 rounded-2xl bg-white/70 backdrop-blur-md border border-border/50 shadow-sm">
+        <div className="flex items-center gap-4 mb-8 p-6 rounded-2xl bg-card/70 backdrop-blur-md border border-border/50 shadow-sm">
           <AvatarUpload
             currentAvatarUrl={avatarUrl}
             displayName={displayName}

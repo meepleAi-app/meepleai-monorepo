@@ -103,9 +103,17 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         // Agent Slots (Issue #417)
         yield return ["GET", "/api/v1/user/agent-slots"];
 
-        // Agents (Issues #654, #655 — handlers implemented in Wave B.2 / β.3)
-        yield return ["POST", "/api/v1/agents/user"];
-        yield return ["POST", "/api/v1/agents/create-with-setup"];
+        // Agents (Issues #641/#647/#648/#650/#654/#655/#657/#658/#659 — handlers all implemented)
+        yield return ["GET",  "/api/v1/agents"];                                                                 // #641 Wave B.2
+        yield return ["GET",  "/api/v1/agents/00000000-0000-0000-0000-000000000001"];                            // #647 Phase γ.1
+        yield return ["GET",  "/api/v1/agents/00000000-0000-0000-0000-000000000001/status"];                     // #648 Phase γ.2
+        yield return ["GET",  "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration"];              // #657 Phase γ.4
+        yield return ["GET",  "/api/v1/agents/recent?limit=10"];                                                 // #650 Phase γ.3
+        yield return ["GET",  "/api/v1/agent-typologies"];                                                       // typology listing
+        yield return ["POST", "/api/v1/agents/user"];                                                            // #654 Phase β.2
+        yield return ["POST", "/api/v1/agents/create-with-setup"];                                               // #655 Phase β.3
+        yield return ["POST", "/api/v1/agents/quick-create"];                                                    // #659 Phase δ.1
+        yield return ["PATCH","/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration"];              // #658 Phase γ.4
 
         // Contact (public, no auth)
         yield return ["POST", "/api/v1/contact"];
@@ -119,19 +127,11 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
     public static IEnumerable<object[]> PendingBackendRoutes()
     {
         // Agent CRUD — agentsClient.ts marks these as BACKEND MISSING (audit 2026-04-15).
-        yield return ["GET",  "/api/v1/agents",                                                                "agent listing"];
-        yield return ["GET",  "/api/v1/agents/00000000-0000-0000-0000-000000000001",                          "agent by id"];
-        yield return ["GET",  "/api/v1/agents/00000000-0000-0000-0000-000000000001/status",                   "agent status"];
-        yield return ["GET",  "/api/v1/agent-typologies",                                                     "typology listing"];
-        yield return ["GET",  "/api/v1/agents/recent?limit=10",                                               "recent agents"];
-        // agents/user: moved to KnownRoutes (Issue #654 — Wave B.2 handler implemented)
-        // agent-slots: moved to KnownRoutes (Issue #417 — handler implemented)
-        // agents/create-with-setup: moved to KnownRoutes (Issue #655 — Phase β.3 handler implemented)
-        yield return ["POST", "/api/v1/agents/quick-create",                                                  "quick create tutor"];
-        yield return ["PUT",  "/api/v1/agents/00000000-0000-0000-0000-000000000001/configure",                "configure agent"];
-        yield return ["GET",  "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration",            "get agent config"];
-        yield return ["PATCH", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration",           "update agent config"];
-
+        // Most agents routes have been promoted to KnownRoutes (Waves B.2/γ/δ/β.3). The
+        // only remaining gap is the legacy `/configure` (PUT) endpoint — replaced by
+        // PATCH /configuration in Issue #658 — left here to detect if a regression ever
+        // re-introduces it under the old path.
+        yield return ["PUT",  "/api/v1/agents/00000000-0000-0000-0000-000000000001/configure",                "configure agent (legacy path)"];
     }
 
     [Theory]

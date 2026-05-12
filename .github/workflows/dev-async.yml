@@ -95,6 +95,12 @@ jobs:
           working-directory: apps/web
 
       - name: Run smoke specs only
+        # Use the dedicated smoke-real-backend folder (3 specs covering the
+        # game-night flow). The `@smoke` Playwright tag is documented in
+        # e2e/helpers/test-tags.ts but only one spec currently carries it
+        # (playwright-patterns-demo.spec.ts), so a tag-based --grep would
+        # silently match a single demo file. The folder-based filter is
+        # explicit and matches the specs the nightly run already exercises.
         env:
           PLAYWRIGHT_AUTH_BYPASS: 'true'
-        run: pnpm test:e2e --grep "@smoke"
+        run: pnpm test:e2e -- e2e/smoke-real-backend/

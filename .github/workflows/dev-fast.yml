@@ -77,7 +77,9 @@ jobs:
         run: pnpm typecheck
 
       - name: Unit tests (Vitest, no coverage)
-        run: pnpm test:unit --run
+        # apps/web/package.json declares `"test": "vitest run"` — already
+        # non-watch. There is no separate `test:unit` script.
+        run: pnpm test
 
   backend-fast:
     name: Backend Fast (build + unit)

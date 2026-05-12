@@ -61,72 +61,8 @@ jobs:
         continue-on-error: true
         # Same warn-only stance for first prod rollout — see #850.
 
-  load-probe:
-    name: Load Probe (k6 smoke)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Backend
-        uses: ./.github/actions/setup-backend
-        with:
-          dotnet-version: '9.0.x'
-          working-directory: apps/api
-
-      - name: Build API (Release)
-        working-directory: apps/api
-        run: dotnet build --no-restore --configuration Release
-
-      - name: Start API in background
-        working-directory: apps/api/src/Api
-        env:
-          ASPNETCORE_URLS: 'http://localhost:8080'
-          ASPNETCORE_ENVIRONMENT: 'Production'
-        run: |
-          dotnet run --no-build --configuration Release &
-          echo "API_PID=$!" >> $GITHUB_ENV
-          # Wait for readiness on /health
-          for i in $(seq 1 30); do
-            if curl -fs http://localhost:8080/health >/dev/null 2>&1; then
-              echo "API ready after ${i} attempts"
-              break
-            fi
-            sleep 2
-          done
-
-      - name: Install k6
-        run: |
-          sudo gpg -k
-          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update
-          sudo apt-get install -y k6
-
-      - name: Smoke load (10 VUs × 30s)
-        run: |
-          cat > /tmp/smoke.js <<'JS'
-          import http from 'k6/http';
-          import { check, sleep } from 'k6';
-          export const options = {
-            vus: 10,
-            duration: '30s',
-            thresholds: {
-              http_req_failed: ['rate<0.05'],
-              http_req_duration: ['p(95)<1500'],
-            },
-          };
-          export default function () {
-            const res = http.get('http://localhost:8080/health');
-            check(res, { 'status 200': (r) => r.status === 200 });
-            sleep(1);
-          }
-          JS
-          k6 run /tmp/smoke.js
-        continue-on-error: true
-        # Load thresholds are aspirational on the first prod rollout.
-        # Tighten to blocking once a baseline is captured.
-
-      - name: Stop API
-        if: always()
-        run: kill -TERM "$API_PID" 2>/dev/null || true
+  # load-probe is intentionally deferred to a follow-up: a meaningful k6
+  # smoke needs a production-like stack (Postgres + Redis + secrets) which
+  # is more than this PR's scope. A future workflow can spin up
+  # `infra/compose.test.yml` or hit the staging URL directly. Tracked
+  # under epic #842 close-out alongside the ci.yml consolidation.

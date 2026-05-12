@@ -6,21 +6,17 @@
 | **Generator** | `pnpm lint:tokens` (DS-2) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../docs/for-developers/specs/2026-05-12-token-canonicalization.md) |
 | **Rule** | `local/no-hardcoded-color-utility` |
-| **Total violations** | 1937 |
-| **Files affected** | 251 |
-| **Clusters affected** | 161 |
+| **Total violations** | 1587 |
+| **Files affected** | 226 |
+| **Clusters affected** | 157 |
 
 ## Violations by cluster
 
 | Cluster | Violations | Suggested stage |
 |---|---|---|
-| `admin/shared-games` | 128 | manual |
 | `toolkit-drawer/tabs` | 122 | manual |
-| `admin/agents` | 83 | manual |
 | `stories/Animations.stories.tsx` | 76 | manual |
-| `admin/users` | 75 | manual |
 | `app/(authenticated)/admin` | 67 | manual |
-| `admin/games` | 64 | manual |
 | `app/(authenticated)/play-records` | 55 | manual |
 | `admin/command-center` | 54 | manual |
 | `loading/SkeletonLoader.tsx` | 54 | manual |
@@ -185,21 +181,21 @@
 | `src/components/loading/SkeletonLoader.tsx` | 54 |
 | `src/components/play-records/NewPlayRecordSheet.tsx` | 50 |
 | `src/components/rag-dashboard/config/RagConfigurationForm.tsx` | 44 |
-| `src/components/admin/shared-games/SharedGameExtraMeepleCard.tsx` | 43 |
-| `src/components/admin/agents/chat-history-table.tsx` | 35 |
 | `src/app/(authenticated)/play-records/[id]/page.tsx` | 32 |
-| `src/components/admin/users/activity-table.tsx` | 28 |
-| `src/components/admin/users/permissions-matrix.tsx` | 28 |
 | `src/app/(auth)/welcome/_content.tsx` | 27 |
 | `src/components/errors/ErrorBoundary.stories.tsx` | 27 |
 | `src/stories/DesignTokens.stories.tsx` | 27 |
-| `src/components/admin/agents/models-table.tsx` | 24 |
-| `src/components/admin/shared-games/game-catalog-grid.tsx` | 24 |
-| `src/components/admin/shared-games/categories-table.tsx` | 23 |
 | `src/app/(authenticated)/admin/wizard/steps/ChatSetupStep.tsx` | 22 |
 | `src/app/(authenticated)/play-records/stats/page.tsx` | 22 |
 | `src/components/comments/CommentItem.tsx` | 22 |
 | `src/components/empty-state/EmptyState.stories.tsx` | 22 |
+| `src/components/toolkit-drawer/tabs/EventDiaryTab.tsx` | 22 |
+| `src/stories/BackgroundTexture.stories.tsx` | 22 |
+| `src/app/(public)/contact/page.tsx` | 18 |
+| `src/components/modals/ErrorModal.tsx` | 18 |
+| `src/app/(authenticated)/admin/wizard/steps/QAStep.tsx` | 17 |
+| `src/app/(authenticated)/n8n/page.tsx` | 17 |
+| `src/app/(authenticated)/versions/page.tsx` | 17 |
 
 ## Notes
 

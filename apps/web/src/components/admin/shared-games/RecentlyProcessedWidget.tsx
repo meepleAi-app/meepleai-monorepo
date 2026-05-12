@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 /**
  * RecentlyProcessedWidget — Collapsible card showing the 10 most recent PDFs
  * processed across all shared games. Polls every 15 seconds.
@@ -95,7 +96,7 @@ export function RecentlyProcessedWidget() {
   }
 
   return (
-    <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+    <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-base">
           <div className="flex items-center gap-2">
@@ -124,7 +125,7 @@ export function RecentlyProcessedWidget() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm" role="table">
               <thead>
-                <tr className="text-left text-xs text-muted-foreground border-b border-slate-200/50 dark:border-zinc-700/50">
+                <tr className="text-left text-xs text-muted-foreground border-b border-border/50 dark:border-zinc-700/50">
                   <th className="pb-2 font-medium">PDF</th>
                   <th className="pb-2 font-medium">Gioco</th>
                   <th className="pb-2 font-medium">Stato</th>
@@ -174,11 +175,11 @@ function DocumentRow({ doc, onRetry, retryingJobId }: DocumentRowProps) {
   const status = getStatusConfig(doc.processingState);
 
   return (
-    <tr className="hover:bg-slate-50/50 dark:hover:bg-zinc-900/30">
+    <tr className="hover:bg-muted/50 dark:hover:bg-zinc-900/30">
       {/* PDF */}
       <td className="py-2 pr-3">
         <div className="flex items-center gap-2 min-w-0">
-          <FileTextIcon className="h-4 w-4 text-slate-500 shrink-0" />
+          <FileTextIcon className="h-4 w-4 text-muted-foreground shrink-0" />
           <span className="truncate max-w-[180px]" title={doc.fileName}>
             {doc.fileName}
           </span>

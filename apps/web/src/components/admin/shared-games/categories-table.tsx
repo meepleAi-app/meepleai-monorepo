@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { PlusIcon } from 'lucide-react';
@@ -47,10 +48,10 @@ export function CategoriesTable() {
       {/* Header with Add Button */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-quicksand text-xl font-bold text-slate-900 dark:text-zinc-100">
+          <h2 className="font-quicksand text-xl font-bold text-foreground dark:text-zinc-100">
             Categories
           </h2>
-          <p className="text-sm text-slate-600 dark:text-zinc-400 mt-1">
+          <p className="text-sm text-muted-foreground dark:text-muted-foreground mt-1">
             Drag to reorder, click to edit
           </p>
         </div>
@@ -61,24 +62,24 @@ export function CategoriesTable() {
       </div>
 
       {/* Table */}
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border border-amber-200/50 dark:border-zinc-700/50 rounded-lg overflow-hidden">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border border-amber-200/50 dark:border-zinc-700/50 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-amber-100/50 dark:bg-zinc-900/50 border-b border-amber-200/50 dark:border-zinc-700/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-zinc-300 uppercase tracking-wider w-12">
+                <th className="px-6 py-3 text-left text-xs font-medium text-foreground dark:text-zinc-300 uppercase tracking-wider w-12">
                   {/* Drag handle column */}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-zinc-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-foreground dark:text-zinc-300 uppercase tracking-wider">
                   Category Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-zinc-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-foreground dark:text-zinc-300 uppercase tracking-wider">
                   Game Count
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-zinc-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-foreground dark:text-zinc-300 uppercase tracking-wider">
                   Color
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-zinc-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-foreground dark:text-zinc-300 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -101,7 +102,7 @@ export function CategoriesTable() {
       </div>
 
       {/* Note about drag-to-reorder */}
-      <p className="text-xs text-slate-500 dark:text-zinc-500 italic">
+      <p className="text-xs text-muted-foreground dark:text-muted-foreground italic">
         Note: Drag-to-reorder functionality will be added in a future update
       </p>
     </div>

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 /**
@@ -108,7 +109,7 @@ function buildPipelineSteps(currentState: string, isFailed: boolean): PipelineSt
 function PipelineStepItem({ step }: { step: PipelineStep }) {
   const statusClasses = {
     pending:
-      'bg-slate-100 dark:bg-zinc-800 text-muted-foreground border-slate-200 dark:border-zinc-700',
+      'bg-muted dark:bg-zinc-800 text-muted-foreground border-border dark:border-zinc-700',
     active:
       'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 ring-2 ring-amber-500/20',
     completed:
@@ -156,7 +157,7 @@ function PipelineConnector({ isCompleted }: { isCompleted: boolean }) {
     <div className="ml-4 flex items-center">
       <div
         className={`h-6 w-px transition-colors duration-300 ${
-          isCompleted ? 'bg-green-400 dark:bg-green-600' : 'bg-slate-200 dark:bg-zinc-700'
+          isCompleted ? 'bg-green-400 dark:bg-green-600' : 'bg-muted dark:bg-zinc-700'
         }`}
       />
     </div>
@@ -217,7 +218,7 @@ export function ProcessingMonitor({ gameId, gameTitle }: ProcessingMonitorProps)
       </div>
 
       {/* Progress bar */}
-      <div className="relative h-2 rounded-full bg-slate-100 dark:bg-zinc-800 overflow-hidden">
+      <div className="relative h-2 rounded-full bg-muted dark:bg-zinc-800 overflow-hidden">
         <div
           className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out ${
             isFailed
@@ -231,7 +232,7 @@ export function ProcessingMonitor({ gameId, gameTitle }: ProcessingMonitorProps)
       </div>
 
       {/* Pipeline visualization */}
-      <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+      <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between text-base">
             <span className="flex items-center gap-2">

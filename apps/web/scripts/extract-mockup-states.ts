@@ -213,7 +213,12 @@ export async function runCli(opts: CliOptions): Promise<number> {
 
   switch (opts.mode) {
     case 'write': {
-      writeFileSync(opts.matrixPath, JSON.stringify(merged, null, 2) + '\n', 'utf-8');
+      // Prepend $schema link so IDE auto-validates the file
+      const output = {
+        $schema: './state-matrix.schema.json',
+        ...merged,
+      };
+      writeFileSync(opts.matrixPath, JSON.stringify(output, null, 2) + '\n', 'utf-8');
       return 0;
     }
     case 'check': {

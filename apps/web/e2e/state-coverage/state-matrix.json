@@ -1,5 +1,6 @@
 {
-  "generated_at": "2026-05-12T14:38:00.257Z",
+  "$schema": "./state-matrix.schema.json",
+  "generated_at": "2026-05-12T14:39:28.967Z",
   "total_mockups": 61,
   "enforced_count": 0,
   "entries": [

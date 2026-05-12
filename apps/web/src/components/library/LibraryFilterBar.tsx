@@ -51,7 +51,7 @@ export function LibraryFilterBar({
           className={cn(
             'px-3 py-1.5 rounded-full font-semibold text-xs whitespace-nowrap transition-colors shrink-0',
             activeFilter === f
-              ? 'bg-[hsl(var(--e-game))] text-white'
+              ? 'bg-[hsl(var(--c-game))] text-white'
               : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
           )}
         >
@@ -69,7 +69,7 @@ export function LibraryFilterBar({
           className={cn(
             'px-3 py-1.5 rounded-full font-semibold text-xs whitespace-nowrap transition-colors shrink-0',
             activePlayerFilter === count
-              ? 'bg-[hsl(var(--e-player))] text-white'
+              ? 'bg-[hsl(var(--c-player))] text-white'
               : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
           )}
         >

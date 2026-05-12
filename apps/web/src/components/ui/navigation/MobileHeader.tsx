@@ -27,8 +27,8 @@ export function MobileHeader({
         'sticky top-0 z-30 lg:hidden',
         'flex items-center gap-3',
         'h-[var(--size-mobile-header)] px-4',
-        'bg-[var(--gaming-bg-base)]/95 backdrop-blur-sm',
-        'border-b border-[var(--gaming-border-glass)]',
+        'bg-[var(--bg)]/95 backdrop-blur-sm',
+        'border-b border-[var(--glass-border)]',
         className
       )}
     >
@@ -36,18 +36,18 @@ export function MobileHeader({
         <button
           onClick={onBack}
           aria-label="Torna indietro"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--gaming-text-secondary)] hover:bg-card/5"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-sec)] hover:bg-card/5"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
       )}
 
       <div className="flex-1 min-w-0">
-        <h1 className="truncate text-base font-semibold text-[var(--gaming-text-primary)]">
+        <h1 className="truncate text-base font-semibold text-[var(--text)]">
           {title}
         </h1>
         {subtitle && (
-          <p className="truncate text-xs text-[var(--gaming-text-secondary)]">{subtitle}</p>
+          <p className="truncate text-xs text-[var(--text-sec)]">{subtitle}</p>
         )}
       </div>
 

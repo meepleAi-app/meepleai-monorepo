@@ -87,7 +87,7 @@ export function BottomSheet({
               <div className="px-4 pb-3">
                 <h2
                   id={titleId}
-                  className="text-lg font-semibold text-[var(--gaming-text-primary)]"
+                  className="text-lg font-semibold text-[var(--text)]"
                 >
                   {title}
                 </h2>

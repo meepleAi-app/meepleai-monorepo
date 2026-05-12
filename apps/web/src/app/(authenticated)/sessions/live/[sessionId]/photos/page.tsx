@@ -199,7 +199,7 @@ export default function PhotosPage({ params }: PhotosPageProps) {
       )}
 
       {/* Vision AI Snapshots */}
-      <div className="mt-6 border-t border-[var(--nh-border-default)] pt-6">
+      <div className="mt-6 border-t border-[var(--border)] pt-6">
         <SessionSnapshotPanel
           sessionId={sessionId}
           userId={currentUser?.id ?? ''}

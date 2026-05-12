@@ -27,7 +27,7 @@ export default function PlayRecordsPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   return (
-    <div className="flex flex-col min-h-full bg-[var(--gaming-bg-base)]">
+    <div className="flex flex-col min-h-full bg-[var(--bg)]">
       <MobileHeader
         title="Partite Giocate"
         onBack={() => router.back()}
@@ -36,7 +36,7 @@ export default function PlayRecordsPage() {
             type="button"
             aria-label="Vai alle statistiche"
             onClick={() => router.push('/play-records/stats')}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--gaming-text-secondary)] hover:bg-card/5"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-sec)] hover:bg-card/5"
           >
             <BarChart3 className="h-5 w-5" />
           </button>

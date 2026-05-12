@@ -81,16 +81,16 @@ export function SnapshotUploadDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-md rounded-2xl border border-[var(--nh-border-default)] bg-card p-5 shadow-xl">
+      <div className="mx-4 w-full max-w-md rounded-2xl border border-[var(--border)] bg-card p-5 shadow-xl">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-quicksand text-lg font-bold text-[var(--nh-text-primary)]">
+          <h3 className="font-quicksand text-lg font-bold text-[var(--text)]">
             Nuovo Snapshot
           </h3>
           <button
             type="button"
             onClick={handleClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--nh-text-muted)] hover:bg-muted"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-muted"
             aria-label="Chiudi"
           >
             <X className="h-4 w-4" />
@@ -107,7 +107,7 @@ export function SnapshotUploadDialog({
           )}
         >
           <ImagePlus className="h-8 w-8 text-muted-foreground" />
-          <span className="font-nunito text-sm text-[var(--nh-text-muted)]">
+          <span className="font-nunito text-sm text-[var(--text-muted)]">
             Tocca per selezionare immagini
           </span>
         </button>
@@ -149,7 +149,7 @@ export function SnapshotUploadDialog({
 
         {/* Turn number */}
         <div className="mb-3">
-          <label className="mb-1 block font-nunito text-xs font-semibold text-[var(--nh-text-muted)]">
+          <label className="mb-1 block font-nunito text-xs font-semibold text-[var(--text-muted)]">
             Numero turno
           </label>
           <input
@@ -157,13 +157,13 @@ export function SnapshotUploadDialog({
             min={1}
             value={turnNumber}
             onChange={e => setTurnNumber(Math.max(1, parseInt(e.target.value) || 1))}
-            className="w-full rounded-lg border border-[var(--nh-border-default)] bg-[var(--nh-bg-base)] px-3 py-2 font-nunito text-sm text-[var(--nh-text-primary)] outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200"
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 font-nunito text-sm text-[var(--text)] outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200"
           />
         </div>
 
         {/* Caption */}
         <div className="mb-4">
-          <label className="mb-1 block font-nunito text-xs font-semibold text-[var(--nh-text-muted)]">
+          <label className="mb-1 block font-nunito text-xs font-semibold text-[var(--text-muted)]">
             Descrizione (opzionale)
           </label>
           <input
@@ -171,7 +171,7 @@ export function SnapshotUploadDialog({
             value={caption}
             onChange={e => setCaption(e.target.value)}
             placeholder="Es. Fine del round 3, Alice in vantaggio"
-            className="w-full rounded-lg border border-[var(--nh-border-default)] bg-[var(--nh-bg-base)] px-3 py-2 font-nunito text-sm text-[var(--nh-text-primary)] outline-none placeholder:text-[var(--nh-text-muted)] focus:border-amber-400 focus:ring-1 focus:ring-amber-200"
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 font-nunito text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)] focus:border-amber-400 focus:ring-1 focus:ring-amber-200"
           />
         </div>
 
@@ -180,7 +180,7 @@ export function SnapshotUploadDialog({
           <button
             type="button"
             onClick={handleClose}
-            className="flex-1 rounded-xl border border-[var(--nh-border-default)] bg-card py-2.5 font-nunito text-sm font-medium text-[var(--nh-text-primary)] transition-colors hover:bg-muted"
+            className="flex-1 rounded-xl border border-[var(--border)] bg-card py-2.5 font-nunito text-sm font-medium text-[var(--text)] transition-colors hover:bg-muted"
           >
             Annulla
           </button>

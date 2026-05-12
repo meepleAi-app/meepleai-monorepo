@@ -8,7 +8,7 @@ interface ChatPanelHeaderProps {
 
 export function ChatPanelHeader({ subtitle, onClose }: ChatPanelHeaderProps) {
   return (
-    <div className="flex flex-shrink-0 items-center gap-3.5 border-b border-[var(--nh-border-default)] bg-[rgba(255,252,248,0.7)] px-5 py-4 backdrop-blur-md">
+    <div className="flex flex-shrink-0 items-center gap-3.5 border-b border-[var(--border)] bg-[rgba(255,252,248,0.7)] px-5 py-4 backdrop-blur-md">
       <div
         className="flex h-[42px] w-[42px] flex-shrink-0 items-center justify-center rounded-xl text-xl text-white"
         style={{
@@ -23,13 +23,13 @@ export function ChatPanelHeader({ subtitle, onClose }: ChatPanelHeaderProps) {
         <h2 className="font-quicksand text-[1.08rem] font-extrabold leading-tight">
           Chat con l&apos;agente
         </h2>
-        <p className="mt-0.5 text-[0.74rem] text-[var(--nh-text-muted)]">{subtitle}</p>
+        <p className="mt-0.5 text-[0.74rem] text-[var(--text-muted)]">{subtitle}</p>
       </div>
       <button
         type="button"
         aria-label="Chiudi chat panel"
         onClick={onClose}
-        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px] border border-[var(--nh-border-default)] bg-[var(--nh-bg-surface)] text-lg text-[var(--nh-text-secondary)] transition-all hover:bg-card hover:text-[var(--nh-text-primary)] hover:shadow-[var(--shadow-warm-sm)]"
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px] border border-[var(--border)] bg-[var(--bg-card)] text-lg text-[var(--text-sec)] transition-all hover:bg-card hover:text-[var(--text)] hover:shadow-[var(--shadow-warm-sm)]"
       >
         ✕
       </button>

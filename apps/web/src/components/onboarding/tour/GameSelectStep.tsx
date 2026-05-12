@@ -31,7 +31,7 @@ function GameTile({
         'group relative flex flex-col overflow-hidden rounded-xl border-2 text-left transition-transform',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
         selected
-          ? 'border-[hsl(var(--e-game))] scale-[0.97]'
+          ? 'border-[hsl(var(--c-game))] scale-[0.97]'
           : 'border-transparent hover:scale-[1.02]'
       )}
     >
@@ -40,7 +40,7 @@ function GameTile({
         {selected && (
           <span
             aria-hidden="true"
-            className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-card text-sm font-bold text-[hsl(var(--e-game))] shadow"
+            className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-card text-sm font-bold text-[hsl(var(--c-game))] shadow"
           >
             ✓
           </span>
@@ -63,7 +63,7 @@ export function GameSelectStep({ selected, onToggle }: GameSelectStepProps): JSX
     <div className="flex flex-col gap-5 px-4 py-6">
       <div className="text-center">
         <h2 className="font-quicksand text-xl font-bold">
-          Quali giochi hai nella tua <span className="text-[hsl(var(--e-game))]">ludoteca</span>?
+          Quali giochi hai nella tua <span className="text-[hsl(var(--c-game))]">ludoteca</span>?
         </h2>
         <p className="mt-1 font-nunito text-sm text-muted-foreground">
           Seleziona almeno {MIN_SELECTED}, li useremo per personalizzare l&apos;esperienza.
@@ -78,7 +78,7 @@ export function GameSelectStep({ selected, onToggle }: GameSelectStepProps): JSX
         aria-live="polite"
         className={clsx(
           'text-center font-nunito text-sm',
-          ready ? 'text-[hsl(var(--e-game))] font-semibold' : 'text-muted-foreground'
+          ready ? 'text-[hsl(var(--c-game))] font-semibold' : 'text-muted-foreground'
         )}
       >
         {ready

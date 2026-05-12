@@ -47,7 +47,7 @@ export function QuickToolBar({ activeTool, onSelectTool, className }: QuickToolB
               'flex min-w-[64px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition-colors',
               isActive
                 ? 'bg-amber-500 text-white shadow-md'
-                : 'bg-white/10 text-[var(--gaming-text-secondary,#ccc)] hover:bg-white/20'
+                : 'bg-white/10 text-[var(--text-sec,#ccc)] hover:bg-white/20'
             )}
           >
             <Icon className="h-5 w-5" aria-hidden="true" />

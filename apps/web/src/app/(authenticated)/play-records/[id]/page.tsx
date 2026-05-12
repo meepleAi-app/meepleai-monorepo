@@ -117,7 +117,7 @@ export default function PlayRecordDetailsPage() {
   if (isLoading) {
     return (
       <div
-        className="flex flex-col min-h-full bg-[var(--gaming-bg-base)]"
+        className="flex flex-col min-h-full bg-[var(--bg)]"
         data-testid="play-record-detail-loading"
       >
         <MobileHeader title="" onBack={() => router.back()} />
@@ -133,7 +133,7 @@ export default function PlayRecordDetailsPage() {
   if (error || !record) {
     return (
       <div
-        className="flex flex-col min-h-full bg-[var(--gaming-bg-base)]"
+        className="flex flex-col min-h-full bg-[var(--bg)]"
         data-testid="play-record-detail-error"
       >
         <MobileHeader title="Errore" onBack={() => router.back()} />
@@ -176,7 +176,7 @@ export default function PlayRecordDetailsPage() {
 
   return (
     <div
-      className="flex flex-col min-h-full bg-[var(--gaming-bg-base)]"
+      className="flex flex-col min-h-full bg-[var(--bg)]"
       data-testid="play-record-detail"
     >
       <MobileHeader
@@ -188,7 +188,7 @@ export default function PlayRecordDetailsPage() {
               type="button"
               aria-label="Modifica partita"
               onClick={() => router.push(`/play-records/${recordId}/edit`)}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--gaming-text-secondary)] hover:bg-card/5"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-sec)] hover:bg-card/5"
             >
               <Edit className="h-4 w-4" />
             </button>

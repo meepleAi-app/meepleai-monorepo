@@ -45,7 +45,7 @@ export function TopBarNavLinks() {
               'px-3.5 py-2 rounded-[10px] font-nunito font-bold text-[0.82rem] transition-colors',
               active
                 ? 'text-[hsl(25_95%_38%)] shadow-[inset_0_0_0_1px_hsla(25,95%,45%,0.25)]'
-                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]'
+                : 'text-[var(--text-sec)] hover:bg-[var(--bg-card)] hover:text-[var(--text)]'
             )}
             style={active ? { background: 'hsla(25, 95%, 45%, 0.1)' } : undefined}
           >

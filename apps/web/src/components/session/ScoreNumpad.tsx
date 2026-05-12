@@ -67,18 +67,18 @@ export function ScoreNumpad({
     >
       {/* Header */}
       <div className="flex w-full items-center justify-between">
-        <span className="text-sm font-medium text-[var(--gaming-text-secondary,#ccc)]">
+        <span className="text-sm font-medium text-[var(--text-sec,#ccc)]">
           {playerName}
         </span>
         {currentScore !== undefined && (
-          <span className="text-xs text-[var(--gaming-text-secondary,#aaa)]">
+          <span className="text-xs text-[var(--text-sec,#aaa)]">
             Attuale: {currentScore}
           </span>
         )}
         <button
           aria-label="Chiudi"
           onClick={onClose}
-          className="text-[var(--gaming-text-secondary,#ccc)] hover:text-white"
+          className="text-[var(--text-sec,#ccc)] hover:text-white"
         >
           ✕
         </button>

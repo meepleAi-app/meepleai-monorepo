@@ -70,7 +70,7 @@ export default function PricingPage() {
           <>
             Semplice, trasparente,
             <br />
-            <span style={{ color: 'hsl(var(--e-game))' }}>board-game friendly</span>
+            <span style={{ color: 'hsl(var(--c-game))' }}>board-game friendly</span>
           </>
         }
         subtitle="Nessun contratto. Cancella quando vuoi. Il piano Free rimane gratuito per sempre."

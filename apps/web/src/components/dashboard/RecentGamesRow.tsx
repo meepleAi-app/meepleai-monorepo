@@ -23,7 +23,7 @@ export function RecentGamesRow() {
 
   return (
     <section>
-      <h2 className="mb-2 px-4 text-sm font-medium text-[var(--gaming-text-secondary)]">
+      <h2 className="mb-2 px-4 text-sm font-medium text-[var(--text-sec)]">
         Giochi recenti
       </h2>
       <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-none">

@@ -41,7 +41,7 @@ function LoadingSkeleton() {
 
 function EmptyCatalog() {
   return (
-    <div className="flex flex-col items-center gap-3 py-16 px-4 text-center text-[var(--nh-text-muted,#94a3b8)]">
+    <div className="flex flex-col items-center gap-3 py-16 px-4 text-center text-[var(--text-muted,#94a3b8)]">
       <span className="text-5xl">🔍</span>
       <p className="font-medium">Nessun gioco nel catalogo.</p>
       <p className="text-sm">Prova a cambiare i filtri di ricerca.</p>
@@ -51,7 +51,7 @@ function EmptyCatalog() {
 
 function EmptyKB() {
   return (
-    <div className="flex flex-col items-center gap-3 py-16 px-4 text-center text-[var(--nh-text-muted,#94a3b8)]">
+    <div className="flex flex-col items-center gap-3 py-16 px-4 text-center text-[var(--text-muted,#94a3b8)]">
       <span className="text-5xl">📚</span>
       <p className="font-medium">Nessun documento nella Knowledge Base.</p>
       <p className="text-sm">Carica i regolamenti dei tuoi giochi per abilitare l&apos;AI.</p>
@@ -157,7 +157,7 @@ function GamesHubContent() {
   const topActions = (
     <Link
       href="/games/new"
-      className="inline-flex items-center gap-1 h-9 px-3 text-sm font-semibold rounded-2xl bg-[var(--nh-text-primary,#1a1a1a)] text-white shrink-0"
+      className="inline-flex items-center gap-1 h-9 px-3 text-sm font-semibold rounded-2xl bg-[var(--text,#1a1a1a)] text-white shrink-0"
     >
       ＋
     </Link>

@@ -311,9 +311,9 @@ export function ChatSlideOverPanel() {
       {/* Panel */}
       <aside
         data-testid="chat-slide-over-panel"
-        className="fixed right-0 top-0 bottom-0 z-[var(--z-modal,1050)] flex w-[760px] max-w-[60vw] flex-col overflow-hidden border-l border-[var(--nh-border-default)] shadow-[var(--shadow-warm-2xl)]"
+        className="fixed right-0 top-0 bottom-0 z-[var(--z-modal,1050)] flex w-[760px] max-w-[60vw] flex-col overflow-hidden border-l border-[var(--border)] shadow-[var(--shadow-warm-2xl)]"
         style={{
-          background: 'linear-gradient(180deg, var(--nh-bg-surface), var(--nh-bg-base))',
+          background: 'linear-gradient(180deg, var(--bg-card), var(--bg))',
           animation: 'chatPanelSlideIn 350ms cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >

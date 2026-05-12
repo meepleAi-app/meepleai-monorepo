@@ -16,7 +16,7 @@ export function AdminShell({ children }: AdminShellProps) {
   const [searchOpen, setSearchOpen] = useState(false);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[var(--bg-base)]">
+    <div className="flex min-h-dvh flex-col bg-[var(--bg)]">
       <TopBarV2
         onHamburgerClick={() => setDrawerOpen(true)}
         onSearchClick={() => setSearchOpen(true)}

@@ -29,7 +29,7 @@ export function AiLoadingState({
 }: AiLoadingStateProps) {
   if (state === 'loading') {
     return (
-      <div className="flex items-center gap-3 text-sm text-[var(--gaming-text-secondary,rgba(255,255,255,0.6))]">
+      <div className="flex items-center gap-3 text-sm text-[var(--text-sec,rgba(255,255,255,0.6))]">
         <Loader2 className="h-4 w-4 animate-spin text-amber-400 flex-shrink-0" />
         <span>{statusMessage ?? 'Sto cercando nelle regole...'}</span>
       </div>
@@ -58,7 +58,7 @@ export function AiLoadingState({
 
   if (state === 'no-results') {
     return (
-      <p className="text-sm text-[var(--gaming-text-secondary,rgba(255,255,255,0.6))]">
+      <p className="text-sm text-[var(--text-sec,rgba(255,255,255,0.6))]">
         {statusMessage ??
           'Nessun risultato trovato nelle regole. Rispondo usando la mia conoscenza generale.'}
       </p>
@@ -68,7 +68,7 @@ export function AiLoadingState({
   // no-pdf
   return (
     <div className="flex flex-col items-start gap-3">
-      <div className="flex items-center gap-2 text-sm text-[var(--gaming-text-secondary,rgba(255,255,255,0.6))]">
+      <div className="flex items-center gap-2 text-sm text-[var(--text-sec,rgba(255,255,255,0.6))]">
         <FileQuestion className="h-4 w-4 flex-shrink-0 text-amber-400" />
         <span>{statusMessage ?? 'Carica il regolamento per risposte più precise.'}</span>
       </div>

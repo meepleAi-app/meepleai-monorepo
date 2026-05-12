@@ -21,7 +21,7 @@ export interface HeroGradientProps {
 
 const GRADIENT_STYLE: CSSProperties = {
   background:
-    'linear-gradient(135deg, hsl(var(--e-game) / 0.08), hsl(var(--e-event) / 0.06), hsl(var(--e-player) / 0.08))',
+    'linear-gradient(135deg, hsl(var(--c-game) / 0.08), hsl(var(--c-event) / 0.06), hsl(var(--c-player) / 0.08))',
 };
 
 function renderCta(cta: HeroGradientCta, variant: 'primary' | 'outline'): JSX.Element {

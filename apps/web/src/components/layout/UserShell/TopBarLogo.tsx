@@ -20,7 +20,7 @@ export function TopBarLogo() {
       >
         ◆
       </span>
-      <span className="text-[var(--text-primary)]">Meeple</span>
+      <span className="text-[var(--text)]">Meeple</span>
       <span className="-ml-2.5" style={{ color: 'hsl(25 95% 42%)' }}>
         Ai
       </span>

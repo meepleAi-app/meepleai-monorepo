@@ -21,8 +21,18 @@ export type ThemeProviderProps = NextThemesProviderProps;
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   return (
     <NextThemesProvider
-      attribute="class"
-      defaultTheme="dark"
+      // DS-1 (2026-05-12 token canonicalization):
+      // - attribute={['class', 'data-theme']} applies BOTH `class="dark"` and
+      //   `data-theme="dark"` on <html>. This keeps backwards compatibility
+      //   with the ~80 legacy `.dark .foo` selectors in globals.css /
+      //   design-tokens.css while enabling the canonical mockup convention
+      //   (admin-mockups/design_files/tokens.css uses [data-theme="light|dark"]).
+      //   Bridge removed in DS-12 once all legacy `.dark` selectors migrate.
+      // - defaultTheme="light" — mockup default warm cream (#f7f3ee).
+      //   Previously dark-first via legacy gaming palette; now the canonical
+      //   light theme is authoritative.
+      attribute={['class', 'data-theme']}
+      defaultTheme="light"
       enableSystem
       disableTransitionOnChange={false}
       {...props}

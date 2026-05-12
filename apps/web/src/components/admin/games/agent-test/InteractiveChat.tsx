@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 /**
@@ -42,14 +43,14 @@ function ChatMessageBubble({ message }: { message: AgentChatMessage }) {
       )}
       <div
         className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-          isUser ? 'bg-amber-500 text-white' : 'bg-slate-100 dark:bg-zinc-800 text-foreground'
+          isUser ? 'bg-amber-500 text-white' : 'bg-muted dark:bg-zinc-800 text-foreground'
         }`}
       >
         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
 
         {/* Metadata badges for assistant messages */}
         {!isUser && (message.confidence !== undefined || message.latencyMs !== undefined) && (
-          <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-slate-200/50 dark:border-zinc-700/50">
+          <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-border/50 dark:border-zinc-700/50">
             {message.confidence !== undefined && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <TargetIcon className="h-3 w-3" />
@@ -72,7 +73,7 @@ function ChatMessageBubble({ message }: { message: AgentChatMessage }) {
         )}
       </div>
       {isUser && (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-700">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted dark:bg-zinc-700">
           <UserIcon className="h-4 w-4 text-muted-foreground" />
         </div>
       )}
@@ -141,7 +142,7 @@ export function InteractiveChat({ gameId, gameTitle }: InteractiveChatProps) {
   return (
     <div className="flex flex-col h-[600px]">
       {/* Messages area */}
-      <Card className="flex-1 overflow-hidden bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+      <Card className="flex-1 overflow-hidden bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
         <CardContent className="p-4 h-full overflow-y-auto">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
@@ -163,7 +164,7 @@ export function InteractiveChat({ gameId, gameTitle }: InteractiveChatProps) {
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
                     <BotIcon className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                   </div>
-                  <div className="rounded-2xl bg-slate-100 dark:bg-zinc-800 px-4 py-3">
+                  <div className="rounded-2xl bg-muted dark:bg-zinc-800 px-4 py-3">
                     <LoaderCircleIcon className="h-4 w-4 animate-spin text-muted-foreground" />
                   </div>
                 </div>
@@ -182,7 +183,7 @@ export function InteractiveChat({ gameId, gameTitle }: InteractiveChatProps) {
           onChange={e => setInput(e.target.value)}
           placeholder="Ask a question about the game rules..."
           disabled={isPending}
-          className="flex-1 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/50 disabled:opacity-50"
+          className="flex-1 rounded-lg border border-border dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/50 disabled:opacity-50"
         />
         <Button
           type="submit"

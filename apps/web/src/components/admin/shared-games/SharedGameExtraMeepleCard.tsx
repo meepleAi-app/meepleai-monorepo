@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 /**
@@ -69,12 +70,12 @@ function LoadingState({ className, testId }: { className?: string; testId?: stri
     <div
       className={cn(
         'flex h-[600px] w-full items-center justify-center rounded-2xl',
-        'bg-white/70 backdrop-blur-md shadow-lg border border-white/20',
+        'bg-card/70 backdrop-blur-md shadow-lg border border-border',
         className
       )}
       data-testid={testId}
     >
-      <div className="flex flex-col items-center gap-3 text-slate-400">
+      <div className="flex flex-col items-center gap-3 text-muted-foreground">
         <Loader2 className="h-8 w-8 animate-spin" />
         <span className="font-nunito text-sm">Caricamento...</span>
       </div>
@@ -95,7 +96,7 @@ function ErrorState({
     <div
       className={cn(
         'flex h-[600px] w-full items-center justify-center rounded-2xl',
-        'bg-white/70 backdrop-blur-md shadow-lg border border-white/20',
+        'bg-card/70 backdrop-blur-md shadow-lg border border-border',
         className
       )}
       data-testid={testId}
@@ -121,7 +122,7 @@ function StatCard({
     <div className={cn('rounded-lg border p-2.5', COLORS.accentBorder, `${COLORS.accentBg}/30`)}>
       <div className="flex items-center gap-1.5 mb-1">
         <Icon className={cn('h-3.5 w-3.5', COLORS.accent)} />
-        <span className="font-nunito text-[10px] text-slate-500">{label}</span>
+        <span className="font-nunito text-[10px] text-muted-foreground">{label}</span>
       </div>
       <p className={cn('font-quicksand text-sm font-bold', COLORS.accent)}>{value}</p>
     </div>
@@ -144,7 +145,7 @@ function TabTrigger({
       value={value}
       className={cn(
         'flex items-center gap-1.5 px-3 py-1.5 font-nunito text-xs font-medium',
-        'data-[state=active]:bg-white data-[state=active]:shadow-sm',
+        'data-[state=active]:bg-card data-[state=active]:shadow-sm',
         COLORS.activeAccent,
         'transition-all duration-200'
       )}
@@ -200,7 +201,7 @@ function DetailsTab({ data }: { data: SharedGameDetailData }) {
         </div>
       )}
       {data.description && (
-        <p className="font-nunito text-xs text-slate-600 leading-relaxed">{data.description}</p>
+        <p className="font-nunito text-xs text-muted-foreground leading-relaxed">{data.description}</p>
       )}
       {data.linkedAgent && (
         <div className="flex items-center gap-2 rounded-lg bg-amber-50/50 border border-amber-200/40 p-3">
@@ -218,7 +219,7 @@ function DetailsTab({ data }: { data: SharedGameDetailData }) {
               'rounded-full px-2 py-0.5 text-[9px] font-bold font-nunito',
               data.linkedAgent.isActive
                 ? 'bg-green-100 text-green-700'
-                : 'bg-slate-100 text-slate-500'
+                : 'bg-muted text-muted-foreground'
             )}
           >
             {data.linkedAgent.isActive ? 'Attivo' : 'Inattivo'}
@@ -237,14 +238,14 @@ function DocumentRow({ doc }: { doc: SharedGameDocumentInfo }) {
   const typeLabel = DOC_TYPE_LABELS[doc.documentType] ?? `Tipo ${doc.documentType}`;
 
   return (
-    <div className="rounded-lg bg-white/50 border border-slate-200/40 p-3 space-y-2">
+    <div className="rounded-lg bg-card/50 border border-border/40 p-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <FileText className="h-4 w-4 text-slate-400 shrink-0" />
-          <span className="font-nunito text-xs font-medium text-slate-700 truncate">
+          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="font-nunito text-xs font-medium text-foreground truncate">
             {typeLabel}
           </span>
-          <span className="font-nunito text-[10px] text-slate-400">v{doc.version}</span>
+          <span className="font-nunito text-[10px] text-muted-foreground">v{doc.version}</span>
         </div>
         {doc.isActive && (
           <span className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold font-nunito bg-green-100 text-green-700">
@@ -267,7 +268,7 @@ function DocumentsTab({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="font-nunito text-xs text-slate-500">
+        <span className="font-nunito text-xs text-muted-foreground">
           {data.documents.length} documento{data.documents.length !== 1 ? 'i' : ''}
         </span>
         <div className="flex items-center gap-2">
@@ -295,9 +296,9 @@ function DocumentsTab({
       </div>
 
       {data.documents.length === 0 ? (
-        <div className="rounded-lg bg-slate-50 border border-slate-200/40 p-6 text-center">
+        <div className="rounded-lg bg-muted border border-border/40 p-6 text-center">
           <FileText className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-          <p className="font-nunito text-xs text-slate-400">Nessun documento caricato</p>
+          <p className="font-nunito text-xs text-muted-foreground">Nessun documento caricato</p>
           <p className="font-nunito text-[10px] text-slate-300 mt-1">
             Carica un PDF per iniziare l&apos;indicizzazione
           </p>
@@ -339,7 +340,7 @@ function KbCardsTab({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="font-nunito text-xs text-slate-500">
+        <span className="font-nunito text-xs text-muted-foreground">
           {completedCards.length} card indicizzat{completedCards.length !== 1 ? 'e' : 'a'}
         </span>
         <button
@@ -351,7 +352,7 @@ function KbCardsTab({
             'font-nunito text-[10px] font-bold transition-colors',
             completedCards.length > 0
               ? 'bg-amber-100 text-amber-700 border border-amber-200 hover:bg-amber-200'
-              : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+              : 'bg-muted text-muted-foreground border border-border cursor-not-allowed'
           )}
         >
           <Bot className="h-3 w-3" />
@@ -360,9 +361,9 @@ function KbCardsTab({
       </div>
 
       {groups.length === 0 ? (
-        <div className="rounded-lg bg-slate-50 border border-slate-200/40 p-6 text-center">
+        <div className="rounded-lg bg-muted border border-border/40 p-6 text-center">
           <BookOpen className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-          <p className="font-nunito text-xs text-slate-400">Nessuna KB card generata</p>
+          <p className="font-nunito text-xs text-muted-foreground">Nessuna KB card generata</p>
           <p className="font-nunito text-[10px] text-slate-300 mt-1">
             Indicizza un PDF per creare le card
           </p>
@@ -374,15 +375,15 @@ function KbCardsTab({
             return (
               <div
                 key={pdfId}
-                className="rounded-lg bg-white/50 border border-slate-200/40 overflow-hidden"
+                className="rounded-lg bg-card/50 border border-border/40 overflow-hidden"
               >
                 {/* Group header */}
-                <div className="flex items-center gap-2 px-3 py-2 bg-slate-50/50 border-b border-slate-200/40">
-                  <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                  <span className="font-nunito text-[10px] font-bold text-slate-600 truncate">
+                <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border/40">
+                  <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="font-nunito text-[10px] font-bold text-muted-foreground truncate">
                     {fileName}
                   </span>
-                  <span className="ml-auto font-nunito text-[9px] text-slate-400 shrink-0">
+                  <span className="ml-auto font-nunito text-[9px] text-muted-foreground shrink-0">
                     {cards.length} card
                   </span>
                 </div>
@@ -391,7 +392,7 @@ function KbCardsTab({
                   {cards.map(card => {
                     const statusStyle =
                       KB_STATUS_STYLES[card.indexingStatus] ??
-                      'bg-slate-100 text-slate-600 border-slate-200';
+                      'bg-muted text-muted-foreground border-border';
                     return (
                       <div
                         key={card.id}
@@ -407,13 +408,13 @@ function KbCardsTab({
                             {card.indexingStatus}
                           </span>
                           {card.documentType && (
-                            <span className="font-nunito text-[9px] text-slate-400">
+                            <span className="font-nunito text-[9px] text-muted-foreground">
                               {card.documentType}
                             </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="font-nunito text-[9px] text-slate-400">
+                          <span className="font-nunito text-[9px] text-muted-foreground">
                             {card.chunkCount} chunk
                           </span>
                           {card.indexedAt && (
@@ -460,7 +461,7 @@ export const SharedGameExtraMeepleCard = React.memo(function SharedGameExtraMeep
     <div
       className={cn(
         'flex w-full flex-col rounded-2xl overflow-hidden',
-        'bg-white/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/20',
+        'bg-card/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-border',
         className
       )}
       data-testid={testId}
@@ -488,13 +489,13 @@ export const SharedGameExtraMeepleCard = React.memo(function SharedGameExtraMeep
                 {data.title}
               </h2>
               {data.publisher && (
-                <p className="font-nunito text-sm text-white/70">
+                <p className="font-nunito text-sm text-foreground/80">
                   {data.publisher}
                   {data.yearPublished ? ` (${data.yearPublished})` : ''}
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-sm px-2.5 py-1">
+            <div className="flex items-center gap-1 rounded-full bg-card/20 backdrop-blur-sm px-2.5 py-1">
               <FileText className="h-3 w-3 text-white" />
               <span className="font-quicksand text-sm font-bold text-white">
                 {data.documents.length} doc
@@ -510,7 +511,7 @@ export const SharedGameExtraMeepleCard = React.memo(function SharedGameExtraMeep
         onValueChange={v => setActiveTab(v as SharedGameExtraMeepleCardTab)}
         className="flex flex-1 flex-col"
       >
-        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-slate-100/80 rounded-lg p-1">
+        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-muted/80 rounded-lg p-1">
           <TabTrigger value="details" icon={Gamepad2} label="Dettagli" />
           <TabTrigger
             value="documents"

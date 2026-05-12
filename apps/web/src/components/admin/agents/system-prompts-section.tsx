@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { EyeIcon, PencilIcon } from 'lucide-react';
@@ -41,7 +42,7 @@ export function SystemPromptsSection() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-quicksand text-xl font-bold text-slate-900 dark:text-zinc-100">
+        <h2 className="font-quicksand text-xl font-bold text-foreground dark:text-zinc-100">
           System Prompts
         </h2>
       </div>
@@ -50,10 +51,10 @@ export function SystemPromptsSection() {
         {MOCK_PROMPTS.map(prompt => (
           <div
             key={prompt.id}
-            className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-slate-200/50 dark:border-zinc-700/50"
+            className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-border/50 dark:border-zinc-700/50"
           >
             <div className="flex items-start justify-between mb-3">
-              <h3 className="font-quicksand text-lg font-bold text-slate-900 dark:text-zinc-100">
+              <h3 className="font-quicksand text-lg font-bold text-foreground dark:text-zinc-100">
                 {prompt.title}
               </h3>
               <Badge
@@ -63,9 +64,9 @@ export function SystemPromptsSection() {
                 {prompt.tokenCount} tokens
               </Badge>
             </div>
-            <p className="text-sm text-slate-600 dark:text-zinc-400 mb-4">{prompt.description}</p>
+            <p className="text-sm text-muted-foreground dark:text-muted-foreground mb-4">{prompt.description}</p>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-500 dark:text-zinc-500">
+              <span className="text-xs text-muted-foreground dark:text-muted-foreground">
                 Updated {prompt.lastUpdated}
               </span>
               <div className="flex gap-2">

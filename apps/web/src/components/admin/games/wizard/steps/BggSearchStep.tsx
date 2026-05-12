@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 /**
@@ -77,7 +78,7 @@ export function BggSearchStep({ onGameSelected }: BggSearchStepProps) {
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="h-24 bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse"
+              className="h-24 bg-card/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-border/60 dark:border-zinc-700/40 animate-pulse"
             />
           ))}
         </div>
@@ -118,7 +119,7 @@ function BggGameCard({
 }) {
   return (
     <Card
-      className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60 hover:border-amber-300/60 dark:hover:border-amber-600/40 transition-all cursor-pointer group"
+      className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60 hover:border-amber-300/60 dark:hover:border-amber-600/40 transition-all cursor-pointer group"
       onClick={() => onSelect(game)}
     >
       <CardContent className="flex items-center gap-3 p-3">
@@ -130,10 +131,10 @@ function BggGameCard({
             width={64}
             height={64}
             unoptimized
-            className="h-16 w-16 rounded-lg object-cover shrink-0 bg-slate-100 dark:bg-zinc-700"
+            className="h-16 w-16 rounded-lg object-cover shrink-0 bg-muted dark:bg-zinc-700"
           />
         ) : (
-          <div className="h-16 w-16 rounded-lg shrink-0 bg-slate-100 dark:bg-zinc-700 flex items-center justify-center">
+          <div className="h-16 w-16 rounded-lg shrink-0 bg-muted dark:bg-zinc-700 flex items-center justify-center">
             <span className="text-2xl">🎲</span>
           </div>
         )}

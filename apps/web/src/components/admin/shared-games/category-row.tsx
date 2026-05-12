@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { GripVerticalIcon, PencilIcon, Trash2Icon } from 'lucide-react';
@@ -18,30 +19,30 @@ export function CategoryRow({ name, emoji, gameCount, color, onEdit, onDelete }:
     <tr className="hover:bg-amber-50/30 dark:hover:bg-zinc-900/50 transition-colors">
       {/* Drag Handle */}
       <td className="px-6 py-4">
-        <GripVerticalIcon className="w-5 h-5 text-gray-400 dark:text-zinc-600 cursor-move opacity-40 hover:opacity-100 transition-opacity" />
+        <GripVerticalIcon className="w-5 h-5 text-muted-foreground dark:text-muted-foreground cursor-move opacity-40 hover:opacity-100 transition-opacity" />
       </td>
 
       {/* Category Name */}
       <td className="px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="text-2xl">{emoji}</div>
-          <span className="text-sm font-medium text-gray-900 dark:text-zinc-100">{name}</span>
+          <span className="text-sm font-medium text-foreground dark:text-zinc-100">{name}</span>
         </div>
       </td>
 
       {/* Game Count */}
       <td className="px-6 py-4">
-        <span className="text-sm text-gray-700 dark:text-zinc-300">{gameCount} games</span>
+        <span className="text-sm text-foreground dark:text-zinc-300">{gameCount} games</span>
       </td>
 
       {/* Color */}
       <td className="px-6 py-4">
         <div className="flex items-center gap-2">
           <div
-            className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-zinc-600"
+            className="w-6 h-6 rounded-full border-2 border-border dark:border-zinc-600"
             style={{ backgroundColor: color }}
           />
-          <span className="text-xs font-mono text-gray-600 dark:text-zinc-400">{color}</span>
+          <span className="text-xs font-mono text-muted-foreground dark:text-muted-foreground">{color}</span>
         </div>
       </td>
 

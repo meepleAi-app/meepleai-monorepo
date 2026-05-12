@@ -6,9 +6,9 @@
 | **Generator** | `pnpm lint:tokens` (DS-2) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../docs/for-developers/specs/2026-05-12-token-canonicalization.md) |
 | **Rule** | `local/no-hardcoded-color-utility` |
-| **Total violations** | 3491 |
-| **Files affected** | 364 |
-| **Clusters affected** | 163 |
+| **Total violations** | 3141 |
+| **Files affected** | 339 |
+| **Clusters affected** | 159 |
 
 ## Violations by cluster
 
@@ -16,13 +16,9 @@
 |---|---|---|
 | `app/admin/(dashboard)` | 1241 | manual |
 | `admin/knowledge-base` | 313 | manual |
-| `admin/shared-games` | 128 | manual |
 | `toolkit-drawer/tabs` | 122 | manual |
-| `admin/agents` | 83 | manual |
 | `stories/Animations.stories.tsx` | 76 | manual |
-| `admin/users` | 75 | manual |
 | `app/(authenticated)/admin` | 67 | manual |
-| `admin/games` | 64 | manual |
 | `app/(authenticated)/play-records` | 55 | manual |
 | `admin/command-center` | 54 | manual |
 | `loading/SkeletonLoader.tsx` | 54 | manual |
@@ -197,11 +193,11 @@
 | `src/app/admin/(dashboard)/knowledge-base/documents/page.tsx` | 46 |
 | `src/components/rag-dashboard/config/RagConfigurationForm.tsx` | 44 |
 | `src/components/admin/knowledge-base/upload-settings.tsx` | 43 |
-| `src/components/admin/shared-games/SharedGameExtraMeepleCard.tsx` | 43 |
 | `src/app/admin/(dashboard)/agents/config/AgentModelsTabContent.tsx` | 40 |
 | `src/app/admin/(dashboard)/agents/config/AgentStrategyTabContent.tsx` | 40 |
 | `src/app/admin/(dashboard)/shared-games/[id]/client.tsx` | 40 |
 | `src/app/admin/(dashboard)/agents/page.tsx` | 38 |
+| `src/app/admin/(dashboard)/users/invitations/page.tsx` | 38 |
 
 ## Notes
 

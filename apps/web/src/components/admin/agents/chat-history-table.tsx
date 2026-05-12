@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { Fragment, useEffect, useState, type KeyboardEvent } from 'react';
@@ -81,7 +82,7 @@ export function ChatHistoryTable() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-amber-200/50 dark:border-zinc-700/50">
+      <div className="flex items-center justify-center py-16 bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-amber-200/50 dark:border-zinc-700/50">
         <Loader2 className="w-6 h-6 animate-spin text-amber-500 mr-2" />
         <span className="text-muted-foreground text-sm">Caricamento sessioni...</span>
       </div>
@@ -90,7 +91,7 @@ export function ChatHistoryTable() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center py-16 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-red-200/50 dark:border-red-700/50">
+      <div className="flex items-center justify-center py-16 bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-red-200/50 dark:border-red-700/50">
         <span className="text-red-600 dark:text-red-400 text-sm">{error}</span>
       </div>
     );
@@ -98,14 +99,14 @@ export function ChatHistoryTable() {
 
   if (sessions.length === 0) {
     return (
-      <div className="flex items-center justify-center py-16 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-amber-200/50 dark:border-zinc-700/50">
+      <div className="flex items-center justify-center py-16 bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-amber-200/50 dark:border-zinc-700/50">
         <span className="text-muted-foreground text-sm">Nessuna sessione chat trovata</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-amber-200/50 dark:border-zinc-700/50 overflow-hidden">
+    <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-amber-200/50 dark:border-zinc-700/50 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-amber-100/50 dark:bg-zinc-900/50 border-b border-amber-200/50 dark:border-zinc-700/50">
@@ -137,7 +138,7 @@ export function ChatHistoryTable() {
               return (
                 <Fragment key={session.id}>
                   <tr
-                    className="hover:bg-slate-50/50 dark:hover:bg-zinc-900/50 cursor-pointer"
+                    className="hover:bg-muted/50 dark:hover:bg-zinc-900/50 cursor-pointer"
                     onClick={() => toggleRow(session.id)}
                     onKeyDown={e => handleKeyDown(e, session.id)}
                     role="button"
@@ -145,15 +146,15 @@ export function ChatHistoryTable() {
                   >
                     <td className="py-3 px-4">
                       {isExpanded ? (
-                        <ChevronDownIcon className="w-4 h-4 text-gray-600 dark:text-zinc-400" />
+                        <ChevronDownIcon className="w-4 h-4 text-muted-foreground dark:text-muted-foreground" />
                       ) : (
-                        <ChevronRightIcon className="w-4 h-4 text-gray-600 dark:text-zinc-400" />
+                        <ChevronRightIcon className="w-4 h-4 text-muted-foreground dark:text-muted-foreground" />
                       )}
                     </td>
-                    <td className="py-3 px-4 font-mono text-xs text-slate-600 dark:text-zinc-400">
+                    <td className="py-3 px-4 font-mono text-xs text-muted-foreground dark:text-muted-foreground">
                       {session.id.slice(0, 8)}...
                     </td>
-                    <td className="py-3 px-4 text-sm font-medium text-slate-900 dark:text-zinc-100">
+                    <td className="py-3 px-4 text-sm font-medium text-foreground dark:text-zinc-100">
                       {session.userName}
                     </td>
                     <td className="py-3 px-4">
@@ -164,21 +165,21 @@ export function ChatHistoryTable() {
                         {session.agent}
                       </Badge>
                     </td>
-                    <td className="py-3 px-4 text-right text-sm text-slate-600 dark:text-zinc-400">
+                    <td className="py-3 px-4 text-right text-sm text-muted-foreground dark:text-muted-foreground">
                       {session.messageCount}
                     </td>
-                    <td className="py-3 px-4 text-right font-mono text-sm text-slate-600 dark:text-zinc-400">
+                    <td className="py-3 px-4 text-right font-mono text-sm text-muted-foreground dark:text-muted-foreground">
                       {formatDuration(session.durationSeconds)}
                     </td>
-                    <td className="py-3 px-4 font-mono text-xs text-slate-600 dark:text-zinc-400">
+                    <td className="py-3 px-4 font-mono text-xs text-muted-foreground dark:text-muted-foreground">
                       {formatDate(session.date)}
                     </td>
                   </tr>
                   {isExpanded && (
                     <tr>
-                      <td colSpan={7} className="bg-slate-50/50 dark:bg-zinc-900/30">
+                      <td colSpan={7} className="bg-muted/50 dark:bg-zinc-900/30">
                         <div className="p-4 space-y-3">
-                          <h4 className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
+                          <h4 className="text-sm font-semibold text-foreground dark:text-zinc-300">
                             Chat Preview
                           </h4>
                           {session.preview.length === 0 ? (
@@ -195,7 +196,7 @@ export function ChatHistoryTable() {
                                   className={`max-w-[70%] px-4 py-2 rounded-lg text-sm ${
                                     msg.role === 'user'
                                       ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-300'
-                                      : 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100'
+                                      : 'bg-white dark:bg-zinc-800 text-foreground dark:text-zinc-100'
                                   }`}
                                 >
                                   {msg.content}

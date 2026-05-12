@@ -39,6 +39,11 @@ import { test, expect, type Page } from '@playwright/test';
 import { mockAuthEndpoints, seedAuthSession } from '../_helpers/seedAuthSession';
 import { seedCookieConsent } from '../_helpers/seedCookieConsent';
 
+// See sessions-index.spec.ts for rationale (also: SessionLiveView hardcodes
+// data-theme="dark" on its root, but the global --e-* tokens still depend on
+// the .dark class applied by next-themes).
+test.use({ colorScheme: 'dark' });
+
 const FIXTURE_SESSION_ID = '00000000-0000-4000-8000-000000000d20';
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] as const;
 

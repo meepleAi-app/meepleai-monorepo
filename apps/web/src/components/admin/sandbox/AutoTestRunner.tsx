@@ -116,7 +116,7 @@ export function AutoTestRunner({ onComplete, disabled }: AutoTestRunnerProps) {
           {currentResults.map((result, i) => (
             <div
               key={i}
-              className="flex items-center gap-2 rounded-md border bg-white/50 px-2.5 py-1.5 text-xs font-nunito"
+              className="flex items-center gap-2 rounded-md border bg-card/50 px-2.5 py-1.5 text-xs font-nunito"
             >
               {result.passed ? (
                 <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />

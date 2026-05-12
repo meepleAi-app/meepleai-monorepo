@@ -48,7 +48,7 @@ export function TestChatPanel() {
 
   return (
     <div
-      className="flex h-full flex-col rounded-xl border bg-white/70 backdrop-blur-md overflow-hidden"
+      className="flex h-full flex-col rounded-xl border bg-card/70 backdrop-blur-md overflow-hidden"
       data-testid="test-chat-panel"
     >
       {/* Panel header */}

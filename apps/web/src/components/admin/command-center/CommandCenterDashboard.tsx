@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 /**
  * Command Center Dashboard - Admin Mission Control
  *
@@ -269,10 +270,10 @@ function ServiceCard({ service }: { service: ServiceData }) {
       animate={{ opacity: 1, scale: 1 }}
       className={cn(
         'relative group',
-        'bg-slate-900/80 backdrop-blur-xl',
-        'border border-slate-700/50',
+        'bg-card backdrop-blur-xl',
+        'border border-border/50',
         'rounded-lg overflow-hidden',
-        'hover:border-slate-600/80 transition-all duration-300',
+        'hover:border-border/80 transition-all duration-300',
         'hover:shadow-lg',
         colors.glow.replace('shadow-', 'hover:shadow-')
       )}
@@ -285,7 +286,7 @@ function ServiceCard({ service }: { service: ServiceData }) {
           <div
             className={cn(
               'w-10 h-10 rounded-lg flex items-center justify-center',
-              'bg-slate-800/80 border border-slate-700/50',
+              'bg-card border border-border/50',
               colors.text
             )}
           >
@@ -301,14 +302,14 @@ function ServiceCard({ service }: { service: ServiceData }) {
             {service.status}
           </span>
           {service.latency !== undefined && service.latency > 0 && (
-            <span className="font-mono text-slate-500">{service.latency}ms</span>
+            <span className="font-mono text-muted-foreground">{service.latency}ms</span>
           )}
         </div>
 
         {service.uptime !== undefined && (
-          <div className="mt-3 pt-3 border-t border-slate-800">
+          <div className="mt-3 pt-3 border-t border-border">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500">Uptime</span>
+              <span className="text-muted-foreground">Uptime</span>
               <span
                 className={cn(
                   'font-mono',
@@ -322,7 +323,7 @@ function ServiceCard({ service }: { service: ServiceData }) {
                 {service.uptime}%
               </span>
             </div>
-            <div className="mt-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+            <div className="mt-1 h-1 bg-card rounded-full overflow-hidden">
               <div
                 className={cn(
                   'h-full rounded-full transition-all duration-500',
@@ -359,28 +360,28 @@ function MetricCard({ metric, index }: { metric: SystemMetric; index: number }) 
       transition={{ delay: index * 0.05 }}
       className={cn(
         'relative overflow-hidden',
-        'bg-slate-900/60 backdrop-blur-xl',
-        'border border-slate-700/50 rounded-lg',
-        'p-4 group hover:border-slate-600/80 transition-all'
+        'bg-card backdrop-blur-xl',
+        'border border-border/50 rounded-lg',
+        'p-4 group hover:border-border/80 transition-all'
       )}
     >
       {/* Decorative corner gradient */}
       <div className="absolute -top-10 -right-10 w-20 h-20 bg-gradient-to-br from-cyan-500/10 to-transparent rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
 
-      <p className="text-xs text-slate-500 uppercase tracking-wider font-mono mb-2">
+      <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mb-2">
         {metric.label}
       </p>
 
       <div className="flex items-baseline gap-2">
         <span className="text-2xl font-bold text-slate-100 font-mono">{metric.value}</span>
-        {metric.unit && <span className="text-sm text-slate-500 font-mono">{metric.unit}</span>}
+        {metric.unit && <span className="text-sm text-muted-foreground font-mono">{metric.unit}</span>}
       </div>
 
       {metric.trend !== undefined && (
         <div className={cn('flex items-center gap-1 mt-2 text-xs font-mono', trendColor)}>
           <span>{isPositiveTrend ? '↑' : '↓'}</span>
           <span>{Math.abs(metric.trend)}%</span>
-          <span className="text-slate-600">vs last week</span>
+          <span className="text-muted-foreground">vs last week</span>
         </div>
       )}
     </motion.div>
@@ -402,7 +403,7 @@ function AlertItem({ alert, index }: { alert: AlertData; index: number }) {
       <Icon className={cn('w-5 h-5 mt-0.5 flex-shrink-0', styles.text)} />
       <div className="flex-1 min-w-0">
         <p className="text-sm text-slate-300">{alert.message}</p>
-        <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 font-mono">
+        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground font-mono">
           <span>{alert.source}</span>
           <span>•</span>
           <span>{formatTimeAgo(alert.timestamp)}</span>
@@ -428,8 +429,8 @@ function PendingActionCard({ action }: { action: PendingAction }) {
         whileHover={{ scale: 1.02 }}
         className={cn(
           'flex items-center justify-between p-4 rounded-lg',
-          'bg-slate-900/60 border border-slate-700/50',
-          'hover:border-slate-600/80 hover:bg-slate-800/60',
+          'bg-card border border-border/50',
+          'hover:border-border/80 hover:bg-card',
           'transition-all cursor-pointer group'
         )}
       >
@@ -439,7 +440,7 @@ function PendingActionCard({ action }: { action: PendingAction }) {
           </div>
           <div>
             <p className="text-sm font-medium text-slate-200">{action.title}</p>
-            <p className="text-xs text-slate-500 font-mono uppercase tracking-wider">
+            <p className="text-xs text-muted-foreground font-mono uppercase tracking-wider">
               {action.type}
             </p>
           </div>
@@ -458,7 +459,7 @@ function PendingActionCard({ action }: { action: PendingAction }) {
           >
             {action.count}
           </span>
-          <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-slate-400 transition-colors" />
+          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-muted-foreground transition-colors" />
         </div>
       </motion.div>
     </Link>
@@ -492,15 +493,15 @@ function TerminalLogs() {
   }, []);
 
   return (
-    <div className="bg-slate-950 rounded-lg border border-slate-800 overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-800 bg-slate-900/50">
-        <Terminal className="w-4 h-4 text-slate-500" />
-        <span className="text-xs font-mono text-slate-500 uppercase tracking-wider">
+    <div className="bg-card rounded-lg border border-border overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-card">
+        <Terminal className="w-4 h-4 text-muted-foreground" />
+        <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
           System Logs
         </span>
         <div className="ml-auto flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-mono text-slate-500">LIVE</span>
+          <span className="text-xs font-mono text-muted-foreground">LIVE</span>
         </div>
       </div>
       <div className="p-4 font-mono text-xs space-y-1 max-h-36 overflow-y-auto">
@@ -516,7 +517,7 @@ function TerminalLogs() {
                   ? 'text-amber-400'
                   : log.includes('[ERROR]')
                     ? 'text-red-400'
-                    : 'text-slate-400'
+                    : 'text-muted-foreground'
               )}
             >
               {log}
@@ -569,7 +570,7 @@ export function CommandCenterDashboard({ className }: CommandCenterDashboardProp
   };
 
   return (
-    <div className={cn('min-h-screen bg-slate-950 text-slate-100', 'font-sans', className)}>
+    <div className={cn('min-h-screen bg-card text-slate-100', 'font-sans', className)}>
       {/* Subtle grid background */}
       <div
         className="fixed inset-0 opacity-[0.02] pointer-events-none"
@@ -593,14 +594,14 @@ export function CommandCenterDashboard({ className }: CommandCenterDashboardProp
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold tracking-tight">Command Center</h1>
-                  <p className="text-sm text-slate-500 font-mono">MeepleAI Admin Dashboard</p>
+                  <p className="text-sm text-muted-foreground font-mono">MeepleAI Admin Dashboard</p>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
               {/* System health indicator */}
-              <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-900/60 border border-slate-700/50">
+              <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-card border border-border/50">
                 <div
                   className={cn(
                     'w-3 h-3 rounded-full',
@@ -614,14 +615,14 @@ export function CommandCenterDashboard({ className }: CommandCenterDashboardProp
                 />
                 <div className="text-sm">
                   <span className="font-mono font-bold">{systemHealth.percentage}%</span>
-                  <span className="text-slate-500 ml-2">System Health</span>
+                  <span className="text-muted-foreground ml-2">System Health</span>
                 </div>
               </div>
 
               {/* Time display */}
               {mounted && currentTime && (
-                <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900/60 border border-slate-700/50">
-                  <Clock className="w-4 h-4 text-slate-500" />
+                <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg bg-card border border-border/50">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
                   <span className="font-mono text-sm text-slate-300">
                     {currentTime.toLocaleDateString('it-IT')}
                   </span>
@@ -637,13 +638,13 @@ export function CommandCenterDashboard({ className }: CommandCenterDashboardProp
                 disabled={isRefreshing}
                 className={cn(
                   'p-2 rounded-lg',
-                  'bg-slate-900/60 border border-slate-700/50',
-                  'hover:border-slate-600/80 hover:bg-slate-800/60',
+                  'bg-card border border-border/50',
+                  'hover:border-border/80 hover:bg-card',
                   'transition-all disabled:opacity-50'
                 )}
               >
                 <RefreshCw
-                  className={cn('w-5 h-5 text-slate-400', isRefreshing && 'animate-spin')}
+                  className={cn('w-5 h-5 text-muted-foreground', isRefreshing && 'animate-spin')}
                 />
               </button>
             </div>
@@ -659,7 +660,7 @@ export function CommandCenterDashboard({ className }: CommandCenterDashboardProp
             </h2>
             <Link
               href="/admin/infrastructure"
-              className="text-sm text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1"
+              className="text-sm text-muted-foreground hover:text-slate-300 transition-colors flex items-center gap-1"
             >
               View Details <ChevronRight className="w-4 h-4" />
             </Link>
@@ -707,7 +708,7 @@ export function CommandCenterDashboard({ className }: CommandCenterDashboardProp
               </h2>
               <Link
                 href="/admin/alerts"
-                className="text-sm text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1"
+                className="text-sm text-muted-foreground hover:text-slate-300 transition-colors flex items-center gap-1"
               >
                 View All <ChevronRight className="w-4 h-4" />
               </Link>

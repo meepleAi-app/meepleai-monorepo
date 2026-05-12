@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { ArrowRight } from 'lucide-react';
@@ -17,7 +18,7 @@ const STATUS_COLORS: Record<string, string> = {
   Degraded: 'bg-yellow-500',
   Down: 'bg-red-500',
   Restarting: 'bg-blue-500',
-  Unknown: 'bg-gray-400',
+  Unknown: 'bg-muted-foreground',
 };
 
 function StatusDot({ service }: { service: AiServiceStatus }) {
@@ -43,7 +44,7 @@ function LoadingSkeleton() {
       {Array.from({ length: 8 }).map((_, i) => (
         <span
           key={i}
-          className="inline-block h-2.5 w-2.5 rounded-full bg-gray-300 dark:bg-gray-600 animate-pulse"
+          className="inline-block h-2.5 w-2.5 rounded-full bg-muted dark:bg-gray-600 animate-pulse"
         />
       ))}
     </div>
@@ -58,7 +59,7 @@ export function InfraStatusBar() {
   const total = services.length;
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-slate-200/60 dark:border-zinc-700/60 bg-white/80 dark:bg-zinc-800/80 px-3 py-2">
+    <div className="flex items-center gap-3 rounded-lg border border-border/60 dark:border-zinc-700/60 bg-card/80 dark:bg-zinc-800/80 px-3 py-2">
       <TooltipProvider delayDuration={200}>
         {isLoading ? (
           <LoadingSkeleton />

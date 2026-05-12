@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 /**
@@ -65,8 +66,8 @@ export function DebugEventCard({ event }: DebugEventCardProps) {
   const [expanded, setExpanded] = useState(false);
   const config = EVENT_CONFIG[event.type] || {
     icon: DatabaseIcon,
-    color: 'text-gray-400',
-    bg: 'bg-gray-500/10',
+    color: 'text-muted-foreground',
+    bg: 'bg-muted-foreground/10',
   };
   const Icon = config.icon;
   const data = event.data as Record<string, unknown> | null;

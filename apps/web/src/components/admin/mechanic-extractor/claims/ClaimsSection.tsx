@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 /**
@@ -159,7 +160,7 @@ export function ClaimsSection({
   if (claimsQuery.isLoading) {
     return (
       <div
-        className="rounded-md border border-slate-200 p-3 text-sm text-muted-foreground dark:border-zinc-700"
+        className="rounded-md border border-border p-3 text-sm text-muted-foreground dark:border-zinc-700"
         data-testid="claims-loading"
       >
         <Loader2Icon className="mr-2 inline h-4 w-4 animate-spin" />
@@ -186,7 +187,7 @@ export function ClaimsSection({
     // neutral wording avoids implying "extraction still running".
     return (
       <div
-        className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-muted-foreground dark:border-zinc-700 dark:bg-zinc-900"
+        className="rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground dark:border-zinc-700 dark:bg-zinc-900"
         data-testid="claims-empty"
       >
         No claims to display.
@@ -199,7 +200,7 @@ export function ClaimsSection({
   return (
     <div className="space-y-3" data-testid="claims-section">
       {/* Header / stats */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3 dark:border-zinc-700">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 dark:border-zinc-700">
         <div>
           <h3 className="text-sm font-medium">Claims ({stats.total})</h3>
           <p className="text-xs text-muted-foreground">
@@ -305,11 +306,11 @@ function SectionGroup({
   const pendingCount = claims.filter(c => c.status === MechanicClaimStatus.Pending).length;
 
   return (
-    <div className="rounded-md border border-slate-200 dark:border-zinc-700">
+    <div className="rounded-md border border-border dark:border-zinc-700">
       <button
         type="button"
         onClick={() => setExpanded(v => !v)}
-        className="flex w-full items-center justify-between gap-2 bg-slate-50 px-3 py-2 text-left text-sm dark:bg-zinc-900"
+        className="flex w-full items-center justify-between gap-2 bg-muted px-3 py-2 text-left text-sm dark:bg-zinc-900"
         data-testid={`claims-section-header-${section}`}
       >
         <span className="flex items-center gap-2 font-medium">
@@ -460,7 +461,7 @@ function ClaimRow({
             <ul className="mt-1 space-y-1 border-l-2 border-sky-200 pl-3 text-xs">
               {claim.citations.map(c => (
                 <li key={c.id} className="text-muted-foreground">
-                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                  <span className="font-medium text-foreground">
                     p.{c.pdfPage}
                   </span>{' '}
                   — &ldquo;{c.quote}&rdquo;

@@ -115,7 +115,7 @@ export function TimelineStep({
     <div
       className={cn(
         'rounded-xl overflow-hidden transition-all duration-250',
-        'bg-white/90 backdrop-blur-md border',
+        'bg-card/90 backdrop-blur-md border',
         isActive ? 'border-amber-500' : 'border-black/10',
         className
       )}
@@ -125,7 +125,7 @@ export function TimelineStep({
         onClick={onToggle}
         className={cn(
           'w-full flex items-center gap-3 px-4.5 py-3.5',
-          'transition-colors hover:bg-white/70',
+          'transition-colors hover:bg-card/70',
           'focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500'
         )}
       >
@@ -139,7 +139,7 @@ export function TimelineStep({
 
         {/* Duration Bar */}
         <div className="flex-1 mx-3">
-          <div className="h-1.5 bg-black/8 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-foreground/8 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
@@ -161,14 +161,14 @@ export function TimelineStep({
         </span>
 
         {/* Percentage */}
-        <span className="text-xs text-gray-500 font-mono flex-shrink-0 min-w-[36px] text-right">
+        <span className="text-xs text-muted-foreground font-mono flex-shrink-0 min-w-[36px] text-right">
           {percentOfTotal.toFixed(1)}%
         </span>
 
         {/* Expand Icon */}
         <ChevronDown
           className={cn(
-            'w-3.5 h-3.5 text-gray-400 flex-shrink-0',
+            'w-3.5 h-3.5 text-muted-foreground flex-shrink-0',
             'transition-transform duration-300',
             isOpen && 'rotate-180'
           )}
@@ -190,7 +190,7 @@ export function TimelineStep({
                 className={cn('flex flex-col gap-0.5', detail.wide && 'col-span-full')}
               >
                 {/* Label */}
-                <span className="text-[11px] text-gray-400 uppercase tracking-wider font-semibold">
+                <span className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
                   {detail.label}
                 </span>
 

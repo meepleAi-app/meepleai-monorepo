@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 /**
@@ -49,7 +50,7 @@ const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
 
 const STATUS_BADGE_CLASS: Record<number, string> = {
-  [MechanicAnalysisStatus.Draft]: 'bg-slate-100 text-slate-700 border-slate-300',
+  [MechanicAnalysisStatus.Draft]: 'bg-muted text-foreground border-border',
   [MechanicAnalysisStatus.InReview]: 'bg-amber-100 text-amber-800 border-amber-300',
   [MechanicAnalysisStatus.Published]: 'bg-green-100 text-green-800 border-green-300',
   [MechanicAnalysisStatus.Rejected]: 'bg-rose-100 text-rose-800 border-rose-300',
@@ -98,7 +99,7 @@ export function MechanicAnalysesListCard({
 
   return (
     <Card
-      className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/60"
+      className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/60"
       data-testid="mechanic-analyses-list-card"
     >
       <CardContent className="pt-6 space-y-3">
@@ -147,9 +148,9 @@ export function MechanicAnalysesListCard({
         )}
 
         {items.length > 0 && (
-          <div className="overflow-x-auto rounded-md border border-slate-200 dark:border-zinc-700">
+          <div className="overflow-x-auto rounded-md border border-border dark:border-zinc-700">
             <table className="w-full text-xs">
-              <thead className="bg-slate-50 dark:bg-zinc-900">
+              <thead className="bg-muted dark:bg-zinc-900">
                 <tr>
                   <th className="p-2 text-left">Game</th>
                   <th className="p-2 text-left">Status</th>
@@ -166,7 +167,7 @@ export function MechanicAnalysesListCard({
                       key={row.id}
                       onClick={() => onSelect(row.id)}
                       className={
-                        'cursor-pointer border-t border-slate-200 transition-colors hover:bg-amber-50 dark:border-zinc-700 dark:hover:bg-amber-950/20 ' +
+                        'cursor-pointer border-t border-border transition-colors hover:bg-amber-50 dark:border-zinc-700 dark:hover:bg-amber-950/20 ' +
                         (isSelected ? 'bg-amber-100/70 dark:bg-amber-950/30' : '')
                       }
                       data-testid={`mechanic-analyses-list-row-${row.id}`}

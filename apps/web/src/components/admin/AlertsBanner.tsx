@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 /**
  * AlertsBanner Component - Issue #2791 (Updated for Issue #2792)
  *
@@ -197,14 +198,14 @@ export function AlertsBanner({
         >
           <motion.p
             variants={shouldReduceMotion ? undefined : VARIANTS.fadeIn}
-            className="font-semibold text-lg text-stone-900 dark:text-white"
+            className="font-semibold text-lg text-foreground dark:text-white"
             data-testid="alerts-primary-message"
           >
             {primaryMessage}
           </motion.p>
           <motion.p
             variants={shouldReduceMotion ? undefined : VARIANTS.fadeIn}
-            className="text-sm text-stone-600 dark:text-stone-400"
+            className="text-sm text-muted-foreground"
             data-testid="alerts-secondary-message"
           >
             {secondaryMessage}

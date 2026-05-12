@@ -57,7 +57,7 @@ export function GameSearchCombobox({
         <button
           role="combobox"
           aria-expanded={open}
-          className="flex w-full items-center gap-2 rounded-lg border bg-white/50 px-3 py-2 text-sm text-muted-foreground hover:bg-white/80 transition-colors"
+          className="flex w-full items-center gap-2 rounded-lg border bg-card/50 px-3 py-2 text-sm text-muted-foreground hover:bg-card/80 transition-colors"
         >
           <Search className="h-4 w-4 shrink-0" />
           <span className="font-nunito">Cerca un gioco...</span>

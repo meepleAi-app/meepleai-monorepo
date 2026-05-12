@@ -57,7 +57,7 @@ const TIER_ICONS: Record<SubscriptionTier, React.ReactNode> = {
 };
 
 const TIER_COLORS: Record<SubscriptionTier, string> = {
-  Free: 'text-slate-600 dark:text-slate-400',
+  Free: 'text-muted-foreground',
   Normal: 'text-blue-600 dark:text-blue-400',
   Premium: 'text-amber-600 dark:text-amber-400',
 };
@@ -451,7 +451,7 @@ export default function FeatureFlagsTab({
                                           'data-[state=checked]:bg-blue-500',
                                         isTierEnabled &&
                                           tier === 'Free' &&
-                                          'data-[state=checked]:bg-slate-500'
+                                          'data-[state=checked]:bg-muted-foreground'
                                       )}
                                     />
                                   </div>
@@ -539,7 +539,7 @@ export default function FeatureFlagsTab({
                   features
                 </li>
                 <li>
-                  • <Users className="inline h-3 w-3 text-slate-500" /> Free: Basic access with
+                  • <Users className="inline h-3 w-3 text-muted-foreground" /> Free: Basic access with
                   limitations
                 </li>
               </>

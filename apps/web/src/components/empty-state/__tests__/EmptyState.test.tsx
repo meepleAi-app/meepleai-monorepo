@@ -116,7 +116,7 @@ describe('EmptyState', () => {
         />
       );
       const button = screen.getByRole('button', { name: 'Add item' });
-      expect(button).toHaveClass('bg-slate-100');
+      expect(button).toHaveClass('bg-muted'); // semantic token (post DS-15)
     });
 
     it('should not render action button when not provided', () => {

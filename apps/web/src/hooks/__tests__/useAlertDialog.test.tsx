@@ -261,7 +261,7 @@ describe('useAlertDialog', () => {
 
     await waitFor(() => {
       const icon = screen.getByText('Loading').parentElement?.querySelector('svg');
-      expect(icon).toHaveClass('text-gray-600');
+      expect(icon).toHaveClass('text-muted-foreground'); // post DS-15
       expect(icon).toHaveClass('animate-spin');
     });
   });

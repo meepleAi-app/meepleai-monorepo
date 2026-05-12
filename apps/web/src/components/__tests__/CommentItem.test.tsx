@@ -295,10 +295,10 @@ describe('CommentItem', () => {
       );
 
       // Verify resolved styling is applied - Shadcn/UI uses Tailwind CSS classes
-      // The component applies "bg-gray-100 opacity-70" for resolved comments
+      // Post DS-15: bg-gray-100 → bg-muted (semantic token)
       const commentWrapper = container.firstChild as HTMLElement;
       expect(commentWrapper).toBeInTheDocument();
-      expect(commentWrapper).toHaveClass('bg-gray-100');
+      expect(commentWrapper).toHaveClass('bg-muted');
       expect(commentWrapper).toHaveClass('opacity-70');
     });
 

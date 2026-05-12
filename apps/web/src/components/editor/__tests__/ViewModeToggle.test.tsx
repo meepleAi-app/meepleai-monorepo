@@ -20,7 +20,7 @@ describe('ViewModeToggle', () => {
 
     const richButton = screen.getByText(/📝 Editor Visuale/);
     // Check Tailwind classes instead of inline styles
-    expect(richButton).toHaveClass('bg-white', 'text-blue-600', 'font-bold', 'shadow-sm');
+    expect(richButton).toHaveClass('bg-card', 'text-blue-600', 'font-bold', 'shadow-sm');
   });
 
   it('highlights json mode when active', () => {
@@ -28,7 +28,7 @@ describe('ViewModeToggle', () => {
 
     const jsonButton = screen.getByText(/\{ \} Codice JSON/);
     // Check Tailwind classes instead of inline styles
-    expect(jsonButton).toHaveClass('bg-white', 'text-blue-600', 'font-bold', 'shadow-sm');
+    expect(jsonButton).toHaveClass('bg-card', 'text-blue-600', 'font-bold', 'shadow-sm');
   });
 
   it('does not highlight inactive rich mode', () => {
@@ -36,7 +36,7 @@ describe('ViewModeToggle', () => {
 
     const richButton = screen.getByText(/📝 Editor Visuale/);
     // Check Tailwind classes instead of inline styles
-    expect(richButton).toHaveClass('bg-transparent', 'text-gray-600', 'font-normal');
+    expect(richButton).toHaveClass('bg-transparent', 'text-muted-foreground', 'font-normal');
   });
 
   it('does not highlight inactive json mode', () => {
@@ -44,7 +44,7 @@ describe('ViewModeToggle', () => {
 
     const jsonButton = screen.getByText(/\{ \} Codice JSON/);
     // Check Tailwind classes instead of inline styles
-    expect(jsonButton).toHaveClass('bg-transparent', 'text-gray-600', 'font-normal');
+    expect(jsonButton).toHaveClass('bg-transparent', 'text-muted-foreground', 'font-normal');
   });
 
   it("calls onModeChange with 'rich' when rich button is clicked", () => {
@@ -91,7 +91,7 @@ describe('ViewModeToggle', () => {
 
     const wrapper = container.firstChild as HTMLElement;
     // Check Tailwind classes instead of inline styles
-    expect(wrapper).toHaveClass('inline-flex', 'bg-gray-100', 'rounded', 'p-0.5');
+    expect(wrapper).toHaveClass('inline-flex', 'bg-muted', 'rounded', 'p-0.5');
   });
 
   it('applies box shadow to active button', () => {

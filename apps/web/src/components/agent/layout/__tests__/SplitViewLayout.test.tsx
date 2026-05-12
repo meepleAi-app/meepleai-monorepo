@@ -94,7 +94,7 @@ describe('SplitViewLayout', () => {
 
       // Chat is selected by default, so PDF should be inactive
       const pdfTab = screen.getByText('PDF');
-      expect(pdfTab.className).toContain('text-slate-400');
+      expect(pdfTab.className).toContain('text-muted-foreground'); // post DS-15
     });
   });
 

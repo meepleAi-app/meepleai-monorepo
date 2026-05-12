@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { Suspense, useState } from 'react';
@@ -213,7 +214,7 @@ function ReviewContent() {
             </thead>
             <tbody>
               {resources.map((r, i) => (
-                <tr key={i} className="border-b border-slate-100 dark:border-zinc-700/50">
+                <tr key={i} className="border-b border-border dark:border-zinc-700/50">
                   <td className="py-2 pr-4 font-medium">{r.name}</td>
                   <td className="py-2 pr-4">{r.type}</td>
                   <td className="py-2 pr-4">{r.usage ?? '\u2014'}</td>
@@ -332,7 +333,7 @@ function ValidationSection({ sharedGameId }: { sharedGameId: string }) {
   };
 
   return (
-    <Card className="bg-white/70 backdrop-blur-md border-slate-200/60 dark:bg-zinc-800/70 dark:border-zinc-700/60 print:hidden">
+    <Card className="bg-card/70 backdrop-blur-md border-border/60 dark:bg-zinc-800/70 dark:border-zinc-700/60 print:hidden">
       <CardHeader className="pb-3">
         <CardTitle className="font-quicksand text-base">AI Comprehension Validation</CardTitle>
       </CardHeader>
@@ -342,7 +343,7 @@ function ValidationSection({ sharedGameId }: { sharedGameId: string }) {
         ) : metrics ? (
           <MetricsCard metrics={metrics} currentGoldenVersionHash={currentGoldenVersionHash} />
         ) : (
-          <div className="rounded-md border border-dashed border-slate-300 bg-white/40 p-4 text-sm text-muted-foreground dark:border-zinc-700 dark:bg-zinc-900/40">
+          <div className="rounded-md border border-dashed border-border bg-card/40 p-4 text-sm text-muted-foreground dark:border-zinc-700 dark:bg-zinc-900/40">
             No prior metrics for this game. Run an evaluation to compute the first snapshot.
           </div>
         )}
@@ -383,7 +384,7 @@ function ValidationSection({ sharedGameId }: { sharedGameId: string }) {
 
 function StatCard({ value, label }: { value: number; label: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 text-center transition-shadow hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800">
+    <div className="rounded-lg border border-border bg-card p-4 text-center transition-shadow hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800">
       <div className="font-quicksand text-2xl font-bold text-amber-500">{value}</div>
       <div className="mt-0.5 text-xs text-muted-foreground">{label}</div>
     </div>
@@ -402,7 +403,7 @@ function ReviewCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="bg-white/70 backdrop-blur-md border-slate-200/60 dark:bg-zinc-800/70 dark:border-zinc-700/60 print:shadow-none print:border-slate-300">
+    <Card className="bg-card/70 backdrop-blur-md border-border/60 dark:bg-zinc-800/70 dark:border-zinc-700/60 print:shadow-none print:border-border">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base font-quicksand">

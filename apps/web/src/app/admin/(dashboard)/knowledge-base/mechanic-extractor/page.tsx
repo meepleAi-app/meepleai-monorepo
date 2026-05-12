@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
@@ -277,7 +278,7 @@ export default function MechanicExtractorPage() {
       </div>
 
       {/* Game + PDF Selection */}
-      <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/60">
+      <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/60">
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
@@ -356,18 +357,18 @@ export default function MechanicExtractorPage() {
       {selectedGameId && selectedPdfId && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {/* Left: PDF Viewer */}
-          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/60">
+          <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/60">
             <CardContent className="pt-6">
               <h2 className="mb-3 text-lg font-medium font-quicksand">Rulebook PDF</h2>
               {pdfUrl ? (
                 <div
-                  className="rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden"
+                  className="rounded-lg border border-border dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden"
                   style={{ height: '600px' }}
                 >
                   <iframe src={pdfUrl} className="h-full w-full" title="Rulebook PDF" />
                 </div>
               ) : (
-                <div className="flex h-[600px] items-center justify-center rounded-lg border border-dashed border-slate-300 dark:border-zinc-600">
+                <div className="flex h-[600px] items-center justify-center rounded-lg border border-dashed border-border dark:border-zinc-600">
                   <p className="text-muted-foreground">Select a PDF to view</p>
                 </div>
               )}
@@ -378,7 +379,7 @@ export default function MechanicExtractorPage() {
           </Card>
 
           {/* Right: Mechanic Editor */}
-          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/60">
+          <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/60">
             <CardContent className="pt-6">
               {isDraftLoading ? (
                 <div className="space-y-3">
@@ -406,7 +407,7 @@ export default function MechanicExtractorPage() {
                           className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                             activeSection === section.id
                               ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-300'
-                              : 'text-muted-foreground hover:bg-slate-100 dark:hover:bg-zinc-700'
+                              : 'text-muted-foreground hover:bg-muted dark:hover:bg-zinc-700'
                           }`}
                         >
                           <Icon className="h-3.5 w-3.5" />
@@ -429,7 +430,7 @@ export default function MechanicExtractorPage() {
                       value={notes[activeSection]}
                       onChange={e => handleNotesChange(activeSection, e.target.value)}
                       placeholder={`Write your notes about ${activeSection} here. Describe what you read in the rulebook using your own words...`}
-                      className="h-40 w-full resize-y rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                      className="h-40 w-full resize-y rounded-md border border-border bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
                     />
                     <p className="mt-1 text-xs text-muted-foreground">
                       {notes[activeSection].length} characters
@@ -526,7 +527,7 @@ export default function MechanicExtractorPage() {
 
                   {/* Finalize Button */}
                   {canFinalize && (
-                    <div className="mt-4 border-t border-slate-200 pt-4 dark:border-zinc-700">
+                    <div className="mt-4 border-t border-border pt-4 dark:border-zinc-700">
                       <div className="flex gap-2">
                         <Button variant="outline" className="flex-1" asChild>
                           <a

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -218,7 +219,7 @@ export function AuditTab() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md overflow-x-auto">
+        <div className="rounded-xl border bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-xs text-muted-foreground">
@@ -298,7 +299,7 @@ function AuditRow({
     <>
       <tr
         className={cn(
-          'border-b last:border-0 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-zinc-800/30'
+          'border-b last:border-0 cursor-pointer hover:bg-muted/50 dark:hover:bg-zinc-800/30'
         )}
         onClick={onToggle}
       >
@@ -334,7 +335,7 @@ function AuditRow({
         </td>
       </tr>
       {expanded && (
-        <tr className="bg-slate-50/30 dark:bg-zinc-800/20">
+        <tr className="bg-muted/30 dark:bg-zinc-800/20">
           <td colSpan={6} className="px-6 py-3">
             <div className="grid gap-2 text-xs sm:grid-cols-2">
               <div>
@@ -364,7 +365,7 @@ function AuditDetailValue({ value }: { value: string }) {
   try {
     const parsed = JSON.parse(value);
     return (
-      <pre className="mt-1 p-2 rounded bg-slate-100 dark:bg-zinc-800 overflow-x-auto text-xs font-mono whitespace-pre-wrap">
+      <pre className="mt-1 p-2 rounded bg-muted dark:bg-zinc-800 overflow-x-auto text-xs font-mono whitespace-pre-wrap">
         {JSON.stringify(parsed, null, 2)}
       </pre>
     );

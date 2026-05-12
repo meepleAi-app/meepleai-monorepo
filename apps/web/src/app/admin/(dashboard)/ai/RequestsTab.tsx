@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -66,7 +67,7 @@ export function RequestsTab() {
           {[1, 2, 3, 4, 5].map(i => (
             <div
               key={i}
-              className="h-14 rounded-xl bg-white/40 dark:bg-zinc-800/40 animate-pulse"
+              className="h-14 rounded-xl bg-card/40 dark:bg-zinc-800/40 animate-pulse"
             />
           ))}
         </div>
@@ -77,7 +78,7 @@ export function RequestsTab() {
             {requests.map((r, idx) => (
               <div
                 key={r.id ?? idx}
-                className="rounded-xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-md p-3"
+                className="rounded-xl border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-md p-3"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-mono text-xs text-foreground truncate max-w-[60%]">
@@ -97,10 +98,10 @@ export function RequestsTab() {
           </div>
 
           {/* Desktop: table layout */}
-          <div className="hidden md:block rounded-xl border border-slate-200/60 dark:border-zinc-700/40 overflow-hidden">
+          <div className="hidden md:block rounded-xl border border-border/60 dark:border-zinc-700/40 overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200/60 dark:border-zinc-700/40 bg-muted/30">
+                <tr className="border-b border-border/60 dark:border-zinc-700/40 bg-muted/30">
                   <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground">
                     Model
                   </th>
@@ -122,7 +123,7 @@ export function RequestsTab() {
                 {requests.map((r, idx) => (
                   <tr
                     key={r.id ?? idx}
-                    className="border-b border-slate-100/60 dark:border-zinc-800/40 last:border-0"
+                    className="border-b border-border/60 dark:border-zinc-800/40 last:border-0"
                   >
                     <td className="px-4 py-2.5 font-mono text-xs text-foreground">
                       {r.model ?? '—'}

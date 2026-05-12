@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 import { Download, HeartPulse, RefreshCw, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -44,9 +45,9 @@ const TECH_ACTIONS: TechActionConfig[] = [
 ];
 
 const LINK_CLASS =
-  'inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-md px-3 py-1.5 transition-colors';
+  'inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800 rounded-md px-3 py-1.5 transition-colors';
 
-const SEPARATOR_CLASS = 'text-slate-300 dark:text-zinc-600';
+const SEPARATOR_CLASS = 'text-slate-300 dark:text-muted-foreground';
 
 // ============================================================================
 // Component
@@ -55,7 +56,7 @@ const SEPARATOR_CLASS = 'text-slate-300 dark:text-zinc-600';
 export function TechActionsBar() {
   return (
     <div
-      className="flex flex-wrap items-center gap-1 pt-2 border-t border-slate-200/60 dark:border-zinc-700/40"
+      className="flex flex-wrap items-center gap-1 pt-2 border-t border-border/60 dark:border-zinc-700/40"
       data-testid="tech-actions-bar"
     >
       {TECH_ACTIONS.map((action, index) => {

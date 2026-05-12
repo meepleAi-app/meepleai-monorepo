@@ -32,6 +32,17 @@ ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch st
 > · G2 game-night-detail) and SP5 admin batch tracked separately — pending Claude Design
 > production resumption (post 2026-05-10).
 
+> **Updated 2026-05-12** (Nanolith gap-coverage mockups post-storyboard audit): added
+> 3 new components across 1 new route + 1 existing route extension + 1 cross-cutting —
+> `EncounterCheatsheetView` (new route `/library/[gameId]/play/[campaignId]/encounter`,
+> Tier S, BLOCKER §9.1), `LibroGameOnboardingPanel` (existing route `/library/[gameId]`
+> libro variant prereq gate), `GamebookErrorBanner` (cross-cutting chat/translate/encounter).
+> Total grew 80 → 83. All `pending` — gated by Design System De-versioning FREEZE
+> (umbrella #1023) until Stage 2 path-migration lands. Target path
+> `apps/web/src/components/features/gamebook/` (NON `components/v2/gamebook/` per nuove
+> implementazioni post-PR #1025). Storyboard iframe references added to
+> `nanolith-game-night-storyboard.html` (step 00 + step 11a + step E4).
+
 ## Scope and ground rules
 
 - **In scope**: 80 feature components extracted from `admin-mockups/design_files/sp4-*.jsx`
@@ -107,6 +118,7 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 | `/gamebook` | **M** | `sp6-libro-game-index.html` | Libro-game index: Hero + QuotaWidget + Card grid + EmptyState | ✅ done (SP6 Phase B, PR #792) |
 | `/gamebook/upload` | **L** | `sp4-upload-wizard-extended.html` + `sp6-libro-game-photo-upload.html` | 3-step wizard: game search + camera + indexing — 14-state FSM + camera permission matrix + offline retry | ✅ done (SP6 Phase C, contract PR #794 + Foundation PR #796 + Interactions PR #800) — [`contracts/gamebook-upload-hooks.md`](contracts/gamebook-upload-hooks.md) |
 | `/library/[gameId]/play/[campaignId]/translate` | **S** | `nanolith-runthrough-translate-viewer.html` | Nanolith demo — paragraph translate via chat-stream workaround. Route consolidated from `/library/games/[gameId]/translate` under campaign in IA refactor #871. | ✅ done (SP6 Phase A, PR #790; route refactored in #871) |
+| `/library/[gameId]/play/[campaignId]/encounter` | **S** | `nanolith-runthrough-encounter-cheatsheet.html` | Nanolith dogfood — Encounter Book photo→cheatsheet on-demand (4 stati: entry-from-story · segmenting · cheatsheet-rendered · resolved-back). Ephemeral parse (no long-term cache, §9.1). Single hook `useEncounterParse`, linear FSM. | pending (post-Stage-2 unfreeze) |
 | `/kb/[id]` | **M** | `sp4-kb-detail.html` | KB header + chunks + search | **deferred** — pivot legale 2026-05-10, vedi `2026-05-10-citation-pdf-viewer-design.md` (G4 v3) |
 
 **Anti-pattern**: dispatchare implementation subagent senza Phase 0.5 per route Tier L. Wave C.1 PR #697 ha esattamente questo come root cause (vedi [post-mortem](../specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only)).
@@ -345,6 +357,35 @@ the PR review.
 | `nanolith-runthrough-game-detail.html` | `LibroGameDetailView` | `apps/web/src/components/v2/gamebook/LibroGameDetailView.tsx` | `/library/[gameId]` (libro variant) | done | #1037 | T A V |
 | `nanolith-runthrough-setup-wizard.html` | `CampaignSetupDrawer` | `apps/web/src/components/v2/gamebook/CampaignSetupDrawer.tsx` | `/library/[gameId]` (libro variant — drawer) | done | #1037 | T A V |
 
+## SP6 — Nanolith libro-game gap-coverage (post-storyboard 2026-05-12) — 3 components
+
+> **Added 2026-05-12** post mockup gap analysis: 3 mockup blocker/nice-to-have aggiunti
+> al runthrough Nanolith per coprire stati non rappresentati nei 14 mockup originali —
+> Encounter Book photo→cheatsheet (BLOCKER §9.1), prerequisiti libro-game (PDF + KB +
+> agente), error states tecnici (timeout/OCR-fail/503/segmentation-fail). Tutti i 3
+> mockup riusano pattern esistenti (translate-viewer camera, game-detail hero, low-conf
+> banner) — zero CSS proprietari, solo `tokens.css`.
+>
+> **🔒 FREEZE NOTE**: Path target post-Stage-2 = `apps/web/src/components/features/gamebook/`
+> (NON più `components/v2/gamebook/` per nuove implementazioni). Status `pending`
+> rimane fino al lift FREEZE Design System De-versioning (umbrella #1023). Le entry
+> precedenti che puntano a `components/v2/gamebook/` (LibroGameDetailView,
+> CampaignSetupDrawer) rimangono in quel path perché pre-FREEZE shipped.
+
+### Libro-game gap-coverage — 3 components — **Tier S**
+
+| Mockup | Component | Path | Route | Status | PR | AC |
+|--------|-----------|------|-------|--------|----|----|
+| `nanolith-runthrough-encounter-cheatsheet.html` | `EncounterCheatsheetView` | `apps/web/src/components/features/gamebook/EncounterCheatsheetView.tsx` | `/library/[gameId]/play/[campaignId]/encounter` | pending | — | T A M V |
+| `nanolith-runthrough-game-onboarding.html` | `LibroGameOnboardingPanel` | `apps/web/src/components/features/gamebook/LibroGameOnboardingPanel.tsx` | `/library/[gameId]` (libro variant — prereq gate) | pending | — | T A M V |
+| `nanolith-runthrough-error-states.html` | `GamebookErrorBanner` | `apps/web/src/components/features/gamebook/GamebookErrorBanner.tsx` | cross-cutting (chat, translate, encounter) | pending | — | T A V |
+
+**Stato di copertura** (4 stati ciascuno, mobile + desktop parity):
+
+- **`EncounterCheatsheetView`** (BLOCKER): entry-from-story / photo-segmenting / cheatsheet-rendered / resolved-back. Ephemeral card (no long-term cache, §9.1 spec). Single hook `useEncounterParse({photoId, paragraphRef})` + linear FSM 5-state.
+- **`LibroGameOnboardingPanel`** (NICE-TO-HAVE): prereq-missing / pdf-uploading / kb-indexing / ready. Replace della CTA "Avvia libro game" quando prerequisiti non soddisfatti. Composition: drop-zone + upload-row + index-detail + step-list primitives. Multi-hook (`useGamePrerequisites` + `usePdfUpload` + `useKbIndexing`).
+- **`GamebookErrorBanner`** (NICE-TO-HAVE): stream-timeout / ocr-fail / llm-503 / segmentation-fail. Trasversale alle 3 route gamebook (chat, translate, encounter). Cost-note "non addebitato" + ≥2 azioni di recupero + telemetry dogfood. Componente "primitive-like" candidato a `components/ui/error-banner/` se generalizzato post-Iter-1.
+
 ## Stub format (informational)
 
 Each stub follows this minimal contract so `pnpm typecheck` stays green and downstream
@@ -457,11 +498,12 @@ instead.
 | `/library/private` · `/add` · `/[id]` | `sp4-add-game-pdf-dedup.html` + `sp4-upload-wizard-extended.html` [partial] | — |
 | `/library/private/[id]/toolkit/configure` | `sp4-toolkit-detail.html` ↻ | — |
 | `/library/proposals` · `/propose` | `sp4-add-game-bgg-step.html` | Ingestion proposta |
-| `/library/[gameId]` | `sp4-game-detail.html` + `nanolith-runthrough-game-detail.html` | IA closes #871 (PR #1037) |
+| `/library/[gameId]` | `sp4-game-detail.html` + `nanolith-runthrough-game-detail.html` + `nanolith-runthrough-game-onboarding.html` | IA closes #871 (PR #1037); onboarding gap-coverage 2026-05-12 (pending Stage-2) |
 | `/library/[gameId]/agent` | `sp4-agent-detail.html` + `sp4-game-chat-tab.html` | — |
 | `/library/[gameId]/play` | `nanolith-runthrough-resume-picker.html` + `sp6-libro-game-resume-state.html` | Libro-game |
 | `/library/[gameId]/play/[campaignId]` | `nanolith-runthrough-play-session.html` + `sp6-libro-game-index.html` | — |
 | `/library/[gameId]/play/[campaignId]/translate` | `nanolith-runthrough-translate-viewer.html` + `sp6-libro-game-photo-upload.html` | Tier S done (PR #790) |
+| `/library/[gameId]/play/[campaignId]/encounter` | `nanolith-runthrough-encounter-cheatsheet.html` | Tier S pending (BLOCKER §9.1 gap-coverage 2026-05-12) |
 | `/library/[gameId]/toolbox` · `/toolkit` · `/toolkit/[sessionId]` | `sp4-toolkit-detail.html` ↻ | — |
 
 > **Note**: `/library/v2` decommissionata 2026-05-12 (era demo orfana con SEED hard-coded).

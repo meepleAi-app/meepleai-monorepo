@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useRef, useState } from 'react';
@@ -30,7 +31,7 @@ export function ExcelImportTab() {
   return (
     <div className="space-y-6">
       {/* Upload section */}
-      <div className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-slate-200/60 dark:border-zinc-700/60 p-6 space-y-4">
+      <div className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-border/60 dark:border-zinc-700/60 p-6 space-y-4">
         <h3 className="font-quicksand text-lg font-semibold text-foreground">Upload Excel File</h3>
         <p className="text-sm text-muted-foreground">
           Import skeleton games from an Excel spreadsheet (.xlsx). The file should contain columns
@@ -74,7 +75,7 @@ export function ExcelImportTab() {
 
       {/* Results */}
       {result && (
-        <div className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-slate-200/60 dark:border-zinc-700/60 p-6 space-y-4">
+        <div className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-border/60 dark:border-zinc-700/60 p-6 space-y-4">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-emerald-500" />
             <h3 className="font-quicksand text-lg font-semibold text-foreground">Import Results</h3>
@@ -103,9 +104,9 @@ export function ExcelImportTab() {
           {result.rowErrors.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-sm font-semibold text-foreground">Row Errors</h4>
-              <div className="overflow-auto max-h-64 rounded-lg border border-slate-200/60 dark:border-zinc-700/40">
+              <div className="overflow-auto max-h-64 rounded-lg border border-border/60 dark:border-zinc-700/40">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 dark:bg-zinc-800 sticky top-0">
+                  <thead className="bg-muted dark:bg-zinc-800 sticky top-0">
                     <tr>
                       <th className="text-left px-3 py-2 font-medium text-muted-foreground">Row</th>
                       <th className="text-left px-3 py-2 font-medium text-muted-foreground">
@@ -139,7 +140,7 @@ export function ExcelImportTab() {
 
 function ResultStat({ label, value, color }: { label: string; value: number; color?: string }) {
   return (
-    <div className="text-center p-3 rounded-lg bg-slate-50/80 dark:bg-zinc-700/40">
+    <div className="text-center p-3 rounded-lg bg-muted/80 dark:bg-zinc-700/40">
       <div className={`text-2xl font-bold tabular-nums ${color ?? 'text-foreground'}`}>{value}</div>
       <div className="text-xs text-muted-foreground mt-1">{label}</div>
     </div>

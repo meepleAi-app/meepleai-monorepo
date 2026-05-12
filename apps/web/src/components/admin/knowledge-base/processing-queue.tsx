@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13b admin scope (see token-bridge-map.md for --admin-* decision deferred to DS-15). */
 'use client';
 
 import { useState } from 'react';
@@ -40,7 +41,7 @@ const statusConfig: Record<
 > = {
   Queued: {
     icon: ClockIcon,
-    badge: 'bg-slate-100 text-slate-900 dark:bg-slate-900/30 dark:text-slate-300',
+    badge: 'bg-muted text-foreground dark:bg-card dark:text-slate-300',
     label: 'In coda',
   },
   Processing: {
@@ -60,7 +61,7 @@ const statusConfig: Record<
   },
   Cancelled: {
     icon: BanIcon,
-    badge: 'bg-gray-100 text-gray-900 dark:bg-gray-900/30 dark:text-gray-300',
+    badge: 'bg-muted text-foreground dark:bg-card dark:text-foreground',
     label: 'Annullato',
   },
 };
@@ -92,9 +93,9 @@ export function ProcessingQueue() {
   };
 
   return (
-    <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-slate-200/50 dark:border-zinc-700/50">
+    <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-border/50 dark:border-zinc-700/50">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-quicksand text-xl font-bold text-slate-900 dark:text-zinc-100">
+        <h2 className="font-quicksand text-xl font-bold text-foreground dark:text-zinc-100">
           Coda di Elaborazione
         </h2>
         <div className="flex items-center gap-1.5 text-xs">
@@ -105,15 +106,15 @@ export function ProcessingQueue() {
             </>
           ) : (
             <>
-              <WifiOffIcon className="w-3.5 h-3.5 text-slate-400" />
-              <span className="text-slate-500">Polling</span>
+              <WifiOffIcon className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-muted-foreground">Polling</span>
             </>
           )}
         </div>
       </div>
 
       {isLoading && (
-        <div className="flex items-center justify-center py-8 text-sm text-slate-500">
+        <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
           <LoaderIcon className="w-4 h-4 animate-spin mr-2" />
           Caricamento coda...
         </div>
@@ -126,7 +127,7 @@ export function ProcessingQueue() {
       )}
 
       {!isLoading && !error && jobs.length === 0 && (
-        <div className="py-8 text-sm text-slate-500 dark:text-zinc-400 text-center">
+        <div className="py-8 text-sm text-muted-foreground dark:text-muted-foreground text-center">
           Nessun job in coda. Carica un PDF per iniziare.
         </div>
       )}
@@ -140,12 +141,12 @@ export function ProcessingQueue() {
           return (
             <div
               key={job.id}
-              className="p-3 bg-slate-50/50 dark:bg-zinc-900/50 rounded-lg border border-slate-200/50 dark:border-zinc-700/50"
+              className="p-3 bg-muted/50 dark:bg-zinc-900/50 rounded-lg border border-border/50 dark:border-zinc-700/50"
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2 min-w-0">
-                  <FileIcon className="w-4 h-4 text-gray-500 dark:text-zinc-400 shrink-0" />
-                  <span className="font-medium text-slate-900 dark:text-zinc-100 text-sm truncate">
+                  <FileIcon className="w-4 h-4 text-muted-foreground dark:text-muted-foreground shrink-0" />
+                  <span className="font-medium text-foreground dark:text-zinc-100 text-sm truncate">
                     {job.pdfFileName}
                   </span>
                 </div>
@@ -208,7 +209,7 @@ export function ProcessingQueue() {
                   </Button>
                 )}
                 <time
-                  className="text-xs text-slate-400 ml-auto"
+                  className="text-xs text-muted-foreground ml-auto"
                   dateTime={job.createdAt}
                   suppressHydrationWarning
                 >

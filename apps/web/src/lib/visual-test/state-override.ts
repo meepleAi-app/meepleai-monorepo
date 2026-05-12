@@ -13,6 +13,8 @@
  * Issue: #1070 (umbrella #1066)
  */
 
+import { useSearchParams } from 'next/navigation';
+
 /** Compile-time flag set by Next.js build via env var. */
 export const IS_VISUAL_TEST_BUILD: boolean = process.env.NEXT_PUBLIC_VISUAL_TEST_BUILD === '1';
 
@@ -42,8 +44,6 @@ export function readTypedStateOverride<S extends string>(
   if (!allowedStates.includes(raw as S)) return null;
   return raw as S;
 }
-
-import { useSearchParams } from 'next/navigation';
 
 /**
  * React hook variant. Reads `?state=` from Next.js `useSearchParams()`.

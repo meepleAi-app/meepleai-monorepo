@@ -195,12 +195,18 @@ function loadExistingMatrix(matrixPath: string): StateMatrix {
 /**
  * Stringify matrix omitting meta keys (`generated_at`, `$schema`) for diff
  * comparison — avoids spurious diffs from timestamp bumps or schema link.
+ *
+ * Both keys are dropped entirely (not re-inserted with sentinel values) so
+ * the comparison output reflects only content fields. Tightened after PR
+ * #1084 review feedback: the previous `{ ...rest, generated_at: '' }`
+ * version reinserted the field as an empty string, which made the comparison
+ * shape diverge from on-disk JSON and could mask the bootstrap edge case.
  */
 function stringifyForDiff(matrix: StateMatrix & { $schema?: string }): string {
   const { generated_at: _gen, $schema: _s, ...rest } = matrix;
   void _gen;
   void _s;
-  return JSON.stringify({ ...rest, generated_at: '' }, null, 2);
+  return JSON.stringify(rest, null, 2);
 }
 
 /**

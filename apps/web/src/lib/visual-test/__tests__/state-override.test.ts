@@ -6,6 +6,18 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { useSearchParams } from 'next/navigation';
+
+// Hoisted mock for next/navigation. Tests configure return value per-case via
+// `mockUseSearchParams.mockReturnValue(...)`. This is the recommended pattern
+// for top-level ESM imports in vitest — `vi.doMock` in beforeEach does not
+// retroactively replace the bound `useSearchParams` reference inside
+// state-override.ts after its first module load.
+vi.mock('next/navigation', () => ({
+  useSearchParams: vi.fn(),
+}));
+
+const mockUseSearchParams = vi.mocked(useSearchParams);
 
 describe('readStateOverride', () => {
   const ORIGINAL_ENV = process.env.NEXT_PUBLIC_VISUAL_TEST_BUILD;
@@ -95,19 +107,19 @@ describe('useStateOverride', () => {
 
   beforeEach(() => {
     vi.resetModules();
+    mockUseSearchParams.mockReset();
   });
 
   afterEach(() => {
     if (ORIGINAL_ENV === undefined) delete process.env.NEXT_PUBLIC_VISUAL_TEST_BUILD;
     else process.env.NEXT_PUBLIC_VISUAL_TEST_BUILD = ORIGINAL_ENV;
-    vi.doUnmock('next/navigation');
   });
 
   it('returns null in production regardless of route params', async () => {
     delete process.env.NEXT_PUBLIC_VISUAL_TEST_BUILD;
-    vi.doMock('next/navigation', () => ({
-      useSearchParams: () => new URLSearchParams('state=loading'),
-    }));
+    mockUseSearchParams.mockReturnValue(
+      new URLSearchParams('state=loading') as unknown as ReturnType<typeof useSearchParams>
+    );
     const { useStateOverride } = await import('../state-override');
     const { result } = renderHook(() => useStateOverride(['default', 'loading'] as const));
     expect(result.current).toBeNull();
@@ -115,9 +127,9 @@ describe('useStateOverride', () => {
 
   it('returns typed value in visual-test mode', async () => {
     process.env.NEXT_PUBLIC_VISUAL_TEST_BUILD = '1';
-    vi.doMock('next/navigation', () => ({
-      useSearchParams: () => new URLSearchParams('state=loading'),
-    }));
+    mockUseSearchParams.mockReturnValue(
+      new URLSearchParams('state=loading') as unknown as ReturnType<typeof useSearchParams>
+    );
     const { useStateOverride } = await import('../state-override');
     const { result } = renderHook(() => useStateOverride(['default', 'loading'] as const));
     expect(result.current).toBe('loading');

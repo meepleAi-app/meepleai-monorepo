@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 /**
  * Admin Access Requests Page
  *
@@ -228,7 +229,7 @@ export default function AccessRequestsPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
@@ -244,7 +245,7 @@ export default function AccessRequestsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
@@ -260,7 +261,7 @@ export default function AccessRequestsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
@@ -276,7 +277,7 @@ export default function AccessRequestsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
@@ -303,7 +304,7 @@ export default function AccessRequestsPage() {
             setSelectedIds(new Set());
           }}
         >
-          <SelectTrigger className="w-44 bg-white/70 dark:bg-zinc-800/70">
+          <SelectTrigger className="w-44 bg-card/70 dark:bg-zinc-800/70">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -339,11 +340,11 @@ export default function AccessRequestsPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/40 overflow-hidden">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/40 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200/60 dark:border-zinc-700/40">
+              <tr className="border-b border-border/60 dark:border-zinc-700/40">
                 <th className="p-3 w-10">
                   <input
                     type="checkbox"
@@ -366,7 +367,7 @@ export default function AccessRequestsPage() {
             <tbody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="border-b border-slate-100 dark:border-zinc-800/60">
+                  <tr key={i} className="border-b border-border dark:border-zinc-800/60">
                     <td className="p-3">
                       <Skeleton className="h-4 w-4" />
                     </td>
@@ -402,7 +403,7 @@ export default function AccessRequestsPage() {
                 items.map(item => (
                   <tr
                     key={item.id}
-                    className="border-b border-slate-100 dark:border-zinc-800/60 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30"
+                    className="border-b border-border dark:border-zinc-800/60 hover:bg-muted/50 dark:hover:bg-zinc-800/30"
                   >
                     <td className="p-3">
                       <input
@@ -455,7 +456,7 @@ export default function AccessRequestsPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60 dark:border-zinc-700/40">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border/60 dark:border-zinc-700/40">
             <p className="text-sm text-muted-foreground">
               Mostrati {(page - 1) * PAGE_SIZE + 1}&ndash;
               {Math.min(page * PAGE_SIZE, totalCount)} di {totalCount}

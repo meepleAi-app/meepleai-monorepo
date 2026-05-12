@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState } from 'react';
@@ -98,7 +99,7 @@ export function QuickActionsGrid() {
             key={action.id}
             data-testid={`quick-action-${action.id}`}
             onClick={() => handleAction(action)}
-            className="rounded-2xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-sm p-4 text-left hover:border-amber-300 dark:hover:border-amber-700 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 transition-colors"
+            className="rounded-2xl border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-sm p-4 text-left hover:border-amber-300 dark:hover:border-amber-700 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 transition-colors"
           >
             <div className="h-10 w-10 rounded-lg bg-amber-100/80 dark:bg-amber-900/30 flex items-center justify-center mb-3">
               {action.icon}

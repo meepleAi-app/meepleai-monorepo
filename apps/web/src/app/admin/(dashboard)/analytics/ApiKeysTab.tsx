@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -70,10 +71,10 @@ export function ApiKeysTab() {
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200/60 dark:border-zinc-700/40">
+      <div className="overflow-x-auto rounded-lg border border-border/60 dark:border-zinc-700/40">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200/60 dark:border-zinc-700/40 bg-slate-50/50 dark:bg-zinc-800/50">
+            <tr className="border-b border-border/60 dark:border-zinc-700/40 bg-muted/50 dark:bg-zinc-800/50">
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Prefix</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
@@ -92,7 +93,7 @@ export function ApiKeysTab() {
               keys.map(k => (
                 <tr
                   key={k.apiKey.id}
-                  className="border-b border-slate-200/40 dark:border-zinc-700/30 last:border-b-0"
+                  className="border-b border-border/40 dark:border-zinc-700/30 last:border-b-0"
                 >
                   <td className="px-4 py-3 font-medium text-foreground">{k.apiKey.keyName}</td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">

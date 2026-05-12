@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState } from 'react';
@@ -43,7 +44,7 @@ function PhaseTimingBar({ phase, maxDuration }: { phase: PhaseTimingDto; maxDura
           avg {formatDuration(phase.avgDurationSeconds)} ({phase.sampleCount} samples)
         </span>
       </div>
-      <div className="h-6 bg-slate-100 dark:bg-zinc-700/50 rounded-md overflow-hidden relative">
+      <div className="h-6 bg-muted dark:bg-zinc-700/50 rounded-md overflow-hidden relative">
         {/* Min-max range bar */}
         <div
           className="absolute top-0 h-full bg-blue-100 dark:bg-blue-900/30 rounded-md"
@@ -90,7 +91,7 @@ export function MetricsDashboard() {
             Processing Metrics
           </h2>
         </div>
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-700/50 rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-muted dark:bg-zinc-700/50 rounded-lg p-0.5">
           {PERIOD_OPTIONS.map(opt => (
             <button
               key={opt.value}

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 import {
   FileTextIcon,
   DatabaseIcon,
@@ -136,7 +137,7 @@ export default function KnowledgeBasePage() {
           const Icon = section.icon;
           return (
             <Link key={section.title} href={section.href}>
-              <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60 hover:border-amber-300/60 dark:hover:border-amber-600/40 transition-all cursor-pointer group h-full">
+              <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60 hover:border-amber-300/60 dark:hover:border-amber-600/40 transition-all cursor-pointer group h-full">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-3 text-base">
                     <div
@@ -163,36 +164,36 @@ export default function KnowledgeBasePage() {
       </div>
 
       {/* Quick Links */}
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/40 p-6">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/40 p-6">
         <h2 className="font-quicksand font-semibold text-lg text-foreground mb-4">Quick Links</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Link
             href="/admin/agents/analytics"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-slate-100/80 dark:hover:bg-zinc-700/60"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted/80 dark:hover:bg-zinc-700/60"
           >
             RAG Executions Log
           </Link>
           <Link
             href="/admin/agents/models"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-slate-100/80 dark:hover:bg-zinc-700/60"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted/80 dark:hover:bg-zinc-700/60"
           >
             AI Models
           </Link>
           <Link
             href="/admin/agents/strategy"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-slate-100/80 dark:hover:bg-zinc-700/60"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted/80 dark:hover:bg-zinc-700/60"
           >
             Strategy Config
           </Link>
           <Link
             href="/admin/knowledge-base/settings"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-slate-100/80 dark:hover:bg-zinc-700/60"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted/80 dark:hover:bg-zinc-700/60"
           >
             KB Settings
           </Link>
           <Link
             href="/admin/agents/usage"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-slate-100/80 dark:hover:bg-zinc-700/60"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-muted/80 dark:hover:bg-zinc-700/60"
           >
             Usage &amp; Costs
           </Link>

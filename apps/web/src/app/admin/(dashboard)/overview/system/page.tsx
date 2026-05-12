@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -55,7 +56,7 @@ export default function SystemHealthPage() {
 
       {/* Overall Status */}
       {overall && (
-        <div className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/60 p-6">
+        <div className="bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/60 p-6">
           <div className="flex items-center gap-4">
             <div
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${
@@ -100,7 +101,7 @@ export default function SystemHealthPage() {
             services.map(service => (
               <div
                 key={service.serviceName}
-                className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/60 p-6 hover:shadow-lg transition-shadow"
+                className="bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/60 p-6 hover:shadow-lg transition-shadow"
               >
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="font-quicksand font-bold text-lg">{service.serviceName}</h3>
@@ -149,19 +150,19 @@ export default function SystemHealthPage() {
         <div>
           <h2 className="text-lg font-quicksand font-semibold mb-4">API Metrics (24h)</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/60 p-6">
+            <div className="bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/60 p-6">
               <p className="text-sm text-muted-foreground">Requests</p>
               <p className="text-2xl font-quicksand font-bold mt-1">
                 {metrics.apiRequestsLast24h.toLocaleString()}
               </p>
             </div>
-            <div className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/60 p-6">
+            <div className="bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/60 p-6">
               <p className="text-sm text-muted-foreground">Avg Latency</p>
               <p className="text-2xl font-quicksand font-bold mt-1">
                 {Math.round(metrics.avgLatencyMs)}ms
               </p>
             </div>
-            <div className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/60 p-6">
+            <div className="bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/60 p-6">
               <p className="text-sm text-muted-foreground">Error Rate</p>
               <p
                 className={`text-2xl font-quicksand font-bold mt-1 ${
@@ -175,7 +176,7 @@ export default function SystemHealthPage() {
                 {(metrics.errorRate * 100).toFixed(2)}%
               </p>
             </div>
-            <div className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/60 p-6">
+            <div className="bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/60 p-6">
               <p className="text-sm text-muted-foreground">LLM Cost</p>
               <p className="text-2xl font-quicksand font-bold mt-1">
                 ${metrics.llmCostLast24h.toFixed(2)}

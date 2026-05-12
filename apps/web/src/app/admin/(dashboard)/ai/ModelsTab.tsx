@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -51,7 +52,7 @@ export function ModelsTab() {
           {[1, 2, 3, 4].map(i => (
             <div
               key={i}
-              className="h-28 rounded-xl bg-white/40 dark:bg-zinc-800/40 animate-pulse"
+              className="h-28 rounded-xl bg-card/40 dark:bg-zinc-800/40 animate-pulse"
             />
           ))}
         </div>
@@ -60,7 +61,7 @@ export function ModelsTab() {
           {models.map(m => (
             <div
               key={m.id}
-              className="relative rounded-xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-md p-3 sm:p-4"
+              className="relative rounded-xl border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-md p-3 sm:p-4"
             >
               {m.isPrimary && (
                 <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">

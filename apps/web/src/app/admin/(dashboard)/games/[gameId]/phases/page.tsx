@@ -204,7 +204,7 @@ export default function GamePhasesAdminPage({ params }: PhasesPageProps) {
       {/* Phase list */}
       <div className="space-y-2">
         {rows.length === 0 && (
-          <div className="flex items-center justify-center py-10 rounded-xl border border-dashed border-white/20">
+          <div className="flex items-center justify-center py-10 rounded-xl border border-dashed border-border">
             <p className="text-sm text-muted-foreground">
               Nessuna fase configurata. Aggiungine una o usa AI.
             </p>
@@ -213,7 +213,7 @@ export default function GamePhasesAdminPage({ params }: PhasesPageProps) {
         {rows.map((row, idx) => (
           <div
             key={row.localId}
-            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-3"
+            className="flex items-center gap-2 rounded-xl border border-border bg-card/5 p-3"
           >
             {/* Order */}
             <span className="text-xs font-mono text-muted-foreground w-5 text-center shrink-0">
@@ -243,7 +243,7 @@ export default function GamePhasesAdminPage({ params }: PhasesPageProps) {
               <button
                 onClick={() => moveRow(row.localId, 'up')}
                 disabled={idx === 0}
-                className="p-1 rounded hover:bg-white/10 disabled:opacity-30"
+                className="p-1 rounded hover:bg-card/10 disabled:opacity-30"
                 aria-label="Sposta su"
               >
                 <ArrowUp className="h-3 w-3" />
@@ -251,7 +251,7 @@ export default function GamePhasesAdminPage({ params }: PhasesPageProps) {
               <button
                 onClick={() => moveRow(row.localId, 'down')}
                 disabled={idx === rows.length - 1}
-                className="p-1 rounded hover:bg-white/10 disabled:opacity-30"
+                className="p-1 rounded hover:bg-card/10 disabled:opacity-30"
                 aria-label="Sposta giù"
               >
                 <ArrowDown className="h-3 w-3" />

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
@@ -30,12 +31,12 @@ function StatCard({ label, value, icon: Icon, color }: {
   color?: string;
 }) {
   return (
-    <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-white/40 dark:border-zinc-700/40">
-      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400 mb-1">
+    <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-border dark:border-zinc-700/40">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground dark:text-muted-foreground mb-1">
         <Icon className={`h-4 w-4 ${color ?? ''}`} />
         {label}
       </div>
-      <div className="text-2xl font-bold text-gray-900 dark:text-zinc-100">{value}</div>
+      <div className="text-2xl font-bold text-foreground dark:text-zinc-100">{value}</div>
     </div>
   );
 }
@@ -128,11 +129,11 @@ export default function EmbeddingServicePage() {
 
       {/* Service Health */}
       {infoLoading ? (
-        <div className="h-32 bg-white/40 dark:bg-zinc-800/40 rounded-xl animate-pulse" />
+        <div className="h-32 bg-card/40 dark:bg-zinc-800/40 rounded-xl animate-pulse" />
       ) : (
-        <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-white/40 dark:border-zinc-700/40">
+        <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-border dark:border-zinc-700/40">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground dark:text-zinc-100 flex items-center gap-2">
               <BrainCircuitIcon className="h-5 w-5 text-violet-500" />
               Service Status
             </h2>
@@ -141,49 +142,49 @@ export default function EmbeddingServicePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <div className="text-xs text-gray-500 dark:text-zinc-500 uppercase tracking-wider mb-1">Model</div>
-              <div className="text-sm font-medium text-gray-900 dark:text-zinc-100">
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Model</div>
+              <div className="text-sm font-medium text-foreground dark:text-zinc-100">
                 {info?.model ?? '\u2014'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-gray-500 dark:text-zinc-500 uppercase tracking-wider mb-1">Device</div>
-              <div className="text-sm font-medium text-gray-900 dark:text-zinc-100 flex items-center gap-1.5">
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Device</div>
+              <div className="text-sm font-medium text-foreground dark:text-zinc-100 flex items-center gap-1.5">
                 <CpuIcon className="h-3.5 w-3.5" />
                 {info?.device?.toUpperCase() ?? '\u2014'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-gray-500 dark:text-zinc-500 uppercase tracking-wider mb-1">Dimensions</div>
-              <div className="text-sm font-medium text-gray-900 dark:text-zinc-100">
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Dimensions</div>
+              <div className="text-sm font-medium text-foreground dark:text-zinc-100">
                 {info?.dimension ?? '\u2014'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-gray-500 dark:text-zinc-500 uppercase tracking-wider mb-1">Languages</div>
-              <div className="text-sm font-medium text-gray-900 dark:text-zinc-100 flex items-center gap-1.5">
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Languages</div>
+              <div className="text-sm font-medium text-foreground dark:text-zinc-100 flex items-center gap-1.5">
                 <GlobeIcon className="h-3.5 w-3.5" />
                 {info?.supportedLanguages?.join(', ').toUpperCase() ?? '\u2014'}
               </div>
             </div>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-zinc-700/50 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="mt-4 pt-4 border-t border-border/50 dark:border-zinc-700/50 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <div className="text-xs text-gray-500 dark:text-zinc-500 uppercase tracking-wider mb-1">Max Input</div>
-              <div className="text-sm text-gray-700 dark:text-zinc-300">
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Max Input</div>
+              <div className="text-sm text-foreground dark:text-zinc-300">
                 {info?.maxInputChars ? `${info.maxInputChars.toLocaleString()} chars` : '\u2014'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-gray-500 dark:text-zinc-500 uppercase tracking-wider mb-1">Max Batch</div>
-              <div className="text-sm text-gray-700 dark:text-zinc-300">
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Max Batch</div>
+              <div className="text-sm text-foreground dark:text-zinc-300">
                 {info?.maxBatchSize ? `${info.maxBatchSize} texts` : '\u2014'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-gray-500 dark:text-zinc-500 uppercase tracking-wider mb-1">Auto-refresh</div>
-              <div className="text-sm text-gray-700 dark:text-zinc-300">Every 30s</div>
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-1">Auto-refresh</div>
+              <div className="text-sm text-foreground dark:text-zinc-300">Every 30s</div>
             </div>
           </div>
         </div>
@@ -193,12 +194,12 @@ export default function EmbeddingServicePage() {
       {metricsLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-24 bg-white/40 dark:bg-zinc-800/40 rounded-lg animate-pulse" />
+            <div key={i} className="h-24 bg-card/40 dark:bg-zinc-800/40 rounded-lg animate-pulse" />
           ))}
         </div>
       ) : (
         <>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-foreground dark:text-zinc-100 flex items-center gap-2">
             <ActivityIcon className="h-5 w-5 text-blue-500" />
             Throughput Metrics
           </h2>

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- canvas drawing code accesses array indices guarded by length checks; assertion is correct by construction */
 
@@ -428,7 +429,7 @@ export function WhiteboardTool({
       <div className="flex items-center justify-between">
         <h2
           id={`wb-title-${sectionId}`}
-          className="flex items-center gap-2 text-base font-semibold text-stone-800 dark:text-stone-200"
+          className="flex items-center gap-2 text-base font-semibold text-foreground"
         >
           <Pencil className="w-4 h-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />
           Lavagna
@@ -436,7 +437,7 @@ export function WhiteboardTool({
 
         {/* Mode switcher */}
         <div
-          className="flex items-center rounded-lg border border-stone-200 dark:border-stone-700 overflow-hidden"
+          className="flex items-center rounded-lg border border-border overflow-hidden"
           role="group"
           aria-label="Modalità lavagna"
         >
@@ -461,7 +462,7 @@ export function WhiteboardTool({
                 'p-1.5 transition-colors',
                 mode === value
                   ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
-                  : 'bg-white dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700'
+                  : 'bg-card text-muted-foreground hover:bg-muted'
               )}
             >
               <Icon className="w-4 h-4" aria-hidden="true" />
@@ -483,7 +484,7 @@ export function WhiteboardTool({
       {/* ── Canvas + token overlay ───────────────────────────────────────────── */}
       <div
         ref={containerRef}
-        className="relative rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 overflow-hidden"
+        className="relative rounded-xl border border-border bg-card overflow-hidden"
         style={{ minHeight: 320 }}
         data-testid="whiteboard-container"
       >
@@ -526,7 +527,7 @@ export function WhiteboardTool({
                     data-testid={`grid-cell-${x}-${y}`}
                     className={cn(
                       'relative flex items-center justify-center',
-                      showGrid && 'border border-dashed border-stone-300 dark:border-stone-600'
+                      showGrid && 'border border-dashed border-border'
                     )}
                     onDragOver={e => e.preventDefault()}
                     onDrop={e => handleCellDrop(e, x, y)}
@@ -545,7 +546,7 @@ export function WhiteboardTool({
                         <button
                           type="button"
                           onClick={() => handleRemoveToken(token.id)}
-                          className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-stone-700 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 hover:!opacity-100 focus:!opacity-100 transition-opacity"
+                          className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-card text-white flex items-center justify-center opacity-0 group-hover:opacity-100 hover:!opacity-100 focus:!opacity-100 transition-opacity"
                           aria-label={`Rimuovi token ${token.label}`}
                         >
                           <X className="w-2 h-2" aria-hidden="true" />
@@ -580,7 +581,7 @@ export function WhiteboardTool({
                   disabled={isPending}
                   className={cn(
                     'w-5 h-5 rounded-full border-2 transition-transform hover:scale-110',
-                    color === '#ffffff' ? 'border-stone-300' : 'border-transparent',
+                    color === '#ffffff' ? 'border-border' : 'border-transparent',
                     selectedColor === color && !isEraser
                       ? 'ring-2 ring-offset-1 ring-amber-500 scale-110'
                       : ''
@@ -613,7 +614,7 @@ export function WhiteboardTool({
                     'flex items-center justify-center w-7 h-7 rounded-lg border transition-colors',
                     selectedThickness === value && !isEraser
                       ? 'bg-amber-100 dark:bg-amber-900/40 border-amber-400 text-amber-700'
-                      : 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-500'
+                      : 'bg-card border-border text-muted-foreground'
                   )}
                 >
                   <span
@@ -638,7 +639,7 @@ export function WhiteboardTool({
                 'flex items-center gap-1 px-2 py-1 rounded-lg border text-sm transition-colors',
                 isEraser
                   ? 'bg-amber-100 dark:bg-amber-900/40 border-amber-400 text-amber-700'
-                  : 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-500'
+                  : 'bg-card border-border text-muted-foreground'
               )}
             >
               <Eraser className="w-3.5 h-3.5" aria-hidden="true" />
@@ -660,7 +661,7 @@ export function WhiteboardTool({
                 'flex items-center gap-1 px-2 py-1 rounded-lg border text-sm transition-colors',
                 showGrid
                   ? 'bg-amber-100 dark:bg-amber-900/40 border-amber-400 text-amber-700'
-                  : 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-500'
+                  : 'bg-card border-border text-muted-foreground'
               )}
             >
               <LayoutGrid className="w-3.5 h-3.5" aria-hidden="true" />
@@ -672,7 +673,7 @@ export function WhiteboardTool({
               onChange={e => handleGridSizeChange(e.target.value as GridSize)}
               aria-label="Dimensione griglia"
               disabled={isPending}
-              className="px-2 py-1 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm text-stone-700 dark:text-stone-300"
+              className="px-2 py-1 rounded-lg border border-border bg-card text-sm text-foreground"
             >
               <option value="4x4">4×4</option>
               <option value="6x6">6×6</option>
@@ -685,7 +686,7 @@ export function WhiteboardTool({
               onClick={() => setAddTokenColor(TOKEN_COLORS[0] ?? '#ef4444')}
               aria-label="Aggiungi token"
               disabled={isPending}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-sm text-stone-500 hover:bg-stone-50 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg border border-border bg-card text-sm text-muted-foreground hover:bg-muted transition-colors"
             >
               <Plus className="w-3.5 h-3.5" aria-hidden="true" />
               Token
@@ -698,7 +699,7 @@ export function WhiteboardTool({
 
         {/* Pending indicator */}
         {isPending && (
-          <span className="text-xs text-stone-400 dark:text-stone-500 flex items-center gap-1">
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
             <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
             Salvataggio…
           </span>
@@ -720,12 +721,12 @@ export function WhiteboardTool({
       {/* ── Add token panel ──────────────────────────────────────────────────── */}
       {addTokenColor !== null && (
         <div
-          className="flex flex-wrap items-center gap-3 px-3 py-2 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700"
+          className="flex flex-wrap items-center gap-3 px-3 py-2 rounded-xl bg-muted border border-border"
           role="group"
           aria-label="Aggiungi token"
           data-testid="add-token-panel"
         >
-          <span className="text-sm font-medium text-stone-700 dark:text-stone-300">
+          <span className="text-sm font-medium text-foreground">
             Nuovo token
           </span>
 
@@ -737,7 +738,7 @@ export function WhiteboardTool({
             placeholder="Iniziale"
             maxLength={3}
             aria-label="Etichetta token"
-            className="w-20 px-2 py-1 rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 text-sm text-stone-800 dark:text-stone-200"
+            className="w-20 px-2 py-1 rounded-lg border border-border bg-card text-sm text-foreground"
           />
 
           {/* Color picker */}
@@ -777,7 +778,7 @@ export function WhiteboardTool({
               setAddTokenLabel('');
             }}
             aria-label="Annulla aggiunta token"
-            className="px-3 py-1 rounded-lg border border-stone-300 dark:border-stone-600 text-sm text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors"
+            className="px-3 py-1 rounded-lg border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
           >
             Annulla
           </button>
@@ -791,19 +792,19 @@ export function WhiteboardTool({
           aria-modal="true"
           aria-labelledby={`clear-title-${sectionId}`}
           aria-describedby={`clear-desc-${sectionId}`}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40"
           data-testid="clear-confirm-dialog"
         >
-          <div className="bg-white dark:bg-stone-800 rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4 flex flex-col gap-4">
+          <div className="bg-card rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4 flex flex-col gap-4">
             <h3
               id={`clear-title-${sectionId}`}
-              className="text-base font-semibold text-stone-800 dark:text-stone-100"
+              className="text-base font-semibold text-foreground"
             >
               Cancella lavagna?
             </h3>
             <p
               id={`clear-desc-${sectionId}`}
-              className="text-sm text-stone-600 dark:text-stone-400"
+              className="text-sm text-muted-foreground"
             >
               Questa operazione elimina tutti i disegni e i token. Non è reversibile.
             </p>
@@ -812,7 +813,7 @@ export function WhiteboardTool({
                 type="button"
                 onClick={() => setShowClearConfirm(false)}
                 aria-label="Annulla cancellazione"
-                className="px-4 py-2 rounded-xl border border-stone-300 dark:border-stone-600 text-sm text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors"
+                className="px-4 py-2 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors"
               >
                 Annulla
               </button>

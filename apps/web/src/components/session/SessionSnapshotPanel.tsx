@@ -88,15 +88,15 @@ export function SessionSnapshotPanel({
 
       {/* Empty state */}
       {!isLoading && snapshotList.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-stone-300 py-10">
-          <ImageOff className="h-10 w-10 text-stone-300" />
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-10">
+          <ImageOff className="h-10 w-10 text-foreground" />
           <p className="font-nunito text-sm text-[var(--nh-text-muted)]">
             Scatta una foto del tavolo per analizzare lo stato della partita
           </p>
           <button
             type="button"
             onClick={() => setDialogOpen(true)}
-            className="rounded-lg border border-[var(--nh-border-default)] bg-white px-4 py-2 font-nunito text-xs font-medium text-[var(--nh-text-primary)] transition-colors hover:bg-stone-50"
+            className="rounded-lg border border-[var(--nh-border-default)] bg-card px-4 py-2 font-nunito text-xs font-medium text-[var(--nh-text-primary)] transition-colors hover:bg-muted"
           >
             <Camera className="mr-1.5 inline-block h-3.5 w-3.5" />
             Primo snapshot

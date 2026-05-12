@@ -204,6 +204,10 @@ services:
 
   orchestration-service:
     restart: always
+    env_file:
+      - ./secrets/database.secret
+      - ./secrets/redis.secret
+      - ./secrets/openrouter.secret
     deploy:
       resources:
         limits:

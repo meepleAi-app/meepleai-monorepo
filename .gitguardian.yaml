@@ -9,6 +9,14 @@ ignore-paths:
   - apps/web/src/**/__tests__/
   - apps/web/src/**/*.test.tsx
   - apps/web/src/**/*.test.ts
+  # Python service tests: literal stub keys used only to exercise pydantic
+  # property branches (e.g. `Settings.is_llm_configured`), not real secrets.
+  # Same rationale as the apps/web test exclusions above.
+  - apps/orchestration-service/tests/
+  - apps/embedding-service/tests/
+  - apps/reranker-service/tests/
+  - apps/smoldocling-service/tests/
+  - apps/unstructured-service/tests/
   # E2E demo fixtures + smoke scripts: hardcoded test-account credentials (badsworm
   # demo persona on staging), not production secrets. Same rationale as src test files.
   - apps/web/e2e/

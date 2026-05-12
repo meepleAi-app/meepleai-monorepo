@@ -101,7 +101,7 @@ services:
     ports: ["127.0.0.1:8003:8003"]
 
   orchestration-service:
-    env_file: [./secrets/database.secret, ./secrets/redis.secret]
+    env_file: [./secrets/database.secret, ./secrets/redis.secret, ./secrets/openrouter.secret]
     ports: ["127.0.0.1:8004:8004"]
     environment:
       EMBEDDING_SERVICE_URL: http://embedding-service:8000

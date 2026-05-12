@@ -56,6 +56,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("🚀 Starting MeepleAI Orchestration Service")
     logger.info(f"Config: LangGraph timeout={settings.langgraph_timeout}s, max_depth={settings.max_workflow_depth}")
 
+    if not settings.is_llm_configured:
+        raise RuntimeError(
+            "OPENROUTER_API_KEY is not set. The orchestration service requires an LLM "
+            "provider key to start. Add `./secrets/openrouter.secret` to the "
+            "orchestration-service env_file in your compose override "
+            "(compose.dev.yml / compose.staging.yml / compose.prod.yml). "
+            "See `infra/secrets/openrouter.secret.example` for the expected format."
+        )
+
     try:
         # Initialize Redis cache for intent classification (ISSUE-3496)
         intent_cache = IntentCache()

@@ -35,7 +35,7 @@ export function QuickStartSuggestions({
   return (
     <section
       className={cn(
-        'p-6 rounded-2xl bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50',
+        'p-6 rounded-2xl bg-card/70 dark:bg-card/70 backdrop-blur-md border border-border/50',
         className
       )}
       data-testid="quick-start-section"
@@ -56,7 +56,7 @@ export function QuickStartSuggestions({
               'border border-border/50',
               disabled
                 ? 'bg-muted text-muted-foreground/50 cursor-not-allowed'
-                : 'bg-white/70 dark:bg-card/70 backdrop-blur-md text-foreground hover:bg-amber-50 dark:hover:bg-amber-500/10 hover:border-amber-300 cursor-pointer'
+                : 'bg-card/70 dark:bg-card/70 backdrop-blur-md text-foreground hover:bg-amber-50 dark:hover:bg-amber-500/10 hover:border-amber-300 cursor-pointer'
             )}
             data-testid={`quick-start-${s.label.replace(/\s/g, '-').toLowerCase()}`}
           >

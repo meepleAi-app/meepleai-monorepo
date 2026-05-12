@@ -108,7 +108,7 @@ export function GameSearchBar({
           'focus-within:border-foreground/40 focus-within:ring-2 focus-within:ring-ring/30'
         )}
       >
-        <span aria-hidden="true" className="text-base text-slate-700">
+        <span aria-hidden="true" className="text-base text-foreground">
           🔍
         </span>
         <input
@@ -118,7 +118,7 @@ export function GameSearchBar({
           onChange={handleInputChange}
           placeholder={labels.placeholder}
           aria-label={labels.searchAria}
-          className="flex-1 bg-transparent text-sm text-foreground placeholder:text-slate-500 focus:outline-none"
+          className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
         />
       </label>
 
@@ -150,7 +150,7 @@ export function GameSearchBar({
                 '-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold',
                 'transition-colors motion-reduce:transition-none',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                isActive ? activeCls : 'border-transparent text-slate-700'
+                isActive ? activeCls : 'border-transparent text-foreground'
               )}
             >
               {label}

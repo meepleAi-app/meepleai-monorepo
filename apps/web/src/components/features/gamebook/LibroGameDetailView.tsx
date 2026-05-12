@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -73,7 +74,7 @@ export function LibroGameDetailView({ gameDetail }: LibroGameDetailViewProps): R
 
       <main className="mx-auto max-w-4xl px-4 py-4">
         {/* Hero card */}
-        <article className="overflow-hidden rounded-[18px] border border-[rgba(180,130,80,0.1)] bg-white shadow-[0_2px_8px_rgba(90,60,20,0.08)]">
+        <article className="overflow-hidden rounded-[18px] border border-[rgba(180,130,80,0.1)] bg-card shadow-[0_2px_8px_rgba(90,60,20,0.08)]">
           {/* Cover */}
           <div
             className="relative flex items-end p-5 text-white"
@@ -86,7 +87,7 @@ export function LibroGameDetailView({ gameDetail }: LibroGameDetailViewProps): R
             }}
           >
             <span
-              className="absolute right-4 top-4 rounded-[6px] bg-white/20 px-2 py-0.5 font-mono text-[11px] text-white backdrop-blur"
+              className="absolute right-4 top-4 rounded-[6px] bg-card/20 px-2 py-0.5 font-mono text-[11px] text-white backdrop-blur"
               data-slot="nano-mark"
             >
               In collezione
@@ -285,7 +286,7 @@ function InfoPanel({ detail }: { detail: LibraryGameDetail }): ReactElement {
 
 function PlaceholderPanel({ label }: { label: string }): ReactElement {
   return (
-    <div className="rounded-[14px] border border-dashed border-[rgba(180,130,80,0.32)] bg-white p-6 text-center">
+    <div className="rounded-[14px] border border-dashed border-[rgba(180,130,80,0.32)] bg-card p-6 text-center">
       <p className="text-[15px] text-[#5a4a38]">
         Pannello <strong>{label}</strong> · in arrivo con la prossima iter.
       </p>

@@ -215,7 +215,7 @@ export function AgentSelector({
   return (
     <section
       className={cn(
-        'p-6 rounded-2xl bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50',
+        'p-6 rounded-2xl bg-card/70 dark:bg-card/70 backdrop-blur-md border border-border/50',
         className
       )}
       data-testid="agent-selection-section"

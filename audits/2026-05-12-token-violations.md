@@ -6,9 +6,9 @@
 | **Generator** | `pnpm lint:tokens` (DS-2) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../docs/for-developers/specs/2026-05-12-token-canonicalization.md) |
 | **Rule** | `local/no-hardcoded-color-utility` |
-| **Total violations** | 4589 |
-| **Files affected** | 527 |
-| **Clusters affected** | 212 |
+| **Total violations** | 4428 |
+| **Files affected** | 486 |
+| **Clusters affected** | 196 |
 
 ## Violations by cluster
 
@@ -21,7 +21,6 @@
 | `toolkit-drawer/tabs` | 122 | manual |
 | `library/add-game-sheet` | 113 | manual |
 | `app/(authenticated)/library` | 107 | DS-11 |
-| `features/gamebook` | 101 | DS-10 |
 | `collection/wizard` | 92 | manual |
 | `admin/agents` | 83 | manual |
 | `stories/Animations.stories.tsx` | 76 | manual |
@@ -69,8 +68,6 @@
 | `onboarding/FirstGameStep.tsx` | 12 | manual |
 | `ui/feedback` | 12 | manual |
 | `admin/DashboardHeader.tsx` | 11 | manual |
-| `chat-unified/AgentCreationWizard.tsx` | 11 | manual |
-| `chat-unified/RuleSourceCard.tsx` | 11 | manual |
 | `app/(public)/about` | 10 | manual |
 | `admin/KPICard.tsx` | 10 | manual |
 | `admin/layout` | 10 | manual |
@@ -78,13 +75,11 @@
 | `game-detail/AgentChatPanel.tsx` | 9 | manual |
 | `toolkit/Counter.tsx` | 9 | manual |
 | `app/(authenticated)/setup` | 8 | manual |
-| `chat/panel` | 8 | manual |
 | `diff/DiffSummary.tsx` | 8 | manual |
 | `game-detail/game-hero-section.tsx` | 8 | manual |
 | `game-detail/stats-grid.tsx` | 8 | manual |
 | `library/DocumentSelectionPanel.tsx` | 8 | manual |
 | `modals/SessionWarningModal.tsx` | 8 | manual |
-| `app/(authenticated)/gamebook` | 7 | manual |
 | `accessible/Accessibility.stories.tsx` | 7 | manual |
 | `auth/VerificationError.stories.tsx` | 7 | manual |
 | `editor/RichTextEditor.tsx` | 7 | manual |
@@ -103,7 +98,6 @@
 | `toolkit/DiceRoller.tsx` | 6 | manual |
 | `auth/VerificationPending.stories.tsx` | 5 | manual |
 | `auth/VerificationSuccess.stories.tsx` | 5 | manual |
-| `chat/entry` | 5 | manual |
 | `legal/CookieConsentBanner.tsx` | 5 | manual |
 | `onboarding/InterestsStep.tsx` | 5 | manual |
 | `state/BoardStateEditor.tsx` | 5 | manual |
@@ -134,9 +128,7 @@
 | `ui/navigation` | 4 | manual |
 | `admin/charts` | 3 | manual |
 | `auth/AuthModal.stories.tsx` | 3 | manual |
-| `chat-unified/AiLoadingState.tsx` | 3 | manual |
 | `comments/InlineCommentIndicator.tsx` | 3 | manual |
-| `features/game-chat` | 3 | DS-10 |
 | `game-detail/TypingIndicator.tsx` | 3 | manual |
 | `layout/UserShell` | 3 | manual |
 | `library/PdfUploadSheet.tsx` | 3 | manual |
@@ -148,10 +140,6 @@
 | `versioning/VersionTimeline.tsx` | 3 | manual |
 | `admin/ApprovalStatusFilter.tsx` | 2 | manual |
 | `auth/RequireRole.tsx` | 2 | manual |
-| `chat-unified/ChatInputArea.tsx` | 2 | manual |
-| `chat-unified/CitationSheet.tsx` | 2 | manual |
-| `chat-unified/EmbeddedChatView.tsx` | 2 | manual |
-| `chat-unified/VoiceTranscriptOverlay.tsx` | 2 | manual |
 | `comments/CommentThread.tsx` | 2 | manual |
 | `errors/RouteErrorBoundary.tsx` | 2 | manual |
 | `forms/FormDescription.tsx` | 2 | manual |
@@ -181,10 +169,6 @@
 | `admin/ui-library` | 1 | manual |
 | `admin/UserActivityTimeline.tsx` | 1 | manual |
 | `auth/TwoFactorSetup.tsx` | 1 | manual |
-| `chat-unified/AgentSwitchDialog.tsx` | 1 | manual |
-| `chat-unified/ChatHistoryDrawer.tsx` | 1 | manual |
-| `chat-unified/ChatMessageList.tsx` | 1 | manual |
-| `chat-unified/ChatMobile.tsx` | 1 | manual |
 | `comments/CommentForm.tsx` | 1 | manual |
 | `editor/ViewModeToggle.tsx` | 1 | manual |
 | `features/chat` | 1 | manual |

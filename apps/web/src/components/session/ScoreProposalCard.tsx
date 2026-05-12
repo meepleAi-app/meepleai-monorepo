@@ -43,14 +43,14 @@ export function ScoreProposalCard({
 }: ScoreProposalCardProps) {
   return (
     <Card
-      className="border-amber-200 bg-white/70 backdrop-blur-md"
+      className="border-amber-200 bg-card/70 backdrop-blur-md"
       data-testid="score-proposal-card"
     >
       <CardContent className="px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           {/* Proposal info */}
           <div className="min-w-0 flex-1 space-y-1">
-            <p className="text-sm font-medium font-nunito text-gray-900">
+            <p className="text-sm font-medium font-nunito text-foreground">
               <span className="font-semibold">{proposerName}</span>
               {' proposes '}
               <span className="font-mono font-bold text-amber-900 bg-amber-100 px-1 rounded">

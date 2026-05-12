@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * ScoreboardPage — /sessions/{id}/scoreboard
  *
@@ -45,8 +46,8 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   Active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400',
   Paused: 'bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400',
-  Finalized: 'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400',
-  Completed: 'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400',
+  Finalized: 'bg-muted text-foreground dark:bg-card dark:text-muted-foreground',
+  Completed: 'bg-muted text-foreground dark:bg-card dark:text-muted-foreground',
 };
 
 // Avatar colors cycling for players that don't have a color set
@@ -123,7 +124,7 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
   const statusLabel = STATUS_LABELS[session.status] ?? session.status;
   const statusColor =
     STATUS_COLORS[session.status] ??
-    'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400';
+    'bg-muted text-foreground dark:bg-card dark:text-muted-foreground';
 
   // Players ranked by playerOrder (ascending)
   const rankedPlayers = [...session.players].sort((a, b) => a.playerOrder - b.playerOrder);
@@ -213,7 +214,7 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
 
               {/* Avatar */}
               <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white shadow-sm ring-1 ring-black/10"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white shadow-sm ring-1 ring-border"
                 style={{
                   background: `linear-gradient(135deg, ${avatarColor} 0%, ${avatarColor}dd 100%)`,
                 }}

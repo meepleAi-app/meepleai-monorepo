@@ -80,8 +80,8 @@ export function SnapshotUploadDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-md rounded-2xl border border-[var(--nh-border-default)] bg-white p-5 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm">
+      <div className="mx-4 w-full max-w-md rounded-2xl border border-[var(--nh-border-default)] bg-card p-5 shadow-xl">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-quicksand text-lg font-bold text-[var(--nh-text-primary)]">
@@ -90,7 +90,7 @@ export function SnapshotUploadDialog({
           <button
             type="button"
             onClick={handleClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--nh-text-muted)] hover:bg-stone-100"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--nh-text-muted)] hover:bg-muted"
             aria-label="Chiudi"
           >
             <X className="h-4 w-4" />
@@ -103,10 +103,10 @@ export function SnapshotUploadDialog({
           onClick={() => fileInputRef.current?.click()}
           className={cn(
             'mb-4 flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors',
-            'border-stone-300 hover:border-amber-400 hover:bg-amber-50/50'
+            'border-border hover:border-amber-400 hover:bg-amber-50/50'
           )}
         >
-          <ImagePlus className="h-8 w-8 text-stone-400" />
+          <ImagePlus className="h-8 w-8 text-muted-foreground" />
           <span className="font-nunito text-sm text-[var(--nh-text-muted)]">
             Tocca per selezionare immagini
           </span>
@@ -132,7 +132,7 @@ export function SnapshotUploadDialog({
                 <img
                   src={p.url}
                   alt={`Anteprima ${idx + 1}`}
-                  className="h-16 w-20 rounded-lg border border-stone-200 object-cover"
+                  className="h-16 w-20 rounded-lg border border-border object-cover"
                 />
                 <button
                   type="button"
@@ -180,7 +180,7 @@ export function SnapshotUploadDialog({
           <button
             type="button"
             onClick={handleClose}
-            className="flex-1 rounded-xl border border-[var(--nh-border-default)] bg-white py-2.5 font-nunito text-sm font-medium text-[var(--nh-text-primary)] transition-colors hover:bg-stone-50"
+            className="flex-1 rounded-xl border border-[var(--nh-border-default)] bg-card py-2.5 font-nunito text-sm font-medium text-[var(--nh-text-primary)] transition-colors hover:bg-muted"
           >
             Annulla
           </button>

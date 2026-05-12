@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import React, { useState } from 'react';
@@ -38,7 +39,7 @@ export function QrInviteSheet({
     <BottomSheet open={open} onOpenChange={onOpenChange} title="Invita Giocatori">
       <div className={cn('flex flex-col items-center gap-6 pb-4', className)}>
         {/* QR Code */}
-        <div className="rounded-xl bg-white p-3">
+        <div className="rounded-xl bg-card p-3">
           <QRCodeSVG
             value={shareLink}
             size={180}
@@ -62,7 +63,7 @@ export function QrInviteSheet({
           aria-label={copied ? 'Link copiato!' : 'Copia link di invito'}
           className={cn(
             'w-full rounded-xl px-4 py-3 text-sm font-medium transition-colors',
-            copied ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white hover:bg-white/20'
+            copied ? 'bg-green-500/20 text-green-400' : 'bg-card/10 text-white hover:bg-card/20'
           )}
         >
           {copied ? 'Link copiato!' : 'Copia link'}

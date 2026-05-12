@@ -92,6 +92,25 @@ jobs:
         run: pnpm lint
         # Note: package.json lint script has --max-warnings=15 for security false positives
 
+      # DS-2 (token canonicalization, 2026-05-12):
+      # Non-blocking inventory of `local/no-hardcoded-color-utility` violations.
+      # Produces audits/2026-05-12-token-violations.{json,md} for cluster
+      # prioritization in DS-3 and subsequent migration PRs (DS-4..DS-11).
+      # Switched to blocking (`--max-warnings 0`) in DS-12.
+      - name: Token vocabulary inventory (non-blocking)
+        run: pnpm lint:tokens
+        continue-on-error: true
+
+      - name: Upload token violations report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: token-violations-${{ github.run_number }}
+          path: |
+            audits/2026-05-12-token-violations.json
+            audits/2026-05-12-token-violations.md
+          retention-days: 14
+
       - name: Typecheck
         run: pnpm typecheck
 

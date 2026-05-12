@@ -57,6 +57,7 @@
     "audit:a11y": "tsx scripts/run-accessibility-audit.ts",
     "lint": "eslint . --max-warnings=510",
     "lint:fix": "eslint . --fix",
+    "lint:tokens": "node scripts/lint-tokens.mjs",
     "typecheck": "tsc --noEmit",
     "test:e2e:groups": "dotenv -e .env.test -- playwright test",
     "storybook": "storybook dev -p 6006",

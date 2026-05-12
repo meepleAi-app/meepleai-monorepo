@@ -272,6 +272,17 @@ Stage 2 codemod (atomic rename + import fix) is the unblocker. Exceptions requir
 
 > **Historical**: SP6 v2 expansion FREEZE (issued 2026-05-06 per [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808), tied to A11y audit [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807)) was **lifted on 2026-05-10** by PR #876 (token redesign — AA-compliant CSS vars + entity Tailwind utilities). Issues #807 and #808 are both CLOSED. Restore A11y CI job (`Frontend - A11y E2E`) to blocking (`continue-on-error: false`) when verified green on `main-dev`.
 
+**Token Canonicalization in progress** (DS-1 #1044 landed 2026-05-12, spec [`2026-05-12-token-canonicalization.md`](./docs/for-developers/specs/2026-05-12-token-canonicalization.md))
+
+The runtime now imports `admin-mockups/design_files/tokens.css` as `apps/web/src/styles/design-tokens-canonical.css` and bridges legacy v1 names via `token-bridge.css`. Theming uses `[data-theme="light|dark"]` (next-themes applies both `class="dark"` AND `data-theme="dark"`). **Default theme is light** (mockup cream `#f7f3ee`), with dark accessible via user toggle.
+
+When writing new components:
+- ✅ Use semantic tokens: `bg-background`, `bg-card`, `bg-muted`, `text-foreground`, `text-muted-foreground`, `border-border`, `border-border-strong`.
+- ✅ Use entity utilities: `bg-entity-game`, `text-entity-session`, `ring-entity-event/30`, etc.
+- ❌ Avoid hardcoded neutrals: `bg-white`, `bg-slate-*`, `text-gray-*`, `border-zinc-*`, etc. ESLint rule `local/no-hardcoded-color-utility` flags these (warn mode during DS-3..DS-11, error in DS-12).
+
+Run `pnpm lint:tokens` to regenerate the violation inventory in `audits/2026-05-12-token-violations.md`. Bridge layer removed in DS-12.
+
 ### DDD Rules
 
 - ✅ Entities: Private setters + factory methods

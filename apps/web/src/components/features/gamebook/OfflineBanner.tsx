@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * OfflineBanner — SP6 Phase C.2.B v2 component (Issue #789).
  *
@@ -120,7 +121,7 @@ export function OfflineBanner({
           </span>
           <span
             data-slot="offline-banner-countdown"
-            className="text-[11px] text-slate-700 leading-tight tabular-nums"
+            className="text-[11px] text-foreground leading-tight tabular-nums"
             aria-live="polite"
           >
             {labels.retryIn}
@@ -136,7 +137,7 @@ export function OfflineBanner({
             className={clsx(
               'rounded-md border-none px-2.5 py-1 text-[11px] font-bold text-white',
               'cursor-pointer transition-opacity motion-reduce:transition-none',
-              'bg-entity-event hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80'
+              'bg-entity-event hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30'
             )}
           >
             {labels.retryNow}
@@ -149,7 +150,7 @@ export function OfflineBanner({
             className={clsx(
               'rounded-md border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-foreground',
               'cursor-pointer transition-colors motion-reduce:transition-none',
-              'hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+              'hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
             )}
           >
             {labels.cancel}
@@ -165,7 +166,7 @@ export function OfflineBanner({
         aria-valuemin={0}
         aria-valuemax={safeBudget}
         aria-valuetext={labels.progressAria}
-        className="h-1 w-full overflow-hidden rounded-full bg-slate-200"
+        className="h-1 w-full overflow-hidden rounded-full bg-muted"
       >
         <div
           className="h-full bg-entity-event transition-[width] duration-300 motion-reduce:transition-none"

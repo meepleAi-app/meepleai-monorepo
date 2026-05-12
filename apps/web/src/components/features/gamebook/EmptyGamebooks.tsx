@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * EmptyGamebooks — SP6 Phase B Task 2 v2 component (Issue #788).
  *
@@ -79,7 +80,7 @@ export function EmptyGamebooks({
       </h2>
 
       {/* Description */}
-      <p className="max-w-xs text-sm leading-relaxed text-slate-700">{labels.description}</p>
+      <p className="max-w-xs text-sm leading-relaxed text-foreground">{labels.description}</p>
 
       {/* Primary CTA */}
       <button

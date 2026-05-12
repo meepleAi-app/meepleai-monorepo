@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * GameSearchCard — SP6 Phase C.1.B v2 component (Issue #789).
  *
@@ -155,7 +156,7 @@ export function GameSearchCard({
         'transition-shadow motion-reduce:transition-none',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         'hover:shadow-md',
-        isSelected ? [tokens.borderCls, tokens.shadowCls] : 'border-slate-200',
+        isSelected ? [tokens.borderCls, tokens.shadowCls] : 'border-border',
         className
       )}
     >
@@ -180,7 +181,7 @@ export function GameSearchCard({
           {title}
         </div>
         <div
-          className="truncate font-mono text-[11px] text-slate-700"
+          className="truncate font-mono text-[11px] text-foreground"
           data-slot="game-search-card-meta"
         >
           {publisher ?? '—'}
@@ -201,7 +202,7 @@ export function GameSearchCard({
             {showSharedByCount && (
               <span
                 data-slot="game-search-card-shared"
-                className="inline-flex items-center gap-1 text-[11px] text-slate-700"
+                className="inline-flex items-center gap-1 text-[11px] text-foreground"
               >
                 <span aria-hidden="true">👥</span>
                 <span className="tabular-nums">{labels.sharedByCount}</span>

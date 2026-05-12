@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * CancelModal — SP6 Phase C.2.B v2 component (Issue #789).
  *
@@ -177,7 +178,7 @@ export function CancelModal({
       data-slot="cancel-modal-overlay"
       onClick={handleOverlayClick}
       className={clsx(
-        'fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-5 backdrop-blur-sm',
+        'fixed inset-0 z-50 flex items-center justify-center bg-foreground/55 p-5 backdrop-blur-sm',
         'motion-safe:transition-opacity motion-reduce:transition-none'
       )}
     >
@@ -217,7 +218,7 @@ export function CancelModal({
         <p
           id={descId}
           data-slot="cancel-modal-description"
-          className="text-sm leading-normal text-slate-700"
+          className="text-sm leading-normal text-foreground"
         >
           {labels.description}
         </p>
@@ -233,7 +234,7 @@ export function CancelModal({
             className={clsx(
               'flex-1 rounded-lg border border-border bg-card px-4 py-3 text-sm font-semibold text-foreground',
               'cursor-pointer transition-colors motion-reduce:transition-none',
-              'hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+              'hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
             )}
           >
             {labels.dismiss}

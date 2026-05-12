@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * AgentCreationWizard - 4-step wizard to create a user-owned custom agent (Issue #4915)
  *
@@ -190,7 +191,7 @@ function GameCollectionPicker({
           placeholder="Cerca nella tua libreria..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border bg-white/50 dark:bg-black/20 backdrop-blur-sm text-sm font-nunito focus:outline-none focus:ring-2 focus:ring-amber-400"
+          className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border bg-card/50 dark:bg-foreground/20 backdrop-blur-sm text-sm font-nunito focus:outline-none focus:ring-2 focus:ring-amber-400"
         />
       </div>
 
@@ -272,7 +273,7 @@ function AgentTypePicker({
             onClick={() => onSelect(option.id)}
             className={cn(
               'p-5 rounded-2xl border-2 text-left transition-all focus:outline-none focus:ring-2',
-              'bg-white/70 dark:bg-black/30 backdrop-blur-sm hover:shadow-md',
+              'bg-card/70 dark:bg-foreground/30 backdrop-blur-sm hover:shadow-md',
               isSelected
                 ? `border-2 ring-4 ${colorMap[option.color]}`
                 : 'border-border hover:border-amber-200'
@@ -348,7 +349,7 @@ function AgentNameAndKbStep({
           value={agentName}
           onChange={e => onNameChange(e.target.value)}
           maxLength={100}
-          className="w-full px-4 py-2.5 rounded-lg border border-border bg-white/50 dark:bg-black/20 backdrop-blur-sm text-sm font-nunito focus:outline-none focus:ring-2 focus:ring-amber-400"
+          className="w-full px-4 py-2.5 rounded-lg border border-border bg-card/50 dark:bg-foreground/20 backdrop-blur-sm text-sm font-nunito focus:outline-none focus:ring-2 focus:ring-amber-400"
         />
         <div className="text-xs text-muted-foreground font-nunito mt-1 text-right">
           {agentName.length}/100
@@ -390,7 +391,7 @@ function AgentNameAndKbStep({
                     'w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-all',
                     isSelected
                       ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20'
-                      : 'border-border hover:border-amber-200 bg-white/50 dark:bg-black/10'
+                      : 'border-border hover:border-amber-200 bg-card/50 dark:bg-foreground/10'
                   )}
                 >
                   <div
@@ -459,7 +460,7 @@ function AgentCreationReview({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-border bg-white/70 dark:bg-black/30 backdrop-blur-sm p-5 space-y-4">
+      <div className="rounded-2xl border border-border bg-card/70 dark:bg-foreground/30 backdrop-blur-sm p-5 space-y-4">
         <ReviewRow icon={Gamepad2} label="Gioco" value={state.selectedGame?.gameTitle ?? '—'} />
         <ReviewRow icon={Bot} label="Tipo" value={agentTypeLabel ?? '—'} />
         <ReviewRow icon={Swords} label="Nome" value={state.agentName || '—'} />
@@ -649,7 +650,7 @@ export function AgentCreationWizard() {
         <StepIndicator current={step} total={4} />
 
         {/* Step Content */}
-        <div className="rounded-2xl border border-border bg-white/70 dark:bg-black/30 backdrop-blur-md p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card/70 dark:bg-foreground/30 backdrop-blur-md p-6 shadow-sm">
           <h2 className="text-lg font-semibold font-quicksand text-foreground mb-5">
             {stepTitles[step - 1]}
           </h2>

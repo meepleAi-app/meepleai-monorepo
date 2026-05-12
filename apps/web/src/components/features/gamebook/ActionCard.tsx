@@ -65,7 +65,7 @@ export function ActionCard({
       <span
         data-slot="action-card-icon"
         aria-hidden="true"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xl"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-xl"
       >
         {icon}
       </span>
@@ -76,7 +76,7 @@ export function ActionCard({
         >
           {title}
         </span>
-        <span data-slot="action-card-description" className="text-xs leading-snug text-slate-700">
+        <span data-slot="action-card-description" className="text-xs leading-snug text-foreground">
           {description}
         </span>
       </span>

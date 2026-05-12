@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * CameraViewfinder — SP6 Phase C.2.B v2 component (Issue #789).
  *
@@ -215,7 +216,7 @@ export function CameraViewfinder({
       data-capturing={isCapturing ? 'true' : 'false'}
       role="region"
       aria-label={labels.regionAria}
-      className={clsx('relative flex h-full w-full flex-col bg-black text-white', className)}
+      className={clsx('relative flex h-full w-full flex-col bg-foreground text-white', className)}
     >
       {/* Top toolbar: cancel + counter + flash */}
       <div
@@ -230,8 +231,8 @@ export function CameraViewfinder({
           aria-label={labels.cancelAria}
           className={clsx(
             'flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none text-lg text-white',
-            'bg-black/50 transition-colors motion-reduce:transition-none',
-            'hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white'
+            'bg-foreground/50 transition-colors motion-reduce:transition-none',
+            'hover:bg-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white'
           )}
         >
           ×
@@ -240,7 +241,7 @@ export function CameraViewfinder({
         <span
           data-slot="camera-viewfinder-counter"
           aria-live="polite"
-          className="inline-flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 font-mono text-xs font-bold text-white tabular-nums"
+          className="inline-flex items-center gap-1.5 rounded-full bg-foreground/60 px-3 py-1.5 font-mono text-xs font-bold text-white tabular-nums"
         >
           <span aria-hidden="true">📸</span>
           <span>{labels.capturedCount}</span>
@@ -252,8 +253,8 @@ export function CameraViewfinder({
           aria-label={labels.flashAria}
           className={clsx(
             'flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border-none text-lg text-white',
-            'bg-black/50 transition-colors motion-reduce:transition-none',
-            'hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white'
+            'bg-foreground/50 transition-colors motion-reduce:transition-none',
+            'hover:bg-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white'
           )}
         >
           ⚡
@@ -318,7 +319,7 @@ export function CameraViewfinder({
             aria-live="polite"
             className={clsx(
               'absolute -bottom-9 left-1/2 -translate-x-1/2 rounded-full px-3.5 py-1.5 text-xs font-bold text-white whitespace-nowrap font-display',
-              detectionFailed ? 'bg-entity-event/95' : isOk ? 'bg-entity-toolkit/95' : 'bg-black/70'
+              detectionFailed ? 'bg-entity-event/95' : isOk ? 'bg-entity-toolkit/95' : 'bg-foreground/70'
             )}
           >
             {hintText}
@@ -328,7 +329,7 @@ export function CameraViewfinder({
         {/* Light meter (top-right pill) */}
         <div
           data-slot="camera-viewfinder-light-meter"
-          className="absolute right-3.5 top-3.5 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1"
+          className="absolute right-3.5 top-3.5 flex items-center gap-1.5 rounded-full bg-foreground/60 px-2.5 py-1"
           aria-label={labels.lightMeterAria}
         >
           <span aria-hidden="true" className="text-xs">
@@ -340,7 +341,7 @@ export function CameraViewfinder({
             aria-valuemin={0}
             aria-valuemax={1}
             aria-valuetext={lightValueText}
-            className="h-1 w-12 overflow-hidden rounded-full bg-white/20"
+            className="h-1 w-12 overflow-hidden rounded-full bg-card/20"
           >
             <div
               data-slot="camera-viewfinder-light-fill"
@@ -380,7 +381,7 @@ export function CameraViewfinder({
               <li
                 key={thumb.pageNumber}
                 data-slot="camera-viewfinder-thumb"
-                className="relative shrink-0 overflow-hidden rounded-sm border-[1.5px] border-white/40"
+                className="relative shrink-0 overflow-hidden rounded-sm border-[1.5px] border-border"
                 style={{ width: 44, height: 56 }}
               >
                 <div
@@ -404,7 +405,7 @@ export function CameraViewfinder({
       {/* Shutter row */}
       <div
         data-slot="camera-viewfinder-shutter-row"
-        className="flex shrink-0 items-center justify-around bg-black/60 px-6 py-3.5"
+        className="flex shrink-0 items-center justify-around bg-foreground/60 px-6 py-3.5"
       >
         <button
           type="button"
@@ -413,8 +414,8 @@ export function CameraViewfinder({
           aria-label={labels.galleryAria}
           className={clsx(
             'flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-none text-lg text-white',
-            'bg-white/15 transition-colors motion-reduce:transition-none',
-            'hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white'
+            'bg-card/15 transition-colors motion-reduce:transition-none',
+            'hover:bg-card/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white'
           )}
         >
           🖼️
@@ -432,7 +433,7 @@ export function CameraViewfinder({
             'transition-opacity motion-reduce:transition-none',
             shutterDisabled
               ? 'cursor-not-allowed opacity-50'
-              : 'cursor-pointer bg-white/20 hover:bg-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white'
+              : 'cursor-pointer bg-card/20 hover:bg-card/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white'
           )}
           style={{
             backgroundColor: shutterDisabled ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)',
@@ -442,7 +443,7 @@ export function CameraViewfinder({
             data-slot="camera-viewfinder-shutter-inner"
             aria-hidden="true"
             className={clsx(
-              'h-12 w-12 rounded-full bg-white',
+              'h-12 w-12 rounded-full bg-card',
               'transition-transform motion-reduce:transition-none',
               !shutterDisabled && 'group-hover:scale-95',
               isCapturing && 'scale-90'
@@ -461,7 +462,7 @@ export function CameraViewfinder({
             'flex h-11 w-11 items-center justify-center rounded-full border-none text-lg text-white',
             'transition-colors motion-reduce:transition-none',
             doneDisabled
-              ? 'cursor-not-allowed bg-white/15 opacity-50'
+              ? 'cursor-not-allowed bg-card/15 opacity-50'
               : 'cursor-pointer hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white'
           )}
           style={{

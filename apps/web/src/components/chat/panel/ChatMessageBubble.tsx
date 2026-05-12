@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import { type ReactNode } from 'react';
@@ -135,7 +136,7 @@ export function ChatMessageBubble({
                   <img
                     src={url}
                     alt={`Immagine ${idx + 1}`}
-                    className="h-15 w-20 cursor-pointer rounded-md border border-white/10 object-cover transition-opacity hover:opacity-80"
+                    className="h-15 w-20 cursor-pointer rounded-md border border-border object-cover transition-opacity hover:opacity-80"
                   />
                 </a>
               ))}

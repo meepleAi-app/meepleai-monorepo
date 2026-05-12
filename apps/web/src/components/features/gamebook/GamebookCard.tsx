@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * GamebookCard — SP6 Phase B Task 2 v2 component (Issue #788).
  *
@@ -233,7 +234,7 @@ function Cover({ cover, emoji, pagesLabel, status }: CoverProps): ReactElement {
       <span className="text-5xl drop-shadow-md">{emoji ?? '📖'}</span>
       <span
         data-slot="gamebook-card-cover-pages"
-        className="absolute right-2 top-2 rounded-md bg-black/40 px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums text-white backdrop-blur-sm"
+        className="absolute right-2 top-2 rounded-md bg-foreground/40 px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums text-white backdrop-blur-sm"
       >
         {pagesLabel}
       </span>
@@ -300,7 +301,7 @@ export function GamebookCard({
           </h3>
           <p
             data-slot="gamebook-card-meta"
-            className="mt-0.5 truncate font-mono text-[11px] text-slate-700"
+            className="mt-0.5 truncate font-mono text-[11px] text-foreground"
           >
             {gamebook.publisher ?? '—'}
             {gamebook.year != null && (
@@ -323,7 +324,7 @@ export function GamebookCard({
           {isReady && gamebook.chunks > 0 && (
             <span
               data-slot="gamebook-card-chunks-counter"
-              className="font-mono text-[10px] uppercase tracking-wide text-slate-700"
+              className="font-mono text-[10px] uppercase tracking-wide text-foreground"
             >
               {labels.chunksCount}
             </span>
@@ -333,10 +334,10 @@ export function GamebookCard({
         {/* Indexing progress bar (only visible during indexing) */}
         {isIndexing && (
           <div className="flex flex-col gap-1" data-slot="gamebook-card-indexing-progress">
-            <p className="font-mono text-[10px] tabular-nums text-slate-700">
+            <p className="font-mono text-[10px] tabular-nums text-foreground">
               {labels.indexingProgress}
             </p>
-            <div aria-hidden="true" className="h-1 overflow-hidden rounded-full bg-slate-200">
+            <div aria-hidden="true" className="h-1 overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
                 style={{ width: `${indexingPct}%`, backgroundColor: 'var(--color-entity-game)' }}
@@ -373,7 +374,7 @@ export function GamebookCard({
                 'self-start rounded-full border px-3 py-0.5 text-[10px] font-bold uppercase tracking-wide',
                 'transition-colors motion-reduce:transition-none',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                'hover:bg-white/40',
+                'hover:bg-card/40',
                 'border-entity-event text-entity-event'
               )}
             >

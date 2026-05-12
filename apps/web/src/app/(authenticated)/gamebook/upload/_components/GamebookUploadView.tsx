@@ -990,7 +990,7 @@ function renderCell(input: CellRenderInput): ReactElement {
               <p className="text-sm font-semibold text-foreground">
                 {input.t('gamebook.upload.wizard.step1.bggLoadingTitle')}
               </p>
-              <p className="text-xs text-slate-700">
+              <p className="text-xs text-foreground">
                 {input.t('gamebook.upload.wizard.step1.bggLoadingSubtitle')}
               </p>
             </div>
@@ -1140,13 +1140,13 @@ function renderCell(input: CellRenderInput): ReactElement {
               role="dialog"
               aria-modal="true"
               aria-label={input.t('gamebook.upload.wizard.cancelModal.title')}
-              className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4"
+              className="fixed inset-0 z-20 flex items-center justify-center bg-foreground/40 p-4"
             >
               <div className="w-full max-w-sm rounded-xl bg-card p-6 shadow-xl">
                 <p className="text-base font-bold text-foreground">
                   {input.t('gamebook.upload.wizard.cancelModal.title')}
                 </p>
-                <p className="mt-2 text-sm text-slate-700">
+                <p className="mt-2 text-sm text-foreground">
                   {input.t('gamebook.upload.wizard.step3.cancelButton')}
                 </p>
               </div>
@@ -1240,7 +1240,7 @@ function CatalogGrid({
         <span aria-hidden="true" className="text-3xl">
           📚
         </span>
-        <p className="text-sm text-slate-700">Nessun gioco da mostrare.</p>
+        <p className="text-sm text-foreground">Nessun gioco da mostrare.</p>
       </div>
     );
   }
@@ -1313,7 +1313,7 @@ function Step2Placeholder({
             ? t('gamebook.upload.wizard.step2.unsupportedTitle')
             : t('gamebook.upload.wizard.step2.deniedTitle')}
         </p>
-        <p className="max-w-sm text-sm text-slate-700">
+        <p className="max-w-sm text-sm text-foreground">
           {permissionState === 'unsupported'
             ? t('gamebook.upload.wizard.step2.unsupportedSubtitle')
             : t('gamebook.upload.wizard.step2.deniedSubtitle')}
@@ -1395,7 +1395,7 @@ function Step3Body({
         {kind === 'step3-complete' ? '✅' : kind === 'step3-offline' ? '📡' : '⚙️'}
       </span>
       <p className="text-base font-bold text-foreground">{t(titleKey)}</p>
-      <p className="text-sm text-slate-700">
+      <p className="text-sm text-foreground">
         {kind === 'step3-offline' ? t('gamebook.upload.wizard.offline.bannerTitle') : progressLabel}
       </p>
 

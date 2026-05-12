@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import type { ChatMessageRole } from '@/components/chat/shared';
@@ -60,7 +61,7 @@ export function ChatMainArea({
                     key={q}
                     type="button"
                     onClick={() => onSend(q)}
-                    className="rounded-full border border-[var(--nh-border-default)] bg-[var(--nh-bg-elevated)] px-3.5 py-2 font-nunito text-[0.76rem] font-bold text-[var(--nh-text-secondary)] transition-all hover:-translate-y-px hover:bg-white hover:shadow-[var(--shadow-warm-sm)]"
+                    className="rounded-full border border-[var(--nh-border-default)] bg-[var(--nh-bg-elevated)] px-3.5 py-2 font-nunito text-[0.76rem] font-bold text-[var(--nh-text-secondary)] transition-all hover:-translate-y-px hover:bg-card hover:shadow-[var(--shadow-warm-sm)]"
                   >
                     {q}
                   </button>

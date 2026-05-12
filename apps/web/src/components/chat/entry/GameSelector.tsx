@@ -69,7 +69,7 @@ function GameGrid({
           placeholder="Cerca gioco..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 rounded-lg border border-border/50 bg-white/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+          className="w-full pl-9 pr-3 py-2 rounded-lg border border-border/50 bg-card/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/40"
           data-testid="game-search-input"
         />
       </div>
@@ -219,7 +219,7 @@ export function GameSelector({
   return (
     <section
       className={cn(
-        'p-6 rounded-2xl bg-white/70 dark:bg-card/70 backdrop-blur-md border border-border/50',
+        'p-6 rounded-2xl bg-card/70 dark:bg-card/70 backdrop-blur-md border border-border/50',
         className
       )}
       data-testid="game-selection-section"
@@ -251,7 +251,7 @@ export function GameSelector({
           className={cn(
             'flex-1 py-1.5 px-3 rounded-md text-sm font-nunito font-medium transition-all duration-200',
             activeTab === 'private'
-              ? 'bg-white dark:bg-card shadow-sm text-foreground'
+              ? 'bg-card shadow-sm text-foreground'
               : 'text-muted-foreground hover:text-foreground'
           )}
           data-testid="tab-private-games"
@@ -265,7 +265,7 @@ export function GameSelector({
           className={cn(
             'flex-1 py-1.5 px-3 rounded-md text-sm font-nunito font-medium transition-all duration-200',
             activeTab === 'shared'
-              ? 'bg-white dark:bg-card shadow-sm text-foreground'
+              ? 'bg-card shadow-sm text-foreground'
               : 'text-muted-foreground hover:text-foreground'
           )}
           data-testid="tab-shared-games"

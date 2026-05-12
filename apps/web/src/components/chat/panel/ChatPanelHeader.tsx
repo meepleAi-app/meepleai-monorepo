@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 interface ChatPanelHeaderProps {
@@ -28,7 +29,7 @@ export function ChatPanelHeader({ subtitle, onClose }: ChatPanelHeaderProps) {
         type="button"
         aria-label="Chiudi chat panel"
         onClick={onClose}
-        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px] border border-[var(--nh-border-default)] bg-[var(--nh-bg-surface)] text-lg text-[var(--nh-text-secondary)] transition-all hover:bg-white hover:text-[var(--nh-text-primary)] hover:shadow-[var(--shadow-warm-sm)]"
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px] border border-[var(--nh-border-default)] bg-[var(--nh-bg-surface)] text-lg text-[var(--nh-text-secondary)] transition-all hover:bg-card hover:text-[var(--nh-text-primary)] hover:shadow-[var(--shadow-warm-sm)]"
       >
         ✕
       </button>

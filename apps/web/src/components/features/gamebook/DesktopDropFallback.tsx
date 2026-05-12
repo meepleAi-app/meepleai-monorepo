@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * DesktopDropFallback — SP6 Phase C.2.B v2 component (Issue #789).
  *
@@ -197,7 +198,7 @@ export function DesktopDropFallback({
       {/* Description (pre-resolved including types + max-files) */}
       <p
         data-slot="desktop-drop-fallback-description"
-        className="text-sm leading-relaxed text-slate-700"
+        className="text-sm leading-relaxed text-foreground"
       >
         {labels.description}
       </p>
@@ -219,10 +220,10 @@ export function DesktopDropFallback({
       </button>
 
       {/* Max files hint */}
-      <p className="text-[11px] text-slate-700">{labels.maxFilesHint}</p>
+      <p className="text-[11px] text-foreground">{labels.maxFilesHint}</p>
 
       {/* Footer: phone handoff */}
-      <p className="mt-2 text-[11px] text-slate-700">
+      <p className="mt-2 text-[11px] text-foreground">
         {onPhoneHandoffClick ? (
           <button
             type="button"

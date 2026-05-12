@@ -40,7 +40,7 @@ export const EVENT_META: Record<string, EventMeta> = {
   session_created: { icon: Play, color: 'text-emerald-500', label: 'Sessione avviata' },
   session_paused: { icon: Pause, color: 'text-amber-500', label: 'Sessione in pausa' },
   session_resumed: { icon: Play, color: 'text-emerald-500', label: 'Sessione ripresa' },
-  session_finalized: { icon: Flag, color: 'text-slate-500', label: 'Sessione finalizzata' },
+  session_finalized: { icon: Flag, color: 'text-muted-foreground', label: 'Sessione finalizzata' },
 
   // Participants
   participant_added: { icon: Users, color: 'text-purple-500', label: 'Partecipante aggiunto' },

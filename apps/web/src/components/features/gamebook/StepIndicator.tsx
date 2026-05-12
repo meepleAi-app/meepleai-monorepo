@@ -81,13 +81,13 @@ function StepCircle({ stepNumber, state, label, ariaCurrent }: StepCircleProps):
           'transition-colors motion-reduce:transition-none',
           isDone || isActive
             ? 'border-entity-game bg-entity-game text-white'
-            : 'border-slate-300 bg-transparent text-slate-500'
+            : 'border-border bg-transparent text-muted-foreground'
         )}
       >
         {isDone ? '✓' : stepNumber}
       </span>
       <span
-        className={clsx('text-xs font-semibold', isActive ? 'text-foreground' : 'text-slate-700')}
+        className={clsx('text-xs font-semibold', isActive ? 'text-foreground' : 'text-muted-foreground')}
       >
         {label}
       </span>

@@ -44,7 +44,7 @@ export function ApprovalStatusFilter({ value, onChange, counts }: ApprovalStatus
               <div className="flex items-center justify-between gap-4">
                 <span>{option.label}</span>
                 {count !== undefined && (
-                  <span className="text-xs text-slate-500 dark:text-slate-400">({count})</span>
+                  <span className="text-xs text-muted-foreground">({count})</span>
                 )}
               </div>
             </SelectItem>

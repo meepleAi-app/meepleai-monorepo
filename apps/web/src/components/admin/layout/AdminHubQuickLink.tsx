@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { type ReactNode } from 'react';
@@ -33,8 +34,8 @@ export function AdminHubQuickLink({
       href={href}
       className={cn(
         'group relative flex items-start gap-3 rounded-xl p-4',
-        'bg-white/70 dark:bg-zinc-800/50 backdrop-blur-md',
-        'border border-slate-200/60 dark:border-zinc-700/40',
+        'bg-card/70 dark:bg-zinc-800/50 backdrop-blur-md',
+        'border border-border/60 dark:border-zinc-700/40',
         'hover:border-primary/30 dark:hover:border-primary/30',
         'hover:shadow-md hover:shadow-primary/5',
         'transition-all duration-200'

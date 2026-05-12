@@ -6,9 +6,9 @@
 | **Generator** | `pnpm lint:tokens` (DS-2) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../docs/for-developers/specs/2026-05-12-token-canonicalization.md) |
 | **Rule** | `local/no-hardcoded-color-utility` |
-| **Total violations** | 3491 |
-| **Files affected** | 364 |
-| **Clusters affected** | 163 |
+| **Total violations** | 3236 |
+| **Files affected** | 319 |
+| **Clusters affected** | 144 |
 
 ## Violations by cluster
 
@@ -24,45 +24,35 @@
 | `app/(authenticated)/admin` | 67 | manual |
 | `admin/games` | 64 | manual |
 | `app/(authenticated)/play-records` | 55 | manual |
-| `admin/command-center` | 54 | manual |
 | `loading/SkeletonLoader.tsx` | 54 | manual |
-| `admin/mechanic-extractor` | 52 | manual |
 | `play-records/NewPlayRecordSheet.tsx` | 50 | manual |
 | `layout/mobile` | 49 | manual |
 | `rag-dashboard/config` | 44 | manual |
 | `app/admin/database-sync` | 36 | manual |
 | `app/(authenticated)/toolkit` | 32 | manual |
-| `admin/sandbox` | 31 | manual |
 | `app/(auth)/welcome` | 27 | manual |
 | `errors/ErrorBoundary.stories.tsx` | 27 | manual |
 | `stories/DesignTokens.stories.tsx` | 27 | manual |
 | `comments/CommentItem.tsx` | 22 | manual |
 | `empty-state/EmptyState.stories.tsx` | 22 | manual |
 | `stories/BackgroundTexture.stories.tsx` | 22 | manual |
-| `admin/infrastructure` | 20 | manual |
 | `app/(public)/contact` | 18 | manual |
 | `modals/ErrorModal.tsx` | 18 | manual |
 | `app/(authenticated)/n8n` | 17 | manual |
 | `app/(authenticated)/versions` | 17 | manual |
-| `admin/rag` | 17 | manual |
 | `app/(authenticated)/sessions` | 16 | manual |
 | `app/(public)/join` | 16 | manual |
 | `play-records/PlayHistory.tsx` | 16 | manual |
 | `toolkit-drawer/shared` | 16 | manual |
 | `upload/UploadSummary.tsx` | 16 | manual |
-| `admin/PdfLimitsConfig.tsx` | 15 | manual |
 | `errors/ErrorBoundary.tsx` | 15 | manual |
-| `admin/notifications` | 14 | manual |
 | `app/join/[inviteToken]` | 13 | manual |
 | `toolkit/Scoreboard.tsx` | 13 | manual |
 | `app/(authenticated)/editor` | 12 | manual |
 | `editor/ConflictResolutionModal.tsx` | 12 | manual |
 | `legal/LegalMarkdown.tsx` | 12 | manual |
 | `onboarding/FirstGameStep.tsx` | 12 | manual |
-| `admin/DashboardHeader.tsx` | 11 | manual |
 | `app/(public)/about` | 10 | manual |
-| `admin/KPICard.tsx` | 10 | manual |
-| `admin/layout` | 10 | manual |
 | `onboarding/OnboardingWizard.tsx` | 10 | manual |
 | `game-detail/AgentChatPanel.tsx` | 9 | manual |
 | `toolkit/Counter.tsx` | 9 | manual |
@@ -96,9 +86,6 @@
 | `app/(auth)/register` | 4 | manual |
 | `app/(auth)/reset-password` | 4 | manual |
 | `app/(auth)/setup-account` | 4 | manual |
-| `admin/AlertsBanner.tsx` | 4 | manual |
-| `admin/invitations` | 4 | manual |
-| `admin/rag-quality-dashboard.tsx` | 4 | manual |
 | `auth/RegisterForm.stories.tsx` | 4 | manual |
 | `diff/DiffViewerEnhanced.tsx` | 4 | manual |
 | `editor/EditorToolbar.tsx` | 4 | manual |
@@ -110,7 +97,6 @@
 | `pdf/PdfProcessingProgressBar.stories.tsx` | 4 | manual |
 | `pwa/InstallPrompt.tsx` | 4 | manual |
 | `toolkit-drawer/ToolkitDrawer.tsx` | 4 | manual |
-| `admin/charts` | 3 | manual |
 | `auth/AuthModal.stories.tsx` | 3 | manual |
 | `comments/InlineCommentIndicator.tsx` | 3 | manual |
 | `game-detail/TypingIndicator.tsx` | 3 | manual |
@@ -120,7 +106,6 @@
 | `pwa/UpdatePrompt.tsx` | 3 | manual |
 | `toolkit/Timer.tsx` | 3 | manual |
 | `versioning/VersionTimeline.tsx` | 3 | manual |
-| `admin/ApprovalStatusFilter.tsx` | 2 | manual |
 | `auth/RequireRole.tsx` | 2 | manual |
 | `comments/CommentThread.tsx` | 2 | manual |
 | `errors/RouteErrorBoundary.tsx` | 2 | manual |
@@ -142,10 +127,6 @@
 | `upload/MultiFileUpload.tsx` | 2 | manual |
 | `app/(authenticated)/profile` | 1 | manual |
 | `app/(authenticated)/settings` | 1 | manual |
-| `admin/debug-chat` | 1 | manual |
-| `admin/FeatureFlagsTab.tsx` | 1 | manual |
-| `admin/ui-library` | 1 | manual |
-| `admin/UserActivityTimeline.tsx` | 1 | manual |
 | `auth/TwoFactorSetup.tsx` | 1 | manual |
 | `comments/CommentForm.tsx` | 1 | manual |
 | `editor/ViewModeToggle.tsx` | 1 | manual |
@@ -186,7 +167,6 @@
 | `src/stories/Animations.stories.tsx` | 76 |
 | `src/app/admin/(dashboard)/knowledge-base/mechanic-extractor/analyses/page.tsx` | 57 |
 | `src/app/admin/(dashboard)/knowledge-base/vectors/page.tsx` | 54 |
-| `src/components/admin/command-center/CommandCenterDashboard.tsx` | 54 |
 | `src/components/loading/SkeletonLoader.tsx` | 54 |
 | `src/components/admin/knowledge-base/processing-metrics.tsx` | 51 |
 | `src/app/admin/(dashboard)/knowledge-base/embedding/page.tsx` | 50 |
@@ -202,6 +182,7 @@
 | `src/app/admin/(dashboard)/agents/config/AgentStrategyTabContent.tsx` | 40 |
 | `src/app/admin/(dashboard)/shared-games/[id]/client.tsx` | 40 |
 | `src/app/admin/(dashboard)/agents/page.tsx` | 38 |
+| `src/app/admin/(dashboard)/users/invitations/page.tsx` | 38 |
 
 ## Notes
 

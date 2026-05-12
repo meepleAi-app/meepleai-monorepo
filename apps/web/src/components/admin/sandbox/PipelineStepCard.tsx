@@ -80,7 +80,7 @@ export function PipelineStepCard({ step, details }: PipelineStepCardProps) {
       <div
         data-testid={`step-card-${step.step}`}
         className={cn(
-          'rounded-lg border bg-white/70 backdrop-blur-sm transition-colors',
+          'rounded-lg border bg-card/70 backdrop-blur-sm transition-colors',
           step.status === 'failed' && 'border-red-300 bg-red-50/70'
         )}
       >
@@ -150,7 +150,7 @@ export function PipelineStepCard({ step, details }: PipelineStepCardProps) {
                   <pre
                     key={i}
                     data-testid={`chunk-sample-${i}`}
-                    className="rounded-md bg-gray-50 p-2 font-mono text-xs text-gray-700 line-clamp-2"
+                    className="rounded-md bg-muted p-2 font-mono text-xs text-foreground line-clamp-2"
                   >
                     {truncateText(chunk, 2)}
                   </pre>

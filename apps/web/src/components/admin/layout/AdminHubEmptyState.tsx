@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 import { type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -19,7 +20,7 @@ export function AdminHubEmptyState({ icon, title, description, action }: AdminHu
       className={cn(
         'flex flex-col items-center justify-center py-16 px-6 text-center',
         'rounded-2xl border border-dashed border-border/50',
-        'bg-white/30 dark:bg-zinc-800/20 backdrop-blur-sm'
+        'bg-card/30 dark:bg-zinc-800/20 backdrop-blur-sm'
       )}
     >
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50 [&>svg]:h-7 [&>svg]:w-7 [&>svg]:text-muted-foreground/40">

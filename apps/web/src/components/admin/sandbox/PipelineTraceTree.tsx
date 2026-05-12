@@ -35,7 +35,7 @@ function TraceNode({ step, index }: { step: PipelineTraceStep; index: number }) 
   return (
     <div className="font-nunito" data-testid={`trace-step-${index}`}>
       <button
-        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-gray-50 transition-colors"
+        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted transition-colors"
         onClick={() => setExpanded(!expanded)}
         data-testid={`trace-step-toggle-${index}`}
       >

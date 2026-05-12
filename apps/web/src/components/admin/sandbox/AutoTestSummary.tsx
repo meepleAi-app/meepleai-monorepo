@@ -26,7 +26,7 @@ export function AutoTestSummary({ results }: AutoTestSummaryProps) {
 
   return (
     <div
-      className="rounded-xl border bg-white/70 backdrop-blur-md p-4 space-y-4"
+      className="rounded-xl border bg-card/70 backdrop-blur-md p-4 space-y-4"
       data-testid="auto-test-summary"
     >
       {/* Header with overall score */}
@@ -43,21 +43,21 @@ export function AutoTestSummary({ results }: AutoTestSummaryProps) {
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3 text-xs font-nunito">
-        <div className="flex flex-col items-center gap-1 rounded-lg border bg-gray-50/50 p-2">
+        <div className="flex flex-col items-center gap-1 rounded-lg border bg-muted/50 p-2">
           <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-muted-foreground">Confidenza media</span>
           <span className="font-semibold tabular-nums" data-testid="avg-confidence">
             {(avgConfidence * 100).toFixed(0)}%
           </span>
         </div>
-        <div className="flex flex-col items-center gap-1 rounded-lg border bg-gray-50/50 p-2">
+        <div className="flex flex-col items-center gap-1 rounded-lg border bg-muted/50 p-2">
           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-muted-foreground">Latenza media</span>
           <span className="font-semibold tabular-nums" data-testid="avg-latency">
             {Math.round(avgLatency)}ms
           </span>
         </div>
-        <div className="flex flex-col items-center gap-1 rounded-lg border bg-gray-50/50 p-2">
+        <div className="flex flex-col items-center gap-1 rounded-lg border bg-muted/50 p-2">
           <Timer className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-muted-foreground">Tempo totale</span>
           <span className="font-semibold tabular-nums" data-testid="total-time">
@@ -71,7 +71,7 @@ export function AutoTestSummary({ results }: AutoTestSummaryProps) {
         {results.map((result, i) => (
           <div
             key={i}
-            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-nunito hover:bg-gray-50"
+            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-nunito hover:bg-muted"
           >
             {result.passed ? (
               <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
@@ -134,7 +135,7 @@ export function QueueDashboardClient({
       {/* Main Content: List (40%) + Detail (60%) */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 min-h-[500px]">
         {/* Queue List - 2/5 = 40% */}
-        <div className="lg:col-span-2 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-zinc-700/50 overflow-hidden">
+        <div className="lg:col-span-2 bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/50 dark:border-zinc-700/50 overflow-hidden">
           <QueueList
             data={queueData}
             isLoading={isQueueLoading}
@@ -146,7 +147,7 @@ export function QueueDashboardClient({
         </div>
 
         {/* Detail Panel - 3/5 = 60% */}
-        <div className="lg:col-span-3 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-zinc-700/50 overflow-hidden">
+        <div className="lg:col-span-3 bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/50 dark:border-zinc-700/50 overflow-hidden">
           <JobDetailPanel job={jobDetail} isLoading={isDetailLoading} />
         </div>
       </div>

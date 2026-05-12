@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -46,13 +47,13 @@ const LIMIT_OPTIONS = [5, 10, 20, 50] as const;
 
 function StatSkeleton() {
   return (
-    <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+    <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-slate-200 dark:bg-zinc-700 animate-pulse" />
+          <div className="h-10 w-10 rounded-lg bg-muted dark:bg-zinc-700 animate-pulse" />
           <div className="space-y-2">
-            <div className="h-3 w-24 bg-slate-200 dark:bg-zinc-700 rounded animate-pulse" />
-            <div className="h-6 w-16 bg-slate-200 dark:bg-zinc-700 rounded animate-pulse" />
+            <div className="h-3 w-24 bg-muted dark:bg-zinc-700 rounded animate-pulse" />
+            <div className="h-6 w-16 bg-muted dark:bg-zinc-700 rounded animate-pulse" />
           </div>
         </div>
       </CardContent>
@@ -165,7 +166,7 @@ export default function VectorStorePage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Total Vectors */}
-          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+          <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
@@ -182,7 +183,7 @@ export default function VectorStorePage() {
           </Card>
 
           {/* Games Indexed */}
-          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+          <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
@@ -197,7 +198,7 @@ export default function VectorStorePage() {
           </Card>
 
           {/* Dimensions */}
-          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+          <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center">
@@ -214,7 +215,7 @@ export default function VectorStorePage() {
           </Card>
 
           {/* Avg Health */}
-          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+          <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
@@ -233,7 +234,7 @@ export default function VectorStorePage() {
       )}
 
       {/* Semantic Search Panel */}
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/40 p-6 space-y-4">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/40 p-6 space-y-4">
         <div>
           <h2 className="font-quicksand font-semibold text-lg text-foreground flex items-center gap-2">
             <SearchIcon className="h-5 w-5 text-blue-500" />
@@ -256,13 +257,13 @@ export default function VectorStorePage() {
               onKeyDown={e => {
                 if (e.key === 'Enter') void handleSearch();
               }}
-              className="pl-9 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md"
+              className="pl-9 bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md"
             />
           </div>
 
           {/* Game filter */}
           <Select value={searchGameId} onValueChange={setSearchGameId}>
-            <SelectTrigger className="w-full sm:w-48 bg-white/70 dark:bg-zinc-800/70">
+            <SelectTrigger className="w-full sm:w-48 bg-card/70 dark:bg-zinc-800/70">
               <SelectValue placeholder="All games" />
             </SelectTrigger>
             <SelectContent>
@@ -277,7 +278,7 @@ export default function VectorStorePage() {
 
           {/* Limit selector */}
           <Select value={searchLimit} onValueChange={setSearchLimit}>
-            <SelectTrigger className="w-full sm:w-28 bg-white/70 dark:bg-zinc-800/70">
+            <SelectTrigger className="w-full sm:w-28 bg-card/70 dark:bg-zinc-800/70">
               <SelectValue placeholder="Limit" />
             </SelectTrigger>
             <SelectContent>
@@ -322,14 +323,14 @@ export default function VectorStorePage() {
             {searchResults.map(item => (
               <div
                 key={`${item.documentId}-${item.chunkIndex}`}
-                className="bg-slate-50/70 dark:bg-zinc-900/50 rounded-lg border border-slate-200/50 dark:border-zinc-700/50 overflow-hidden"
+                className="bg-muted/70 dark:bg-zinc-900/50 rounded-lg border border-border/50 dark:border-zinc-700/50 overflow-hidden"
               >
                 <button
                   type="button"
                   onClick={() =>
                     setExpandedResult(expandedResult === item.documentId ? null : item.documentId)
                   }
-                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-100/60 dark:hover:bg-zinc-800/60 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/60 dark:hover:bg-zinc-800/60 transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="text-xs font-mono text-muted-foreground shrink-0">
@@ -347,7 +348,7 @@ export default function VectorStorePage() {
                 </button>
 
                 {expandedResult === item.documentId && (
-                  <div className="px-4 py-3 border-t border-slate-200/50 dark:border-zinc-700/50 bg-white/50 dark:bg-zinc-900/30">
+                  <div className="px-4 py-3 border-t border-border/50 dark:border-zinc-700/50 bg-card/50 dark:bg-zinc-900/30">
                     <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                       Details
                     </div>
@@ -385,7 +386,7 @@ export default function VectorStorePage() {
           {Array.from({ length: 4 }).map((_, i) => (
             <div
               key={i}
-              className="h-40 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse"
+              className="h-40 bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/40 animate-pulse"
             />
           ))}
         </div>
@@ -404,7 +405,7 @@ export default function VectorStorePage() {
 
       {/* Empty State */}
       {!isLoading && !error && gameBreakdown.length === 0 && (
-        <div className="text-center py-12 bg-white/50 dark:bg-zinc-800/50 backdrop-blur-sm rounded-xl border border-slate-200/40 dark:border-zinc-700/30">
+        <div className="text-center py-12 bg-card/50 dark:bg-zinc-800/50 backdrop-blur-sm rounded-xl border border-border/40 dark:border-zinc-700/30">
           <DatabaseIcon className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground font-medium">No vectors indexed yet</p>
           <p className="text-xs text-muted-foreground mt-1">

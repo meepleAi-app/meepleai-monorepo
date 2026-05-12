@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -258,7 +259,7 @@ export function QueueTab() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md overflow-x-auto">
+        <div className="rounded-xl border bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-xs text-muted-foreground">

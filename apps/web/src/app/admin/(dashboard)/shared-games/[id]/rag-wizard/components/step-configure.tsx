@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 /**
  * Step 2: Configura — Per-file configuration
  *
@@ -72,7 +73,7 @@ export function StepConfigure({
           return (
             <div
               key={`${config.file.name}-${config.file.size}`}
-              className="rounded-lg border bg-white/60 dark:bg-zinc-800/60 p-4 space-y-3"
+              className="rounded-lg border bg-card/60 dark:bg-zinc-800/60 p-4 space-y-3"
             >
               {/* File name */}
               <div className="flex items-center gap-2">

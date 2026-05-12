@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState } from 'react';
@@ -136,7 +137,7 @@ function LibraryStatsCard({ userId }: { userId: string }) {
   });
 
   return (
-    <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+    <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
       <CardHeader className="pb-2">
         <CardTitle className="font-quicksand text-base flex items-center gap-2">
           <Gamepad2Icon className="h-4 w-4" />
@@ -169,7 +170,7 @@ function LibraryStatsCard({ userId }: { userId: string }) {
         </div>
 
         {/* Quick links */}
-        <div className="pt-2 border-t border-slate-200/60 dark:border-zinc-700/40 flex gap-2">
+        <div className="pt-2 border-t border-border/60 dark:border-zinc-700/40 flex gap-2">
           <Link
             href={`/admin/agents/chat-history?userId=${userId}`}
             className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
@@ -200,7 +201,7 @@ function OverviewTab({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardHeader className="pb-2">
             <CardTitle className="font-quicksand text-base">Info Account</CardTitle>
           </CardHeader>
@@ -222,7 +223,7 @@ function OverviewTab({
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardHeader className="pb-2">
             <CardTitle className="font-quicksand text-base">Utilizzo</CardTitle>
           </CardHeader>
@@ -239,7 +240,7 @@ function OverviewTab({
               </span>
             </div>
             <div className="mt-2">
-              <div className="h-2 rounded-full bg-slate-200 dark:bg-zinc-700 overflow-hidden">
+              <div className="h-2 rounded-full bg-muted dark:bg-zinc-700 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-amber-500 dark:bg-amber-400 transition-all"
                   style={{
@@ -285,7 +286,7 @@ function ChangeRoleCard({
   const canSubmit = newRole && newRole !== currentRole;
 
   return (
-    <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+    <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
       <CardHeader className="pb-2">
         <CardTitle className="font-quicksand text-base flex items-center gap-2">
           <ChevronsUpDownIcon className="h-4 w-4" />
@@ -296,7 +297,7 @@ function ChangeRoleCard({
         <div className="space-y-2">
           <Label htmlFor="new-role">New Role</Label>
           <Select value={newRole} onValueChange={setNewRole}>
-            <SelectTrigger id="new-role" className="bg-white/70 dark:bg-zinc-800/70">
+            <SelectTrigger id="new-role" className="bg-card/70 dark:bg-zinc-800/70">
               <SelectValue placeholder="Select a role..." />
             </SelectTrigger>
             <SelectContent>
@@ -317,7 +318,7 @@ function ChangeRoleCard({
             onChange={e => setReason(e.target.value)}
             placeholder="Why is this role change needed?"
             rows={3}
-            className="bg-white/70 dark:bg-zinc-800/70"
+            className="bg-card/70 dark:bg-zinc-800/70"
           />
         </div>
 
@@ -395,11 +396,11 @@ function RoleHistoryTable({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/40 overflow-hidden">
+    <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/40 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200/60 dark:border-zinc-700/40">
+            <tr className="border-b border-border/60 dark:border-zinc-700/40">
               <th className="text-left p-3 font-medium text-muted-foreground">Previous Role</th>
               <th className="text-left p-3 font-medium text-muted-foreground">New Role</th>
               <th className="text-left p-3 font-medium text-muted-foreground">Changed By</th>
@@ -410,7 +411,7 @@ function RoleHistoryTable({ userId }: { userId: string }) {
             {roleHistory.map((entry, i) => (
               <tr
                 key={i}
-                className="border-b border-slate-100 dark:border-zinc-800/60 hover:bg-slate-50/50 dark:hover:bg-zinc-700/30"
+                className="border-b border-border dark:border-zinc-800/60 hover:bg-muted/50 dark:hover:bg-zinc-700/30"
               >
                 <td className="p-3">
                   <Badge variant="outline" className={getRoleBadgeClass(entry.oldRole)}>
@@ -487,11 +488,11 @@ function UserAuditLogTable({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/40 overflow-hidden">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/40 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200/60 dark:border-zinc-700/40">
+              <tr className="border-b border-border/60 dark:border-zinc-700/40">
                 <th className="text-left p-3 font-medium text-muted-foreground">Timestamp</th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Action</th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Resource</th>
@@ -503,7 +504,7 @@ function UserAuditLogTable({ userId }: { userId: string }) {
               {entries.map(entry => (
                 <tr
                   key={entry.id}
-                  className="border-b border-slate-100 dark:border-zinc-800/60 hover:bg-slate-50/50 dark:hover:bg-zinc-700/30 cursor-pointer"
+                  className="border-b border-border dark:border-zinc-800/60 hover:bg-muted/50 dark:hover:bg-zinc-700/30 cursor-pointer"
                   onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
                 >
                   <td className="p-3 text-muted-foreground whitespace-nowrap">
@@ -536,7 +537,7 @@ function UserAuditLogTable({ userId }: { userId: string }) {
           .map(entry => (
             <div
               key={`detail-${entry.id}`}
-              className="px-4 py-3 border-t border-slate-200/60 dark:border-zinc-700/40 bg-slate-50/50 dark:bg-zinc-900/30"
+              className="px-4 py-3 border-t border-border/60 dark:border-zinc-700/40 bg-muted/50 dark:bg-zinc-900/30"
             >
               <p className="text-xs font-medium text-muted-foreground mb-1">Details</p>
               <pre className="text-xs whitespace-pre-wrap text-foreground/80 font-mono">

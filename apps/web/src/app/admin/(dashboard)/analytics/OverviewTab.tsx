@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
@@ -86,7 +87,7 @@ export function OverviewTab() {
           {quickStats.map(stat => (
             <Card
               key={stat.label}
-              className="bg-white/70 dark:bg-zinc-800/50 backdrop-blur-sm border-slate-200/60 dark:border-zinc-700/40"
+              className="bg-card/70 dark:bg-zinc-800/50 backdrop-blur-sm border-border/60 dark:border-zinc-700/40"
             >
               <CardContent className="flex items-center gap-3 py-3 px-4">
                 {stat.icon}

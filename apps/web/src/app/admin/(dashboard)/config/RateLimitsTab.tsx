@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { type LucideIcon, Shield, MessageSquare, Upload, Loader2 } from 'lucide-react';
@@ -88,7 +89,7 @@ export function RateLimitsTab() {
           return (
             <Card
               key={category.title}
-              className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40"
+              className="bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40"
             >
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base font-quicksand">

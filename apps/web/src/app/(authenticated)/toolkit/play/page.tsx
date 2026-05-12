@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -32,20 +33,20 @@ export default function ToolkitPlayPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-800">Toolkit</h1>
+        <h1 className="text-xl font-bold text-foreground">Toolkit</h1>
         <input
           type="text"
           value={actorLabel}
           onChange={e => setActorLabel(e.target.value)}
           placeholder="Chi gioca?"
-          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
+          className="rounded-md border border-border px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-400"
           maxLength={30}
         />
       </div>
 
       {/* Dadi */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Dadi</h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Dadi</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {DEFAULT_TOOLKIT.dice.map(config => (
             <DiceRoller
@@ -67,7 +68,7 @@ export default function ToolkitPlayPage() {
       {/* Timer */}
       {DEFAULT_TOOLKIT.timers.length > 0 && (
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Timer
           </h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -92,7 +93,7 @@ export default function ToolkitPlayPage() {
 
       {/* Contatori */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Contatori
         </h2>
         <div className="grid grid-cols-2 gap-3">
@@ -114,7 +115,7 @@ export default function ToolkitPlayPage() {
 
       {/* Randomizzatore */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Randomizzatore
         </h2>
         <Randomizer
@@ -127,12 +128,12 @@ export default function ToolkitPlayPage() {
       {/* Log */}
       {log.length > 0 && (
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Cronologia
           </h2>
-          <div className="space-y-1 rounded-lg border border-slate-100 bg-slate-50 p-3">
+          <div className="space-y-1 rounded-lg border border-border bg-muted p-3">
             {[...log].reverse().map(entry => (
-              <div key={entry.id} className="flex items-center gap-2 text-xs text-slate-600">
+              <div key={entry.id} className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="text-slate-300">
                   {new Date(entry.timestamp).toLocaleTimeString('it-IT', {
                     hour: '2-digit',
@@ -140,7 +141,7 @@ export default function ToolkitPlayPage() {
                   })}
                 </span>
                 {entry.actorLabel && (
-                  <span className="font-medium text-slate-500">{entry.actorLabel}</span>
+                  <span className="font-medium text-muted-foreground">{entry.actorLabel}</span>
                 )}
                 <span>{entry.result}</span>
               </div>

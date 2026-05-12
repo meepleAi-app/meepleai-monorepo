@@ -386,15 +386,15 @@ export function SessionSetupModal({
             {players.map((player, _index) => (
               <div
                 key={player.id}
-                className="flex items-start gap-3 p-3 border rounded-md bg-slate-50 dark:bg-slate-900/50"
+                className="flex items-start gap-3 p-3 border rounded-md bg-muted"
               >
                 <div className="flex-1 space-y-2">
                   {/* Player order badge */}
                   <div className="flex items-center gap-2">
-                    <span className="flex items-center justify-center w-6 h-6 text-xs font-bold bg-slate-200 dark:bg-slate-700 rounded-full">
+                    <span className="flex items-center justify-center w-6 h-6 text-xs font-bold bg-muted dark:bg-card rounded-full">
                       {player.playerOrder}
                     </span>
-                    <span className="text-xs text-slate-600 dark:text-slate-400">
+                    <span className="text-xs text-muted-foreground">
                       Player {player.playerOrder}
                     </span>
                   </div>

@@ -121,7 +121,7 @@ export function SplitViewLayout({
       <div
         onMouseDown={handleMouseDown}
         className={cn(
-          'w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize transition-all flex-shrink-0',
+          'w-1 bg-muted hover:bg-blue-500 cursor-col-resize transition-all flex-shrink-0',
           isResizing && 'bg-blue-600 w-1.5'
         )}
         title="Trascina per ridimensionare"

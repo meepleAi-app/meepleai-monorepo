@@ -342,7 +342,7 @@ export const DarkMode: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark max-w-2xl mx-auto p-6 bg-slate-900 min-h-screen">
+      <div className="dark max-w-2xl mx-auto p-6 bg-card min-h-screen">
         <Story />
       </div>
     ),
@@ -360,7 +360,7 @@ export const DarkModeUploading: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark max-w-2xl mx-auto p-6 bg-slate-900 min-h-screen">
+      <div className="dark max-w-2xl mx-auto p-6 bg-card min-h-screen">
         <Story />
       </div>
     ),

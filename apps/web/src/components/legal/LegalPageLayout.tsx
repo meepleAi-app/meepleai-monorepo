@@ -108,8 +108,8 @@ function LegalPageContent({
               <h1 className="text-3xl font-bold text-foreground" data-testid={`${pageKey}-heading`}>
                 {title}
               </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-2">{description}</p>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              <p className="text-muted-foreground mt-2">{description}</p>
+              <p className="text-sm text-muted-foreground mt-1">
                 {t('legal.lastUpdated', {
                   date: formatDate(lastUpdated, {
                     year: 'numeric',
@@ -173,7 +173,7 @@ function LegalPageContent({
         </Accordion>
 
         {/* Footer Navigation — uses <Link> for SEO, accessibility, and right-click support */}
-        <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4 pt-8 border-t border-slate-200 dark:border-slate-700">
+        <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4 pt-8 border-t border-border">
           {prevLink ? (
             <Button variant="ghost" asChild>
               <Link href={prevLink.href}>

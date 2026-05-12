@@ -41,7 +41,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps): React.Reac
       {/* Semi-transparent backdrop */}
       <div
         data-testid="search-overlay-backdrop"
-        className="fixed inset-0 z-40 bg-black/40"
+        className="fixed inset-0 z-40 bg-foreground/40"
         onClick={onClose}
         aria-hidden="true"
       />

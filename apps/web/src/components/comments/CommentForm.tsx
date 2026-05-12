@@ -55,14 +55,14 @@ export function CommentForm({
         onChange={e => setCommentText(e.target.value)}
         placeholder={effectivePlaceholder}
         disabled={isDisabled}
-        className="w-full min-h-20 p-3 border border-gray-300 rounded text-sm font-inherit mb-2 resize-vertical"
+        className="w-full min-h-20 p-3 border border-border rounded text-sm font-inherit mb-2 resize-vertical"
       />
       <button
         type="submit"
         disabled={isDisabled || !commentText.trim()}
         className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
           isDisabled || !commentText.trim()
-            ? 'bg-gray-300 text-white cursor-not-allowed'
+            ? 'bg-muted text-white cursor-not-allowed'
             : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
         }`}
       >

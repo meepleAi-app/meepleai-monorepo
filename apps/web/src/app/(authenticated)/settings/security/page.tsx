@@ -207,7 +207,7 @@ export default function SecuritySettingsPage() {
                 Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
               </p>
 
-              <div className="bg-white p-4 rounded-lg mx-auto w-fit">
+              <div className="bg-card p-4 rounded-lg mx-auto w-fit">
                 <Image
                   src={setupData.qrCodeUrl}
                   alt="2FA QR Code"

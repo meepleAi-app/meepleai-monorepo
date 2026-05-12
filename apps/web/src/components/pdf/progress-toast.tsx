@@ -122,7 +122,7 @@ export function ProgressToast({
       className={cn(
         'w-full max-w-[400px]',
         'rounded-lg border border-border/50',
-        'bg-white/95 dark:bg-card/95 backdrop-blur-md',
+        'bg-card/95 dark:bg-card/95 backdrop-blur-md',
         'shadow-lg dark:shadow-2xl',
         'p-4',
         'animate-in slide-in-from-right-full duration-300',

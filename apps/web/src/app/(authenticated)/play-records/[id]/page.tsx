@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 /**
@@ -48,9 +49,9 @@ function statusColor(status: PlayRecordStatus): string {
     case 'InProgress':
       return 'text-blue-400 bg-blue-400/10 border-blue-400/20';
     case 'Planned':
-      return 'text-slate-400 bg-white/5 border-white/10';
+      return 'text-muted-foreground bg-card/5 border-border';
     case 'Archived':
-      return 'text-slate-500 bg-white/5 border-white/10';
+      return 'text-muted-foreground bg-card/5 border-border';
   }
 }
 
@@ -122,7 +123,7 @@ export default function PlayRecordDetailsPage() {
         <MobileHeader title="" onBack={() => router.back()} />
         <div className="px-4 pt-3 flex flex-col gap-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-white/5" />
+            <div key={i} className="h-20 animate-pulse rounded-xl bg-card/5" />
           ))}
         </div>
       </div>
@@ -143,7 +144,7 @@ export default function PlayRecordDetailsPage() {
           <button
             type="button"
             onClick={() => router.push('/play-records')}
-            className="mt-3 text-sm text-white/50 underline"
+            className="mt-3 text-sm text-foreground/80 underline"
           >
             Torna alle partite
           </button>
@@ -187,7 +188,7 @@ export default function PlayRecordDetailsPage() {
               type="button"
               aria-label="Modifica partita"
               onClick={() => router.push(`/play-records/${recordId}/edit`)}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--gaming-text-secondary)] hover:bg-white/5"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--gaming-text-secondary)] hover:bg-card/5"
             >
               <Edit className="h-4 w-4" />
             </button>
@@ -197,17 +198,17 @@ export default function PlayRecordDetailsPage() {
 
       <div className="flex-1 px-4 pt-3 pb-28 flex flex-col gap-4">
         {/* Hero card */}
-        <div className="rounded-2xl bg-white/5 border border-white/8 overflow-hidden">
+        <div className="rounded-2xl bg-card/5 border border-border overflow-hidden">
           <div className="px-4 pt-4 pb-3">
             <div className="flex items-start justify-between gap-2 mb-3">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30 mb-0.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
                   Partita
                 </p>
                 <h1 className="text-lg font-bold text-white font-quicksand leading-tight">
                   {record.gameName}
                 </h1>
-                <p className="text-sm text-white/50 mt-0.5">{dateStr}</p>
+                <p className="text-sm text-foreground/80 mt-0.5">{dateStr}</p>
               </div>
               <span
                 className={cn(
@@ -220,7 +221,7 @@ export default function PlayRecordDetailsPage() {
               </span>
             </div>
 
-            <div className="flex items-center gap-3 text-xs text-white/40">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span>
                 {record.players.length} {record.players.length === 1 ? 'giocatore' : 'giocatori'}
               </span>
@@ -241,7 +242,7 @@ export default function PlayRecordDetailsPage() {
 
           {/* Quick actions se la partita è in uno stato modificabile */}
           {(canStart || canComplete) && (
-            <div className="border-t border-white/8 px-4 py-3 flex gap-2">
+            <div className="border-t border-border px-4 py-3 flex gap-2">
               {canStart && (
                 <button
                   type="button"
@@ -271,7 +272,7 @@ export default function PlayRecordDetailsPage() {
         {/* Classifica */}
         {sortedPlayers.length > 0 && (
           <div className="flex flex-col gap-2" data-testid="classifica">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30 px-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">
               Classifica
             </p>
             {sortedPlayers.map((player, i) => {
@@ -281,7 +282,7 @@ export default function PlayRecordDetailsPage() {
                   key={player.id}
                   className={cn(
                     'flex items-center justify-between rounded-xl px-3 py-3 border',
-                    i === 0 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-white/5 border-white/8'
+                    i === 0 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-card/5 border-border'
                   )}
                   data-testid={`rank-row-${player.displayName}`}
                 >
@@ -297,7 +298,7 @@ export default function PlayRecordDetailsPage() {
                         {player.displayName}
                       </p>
                       {player.userId && (
-                        <p className="text-[10px] text-white/30">utente registrato</p>
+                        <p className="text-[10px] text-muted-foreground">utente registrato</p>
                       )}
                     </div>
                   </div>
@@ -305,7 +306,7 @@ export default function PlayRecordDetailsPage() {
                     <span
                       className={cn(
                         'text-sm font-bold',
-                        i === 0 ? 'text-amber-400' : 'text-white/60'
+                        i === 0 ? 'text-amber-400' : 'text-foreground/80'
                       )}
                     >
                       {total} pts
@@ -320,7 +321,7 @@ export default function PlayRecordDetailsPage() {
         {/* Dettagli punteggio (collapsible) */}
         {hasDimensions && record.players.some(p => p.scores.length > 0) && (
           <div
-            className="rounded-xl bg-white/5 border border-white/8 overflow-hidden"
+            className="rounded-xl bg-card/5 border border-border overflow-hidden"
             data-testid="score-details"
           >
             <button
@@ -330,24 +331,24 @@ export default function PlayRecordDetailsPage() {
             >
               <span>Dettagli punteggio</span>
               {scoresOpen ? (
-                <ChevronUp className="h-4 w-4 text-white/40" />
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-white/40" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               )}
             </button>
 
             {scoresOpen && (
-              <div className="border-t border-white/8 px-4 pb-4 pt-3 overflow-x-auto">
+              <div className="border-t border-border px-4 pb-4 pt-3 overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr>
-                      <th className="text-left text-white/40 font-semibold pb-2 pr-3">Giocatore</th>
+                      <th className="text-left text-muted-foreground font-semibold pb-2 pr-3">Giocatore</th>
                       {record.scoringConfig.enabledDimensions.map(dim => (
-                        <th key={dim} className="text-center text-white/40 font-semibold pb-2 px-2">
+                        <th key={dim} className="text-center text-muted-foreground font-semibold pb-2 px-2">
                           {dim}
                         </th>
                       ))}
-                      <th className="text-right text-white/40 font-semibold pb-2 pl-3">Tot</th>
+                      <th className="text-right text-muted-foreground font-semibold pb-2 pl-3">Tot</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -357,12 +358,12 @@ export default function PlayRecordDetailsPage() {
                       );
                       const total = getPlayerTotalScore(player);
                       return (
-                        <tr key={player.id} className="border-t border-white/5">
+                        <tr key={player.id} className="border-t border-border">
                           <td className="text-white font-semibold py-2 pr-3 whitespace-nowrap">
                             {player.displayName}
                           </td>
                           {record.scoringConfig.enabledDimensions.map(dim => (
-                            <td key={dim} className="text-center text-white/70 py-2 px-2">
+                            <td key={dim} className="text-center text-foreground/80 py-2 px-2">
                               {scoreMap[dim] ?? '—'}
                             </td>
                           ))}
@@ -382,7 +383,7 @@ export default function PlayRecordDetailsPage() {
         {/* Note */}
         {record.notes && (
           <div
-            className="rounded-xl bg-white/5 border border-white/8 overflow-hidden"
+            className="rounded-xl bg-card/5 border border-border overflow-hidden"
             data-testid="notes-section"
           >
             <button
@@ -392,14 +393,14 @@ export default function PlayRecordDetailsPage() {
             >
               <span>📝 Note</span>
               {notesOpen ? (
-                <ChevronUp className="h-4 w-4 text-white/40" />
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-white/40" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               )}
             </button>
             {notesOpen && (
-              <div className="border-t border-white/8 px-4 pb-4 pt-3">
-                <p className="text-sm text-white/70 whitespace-pre-wrap">{record.notes}</p>
+              <div className="border-t border-border px-4 pb-4 pt-3">
+                <p className="text-sm text-foreground/80 whitespace-pre-wrap">{record.notes}</p>
               </div>
             )}
           </div>

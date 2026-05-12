@@ -46,16 +46,16 @@ function DiceQuickLogForm({ players, defaultPlayerId, onSave, onCancel }: DiceQu
 
   return (
     <div
-      className="flex flex-col gap-2.5 rounded-xl border border-gray-200 bg-gray-50 p-3"
+      className="flex flex-col gap-2.5 rounded-xl border border-border bg-muted p-3"
       data-testid="dice-quick-log-form"
     >
-      <h4 className="text-xs font-semibold text-gray-600">Registra tiro manuale</h4>
+      <h4 className="text-xs font-semibold text-muted-foreground">Registra tiro manuale</h4>
 
       {players.length > 0 && (
         <select
           value={selectedPlayerId}
           onChange={e => setSelectedPlayerId(e.target.value)}
-          className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
+          className="rounded-lg border border-border px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
           data-testid="quick-log-player"
         >
           <option value="">— nessun giocatore —</option>
@@ -75,7 +75,7 @@ function DiceQuickLogForm({ players, defaultPlayerId, onSave, onCancel }: DiceQu
         onKeyDown={e => {
           if (e.key === 'Enter' && canSubmit) handleSubmit();
         }}
-        className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
+        className="rounded-lg border border-border px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
         data-testid="quick-log-formula"
       />
 
@@ -87,7 +87,7 @@ function DiceQuickLogForm({ players, defaultPlayerId, onSave, onCancel }: DiceQu
         onKeyDown={e => {
           if (e.key === 'Enter' && canSubmit) handleSubmit();
         }}
-        className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
+        className="rounded-lg border border-border px-2 py-1.5 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
         data-testid="quick-log-total"
       />
 
@@ -95,7 +95,7 @@ function DiceQuickLogForm({ players, defaultPlayerId, onSave, onCancel }: DiceQu
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 rounded-lg border border-gray-300 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100"
+          className="flex-1 rounded-lg border border-border py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
           data-testid="quick-log-cancel"
         >
           Annulla
@@ -108,7 +108,7 @@ function DiceQuickLogForm({ players, defaultPlayerId, onSave, onCancel }: DiceQu
             'flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors',
             canSubmit
               ? 'bg-[hsl(142,70%,45%)] text-white hover:bg-[hsl(142,70%,40%)]'
-              : 'cursor-not-allowed bg-gray-200 text-gray-400'
+              : 'cursor-not-allowed bg-muted text-muted-foreground'
           )}
           data-testid="quick-log-save"
         >
@@ -235,7 +235,7 @@ export function DiceRollerTab() {
     <div className="flex flex-col gap-4" data-testid="dice-roller-tab">
       {/* Universal presets */}
       <section>
-        <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
+        <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Preset
         </h3>
         <DicePresetRow presets={UNIVERSAL_DICE_PRESETS} onRoll={handleRoll} variant="universal" />
@@ -285,7 +285,7 @@ export function DiceRollerTab() {
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleSavePreset();
                   }}
-                  className="flex-1 rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
+                  className="flex-1 rounded-lg border border-border px-2 py-1 text-xs outline-none focus:border-[hsl(142,70%,45%)]"
                   data-testid="save-preset-input"
                 />
                 <button
@@ -296,7 +296,7 @@ export function DiceRollerTab() {
                     'rounded-lg px-2 py-1 text-xs font-medium transition-colors',
                     saveName.trim()
                       ? 'bg-[hsl(142,70%,45%)] text-white hover:bg-[hsl(142,70%,40%)]'
-                      : 'cursor-not-allowed bg-gray-200 text-gray-400'
+                      : 'cursor-not-allowed bg-muted text-muted-foreground'
                   )}
                   data-testid="save-preset-btn"
                 >
@@ -310,7 +310,7 @@ export function DiceRollerTab() {
 
       {/* Pool builder */}
       <section>
-        <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
+        <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Pool dadi
         </h3>
         <DicePoolBuilder onRoll={handleRoll} />
@@ -325,7 +325,7 @@ export function DiceRollerTab() {
           <button
             type="button"
             onClick={handleReroll}
-            className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:border-[hsl(142,70%,45%)] hover:text-[hsl(142,70%,45%)]"
+            className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground shadow-sm transition-colors hover:border-[hsl(142,70%,45%)] hover:text-[hsl(142,70%,45%)]"
             data-testid="dice-reroll-btn"
           >
             ↺ Ritira
@@ -355,7 +355,7 @@ export function DiceRollerTab() {
         <button
           type="button"
           onClick={() => setShowQuickLog(true)}
-          className="text-center text-xs text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline"
+          className="text-center text-xs text-muted-foreground underline-offset-2 hover:text-muted-foreground hover:underline"
           data-testid="dice-quick-log-btn"
         >
           📝 Registra tiro manuale

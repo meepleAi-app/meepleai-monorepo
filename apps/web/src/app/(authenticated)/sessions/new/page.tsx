@@ -73,7 +73,7 @@ export default function NewSessionPage() {
             </Button>
           </div>
         ) : (
-          <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+          <div className="rounded-xl border border-border p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-quicksand font-bold text-xl">Serata di Gioco</h2>
               <Button

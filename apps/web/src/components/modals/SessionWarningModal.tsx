@@ -123,17 +123,17 @@ export function SessionWarningModal({
           >
             {remainingMinutes}
           </div>
-          <div className="mt-1 text-sm text-slate-600 dark:text-slate-400" data-testid="time-unit">
+          <div className="mt-1 text-sm text-muted-foreground" data-testid="time-unit">
             {remainingMinutes === 1 ? 'minute remaining' : 'minutes remaining'}
           </div>
         </div>
 
         {/* Message */}
-        <p className="text-center text-slate-700 dark:text-slate-300">
+        <p className="text-center text-foreground">
           You haven&apos;t been active for a while. For your security, your session will expire
           soon.
           <br />
-          <span className="text-sm text-slate-600 dark:text-slate-400">
+          <span className="text-sm text-muted-foreground">
             Click &quot;Stay Logged In&quot; to continue your session.
           </span>
         </p>
@@ -162,7 +162,7 @@ export function SessionWarningModal({
         </div>
 
         {/* Help Text */}
-        <p className="text-xs text-center text-slate-500 dark:text-slate-500">
+        <p className="text-xs text-center text-muted-foreground">
           Sessions expire after 30 days of inactivity. Regular activity keeps your session active.
         </p>
       </div>

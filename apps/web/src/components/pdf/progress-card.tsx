@@ -167,7 +167,7 @@ export function ProgressCard({
   return (
     <div
       className={cn(
-        'rounded-lg border border-border/50 bg-white/70 dark:bg-white/5 backdrop-blur-md p-4 transition-all',
+        'rounded-lg border border-border/50 bg-card/70 dark:bg-card/5 backdrop-blur-md p-4 transition-all',
         'hover:shadow-md dark:hover:shadow-lg',
         className
       )}

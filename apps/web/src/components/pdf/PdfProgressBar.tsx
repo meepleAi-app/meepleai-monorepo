@@ -49,7 +49,7 @@ function getProgressColor(state: PdfState): string {
     return '[&>div]:bg-red-500';
   }
   if (state === 'pending') {
-    return '[&>div]:bg-gray-400';
+    return '[&>div]:bg-muted-foreground';
   }
   // Processing states: uploading, extracting, chunking, embedding, indexing
   return '[&>div]:bg-blue-500';
@@ -125,7 +125,7 @@ export function PdfProgressBar({
           'h-2',
           colorClass,
           // Glassmorphic effect
-          'bg-white/30 backdrop-blur-sm border border-white/20'
+          'bg-card/30 backdrop-blur-sm border border-border'
         )}
         aria-hidden="true"
       />

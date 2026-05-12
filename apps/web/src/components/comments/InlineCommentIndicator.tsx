@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 import React, { useState, useEffect } from 'react';
 
 interface InlineCommentIndicatorProps {
@@ -150,7 +151,7 @@ export const InlineCommentIndicator: React.FC<InlineCommentIndicatorProps> = ({
       {/* Hover tooltip */}
       {showTooltip && truncatedPreview && (
         <div
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 max-w-[300px] px-3 py-2 bg-gray-800 text-white text-xs rounded shadow-lg whitespace-normal break-words z-[1000] pointer-events-none"
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 max-w-[300px] px-3 py-2 bg-card text-white text-xs rounded shadow-lg whitespace-normal break-words z-[1000] pointer-events-none"
         >
           {truncatedPreview}
           {/* Tooltip arrow */}

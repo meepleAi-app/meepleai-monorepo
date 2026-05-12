@@ -40,7 +40,7 @@ function GameTile({
         {selected && (
           <span
             aria-hidden="true"
-            className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-bold text-[hsl(var(--e-game))] shadow"
+            className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-card text-sm font-bold text-[hsl(var(--e-game))] shadow"
           >
             ✓
           </span>

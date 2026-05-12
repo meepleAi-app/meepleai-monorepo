@@ -124,7 +124,7 @@ export function BoardStateEditor({
     const previewHeight = Math.min(board.gridHeight, maxPreviewSize);
 
     return (
-      <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+      <div className="rounded-md border border-border bg-muted p-4">
         <div className="mb-2 flex items-center justify-between text-sm text-muted-foreground">
           <span>Anteprima Griglia</span>
           <span>
@@ -132,7 +132,7 @@ export function BoardStateEditor({
           </span>
         </div>
         <div
-          className="grid gap-0.5 border border-gray-300"
+          className="grid gap-0.5 border border-border"
           style={{
             gridTemplateColumns: `repeat(${previewWidth}, ${cellSize}px)`,
             width: `${previewWidth * cellSize + (previewWidth - 1) * 2}px`,
@@ -146,7 +146,7 @@ export function BoardStateEditor({
               return (
                 <div
                   key={`${x}-${y}`}
-                  className="flex items-center justify-center border border-gray-200 bg-white text-xs"
+                  className="flex items-center justify-center border border-border bg-card text-xs"
                   style={{
                     width: `${cellSize}px`,
                     height: `${cellSize}px`,

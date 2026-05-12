@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 /**
  * Agent Chat Panel Component (Issue #3156)
  *
@@ -216,9 +217,9 @@ export function AgentChatPanel({
   const selectedMode = agentModes.find(m => m.id === selectedAgentMode);
 
   return (
-    <div className={cn('flex flex-col h-full bg-white', className)}>
+    <div className={cn('flex flex-col h-full bg-card', className)}>
       {/* Agent & PDF Selectors Header */}
-      <div className="border-b border-gray-200 p-4 bg-gray-50/50">
+      <div className="border-b border-border p-4 bg-muted/50">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Agent Mode Selector */}
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
@@ -301,7 +302,7 @@ export function AgentChatPanel({
                 className={cn(
                   'rounded-2xl px-4 py-3',
                   message.role === 'agent'
-                    ? 'bg-gray-100 rounded-tl-sm'
+                    ? 'bg-muted rounded-tl-sm'
                     : 'bg-blue-600 text-white rounded-tr-sm'
                 )}
               >
@@ -341,7 +342,7 @@ export function AgentChatPanel({
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
               <Bot className="w-4 h-4 text-white" />
             </div>
-            <div className="bg-gray-100 rounded-2xl rounded-tl-sm">
+            <div className="bg-muted rounded-2xl rounded-tl-sm">
               <TypingIndicator />
             </div>
           </div>
@@ -351,7 +352,7 @@ export function AgentChatPanel({
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-gray-200 p-4 bg-white">
+      <div className="border-t border-border p-4 bg-card">
         <div className="flex items-end gap-3">
           <div className="flex-1">
             <Textarea

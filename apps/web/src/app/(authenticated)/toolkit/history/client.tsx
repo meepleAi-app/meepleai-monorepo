@@ -91,7 +91,7 @@ export default function ToolkitHistoryPage() {
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
             Session History
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300">
+          <p className="text-lg text-muted-foreground">
             Review past game sessions and statistics
           </p>
         </div>
@@ -152,14 +152,14 @@ export default function ToolkitHistoryPage() {
           <Card>
             <CardContent className="py-12 text-center">
               <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-purple-600" />
-              <p className="text-gray-600 dark:text-gray-400">Loading sessions...</p>
+              <p className="text-muted-foreground">Loading sessions...</p>
             </CardContent>
           </Card>
         ) : sessions.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <p className="text-gray-600 dark:text-gray-400 mb-4">No sessions found</p>
+              <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground mb-4">No sessions found</p>
               <Button onClick={() => router.push('/toolkit')}>Start Your First Session</Button>
             </CardContent>
           </Card>
@@ -175,7 +175,7 @@ export default function ToolkitHistoryPage() {
                         <CardTitle className="text-base">
                           {session.gameName || 'Generic Session'}
                         </CardTitle>
-                        <p className="text-sm text-gray-500">{session.sessionCode}</p>
+                        <p className="text-sm text-muted-foreground">{session.sessionCode}</p>
                       </div>
                     </div>
                     <Badge variant={session.status === 'Finalized' ? 'default' : 'secondary'}>
@@ -184,12 +184,12 @@ export default function ToolkitHistoryPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="w-4 h-4" />
                     <span>{new Date(session.sessionDate).toLocaleDateString('it-IT')}</span>
                   </div>
 
-                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Trophy className="w-4 h-4" />
                     <span>{session.participantCount} players</span>
                   </div>

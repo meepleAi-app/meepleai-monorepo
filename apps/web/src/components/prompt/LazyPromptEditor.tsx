@@ -11,9 +11,9 @@ export type { PromptEditorProps } from './PromptEditor';
 const LazyPromptEditor = dynamic(() => import('./PromptEditor'), {
   ssr: false,
   loading: () => (
-    <div className="border border-gray-300 rounded-md overflow-hidden">
-      <div className="flex items-center justify-center h-[400px] bg-gray-50">
-        <div className="text-gray-500 animate-pulse">Loading editor...</div>
+    <div className="border border-border rounded-md overflow-hidden">
+      <div className="flex items-center justify-center h-[400px] bg-muted">
+        <div className="text-muted-foreground animate-pulse">Loading editor...</div>
       </div>
     </div>
   ),

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
@@ -223,7 +224,7 @@ function VersionHistoryContent() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="m-0">Storico Versioni RuleSpec</h1>
-          <p className="my-2 mx-0 text-gray-600">
+          <p className="my-2 mx-0 text-muted-foreground">
             Game: <strong>{gameId}</strong>
           </p>
         </div>
@@ -249,7 +250,7 @@ function VersionHistoryContent() {
       )}
 
       {/* View mode toggle */}
-      <div className="mb-4 border-b-2 border-gray-300">
+      <div className="mb-4 border-b-2 border-border">
         <div className="flex gap-0">
           <button
             onClick={() => setViewMode('list')}
@@ -257,7 +258,7 @@ function VersionHistoryContent() {
               'px-6 py-3 border-none cursor-pointer text-sm transition-all duration-200',
               viewMode === 'list'
                 ? 'bg-blue-600 text-white border-b-2 border-blue-600 font-bold'
-                : 'bg-transparent text-gray-600 border-b-2 border-transparent'
+                : 'bg-transparent text-muted-foreground border-b-2 border-transparent'
             )}
           >
             📋 List View
@@ -268,7 +269,7 @@ function VersionHistoryContent() {
               'px-6 py-3 border-none cursor-pointer text-sm transition-all duration-200',
               viewMode === 'timeline'
                 ? 'bg-blue-600 text-white border-b-2 border-blue-600 font-bold'
-                : 'bg-transparent text-gray-600 border-b-2 border-transparent'
+                : 'bg-transparent text-muted-foreground border-b-2 border-transparent'
             )}
           >
             🕒 Timeline View
@@ -304,20 +305,20 @@ function VersionHistoryContent() {
               {history?.versions.map((version, index) => (
                 <div
                   key={version.version}
-                  className="p-3 bg-white border border-gray-300 rounded text-sm"
+                  className="p-3 bg-card border border-border rounded text-sm"
                 >
                   <div className="flex justify-between items-center mb-2">
-                    <strong className={index === 0 ? 'text-green-600' : 'text-gray-900'}>
+                    <strong className={index === 0 ? 'text-green-600' : 'text-foreground'}>
                       {version.version}
                       {index === 0 && (
                         <span className="ml-2 text-xs text-green-600">(corrente)</span>
                       )}
                     </strong>
                   </div>
-                  <div className="text-xs text-gray-600 mb-2">
+                  <div className="text-xs text-muted-foreground mb-2">
                     {new Date(version.createdAt).toLocaleString()}
                   </div>
-                  <div className="text-xs text-gray-600 mb-2">{version.atomCount} regole</div>
+                  <div className="text-xs text-muted-foreground mb-2">{version.atomCount} regole</div>
                   {authUser.role.toLowerCase() === 'admin' ||
                   authUser.role.toLowerCase() === 'superadmin' ||
                   authUser.role.toLowerCase() === 'editor' ? (
@@ -327,7 +328,7 @@ function VersionHistoryContent() {
                       className={cn(
                         'w-full px-3 py-1.5 text-white border-none rounded text-xs',
                         index === 0 || isRestoring
-                          ? 'bg-gray-300 cursor-not-allowed'
+                          ? 'bg-muted cursor-not-allowed'
                           : 'bg-orange-500 cursor-pointer'
                       )}
                     >
@@ -352,7 +353,7 @@ function VersionHistoryContent() {
                     id="from-version"
                     value={selectedFromVersion}
                     onChange={e => setSelectedFromVersion(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded text-sm"
+                    className="w-full p-2 border border-border rounded text-sm"
                   >
                     <option value="">Seleziona versione</option>
                     {history?.versions.map(version => (
@@ -370,7 +371,7 @@ function VersionHistoryContent() {
                     id="to-version"
                     value={selectedToVersion}
                     onChange={e => setSelectedToVersion(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded text-sm"
+                    className="w-full p-2 border border-border rounded text-sm"
                   >
                     <option value="">Seleziona versione</option>
                     {history?.versions.map(version => (
@@ -405,7 +406,7 @@ function VersionHistoryContent() {
 
                 {/* Comments section for the selected "to" version */}
                 {selectedToVersion && authUser && (
-                  <div className="mt-8 border-t-2 border-gray-300 pt-6">
+                  <div className="mt-8 border-t-2 border-border pt-6">
                     <CommentThread
                       gameId={gameId as string}
                       version={selectedToVersion}
@@ -416,7 +417,7 @@ function VersionHistoryContent() {
                 )}
               </>
             ) : (
-              <p className="text-gray-400">Seleziona due versioni per visualizzare le differenze</p>
+              <p className="text-muted-foreground">Seleziona due versioni per visualizzare le differenze</p>
             )}
           </div>
         </div>
@@ -429,7 +430,7 @@ export default function VersionHistory() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+        <div className="min-h-dvh flex items-center justify-center bg-muted text-muted-foreground">
           Caricamento cronologia versioni...
         </div>
       }

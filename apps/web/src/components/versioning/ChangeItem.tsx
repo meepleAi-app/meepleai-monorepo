@@ -96,12 +96,12 @@ export function ChangeItem({ change }: ChangeItemProps) {
             <strong>Testo:</strong> {change.newValue.text}
           </div>
           {change.newValue.section && (
-            <div className="text-xs text-gray-600">
+            <div className="text-xs text-muted-foreground">
               Sezione: {change.newValue.section}
             </div>
           )}
           {change.newValue.page && (
-            <div className="text-xs text-gray-600">
+            <div className="text-xs text-muted-foreground">
               Pagina: {change.newValue.page}
             </div>
           )}
@@ -114,12 +114,12 @@ export function ChangeItem({ change }: ChangeItemProps) {
             <strong>Testo:</strong> {change.oldValue.text}
           </div>
           {change.oldValue.section && (
-            <div className="text-xs text-gray-600 line-through">
+            <div className="text-xs text-muted-foreground line-through">
               Sezione: {change.oldValue.section}
             </div>
           )}
           {change.oldValue.page && (
-            <div className="text-xs text-gray-600 line-through">
+            <div className="text-xs text-muted-foreground line-through">
               Pagina: {change.oldValue.page}
             </div>
           )}
@@ -135,11 +135,11 @@ export function ChangeItem({ change }: ChangeItemProps) {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-2 bg-red-50 rounded">
-                  <div className="text-xs text-gray-600 mb-1">Prima:</div>
+                  <div className="text-xs text-muted-foreground mb-1">Prima:</div>
                   <div className="text-sm">{fieldChange.oldValue || "(vuoto)"}</div>
                 </div>
                 <div className="p-2 bg-green-50 rounded">
-                  <div className="text-xs text-gray-600 mb-1">Dopo:</div>
+                  <div className="text-xs text-muted-foreground mb-1">Dopo:</div>
                   <div className="text-sm">{fieldChange.newValue || "(vuoto)"}</div>
                 </div>
               </div>
@@ -150,7 +150,7 @@ export function ChangeItem({ change }: ChangeItemProps) {
 
       {change.type === "Unchanged" && change.oldValue && (
         <div data-testid="change-unchanged-content">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-muted-foreground">
             {change.oldValue.text}
           </div>
         </div>

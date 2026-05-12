@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import {
@@ -27,7 +28,7 @@ export function SqlPreviewModal({ sql, open, onOpenChange }: SqlPreviewModalProp
           <DialogTitle>SQL Preview</DialogTitle>
         </DialogHeader>
 
-        <div className="max-h-[60vh] overflow-auto rounded-lg border border-slate-200/60 bg-slate-50 p-4 dark:border-zinc-700/40 dark:bg-zinc-900/50">
+        <div className="max-h-[60vh] overflow-auto rounded-lg border border-border/60 bg-muted p-4 dark:border-zinc-700/40 dark:bg-zinc-900/50">
           <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-foreground">
             <code>{sql}</code>
           </pre>

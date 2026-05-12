@@ -37,10 +37,10 @@ export function Randomizer({ onAction }: RandomizerProps) {
   const isEmpty = randomizer.remainingItems.length === 0;
 
   return (
-    <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+    <div className="space-y-3 rounded-lg border border-border bg-card p-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-700">Randomizzatore</span>
-        <span className="text-xs text-slate-400">
+        <span className="text-sm font-semibold text-foreground">Randomizzatore</span>
+        <span className="text-xs text-muted-foreground">
           <span data-testid="pool-count">{randomizer.remainingItems.length}</span>/
           {randomizer.originalItems.length}
         </span>
@@ -75,7 +75,7 @@ export function Randomizer({ onAction }: RandomizerProps) {
       )}
 
       {isEmpty && randomizer.originalItems.length > 0 && (
-        <p className="text-center text-xs text-slate-400">
+        <p className="text-center text-xs text-muted-foreground">
           Pool esaurito — premi Reset per ricominciare
         </p>
       )}

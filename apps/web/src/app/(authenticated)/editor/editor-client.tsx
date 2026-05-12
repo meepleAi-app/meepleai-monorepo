@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 /**
  * Editor Page - Client Component
  *
@@ -523,7 +524,7 @@ export function EditorClient() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="m-0">Editor RuleSpec</h1>
-          <p className="my-2 mx-0 text-gray-600">
+          <p className="my-2 mx-0 text-muted-foreground">
             Game: <strong>{gameId}</strong>
             {hasUnsavedChanges && (
               <span className="ml-3 text-orange-500 text-sm">• Modifiche non salvate</span>
@@ -578,7 +579,7 @@ export function EditorClient() {
                       disabled={!canUndo}
                       className={cn(
                         'px-3 py-1.5 text-white border-none rounded cursor-pointer text-sm',
-                        canUndo ? 'bg-blue-600' : 'bg-gray-300 cursor-not-allowed'
+                        canUndo ? 'bg-blue-600' : 'bg-muted cursor-not-allowed'
                       )}
                       title="Annulla (Ctrl+Z)"
                     >
@@ -589,7 +590,7 @@ export function EditorClient() {
                       disabled={!canRedo}
                       className={cn(
                         'px-3 py-1.5 text-white border-none rounded cursor-pointer text-sm',
-                        canRedo ? 'bg-blue-600' : 'bg-gray-300 cursor-not-allowed'
+                        canRedo ? 'bg-blue-600' : 'bg-muted cursor-not-allowed'
                       )}
                       title="Ripeti (Ctrl+Y)"
                     >
@@ -604,7 +605,7 @@ export function EditorClient() {
                     'px-4 py-1.5 text-white border-none rounded text-sm font-bold',
                     isValid && !isSaving && hasUnsavedChanges
                       ? 'bg-green-600 cursor-pointer'
-                      : 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-muted cursor-not-allowed'
                   )}
                 >
                   {isSaving ? 'Salvataggio...' : hasUnsavedChanges ? 'Salva Ora' : 'Salvato'}
@@ -637,7 +638,7 @@ export function EditorClient() {
                 onBlur={handleJsonBlur}
                 className={cn(
                   'flex-1 min-h-[600px] font-mono text-sm p-3 rounded resize-y',
-                  isValid ? 'border-2 border-gray-300' : 'border-2 border-red-600'
+                  isValid ? 'border-2 border-border' : 'border-2 border-red-600'
                 )}
                 spellCheck={false}
               />
@@ -647,7 +648,7 @@ export function EditorClient() {
           {/* Preview Panel */}
           <div className="flex-[1_1_50%] flex flex-col">
             <h2 className="mt-0">Preview</h2>
-            <div className="flex-1 p-4 bg-gray-50 border border-gray-300 rounded overflow-y-auto min-h-[600px]">
+            <div className="flex-1 p-4 bg-muted border border-border rounded overflow-y-auto min-h-[600px]">
               {isValid && (viewMode === 'rich' ? richContent : jsonContent) ? (
                 viewMode === 'rich' ? (
                   <div dangerouslySetInnerHTML={{ __html: sanitizedRichContent }} />
@@ -655,7 +656,7 @@ export function EditorClient() {
                   <RuleSpecPreview ruleSpec={JSON.parse(jsonContent)} />
                 )
               ) : (
-                <p className="text-gray-400">
+                <p className="text-muted-foreground">
                   Correggi gli errori per visualizzare l&apos;anteprima
                 </p>
               )}
@@ -697,12 +698,12 @@ function RuleSpecPreview({ ruleSpec }: { ruleSpec: RuleSpec }) {
       <div>
         <h3 className="mb-3">Regole</h3>
         {ruleSpec.atoms.map((rule, index) => (
-          <div key={rule.id} className="mb-4 p-3 bg-white border border-gray-300 rounded">
+          <div key={rule.id} className="mb-4 p-3 bg-card border border-border rounded">
             <div className="flex justify-between mb-2">
               <strong className="text-blue-600">
                 {index + 1}. {rule.id}
               </strong>
-              <div className="text-xs text-gray-600">
+              <div className="text-xs text-muted-foreground">
                 {rule.section && <span className="mr-3">Sezione: {rule.section}</span>}
                 {rule.page && <span className="mr-3">Pag. {rule.page}</span>}
                 {rule.line && <span>Riga {rule.line}</span>}

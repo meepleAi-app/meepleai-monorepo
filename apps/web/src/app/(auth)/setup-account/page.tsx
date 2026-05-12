@@ -23,7 +23,7 @@ export default function SetupAccountPage() {
       fallback={
         <AuthLayout title="Caricamento...">
           <div className="text-center py-8">
-            <div className="animate-pulse text-slate-500">Caricamento...</div>
+            <div className="animate-pulse text-muted-foreground">Caricamento...</div>
           </div>
         </AuthLayout>
       }

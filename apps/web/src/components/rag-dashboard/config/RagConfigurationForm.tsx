@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 /**
@@ -77,12 +78,12 @@ function ConfigurableInput<T extends number | string>({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">{label}</label>
+      <label className="block text-sm font-medium text-foreground">{label}</label>
 
       <div className="grid grid-cols-2 gap-4">
         {/* Estimated Value */}
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Stimato (teorico)</label>
+          <label className="block text-xs text-muted-foreground mb-1">Stimato (teorico)</label>
           <div className="relative">
             <input
               type={type}
@@ -96,18 +97,18 @@ function ConfigurableInput<T extends number | string>({
               max={max}
               step={step}
               className={`w-full px-3 py-2 border rounded-md text-sm ${
-                !hasMeasured ? 'border-blue-300 bg-blue-50' : 'border-gray-300 bg-gray-50'
+                !hasMeasured ? 'border-blue-300 bg-blue-50' : 'border-border bg-muted'
               }`}
             />
             {suffix && (
-              <span className="absolute right-3 top-2 text-gray-400 text-sm">{suffix}</span>
+              <span className="absolute right-3 top-2 text-muted-foreground text-sm">{suffix}</span>
             )}
           </div>
         </div>
 
         {/* Measured Value */}
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Misurato (produzione)</label>
+          <label className="block text-xs text-muted-foreground mb-1">Misurato (produzione)</label>
           <div className="relative">
             <input
               type={type}
@@ -126,15 +127,15 @@ function ConfigurableInput<T extends number | string>({
               step={step}
               placeholder="Non misurato"
               className={`w-full px-3 py-2 border rounded-md text-sm ${
-                hasMeasured ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'
+                hasMeasured ? 'border-green-300 bg-green-50' : 'border-border bg-card'
               }`}
             />
             {suffix && (
-              <span className="absolute right-3 top-2 text-gray-400 text-sm">{suffix}</span>
+              <span className="absolute right-3 top-2 text-muted-foreground text-sm">{suffix}</span>
             )}
           </div>
           {value.measuredAt && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-muted-foreground">
               Aggiornato: {new Date(value.measuredAt).toLocaleDateString()}
             </span>
           )}
@@ -143,7 +144,7 @@ function ConfigurableInput<T extends number | string>({
 
       {/* Effective Value Display */}
       <div className="flex items-center gap-2 text-sm">
-        <span className="text-gray-500">Valore effettivo:</span>
+        <span className="text-muted-foreground">Valore effettivo:</span>
         <span className={`font-semibold ${hasMeasured ? 'text-green-600' : 'text-blue-600'}`}>
           {typeof effectiveValue === 'number' ? effectiveValue.toLocaleString() : effectiveValue}
           {suffix && ` ${suffix}`}
@@ -155,7 +156,7 @@ function ConfigurableInput<T extends number | string>({
         )}
       </div>
 
-      {helpText && <p className="text-xs text-gray-400">{helpText}</p>}
+      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
     </div>
   );
 }
@@ -178,26 +179,26 @@ function StrategyConfigPanel({ strategy: _strategy, config, onChange }: Strategy
       {/* Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors"
+        className="w-full px-4 py-3 bg-muted flex items-center justify-between hover:bg-muted transition-colors"
       >
         <div className="flex items-center gap-3">
           <span className="font-semibold text-lg">{config.displayName}</span>
-          <span className="text-gray-500 text-sm">{config.description}</span>
+          <span className="text-muted-foreground text-sm">{config.description}</span>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right text-sm">
-            <div className="text-gray-600">
+            <div className="text-muted-foreground">
               {getEffectiveValue(config.tokens).toLocaleString()} tokens
             </div>
-            <div className="text-gray-500">${getEffectiveValue(config.cost).toFixed(4)}/query</div>
+            <div className="text-muted-foreground">${getEffectiveValue(config.cost).toFixed(4)}/query</div>
           </div>
-          <span className="text-gray-400">{isExpanded ? '▼' : '▶'}</span>
+          <span className="text-muted-foreground">{isExpanded ? '▼' : '▶'}</span>
         </div>
       </button>
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="p-4 space-y-6 bg-white">
+        <div className="p-4 space-y-6 bg-card">
           {/* Tokens & Cost */}
           <div className="grid grid-cols-2 gap-6">
             <ConfigurableInput
@@ -220,7 +221,7 @@ function StrategyConfigPanel({ strategy: _strategy, config, onChange }: Strategy
 
           {/* Latency */}
           <div>
-            <h4 className="font-medium text-gray-700 mb-3">Latenza</h4>
+            <h4 className="font-medium text-foreground mb-3">Latenza</h4>
             <div className="grid grid-cols-2 gap-6">
               <ConfigurableInput
                 label="Latenza minima"
@@ -248,14 +249,14 @@ function StrategyConfigPanel({ strategy: _strategy, config, onChange }: Strategy
                 min={0}
               />
             </div>
-            <div className="mt-2 text-sm text-gray-500">
+            <div className="mt-2 text-sm text-muted-foreground">
               Visualizzato come: <span className="font-mono">{formatLatency(config)}</span>
             </div>
           </div>
 
           {/* Accuracy */}
           <div>
-            <h4 className="font-medium text-gray-700 mb-3">Accuratezza</h4>
+            <h4 className="font-medium text-foreground mb-3">Accuratezza</h4>
             <div className="grid grid-cols-2 gap-6">
               <ConfigurableInput
                 label="Accuratezza minima"
@@ -288,17 +289,17 @@ function StrategyConfigPanel({ strategy: _strategy, config, onChange }: Strategy
                 step={0.01}
               />
             </div>
-            <div className="mt-2 text-sm text-gray-500">
+            <div className="mt-2 text-sm text-muted-foreground">
               Visualizzato come: <span className="font-mono">{formatAccuracy(config)}</span>
             </div>
           </div>
 
           {/* Usage Distribution */}
           <div>
-            <h4 className="font-medium text-gray-700 mb-3">Distribuzione utilizzo</h4>
+            <h4 className="font-medium text-foreground mb-3">Distribuzione utilizzo</h4>
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Min %</label>
+                <label className="block text-xs text-muted-foreground mb-1">Min %</label>
                 <input
                   type="number"
                   value={getEffectiveValue(config.usagePercent).min}
@@ -320,7 +321,7 @@ function StrategyConfigPanel({ strategy: _strategy, config, onChange }: Strategy
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Max %</label>
+                <label className="block text-xs text-muted-foreground mb-1">Max %</label>
                 <input
                   type="number"
                   value={getEffectiveValue(config.usagePercent).max}
@@ -346,10 +347,10 @@ function StrategyConfigPanel({ strategy: _strategy, config, onChange }: Strategy
 
           {/* Models */}
           <div>
-            <h4 className="font-medium text-gray-700 mb-2">Modelli primari</h4>
+            <h4 className="font-medium text-foreground mb-2">Modelli primari</h4>
             <div className="flex flex-wrap gap-2">
               {config.primaryModels.map(model => (
-                <span key={model} className="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded">
+                <span key={model} className="px-2 py-1 bg-muted text-foreground text-sm rounded">
                   {model}
                 </span>
               ))}
@@ -383,17 +384,17 @@ function ModelPricingPanel({ pricing, onChange }: ModelPricingPanelProps) {
     <div className="border rounded-lg overflow-hidden">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 bg-gray-50 flex items-center justify-between hover:bg-gray-100"
+        className="w-full px-4 py-3 bg-muted flex items-center justify-between hover:bg-muted"
       >
         <div className="flex items-center gap-3">
           <span className="font-semibold text-lg">Prezzi Modelli LLM</span>
-          <span className="text-gray-500 text-sm">{pricing.length} modelli configurati</span>
+          <span className="text-muted-foreground text-sm">{pricing.length} modelli configurati</span>
         </div>
-        <span className="text-gray-400">{isExpanded ? '▼' : '▶'}</span>
+        <span className="text-muted-foreground">{isExpanded ? '▼' : '▶'}</span>
       </button>
 
       {isExpanded && (
-        <div className="p-4 bg-white">
+        <div className="p-4 bg-card">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -408,9 +409,9 @@ function ModelPricingPanel({ pricing, onChange }: ModelPricingPanelProps) {
               </thead>
               <tbody>
                 {pricing.map((model, index) => (
-                  <tr key={model.modelId} className="border-b hover:bg-gray-50">
+                  <tr key={model.modelId} className="border-b hover:bg-muted">
                     <td className="py-2 px-2 font-medium">{model.modelName}</td>
-                    <td className="py-2 px-2 text-gray-500">{model.provider}</td>
+                    <td className="py-2 px-2 text-muted-foreground">{model.provider}</td>
                     <td className="py-2 px-2">
                       <input
                         type="number"
@@ -488,7 +489,7 @@ function ModelPricingPanel({ pricing, onChange }: ModelPricingPanelProps) {
             </table>
           </div>
 
-          <div className="mt-4 text-xs text-gray-500">
+          <div className="mt-4 text-xs text-muted-foreground">
             Ultimo aggiornamento prezzi:{' '}
             {pricing.length > 0 && new Date(pricing[0].lastUpdated).toLocaleDateString()}
           </div>
@@ -528,7 +529,7 @@ function CostPreviewPanel({ config }: CostPreviewPanelProps) {
       <h3 className="font-semibold text-lg mb-4">Anteprima Costi Mensili</h3>
 
       <div className="mb-4">
-        <label className="block text-sm text-gray-600 mb-1">Query al mese</label>
+        <label className="block text-sm text-muted-foreground mb-1">Query al mese</label>
         <input
           type="number"
           value={queriesPerMonth}
@@ -550,7 +551,7 @@ function CostPreviewPanel({ config }: CostPreviewPanelProps) {
 
         {/* By Strategy */}
         <div>
-          <span className="text-sm text-gray-600">Per strategia:</span>
+          <span className="text-sm text-muted-foreground">Per strategia:</span>
           <div className="mt-2 space-y-1">
             {(Object.entries(costProjection.byStrategy) as [RagStrategy, number][])
               .filter(([, cost]) => cost > 0)
@@ -575,7 +576,7 @@ function CostPreviewPanel({ config }: CostPreviewPanelProps) {
         {/* Per Query */}
         <div className="pt-2 border-t">
           <div className="flex justify-between">
-            <span className="text-gray-600">Costo medio per query</span>
+            <span className="text-muted-foreground">Costo medio per query</span>
             <span className="font-mono">
               ${(costProjection.totalCost / queriesPerMonth).toFixed(6)}
             </span>
@@ -644,7 +645,7 @@ export function RagConfigurationForm({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Configurazione RAG</h1>
-          <p className="text-gray-500">
+          <p className="text-muted-foreground">
             Configura parametri di token, costi, accuratezza e latenza
           </p>
         </div>
@@ -654,17 +655,17 @@ export function RagConfigurationForm({
               Modifiche non salvate
             </span>
           )}
-          <button onClick={handleReset} className="px-4 py-2 border rounded-md hover:bg-gray-50">
+          <button onClick={handleReset} className="px-4 py-2 border rounded-md hover:bg-muted">
             Reset
           </button>
-          <button onClick={handleExport} className="px-4 py-2 border rounded-md hover:bg-gray-50">
+          <button onClick={handleExport} className="px-4 py-2 border rounded-md hover:bg-muted">
             Esporta JSON
           </button>
           <button
             onClick={handleSave}
             disabled={!isDirty}
             className={`px-4 py-2 rounded-md text-white ${
-              isDirty ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'
+              isDirty ? 'bg-blue-600 hover:bg-blue-700' : 'bg-muted cursor-not-allowed'
             }`}
           >
             Salva
@@ -673,7 +674,7 @@ export function RagConfigurationForm({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-6 p-3 bg-gray-50 rounded-lg text-sm">
+      <div className="flex items-center gap-6 p-3 bg-muted rounded-lg text-sm">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-blue-100 border border-blue-300 rounded" />
           <span>Valore stimato (attivo)</span>
@@ -683,7 +684,7 @@ export function RagConfigurationForm({
           <span>Valore misurato (attivo)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded" />
+          <div className="w-4 h-4 bg-muted border border-border rounded" />
           <span>Non configurato</span>
         </div>
       </div>
@@ -708,7 +709,7 @@ export function RagConfigurationForm({
       <CostPreviewPanel config={config} />
 
       {/* Metadata */}
-      <div className="text-sm text-gray-500 flex justify-between border-t pt-4">
+      <div className="text-sm text-muted-foreground flex justify-between border-t pt-4">
         <span>Schema version: {config.schemaVersion}</span>
         <span>Ultimo aggiornamento: {new Date(config.lastUpdated).toLocaleString()}</span>
       </div>

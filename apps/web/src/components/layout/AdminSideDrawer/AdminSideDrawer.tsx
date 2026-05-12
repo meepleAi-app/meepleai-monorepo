@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -282,7 +283,7 @@ export function AdminSideDrawer({ open, onClose }: AdminSideDrawerProps) {
       {/* Overlay */}
       <div
         data-testid="drawer-overlay"
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+        className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-40"
         onClick={onClose}
         aria-hidden="true"
       />

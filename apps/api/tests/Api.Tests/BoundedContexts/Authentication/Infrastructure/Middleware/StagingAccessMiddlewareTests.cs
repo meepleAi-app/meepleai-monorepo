@@ -51,13 +51,16 @@ public class StagingAccessMiddlewareTests
         {
             _allowed = emails.ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
-        public bool IsEmailAllowed(string email)
+        public ValueTask<bool> IsEmailAllowedAsync(string email, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(email)) return false;
-            if (_allowed.Count == 0) return true;
-            return _allowed.Contains(email);
+            if (string.IsNullOrWhiteSpace(email)) return ValueTask.FromResult(false);
+            // Fail-closed (#845): empty allowlist denies.
+            if (_allowed.Count == 0) return ValueTask.FromResult(false);
+            return ValueTask.FromResult(_allowed.Contains(email));
         }
-        public bool HasNonEmptyAllowlist => _allowed.Count > 0;
+        public ValueTask<bool> HasNonEmptyAllowlistAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(_allowed.Count > 0);
+        public void InvalidateCache() { /* no-op for tests */ }
     }
 
     private static IConfiguration ConfigWithContact(string? contactEmail)
@@ -204,11 +207,12 @@ public class StagingAccessMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WhenAllowlistEmpty_PassesThroughEvenForUnknownEmails()
+    public async Task InvokeAsync_WhenAllowlistEmpty_DeniesAccess_FailClosed()
     {
-        // Default-safe behavior: empty allowlist = open access.
-        // Combined with Staging-only wiring + startup warning, this prevents
-        // accidental lockout if STAGING_ALLOWED_EMAILS is misconfigured.
+        // Semantic change in #845: empty allowlist now FAIL-CLOSED.
+        // Previously "empty = open" — a latent landmine if the bootstrap seed
+        // failed silently. The new behavior makes a misconfigured Staging env
+        // explicitly deny all rather than silently allow.
         var context = CreateAuthenticatedContext("anyone@example.com");
         var nextCalled = false;
         var middleware = new StagingAccessMiddleware(
@@ -217,8 +221,8 @@ public class StagingAccessMiddlewareTests
 
         await middleware.InvokeAsync(context, new StubGuard(/* empty allowlist */));
 
-        nextCalled.Should().BeTrue();
-        context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+        nextCalled.Should().BeFalse("empty allowlist now fail-closed");
+        context.Response.StatusCode.Should().Be((int)HttpStatusCode.Forbidden);
     }
 
     private sealed record DeniedResponse(string Code, string Message, string ContactEmail);

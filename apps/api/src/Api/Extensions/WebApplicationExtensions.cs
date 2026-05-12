@@ -172,14 +172,20 @@ internal static class WebApplicationExtensions
         if (app.Environment.IsEnvironment("Staging"))
         {
             // Resolve singleton directly from root container — no scope needed since
-            // IStagingAccessGuard is registered as Singleton and has no IDisposable
-            // dependencies. Startup code, no concurrency hazard.
+            // IStagingAccessGuard is registered as Singleton with a 60s memory cache (#845).
+            // The hot-path uses a scope factory for DB access; startup probe stays lightweight.
+            // Empty allowlist now FAIL-CLOSED in Staging (denies all) — the previous
+            // "empty = pass-through" semantics were a latent landmine if the bootstrap
+            // seed failed silently.
             var guard = app.Services.GetRequiredService<IStagingAccessGuard>();
-            if (!guard.HasNonEmptyAllowlist)
+            var hasEntries = guard.HasNonEmptyAllowlistAsync().AsTask().GetAwaiter().GetResult();
+            if (!hasEntries)
             {
                 app.Logger.LogWarning(
-                    "STAGING_ACCESS: middleware active but STAGING_ALLOWED_EMAILS is empty. " +
-                    "All authenticated users will pass through. Set STAGING_ALLOWED_EMAILS to enable allowlist.");
+                    "STAGING_ACCESS: middleware active but staging_allowlist is empty — " +
+                    "all authenticated requests will be denied (fail-closed). " +
+                    "Bootstrap seed should have inserted badsworm@gmail.com; " +
+                    "check SeedStagingAllowlistCommand execution.");
             }
             app.UseStagingAccessGuard();
         }

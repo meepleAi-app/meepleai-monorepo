@@ -10,6 +10,7 @@ using Api.Middleware;
 using Api.Models;
 using Api.Observability;
 using Api.Routing;
+using Api.Routing.Admin;
 using Api.Routing.AdministrationDiscover;
 using Api.Routing.GameManagement;
 using Api.Routing.GameToolkit;
@@ -736,6 +737,7 @@ v1Api.MapDashboardEndpoints();         // Issue #3314: User dashboard aggregated
 
 // Admin (users + content only)
 v1Api.MapAdminUserEndpoints();         // User management
+v1Api.MapAdminStagingAllowlistEndpoints(); // #845: DevOps Wave 1 staging email allowlist
 v1Api.MapAdminConfigEndpoints();       // Issue #3673: PDF limits admin UI (per-tier)
 v1Api.MapConfigurationEndpoints();     // System configuration CRUD & operations
 v1Api.MapFeatureFlagEndpoints();       // Feature flag management

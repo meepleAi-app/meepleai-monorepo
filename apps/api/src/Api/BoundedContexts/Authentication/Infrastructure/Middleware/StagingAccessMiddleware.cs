@@ -62,7 +62,7 @@ internal sealed class StagingAccessMiddleware
         }
 
         var email = context.User.FindFirstValue(ClaimTypes.Email);
-        if (!guard.IsEmailAllowed(email ?? string.Empty))
+        if (!await guard.IsEmailAllowedAsync(email ?? string.Empty, context.RequestAborted).ConfigureAwait(false))
         {
             await WriteDeniedAsync(context).ConfigureAwait(false);
             return;

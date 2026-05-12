@@ -604,20 +604,22 @@ export default [
       "@next/next/no-img-element": "off",
     },
   },
-  // DS-2 (token canonicalization, 2026-05-12):
+  // DS-15 (token canonicalization finalization, 2026-05-12):
   // Forbid hardcoded Tailwind neutral-greyscale utilities (bg-white, bg-slate-*,
   // text-gray-*, …) in src/. Components must consume semantic tokens from the
   // canonical design system (bg-background, bg-card, text-muted-foreground, …)
   // so the mockup palette flows through every surface uniformly.
   //
-  // Mode: `warn` during DS-3 inventory + DS-4..DS-11 cluster migrations.
-  // Switched to `error` in DS-12 once `pnpm lint:tokens --max-warnings 0` is green.
+  // Mode: `error` — enforced after DS-4..DS-14 migrated all 5710 violations.
+  // File-level eslint-disable comments are allowed only for the documented
+  // mockup `.e-bg` pattern (white text on style-prop colored backgrounds);
+  // surgical line-level suppressions preferred where feasible.
   //
   // Spec: docs/for-developers/specs/2026-05-12-token-canonicalization.md
   {
     files: ["src/**/*.{ts,tsx}"],
     rules: {
-      "local/no-hardcoded-color-utility": "warn",
+      "local/no-hardcoded-color-utility": "error",
     },
   },
 ];

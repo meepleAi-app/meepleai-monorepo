@@ -313,7 +313,7 @@ export function GamebookIndexView(): ReactElement {
           className="mx-auto flex max-w-[1280px] flex-col items-center gap-4 px-4 py-12 text-center sm:px-8"
         >
           <p className="text-lg font-semibold text-foreground">{t('gamebook.index.error.title')}</p>
-          <p className="text-sm text-slate-700">{t('gamebook.index.error.description')}</p>
+          <p className="text-sm text-foreground">{t('gamebook.index.error.description')}</p>
           <button
             type="button"
             onClick={handleRetry}

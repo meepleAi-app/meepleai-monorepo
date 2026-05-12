@@ -1,0 +1,106 @@
+# Dev Async — non-blocking heavy checks on push to main-dev
+#
+# Per ADR-054 and epic #842 / issue #846: heavier integration + E2E suites
+# run AFTER the merge to main-dev, not on the PR. Target SLO < 15 min.
+# Failures here trigger the auto-revert bot (#843) once that lands; in the
+# meantime, repeated red runs surface in the nightly digest (#850).
+#
+# This workflow does NOT gate PR merges. The hot path is dev-fast.yml.
+name: Dev Async
+
+on:
+  push:
+    branches: [main-dev]
+    paths:
+      - 'apps/web/**'
+      - 'apps/api/**'
+      - 'apps/orchestration-service/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'global.json'
+      - '.github/workflows/dev-async.yml'
+      - '.github/actions/**'
+  workflow_dispatch:
+
+concurrency:
+  group: dev-async-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
+        id: filter
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            frontend:
+              - 'apps/web/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+            backend:
+              - 'apps/api/**'
+              - 'global.json'
+
+  backend-integration:
+    name: Backend Integration (Testcontainers)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '9.0.x'
+          working-directory: apps/api
+
+      - name: Build (Release)
+        working-directory: apps/api
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Integration tests
+        working-directory: apps/api/tests/Api.Tests
+        run: dotnet test --no-build --configuration Release --filter "Category=Integration" --verbosity quiet
+
+  frontend-e2e-smoke:
+    name: Frontend E2E Smoke (Playwright subset)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+      - uses: ./.github/actions/setup-playwright
+        with:
+          working-directory: apps/web
+
+      - name: Run smoke specs only
+        # Use the dedicated smoke-real-backend folder (3 specs covering the
+        # game-night flow). The `@smoke` Playwright tag is documented in
+        # e2e/helpers/test-tags.ts but only one spec currently carries it
+        # (playwright-patterns-demo.spec.ts), so a tag-based --grep would
+        # silently match a single demo file. The folder-based filter is
+        # explicit and matches the specs the nightly run already exercises.
+        env:
+          PLAYWRIGHT_AUTH_BYPASS: 'true'
+        run: pnpm test:e2e -- e2e/smoke-real-backend/

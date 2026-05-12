@@ -1,0 +1,103 @@
+# Dev Fast Path — blocking CI on PR to main-dev
+#
+# Per ADR-054 (DevOps Multi-Branch Strategy) and epic #842 / issue #846:
+# Keep the hot path narrow. Lint + typecheck + unit only. Target SLO < 3 min.
+# Heavier checks run async on push to main-dev via dev-async.yml.
+#
+# Path filters skip the workflow when irrelevant files (e.g. docs-only PRs)
+# change so we don't burn minutes on a docs PR.
+name: Dev Fast
+
+on:
+  pull_request:
+    branches: [main-dev]
+    paths:
+      - 'apps/web/**'
+      - 'apps/api/**'
+      - 'apps/orchestration-service/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'global.json'
+      - '.github/workflows/dev-fast.yml'
+      - '.github/actions/**'
+  workflow_dispatch:
+
+concurrency:
+  group: dev-fast-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
+        id: filter
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            frontend:
+              - 'apps/web/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+            backend:
+              - 'apps/api/**'
+              - 'global.json'
+
+  frontend-fast:
+    name: Frontend Fast (lint + typecheck + unit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests (Vitest, no coverage)
+        # apps/web/package.json declares `"test": "vitest run"` — already
+        # non-watch. There is no separate `test:unit` script.
+        run: pnpm test
+
+  backend-fast:
+    name: Backend Fast (build + unit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '9.0.x'
+          working-directory: apps/api
+
+      - name: Build
+        working-directory: apps/api
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Unit tests
+        working-directory: apps/api/tests/Api.Tests
+        run: dotnet test --no-build --configuration Release --filter "Category=Unit" --verbosity quiet

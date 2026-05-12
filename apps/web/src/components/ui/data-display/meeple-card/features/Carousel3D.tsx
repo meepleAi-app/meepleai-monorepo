@@ -31,7 +31,7 @@ export function Carousel3D({
       <button
         onClick={() => navigate(activeIndex - 1)}
         disabled={activeIndex === 0}
-        className="z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/80 shadow-md backdrop-blur-sm transition-transform hover:scale-110 disabled:opacity-30"
+        className="z-10 flex h-10 w-10 items-center justify-center rounded-full bg-card/80 shadow-md backdrop-blur-sm transition-transform hover:scale-110 disabled:opacity-30"
       >
         ‹
       </button>
@@ -71,7 +71,7 @@ export function Carousel3D({
       <button
         onClick={() => navigate(activeIndex + 1)}
         disabled={activeIndex === cards.length - 1}
-        className="z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/80 shadow-md backdrop-blur-sm transition-transform hover:scale-110 disabled:opacity-30"
+        className="z-10 flex h-10 w-10 items-center justify-center rounded-full bg-card/80 shadow-md backdrop-blur-sm transition-transform hover:scale-110 disabled:opacity-30"
       >
         ›
       </button>

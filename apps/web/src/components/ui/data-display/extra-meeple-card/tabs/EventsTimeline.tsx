@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- pre-existing pattern: array/object access guarded by length/key check or by upstream validator; assertion is correct by construction. Cleanup tracked for follow-up audit. */
 
@@ -45,7 +46,7 @@ const EVENT_CONFIG: Record<
     label: string;
   }
 > = {
-  system: { icon: Settings, dot: 'bg-slate-400', text: 'text-slate-600', label: 'System' },
+  system: { icon: Settings, dot: 'bg-muted-foreground', text: 'text-muted-foreground', label: 'System' },
   turn: { icon: RotateCcw, dot: 'bg-blue-400', text: 'text-blue-600', label: 'Turn' },
   score: { icon: Trophy, dot: 'bg-amber-400', text: 'text-amber-600', label: 'Score' },
   action: { icon: Zap, dot: 'bg-green-400', text: 'text-green-600', label: 'Action' },
@@ -90,7 +91,7 @@ function TimelineEventItem({
         )}
       />
       {/* Timeline line */}
-      <div className="absolute left-[5px] top-5 bottom-0 w-0.5 bg-slate-200" />
+      <div className="absolute left-[5px] top-5 bottom-0 w-0.5 bg-muted" />
 
       <div
         role={hasDetails ? 'button' : undefined}
@@ -98,8 +99,8 @@ function TimelineEventItem({
         aria-expanded={hasDetails ? isExpanded : undefined}
         className={cn(
           'rounded-lg px-3 py-2 mb-2 transition-colors',
-          hasDetails ? 'cursor-pointer hover:bg-slate-50' : '',
-          isExpanded ? 'bg-slate-50' : ''
+          hasDetails ? 'cursor-pointer hover:bg-muted' : '',
+          isExpanded ? 'bg-muted' : ''
         )}
         onClick={() => {
           if (hasDetails) onToggle();
@@ -123,15 +124,15 @@ function TimelineEventItem({
             <div className="min-w-0">
               <p className={cn('font-nunito text-xs font-medium', config.text)}>{event.label}</p>
               {event.playerName && (
-                <p className="font-nunito text-[10px] text-slate-400">by {event.playerName}</p>
+                <p className="font-nunito text-[10px] text-muted-foreground">by {event.playerName}</p>
               )}
             </div>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             {event.turnNumber != null && (
-              <span className="font-nunito text-[10px] text-slate-400">T{event.turnNumber}</span>
+              <span className="font-nunito text-[10px] text-muted-foreground">T{event.turnNumber}</span>
             )}
-            <span className="font-nunito text-[10px] text-slate-400 tabular-nums">
+            <span className="font-nunito text-[10px] text-muted-foreground tabular-nums">
               {formattedTime}
             </span>
             {hasDetails &&
@@ -147,7 +148,7 @@ function TimelineEventItem({
         {isExpanded && hasDetails && (
           <div className="mt-1.5 pl-5 space-y-1">
             {event.description && (
-              <p className="font-nunito text-[10px] text-slate-500">{event.description}</p>
+              <p className="font-nunito text-[10px] text-muted-foreground">{event.description}</p>
             )}
             {event.snapshotId && onNavigateToSnapshot && (
               <button
@@ -189,12 +190,12 @@ function FilterChip({
       className={cn(
         'flex items-center gap-1 rounded-full px-2 py-0.5 font-nunito text-[10px] font-medium transition-colors',
         active
-          ? `${config.text} bg-white shadow-sm border border-slate-200`
-          : 'text-slate-400 hover:text-slate-600'
+          ? `${config.text} bg-card shadow-sm border border-border`
+          : 'text-muted-foreground hover:text-muted-foreground'
       )}
       data-testid={`filter-${type}`}
     >
-      <span className={cn('h-1.5 w-1.5 rounded-full', active ? config.dot : 'bg-slate-300')} />
+      <span className={cn('h-1.5 w-1.5 rounded-full', active ? config.dot : 'bg-muted')} />
       {config.label}
       <span className="text-[9px] opacity-60">{count}</span>
     </button>
@@ -207,7 +208,7 @@ export function EventsTimeline({ data, actions }: EventsTimelineProps) {
 
   if (!data || data.events.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
         <Activity className="h-8 w-8 mb-2 opacity-50" />
         <p className="font-nunito text-sm">No events yet</p>
         <p className="font-nunito text-xs mt-1">Events will appear as the session progresses</p>
@@ -258,7 +259,7 @@ export function EventsTimeline({ data, actions }: EventsTimelineProps) {
     <div className="space-y-3" data-testid="events-timeline">
       {/* Filter bar */}
       <div className="flex items-center gap-2">
-        <Filter className="h-3 w-3 text-slate-400 flex-shrink-0" aria-hidden="true" />
+        <Filter className="h-3 w-3 text-muted-foreground flex-shrink-0" aria-hidden="true" />
         <div className="flex flex-wrap gap-1">
           {availableTypes.map(type => (
             <FilterChip
@@ -273,7 +274,7 @@ export function EventsTimeline({ data, actions }: EventsTimelineProps) {
       </div>
 
       {/* Event count */}
-      <p className="font-nunito text-[10px] text-slate-400">
+      <p className="font-nunito text-[10px] text-muted-foreground">
         {filteredEvents.length} of {data.totalEvents} events
       </p>
 
@@ -293,7 +294,7 @@ export function EventsTimeline({ data, actions }: EventsTimelineProps) {
 
       {/* Filtered empty state */}
       {filteredEvents.length === 0 && activeFilters.size > 0 && (
-        <div className="flex flex-col items-center py-4 text-slate-400">
+        <div className="flex flex-col items-center py-4 text-muted-foreground">
           <p className="font-nunito text-xs">No events match the selected filters</p>
         </div>
       )}

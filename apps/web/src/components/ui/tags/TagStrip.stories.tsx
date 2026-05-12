@@ -23,7 +23,7 @@ const gameTags = [
 
 export const Default: Story = {
   args: { tags: gameTags.slice(0, 3), maxVisible: 3, variant: 'desktop' },
-  decorators: [(Story) => <div className="relative w-64 h-96 bg-slate-200 rounded-2xl"><Story /></div>]
+  decorators: [(Story) => <div className="relative w-64 h-96 bg-muted rounded-2xl"><Story /></div>]
 };
 
 export const WithOverflow: Story = {
@@ -33,5 +33,5 @@ export const WithOverflow: Story = {
 
 export const Mobile: Story = {
   args: { tags: gameTags, maxVisible: 3, variant: 'mobile' },
-  decorators: [(Story) => <div className="relative w-48 h-64 bg-slate-200 rounded-2xl"><Story /></div>]
+  decorators: [(Story) => <div className="relative w-48 h-64 bg-muted rounded-2xl"><Story /></div>]
 };

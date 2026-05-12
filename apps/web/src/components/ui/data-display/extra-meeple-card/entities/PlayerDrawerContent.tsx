@@ -67,7 +67,7 @@ export function PlayerDrawerContent({ entityId }: PlayerDrawerContentProps) {
         onValueChange={v => setActiveTab(v as PlayerTab)}
         className="flex flex-1 flex-col"
       >
-        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-slate-100/80 rounded-lg p-1">
+        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-muted/80 rounded-lg p-1">
           <EntityTabTrigger
             value="profile"
             icon={User}
@@ -152,18 +152,18 @@ export function PlayerDrawerContent({ entityId }: PlayerDrawerContentProps) {
           <TabsContent value="history" className="mt-0">
             <div className="space-y-2">
               {data.recentGames.length === 0 ? (
-                <p className="font-nunito text-xs text-slate-400 text-center py-8">
+                <p className="font-nunito text-xs text-muted-foreground text-center py-8">
                   Nessuna partita recente
                 </p>
               ) : (
                 data.recentGames.map((g, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between rounded-lg bg-white/50 border border-slate-200/40 p-2.5"
+                    className="flex items-center justify-between rounded-lg bg-card/50 border border-border/40 p-2.5"
                   >
                     <div>
-                      <p className="font-nunito text-xs font-medium text-slate-700">{g.name}</p>
-                      <p className="font-nunito text-[10px] text-slate-400">{g.date}</p>
+                      <p className="font-nunito text-xs font-medium text-foreground">{g.name}</p>
+                      <p className="font-nunito text-[10px] text-muted-foreground">{g.date}</p>
                     </div>
                     <span
                       className={cn(
@@ -172,7 +172,7 @@ export function PlayerDrawerContent({ entityId }: PlayerDrawerContentProps) {
                           ? 'bg-green-100 text-green-700'
                           : g.result === 'loss'
                             ? 'bg-red-100 text-red-700'
-                            : 'bg-slate-100 text-slate-600'
+                            : 'bg-muted text-muted-foreground'
                       )}
                     >
                       {g.result === 'win' ? 'Vinto' : g.result === 'loss' ? 'Perso' : 'Pareggio'}

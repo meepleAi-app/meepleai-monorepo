@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 import React from 'react';
@@ -13,7 +14,7 @@ export function TagOverflow({ hiddenTags, count, variant }: { hiddenTags: Tag[];
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className={cn('flex items-center justify-center rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-xs font-bold text-white', variant === 'mobile' ? 'w-5 h-5' : 'w-6 h-6')}>
+          <div className={cn('flex items-center justify-center rounded-full bg-card/20 backdrop-blur-sm border border-border text-xs font-bold text-white', variant === 'mobile' ? 'w-5 h-5' : 'w-6 h-6')}>
             +{count}
           </div>
         </TooltipTrigger>

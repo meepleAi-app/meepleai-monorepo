@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 import { ManaPips } from '../parts/ManaPips';
@@ -52,7 +53,7 @@ export function HeroCard(props: MeepleCardProps) {
       <div className="relative flex h-full min-h-[320px] flex-col justify-end p-6">
         {badge && (
           <span
-            className="absolute right-6 top-6 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm"
+            className="absolute right-6 top-6 rounded-full border border-border bg-card/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm"
             data-slot="badge"
           >
             {badge}
@@ -66,7 +67,7 @@ export function HeroCard(props: MeepleCardProps) {
           <div className="mt-2 flex items-center gap-1 text-amber-300">
             <span>★</span>
             <span className="text-sm font-bold text-white">{rating.toFixed(1)}</span>
-            {ratingMax && <span className="text-xs text-white/60">/ {ratingMax}</span>}
+            {ratingMax && <span className="text-xs text-foreground/80">/ {ratingMax}</span>}
           </div>
         )}
         {manaPips && (

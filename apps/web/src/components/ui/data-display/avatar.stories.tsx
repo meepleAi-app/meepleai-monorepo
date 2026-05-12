@@ -213,7 +213,7 @@ export const WithStatus: Story = {
           <AvatarImage src="/invalid.jpg" alt="Offline user" />
           <AvatarFallback>OF</AvatarFallback>
         </Avatar>
-        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-gray-400" />
+        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-muted-foreground" />
       </div>
     </div>
   ),

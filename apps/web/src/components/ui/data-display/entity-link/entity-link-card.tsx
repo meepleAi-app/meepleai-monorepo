@@ -136,7 +136,7 @@ export function EntityLinkCard({
         {/* BGG badge */}
         {showBggBadge && (
           <span
-            className="inline-flex items-center gap-0.5 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-500"
+            className="inline-flex items-center gap-0.5 rounded-full border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
             title="Imported from external source"
           >
             <Globe className="h-2.5 w-2.5" aria-hidden="true" />
@@ -157,7 +157,7 @@ export function EntityLinkCard({
               'bg-transparent text-muted-foreground/50',
               'transition-all duration-150',
               'hover:bg-muted hover:text-foreground',
-              'focus:outline-none focus:ring-2 focus:ring-slate-300'
+              'focus:outline-none focus:ring-2 focus:ring-border'
             )}
             aria-label={`Navigate to ${targetName}`}
           >

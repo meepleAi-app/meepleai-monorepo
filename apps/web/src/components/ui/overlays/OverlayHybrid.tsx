@@ -78,7 +78,7 @@ export function OverlayHybrid({ children, enableDeepLink = false }: OverlayHybri
       {/* Backdrop */}
       <div
         data-testid="overlay-backdrop"
-        className="fixed inset-0 z-40 bg-black/40 motion-reduce:transition-none transition-opacity duration-200"
+        className="fixed inset-0 z-40 bg-foreground/40 motion-reduce:transition-none transition-opacity duration-200"
         onClick={handleBackdropClick}
         aria-hidden="true"
       />

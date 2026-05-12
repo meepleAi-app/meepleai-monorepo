@@ -6,7 +6,10 @@
 @import "./design-tokens.css";
 @import "./premium-gaming.css";
 
-@custom-variant dark (&:is(.dark *));
+/* DS-1 (2026-05-12 token canonicalization): dark variant honours both
+ * the legacy `.dark` class (compat) and the canonical `[data-theme="dark"]`
+ * attribute (now set by next-themes — see ThemeProvider.tsx). */
+@custom-variant dark (&:is(.dark *, [data-theme="dark"] *));
 
 @theme {
   /* Remove all brand color shade references - migrating to semantic tokens */
@@ -622,7 +625,9 @@
   --font-weight-bold: var(--font-bold);
 }
 
-.dark {
+/* DS-1: dual selector — `.dark` (legacy class) OR `[data-theme="dark"]`
+ * (canonical attribute set by next-themes per ThemeProvider.tsx). */
+:is(.dark, [data-theme="dark"]) {
   /* Base theme tokens - Dark Professional (Issue #2965) */
   --background: 0 0% 10%;           /* #1a1a1a - Neutral dark gray */
   --foreground: 30 25% 90%;         /* #e8e4d8 - Warm beige text */

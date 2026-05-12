@@ -128,12 +128,9 @@ function CatalogGameCard({
   hasKb?: boolean;
 }) {
   return (
-    <div
-      className="bg-card border border-border
-                 rounded-xl shadow-sm overflow-hidden flex flex-col"
-    >
+    <div className="e-game bg-card border border-border rounded-xl shadow-sm overflow-hidden flex flex-col">
       {/* Thumbnail */}
-      <div className="relative h-[68px] flex items-center justify-center bg-gradient-to-br from-[#fdf0e0] to-[#fce8cc] dark:from-[hsl(25,20%,18%)] dark:to-[hsl(30,15%,15%)] overflow-hidden flex-shrink-0">
+      <div className="relative h-[68px] flex items-center justify-center bg-[hsl(var(--c-game)/0.08)] dark:bg-[hsl(var(--c-game)/0.15)] overflow-hidden flex-shrink-0">
         {game.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={game.imageUrl} alt={game.title} className="w-full h-full object-cover" />
@@ -142,7 +139,7 @@ function CatalogGameCard({
         )}
         {hasKb !== undefined && (
           <span
-            className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold font-[Quicksand] leading-none ${hasKb ? 'bg-green-500 text-white' : 'bg-muted-foreground/60 text-white'}`}
+            className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold font-[Quicksand] leading-none ${hasKb ? 'bg-[hsl(var(--c-success))] text-white' : 'bg-muted-foreground/60 text-white'}`}
           >
             {hasKb ? 'KB ✓' : 'KB –'}
           </span>
@@ -164,6 +161,7 @@ function CatalogGameCard({
 
       {/* Add button */}
       <button
+        type="button"
         onClick={() => !inLibrary && !adding && onAdd(game.id)}
         disabled={inLibrary || adding}
         aria-label={
@@ -174,7 +172,7 @@ function CatalogGameCard({
             ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-muted text-muted-foreground/60 cursor-default'
             : adding
               ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-muted text-muted-foreground cursor-wait'
-              : 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-amber-600 text-white hover:opacity-90 active:scale-95 transition-transform'
+              : 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-[hsl(var(--c-game))] text-white hover:opacity-90 active:scale-95 transition-transform'
         }
       >
         <span className="text-xs leading-none">＋</span>
@@ -272,7 +270,7 @@ function NewUserGamesBlock({
         <LoadingSkeleton count={6} />
       ) : (
         <>
-          <p className="text-xs text-muted-foreground/60 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 rounded-lg px-3 py-2 mb-3 font-medium">
+          <p className="e-game text-xs text-muted-foreground/80 bg-[hsl(var(--c-game)/0.06)] border border-[hsl(var(--c-game)/0.25)] rounded-lg px-3 py-2 mb-3 font-medium">
             💡 Libreria vuota — ecco i top giochi dal catalogo. Aggiungili per iniziare!
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -313,10 +311,10 @@ function ToolkitGrid() {
         <Link
           key={tool.id}
           href={`/toolkit?tool=${tool.id}`}
-          className="flex flex-col items-center gap-1.5 rounded-xl border border-[hsl(142,30%,88%)] bg-[hsl(142,30%,96%)] p-4 text-center transition-all hover:-translate-y-0.5 hover:border-[hsl(142,70%,45%)] hover:shadow-md dark:border-[hsl(142,30%,25%)] dark:bg-[hsl(142,20%,12%)] dark:hover:border-[hsl(142,70%,40%)]"
+          className="e-toolkit flex flex-col items-center gap-1.5 rounded-xl border border-[hsl(var(--c-toolkit)/0.25)] bg-[hsl(var(--c-toolkit)/0.06)] p-4 text-center transition-all hover:-translate-y-0.5 hover:border-[hsl(var(--c-toolkit)/0.6)] hover:shadow-md"
         >
           <span className="text-[28px]">{tool.icon}</span>
-          <span className="font-quicksand text-[13px] font-bold text-[hsl(142,50%,30%)] dark:text-[hsl(142,50%,65%)]">
+          <span className="font-quicksand text-[13px] font-bold text-[hsl(var(--c-toolkit))]">
             {tool.name}
           </span>
           <span className="text-[11px] text-muted-foreground">{tool.desc}</span>

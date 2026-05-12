@@ -79,7 +79,7 @@ Concrete operational rules:
    *Deferred*: this is the right end state. It is gated on the user base outgrowing the co-tenant resource budget, or on the ops cost becoming small relative to the value delivered. Tracked implicitly under the [#842](https://github.com/meepleAi-app/meepleai-monorepo/issues/842) epic close-out criteria.
 
 3. **Blue/green production deployments**.
-   *Deferred*: overkill for current scale. A rolling-with-healthcheck deploy + image-tag rollback gives us the recoverability we need at a fraction of the operational complexity.
+   *Deferred*: overkill for current scale. A rolling-with-healthcheck deploy + image-tag rollback gives us the recoverability we need at a fraction of the operational complexity. Procedure documented in [`rollback-runbook.md`](../../../for-developers/operations/rollback-runbook.md); upgrade triggers in [§15 future upgrade path](../../../for-developers/operations/rollback-runbook.md#15-future-upgrade-path).
 
 4. **Auto-deploy from `main-dev` straight to staging** (skip `main-staging`).
    *Rejected*: removes the gate where the full suite runs blocking, which is exactly the friction that protects invited users from `main-dev` flakes.
@@ -92,6 +92,6 @@ Concrete operational rules:
 - Access control Wave 1: [#845](https://github.com/meepleAi-app/meepleai-monorepo/issues/845)
 - Workflow split: [#846](https://github.com/meepleAi-app/meepleai-monorepo/issues/846)
 - Invitation aggregate Wave 2: [#847](https://github.com/meepleAi-app/meepleai-monorepo/issues/847)
-- Prod rollback runbook: [#848](https://github.com/meepleAi-app/meepleai-monorepo/issues/848)
+- Prod rollback runbook: [#848](https://github.com/meepleAi-app/meepleai-monorepo/issues/848) → [`rollback-runbook.md`](../../../for-developers/operations/rollback-runbook.md)
 - CI cost optimisation: [#850](https://github.com/meepleAi-app/meepleai-monorepo/issues/850)
 - Self-hosted ARM64 runner: [ADR-044](./adr-044-self-hosted-arm64-runner.md)

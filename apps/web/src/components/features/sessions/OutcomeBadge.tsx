@@ -89,7 +89,7 @@ export function OutcomeBadge({
       <span
         data-slot="outcome-badge"
         data-status="abandoned"
-        className={clsx(PILL_BASE, 'bg-slate-100 text-slate-700 ring-1 ring-slate-200', className)}
+        className={clsx(PILL_BASE, 'bg-muted text-foreground ring-1 ring-border', className)}
       >
         {labels.statusAbandoned}
       </span>
@@ -129,7 +129,7 @@ export function OutcomeBadge({
       <span
         data-slot="outcome-badge"
         data-outcome="tie"
-        className={clsx(PILL_BASE, 'bg-slate-100 text-slate-700 ring-1 ring-slate-200', className)}
+        className={clsx(PILL_BASE, 'bg-muted text-foreground ring-1 ring-border', className)}
       >
         {labels.outcomeTie}
       </span>

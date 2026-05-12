@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import React from 'react';
@@ -52,7 +53,7 @@ export function SessionSummaryCard({
         {sorted.map((player, index) => (
           <li
             key={player.id}
-            className="flex items-center justify-between rounded-xl bg-white/5 px-4 py-2"
+            className="flex items-center justify-between rounded-xl bg-card/5 px-4 py-2"
           >
             <div className="flex items-center gap-3">
               <span className="text-xl" aria-label={`Posizione ${index + 1}`}>

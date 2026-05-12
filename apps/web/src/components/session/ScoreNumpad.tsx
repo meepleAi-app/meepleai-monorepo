@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import React, { useState } from 'react';
@@ -101,7 +102,7 @@ export function ScoreNumpad({
                 key="delete"
                 aria-label="Cancella"
                 onClick={action}
-                className="flex items-center justify-center rounded-xl bg-white/10 p-4 text-white hover:bg-white/20 active:scale-95"
+                className="flex items-center justify-center rounded-xl bg-card/10 p-4 text-white hover:bg-card/20 active:scale-95"
               >
                 <Delete className="h-5 w-5" aria-hidden="true" />
               </button>
@@ -126,7 +127,7 @@ export function ScoreNumpad({
               key={label}
               aria-label={label}
               onClick={action}
-              className="rounded-xl bg-white/10 p-4 text-lg font-semibold text-white hover:bg-white/20 active:scale-95"
+              className="rounded-xl bg-card/10 p-4 text-lg font-semibold text-white hover:bg-card/20 active:scale-95"
             >
               {label}
             </button>

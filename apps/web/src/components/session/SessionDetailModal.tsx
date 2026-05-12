@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import React from 'react';
@@ -68,25 +69,25 @@ export function SessionDetailModal({
 
         {/* Session Metadata */}
         <div className="grid md:grid-cols-2 gap-4 mb-6">
-          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <Calendar className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+            <Calendar className="w-5 h-5 text-muted-foreground" />
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Date</p>
+              <p className="text-xs text-muted-foreground">Date</p>
               <p className="font-medium">
                 {new Date(session.sessionDate).toLocaleString('it-IT')}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <Users className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+            <Users className="w-5 h-5 text-muted-foreground" />
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Participants</p>
+              <p className="text-xs text-muted-foreground">Participants</p>
               <p className="font-medium">{session.participantCount} players</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
             <Badge
               variant={session.status === 'Finalized' ? 'default' : 'secondary'}
               className="text-sm"
@@ -95,10 +96,10 @@ export function SessionDetailModal({
             </Badge>
           </div>
 
-          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <Trophy className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+            <Trophy className="w-5 h-5 text-muted-foreground" />
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Type</p>
+              <p className="text-xs text-muted-foreground">Type</p>
               <p className="font-medium">{session.sessionType}</p>
             </div>
           </div>
@@ -122,7 +123,7 @@ export function SessionDetailModal({
                 .map((participant) => (
                   <div
                     key={participant.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-muted rounded-lg"
                   >
                     <div className="flex items-center gap-3">
                       <div

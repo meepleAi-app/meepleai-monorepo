@@ -127,14 +127,14 @@ function CounterRow({
     'transition-colors duration-100 select-none touch-none',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1',
     'disabled:opacity-40 disabled:cursor-not-allowed',
-    'bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700',
-    'border border-stone-200 dark:border-stone-700'
+    'bg-muted hover:bg-muted dark:hover:bg-card',
+    'border border-border'
   );
 
   return (
     <div className="flex items-center gap-3 px-2 py-1.5">
       {/* Player label */}
-      <span className="flex-1 text-sm font-medium text-stone-700 dark:text-stone-300 truncate">
+      <span className="flex-1 text-sm font-medium text-foreground truncate">
         {label}
       </span>
 
@@ -156,7 +156,7 @@ function CounterRow({
       <span
         className={cn(
           'w-16 text-center text-xl font-bold tabular-nums',
-          'text-stone-900 dark:text-stone-100',
+          'text-foreground',
           isPending && 'opacity-60'
         )}
         aria-live="polite"
@@ -267,7 +267,7 @@ export function CounterTool({
     >
       {/* Header */}
       <div className="flex items-center justify-between px-2">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-stone-800 dark:text-stone-200">
+        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
           {config.icon ? (
             <span aria-hidden="true">{config.icon}</span>
           ) : (
@@ -280,7 +280,7 @@ export function CounterTool({
         </h2>
 
         {/* Mode badge */}
-        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 border border-stone-200 dark:border-stone-700">
+        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-muted text-muted-foreground border border-border">
           {config.isPerPlayer ? 'Per player' : 'Condiviso'}
         </span>
       </div>
@@ -298,7 +298,7 @@ export function CounterTool({
 
       {/* Counter rows */}
       <div
-        className="flex flex-col divide-y divide-stone-100 dark:divide-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900"
+        className="flex flex-col divide-y divide-border rounded-xl border border-border bg-card"
         aria-label="Contatori"
       >
         {config.isPerPlayer ? (
@@ -345,7 +345,7 @@ export function CounterTool({
       </div>
 
       {/* Range indicator */}
-      <p className="px-2 text-xs text-stone-400 dark:text-stone-600 text-center">
+      <p className="px-2 text-xs text-muted-foreground dark:text-muted-foreground text-center">
         Range: {config.minValue} – {config.maxValue}
         {isPending && (
           <span className="ml-2 inline-flex items-center gap-1">
@@ -363,9 +363,9 @@ export function CounterTool({
           disabled={isResetting || isPending}
           className={cn(
             'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
-            'text-stone-600 dark:text-stone-400',
-            'border border-stone-300 dark:border-stone-600',
-            'hover:bg-stone-100 dark:hover:bg-stone-800',
+            'text-muted-foreground',
+            'border border-border',
+            'hover:bg-muted',
             'transition-colors duration-150',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1',
             'disabled:opacity-50 disabled:cursor-not-allowed'

@@ -88,7 +88,7 @@ export function GameStateDisplay({ gameStateJson, className }: GameStateDisplayP
       {/* Confidence */}
       {confidence !== null && (
         <div className="flex items-center gap-2 pt-1">
-          <div className="h-1.5 flex-1 rounded-full bg-stone-200">
+          <div className="h-1.5 flex-1 rounded-full bg-muted">
             <div
               className={cn(
                 'h-1.5 rounded-full transition-all',

@@ -77,7 +77,7 @@ export function KbProcessingBanner({ gameId, onReady }: KbProcessingBannerProps)
   if (state === 'timeout') {
     return (
       <div
-        className="rounded-lg border border-slate-500/30 bg-slate-500/10 px-4 py-2 text-sm flex items-center gap-2 text-slate-700 dark:text-slate-300"
+        className="rounded-lg border border-border-strong/30 bg-muted-foreground/10 px-4 py-2 text-sm flex items-center gap-2 text-foreground"
         data-testid="kb-banner-timeout"
       >
         <AlertTriangle className="h-4 w-4" aria-hidden="true" />

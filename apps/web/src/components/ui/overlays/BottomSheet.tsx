@@ -57,7 +57,7 @@ export function BottomSheet({
         <>
           <motion.div
             data-testid="bottom-sheet-overlay"
-            className="fixed inset-0 z-50 bg-black/60"
+            className="fixed inset-0 z-50 bg-foreground/60"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -81,7 +81,7 @@ export function BottomSheet({
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
           >
             <div className="flex justify-center py-3" data-testid="drag-handle">
-              <div className="h-1 w-10 rounded-full bg-white/20" />
+              <div className="h-1 w-10 rounded-full bg-card/20" />
             </div>
             {title && (
               <div className="px-4 pb-3">

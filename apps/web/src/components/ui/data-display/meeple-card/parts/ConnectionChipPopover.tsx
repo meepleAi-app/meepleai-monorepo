@@ -72,7 +72,7 @@ export function ConnectionChipPopover({
                 <Link
                   href={item.href}
                   onClick={() => onOpenChange(false)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm transition-colors hover:bg-white/5"
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm transition-colors hover:bg-card/5"
                   style={{ color: 'var(--mc-text, inherit)' }}
                 >
                   <span className="shrink-0" style={{ color: tokens.solid }}>

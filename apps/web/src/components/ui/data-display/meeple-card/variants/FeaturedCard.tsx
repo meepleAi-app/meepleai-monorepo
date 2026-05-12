@@ -63,7 +63,7 @@ export function FeaturedCard(props: MeepleCardProps) {
           </h3>
           {badge && (
             <span
-              className="shrink-0 rounded-full border border-[var(--mc-border)] bg-black/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--mc-text-primary)] dark:bg-white/15"
+              className="shrink-0 rounded-full border border-[var(--mc-border)] bg-foreground/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--mc-text-primary)] dark:bg-card/15"
               data-slot="badge"
             >
               {badge}

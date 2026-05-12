@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 import { memo } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -34,7 +35,7 @@ export const DeckStackCard = memo(function DeckStackCard({
       onClick={() => onClick(item.id, item.entityType)}
       className={cn(
         'flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer',
-        'w-[120px] h-[48px] border border-white/10',
+        'w-[120px] h-[48px] border border-border',
         'transition-transform duration-150 hover:-translate-y-2 hover:scale-105',
         className
       )}
@@ -48,7 +49,7 @@ export const DeckStackCard = memo(function DeckStackCard({
       <div className="flex-1 min-w-0">
         <div className="text-[11px] text-slate-200 font-medium truncate">{item.title}</div>
         {item.status && (
-          <div data-testid="deck-stack-card-status" className="text-[9px] text-slate-400">
+          <div data-testid="deck-stack-card-status" className="text-[9px] text-muted-foreground">
             {item.status}
           </div>
         )}

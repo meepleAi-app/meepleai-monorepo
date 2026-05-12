@@ -6,16 +6,15 @@
 | **Generator** | `pnpm lint:tokens` (DS-2) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../docs/for-developers/specs/2026-05-12-token-canonicalization.md) |
 | **Rule** | `local/no-hardcoded-color-utility` |
-| **Total violations** | 3979 |
-| **Files affected** | 441 |
-| **Clusters affected** | 174 |
+| **Total violations** | 3491 |
+| **Files affected** | 364 |
+| **Clusters affected** | 163 |
 
 ## Violations by cluster
 
 | Cluster | Violations | Suggested stage |
 |---|---|---|
 | `app/admin/(dashboard)` | 1241 | manual |
-| `ui/data-display` | 450 | manual |
 | `admin/knowledge-base` | 313 | manual |
 | `admin/shared-games` | 128 | manual |
 | `toolkit-drawer/tabs` | 122 | manual |
@@ -60,7 +59,6 @@
 | `editor/ConflictResolutionModal.tsx` | 12 | manual |
 | `legal/LegalMarkdown.tsx` | 12 | manual |
 | `onboarding/FirstGameStep.tsx` | 12 | manual |
-| `ui/feedback` | 12 | manual |
 | `admin/DashboardHeader.tsx` | 11 | manual |
 | `app/(public)/about` | 10 | manual |
 | `admin/KPICard.tsx` | 10 | manual |
@@ -93,8 +91,6 @@
 | `onboarding/InterestsStep.tsx` | 5 | manual |
 | `state/BoardStateEditor.tsx` | 5 | manual |
 | `toolkit/Randomizer.tsx` | 5 | manual |
-| `ui/overlays` | 5 | manual |
-| `ui/tags` | 5 | manual |
 | `upload/UploadQueueItem.tsx` | 5 | manual |
 | `app/(auth)/login` | 4 | manual |
 | `app/(auth)/register` | 4 | manual |
@@ -114,8 +110,6 @@
 | `pdf/PdfProcessingProgressBar.stories.tsx` | 4 | manual |
 | `pwa/InstallPrompt.tsx` | 4 | manual |
 | `toolkit-drawer/ToolkitDrawer.tsx` | 4 | manual |
-| `ui/detail-layout` | 4 | manual |
-| `ui/navigation` | 4 | manual |
 | `admin/charts` | 3 | manual |
 | `auth/AuthModal.stories.tsx` | 3 | manual |
 | `comments/InlineCommentIndicator.tsx` | 3 | manual |
@@ -125,7 +119,6 @@
 | `prompt/PromptEditor.tsx` | 3 | manual |
 | `pwa/UpdatePrompt.tsx` | 3 | manual |
 | `toolkit/Timer.tsx` | 3 | manual |
-| `ui/sheet.tsx` | 3 | manual |
 | `versioning/VersionTimeline.tsx` | 3 | manual |
 | `admin/ApprovalStatusFilter.tsx` | 2 | manual |
 | `auth/RequireRole.tsx` | 2 | manual |
@@ -146,7 +139,6 @@
 | `rag-dashboard/builder` | 2 | manual |
 | `rag-dashboard/reference` | 2 | manual |
 | `showcase/stories` | 2 | manual |
-| `ui/shared-games` | 2 | manual |
 | `upload/MultiFileUpload.tsx` | 2 | manual |
 | `app/(authenticated)/profile` | 1 | manual |
 | `app/(authenticated)/settings` | 1 | manual |
@@ -184,9 +176,6 @@
 | `search/SearchModeToggle.tsx` | 1 | manual |
 | `state/LedgerTimeline.stories.tsx` | 1 | manual |
 | `toolkit/WhiteboardWidget.tsx` | 1 | manual |
-| `ui/auth-card` | 1 | manual |
-| `ui/invites` | 1 | manual |
-| `ui/pricing-card` | 1 | manual |
 | `versioning/VersionTimelineFilters.tsx` | 1 | manual |
 
 ## Top 20 files

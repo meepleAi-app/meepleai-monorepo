@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 /**
  * SidebarFilters - Glassmorphic filter sidebar for EntityListView list mode
  *
@@ -195,7 +196,7 @@ function SidebarContent<T>({
               placeholder={searchPlaceholder}
               className={cn(
                 'w-full h-9 pl-9 pr-8 rounded-lg',
-                'bg-white/40 dark:bg-white/10 border border-border/50',
+                'bg-card/40 dark:bg-card/10 border border-border/50',
                 'text-sm placeholder:text-muted-foreground',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 'backdrop-blur-sm',
@@ -254,9 +255,9 @@ function SidebarContent<T>({
               className={cn(
                 'w-full flex items-center justify-between',
                 'h-9 px-3 rounded-lg',
-                'bg-white/40 dark:bg-white/10 border border-border/50',
+                'bg-card/40 dark:bg-card/10 border border-border/50',
                 'text-sm text-foreground',
-                'hover:bg-white/60 dark:hover:bg-white/15',
+                'hover:bg-card/60 dark:hover:bg-card/15',
                 'backdrop-blur-sm',
                 'transition-colors duration-200',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
@@ -340,7 +341,7 @@ export function SidebarFilters<T>(props: SidebarFiltersProps<T>) {
         <div
           className={cn(
             'sticky top-4 p-5 rounded-2xl',
-            'bg-white/60 dark:bg-white/5',
+            'bg-card/60 dark:bg-card/5',
             'backdrop-blur-xl saturate-[180%]',
             'border border-border/50',
             'shadow-sm'

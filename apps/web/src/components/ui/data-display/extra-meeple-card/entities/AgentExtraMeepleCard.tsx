@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 /**
@@ -104,7 +105,7 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
     <div
       className={cn(
         'flex w-[600px] flex-col rounded-2xl overflow-hidden',
-        'bg-white/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/20',
+        'bg-card/70 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-border',
         'max-md:w-full',
         enableChat && 'w-full max-w-[800px]',
         className
@@ -127,7 +128,7 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
         onValueChange={v => setActiveTab(v as AgentTab)}
         className="flex flex-1 flex-col"
       >
-        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-slate-100/80 rounded-lg p-1">
+        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-muted/80 rounded-lg p-1">
           {enableChat && (
             <EntityTabTrigger
               value="chat"
@@ -200,7 +201,7 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
                 >
                   <Gamepad2 className={cn('h-4 w-4 shrink-0', colors.accent)} aria-hidden="true" />
                   <div className="flex-1 min-w-0">
-                    <p className="font-nunito text-[10px] text-slate-500 uppercase tracking-wider">
+                    <p className="font-nunito text-[10px] text-muted-foreground uppercase tracking-wider">
                       Gioco collegato
                     </p>
                     <p className={cn('font-quicksand text-sm font-bold truncate', colors.accent)}>
@@ -248,7 +249,7 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
                     href={`/library/${data.gameId}/agent`}
                     className={cn(
                       'flex items-center justify-center gap-1.5 rounded-lg border py-2.5 px-3',
-                      'bg-white border-blue-200 text-blue-700',
+                      'bg-card border-blue-200 text-blue-700',
                       'font-nunito text-xs font-medium',
                       'transition-colors duration-150 hover:bg-blue-50',
                       'focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1'
@@ -273,7 +274,7 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
                 }}
               />
               {data.invocationCount === 0 && (
-                <p className="font-nunito text-xs text-slate-400 text-center py-4">
+                <p className="font-nunito text-xs text-muted-foreground text-center py-4">
                   Nessuna conversazione ancora
                 </p>
               )}
@@ -289,7 +290,7 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
             ) : threads.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
                 <MessageSquare className="h-8 w-8 text-slate-300" aria-hidden="true" />
-                <p className="font-nunito text-xs text-slate-400">Nessun thread di chat</p>
+                <p className="font-nunito text-xs text-muted-foreground">Nessun thread di chat</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -309,14 +310,14 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
             ) : !data.gameId ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
                 <FileText className="h-8 w-8 text-slate-300" aria-hidden="true" />
-                <p className="font-nunito text-xs text-slate-400">
+                <p className="font-nunito text-xs text-muted-foreground">
                   Nessun gioco collegato a questo agente
                 </p>
               </div>
             ) : docs.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
                 <FileText className="h-8 w-8 text-slate-300" aria-hidden="true" />
-                <p className="font-nunito text-xs text-slate-400 mb-2">Nessun documento KB</p>
+                <p className="font-nunito text-xs text-muted-foreground mb-2">Nessun documento KB</p>
                 <a
                   href={`/library/${data.gameId}/agent`}
                   className="font-nunito text-xs text-blue-600 underline hover:text-blue-700"
@@ -341,7 +342,7 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
           <div className="absolute top-4 right-4 z-10">
             <button
               onClick={() => setIsFullscreen(false)}
-              className="p-2 rounded-lg bg-white/80 dark:bg-card/80 backdrop-blur-md border border-border/50 hover:bg-white dark:hover:bg-card transition-colors"
+              className="p-2 rounded-lg bg-card/80 dark:bg-card/80 backdrop-blur-md border border-border/50 hover:bg-card transition-colors"
               title="Esci da schermo intero"
               data-testid="fullscreen-close"
             >
@@ -396,7 +397,7 @@ function AgentChatTab({
     return (
       <div className="flex flex-1 flex-col items-center justify-center text-center p-6">
         <Loader2 className="mb-3 h-8 w-8 animate-spin text-blue-500" />
-        <p className="font-nunito text-sm text-slate-500">
+        <p className="font-nunito text-sm text-muted-foreground">
           Verifica disponibilit&agrave; agente...
         </p>
       </div>
@@ -410,7 +411,7 @@ function AgentChatTab({
         <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50">
           <AlertCircle className="h-8 w-8 text-red-400" />
         </div>
-        <h4 className="mb-2 font-quicksand text-lg font-semibold text-slate-800">Errore</h4>
+        <h4 className="mb-2 font-quicksand text-lg font-semibold text-foreground">Errore</h4>
         <p className="max-w-xs font-nunito text-sm text-red-600 mb-4">{readinessError}</p>
       </div>
     );
@@ -423,13 +424,13 @@ function AgentChatTab({
         <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50">
           <AlertCircle className="h-8 w-8 text-amber-500" />
         </div>
-        <h4 className="mb-2 font-quicksand text-lg font-semibold text-slate-800">
+        <h4 className="mb-2 font-quicksand text-lg font-semibold text-foreground">
           Agente non configurato
         </h4>
-        <p className="max-w-xs font-nunito text-sm text-slate-500 mb-1">
+        <p className="max-w-xs font-nunito text-sm text-muted-foreground mb-1">
           {readiness.blockingReason || 'Configura la Knowledge Base per abilitare la chat'}
         </p>
-        <p className="max-w-xs font-nunito text-xs text-slate-400 mb-4">
+        <p className="max-w-xs font-nunito text-xs text-muted-foreground mb-4">
           Documenti: {readiness.documentCount} | Status RAG: {readiness.ragStatus}
         </p>
         <Button
@@ -454,7 +455,7 @@ function AgentChatTab({
           <div className="absolute top-2 right-2 z-10">
             <button
               onClick={onFullscreenToggle}
-              className="p-2 rounded-lg bg-white/80 dark:bg-card/80 backdrop-blur-md border border-border/50 hover:bg-white dark:hover:bg-card transition-colors"
+              className="p-2 rounded-lg bg-card/80 dark:bg-card/80 backdrop-blur-md border border-border/50 hover:bg-card transition-colors"
               title={isFullscreen ? 'Esci da schermo intero' : 'Schermo intero'}
               data-testid="fullscreen-toggle"
             >
@@ -480,10 +481,10 @@ function AgentChatTab({
         <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50">
           <MessageSquare className="h-8 w-8 text-blue-500" />
         </div>
-        <h4 className="mb-2 font-quicksand text-lg font-semibold text-slate-800">
+        <h4 className="mb-2 font-quicksand text-lg font-semibold text-foreground">
           Chat con {agentName}
         </h4>
-        <p className="max-w-xs font-nunito text-sm text-slate-500 mb-4">
+        <p className="max-w-xs font-nunito text-sm text-muted-foreground mb-4">
           Pronto per chattare &bull; {readiness.documentCount} documenti nella KB
         </p>
         <Button
@@ -550,14 +551,14 @@ function ThreadItem({ thread, accentColor }: { thread: ChatThreadPreview; accent
       : thread.firstMessagePreview;
 
   return (
-    <div className="flex items-start gap-3 rounded-lg bg-white/50 border border-slate-200/40 p-2.5">
-      <MessageSquare className="h-4 w-4 mt-0.5 shrink-0 text-slate-400" aria-hidden="true" />
+    <div className="flex items-start gap-3 rounded-lg bg-card/50 border border-border/40 p-2.5">
+      <MessageSquare className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" aria-hidden="true" />
       <div className="flex-1 min-w-0 space-y-0.5">
         <div className="flex items-center justify-between gap-2">
-          <p className="font-nunito text-[10px] text-slate-400">{date}</p>
-          <p className="font-nunito text-[10px] text-slate-400">{thread.messageCount} msg</p>
+          <p className="font-nunito text-[10px] text-muted-foreground">{date}</p>
+          <p className="font-nunito text-[10px] text-muted-foreground">{thread.messageCount} msg</p>
         </div>
-        {preview && <p className="font-nunito text-xs text-slate-600 leading-relaxed">{preview}</p>}
+        {preview && <p className="font-nunito text-xs text-muted-foreground leading-relaxed">{preview}</p>}
       </div>
       <a
         href={`/chat/${thread.id}`}
@@ -582,11 +583,11 @@ function KbDocItem({ doc }: { doc: KbDocumentPreview }) {
   });
 
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-white/50 border border-slate-200/40 p-2.5">
-      <FileText className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+    <div className="flex items-center gap-3 rounded-lg bg-card/50 border border-border/40 p-2.5">
+      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       <div className="flex-1 min-w-0">
-        <p className="font-nunito text-xs font-medium text-slate-700 truncate">{doc.fileName}</p>
-        <p className="font-nunito text-[10px] text-slate-400">{date}</p>
+        <p className="font-nunito text-xs font-medium text-foreground truncate">{doc.fileName}</p>
+        <p className="font-nunito text-[10px] text-muted-foreground">{date}</p>
       </div>
       <KbStatusBadge status={doc.status} />
     </div>

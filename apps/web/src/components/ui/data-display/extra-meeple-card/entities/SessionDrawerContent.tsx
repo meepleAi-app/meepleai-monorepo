@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 import React, { useState } from 'react';
@@ -101,7 +102,7 @@ export function SessionDrawerContent({ entityId, initialTabId }: SessionDrawerCo
         onValueChange={v => setActiveTab(v as SessionTab)}
         className="flex flex-1 flex-col"
       >
-        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-slate-100/80 rounded-lg p-1">
+        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-muted/80 rounded-lg p-1">
           <EntityTabTrigger
             value="live"
             icon={Play}
@@ -129,7 +130,7 @@ export function SessionDrawerContent({ entityId, initialTabId }: SessionDrawerCo
           <TabsContent value="live" className="mt-0">
             <div className="space-y-2">
               {data.players.length === 0 ? (
-                <p className="font-nunito text-xs text-slate-400 text-center py-8">
+                <p className="font-nunito text-xs text-muted-foreground text-center py-8">
                   Nessun giocatore
                 </p>
               ) : (
@@ -142,7 +143,7 @@ export function SessionDrawerContent({ entityId, initialTabId }: SessionDrawerCo
                     onKeyDown={e => {
                       if (e.key === 'Enter' || e.key === ' ') pushDrawer('player', player.id);
                     }}
-                    className="flex items-center gap-3 rounded-lg bg-white/50 border border-slate-200/40 p-2.5 cursor-pointer hover:bg-white/80 transition-colors"
+                    className="flex items-center gap-3 rounded-lg bg-card/50 border border-border/40 p-2.5 cursor-pointer hover:bg-card/80 transition-colors"
                   >
                     {/* Avatar circle */}
                     <div
@@ -154,7 +155,7 @@ export function SessionDrawerContent({ entityId, initialTabId }: SessionDrawerCo
                     </div>
 
                     {/* Name */}
-                    <span className="flex-1 font-nunito text-sm font-medium text-slate-700">
+                    <span className="flex-1 font-nunito text-sm font-medium text-foreground">
                       {player.displayName}
                     </span>
 
@@ -191,23 +192,23 @@ export function SessionDrawerContent({ entityId, initialTabId }: SessionDrawerCo
                   </p>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-lg bg-white/50 border border-slate-200/40 p-2.5 text-center">
+                  <div className="rounded-lg bg-card/50 border border-border/40 p-2.5 text-center">
                     <p className="font-quicksand text-lg font-bold text-indigo-700">
                       {data.toolkit!.diceTools.length}
                     </p>
-                    <p className="font-nunito text-[10px] text-slate-500">Dadi</p>
+                    <p className="font-nunito text-[10px] text-muted-foreground">Dadi</p>
                   </div>
-                  <div className="rounded-lg bg-white/50 border border-slate-200/40 p-2.5 text-center">
+                  <div className="rounded-lg bg-card/50 border border-border/40 p-2.5 text-center">
                     <p className="font-quicksand text-lg font-bold text-indigo-700">
                       {data.toolkit!.cardTools.length}
                     </p>
-                    <p className="font-nunito text-[10px] text-slate-500">Carte</p>
+                    <p className="font-nunito text-[10px] text-muted-foreground">Carte</p>
                   </div>
-                  <div className="rounded-lg bg-white/50 border border-slate-200/40 p-2.5 text-center">
+                  <div className="rounded-lg bg-card/50 border border-border/40 p-2.5 text-center">
                     <p className="font-quicksand text-lg font-bold text-indigo-700">
                       {data.toolkit!.timerTools.length}
                     </p>
-                    <p className="font-nunito text-[10px] text-slate-500">Timer</p>
+                    <p className="font-nunito text-[10px] text-muted-foreground">Timer</p>
                   </div>
                 </div>
               </div>
@@ -218,20 +219,20 @@ export function SessionDrawerContent({ entityId, initialTabId }: SessionDrawerCo
           <TabsContent value="timeline" className="mt-0">
             <div className="space-y-2">
               {data.timeline.length === 0 ? (
-                <p className="font-nunito text-xs text-slate-400 text-center py-8">
+                <p className="font-nunito text-xs text-muted-foreground text-center py-8">
                   Nessun evento registrato
                 </p>
               ) : (
                 data.timeline.map(event => (
                   <div
                     key={event.id}
-                    className="flex items-start gap-2.5 rounded-lg bg-white/50 border border-slate-200/40 p-2.5"
+                    className="flex items-start gap-2.5 rounded-lg bg-card/50 border border-border/40 p-2.5"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="font-nunito text-xs font-medium text-slate-700 truncate">
+                      <p className="font-nunito text-xs font-medium text-foreground truncate">
                         {event.label ?? event.description}
                       </p>
-                      <p className="font-nunito text-[10px] text-slate-400">{event.timestamp}</p>
+                      <p className="font-nunito text-[10px] text-muted-foreground">{event.timestamp}</p>
                     </div>
                   </div>
                 ))

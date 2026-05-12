@@ -179,7 +179,7 @@ const OfflineBanner = React.forwardRef<HTMLDivElement, OfflineBannerProps>(
               variant="ghost"
               size="sm"
               onClick={handleRetry}
-              className="h-7 px-2 text-current hover:bg-white/20"
+              className="h-7 px-2 text-current hover:bg-card/20"
             >
               <RefreshCw className="mr-1 h-3 w-3" />
               Riprova
@@ -191,7 +191,7 @@ const OfflineBanner = React.forwardRef<HTMLDivElement, OfflineBannerProps>(
               variant="ghost"
               size="sm"
               onClick={handleDismiss}
-              className="h-7 w-7 p-0 text-current hover:bg-white/20"
+              className="h-7 w-7 p-0 text-current hover:bg-card/20"
               aria-label="Chiudi banner"
             >
               <X className="h-4 w-4" />

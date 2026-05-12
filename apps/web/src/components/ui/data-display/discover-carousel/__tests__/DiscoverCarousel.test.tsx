@@ -1,9 +1,20 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { DiscoverCarousel } from '../DiscoverCarousel';
 
 describe('DiscoverCarousel', () => {
+  const originalScrollBy = Element.prototype.scrollBy;
+  const originalScrollTo = Element.prototype.scrollTo;
+  const originalScrollWidthDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    'scrollWidth'
+  );
+  const originalClientWidthDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    'clientWidth'
+  );
+
   beforeEach(() => {
     Element.prototype.scrollBy = vi.fn();
     Element.prototype.scrollTo = vi.fn();
@@ -15,6 +26,22 @@ describe('DiscoverCarousel', () => {
       configurable: true,
       get: () => 400,
     });
+  });
+
+  afterEach(() => {
+    // Restore prototype mutations to avoid leakage across test files in the same worker.
+    Element.prototype.scrollBy = originalScrollBy;
+    Element.prototype.scrollTo = originalScrollTo;
+    if (originalScrollWidthDescriptor) {
+      Object.defineProperty(HTMLElement.prototype, 'scrollWidth', originalScrollWidthDescriptor);
+    } else {
+      delete (HTMLElement.prototype as { scrollWidth?: number }).scrollWidth;
+    }
+    if (originalClientWidthDescriptor) {
+      Object.defineProperty(HTMLElement.prototype, 'clientWidth', originalClientWidthDescriptor);
+    } else {
+      delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+    }
   });
 
   it('renders children in a role=region with ariaLabel', () => {

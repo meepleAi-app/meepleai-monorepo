@@ -26,7 +26,7 @@ export function DashboardHero({ displayName }: DashboardHeroProps) {
       <div
         data-testid="hero-kicker"
         aria-hidden="true"
-        className="mb-3 font-mono text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground"
+        className="mb-3 min-h-[1em] font-mono text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground"
       >
         {kicker || ' '}
       </div>

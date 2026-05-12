@@ -55,5 +55,11 @@ internal class StagingAllowlistEntityConfiguration : IEntityTypeConfiguration<St
 
         builder.HasIndex(e => e.IsDeleted)
             .HasDatabaseName("ix_staging_allowlist_is_deleted");
+
+        // Soft-delete query filter per CLAUDE.md "Key Data Patterns":
+        // IsDeleted + DeletedAt + HasQueryFilter(e => !e.IsDeleted).
+        // Repository methods that need to read soft-deleted rows (e.g. UpdateAsync
+        // soft-delete path) must use .IgnoreQueryFilters() to bypass this filter.
+        builder.HasQueryFilter(e => !e.IsDeleted);
     }
 }

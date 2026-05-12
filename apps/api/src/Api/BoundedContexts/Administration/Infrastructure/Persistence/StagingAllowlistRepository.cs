@@ -15,11 +15,15 @@ internal sealed class StagingAllowlistRepository : RepositoryBase, IStagingAllow
     {
     }
 
+    // Note: `IsDeleted` filtering is enforced globally by the entity's HasQueryFilter
+    // in StagingAllowlistEntityConfiguration. Methods that need to see soft-deleted
+    // rows must call `.IgnoreQueryFilters()` explicitly (see UpdateAsync below).
+
     public async Task<StagingAllowlistEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var entity = await DbContext.StagingAllowlist
             .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == id && !e.IsDeleted, cancellationToken)
+            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
         return entity is null ? null : MapToDomain(entity);
@@ -29,7 +33,6 @@ internal sealed class StagingAllowlistRepository : RepositoryBase, IStagingAllow
     {
         var entities = await DbContext.StagingAllowlist
             .AsNoTracking()
-            .Where(e => !e.IsDeleted)
             .OrderByDescending(e => e.AddedAt)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -43,7 +46,7 @@ internal sealed class StagingAllowlistRepository : RepositoryBase, IStagingAllow
 
         var entity = await DbContext.StagingAllowlist
             .AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Email == normalizedEmail && !e.IsDeleted, cancellationToken)
+            .FirstOrDefaultAsync(e => e.Email == normalizedEmail, cancellationToken)
             .ConfigureAwait(false);
 
         return entity is null ? null : MapToDomain(entity);
@@ -54,7 +57,7 @@ internal sealed class StagingAllowlistRepository : RepositoryBase, IStagingAllow
         ArgumentNullException.ThrowIfNull(normalizedEmail);
 
         return await DbContext.StagingAllowlist
-            .AnyAsync(e => e.Email == normalizedEmail && !e.IsDeleted, cancellationToken)
+            .AnyAsync(e => e.Email == normalizedEmail, cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -62,7 +65,6 @@ internal sealed class StagingAllowlistRepository : RepositoryBase, IStagingAllow
     {
         var emails = await DbContext.StagingAllowlist
             .AsNoTracking()
-            .Where(e => !e.IsDeleted)
             .Select(e => e.Email)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -71,7 +73,7 @@ internal sealed class StagingAllowlistRepository : RepositoryBase, IStagingAllow
     }
 
     public Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default) =>
-        DbContext.StagingAllowlist.AnyAsync(e => e.Id == id && !e.IsDeleted, cancellationToken);
+        DbContext.StagingAllowlist.AnyAsync(e => e.Id == id, cancellationToken);
 
     public async Task AddAsync(StagingAllowlistEntry entry, CancellationToken cancellationToken = default)
     {

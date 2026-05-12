@@ -55,6 +55,7 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 | ADR | Title | Date | Status |
 |-----|-------|------|--------|
 | [050](adr-050-pgvector-migration.md) | Migrazione Qdrant → pgvector | 2026-03-29 | Implemented |
+| [054](adr-054-devops-multi-branch-strategy.md) | DevOps Multi-Branch Strategy | 2026-05-08 | Accepted |
 
 ## ADR Lifecycle
 
@@ -85,6 +86,8 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 
 ---
 
-**Last Updated**: 2026-04-05
-**Total ADRs**: 24 (22 Accepted/Implemented, 1 Rejected, 1 Deprecated)
+**Last Updated**: 2026-05-12
+**Total ADRs**: 25 (23 Accepted/Implemented, 1 Rejected, 1 Deprecated)
 **Archived**: 12 obsolete ADRs removed (see git history)
+
+> Note: the count reflects ADRs **listed in the tables above**. The on-disk directory currently contains a handful of additional ADRs (051, 052, 053) whose README rows were not added in their respective PRs — that pre-existing drift is tracked outside this file and not adjusted by ADR-054's PR to keep its scope surgical.

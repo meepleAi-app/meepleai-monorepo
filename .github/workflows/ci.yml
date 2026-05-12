@@ -606,17 +606,29 @@ jobs:
 
   # Frontend Accessibility Gate (Issue #601)
   # Runs Playwright + axe-core against public routes for WCAG 2.1 AA compliance.
-  # BLOCKING (post P2 #807 token redesign — entity tokens now AA-compliant on bg-card).
-  # Pre-P2: pattern hsl(*, 89%, 48%) on hsla(0.10) bg in SP6 v2 design tokens triggers
-  # axe-core color-contrast violations. Resolved by P2 #807 — see:
-  #   - https://github.com/meepleAi-app/meepleai-monorepo/issues/807 (closed)
-  #   - https://github.com/meepleAi-app/meepleai-monorepo/issues/808 (freeze lifted)
+  # STATUS: non-blocking. Re-enabling requires resolving the residual dark-mode
+  # contrast violations tracked in #752 (text-slate-500 on dark surfaces — fails
+  # WCAG AA 4.5:1, ~20-36 nodes per state).
+  #
+  # History:
+  #   - #807 (closed 2026-05-09): SP6 v2 token redesign — entity tokens AA on light;
+  #     base text/bg pairs AA on both themes.
+  #   - #808 (closed): SP6 freeze lifted post-#807.
+  #   - #752 (OPEN — blocker for restoring this gate to blocking): D.2 Foundation
+  #     dark-mode contrast — text-slate-500 on dark backgrounds fails 4.5:1.
+  #     Fix path: migrate text-slate-500 → text-muted-foreground (DS-15 semantic
+  #     token) on dark-mode surfaces.
+  #
+  # Dashboard restyle (PR #1079) and follow-ups (#1081 token cleanup, #1082
+  # gradient mark) verified locally with jest-axe → 0 violations on the new
+  # dashboard surfaces in both themes. The continue-on-error stays until #752
+  # closes.
   frontend-a11y:
     name: Frontend - A11y E2E
     runs-on: ${{ needs.changes.outputs.runner }}
     timeout-minutes: 15
     needs: changes
-    continue-on-error: true # #807: token redesign light/dark base AA OK, but legacy dark-mode surfaces (#2e2e2e, alpha-blended bg-entity-*/15) + slate-700 fg combos still violate. Re-block gate via dedicated PR after dark-surface audit follow-up.
+    continue-on-error: true # Blocker: #752 (text-slate-500 on dark fails AA). See comment block above for re-enable path.
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
       run:

@@ -3,7 +3,11 @@
  * Spec: docs/for-developers/specs/2026-05-12-ws-d-state-coverage-design.md
  */
 import { describe, it, expect } from 'vitest';
-import { extractStatesFromComment, extractRouteFromComment } from '../extract-mockup-states';
+import {
+  extractStatesFromComment,
+  extractRouteFromComment,
+  parseMockupFile,
+} from '../extract-mockup-states';
 
 describe('extractStatesFromComment', () => {
   it('parses single-line Stati with · separator', () => {
@@ -53,5 +57,37 @@ describe('extractRouteFromComment', () => {
   it('returns null when no Route declared', () => {
     const comment = `Mockup: foo\nStati: default`;
     expect(extractRouteFromComment(comment)).toBeNull();
+  });
+});
+
+describe('parseMockupFile', () => {
+  it('extracts MockupStateEntry from HTML string', () => {
+    const html = `<!doctype html>
+<html>
+<head><title>test</title></head>
+<!--
+  Mockup: test-mockup
+  Route:  /test/{id}
+  Stati:  default · loading · error
+  Persona: Aaron
+-->
+<body></body>
+</html>`;
+    const entry = parseMockupFile('admin-mockups/design_files/test-mockup.html', html);
+    expect(entry).toEqual({
+      mockup_path: 'admin-mockups/design_files/test-mockup.html',
+      route: '/test/{id}',
+      declared_states: ['default', 'loading', 'error'],
+      covered_states: [],
+      missing: ['default', 'loading', 'error'],
+      enforced: false,
+    });
+  });
+
+  it('returns entry with empty declared_states when no Stati line', () => {
+    const html = `<!--\n  Mockup: foo\n-->`;
+    const entry = parseMockupFile('admin-mockups/design_files/foo.html', html);
+    expect(entry.declared_states).toEqual([]);
+    expect(entry.missing).toEqual([]);
   });
 });

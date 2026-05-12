@@ -20,11 +20,15 @@ export const gameNightKeys = {
   rsvps: (id: string) => [...gameNightKeys.all, id, 'rsvps'] as const,
 };
 
-export function useUpcomingGameNights(enabled: boolean = true) {
+export function useUpcomingGameNights(
+  options: { enabled?: boolean; retry?: number | boolean } = {}
+) {
+  const { enabled = true, retry } = options;
   return useQuery({
     queryKey: gameNightKeys.upcoming(),
     queryFn: () => api.gameNights.getUpcoming(),
     enabled,
+    ...(retry !== undefined ? { retry } : {}),
   });
 }
 

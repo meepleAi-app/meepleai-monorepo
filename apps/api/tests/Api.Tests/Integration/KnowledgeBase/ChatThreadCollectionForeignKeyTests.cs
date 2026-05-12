@@ -47,9 +47,14 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "user@test.com", DisplayName = "User", Role = "User" };
         var gameId = Guid.NewGuid();
+        // DocumentCollection.SharedGameId FKs to shared_games — same GUID
+        // doubles as PK on both rows so the existing ChatThread.GameId references
+        // to `games` keep working alongside the FK on shared_games.
+        var sharedGame = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity { Id = gameId, Title = "Gloomhaven" };
         var game = new GameEntity { Id = gameId, Name = "Gloomhaven" };
 
         _dbContext!.Users.Add(user);
+        _dbContext.SharedGames.Add(sharedGame);
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -107,9 +112,11 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "user@test.com", DisplayName = "User", Role = "User" };
         var gameId = Guid.NewGuid();
+        var sharedGame = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity { Id = gameId, Title = "Wingspan" };
         var game = new GameEntity { Id = gameId, Name = "Wingspan" };
 
         _dbContext!.Users.Add(user);
+        _dbContext.SharedGames.Add(sharedGame);
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -163,13 +170,18 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
     [Fact]
     public async Task DeleteGame_WithCompleteChain_CascadesCorrectly()
     {
-        // Arrange - Complex cascade: Game → Collection → Junction (ChatThread remains)
+        // Arrange - Complex cascade: SharedGame → Collection → Junction (ChatThread remains).
+        // DocumentCollection.SharedGameId FKs to shared_games with CASCADE (see
+        // DocumentCollectionEntityConfiguration), so removing the SharedGame
+        // triggers the chain. The GameEntity row is incidental here.
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "user@test.com", DisplayName = "User", Role = "User" };
         var gameId = Guid.NewGuid();
+        var sharedGame = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity { Id = gameId, Title = "Azul" };
         var game = new GameEntity { Id = gameId, Name = "Azul" };
 
         _dbContext!.Users.Add(user);
+        _dbContext.SharedGames.Add(sharedGame);
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -187,8 +199,10 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         _dbContext.ChatThreadCollections.Add(junction);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        // Act - Delete game (Game → Collection → Junction cascade)
-        _dbContext.Games.Remove(game);
+        // Act - Delete SharedGame (SharedGame → Collection → Junction cascade).
+        // Note: GameEntity is left intact; ChatThread.GameId references `games`
+        // and is NOT part of the cascade chain (deliberately decoupled).
+        _dbContext.SharedGames.Remove(sharedGame);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert - Collection and junction deleted, thread remains

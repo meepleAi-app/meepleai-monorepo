@@ -312,6 +312,12 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var game1Id = Guid.NewGuid();
+        // DocumentCollection.SharedGameId FKs to shared_games (see SeedTestDataAsync).
+        _dbContext.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
+        {
+            Id = game1Id,
+            Title = "Test Game 1 for Ordering",
+        });
         var game1 = new GameEntity { Id = game1Id, Name = "Test Game 1 for Ordering" };
         _dbContext.Games.Add(game1);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
@@ -328,6 +334,11 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         await Task.Delay(TimeSpan.FromMilliseconds(100), TestCancellationToken); // Ensure different timestamps
 
         var game2Id = Guid.NewGuid();
+        _dbContext.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
+        {
+            Id = game2Id,
+            Title = "Test Game 2 for Ordering",
+        });
         var game2 = new GameEntity { Id = game2Id, Name = "Test Game 2 for Ordering" };
         _dbContext!.Games.Add(game2);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
@@ -554,7 +565,20 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         };
         _dbContext!.Users.Add(testUser);
 
-        // Create test games
+        // Create test games.
+        // DocumentCollection.SharedGameId FKs to shared_games (not games), so
+        // seed a SharedGameEntity with the same GUID — this satisfies the FK
+        // without changing existing test fixture IDs.
+        _dbContext.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
+        {
+            Id = TestGameId1,
+            Title = "Test Game 1",
+        });
+        _dbContext.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
+        {
+            Id = TestGameId2,
+            Title = "Test Game 2",
+        });
         var game1 = new GameEntity
         {
             Id = TestGameId1,

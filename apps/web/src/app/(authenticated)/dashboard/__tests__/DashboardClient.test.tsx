@@ -22,15 +22,44 @@ vi.mock('@/lib/stores/mini-nav-config-store', () => {
 
 vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibrary: vi.fn(() => ({ data: { items: [] }, isLoading: false })),
+  useLibraryStats: vi.fn(() => ({
+    data: { totalGames: 0 },
+    isLoading: false,
+    isError: false,
+    isFetching: false,
+    refetch: vi.fn(),
+  })),
   useAddGameToLibrary: () => ({ mutateAsync: vi.fn() }),
 }));
 
 vi.mock('@/hooks/queries/useActiveSessions', () => ({
-  useActiveSessions: () => ({ data: { sessions: [] }, isLoading: false }),
+  useActiveSessions: () => ({
+    data: { sessions: [] },
+    isLoading: false,
+    isError: false,
+    isFetching: false,
+    refetch: vi.fn(),
+  }),
 }));
 
 vi.mock('@/hooks/queries/useAgents', () => ({
-  useAgents: () => ({ data: [], isLoading: false }),
+  useAgents: () => ({
+    data: [],
+    isLoading: false,
+    isError: false,
+    isFetching: false,
+    refetch: vi.fn(),
+  }),
+}));
+
+vi.mock('@/hooks/queries/useGameNights', () => ({
+  useUpcomingGameNights: () => ({
+    data: [],
+    isLoading: false,
+    isError: false,
+    isFetching: false,
+    refetch: vi.fn(),
+  }),
 }));
 
 vi.mock('@/hooks/queries/useGames', () => ({
@@ -58,9 +87,19 @@ describe('DashboardClient', () => {
     } as ReturnType<typeof useGames>);
   });
 
-  it('renders the greeting with the user name', () => {
+  it('renders the DashboardHero h1 with the user name', () => {
     render(<DashboardClient />);
-    expect(screen.getByText(/Marco/)).toBeInTheDocument();
+    const h1 = screen.getByRole('heading', { level: 1 });
+    expect(h1).toBeInTheDocument();
+    expect(h1).toHaveTextContent(/Marco/);
+  });
+
+  it('renders DashboardStatsRow with 4 stat cards', () => {
+    render(<DashboardClient />);
+    const nav = screen.getByRole('navigation', { name: 'Statistiche personali' });
+    expect(nav).toBeInTheDocument();
+    const cards = nav.querySelectorAll('[data-entity]');
+    expect(cards).toHaveLength(4);
   });
 
   it('renders hub block titles', () => {
@@ -94,6 +133,11 @@ describe('DashboardClient', () => {
     expect(screen.getByText('Dado')).toBeInTheDocument();
     expect(screen.getByText('Clessidra')).toBeInTheDocument();
     expect(screen.getByText('Scoreboard')).toBeInTheDocument();
+  });
+
+  it('does NOT render any GreetingStrip avatar (anti-regression for delete)', () => {
+    render(<DashboardClient />);
+    expect(screen.queryByTestId('greeting-avatar')).not.toBeInTheDocument();
   });
 
   describe('returning user (library has games)', () => {
@@ -134,7 +178,6 @@ describe('DashboardClient', () => {
       vi.mocked(useGames).mockReturnValue({
         data: {
           games: [
-            // rating più alta ma senza KB
             {
               id: 'g1',
               title: 'Game NoKB High Rating',
@@ -143,7 +186,6 @@ describe('DashboardClient', () => {
               averageRating: 9.5,
               hasKnowledgeBase: false,
             },
-            // rating più bassa ma con KB
             {
               id: 'g2',
               title: 'Game WithKB Low Rating',
@@ -161,7 +203,6 @@ describe('DashboardClient', () => {
     it('renders KB game before non-KB game regardless of rating', () => {
       render(<DashboardClient />);
       const gameNames = screen.getAllByText(/Game (WithKB|NoKB)/);
-      // First match should be the KB game
       expect(gameNames[0]).toHaveTextContent('Game WithKB Low Rating');
       expect(gameNames[1]).toHaveTextContent('Game NoKB High Rating');
     });

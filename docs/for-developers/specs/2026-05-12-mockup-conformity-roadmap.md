@@ -5,7 +5,7 @@
 | **Status** | draft |
 | **Date** | 2026-05-12 |
 | **Author** | spec-panel (Wiegers·Cockburn·Fowler·Adzic·Crispin·Nygard) |
-| **Upstream dependency** | [`2026-05-11-design-system-deversioning.md`](./2026-05-11-design-system-deversioning.md) — Stage 2 path-migration is hard prerequisite for WS-A |
+| **Upstream dependency** | [`2026-05-11-design-system-deversioning.md`](./2026-05-11-design-system-deversioning.md) — Stage 2 path-migration ✅ chiuso 2026-05-11 (#1025), WS-A unblocked |
 | **Related** | [`2026-04-26-v2-design-migration.md`](./2026-04-26-v2-design-migration.md), [`v2-token-system.md`](../frontend/v2-token-system.md), [`v2-migration-matrix.md`](../frontend/v2-migration-matrix.md) |
 | **Branch convention** | `feature/issue-{N}-mockup-conformity-{ws}` (ws ∈ {tokens, nanolith, gate, states, linter, ownership}) |
 
@@ -26,7 +26,7 @@ Un audit visivo del 2026-05-12 (spec-panel critique mode, 4 route campionate) ha
 
 1. **Doppio design system in convivenza** — `admin-mockups/design_files/tokens.css` (canonical, 9 entity HSL triplets + spacing 4px grid + Quicksand/Nunito/JetBrains Mono) vs il frontend che usa palette frammentate in `apps/web/src/components/ui/data-display/meeple-card/tokens.ts` + shadow palette `apps/web/src/lib/sessions-summary/entity-text-tokens.ts` (Wave D.3 hotfix #756). Risultato: shadow, border-radius, font-family, color scale, glass-blur, gradient hero divergenti.
 
-2. **Freeze attivo (umbrella #1023, audit #1024)** — la causa originaria è riconosciuta dal de-versioning spec ma in attesa di Stage 2 codemod. Tre giorni di freeze accumulati al 2026-05-12.
+2. **Freeze attivo** ~~(umbrella #1023, audit #1024) — la causa originaria è riconosciuta dal de-versioning spec ma in attesa di Stage 2 codemod~~ → **Aggiornamento 2026-05-12**: Stage 2 di-versioning chiuso 2026-05-11 (#1025 / PR #1032), Wave A-D `v2/` paths rinominati a `components/features/**` + `components/ui/**`. Freeze resta solo per nuovi file sotto `v2/**` (cleanup di legacy code coexistence). WS-A non è più bloccato.
 
 3. **Spec-as-comment non spec-as-test** — i mockup contengono vincoli SMART nei commenti HTML (es. `sp4-game-chat-tab.html:32-37`: «90% citation explicit», «confidence <70% marker», «latency P95 ≤ 10s»). Nessun gate CI estrae quei vincoli per validarli runtime.
 
@@ -68,7 +68,7 @@ Sei workstream (A–F) con dipendenze esplicitate in §4 sequencing.
 
 ### WS-A — Token unification (single source of truth)
 
-**Owner**: frontend-architect · **Status**: blocked on Stage 2 di-versioning · **Effort**: 3–5 giorni
+**Owner**: frontend-architect · **Status**: ✅ ready (Stage 2 di-versioning chiuso 2026-05-11 via #1025 / PR #1032) · **Effort**: 3–5 giorni
 
 **Problem**: tre palette entity colors in convivenza (canonical mockup, shadow MeepleCard, shadow Wave D.3) con valori HSL divergenti. Esempio entity=game:
 - mockup `tokens.css:7` → `--c-game: 25 95% 45%`
@@ -367,7 +367,7 @@ INDEPENDENT (parallel-safe, can start NOW):
 
 - **Roadmap origin**: spec-panel critique mode 2026-05-12 (questa conversazione) — 4 route campionate, gap 75-85% quantificato.
 - **Mockup canonical source**: [`admin-mockups/design_files/`](../../../admin-mockups/design_files/) (~60 file HTML/JSX).
-- **Upstream spec**: [`2026-05-11-design-system-deversioning.md`](./2026-05-11-design-system-deversioning.md) — WS-A blocked on Stage 2.
+- **Upstream spec**: [`2026-05-11-design-system-deversioning.md`](./2026-05-11-design-system-deversioning.md) — Stage 2 ✅ chiuso 2026-05-11 #1025, WS-A unblocked.
 - **Existing CI workflows**:
   - [`visual-regression-mockups.yml`](../../../.github/workflows/visual-regression-mockups.yml) (issue #571, mockup-to-baseline).
   - [`visual-regression-migrated.yml`](../../../.github/workflows/visual-regression-migrated.yml) (Wave A/B, route-to-baseline).

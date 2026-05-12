@@ -2,7 +2,7 @@
   "$schema": "./state-matrix.schema.json",
   "generated_at": "2026-05-12T14:39:28.967Z",
   "total_mockups": 61,
-  "enforced_count": 0,
+  "enforced_count": 1,
   "entries": [
     {
       "mockup_path": "admin-mockups/design_files/00-hub.html",
@@ -143,14 +143,14 @@
         "error",
         "not-found"
       ],
-      "covered_states": [],
-      "missing": [
+      "covered_states": [
         "default",
         "loading",
         "error",
         "not-found"
       ],
-      "enforced": false
+      "missing": [],
+      "enforced": true
     },
     {
       "mockup_path": "admin-mockups/design_files/nanolith-runthrough-game-onboarding.html",

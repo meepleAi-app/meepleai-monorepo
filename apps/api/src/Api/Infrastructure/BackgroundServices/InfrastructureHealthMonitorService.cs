@@ -260,6 +260,13 @@ internal sealed class InfrastructureHealthMonitorService : BackgroundService
                     ex,
                     "[HealthMonitor] {Service}: persist failed (status={Status}); in-memory cache updated, DB out of sync until next successful save",
                     serviceName, newState.CurrentStatus);
+
+                // EF Core guidance: after SaveChanges throws, the change tracker may
+                // hold the failed entity in Modified/Added state. Without a clear, the
+                // NEXT iteration's UpsertStateAsync would re-attempt persisting that
+                // entity alongside the new one, cascading the failure across services
+                // and defeating the per-iteration isolation we want here.
+                db.ChangeTracker.Clear();
             }
 #pragma warning restore CA1031
         }

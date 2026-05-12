@@ -2,12 +2,16 @@
  * Tests for WS-D Foundation parser (refs #1070, umbrella #1066).
  * Spec: docs/for-developers/specs/2026-05-12-ws-d-state-coverage-design.md
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   extractStatesFromComment,
   extractRouteFromComment,
   parseMockupFile,
   mergeMatrix,
+  runCli,
 } from '../extract-mockup-states';
 import type { StateMatrix } from '../extract-mockup-states';
 
@@ -188,5 +192,111 @@ describe('mergeMatrix', () => {
       'admin-mockups/design_files/alpha.html',
       'admin-mockups/design_files/zeta.html',
     ]);
+  });
+});
+
+describe('runCli', () => {
+  let tmp: string;
+  let mockupsDir: string;
+  let matrixPath: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'state-coverage-test-'));
+    mockupsDir = join(tmp, 'admin-mockups', 'design_files');
+    mkdirSync(mockupsDir, { recursive: true });
+    matrixPath = join(tmp, 'matrix.json');
+    writeFileSync(
+      join(mockupsDir, 'foo.html'),
+      `<!--\n  Mockup: foo\n  Stati: default · loading\n-->`
+    );
+  });
+
+  afterEach(() => {
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  it('--write creates matrix.json with parsed entries', async () => {
+    const exitCode = await runCli({
+      mode: 'write',
+      mockupsDir,
+      matrixPath,
+      mockupsPathPrefix: 'admin-mockups/design_files',
+    });
+    expect(exitCode).toBe(0);
+    const matrix = JSON.parse(readFileSync(matrixPath, 'utf-8'));
+    expect(matrix.total_mockups).toBe(1);
+    expect(matrix.entries[0].declared_states).toEqual(['default', 'loading']);
+  });
+
+  it('--check exits 0 when matrix.json in sync', async () => {
+    await runCli({
+      mode: 'write',
+      mockupsDir,
+      matrixPath,
+      mockupsPathPrefix: 'admin-mockups/design_files',
+    });
+    const exitCode = await runCli({
+      mode: 'check',
+      mockupsDir,
+      matrixPath,
+      mockupsPathPrefix: 'admin-mockups/design_files',
+    });
+    expect(exitCode).toBe(0);
+  });
+
+  it('--check exits 1 when mockup changed but matrix.json stale', async () => {
+    await runCli({
+      mode: 'write',
+      mockupsDir,
+      matrixPath,
+      mockupsPathPrefix: 'admin-mockups/design_files',
+    });
+    writeFileSync(
+      join(mockupsDir, 'foo.html'),
+      `<!--\n  Mockup: foo\n  Stati: default · loading · error\n-->`
+    );
+    const exitCode = await runCli({
+      mode: 'check',
+      mockupsDir,
+      matrixPath,
+      mockupsPathPrefix: 'admin-mockups/design_files',
+    });
+    expect(exitCode).toBe(1);
+  });
+
+  it('--enforced-only exits 0 when no enforced entries have missing', async () => {
+    await runCli({
+      mode: 'write',
+      mockupsDir,
+      matrixPath,
+      mockupsPathPrefix: 'admin-mockups/design_files',
+    });
+    const exitCode = await runCli({
+      mode: 'enforced-only',
+      mockupsDir,
+      matrixPath,
+      mockupsPathPrefix: 'admin-mockups/design_files',
+    });
+    expect(exitCode).toBe(0);
+  });
+
+  it('--enforced-only exits 1 when enforced entry has missing states', async () => {
+    await runCli({
+      mode: 'write',
+      mockupsDir,
+      matrixPath,
+      mockupsPathPrefix: 'admin-mockups/design_files',
+    });
+    const matrix = JSON.parse(readFileSync(matrixPath, 'utf-8'));
+    matrix.entries[0].enforced = true;
+    matrix.enforced_count = 1;
+    writeFileSync(matrixPath, JSON.stringify(matrix, null, 2));
+    const exitCode = await runCli({
+      mode: 'enforced-only',
+      mockupsDir,
+      matrixPath,
+      mockupsPathPrefix: 'admin-mockups/design_files',
+    });
+    expect(exitCode).toBe(1);
   });
 });

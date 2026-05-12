@@ -7,6 +7,8 @@
  */
 
 import { JSDOM } from 'jsdom';
+import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 export interface MockupStateEntry {
   mockup_path: string;
@@ -156,4 +158,107 @@ export function mergeMatrix(existing: StateMatrix, fresh: MockupStateEntry[]): S
     enforced_count: merged.filter(e => e.enforced).length,
     entries: merged,
   };
+}
+
+export type CliMode = 'check' | 'write' | 'enforced-only';
+
+export interface CliOptions {
+  mode: CliMode;
+  mockupsDir: string;
+  matrixPath: string;
+  /** Path prefix written into matrix entries (e.g. 'admin-mockups/design_files'). */
+  mockupsPathPrefix: string;
+}
+
+/**
+ * Glob mockup HTML files in `opts.mockupsDir` and parse each into a MockupStateEntry.
+ */
+function collectAllMockupEntries(opts: CliOptions): MockupStateEntry[] {
+  const files = readdirSync(opts.mockupsDir)
+    .filter(f => f.endsWith('.html'))
+    .sort();
+  return files.map(filename => {
+    const absPath = join(opts.mockupsDir, filename);
+    const html = readFileSync(absPath, 'utf-8');
+    const repoRelative = `${opts.mockupsPathPrefix}/${filename}`;
+    return parseMockupFile(repoRelative, html);
+  });
+}
+
+function loadExistingMatrix(matrixPath: string): StateMatrix {
+  if (!existsSync(matrixPath)) {
+    return { generated_at: '', total_mockups: 0, enforced_count: 0, entries: [] };
+  }
+  return JSON.parse(readFileSync(matrixPath, 'utf-8'));
+}
+
+/**
+ * Stringify matrix omitting meta keys (`generated_at`, `$schema`) for diff
+ * comparison — avoids spurious diffs from timestamp bumps or schema link.
+ */
+function stringifyForDiff(matrix: StateMatrix & { $schema?: string }): string {
+  const { generated_at: _gen, $schema: _s, ...rest } = matrix;
+  void _gen;
+  void _s;
+  return JSON.stringify({ ...rest, generated_at: '' }, null, 2);
+}
+
+/**
+ * CLI orchestrator. Returns exit code (0 OK, 1 fail).
+ */
+export async function runCli(opts: CliOptions): Promise<number> {
+  const fresh = collectAllMockupEntries(opts);
+  const existing = loadExistingMatrix(opts.matrixPath);
+  const merged = mergeMatrix(existing, fresh);
+
+  switch (opts.mode) {
+    case 'write': {
+      writeFileSync(opts.matrixPath, JSON.stringify(merged, null, 2) + '\n', 'utf-8');
+      return 0;
+    }
+    case 'check': {
+      if (stringifyForDiff(existing) === stringifyForDiff(merged)) return 0;
+      console.error('state-matrix.json out of sync with admin-mockups/design_files.');
+      console.error('Run: pnpm tsx apps/web/scripts/extract-mockup-states.ts --write');
+      return 1;
+    }
+    case 'enforced-only': {
+      const violations = merged.entries.filter(e => e.enforced && e.missing.length > 0);
+      if (violations.length === 0) return 0;
+      console.error(`Found ${violations.length} enforced entries with missing states:`);
+      for (const v of violations) {
+        console.error(`  ${v.mockup_path}: missing ${JSON.stringify(v.missing)}`);
+      }
+      return 1;
+    }
+  }
+}
+
+// ─── CLI entry point ───────────────────────────────────────────────────────────
+// Runs only when invoked directly via `pnpm tsx scripts/extract-mockup-states.ts`
+const invokedDirectly =
+  typeof process !== 'undefined' &&
+  typeof process.argv[1] === 'string' &&
+  process.argv[1].endsWith('extract-mockup-states.ts');
+
+if (invokedDirectly) {
+  const args = process.argv.slice(2);
+  let mode: CliMode = 'check';
+  if (args.includes('--write')) mode = 'write';
+  else if (args.includes('--enforced-only')) mode = 'enforced-only';
+  else if (args.includes('--check')) mode = 'check';
+
+  // Resolve repo root from script location: apps/web/scripts/ → ../../..
+  const scriptDir = new URL('.', import.meta.url).pathname;
+  // On Windows, pathname has leading slash that needs trimming: /D:/...
+  const normalizedScriptDir =
+    process.platform === 'win32' && /^\/[A-Z]:/.test(scriptDir) ? scriptDir.slice(1) : scriptDir;
+  const repoRoot = join(normalizedScriptDir, '..', '..', '..');
+
+  runCli({
+    mode,
+    mockupsDir: join(repoRoot, 'admin-mockups', 'design_files'),
+    matrixPath: join(repoRoot, 'apps', 'web', 'e2e', 'state-coverage', 'state-matrix.json'),
+    mockupsPathPrefix: 'admin-mockups/design_files',
+  }).then(code => process.exit(code));
 }

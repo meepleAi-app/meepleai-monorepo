@@ -114,6 +114,8 @@ cd ../../infra && make dev        # All services (make dev-core = no AI/monitori
 
 ### Git Workflow
 
+> **Reference**: full rationale in [ADR-054 — DevOps Multi-Branch Strategy](./docs/for-claude/architecture/adr/adr-054-devops-multi-branch-strategy.md). Tracking epic: [#842](https://github.com/meepleAi-app/meepleai-monorepo/issues/842).
+
 **Branches**: `main-dev` (dev) | `main-staging` (release) | `main` (prod) | `feature/issue-{n}-{desc}`
 
 **🔴 PR Target Rule**: Feature branches MUST merge to their parent branch (typically `main-dev`)

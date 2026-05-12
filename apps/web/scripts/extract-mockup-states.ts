@@ -58,3 +58,12 @@ export function extractStatesFromComment(commentText: string): string[] {
     .map(l => l.trim().split(/\s+/)[0])
     .filter(token => /^[a-zA-Z][\w-]*$/.test(token));
 }
+
+/**
+ * Extract `Route:` value from comment text.
+ * Returns null if not declared.
+ */
+export function extractRouteFromComment(commentText: string): string | null {
+  const match = commentText.match(/Route:\s*(\S+)/);
+  return match ? match[1] : null;
+}

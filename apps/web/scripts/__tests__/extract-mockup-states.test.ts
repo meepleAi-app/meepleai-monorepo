@@ -3,7 +3,7 @@
  * Spec: docs/for-developers/specs/2026-05-12-ws-d-state-coverage-design.md
  */
 import { describe, it, expect } from 'vitest';
-import { extractStatesFromComment } from '../extract-mockup-states';
+import { extractStatesFromComment, extractRouteFromComment } from '../extract-mockup-states';
 
 describe('extractStatesFromComment', () => {
   it('parses single-line Stati with · separator', () => {
@@ -38,5 +38,20 @@ describe('extractStatesFromComment', () => {
   it('returns empty array when no Stati line present', () => {
     const comment = `Mockup: foo\nRoute: /bar`;
     expect(extractStatesFromComment(comment)).toEqual([]);
+  });
+});
+
+describe('extractRouteFromComment', () => {
+  it('extracts Route: from comment', () => {
+    const comment = `
+      Mockup: foo
+      Route:  /library/{gameId}
+      Stati: default`;
+    expect(extractRouteFromComment(comment)).toBe('/library/{gameId}');
+  });
+
+  it('returns null when no Route declared', () => {
+    const comment = `Mockup: foo\nStati: default`;
+    expect(extractRouteFromComment(comment)).toBeNull();
   });
 });

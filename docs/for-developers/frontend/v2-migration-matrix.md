@@ -84,25 +84,30 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 
 ### Route Tier mapping
 
-| Route | Tier | Rationale | Status |
-|-------|------|-----------|--------|
-| `/games?tab=library` | **S** | useLibraryGames single hook, 5-state lineare | ✅ done (B.1, PR #635) |
-| `/agents` | **S** | useAgentList single hook, grid pattern | ✅ done (B.2, PR #637) |
-| `/library` | **S** | useLibrary single hook, hybrid grid | ✅ done (B.3, PR #638) |
-| `/players` | **S** | usePlayerStatistics single hook, games-as-players grid (Wave 4 D1) — v1 carryover anti-pattern preserved | ✅ done (Wave 4 D1, PR #717) |
-| `/games/[id]` | **L** | useGame + useAgents/Faqs/KbDocs by gameId — Phase 0.5 contract enforced | ✅ done (Wave C.1, PR #702) — `contracts/games-id-hooks.md` (TBD) |
-| `/agents/[id]` | **L** | useAgent + chat history + KB docs cross-resource (2-step chain agent.gameId) | ✅ done (Wave C.2, PR #711) — `contracts/agents-id-hooks.md` (TBD) |
-| `/sessions/[id]/live` | **L+** | Real-time SSE + multi-hook + dialog states | pending — Phase 0.5 + sub-PR split |
-| `/discover` | **L** | Multiple horizontal-row hooks | pending — Phase 0.5 required |
-| `/game-nights` | **L** | Calendar + day-detail drawer + filters | pending — Phase 0.5 required |
-| `/sessions` | **M** | Sessions list + filters composition | pending |
-| `/sessions/[id]` | **M-L** | Post-game summary: podium + KPI + diary + photos + share + tie-group computation | ✅ done (Wave D.3, PR #762) — `contracts/sessions-id-summary-hooks.md` (TBD) |
-| `/players/[id]` | **M** | usePlayerStatistics single hook (current user only — schema reality v1 carryover) | ✅ done (Wave 3, PR #724) |
-| `/toolkits/[id]` | **M** | Toolkit summary + version timeline | pending |
-| `/gamebook` | **M** | Libro-game index: Hero + QuotaWidget + Card grid + EmptyState | ✅ done (SP6 Phase B, PR #792) |
-| `/gamebook/upload` | **L** | 3-step wizard: game search + camera + indexing — 14-state FSM + camera permission matrix + offline retry | ✅ done (SP6 Phase C, contract PR #794 + Foundation PR #796 + Interactions PR #800) — [`contracts/gamebook-upload-hooks.md`](contracts/gamebook-upload-hooks.md) |
-| `/library/[gameId]/play/[campaignId]/translate` | **S** | Nanolith demo — paragraph translate via chat-stream workaround. Route consolidated from `/library/games/[gameId]/translate` under campaign in IA refactor #871. | ✅ done (SP6 Phase A, PR #790; route refactored in #871) |
-| `/kb/[id]` | **M** | KB header + chunks + search | **deferred** — pivot legale 2026-05-10, vedi `2026-05-10-citation-pdf-viewer-design.md` (G4 v3) |
+> **Updated 2026-05-12**: added `Primary Mockup` column linking each Tier-classified
+> route to the canonical file in `admin-mockups/design_files/`. See
+> [Route → Mockup index](#route--mockup-index-page-level) below for the full
+> per-route mapping (incl. routes not yet in Tier classification).
+
+| Route | Tier | Primary Mockup | Rationale | Status |
+|-------|------|---------------|-----------|--------|
+| `/games?tab=library` | **S** | `sp4-games-index.html` | useLibraryGames single hook, 5-state lineare | ✅ done (B.1, PR #635) |
+| `/agents` | **S** | `sp4-agents-index.html` | useAgentList single hook, grid pattern | ✅ done (B.2, PR #637) |
+| `/library` | **S** | `sp4-library-desktop.html` | useLibrary single hook, hybrid grid | ✅ done (B.3, PR #638) |
+| `/players` | **S** | `sp4-players-index.html` | usePlayerStatistics single hook, games-as-players grid (Wave 4 D1) — v1 carryover anti-pattern preserved | ✅ done (Wave 4 D1, PR #717) |
+| `/games/[id]` | **L** | `sp4-game-detail.html` | useGame + useAgents/Faqs/KbDocs by gameId — Phase 0.5 contract enforced | ✅ done (Wave C.1, PR #702) — `contracts/games-id-hooks.md` (TBD) |
+| `/agents/[id]` | **L** | `sp4-agent-detail.html` | useAgent + chat history + KB docs cross-resource (2-step chain agent.gameId) | ✅ done (Wave C.2, PR #711) — `contracts/agents-id-hooks.md` (TBD) |
+| `/sessions/[id]/live` | **L+** | `sp4-session-live.html` + `sp4-session-live-parts.jsx` | Real-time SSE + multi-hook + dialog states | pending — Phase 0.5 + sub-PR split |
+| `/discover` | **L** | `sp4-discover.html` | Multiple horizontal-row hooks | pending — Phase 0.5 required |
+| `/game-nights` | **L** | `sp4-game-nights-index.html` | Calendar + day-detail drawer + filters | pending — Phase 0.5 required |
+| `/sessions` | **M** | `sp4-sessions-index.html` | Sessions list + filters composition | pending |
+| `/sessions/[id]` | **M-L** | `sp4-session-summary.html` + `sp4-session-summary-parts.jsx` | Post-game summary: podium + KPI + diary + photos + share + tie-group computation | ✅ done (Wave D.3, PR #762) — `contracts/sessions-id-summary-hooks.md` (TBD) |
+| `/players/[id]` | **M** | `sp4-player-detail.html` | usePlayerStatistics single hook (current user only — schema reality v1 carryover) | ✅ done (Wave 3, PR #724) |
+| `/toolkits/[id]` | **M** | `sp4-toolkit-detail.html` | Toolkit summary + version timeline | pending |
+| `/gamebook` | **M** | `sp6-libro-game-index.html` | Libro-game index: Hero + QuotaWidget + Card grid + EmptyState | ✅ done (SP6 Phase B, PR #792) |
+| `/gamebook/upload` | **L** | `sp4-upload-wizard-extended.html` + `sp6-libro-game-photo-upload.html` | 3-step wizard: game search + camera + indexing — 14-state FSM + camera permission matrix + offline retry | ✅ done (SP6 Phase C, contract PR #794 + Foundation PR #796 + Interactions PR #800) — [`contracts/gamebook-upload-hooks.md`](contracts/gamebook-upload-hooks.md) |
+| `/library/[gameId]/play/[campaignId]/translate` | **S** | `nanolith-runthrough-translate-viewer.html` | Nanolith demo — paragraph translate via chat-stream workaround. Route consolidated from `/library/games/[gameId]/translate` under campaign in IA refactor #871. | ✅ done (SP6 Phase A, PR #790; route refactored in #871) |
+| `/kb/[id]` | **M** | `sp4-kb-detail.html` | KB header + chunks + search | **deferred** — pivot legale 2026-05-10, vedi `2026-05-10-citation-pdf-viewer-design.md` (G4 v3) |
 
 **Anti-pattern**: dispatchare implementation subagent senza Phase 0.5 per route Tier L. Wave C.1 PR #697 ha esattamente questo come root cause (vedi [post-mortem](../specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only)).
 
@@ -383,10 +388,157 @@ session title) into a single artifact suitable for image export — that is feat
 work, not a primitive composition. The total stays at 46 by dropping `GamesSortBar`
 instead.
 
+## Route → Mockup index (page-level)
+
+> **Added 2026-05-12** post user-page audit (issue #TBD). This is the
+> *route-first* counterpart to the per-component matrix above: one row per
+> user-reachable Next.js route (excluding `admin/(dashboard)/**`), linked to
+> the canonical mockup file(s). For machine-readable file classification see
+> [`admin-mockups/MOCKUPS_INDEX.md`](../../../admin-mockups/MOCKUPS_INDEX.md).
+>
+> **Scope**: 84 user-reachable routes inventoried from `apps/web/src/app/`
+> (`(public)`, `(auth)`, `(authenticated)`, `(chat)`). Routes under
+> `app/admin/(dashboard)/**` are intentionally excluded.
+>
+> **Legend**: `—` = no mockup mapped (gap); `↻` = reuse of another route's
+> mockup; `[partial]` = mockup covers a subset of the route's surface.
+
+### Public `(public)/`
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/` | `public.html` | Landing |
+| `/about` | — | gap |
+| `/contact` | — | gap |
+| `/cookies` · `/cookie-settings` | `sp3-legal.html` ↻ | Legal hub reuse |
+| `/privacy` · `/terms` | `sp3-legal.html` ↻ | Legal hub reuse |
+| `/faq` | `sp3-faq-enhanced.html` | — |
+| `/how-it-works` | `sp3-how-it-works.html` | — |
+| `/pricing` | — | gap |
+| `/join` | `sp3-join.html` | — |
+| `/join/session/[code]` | — | gap (deep-link session) |
+| `/accept-invite` | `sp3-accept-invite.html` | — |
+| `/invites/[token]` | `sp3-accept-invite.html` ↻ | Token variant |
+| `/shared-games` | `sp3-shared-games.html` + `sp3-library-public.html` | — |
+| `/shared-games/[id]` | `sp3-shared-game-detail.html` | Wave A.3 (PR #600/605/612/630) |
+| `/library/shared/[token]` | `sp3-library-public.html` ↻ | Public library snapshot |
+| `/dev/meeple-card` | `04-design-system.html` | Dev showcase only |
+
+### Auth `(auth)/`
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/login` · `/register` · `/reset-password` | `auth-flow.html` | Flow unico |
+| `/oauth-callback` | `auth-flow.html` [partial] | Callback step |
+| `/verify-email` · `/verification-pending` · `/verification-success` | `auth-flow.html` [partial] | Sub-states |
+| `/setup-account` | `auth-flow.html` + `onboarding.html` | Hand-off |
+| `/welcome` | `onboarding.html` | — |
+| `/invitation-expired` | `auth-flow.html` [partial] | Error state |
+
+### Authenticated `(authenticated)/` — Onboarding & Profile
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/onboarding` · `/setup` | `onboarding.html` | — |
+| `/dashboard` | — | **gap critico** (oggi inferito da `02-desktop-patterns.html` pattern lib) |
+| `/discover` | `sp4-discover.html` | Tier L, pending |
+| `/profile` · `/profile/achievements` | — | **gap critico** |
+| `/settings` (+ `/ai-consent`, `/api-keys`, `/notifications`, `/preferences`, `/profile`, `/security`, `/services`) | `settings.html` | Shell unica per 7 sub-route |
+| `/notifications` · `/notifications/preferences` | `notifications.html` | — |
+| `/versions` | — | gap (changelog) |
+
+### Authenticated — Library
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/library` | `sp4-library-desktop.html` | Tier S done (PR #574/635/638) |
+| `/library/wishlist` | — | gap |
+| `/library/playlists` · `/[id]` · `/shared/[token]` | — | **gap critico** (US-attiva) |
+| `/library/private` · `/add` · `/[id]` | `sp4-add-game-pdf-dedup.html` + `sp4-upload-wizard-extended.html` [partial] | — |
+| `/library/private/[id]/toolkit/configure` | `sp4-toolkit-detail.html` ↻ | — |
+| `/library/proposals` · `/propose` | `sp4-add-game-bgg-step.html` | Ingestion proposta |
+| `/library/[gameId]` | `sp4-game-detail.html` + `nanolith-runthrough-game-detail.html` | IA closes #871 (PR #1037) |
+| `/library/[gameId]/agent` | `sp4-agent-detail.html` + `sp4-game-chat-tab.html` | — |
+| `/library/[gameId]/play` | `nanolith-runthrough-resume-picker.html` + `sp6-libro-game-resume-state.html` | Libro-game |
+| `/library/[gameId]/play/[campaignId]` | `nanolith-runthrough-play-session.html` + `sp6-libro-game-index.html` | — |
+| `/library/[gameId]/play/[campaignId]/translate` | `nanolith-runthrough-translate-viewer.html` + `sp6-libro-game-photo-upload.html` | Tier S done (PR #790) |
+| `/library/[gameId]/toolbox` · `/toolkit` · `/toolkit/[sessionId]` | `sp4-toolkit-detail.html` ↻ | — |
+
+> **Note**: `/library/v2` decommissionata 2026-05-12 (era demo orfana con SEED hard-coded).
+
+### Authenticated — Games & Players
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/games` | `sp4-games-index.html` | — |
+| `/games/[id]` | `sp4-game-detail.html` | Tier L done (PR #702) |
+| `/games/[id]/faqs` | `sp3-faq-enhanced.html` ↻ | Reuse |
+| `/games/[id]/reviews` · `/strategies` · `/rules` | — | gap (sub-tab) |
+| `/games/[id]/sessions` | `sp4-sessions-index.html` ↻ | Filtrato per game |
+| `/players` | `sp4-players-index.html` | Tier S done (PR #717) |
+| `/players/[id]` | `sp4-player-detail.html` | Tier M done (PR #724) |
+| `/players/[id]/{achievements,games,sessions,stats}` | `sp4-player-detail.html` ↻ | Sub-tab unica |
+
+### Authenticated — Sessions & Game Nights
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/sessions` | `sp4-sessions-index.html` | — |
+| `/sessions/new` | `nanolith-runthrough-setup-wizard.html` | — |
+| `/sessions/join` | `sp3-join.html` ↻ | Reuse |
+| `/sessions/[id]` | `sp4-session-summary.html` | Tier M-L done (PR #762) |
+| `/sessions/[id]/live` | `sp4-session-live.html` | Tier L+ pending |
+| `/sessions/[id]/{play,notes,players,scoreboard,join}` | `sp4-session-live.html` [partial] | Sub-views |
+| `/sessions/live/[id]` (+ `/agent`, `/photos`, `/players`, `/scores`) | `sp4-session-live.html` + `nanolith-runthrough-session-end.html` | — |
+| `/game-nights` | `sp4-game-nights-index.html` | Tier L pending |
+| `/game-nights/new` | `sp7-game-night-create.html` | — |
+| `/game-nights/[id]` · `/[id]/edit` | `sp7-game-night-detail-rsvp.html` + `nanolith-game-night-storyboard.html` | — |
+
+### Authenticated — Play Records, Toolkit, Gamebook, Agents, KB
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/play-records` · `/new` · `/[id]` · `/[id]/edit` · `/stats` | — | **gap critico** (P1 sprint, 5 route) |
+| `/toolkit` · `/play` · `/history` · `/stats` · `/templates` · `/[sessionId]` | `sp4-toolkit-detail.html` ↻ | Shell unica |
+| `/gamebook` · `/gamebook/upload` | `sp6-libro-game-index.html` + `sp4-upload-wizard-extended.html` | done (PR #792/794+) |
+| `/agents` · `/agents/[id]` | `sp4-agents-index.html` + `sp4-agent-detail.html` | Tier S+L done |
+| `/knowledge-base` · `/[id]` | `sp4-kb-hub.html` + `sp4-kb-detail.html` | KB-detail deferred (G4 v3) |
+| `/upload` | `sp4-upload-wizard-extended.html` + `sp4-add-game-pdf-dedup.html` | — |
+| `/private-games/[id]` | `sp4-game-detail.html` ↻ | Reuse |
+
+### Chat `(chat)/`
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/chat` · `/chat/new` · `/chat/[threadId]` | `sp4-game-chat-tab.html` + `nanolith-runthrough-setup-chat.html` + `nanolith-nav-chat-panel.html` | — |
+| `/chat/agents/create` | `sp4-agents-index.html` [partial] | gap dedicato per "create flow" |
+
+### Power-user / editor (utente avanzato, non admin)
+
+| Route | Mockup | Note |
+|-------|--------|------|
+| `/editor` · `/editor/agent-proposals/*` (4 sub-route) | `sp4-agents-index.html` [partial] | UX editor proposte mancante |
+| `/pipeline-builder` | — | gap |
+| `/n8n` | — | gap (integration UI) |
+
+### Critical gaps summary
+
+Routes senza mockup con **alta priorità user-journey** (audit 2026-05-12):
+
+1. **`/dashboard`** — hub post-login, oggi inferito da pattern lib non-page-level
+2. **`/play-records/*`** — 5 route P1 sprint senza copertura
+3. **`/library/playlists/*`** — 3 route feature US-attiva
+4. **`/profile/*`** — 2 route standard utente (esiste solo `settings.html`)
+5. **`/pricing`** — landing commerciale assente
+
+Status di queste 5 lacune è tracciato in `docs/for-developers/audits/2026-05-12-mockup-gaps.md`.
+
 ## References
 
 - Issue #573 — *[V2 Phase 0] Migration contract matrix + 46 component stub*.
 - Wave A umbrella #579.
 - v2 design migration spec: [`docs/for-developers/specs/2026-04-26-v2-design-migration.md`](../specs/2026-04-26-v2-design-migration.md).
 - Existing v2 primitives index: [`apps/web/src/components/ui/`](../../../apps/web/src/components/ui/).
-- Mockups: [`admin-mockups/design_files/`](../../../admin-mockups/design_files/) (sp4-* wave 1+2).
+- Mockups: [`admin-mockups/design_files/`](../../../admin-mockups/design_files/) (sp3/sp4/sp6/sp7/nanolith).
+- Mockup file classification: [`admin-mockups/MOCKUPS_INDEX.md`](../../../admin-mockups/MOCKUPS_INDEX.md).
+- Page-level gaps audit: [`docs/for-developers/audits/2026-05-12-mockup-gaps.md`](../audits/2026-05-12-mockup-gaps.md).

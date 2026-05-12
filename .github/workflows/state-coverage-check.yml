@@ -1,0 +1,98 @@
+name: State Coverage Check
+
+# Issue #1070 (WS-D Mockup Conformity Roadmap, umbrella #1066)
+# Verifies state-matrix.json is in sync with admin-mockups/design_files/*.html
+# and enforces missing.length === 0 for mockups flagged `enforced: true`.
+
+on:
+  pull_request:
+    branches: [main, main-dev, main-staging]
+    paths:
+      - 'admin-mockups/design_files/**'
+      - 'apps/web/e2e/state-coverage/**'
+      - 'apps/web/scripts/extract-mockup-states.ts'
+      - 'apps/web/scripts/__tests__/extract-mockup-states.test.ts'
+      - '.github/workflows/state-coverage-check.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check (diff fail) | regenerate (write matrix.json artifact)'
+        required: true
+        default: 'check'
+        type: choice
+        options:
+          - check
+          - regenerate
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: state-coverage-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  state-coverage:
+    name: State Matrix Sync + Enforcement
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Run state matrix sync check
+        if: github.event_name != 'workflow_dispatch' || inputs.mode == 'check'
+        run: pnpm tsx scripts/extract-mockup-states.ts --check
+
+      - name: Run enforcement check (enforced=true entries)
+        if: github.event_name != 'workflow_dispatch' || inputs.mode == 'check'
+        run: pnpm tsx scripts/extract-mockup-states.ts --enforced-only
+
+      - name: Regenerate matrix.json (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'regenerate'
+        run: pnpm tsx scripts/extract-mockup-states.ts --write
+
+      - name: Upload regenerated matrix
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'regenerate'
+        uses: actions/upload-artifact@v7
+        with:
+          name: state-matrix-regenerated-${{ github.run_number }}
+          path: apps/web/e2e/state-coverage/state-matrix.json
+          retention-days: 14
+
+      - name: Comment on PR (sync failure)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const body = `## State Coverage Check failed
+
+            \`state-matrix.json\` is out-of-sync with mockup HTML files in \`admin-mockups/design_files/\`.
+
+            **To fix**:
+            \`\`\`bash
+            cd apps/web
+            pnpm tsx scripts/extract-mockup-states.ts --write
+            git add e2e/state-coverage/state-matrix.json
+            git commit -m "chore(state-coverage): refresh matrix from mockup edits"
+            \`\`\`
+
+            See \`docs/for-developers/testing/frontend/visual-state-coverage.md\` for full workflow.
+            `;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });

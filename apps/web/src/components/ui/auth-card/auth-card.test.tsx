@@ -95,8 +95,8 @@ describe('AuthCard', () => {
     expect(brandMark).not.toBeNull();
     const bg = brandMark?.style.background ?? '';
     expect(bg).toMatch(/linear-gradient/);
-    expect(bg).toMatch(/--e-game/);
-    expect(bg).toMatch(/--e-event/);
-    expect(bg).toMatch(/--e-player/);
+    expect(bg).toMatch(/--c-game/); // post DS-16: bridge removed, --e-* → --c-*
+    expect(bg).toMatch(/--c-event/);
+    expect(bg).toMatch(/--c-player/);
   });
 });

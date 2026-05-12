@@ -9,11 +9,11 @@ exports[`EmptyState > Snapshot tests > should match snapshot for default variant
 >
   <div
     aria-hidden="true"
-    class="mb-4 p-4 rounded-full bg-slate-100 dark:bg-slate-800 transition-transform duration-200 hover:scale-105"
+    class="mb-4 p-4 rounded-full bg-muted transition-transform duration-200 hover:scale-105"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-inbox w-8 h-8 text-slate-400 dark:text-slate-500"
+      class="lucide lucide-inbox w-8 h-8 text-muted-foreground"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -33,12 +33,12 @@ exports[`EmptyState > Snapshot tests > should match snapshot for default variant
     </svg>
   </div>
   <h3
-    class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2"
+    class="text-lg font-semibold text-foreground mb-2"
   >
     No items
   </h3>
   <p
-    class="text-sm text-slate-600 dark:text-slate-400 max-w-sm mb-4"
+    class="text-sm text-muted-foreground max-w-sm mb-4"
   >
     Add your first item
   </p>
@@ -62,7 +62,7 @@ exports[`EmptyState > Snapshot tests > should match snapshot for error variant 1
 >
   <div
     aria-hidden="true"
-    class="mb-4 p-4 rounded-full bg-slate-100 dark:bg-slate-800 transition-transform duration-200 hover:scale-105"
+    class="mb-4 p-4 rounded-full bg-muted transition-transform duration-200 hover:scale-105"
   >
     <svg
       aria-hidden="true"
@@ -97,12 +97,12 @@ exports[`EmptyState > Snapshot tests > should match snapshot for error variant 1
     </svg>
   </div>
   <h3
-    class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2"
+    class="text-lg font-semibold text-foreground mb-2"
   >
     Something went wrong
   </h3>
   <p
-    class="text-sm text-slate-600 dark:text-slate-400 max-w-sm mb-4"
+    class="text-sm text-muted-foreground max-w-sm mb-4"
   >
     Please try again later
   </p>
@@ -133,7 +133,7 @@ exports[`EmptyState > Snapshot tests > should match snapshot for noAccess varian
 >
   <div
     aria-hidden="true"
-    class="mb-4 p-4 rounded-full bg-slate-100 dark:bg-slate-800 transition-transform duration-200 hover:scale-105"
+    class="mb-4 p-4 rounded-full bg-muted transition-transform duration-200 hover:scale-105"
   >
     <svg
       aria-hidden="true"
@@ -162,12 +162,12 @@ exports[`EmptyState > Snapshot tests > should match snapshot for noAccess varian
     </svg>
   </div>
   <h3
-    class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2"
+    class="text-lg font-semibold text-foreground mb-2"
   >
     Access denied
   </h3>
   <p
-    class="text-sm text-slate-600 dark:text-slate-400 max-w-sm mb-4"
+    class="text-sm text-muted-foreground max-w-sm mb-4"
   >
     You do not have permission
   </p>
@@ -191,7 +191,7 @@ exports[`EmptyState > Snapshot tests > should match snapshot for noResults varia
 >
   <div
     aria-hidden="true"
-    class="mb-4 p-4 rounded-full bg-slate-100 dark:bg-slate-800 transition-transform duration-200 hover:scale-105"
+    class="mb-4 p-4 rounded-full bg-muted transition-transform duration-200 hover:scale-105"
   >
     <svg
       aria-hidden="true"
@@ -217,12 +217,12 @@ exports[`EmptyState > Snapshot tests > should match snapshot for noResults varia
     </svg>
   </div>
   <h3
-    class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2"
+    class="text-lg font-semibold text-foreground mb-2"
   >
     No results found
   </h3>
   <p
-    class="text-sm text-slate-600 dark:text-slate-400 max-w-sm mb-4"
+    class="text-sm text-muted-foreground max-w-sm mb-4"
   >
     Try adjusting your search
   </p>
@@ -253,11 +253,11 @@ exports[`EmptyState > Snapshot tests > should match snapshot with custom icon 1`
 >
   <div
     aria-hidden="true"
-    class="mb-4 p-4 rounded-full bg-slate-100 dark:bg-slate-800 transition-transform duration-200 hover:scale-105"
+    class="mb-4 p-4 rounded-full bg-muted transition-transform duration-200 hover:scale-105"
   >
     <svg
       aria-hidden="true"
-      class="lucide lucide-upload w-8 h-8 text-slate-400 dark:text-slate-500"
+      class="lucide lucide-upload w-8 h-8 text-muted-foreground"
       fill="none"
       height="24"
       stroke="currentColor"
@@ -280,12 +280,12 @@ exports[`EmptyState > Snapshot tests > should match snapshot with custom icon 1`
     </svg>
   </div>
   <h3
-    class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2"
+    class="text-lg font-semibold text-foreground mb-2"
   >
     Upload files
   </h3>
   <p
-    class="text-sm text-slate-600 dark:text-slate-400 max-w-sm mb-4"
+    class="text-sm text-muted-foreground max-w-sm mb-4"
   >
     Drag and drop files here
   </p>

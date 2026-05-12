@@ -8,6 +8,15 @@
 
 'use client';
 
+/* eslint-disable local/no-hardcoded-color-utility --
+ * Active hero renders white text + inverted white-button CTA on an inline
+ * `style={{ background: 'linear-gradient(...)' }}` parent (amber gradient).
+ * The lint rule inspects className strings only, so it cannot see the colored
+ * bg in the style prop. Pattern is mockup-faithful (.e-bg / hero convention).
+ * DS-12 (ui primitives) will introduce a shared <EntityHero> primitive that
+ * encodes the bg via className, at which point this exemption can be removed.
+ */
+
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Dices, Play, RotateCcw } from 'lucide-react';

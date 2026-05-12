@@ -49,6 +49,7 @@ function AgentCard({ agent }: { agent: AgentDto }) {
     >
       {/* Icon */}
       <span
+        // eslint-disable-next-line local/no-hardcoded-color-utility -- white text on gradient bg (style prop); mockup .e-bg pattern
         className="flex items-center justify-center w-9 h-9 rounded-lg text-white shrink-0"
         style={{ background: 'linear-gradient(135deg, hsl(38,92%,50%), hsl(38,92%,32%))' }}
         aria-hidden

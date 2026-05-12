@@ -800,6 +800,51 @@ export interface LibraryGameDetail {
 }
 
 /**
+ * Map a PrivateGameDto into the LibraryGameDetail shape so the unified
+ * `/library/[gameId]` route can render private-game ownership (Issue #1068).
+ *
+ * Private games are user-owned game records not present in the shared catalog —
+ * typically dogfood titles (Nanolith) or manually-added entries. They expose a
+ * narrower schema than GameDetailDto (no play stats, no shared metadata), so
+ * the mapper substitutes sentinel/null values for fields the source cannot
+ * provide. `libraryEntryId === ''` is the same sentinel used by the catalog
+ * fallback to signal `heroVariant === 'community'` downstream.
+ */
+function mapPrivateGameToLibraryGameDetail(privateGame: PrivateGameDto): LibraryGameDetail {
+  return {
+    libraryEntryId: '',
+    userId: privateGame.ownerId,
+    gameId: privateGame.id,
+    addedAt: privateGame.createdAt,
+    notes: null,
+    isFavorite: false,
+    currentState: 'Nuovo',
+    stateChangedAt: null,
+    stateNotes: null,
+    isAvailableForPlay: true,
+    hasCustomPdf: false,
+    hasRagAccess: false,
+    gameTitle: privateGame.title,
+    gamePublisher: null,
+    gameYearPublished: privateGame.yearPublished ?? null,
+    gameIconUrl: privateGame.thumbnailUrl ?? null,
+    gameImageUrl: privateGame.imageUrl ?? null,
+    description: privateGame.description ?? null,
+    minPlayers: privateGame.minPlayers,
+    maxPlayers: privateGame.maxPlayers,
+    playingTimeMinutes: privateGame.playingTimeMinutes ?? null,
+    minAge: privateGame.minAge ?? undefined,
+    complexityRating: privateGame.complexityRating ?? null,
+    averageRating: null,
+    timesPlayed: 0,
+    lastPlayed: null,
+    winRate: null,
+    avgDuration: null,
+    bggId: privateGame.bggId ?? null,
+  };
+}
+
+/**
  * Hook to fetch library game detail for Game Detail page (Issue #3513)
  *
  * Uses the efficient GET /library/{gameId} endpoint that returns
@@ -807,7 +852,11 @@ export interface LibraryGameDetail {
  *
  * For extended data (categories, mechanics, designers), fetches SharedGame in parallel.
  *
- * @param gameId - Game UUID (same as SharedGame.id)
+ * Issue #1068: also probes PrivateGame as third source so private-game ownership
+ * (Nanolith dogfood) renders correctly on the unified `/library/[gameId]` route
+ * introduced by PR #1037 IA consolidation.
+ *
+ * @param gameId - Game UUID (SharedGame.id, PrivateGame.id, or library entry UUID)
  * @param enabled - Whether to run the query (default: true)
  * @returns UseQueryResult with combined library game detail
  */
@@ -818,13 +867,25 @@ export function useLibraryGameDetail(
   return useQuery({
     queryKey: libraryKeys.gameDetail(gameId),
     queryFn: async (): Promise<LibraryGameDetail | null> => {
-      // Fetch game detail (efficient single endpoint) and shared game (for extended data) in parallel
-      const [gameDetail, sharedGame] = await Promise.all([
+      // Issue #1068 (WS-B Mockup Conformity): probe three sources in parallel.
+      // After PR #1037 IA consolidation collapsed `/library/games/[id]` →
+      // `/library/[id]`, the same URL must serve shared-library entries,
+      // shared-catalog browse, AND private-game ownership (e.g. Nanolith
+      // dogfood). Without the PrivateGame fallback, page.tsx:76 collapses
+      // owned private games into a misleading "Gioco non trovato" state.
+      const [gameDetail, sharedGame, privateGame] = await Promise.all([
         api.library.getGameDetail(gameId).catch(() => null),
         api.sharedGames.getById(gameId).catch(() => null),
+        api.library.getPrivateGame(gameId).catch(() => null),
       ]);
 
       if (!gameDetail) {
+        // PrivateGame ownership takes priority over catalog fallback: an owned
+        // private game is more specific than a community-only entry, and
+        // typically a private-game UUID will NOT match shared_games anyway.
+        if (privateGame) {
+          return mapPrivateGameToLibraryGameDetail(privateGame);
+        }
         // Game not in user's library → fall back to catalog-only view (G1).
         // The detail page must render for ANY shared_game so the user can
         // see metadata and click "Aggiungi alla libreria". The sentinel

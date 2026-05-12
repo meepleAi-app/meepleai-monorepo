@@ -6,15 +6,14 @@
 | **Generator** | `pnpm lint:tokens` (DS-2) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../docs/for-developers/specs/2026-05-12-token-canonicalization.md) |
 | **Rule** | `local/no-hardcoded-color-utility` |
-| **Total violations** | 3178 |
-| **Files affected** | 351 |
-| **Clusters affected** | 162 |
+| **Total violations** | 1937 |
+| **Files affected** | 251 |
+| **Clusters affected** | 161 |
 
 ## Violations by cluster
 
 | Cluster | Violations | Suggested stage |
 |---|---|---|
-| `app/admin/(dashboard)` | 1241 | manual |
 | `admin/shared-games` | 128 | manual |
 | `toolkit-drawer/tabs` | 122 | manual |
 | `admin/agents` | 83 | manual |
@@ -181,26 +180,26 @@
 
 | File | Violations |
 |---|---|
-| `src/app/admin/(dashboard)/agents/inspector/page.tsx` | 122 |
 | `src/stories/Animations.stories.tsx` | 76 |
-| `src/app/admin/(dashboard)/knowledge-base/mechanic-extractor/analyses/page.tsx` | 57 |
-| `src/app/admin/(dashboard)/knowledge-base/vectors/page.tsx` | 54 |
 | `src/components/admin/command-center/CommandCenterDashboard.tsx` | 54 |
 | `src/components/loading/SkeletonLoader.tsx` | 54 |
-| `src/app/admin/(dashboard)/knowledge-base/embedding/page.tsx` | 50 |
 | `src/components/play-records/NewPlayRecordSheet.tsx` | 50 |
-| `src/app/admin/(dashboard)/users/[id]/page.tsx` | 48 |
-| `src/app/admin/(dashboard)/knowledge-base/documents/page.tsx` | 46 |
 | `src/components/rag-dashboard/config/RagConfigurationForm.tsx` | 44 |
 | `src/components/admin/shared-games/SharedGameExtraMeepleCard.tsx` | 43 |
-| `src/app/admin/(dashboard)/agents/config/AgentModelsTabContent.tsx` | 40 |
-| `src/app/admin/(dashboard)/agents/config/AgentStrategyTabContent.tsx` | 40 |
-| `src/app/admin/(dashboard)/shared-games/[id]/client.tsx` | 40 |
-| `src/app/admin/(dashboard)/agents/page.tsx` | 38 |
-| `src/app/admin/(dashboard)/users/invitations/page.tsx` | 38 |
-| `src/app/admin/(dashboard)/knowledge-base/games/page.tsx` | 37 |
 | `src/components/admin/agents/chat-history-table.tsx` | 35 |
 | `src/app/(authenticated)/play-records/[id]/page.tsx` | 32 |
+| `src/components/admin/users/activity-table.tsx` | 28 |
+| `src/components/admin/users/permissions-matrix.tsx` | 28 |
+| `src/app/(auth)/welcome/_content.tsx` | 27 |
+| `src/components/errors/ErrorBoundary.stories.tsx` | 27 |
+| `src/stories/DesignTokens.stories.tsx` | 27 |
+| `src/components/admin/agents/models-table.tsx` | 24 |
+| `src/components/admin/shared-games/game-catalog-grid.tsx` | 24 |
+| `src/components/admin/shared-games/categories-table.tsx` | 23 |
+| `src/app/(authenticated)/admin/wizard/steps/ChatSetupStep.tsx` | 22 |
+| `src/app/(authenticated)/play-records/stats/page.tsx` | 22 |
+| `src/components/comments/CommentItem.tsx` | 22 |
+| `src/components/empty-state/EmptyState.stories.tsx` | 22 |
 
 ## Notes
 

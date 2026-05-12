@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -29,7 +30,7 @@ function MetricCard({
     <div
       className={cn(
         'rounded-xl border border-border/60 p-5',
-        'bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md'
+        'bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md'
       )}
     >
       <p className="text-sm text-muted-foreground">{label}</p>

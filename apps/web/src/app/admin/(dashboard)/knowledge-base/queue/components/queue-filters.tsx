@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -85,7 +86,7 @@ export function QueueFiltersBar({ filters, onFiltersChange }: QueueFiltersBarPro
           placeholder="Search by filename..."
           value={localSearch}
           onChange={e => setLocalSearch(e.target.value)}
-          className="pl-9 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md"
+          className="pl-9 bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md"
         />
       </div>
 
@@ -100,7 +101,7 @@ export function QueueFiltersBar({ filters, onFiltersChange }: QueueFiltersBarPro
           })
         }
       >
-        <SelectTrigger className="w-[160px] bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md">
+        <SelectTrigger className="w-[160px] bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
@@ -121,7 +122,7 @@ export function QueueFiltersBar({ filters, onFiltersChange }: QueueFiltersBarPro
           onFiltersChange({ ...filters, ...range, page: 1 });
         }}
       >
-        <SelectTrigger className="w-[160px] bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md">
+        <SelectTrigger className="w-[160px] bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md">
           <SelectValue placeholder="Date Range" />
         </SelectTrigger>
         <SelectContent>

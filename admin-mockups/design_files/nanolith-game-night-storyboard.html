@@ -258,6 +258,24 @@
 
     <article class="step">
       <header class="head">
+        <span class="num">00</span>
+        <div class="info">
+          <div class="ts">T−7d · una tantum</div>
+          <h3>Onboarding libro game · pre-condizione</h3>
+          <p class="desc">Settimana prima della sera: Aaron carica i 2 PDF (Press Start 36MB + Rules 101MB), KB indicizza (1.842 chunks), agente "Arbitro Nanolith" creato. 4 stati: prereq-missing → uploading → indexing → ready. Una sola volta nella vita del libro game.</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip kb"><span class="badge">0→142</span></span><span class="manapip agent"><span class="badge">0→1</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-game-onboarding.html#s4" loading="lazy" title="Onboarding ready"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-game-onboarding.html"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-game-onboarding.html">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">/library/nanolith (prereq gate)</span><span class="state-pill">04-ready ✓</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
         <span class="num">01</span>
         <div class="info">
           <div class="ts">20:30 · Mobile</div>
@@ -457,6 +475,24 @@
 
     <article class="step">
       <header class="head">
+        <span class="num">11a</span>
+        <div class="info">
+          <div class="ts">22:30 · J3 encounter photo</div>
+          <h3>Encounter Book · foto → cheatsheet on-demand</h3>
+          <p class="desc">Storybook §147 cita "→ Encounter §218 (Reaver Camp)". Aaron fotografa la pagina Encounter Book. Pipeline OCR + parse stats/options/conditions in ≤ 6s. Layout cheatsheet card compatto (no prose). 4 stati: entry-from-story · segmenting · cheatsheet-rendered · resolved-back. NO long-term cache (ephemeral §9.1).</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip event"><span class="badge">+1</span></span><span class="manapip kb"><span class="badge">142</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-encounter-cheatsheet.html#s3" loading="lazy" title="Encounter cheatsheet rendered"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-encounter-cheatsheet.html"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-encounter-cheatsheet.html">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">…/play/{cmp}/encounter</span><span class="state-pill">03-cheatsheet-rendered</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
         <span class="num">11</span>
         <div class="info">
           <div class="ts">22:31 · J3 encounter</div>
@@ -586,6 +622,24 @@
           <button class="open-overlay" data-open="nanolith-runthrough-quota-credits.html">↗ Apri</button>
         </div>
         <div class="foot"><span class="route">…modal + /account/checkout</span><span class="state-pill">quota-raggiunta</span></div>
+      </article>
+
+      <article class="step edge">
+        <header class="head">
+          <span class="num">E4</span>
+          <div class="info">
+            <div class="ts">edge · failure modes</div>
+            <h3>Error states · 4 stati tecnici trasversali</h3>
+            <p class="desc">4 stati di degradazione coperti: stream-timeout (chat &gt; 30s no token) · OCR-fail (foto conf &lt; 0.3) · LLM-503 (provider down, 3 retry + fallback offline) · segmentation-fail (OCR ok ma 0 §). Tutti con cost-note "non addebitato" + ≥ 2 azioni di recupero + telemetry dogfood.</p>
+          </div>
+        </header>
+        <div class="pips"><span class="manapip chat"><span class="badge">!</span></span><span class="manapip event"><span class="badge">!</span></span></div>
+        <div class="preview">
+          <iframe src="nanolith-runthrough-error-states.html#s3" loading="lazy" title="Error LLM 503"></iframe>
+          <button class="scrim" data-open="nanolith-runthrough-error-states.html"></button>
+          <button class="open-overlay" data-open="nanolith-runthrough-error-states.html">↗ Apri</button>
+        </div>
+        <div class="foot"><span class="route">trasversale</span><span class="state-pill">stream-timeout · ocr-fail · 503 · seg-fail</span></div>
       </article>
 
     </div>

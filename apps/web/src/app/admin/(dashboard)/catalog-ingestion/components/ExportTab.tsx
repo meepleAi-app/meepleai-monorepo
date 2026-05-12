@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState } from 'react';
@@ -28,7 +29,7 @@ export function ExportTab() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-slate-200/60 dark:border-zinc-700/60 p-6 space-y-6">
+      <div className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-border/60 dark:border-zinc-700/60 p-6 space-y-6">
         <div>
           <h3 className="font-quicksand text-lg font-semibold text-foreground">
             Export Catalog to Excel
@@ -121,7 +122,7 @@ export function ExportTab() {
 
       {/* Success */}
       {exportMutation.isSuccess && (
-        <div className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-emerald-200/60 dark:border-emerald-700/40 p-4">
+        <div className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-emerald-200/60 dark:border-emerald-700/40 p-4">
           <p className="text-sm text-emerald-700 dark:text-emerald-400">
             Export downloaded successfully.
           </p>

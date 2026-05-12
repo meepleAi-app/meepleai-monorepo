@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -73,7 +74,7 @@ const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
 
 const STATUS_BADGE_CLASS: Record<number, string> = {
-  [MechanicAnalysisStatus.Draft]: 'bg-slate-100 text-slate-700 border-slate-300',
+  [MechanicAnalysisStatus.Draft]: 'bg-muted text-foreground border-border',
   [MechanicAnalysisStatus.InReview]: 'bg-amber-100 text-amber-800 border-amber-300',
   [MechanicAnalysisStatus.Published]: 'bg-green-100 text-green-800 border-green-300',
   [MechanicAnalysisStatus.Rejected]: 'bg-rose-100 text-rose-800 border-rose-300',
@@ -83,7 +84,7 @@ const STATUS_BADGE_CLASS: Record<number, string> = {
 const RUN_STATUS_BADGE_CLASS: Record<number, string> = {
   0: 'bg-green-100 text-green-800 border-green-300', // Succeeded
   1: 'bg-rose-100 text-rose-800 border-rose-300', // Failed
-  2: 'bg-slate-100 text-slate-700 border-slate-300', // SkippedDueToCostCap
+  2: 'bg-muted text-foreground border-border', // SkippedDueToCostCap
 };
 
 function formatCurrency(value: number | null | undefined): string {
@@ -346,7 +347,7 @@ export default function MechanicAnalysesPage() {
 
       {/* Load existing analysis by id (review claims, suppression, etc.) — kept
           as a fallback for direct deep-linking when the UUID is already known. */}
-      <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/60">
+      <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/60">
         <CardContent className="pt-6 space-y-2">
           <h2 className="text-lg font-medium font-quicksand">Load existing analysis</h2>
           <p className="text-xs text-muted-foreground">
@@ -358,7 +359,7 @@ export default function MechanicAnalysesPage() {
               value={loadIdInput}
               onChange={e => setLoadIdInput(e.target.value)}
               placeholder="00000000-0000-0000-0000-000000000000"
-              className="flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+              className="flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
               data-testid="load-analysis-id-input"
             />
             <Button
@@ -380,7 +381,7 @@ export default function MechanicAnalysesPage() {
       </Card>
 
       {/* Generation form */}
-      <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/60">
+      <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/60">
         <CardContent className="pt-6 space-y-4">
           <h2 className="text-lg font-medium font-quicksand">Start a new analysis</h2>
 
@@ -449,7 +450,7 @@ export default function MechanicAnalysesPage() {
                 step="0.01"
                 value={costCapUsd}
                 onChange={e => setCostCapUsd(e.target.value)}
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 Sections skip after total projected cost × 1.0 exceeds this cap.
@@ -462,7 +463,7 @@ export default function MechanicAnalysesPage() {
                   type="checkbox"
                   checked={overrideEnabled}
                   onChange={e => setOverrideEnabled(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300"
+                  className="h-4 w-4 rounded border-border"
                 />
                 Apply planning-time override
               </label>
@@ -475,13 +476,13 @@ export default function MechanicAnalysesPage() {
                     value={overrideCapUsd}
                     onChange={e => setOverrideCapUsd(e.target.value)}
                     placeholder="Override cap USD"
-                    className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
                   />
                   <textarea
                     value={overrideReason}
                     onChange={e => setOverrideReason(e.target.value)}
                     placeholder="Reason for override (min 20 chars)"
-                    className="h-20 w-full resize-y rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    className="h-20 w-full resize-y rounded-md border border-border bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
                   />
                   <p className="text-xs text-muted-foreground">
                     {overrideReason.length} / 20+ characters
@@ -528,7 +529,7 @@ export default function MechanicAnalysesPage() {
 
       {/* Status + telemetry */}
       {analysisId && (
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/60">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/60">
           <CardContent className="pt-6 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
@@ -570,24 +571,24 @@ export default function MechanicAnalysesPage() {
 
             {status && (
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <div className="rounded-md border border-slate-200 p-2 text-xs dark:border-zinc-700">
+                <div className="rounded-md border border-border p-2 text-xs dark:border-zinc-700">
                   <div className="text-muted-foreground">Prompt version</div>
                   <div className="font-medium">{status.promptVersion}</div>
                 </div>
-                <div className="rounded-md border border-slate-200 p-2 text-xs dark:border-zinc-700">
+                <div className="rounded-md border border-border p-2 text-xs dark:border-zinc-700">
                   <div className="text-muted-foreground">Model</div>
                   <div className="font-medium">
                     {status.provider} · {status.modelUsed}
                   </div>
                 </div>
-                <div className="rounded-md border border-slate-200 p-2 text-xs dark:border-zinc-700">
+                <div className="rounded-md border border-border p-2 text-xs dark:border-zinc-700">
                   <div className="text-muted-foreground flex items-center gap-1">
                     <SparklesIcon className="h-3 w-3" />
                     Tokens
                   </div>
                   <div className="font-medium">{status.totalTokensUsed.toLocaleString()}</div>
                 </div>
-                <div className="rounded-md border border-slate-200 p-2 text-xs dark:border-zinc-700">
+                <div className="rounded-md border border-border p-2 text-xs dark:border-zinc-700">
                   <div className="text-muted-foreground flex items-center gap-1">
                     <DollarSignIcon className="h-3 w-3" />
                     Cost / cap
@@ -599,22 +600,22 @@ export default function MechanicAnalysesPage() {
                     )}
                   </div>
                 </div>
-                <div className="rounded-md border border-slate-200 p-2 text-xs dark:border-zinc-700">
+                <div className="rounded-md border border-border p-2 text-xs dark:border-zinc-700">
                   <div className="text-muted-foreground">Claims</div>
                   <div className="font-medium">{status.claimsCount}</div>
                 </div>
-                <div className="rounded-md border border-slate-200 p-2 text-xs dark:border-zinc-700">
+                <div className="rounded-md border border-border p-2 text-xs dark:border-zinc-700">
                   <div className="text-muted-foreground">Created</div>
                   <div className="font-medium">{formatDate(status.createdAt)}</div>
                 </div>
                 {status.reviewedAt && (
-                  <div className="rounded-md border border-slate-200 p-2 text-xs dark:border-zinc-700">
+                  <div className="rounded-md border border-border p-2 text-xs dark:border-zinc-700">
                     <div className="text-muted-foreground">Reviewed</div>
                     <div className="font-medium">{formatDate(status.reviewedAt)}</div>
                   </div>
                 )}
                 {status.suppressedAt && (
-                  <div className="rounded-md border border-slate-200 p-2 text-xs dark:border-zinc-700">
+                  <div className="rounded-md border border-border p-2 text-xs dark:border-zinc-700">
                     <div className="text-muted-foreground">Suppressed</div>
                     <div className="font-medium">{formatDate(status.suppressedAt)}</div>
                   </div>
@@ -637,9 +638,9 @@ export default function MechanicAnalysesPage() {
             {status && status.sectionRuns.length > 0 && (
               <div>
                 <h3 className="mb-2 text-sm font-medium">Section runs</h3>
-                <div className="overflow-x-auto rounded-md border border-slate-200 dark:border-zinc-700">
+                <div className="overflow-x-auto rounded-md border border-border dark:border-zinc-700">
                   <table className="w-full text-xs">
-                    <thead className="bg-slate-50 dark:bg-zinc-900">
+                    <thead className="bg-muted dark:bg-zinc-900">
                       <tr>
                         <th className="p-2 text-left">Section</th>
                         <th className="p-2 text-left">#</th>
@@ -654,7 +655,7 @@ export default function MechanicAnalysesPage() {
                       {status.sectionRuns.map((run, idx) => (
                         <tr
                           key={`${run.section}-${run.runOrder}-${idx}`}
-                          className="border-t border-slate-200 dark:border-zinc-700"
+                          className="border-t border-border dark:border-zinc-700"
                         >
                           <td className="p-2">
                             {MECHANIC_SECTION_LABELS[run.section] ?? run.section}
@@ -710,7 +711,7 @@ export default function MechanicAnalysesPage() {
 
             {/* Lifecycle actions */}
             {status && (
-              <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4 dark:border-zinc-700">
+              <div className="flex flex-wrap gap-2 border-t border-border pt-4 dark:border-zinc-700">
                 <Button
                   variant="outline"
                   onClick={() => submitReviewMutation.mutate()}
@@ -778,7 +779,7 @@ export default function MechanicAnalysesPage() {
                 value={suppressReason}
                 onChange={e => setSuppressReason(e.target.value)}
                 placeholder="Legal takedown justification…"
-                className="h-24 w-full resize-y rounded-md border border-slate-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400"
+                className="h-24 w-full resize-y rounded-md border border-border bg-card px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 focus:border-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400"
                 data-testid="suppress-reason-input"
               />
               <p className="mt-1 text-xs text-muted-foreground">

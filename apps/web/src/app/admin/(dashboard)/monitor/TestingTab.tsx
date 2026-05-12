@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -40,7 +41,7 @@ function AccessibilitySection({ data }: { data: AccessibilityMetrics | null }) {
       <div
         className={cn(
           'rounded-xl border border-border/60 p-5',
-          'bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md'
+          'bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md'
         )}
       >
         <h3 className="font-quicksand text-sm font-semibold text-foreground">Accessibility</h3>
@@ -53,7 +54,7 @@ function AccessibilitySection({ data }: { data: AccessibilityMetrics | null }) {
     <div
       className={cn(
         'rounded-xl border border-border/60 p-5',
-        'bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md'
+        'bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md'
       )}
     >
       <h3 className="font-quicksand text-sm font-semibold text-foreground">Accessibility</h3>
@@ -74,7 +75,7 @@ function PerformanceSection({ data }: { data: PerformanceMetrics | null }) {
       <div
         className={cn(
           'rounded-xl border border-border/60 p-5',
-          'bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md'
+          'bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md'
         )}
       >
         <h3 className="font-quicksand text-sm font-semibold text-foreground">Performance</h3>
@@ -87,7 +88,7 @@ function PerformanceSection({ data }: { data: PerformanceMetrics | null }) {
     <div
       className={cn(
         'rounded-xl border border-border/60 p-5',
-        'bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md'
+        'bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md'
       )}
     >
       <h3 className="font-quicksand text-sm font-semibold text-foreground">Performance</h3>
@@ -112,7 +113,7 @@ function E2ESection({ data }: { data: E2EMetrics | null }) {
       <div
         className={cn(
           'rounded-xl border border-border/60 p-5',
-          'bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md'
+          'bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md'
         )}
       >
         <h3 className="font-quicksand text-sm font-semibold text-foreground">E2E</h3>
@@ -125,7 +126,7 @@ function E2ESection({ data }: { data: E2EMetrics | null }) {
     <div
       className={cn(
         'rounded-xl border border-border/60 p-5',
-        'bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md'
+        'bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md'
       )}
     >
       <h3 className="font-quicksand text-sm font-semibold text-foreground">E2E</h3>

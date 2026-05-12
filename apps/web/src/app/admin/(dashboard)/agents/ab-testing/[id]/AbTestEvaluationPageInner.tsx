@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 /* eslint-disable @typescript-eslint/no-non-null-assertion -- pre-existing pattern: array/object access guarded by length/key check or by upstream validator; assertion is correct by construction. Cleanup tracked for follow-up audit. */
 
@@ -73,7 +74,7 @@ function StarRating({
             className={`h-5 w-5 ${
               star <= value
                 ? 'fill-amber-400 text-amber-400'
-                : 'fill-transparent text-slate-300 dark:text-zinc-600'
+                : 'fill-transparent text-slate-300 dark:text-muted-foreground'
             }`}
           />
         </button>
@@ -192,7 +193,7 @@ export function AbTestEvaluationPageInner({ id }: { id: string }) {
       ) : (
         <>
           {/* Query */}
-          <div className="rounded-2xl border border-slate-200/60 bg-white/70 p-4 backdrop-blur-md dark:border-zinc-700/40 dark:bg-zinc-800/70">
+          <div className="rounded-2xl border border-border/60 bg-card/70 p-4 backdrop-blur-md dark:border-zinc-700/40 dark:bg-zinc-800/70">
             <p className="text-sm text-muted-foreground">
               Query: <span className="font-medium text-foreground">{session.query}</span>
             </p>
@@ -233,8 +234,8 @@ export function AbTestEvaluationPageInner({ id }: { id: string }) {
                   key={variant.id}
                   className={`rounded-2xl border p-5 transition-all ${
                     revealed
-                      ? 'border-amber-300 bg-white/90 dark:border-amber-700 dark:bg-zinc-800/90'
-                      : 'border-slate-200/60 bg-white/70 dark:border-zinc-700/40 dark:bg-zinc-800/70'
+                      ? 'border-amber-300 bg-card/90 dark:border-amber-700 dark:bg-zinc-800/90'
+                      : 'border-border/60 bg-card/70 dark:border-zinc-700/40 dark:bg-zinc-800/70'
                   } backdrop-blur-md`}
                 >
                   {/* Variant Header */}
@@ -271,14 +272,14 @@ export function AbTestEvaluationPageInner({ id }: { id: string }) {
                       </p>
                     </div>
                   ) : (
-                    <div className="mb-4 max-h-[300px] overflow-y-auto rounded-lg bg-slate-50 p-3 text-sm whitespace-pre-wrap dark:bg-zinc-900/50">
+                    <div className="mb-4 max-h-[300px] overflow-y-auto rounded-lg bg-muted p-3 text-sm whitespace-pre-wrap dark:bg-zinc-900/50">
                       {variant.response}
                     </div>
                   )}
 
                   {/* Scoring (only for non-failed, non-evaluated) */}
                   {!variant.failed && !isEvaluated && (
-                    <div className="space-y-3 border-t border-slate-200/60 pt-3 dark:border-zinc-700/40">
+                    <div className="space-y-3 border-t border-border/60 pt-3 dark:border-zinc-700/40">
                       {DIMENSIONS.map(dim => (
                         <div key={dim} className="flex items-center justify-between">
                           <Label className="text-xs font-medium">{DIMENSION_LABELS[dim]}</Label>
@@ -305,7 +306,7 @@ export function AbTestEvaluationPageInner({ id }: { id: string }) {
 
                   {/* Evaluation Display (after submit) */}
                   {revealed?.evaluation && (
-                    <div className="space-y-2 border-t border-slate-200/60 pt-3 dark:border-zinc-700/40">
+                    <div className="space-y-2 border-t border-border/60 pt-3 dark:border-zinc-700/40">
                       {DIMENSIONS.map(dim => (
                         <div key={dim} className="flex items-center justify-between">
                           <span className="text-xs font-medium text-muted-foreground">

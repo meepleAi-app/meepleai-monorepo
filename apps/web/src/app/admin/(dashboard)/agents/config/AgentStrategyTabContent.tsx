@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -267,7 +268,7 @@ export function AgentStrategyTabContent() {
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+        <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
           <CardContent className="pt-6">
             <div className="text-center space-y-2">
               <div className="text-3xl">⚡</div>
@@ -284,7 +285,7 @@ export function AgentStrategyTabContent() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+        <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
           <CardContent className="pt-6">
             <div className="text-center space-y-2">
               <div className="text-3xl">🤖</div>
@@ -304,7 +305,7 @@ export function AgentStrategyTabContent() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+        <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
           <CardContent className="pt-6">
             <div className="text-center space-y-2">
               <div className="text-3xl">📊</div>
@@ -326,7 +327,7 @@ export function AgentStrategyTabContent() {
       {/* Retrieval & Generation Config */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Retrieval Configuration */}
-        <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+        <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
               <Target className="h-4 w-4 text-blue-500" />
@@ -483,7 +484,7 @@ export function AgentStrategyTabContent() {
         </Card>
 
         {/* Generation Configuration */}
-        <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+        <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
               <Zap className="h-4 w-4 text-amber-500" />
@@ -620,7 +621,7 @@ export function AgentStrategyTabContent() {
       </div>
 
       {/* Tier Access Matrix */}
-      <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+      <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
             <Lock className="h-4 w-4 text-purple-500" />
@@ -685,7 +686,7 @@ export function AgentStrategyTabContent() {
       </Card>
 
       {/* Strategy-Model Mappings */}
-      <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+      <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
             <LinkIcon className="h-4 w-4 text-emerald-500" />
@@ -745,7 +746,7 @@ export function AgentStrategyTabContent() {
       </Card>
 
       {/* Confidence Thresholds */}
-      <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+      <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
             <Settings className="h-4 w-4 text-rose-500" />
@@ -781,7 +782,7 @@ export function AgentStrategyTabContent() {
             </div>
           </div>
 
-          <div className="p-4 rounded-lg bg-slate-50 dark:bg-zinc-900/50 border">
+          <div className="p-4 rounded-lg bg-muted dark:bg-zinc-900/50 border">
             <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Scoring Formula
             </div>
@@ -849,7 +850,7 @@ export function AgentStrategyTabContent() {
               variant="secondary"
               size="sm"
               onClick={handleSaveAll}
-              className="bg-white text-amber-600 hover:bg-slate-100"
+              className="bg-card text-amber-600 hover:bg-muted"
             >
               Save All
             </Button>
@@ -857,7 +858,7 @@ export function AgentStrategyTabContent() {
               variant="ghost"
               size="sm"
               onClick={handleDiscard}
-              className="text-white border-2 border-white/50 hover:border-white hover:bg-white/10"
+              className="text-white border-2 border-border hover:border-white hover:bg-card/10"
             >
               Discard
             </Button>

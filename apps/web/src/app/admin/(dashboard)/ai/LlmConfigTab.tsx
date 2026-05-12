@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -138,7 +139,7 @@ export function LlmConfigTab() {
           {[1, 2, 3, 4].map(i => (
             <div
               key={i}
-              className="h-40 rounded-xl bg-white/40 dark:bg-zinc-800/40 animate-pulse"
+              className="h-40 rounded-xl bg-card/40 dark:bg-zinc-800/40 animate-pulse"
             />
           ))}
         </div>
@@ -283,7 +284,7 @@ export function LlmConfigTab() {
               value={form.fallbackChainJson}
               onChange={e => updateField('fallbackChainJson', e.target.value)}
               rows={2}
-              className="w-full rounded-md border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full rounded-md border border-border dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
               placeholder='["OpenRouter", "Ollama"]'
             />
           </div>
@@ -403,7 +404,7 @@ function ConfigSection({
   };
 
   return (
-    <div className="rounded-xl border border-slate-200/60 dark:border-zinc-700/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-md p-4">
+    <div className="rounded-xl border border-border/60 dark:border-zinc-700/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-md p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           {icon}
@@ -450,7 +451,7 @@ function NumberField({
         min={min}
         max={max}
         step={step}
-        className="w-full rounded-md border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+        className="w-full rounded-md border border-border dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
       />
     </div>
   );

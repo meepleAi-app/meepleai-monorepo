@@ -6,9 +6,9 @@
 | **Generator** | `pnpm lint:tokens` (DS-2) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../docs/for-developers/specs/2026-05-12-token-canonicalization.md) |
 | **Rule** | `local/no-hardcoded-color-utility` |
-| **Total violations** | 4589 |
-| **Files affected** | 527 |
-| **Clusters affected** | 212 |
+| **Total violations** | 4588 |
+| **Files affected** | 526 |
+| **Clusters affected** | 211 |
 
 ## Violations by cluster
 
@@ -190,7 +190,6 @@
 | `features/chat` | 1 | manual |
 | `features/common` | 1 | manual |
 | `features/play` | 1 | manual |
-| `features/player-detail` | 1 | DS-9 |
 | `game-detail/SplitViewLayout.tsx` | 1 | manual |
 | `game-state/GameStateViewer.stories.tsx` | 1 | manual |
 | `game-state/ResourceTracker.stories.tsx` | 1 | manual |

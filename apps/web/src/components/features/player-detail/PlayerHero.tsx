@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white on style-prop colored bg (mockup .e-bg pattern). DS-12 will introduce primitives encoding bg via className. */
 /**
  * PlayerHero — Wave 3 /players/[id] v2 component (Task 2).
  *

@@ -108,7 +108,22 @@ Post-P1 il trigger è `push: [main-staging]` quindi non si verificano più run v
 
 ## Rollback procedure
 
-`deploy-staging.yml` non ha auto-rollback. Manual rollback richiede:
+Two paths depending on incident urgency:
+
+### Fast path — image-tag revert (≤ 10 min RTO)
+
+For P1 incidents where forward-fix is too slow, use the **image-tag rollback**:
+
+```bash
+bash infra/scripts/rollback-trigger.sh staging staging-YYYYMMDD-<sha7>
+```
+
+Full procedure with safety checks, 3 scenarios, and post-rollback validation:
+[**rollback-runbook.md**](./rollback-runbook.md).
+
+### Slow path — revert PR (forward-fix friendly)
+
+When the broken deploy is non-critical and you want the rollback to flow through CI:
 
 ```bash
 # 1. Identifica merge commit responsabile
@@ -129,6 +144,9 @@ gh pr merge <REVERT_PR_NUM> --merge --delete-branch
 gh run watch $(gh run list --workflow "Deploy to Staging" --limit 1 --json databaseId --jq '.[0].databaseId')
 ```
 
+The slow path takes ~15-25 min (CI rebuild + deploy) vs ~10 min for the image-tag path,
+but produces a clean git history. Use slow path for P2/P3, fast path for P1.
+
 ## Observability
 
 - Slack: notifiche via `notify-start` + `notify-end` jobs (channel configurato in repo secrets `SLACK_GITNOTIFY_WEBHOOK_URL` + `SLACK_CRITICAL_WEBHOOK_URL`)
@@ -139,7 +157,7 @@ gh run watch $(gh run list --workflow "Deploy to Staging" --limit 1 --json datab
 
 - Trigger `push: [main-staging]` accetta qualsiasi push, anche con CI rosso. Affidamento al disciplinare merge process: chi mergia main-dev → main-staging deve aver verificato CI green pre-merge.
 - Smoke test K6 + perf regression sono `continue-on-error: true` — non bloccanti.
-- Auto-rollback assente — richiede manual revert PR.
+- Auto-rollback assente — manuale via `rollback-runbook.md` (fast path, image-tag) o revert PR (slow path).
 
 Future hardening (out of scope P1):
 

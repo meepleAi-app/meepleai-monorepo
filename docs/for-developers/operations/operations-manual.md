@@ -2214,10 +2214,11 @@ S3_FORCE_PATH_STYLE=false
    └── If disk full:    docker system prune -f
 
 4. RESOLVE
-   ├── Apply fix (config change, restart, rollback)
+   ├── Apply fix (config change, restart, rollback*)
    ├── Verify health:  docker compose ps
    ├── Check logs:     docker logs <container> --tail=20
    └── Run smoke test: curl http://localhost:8080/
+   * For image-tag rollback procedure see rollback-runbook.md
 
 5. POST-MORTEM
    ├── Document: what happened, why, how fixed
@@ -2392,12 +2393,17 @@ echo "=== Backup complete ==="
 
 ### Disaster Recovery Procedures
 
+> **Rollback (image-tag revert)** for a single bad deploy lives in a dedicated runbook:
+> [**rollback-runbook.md**](./rollback-runbook.md) — covers bad image, bad migration, and slow-leak scenarios with RTO ≤ 10 min.
+> Use this section for **infrastructure-level** disasters (VPS loss, DB corruption, ransomware) where rollback alone is insufficient.
+
 #### Recovery Targets
 
-| Metric | Target |
-|--------|--------|
-| **RTO** (Recovery Time Objective) | < 2 hours |
-| **RPO** (Recovery Point Objective) | < 24 hours |
+| Metric | Target | Notes |
+|--------|--------|-------|
+| **RTO** (Recovery Time Objective) — DR scenarios | < 2 hours | This section |
+| **RTO** — single-deploy rollback | < 10 minutes | See [rollback-runbook.md §10](./rollback-runbook.md#10-raci--sla) |
+| **RPO** (Recovery Point Objective) | < 24 hours | Daily `backup.sh` cron |
 
 #### Scenario 1: VPS Failure (Total Loss)
 

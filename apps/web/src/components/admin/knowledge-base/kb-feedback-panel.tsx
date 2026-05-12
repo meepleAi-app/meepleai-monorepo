@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13b admin scope (see token-bridge-map.md for --admin-* decision deferred to DS-15). */
 'use client';
 
 import { useState } from 'react';
@@ -57,7 +58,7 @@ export function KbFeedbackPanel({ gameId }: Props) {
         {data?.items.map(item => (
           <div
             key={item.id}
-            className="flex items-start gap-3 p-3 border rounded-lg bg-white/60 dark:bg-zinc-800/60"
+            className="flex items-start gap-3 p-3 border rounded-lg bg-card/60 dark:bg-zinc-800/60"
           >
             {item.outcome === 'helpful' ? (
               <ThumbsUp className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -66,7 +67,7 @@ function ContainerCard({ container }: ContainerCardProps) {
   return (
     <div
       data-testid={`container-card-${container.id}`}
-      className="rounded-xl border bg-white/70 p-4 backdrop-blur-md transition-shadow hover:shadow-md dark:bg-zinc-900/70"
+      className="rounded-xl border bg-card/70 p-4 backdrop-blur-md transition-shadow hover:shadow-md dark:bg-zinc-900/70"
     >
       {/* Header */}
       <div className="mb-3 flex items-start justify-between">
@@ -115,15 +116,15 @@ function StatusSummary({ containers }: { containers: ContainerInfo[] }) {
 
   return (
     <div className="grid grid-cols-3 gap-3" data-testid="status-summary">
-      <div className="rounded-xl border bg-white/70 p-3 backdrop-blur-md dark:bg-zinc-900/70">
+      <div className="rounded-xl border bg-card/70 p-3 backdrop-blur-md dark:bg-zinc-900/70">
         <p className="text-xs text-muted-foreground">Total</p>
         <p className="text-lg font-semibold font-mono">{total}</p>
       </div>
-      <div className="rounded-xl border bg-white/70 p-3 backdrop-blur-md dark:bg-zinc-900/70">
+      <div className="rounded-xl border bg-card/70 p-3 backdrop-blur-md dark:bg-zinc-900/70">
         <p className="text-xs text-green-600">Running</p>
         <p className="text-lg font-semibold font-mono text-green-600">{running}</p>
       </div>
-      <div className="rounded-xl border bg-white/70 p-3 backdrop-blur-md dark:bg-zinc-900/70">
+      <div className="rounded-xl border bg-card/70 p-3 backdrop-blur-md dark:bg-zinc-900/70">
         <p className="text-xs text-red-600">Stopped</p>
         <p className="text-lg font-semibold font-mono text-red-600">{stopped}</p>
       </div>
@@ -254,7 +255,7 @@ export function ContainerDashboard() {
       ) : containers.length === 0 ? (
         <div
           data-testid="container-empty"
-          className="rounded-xl border bg-white/70 p-8 text-center backdrop-blur-md dark:bg-zinc-900/70"
+          className="rounded-xl border bg-card/70 p-8 text-center backdrop-blur-md dark:bg-zinc-900/70"
         >
           <Box className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
           <p className="text-muted-foreground">

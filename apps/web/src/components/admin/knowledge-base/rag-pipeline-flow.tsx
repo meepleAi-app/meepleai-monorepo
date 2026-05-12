@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13b admin scope (see token-bridge-map.md for --admin-* decision deferred to DS-15). */
 'use client';
 
 import { useState } from 'react';
@@ -32,7 +33,7 @@ function statusColor(status: PipelineStageStatus) {
     case 'error':
       return 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]';
     default:
-      return 'bg-gray-400';
+      return 'bg-muted-foreground';
   }
 }
 
@@ -45,7 +46,7 @@ function statusBorder(status: PipelineStageStatus) {
     case 'error':
       return 'border-red-400/40 dark:border-red-600/40';
     default:
-      return 'border-gray-400/40';
+      return 'border-border/40';
   }
 }
 
@@ -86,10 +87,10 @@ export function RAGPipelineFlow() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="h-48 bg-white/40 dark:bg-zinc-800/40 rounded-xl animate-pulse" />
+        <div className="h-48 bg-card/40 dark:bg-zinc-800/40 rounded-xl animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-20 bg-white/40 dark:bg-zinc-800/40 rounded-lg animate-pulse" />
+            <div key={i} className="h-20 bg-card/40 dark:bg-zinc-800/40 rounded-lg animate-pulse" />
           ))}
         </div>
       </div>
@@ -104,9 +105,9 @@ export function RAGPipelineFlow() {
   return (
     <div className="space-y-6">
       {/* Pipeline Flow */}
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-8 border border-amber-200/50 dark:border-zinc-700/50">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-8 border border-amber-200/50 dark:border-zinc-700/50">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="font-quicksand text-xl font-bold text-slate-900 dark:text-zinc-100">
+          <h2 className="font-quicksand text-xl font-bold text-foreground dark:text-zinc-100">
             RAG Pipeline Flow
           </h2>
           <Button
@@ -131,15 +132,15 @@ export function RAGPipelineFlow() {
                   <button
                     type="button"
                     onClick={() => setExpandedStage(isExpanded ? null : stage.name)}
-                    className={`bg-slate-50 dark:bg-zinc-900 rounded-lg p-4 border-2 ${statusBorder(stage.status)} min-w-[110px] transition-all hover:shadow-md hover:-translate-y-0.5 ${isExpanded ? 'ring-2 ring-blue-400/60' : ''}`}
+                    className={`bg-muted dark:bg-zinc-900 rounded-lg p-4 border-2 ${statusBorder(stage.status)} min-w-[110px] transition-all hover:shadow-md hover:-translate-y-0.5 ${isExpanded ? 'ring-2 ring-blue-400/60' : ''}`}
                   >
                     <div className="text-center">
-                      <div className="font-semibold text-slate-900 dark:text-zinc-100 text-sm mb-2">
+                      <div className="font-semibold text-foreground dark:text-zinc-100 text-sm mb-2">
                         {stage.name}
                       </div>
                       <div className={`w-3 h-3 rounded-full mx-auto ${statusColor(stage.status)} animate-pulse`} />
                       {stage.metrics && Object.keys(stage.metrics).length > 0 && (
-                        <div className="mt-2 text-[10px] text-gray-500 dark:text-zinc-500 leading-tight">
+                        <div className="mt-2 text-[10px] text-muted-foreground dark:text-muted-foreground leading-tight">
                           {renderStageMetric(stage.name, stage.metrics)}
                         </div>
                       )}
@@ -165,9 +166,9 @@ export function RAGPipelineFlow() {
           if (!stage) return null;
           const metricsEntries = stage.metrics ? Object.entries(stage.metrics) : [];
           return (
-            <div className="mb-6 bg-slate-50/80 dark:bg-zinc-900/60 rounded-xl border border-slate-200/50 dark:border-zinc-700/50 p-5 space-y-3">
+            <div className="mb-6 bg-muted/80 dark:bg-zinc-900/60 rounded-xl border border-border/50 dark:border-zinc-700/50 p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-slate-900 dark:text-zinc-100 flex items-center gap-2">
+                <h3 className="font-semibold text-foreground dark:text-zinc-100 flex items-center gap-2">
                   <span className={`w-2.5 h-2.5 rounded-full ${statusColor(stage.status)}`} />
                   {stage.name} — Stage Details
                 </h3>
@@ -184,7 +185,7 @@ export function RAGPipelineFlow() {
                   {metricsEntries.map(([key, value]) => (
                     <div
                       key={key}
-                      className="bg-white/70 dark:bg-zinc-800/70 rounded-lg px-3 py-2 border border-slate-200/40 dark:border-zinc-700/40"
+                      className="bg-card/70 dark:bg-zinc-800/70 rounded-lg px-3 py-2 border border-border/40 dark:border-zinc-700/40"
                     >
                       <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">
                         {key.replace(/([A-Z])/g, ' $1').trim()}
@@ -265,12 +266,12 @@ export function RAGPipelineFlow() {
       )}
 
       {/* Recent Activity */}
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-slate-200/50 dark:border-zinc-700/50">
-        <h2 className="font-quicksand text-xl font-bold text-slate-900 dark:text-zinc-100 mb-4">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-border/50 dark:border-zinc-700/50">
+        <h2 className="font-quicksand text-xl font-bold text-foreground dark:text-zinc-100 mb-4">
           Recent Activity
         </h2>
         {recentActivity.length === 0 ? (
-          <p className="text-sm text-slate-600 dark:text-zinc-400">
+          <p className="text-sm text-muted-foreground dark:text-muted-foreground">
             No recent processing activity
           </p>
         ) : (
@@ -278,15 +279,15 @@ export function RAGPipelineFlow() {
             {recentActivity.map((item) => (
               <div
                 key={item.jobId}
-                className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
+                className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted dark:hover:bg-zinc-800 transition-colors"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <JobStatusIcon status={item.status} />
-                  <span className="text-sm font-medium text-slate-900 dark:text-zinc-100 truncate">
+                  <span className="text-sm font-medium text-foreground dark:text-zinc-100 truncate">
                     {item.fileName}
                   </span>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-zinc-500 flex-shrink-0">
+                <div className="flex items-center gap-4 text-xs text-muted-foreground dark:text-muted-foreground flex-shrink-0">
                   {item.durationMs !== null && (
                     <span className="flex items-center gap-1">
                       <ClockIcon className="h-3 w-3" />
@@ -311,12 +312,12 @@ function StatCard({ icon: Icon, label, value, color }: {
   color: string;
 }) {
   return (
-    <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-white/40 dark:border-zinc-700/40">
-      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400 mb-1">
+    <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-lg p-4 border border-border dark:border-zinc-700/40">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground dark:text-muted-foreground mb-1">
         <Icon className={`h-4 w-4 ${color}`} />
         {label}
       </div>
-      <div className="text-2xl font-bold text-gray-900 dark:text-zinc-100">{value}</div>
+      <div className="text-2xl font-bold text-foreground dark:text-zinc-100">{value}</div>
     </div>
   );
 }

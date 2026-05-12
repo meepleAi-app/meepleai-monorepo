@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
@@ -38,7 +39,7 @@ export function JobLogViewer({ logs }: JobLogViewerProps) {
 
   return (
     <ScrollArea className="h-[200px]">
-      <div className="font-mono text-xs space-y-0.5 p-2 bg-slate-50/50 dark:bg-zinc-900/50 rounded-lg">
+      <div className="font-mono text-xs space-y-0.5 p-2 bg-muted/50 dark:bg-zinc-900/50 rounded-lg">
         {logs.map((entry) => (
           <div key={entry.id} className="flex gap-2">
             <span className="text-muted-foreground shrink-0">

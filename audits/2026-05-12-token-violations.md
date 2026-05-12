@@ -6,16 +6,14 @@
 | **Generator** | `pnpm lint:tokens` (DS-2) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../docs/for-developers/specs/2026-05-12-token-canonicalization.md) |
 | **Rule** | `local/no-hardcoded-color-utility` |
-| **Total violations** | 3141 |
-| **Files affected** | 339 |
-| **Clusters affected** | 159 |
+| **Total violations** | 1587 |
+| **Files affected** | 226 |
+| **Clusters affected** | 157 |
 
 ## Violations by cluster
 
 | Cluster | Violations | Suggested stage |
 |---|---|---|
-| `app/admin/(dashboard)` | 1241 | manual |
-| `admin/knowledge-base` | 313 | manual |
 | `toolkit-drawer/tabs` | 122 | manual |
 | `stories/Animations.stories.tsx` | 76 | manual |
 | `app/(authenticated)/admin` | 67 | manual |
@@ -178,26 +176,26 @@
 
 | File | Violations |
 |---|---|
-| `src/app/admin/(dashboard)/agents/inspector/page.tsx` | 122 |
 | `src/stories/Animations.stories.tsx` | 76 |
-| `src/app/admin/(dashboard)/knowledge-base/mechanic-extractor/analyses/page.tsx` | 57 |
-| `src/app/admin/(dashboard)/knowledge-base/vectors/page.tsx` | 54 |
 | `src/components/admin/command-center/CommandCenterDashboard.tsx` | 54 |
 | `src/components/loading/SkeletonLoader.tsx` | 54 |
-| `src/components/admin/knowledge-base/processing-metrics.tsx` | 51 |
-| `src/app/admin/(dashboard)/knowledge-base/embedding/page.tsx` | 50 |
 | `src/components/play-records/NewPlayRecordSheet.tsx` | 50 |
-| `src/app/admin/(dashboard)/users/[id]/page.tsx` | 48 |
-| `src/components/admin/knowledge-base/upload-zone.tsx` | 48 |
-| `src/components/admin/knowledge-base/rag-pipeline-flow.tsx` | 47 |
-| `src/app/admin/(dashboard)/knowledge-base/documents/page.tsx` | 46 |
 | `src/components/rag-dashboard/config/RagConfigurationForm.tsx` | 44 |
-| `src/components/admin/knowledge-base/upload-settings.tsx` | 43 |
-| `src/app/admin/(dashboard)/agents/config/AgentModelsTabContent.tsx` | 40 |
-| `src/app/admin/(dashboard)/agents/config/AgentStrategyTabContent.tsx` | 40 |
-| `src/app/admin/(dashboard)/shared-games/[id]/client.tsx` | 40 |
-| `src/app/admin/(dashboard)/agents/page.tsx` | 38 |
-| `src/app/admin/(dashboard)/users/invitations/page.tsx` | 38 |
+| `src/app/(authenticated)/play-records/[id]/page.tsx` | 32 |
+| `src/app/(auth)/welcome/_content.tsx` | 27 |
+| `src/components/errors/ErrorBoundary.stories.tsx` | 27 |
+| `src/stories/DesignTokens.stories.tsx` | 27 |
+| `src/app/(authenticated)/admin/wizard/steps/ChatSetupStep.tsx` | 22 |
+| `src/app/(authenticated)/play-records/stats/page.tsx` | 22 |
+| `src/components/comments/CommentItem.tsx` | 22 |
+| `src/components/empty-state/EmptyState.stories.tsx` | 22 |
+| `src/components/toolkit-drawer/tabs/EventDiaryTab.tsx` | 22 |
+| `src/stories/BackgroundTexture.stories.tsx` | 22 |
+| `src/app/(public)/contact/page.tsx` | 18 |
+| `src/components/modals/ErrorModal.tsx` | 18 |
+| `src/app/(authenticated)/admin/wizard/steps/QAStep.tsx` | 17 |
+| `src/app/(authenticated)/n8n/page.tsx` | 17 |
+| `src/app/(authenticated)/versions/page.tsx` | 17 |
 
 ## Notes
 

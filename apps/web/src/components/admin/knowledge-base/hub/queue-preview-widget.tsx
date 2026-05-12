@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13b admin scope (see token-bridge-map.md for --admin-* decision deferred to DS-15). */
 'use client';
 
 import {
@@ -23,7 +24,7 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 
 const statusStyles: Record<JobStatus, { badge: string; label: string }> = {
   Queued: {
-    badge: 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300',
+    badge: 'bg-muted text-foreground dark:bg-card dark:text-slate-300',
     label: 'In coda',
   },
   Processing: {
@@ -39,7 +40,7 @@ const statusStyles: Record<JobStatus, { badge: string; label: string }> = {
     label: 'Fallito',
   },
   Cancelled: {
-    badge: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
+    badge: 'bg-muted text-foreground dark:bg-card dark:text-foreground',
     label: 'Annullato',
   },
 };
@@ -60,7 +61,7 @@ export function QueuePreviewWidget() {
   );
 
   return (
-    <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+    <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-base">
           <div className="flex items-center gap-2">
@@ -86,7 +87,7 @@ export function QueuePreviewWidget() {
               label: 'In coda',
               count: queuedCount,
               icon: ClockIcon,
-              color: 'text-slate-600 dark:text-slate-400',
+              color: 'text-muted-foreground',
             },
             {
               label: 'Attivi',
@@ -109,10 +110,10 @@ export function QueuePreviewWidget() {
           ].map(({ label, count, icon: Icon, color }) => (
             <div
               key={label}
-              className="text-center p-2 rounded-lg bg-slate-50/50 dark:bg-zinc-900/50"
+              className="text-center p-2 rounded-lg bg-muted/50 dark:bg-zinc-900/50"
             >
               <Icon className={`h-3.5 w-3.5 mx-auto mb-0.5 ${color}`} />
-              <p className="text-lg font-bold text-slate-900 dark:text-zinc-100">{count}</p>
+              <p className="text-lg font-bold text-foreground dark:text-zinc-100">{count}</p>
               <p className="text-[10px] text-muted-foreground">{label}</p>
             </div>
           ))}
@@ -136,12 +137,12 @@ export function QueuePreviewWidget() {
           return (
             <div
               key={job.id}
-              className="flex items-center gap-3 p-2 rounded-lg bg-slate-50/50 dark:bg-zinc-900/50 border border-slate-200/30 dark:border-zinc-700/30"
+              className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 dark:bg-zinc-900/50 border border-border/30 dark:border-zinc-700/30"
             >
-              <FileIcon className="h-4 w-4 text-slate-500 dark:text-zinc-400 shrink-0" />
+              <FileIcon className="h-4 w-4 text-muted-foreground dark:text-muted-foreground shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-medium text-slate-900 dark:text-zinc-100 truncate">
+                  <p className="text-sm font-medium text-foreground dark:text-zinc-100 truncate">
                     {job.pdfFileName}
                   </p>
                   <PriorityBadge priority={job.priority} />

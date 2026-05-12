@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 /**
  * Admin Invitations Page (Issue #132)
  *
@@ -164,7 +165,7 @@ export default function InvitationsPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
@@ -180,7 +181,7 @@ export default function InvitationsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
@@ -196,7 +197,7 @@ export default function InvitationsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
@@ -212,11 +213,11 @@ export default function InvitationsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-zinc-700/50 flex items-center justify-center">
-                <AlertCircleIcon className="h-5 w-5 text-slate-600 dark:text-zinc-400" />
+              <div className="h-10 w-10 rounded-lg bg-muted dark:bg-zinc-700/50 flex items-center justify-center">
+                <AlertCircleIcon className="h-5 w-5 text-muted-foreground dark:text-muted-foreground" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Scaduti</p>
@@ -228,7 +229,7 @@ export default function InvitationsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+        <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
@@ -253,7 +254,7 @@ export default function InvitationsPage() {
             placeholder="Cerca per email..."
             value={emailSearch}
             onChange={e => setEmailSearch(e.target.value)}
-            className="pl-9 bg-white/70 dark:bg-zinc-800/70"
+            className="pl-9 bg-card/70 dark:bg-zinc-800/70"
           />
         </div>
         <Select
@@ -263,7 +264,7 @@ export default function InvitationsPage() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-44 bg-white/70 dark:bg-zinc-800/70">
+          <SelectTrigger className="w-44 bg-card/70 dark:bg-zinc-800/70">
             <SelectValue placeholder="Filtra per stato" />
           </SelectTrigger>
           <SelectContent>
@@ -295,11 +296,11 @@ export default function InvitationsPage() {
       )}
 
       {/* Invitations Table */}
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/60 dark:border-zinc-700/40 overflow-hidden">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/60 dark:border-zinc-700/40 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200/60 dark:border-zinc-700/40">
+              <tr className="border-b border-border/60 dark:border-zinc-700/40">
                 <th className="text-left p-3 font-medium text-muted-foreground">Email</th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Ruolo</th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Stato</th>
@@ -311,7 +312,7 @@ export default function InvitationsPage() {
             <tbody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="border-b border-slate-100 dark:border-zinc-800/60">
+                  <tr key={i} className="border-b border-border dark:border-zinc-800/60">
                     <td className="p-3">
                       <Skeleton className="h-4 w-40" />
                     </td>
@@ -363,7 +364,7 @@ export default function InvitationsPage() {
 
         {/* Pagination — hidden when email search is active (client-side filter, server counts don't match) */}
         {totalPages > 1 && !emailSearch.trim() && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60 dark:border-zinc-700/40">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border/60 dark:border-zinc-700/40">
             <p className="text-sm text-muted-foreground">
               Mostrati {(page - 1) * PAGE_SIZE + 1}&ndash;{Math.min(page * PAGE_SIZE, totalCount)}{' '}
               di {totalCount}

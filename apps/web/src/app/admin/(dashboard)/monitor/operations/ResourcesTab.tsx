@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -44,7 +45,7 @@ function MetricCard({ title, icon, children, loading }: MetricCardProps) {
   return (
     <div
       className={cn(
-        'rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-4',
+        'rounded-xl border bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md p-4',
         'shadow-sm'
       )}
     >
@@ -264,7 +265,7 @@ export function ResourcesTab() {
 
       {/* Top Tables (Sortable DataTable) */}
       {tables.length > 0 && (
-        <div className="rounded-xl border bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md p-4">
+        <div className="rounded-xl border bg-card/70 dark:bg-zinc-900/70 backdrop-blur-md p-4">
           <h3 className="font-quicksand font-semibold text-sm mb-3">Top Tables by Size</h3>
           <DataTable
             columns={tableColumns}

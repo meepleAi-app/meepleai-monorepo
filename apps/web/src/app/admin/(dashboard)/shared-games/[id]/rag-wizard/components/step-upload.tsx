@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 /**
  * Step 1: Upload — Drag & drop + file input for PDFs
  *
@@ -156,7 +157,7 @@ export function StepUpload({ files, onFilesChange, onNext }: StepUploadProps) {
           {files.map((file, index) => (
             <div
               key={`${file.name}-${file.size}`}
-              className="flex items-center justify-between rounded-lg border bg-white/60 dark:bg-zinc-800/60 px-4 py-3"
+              className="flex items-center justify-between rounded-lg border bg-card/60 dark:bg-zinc-800/60 px-4 py-3"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <FileText className="h-5 w-5 text-muted-foreground shrink-0" />

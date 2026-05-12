@@ -221,7 +221,7 @@ export function AgentHero(props: AgentHeroProps): ReactElement {
                 </span>
               ) : null}
               {variant === 'archived' ? (
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 font-mono text-[9px] font-extrabold uppercase tracking-[0.08em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                <span className="rounded-full bg-muted px-2.5 py-1 font-mono text-[9px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground dark:bg-card dark:text-muted-foreground">
                   ⊘ {labels.archivedBadge}
                 </span>
               ) : null}

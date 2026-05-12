@@ -71,7 +71,7 @@ export function AgentConfigSheet({
         className="h-[90vh] sm:h-auto sm:max-h-[90vh] md:h-screen md:max-w-[500px] lg:max-w-[600px] flex flex-col"
       >
         {/* Header */}
-        <SheetHeader className="border-b border-slate-800 pb-4">
+        <SheetHeader className="border-b border-border pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {showBackButton && (
@@ -97,10 +97,10 @@ export function AgentConfigSheet({
               className="h-8 w-8"
               aria-label="Help"
             >
-              <HelpCircle className="h-4 w-4 text-slate-400" />
+              <HelpCircle className="h-4 w-4 text-muted-foreground" />
             </Button>
           </div>
-          <p className="text-sm text-slate-400 mt-1">{gameTitle}</p>
+          <p className="text-sm text-muted-foreground mt-1">{gameTitle}</p>
         </SheetHeader>
 
         {/* Content Area - Scrollable */}
@@ -133,7 +133,7 @@ export function AgentConfigSheet({
           {view === 'template-info' && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Template Information</h3>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 Detailed template descriptions will be shown here.
               </p>
             </div>
@@ -142,7 +142,7 @@ export function AgentConfigSheet({
           {view === 'model-pricing' && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Model Pricing</h3>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 Pricing comparison for different AI models.
               </p>
             </div>
@@ -150,7 +150,7 @@ export function AgentConfigSheet({
         </div>
 
         {/* Footer */}
-        <SheetFooter className="border-t border-slate-800 pt-4">
+        <SheetFooter className="border-t border-border pt-4">
           <div className="w-full flex gap-3 justify-end">
             <Button variant="outline" onClick={onClose} disabled={isLaunching}>
               Cancel

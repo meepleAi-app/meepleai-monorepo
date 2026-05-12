@@ -36,7 +36,7 @@ test.describe('SMOKE-REAL-LLM — game-night happy path (free tier)', () => {
     const { cookieHeader } = await smokeLogin(request);
     await applySessionToPage(page, cookieHeader);
 
-    await page.goto(`/library/games/${SEED_GAME_ID}?tab=aiChat`, {
+    await page.goto(`/library/${SEED_GAME_ID}?tab=aiChat`, {
       waitUntil: 'domcontentloaded',
     });
     await page.waitForSelector('[data-testid="message-input"]', { timeout: 30_000 });

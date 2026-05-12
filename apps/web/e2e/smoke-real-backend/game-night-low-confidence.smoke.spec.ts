@@ -46,7 +46,7 @@ test.describe('SMOKE — game-chat low confidence (G5)', () => {
       confidence: 0.42,
     });
 
-    await page.goto(`/library/games/${gameId}?tab=aiChat`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`/library/${gameId}?tab=aiChat`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('[data-testid="message-input"]', { timeout: 30_000 });
 
     const input = page.locator('[data-testid="message-input"]');

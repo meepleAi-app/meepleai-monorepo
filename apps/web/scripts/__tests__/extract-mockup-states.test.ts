@@ -7,7 +7,9 @@ import {
   extractStatesFromComment,
   extractRouteFromComment,
   parseMockupFile,
+  mergeMatrix,
 } from '../extract-mockup-states';
+import type { StateMatrix } from '../extract-mockup-states';
 
 describe('extractStatesFromComment', () => {
   it('parses single-line Stati with · separator', () => {
@@ -89,5 +91,102 @@ describe('parseMockupFile', () => {
     const entry = parseMockupFile('admin-mockups/design_files/foo.html', html);
     expect(entry.declared_states).toEqual([]);
     expect(entry.missing).toEqual([]);
+  });
+});
+
+describe('mergeMatrix', () => {
+  it('preserves covered_states and enforced from existing matrix', () => {
+    const existing: StateMatrix = {
+      generated_at: '2026-05-01T00:00:00.000Z',
+      total_mockups: 1,
+      enforced_count: 1,
+      entries: [
+        {
+          mockup_path: 'admin-mockups/design_files/foo.html',
+          route: '/foo',
+          declared_states: ['a', 'b'],
+          covered_states: ['a'],
+          missing: ['b'],
+          enforced: true,
+        },
+      ],
+    };
+    const fresh = [
+      {
+        mockup_path: 'admin-mockups/design_files/foo.html',
+        route: '/foo',
+        declared_states: ['a', 'b', 'c'],
+        covered_states: [],
+        missing: ['a', 'b', 'c'],
+        enforced: false,
+      },
+    ];
+    const merged = mergeMatrix(existing, fresh);
+    expect(merged.entries[0].covered_states).toEqual(['a']);
+    expect(merged.entries[0].enforced).toBe(true);
+    expect(merged.entries[0].declared_states).toEqual(['a', 'b', 'c']);
+    expect(merged.entries[0].missing).toEqual(['b', 'c']);
+  });
+
+  it('drops covered states no longer in declared', () => {
+    const existing: StateMatrix = {
+      generated_at: '2026-05-01T00:00:00.000Z',
+      total_mockups: 1,
+      enforced_count: 0,
+      entries: [
+        {
+          mockup_path: 'admin-mockups/design_files/foo.html',
+          route: '/foo',
+          declared_states: ['a', 'b'],
+          covered_states: ['a', 'b', 'obsolete'],
+          missing: [],
+          enforced: false,
+        },
+      ],
+    };
+    const fresh = [
+      {
+        mockup_path: 'admin-mockups/design_files/foo.html',
+        route: '/foo',
+        declared_states: ['a'],
+        covered_states: [],
+        missing: ['a'],
+        enforced: false,
+      },
+    ];
+    const merged = mergeMatrix(existing, fresh);
+    expect(merged.entries[0].covered_states).toEqual(['a']);
+  });
+
+  it('sorts entries alphabetically by mockup_path', () => {
+    const existing: StateMatrix = {
+      generated_at: '2026-05-01T00:00:00.000Z',
+      total_mockups: 0,
+      enforced_count: 0,
+      entries: [],
+    };
+    const fresh = [
+      {
+        mockup_path: 'admin-mockups/design_files/zeta.html',
+        route: null,
+        declared_states: [],
+        covered_states: [],
+        missing: [],
+        enforced: false,
+      },
+      {
+        mockup_path: 'admin-mockups/design_files/alpha.html',
+        route: null,
+        declared_states: [],
+        covered_states: [],
+        missing: [],
+        enforced: false,
+      },
+    ];
+    const merged = mergeMatrix(existing, fresh);
+    expect(merged.entries.map(e => e.mockup_path)).toEqual([
+      'admin-mockups/design_files/alpha.html',
+      'admin-mockups/design_files/zeta.html',
+    ]);
   });
 });

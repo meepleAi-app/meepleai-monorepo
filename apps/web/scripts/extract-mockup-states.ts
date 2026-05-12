@@ -95,6 +95,13 @@ function collectAllCommentsText(html: string): string {
   return parts.join('\n');
 }
 
+export interface StateMatrix {
+  generated_at: string;
+  total_mockups: number;
+  enforced_count: number;
+  entries: MockupStateEntry[];
+}
+
 /**
  * Parse a single mockup HTML file into a MockupStateEntry.
  * Preserves declared_states in source order; covered_states starts empty,
@@ -111,5 +118,42 @@ export function parseMockupFile(mockupPath: string, html: string): MockupStateEn
     covered_states: [],
     missing: declared.slice(), // declared - covered (all declared at bootstrap)
     enforced: false,
+  };
+}
+
+/**
+ * Merge fresh-parsed entries into an existing matrix, preserving manually-curated
+ * fields (`covered_states`, `enforced`). Filters covered_states down to those
+ * still in declared_states (drops obsolete coverage).
+ *
+ * Output sorted alphabetically by `mockup_path` for deterministic diffs.
+ */
+export function mergeMatrix(existing: StateMatrix, fresh: MockupStateEntry[]): StateMatrix {
+  const byPath = new Map<string, MockupStateEntry>();
+  for (const e of existing.entries) {
+    byPath.set(e.mockup_path, e);
+  }
+
+  const merged: MockupStateEntry[] = fresh.map(freshEntry => {
+    const prior = byPath.get(freshEntry.mockup_path);
+    if (!prior) return freshEntry;
+    const declared = freshEntry.declared_states;
+    const covered = prior.covered_states.filter(s => declared.includes(s));
+    const missing = declared.filter(s => !covered.includes(s));
+    return {
+      ...freshEntry,
+      covered_states: covered,
+      missing,
+      enforced: prior.enforced,
+    };
+  });
+
+  merged.sort((a, b) => a.mockup_path.localeCompare(b.mockup_path));
+
+  return {
+    generated_at: new Date().toISOString(),
+    total_mockups: merged.length,
+    enforced_count: merged.filter(e => e.enforced).length,
+    entries: merged,
   };
 }

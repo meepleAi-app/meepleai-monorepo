@@ -65,6 +65,7 @@ import {
   createSandboxClient,
   createOnboardingClient,
   createAccessRequestsClient,
+  createStagingAllowlistClient,
   createAdminNotificationsClient,
   createContactClient,
   createAgentMemoryClient,
@@ -116,6 +117,7 @@ import {
   type SandboxClient,
   type OnboardingClient,
   type AccessRequestsClient,
+  type StagingAllowlistClient,
   type AdminNotificationsClient,
   type ContactClient,
   type AgentMemoryClient,
@@ -345,6 +347,9 @@ export interface ApiClient {
   /** Access Requests — invite-only registration */
   accessRequests: AccessRequestsClient;
 
+  /** Staging Allowlist — DevOps Wave 1 (#845) */
+  stagingAllowlist: StagingAllowlistClient;
+
   /** Admin manual notification dispatch */
   adminNotifications: AdminNotificationsClient;
 
@@ -458,6 +463,7 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     sandbox: createSandboxClient({ httpClient }), // RAG Sandbox Dashboard
     onboarding: createOnboardingClient({ httpClient }), // First-time user onboarding
     accessRequests: createAccessRequestsClient({ httpClient }), // Invite-only registration
+    stagingAllowlist: createStagingAllowlistClient({ httpClient }), // #845 DevOps Wave 1
     adminNotifications: createAdminNotificationsClient({ httpClient }), // Admin manual notifications
     contact: createContactClient({ httpClient }), // Public contact form
     agentMemory: createAgentMemoryClient({ httpClient }), // AgentMemory

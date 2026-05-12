@@ -1,37 +1,75 @@
-using Microsoft.Extensions.Configuration;
+using Api.BoundedContexts.Administration.Domain.Repositories;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.Authentication.Application.Services;
 
 /// <summary>
-/// Reads <c>STAGING_ALLOWED_EMAILS</c> from <see cref="IConfiguration"/> at construction time
-/// and caches the parsed allowlist as an immutable <see cref="HashSet{String}"/>.
+/// DB-backed implementation of <see cref="IStagingAccessGuard"/> (#845).
+/// Reads from <c>staging_allowlist</c> via <see cref="IStagingAllowlistRepository"/>
+/// and caches the resulting set in <see cref="IMemoryCache"/> for 60 seconds.
 /// </summary>
+/// <remarks>
+/// Registered as <b>Singleton</b>, but uses <see cref="IServiceScopeFactory"/> to resolve
+/// the scoped repository on cache miss. Cache invalidation on add/remove flows via
+/// the domain event handler <c>StagingAllowlistCacheInvalidator</c>.
+/// </remarks>
 internal sealed class StagingAccessGuard : IStagingAccessGuard
 {
-    private readonly HashSet<string> _allowedEmails;
+    internal const string CacheKey = "staging_allowlist:emails";
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(60);
 
-    public StagingAccessGuard(IConfiguration configuration)
+    private readonly IMemoryCache _cache;
+    private readonly IServiceScopeFactory _scopeFactory;
+
+    public StagingAccessGuard(IMemoryCache cache, IServiceScopeFactory scopeFactory)
     {
-        var raw = configuration["STAGING_ALLOWED_EMAILS"] ?? string.Empty;
-        _allowedEmails = raw
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
     }
 
-    public bool IsEmailAllowed(string email)
+    public async ValueTask<bool> IsEmailAllowedAsync(string email, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(email))
         {
             return false;
         }
 
-        if (_allowedEmails.Count == 0)
+        var allowed = await GetAllowedEmailsAsync(cancellationToken).ConfigureAwait(false);
+
+        // FAIL-CLOSED (#845): empty allowlist denies all in Staging.
+        // The middleware only registers in Staging env, so prod/dev are unaffected.
+        if (allowed.Count == 0)
         {
-            return true;
+            return false;
         }
 
-        return _allowedEmails.Contains(email.Trim());
+        return allowed.Contains(email.Trim().ToLowerInvariant());
     }
 
-    public bool HasNonEmptyAllowlist => _allowedEmails.Count > 0;
+    public async ValueTask<bool> HasNonEmptyAllowlistAsync(CancellationToken cancellationToken = default)
+    {
+        var allowed = await GetAllowedEmailsAsync(cancellationToken).ConfigureAwait(false);
+        return allowed.Count > 0;
+    }
+
+    public void InvalidateCache()
+    {
+        _cache.Remove(CacheKey);
+    }
+
+    private async Task<IReadOnlySet<string>> GetAllowedEmailsAsync(CancellationToken cancellationToken)
+    {
+        if (_cache.TryGetValue<IReadOnlySet<string>>(CacheKey, out var cached) && cached is not null)
+        {
+            return cached;
+        }
+
+        using var scope = _scopeFactory.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IStagingAllowlistRepository>();
+        var emails = await repository.GetAllowedEmailsAsync(cancellationToken).ConfigureAwait(false);
+
+        _cache.Set(CacheKey, emails, CacheTtl);
+        return emails;
+    }
 }

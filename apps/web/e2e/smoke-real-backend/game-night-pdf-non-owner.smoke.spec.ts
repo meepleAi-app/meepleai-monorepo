@@ -47,7 +47,7 @@ test.describe('SMOKE — game-chat PDF non-owner upsell (G4)', () => {
       confidence: 0.9,
     });
 
-    await page.goto(`/library/games/${gameId}?tab=aiChat`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`/library/${gameId}?tab=aiChat`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('[data-testid="message-input"]', { timeout: 30_000 });
 
     const input = page.locator('[data-testid="message-input"]');

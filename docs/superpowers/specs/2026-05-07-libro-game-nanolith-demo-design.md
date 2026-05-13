@@ -676,7 +676,7 @@ sequenceDiagram
 - EF migration: nuove tabelle `gamebook_campaign_sessions` + `gamebook_translated_paragraphs` + `gamebook_photo_artifacts`
 - Riuso `AgentMemory.MemoryNote` con tag `nanolith-glossary-{campaign_id}`
 
-> **Spec-panel fix C3 (Fowler) cross-BC**: `gamebook_photo_artifacts.campaign_session_id` FK punta a tabella in BC diverso (`SessionTracking`). Soluzione adottata: **sposta `gamebook_photo_artifacts` in `SessionTracking` BC** (è transitorio per session, conceptual fit). Foto fisica resta su R2, solo metadata ref. Documentato in [ADR-053](../../architecture/adr/adr-053-shared-game-detail-cross-bc-read-model.md) come precedente.
+> **Spec-panel fix C3 (Fowler) cross-BC**: `gamebook_photo_artifacts.campaign_session_id` FK punta a tabella in BC diverso (`SessionTracking`). Soluzione adottata: **sposta `gamebook_photo_artifacts` in `SessionTracking` BC** (è transitorio per session, conceptual fit). Foto fisica resta su R2, solo metadata ref. Documentato in [ADR-053](../../for-claude/architecture/adr/adr-053-shared-game-detail-cross-bc-read-model.md) come precedente.
 
 **Glossary feedback loop** (con M11 race condition fix):
 - Round-trip: ogni translate → glossary extraction prompt piggy-back (1 LLM call combinato)
@@ -1080,7 +1080,7 @@ Da prioritizzare DOPO feedback dogfooding sessione 1.
 **Spec & vision**:
 - [Vision Document 2026-05-04](2026-05-04-libro-game-assistant-vision.md) — vision a 12 mesi, persona "Sara casual designer", 4 user goal G1-G4
 - [SP6 Migration Plan 2026-05-06](../../for-developers/plans/2026-05-06-sp6-libro-game-migration.md) — plan tecnico Phase A/B/C
-- [ADR-053 Cross-BC read-model](../../architecture/adr/adr-053-shared-game-detail-cross-bc-read-model.md) — pattern citato in fix C3
+- [ADR-053 Cross-BC read-model](../../for-claude/architecture/adr/adr-053-shared-game-detail-cross-bc-read-model.md) — pattern citato in fix C3
 
 **API documentation**:
 - OpenAPI / Scalar interactive: http://localhost:8080/scalar/v1 (dev) — auto-generato da endpoint annotations (riferimento m5)

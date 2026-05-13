@@ -1074,7 +1074,7 @@ docker exec meepleai-api cat /run/secrets/postgres-password
 **Domande?** Consultare:
 - `docs/INDEX.md` - Indice completo documentazione (path: `../INDEX.md`)
 - [secrets-management.md](./secrets-management.md) - Production secrets management (covers Docker Secrets migration patterns)
-- [SECURITY.md](../../SECURITY.md) - Security policy generale
+- [SECURITY.md](../../../SECURITY.md) - Security policy generale
 
 **Maintainer**: Engineering Team
 **Contact**: ops@meepleai.dev

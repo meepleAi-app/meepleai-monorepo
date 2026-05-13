@@ -543,10 +543,10 @@ pnpm audit --fix
 ## 📚 Security Resources
 
 ### Internal Documentation
-- [Secrets Management](../deployment/secrets-management.md)
-- [OAuth Testing](../testing/backend/oauth-testing.md)
-- [Authentication Context](../bounded-contexts/authentication.md)
-- [ADR-010: Security Headers](../architecture/adr/adr-010-security-headers-middleware.md)
+- [Secrets Management](./secrets-management.md)
+- **OAuth Testing** _(planned)_
+- **Authentication Context** _(planned)_
+- [ADR-010: Security Headers](../../for-claude/architecture/adr/adr-010-security-headers-middleware.md)
 
 ### External Resources
 - [OWASP Top 10 (2021)](https://owasp.org/Top10/)

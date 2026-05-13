@@ -1,7 +1,7 @@
 # Mockup-to-route Conformity Gate
 
 > **Issue:** #1069 (WS-C Mockup Conformity Roadmap, umbrella #1066)
-> **Status:** WS-C complete (Phase 1–4b) + WS-F.1 (ownership headers) + WS-F.2 (drift detection) shipped 2026-05-13. WS-F.3 (dashboard) ships next.
+> **Status:** WS-C complete (Phase 1–4b) + WS-F complete (F.1 headers + F.2 drift detection + F.3 dashboard) shipped 2026-05-13. Optional follow-ups: Phase 4c waiver summary, post-merge bootstrap dispatch.
 
 ## Overview
 
@@ -274,13 +274,21 @@ The companion issue body links to the originating PR, lists affected route ids, 
 
 Dedup: companion issues carry `<!-- mockup-drift-pr: <PR#> -->` in body. Re-trigger on the same PR comment-updates the existing issue; PR closed-unmerged auto-closes it.
 
+### WS-F.3 — Dashboard (this PR for WS-F)
+
+- `apps/web/scripts/generate-ownership-status.ts` — walks `admin-mockups/design_files/*.html`, parses headers, computes `ageDays` from `@last-verified`, flags canonical entries older than 30d as `stale`. Renders `docs/for-developers/audits/mockup-ownership-status.md` with summary counts + per-mockup table sorted by status priority. 9 unit tests covering scan + render + sort + stale-detection.
+- `.github/workflows/mockup-ownership-summary.yml` — weekly cron (Monday 07:00 UTC) + `workflow_dispatch`. Regenerates the dashboard and opens auto-PR via `peter-evans/create-pull-request@SHA-pinned` if the file changed.
+- `pnpm audit:mockup-ownership` runs the generator locally.
+
+Initial snapshot committed in this PR: **61 mockups**, 2 canonical, 3 verified, 56 unmapped (allowlist will grow as WS-F.1 adoption expands).
+
 ## What ships next
 
-| Phase | Deliverable |
-|-------|-------------|
-| **F.3** | Dashboard generator `mockup-ownership-summary.yml` weekly cron, publishes `docs/for-developers/audits/mockup-ownership-status.md` with status enum coloring + age (AC-F.5 dashboard) |
-| **4c** (opt) | Weekly observability summary `conformity-waivers-summary.md` (AC-C.5.7) |
-| **post-merge** | Dispatch `bootstrap-mockup-baselines.yml` workflow → auto-PR lands `__mockup__/*.png` → conformity gate produces real diff (expected: large, documenting the 75-85% pre-remediation gap) |
+| Item | Status |
+|------|--------|
+| **4c** (opt) Weekly observability summary `conformity-waivers-summary.md` (AC-C.5.7) | not scheduled |
+| **post-merge** Dispatch `bootstrap-mockup-baselines.yml` workflow → auto-PR lands `__mockup__/*.png` → conformity gate produces real diff | manual |
+| **Branch protection update** — add `Conformity Waiver Rationale`, `Conformity Debt Gate`, `Mockup Ownership Header` to required checks on main-dev/main-staging/main | manual |
 
 ## Running locally
 

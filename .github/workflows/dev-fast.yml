@@ -37,20 +37,33 @@ jobs:
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
+      orchestration: ${{ steps.filter.outputs.orchestration }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
         id: filter
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          # Issue #850: filter patterns must cover ALL paths that trigger
+          # this workflow, otherwise a workflow/action/orchestration change
+          # spawns a run where every job skips ("changes" runs alone, both
+          # downstream jobs skip → wasted minutes). The `workflow-meta`
+          # pseudo-pattern bundles all the cross-cutting paths.
           filters: |
             frontend:
               - 'apps/web/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
+              - '.github/workflows/dev-fast.yml'
+              - '.github/actions/setup-frontend/**'
+              - '.github/actions/setup-playwright/**'
             backend:
               - 'apps/api/**'
               - 'global.json'
+              - '.github/workflows/dev-fast.yml'
+              - '.github/actions/setup-backend/**'
+            orchestration:
+              - 'apps/orchestration-service/**'
 
   frontend-fast:
     name: Frontend Fast (lint + typecheck + unit)

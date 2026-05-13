@@ -159,13 +159,62 @@ To strengthen a constraint from `likely-implemented` to `verified`, add a commen
 
 The check script greps for `@spec-ref <id>` literally. Free-form references in PR descriptions or commits do **not** count.
 
-## What ships next (WS-E.2b)
+## WS-E.2b (shipped)
+
+The sync workflow + false-positive override hook + allowlist ledger ship together.
+
+### `mockup-spec-sync.yml`
+
+Three triggers:
+
+| Trigger | Mode | Notes |
+|---------|------|-------|
+| `schedule '0 8 * * *'` (daily 08:00 UTC) | always `dry-run` | Canonical sync path; never auto-creates issues without explicit human go-ahead |
+| `pull_request` on `admin-mockups/design_files/**` + the audit scripts | always `dry-run` | Opportunistic feedback when a mockup change lands |
+| `workflow_dispatch` with `mode` input | `dry-run` (default) or `apply` | Manual escalation. Promoting to `apply` requires editing the workflow file's `default: 'dry-run'` line — git history shows the explicit decision |
+
+Both `dry-run` and `apply` emit a GitHub Actions job summary. `apply` mode is capped at `max-issues-per-run` (default 5) — excess candidates are deferred to the next run.
+
+Auto-issue selection rule (AC-E.2 rewritten):
+
+- `tier === 'missing'` → eligible immediately
+- `tier === 'unknown'` AND `now - evaluated_at >= min_unknown_age_days` (default 30d) → eligible
+- All other tiers → skipped (verified / likely-implemented / manual-review)
+- `dedup_key ∈ allowlist` → skipped (false-positive override)
+
+Dedup is via `<!-- spec-debt-key: <hash>; ... -->` header marker in the issue body. Reapplication of the same key updates the existing issue instead of creating a duplicate (AC-E.7).
+
+### `spec-debt-false-positive-handler.yml`
+
+Triggers on `issues.labeled` with label `spec-debt-false-positive`. Steps:
+
+1. Parses the `dedup_key` from the issue body marker
+2. Appends the key to `docs/for-developers/audits/spec-debt-false-positive-allowlist.json` (idempotent, sorted)
+3. Closes the labelled issue with `state_reason: not_planned` and a tracking comment
+4. Opens an auto-PR with the allowlist change for human review via `peter-evans/create-pull-request@22a9089` (SHA-pinned)
+
+Reviewer checklist on the auto-PR: confirm the FP determination is genuine, then merge to activate the override. To re-enable auto-issue creation later, remove the entry from the allowlist via PR — the next sync run will re-open a fresh debt issue.
+
+### Allowlist file
+
+`docs/for-developers/audits/spec-debt-false-positive-allowlist.json`:
+
+```json
+{
+  "version": 1,
+  "keys": []
+}
+```
+
+The list is the audit trail. Manual edits are tracked in git history. Removing an entry is a deliberate revert decision (auto-issue will be recreated by the next workflow run).
+
+## Future work
 
 | Item | Deliverable |
 |------|-------------|
-| `mockup-spec-sync.yml` workflow | Cron daily + PR trigger on `admin-mockups/design_files/**`. Dry-run mode default (AC-E.6); cap `max-issues-per-run: 5`; create/update `mockup-spec-debt` issues for tier=`unknown` (≥30d) or `missing` constraints; dedup by `(mockup, id_or_text_hash, metric_type)` (AC-E.7) |
-| False-positive override hook | Label `spec-debt-false-positive` → close + append `dedup_key` to `docs/.../spec-debt-false-positive-allowlist.json` (AC-E.8) |
-| JSON Schema sidecar | `mockup-smart-constraints.schema.json` + `mockup-smart-implementation.schema.json` for IDE validation |
+| JSON Schema sidecars | `mockup-smart-constraints.schema.json` + `mockup-smart-implementation.schema.json` for IDE validation |
+| `first_seen` tracking | Persist the first-evaluation timestamp across check-implementation runs so `unknown ≥ 30d` truly tracks the constraint's lifespan rather than just the last evaluation date |
+| Weekly summary observability | Optional dashboard listing top dedup_keys, by-tier counts, allowlist age (analogue of AC-C.5.7) |
 
 ## Refs
 

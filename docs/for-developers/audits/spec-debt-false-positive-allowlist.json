@@ -1,0 +1,5 @@
+{
+  "$comment": "WS-E.2b false-positive allowlist (AC-E.8). Dedup keys here are skipped by mockup-spec-sync.yml when creating auto-issues. Entries are appended by spec-debt-false-positive-handler.yml when the `spec-debt-false-positive` label is applied to an existing debt issue. Remove an entry (via PR) to re-enable auto-issue creation for that constraint.",
+  "version": 1,
+  "keys": []
+}

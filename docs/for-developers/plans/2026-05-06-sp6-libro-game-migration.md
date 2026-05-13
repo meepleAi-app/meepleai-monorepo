@@ -716,7 +716,7 @@ Verdict transitions: ⚠️ APPROVE WITH AMENDMENTS → ✅ APPROVED FOR EXECUTI
 ## Refs
 
 - SP6 mockups: [`sp6-libro-game-index.html`](../../../admin-mockups/design_files/sp6-libro-game-index.html) + [`sp6-libro-game-photo-upload.html`](../../../admin-mockups/design_files/sp6-libro-game-photo-upload.html)
-- [v2-migration-matrix.md](../../frontend/v2-migration-matrix.md)
+- [v2-migration-matrix.md](../frontend/v2-migration-matrix.md)
 - Pattern parents:
   - PR #717 Wave 4 D1 (Tier S blueprint, single-shot)
   - PR #724 Wave 3 (Tier M `/players/[id]` blueprint)

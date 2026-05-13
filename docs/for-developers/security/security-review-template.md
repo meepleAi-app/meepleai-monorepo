@@ -651,7 +651,7 @@ Else it can defer to next quarter at tier-2
 
 ## Appendix C — References
 
-- [SECURITY.md](../../SECURITY.md)
+- [SECURITY.md](../../../SECURITY.md)
 - [OWASP Top 10 2021](https://owasp.org/Top10/)
 - [OWASP ASVS 4.0](https://owasp.org/www-project-application-security-verification-standard/)
 - [CWE Top 25](https://cwe.mitre.org/top25/)
@@ -663,5 +663,5 @@ Else it can defer to next quarter at tier-2
 
 **Next Review Due**: [Next Quarter Start Date]
 **Spec-Panel revision history**:
-- v1: original (pre-2026-05-05) — archived at [archive/security-review-template-v1.md](./archive/security-review-template-v1.md)
+- v1: original (pre-2026-05-05) — archived at **archive/security-review-template-v1.md** _(planned)_
 - v2 (2026-05-05): post-spec-panel hardening — addresses Critical findings C-1…C-5 from #186 review

@@ -4,7 +4,7 @@
 **Date**: 2026-03-29
 **Issue**: Refactoring KB — rimozione Qdrant
 **Decision Makers**: Engineering Lead
-**Related Spec**: [docs/for-developers/specs/2026-03-29-qdrant-to-pgvector-migration-design.md](../../superpowers/specs/2026-03-29-qdrant-to-pgvector-migration-design.md)
+**Related Spec**: **docs/for-developers/specs/2026-03-29-qdrant-to-pgvector-migration-design.md** _(planned)_
 
 ---
 

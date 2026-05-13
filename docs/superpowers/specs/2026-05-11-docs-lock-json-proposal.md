@@ -28,7 +28,7 @@ Add `docs/.lock.json` mapping every Markdown file path to its content SHA at com
 }
 ```
 
-Hook generates `referenced_by` by parsing markdown `[text](relative-path.md)` and `file://` links. Pre-commit fails if:
+Hook generates `referenced_by` by parsing markdown `**text** _(planned)_` and `file://` links. Pre-commit fails if:
 - File deleted but `referenced_by` non-empty in lock
 - File moved (SHA same, path different) without updating refs
 

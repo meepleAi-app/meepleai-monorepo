@@ -6,7 +6,7 @@
 | **Stage** | DS-3 (cluster prioritization) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../specs/2026-05-12-token-canonicalization.md) |
 | **Generator** | `pnpm lint:tokens` against `main-dev` HEAD `01ef5851e..f3702921d` (post DS-1 merge: bridge active, but consumers not yet migrated) |
-| **Companion JSON** | [`audits/2026-05-12-token-violations.json`](../../../audits/2026-05-12-token-violations.json) (regenerable, gitignored) |
+| **Companion JSON** | **`audits/2026-05-12-token-violations.json`** _(planned)_ (regenerable, gitignored) |
 | **Source rule** | `local/no-hardcoded-color-utility` (DS-2) |
 
 ## Method
@@ -120,7 +120,7 @@ These items emerged during the heuristic aggregation and need a human decision:
 
 ## Per-cluster file count tail
 
-The full byCluster JSON has 308 buckets; the long tail (215 buckets with ≤2 violations) is suppressed here. Refer to [`audits/2026-05-12-token-violations.json`](../../../audits/2026-05-12-token-violations.json) for the raw inventory.
+The full byCluster JSON has 308 buckets; the long tail (215 buckets with ≤2 violations) is suppressed here. Refer to **`audits/2026-05-12-token-violations.json`** _(planned)_ for the raw inventory.
 
 ## Acceptance criteria
 

@@ -1493,8 +1493,8 @@ No overlap. The state coverage gate is **declarative** (state names match), not 
 
 ## References
 
-- Spec: [`docs/for-developers/specs/2026-05-12-ws-d-state-coverage-design.md`](../../specs/2026-05-12-ws-d-state-coverage-design.md)
-- Roadmap: [`docs/for-developers/specs/2026-05-12-mockup-conformity-roadmap.md`](../../specs/2026-05-12-mockup-conformity-roadmap.md) §3 WS-D
+- Spec: [`docs/for-developers/specs/2026-05-12-ws-d-state-coverage-design.md`](../specs/2026-05-12-ws-d-state-coverage-design.md)
+- Roadmap: [`docs/for-developers/specs/2026-05-12-mockup-conformity-roadmap.md`](../specs/2026-05-12-mockup-conformity-roadmap.md) §3 WS-D
 - Umbrella issue: #1066
 - Tracking issue: #1070
 ```

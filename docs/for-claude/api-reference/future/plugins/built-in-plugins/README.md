@@ -8,14 +8,14 @@ MeepleAI includes a library of ready-to-use plugins covering common RAG operatio
 
 | Category | Description | Plugins |
 |----------|-------------|---------|
-| [Routing](routing.md) | Query classification and path selection | Intent Router, Complexity Router |
-| [Cache](cache.md) | Result caching for performance | Semantic Cache, Exact Match Cache |
-| [Retrieval](retrieval.md) | Document fetching from stores | Vector Search, Hybrid Search, Keyword Search |
-| [Evaluation](evaluation.md) | Quality assessment | Relevance Scorer, Confidence Evaluator |
-| [Generation](generation.md) | Response creation | Answer Generator, Summary Generator |
-| [Validation](validation.md) | Output verification | Hallucination Detector, Guardrails |
-| [Transform](transform.md) | Data modification | Query Rewriter, Document Reranker |
-| [Filter](filter.md) | Document selection | Deduplication, Threshold Filter |
+| **Routing** _(planned)_ | Query classification and path selection | Intent Router, Complexity Router |
+| **Cache** _(planned)_ | Result caching for performance | Semantic Cache, Exact Match Cache |
+| **Retrieval** _(planned)_ | Document fetching from stores | Vector Search, Hybrid Search, Keyword Search |
+| **Evaluation** _(planned)_ | Quality assessment | Relevance Scorer, Confidence Evaluator |
+| **Generation** _(planned)_ | Response creation | Answer Generator, Summary Generator |
+| **Validation** _(planned)_ | Output verification | Hallucination Detector, Guardrails |
+| **Transform** _(planned)_ | Data modification | Query Rewriter, Document Reranker |
+| **Filter** _(planned)_ | Document selection | Deduplication, Threshold Filter |
 
 ## Quick Reference
 
@@ -110,4 +110,4 @@ MeepleAI includes a library of ready-to-use plugins covering common RAG operatio
 
 ## Creating Custom Plugins
 
-See the [Plugin Development Guide](../plugin-development-guide.md) for creating your own plugins.
+See the **Plugin Development Guide** _(planned)_ for creating your own plugins.

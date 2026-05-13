@@ -19,27 +19,27 @@ TOMAC-RAG routes queries to one of 6 strategies, each combining multiple variant
 
 ## Priority P0 (Implemented/High Priority)
 
-1. **[Semantic Cache](semantic-cache.md)** - 986 tokens | $0.004 | +0% accuracy | 50% token reduction
-2. **[Contextual Embeddings](contextual-embeddings.md)** - 1,950 tokens | $0.007 | +5% accuracy | 30% reduction
-3. **[Metadata Filtering](metadata-filtering.md)** - 3,100 tokens | $0.012 | +6% accuracy | Multi-game filtering
-4. **[Cross-Encoder Reranking](cross-encoder-reranking.md)** - 3,250 tokens | $0.013 | +8% accuracy | BALANCED tier
-5. **[Hybrid Search](hybrid-search.md)** - 4,250 tokens | $0.016 | +11% accuracy | Vector + BM25
-6. **[Advanced RAG](advanced-rag.md)** - 3,700 tokens | $0.013 | +10% accuracy | Production foundation
+1. ****Semantic Cache** _(planned)_** - 986 tokens | $0.004 | +0% accuracy | 50% token reduction
+2. ****Contextual Embeddings** _(planned)_** - 1,950 tokens | $0.007 | +5% accuracy | 30% reduction
+3. ****Metadata Filtering** _(planned)_** - 3,100 tokens | $0.012 | +6% accuracy | Multi-game filtering
+4. ****Cross-Encoder Reranking** _(planned)_** - 3,250 tokens | $0.013 | +8% accuracy | BALANCED tier
+5. ****Hybrid Search** _(planned)_** - 4,250 tokens | $0.016 | +11% accuracy | Vector + BM25
+6. ****Advanced RAG** _(planned)_** - 3,700 tokens | $0.013 | +10% accuracy | Production foundation
 
 ## Priority P1 (High Value)
 
-7. **[Sentence Window](sentence-window.md)** - 3,250 tokens | $0.012 | +7% accuracy | Granular retrieval
-8. **[ColBERT Reranking](colbert-reranking.md)** - 3,250 tokens | $0.014 | +12% accuracy | Late interaction
-9. **[Chain-of-Thought RAG](chain-of-thought-rag.md)** - 3,650 tokens | $0.016 | +18% accuracy | Reasoning transparency
-10. **[Query Decomposition](query-decomposition.md)** - 6,550 tokens | $0.026 | +12% accuracy | Multi-concept queries
-11. **[Iterative RAG](iterative-rag.md)** - 6,736 tokens | $0.025 | +14% accuracy | Feedback loops
+7. ****Sentence Window** _(planned)_** - 3,250 tokens | $0.012 | +7% accuracy | Granular retrieval
+8. ****ColBERT Reranking** _(planned)_** - 3,250 tokens | $0.014 | +12% accuracy | Late interaction
+9. ****Chain-of-Thought RAG** _(planned)_** - 3,650 tokens | $0.016 | +18% accuracy | Reasoning transparency
+10. ****Query Decomposition** _(planned)_** - 6,550 tokens | $0.026 | +12% accuracy | Multi-concept queries
+11. ****Iterative RAG** _(planned)_** - 6,736 tokens | $0.025 | +14% accuracy | Feedback loops
 
 ## Priority P2 (Specialized Use Cases)
 
-12. **[Multi-Agent RAG](multi-agent-rag.md)** - 12,900 tokens | $0.043 | +20% accuracy | PRECISE tier
-13. **[RAG-Fusion](rag-fusion.md)** - 11,550 tokens | $0.041 | +11% accuracy | Query reformulation
-14. **[Step-Back Prompting](step-back-prompting.md)** - 5,740 tokens | $0.022 | +10% accuracy | Conceptual grounding
-15. **[Query Expansion](query-expansion.md)** - 4,110 tokens | $0.016 | +7% accuracy | Synonym matching
+12. ****Multi-Agent RAG** _(planned)_** - 12,900 tokens | $0.043 | +20% accuracy | PRECISE tier
+13. ****RAG-Fusion** _(planned)_** - 11,550 tokens | $0.041 | +11% accuracy | Query reformulation
+14. ****Step-Back Prompting** _(planned)_** - 5,740 tokens | $0.022 | +10% accuracy | Conceptual grounding
+15. ****Query Expansion** _(planned)_** - 4,110 tokens | $0.016 | +7% accuracy | Synonym matching
 
 ## Quick Reference
 

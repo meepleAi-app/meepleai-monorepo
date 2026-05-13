@@ -4,7 +4,7 @@
 |---|---|
 | **Date** | 2026-05-12 (DS-1) |
 | **Spec** | [`2026-05-12-token-canonicalization.md`](../specs/2026-05-12-token-canonicalization.md) |
-| **Bridge file** | [`apps/web/src/styles/token-bridge.css`](../../../apps/web/src/styles/token-bridge.css) |
+| **Bridge file** | **`apps/web/src/styles/token-bridge.css`** _(planned)_ |
 | **Canonical source** | [`apps/web/src/styles/design-tokens-canonical.css`](../../../apps/web/src/styles/design-tokens-canonical.css) (mirror of [`admin-mockups/design_files/tokens.css`](../../../admin-mockups/design_files/tokens.css)) |
 | **Removal target** | DS-12 (when 0 consumers reference legacy names) |
 

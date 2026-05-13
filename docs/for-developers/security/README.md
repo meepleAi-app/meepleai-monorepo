@@ -18,11 +18,11 @@
 **Se vuoi...** | **Leggi questo file**
 ---|---
 Verificare OWASP compliance | `owasp-top-10-compliance.md`
-Gestire i secret | `../deployment/secrets-management.md`
+Gestire i secret | `./secrets-management.md`
 Configurare autenticazione | `../bounded-contexts/authentication.md`
 Implementare OAuth/2FA | `../testing/backend/oauth-testing.md`
-Security headers middleware | `../architecture/adr/adr-010-security-headers-middleware.md`
-CORS configuration | `../architecture/adr/adr-011-cors-whitelist-headers.md`
+Security headers middleware | `../../for-claude/architecture/adr/adr-010-security-headers-middleware.md`
+CORS configuration | `../../for-claude/architecture/adr/adr-011-cors-whitelist-headers.md`
 
 ---
 
@@ -52,11 +52,11 @@ CORS configuration | `../architecture/adr/adr-011-cors-whitelist-headers.md`
 
 ## 📖 Guide Correlate
 
-- [Secrets Management](../deployment/secrets-management.md)
-- [OAuth Testing Guide](../testing/backend/oauth-testing.md)
+- [Secrets Management](./secrets-management.md)
+- **OAuth Testing Guide** _(planned)_
 - [Deployment Security](../deployment/infrastructure-deployment-checklist.md)
-- [ADR-010: Security Headers Middleware](../architecture/adr/adr-010-security-headers-middleware.md)
-- [ADR-011: CORS Whitelist](../architecture/adr/adr-011-cors-whitelist-headers.md)
+- [ADR-010: Security Headers Middleware](../../for-claude/architecture/adr/adr-010-security-headers-middleware.md)
+- [ADR-011: CORS Whitelist](../../for-claude/architecture/adr/adr-011-cors-whitelist-headers.md)
 
 ---
 

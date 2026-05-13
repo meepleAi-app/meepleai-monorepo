@@ -12,7 +12,7 @@
 
 `v2.0` · `.NET 9` · `Next.js 16` · `Python AI` · `Docker Compose`
 
-[Diagramma PDF](../../claudedocs/MeepleAI-Architecture.pdf)
+**Diagramma PDF** _(planned)_
 
 </div>
 
@@ -480,6 +480,6 @@ Browser → Next.js middleware → .NET API /api/v1/auth/login
 
 <div align="center">
 
-*Ultimo aggiornamento: 2026-02-19* · *Diagramma: [`MeepleAI-Architecture.pdf`](../../claudedocs/MeepleAI-Architecture.pdf)*
+*Ultimo aggiornamento: 2026-02-19* · *Diagramma: **`MeepleAI-Architecture.pdf`** _(planned)_*
 
 </div>

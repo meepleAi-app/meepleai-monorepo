@@ -409,19 +409,19 @@ docker exec meepleai-redis redis-cli ping             # Redis
 
 | Guida | Contenuto |
 |-------|-----------|
-| [Staging Setup](./staging-setup-guide.md) | Setup server staging completo |
-| [SSH Manual Deploy](./ssh-manual-deploy.md) | Deploy manuale via SSH |
-| [Docker Versioning](./docker-versioning-guide.md) | Image tagging, GHCR |
+| **Staging Setup** _(planned)_ | Setup server staging completo |
+| **SSH Manual Deploy** _(planned)_ | Deploy manuale via SSH |
+| **Docker Versioning** _(planned)_ | Image tagging, GHCR |
 | [Deployment Workflows](./deployment-workflows-guide.md) | Pipeline staging → production |
-| [R2 Storage](./r2-storage-configuration-guide.md) | Cloudflare R2 setup |
-| [Infrastructure Cost](./infrastructure-cost-summary.md) | Budget per fase |
-| [Domain Setup](./domain-setup-guide.md) | DNS, SSL, Cloudflare |
-| [Environments](./environments.md) | Differenze dev/staging/prod |
-| [Email/TOTP](./email-totp-services.md) | Email and TOTP services |
-| [BGG API](./boardgamegeek-api-setup.md) | BoardGameGeek API setup |
-| [Cost Optimization](./github-alternatives-cost-optimization.md) | GitHub Alternatives & Cost |
+| **R2 Storage** _(planned)_ | Cloudflare R2 setup |
+| **Infrastructure Cost** _(planned)_ | Budget per fase |
+| **Domain Setup** _(planned)_ | DNS, SSL, Cloudflare |
+| **Environments** _(planned)_ | Differenze dev/staging/prod |
+| **Email/TOTP** _(planned)_ | Email and TOTP services |
+| **BGG API** _(planned)_ | BoardGameGeek API setup |
+| **Cost Optimization** _(planned)_ | GitHub Alternatives & Cost |
 
-**Related**: [Monitoring](../development/README.md#monitoring), [Testing](../testing/README.md), [Security](../security/README.md)
+**Related**: **Monitoring** _(planned)_, [Testing](../testing/README.md), [Security](../security/README.md)
 
 ---
 

@@ -80,8 +80,8 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 
 ## Related Docs
 
-- [System Architecture](../overview/system-architecture.md)
-- [DDD Quick Reference](../ddd/quick-reference.md)
+- **System Architecture** _(planned)_
+- **DDD Quick Reference** _(planned)_
 - [Bounded Contexts Diagram](../diagrams/bounded-contexts-interactions.md)
 
 ---

@@ -58,18 +58,14 @@ jobs:
             echo "Mode: PR-diff scan (base=$BASE_SHA head=$HEAD_SHA)"
             git diff --name-only --diff-filter=AM "$BASE_SHA" "$HEAD_SHA" -- 'docs/**/*.md' 'CLAUDE.md' > .lychee-targets.txt || true
           fi
-          # Always exclude .docs-archive/ — those files are dead by definition.
-          # Also exclude reorg-in-flight trees with known dead cross-refs (cascade
-          # debt from #916 Qdrant cleanup + #949 ALPHA_MODE removal + Nanolith
-          # libro-game intro):
-          #   - docs/for-claude/  — AI-consumption sandbox (#1002 carryover)
-          #   - docs/for-developers/{deployment,security,testing,plans}/ — partial deletions
-          #   - docs/superpowers/{plans,specs}/archive/  — archived docs with stale refs
-          # Tracked in #1014. The grep filter uses `archive/` as a generic suffix
-          # match anywhere under docs/superpowers/ to absorb future archive-tree
-          # growth without code change. See PR #979 unblock rationale.
+          # Exclude legitimate archive trees only (dead by definition).
+          # The 6-tree exclusion previously here (#1013, #1002) was retired by
+          # #1014 — all broken refs in docs/for-developers/{deployment,security,
+          # testing,plans}/, docs/for-claude/, and docs/superpowers/ (non-archive)
+          # have been fixed or stripped. See `scripts/quality/scan-broken-links.py`
+          # for the local equivalent of this gate.
           if [[ -f .lychee-targets.txt ]]; then
-            grep -vE '^\.docs-archive/|^docs/for-claude/|^docs/for-developers/(deployment|security|testing|plans)/|^docs/superpowers/.*archive/' .lychee-targets.txt > .lychee-targets.filtered.txt || true
+            grep -vE '^\.docs-archive/|^docs/superpowers/.*archive/' .lychee-targets.txt > .lychee-targets.filtered.txt || true
             mv .lychee-targets.filtered.txt .lychee-targets.txt
           fi
           count=$(wc -l < .lychee-targets.txt)

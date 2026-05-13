@@ -275,7 +275,7 @@ public class RegisterUserCommandValidator : AbstractValidator<RegisterUserComman
 }
 ```
 
-See: [ADR-012: FluentValidation CQRS](../architecture/adr/adr-012-fluentvalidation-cqrs.md)
+See: [ADR-012: FluentValidation CQRS](../../for-claude/architecture/adr/adr-012-fluentvalidation-cqrs.md)
 
 ### Pattern 3: Regex Sanitization
 
@@ -600,7 +600,7 @@ See: `security-testing-strategy.md` (documentation pending)
 ## Related Documentation
 
 ### Security Policies & Strategies
-- **[SECURITY.md](../../SECURITY.md)** - Security policy and reporting
+- **[SECURITY.md](../../../SECURITY.md)** - Security policy and reporting
 - `security-testing-strategy.md` - Comprehensive testing (documentation pending)
 - **[OAuth Security](./oauth-security.md)** - OAuth implementation security
 - **[TOTP Vulnerability Analysis](./totp-vulnerability-analysis.md)** - 2FA/TOTP security analysis
@@ -617,8 +617,8 @@ See: `security-testing-strategy.md` (documentation pending)
 
 ### Architecture
 - `security-testing.md` - Security test patterns (documentation pending)
-- **[ADR-010: Security Headers](../architecture/adr/adr-010-security-headers-middleware.md)** - Headers middleware
-- **[ADR-011: CORS Whitelist](../architecture/adr/adr-011-cors-whitelist-headers.md)** - CORS policy
+- **[ADR-010: Security Headers](../../for-claude/architecture/adr/adr-010-security-headers-middleware.md)** - Headers middleware
+- **[ADR-011: CORS Whitelist](../../for-claude/architecture/adr/adr-011-cors-whitelist-headers.md)** - CORS policy
 
 ---
 

@@ -530,10 +530,10 @@ dotnet run
 ## References
 
 ### Documentation
-- **Deployment Guide**: [docs/for-developers/deployment/ (auto-config docs)](../../deployment/auto-configuration-guide.md)
-- **Secrets Management**: [docs/for-developers/deployment/secrets-management.md](../../deployment/secrets-management.md)
-- **Health Check API**: [http://localhost:8080/health](../../api/health-check-api.md)
-- **Secrets README**: [infra/secrets/README.md](../../../infra/secrets/README.md)
+- **Deployment Guide**: **docs/for-developers/deployment/ (auto-config docs)** _(planned)_
+- **Secrets Management**: [docs/for-developers/deployment/secrets-management.md](../../../for-developers/security/secrets-management.md)
+- **Health Check API**: **http://localhost:8080/health** _(planned)_
+- **Secrets README**: **infra/secrets/README.md** _(planned)_
 
 ### Source Code
 - **Setup Script**: `infra/secrets/setup-secrets.ps1`

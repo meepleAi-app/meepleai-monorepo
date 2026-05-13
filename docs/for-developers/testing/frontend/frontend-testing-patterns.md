@@ -256,8 +256,8 @@ export const gamesHandlers = [
 node node_modules/vitest/vitest.mjs run --coverage
 ```
 
-See [windows-vitest-troubleshooting.md](./windows-vitest-troubleshooting.md)
+See **windows-vitest-troubleshooting.md** _(planned)_
 
 ---
 
-**Related**: [E2E Guide](./e2e/e2-e-test-guide.md) | [Backend Testing](./backend/testcontainers-best-practices.md) | [Week 4 Plan](./week4-frontend-component-test-plan.md)
+**Related**: [E2E Guide](../e2e/e2-e-test-guide.md) | **Backend Testing** _(planned)_ | **Week 4 Plan** _(planned)_

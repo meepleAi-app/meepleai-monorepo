@@ -402,6 +402,102 @@ export default defineConfig({
       fullyParallel: true,
     },
 
+    // WS-C Mockup Conformity Gate (Issue #1069, umbrella #1066) — Phase 2
+    //
+    // Two project pairs share the `__mockup__/` baseline directory via
+    // `snapshotPathTemplate`:
+    //
+    //   conformity-bootstrap-{desktop,mobile} → navigates mockup HTML on :5174,
+    //     captures baseline PNG (via --update-snapshots). Run by Phase 3
+    //     `bootstrap-mockup-baselines.yml` workflow.
+    //
+    //   conformity-verify-{desktop,mobile} → navigates live route on :3000,
+    //     asserts pixel diff vs the committed mockup baseline. Per-route
+    //     `threshold` + `maxDiffPixelRatio` come from `mockup-ownership.bootstrap.json`
+    //     and are applied per `toHaveScreenshot()` call inside the spec.
+    //
+    // Project-level expect defaults are tight (matches existing visual-* projects).
+    // Specs override per-route via the loader's `RouteOwnership` values.
+    {
+      name: 'conformity-bootstrap-desktop',
+      testDir: './e2e/visual-conformity',
+      testMatch: /bootstrap\.spec\.ts/,
+      snapshotPathTemplate: './e2e/visual-conformity/__mockup__/{arg}.desktop{ext}',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: process.env.MOCKUP_BASE_URL ?? 'http://localhost:5174',
+        viewport: { width: 1280, height: 720 },
+      },
+      expect: {
+        toHaveScreenshot: {
+          maxDiffPixelRatio: 0.001,
+          threshold: 0.2,
+          animations: 'disabled',
+        },
+      },
+      fullyParallel: true,
+    },
+    {
+      name: 'conformity-bootstrap-mobile',
+      testDir: './e2e/visual-conformity',
+      testMatch: /bootstrap\.spec\.ts/,
+      snapshotPathTemplate: './e2e/visual-conformity/__mockup__/{arg}.mobile{ext}',
+      use: {
+        ...devices['Pixel 5'],
+        baseURL: process.env.MOCKUP_BASE_URL ?? 'http://localhost:5174',
+        viewport: { width: 375, height: 740 },
+      },
+      expect: {
+        toHaveScreenshot: {
+          maxDiffPixelRatio: 0.001,
+          threshold: 0.2,
+          animations: 'disabled',
+        },
+      },
+      fullyParallel: true,
+    },
+    {
+      name: 'conformity-verify-desktop',
+      testDir: './e2e/visual-conformity',
+      testMatch: /conformity\.spec\.ts/,
+      snapshotPathTemplate: './e2e/visual-conformity/__mockup__/{arg}.desktop{ext}',
+      retries: 1,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:3000',
+        viewport: { width: 1280, height: 720 },
+      },
+      expect: {
+        toHaveScreenshot: {
+          // Project defaults; specs override per route via toHaveScreenshot() call.
+          maxDiffPixelRatio: 0.05,
+          threshold: 0.1,
+          animations: 'disabled',
+        },
+      },
+      fullyParallel: true,
+    },
+    {
+      name: 'conformity-verify-mobile',
+      testDir: './e2e/visual-conformity',
+      testMatch: /conformity\.spec\.ts/,
+      snapshotPathTemplate: './e2e/visual-conformity/__mockup__/{arg}.mobile{ext}',
+      retries: 1,
+      use: {
+        ...devices['Pixel 5'],
+        baseURL: 'http://localhost:3000',
+        viewport: { width: 375, height: 740 },
+      },
+      expect: {
+        toHaveScreenshot: {
+          maxDiffPixelRatio: 0.05,
+          threshold: 0.1,
+          animations: 'disabled',
+        },
+      },
+      fullyParallel: true,
+    },
+
     // Admin Embedding Flow — local dev and integration environments
     {
       name: 'embedding-flow-local',

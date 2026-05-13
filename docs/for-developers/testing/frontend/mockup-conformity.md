@@ -1,7 +1,7 @@
 # Mockup-to-route Conformity Gate
 
 > **Issue:** #1069 (WS-C Mockup Conformity Roadmap, umbrella #1066)
-> **Status:** Phase 1 shipped 2026-05-13 — config + loader. Workflows + Playwright projects ship in Phase 2/3.
+> **Status:** Phase 1 + Phase 2 shipped 2026-05-13 — config, loader, Playwright projects, bootstrap spec, conformity scaffold, pin verifier. Workflows + data-mocking parity ship in Phase 3.
 
 ## Overview
 
@@ -15,14 +15,38 @@ The conformity gate answers a question that the two existing visual-regression w
 
 Without this gate, an implementation can drift 75–85% from its canonical mockup and every check stays green (this is exactly what the 2026-05-12 audit measured).
 
-## Phase 1 deliverables (this PR)
+## Deliverables shipped
+
+### Phase 1 (PR #1105)
 
 - `apps/web/e2e/visual-conformity/mockup-ownership.schema.json` — JSON Schema for the ownership map (versioned)
 - `apps/web/e2e/visual-conformity/mockup-ownership.bootstrap.json` — minimal bootstrap with **2 routes** (AC-C.7)
 - `apps/web/scripts/conformity-ownership.ts` — loader, validator, default merger
 - `apps/web/scripts/__tests__/conformity-ownership.test.ts` — unit tests
 
-The Playwright spec, workflows, and committed baselines arrive in Phase 2/3.
+### Phase 2 (this PR)
+
+- `apps/web/playwright.config.ts` — 4 new projects: `conformity-bootstrap-{desktop,mobile}` (generate baselines) + `conformity-verify-{desktop,mobile}` (assert route vs baseline)
+- `apps/web/e2e/visual-conformity/bootstrap.spec.ts` — iterates ownership, captures mockup screenshot at `__mockup__/{id}.{viewport}.png`
+- `apps/web/e2e/visual-conformity/conformity.spec.ts` — scaffold spec, `test.fixme()`'d until Phase 3 data-mocking parity (rationale in commit)
+- `apps/web/scripts/mockup-pin-policy.json` — declarative pin policy (React UMD versions + SRI + preconnects)
+- `apps/web/scripts/verify-mockup-pins.ts` — verifier CLI (`pnpm verify:mockup-pins`)
+- `apps/web/scripts/__tests__/verify-mockup-pins.test.ts` — 13 unit tests
+- `apps/web/package.json` — 4 new scripts (`test:visual:conformity{,:bootstrap{,:update}}`, `verify:mockup-pins`)
+
+The workflows (gate + bootstrap) and per-route `page.route()` data stubs arrive in Phase 3.
+
+## AC-C.8 implementation note (spec reconciliation)
+
+The spec said _"serve-mockups.cjs injects Inter font stack with SHA-384 integrity"_. Implementation diverges deliberately:
+
+| Spec claim | Reality | Phase 2 resolution |
+|------------|---------|--------------------|
+| Inject Inter font | App uses **Quicksand + Nunito + JetBrains Mono** (via `next/font/google`); mockups already load these from Google Fonts CDN | No injection. Existing setup is already cross-platform deterministic. |
+| SHA-384 on font preload | Font binaries don't carry SRI; Google Fonts CSS is dynamically generated and SRI-incompatible | N/A — accepted. |
+| React 18.3.1 SRI pin in `serve-mockups.cjs` | Already pinned **in each mockup HTML file** (verified) | Pin policy externalized to `mockup-pin-policy.json`; verifier enforces consistency |
+
+Determinism guarantee: Playwright runs the same Chromium build on Linux (`ubuntu-22.04`, per AC-C.8) for both mockup and route renders, and `document.fonts.ready` waits ensure font binaries are loaded before screenshot. The verifier catches the only remaining drift vector: accidental React version bumps.
 
 ## Bootstrap route set (AC-C.7)
 
@@ -121,13 +145,27 @@ Rules enforced by the loader:
 
 Adding a route does **not** yet make Phase 3 enforce it — until the workflow ships, this is data-only.
 
-## What ships in Phases 2/3/4
+## What ships next
 
 | Phase | Deliverable |
 |-------|-------------|
-| **2** | `playwright.config.ts` projects `conformity-desktop` + `conformity-mobile`; `apps/web/e2e/visual-conformity/library.spec.ts` + `library-game-detail.spec.ts`; font lock in `serve-mockups.cjs` (AC-C.8) |
-| **3** | `.github/workflows/visual-regression-conformity.yml` (gate) + `bootstrap-mockup-baselines.yml` (manual + auto-trigger on mockup change); committed `__mockup__/*.png` baselines |
+| **3** | `.github/workflows/visual-regression-conformity.yml` (gate) + `bootstrap-mockup-baselines.yml` (manual + auto-trigger on mockup change); committed `__mockup__/*.png` baselines; per-route `page.route()` data stubs that unblock the `test.fixme()` guards in `conformity.spec.ts` |
 | **4** | `docs/for-developers/audits/conformity-waivers.md` audit log; waiver issue automation (AC-C.5) |
+
+## Running locally
+
+```bash
+cd apps/web
+
+# Generate / regenerate mockup baselines under __mockup__/ (committed to repo)
+pnpm test:visual:conformity:bootstrap:update
+
+# Verify route vs committed baseline (after Phase 3 mocks land)
+pnpm test:visual:conformity
+
+# Sanity-check the pin policy across ownership-mapped mockups
+pnpm verify:mockup-pins
+```
 
 ## References
 

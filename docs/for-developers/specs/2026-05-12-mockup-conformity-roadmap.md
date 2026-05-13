@@ -237,7 +237,7 @@ Sei workstream (A–F) con dipendenze esplicitate in §4 sequencing.
 
 ### WS-E — Spec linter (extract SMART constraints)
 
-**Owner**: backend-dev (script side) + technical-writer (taxonomy) · **Status**: depends on WS-D parser infra · **Effort**: 2–3 giorni
+**Owner**: backend-dev (script side) + technical-writer (taxonomy) · **Status**: E.1 ✅ (PR #1135, `e26f4d6ff`); E.2 spec extended 2026-05-13 · **Effort**: E.1 ~3h actual; E.2 ~5h estimated
 
 **Problem**: i mockup contengono vincoli SMART nei commenti, esempio `sp4-game-chat-tab.html:33-37`:
 ```
@@ -259,16 +259,57 @@ Lo screenshot `chat-ai-after-fix.png` non mostra **nessuna** citation chip né c
 5. Tassonomia metric_type documentata in `docs/for-developers/specs/mockup-smart-taxonomy.md` (citation, confidence, latency, accessibility, ...).
 
 **Acceptance criteria**:
-- **AC-E.1**: estrazione corretta su tutti i mockup attuali (~60 file), output JSON validato contro schema.
-- **AC-E.2**: zero false-positive nelle issue auto-create (calibrazione su 5 mockup campione + manual review).
-- **AC-E.3**: sync mantenuta via cron weekly + trigger PR su `admin-mockups/design_files/**` change.
-- **AC-E.4**: tassonomia copre almeno: `citation`, `confidence`, `latency`, `accessibility`, `coverage`, `performance`.
+- **AC-E.1**: estrazione corretta su tutti i mockup attuali (~60 file), output JSON validato contro schema. ✅ E.1
+- **AC-E.2** (rewritten): **confidence-tiered evaluation** sostituisce binary "zero false-positive" (irraggiungibile con grep heuristic). Ogni constraint riceve un tier:
+  - `verified` — implementation marker presente AND esplicito commento `@spec-ref <constraint-id>` nel codice (manuale, alta confidence)
+  - `likely-implemented` — implementation marker pattern matched (vedi AC-E.5 tabella), no esplicito `@spec-ref`
+  - `unknown` — marker pattern non trovato, no `@spec-ref` (needs investigation, default starting tier)
+  - `missing` — manualmente annotato come not-implemented (via comment `<!-- spec-missing: <constraint-id> -->` in mockup o ledger separato)
+  Auto-issue creata SOLO per `missing` OR (`unknown` AND age ≥30gg). `verified`/`likely-implemented` no issue.
+- **AC-E.3**: sync mantenuta via cron daily (was weekly) + trigger PR su `admin-mockups/design_files/**` change. Cron daily per faster signal su drift; concurrency group separato dal PR-trigger path.
+- **AC-E.4**: tassonomia copre 7 tipi: `citation`, `confidence`, `latency`, `performance`, `coverage`, `accessibility`, `ux-constraint` + fall-through `other`. ✅ E.1 doc.
+- **AC-E.5 (NEW)**: implementation-marker pattern map per `metric_type`. Pattern grep + path scope esplicito:
+
+  | metric_type | Path scope | Grep pattern (any-of) |
+  |---|---|---|
+  | `latency` | `apps/web/src/**`, `apps/api/src/**` | `histogram.*latency`, `recordLatency`, `useApiCall.*timing`, OpenTelemetry meter |
+  | `performance` | `apps/web/src/**` | `lighthouse.*budget`, `perf.*test`, `Profiler`, `useMemo.*reason` |
+  | `citation` | `apps/web/src/**` | `CitationChip`, `data-citation`, `<Citation`, `citation-source` |
+  | `confidence` | `apps/web/src/**` | `ConfidenceIndicator`, `data-confidence`, `confidence-marker`, `uncertainty-badge` |
+  | `coverage` | `**/__tests__/**`, `e2e/**` | `expect.*toBeGreaterThan.*0\\.\\d`, `expect.*coverage.*\\d+` |
+  | `accessibility` | `**/__tests__/**`, `e2e/a11y/**` | `axe.run`, `toBeAccessible`, `@axe-core/react`, `axe-playwright` |
+  | `ux-constraint` | n/a | manual review only — no auto-grep |
+  | `other` | n/a | manual review only — no auto-issue, surface in weekly summary as "needs taxonomy" |
+
+  Pattern grep è best-effort; tier `likely-implemented` segnala match, NOT proof. Explicit `@spec-ref <id>` in codebase è l'unico modo per arrivare a `verified`.
+- **AC-E.6 (NEW)**: workflow safety:
+  - `workflow_dispatch` input `mode: dry-run | apply` (default `dry-run`)
+  - Cron daily inizia in `dry-run`; promotion ad `apply` richiede edit esplicito del workflow file (audit trail in git)
+  - `apply` mode cap `max-issues-per-run: 5` hard limit. Eccedenza → workflow log + skip + workflow_dispatch può riprovare con cap esteso
+  - Dry-run output: job summary markdown con proposed issue body, no API call
+- **AC-E.7 (NEW)**: dedup key `sha256(mockup_basename || id_or_text_hash || metric_type)` truncated 16 hex. Issue body header marker:
+  ```
+  <!-- spec-debt-key: {hash}; mockup={file}; metric_type={type}; constraint_id={id-or-null} -->
+  ```
+  Lifecycle:
+  - Constraint riapparsa → comment-update su existing issue (no duplicate)
+  - Constraint text edited → nuovo hash → nuovo issue (intentional re-evaluation)
+  - Mockup deleted → auto-close issue (`state_reason: not_planned`)
+  - PR closed-unmerged → no issue change (mockup non è cambiato)
+- **AC-E.8 (NEW)**: false-positive override:
+  - Label `spec-debt-false-positive` su un'auto-issue → workflow chiude issue + appende `dedup_key` a `docs/for-developers/audits/spec-debt-false-positive-allowlist.json`
+  - Future run skip se `dedup_key ∈ allowlist`
+  - Ledger reviewable via PR (no silent suppression)
+  - Re-evaluation: rimozione manuale dell'entry from allowlist → next workflow run riapre l'issue
 
 **Failure modes**:
-- Regex extract fail su commento HTML edge-case (multi-line, nested) → mitigation: HTML parser (parse5) invece di regex.
-- Issue spam (>50 issue auto-create in primo run) → mitigation: dry-run mode default, manual approval batch-create.
+- Regex extract fail su commento HTML edge-case → mitigation: HTML parser (parse5) invece di regex. ✅ E.1 inline regex copre 8 constraints noti.
+- Issue spam (>5 in primo run) → mitigation: AC-E.6 dry-run default + max-issues cap.
+- False positive cronico su un pattern → mitigation: AC-E.8 `spec-debt-false-positive` allowlist.
+- `other` bucket creates noise → mitigation: AC-E.5 `other` ha no auto-issue, surface in summary as "taxonomy needs extension".
+- Concurrent PR-trigger + cron same constraint → mitigation: separate concurrency groups (`mockup-spec-sync-pr-${PR}` vs `mockup-spec-sync-cron`).
 
-**Rollback**: disable cron, retain JSON snapshot come reference documentation.
+**Rollback**: disable cron + revert workflow to dry-run-only; JSON snapshots retained come reference documentation. Allowlist `spec-debt-false-positive-allowlist.json` preserved.
 
 ---
 

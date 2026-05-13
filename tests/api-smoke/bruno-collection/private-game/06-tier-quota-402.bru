@@ -20,8 +20,15 @@ body:json {
 }
 
 tests {
+  // Tolerant by design — see tests/api-smoke/README.md "Tolerant assertions".
+  // The smoke collection creates 1-2 priv games before this scenario; the
+  // free-tier MaxPrivateGames limit (DB-seeded TierLimits) determines whether
+  // a 3rd-attempt is 201 (within quota) or 402 (over quota). Tightening this
+  // to strict 402 requires either (a) pre-seeding N priv games into smoke-aaron
+  // such that this attempt is the (N+1)th, or (b) modifying this scenario to
+  // call POST /private-games until 402 is observed. Both are deferred to
+  // Phase A.2 (#943).
   test("returns 201 OR 402 depending on quota state", function() {
-    // Smoke proxy — accepts both since smoke runs without strict pre-state.
     expect([201, 402]).to.include(res.getStatus());
   });
   test("if 402, body has TIER_QUOTA_EXCEEDED error code", function() {

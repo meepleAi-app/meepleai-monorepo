@@ -28,15 +28,13 @@ script:post-response {
 }
 
 tests {
+  // Strict assertion enabled by #943 Phase A — pre-request reset wipes the
+  // user's private games, so this happy-path create MUST succeed (quota fresh).
   test("returns 201 Created", function() {
-    // Depending on tier quota state, may be 201 OR 402 (if user already at limit).
-    // Smoke proxy — full assertion in integration test.
-    expect([201, 402]).to.include(res.getStatus());
+    expect(res.getStatus()).to.equal(201);
   });
-  test("if 201, body has privateGameId", function() {
-    if (res.getStatus() === 201) {
-      const body = res.getBody();
-      expect(body).to.have.property("id");
-    }
+  test("body has privateGameId", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("id");
   });
 }

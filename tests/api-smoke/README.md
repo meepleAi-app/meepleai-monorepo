@@ -19,15 +19,18 @@ The endpoint is triple-gated (`TestEndpoints:Enabled=true` + `IsProduction()=fal
 
 ## Assertion strictness
 
-Most scenarios use strict `expect(...).to.equal(N)` assertions after Phase A (#943). Three files remain **intentionally tolerant**:
+After Phase A + Phase A.2 (#943), 5 of 6 originally tolerant assertions are now strict. One file remains **intentionally tolerant**:
 
 | File | Reason | Status |
 |------|--------|--------|
-| `private-game/03-create-from-bgg-id-conflict-redirect.bru` | API behaviour policy-dependent (201 if private copy auto-creates, 409 if conflict-redirect). Tolerant until product decision codified. | Phase A.2 candidate |
-| `private-game/06-tier-quota-402.bru` | Free-tier `MaxPrivateGames` quota is DB-seeded (`TierLimits`). After the pre-request reset the collection creates 1-2 games before this scenario fires; whether the next create is 201 (within quota) or 402 (over quota) depends on the seeded limit. Tightening requires pre-seeding N games OR looping until 402. | Phase A.2 candidate |
 | `private-game/07-bgg-search-throttle.bru` | Depends on external BGG API (`api.geekdo.com`) rate limits — we can't make BGG return 200 deterministically. **Permanently tolerant by design.** | Won't fix |
 
-Phase A.2 (#943 follow-up) addresses the first two. The third is documented and accepted.
+### Phase A.2 conversions (2026-05-13)
+
+| File | Before | After | Mechanism |
+|------|--------|-------|-----------|
+| `private-game/03-create-from-bgg-id-conflict-redirect.bru` | `[201, 409]` | **strict `409`** (with skip-on-missing-precondition for empty catalog) | API confirmed to throw `ConflictException` when BGG ID is already in SharedGameCatalog (`AddPrivateGameCommandHandler.cs`). Scenario 01 fetches a real catalog BGG ID. |
+| `private-game/06-tier-quota-402.bru` | `[201, 402]` | **strict `402`** | `TierLimits.FreeTier.MaxPrivateGames = 3`. After reset + scenario 04 (1 game), this scenario's `pre-request` seeds 2 more games via direct API calls; the main POST is therefore the 4th attempt and must `402`. |
 
 ## Soft-launch flag
 

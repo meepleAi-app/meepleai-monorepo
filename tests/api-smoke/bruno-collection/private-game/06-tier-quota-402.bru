@@ -1,7 +1,50 @@
 meta {
-  name: SG1 — Tier quota: free-tier 3+ private games → 402
+  name: SG1 — Tier quota: free-tier 4th private game → 402
   type: http
   seq: 7
+}
+
+# Phase A.2 conversion (#943): TierLimits.FreeTier.MaxPrivateGames = 3.
+# Collection-level pre-request hook resets smoke-aaron to 0 games at start.
+# Scenario 04 creates the 1st game. This scenario's pre-request creates the
+# 2nd and 3rd, then the main POST is the 4th attempt — must be 402.
+#
+# Implicit dependency on the reset hook (collection.bru): if the reset is
+# skipped (e.g. unauthenticated) smoke-aaron may have leftover games and the
+# strict 402 will hold trivially (already over quota). Either way the
+# assertion direction is "must be 402".
+
+script:pre-request {
+  // Seed games #2 and #3 to bring smoke-aaron's free-tier quota to the limit.
+  // The reset hook already zeroed the state; scenario 04 (run earlier in this
+  // collection) added #1. We need 2 more so the next POST is the (N+1)th.
+  const apiBase = bru.getEnvVar("apiBase");
+  const authToken = bru.getEnvVar("authToken");
+  if (!authToken) {
+    console.warn("[smoke 06] no authToken — quota pre-seed skipped");
+    return;
+  }
+  for (const suffix of ["2", "3"]) {
+    try {
+      const r = await fetch(apiBase + "/api/v1/private-games", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + authToken,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          source: "Manual",
+          title: "SG1 Quota Seed " + suffix + " " + Date.now(),
+          minPlayers: 2,
+          maxPlayers: 4,
+          description: "Pre-seed for quota test"
+        })
+      });
+      console.log("[smoke 06] seed " + suffix + " status=" + r.status);
+    } catch (err) {
+      console.warn("[smoke 06] seed " + suffix + " failed: " + err.message);
+    }
+  }
 }
 
 post {
@@ -15,27 +58,17 @@ body:json {
     "title": "SG1 Quota Test {{$randomInt}}",
     "minPlayers": 2,
     "maxPlayers": 4,
-    "description": "Should trigger TIER_QUOTA_EXCEEDED if user already has 3 priv games"
+    "description": "Should trigger TIER_QUOTA_EXCEEDED — 4th private game on free tier"
   }
 }
 
 tests {
-  // Tolerant by design — see tests/api-smoke/README.md "Tolerant assertions".
-  // The smoke collection creates 1-2 priv games before this scenario; the
-  // free-tier MaxPrivateGames limit (DB-seeded TierLimits) determines whether
-  // a 3rd-attempt is 201 (within quota) or 402 (over quota). Tightening this
-  // to strict 402 requires either (a) pre-seeding N priv games into smoke-aaron
-  // such that this attempt is the (N+1)th, or (b) modifying this scenario to
-  // call POST /private-games until 402 is observed. Both are deferred to
-  // Phase A.2 (#943).
-  test("returns 201 OR 402 depending on quota state", function() {
-    expect([201, 402]).to.include(res.getStatus());
+  test("strict 402 — quota exhausted on 4th create (free-tier limit = 3)", function() {
+    expect(res.getStatus()).to.equal(402);
   });
-  test("if 402, body has TIER_QUOTA_EXCEEDED error code", function() {
-    if (res.getStatus() === 402) {
-      const body = res.getBody();
-      const bodyStr = JSON.stringify(body || {});
-      expect(bodyStr).to.match(/TIER_QUOTA_EXCEEDED|quota/i);
-    }
+  test("body has TIER_QUOTA_EXCEEDED error code", function() {
+    const body = res.getBody();
+    const bodyStr = JSON.stringify(body || {});
+    expect(bodyStr).to.match(/TIER_QUOTA_EXCEEDED|quota/i);
   });
 }

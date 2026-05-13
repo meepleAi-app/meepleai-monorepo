@@ -58,6 +58,53 @@ interface DetailPageLayoutProps {
 
 No default props. No prop-derived behavior. No internal state.
 
+### 4.1 Usage examples
+
+Two canonical compositions emerge from the parent spec's composability table (§4 of `2026-05-11-design-system-deversioning.md`).
+
+**Example 1 — Full authenticated detail page** (e.g. `/games/[id]`):
+
+```tsx
+import { DetailPageLayout, Hero, Tabs } from '@/components/ui/detail-layout';
+import { ConnectionBar } from '@/components/ui/data-display/connection-bar';
+
+<DetailPageLayout
+  hero={<Hero {...heroProps} labels={heroLabels} />}
+  connections={<ConnectionBar items={connectionItems} />}
+  tabs={<Tabs descriptors={tabDescriptors} activeTab={tab} onChange={setTab} labels={tabLabels} />}
+  footer={<ActionsRow {...actionsProps} />}
+>
+  {currentTabPanel}
+</DetailPageLayout>
+```
+
+**Example 2 — Public flat-scroll detail page** (e.g. `/shared-games/[slug]`):
+
+```tsx
+import {
+  DetailPageLayout,
+  Hero,
+  ContributorsStrip,
+  StickyCta,
+} from '@/components/ui/detail-layout';
+import { ConnectionBar } from '@/components/ui/data-display/connection-bar';
+
+<DetailPageLayout
+  hero={<Hero {...heroProps} />}
+  connections={<ConnectionBar items={connectionItems} />}
+  footer={
+    <>
+      <ContributorsStrip avatars={contributors} labels={contributorsLabels} />
+      <StickyCta signInHref="/login" labels={ctaLabels} />
+    </>
+  }
+>
+  {sectionsStacked}
+</DetailPageLayout>
+```
+
+Note on `null` vs `undefined`: passing `connections={null}` renders the `<aside>` wrapper with no children (explicit caller intent — e.g. to reserve the region for a loading placeholder). Omitting the prop (or passing `undefined`) suppresses the wrapper. Test #9 in §7 pins this contract.
+
 ## 5. DOM structure
 
 ```html
@@ -102,6 +149,7 @@ Reading order equals DOM order — no CSS `order` reshuffling. The wrapper uses 
 | 6 | Landmark roles + accessible names: `banner`, `complementary` (name "related entities"), `navigation` (name "detail sections"), `main`, `contentinfo` |
 | 7 | `className` passthrough on the root wrapper |
 | 8 | Reading order equals DOM order — render with a `<button>` placed inside each of hero / connections / tabs / children / footer, then assert that `Array.from(container.querySelectorAll('button'))` matches the expected source order (no `tabIndex` simulation needed, the test inspects static DOM order only) |
+| 9 | `connections={null}` renders the `<aside>` wrapper (explicit caller intent — `null !== undefined` per spec §4.1). Asserts `getByRole('complementary', { name: /related entities/i })` is present even though the slot is empty. |
 
 Coverage target: 100% line and branch (component is roughly 30 lines, all in conditional slot wrappers).
 

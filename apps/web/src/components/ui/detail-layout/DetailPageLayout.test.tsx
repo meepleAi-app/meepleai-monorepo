@@ -135,4 +135,17 @@ describe('DetailPageLayout', () => {
       'footer-btn',
     ]);
   });
+
+  it('renders the aside wrapper when connections is null (explicit caller intent)', () => {
+    // Contract pin (spec-panel review 2026-05-13 / Crispin): the conditional
+    // is `connections !== undefined`, not truthy. A caller passing `null`
+    // explicitly signals "render the wrapper region" — distinct from
+    // omitting the prop entirely.
+    render(
+      <DetailPageLayout hero={<span>H</span>} connections={null}>
+        <p>M</p>
+      </DetailPageLayout>,
+    );
+    expect(screen.getByRole('complementary', { name: /related entities/i })).toBeInTheDocument();
+  });
 });

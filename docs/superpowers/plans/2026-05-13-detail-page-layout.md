@@ -157,7 +157,7 @@ export function DetailPageLayout({
   className,
 }: DetailPageLayoutProps): JSX.Element {
   return (
-    <div className={clsx('flex flex-col gap-6', className)}>
+    <div data-slot="detail-page-layout" className={clsx('flex flex-col gap-6', className)}>
       <header>{hero}</header>
       {connections !== undefined && (
         <aside aria-label="related entities">{connections}</aside>

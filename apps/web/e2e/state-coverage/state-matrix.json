@@ -485,7 +485,17 @@
     {
       "mockup_path": "admin-mockups/design_files/sp4-player-detail.html",
       "route": "/players/[id]",
-      "declared_states": [],
+      "declared_states": [
+        "default",
+        "tab-sessions",
+        "tab-games",
+        "tab-toolkits",
+        "tab-achievements",
+        "loading",
+        "error",
+        "empty",
+        "not-found"
+      ],
       "covered_states": [],
       "missing": [],
       "enforced": false

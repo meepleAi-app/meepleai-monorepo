@@ -1,7 +1,7 @@
 # Mockup-to-route Conformity Gate
 
 > **Issue:** #1069 (WS-C Mockup Conformity Roadmap, umbrella #1066)
-> **Status:** Phase 1 + Phase 2 + Phase 3 + Phase 3b shipped 2026-05-13 — config, loader, Playwright projects, bootstrap spec, **real conformity spec** (no more fixme on data), pin verifier, both CI workflows. Only the waiver audit log (Phase 4) is left.
+> **Status:** Phase 1–4a shipped 2026-05-13 — config, loader, Playwright projects, real conformity spec, pin verifier, both CI workflows + waiver validator + debt-issue manager + audit log scaffold. Phase 4b (cross-branch gate) ship next.
 
 ## Overview
 
@@ -166,11 +166,51 @@ The original Phase 3b plan was to add `page.route()` API stubs per route. That t
 - The only remaining `test.fixme()` is the **baseline-missing** guard — self-resolves once `bootstrap-mockup-baselines.yml` dispatches and the auto-PR lands committed `__mockup__/*.png`
 - `visual-regression-conformity.yml`: build step now passes `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1` so the fixture short-circuit is active in CI
 
+### Phase 4a (this PR)
+
+- `.github/workflows/conformity-waiver-validator.yml` — required check (post-merge branch protection update) that parses PR comments for the structured rationale marker when `conformity-waiver` label is present (AC-C.5.1)
+- `.github/workflows/conformity-debt-issue.yml` — on label-add: parses rationale, computes `sha256(PR, sorted(routes), iso_week)` dedup key (AC-C.5.2), creates/updates a `conformity-debt` issue (AC-C.5.3 machine-readable header), appends row to audit log via auto-PR (AC-C.5.5). On PR-closed-unmerged: auto-closes matching debt-issues.
+- `docs/for-developers/audits/conformity-waivers.md` — audit log scaffold
+
+### Waiver rationale format (AC-C.5.1)
+
+Apply the `conformity-waiver` label, then post a PR comment containing:
+
+```
+> Conformity waiver rationale:
+> Reason: <free text, min 40 char — describe why the diff is acceptable to merge>
+> Expiry: 2026-06-12
+> Routes: library library-game-detail
+```
+
+- `Reason` must be ≥ 40 characters.
+- `Expiry` is optional. Default = now + 30 days. Maximum = now + 90 days.
+- `Routes` must list one or more route ids present in `mockup-ownership.bootstrap.json`.
+- The comment author must be the PR author OR a member with `OWNER` / `MEMBER` /
+  `COLLABORATOR` association.
+
+The validator fails with a guidance link if the block is missing, malformed, or
+the expiry is out of range.
+
+### Branch protection update (manual, post-Phase-4a)
+
+To make the waiver validator block merges, add it to the required-status-check
+list on `main-dev`, `main-staging`, and `main`:
+
+```bash
+gh api repos/meepleAi-app/meepleai-monorepo/branches/main-dev/protection \
+  --method PUT \
+  --raw-field required_status_checks='{"strict":false,"contexts":["GitGuardian Security Checks","Conformity Waiver Rationale"]}'
+```
+
+(Repeat for `main-staging` and `main`.)
+
 ## What ships next
 
 | Phase | Deliverable |
 |-------|-------------|
-| **4** | `docs/for-developers/audits/conformity-waivers.md` audit log; waiver issue automation (AC-C.5 expiration enforcement) |
+| **4b** | `.github/workflows/conformity-debt-gate.yml` — required check on PR `main-dev → main-staging` and `main-staging → main`; fails if ≥1 open `conformity-debt` issue has expired (AC-C.5.4) |
+| **4c** (opt) | Weekly observability summary `conformity-waivers-summary.md` (AC-C.5.7) |
 | **post-merge** | Dispatch `bootstrap-mockup-baselines.yml` workflow → auto-PR lands `__mockup__/*.png` → conformity gate produces real diff (expected: large, documenting the 75-85% pre-remediation gap) |
 
 ## Running locally

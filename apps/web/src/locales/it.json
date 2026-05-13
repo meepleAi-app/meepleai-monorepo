@@ -1784,6 +1784,39 @@
         "games": "Giochi giocati",
         "sessions": "Sessioni",
         "stats": "Statistiche dettagliate"
+      },
+      "connections": {
+        "topGames": "Top giochi",
+        "sessions": "Partite",
+        "gameNights": "Game Nights",
+        "agents": "Agenti usati",
+        "toolkits": "Toolkit",
+        "chats": "Chat"
+      },
+      "tabs": {
+        "ariaLabel": "Sezioni del giocatore",
+        "sessions": {
+          "label": "Partite",
+          "title": "Sessioni recenti",
+          "viewAll": "Vedi tutte",
+          "empty": "Nessuna partita registrata",
+          "totalLabel": "Totale partite"
+        },
+        "games": {
+          "label": "Giochi",
+          "title": "Giochi giocati",
+          "viewAll": "Vedi tutti",
+          "empty": "Nessun gioco giocato",
+          "playsSuffix": "partite"
+        },
+        "toolkits": {
+          "label": "Toolkit",
+          "title": "Toolkit",
+          "comingSoon": "I toolkit del giocatore arriveranno presto"
+        },
+        "achievements": {
+          "label": "Achievement"
+        }
       }
     },
     "agentDetail": {

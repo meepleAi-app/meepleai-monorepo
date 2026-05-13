@@ -34,6 +34,19 @@
         "apps/web/src/components/features/library/**"
       ],
       "notes": "Sinergico WS-B fix (#1068) e WS-D Exemplar (PR #1093). Funzionalmente broken pre-fix (~95% gap)."
+    },
+    {
+      "id": "player-detail",
+      "livePath": "/players/{playerId}",
+      "liveFixture": {
+        "playerId": "sara-rossi"
+      },
+      "mockup": "sp4-player-detail.html",
+      "triggerPaths": [
+        "apps/web/src/app/(authenticated)/players/[id]/**",
+        "apps/web/src/components/features/player-detail/**"
+      ],
+      "notes": "Stage 3 cluster #1113. Default tab (Sessions) screenshot via IS_VISUAL_TEST_BUILD fixture. Multi-tab visual coverage tracked as follow-up."
     }
   ]
 }

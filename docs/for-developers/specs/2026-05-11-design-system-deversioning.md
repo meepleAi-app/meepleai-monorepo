@@ -188,7 +188,7 @@ interface DetailPageLayoutProps {
 |---|---|---|---|---|---|
 | `/games/[id]` | authenticated | `GameDetailHero` | toolkit/agent/kb/session | Overview/KPI/FAQ/Rules/Sessions/Agents/KB | actions row |
 | `/agents/[id]` | authenticated | `AgentHero` | game/kb | Persona/SystemPrompt/Chat/Settings | DangerZone |
-| `/players/[id]` | authenticated | `PlayerHero` | game/session | — (flat) | — |
+| `/players/[id]` | authenticated | `PlayerHero` + `PlayerOverviewRegion` | game/session/event/agent/toolkit/chat | Sessions/Games/Toolkits/Achievements | — |
 | `/shared-games/[slug]` | public | `GameHero` | toolkit/agent/kb/player | Toolkit/Agent/KB | `ContributorsStrip` + `StickyCTA` |
 | `/hub/games/[id]` | public | `GameHero` | toolkit/agent/kb | Toolkit/Agent/KB | `StickyCTA` |
 

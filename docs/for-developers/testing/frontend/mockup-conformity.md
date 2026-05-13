@@ -1,7 +1,7 @@
 # Mockup-to-route Conformity Gate
 
 > **Issue:** #1069 (WS-C Mockup Conformity Roadmap, umbrella #1066)
-> **Status:** Phase 1–4a shipped 2026-05-13 — config, loader, Playwright projects, real conformity spec, pin verifier, both CI workflows + waiver validator + debt-issue manager + audit log scaffold. Phase 4b (cross-branch gate) ship next.
+> **Status:** Phase 1–4b shipped 2026-05-13 — full pipeline including cross-branch debt gate. Phase 4c (weekly observability summary) is optional and not yet shipped.
 
 ## Overview
 
@@ -205,11 +205,28 @@ gh api repos/meepleAi-app/meepleai-monorepo/branches/main-dev/protection \
 
 (Repeat for `main-staging` and `main`.)
 
+### Phase 4b (this PR)
+
+- `.github/workflows/conformity-debt-gate.yml` — required check on PR `main-dev → main-staging` and `main-staging → main`. Enumerates open `conformity-debt` issues, parses the `<!-- conformity-debt: ...; expiry=...; ... -->` header, fails if ≥1 has `expiry < now`. Posts sticky PR comment summarizing expired and active waivers, with remediation runbook (AC-C.5.4 + AC-C.5.6).
+
+### Branch protection update (manual, post-Phase-4b)
+
+```bash
+# main-staging
+gh api repos/meepleAi-app/meepleai-monorepo/branches/main-staging/protection \
+  --method PUT \
+  --raw-field required_status_checks='{"strict":false,"contexts":["GitGuardian Security Checks","Conformity Debt Gate"]}'
+
+# main
+gh api repos/meepleAi-app/meepleai-monorepo/branches/main/protection \
+  --method PUT \
+  --raw-field required_status_checks='{"strict":false,"contexts":["GitGuardian Security Checks","Conformity Debt Gate"]}'
+```
+
 ## What ships next
 
 | Phase | Deliverable |
 |-------|-------------|
-| **4b** | `.github/workflows/conformity-debt-gate.yml` — required check on PR `main-dev → main-staging` and `main-staging → main`; fails if ≥1 open `conformity-debt` issue has expired (AC-C.5.4) |
 | **4c** (opt) | Weekly observability summary `conformity-waivers-summary.md` (AC-C.5.7) |
 | **post-merge** | Dispatch `bootstrap-mockup-baselines.yml` workflow → auto-PR lands `__mockup__/*.png` → conformity gate produces real diff (expected: large, documenting the 75-85% pre-remediation gap) |
 

@@ -274,40 +274,63 @@ Lo screenshot `chat-ai-after-fix.png` non mostra **nessuna** citation chip né c
 
 ### WS-F — Mockup ownership metadata + change tracking
 
-**Owner**: technical-writer + cicd-engineer · **Status**: depends on WS-C + WS-E (steady-state) · **Effort**: 2–3 giorni
+**Owner**: technical-writer + cicd-engineer · **Status**: WS-C ✅ (closed 2026-05-13); WS-E partial dependency only (taxonomy reuse) · **Effort**: 2–3 giorni
 
 **Problem**: nessun sistema tracking persistente collega mockup HTML → route implementata → last-verified timestamp. Quando un mockup cambia (designer update), nessun automatic trigger forza la re-verifica della route.
 
 **Goal**: ogni mockup HTML ha metadata standard. CI rileva drift e flagga PR. Mapping bidirezionale mockup ↔ route.
 
 **Deliverable**:
-1. Header standard per ogni mockup HTML:
+1. Header standard per ogni mockup HTML (vedi AC-F.5 per enum normalization):
    ```html
    <!--
      @route /library/{gameId}
-     @route-pattern dynamic
      @last-verified 2026-05-12
-     @verified-by spec-panel
+     @verified-by maintainer
      @status canonical
-     @conformity-threshold 5
    -->
    ```
-2. `admin-mockups/mockup-ownership.json`: registro centralizzato (bidirezionale) auto-generato da header metadata.
-3. `scripts/mockup-ownership-check.ts`: CI validation che metadata sono presenti + consistenti.
-4. CI workflow `mockup-drift-detect.yml`: trigger su `admin-mockups/design_files/**` PR, se modifica un mockup → genera companion issue per route owned.
-5. Dashboard `docs/for-developers/audits/mockup-ownership-status.md` auto-generato weekly: list di stato `canonical|partial|diverge|missing-route` per ogni mockup.
+   Note: `@route-pattern` rimosso (inferibile da presenza placeholder `{}`). `@conformity-threshold` rimosso (vedi AC-F.7 — single source of truth in WS-C config).
+2. `admin-mockups/mockup-ownership.json`: registro centralizzato (bidirezionale) auto-generato da header metadata. Sostituisce `apps/web/e2e/visual-conformity/mockup-ownership.bootstrap.json` di WS-C (vedi AC-F.6 consolidation).
+3. `apps/web/scripts/mockup-ownership-check.ts`: CI validation che metadata sono presenti + consistenti + enum-valid.
+4. CI workflow `mockup-drift-detect.yml`: PR-triggered su `admin-mockups/design_files/**`, genera companion issue entro ~30s. Cron daily fallback per webhook missed.
+5. Dashboard `docs/for-developers/audits/mockup-ownership-status.md` auto-generato weekly da workflow `mockup-ownership-summary.yml`: status per ogni mockup secondo enum AC-F.5.
+6. Tool `apps/web/scripts/seed-mockup-ownership.ts --dry-run` (AC-F.1a): genera proposta header per file orfani con euristica defaults.
 
 **Acceptance criteria**:
-- **AC-F.1**: 100% dei mockup in `admin-mockups/design_files/*.html` hanno header metadata valido.
-- **AC-F.2**: CI fail se metadata missing/malformed su PR che tocca `admin-mockups/design_files/**`.
-- **AC-F.3**: mapping bidirezionale (`mockup → route` e `route → mockup`) consultabile via `mockup-ownership.json`.
-- **AC-F.4**: drift detection produce issue companion entro 1 ora dalla PR mockup change.
+- **AC-F.1a (seed tool)**: `seed-mockup-ownership.ts --dry-run` scansiona `admin-mockups/design_files/*.html` e produce per ciascun file orfano una proposta di header completo. Defaults euristici:
+  - `@status pending` (sempre, attesa review umana)
+  - `@last-verified` = data git log earliest commit del file
+  - `@verified-by auto-bootstrap`
+  - `@route` = unset (placeholder commento `# TODO`)
+  Modalità `--write` applica le proposte file-by-file solo se confermato via flag esplicito per-file (`--accept-file=path`).
+- **AC-F.1b (progressive enforcement)**: enforcement parte da **allowlist** di 5 mockup canonical core (`sp4-library-desktop`, `nanolith-runthrough-game-detail`, `sp4-game-detail`, `sp4-agents-index`, `sp4-sessions-index`). Su quei 5 → CI fail su metadata missing. Resto dei mockup → warning-only. Allowlist espansa via PR esplicita in fase F.2+.
+- **AC-F.2**: CI fail se metadata missing/malformed/enum-invalid su PR che tocca un mockup **nell'allowlist AC-F.1b**. File fuori allowlist → warning come above.
+- **AC-F.3**: mapping bidirezionale (`mockup → route` e `route → mockup`) consultabile via `mockup-ownership.json`. **Reverse mapping** (`route → mockup`) ha consumer concreti documentati: (a) WS-E spec linter (route cerca i suoi SMART constraint), (b) future CLI dev `pnpm mockup:for-route`. Se reverse non utilizzato in Phase 4 → defer schema reverse, mantieni solo forward.
+- **AC-F.4 (drift SLO clarified)**: drift detection è **PR-triggered** primary path (target SLO ≤5min dalla PR open su `admin-mockups/design_files/**`). **Cron daily** (non weekly) come safety net per webhook missed. AC originale "entro 1 ora" sostituito con SLO bifurcato.
+- **AC-F.5 (enum normalization)**: due enum chiusi sono validati:
+  - `@verified-by ∈ { designer, maintainer, spec-panel-review, auto-bootstrap }`. `spec-panel-review` richiede commit-message marker `[spec-panel-validated]` o sarà rejected dal CI check.
+  - `@status ∈ { canonical, verified, drifted, pending-implementation, archived }`. Semantica + transitions:
+    - `canonical` — full conformity + `@last-verified` ≤30gg ago (green)
+    - `verified` — full conformity + `@last-verified` >30gg (yellow, stale)
+    - `drifted` — conformity gate failing (orange) — auto-transition da workflow
+    - `pending-implementation` — orphan, no route implemented yet (blue, info)
+    - `archived` — intentionally retired (gray) — manual transition only
+- **AC-F.6 (config consolidation)**: `mockup-ownership.json` auto-generato dai header sostituisce `mockup-ownership.bootstrap.json` di WS-C. Migration path:
+  - F.1: tool genera `admin-mockups/mockup-ownership.json` dai 5 allowlist core mockup
+  - F.1: aggiorna path import in `apps/web/scripts/conformity-ownership.ts` (DEFAULT_OWNERSHIP_PATH constant)
+  - F.1: delete `apps/web/e2e/visual-conformity/mockup-ownership.bootstrap.json`
+  - Schema retained e versionato in `admin-mockups/mockup-ownership.schema.json` (movuto da `apps/web/e2e/visual-conformity/`)
+- **AC-F.7 (no per-mockup threshold)**: `@conformity-threshold` **NON** appare nei header. WS-C `mockup-ownership.bootstrap.json` (futuro `mockup-ownership.json`) tiene `conformityRatio` e `threshold` per-route. Razionale: config code-reviewable in JSON, no duplicate source of truth.
 
 **Failure modes**:
-- Mockup orfani (no route ancora implementata) → status `pending-implementation`, no fail CI ma flag dashboard.
-- Route multipli implementano stesso mockup → ammesso, `@route` accetta array.
+- Mockup orfani (no route ancora implementata) → AC-F.5 status `pending-implementation`, no fail CI ma flag dashboard.
+- Route multipli implementano stesso mockup → ammesso, `@route` accetta array (space-separated).
+- Backfill di 60 mockup big-bang impractical → AC-F.1b allowlist progressivo (5 core mockup primi, resto warning).
+- Webhook drift detection missed → AC-F.4 cron daily fallback.
+- AC-F.5 enum drift (designer adds new status) → CI fail con messaggio chiaro + link a spec; aggiornamento spec → enum extension via PR review.
 
-**Rollback**: workflow disable; metadata header rimangono come documentazione passiva.
+**Rollback**: workflow disable; metadata header rimangono come documentazione passiva. `mockup-ownership.json` retained come snapshot ownership.
 
 ## 4. Sequencing & dependency graph
 

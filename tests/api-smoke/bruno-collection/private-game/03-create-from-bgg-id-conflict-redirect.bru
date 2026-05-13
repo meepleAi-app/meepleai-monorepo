@@ -20,16 +20,27 @@ body:json {
 }
 
 tests {
-  test("returns 409 Conflict (BGG id already in catalog)", function() {
-    // Note: depending on auto-redirect policy this may also be 201 (creates anyway as private copy)
-    // Smoke proxy — full assertion in integration test.
-    expect([201, 409]).to.include(res.getStatus());
-  });
-  test("if 409, body has redirectTo or sharedGameId hint", function() {
-    if (res.getStatus() === 409) {
-      const body = res.getBody();
-      // Tolerant: spec says body.redirectTo, but actual may use different key
-      expect(JSON.stringify(body).toLowerCase()).to.match(/shared|redirect/);
+  // Phase A.2 conversion (#943): API confirmed to throw ConflictException → HTTP 409
+  // when a BGG ID matches a row in SharedGameCatalog (handler:
+  // AddPrivateGameCommandHandler.cs ~L62). Scenario 01 fetches a real catalog
+  // bggId, so this POST must conflict deterministically.
+  //
+  // Precondition guard: if the catalog returned no BGG-tagged shared games,
+  // `smokeSharedGameBggId` is undefined and the request body is malformed.
+  // Skip the assertion in that case rather than fail spuriously.
+  test("strict 409 when bggId is already in SharedGameCatalog", function() {
+    const seededBggId = bru.getVar("smokeSharedGameBggId");
+    if (!seededBggId) {
+      // No BGG-tagged shared game available in this run; precondition not met.
+      // Treated as a known-skip — does not fail the smoke run.
+      console.warn("[smoke 03] skipped: smokeSharedGameBggId not set (catalog has no BGG-tagged entries)");
+      return;
     }
+    expect(res.getStatus()).to.equal(409);
+  });
+  test("body references the conflicting shared catalog entry", function() {
+    if (res.getStatus() !== 409) return;
+    const body = res.getBody();
+    expect(JSON.stringify(body).toLowerCase()).to.match(/shared|catalog|already exists/);
   });
 }

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
 using Api.Middleware.Exceptions;
 using MediatR;
@@ -25,6 +26,7 @@ internal static class KbManagementEndpoints
     public static RouteGroupBuilder MapKbManagementEndpoints(this RouteGroupBuilder group)
     {
         MapReindexEndpoint(group);
+        MapReindexStatusEndpoint(group);
         MapRaptorRebuildEndpoint(group);
         return group;
     }
@@ -67,6 +69,44 @@ internal static class KbManagementEndpoints
             "Returns 202 Accepted with a job descriptor. " +
             "Current implementation: synchronous (status = 'completed'). " +
             "Issue #903: SG2 smoke test.");
+    }
+
+    /// <summary>
+    /// GET /games/{gameId:guid}/kb/reindex/{jobId:guid}/status
+    ///
+    /// Returns the current state of a reindex job. Issue #941 / ADR-057.
+    /// </summary>
+    private static void MapReindexStatusEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/games/{gameId:guid}/kb/reindex/{jobId:guid}/status", async (
+            Guid gameId,
+            Guid jobId,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = httpContext.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            var query = new GetKbReindexJobStatusQuery(
+                GameId: gameId,
+                JobId: jobId,
+                RequestingUserId: session.User!.Id);
+            var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return result is null
+                ? Results.NotFound(new { error = "Job not found", jobId })
+                : Results.Ok(result);
+        })
+        .RequireSession()
+        .WithName("GetKbReindexJobStatus")
+        .WithTags("Games", "KnowledgeBase")
+        .WithSummary("Poll the status of a KB reindex job")
+        .WithDescription(
+            "Returns the persisted KbReindexJob row for the given (gameId, jobId). " +
+            "Status values: queued, running, completed, failed. " +
+            "Returns 404 if the job is unknown, 403 if it belongs to another user. " +
+            "Issue #941 / ADR-057.");
     }
 
     /// <summary>

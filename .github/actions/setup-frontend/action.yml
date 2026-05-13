@@ -19,11 +19,11 @@ inputs:
     default: 'true'
   cache-version:
     description: |
-      Cache key version (Issue #850 emergency invalidation knob). Pass
-      `${{ vars.CACHE_VERSION || 'v1' }}` from a workflow to inherit
-      the repo-level CACHE_VERSION variable. The `vars` context is NOT
-      available inside composite actions, so resolution must happen at
-      the workflow caller (fix for PR #1124 regression).
+      Cache key version (Issue #850 emergency invalidation knob). The
+      workflow caller is responsible for resolving the repo variable
+      CACHE_VERSION (use the vars context, which is not available
+      inside composite actions). See dev-fast.yml for the canonical
+      caller pattern. Fix for PR #1124 regression.
     required: false
     default: 'v1'
 

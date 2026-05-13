@@ -21,6 +21,12 @@ name: E2E Smoke Real LLM (free tier, on-demand)
 on:
   workflow_dispatch:
 
+
+# Concurrency: prevent duplicate runs. See issue #850.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 

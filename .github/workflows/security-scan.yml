@@ -3,6 +3,15 @@ name: Security Scan
 on:
   pull_request:
     branches: [main, main-staging]
+    # Issue #850: docs-only PRs do not change dependency or code surface,
+    # so SCA / SAST scans add no signal. The Monday-02:00-UTC cron still
+    # runs the full scan weekly regardless of recent PR activity.
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.editorconfig'
   schedule:
     - cron: '0 2 * * 1' # Weekly on Mondays
   workflow_dispatch:

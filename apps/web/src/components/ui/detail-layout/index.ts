@@ -1,8 +1,14 @@
 /**
- * Wave A.4 (Issue #603) — V2 component family for /shared-games/[id].
+ * Detail-layout primitives.
  *
- * Public API barrel. Consumed by `apps/web/src/app/(public)/shared-games/[id]/page-client.tsx`
- * and Vitest unit tests under `apps/web/src/__tests__/components/ui/v2/shared-game-detail/`.
+ * Wave A.4 (Issue #603) shipped the pieces (Hero, Tabs, StickyCta,
+ * ContributorsStrip, AgentListItem, KbDocItem, ToolkitListItem, and the
+ * EmptyState / ErrorState / NotFoundState family).
+ *
+ * Stage 3 (Issue #1026) adds the DetailPageLayout composer that arranges
+ * these pieces with WAI-ARIA landmarks. The composer is consumer-agnostic:
+ * each slot accepts a ReactNode, so callers can use any of the primitives
+ * above (or none) without the composer knowing.
  */
 
 export { AgentListItem } from '@/components/ui/detail-layout/agent-list-item';
@@ -60,3 +66,6 @@ export type {
   ToolkitListItemLabels,
   ToolkitListItemProps,
 } from '@/components/ui/detail-layout/toolkit-list-item';
+
+export { DetailPageLayout } from './DetailPageLayout';
+export type { DetailPageLayoutProps } from './DetailPageLayout';

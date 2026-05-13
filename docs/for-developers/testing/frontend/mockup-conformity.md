@@ -1,7 +1,7 @@
 # Mockup-to-route Conformity Gate
 
 > **Issue:** #1069 (WS-C Mockup Conformity Roadmap, umbrella #1066)
-> **Status:** Phase 1 + Phase 2 + Phase 3 shipped 2026-05-13 — config, loader, Playwright projects, bootstrap spec, conformity scaffold, pin verifier, **both CI workflows**. Per-route data mocks (Phase 3b) and waiver audit log (Phase 4) land separately.
+> **Status:** Phase 1 + Phase 2 + Phase 3 + Phase 3b shipped 2026-05-13 — config, loader, Playwright projects, bootstrap spec, **real conformity spec** (no more fixme on data), pin verifier, both CI workflows. Only the waiver audit log (Phase 4) is left.
 
 ## Overview
 
@@ -153,12 +153,25 @@ Adding a route does **not** yet make Phase 3 enforce it — until the workflow s
 
 The conformity gate **runs** in CI but every spec is still `test.fixme()`'d pending Phase 3b data mocks. The wiring is present so the next PR that lands `page.route()` stubs can remove fixme guards route-by-route.
 
+### Phase 3b (this PR)
+
+The original Phase 3b plan was to add `page.route()` API stubs per route. That turned out unnecessary: both routes already have deterministic visual-test paths from previous waves.
+
+| Route | Determinism strategy | Source |
+|-------|---------------------|--------|
+| `/library` | `IS_VISUAL_TEST_BUILD` constant set via `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1` at build time → `LibraryHubV2` swaps to curated 12-entry fixture | Wave B.3 (PR #638) |
+| `/library/{gameId}` | `?state=default` URL override consumed by `useStateOverride()` → fixture detail, no API call | WS-D Exemplar (PR #1093) |
+
+- `conformity.spec.ts` rewrites the spec body: `seedAuthSession` + `seedCookieConsent` + `mockAuthEndpoints` triple-helper (auth bypass), per-route `RUNBOOKS` table declares `readySelector` + optional `?state=` URL suffix, `mask: [data-dynamic]` for flake-prone zones
+- The only remaining `test.fixme()` is the **baseline-missing** guard — self-resolves once `bootstrap-mockup-baselines.yml` dispatches and the auto-PR lands committed `__mockup__/*.png`
+- `visual-regression-conformity.yml`: build step now passes `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1` so the fixture short-circuit is active in CI
+
 ## What ships next
 
 | Phase | Deliverable |
 |-------|-------------|
-| **3b** | Per-route `page.route()` data stubs in `conformity.spec.ts` (mocked Nanolith game + library cards matching mockup dataset); removal of `test.fixme()` guards; first real baseline commit via `bootstrap-mockup-baselines.yml workflow_dispatch` |
 | **4** | `docs/for-developers/audits/conformity-waivers.md` audit log; waiver issue automation (AC-C.5 expiration enforcement) |
+| **post-merge** | Dispatch `bootstrap-mockup-baselines.yml` workflow → auto-PR lands `__mockup__/*.png` → conformity gate produces real diff (expected: large, documenting the 75-85% pre-remediation gap) |
 
 ## Running locally
 

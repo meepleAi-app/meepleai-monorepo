@@ -87,6 +87,11 @@ jobs:
         run: pnpm build
         env:
           NEXT_TELEMETRY_DISABLED: '1'
+          # Phase 3b: enables IS_VISUAL_TEST_BUILD constant so /library
+          # short-circuits to the curated fixture (Wave B.3 pattern).
+          # /library/{gameId} uses ?state= URL override which is also gated
+          # behind this flag in production builds.
+          NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED: '1'
 
       - name: Run Conformity Gate
         run: pnpm test:visual:conformity

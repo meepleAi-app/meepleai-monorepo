@@ -39,16 +39,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
   AchievementBadgeGrid,
-  FavoriteAgentCard,
   PlayerHero,
-  PlayerLeaderboardCard,
-  PlayerStatsGrid,
   type AchievementBadgeGridLabels,
   type FavoriteAgentCardLabels,
   type PlayerHeroLabels,
   type PlayerLeaderboardCardLabels,
   type PlayerStatsGridLabels,
 } from '@/components/features/player-detail';
+import { DetailPageLayout } from '@/components/ui/detail-layout';
 import { usePlayerStatistics } from '@/hooks/queries/usePlayersFromRecords';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { PlayerStatistics } from '@/lib/api/schemas/play-records.schemas';
@@ -58,6 +56,30 @@ import {
   tryLoadVisualTestFixture,
   type PlayerProfileFixture,
 } from '@/lib/player-detail/player-detail-visual-test-fixture';
+
+import { GamesTabPanel, type GamesTabPanelLabels } from './GamesTabPanel';
+import {
+  PlayerConnectionBar,
+  type PlayerConnectionBarLabels,
+} from './PlayerConnectionBar';
+import {
+  PlayerOverviewRegion,
+  type PlayerOverviewRegionLabels,
+} from './PlayerOverviewRegion';
+import {
+  PLAYER_TAB_KEYS,
+  PlayerTabs,
+  type PlayerTabKey,
+  type PlayerTabsLabels,
+} from './PlayerTabs';
+import {
+  SessionsTabPanel,
+  type SessionsTabPanelLabels,
+} from './SessionsTabPanel';
+import {
+  ToolkitsTabPanel,
+  type ToolkitsTabPanelLabels,
+} from './ToolkitsTabPanel';
 
 // ─── State override hatch (dev / visual-test only) ─────────────────────────
 
@@ -70,6 +92,17 @@ function parseStateOverride(raw: string | null): StateOverride | null {
   if (!STATE_OVERRIDE_ENABLED) return null;
   if (raw == null) return null;
   return (VALID_OVERRIDES as readonly string[]).includes(raw) ? (raw as StateOverride) : null;
+}
+
+// ─── Tab URL state ────────────────────────────────────────────────────────────
+
+const DEFAULT_TAB: PlayerTabKey = 'sessions';
+
+function parseTabFromUrl(raw: string | null): PlayerTabKey {
+  if (raw == null) return DEFAULT_TAB;
+  return (PLAYER_TAB_KEYS as readonly string[]).includes(raw)
+    ? (raw as PlayerTabKey)
+    : DEFAULT_TAB;
 }
 
 // ─── Props ─────────────────────────────────────────────────────────────────
@@ -352,52 +385,138 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
   const safeProfile = profile!;
   const safePlayerId = playerId ?? safeProfile.playerId;
 
-  return (
-    <div data-slot="player-detail-view" className="flex flex-col gap-6 pb-24">
-      {/* Hero section */}
-      <PlayerHero
-        displayName={safeProfile.displayName}
-        totalSessions={safeProfile.totalSessions}
-        totalWins={safeProfile.totalWins}
-        winRate={safeProfile.winRate}
-        onBack={() => router.push('/players')}
-        labels={heroLabels}
-      />
+  const tab = parseTabFromUrl(searchParams.get('tab'));
 
-      {/* Stats grid */}
-      <div className="px-4 sm:px-8 max-w-4xl mx-auto w-full">
-        <PlayerStatsGrid
-          totalSessions={safeProfile.totalSessions}
-          totalWins={safeProfile.totalWins}
-          winRate={safeProfile.winRate}
-          achievementCount={safeProfile.achievementCount}
-          labels={statsLabels}
+  const onTabChange = (next: PlayerTabKey): void => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === DEFAULT_TAB) {
+      params.delete('tab');
+    } else {
+      params.set('tab', next);
+    }
+    const qs = params.toString();
+    router.replace(`/players/${safePlayerId}${qs ? `?${qs}` : ''}`, { scroll: false });
+  };
+
+  const gamePlayCounts = statsQuery.data?.gamePlayCounts ?? {};
+  const gameCount = Object.keys(gamePlayCounts).length;
+
+  const tabCounts: Record<PlayerTabKey, number> = {
+    sessions: safeProfile.totalSessions,
+    games: gameCount,
+    toolkits: 0,
+    achievements: safeProfile.achievementCount,
+  };
+
+  const tabLabels: PlayerTabsLabels = {
+    tablistAriaLabel: t('pages.playerDetail.tabs.ariaLabel'),
+    sessions: t('pages.playerDetail.tabs.sessions.label'),
+    games: t('pages.playerDetail.tabs.games.label'),
+    toolkits: t('pages.playerDetail.tabs.toolkits.label'),
+    achievements: t('pages.playerDetail.tabs.achievements.label'),
+  };
+
+  const connectionLabels: PlayerConnectionBarLabels = {
+    topGames: t('pages.playerDetail.connections.topGames'),
+    sessions: t('pages.playerDetail.connections.sessions'),
+    gameNights: t('pages.playerDetail.connections.gameNights'),
+    agents: t('pages.playerDetail.connections.agents'),
+    toolkits: t('pages.playerDetail.connections.toolkits'),
+    chats: t('pages.playerDetail.connections.chats'),
+  };
+
+  const overviewLabels: PlayerOverviewRegionLabels = {
+    stats: statsLabels,
+    leaderboard: leaderboardLabels,
+    favoriteAgent: favoriteAgentLabels,
+  };
+
+  const sessionsLabels: SessionsTabPanelLabels = {
+    title: t('pages.playerDetail.tabs.sessions.title'),
+    viewAll: t('pages.playerDetail.tabs.sessions.viewAll'),
+    empty: t('pages.playerDetail.tabs.sessions.empty'),
+    totalLabel: t('pages.playerDetail.tabs.sessions.totalLabel'),
+  };
+
+  const gamesLabels: GamesTabPanelLabels = {
+    title: t('pages.playerDetail.tabs.games.title'),
+    viewAll: t('pages.playerDetail.tabs.games.viewAll'),
+    empty: t('pages.playerDetail.tabs.games.empty'),
+    playsSuffix: t('pages.playerDetail.tabs.games.playsSuffix'),
+  };
+
+  const toolkitsLabels: ToolkitsTabPanelLabels = {
+    title: t('pages.playerDetail.tabs.toolkits.title'),
+    comingSoon: t('pages.playerDetail.tabs.toolkits.comingSoon'),
+  };
+
+  let tabPanel: ReactElement;
+  switch (tab) {
+    case 'games':
+      tabPanel = (
+        <GamesTabPanel
+          playerId={safePlayerId}
+          gamePlayCounts={gamePlayCounts}
+          labels={gamesLabels}
         />
-      </div>
-
-      {/* Leaderboard + Favorite agent — 2-col row on sm+ */}
-      <div className="px-4 sm:px-8 max-w-4xl mx-auto w-full">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <PlayerLeaderboardCard rank={safeProfile.leaderboardRank} labels={leaderboardLabels} />
-          <FavoriteAgentCard
-            agentName={safeProfile.favoriteAgentName}
-            gameName={safeProfile.favoriteGameName}
-            onClick={
-              safeProfile.favoriteAgentName != null ? () => router.push('/agents') : undefined
-            }
-            labels={favoriteAgentLabels}
-          />
-        </div>
-      </div>
-
-      {/* Achievements badge grid (CTA links to subroute) */}
-      <div className="px-4 sm:px-8 max-w-4xl mx-auto w-full">
+      );
+      break;
+    case 'toolkits':
+      tabPanel = <ToolkitsTabPanel labels={toolkitsLabels} />;
+      break;
+    case 'achievements':
+      tabPanel = (
         <AchievementBadgeGrid
           count={safeProfile.achievementCount}
           viewAllHref={`/players/${safePlayerId}/achievements`}
           labels={achievementLabels}
         />
-      </div>
-    </div>
+      );
+      break;
+    case 'sessions':
+    default:
+      tabPanel = <SessionsTabPanel stats={safeProfile} labels={sessionsLabels} />;
+      break;
+  }
+
+  return (
+    <DetailPageLayout
+      hero={
+        <>
+          <PlayerHero
+            displayName={safeProfile.displayName}
+            totalSessions={safeProfile.totalSessions}
+            totalWins={safeProfile.totalWins}
+            winRate={safeProfile.winRate}
+            onBack={() => router.push('/players')}
+            labels={heroLabels}
+          />
+          <PlayerOverviewRegion
+            stats={safeProfile}
+            labels={overviewLabels}
+            onFavoriteAgentClick={
+              safeProfile.favoriteAgentName != null ? () => router.push('/agents') : undefined
+            }
+          />
+        </>
+      }
+      connections={
+        <PlayerConnectionBar
+          stats={safeProfile}
+          gameCount={gameCount}
+          labels={connectionLabels}
+        />
+      }
+      tabs={
+        <PlayerTabs
+          activeTab={tab}
+          onChange={onTabChange}
+          counts={tabCounts}
+          labels={tabLabels}
+        />
+      }
+    >
+      {tabPanel}
+    </DetailPageLayout>
   );
 }

@@ -1734,6 +1734,39 @@
         "games": "Games played",
         "sessions": "Sessions",
         "stats": "Detailed statistics"
+      },
+      "connections": {
+        "topGames": "Top games",
+        "sessions": "Sessions",
+        "gameNights": "Game nights",
+        "agents": "Agents used",
+        "toolkits": "Toolkits",
+        "chats": "Chats"
+      },
+      "tabs": {
+        "ariaLabel": "Player sections",
+        "sessions": {
+          "label": "Sessions",
+          "title": "Recent sessions",
+          "viewAll": "View all",
+          "empty": "No sessions recorded",
+          "totalLabel": "Total sessions"
+        },
+        "games": {
+          "label": "Games",
+          "title": "Games played",
+          "viewAll": "View all",
+          "empty": "No games played",
+          "playsSuffix": "plays"
+        },
+        "toolkits": {
+          "label": "Toolkits",
+          "title": "Toolkits",
+          "comingSoon": "Player toolkits coming soon"
+        },
+        "achievements": {
+          "label": "Achievements"
+        }
       }
     },
     "agentDetail": {

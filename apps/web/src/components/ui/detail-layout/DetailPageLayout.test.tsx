@@ -77,4 +77,23 @@ describe('DetailPageLayout', () => {
     );
     expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
   });
+
+  it('exposes accessible names on the non-trivial landmarks', () => {
+    render(
+      <DetailPageLayout
+        hero={<span>H</span>}
+        connections={<span>C</span>}
+        tabs={<span>T</span>}
+        footer={<span>F</span>}
+      >
+        <span>M</span>
+      </DetailPageLayout>,
+    );
+
+    expect(screen.getByRole('banner')).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: /related entities/i })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: /detail sections/i })).toBeInTheDocument();
+    expect(screen.getByRole('main')).toBeInTheDocument();
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+  });
 });

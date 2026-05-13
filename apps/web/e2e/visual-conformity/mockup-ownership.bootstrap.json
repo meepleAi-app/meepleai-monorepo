@@ -1,0 +1,39 @@
+{
+  "$schema": "./mockup-ownership.schema.json",
+  "version": 1,
+  "defaults": {
+    "threshold": 0.1,
+    "conformityRatio": 0.05,
+    "viewports": [
+      { "name": "desktop", "width": 1280, "height": 720 },
+      { "name": "mobile", "width": 375, "height": 740 }
+    ]
+  },
+  "routes": [
+    {
+      "id": "library",
+      "livePath": "/library",
+      "mockup": "sp4-library-desktop.html",
+      "triggerPaths": [
+        "apps/web/src/app/(authenticated)/library/**",
+        "apps/web/src/components/v2/library/**",
+        "apps/web/src/components/features/library/**"
+      ],
+      "notes": "Wave B.3 stable baseline (PR #638). Sentinel pattern via ?state= URL override (visual-test-fixture)."
+    },
+    {
+      "id": "library-game-detail",
+      "livePath": "/library/{gameId}",
+      "liveFixture": {
+        "gameId": "nanolith-runthrough"
+      },
+      "mockup": "nanolith-runthrough-game-detail.html",
+      "triggerPaths": [
+        "apps/web/src/app/(authenticated)/library/[gameId]/**",
+        "apps/web/src/components/v2/library/**",
+        "apps/web/src/components/features/library/**"
+      ],
+      "notes": "Sinergico WS-B fix (#1068) e WS-D Exemplar (PR #1093). Funzionalmente broken pre-fix (~95% gap)."
+    }
+  ]
+}

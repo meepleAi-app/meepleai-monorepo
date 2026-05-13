@@ -96,4 +96,43 @@ describe('DetailPageLayout', () => {
     expect(screen.getByRole('main')).toBeInTheDocument();
     expect(screen.getByRole('contentinfo')).toBeInTheDocument();
   });
+
+  it('passes the className prop through to the root wrapper', () => {
+    const { container } = render(
+      <DetailPageLayout hero={<span>H</span>} className="custom-layout-class">
+        <p>M</p>
+      </DetailPageLayout>,
+    );
+
+    const root = container.firstElementChild;
+    expect(root).not.toBeNull();
+    expect(root).toHaveClass('custom-layout-class');
+    // base utilities from the component itself are also present
+    expect(root).toHaveClass('flex');
+    expect(root).toHaveClass('flex-col');
+  });
+
+  it('places a focusable element from each slot in source order', () => {
+    const { container } = render(
+      <DetailPageLayout
+        hero={<button type="button">hero-btn</button>}
+        connections={<button type="button">connections-btn</button>}
+        tabs={<button type="button">tabs-btn</button>}
+        footer={<button type="button">footer-btn</button>}
+      >
+        <button type="button">main-btn</button>
+      </DetailPageLayout>,
+    );
+
+    const labels = Array.from(container.querySelectorAll('button')).map(
+      (b) => b.textContent,
+    );
+    expect(labels).toEqual([
+      'hero-btn',
+      'connections-btn',
+      'tabs-btn',
+      'main-btn',
+      'footer-btn',
+    ]);
+  });
 });

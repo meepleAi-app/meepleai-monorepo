@@ -50,4 +50,31 @@ describe('DetailPageLayout', () => {
       'slot-footer',
     ]);
   });
+
+  it('omits the <aside> when connections is undefined', () => {
+    render(
+      <DetailPageLayout hero={<span>H</span>}>
+        <p>M</p>
+      </DetailPageLayout>,
+    );
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+  });
+
+  it('omits the <nav> when tabs is undefined', () => {
+    render(
+      <DetailPageLayout hero={<span>H</span>}>
+        <p>M</p>
+      </DetailPageLayout>,
+    );
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+  });
+
+  it('omits the <footer> when footer is undefined', () => {
+    render(
+      <DetailPageLayout hero={<span>H</span>}>
+        <p>M</p>
+      </DetailPageLayout>,
+    );
+    expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
+  });
 });

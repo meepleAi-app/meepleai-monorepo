@@ -13,6 +13,14 @@ name: Prod Gate
 on:
   pull_request:
     branches: [main]
+    # Issue #850: prod-only deltas (security scan + load probe) have no
+    # signal on docs-only PRs.
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.editorconfig'
   workflow_dispatch:
 
 concurrency:

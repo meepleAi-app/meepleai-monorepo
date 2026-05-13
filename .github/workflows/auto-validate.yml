@@ -18,6 +18,12 @@ on:
 
 # Q2 2026 Security Review (#186) P1.2 AC5: default least-privilege.
 # Job-level permissions blocks (where present) override this default.
+
+# Concurrency: prevent duplicate runs. See issue #850.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

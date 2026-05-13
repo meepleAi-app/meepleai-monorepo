@@ -3,6 +3,15 @@ name: CI
 on:
   pull_request:
     branches: [main, main-staging]
+    # Issue #850: skip CI on docs-only PRs. ci.yml is not in required-status
+    # checks on either branch (verified 2026-05-13), and the legacy CI suite
+    # is not relevant for documentation/license/gitignore changes.
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.editorconfig'
   push:
     # Spec R2 — CI optimization (2026-04-09): ci.yml must run on push to
     # main-staging so deploy-staging.yml can gate on its conclusion via

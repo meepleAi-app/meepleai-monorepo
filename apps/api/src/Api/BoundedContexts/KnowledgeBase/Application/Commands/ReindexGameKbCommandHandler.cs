@@ -1,8 +1,10 @@
-using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Channels;
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
-using MediatR;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
@@ -10,27 +12,35 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <summary>
 /// Handler for <see cref="ReindexGameKbCommand"/>.
 ///
-/// Loads all Ready or Failed PDFs for the game and re-triggers the indexing pipeline
-/// for each by dispatching <see cref="IndexPdfCommand"/> per document.
+/// Async implementation (Issue #941 / ADR-057):
+///   1. Verify at least one indexable PDF exists for the game (early no-op if zero)
+///   2. Enforce concurrency invariant: at most one active job per (GameId, UserId)
+///   3. Create a <see cref="KbReindexJob"/> row in the DB (queued)
+///   4. Write a <see cref="KbReindexJobRequest"/> to <see cref="KbReindexChannel"/>
+///   5. Return 202-equivalent <see cref="KbJobResponse"/> with status="queued"
 ///
-/// Note: This is a synchronous implementation — all indexing happens in the request pipeline.
-/// Background-job queuing is a planned future enhancement.
-///
-/// Issue #903: SG2 — KB lifecycle con re-index.
+/// The actual reindex work happens in <c>KbReindexProcessorService</c>.
+/// Callers poll <c>GET /games/{id}/kb/reindex/{jobId}/status</c>.
 /// </summary>
 internal sealed class ReindexGameKbCommandHandler : ICommandHandler<ReindexGameKbCommand, KbJobResponse>
 {
     private readonly MeepleAiDbContext _db;
-    private readonly IMediator _mediator;
+    private readonly IKbReindexJobRepository _jobRepository;
+    private readonly KbReindexChannel _channel;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ReindexGameKbCommandHandler> _logger;
 
     public ReindexGameKbCommandHandler(
         MeepleAiDbContext db,
-        IMediator mediator,
+        IKbReindexJobRepository jobRepository,
+        KbReindexChannel channel,
+        IUnitOfWork unitOfWork,
         ILogger<ReindexGameKbCommandHandler> logger)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
-        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _jobRepository = jobRepository ?? throw new ArgumentNullException(nameof(jobRepository));
+        _channel = channel ?? throw new ArgumentNullException(nameof(channel));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -38,80 +48,56 @@ internal sealed class ReindexGameKbCommandHandler : ICommandHandler<ReindexGameK
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // Verify the game exists and the user has access.
-        // We check that a PDF belonging to this game is owned by the user,
-        // OR the user is looking up a shared-game KB.
-        // For simplicity in the smoke test: verify at least one PDF exists for the game.
-        var pdfs = await _db.PdfDocuments
+        // 1. Count indexable PDFs.
+        var pdfCount = await _db.PdfDocuments
             .AsNoTracking()
-            .Where(p =>
-                (p.SharedGameId == command.GameId || p.PrivateGameId == command.GameId) &&
-                p.ExtractedText != null)
-            .Select(p => p.Id)
-            .ToListAsync(cancellationToken)
+            .CountAsync(p =>
+                (p.SharedGameId == command.GameId || p.PrivateGameId == command.GameId)
+                && p.ExtractedText != null,
+                cancellationToken)
             .ConfigureAwait(false);
 
-        if (pdfs.Count == 0)
+        if (pdfCount == 0)
         {
-            // Game has no indexable PDFs — return success with 0 docs (idempotent operation)
+            // No work to do — short-circuit with a synthetic completed job.
+            var noop = KbReindexJob.Create(command.GameId, command.UserId, totalPdfs: 0);
+            noop.MarkCompleted();
+            await _jobRepository.AddAsync(noop, cancellationToken).ConfigureAwait(false);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
             _logger.LogInformation(
-                "ReindexGameKb: No indexable PDFs found for game {GameId} (user {UserId}). Nothing to re-index.",
-                command.GameId, command.UserId);
+                "ReindexGameKb: No indexable PDFs for game {GameId} — no-op job {JobId}",
+                command.GameId, noop.Id);
 
-            return new KbJobResponse(
-                JobId: Guid.NewGuid(),
-                Status: "completed",
-                PdfCount: 0);
+            return new KbJobResponse(noop.Id, "completed", 0);
         }
 
-        var jobId = Guid.NewGuid();
-        _logger.LogInformation(
-            "ReindexGameKb: Starting re-index of {Count} PDFs for game {GameId} (job {JobId}, user {UserId})",
-            pdfs.Count, command.GameId, jobId, command.UserId);
-
-        // Re-index each PDF sequentially via the existing IndexPdfCommand pipeline.
-        // Background-job queuing is a planned future enhancement (Issue #903 scope: synchronous smoke test).
-        var successCount = 0;
-        foreach (var pdfId in pdfs)
+        // 2. Concurrency invariant: reject duplicate active jobs for the same (game, user).
+        var existing = await _jobRepository
+            .GetActiveByGameAndUserAsync(command.GameId, command.UserId, cancellationToken)
+            .ConfigureAwait(false);
+        if (existing is not null)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            try
-            {
-                var result = await _mediator.Send(
-                    new IndexPdfCommand(pdfId.ToString()),
-                    cancellationToken).ConfigureAwait(false);
-
-                if (result.Success)
-                    successCount++;
-                else
-                    _logger.LogWarning(
-                        "ReindexGameKb job {JobId}: PDF {PdfId} indexing failed: {Error}",
-                        jobId, pdfId, result.ErrorMessage);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            // RESILIENCE PATTERN: Individual PDF failure must not abort the entire re-index job.
-            // Log and continue to the next PDF.
-            catch (Exception ex)
-#pragma warning restore CA1031
-            {
-                _logger.LogError(ex,
-                    "ReindexGameKb job {JobId}: unexpected error re-indexing PDF {PdfId}",
-                    jobId, pdfId);
-            }
+            // 409 Conflict — caller should poll the existing jobId.
+            throw new ConflictException(
+                $"A reindex job is already active for this game ({existing.Id}); poll its status before retrying");
         }
 
-        _logger.LogInformation(
-            "ReindexGameKb job {JobId}: completed — {Success}/{Total} PDFs re-indexed for game {GameId}",
-            jobId, successCount, pdfs.Count, command.GameId);
+        // 3. Create the job row in `queued` state.
+        var job = KbReindexJob.Create(command.GameId, command.UserId, pdfCount);
+        await _jobRepository.AddAsync(job, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return new KbJobResponse(
-            JobId: jobId,
-            Status: "completed",
-            PdfCount: pdfs.Count);
+        // 4. Hand off to the background worker.
+        await _channel.Writer
+            .WriteAsync(new KbReindexJobRequest(job.Id, command.GameId, command.UserId), cancellationToken)
+            .ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "ReindexGameKb: Enqueued job {JobId} for game {GameId} ({Count} PDFs, user {UserId})",
+            job.Id, command.GameId, pdfCount, command.UserId);
+
+        // 5. Return 202-equivalent.
+        return new KbJobResponse(job.Id, "queued", pdfCount);
     }
 }

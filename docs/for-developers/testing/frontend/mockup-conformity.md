@@ -1,7 +1,7 @@
 # Mockup-to-route Conformity Gate
 
 > **Issue:** #1069 (WS-C Mockup Conformity Roadmap, umbrella #1066)
-> **Status:** Phase 1–4b shipped 2026-05-13 — full pipeline including cross-branch debt gate. Phase 4c (weekly observability summary) is optional and not yet shipped.
+> **Status:** WS-C complete (Phase 1–4b) + WS-F.1 (ownership headers + allowlist enforcement) shipped 2026-05-13. WS-F.2 (drift detection workflow) + WS-F.3 (dashboard) ship next.
 
 ## Overview
 
@@ -223,10 +223,48 @@ gh api repos/meepleAi-app/meepleai-monorepo/branches/main/protection \
   --raw-field required_status_checks='{"strict":false,"contexts":["GitGuardian Security Checks","Conformity Debt Gate"]}'
 ```
 
+### WS-F.1 — Ownership header standard (this PR for WS-F)
+
+Each mockup in the allowlist carries a structured ownership header. Spec: §3 WS-F, AC-F.1b + AC-F.5.
+
+```html
+<!--
+  @route /library/{gameId}
+  @last-verified 2026-05-13
+  @verified-by maintainer
+  @status canonical
+-->
+```
+
+Field semantics (AC-F.5 enum normalization):
+
+| Field | Required | Format / Enum |
+|-------|----------|---------------|
+| `@route` | yes | One or more space-separated route paths starting with `/`. Use `{placeholder}` for dynamic segments. |
+| `@last-verified` | yes | `YYYY-MM-DD` ISO date. |
+| `@verified-by` | yes | `designer` · `maintainer` · `spec-panel-review` · `auto-bootstrap`. `spec-panel-review` requires `[spec-panel-validated]` in the commit message. |
+| `@status` | yes | `canonical` (green, verified ≤30d) · `verified` (yellow, verified >30d) · `drifted` (orange, gate failing) · `pending-implementation` (blue, orphan) · `archived` (gray, retired). |
+
+Enforcement (AC-F.1b progressive):
+
+- 5 mockup core in `ALLOWLIST` (sp4-library-desktop, nanolith-runthrough-game-detail, sp4-game-detail, sp4-agents-index, sp4-sessions-index): missing/invalid header → CI error.
+- Other mockups: warning only. Allowlist expands by explicit PR edit to `apps/web/scripts/mockup-ownership-check.ts`.
+
+Local validation:
+
+```bash
+cd apps/web
+pnpm verify:mockup-ownership
+```
+
+CI workflow: `.github/workflows/mockup-ownership-validator.yml` (required check on PR touching `admin-mockups/design_files/**`).
+
 ## What ships next
 
 | Phase | Deliverable |
 |-------|-------------|
+| **F.2** | `mockup-drift-detect.yml` workflow — PR-triggered (SLO ≤5min) + cron daily fallback. Generates companion issue when a mockup change touches a route in the WS-C conformity gate ownership map (AC-F.4) |
+| **F.3** | Dashboard generator `mockup-ownership-summary.yml` weekly cron, publishes `docs/for-developers/audits/mockup-ownership-status.md` with status enum coloring + age (AC-F.5 dashboard) |
 | **4c** (opt) | Weekly observability summary `conformity-waivers-summary.md` (AC-C.5.7) |
 | **post-merge** | Dispatch `bootstrap-mockup-baselines.yml` workflow → auto-PR lands `__mockup__/*.png` → conformity gate produces real diff (expected: large, documenting the 75-85% pre-remediation gap) |
 

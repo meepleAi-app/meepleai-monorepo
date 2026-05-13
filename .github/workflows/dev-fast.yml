@@ -55,7 +55,9 @@ jobs:
   frontend-fast:
     name: Frontend Fast (lint + typecheck + unit)
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Bumped from 5 to 15 (incident #1115): Vitest suite alone runs ~5min
+    # locally and >5min in CI with cold cache, killing every frontend PR.
+    timeout-minutes: 15
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:

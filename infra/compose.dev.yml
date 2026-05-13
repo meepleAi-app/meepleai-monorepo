@@ -65,6 +65,11 @@ services:
       RERANKER_URL: http://reranker-service:8003
       UNSTRUCTURED_API_URL: http://unstructured-service:8001
       SMOLDOCLING_API_URL: http://smoldocling-service:8002
+      # Issue #1099: passthrough for CI smoke tests to bypass AuthLogin
+      # rate limit (10 req/min/IP) which all smoke tests share a single IP.
+      # Empty in local dev → code treats it as disabled flag absent → rate
+      # limit stays enforced. CI workflow sets to "true" when running smoke.
+      DISABLE_RATE_LIMITING: ${DISABLE_RATE_LIMITING:-}
     volumes:
       - ./secrets:/app/infra/secrets:ro
 

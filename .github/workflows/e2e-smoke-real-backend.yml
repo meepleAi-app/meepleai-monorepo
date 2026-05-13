@@ -92,6 +92,14 @@ jobs:
 
       - name: Boot dev stack (postgres + redis + api)
         working-directory: infra
+        env:
+          # Issue #1099: disable rate limiting in the API container so the
+          # smoke suite — which logs in once per spec from the same runner
+          # IP — doesn't exhaust the AuthLogin policy (10 req/min/IP) and
+          # cause cascading 429s on /api/v1/auth/login. Passthrough wired
+          # in compose.dev.yml; local dev leaves this unset and keeps the
+          # rate limiter active.
+          DISABLE_RATE_LIMITING: "true"
         run: |
           make dev-core
           for i in {1..40}; do

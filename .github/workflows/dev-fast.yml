@@ -65,12 +65,17 @@ jobs:
             orchestration:
               - 'apps/orchestration-service/**'
 
-  frontend-fast:
-    name: Frontend Fast (lint + typecheck + unit)
+  # Sharding strategy (incident #1115): the apps/web Vitest suite runs >15min
+  # in CI as a single job. Splitting into 3 parallel matrix shards drops
+  # wall-clock to ~5min per shard while preserving full coverage. Lint and
+  # typecheck stay in a separate fast job (no benefit from parallelism).
+  # The frontend-fast aggregator job below preserves the branch-protection
+  # required check name "Frontend Fast (lint + typecheck + unit)".
+
+  frontend-static:
+    name: Frontend Static (lint + typecheck)
     runs-on: ubuntu-latest
-    # Bumped from 5 to 15 (incident #1115): Vitest suite alone runs ~5min
-    # locally and >5min in CI with cold cache, killing every frontend PR.
-    timeout-minutes: 15
+    timeout-minutes: 5
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
@@ -91,10 +96,67 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Unit tests (Vitest, no coverage)
-        # apps/web/package.json declares `"test": "vitest run"` — already
-        # non-watch. There is no separate `test:unit` script.
-        run: pnpm test
+  frontend-tests:
+    name: Frontend Tests (shard ${{ matrix.shard }}/3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Unit tests (Vitest shard ${{ matrix.shard }}/3)
+        # Bypass the "test" pnpm script to forward the --shard flag cleanly.
+        # Vitest 3.x supports deterministic file-level sharding via --shard.
+        run: pnpm exec vitest run --shard ${{ matrix.shard }}/3
+
+  frontend-fast:
+    # Aggregator job — preserves the branch-protection required check name
+    # "Frontend Fast (lint + typecheck + unit)" introduced by #846 / #1086.
+    # Succeeds iff both upstream jobs succeeded, or both were legitimately
+    # skipped because the PR did not touch frontend paths.
+    name: Frontend Fast (lint + typecheck + unit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: [changes, frontend-static, frontend-tests]
+    if: ${{ always() }}
+    steps:
+      - name: Verify upstream results
+        run: |
+          STATIC="${{ needs.frontend-static.result }}"
+          TESTS="${{ needs.frontend-tests.result }}"
+          FRONTEND_CHANGED="${{ needs.changes.outputs.frontend }}"
+          EVENT="${{ github.event_name }}"
+          echo "event=$EVENT frontend-static=$STATIC frontend-tests=$TESTS frontend-changed=$FRONTEND_CHANGED"
+          # Skip early only for PRs that don't touch frontend (upstream jobs
+          # legitimately skipped). workflow_dispatch always runs upstream
+          # regardless of frontend-changed, so we must verify their results.
+          if [[ "$FRONTEND_CHANGED" != "true" ]] && [[ "$EVENT" != "workflow_dispatch" ]]; then
+            echo "No frontend changes on PR — aggregator passes (upstream legitimately skipped)."
+            exit 0
+          fi
+          if [[ "$STATIC" != "success" ]]; then
+            echo "frontend-static did not succeed (result=$STATIC)"
+            exit 1
+          fi
+          if [[ "$TESTS" != "success" ]]; then
+            echo "frontend-tests did not succeed across all shards (result=$TESTS)"
+            exit 1
+          fi
+          echo "All frontend checks passed."
 
   backend-fast:
     name: Backend Fast (build + unit)

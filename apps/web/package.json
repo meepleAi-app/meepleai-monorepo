@@ -42,6 +42,7 @@
     "test:visual:conformity:bootstrap:update": "dotenv -e .env.test -- playwright test --project=conformity-bootstrap-desktop --project=conformity-bootstrap-mobile --update-snapshots",
     "verify:mockup-pins": "tsx scripts/verify-mockup-pins.ts",
     "verify:mockup-ownership": "tsx scripts/mockup-ownership-check.ts",
+    "audit:mockup-ownership": "tsx scripts/generate-ownership-status.ts",
     "test:v2-states": "dotenv -e .env.test -- playwright test --project=v2-states-desktop --project=v2-states-mobile",
     "test:v2-states:desktop": "dotenv -e .env.test -- playwright test --project=v2-states-desktop",
     "test:v2-states:mobile": "dotenv -e .env.test -- playwright test --project=v2-states-mobile",

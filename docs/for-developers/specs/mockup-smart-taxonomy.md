@@ -108,13 +108,64 @@ Avoid:
 - Overlapping rules without clear priority (test cases must enforce ordering).
 - Highly specific patterns that match only one constraint (suggests a manual tag would be cleaner).
 
-## What ships next (WS-E.2)
+## Confidence tiers (AC-E.2 rewritten — WS-E.2a)
+
+`check-constraint-implementation.ts` assigns each extracted constraint a tier based on what evidence exists in the codebase:
+
+| Tier | Signal | Auto-issue (WS-E.2b)? |
+|------|--------|-----------------------|
+| `verified` | Explicit `// @spec-ref <id>` in scoped code | No |
+| `likely-implemented` | Grep pattern (AC-E.5 table) matched in scoped path | No |
+| `manual-review` | `metric_type ∈ {ux-constraint, other}` (no auto-grep) | No (surface in summary) |
+| `unknown` | Neither @spec-ref nor pattern match (default) | Yes, after ≥30d age |
+| `missing` | Manual annotation via `<!-- spec-missing: <id> -->` | Yes immediately |
+
+The grep patterns are best-effort heuristics (file globs and regex per `metric_type`). A pattern match elevates a constraint to `likely-implemented` but is **not proof** — only an explicit `@spec-ref <id>` comment promotes to `verified`.
+
+Run locally:
+
+```bash
+cd apps/web
+pnpm audit:mockup-smart-impl
+# Writes docs/for-developers/audits/mockup-smart-implementation.json
+```
+
+## Implementation-marker map (AC-E.5)
+
+`PATTERN_MAP` in `check-constraint-implementation.ts` declares for each `metric_type`:
+
+- `pathScopes` — relative path segments where matches count (ignores out-of-scope)
+- `patterns` — regex run against file contents, any-of semantics
+- `manualOnly` — short-circuit to `manual-review` (for `ux-constraint` and `other`)
+
+Reference table:
+
+| metric_type | Path scope | Pattern examples |
+|---|---|---|
+| `latency` | `apps/web/src`, `apps/api/src` | `histogram.*latency`, `recordLatency`, OpenTelemetry meter |
+| `performance` | `apps/web/src` | `lighthouse.*budget`, `perf.*test`, `Profiler` |
+| `citation` | `apps/web/src` | `CitationChip`, `data-citation`, `<Citation` |
+| `confidence` | `apps/web/src` | `ConfidenceIndicator`, `data-confidence` |
+| `coverage` | `__tests__`, `e2e` | `expect.*toBeGreaterThan.*0\.\d` |
+| `accessibility` | `__tests__`, `e2e/a11y`, `e2e` | `axe.run`, `toBeAccessible`, `@axe-core` |
+| `ux-constraint` | — | manual review only |
+| `other` | — | manual review only |
+
+To strengthen a constraint from `likely-implemented` to `verified`, add a comment like:
+
+```typescript
+// @spec-ref G4.2 — tab "PDF originale" always visible per WS-E spec
+```
+
+The check script greps for `@spec-ref <id>` literally. Free-form references in PR descriptions or commits do **not** count.
+
+## What ships next (WS-E.2b)
 
 | Item | Deliverable |
 |------|-------------|
-| `scripts/check-constraint-implementation.ts` | For each `metric_type`, grep the codebase for implementation markers (telemetry counters, UI data-attributes, dedicated tests) and emit a coverage report |
-| `mockup-spec-sync.yml` workflow | Weekly cron + trigger on `admin-mockups/design_files/**` PR change. Diff fresh extraction vs committed JSON snapshot; create / update `mockup-spec-debt` issues for constraints without implementation markers (dedup by `(mockup, id, text-hash)`) |
-| JSON Schema sidecar | `mockup-smart-constraints.schema.json` for IDE validation |
+| `mockup-spec-sync.yml` workflow | Cron daily + PR trigger on `admin-mockups/design_files/**`. Dry-run mode default (AC-E.6); cap `max-issues-per-run: 5`; create/update `mockup-spec-debt` issues for tier=`unknown` (≥30d) or `missing` constraints; dedup by `(mockup, id_or_text_hash, metric_type)` (AC-E.7) |
+| False-positive override hook | Label `spec-debt-false-positive` → close + append `dedup_key` to `docs/.../spec-debt-false-positive-allowlist.json` (AC-E.8) |
+| JSON Schema sidecar | `mockup-smart-constraints.schema.json` + `mockup-smart-implementation.schema.json` for IDE validation |
 
 ## Refs
 

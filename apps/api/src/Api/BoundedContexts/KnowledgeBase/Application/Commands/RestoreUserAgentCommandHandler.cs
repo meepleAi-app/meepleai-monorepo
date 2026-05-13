@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -21,15 +22,18 @@ internal sealed class RestoreUserAgentCommandHandler
 {
     private readonly IAgentDefinitionRepository _agentRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<RestoreUserAgentCommandHandler> _logger;
 
     public RestoreUserAgentCommandHandler(
         IAgentDefinitionRepository agentRepository,
         ISharedGameRepository sharedGameRepository,
+        IUnitOfWork unitOfWork,
         ILogger<RestoreUserAgentCommandHandler> logger)
     {
         _agentRepository = agentRepository ?? throw new ArgumentNullException(nameof(agentRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -48,6 +52,7 @@ internal sealed class RestoreUserAgentCommandHandler
         agent.Restore();
         await _agentRepository.UpdateAsync(agent, cancellationToken).ConfigureAwait(false);
 
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         _logger.LogInformation(
             "AgentDefinition {AgentId} restored by user {UserId}",
             request.AgentId, request.UserId);

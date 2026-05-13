@@ -81,12 +81,10 @@ internal sealed class SoftDeleteUserAgentCommandHandler
             await _chatThreadRepository.UpdateAsync(thread, cancellationToken).ConfigureAwait(false);
         }
 
-        // ChatThreadRepository.UpdateAsync uses Unit-of-Work pattern (no auto SaveChanges).
-        // Trigger persistence explicitly here.
-        if (activeThreads.Count > 0)
-        {
-            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
+        // ADR-056: both AgentDefinitionRepository and ChatThreadRepository now follow
+        // the UoW pattern (no auto SaveChanges). Single SaveChangesAsync at the end
+        // persists the agent soft-delete AND any cascaded thread closures atomically.
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         if (activeThreads.Count > 0)
         {

@@ -9,7 +9,9 @@ delete {
 }
 
 tests {
-  test("returns 204 NoContent OR 404 (already deleted by prior run)", function() {
-    expect([204, 404]).to.include(res.getStatus());
+  // Strict assertion enabled by #943 Phase A — pre-request reset guarantees a
+  // clean state, so the priv game created earlier in the run must exist here.
+  test("returns 204 NoContent", function() {
+    expect(res.getStatus()).to.equal(204);
   });
 }

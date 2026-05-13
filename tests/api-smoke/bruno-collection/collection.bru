@@ -23,4 +23,39 @@ script:pre-request {
   if (!bru.getEnvVar("authToken")) {
     bru.setVar("authToken", "");
   }
+
+  // Issue #943 Phase A — call the smoke reset endpoint at collection start
+  // so each smoke run begins from a deterministic empty state. The endpoint
+  // is guarded by a triple-gate (TestEndpoints:Enabled + IsProduction()=false
+  // + hardcoded target user), so this call is a no-op in production.
+  //
+  // Idempotent: subsequent runs in the same collection invocation also call
+  // this, but the second call finds nothing to delete and returns 0 counts.
+  //
+  // Skipped gracefully if authToken is empty (first login hasn't happened
+  // yet) — the login scenarios run first; this hook fires per-request.
+  const authToken = bru.getEnvVar("authToken");
+  const apiBase = bru.getEnvVar("apiBase");
+  const resetMarker = bru.getVar("smokeResetCompleted");
+
+  if (authToken && apiBase && !resetMarker) {
+    try {
+      const response = await fetch(apiBase + "/api/v1/test/reset-smoke-aaron", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + authToken,
+          "Content-Type": "application/json"
+        }
+      });
+      // Mark reset done for this collection invocation regardless of result —
+      // a 403 means the env-gate is correctly closed (e.g. against prod) and
+      // we should not retry; a 200 means clean state.
+      bru.setVar("smokeResetCompleted", "true");
+      console.log("[smoke-reset] status=" + response.status);
+    } catch (err) {
+      // Network errors are non-fatal — the smoke scenarios will still run,
+      // they may just see leftover state. Surfaces as tolerant-mode behavior.
+      console.warn("[smoke-reset] failed: " + err.message);
+    }
+  }
 }

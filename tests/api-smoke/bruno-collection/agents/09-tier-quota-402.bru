@@ -18,16 +18,15 @@ body:json {
 }
 
 tests {
+  // Strict assertion enabled by #943 Phase A — pre-request reset wipes prior
+  // agents, and the prior scenario in this collection creates the first agent
+  // for smoke-aaron. This POST is therefore the second-agent attempt, which
+  // MUST be blocked by free-tier quota (limit=1).
   test("returns 402 Payment Required", function() {
-    // Note: this test depends on smoke-aaron having already 1+ active agent.
-    // If preflight cleanup leaves quota free, this scenario will be 201 instead.
-    // Smoke proxy — full quota verification in integration test.
-    expect([201, 402]).to.include(res.getStatus());
+    expect(res.getStatus()).to.equal(402);
   });
-  test("if 402, body has AGENT_SLOT_QUOTA_EXCEEDED error code", function() {
-    if (res.getStatus() === 402) {
-      const body = res.getBody();
-      expect(body.error || body.code || "").to.contain("AGENT_SLOT_QUOTA_EXCEEDED");
-    }
+  test("body has AGENT_SLOT_QUOTA_EXCEEDED error code", function() {
+    const body = res.getBody();
+    expect(body.error || body.code || "").to.contain("AGENT_SLOT_QUOTA_EXCEEDED");
   });
 }

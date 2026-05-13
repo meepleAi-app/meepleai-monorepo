@@ -17,6 +17,15 @@ inputs:
     description: 'Use frozen lockfile for installations'
     required: false
     default: 'true'
+  cache-version:
+    description: |
+      Cache key version (Issue #850 emergency invalidation knob). The
+      workflow caller is responsible for resolving the repo variable
+      CACHE_VERSION (use the vars context, which is not available
+      inside composite actions). See dev-fast.yml for the canonical
+      caller pattern. Fix for PR #1124 regression.
+    required: false
+    default: 'v1'
 
 runs:
   using: 'composite'
@@ -44,12 +53,13 @@ runs:
       with:
         path: ${{ env.STORE_PATH }}
         # Issue #850: cache fingerprint widened to include .npmrc (registry +
-        # auth config affects resolution). vars.CACHE_VERSION is the
-        # emergency invalidation knob — bump 'v1' → 'v2' to flush all pnpm
-        # caches without code change.
-        key: ${{ runner.os }}-${{ runner.arch }}-pnpm-store-${{ vars.CACHE_VERSION || 'v1' }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory), format('{0}/.npmrc', inputs.working-directory)) }}
+        # auth config affects resolution). The emergency invalidation knob
+        # is the `cache-version` input — callers pass
+        # `${{ vars.CACHE_VERSION || 'v1' }}` to inherit the repo variable.
+        # See action input docs above for why `vars` cannot be referenced here.
+        key: ${{ runner.os }}-${{ runner.arch }}-pnpm-store-${{ inputs.cache-version }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory), format('{0}/.npmrc', inputs.working-directory)) }}
         restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-pnpm-store-${{ vars.CACHE_VERSION || 'v1' }}-
+          ${{ runner.os }}-${{ runner.arch }}-pnpm-store-${{ inputs.cache-version }}-
           ${{ runner.os }}-${{ runner.arch }}-pnpm-store-
 
     - name: Install dependencies

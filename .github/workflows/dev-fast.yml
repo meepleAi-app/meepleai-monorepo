@@ -117,6 +117,7 @@ jobs:
     # skipped because the PR did not touch frontend paths.
     name: Frontend Fast (lint + typecheck + unit)
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     needs: [changes, frontend-static, frontend-tests]
     if: ${{ always() }}
     steps:
@@ -125,9 +126,13 @@ jobs:
           STATIC="${{ needs.frontend-static.result }}"
           TESTS="${{ needs.frontend-tests.result }}"
           FRONTEND_CHANGED="${{ needs.changes.outputs.frontend }}"
-          echo "frontend-static=$STATIC frontend-tests=$TESTS frontend-changed=$FRONTEND_CHANGED"
-          if [[ "$FRONTEND_CHANGED" != "true" ]]; then
-            echo "No frontend changes — aggregator passes (upstream legitimately skipped)."
+          EVENT="${{ github.event_name }}"
+          echo "event=$EVENT frontend-static=$STATIC frontend-tests=$TESTS frontend-changed=$FRONTEND_CHANGED"
+          # Skip early only for PRs that don't touch frontend (upstream jobs
+          # legitimately skipped). workflow_dispatch always runs upstream
+          # regardless of frontend-changed, so we must verify their results.
+          if [[ "$FRONTEND_CHANGED" != "true" ]] && [[ "$EVENT" != "workflow_dispatch" ]]; then
+            echo "No frontend changes on PR — aggregator passes (upstream legitimately skipped)."
             exit 0
           fi
           if [[ "$STATIC" != "success" ]]; then

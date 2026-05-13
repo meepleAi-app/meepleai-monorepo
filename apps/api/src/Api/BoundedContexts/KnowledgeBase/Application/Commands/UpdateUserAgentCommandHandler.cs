@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -13,9 +14,9 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// an <see cref="AgentDto"/> with GameName resolved (drift-fix lookup pattern from PR #662).
 /// </summary>
 /// <remarks>
-/// Persistence pattern mirrors <c>CreateUserAgentCommandHandler</c>: repository's
-/// <c>UpdateAsync</c> calls <c>DbContext.SaveChangesAsync</c> internally, so no
-/// <c>IUnitOfWork</c> is required.
+/// Persistence pattern (ADR-056): repository <c>UpdateAsync</c> mutates the
+/// change-tracker only; this handler invokes <c>IUnitOfWork.SaveChangesAsync</c>
+/// explicitly to persist.
 /// Returns <c>null</c> when the agent ID is not found (endpoint maps to 404).
 /// Strategy resolution mirrors the preset-or-Custom pattern used by
 /// <see cref="CreateUserAgentCommandHandler"/>.
@@ -25,15 +26,18 @@ internal sealed class UpdateUserAgentCommandHandler
 {
     private readonly IAgentDefinitionRepository _repository;
     private readonly ISharedGameRepository _sharedGameRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UpdateUserAgentCommandHandler> _logger;
 
     public UpdateUserAgentCommandHandler(
         IAgentDefinitionRepository repository,
         ISharedGameRepository sharedGameRepository,
+        IUnitOfWork unitOfWork,
         ILogger<UpdateUserAgentCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -66,6 +70,7 @@ internal sealed class UpdateUserAgentCommandHandler
         if (changed)
         {
             await _repository.UpdateAsync(agent, cancellationToken).ConfigureAwait(false);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Updated user-owned AgentDefinition {Id} (Name='{Name}', Strategy='{Strategy}') for user {UserId}",

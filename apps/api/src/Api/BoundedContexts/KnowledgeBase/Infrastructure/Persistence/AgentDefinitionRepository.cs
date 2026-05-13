@@ -77,11 +77,12 @@ public sealed class AgentDefinitionRepository : RepositoryBase, IAgentDefinition
 
     public async Task AddAsync(AgentDefinition agentDefinition, CancellationToken cancellationToken = default)
     {
+        // ADR-056: repository methods mutate the change-tracker only.
+        // Callers are responsible for invoking IUnitOfWork.SaveChangesAsync(ct).
         await DbContext.Set<AgentDefinition>().AddAsync(agentDefinition, cancellationToken).ConfigureAwait(false);
-        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task UpdateAsync(AgentDefinition agentDefinition, CancellationToken cancellationToken = default)
+    public Task UpdateAsync(AgentDefinition agentDefinition, CancellationToken cancellationToken = default)
     {
         // Avoid IdentityConflict: another entity with same Id may already be tracked from prior reads
         // (test seeding, EF caching). Detach it before re-attaching the modified version.
@@ -92,7 +93,8 @@ public sealed class AgentDefinitionRepository : RepositoryBase, IAgentDefinition
             tracked.State = Microsoft.EntityFrameworkCore.EntityState.Detached;
         }
         DbContext.Set<AgentDefinition>().Update(agentDefinition);
-        await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // ADR-056: caller persists via IUnitOfWork.SaveChangesAsync.
+        return Task.CompletedTask;
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -101,7 +103,7 @@ public sealed class AgentDefinitionRepository : RepositoryBase, IAgentDefinition
         if (agentDefinition != null)
         {
             DbContext.Set<AgentDefinition>().Remove(agentDefinition);
-            await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            // ADR-056: caller persists via IUnitOfWork.SaveChangesAsync.
         }
     }
 

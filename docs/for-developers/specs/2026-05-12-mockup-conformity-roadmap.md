@@ -153,18 +153,31 @@ Sei workstream (A–F) con dipendenze esplicitate in §4 sequencing.
 5. `docs/for-developers/testing/frontend/mockup-conformity.md` documenta workflow + come aggiornare threshold.
 
 **Acceptance criteria**:
-- **AC-C.1**: gate triggera su PR che tocca `apps/web/src/app/**`, `apps/web/src/components/**`, o `apps/web/src/styles/**`.
-- **AC-C.2**: soglia tolleranza rispettata (5% pixel diff configurabile per-route in `mockup-ownership.json`).
-- **AC-C.3**: failure produce artifact `conformity-diffs-{run}` con triplet (mockup.png, route.png, diff.png).
-- **AC-C.4**: commento PR include link artifact + screenshot inline + percentuale diff per route.
-- **AC-C.5**: workflow saltabile via label PR `conformity-waiver` con commento obbligatorio rationale (escalation manuale).
+- **AC-C.1**: gate triggera su PR il cui changeset interseca path mappati in `mockup-ownership.bootstrap.json` (vedi AC-C.7) **oppure** tocca `apps/web/src/styles/design-tokens-canonical.css`, `apps/web/tailwind.config.*`, o `admin-mockups/design_files/**`. Esplicito **exclude** per `apps/web/src/components/ui/**` (primitive system-wide, non bound a singola route).
+- **AC-C.2**: diff calcolato via `pixelmatch` con parametri espliciti:
+  - per-pixel sensitivity: `pixelmatch.threshold = 0.1` (YIQ delta, hardcoded in `conformity-runner.ts`)
+  - aggregato pass criterion: `mismatchedPixels / totalPixels < ratioPerRoute` (default `0.05`, override per-route in `mockup-ownership.bootstrap.json` campo `conformityRatio`)
+  - formula referenziata nel doc `mockup-conformity.md` con esempio numerico.
+- **AC-C.3**: failure produce artifact `conformity-diffs-{run}` con triplet (mockup.png, route.png, diff.png) per ciascuna route fallita. **Retention**: 14 giorni per PR runs, 90 giorni per `main-dev` runs (configurato in workflow `actions/upload-artifact retention-days`).
+- **AC-C.4**: commento PR include link artifact + screenshot inline + percentuale diff per route (formula AC-C.2). Commento è **sticky** (replace su re-run, no spam).
+- **AC-C.5**: workflow saltabile via label PR `conformity-waiver` con commento obbligatorio rationale. Waiver crea automaticamente issue follow-up con label `conformity-debt` + due-date 30 giorni; issue blocca merge a `main-staging` finché non risolta o ri-validata. Audit trail in `docs/for-developers/audits/conformity-waivers.md` (append-only log: PR#, route, rationale, expiry).
+- **AC-C.6**: mockup baselines committed sotto `apps/web/e2e/visual-conformity/__mockup__/{route-slug}.{viewport}.png`. Rigenerati **solo** via workflow dedicato `bootstrap-mockup-baselines.yml` (manual `workflow_dispatch` + auto-trigger su `admin-mockups/design_files/**` change con PR auto-create). Gate `visual-regression-conformity.yml` **non** rigenera mai baselines: confronta solo route live vs PNG committed.
+- **AC-C.7**: WS-C ships con bootstrap minimal `apps/web/e2e/visual-conformity/mockup-ownership.bootstrap.json` hardcoded a **2 route**: `/library` (mockup `sp4-library-desktop.html`, Wave B.3 stable) e `/library/[gameId]` (mockup `nanolith-runthrough-game-detail.html`, sinergico con WS-B/WS-D Exemplar). Schema completo + auto-discovery sono scope WS-F. JSON schema sidecar `mockup-ownership.schema.json` versionato in repo.
+- **AC-C.8**: determinismo cross-environment garantito da:
+  - workflow runner pinned `ubuntu-22.04` (x86-64), NO matrix multi-OS
+  - mockup baselines bootstrap MUST eseguire su stesso runner (CI-only generation, no local commit di baseline)
+  - `serve-mockups.cjs` inietta font stack canonico `'Inter', -apple-system, system-ui, sans-serif` + preload Inter via `<link rel="preload">` con SHA-384 integrity
+  - React UMD pinned a `18.3.1` con SRI hash in `serve-mockups.cjs`
+- **AC-C.9**: workflow concurrency control: `concurrency: { group: conformity-${{ github.ref }}, cancel-in-progress: true }`. Flake tolerance: retry automatico 1× su failure (Playwright `retries: 1` solo per project `conformity-*`).
 
 **Failure modes**:
-- false positive da anti-alias / font rendering → mitigation: calibration table per-route, threshold per-region (es. hero header 2%, content 8%).
-- Tempo CI eccessivo (>10min) → mitigation: parallelizzazione per-route project, cache mockup screenshots invariati.
-- Mockup HTML usa React 18 UMD (vedi `sp4-library-desktop.html:16-17`) → rendering CI consistente? mitigation: lock React version in `serve-mockups.cjs`.
+- false positive da anti-alias / font rendering → mitigation: AC-C.8 font lock + per-route `conformityRatio` override.
+- Tempo CI eccessivo (>10min) → mitigation: parallelizzazione per-route project Playwright + cache mockup screenshots invariati (mockup HTML hash → cache key).
+- Mockup HTML usa React 18 UMD (vedi `sp4-library-desktop.html:16-17`) → rendering CI consistente? mitigation: AC-C.8 React version + SRI pin in `serve-mockups.cjs`.
+- Waiver back-door permanente → mitigation: AC-C.5 expiration 30gg + blocking label `conformity-debt`.
+- Baseline drift silenzioso post-mockup-change → mitigation: AC-C.6 auto-PR su `admin-mockups/design_files/**` change forza review esplicita.
 
-**Rollback**: workflow disable via PR — gate scompare ma legacy gates restano.
+**Rollback**: workflow disable via PR — gate scompare ma legacy gates restano. Baselines + bootstrap JSON retained come documentation reference.
 
 ---
 

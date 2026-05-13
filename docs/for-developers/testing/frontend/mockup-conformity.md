@@ -1,7 +1,7 @@
 # Mockup-to-route Conformity Gate
 
 > **Issue:** #1069 (WS-C Mockup Conformity Roadmap, umbrella #1066)
-> **Status:** WS-C complete (Phase 1–4b) + WS-F.1 (ownership headers + allowlist enforcement) shipped 2026-05-13. WS-F.2 (drift detection workflow) + WS-F.3 (dashboard) ship next.
+> **Status:** WS-C complete (Phase 1–4b) + WS-F.1 (ownership headers) + WS-F.2 (drift detection) shipped 2026-05-13. WS-F.3 (dashboard) ships next.
 
 ## Overview
 
@@ -259,11 +259,25 @@ pnpm verify:mockup-ownership
 
 CI workflow: `.github/workflows/mockup-ownership-validator.yml` (required check on PR touching `admin-mockups/design_files/**`).
 
+### WS-F.2 — Drift detection (this PR for WS-F)
+
+`mockup-drift-detect.yml` runs two paths:
+
+| Path | Trigger | SLO | Behaviour |
+|------|---------|-----|-----------|
+| **PR-trigger** (primary) | `pull_request` on `admin-mockups/design_files/**` | ≤5min | For each changed mockup that maps to a route in WS-C ownership, open or update a `mockup-drift` companion issue. On `closed/merged`: nudge the issue with bootstrap dispatch reminder. On `closed/unmerged`: auto-close the companion. |
+| **Cron daily fallback** | `schedule '0 6 * * *'` | 24h | Scans recent merged PRs and retroactively creates companion issues if the PR-trigger path missed one (webhook delivery failure, force-push race). |
+
+A `workflow_dispatch` input `lookback_hours` (default 24) allows manual retroactive runs.
+
+The companion issue body links to the originating PR, lists affected route ids, and provides a reviewer checklist: inspect diff, dispatch bootstrap workflow after merge, verify gate diff within budget, close.
+
+Dedup: companion issues carry `<!-- mockup-drift-pr: <PR#> -->` in body. Re-trigger on the same PR comment-updates the existing issue; PR closed-unmerged auto-closes it.
+
 ## What ships next
 
 | Phase | Deliverable |
 |-------|-------------|
-| **F.2** | `mockup-drift-detect.yml` workflow — PR-triggered (SLO ≤5min) + cron daily fallback. Generates companion issue when a mockup change touches a route in the WS-C conformity gate ownership map (AC-F.4) |
 | **F.3** | Dashboard generator `mockup-ownership-summary.yml` weekly cron, publishes `docs/for-developers/audits/mockup-ownership-status.md` with status enum coloring + age (AC-F.5 dashboard) |
 | **4c** (opt) | Weekly observability summary `conformity-waivers-summary.md` (AC-C.5.7) |
 | **post-merge** | Dispatch `bootstrap-mockup-baselines.yml` workflow → auto-PR lands `__mockup__/*.png` → conformity gate produces real diff (expected: large, documenting the 75-85% pre-remediation gap) |

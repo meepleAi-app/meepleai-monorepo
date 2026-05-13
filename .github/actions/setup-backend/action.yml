@@ -34,8 +34,14 @@ runs:
       uses: actions/cache@v5
       with:
         path: ~/.nuget/packages
-        key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}
+        # Issue #850: cache fingerprint widened to include
+        # Directory.Packages.props (central dep management) and global.json
+        # (SDK pinning). vars.CACHE_VERSION is the emergency invalidation
+        # knob — bump it from 'v1' → 'v2' to flush all NuGet caches without
+        # code change.
+        key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ vars.CACHE_VERSION || 'v1' }}-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory), format('{0}/**/Directory.Packages.props', inputs.working-directory), 'global.json') }}
         restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-nuget-${{ vars.CACHE_VERSION || 'v1' }}-
           ${{ runner.os }}-${{ runner.arch }}-nuget-
 
     - name: Cache .NET build outputs
@@ -45,11 +51,13 @@ runs:
         path: |
           ${{ inputs.working-directory }}/src/**/bin
           ${{ inputs.working-directory }}/src/**/obj
-        # Issue #2152: Include *.json in hash to invalidate cache when appsettings change
-        key: ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/*.cs', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/appsettings*.json', inputs.working-directory)) }}
+        # Issue #2152: Include *.json in hash to invalidate cache when appsettings change.
+        # Issue #850: vars.CACHE_VERSION as global invalidation knob.
+        key: ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ vars.CACHE_VERSION || 'v1' }}-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/*.cs', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/appsettings*.json', inputs.working-directory)) }}
         restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/*.cs', inputs.working-directory)) }}-
-          ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-
+          ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ vars.CACHE_VERSION || 'v1' }}-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/*.cs', inputs.working-directory)) }}-
+          ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ vars.CACHE_VERSION || 'v1' }}-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-
+          ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ vars.CACHE_VERSION || 'v1' }}-
           ${{ runner.os }}-${{ runner.arch }}-dotnet-build-
 
     - name: Restore .NET dependencies

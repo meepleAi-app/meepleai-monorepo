@@ -43,8 +43,13 @@ runs:
       uses: actions/cache@v5
       with:
         path: ${{ env.STORE_PATH }}
-        key: ${{ runner.os }}-${{ runner.arch }}-pnpm-store-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}
+        # Issue #850: cache fingerprint widened to include .npmrc (registry +
+        # auth config affects resolution). vars.CACHE_VERSION is the
+        # emergency invalidation knob — bump 'v1' → 'v2' to flush all pnpm
+        # caches without code change.
+        key: ${{ runner.os }}-${{ runner.arch }}-pnpm-store-${{ vars.CACHE_VERSION || 'v1' }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory), format('{0}/.npmrc', inputs.working-directory)) }}
         restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-pnpm-store-${{ vars.CACHE_VERSION || 'v1' }}-
           ${{ runner.os }}-${{ runner.arch }}-pnpm-store-
 
     - name: Install dependencies

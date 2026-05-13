@@ -12,7 +12,9 @@
 
 ## 1. Problem
 
-Spec §4 of the de-versioning roadmap calls for a cross-cutting `DetailPageLayout` primitive that orchestrates `Hero` + `ConnectionBar` + `Tabs` + footer slots. Wave A.4 (issue #603) already shipped the individual pieces under `apps/web/src/components/ui/detail-layout/` (hero, tabs, sticky-cta, contributors-strip, empty/error/not-found states, plus 3 list-item variants) and the canonical `ConnectionBar` primitive lives at `apps/web/src/components/ui/data-display/connection-bar/`. What does not yet exist is the composer that arranges these pieces in the canonical detail-page DOM order with the right landmark a11y semantics. Stage 3 cluster work for `player-detail`, `toolkit-detail`, `game-detail`, `agent-detail`, `kb-detail`, `session-summary`, `hub/<entity>` will all depend on this composer, so it is the right first piece to ship.
+Spec §4 of the de-versioning roadmap calls for a cross-cutting `DetailPageLayout` primitive that orchestrates `Hero` + `ConnectionBar` + `Tabs` + footer slots. Wave A.4 (issue #603) already shipped the individual pieces under `apps/web/src/components/ui/detail-layout/` (hero, tabs, sticky-cta, contributors-strip, empty/error/not-found states, plus 3 list-item variants) and the canonical `ConnectionBar` primitive lives at `apps/web/src/components/ui/data-display/connection-bar/`. What does not yet exist is the composer that arranges these pieces in the canonical detail-page DOM order with the right landmark a11y semantics.
+
+The composer unblocks new Stage 3 clusters that have no current detail implementation: `player-detail`, `toolkit-detail`, `game-nights`, `discover`, plus the NEW clusters `dashboard` and `hub/<entity>` (once their mockups land via #1097). Already-implemented routes (`game-detail`, `agent-detail`, `kb-detail`, `session-summary`, `/shared-games/[id]`) may opt in later via dedicated refactor PRs — they are not part of Stage 3 cluster work per the parent spec §3 priority table.
 
 ## 2. Goals & Non-goals
 
@@ -97,7 +99,7 @@ Reading order equals DOM order — no CSS `order` reshuffling. The wrapper uses 
 | 3 | `connections` omitted → `<aside>` not in the DOM |
 | 4 | `tabs` omitted → `<nav>` not in the DOM |
 | 5 | `footer` omitted → `<footer>` not in the DOM |
-| 6 | Landmark roles present: `banner`, `complementary`, `navigation` (name "detail sections"), `main`, `contentinfo` |
+| 6 | Landmark roles + accessible names: `banner`, `complementary` (name "related entities"), `navigation` (name "detail sections"), `main`, `contentinfo` |
 | 7 | `className` passthrough on the root wrapper |
 | 8 | Reading order equals DOM order — render with a `<button>` placed inside each of hero / connections / tabs / children / footer, then assert that `Array.from(container.querySelectorAll('button'))` matches the expected source order (no `tabIndex` simulation needed, the test inspects static DOM order only) |
 
@@ -111,7 +113,7 @@ No snapshot tests. No Playwright. No Storybook.
 |---|---|
 | `apps/web/src/components/ui/detail-layout/DetailPageLayout.tsx` | NEW |
 | `apps/web/src/components/ui/detail-layout/DetailPageLayout.test.tsx` | NEW |
-| `apps/web/src/components/ui/detail-layout/index.ts` | UPDATED — add 2 exports, update header comment |
+| `apps/web/src/components/ui/detail-layout/index.ts` | UPDATED — append two new export blocks (named export `DetailPageLayout` + type `DetailPageLayoutProps`); replace the leading JSDoc comment "Wave A.4 (Issue #603) — V2 component family for /shared-games/[id]." with "Detail-layout primitives. Wave A.4 (#603) shipped the pieces; Stage 3 (#1026) added the DetailPageLayout composer." Existing exports are not reordered or modified. |
 
 No other files. No migrations. No backend impact.
 

@@ -15,7 +15,7 @@
 | **Developers** | **Implementation Guide** _(planned)_ |
 | **Architects** | **Technical Reference** _(planned)_ |
 | **Business** | [HOW-IT-WORKS.md](HOW-IT-WORKS.md) |
-| **Everyone** | [Interactive Dashboard](/rag) |
+| **Everyone** | **Interactive Dashboard** _(at `/rag` in the running app)_ |
 
 ---
 
@@ -287,7 +287,7 @@ http://localhost:3000/rag
 
 Download the visual architecture diagram:
 - **PDF**: **meepleai-rag-architecture.pdf** _(planned)_
-- **Web**: [/docs/meepleai-rag-architecture.pdf](/docs/meepleai-rag-architecture.pdf)
+- **Web**: served at `/docs/meepleai-rag-architecture.pdf` _(planned)_
 
 ---
 

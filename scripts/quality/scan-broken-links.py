@@ -129,9 +129,14 @@ def scan(trees: list[str]) -> list[tuple[str, str, str, str]]:
             text = strip_code_regions(raw)
             for match in LINK_RE.finditer(text):
                 target = match.group(1).strip()
-                if not target or target.startswith("/"):
+                if not target:
                     continue
-                resolved = (md.parent / target).resolve()
+                # Absolute-path links: Lychee resolves against `--root-dir`
+                # (the workspace), so do the same here.
+                if target.startswith("/"):
+                    resolved = (REPO_ROOT / target.lstrip("/")).resolve()
+                else:
+                    resolved = (md.parent / target).resolve()
                 if resolved.exists():
                     continue
                 category = classify(target, basename_index)

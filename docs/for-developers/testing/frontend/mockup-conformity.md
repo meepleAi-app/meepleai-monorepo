@@ -1,7 +1,7 @@
 # Mockup-to-route Conformity Gate
 
 > **Issue:** #1069 (WS-C Mockup Conformity Roadmap, umbrella #1066)
-> **Status:** Phase 1 + Phase 2 shipped 2026-05-13 — config, loader, Playwright projects, bootstrap spec, conformity scaffold, pin verifier. Workflows + data-mocking parity ship in Phase 3.
+> **Status:** Phase 1 + Phase 2 + Phase 3 shipped 2026-05-13 — config, loader, Playwright projects, bootstrap spec, conformity scaffold, pin verifier, **both CI workflows**. Per-route data mocks (Phase 3b) and waiver audit log (Phase 4) land separately.
 
 ## Overview
 
@@ -145,12 +145,20 @@ Rules enforced by the loader:
 
 Adding a route does **not** yet make Phase 3 enforce it — until the workflow ships, this is data-only.
 
+### Phase 3 (this PR)
+
+- `.github/workflows/bootstrap-mockup-baselines.yml` — workflow_dispatch (with `reason` input) + auto-trigger on `admin-mockups/design_files/**` push to `main-dev`. Runs `pnpm test:visual:conformity:bootstrap:update` on `ubuntu-22.04`, uploads artifact, opens auto-PR with regenerated `__mockup__/*.png` for human review (peter-evans/create-pull-request)
+- `.github/workflows/visual-regression-conformity.yml` — PR gate triggered on routes in `mockup-ownership.bootstrap.json` triggerPaths OR shared design surface (tokens / Tailwind / mockup HTML). Runs `pnpm test:visual:conformity`, posts/updates sticky PR comment on failure (AC-C.4), uploads diff triplets with 14-day retention (AC-C.3), honors `conformity-waiver` label (AC-C.5), `concurrency: cancel-in-progress` per PR (AC-C.9)
+- `bootstrap.spec.ts` — adaptive `waitForMockupReady` that handles both React-bootstrapped mockups (`#root`/`#desktop-root`/`#mobile-root`) and pure-CSS mockups (Nanolith)
+
+The conformity gate **runs** in CI but every spec is still `test.fixme()`'d pending Phase 3b data mocks. The wiring is present so the next PR that lands `page.route()` stubs can remove fixme guards route-by-route.
+
 ## What ships next
 
 | Phase | Deliverable |
 |-------|-------------|
-| **3** | `.github/workflows/visual-regression-conformity.yml` (gate) + `bootstrap-mockup-baselines.yml` (manual + auto-trigger on mockup change); committed `__mockup__/*.png` baselines; per-route `page.route()` data stubs that unblock the `test.fixme()` guards in `conformity.spec.ts` |
-| **4** | `docs/for-developers/audits/conformity-waivers.md` audit log; waiver issue automation (AC-C.5) |
+| **3b** | Per-route `page.route()` data stubs in `conformity.spec.ts` (mocked Nanolith game + library cards matching mockup dataset); removal of `test.fixme()` guards; first real baseline commit via `bootstrap-mockup-baselines.yml workflow_dispatch` |
+| **4** | `docs/for-developers/audits/conformity-waivers.md` audit log; waiver issue automation (AC-C.5 expiration enforcement) |
 
 ## Running locally
 

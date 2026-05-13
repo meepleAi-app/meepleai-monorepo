@@ -74,6 +74,7 @@ jobs:
         with:
           dotnet-version: '9.0.x'
           working-directory: apps/api
+          cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
       - name: Build (Release)
         working-directory: apps/api
@@ -100,9 +101,11 @@ jobs:
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'
+          cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
       - uses: ./.github/actions/setup-playwright
         with:
           working-directory: apps/web
+          cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
       - name: Run smoke specs only
         # Use the dedicated smoke-real-backend folder (3 specs covering the

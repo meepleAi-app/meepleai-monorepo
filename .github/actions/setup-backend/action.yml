@@ -13,6 +13,15 @@ inputs:
     description: 'Enable NuGet package caching'
     required: false
     default: 'true'
+  cache-version:
+    description: |
+      Cache key version (Issue #850 emergency invalidation knob). Pass
+      `${{ inputs.cache-version }}` from a workflow to inherit
+      the repo-level CACHE_VERSION variable. The `vars` context is NOT
+      available inside composite actions, so resolution must happen at
+      the workflow caller (fix for PR #1124 regression).
+    required: false
+    default: 'v1'
 
 runs:
   using: 'composite'
@@ -36,12 +45,13 @@ runs:
         path: ~/.nuget/packages
         # Issue #850: cache fingerprint widened to include
         # Directory.Packages.props (central dep management) and global.json
-        # (SDK pinning). vars.CACHE_VERSION is the emergency invalidation
-        # knob — bump it from 'v1' → 'v2' to flush all NuGet caches without
-        # code change.
-        key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ vars.CACHE_VERSION || 'v1' }}-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory), format('{0}/**/Directory.Packages.props', inputs.working-directory), 'global.json') }}
+        # (SDK pinning). The `cache-version` input is the emergency
+        # invalidation knob — callers pass `${{ vars.CACHE_VERSION || 'v1' }}`
+        # to inherit the repo variable. See input docs for why `vars` is
+        # not referenced directly here.
+        key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ inputs.cache-version }}-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory), format('{0}/**/Directory.Packages.props', inputs.working-directory), 'global.json') }}
         restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-nuget-${{ vars.CACHE_VERSION || 'v1' }}-
+          ${{ runner.os }}-${{ runner.arch }}-nuget-${{ inputs.cache-version }}-
           ${{ runner.os }}-${{ runner.arch }}-nuget-
 
     - name: Cache .NET build outputs
@@ -52,12 +62,12 @@ runs:
           ${{ inputs.working-directory }}/src/**/bin
           ${{ inputs.working-directory }}/src/**/obj
         # Issue #2152: Include *.json in hash to invalidate cache when appsettings change.
-        # Issue #850: vars.CACHE_VERSION as global invalidation knob.
-        key: ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ vars.CACHE_VERSION || 'v1' }}-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/*.cs', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/appsettings*.json', inputs.working-directory)) }}
+        # Issue #850: `cache-version` input as global invalidation knob (was vars.CACHE_VERSION).
+        key: ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ inputs.cache-version }}-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/*.cs', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/appsettings*.json', inputs.working-directory)) }}
         restore-keys: |
-          ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ vars.CACHE_VERSION || 'v1' }}-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/*.cs', inputs.working-directory)) }}-
-          ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ vars.CACHE_VERSION || 'v1' }}-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-
-          ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ vars.CACHE_VERSION || 'v1' }}-
+          ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ inputs.cache-version }}-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-${{ hashFiles(format('{0}/**/*.cs', inputs.working-directory)) }}-
+          ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ inputs.cache-version }}-${{ hashFiles(format('{0}/**/*.csproj', inputs.working-directory)) }}-
+          ${{ runner.os }}-${{ runner.arch }}-dotnet-build-${{ inputs.cache-version }}-
           ${{ runner.os }}-${{ runner.arch }}-dotnet-build-
 
     - name: Restore .NET dependencies

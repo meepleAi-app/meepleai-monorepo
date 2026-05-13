@@ -160,7 +160,27 @@ Sei workstream (A–F) con dipendenze esplicitate in §4 sequencing.
   - formula referenziata nel doc `mockup-conformity.md` con esempio numerico.
 - **AC-C.3**: failure produce artifact `conformity-diffs-{run}` con triplet (mockup.png, route.png, diff.png) per ciascuna route fallita. **Retention**: 14 giorni per PR runs, 90 giorni per `main-dev` runs (configurato in workflow `actions/upload-artifact retention-days`).
 - **AC-C.4**: commento PR include link artifact + screenshot inline + percentuale diff per route (formula AC-C.2). Commento è **sticky** (replace su re-run, no spam).
-- **AC-C.5**: workflow saltabile via label PR `conformity-waiver` con commento obbligatorio rationale. Waiver crea automaticamente issue follow-up con label `conformity-debt` + due-date 30 giorni; issue blocca merge a `main-staging` finché non risolta o ri-validata. Audit trail in `docs/for-developers/audits/conformity-waivers.md` (append-only log: PR#, route, rationale, expiry).
+- **AC-C.5**: waiver system — il PR gate è saltabile tramite label `conformity-waiver`, con i seguenti sub-criteri concreti:
+  - **AC-C.5.1 (rationale enforcement)**: workflow separato `conformity-waiver-validator.yml` è **required check** quando il PR ha la label `conformity-waiver`. Cerca nei commenti del PR un blocco marcatore strutturato:
+    ```
+    > Conformity waiver rationale:
+    > Reason: <free text, min 40 char>
+    > Expiry: <YYYY-MM-DD, optional, default = now+30d, max = now+90d>
+    > Routes: <space-separated route ids from mockup-ownership.bootstrap.json>
+    ```
+    Il check fallisce (red, blocking) se il blocco è assente, malformato, o `Expiry` fuori range. Autore del commento deve essere uno tra: PR author, repo maintainer, member di `area/frontend`.
+  - **AC-C.5.2 (debt-issue dedup)**: workflow `conformity-debt-issue.yml` (triggered su label-add) calcola dedup key `sha256(PR_number || sorted(route_ids) || iso_week(now))`. Query issue aperte con quella key in body header marker `<!-- waiver-key: {key} -->`. Se trovata, comment-update invece di create. Se PR è chiusa unmerged, hook chiude la debt-issue (`closed_by: auto-cancelled, PR not merged`).
+  - **AC-C.5.3 (expiry semantics)**: ogni debt-issue ha campo `Expiry` nel body (parsed dal rationale, default 30gg). Issue body include header machine-readable:
+    ```
+    <!-- conformity-debt: routes=library,library-game-detail; expiry=2026-06-13; waiver-key=ABC123 -->
+    ```
+  - **AC-C.5.4 (cross-branch gate)**: workflow `conformity-debt-gate.yml` è **required check** su PR `main-dev → main-staging` e `main-staging → main`. Enumera issue aperte con label `conformity-debt`, parsing del marker `expiry=`, fail se almeno una ha `expiry < now`. Output console + sticky PR comment elenca le issue scadute per remediation manuale.
+  - **AC-C.5.5 (audit log, git-based)**: workflow waiver crea/aggiorna `docs/for-developers/audits/conformity-waivers.md` via auto-PR (peter-evans/create-pull-request@SHA-pinned). Aggiunta è in fondo, sezione per anno-mese, formato tabellare. **"Append-only"** è inteso come **convention** (git history mostra ogni rimozione, code review detecta tampering). Non è enforced cryptographically nello scope WS-C; sufficiente come audit trail per il contesto del progetto.
+  - **AC-C.5.6 (closing conditions)**: debt-issue si chiude in tre modi:
+    1. **Auto-close su PR remediation**: PR che include `Closes #<debt-issue-number>` e supera conformity gate green → workflow chiude issue con commento `closed_by: remediated by PR #N`.
+    2. **Manual re-validate**: maintainer applica label `waiver-revalidated` su una PR che dimostra che il routes mappati ora conformano alla baseline. Workflow chiude debt-issue.
+    3. **Expiry passed**: se `expiry < now` senza chiusura → no auto-close, ma AC-C.5.4 fa fail su merge a main-staging. Reviewer deve decidere manualmente: estendere expiry (nuovo waiver) oppure remediare.
+  - **AC-C.5.7 (observability)** (opzionale, Phase 4c): workflow weekly `conformity-debt-summary.yml` publishes `docs/for-developers/audits/conformity-waivers-summary.md` con top routes by debt count, oldest expiring, active count. Costo basso, segnale operativo.
 - **AC-C.6**: mockup baselines committed sotto `apps/web/e2e/visual-conformity/__mockup__/{route-slug}.{viewport}.png`. Rigenerati **solo** via workflow dedicato `bootstrap-mockup-baselines.yml` (manual `workflow_dispatch` + auto-trigger su `admin-mockups/design_files/**` change con PR auto-create). Gate `visual-regression-conformity.yml` **non** rigenera mai baselines: confronta solo route live vs PNG committed.
 - **AC-C.7**: WS-C ships con bootstrap minimal `apps/web/e2e/visual-conformity/mockup-ownership.bootstrap.json` hardcoded a **2 route**: `/library` (mockup `sp4-library-desktop.html`, Wave B.3 stable) e `/library/[gameId]` (mockup `nanolith-runthrough-game-detail.html`, sinergico con WS-B/WS-D Exemplar). Schema completo + auto-discovery sono scope WS-F. JSON schema sidecar `mockup-ownership.schema.json` versionato in repo.
 - **AC-C.8**: determinismo cross-environment garantito da:
@@ -174,7 +194,10 @@ Sei workstream (A–F) con dipendenze esplicitate in §4 sequencing.
 - false positive da anti-alias / font rendering → mitigation: AC-C.8 font lock + per-route `conformityRatio` override.
 - Tempo CI eccessivo (>10min) → mitigation: parallelizzazione per-route project Playwright + cache mockup screenshots invariati (mockup HTML hash → cache key).
 - Mockup HTML usa React 18 UMD (vedi `sp4-library-desktop.html:16-17`) → rendering CI consistente? mitigation: AC-C.8 React version + SRI pin in `serve-mockups.cjs`.
-- Waiver back-door permanente → mitigation: AC-C.5 expiration 30gg + blocking label `conformity-debt`.
+- Waiver back-door permanente → mitigation: AC-C.5 expiration 30gg (override max 90gg) + AC-C.5.4 cross-branch gate su PR a main-staging/main.
+- Waiver applicato senza rationale → mitigation: AC-C.5.1 required check `conformity-waiver-validator` parsifica marker strutturato.
+- Duplicate debt-issue se label flap → mitigation: AC-C.5.2 dedup key `sha256(PR, routes, iso_week)` + comment-update fallback.
+- "Append-only" audit log mutable via git → mitigation: AC-C.5.5 accetta git-as-audit-log; tampering visibile in code review.
 - Baseline drift silenzioso post-mockup-change → mitigation: AC-C.6 auto-PR su `admin-mockups/design_files/**` change forza review esplicita.
 
 **Rollback**: workflow disable via PR — gate scompare ma legacy gates restano. Baselines + bootstrap JSON retained come documentation reference.

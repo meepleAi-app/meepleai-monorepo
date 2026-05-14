@@ -163,7 +163,13 @@ jobs:
   backend-fast:
     name: Backend Fast (build + unit)
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Issue #1161: raised from 5 → 8 minutes. The Release `dotnet build` step
+    # alone takes ~4min on ubuntu-latest runners (confirmed on PR #1156 cancels);
+    # combined with setup (~30s) and the test step (~30s) the 5-min budget
+    # leaves no headroom and the job is cancelled mid-test. 8 min gives a ~3min
+    # safety buffer. If observed wall-clock sustains > 6 min, revisit and
+    # consider splitting build + test into separate jobs (issue #1161 option b).
+    timeout-minutes: 8
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     steps:

@@ -45,7 +45,16 @@ internal sealed record ToolkitDetailDto(
     DateTime CreatedAt,
     DateTime? PublishedAt,
     DateTime? YankedAt,
-    string CurrentVersion);
+    string CurrentVersion,
+    // ── Issue #1144 — Stage 3 marketplace extension (appended for binary compat) ──
+    // License:   SPDX-like string (e.g. "CC BY-SA 4.0"). Nullable; FE hides meta row.
+    // GameName:  LEFT JOIN of GameEntity via GameToolkit.GameId. Null when toolkit
+    //            has no game or the game is soft-deleted.
+    // SizeBytes: UTF-8 byte count of AgentConfig + all tool/template JSON columns.
+    //            Nullable per spec §5.5.2 versioning policy; impl always populates.
+    string? License = null,
+    string? GameName = null,
+    long? SizeBytes = null);
 
 /// <summary>
 /// Truncated agent summary embedded in <see cref="ToolkitDetailDto"/>.

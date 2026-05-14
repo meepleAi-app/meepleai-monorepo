@@ -294,7 +294,10 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
             OverridesTurnOrder = toolkit.OverridesTurnOrder,
             OverridesScoreboard = toolkit.OverridesScoreboard,
             OverridesDiceSet = toolkit.OverridesDiceSet,
+#pragma warning disable CS0618 // Issue #1144 / spec D-5: paired write — legacy int + new semver in same MapToPersistence call.
             Version = toolkit.Version,
+#pragma warning restore CS0618
+            VersionSemver = $"0.{toolkit.Version}.0",
             CreatedByUserId = toolkit.CreatedByUserId,
             IsPublished = toolkit.IsPublished,
             CreatedAt = toolkit.CreatedAt,

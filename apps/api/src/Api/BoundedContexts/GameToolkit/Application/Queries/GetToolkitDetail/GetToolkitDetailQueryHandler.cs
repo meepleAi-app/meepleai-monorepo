@@ -83,8 +83,12 @@ internal sealed class GetToolkitDetailQueryHandler
         GetToolkitDetailQuery request,
         CancellationToken cancellationToken)
     {
+        // Issue #1144 — Include(t => t.Game) drives a LEFT JOIN so the marketplace
+        // surface can project Game.Name without a second round-trip. EF emits a
+        // LEFT JOIN automatically because GameId is nullable.
         var entity = await _context.GameToolkits
             .AsNoTracking()
+            .Include(t => t.Game)
             .FirstOrDefaultAsync(t => t.Id == request.ToolkitId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -143,16 +147,25 @@ internal sealed class GetToolkitDetailQueryHandler
         var canRate = hasInstalled && !isOwner; // !alreadyRated true by stub
 
         var publishedAt = isPublished ? entity.UpdatedAt : (DateTime?)null;
-        // currentVersion: "1.0.{intVersion}" placeholder until semver lands.
-        var currentVersion = $"1.0.{entity.Version}";
+
+        // Issue #1144 — VersionSemver is the source of truth for the marketplace
+        // surface (spec D-5). Legacy int Version retained for the composite
+        // uniqueness index until the cleanup PR scheduled in spec §13.
+        var currentVersion = entity.VersionSemver;
 
         var agentSummary = BuildAgentSummary(entity);
+        var sizeBytes = ComputeSizeBytes(entity);
+
+        // Description: prefer the real column; fall back to a synthetic preview
+        // only when the column is NULL. Empty-string ("") is treated as a
+        // legitimate user choice (spec §9.1 cross-aggregate edge cases).
+        var description = entity.Description
+            ?? $"Toolkit \"{entity.Name}\" by {authorName}.";
 
         var detail = new ToolkitDetailDto(
             Id: entity.Id,
             Name: entity.Name,
-            // Description: no column; derived from Name + author preview until v2.
-            Description: $"Toolkit by {authorName}.",
+            Description: description,
             AuthorId: entity.CreatedByUserId,
             AuthorName: authorName,
             AuthorAvatarUrl: author?.AvatarUrl,
@@ -166,7 +179,11 @@ internal sealed class GetToolkitDetailQueryHandler
             CreatedAt: entity.CreatedAt,
             PublishedAt: publishedAt,
             YankedAt: null,
-            CurrentVersion: currentVersion);
+            CurrentVersion: currentVersion,
+            // Stage 3 marketplace fields (spec §5.3)
+            License: entity.License,
+            GameName: entity.Game?.Name,
+            SizeBytes: sizeBytes);
 
         var viewerContext = new ViewerContextDto(
             IsOwner: isOwner,
@@ -184,6 +201,32 @@ internal sealed class GetToolkitDetailQueryHandler
 
         return new ToolkitDetailContainer(response);
     }
+
+    /// <summary>
+    /// Issue #1144 / spec §5.4 — single canonical SizeBytes formula. Sums UTF-8
+    /// byte counts (NEVER char counts) of every JSON/text payload stored on the
+    /// entity. Reads the persisted raw JSON columns directly (NEVER
+    /// re-serialises from a typed object — re-serialisation is non-deterministic
+    /// on key ordering and whitespace, which would make SizeBytes drift between
+    /// sequential reads of the same row).
+    /// </summary>
+    private static long ComputeSizeBytes(GameToolkitEntity entity)
+    {
+        long total = 0;
+        total += Utf8ByteCount(entity.AgentConfig);
+        total += Utf8ByteCount(entity.DiceToolsJson);
+        total += Utf8ByteCount(entity.CardToolsJson);
+        total += Utf8ByteCount(entity.TimerToolsJson);
+        total += Utf8ByteCount(entity.CounterToolsJson);
+        total += Utf8ByteCount(entity.UserDicePresetsJson);
+        total += Utf8ByteCount(entity.ScoringTemplateJson);
+        total += Utf8ByteCount(entity.TurnTemplateJson);
+        total += Utf8ByteCount(entity.StateTemplate);
+        return total;
+    }
+
+    private static long Utf8ByteCount(string? value)
+        => value is null ? 0 : System.Text.Encoding.UTF8.GetByteCount(value);
 
     private static (int ToolsCount, int KbDocsCount) ComputeToolAndKbCounts(GameToolkitEntity entity)
     {

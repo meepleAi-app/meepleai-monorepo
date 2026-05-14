@@ -1675,6 +1675,100 @@
         "secondaryCta": "Invita amici"
       }
     },
+    "toolkitDetail": {
+      "loading": {
+        "ariaLabel": "Caricamento toolkit…"
+      },
+      "error": {
+        "title": "Impossibile caricare il toolkit",
+        "description": "Si è verificato un errore di rete. Riprova o torna al catalogo.",
+        "retry": "Riprova"
+      },
+      "notFound": {
+        "title": "Toolkit non trovato",
+        "description": "Il toolkit richiesto non esiste o è stato rimosso."
+      },
+      "hero": {
+        "authorChipPrefix": "di",
+        "gameChipPrefix": "per",
+        "statsHeading": "Statistiche del toolkit",
+        "installCount": "Installazioni",
+        "rating": "Valutazione",
+        "version": "Versione",
+        "noRatings": "Nessuna valutazione"
+      },
+      "tabs": {
+        "ariaLabel": "Sezioni del toolkit",
+        "overview": "Panoramica",
+        "agent": "Agente",
+        "kb": "Knowledge Base",
+        "tools": "Strumenti",
+        "versions": "Versioni",
+        "ratings": "Recensioni",
+        "disabledTooltip": "Disponibile in Phase 5"
+      },
+      "connectionBar": {
+        "ariaLabel": "Entità collegate al toolkit",
+        "emptyHint": "Dato non ancora disponibile"
+      },
+      "pips": {
+        "agent": "Agente",
+        "kb": "KB",
+        "tools": "Strumenti",
+        "game": "Gioco",
+        "author": "Autore",
+        "sessions": "Sessioni"
+      },
+      "overview": {
+        "descriptionHeading": "Descrizione",
+        "metaHeading": "Dettagli",
+        "meta": {
+          "license": "Licenza",
+          "version": "Versione",
+          "size": "Dimensione",
+          "published": "Pubblicato il",
+          "unknown": "—"
+        },
+        "includesHeading": "Cosa include"
+      },
+      "includes": {
+        "agent": "Agente",
+        "kbDocs": "Documenti KB",
+        "tools": "Strumenti"
+      },
+      "tools": {
+        "heading": "Strumenti inclusi",
+        "description": "Il toolkit include i seguenti strumenti utilizzabili nelle sessioni.",
+        "countTemplate": "{count} strumenti",
+        "emptyTitle": "Nessuno strumento",
+        "emptyBody": "Questo toolkit non contiene strumenti configurati."
+      },
+      "disabled": {
+        "phase5Badge": "Disponibile in Phase 5",
+        "agent": {
+          "title": "Dettagli agente",
+          "description": "I dettagli del system prompt dell'agente saranno disponibili in una versione successiva (#822)."
+        },
+        "kb": {
+          "title": "Documenti KB",
+          "description": "L'elenco dei documenti KB associati sarà disponibile in una versione successiva (#822)."
+        },
+        "versions": {
+          "title": "Storico versioni",
+          "description": "La timeline delle versioni e i changelog saranno disponibili in una versione successiva (#822)."
+        },
+        "ratings": {
+          "title": "Valutazioni e recensioni",
+          "description": "Le recensioni della community saranno disponibili in una versione successiva (#819)."
+        }
+      },
+      "footer": {
+        "editAction": "Modifica toolkit",
+        "publishAction": "Pubblica nuova versione",
+        "installAction": "Installa toolkit",
+        "shareAction": "Condividi"
+      }
+    },
     "sessions": {
       "metadata": {
         "title": "Le mie partite — MeepleAI",

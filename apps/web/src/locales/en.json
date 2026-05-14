@@ -1625,6 +1625,100 @@
         "secondaryCta": "Invite friends"
       }
     },
+    "toolkitDetail": {
+      "loading": {
+        "ariaLabel": "Loading toolkit…"
+      },
+      "error": {
+        "title": "Cannot load toolkit",
+        "description": "A network error occurred. Try again or go back to the catalog.",
+        "retry": "Retry"
+      },
+      "notFound": {
+        "title": "Toolkit not found",
+        "description": "The requested toolkit does not exist or was removed."
+      },
+      "hero": {
+        "authorChipPrefix": "by",
+        "gameChipPrefix": "for",
+        "statsHeading": "Toolkit statistics",
+        "installCount": "Installs",
+        "rating": "Rating",
+        "version": "Version",
+        "noRatings": "No ratings yet"
+      },
+      "tabs": {
+        "ariaLabel": "Toolkit sections",
+        "overview": "Overview",
+        "agent": "Agent",
+        "kb": "Knowledge base",
+        "tools": "Tools",
+        "versions": "Versions",
+        "ratings": "Ratings",
+        "disabledTooltip": "Available in Phase 5"
+      },
+      "connectionBar": {
+        "ariaLabel": "Entities related to this toolkit",
+        "emptyHint": "Not yet available"
+      },
+      "pips": {
+        "agent": "Agent",
+        "kb": "KB",
+        "tools": "Tools",
+        "game": "Game",
+        "author": "Author",
+        "sessions": "Sessions"
+      },
+      "overview": {
+        "descriptionHeading": "Description",
+        "metaHeading": "Details",
+        "meta": {
+          "license": "License",
+          "version": "Version",
+          "size": "Size",
+          "published": "Published on",
+          "unknown": "—"
+        },
+        "includesHeading": "What's included"
+      },
+      "includes": {
+        "agent": "Agent",
+        "kbDocs": "KB documents",
+        "tools": "Tools"
+      },
+      "tools": {
+        "heading": "Included tools",
+        "description": "This toolkit includes the following tools usable in sessions.",
+        "countTemplate": "{count} tools",
+        "emptyTitle": "No tools",
+        "emptyBody": "This toolkit doesn't contain any configured tools."
+      },
+      "disabled": {
+        "phase5Badge": "Available in Phase 5",
+        "agent": {
+          "title": "Agent details",
+          "description": "Agent system prompt details will be available in a later release (#822)."
+        },
+        "kb": {
+          "title": "KB documents",
+          "description": "The list of associated KB documents will be available in a later release (#822)."
+        },
+        "versions": {
+          "title": "Version history",
+          "description": "Version timeline and changelogs will be available in a later release (#822)."
+        },
+        "ratings": {
+          "title": "Ratings and reviews",
+          "description": "Community reviews will be available in a later release (#819)."
+        }
+      },
+      "footer": {
+        "editAction": "Edit toolkit",
+        "publishAction": "Publish new version",
+        "installAction": "Install toolkit",
+        "shareAction": "Share"
+      }
+    },
     "sessions": {
       "metadata": {
         "title": "My sessions — MeepleAI",

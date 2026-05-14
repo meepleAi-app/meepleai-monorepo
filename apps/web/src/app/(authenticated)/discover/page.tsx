@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
@@ -47,7 +47,21 @@ function parseFilter(raw: string | null): EntityFilter {
   return 'all';
 }
 
+/**
+ * Default export wraps the discover content in a Suspense boundary.
+ * Required by Next.js App Router because `useSearchParams()` opts the page
+ * out of SSR static prerendering; without Suspense, the build emits a
+ * "should be wrapped in a suspense boundary" CSR bailout error.
+ */
 export default function DiscoverPage() {
+  return (
+    <Suspense fallback={null}>
+      <DiscoverContent />
+    </Suspense>
+  );
+}
+
+function DiscoverContent() {
   const { t } = useTranslation();
   const searchParams = useSearchParams();
   const router = useRouter();

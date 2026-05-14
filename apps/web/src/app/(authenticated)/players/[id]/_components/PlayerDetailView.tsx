@@ -58,28 +58,16 @@ import {
 } from '@/lib/player-detail/player-detail-visual-test-fixture';
 
 import { GamesTabPanel, type GamesTabPanelLabels } from './GamesTabPanel';
-import {
-  PlayerConnectionBar,
-  type PlayerConnectionBarLabels,
-} from './PlayerConnectionBar';
-import {
-  PlayerOverviewRegion,
-  type PlayerOverviewRegionLabels,
-} from './PlayerOverviewRegion';
+import { PlayerConnectionBar, type PlayerConnectionBarLabels } from './PlayerConnectionBar';
+import { PlayerOverviewRegion, type PlayerOverviewRegionLabels } from './PlayerOverviewRegion';
 import {
   PLAYER_TAB_KEYS,
   PlayerTabs,
   type PlayerTabKey,
   type PlayerTabsLabels,
 } from './PlayerTabs';
-import {
-  SessionsTabPanel,
-  type SessionsTabPanelLabels,
-} from './SessionsTabPanel';
-import {
-  ToolkitsTabPanel,
-  type ToolkitsTabPanelLabels,
-} from './ToolkitsTabPanel';
+import { SessionsTabPanel, type SessionsTabPanelLabels } from './SessionsTabPanel';
+import { ToolkitsTabPanel, type ToolkitsTabPanelLabels } from './ToolkitsTabPanel';
 
 // ─── State override hatch (dev / visual-test only) ─────────────────────────
 
@@ -100,9 +88,7 @@ const DEFAULT_TAB: PlayerTabKey = 'sessions';
 
 function parseTabFromUrl(raw: string | null): PlayerTabKey {
   if (raw == null) return DEFAULT_TAB;
-  return (PLAYER_TAB_KEYS as readonly string[]).includes(raw)
-    ? (raw as PlayerTabKey)
-    : DEFAULT_TAB;
+  return (PLAYER_TAB_KEYS as readonly string[]).includes(raw) ? (raw as PlayerTabKey) : DEFAULT_TAB;
 }
 
 // ─── Props ─────────────────────────────────────────────────────────────────
@@ -480,43 +466,45 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
   }
 
   return (
-    <DetailPageLayout
-      hero={
-        <>
-          <PlayerHero
-            displayName={safeProfile.displayName}
-            totalSessions={safeProfile.totalSessions}
-            totalWins={safeProfile.totalWins}
-            winRate={safeProfile.winRate}
-            onBack={() => router.push('/players')}
-            labels={heroLabels}
-          />
-          <PlayerOverviewRegion
+    <div data-slot="player-detail-view">
+      <DetailPageLayout
+        hero={
+          <>
+            <PlayerHero
+              displayName={safeProfile.displayName}
+              totalSessions={safeProfile.totalSessions}
+              totalWins={safeProfile.totalWins}
+              winRate={safeProfile.winRate}
+              onBack={() => router.push('/players')}
+              labels={heroLabels}
+            />
+            <PlayerOverviewRegion
+              stats={safeProfile}
+              labels={overviewLabels}
+              onFavoriteAgentClick={
+                safeProfile.favoriteAgentName != null ? () => router.push('/agents') : undefined
+              }
+            />
+          </>
+        }
+        connections={
+          <PlayerConnectionBar
             stats={safeProfile}
-            labels={overviewLabels}
-            onFavoriteAgentClick={
-              safeProfile.favoriteAgentName != null ? () => router.push('/agents') : undefined
-            }
+            gameCount={gameCount}
+            labels={connectionLabels}
           />
-        </>
-      }
-      connections={
-        <PlayerConnectionBar
-          stats={safeProfile}
-          gameCount={gameCount}
-          labels={connectionLabels}
-        />
-      }
-      tabs={
-        <PlayerTabs
-          activeTab={tab}
-          onChange={onTabChange}
-          counts={tabCounts}
-          labels={tabLabels}
-        />
-      }
-    >
-      {tabPanel}
-    </DetailPageLayout>
+        }
+        tabs={
+          <PlayerTabs
+            activeTab={tab}
+            onChange={onTabChange}
+            counts={tabCounts}
+            labels={tabLabels}
+          />
+        }
+      >
+        {tabPanel}
+      </DetailPageLayout>
+    </div>
   );
 }

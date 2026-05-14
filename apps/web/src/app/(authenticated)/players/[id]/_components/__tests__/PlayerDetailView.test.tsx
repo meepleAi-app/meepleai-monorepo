@@ -163,6 +163,11 @@ describe('PlayerDetailView', () => {
 
   it('Cell 5: renders default view when stats are loaded', () => {
     const { container } = renderView('sara-rossi');
+    // #1143: feature-specific wrapper that 4 E2E specs (smoke / a11y /
+    // v2-states / sp4-visual) use as the readiness anchor for the default
+    // branch. Guards against the regression that #1138 introduced when the
+    // DetailPageLayout primitive replaced the legacy wrapper.
+    expect(getBySlot(container, 'player-detail-view')).toBeDefined();
     expect(getBySlot(container, 'detail-page-layout')).toBeDefined();
   });
 

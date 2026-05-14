@@ -1625,6 +1625,64 @@
         "secondaryCta": "Invite friends"
       }
     },
+    "dashboard": {
+      "hero": {
+        "guestName": "friend",
+        "greetingMorning": "Good morning",
+        "greetingAfternoon": "Good afternoon",
+        "greetingEvening": "Good evening",
+        "subtitle": "Your overview: games in your library, gaming group, AI agents, sessions, and upcoming events.",
+        "kpiGames": "Games",
+        "kpiSessions": "Sessions",
+        "kpiHours": "Hours played",
+        "kpiWinRate": "Win rate"
+      },
+      "sections": {
+        "games": {
+          "title": "Games",
+          "viewAll": "View library",
+          "emptyTitle": "No games in your library.",
+          "emptyCta": "+ Add game"
+        },
+        "players": {
+          "title": "Gaming group",
+          "viewAll": "All players",
+          "countTemplate": "{visible} of {total}",
+          "emptyTitle": "No gaming group yet.",
+          "emptyCta": "+ Invite friends"
+        },
+        "agents": {
+          "title": "AI agents",
+          "viewAll": "All",
+          "statusActive": "Active",
+          "statusIdle": "Idle",
+          "emptyTitle": "No active AI agents.",
+          "emptyCta": "Explore /hub/agents"
+        },
+        "sessions": {
+          "title": "Sessions",
+          "liveBadge": "Live",
+          "viewAll": "All",
+          "playerCountTemplate": "{count} players",
+          "minutesTemplate": "{count} min",
+          "untitled": "Session",
+          "emptyTitle": "No active or recent sessions.",
+          "emptyCta": "+ Create session",
+          "statusLive": "Live",
+          "statusCompleted": "Completed",
+          "statusPaused": "Paused",
+          "statusSetup": "Setup",
+          "statusAbandoned": "Abandoned"
+        },
+        "events": {
+          "title": "Upcoming nights",
+          "viewAll": "Calendar",
+          "participantsTemplate": "{confirmed}/{total} confirmed",
+          "emptyTitle": "No game nights planned.",
+          "emptyCta": "+ Plan a night"
+        }
+      }
+    },
     "toolkitDetail": {
       "loading": {
         "ariaLabel": "Loading toolkit…"

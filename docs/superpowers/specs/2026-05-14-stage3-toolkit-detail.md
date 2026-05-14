@@ -75,7 +75,7 @@ All six files under `apps/web/src/components/features/toolkit-detail/*.tsx` decl
 
 1. **`[Obsolete]` on `Version int` setter** in `GameToolkitEntity` — read access remains for legacy endpoints, but any new write code path is flagged at compile time.
 2. **Domain invariant**: the entity factory / version-bump command writes BOTH columns in the same EF Core change tracker. A unit test (`Version_int_and_semver_stay_in_sync`) enforces that any code path mutating one mutates the other.
-3. **CI guard**: add an `Architecture` test (NetArchTest or similar — if not present, a simple Roslyn analyzer) that fails the build if any non-migration code calls `entity.Version = …` without setting `VersionSemver` in the same statement / unit-of-work.
+3. **CI guard**: a repository-scan unit test (using `Directory.EnumerateFiles` + regex over `apps/api/src/**/*.cs`) fails the build if any production code outside `Infrastructure/Migrations/` matches `\bentity\.Version\s*=` or `\bSet\(.*nameof\(.*\.Version\)\s*,` without an adjacent `VersionSemver` write on the same line or within the same statement block. NetArchTest is not a current project dependency — this grep-based check is sufficient and self-contained.
 4. **Deletion milestone**: legacy `Version int` removed in a follow-up PR scheduled for the next minor release after all consumers verified migrated (tracked in §13).
 
 Without these guardrails the two columns will drift within 2-3 PRs and produce silent marketplace-vs-runtime version mismatches.
@@ -95,7 +95,7 @@ Without these guardrails the two columns will drift within 2-3 PRs and produce s
 **Goals (in scope):**
 
 1. Add 4 new columns to `GameToolkits` table: `description`, `license`, `version_semver`, *(none for size — projected)*. EF migration reversible.
-2. Add 4+1 fields to `ToolkitDetailDto`: `License`, `VersionSemver` (replacing the way `CurrentVersion` is populated — same field name, real source), `SizeBytes`, `GameName`. The DTO field count grows by 3 (License, SizeBytes, GameName); `Description` and `CurrentVersion` change source but not type.
+2. Add **3 new fields** to `ToolkitDetailDto`: `License`, `GameName`, `SizeBytes` (all nullable per §5.5.2 versioning policy). Two existing fields change source but keep the same wire shape: `Description` reads from the new column with synthetic fallback; `CurrentVersion` reads from the new `version_semver` column instead of the synthesised `"1.0.{int}"`.
 3. FE adopts `DetailPageLayout` for `/toolkits/[id]`, wires the 6 stub components, implements 6-tab navigation, renders mockup-faithfully against the live wire shape.
 4. Visual conformity vs `admin-mockups/design_files/sp4-toolkit-detail.jsx` validated by Playwright.
 
@@ -238,7 +238,7 @@ long sizeBytes =
     Encoding.UTF8.GetByteCount(entity.ToolsConfig ?? string.Empty);
 ```
 
-Both terms are **UTF-8 byte counts**, never char counts. `ToolsConfig` is the JSON string column already on the entity; if it's stored as `jsonb`, project the raw text via `EF.Functions.Cast` or read the entity column directly (whichever EF mapping is in place — verify in implementation; if it's deserialised to a typed object, re-serialise via `JsonSerializer.Serialize(entity.ToolsConfig)` and count bytes on the result).
+Both terms are **UTF-8 byte counts**, never char counts. `ToolsConfig` MUST be read as the **persisted raw JSON text** (e.g. via `EF.Property<string>(entity, "ToolsConfig")` or a shadow string property mapped to the underlying column). Never re-serialise from a deserialised object graph — `JsonSerializer.Serialize` is non-deterministic on key ordering and whitespace, which would make `SizeBytes` drift between sequential reads of the same row. If the entity exposes `ToolsConfig` only as a typed POCO, add a `[NotMapped]` `RawToolsConfigJson` shadow property that the handler reads.
 
 Exemplary Gherkin (added to §9.1): `Given systemPrompt = "Café ☕" (8 UTF-8 bytes) and ToolsConfig = "[]" (2 UTF-8 bytes), When the handler runs, Then SizeBytes = 10`.
 - **License**: pass-through `entity.License`.
@@ -539,15 +539,15 @@ test('frontend /toolkits/{id} renders shell for deterministic slug', async ({ pa
   (a) applies the migration, captures the `information_schema.columns` snapshot for `game_toolkits`,
   (b) runs `Down()`, captures a second snapshot,
   (c) asserts column-set equality with the pre-migration baseline (column names, types, nullability, defaults).
-  No data-loss assertion: a probe row inserted before migration MUST still be readable after Up→Down. Schema diff is unit-testable as a SQL string comparison only as a smoke; the authoritative check is the Testcontainers roundtrip.
+  Data preservation assertion: a probe row inserted before migration MUST still be readable after Up→Down with all original column values intact. Schema diff is unit-testable as a SQL string comparison only as a smoke; the authoritative check is the Testcontainers roundtrip.
 - **AC3 — Unit coverage**: 8 new scenarios in `GetToolkitDetailQueryHandlerTests` pass. Coverage on the modified handler ≥ 90% measured via `dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura` against the existing `coverlet.runsettings` config (repo target documented in `apps/api/tests/Api.Tests/coverlet.runsettings`).
 - **AC4 — Backwards compatibility**: existing wire-shape consumers (FE `useToolkitDetail` pre-PR) parse the new payload without error. Zod `.passthrough()` not required — additive fields only.
 - **AC5 — Staging exercise**: backfill SQL run on a staging DB clone; row counts match; spot-check 5 toolkits show plausible `VersionSemver` values.
 - **AC6 — No regression**: `dotnet test --filter "BoundedContext=GameToolkit|GameToolbox"` green.
 - **AC7 — Cache invalidation on write** (Fowler panel IMPORTANT): the HybridCache tag `toolkitDetail` (and the per-toolkit tag `toolkit:{id}`) is bumped on every write path that mutates fields surfaced in this DTO — specifically `AgentConfig.SystemPrompt`, `ToolsConfig`, `Description`, `License`, `VersionSemver`. An integration test edits each field via its respective command and asserts the next `GET /api/v1/toolkits/{id}` returns the new value (not the cached stale one).
-- **AC8 — Drift prevention enforcement** (Fowler panel CRITICAL): `Version int` writes are blocked at the architecture-test layer; the legacy column setter carries `[Obsolete]`; an explicit unit test (`Version_int_and_semver_stay_in_sync`) verifies that any command writing one writes the other in the same `SaveChangesAsync` call.
+- **AC8 — Drift prevention enforcement** (Fowler panel CRITICAL): the legacy `Version int` setter carries `[Obsolete]`; an explicit unit test (`Version_int_and_semver_stay_in_sync`) verifies that any command writing one writes the other in the same `SaveChangesAsync` call; a repository-scan test (per D-5.3) fails the build if production code outside `Infrastructure/Migrations/` writes `entity.Version` without an adjacent `VersionSemver` write.
 
-> **Precondition (not AC)**: issue #1144 body is edited at BE-PR-open time to reference `ToolkitDetailDto` (not `ToolboxDto`). This is a process step, not an artifact-verifiable acceptance criterion.
+> **Precondition (not AC)**: issue #1144 body is edited at BE-PR-open time to reference `ToolkitDetailDto` (not `ToolboxDto`) — see decision D-9 for rationale. This is a process step, not an artifact-verifiable acceptance criterion.
 
 ### 11.2 FE (issue #1145)
 
@@ -564,7 +564,7 @@ test('frontend /toolkits/{id} renders shell for deterministic slug', async ({ pa
   - AC12.7 No `Suspense` boundary throws; no `kind="error"` shell is reachable from any stub state.
 - **AC13 — Visual conformity**: Playwright visual baseline matches mockup within tolerance threshold (1.5% pixel diff per existing config at `apps/web/playwright-visual.config.ts`).
 - **AC14 — Smoke**: `toolkit-detail.smoke.spec.ts` passes on `main-dev` after merge using the OR-selector pattern from #1143.
-- **AC15 — Unit coverage**: ≥ 85% on new components (CLAUDE.md frontend target).
+- **AC15 — Unit coverage**: ≥ 85% on new components measured via `pnpm test:coverage` (Vitest v8 coverage) against the threshold gate in `apps/web/vitest.config.ts` (per CLAUDE.md frontend target).
 - **AC16 — A11y**: WAI-ARIA landmarks via `DetailPageLayout` (`<header>`, `<aside>`, `<nav>`, `<main>`). No new `axe-core` violations beyond baseline.
 - **AC17 — No hardcoded colors**: ESLint `local/no-hardcoded-color-utility` clean.
 

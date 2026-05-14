@@ -1609,6 +1609,72 @@
         }
       }
     },
+    "discover": {
+      "miniNav": {
+        "breadcrumb": "Scopri",
+        "tabAll": "Scopri"
+      },
+      "hero": {
+        "title": "Scopri la community",
+        "subtitle": "Esplora giochi, agenti, toolkit, KB e contributor. Filtra per entità o cerca tra il catalogo."
+      },
+      "search": {
+        "placeholder": "Cerca giochi, agenti, toolkit…",
+        "disabledTooltip": "Ricerca disponibile in Phase 0.5"
+      },
+      "filters": {
+        "ariaLabel": "Filtra per entità",
+        "all": "Tutti",
+        "games": "Giochi",
+        "agents": "Agenti",
+        "toolkits": "Toolkit",
+        "kbs": "KB",
+        "people": "Persone",
+        "events": "Eventi"
+      },
+      "rows": {
+        "trending": {
+          "title": "Trending",
+          "subtitle": "I giochi più giocati questa settimana"
+        },
+        "newGames": {
+          "title": "Giochi nuovi",
+          "subtitle": "Ultimi titoli aggiunti al catalogo"
+        },
+        "popularAgents": {
+          "title": "Agenti più installati",
+          "subtitle": "Agenti AI con il maggior numero di invocazioni"
+        },
+        "recommendedToolkits": {
+          "title": "Toolkit consigliati",
+          "subtitle": "Bundle di strumenti popolari nella community"
+        },
+        "recentKbDocs": {
+          "title": "KB recenti",
+          "subtitle": "Documenti indicizzati negli ultimi giorni"
+        },
+        "topContributors": {
+          "title": "Top contributor",
+          "subtitle": "Utenti che hanno arricchito di più il catalogo"
+        },
+        "nearbyEvents": {
+          "title": "Eventi vicini",
+          "subtitle": "Game night e tornei nella tua zona"
+        }
+      },
+      "common": {
+        "viewAll": "Vedi tutto",
+        "retry": "Riprova",
+        "empty": "Nessun elemento disponibile al momento.",
+        "disabledPhase05": "Disponibile in Phase 0.5"
+      },
+      "footer": {
+        "title": "Pronto a giocare?",
+        "description": "Aggiungi giochi alla tua libreria o invita amici per pianificare una serata.",
+        "primaryCta": "Esplora la libreria",
+        "secondaryCta": "Invita amici"
+      }
+    },
     "sessions": {
       "metadata": {
         "title": "Le mie partite — MeepleAI",

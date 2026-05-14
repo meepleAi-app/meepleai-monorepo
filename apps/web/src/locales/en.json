@@ -1559,6 +1559,72 @@
         }
       }
     },
+    "discover": {
+      "miniNav": {
+        "breadcrumb": "Discover",
+        "tabAll": "Discover"
+      },
+      "hero": {
+        "title": "Discover the community",
+        "subtitle": "Explore games, agents, toolkits, KBs, and contributors. Filter by entity or search the catalog."
+      },
+      "search": {
+        "placeholder": "Search games, agents, toolkits…",
+        "disabledTooltip": "Search available in Phase 0.5"
+      },
+      "filters": {
+        "ariaLabel": "Filter by entity",
+        "all": "All",
+        "games": "Games",
+        "agents": "Agents",
+        "toolkits": "Toolkits",
+        "kbs": "KB",
+        "people": "People",
+        "events": "Events"
+      },
+      "rows": {
+        "trending": {
+          "title": "Trending",
+          "subtitle": "The most played games this week"
+        },
+        "newGames": {
+          "title": "New games",
+          "subtitle": "Latest titles added to the catalog"
+        },
+        "popularAgents": {
+          "title": "Popular agents",
+          "subtitle": "AI agents with the highest invocation counts"
+        },
+        "recommendedToolkits": {
+          "title": "Recommended toolkits",
+          "subtitle": "Popular toolkit bundles from the community"
+        },
+        "recentKbDocs": {
+          "title": "Recent KB docs",
+          "subtitle": "Documents indexed in the last few days"
+        },
+        "topContributors": {
+          "title": "Top contributors",
+          "subtitle": "Users who enriched the catalog the most"
+        },
+        "nearbyEvents": {
+          "title": "Nearby events",
+          "subtitle": "Game nights and tournaments in your area"
+        }
+      },
+      "common": {
+        "viewAll": "View all",
+        "retry": "Retry",
+        "empty": "No items available right now.",
+        "disabledPhase05": "Available in Phase 0.5"
+      },
+      "footer": {
+        "title": "Ready to play?",
+        "description": "Add games to your library or invite friends to plan a game night.",
+        "primaryCta": "Explore library",
+        "secondaryCta": "Invite friends"
+      }
+    },
     "sessions": {
       "metadata": {
         "title": "My sessions — MeepleAI",

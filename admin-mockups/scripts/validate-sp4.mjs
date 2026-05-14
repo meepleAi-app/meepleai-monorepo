@@ -5,19 +5,30 @@
  *
  * Usage:
  *   node admin-mockups/scripts/validate-sp4.mjs [file1.jsx file2.jsx ...]
- *   node admin-mockups/scripts/validate-sp4.mjs --all      # validate all sp4-*.jsx
+ *   node admin-mockups/scripts/validate-sp4.mjs --all          # validate all sp4-*.jsx
+ *   node admin-mockups/scripts/validate-sp4.mjs --self-test    # run inline regex assertions
  *
  * Exit codes:
  *   0 = all checks pass
  *   1 = one or more validation failures (details to stderr)
  *
- * Checks per .jsx file:
- *   - parse-clean: file loadable as text, ES module syntax OK (loose parse via Babel? No — keep dep-free regex sniff).
- *   - hex/rgb token compliance (AC3): forbid literal #RGB / #RRGGBB / rgb()/rgba() colors in style/className strings.
- *     Allowed: CSS variables (hsl(var(--c-*) / x), var(--text), etc.) and rgba(0,0,0,...) for shadows on dark overlays.
- *     Forbidden: #f5b800, rgb(255,0,0). The check is regex-based and may over-report; CI override via inline `// validator:allow-hex` comment.
- *   - use-case header (AC5): file must contain `USE CASE:` block in JSDoc top comment.
- *   - companion .html exists.
+ * Checks per .jsx file (scope: sp4-(hub-|dashboard) files only — legacy sp4-*
+ * files predate the strict tokens-only policy and are intentionally exempt):
+ *   - companion .html exists (skipped for *-parts.jsx partial fragments)
+ *   - use-case header (AC5): file must contain `USE CASE: ... Primary actor:` block
+ *     in JSDoc top comment. Regex is CRLF-tolerant.
+ *   - hex token compliance (AC3): forbid literal `#RGB` / `#RRGGBB` colors in
+ *     style/className strings. Allowed: CSS variables (`hsl(var(--c-*) / x)`,
+ *     `var(--text)` etc.) and the neutral allowlist (`#fff`, `#000`, etc.).
+ *     CI override via inline `// validator:allow-hex` comment.
+ *
+ * Scope clarification (issue #1154):
+ *   - This validator ONLY checks `#`-notation hex literals. It does NOT check
+ *     `rgb()` / `rgba()` calls. Shadow patterns like `rgba(0, 0, 0, 0.35)` are
+ *     legitimate in the existing mockup set (drop-shadow on dark covers) and
+ *     wholesale-blocking them would over-report. If `rgb()/rgba()` enforcement
+ *     becomes required, add a companion RGBA_RE check with an allowlist for
+ *     shadow patterns — see #1154 for rationale.
  *
  * Note: this is a smoke validator. It does NOT execute the JSX. Full execution
  * requires a browser (open the .html in a tab). CI gating is opt-in for follow-up.
@@ -31,9 +42,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DESIGN_FILES = join(__dirname, '..', 'design_files');
 
 // ─── HEX color regex (forbidden literal hex outside comments) ──────
-// Match #RRGGBB (6-digit) literals. Also catch #RGB (3-digit) but require at
-// least one a-f letter to avoid false-positives on PR/issue references like
-// `#309` or `#1149` (all-digit, common in mockup comments and JSX text).
+// Match #RRGGBB (6-digit) literals unconditionally. For #RGB (3-digit), require
+// at least one a-f letter — this avoids false-positives on PR/issue references
+// like `#309` or `#1149` (all-digit, common in mockup comments and JSX text).
+//
+// tested (kept in sync with --self-test below):
+//   match    → #abc, #a1b, #1a2, #12a, #fff, #fff000, #abcdef, #f5b800
+//   skip     → #309, #1149, #1234, #542, (PR #309)
 const HEX_RE = /(?<![A-Za-z0-9])#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3}(?<=[a-fA-F][0-9a-fA-F]{0,2}|[0-9a-fA-F][a-fA-F][0-9a-fA-F]?|[0-9a-fA-F]{0,2}[a-fA-F]))\b/g;
 // allow specific "neutral" colors used inside on-cover overlays where the
 // design intent is opaque white/black (not entity-tinted). Allowlist intentional:
@@ -43,8 +58,13 @@ const HEX_ALLOWLIST = new Set([
   '#000', '#000000',    // pure black for shadow rings
 ]);
 
-// ─── USE CASE header check ─────────────────────────────────────────
-const USE_CASE_RE = /USE CASE:\s*\n\s*\*?\s*Primary actor:/i;
+// ─── USE CASE header check (CRLF-tolerant) ─────────────────────────
+// tested (kept in sync with --self-test below):
+//   match LF   → "USE CASE:\n  Primary actor: foo"
+//   match CRLF → "USE CASE:\r\n  Primary actor: foo"
+//   skip       → "USE CASE: foo" (no newline before Primary actor)
+//   skip       → "Primary actor: foo" (no USE CASE header)
+const USE_CASE_RE = /USE CASE:\s*[\r\n]+\s*\*?\s*Primary actor:/i;
 
 // ─── Filename ──────────────────────────────────────────────────────
 function companionHtmlFor(jsxPath) {
@@ -76,7 +96,7 @@ function validateFile(jsxPath) {
   const enforceUseCase = /sp4-(hub-|dashboard)/i.test(basename(jsxPath));
   if (enforceUseCase) {
     if (!USE_CASE_RE.test(src)) {
-      errors.push(`Missing or malformed USE CASE block (expected "USE CASE:\\n  Primary actor:" pattern)`);
+      errors.push(`Missing or malformed USE CASE block (expected "USE CASE:\\n  Primary actor:" pattern, LF or CRLF)`);
     }
   }
 
@@ -114,8 +134,62 @@ function validateFile(jsxPath) {
   return { errors, warnings };
 }
 
+// ─── Self-test (inline regex assertions) ───────────────────────────
+// Run via `--self-test` flag. Validates that HEX_RE and USE_CASE_RE behave per
+// their documented contract above. Any regression in the regex (e.g., a future
+// "simplification" that breaks PR-ref detection) trips an exit-1 failure.
+function runSelfTest() {
+  const cases = [
+    // [regex, input, shouldMatch, description]
+    [HEX_RE, '#abc',            true,  'HEX_RE: 3-digit with letter (lowercase)'],
+    [HEX_RE, '#a1b',            true,  'HEX_RE: 3-digit letter in middle'],
+    [HEX_RE, '#1a2',            true,  'HEX_RE: 3-digit letter in middle'],
+    [HEX_RE, '#12a',            true,  'HEX_RE: 3-digit letter at end'],
+    [HEX_RE, '#fff',            true,  'HEX_RE: 3-digit all-letter (will be allowlisted)'],
+    [HEX_RE, '#FFFFFF',         true,  'HEX_RE: 6-digit uppercase'],
+    [HEX_RE, '#abcdef',         true,  'HEX_RE: 6-digit all-letter'],
+    [HEX_RE, '#f5b800',         true,  'HEX_RE: 6-digit mixed (typical brand color)'],
+    [HEX_RE, '#309',            false, 'HEX_RE: 3-digit all-digit = PR ref, must skip'],
+    [HEX_RE, '#1149',           false, 'HEX_RE: 4-digit all-digit = issue ref, must skip'],
+    [HEX_RE, '#1234',           false, 'HEX_RE: 4-digit (not valid hex length), must skip'],
+    [HEX_RE, '#542',            false, 'HEX_RE: 3-digit all-digit = PR ref, must skip'],
+    [HEX_RE, 'see (PR #309)',   false, 'HEX_RE: PR ref in prose context'],
+    [HEX_RE, 'closes #1148',    false, 'HEX_RE: issue ref in prose'],
+    [USE_CASE_RE, 'USE CASE:\n  Primary actor: visitor',   true,  'USE_CASE_RE: LF newline'],
+    [USE_CASE_RE, 'USE CASE:\r\n  Primary actor: visitor', true,  'USE_CASE_RE: CRLF newline (Windows compat)'],
+    [USE_CASE_RE, 'USE CASE:\n   * Primary actor: visitor', true, 'USE_CASE_RE: JSDoc continuation with leading *'],
+    [USE_CASE_RE, 'USE CASE: visitor opens page',          false, 'USE_CASE_RE: no newline before "Primary actor"'],
+    [USE_CASE_RE, 'Primary actor: visitor',                false, 'USE_CASE_RE: no USE CASE header'],
+  ];
+
+  let failed = 0;
+  console.log('\nvalidate-sp4 --self-test: checking inline regex contract...\n');
+  for (const [re, input, expectMatch, desc] of cases) {
+    // reset global regex state before each test (RegExp with /g flag has lastIndex side-effect)
+    re.lastIndex = 0;
+    const matched = re.test(input);
+    re.lastIndex = 0;
+    const ok = matched === expectMatch;
+    if (ok) {
+      console.log(`  ✓ ${desc}`);
+    } else {
+      failed++;
+      console.error(`  ✗ ${desc}`);
+      console.error(`      input: ${JSON.stringify(input)}`);
+      console.error(`      expected match=${expectMatch}, got match=${matched}`);
+    }
+  }
+  console.log(`\n${cases.length - failed}/${cases.length} self-test cases passed.`);
+  process.exit(failed > 0 ? 1 : 0);
+}
+
 // ─── Main ─────────────────────────────────────────────────────────
 const args = process.argv.slice(2);
+
+if (args.includes('--self-test')) {
+  runSelfTest();
+}
+
 let targets = [];
 
 if (args.length === 0 || args.includes('--all')) {

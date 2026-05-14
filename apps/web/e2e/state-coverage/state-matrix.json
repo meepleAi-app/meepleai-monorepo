@@ -1,7 +1,7 @@
 {
   "$schema": "./state-matrix.schema.json",
-  "generated_at": "2026-05-14T08:53:28.594Z",
-  "total_mockups": 64,
+  "generated_at": "2026-05-14T09:33:47.138Z",
+  "total_mockups": 65,
   "enforced_count": 1,
   "entries": [
     {
@@ -402,6 +402,14 @@
     },
     {
       "mockup_path": "admin-mockups/design_files/sp4-citation-pdf-viewer.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp4-dashboard.html",
       "route": null,
       "declared_states": [],
       "covered_states": [],

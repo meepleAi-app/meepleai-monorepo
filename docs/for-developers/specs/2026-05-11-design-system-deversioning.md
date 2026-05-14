@@ -144,11 +144,12 @@ apps/web/src/components/
 |---|---|---|
 | `player-detail` (Wave 3) | 5 | Pending da Wave 3, mai implementato |
 | `toolkit-detail` (Wave 3) | 6 | Pending da Wave 3 |
-| `dashboard` (REFACTOR-FORWARD)¹ | TBD post #1149 | Forward-design 5 entity sections, mockup #1149 in flight |
-| `hub/<entity>` (NEW public) | 3 mockup pronti² | mockup canonici merged via #1148 (sp4-hub-{games,agents,toolkits}) |
+| `dashboard` (REFACTOR-FORWARD)¹ | mockup canonico pronto² | 5 entity sections (Games/Players/Agents/Sessions/Events) — diverge da `DashboardClient.tsx` PR #309, re-implementation completa |
+| `hub/<entity>` (NEW public) | 3 mockup pronti³ | mockup canonici merged via #1148 (sp4-hub-{games,agents,toolkits}) |
 
-¹ `dashboard` re-etichettato da `NEW` a `REFACTOR-FORWARD` dopo spec-panel 2026-05-14 (D2): `DashboardClient.tsx` PR #309 verrà rimpiazzato dal target mockup. Sub-issue Pre-Stage-3: #1149.
-² Mockup canonici: [`sp4-hub-games.{html,jsx}`](../../../admin-mockups/design_files/sp4-hub-games.jsx), [`sp4-hub-agents.{html,jsx}`](../../../admin-mockups/design_files/sp4-hub-agents.jsx), [`sp4-hub-toolkits.{html,jsx}`](../../../admin-mockups/design_files/sp4-hub-toolkits.jsx). Auth model: `/hub/games` pubblico, `/hub/agents` + `/hub/toolkits` authenticated (decisione D1 spec-panel 2026-05-14).
+¹ `dashboard` re-etichettato da `NEW` a `REFACTOR-FORWARD` dopo spec-panel 2026-05-14 (D2): `DashboardClient.tsx` PR #309 (chat/session-centric) verrà sostituito dal target mockup (entity-overview-centric). Features kept/dropped/added documentate nel mockup JSDoc top. Sub-issue Pre-Stage-3: #1149.
+² Mockup canonico: [`sp4-dashboard.{html,jsx}`](../../../admin-mockups/design_files/sp4-dashboard.jsx). Hero greeting + 4 KPI grid + 5 entity sections (4 in 2×2 grid + Events full-width).
+³ Mockup canonici: [`sp4-hub-games.{html,jsx}`](../../../admin-mockups/design_files/sp4-hub-games.jsx), [`sp4-hub-agents.{html,jsx}`](../../../admin-mockups/design_files/sp4-hub-agents.jsx), [`sp4-hub-toolkits.{html,jsx}`](../../../admin-mockups/design_files/sp4-hub-toolkits.jsx). Auth model: `/hub/games` pubblico, `/hub/agents` + `/hub/toolkits` authenticated (decisione D1 spec-panel 2026-05-14).
 | `game-nights` (Wave 3) | 8 | Tier L — richiede Phase 0.5 contract |
 | `discover` (Wave 3) | 6 | Tier L — richiede Phase 0.5 contract |
 
@@ -225,17 +226,32 @@ export const entityRoute = {
 
 Route group: `apps/web/src/app/(authenticated)/dashboard/`
 
-Layout: griglia di **sezioni per entità di proprietà** dell'utente:
+Mockup canonico (PR #1149): [`admin-mockups/design_files/sp4-dashboard.{html,jsx}`](../../../admin-mockups/design_files/sp4-dashboard.jsx)
+
+Layout: **Hero greeting + 4 KPI grid** sopra una griglia 2×2 di sezioni per entità + Events full-width:
 
 ```
-┌─────────────────────────────────────────┐
-│ GamesSection         (le tue librerie)  │ → MeepleCard[entity=game]   → /games/[id]
-│ PlayersSection       (i tuoi avversari) │ → MeepleCard[entity=player] → /players/[id]
-│ AgentsSection        (i tuoi agenti)    │ → MeepleCard[entity=agent]  → /agents/[id]
-│ SessionsSection      (sessioni recenti) │ → MeepleCard[entity=session]→ /sessions/[id]
-│ EventsSection        (game-nights)      │ → MeepleCard[entity=event]  → /game-nights/[id]
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ HERO: "Bentornato, {name}" + 4 KPI (games/sessions/h/wr)│
+├──────────────────────────────┬──────────────────────────┤
+│ GamesSection (carousel 3)    │ PlayersSection (avatars) │ → /library · /players
+│ AgentsSection (grid 2×2)     │ SessionsSection (timeline)│ → /agents · /sessions
+├──────────────────────────────┴──────────────────────────┤
+│ EventsSection (3 inline, full-width)                    │ → /game-nights
+└─────────────────────────────────────────────────────────┘
 ```
+
+Section variants:
+- **Games** — carousel 3 card inline (cover + title + plays count) → `/library`
+- **Players** — avatar list orizzontale (5 inline + count badge) → `/players`
+- **Agents** — grid 2×2 compact (logo + title + model + status dot) → `/agents`
+- **Sessions** — timeline list 3 inline (con live indicator pulse-animated se attive) → `/sessions`
+- **Events** — list 3 inline con date display (DD MMM) + participant ratio → `/game-nights`
+
+Decisione D2 spec-panel 2026-05-14: **forward-design**, diverge da `DashboardClient.tsx` PR #309. Stage 3 cluster `dashboard` sarà re-implementation completa:
+- **Kept**: Greeting personalizzato (→ hero), Live session indicator (→ Sessions section header)
+- **Dropped**: Chat recent cards (→ /chat), Friends row standalone (→ merged in Players)
+- **Added**: Games section (primary entity), Agents overview, Events upcoming
 
 ### Hub (`/hub/<entity>` — public)
 

@@ -31,7 +31,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DESIGN_FILES = join(__dirname, '..', 'design_files');
 
 // ─── HEX color regex (forbidden literal hex outside comments) ──────
-const HEX_RE = /(?<![A-Za-z0-9])#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?\b/g;
+// Match #RRGGBB (6-digit) literals. Also catch #RGB (3-digit) but require at
+// least one a-f letter to avoid false-positives on PR/issue references like
+// `#309` or `#1149` (all-digit, common in mockup comments and JSX text).
+const HEX_RE = /(?<![A-Za-z0-9])#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3}(?<=[a-fA-F][0-9a-fA-F]{0,2}|[0-9a-fA-F][a-fA-F][0-9a-fA-F]?|[0-9a-fA-F]{0,2}[a-fA-F]))\b/g;
 // allow specific "neutral" colors used inside on-cover overlays where the
 // design intent is opaque white/black (not entity-tinted). Allowlist intentional:
 const HEX_ALLOWLIST = new Set([

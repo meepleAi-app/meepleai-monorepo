@@ -188,9 +188,14 @@ export function SessionsLibraryView(): ReactElement {
   const gridCardLabels = useMemo<SessionCardGridLabels>(
     () => ({
       ...cardLabels,
-      scoreOverflowTemplate: t('pages.sessions.card.scoreOverflowTemplate'),
+      // Raw template (not t()) — formatted at render time by SessionCardGrid →
+      // ScoringInline when the overflow count is known. Eager t() on a template
+      // with `{count}` placeholder raises FORMAT_ERROR when no value is provided
+      // (see #1155). Pattern matches playerCountTemplate / turnTemplate / openAriaTemplate above.
+      scoreOverflowTemplate:
+        (intl.messages['pages.sessions.card.scoreOverflowTemplate'] as string) ?? '+{count} altri',
     }),
-    [cardLabels, t]
+    [cardLabels, intl.messages]
   );
 
   const emptyLabels = useMemo<EmptySessionsLabels>(

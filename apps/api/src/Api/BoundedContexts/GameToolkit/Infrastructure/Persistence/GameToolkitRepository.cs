@@ -294,7 +294,19 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
             OverridesTurnOrder = toolkit.OverridesTurnOrder,
             OverridesScoreboard = toolkit.OverridesScoreboard,
             OverridesDiceSet = toolkit.OverridesDiceSet,
+#pragma warning disable CS0618 // Issue #1144 / spec D-5: paired write — legacy int + new semver in same MapToPersistence call.
             Version = toolkit.Version,
+#pragma warning restore CS0618
+#pragma warning disable S1135 // TODO tracked by #1144 follow-up issue.
+            // TODO(#1144 follow-up): MapToPersistence runs on every UpdateAsync,
+            // so this synthesised value silently overwrites any real semver set
+            // directly on the column (e.g. by the migration backfill or future
+            // admin tools). Currently safe because no producer of real values
+            // exists — the backfill computes the identical "0.{Version}.0" form.
+            // Move VersionSemver onto the domain aggregate when the first write
+            // command for it lands (separate epic), then this synthesis goes away.
+            VersionSemver = $"0.{toolkit.Version}.0",
+#pragma warning restore S1135
             CreatedByUserId = toolkit.CreatedByUserId,
             IsPublished = toolkit.IsPublished,
             CreatedAt = toolkit.CreatedAt,

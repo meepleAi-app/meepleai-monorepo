@@ -21,9 +21,16 @@ internal class GameToolkitEntityConfiguration : IEntityTypeConfiguration<GameToo
         builder.Property(e => e.GameId).IsRequired(false);
         builder.Property(e => e.PrivateGameId).IsRequired(false);
         builder.Property(e => e.Name).IsRequired().HasMaxLength(200);
+#pragma warning disable CS0618 // EF schema config of legacy Version property — read access stays supported (spec D-5).
         builder.Property(e => e.Version).IsRequired().HasDefaultValue(1);
+#pragma warning restore CS0618
         builder.Property(e => e.CreatedByUserId).IsRequired();
         builder.Property(e => e.IsPublished).IsRequired().HasDefaultValue(false);
+
+        // Issue #1144 / spec §5.2 — Stage 3 marketplace fields with measurable length bounds.
+        builder.Property(e => e.Description).HasMaxLength(2000); // SPDX-style essay rejected; story copy fits comfortably.
+        builder.Property(e => e.License).HasMaxLength(200);      // SPDX expression + org spec name worst case.
+        builder.Property(e => e.VersionSemver).IsRequired().HasMaxLength(50).HasDefaultValue("0.1.0"); // 4-segment semver + pre-release tag.
 
         // Override flags — Issue #4972
         builder.Property(e => e.OverridesTurnOrder).IsRequired().HasDefaultValue(false);
@@ -68,6 +75,7 @@ internal class GameToolkitEntityConfiguration : IEntityTypeConfiguration<GameToo
         builder.HasIndex(e => e.PrivateGameId).HasDatabaseName("IX_GameToolkits_PrivateGameId");
         builder.HasIndex(e => e.IsPublished).HasDatabaseName("IX_GameToolkits_IsPublished");
 
+#pragma warning disable CS0618 // Legacy Version composite uniqueness retained until spec §13 cleanup PR.
         // Unique (GameId, Version) when GameId is set
         builder.HasIndex(e => new { e.GameId, e.Version })
             .IsUnique()
@@ -79,5 +87,6 @@ internal class GameToolkitEntityConfiguration : IEntityTypeConfiguration<GameToo
             .IsUnique()
             .HasFilter("\"PrivateGameId\" IS NOT NULL")
             .HasDatabaseName("IX_GameToolkits_PrivateGameId_Version");
+#pragma warning restore CS0618
     }
 }

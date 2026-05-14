@@ -69,7 +69,16 @@ All six files under `apps/web/src/components/features/toolkit-detail/*.tsx` decl
 
 **D-4 — `sizeBytes` projected, not stored.** Compute at projection time: `Encoding.UTF8.GetByteCount(systemPrompt) + serializedToolsJsonLength`. Reason: a stored column would need a trigger / save-time hook to stay correct as tools/agent edit. Projection cost is O(1) per detail call and the value is already a cached 10-min response.
 
-**D-5 — `version_semver` is the source of truth going forward.** Issue an EF migration adding `version_semver text NOT NULL DEFAULT '0.1.0'`. Backfill from existing int `Version`: `$"0.{version}.0"`. Old `Version int` column stays for now (other endpoints may still read it; full deprecation is a follow-up).
+**D-5 — `version_semver` is the source of truth going forward.** Issue an EF migration adding `version_semver text NOT NULL DEFAULT '0.1.0'` (via the 3-step idempotent migration in §5.1). Backfill from existing int `Version`: `$"0.{version}.0"`. Old `Version int` column stays for now (other endpoints may still read it; full deprecation is a follow-up).
+
+**Drift prevention** (Fowler panel CRITICAL): the two columns are an architectural debt accumulator unless writes update both transactionally. This PR enforces drift prevention via:
+
+1. **`[Obsolete]` on `Version int` setter** in `GameToolkitEntity` — read access remains for legacy endpoints, but any new write code path is flagged at compile time.
+2. **Domain invariant**: the entity factory / version-bump command writes BOTH columns in the same EF Core change tracker. A unit test (`Version_int_and_semver_stay_in_sync`) enforces that any code path mutating one mutates the other.
+3. **CI guard**: add an `Architecture` test (NetArchTest or similar — if not present, a simple Roslyn analyzer) that fails the build if any non-migration code calls `entity.Version = …` without setting `VersionSemver` in the same statement / unit-of-work.
+4. **Deletion milestone**: legacy `Version int` removed in a follow-up PR scheduled for the next minor release after all consumers verified migrated (tracked in §13).
+
+Without these guardrails the two columns will drift within 2-3 PRs and produce silent marketplace-vs-runtime version mismatches.
 
 **D-6 — `description` migrates to optional column.** Add `description text NULL`. The handler picks `entity.Description ?? FallbackFromName(entity.Name)` so existing toolkits without descriptions still render the synthetic value, but new/edited toolkits use the real one. Validation: max 2000 chars (Wiegers SMART: precise upper bound for storage planning).
 
@@ -106,7 +115,7 @@ All six files under `apps/web/src/components/features/toolkit-detail/*.tsx` decl
 
 ### 5.1 BE: schema migration
 
-New EF migration `ExtendGameToolkitWithMarketplaceFields`.
+New EF migration `ExtendGameToolkitWithMarketplaceFields`. The semver migration is split into **three idempotent steps** so re-running the migration on a partially-backfilled database does not corrupt legitimate user-assigned `"0.1.0"` values (Adzic panel CRITICAL):
 
 ```csharp
 // Up()
@@ -122,22 +131,50 @@ migrationBuilder.AddColumn<string>(
     type: "text",
     nullable: true);
 
+// Step 1 — add VersionSemver as NULLABLE first
 migrationBuilder.AddColumn<string>(
     name: "version_semver",
     table: "game_toolkits",
     type: "text",
-    nullable: false,
-    defaultValue: "0.1.0");
+    nullable: true);
 
-// Backfill semver from existing int version
+// Step 2 — backfill ONLY rows where the column is still NULL
+//          (guards against re-runs overwriting legitimate user values)
 migrationBuilder.Sql(@"
     UPDATE game_toolkits
-    SET version_semver = '0.' || version::text || '.0'
-    WHERE version_semver = '0.1.0' AND version IS NOT NULL;
+    SET version_semver = '0.' || COALESCE(version, 0)::text || '.0'
+    WHERE version_semver IS NULL;
 ");
+
+// Step 3 — promote to NOT NULL with a default for any future inserts
+//          that don't specify the column
+migrationBuilder.AlterColumn<string>(
+    name: "version_semver",
+    table: "game_toolkits",
+    type: "text",
+    nullable: false,
+    defaultValue: "0.1.0",
+    oldClrType: typeof(string),
+    oldType: "text",
+    oldNullable: true);
 ```
 
-`Down()` drops all three columns. Forward-only deploy on staging first; the staging DB clone exercise (AC5) catches Postgres FK / type quirks before prod.
+`Down()` drops all three columns (reversible). Forward-only deploy on staging first; the staging DB clone exercise (AC5) catches Postgres FK / type quirks before prod.
+
+**Idempotency Gherkin** (Adzic panel addition, exercised in AC5):
+
+```gherkin
+Scenario: migration is idempotent under re-run
+  Given a toolkit with version = 5 and version_semver = "0.5.0" from a prior migration
+  When the migration runs a second time
+  Then version_semver remains "0.5.0"
+  And no row's version_semver is overwritten to "0.1.0"
+
+Scenario: backfill handles NULL legacy version
+  Given a toolkit with version = NULL
+  When the migration runs
+  Then version_semver = "0.0.0" (via COALESCE)
+```
 
 ### 5.2 BE: `GameToolkitEntity` extension
 
@@ -155,6 +192,8 @@ Update `MeepleAiDbContext.OnModelCreating` mapping; `Description` max 2000, `Lic
 
 ### 5.3 BE: `ToolkitDetailDto` extension
 
+New fields **append at the end** of the positional record (preserves binary compatibility with all existing C# call sites and contract-test snapshots; Fowler/Wiegers panel CRITICAL):
+
 ```csharp
 internal sealed record ToolkitDetailDto(
     Guid Id,
@@ -164,9 +203,6 @@ internal sealed record ToolkitDetailDto(
     string AuthorName,
     string? AuthorAvatarUrl,
     string? CoverImageUrl,
-    string? License,                 // NEW
-    string? GameName,                // NEW
-    long SizeBytes,                  // NEW (computed, never null)
     ToolkitAgentSummaryDto Agent,
     int KbDocsCount,
     int ToolsCount,
@@ -176,7 +212,15 @@ internal sealed record ToolkitDetailDto(
     DateTime CreatedAt,
     DateTime? PublishedAt,
     DateTime? YankedAt,
-    string CurrentVersion);          // unchanged shape; source: entity.VersionSemver
+    string CurrentVersion,           // unchanged shape; source: entity.VersionSemver
+    // ── appended below — Stage 3 additions (#1144) ──────────────────────
+    string? License,                 // NEW — nullable for forward-compat
+    string? GameName,                // NEW — nullable, LEFT JOIN may miss
+    long? SizeBytes);                // NEW — nullable for forward-compat;
+                                     //       handler computes deterministically
+                                     //       but FE may receive null from a
+                                     //       BE one release behind (DTO
+                                     //       versioning policy §5.5.2).
 ```
 
 ### 5.4 BE: handler projection changes
@@ -186,7 +230,17 @@ In `GetToolkitDetailQueryHandler.ComputeDetailAsync`:
 - **LEFT JOIN** `Games` on `GameToolkit.GameId`. Project `Game.Name AS GameName`.
 - **Description**: `entity.Description ?? $"Toolkit \"{entity.Name}\" by {authorName}."` (existing synthetic kept as fallback).
 - **CurrentVersion**: `entity.VersionSemver` (replaces `$"1.0.{entity.Version}"`).
-- **SizeBytes**: `Encoding.UTF8.GetByteCount(agentConfig?.SystemPrompt ?? string.Empty) + toolsJsonLength` (compute inline; `toolsJsonLength = entity.ToolsConfig?.Length ?? 0` if stored as JSON string, or sum of `JsonSerializer.Serialize(tool).Length` per tool).
+- **SizeBytes** (single canonical formula — Adzic panel IMPORTANT):
+
+```csharp
+long sizeBytes =
+    Encoding.UTF8.GetByteCount(agentConfig?.SystemPrompt ?? string.Empty) +
+    Encoding.UTF8.GetByteCount(entity.ToolsConfig ?? string.Empty);
+```
+
+Both terms are **UTF-8 byte counts**, never char counts. `ToolsConfig` is the JSON string column already on the entity; if it's stored as `jsonb`, project the raw text via `EF.Functions.Cast` or read the entity column directly (whichever EF mapping is in place — verify in implementation; if it's deserialised to a typed object, re-serialise via `JsonSerializer.Serialize(entity.ToolsConfig)` and count bytes on the result).
+
+Exemplary Gherkin (added to §9.1): `Given systemPrompt = "Café ☕" (8 UTF-8 bytes) and ToolsConfig = "[]" (2 UTF-8 bytes), When the handler runs, Then SizeBytes = 10`.
 - **License**: pass-through `entity.License`.
 
 Cache key unchanged. Cache invalidation tag unchanged. The 10-min TTL is sufficient — these are slow-moving fields.
@@ -200,11 +254,21 @@ export const toolkitDetailSchema = z.object({
   // … existing …
   license: z.string().nullable(),
   gameName: z.string().nullable(),
-  sizeBytes: z.number().int().nonnegative(),
+  sizeBytes: z.number().int().nonnegative().nullable(),
 });
 ```
 
 `useToolkitDetail` hook in `apps/web/src/hooks/queries/useToolkitDetail.ts` re-validates.
+
+#### 5.5.1 Schema mode
+
+The schema does **not** use `.strict()` — it tolerates unknown additive keys so a FE one release behind a BE that adds further fields continues to parse. This matches the existing Zod conventions across the codebase (verify via `pnpm exec grep -r ".strict()" apps/web/src/lib/api/schemas/`).
+
+#### 5.5.2 DTO versioning policy
+
+New DTO fields land **nullable** for one full release cycle, then get promoted to non-null in a follow-up PR only after every active FE deploy is verified to send/receive the new shape. This protects against a partial deploy state where the BE produces a richer envelope than the FE knows how to consume — and equally, where a stale FE call (e.g. cached service worker) hits an older BE that emits `null` for the new field.
+
+The named schema (`toolkitDetailSchemaV2` if/when a breaking change ships) replaces the unsuffixed default; readers MUST import the version they target.
 
 ### 5.6 FE: route composition (issue #1145)
 
@@ -332,6 +396,40 @@ Scenario: Description falls back to synthetic when entity description is null
   Given a toolkit with Description = null, Name = "Strategy Lab", author = "Aaron"
   When GetToolkitDetailQuery is handled
   Then response.Toolkit.Description = 'Toolkit "Strategy Lab" by Aaron.'
+
+# ── Cross-aggregate edge cases (Adzic panel IMPORTANT) ─────────────────
+
+Scenario: GameName is null when the referenced Game is soft-deleted
+  Given a toolkit with GameId pointing to a Game with IsDeleted = true
+  When the handler runs (MeepleAiDbContext applies HasQueryFilter(!IsDeleted))
+  Then response.Toolkit.GameName = null
+  And response.Toolkit.GameId remains the original Guid (FK not nulled)
+
+Scenario: Description "" (empty string) is preserved, not replaced by synthetic
+  Given a toolkit with Description = "" (user-set empty)
+  When the handler runs
+  Then response.Toolkit.Description = "" (NOT the synthetic fallback)
+  # Rationale: empty-string is a meaningful user choice;
+  # synthetic only applies on NULL (column unset).
+
+Scenario: VersionSemver max-length boundary
+  Given a toolkit with VersionSemver = "{50-char-string}"
+  When the handler runs
+  Then response is 200 and CurrentVersion equals the input verbatim
+  # Anti-scenario: 51-char input is rejected by the DbContext mapping
+  # at write time, not read time — this scenario covers the read path only.
+
+Scenario: License at and over the max-length boundary
+  Given the License column max = 200
+  When a toolkit with License = "{200-char-string}" is fetched
+  Then response.Toolkit.License has length 200
+  # Write-side rejection at length 201 is covered by entity-level validation tests.
+
+Scenario: SizeBytes unicode encoding correctness
+  Given systemPrompt = "Café ☕" (8 UTF-8 bytes; not 6 chars)
+   And ToolsConfig = "[]" (2 UTF-8 bytes)
+  When the handler runs
+  Then SizeBytes = 10
 ```
 
 ### 9.2 BE — integration tests
@@ -437,24 +535,38 @@ test('frontend /toolkits/{id} renders shell for deterministic slug', async ({ pa
 ### 11.1 BE (issue #1144)
 
 - **AC1 — Endpoint shape**: `GET /api/v1/toolkits/{id}` 200 response includes `license` (string?), `gameName` (string?), `sizeBytes` (long), and `currentVersion` from `VersionSemver`. Verified by integration test.
-- **AC2 — Migration reversibility**: `dotnet ef migrations script <prev>` produces forward SQL; `Down()` is exercised in a unit test that snapshots schema before/after. No data loss.
-- **AC3 — Unit coverage**: 8 new scenarios in `GetToolkitDetailQueryHandlerTests` pass. Coverage on the modified handler ≥ 90% (existing target).
+- **AC2 — Migration reversibility (Testcontainers Postgres)**: an integration test using the existing Testcontainers Postgres fixture
+  (a) applies the migration, captures the `information_schema.columns` snapshot for `game_toolkits`,
+  (b) runs `Down()`, captures a second snapshot,
+  (c) asserts column-set equality with the pre-migration baseline (column names, types, nullability, defaults).
+  No data-loss assertion: a probe row inserted before migration MUST still be readable after Up→Down. Schema diff is unit-testable as a SQL string comparison only as a smoke; the authoritative check is the Testcontainers roundtrip.
+- **AC3 — Unit coverage**: 8 new scenarios in `GetToolkitDetailQueryHandlerTests` pass. Coverage on the modified handler ≥ 90% measured via `dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura` against the existing `coverlet.runsettings` config (repo target documented in `apps/api/tests/Api.Tests/coverlet.runsettings`).
 - **AC4 — Backwards compatibility**: existing wire-shape consumers (FE `useToolkitDetail` pre-PR) parse the new payload without error. Zod `.passthrough()` not required — additive fields only.
 - **AC5 — Staging exercise**: backfill SQL run on a staging DB clone; row counts match; spot-check 5 toolkits show plausible `VersionSemver` values.
 - **AC6 — No regression**: `dotnet test --filter "BoundedContext=GameToolkit|GameToolbox"` green.
-- **AC7 — Spec sync**: issue #1144 body edited to reference `ToolkitDetailDto` (not `ToolboxDto`) at PR-open time.
+- **AC7 — Cache invalidation on write** (Fowler panel IMPORTANT): the HybridCache tag `toolkitDetail` (and the per-toolkit tag `toolkit:{id}`) is bumped on every write path that mutates fields surfaced in this DTO — specifically `AgentConfig.SystemPrompt`, `ToolsConfig`, `Description`, `License`, `VersionSemver`. An integration test edits each field via its respective command and asserts the next `GET /api/v1/toolkits/{id}` returns the new value (not the cached stale one).
+- **AC8 — Drift prevention enforcement** (Fowler panel CRITICAL): `Version int` writes are blocked at the architecture-test layer; the legacy column setter carries `[Obsolete]`; an explicit unit test (`Version_int_and_semver_stay_in_sync`) verifies that any command writing one writes the other in the same `SaveChangesAsync` call.
+
+> **Precondition (not AC)**: issue #1144 body is edited at BE-PR-open time to reference `ToolkitDetailDto` (not `ToolboxDto`). This is a process step, not an artifact-verifiable acceptance criterion.
 
 ### 11.2 FE (issue #1145)
 
-- **AC8 — Layout adoption**: `/toolkits/[id]` default render wraps `DetailPageLayout` with `data-slot="toolkit-detail-view"`.
-- **AC9 — All FSM shells**: loading / error / not-found emit own `data-slot="toolkit-detail-{loading|error|not-found}"`.
-- **AC10 — 6 tabs functional**: each tab renders its panel; URL `?tab={key}` round-trips on navigation; default tab is `overview` (omitted from URL).
-- **AC11 — Stub-tolerance**: route renders mockup-faithfully with all Phase-5 stub values (zero ratings, zero installs, null cover). No FE crashes, no error shell on stubs.
-- **AC12 — Visual conformity**: Playwright visual baseline matches mockup within tolerance threshold (1.5% pixel diff per existing config).
-- **AC13 — Smoke**: `toolkit-detail.smoke.spec.ts` passes on `main-dev` after merge.
-- **AC14 — Unit coverage**: ≥ 85% on new components (CLAUDE.md frontend target).
-- **AC15 — A11y**: WAI-ARIA landmarks via `DetailPageLayout` (`<header>`, `<aside>`, `<nav>`, `<main>`). No new color-contrast violations.
-- **AC16 — No hardcoded colors**: ESLint `local/no-hardcoded-color-utility` clean.
+- **AC9 — Layout adoption**: `/toolkits/[id]` default render wraps `DetailPageLayout` with `data-slot="toolkit-detail-view"`.
+- **AC10 — All FSM shells**: loading / error / not-found emit own `data-slot="toolkit-detail-{loading|error|not-found}"`.
+- **AC11 — 6 tabs functional**: each tab renders its panel; URL `?tab={key}` round-trips on navigation; default tab is `overview` (omitted from URL).
+- **AC12 — Stub-tolerance** (decomposed per Wiegers panel IMPORTANT): the route renders mockup-faithfully on Phase-5 stub values. Verified by these specific sub-assertions:
+  - AC12.1 `RatingsTabPanel` shows "No ratings yet" copy when `ratingCount = 0`.
+  - AC12.2 `ToolkitSummaryPanel` hides the License meta row when `license = null`; renders the value verbatim otherwise.
+  - AC12.3 `ToolkitSummaryPanel` hides the Game chip when `gameName = null`; renders chip + link otherwise.
+  - AC12.4 `ToolkitSummaryPanel` shows the cover gradient placeholder when `coverImageUrl = null`; renders image otherwise.
+  - AC12.5 `VersionsTabPanel` shows only the current version (no timeline) when versions array is empty (v1 carryover).
+  - AC12.6 `OverviewTabPanel` description block renders the synthetic fallback when `description` is the BE-derived synthetic; renders the real value verbatim when not.
+  - AC12.7 No `Suspense` boundary throws; no `kind="error"` shell is reachable from any stub state.
+- **AC13 — Visual conformity**: Playwright visual baseline matches mockup within tolerance threshold (1.5% pixel diff per existing config at `apps/web/playwright-visual.config.ts`).
+- **AC14 — Smoke**: `toolkit-detail.smoke.spec.ts` passes on `main-dev` after merge using the OR-selector pattern from #1143.
+- **AC15 — Unit coverage**: ≥ 85% on new components (CLAUDE.md frontend target).
+- **AC16 — A11y**: WAI-ARIA landmarks via `DetailPageLayout` (`<header>`, `<aside>`, `<nav>`, `<main>`). No new `axe-core` violations beyond baseline.
+- **AC17 — No hardcoded colors**: ESLint `local/no-hardcoded-color-utility` clean.
 
 ---
 

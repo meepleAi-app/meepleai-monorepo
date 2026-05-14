@@ -108,6 +108,7 @@ const MESSAGES: Record<string, string> = {
   'pages.sessions.card.winnerLabel': 'Vincitore',
   'pages.sessions.card.turnLabel': 'Turno {turn}',
   'pages.sessions.card.openAriaLabel': 'Apri sessione {gameName}',
+  'pages.sessions.card.scoreOverflowTemplate': '+{count} altri',
 };
 
 function renderWithIntl(ui: ReactElement) {

@@ -144,8 +144,11 @@ apps/web/src/components/
 |---|---|---|
 | `player-detail` (Wave 3) | 5 | Pending da Wave 3, mai implementato |
 | `toolkit-detail` (Wave 3) | 6 | Pending da Wave 3 |
-| `dashboard` (NEW) | TBD post audit | Decisione utente: sezioni per entità |
-| `hub/<entity>` (NEW public) | TBD post audit | Decisione utente: catalogo pubblico |
+| `dashboard` (REFACTOR-FORWARD)¹ | TBD post #1149 | Forward-design 5 entity sections, mockup #1149 in flight |
+| `hub/<entity>` (NEW public) | 3 mockup pronti² | mockup canonici merged via #1148 (sp4-hub-{games,agents,toolkits}) |
+
+¹ `dashboard` re-etichettato da `NEW` a `REFACTOR-FORWARD` dopo spec-panel 2026-05-14 (D2): `DashboardClient.tsx` PR #309 verrà rimpiazzato dal target mockup. Sub-issue Pre-Stage-3: #1149.
+² Mockup canonici: [`sp4-hub-games.{html,jsx}`](../../../admin-mockups/design_files/sp4-hub-games.jsx), [`sp4-hub-agents.{html,jsx}`](../../../admin-mockups/design_files/sp4-hub-agents.jsx), [`sp4-hub-toolkits.{html,jsx}`](../../../admin-mockups/design_files/sp4-hub-toolkits.jsx). Auth model: `/hub/games` pubblico, `/hub/agents` + `/hub/toolkits` authenticated (decisione D1 spec-panel 2026-05-14).
 | `game-nights` (Wave 3) | 8 | Tier L — richiede Phase 0.5 contract |
 | `discover` (Wave 3) | 6 | Tier L — richiede Phase 0.5 contract |
 
@@ -241,12 +244,21 @@ Route group: `apps/web/src/app/(public)/hub/`
 Catalogo pubblico **browse globale** per entità principali:
 
 ```
-/hub/games       → catalogo public games          (MeepleCard click → /shared-games/[slug])
-/hub/agents      → catalogo public agents         (MeepleCard click → /hub/agents/[id])
-/hub/toolkits    → catalogo public toolkits       (MeepleCard click → /hub/toolkits/[id])
+/hub/games       → catalogo PUBLIC games          (MeepleCard click → /shared-games/[slug])      → mockup sp4-hub-games
+/hub/agents      → catalogo authenticated agents  (MeepleCard click → /hub/agents/[id])          → mockup sp4-hub-agents
+/hub/toolkits    → catalogo authenticated toolkits (MeepleCard click → /hub/toolkits/[id])       → mockup sp4-hub-toolkits
 ```
 
-Detail "hub" usa `DetailPageLayout variant="public"` con `StickyCTA` "Accedi per installare" (pattern SP3).
+**Auth model** (decisione D1 spec-panel 2026-05-14, issue #1097):
+- `/hub/games`: **pubblico** — visitatori senza login sfogliano. `StickyAccessCta` "Accedi per installare" sempre visibile in basso.
+- `/hub/agents` + `/hub/toolkits`: **authenticated** — install inline (hover-revealed); no StickyCTA.
+
+Mockup canonici (PR #1148):
+- [`admin-mockups/design_files/sp4-hub-games.{html,jsx}`](../../../admin-mockups/design_files/sp4-hub-games.jsx)
+- [`admin-mockups/design_files/sp4-hub-agents.{html,jsx}`](../../../admin-mockups/design_files/sp4-hub-agents.jsx)
+- [`admin-mockups/design_files/sp4-hub-toolkits.{html,jsx}`](../../../admin-mockups/design_files/sp4-hub-toolkits.jsx)
+
+Detail "hub" (`/hub/<entity>/[id]`) usa `DetailPageLayout variant="public"` con `StickyCTA` "Accedi per installare" (pattern SP3, fuori scope #1148).
 
 ## 7. Failure matrix
 

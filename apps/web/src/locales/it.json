@@ -1675,6 +1675,70 @@
         "secondaryCta": "Invita amici"
       }
     },
+    "hub": {
+      "common": {
+        "searchPlaceholder": "Cerca per titolo o autore…",
+        "filterAriaLabel": "Filtri catalogo",
+        "filters": {
+          "all": "Tutti",
+          "featured": "In evidenza",
+          "new": "Nuovi",
+          "top": "Top"
+        },
+        "filteredEmptyTitle": "Nessun risultato",
+        "filteredEmptyBody": "Prova a modificare i filtri o la ricerca.",
+        "errorTitle": "Errore di caricamento",
+        "errorBody": "Si è verificato un errore. Riprova fra qualche istante.",
+        "retry": "Riprova",
+        "resultsCountTemplate": "{filtered} di {total} risultati"
+      },
+      "games": {
+        "badge": "Hub · /hub/games · Pubblico",
+        "title": "Catalogo giochi della community",
+        "subtitle": "Esplora i giochi indicizzati dalla community. Accedi per aggiungerli alla tua libreria.",
+        "kpi": {
+          "total": "Giochi totali",
+          "featured": "In evidenza",
+          "recent": "Recenti"
+        },
+        "emptyTitle": "Catalogo vuoto",
+        "emptyBody": "Nessun gioco pubblico è ancora stato aggiunto al catalogo della community.",
+        "stickyCta": {
+          "title": "Accedi per installare",
+          "description": "Crea un account gratuito per aggiungere giochi alla tua libreria personale.",
+          "buttonLabel": "Accedi"
+        }
+      },
+      "agents": {
+        "badge": "Hub · /hub/agents",
+        "title": "Agenti community",
+        "subtitle": "Scopri agenti AI condivisi dalla community per i tuoi giochi preferiti.",
+        "installLabel": "Installa agente",
+        "invocationsTemplate": "{count} invocazioni",
+        "kpi": {
+          "total": "Agenti",
+          "popular": "Popolari",
+          "gameAgents": "Game-specific"
+        },
+        "emptyTitle": "Nessun agente disponibile",
+        "emptyBody": "La community non ha ancora pubblicato agenti AI."
+      },
+      "toolkits": {
+        "badge": "Hub · /hub/toolkits",
+        "title": "Toolkit community",
+        "subtitle": "Toolkit di strumenti condivisi dalla community per arricchire le tue sessioni.",
+        "installLabel": "Installa toolkit",
+        "toolsTemplate": "{count} strumenti",
+        "installsTemplate": "{count} installazioni",
+        "kpi": {
+          "total": "Toolkit",
+          "featured": "In evidenza",
+          "installs": "Installazioni totali"
+        },
+        "emptyTitle": "Nessun toolkit disponibile",
+        "emptyBody": "La community non ha ancora pubblicato toolkit."
+      }
+    },
     "dashboard": {
       "hero": {
         "guestName": "amico",

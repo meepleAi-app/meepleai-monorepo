@@ -1625,6 +1625,70 @@
         "secondaryCta": "Invite friends"
       }
     },
+    "hub": {
+      "common": {
+        "searchPlaceholder": "Search by title or author…",
+        "filterAriaLabel": "Catalog filters",
+        "filters": {
+          "all": "All",
+          "featured": "Featured",
+          "new": "New",
+          "top": "Top"
+        },
+        "filteredEmptyTitle": "No results",
+        "filteredEmptyBody": "Try changing the filters or search query.",
+        "errorTitle": "Loading error",
+        "errorBody": "Something went wrong. Try again in a moment.",
+        "retry": "Retry",
+        "resultsCountTemplate": "{filtered} of {total} results"
+      },
+      "games": {
+        "badge": "Hub · /hub/games · Public",
+        "title": "Community games catalog",
+        "subtitle": "Browse community-indexed games. Sign in to add them to your library.",
+        "kpi": {
+          "total": "Total games",
+          "featured": "Featured",
+          "recent": "Recent"
+        },
+        "emptyTitle": "Empty catalog",
+        "emptyBody": "No public games have been added to the community catalog yet.",
+        "stickyCta": {
+          "title": "Sign in to install",
+          "description": "Create a free account to add games to your personal library.",
+          "buttonLabel": "Sign in"
+        }
+      },
+      "agents": {
+        "badge": "Hub · /hub/agents",
+        "title": "Community agents",
+        "subtitle": "Discover AI agents shared by the community for your favourite games.",
+        "installLabel": "Install agent",
+        "invocationsTemplate": "{count} invocations",
+        "kpi": {
+          "total": "Agents",
+          "popular": "Popular",
+          "gameAgents": "Game-specific"
+        },
+        "emptyTitle": "No agents available",
+        "emptyBody": "The community has not published any AI agents yet."
+      },
+      "toolkits": {
+        "badge": "Hub · /hub/toolkits",
+        "title": "Community toolkits",
+        "subtitle": "Community-shared toolkits of tools to enrich your sessions.",
+        "installLabel": "Install toolkit",
+        "toolsTemplate": "{count} tools",
+        "installsTemplate": "{count} installs",
+        "kpi": {
+          "total": "Toolkits",
+          "featured": "Featured",
+          "installs": "Total installs"
+        },
+        "emptyTitle": "No toolkits available",
+        "emptyBody": "The community has not published any toolkits yet."
+      }
+    },
     "dashboard": {
       "hero": {
         "guestName": "friend",

@@ -1675,6 +1675,64 @@
         "secondaryCta": "Invita amici"
       }
     },
+    "dashboard": {
+      "hero": {
+        "guestName": "amico",
+        "greetingMorning": "Buongiorno",
+        "greetingAfternoon": "Buon pomeriggio",
+        "greetingEvening": "Buonasera",
+        "subtitle": "Ecco una panoramica di tutto: giochi in libreria, gruppo di gioco, agenti AI, sessioni e prossimi eventi.",
+        "kpiGames": "Giochi",
+        "kpiSessions": "Sessioni",
+        "kpiHours": "Ore giocate",
+        "kpiWinRate": "Win rate"
+      },
+      "sections": {
+        "games": {
+          "title": "Giochi",
+          "viewAll": "Vedi libreria",
+          "emptyTitle": "Nessun gioco in libreria.",
+          "emptyCta": "+ Aggiungi gioco"
+        },
+        "players": {
+          "title": "Gruppo di gioco",
+          "viewAll": "Tutti i giocatori",
+          "countTemplate": "{visible} di {total}",
+          "emptyTitle": "Nessun gruppo di gioco ancora.",
+          "emptyCta": "+ Invita amici"
+        },
+        "agents": {
+          "title": "Agenti AI",
+          "viewAll": "Tutti",
+          "statusActive": "Attivo",
+          "statusIdle": "Inattivo",
+          "emptyTitle": "Nessun agente AI attivo.",
+          "emptyCta": "Esplora /hub/agents"
+        },
+        "sessions": {
+          "title": "Sessioni",
+          "liveBadge": "Live",
+          "viewAll": "Tutte",
+          "playerCountTemplate": "{count} giocatori",
+          "minutesTemplate": "{count} min",
+          "untitled": "Sessione",
+          "emptyTitle": "Nessuna sessione attiva o recente.",
+          "emptyCta": "+ Crea sessione",
+          "statusLive": "Live",
+          "statusCompleted": "Conclusa",
+          "statusPaused": "In pausa",
+          "statusSetup": "In preparazione",
+          "statusAbandoned": "Abbandonata"
+        },
+        "events": {
+          "title": "Prossime serate",
+          "viewAll": "Calendario",
+          "participantsTemplate": "{confirmed}/{total} conferme",
+          "emptyTitle": "Nessuna serata gioco pianificata.",
+          "emptyCta": "+ Pianifica serata"
+        }
+      }
+    },
     "toolkitDetail": {
       "loading": {
         "ariaLabel": "Caricamento toolkit…"

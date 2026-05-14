@@ -51,6 +51,13 @@ export const ToolkitDetailSchema = z.object({
   yankedAt: z.string().datetime({ offset: true }).nullable(),
   // Schema reality v1 carryover (Gate B): "1.0.{int}" until semver lands.
   currentVersion: z.string().min(1),
+  // ── Stage 3 marketplace extension (PR #1156 / issue #1144) ──
+  /** SPDX-like license string (e.g. "CC BY-SA 4.0"). Nullable → FE hides meta row. */
+  license: z.string().nullable().optional(),
+  /** LEFT JOIN of GameEntity via GameToolkit.GameId. Null when no game / soft-deleted. */
+  gameName: z.string().nullable().optional(),
+  /** UTF-8 byte count of AgentConfig + tool/template JSON. */
+  sizeBytes: z.number().int().nonnegative().nullable().optional(),
 });
 export type ToolkitDetail = z.infer<typeof ToolkitDetailSchema>;
 

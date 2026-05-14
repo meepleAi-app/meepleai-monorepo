@@ -27,6 +27,22 @@ public class VersionDriftPreventionTests
     /// names (<c>toolkit.Version =</c>, <c>entity.Version =</c>) used in the
     /// GameToolkit aggregate. The accompanying allow-list narrows further.
     /// </summary>
+    /// <remarks>
+    /// Known coverage gaps (acknowledged per #1156 spec-panel review):
+    /// <list type="bullet">
+    ///   <item>Bare <c>Version = …</c> assignments inside the
+    ///         <c>GameToolkit</c> domain aggregate constructor (no receiver
+    ///         qualifier). Currently safe because the domain aggregate has
+    ///         no <c>VersionSemver</c> property — when it gains one,
+    ///         widen this regex to also match the bare form, scoped to
+    ///         <c>BoundedContexts/GameToolkit/Domain/</c>.</item>
+    ///   <item>Reflection writes via <c>SetPrivateProperty(toolkit, "Version", …)</c>
+    ///         in <c>GameToolkitRepository.MapToDomain</c>. The repository
+    ///         is the single persistence boundary; its write path is
+    ///         exercised by the paired-write assertion in
+    ///         <c>GetToolkitDetailQueryHandlerTests.Version_int_and_semver_stay_in_sync_after_persistence</c>.</item>
+    /// </list>
+    /// </remarks>
     private static readonly Regex VersionWriteRegex = new(
         @"\b(?:toolkit|entity)\.Version\s*=",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);

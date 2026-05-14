@@ -238,6 +238,17 @@ long sizeBytes =
     Encoding.UTF8.GetByteCount(entity.ToolsConfig ?? string.Empty);
 ```
 
+> **Implementation note (#1156 review)**: the spec sketch above names two
+> aggregate terms (`SystemPrompt` and `ToolsConfig`) but the persisted
+> entity decomposes tools into **nine separate JSON/text columns**
+> (AgentConfig, DiceToolsJson, CardToolsJson, TimerToolsJson,
+> CounterToolsJson, UserDicePresetsJson, ScoringTemplateJson,
+> TurnTemplateJson, StateTemplate). The handler sums all nine. Sum is
+> equivalent to the two-term sketch under any realistic toolkit shape
+> — the wider surface is more accurate, not less. Documented here
+> instead of revising the formula because the architectural intent is
+> unchanged.
+
 Both terms are **UTF-8 byte counts**, never char counts. `ToolsConfig` MUST be read as the **persisted raw JSON text** (e.g. via `EF.Property<string>(entity, "ToolsConfig")` or a shadow string property mapped to the underlying column). Never re-serialise from a deserialised object graph — `JsonSerializer.Serialize` is non-deterministic on key ordering and whitespace, which would make `SizeBytes` drift between sequential reads of the same row. If the entity exposes `ToolsConfig` only as a typed POCO, add a `[NotMapped]` `RawToolsConfigJson` shadow property that the handler reads.
 
 Exemplary Gherkin (added to §9.1): `Given systemPrompt = "Café ☕" (8 UTF-8 bytes) and ToolsConfig = "[]" (2 UTF-8 bytes), When the handler runs, Then SizeBytes = 10`.

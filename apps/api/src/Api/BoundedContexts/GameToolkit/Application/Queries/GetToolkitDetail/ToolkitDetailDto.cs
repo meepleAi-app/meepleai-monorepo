@@ -21,8 +21,10 @@ namespace Api.BoundedContexts.GameToolkit.Application.Queries.GetToolkitDetail;
 ///   <item><c>PublishedAt</c>: derived from <c>UpdatedAt</c> when
 ///         <c>IsPublished</c> + <c>TemplateStatus == Approved</c>; null otherwise.</item>
 ///   <item><c>YankedAt</c>: no yank workflow yet; always null in v1.</item>
-///   <item><c>CurrentVersion</c>: GameToolkitEntity stores int Version;
-///         surfaced as <c>"1.0.{version}"</c> until semver schema lands.</item>
+///   <item><c>CurrentVersion</c>: Issue #1144 — now reads <c>VersionSemver</c>
+///         (e.g. <c>"0.1.0"</c> default, <c>"2.0.0"</c> when user-set). The
+///         legacy <c>"1.0.{int}"</c> synthesised format predates #1144 and
+///         no longer applies.</item>
 /// </list>
 ///
 /// FE wire shape mirrors PR #732 §5.3.1 TypeScript interface exactly so the

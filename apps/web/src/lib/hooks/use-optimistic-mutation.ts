@@ -14,12 +14,13 @@
  *      `(cachedValue, variables) => optimisticValue`.
  *   2. On mutate() we snapshot the cache, apply the reducer, then run the network call.
  *   3. On success we invalidate (server is truth).
- *   4. On error we restore the snapshot and surface the error to the caller.
+ *   4. On error we restore the snapshot and surface the error via React Query's
+ *      reactive `mutation.error`.
  *
  * Composition over React Query's built-in `onMutate`:
  *   The built-in pattern requires hand-rolling snapshot/restore in every consumer.
- *   This wrapper enforces the snapshot/restore discipline and exposes a `rollbackReason`
- *   for telemetry hooks.
+ *   This wrapper enforces the snapshot/restore discipline and exposes an
+ *   `onRollback` callback for telemetry hooks.
  */
 
 import { useRef } from 'react';
@@ -31,6 +32,15 @@ import {
   type UseMutationOptions,
   type UseMutationResult,
 } from '@tanstack/react-query';
+
+/**
+ * For error surfacing in consumers, read `mutation.error` from the returned
+ * UseMutationResult — it is React Query's reactive state and re-renders the
+ * consumer on each error transition. An earlier revision of this hook exposed
+ * a ref-backed `rollbackReason` field, but useRef writes don't trigger
+ * re-renders, so the field was either stale or coincidentally correct via
+ * React Query's own re-render. Removed in #1171 review followup.
+ */
 
 export interface UseOptimisticMutationOptions<TData, TError, TVariables, TCached> extends Omit<
   UseMutationOptions<TData, TError, TVariables>,
@@ -54,20 +64,9 @@ export interface UseOptimisticMutationOptions<TData, TError, TVariables, TCached
   invalidateOnSuccess?: boolean;
 }
 
-// UseMutationResult is a discriminated union (status: 'idle' | 'pending' | 'success' | 'error'),
-// so we intersect rather than extend — interfaces can't extend unions.
-export type OptimisticMutationResult<TData, TError, TVariables> = UseMutationResult<
-  TData,
-  TError,
-  TVariables
-> & {
-  /** Last rollback reason — populated only when the most recent mutation was rolled back. */
-  rollbackReason: TError | undefined;
-};
-
 export function useOptimisticMutation<TData, TError, TVariables, TCached>(
   options: UseOptimisticMutationOptions<TData, TError, TVariables, TCached>
-): OptimisticMutationResult<TData, TError, TVariables> {
+): UseMutationResult<TData, TError, TVariables> {
   const {
     cacheKey,
     applyOptimistic,
@@ -79,7 +78,9 @@ export function useOptimisticMutation<TData, TError, TVariables, TCached>(
 
   const queryClient = useQueryClient();
   const snapshotRef = useRef<TCached | undefined>(undefined);
-  const rollbackReasonRef = useRef<TError | undefined>(undefined);
+  // Internal flag for onSettled to skip cache invalidation on the error path.
+  // Not exported — consumers should read the reactive `mutation.error` instead.
+  const errorOccurredRef = useRef<boolean>(false);
 
   const mutation = useMutation<TData, TError, TVariables>({
     ...rest,
@@ -90,7 +91,7 @@ export function useOptimisticMutation<TData, TError, TVariables, TCached>(
 
       const previous = queryClient.getQueryData<TCached>(cacheKey);
       snapshotRef.current = previous;
-      rollbackReasonRef.current = undefined;
+      errorOccurredRef.current = false;
 
       const next = applyOptimistic(previous, variables);
       queryClient.setQueryData(cacheKey, next);
@@ -102,18 +103,15 @@ export function useOptimisticMutation<TData, TError, TVariables, TCached>(
       // here — invalidation on error would race with the snapshot restore and
       // potentially overwrite the user's edit-in-progress in adjacent components.
       queryClient.setQueryData(cacheKey, snapshotRef.current);
-      rollbackReasonRef.current = error;
+      errorOccurredRef.current = true;
       onRollback?.(variables, error);
     },
     onSettled: () => {
-      if (invalidateOnSuccess && rollbackReasonRef.current === undefined) {
+      if (invalidateOnSuccess && !errorOccurredRef.current) {
         void queryClient.invalidateQueries({ queryKey: cacheKey });
       }
     },
   });
 
-  return {
-    ...mutation,
-    rollbackReason: rollbackReasonRef.current,
-  };
+  return mutation;
 }

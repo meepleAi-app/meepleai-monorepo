@@ -6,7 +6,7 @@
  *   - Snapshot restore on error
  *   - onRollback consumer fires AFTER restore
  *   - Cache invalidation on success (invalidateOnSuccess flag)
- *   - rollbackReason surface
+ *   - reactive mutation.error surfacing on rollback
  */
 
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
@@ -90,7 +90,7 @@ describe('useOptimisticMutation', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 
-  it('restores snapshot and surfaces rollbackReason on error', async () => {
+  it('restores snapshot and surfaces error via mutation.error on rollback', async () => {
     const { client, wrapper } = createWrapper();
     const original: CachedRoster = { status: 'Pending', count: 3 };
     client.setQueryData<CachedRoster>(CACHE_KEY, original);

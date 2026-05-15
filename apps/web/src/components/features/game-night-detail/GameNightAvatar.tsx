@@ -49,13 +49,23 @@ export function GameNightAvatar({
   highlightSelf = false,
   className,
 }: GameNightAvatarProps): React.JSX.Element {
+  // Per-player HSL bg is dynamic (different hue per user GUID), so it cannot
+  // be expressed as a literal Tailwind class — the JIT extractor only sees
+  // class strings statically. We pipe the value through a CSS custom property
+  // and reference it via the literal arbitrary `bg-[var(--avatar-bg)]` class
+  // in the same className as `text-white`. This satisfies the CLAUDE.md DS-15
+  // exemption ("text-white IS allowed when the same className declares a
+  // colored bg [...] arbitrary `bg-[hsl(…)]`") while keeping the hue dynamic.
+  // Issue caught in #1171 review followup.
+  const avatarBg = `hsl(${hue}, 60%, 55%)`;
   return (
     <span
       role="img"
       aria-label={label}
       className={clsx(
         'inline-flex shrink-0 items-center justify-center rounded-full font-display font-extrabold',
-        // eslint-disable-next-line local/no-hardcoded-color-utility -- white text on per-player HSL background; mockup .e-bg pattern.
+        'bg-[var(--avatar-bg)]',
+        // eslint-disable-next-line local/no-hardcoded-color-utility -- white text on per-player HSL background; mockup .e-bg pattern. Exemption satisfied by bg-[var(--avatar-bg)] declared on the same className.
         'text-white',
         // 2px border preserves card-background separation in roster grids; ring color flips for "me".
         highlightSelf
@@ -64,7 +74,7 @@ export function GameNightAvatar({
         SIZE_TO_CLASS[size],
         className
       )}
-      style={{ backgroundColor: `hsl(${hue}, 60%, 55%)` }}
+      style={{ ['--avatar-bg' as string]: avatarBg } as React.CSSProperties}
     >
       {initials}
     </span>

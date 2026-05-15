@@ -15,4 +15,16 @@
  * See mockup: admin-mockups/design_files/sp7-game-night-detail-rsvp.{html,jsx}
  */
 
-export {};
+export {
+  GameNightAvatar,
+  computeInitials,
+  deriveHueFromId,
+  type GameNightAvatarProps,
+} from './GameNightAvatar';
+export { GameNightStatusBadge, type GameNightStatusBadgeProps } from './GameNightStatusBadge';
+export { GameNightRsvpRow, type GameNightRsvpRowProps } from './GameNightRsvpRow';
+export {
+  GameNightRsvpActionBar,
+  type GameNightRsvpActionBarLabels,
+  type GameNightRsvpActionBarProps,
+} from './GameNightRsvpActionBar';

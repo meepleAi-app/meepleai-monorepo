@@ -2956,5 +2956,84 @@
         "retry": "🔄 Riprova"
       }
     }
+  },
+  "gameNightDetail": {
+    "hero": {
+      "scheduledOn": "{date}",
+      "organizedBy": "Organizzata da {name}",
+      "location": "{location}",
+      "capacity": "{accepted} confermati di {max}",
+      "capacityUncapped": "{accepted} confermati",
+      "pendingCount": "· {count} in attesa"
+    },
+    "status": {
+      "draft": "Bozza",
+      "published": "Attiva",
+      "completed": "Completata",
+      "cancelled": "Annullata",
+      "inProgress": "In corso"
+    },
+    "rsvp": {
+      "sectionTitle": "La tua risposta",
+      "accept": "Partecipo",
+      "maybe": "Forse",
+      "decline": "Non partecipo",
+      "saving": "Salvataggio…",
+      "confirmedToast": "Partecipazione confermata",
+      "declinedToast": "Risposta registrata",
+      "maybeToast": "Risposta registrata",
+      "errors": {
+        "generic": "Impossibile inviare la risposta.",
+        "capacityExceeded": "Capacity raggiunta — non ci sono più posti disponibili.",
+        "directConflict": "Modifica la tua risposta a 'Forse' prima di cambiare tra accettato/declinato.",
+        "cancelledGone": "La serata è stata cancellata — la tua risposta non può essere registrata.",
+        "timeout": "Connessione lenta, riprova fra un momento."
+      }
+    },
+    "actor": {
+      "host": {
+        "edit": "Modifica",
+        "cancel": "Annulla serata",
+        "publish": "Pubblica",
+        "kickGuest": "Rimuovi"
+      },
+      "bystander": {
+        "privateTitle": "Serata privata",
+        "privateBody": "Solo gli invitati possono vedere i dettagli di questa serata.",
+        "requestInvite": "Richiedi invito"
+      }
+    },
+    "tabs": {
+      "details": "Dettagli",
+      "voting": "Voting",
+      "chat": "Chat"
+    },
+    "participants": {
+      "sectionTitle": "Partecipanti ({count})",
+      "rsvpStatus": {
+        "accepted": "Confermato",
+        "declined": "Declinato",
+        "maybe": "Forse",
+        "pending": "In attesa"
+      }
+    },
+    "errors": {
+      "notFound": {
+        "title": "Serata non trovata",
+        "body": "La serata che cerchi non esiste o è stata rimossa.",
+        "cta": "Torna al calendario"
+      },
+      "loadFailed": {
+        "title": "Impossibile caricare la serata",
+        "body": "Connessione instabile. Riprova fra un momento.",
+        "retry": "Riprova"
+      },
+      "concurrentEdit": {
+        "title": "Modifiche aggiornate",
+        "body": "Qualcuno ha aggiornato la serata mentre stavi guardando. Ricarica per vedere le ultime modifiche.",
+        "reload": "Ricarica",
+        "dismiss": "Annulla"
+      }
+    }
   }
 }

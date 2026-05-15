@@ -53,7 +53,10 @@ describe('DashboardHero', () => {
       await Promise.resolve();
     });
     expect(kicker?.textContent?.toLowerCase()).toMatch(/benvenuto/);
-    expect(kicker?.textContent?.toLowerCase()).toMatch(/martedì/);
+    // Match any Italian weekday — was hardcoded 'martedì' which fails on other days (issue #1159).
+    expect(kicker?.textContent?.toLowerCase()).toMatch(
+      /luned[iì]|marted[iì]|mercoled[iì]|gioved[iì]|venerd[iì]|sabato|domenica/
+    );
   });
 
   it('renders lead text', () => {

@@ -47,6 +47,18 @@
         "apps/web/src/components/features/player-detail/**"
       ],
       "notes": "Stage 3 cluster #1113. Default tab (Sessions) screenshot via IS_VISUAL_TEST_BUILD fixture. Multi-tab visual coverage tracked as follow-up."
+    },
+    {
+      "id": "game-nights-index",
+      "livePath": "/game-nights",
+      "mockup": "sp4-game-nights-index.html",
+      "triggerPaths": [
+        "apps/web/src/app/(authenticated)/game-nights/**",
+        "apps/web/src/components/features/game-nights/**",
+        "apps/web/src/lib/game-nights/**",
+        "apps/web/src/hooks/queries/useGameNights.ts"
+      ],
+      "notes": "Stage 3 #1170 commit 4. Functional + a11y coverage in e2e/v2-states/game-nights-index.spec.ts (5 scenarios x 3 viewports). Visual baselines deferred — auto-generated on Linux CI via visual-regression-migrated workflow (bootstrap mode)."
     }
   ]
 }

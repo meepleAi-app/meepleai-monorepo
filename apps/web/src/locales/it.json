@@ -3045,5 +3045,82 @@
         "dismiss": "Annulla"
       }
     }
+  },
+  "gameNightsIndex": {
+    "header": {
+      "kicker": "Game nights",
+      "title": "Serate di gioco",
+      "countLine": "{total} serate questo mese · {confirmed} confermate",
+      "ctaNew": "Nuova serata"
+    },
+    "view": {
+      "tablistAriaLabel": "Vista serate",
+      "calendar": "Calendario",
+      "list": "Lista"
+    },
+    "filter": {
+      "ariaLabel": "Filtra per ruolo",
+      "all": "Tutte",
+      "organizing": "Organizzo",
+      "invited": "Invitato",
+      "completed": "Concluse"
+    },
+    "status": {
+      "confirmed": "Confermata",
+      "planned": "In programma",
+      "cancelled": "Annullata",
+      "completed": "Conclusa"
+    },
+    "calendar": {
+      "prevMonth": "Mese precedente",
+      "nextMonth": "Mese successivo",
+      "today": "Oggi",
+      "todayBadge": "Oggi",
+      "dayLabels": "Lun,Mar,Mer,Gio,Ven,Sab,Dom",
+      "dayAriaLabel": "Giorno {day}{events, plural, =0 {} =1 {, 1 evento} other {, # eventi}}",
+      "overflow": "+{count} altri",
+      "footerCount": "{total} serate · {cancelled} annullate",
+      "legend": {
+        "event": "Serata",
+        "cancelled": "Annullata",
+        "today": "Oggi"
+      }
+    },
+    "list": {
+      "groupSubCurrent": "Mese corrente",
+      "groupSubPast": "Storico",
+      "groupCount": "{count} {count, plural, =1 {serata} other {serate}}",
+      "participants": "{count} {count, plural, =1 {partecipante} other {partecipanti}}",
+      "organizingBadge": "● Organizzo",
+      "cta": {
+        "edit": "Modifica",
+        "viewSummary": "Vedi summary →",
+        "reschedule": "Riprogramma",
+        "accept": "✓ Partecipo",
+        "maybe": "Forse"
+      }
+    },
+    "drawer": {
+      "title": "{day} {month} {year}",
+      "subtitle": "{count} {count, plural, =1 {serata} other {serate}} in programma",
+      "close": "Chiudi",
+      "addOnDay": "+ Aggiungi serata in questo giorno"
+    },
+    "states": {
+      "empty": {
+        "title": "Nessuna serata in programma",
+        "body": "Crea la prima serata per organizzare le tue partite, invitare il gruppo e tenere traccia di chi gioca a cosa.",
+        "cta": "+ Crea la prima serata"
+      },
+      "filteredEmpty": {
+        "title": "Nessuna serata in questo filtro",
+        "body": "Cambia filtro o crea una nuova serata."
+      },
+      "error": {
+        "title": "Impossibile caricare le serate",
+        "body": "C'è stato un problema. Riprova fra un momento.",
+        "retry": "Riprova"
+      }
+    }
   }
 }

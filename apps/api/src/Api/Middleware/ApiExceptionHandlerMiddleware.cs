@@ -1,4 +1,5 @@
 using System;
+using Api.Helpers;
 using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.SharedKernel.Domain.Exceptions;
@@ -62,7 +63,7 @@ internal class ApiExceptionHandlerMiddleware
         _logger.LogError(ex,
             "Unhandled exception in API endpoint. Path: {Path}, Method: {Method}, TraceId: {TraceId}",
             sanitizedPath,
-            LogValueSanitizer.Sanitize(context.Request.Method),
+            LogSanitizer.Sanitize(context.Request.Method),
             context.TraceIdentifier);
 
         // Special handling for FluentValidation exceptions (Issue #1449)

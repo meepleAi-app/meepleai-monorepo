@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
+using Api.Helpers;
 using Api.Middleware;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -78,7 +79,7 @@ internal static class ReportingEndpoints
                 ?? throw new UnauthorizedAccessException("User ID not found");
 
             logger.LogInformation("POST /api/v1/admin/reports/schedule - Name={Name}, Template={Template}",
-                LogValueSanitizer.Sanitize(request.Name), LogValueSanitizer.Sanitize(request.Template.ToString()));
+                LogSanitizer.Sanitize(request.Name), LogSanitizer.Sanitize(request.Template.ToString()));
 
             var command = new ScheduleReportCommand
             {

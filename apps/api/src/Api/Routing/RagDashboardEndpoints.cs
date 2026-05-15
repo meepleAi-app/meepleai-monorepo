@@ -312,7 +312,7 @@ internal static class RagDashboardEndpoints
 
             logger.LogInformation(
                 "Admin {AdminId} running live RAG test for game {GameId}: '{Query}'",
-                session!.User!.Id, gameId, LogValueSanitizer.Sanitize(request.Query));
+                session!.User!.Id, gameId, LogSanitizer.Sanitize(request.Query));
 
             var streamQuery = new StreamQaQuery(GameId: gameId.Value.ToString(), Query: request.Query);
 

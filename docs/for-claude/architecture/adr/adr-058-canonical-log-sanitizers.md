@@ -144,12 +144,13 @@ Esecuzione segue le fasi già definite in #1181 (revised body 2026-05-15):
 |-------|------|--------|
 | 1.1 | Promuovere `DataMasking` a `public` | 1-line diff, build verde |
 | 1.2 | Spostare `SanitizePath` da `LogValueSanitizer` a `LogSanitizer`; **migrare unit test esistente** preservando assertion set (incluso input `/path%0Anew-log-line` → URL-decode → control-char stripping) | Refactor, no behavior change, test verde |
-| 1.3 | Marcare `LogValueSanitizer.*` con `[Obsolete("Use Api.Helpers.LogSanitizer instead")]` | Build warnings su 85 caller, non error |
+| 1.3 + 2.0 | **Combinati** (vedi nota sotto): introdurre forwarder `[Obsolete]` E migrare contestualmente tutti gli ~85 call site (`LogValueSanitizer` → `LogSanitizer` + `using Api.Helpers;`); rimuovere `LogValueSanitizer.cs` quando `grep -r "LogValueSanitizer" apps/api/src/Api` ritorna 0 match | Build verde, 85 caller migrati, forwarder rimosso |
 | 1.4 | Aggiornare `codeql-config.yml` con extension models (sanitizer registration); **validare config localmente con `codeql database analyze` prima di push** per evitare rottura CI | Custom suite caricata dal workflow CodeQL |
 | 1.5 | Riparare exclude `cs/log-forging` non applicata (probabile config drift fra workflow e file) | Alert #537 chiuso |
-| 2.0 | Codemod sweep `LogValueSanitizer` → `LogSanitizer` (PR dedicata); **rimuovere `LogValueSanitizer.cs` quando `grep -r "LogValueSanitizer" apps/api/src/Api` ritorna 0 match** (verificato in pre-merge hook della PR) | 85 caller migrati, `LogValueSanitizer.cs` rimosso |
 | 2.a-2.f | Adoption sweep PII masking per BC (vedi #1181) | 107 alert chiusi |
 | 3 | Analyzer/CI gate (vedi #1181) | Regression guard attivo |
+
+> **Plan revision 2026-05-15**: la pianificazione originale separava Phase 1.3 (`[Obsolete]` forwarder + build warnings) da Phase 2.0 (codemod sweep in PR dedicata). Verifica empirica durante l'esecuzione ha rivelato che `Api.csproj` tratta `CS0618` come **errore** (build setting via `<TreatWarningsAsErrors>` o `WarningsAsErrors`), rendendo l'approccio "warning, migrate gradualmente" non praticabile. Le due fasi sono state quindi unificate: il forwarder `[Obsolete]` viene introdotto e i ~85 caller migrati contestualmente, in una sola PR. La decisione architetturale resta invariata; cambia solo la cadenza di esecuzione.
 
 ## Acceptance
 

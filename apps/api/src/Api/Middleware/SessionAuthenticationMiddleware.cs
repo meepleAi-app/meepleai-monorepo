@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries;
+using Api.Helpers;
 using Api.Routing;
 using MediatR;
 
@@ -28,7 +29,7 @@ internal class SessionAuthenticationMiddleware
     public async Task InvokeAsync(HttpContext context, IMediator mediator)
     {
         _logger.LogDebug("[SessionAuth] InvokeAsync START - Path: {Path}, Method: {Method}",
-            LogValueSanitizer.SanitizePath(context.Request.Path), LogValueSanitizer.Sanitize(context.Request.Method));
+            LogSanitizer.SanitizePath(context.Request.Path), LogSanitizer.Sanitize(context.Request.Method));
 
         // Process only API routes
         if (context.Request.Path.StartsWithSegments("/api", StringComparison.Ordinal))

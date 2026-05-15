@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.Helpers;
 using Api.Middleware;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -34,7 +35,7 @@ internal static class ModelEndpoints
             logger.LogInformation(
                 "Retrieved {Count} models with tier filter: {Tier}",
                 result.Models.Count,
-                LogValueSanitizer.Sanitize(tier ?? "all"));
+                LogSanitizer.Sanitize(tier ?? "all"));
 
             return Results.Ok(result);
         })

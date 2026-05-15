@@ -5,10 +5,13 @@
  * Mapped from `admin-mockups/design_files/sp7-game-night-detail-rsvp.jsx` (Avatar).
  *
  * Pure presentational. The mockup uses inline HSL background derived from a
- * per-player hue (`player.color`); we expose `hue` as a prop and compose the
- * Tailwind arbitrary value so the background tracks the design intent without
- * introducing N entity colors. ESLint local/no-hardcoded-color-utility allows
- * arbitrary `bg-[hsl(...)]` patterns.
+ * per-player hue (`player.color`); we expose `hue` as a prop and pipe the
+ * computed `hsl(...)` value through a CSS custom property (`--avatar-bg`) so
+ * the static class `bg-[var(--avatar-bg)]` can be paired with `text-white` in
+ * the same className — required by the CLAUDE.md DS-15 exemption (Tailwind
+ * JIT cannot extract `bg-[hsl(${hue}_...)]` templated literals, so a literal
+ * class string is necessary regardless). The inline body comment details the
+ * full rationale. #1171 review followup.
  *
  * AC: T V
  */

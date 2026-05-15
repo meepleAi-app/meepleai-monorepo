@@ -30,8 +30,10 @@ ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch st
 > (1 route, 4 components: `/players`). Total grew 45 → 80. Stubs live under
 > `apps/web/src/components/features/{player-detail,toolkit-detail,kb-detail,game-nights,discover,players}/`
 > and `pnpm typecheck` stays green. Wave 4 remaining (E1 toolkits-index · F1 kb-index
-> · G2 game-night-detail) and SP5 admin batch tracked separately — pending Claude Design
-> production resumption (post 2026-05-10).
+> · G2 game-night-detail) and SP5 admin batch tracked separately. Wave 4 G2
+> game-night-detail unblocked 2026-05-15 via SP7 mockup (PR #1171, 6 components
+> shipped — see "SP7 — Game Night detail RSVP" section below). E1/F1 still
+> pending Claude Design production resumption (post 2026-05-10).
 
 > **Updated 2026-05-12** (Nanolith gap-coverage mockups post-storyboard audit, PR #1056): added
 > 3 new components across 1 new route + 1 existing route extension + 1 cross-cutting —
@@ -337,8 +339,9 @@ the PR review.
 ## Wave 4 — 4 components (partial — 1/4 routes)
 
 > **Status**: D1 players-index landed via PR #640 mockup batch (2026-05-03).
-> Remaining routes (E1 toolkits-index, F1 kb-index, G2 game-night-detail) blocked
-> until Claude Design production resumes (post 2026-05-10).
+> G2 game-night-detail unblocked 2026-05-15 via SP7 mockup (PR #1171 — see
+> "SP7 — Game Night detail RSVP" section). E1 toolkits-index, F1 kb-index
+> still blocked until Claude Design production resumes (post 2026-05-10).
 
 ### Players index — `/players` — 4 components — **Tier S**
 
@@ -398,6 +401,50 @@ the PR review.
 - **`EncounterCheatsheetView`** (BLOCKER · Tier S): entry-from-story / photo-segmenting / cheatsheet-rendered / resolved-back. Ephemeral card (no long-term cache, §9.1 spec). Single hook `useEncounterParse({photoId, paragraphRef})` + linear FSM 5-state. Bundle budget < +50 KB.
 - **`LibroGameOnboardingPanel`** (NICE-TO-HAVE · Tier L): prereq-missing / pdf-uploading / kb-indexing / ready. Replace della CTA "Avvia libro game" quando prerequisiti non soddisfatti. Composition: drop-zone + upload-row + index-detail + step-list primitives. Multi-hook ≥3 (`useGamePrerequisites` + `usePdfUpload` + `useKbIndexing`) → Phase 0.5 sub-hook contract OBBLIGATORIA prima di implementation (vedi `contracts/library-id-onboarding-hooks.md` TBD). Bundle budget < +120 KB.
 - **`GamebookErrorBanner`** (NICE-TO-HAVE · Tier S primitive-like): stream-timeout / ocr-fail / llm-503 / segmentation-fail. Trasversale alle 3 route gamebook (chat, translate, encounter). Cost-note "non addebitato" + ≥2 azioni di recupero + telemetry dogfood. Componente "primitive-like" candidato a `components/ui/error-banner/` se generalizzato post-Iter-1.
+
+## SP7 — Game Night detail RSVP (Issue #951) — 6 components
+
+> **Shipped 2026-05-15** via PR #1171 (commits 94beef71e / b31d95f2d /
+> 21733a339 / ada5eade9 / 70579996c). Out-of-Wave addition delivered alongside
+> the SP4/SP6 sections because the spec-hardening was prompted by audit
+> #951 (G2 game-night-detail row at line 33 / 340 — formerly blocked pending
+> Claude Design resume, unblocked by sp7-game-night-detail-rsvp mockup).
+>
+> **Path discipline** (post-Stage-2 #1025): components landed directly under
+> `apps/web/src/components/features/game-night-detail/` per the canonical
+> path convention — NOT `components/v2/`.
+>
+> **Foundation primitives co-shipped**:
+> - `apps/web/src/lib/game-nights/actor-classification.ts` (host/guest/bystander discriminator, AC-H3)
+> - `apps/web/src/lib/game-nights/rsvp-state-machine.ts` (client-side BE-mirror, AC-H2)
+> - `apps/web/src/lib/hooks/use-optimistic-mutation.ts` (generic React Query optimistic wrapper)
+> - `apps/web/src/hooks/queries/useGameNightDetail.ts` (composed orchestration hook)
+>
+> **Bundle delta** (measured 2026-05-15, `pnpm build` aggregate of
+> `.next/static/chunks/` baseline vs HEAD): **+21,569 bytes (+21 KB)**.
+> Per-route `page_client-reference-manifest.js` for `/game-nights/[id]`:
+> **+113 bytes**. Page RSC entry unchanged (1,234 bytes — thin wrapper).
+>
+> **E2E coverage**: `apps/web/e2e/v2-states/game-night-detail.spec.ts`
+> covers 5 AC-H1 GWT failure modes (capacity / double-rsvp / cancelled /
+> not-found / concurrent-edit) + axe-core WCAG 2.1 AA @ 375/768/1280.
+
+### Game night detail — `/game-nights/[id]` — 6 components — **Tier M**
+
+| Mockup | Component | Path | Route | Status | PR | AC |
+|--------|-----------|------|-------|--------|----|----|
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightAvatar` | `apps/web/src/components/features/game-night-detail/GameNightAvatar.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightStatusBadge` | `apps/web/src/components/features/game-night-detail/GameNightStatusBadge.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightRsvpRow` | `apps/web/src/components/features/game-night-detail/GameNightRsvpRow.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightRsvpActionBar` | `apps/web/src/components/features/game-night-detail/GameNightRsvpActionBar.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightDetailHero` | `apps/web/src/components/features/game-night-detail/GameNightDetailHero.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightCancelledBanner` | `apps/web/src/components/features/game-night-detail/GameNightCancelledBanner.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
+
+**Deferred (planned follow-up)**:
+- Tabbed surface (Dettagli / Voting / Chat) — `GameNightDetailTabs`, `GameVoteCard`, `VotingTiedResolver`, `GameNightChatStream` — out of AC-H1..H5 scope (mockup lines 600+).
+- Mobile sticky CTA `GameNightRsvpBottomSheet` — checkpoint decision 3c (deferred polish PR, current inline RsvpActionBar functional).
+- Host-side actor UI (`HostReadyCTA`, `InProgressCTA`, `CompletedCTA`) — present in mockup, awaiting design freeze on host-flow surfaces.
+- Legacy `GameNightActions` / `GameNightSessionsList` / `GameNightDiaryPanel` / `GameNightPlanningLayout` audit — kept under hero for Published/Completed/Draft branches per checkpoint decisions 1a + 2a. Migration to v2 primitives tracked separately.
 
 ## Stub format (informational)
 
@@ -547,7 +594,7 @@ instead.
 | `/sessions/live/[id]` (+ `/agent`, `/photos`, `/players`, `/scores`) | `sp4-session-live.html` + `nanolith-runthrough-session-end.html` | — |
 | `/game-nights` | `sp4-game-nights-index.html` | Tier L pending |
 | `/game-nights/new` | `sp7-game-night-create.html` | — |
-| `/game-nights/[id]` · `/[id]/edit` | `sp7-game-night-detail-rsvp.html` + `nanolith-game-night-storyboard.html` | — |
+| `/game-nights/[id]` · `/[id]/edit` | `sp7-game-night-detail-rsvp.html` + `nanolith-game-night-storyboard.html` | Tier M done (PR #1171, RSVP cluster); tabbed/host surfaces pending |
 
 ### Authenticated — Play Records, Toolkit, Gamebook, Agents, KB
 

@@ -2903,5 +2903,94 @@
         "retry": "🔄 Retry"
       }
     }
+  },
+  "gameNightDetail": {
+    "hero": {
+      "scheduledOn": "{date}",
+      "organizedBy": "Organized by {name}",
+      "location": "{location}",
+      "capacity": "{accepted} confirmed of {max}",
+      "capacityUncapped": "{accepted} confirmed",
+      "pendingCount": "· {count} pending"
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Live",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "inProgress": "In progress"
+    },
+    "rsvp": {
+      "sectionTitle": "Your response",
+      "accept": "Going",
+      "maybe": "Maybe",
+      "decline": "Can't make it",
+      "saving": "Saving…",
+      "confirmedToast": "RSVP confirmed",
+      "declinedToast": "Response saved",
+      "maybeToast": "Response saved",
+      "errors": {
+        "generic": "Could not send your response.",
+        "capacityExceeded": "Capacity reached — no spots left.",
+        "directConflict": "Change your response to 'Maybe' before switching between Going/Declined.",
+        "cancelledGone": "This game night has been cancelled — your response cannot be saved.",
+        "timeout": "Connection slow, try again in a moment."
+      }
+    },
+    "actor": {
+      "host": {
+        "edit": "Edit",
+        "cancel": "Cancel game night",
+        "publish": "Publish",
+        "kickGuest": "Remove",
+        "publishedToast": "Game night published",
+        "publishedToastDescription": "Guests will receive a notification.",
+        "cancelledToast": "Game night cancelled"
+      },
+      "bystander": {
+        "privateTitle": "Private game night",
+        "privateBody": "Only invited guests can see the details of this game night.",
+        "requestInvite": "Request invite"
+      }
+    },
+    "tabs": {
+      "details": "Details",
+      "voting": "Voting",
+      "chat": "Chat"
+    },
+    "participants": {
+      "sectionTitle": "Participants ({count})",
+      "hostLabel": "host",
+      "rsvpStatus": {
+        "accepted": "Going",
+        "declined": "Declined",
+        "maybe": "Maybe",
+        "pending": "Pending"
+      }
+    },
+    "cancelled": {
+      "title": "Game night cancelled",
+      "meta": "Cancelled by {organizer}",
+      "reasonLabel": "Reason:",
+      "ctaLabel": "Create a new game night"
+    },
+    "errors": {
+      "notFound": {
+        "title": "Game night not found",
+        "body": "The game night you're looking for doesn't exist or has been removed.",
+        "cta": "Back to calendar"
+      },
+      "loadFailed": {
+        "title": "Could not load game night",
+        "body": "Connection unstable. Try again in a moment.",
+        "retry": "Retry"
+      },
+      "concurrentEdit": {
+        "title": "Updates available",
+        "body": "Someone else updated this game night while you were viewing. Reload to see the latest changes.",
+        "reload": "Reload",
+        "dismiss": "Dismiss"
+      }
+    }
   }
 }

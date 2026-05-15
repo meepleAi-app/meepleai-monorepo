@@ -107,6 +107,15 @@ jobs:
           working-directory: apps/web
           cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
+      - name: Build Next.js (required by Playwright webServer `next start`)
+        # playwright.config.ts (L561-564) selects `next start` when CI=true to
+        # avoid dev-server crashes under sustained load (Issue #2007). That
+        # requires a prior production build; without it the webServer aborts
+        # with "Could not find a production build in the '.next' directory".
+        run: pnpm build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+
       - name: Run smoke specs only
         # Use the dedicated smoke-real-backend folder (3 specs covering the
         # game-night flow). The `@smoke` Playwright tag is documented in

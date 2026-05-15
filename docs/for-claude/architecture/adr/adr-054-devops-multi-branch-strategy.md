@@ -61,7 +61,7 @@ Concrete operational rules:
 
 ### Negative
 
-- **Co-tenancy fragility**: the dev workstation hosting both `make dev` and `make staging` can race for ports / RAM if pruning discipline lapses (see [Staging disk space memory](../../../../docs/for-developers/operations/operations-manual.md#disk-space) and the related ops notes about cleaning images before rebuilds). Accepted for beta scale.
+- **Co-tenancy fragility**: the dev workstation hosting both `make dev` and `make staging` can race for ports / RAM if pruning discipline lapses (see [Staging disk space memory](../../../../docs/for-developers/operations/operations-manual.md#docker-maintenance) and the related ops notes about cleaning images before rebuilds). Accepted for beta scale.
 - **CI complexity**: four workflow files instead of one is more to maintain. Mitigation: each file has a clear scope (fast PR, async post-merge, staging deploy, prod deploy) and shared steps live in reusable workflows.
 - **Three branches to keep in sync**: drift between `main-staging` and `main` is possible if hotfixes land directly on `main`. Mitigation: hotfixes also fast-forward back into `main-staging` and `main-dev` in the same PR series.
 

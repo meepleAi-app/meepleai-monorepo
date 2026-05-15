@@ -120,7 +120,7 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 | `/agents/[id]` | **L** | `sp4-agent-detail.html` | useAgent + chat history + KB docs cross-resource (2-step chain agent.gameId) | ✅ done (Wave C.2, PR #711) — `contracts/agents-id-hooks.md` (TBD) |
 | `/sessions/[id]/live` | **L+** | `sp4-session-live.html` + `sp4-session-live-parts.jsx` | Real-time SSE + multi-hook + dialog states | pending — Phase 0.5 + sub-PR split |
 | `/discover` | **L** | `sp4-discover.html` | Multiple horizontal-row hooks | pending — Phase 0.5 required |
-| `/game-nights` | **L** | `sp4-game-nights-index.html` | Calendar + day-detail drawer + filters | pending — Phase 0.5 required |
+| `/game-nights` | **L** | `sp4-game-nights-index.html` | Calendar + day-detail drawer + filters | ✅ done (Stage 3, PR #TBD) |
 | `/sessions` | **M** | `sp4-sessions-index.html` | Sessions list + filters composition | pending |
 | `/sessions/[id]` | **M-L** | `sp4-session-summary.html` + `sp4-session-summary-parts.jsx` | Post-game summary: podium + KPI + diary + photos + share + tie-group computation | ✅ done (Wave D.3, PR #762) — `contracts/sessions-id-summary-hooks.md` (TBD) |
 | `/players/[id]` | **M** | `sp4-player-detail.html` | usePlayerStatistics single hook (current user only — schema reality v1 carryover) | ✅ done (Wave 3, PR #724) |
@@ -312,18 +312,18 @@ the PR review.
 | `sp4-kb-detail.jsx` | `MarkdownRenderBlock` | `apps/web/src/components/features/kb-detail/MarkdownRenderBlock.tsx` | `/kb/[id]` | deferred (G4 v3) | — | T A V |
 | `sp4-kb-detail.jsx` | `KbProcessingState` | `apps/web/src/components/features/kb-detail/KbProcessingState.tsx` | `/kb/[id]` | deferred (G4 v3) | — | T A V |
 
-### Game nights index — `/game-nights` — 8 components — **Tier L** ⚠️ Phase 0.5 required
+### Game nights index — `/game-nights` — 8 components — **Tier L** ✅ Stage 3 complete
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
-| `sp4-game-nights-index.jsx` | `GameNightsHeader` | `apps/web/src/components/features/game-nights/GameNightsHeader.tsx` | `/game-nights` | pending | — | T A V |
-| `sp4-game-nights-index.jsx` | `CalendarMonthGrid` | `apps/web/src/components/features/game-nights/CalendarMonthGrid.tsx` | `/game-nights` | pending | — | T A V |
-| `sp4-game-nights-index.jsx` | `CalendarDayCell` | `apps/web/src/components/features/game-nights/CalendarDayCell.tsx` | `/game-nights` | pending | — | T A V |
-| `sp4-game-nights-index.jsx` | `GameNightListCard` | `apps/web/src/components/features/game-nights/GameNightListCard.tsx` | `/game-nights` | pending | — | T A V |
-| `sp4-game-nights-index.jsx` | `DayDetailDrawer` | `apps/web/src/components/features/game-nights/DayDetailDrawer.tsx` | `/game-nights` | pending | — | T A M V |
-| `sp4-game-nights-index.jsx` | `FilterPillBar` | `apps/web/src/components/features/game-nights/FilterPillBar.tsx` | `/game-nights` | pending | — | T A V |
-| `sp4-game-nights-index.jsx` | `StatusPill` | `apps/web/src/components/features/game-nights/StatusPill.tsx` | `/game-nights` | pending | — | T A V |
-| `sp4-game-nights-index.jsx` | `PlayerAvatars` | `apps/web/src/components/features/game-nights/PlayerAvatars.tsx` | `/game-nights` | pending | — | T A V |
+| `sp4-game-nights-index.jsx` | `GameNightsHeader` | `apps/web/src/components/features/game-nights/GameNightsHeader.tsx` | `/game-nights` | done | #TBD | T A V |
+| `sp4-game-nights-index.jsx` | `CalendarMonthGrid` | `apps/web/src/components/features/game-nights/CalendarMonthGrid.tsx` | `/game-nights` | done | #TBD | T A V |
+| `sp4-game-nights-index.jsx` | `CalendarDayCell` | `apps/web/src/components/features/game-nights/CalendarDayCell.tsx` | `/game-nights` | done | #TBD | T A V |
+| `sp4-game-nights-index.jsx` | `GameNightListCard` | `apps/web/src/components/features/game-nights/GameNightListCard.tsx` | `/game-nights` | done | #TBD | T A V |
+| `sp4-game-nights-index.jsx` | `DayDetailDrawer` | `apps/web/src/components/features/game-nights/DayDetailDrawer.tsx` | `/game-nights` | done | #TBD | T A M V |
+| `sp4-game-nights-index.jsx` | `FilterPillBar` | `apps/web/src/components/features/game-nights/FilterPillBar.tsx` | `/game-nights` | done | #TBD | T A V |
+| `sp4-game-nights-index.jsx` | `StatusPill` | `apps/web/src/components/features/game-nights/StatusPill.tsx` | `/game-nights` | done | #TBD | T A V |
+| `sp4-game-nights-index.jsx` | `PlayerAvatars` | `apps/web/src/components/features/game-nights/PlayerAvatars.tsx` | `/game-nights` | done | #TBD | T A V |
 
 ### Discover — `/discover` — 6 components — **Tier L** ⚠️ Phase 0.5 required
 

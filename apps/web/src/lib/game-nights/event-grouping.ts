@@ -39,7 +39,11 @@ export function groupByMonth(events: readonly GameNightVM[], now: Date = new Dat
   const groups: MonthGroup[] = [];
   for (const bucket of buckets.values()) {
     const past = isPastMonth(bucket.year, bucket.month, now);
-    const sortedItems = bucket.items.slice().sort((a, b) => (past ? b.day - a.day : a.day - b.day));
+    const sortedItems = bucket.items.slice().sort((a, b) => {
+      const dayDiff = past ? b.day - a.day : a.day - b.day;
+      if (dayDiff !== 0) return dayDiff;
+      return past ? b.timeLabel.localeCompare(a.timeLabel) : a.timeLabel.localeCompare(b.timeLabel);
+    });
     groups.push({ year: bucket.year, month: bucket.month, items: sortedItems });
   }
 

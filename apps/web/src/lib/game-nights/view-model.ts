@@ -33,6 +33,7 @@ export interface GameNightVM {
   readonly statusKey: StatusKey;
 }
 
+// Mockup spec (sp4-game-nights-index): ≥3 accepted RSVPs promote a Published night to the "Confermata" status chip.
 const CONFIRMED_ACCEPTED_THRESHOLD = 3;
 
 function deriveStatusKey(dto: GameNightDto): StatusKey {

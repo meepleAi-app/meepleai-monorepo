@@ -74,6 +74,27 @@ describe('groupByMonth', () => {
     expect(groups.map(g => `${g.year}-${g.month}`)).toEqual(['2026-0', '2025-11']);
   });
 
+  it('sorts same-day events by timeLabel ASC in current/future bucket', () => {
+    const now = new Date(2026, 5, 10);
+    const events: GameNightVM[] = [
+      vm({ id: 'evening', year: 2026, month: 5, day: 15, timeLabel: '20:00' }),
+      vm({ id: 'lunch', year: 2026, month: 5, day: 15, timeLabel: '12:30' }),
+      vm({ id: 'afternoon', year: 2026, month: 5, day: 15, timeLabel: '15:00' }),
+    ];
+    const groups = groupByMonth(events, now);
+    expect(groups[0].items.map(e => e.id)).toEqual(['lunch', 'afternoon', 'evening']);
+  });
+
+  it('sorts same-day events by timeLabel DESC in past bucket', () => {
+    const now = new Date(2026, 5, 10);
+    const events: GameNightVM[] = [
+      vm({ id: 'evening', year: 2026, month: 0, day: 15, timeLabel: '20:00' }),
+      vm({ id: 'lunch', year: 2026, month: 0, day: 15, timeLabel: '12:30' }),
+    ];
+    const groups = groupByMonth(events, now);
+    expect(groups[0].items.map(e => e.id)).toEqual(['evening', 'lunch']);
+  });
+
   it('groups items into the right buckets', () => {
     const now = new Date(2026, 5, 15);
     const events: GameNightVM[] = [

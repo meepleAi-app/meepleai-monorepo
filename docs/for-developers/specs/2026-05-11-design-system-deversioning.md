@@ -2,8 +2,9 @@
 
 | Field | Value |
 |---|---|
-| **Status** | draft |
+| **Status** | accepted (Stage 1+2 delivered, Stage 3 in progress) |
 | **Date** | 2026-05-11 |
+| **Last sync** | 2026-05-13 (umbrella #1023 spec-panel review) |
 | **Author** | spec-panel (Wiegers/Cockburn/Fowler/Adzic/Crispin/Nygard) |
 | **Supersedes (partial)** | [`2026-04-26-v2-design-migration.md`](./2026-04-26-v2-design-migration.md) — Phase 0 matrix logic obsoleted post-migration |
 | **Related** | [`v2-migration-matrix.md`](../frontend/v2-migration-matrix.md), [`sp3-shared-game-detail.jsx`](../../../admin-mockups/design_files/sp3-shared-game-detail.jsx) |
@@ -306,11 +307,13 @@ Detail "hub" (`/hub/<entity>/[id]`) usa `DetailPageLayout variant="public"` con 
 
 **Total**: ~2 sprint con 1 dev FTE; ~1 sprint con 2 dev paralleli su Stage 3.
 
-## 10. Open questions for implementation
+## 10. Resolved questions
 
-- Q1: Quale subagent per Stage 1 audit? Candidato `frontend-architect` o `general-purpose` con Playwright browser tools? → da decidere al kickoff PR 1.
-- Q2: Naming definitivo `components/features/` vs `components/feature/` vs `components/compositions/`? Proposta corrente: `features/`. Da confermare in PR 2 review.
-- Q3: Tracking issue: aprire una umbrella issue su GitHub con sotto-issue per stage? Convenzione `feature/issue-{N}` lo richiede. Decidere al kickoff.
+Originariamente sezione "Open questions"; tutte chiuse durante Stage 1+2 (vedi §12 change log).
+
+- ~~Q1: Quale subagent per Stage 1 audit?~~ **Risolto** in #1024 / PR #1028 — `frontend-architect` + Playwright visual diff. Report finale: [`docs/for-developers/audits/2026-05-11-mockup-conformity.md`](../audits/2026-05-11-mockup-conformity.md).
+- ~~Q2: Naming definitivo `components/features/` vs `components/feature/` vs `components/compositions/`?~~ **Risolto** in #1025 / PR #1032 — adottato `components/features/` (compositions) e `components/ui/` (primitives).
+- ~~Q3: Aprire umbrella issue per tracking?~~ **Risolto** — umbrella aperta come #1023, sotto-issue #1024 / #1025 / #1026 per stage.
 
 ## 11. References
 
@@ -320,9 +323,21 @@ Detail "hub" (`/hub/<entity>/[id]`) usa `DetailPageLayout variant="public"` con 
 - ConnectionBar reference: PR #549/#552
 - SP3 reference implementation: [`sp3-shared-game-detail.jsx`](../../../admin-mockups/design_files/sp3-shared-game-detail.jsx)
 
+## 12. Change log
+
+| Date | Event | Reference |
+|---|---|---|
+| 2026-05-11 | Spec drafted, decisioni di principio firmate | umbrella #1023 |
+| 2026-05-11 | Stage 1 — Audit automatizzato delivered | issue #1024, PR #1028, report `audits/2026-05-11-mockup-conformity.md` |
+| 2026-05-11 | Stage 2 — Path migration codemod delivered, naming `features/` confermato | issue #1025, PR #1032 |
+| 2026-05-11 | Freeze "Design System De-versioning" issued in `CLAUDE.md` | umbrella #1023 |
+| 2026-05-13 | Spec sync: status `draft` → `accepted`, resolved questions migrate da §10, change log added | this PR |
+
+**Outstanding Stage 3 prerequisite** (raised by spec-panel review 2026-05-13): i cluster `dashboard` e `hub/<entity>` non hanno mockup canonico in `admin-mockups/design_files/`. AC3.1 ("pixel-faithful al mockup HTML") non misurabile fino a creazione mockup. Vedi follow-up issue da aprire pre Stage-3 kickoff su questi cluster.
+
 ---
 
-**Sign-off required from**:
-- [x] Project owner — decisioni di principio confermate 2026-05-11 (vedi umbrella #1023)
-- [ ] Frontend architecture review — naming `features/` finale
-- [ ] PM — apertura umbrella issue + scheduling sprint
+**Sign-off**:
+- [x] Project owner — decisioni di principio confermate 2026-05-11 (umbrella #1023)
+- [x] Frontend architecture review — naming `features/` confermato in Stage 2 (PR #1032)
+- [x] PM — umbrella #1023 + sotto-issue #1024 / #1025 / #1026 aperte, Stage 1+2 delivered

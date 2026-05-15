@@ -141,12 +141,16 @@ export function GameNightsContent(): React.JSX.Element {
     [filtered]
   );
 
-  // Day-drawer state.
-  const [drawerCell, setDrawerCell] = useState<MonthCell | null>(null);
+  // Day-drawer state. The drawer carries its own (year, month) snapshot so that
+  // when month-nav is wired up in a follow-up, filtering doesn't silently fall
+  // back to today's month.
+  type DrawerTarget = { cell: MonthCell; gridYear: number; gridMonth: number };
+  const [drawerTarget, setDrawerTarget] = useState<DrawerTarget | null>(null);
   const dayEvents = useMemo<readonly GameNightVM[]>(() => {
-    if (!drawerCell) return [];
-    return filtered.filter(v => v.year === year && v.month === month && v.day === drawerCell.day);
-  }, [drawerCell, filtered, year, month]);
+    if (!drawerTarget) return [];
+    const { cell, gridYear, gridMonth } = drawerTarget;
+    return filtered.filter(v => v.year === gridYear && v.month === gridMonth && v.day === cell.day);
+  }, [drawerTarget, filtered]);
 
   // ── Label dictionaries (memoised on translator + dependent counts). ──
   const statusLabels: StatusPillLabels = useMemo(
@@ -219,6 +223,9 @@ export function GameNightsContent(): React.JSX.Element {
   // ── State branches ────────────────────────────────────────────────
   // Loading: only show skeleton on first load (both queries pending).
   const isInitialLoading = upcoming.isLoading && mine.isLoading && allVms.length === 0;
+  // Stale-over-error policy: once we have any cached data (allVms > 0), background
+  // refetch failures keep the existing data visible rather than swapping to an error
+  // screen. The error branch only triggers on the initial load with no cache.
   const hasError = (upcoming.error || mine.error) && allVms.length === 0;
 
   if (hasError) {
@@ -276,13 +283,17 @@ export function GameNightsContent(): React.JSX.Element {
     );
   }
 
-  // Drawer labels (only built when drawerCell present).
-  const drawerLabels: DayDetailDrawerLabels | null = drawerCell
+  // Drawer labels (only built when drawerTarget present). Uses the target's
+  // (gridYear, gridMonth) snapshot, not today's — required for month-nav.
+  const drawerLabels: DayDetailDrawerLabels | null = drawerTarget
     ? {
         title: t(`${K}.drawer.title`, {
-          day: drawerCell.day,
-          month: new Date(year, month, 1).toLocaleString(undefined, { month: 'long' }),
-          year,
+          day: drawerTarget.cell.day,
+          month: new Date(drawerTarget.gridYear, drawerTarget.gridMonth, 1).toLocaleString(
+            undefined,
+            { month: 'long' }
+          ),
+          year: drawerTarget.gridYear,
         }),
         subtitle: t(`${K}.drawer.subtitle`, { count: dayEvents.length }),
         close: t(`${K}.drawer.close`),
@@ -298,9 +309,9 @@ export function GameNightsContent(): React.JSX.Element {
             accept: t(`${K}.list.cta.accept`),
             maybe: t(`${K}.list.cta.maybe`),
           },
-          monthAbbrev: monthAbbrev(year, month),
+          monthAbbrev: monthAbbrev(drawerTarget.gridYear, drawerTarget.gridMonth),
         },
-        monthAbbrev: monthAbbrev(year, month),
+        monthAbbrev: monthAbbrev(drawerTarget.gridYear, drawerTarget.gridMonth),
       }
     : null;
 
@@ -314,7 +325,7 @@ export function GameNightsContent(): React.JSX.Element {
           events={filtered}
           today={today}
           labels={monthGridLabels}
-          onDayClick={cell => setDrawerCell(cell)}
+          onDayClick={cell => setDrawerTarget({ cell, gridYear: year, gridMonth: month })}
         />
       ) : (
         <ListView
@@ -326,13 +337,13 @@ export function GameNightsContent(): React.JSX.Element {
           emptyBody={t(`${K}.states.filteredEmpty.body`)}
         />
       )}
-      {drawerCell && drawerLabels && (
+      {drawerTarget && drawerLabels && (
         <DayDetailDrawer
           open
-          day={drawerCell.day}
+          day={drawerTarget.cell.day}
           events={dayEvents}
           labels={drawerLabels}
-          onClose={() => setDrawerCell(null)}
+          onClose={() => setDrawerTarget(null)}
           onAddOnDay={() => router.push('/game-nights/new')}
         />
       )}

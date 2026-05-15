@@ -237,6 +237,37 @@ describe('GameNightsContent (orchestrator)', () => {
     expect(target).toMatch(/view=list/);
   });
 
+  it('renders only organizing events when URL has ?filter=organizing', () => {
+    searchParamsState.view = 'list';
+    searchParamsState.filter = 'organizing';
+    const mine = makeDto({ organizerId: VIEWER_ID, title: 'Mia serata' });
+    const others = makeDto({
+      id: '55555555-5555-5555-5555-555555555555',
+      organizerId: 'someone-else-id-00000000000000000000',
+      title: 'Serata altrui',
+    });
+    useUpcomingMock.mockReturnValue({
+      data: [mine, others],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useMineMock.mockReturnValue({
+      data: [mine],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<GameNightsContent />);
+
+    // List view renders only the organizing event (the viewer's own).
+    const cards = screen.getAllByTestId('game-nights-list-card');
+    expect(cards).toHaveLength(1);
+    expect(screen.getByText('Mia serata')).toBeInTheDocument();
+    expect(screen.queryByText('Serata altrui')).not.toBeInTheDocument();
+  });
+
   it('filters to organizing events when the "Organizzo" filter is clicked', () => {
     const mine = makeDto({ organizerId: VIEWER_ID, title: 'Mia serata' });
     const others = makeDto({

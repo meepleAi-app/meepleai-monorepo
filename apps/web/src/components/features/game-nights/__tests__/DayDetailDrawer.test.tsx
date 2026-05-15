@@ -3,6 +3,7 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { GameNightVM } from '@/lib/game-nights/view-model';
@@ -107,6 +108,33 @@ describe('DayDetailDrawer', () => {
     render(<DayDetailDrawer open day={15} events={[]} labels={labels} onClose={onClose} />);
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('traps Tab focus within the drawer when open', async () => {
+    const user = userEvent.setup();
+    render(
+      <DayDetailDrawer
+        open
+        day={15}
+        events={[makeVM('a'), makeVM('b')]}
+        labels={labels}
+        onClose={() => {}}
+        onAddOnDay={() => {}}
+      />
+    );
+
+    const closeBtn = screen.getByRole('button', { name: 'Chiudi' });
+    expect(closeBtn).toHaveFocus();
+
+    // Tab through all interactive elements; cycle should stay inside the dialog.
+    for (let i = 0; i < 8; i++) {
+      // eslint-disable-next-line no-await-in-loop
+      await user.tab();
+    }
+
+    const dialog = screen.getByRole('dialog');
+    expect(document.activeElement).toBeInstanceOf(HTMLElement);
+    expect(dialog.contains(document.activeElement)).toBe(true);
   });
 
   it('renders "add on day" button only when onAddOnDay is provided', () => {

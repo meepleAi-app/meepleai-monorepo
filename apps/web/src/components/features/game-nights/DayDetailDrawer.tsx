@@ -15,6 +15,7 @@ import { useEffect, useId, useRef } from 'react';
 
 import clsx from 'clsx';
 
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { GameNightVM } from '@/lib/game-nights/view-model';
 
 import {
@@ -61,6 +62,9 @@ export function DayDetailDrawer({
 }: DayDetailDrawerProps): React.JSX.Element | null {
   const headingId = useId();
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const drawerRef = useRef<HTMLElement | null>(null);
+
+  useFocusTrap(drawerRef, open);
 
   useEffect(() => {
     if (!open) return;
@@ -89,6 +93,7 @@ export function DayDetailDrawer({
       className="absolute inset-0 z-50 flex items-end justify-stretch bg-foreground/50 md:items-stretch md:justify-end"
     >
       <aside
+        ref={drawerRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={headingId}

@@ -41,7 +41,6 @@ export interface GameNightsHeaderProps {
   readonly onFilterChange: (key: FilterKey) => void;
   readonly onCreate: () => void;
   readonly labels: GameNightsHeaderLabels;
-  readonly isMobile?: boolean;
   readonly className?: string;
 }
 
@@ -52,7 +51,6 @@ export function GameNightsHeader({
   onFilterChange,
   onCreate,
   labels,
-  isMobile: _isMobile = false,
   className,
 }: GameNightsHeaderProps): React.JSX.Element {
   const { tabRefs, handleKeyDown } = useTablistKeyboardNav<GameNightsView>({

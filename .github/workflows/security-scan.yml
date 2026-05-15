@@ -42,6 +42,11 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
+          # ADR-058 §1.5 / issue #1181: load custom config so query-filters and
+          # paths-ignore from codeql-config.yml are actually applied (previously
+          # the workflow ignored the file → cs/log-forging exclude never fired,
+          # alert #537 stayed open).
+          config-file: ./.github/codeql/codeql-config.yml
 
       # Build C# for analysis
       - name: Setup .NET

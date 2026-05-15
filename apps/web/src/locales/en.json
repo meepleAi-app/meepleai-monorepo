@@ -2992,5 +2992,82 @@
         "dismiss": "Dismiss"
       }
     }
+  },
+  "gameNightsIndex": {
+    "header": {
+      "kicker": "Game nights",
+      "title": "Game nights",
+      "countLine": "{total} nights this month · {confirmed} confirmed",
+      "ctaNew": "New night"
+    },
+    "view": {
+      "tablistAriaLabel": "Nights view",
+      "calendar": "Calendar",
+      "list": "List"
+    },
+    "filter": {
+      "ariaLabel": "Filter by role",
+      "all": "All",
+      "organizing": "Organizing",
+      "invited": "Invited",
+      "completed": "Completed"
+    },
+    "status": {
+      "confirmed": "Confirmed",
+      "planned": "Planned",
+      "cancelled": "Cancelled",
+      "completed": "Completed"
+    },
+    "calendar": {
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "today": "Today",
+      "todayBadge": "Today",
+      "dayLabels": "Mon,Tue,Wed,Thu,Fri,Sat,Sun",
+      "dayAriaLabel": "Day {day}{events, plural, =0 {} =1 {, 1 event} other {, # events}}",
+      "overflow": "+{count} more",
+      "footerCount": "{total} nights · {cancelled} cancelled",
+      "legend": {
+        "event": "Night",
+        "cancelled": "Cancelled",
+        "today": "Today"
+      }
+    },
+    "list": {
+      "groupSubCurrent": "Current month",
+      "groupSubPast": "History",
+      "groupCount": "{count} {count, plural, =1 {night} other {nights}}",
+      "participants": "{count} {count, plural, =1 {participant} other {participants}}",
+      "organizingBadge": "● Organizing",
+      "cta": {
+        "edit": "Edit",
+        "viewSummary": "View summary →",
+        "reschedule": "Reschedule",
+        "accept": "✓ Attending",
+        "maybe": "Maybe"
+      }
+    },
+    "drawer": {
+      "title": "{day} {month} {year}",
+      "subtitle": "{count} {count, plural, =1 {night} other {nights}} scheduled",
+      "close": "Close",
+      "addOnDay": "+ Add a night on this day"
+    },
+    "states": {
+      "empty": {
+        "title": "No nights scheduled",
+        "body": "Create your first night to organize your games, invite your group and track who plays what.",
+        "cta": "+ Create first night"
+      },
+      "filteredEmpty": {
+        "title": "No nights match this filter",
+        "body": "Change the filter or create a new night."
+      },
+      "error": {
+        "title": "Unable to load nights",
+        "body": "Something went wrong. Try again in a moment.",
+        "retry": "Retry"
+      }
+    }
   }
 }

@@ -5,12 +5,14 @@
  *   - Scenario "Capacity exceeded" exercises the `allowed` branch (server returns 409 on capacity)
  *   - Scenario "Double-RSVP" → `no-op`
  *   - Scenario "Game-night cancelled" → 410 reject
- *   - Scenario "Concurrent edit" → server 409 path, mapped by describeRsvpRejection
+ *   - Scenario "Concurrent edit" → server 409 path, mapped to i18n keys by the consumer
+ *     (`GameNightDetailView.handleRsvp` translates status codes to
+ *     `gameNightDetail.rsvp.errors.{cancelledGone,directConflict}`)
  */
 
 import { describe, expect, it } from 'vitest';
 
-import { describeRsvpRejection, evaluateRsvpTransition } from '../rsvp-state-machine';
+import { evaluateRsvpTransition } from '../rsvp-state-machine';
 
 describe('evaluateRsvpTransition', () => {
   describe('no-op (same response replay)', () => {
@@ -69,26 +71,5 @@ describe('evaluateRsvpTransition', () => {
       const outcome = evaluateRsvpTransition({ current, desired });
       expect(outcome).toEqual({ kind: 'allowed', from: current, to: desired });
     });
-  });
-});
-
-describe('describeRsvpRejection', () => {
-  it('returns a cancellation message for 410 regardless of response', () => {
-    const message = describeRsvpRejection(410, 'Accepted');
-    expect(message).toContain('cancellata');
-  });
-
-  it('explains Accepted-after-Declined as needing a Maybe hop', () => {
-    expect(describeRsvpRejection(409, 'Accepted')).toContain('declinato');
-  });
-
-  it('explains Declined-after-Accepted as needing a Maybe hop', () => {
-    expect(describeRsvpRejection(409, 'Declined')).toContain('accettato');
-  });
-
-  it('falls back to a generic message for 409 with Maybe response', () => {
-    // Maybe is allowed from any non-terminal state, but the BE could still 409
-    // on a stale RowVersion race — surface a generic message in that edge case.
-    expect(describeRsvpRejection(409, 'Maybe')).toBeTruthy();
   });
 });

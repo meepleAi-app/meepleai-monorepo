@@ -14,10 +14,15 @@ describe('GameNightAvatar', () => {
     expect(el.textContent).toBe('MR');
   });
 
-  it('applies HSL background derived from hue prop', () => {
+  it('applies HSL background derived from hue prop via --avatar-bg custom property', () => {
+    // Dynamic hue is piped through a CSS custom property so the static
+    // `bg-[var(--avatar-bg)]` class can satisfy the CLAUDE.md DS-15 exemption
+    // (text-white requires a colored bg in the same className — see
+    // GameNightAvatar.tsx for the rationale). #1171 review followup.
     render(<GameNightAvatar initials="DC" label="Davide C." hue={120} />);
-    const el = screen.getByRole('img');
-    expect(el).toHaveStyle({ backgroundColor: 'hsl(120, 60%, 55%)' });
+    const el = screen.getByRole('img') as HTMLElement;
+    expect(el.style.getPropertyValue('--avatar-bg')).toBe('hsl(120, 60%, 55%)');
+    expect(el.className).toContain('bg-[var(--avatar-bg)]');
   });
 
   it('switches border to entity-player ring when highlightSelf=true', () => {

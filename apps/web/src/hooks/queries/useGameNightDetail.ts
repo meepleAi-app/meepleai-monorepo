@@ -111,8 +111,6 @@ export interface UseGameNightDetailReturn {
   ) => RsvpSubmitOutcome;
   /** Indicates whether the optimistic mutation is currently running. */
   readonly isSubmitting: boolean;
-  /** Last rollback error (populated only on the most recent failed submit). */
-  readonly rollbackError: Error | undefined;
 }
 
 interface RsvpMutationVariables {
@@ -219,6 +217,5 @@ export function useGameNightDetail(
     pendingResponse,
     submitRsvp,
     isSubmitting: mutation.isPending,
-    rollbackError: mutation.rollbackReason,
   };
 }

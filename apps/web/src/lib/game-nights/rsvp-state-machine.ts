@@ -75,21 +75,3 @@ export function evaluateRsvpTransition(input: EvaluateRsvpInput): RsvpTransition
 
   return { kind: 'allowed', from: current, to: desired };
 }
-
-/**
- * Server-side error → user-facing reason mapper. Used by hook layer when the
- * BE rejects an `allowed`-classified transition (e.g. race condition where
- * another tab cancelled the event between classification and network call).
- */
-export function describeRsvpRejection(status: 409 | 410, response: RsvpResponse): string {
-  if (status === 410) {
-    return 'La serata è stata cancellata o è scaduta — la tua risposta non può essere registrata.';
-  }
-  if (response === 'Accepted') {
-    return 'Hai già declinato — modifica la tua risposta a "Forse" prima di confermare.';
-  }
-  if (response === 'Declined') {
-    return 'Hai già accettato — modifica la tua risposta a "Forse" prima di declinare.';
-  }
-  return 'Transizione RSVP non consentita.';
-}

@@ -1,6 +1,6 @@
 {
   "$schema": "./state-matrix.schema.json",
-  "generated_at": "2026-05-14T09:33:47.138Z",
+  "generated_at": "2026-05-15T09:22:09.817Z",
   "total_mockups": 65,
   "enforced_count": 1,
   "entries": [
@@ -604,10 +604,20 @@
     },
     {
       "mockup_path": "admin-mockups/design_files/sp7-game-night-detail-rsvp.html",
-      "route": null,
-      "declared_states": [],
+      "route": "/game-nights/[id]",
+      "declared_states": [
+        "default",
+        "cancelled",
+        "not-found",
+        "loading"
+      ],
       "covered_states": [],
-      "missing": [],
+      "missing": [
+        "default",
+        "cancelled",
+        "not-found",
+        "loading"
+      ],
       "enforced": false
     }
   ]

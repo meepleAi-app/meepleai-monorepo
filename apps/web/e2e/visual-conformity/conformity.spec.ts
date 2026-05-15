@@ -127,7 +127,7 @@ test.describe('WS-C Conformity — route vs mockup baseline', () => {
       await waitForRouteReady(page, runbook);
 
       // Per-route override the project-level expect defaults.
-      await expect(page).toHaveScreenshot(route.id, {
+      await expect(page).toHaveScreenshot(`${route.id}.png`, {
         fullPage: true,
         threshold: route.threshold,
         maxDiffPixelRatio: route.conformityRatio,

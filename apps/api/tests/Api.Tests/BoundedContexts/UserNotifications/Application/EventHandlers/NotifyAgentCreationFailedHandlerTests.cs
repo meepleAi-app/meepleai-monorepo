@@ -45,16 +45,6 @@ public sealed class NotifyAgentCreationFailedHandlerTests
             ErrorCode: errorCode,
             Reason: reason);
 
-    private NotificationMessage CaptureDispatchedMessage()
-    {
-        NotificationMessage? captured = null;
-        _dispatcher
-            .Setup(d => d.DispatchAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()))
-            .Callback<NotificationMessage, CancellationToken>((msg, _) => captured = msg)
-            .Returns(Task.CompletedTask);
-        return captured!; // populated after Handle() runs; tests assert via the field
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     // UT-1: AGENT_SLOT_QUOTA_EXCEEDED → tier-quota copy + /settings/subscription
     // ─────────────────────────────────────────────────────────────────────────

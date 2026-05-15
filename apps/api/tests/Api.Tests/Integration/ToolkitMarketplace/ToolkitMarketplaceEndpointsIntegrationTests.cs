@@ -726,6 +726,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     /// (via <see cref="GameEntity"/> mapping that points to the SharedGame
     /// row) is satisfied by inserting a sibling SharedGame first.
     /// </summary>
+    [Obsolete]
     private static async Task<GameToolkitEntity> SeedToolkitAsync(
         MeepleAiDbContext dbContext,
         Guid authorId,

@@ -2942,7 +2942,10 @@
         "edit": "Edit",
         "cancel": "Cancel game night",
         "publish": "Publish",
-        "kickGuest": "Remove"
+        "kickGuest": "Remove",
+        "publishedToast": "Game night published",
+        "publishedToastDescription": "Guests will receive a notification.",
+        "cancelledToast": "Game night cancelled"
       },
       "bystander": {
         "privateTitle": "Private game night",

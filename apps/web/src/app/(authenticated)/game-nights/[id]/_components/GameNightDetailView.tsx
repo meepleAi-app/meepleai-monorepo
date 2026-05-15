@@ -112,7 +112,26 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   );
 
   function handleRsvp(response: RsvpResponse) {
-    const outcome = detail.submitRsvp(response);
+    // Toasts fire from the mutation callbacks below — NOT on the synchronous
+    // 'submitted' return — so a server rejection produces an error toast
+    // instead of a stale success toast. #1171 review fix.
+    const outcome = detail.submitRsvp(response, {
+      onSuccess: submitted => {
+        const toastKey: Record<RsvpResponse, string> = {
+          Accepted: 'confirmedToast',
+          Maybe: 'maybeToast',
+          Declined: 'declinedToast',
+        };
+        toast({ title: t(`gameNightDetail.rsvp.${toastKey[submitted]}`) });
+      },
+      onError: () => {
+        toast({
+          title: t('common.error'),
+          description: t('gameNightDetail.rsvp.errors.generic'),
+          variant: 'destructive',
+        });
+      },
+    });
     if (outcome.kind === 'rejected') {
       const errorKey = outcome.status === 410 ? 'cancelledGone' : 'directConflict';
       toast({
@@ -120,15 +139,6 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
         description: t(`gameNightDetail.rsvp.errors.${errorKey}`),
         variant: 'destructive',
       });
-      return;
-    }
-    if (outcome.kind === 'submitted') {
-      const toastKey: Record<RsvpResponse, string> = {
-        Accepted: 'confirmedToast',
-        Maybe: 'maybeToast',
-        Declined: 'declinedToast',
-      };
-      toast({ title: t(`gameNightDetail.rsvp.${toastKey[response]}`) });
     }
   }
 
@@ -136,7 +146,8 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
     publishMutation.mutate(id, {
       onSuccess: () =>
         toast({
-          title: t('gameNightDetail.actor.host.publish'),
+          title: t('gameNightDetail.actor.host.publishedToast'),
+          description: t('gameNightDetail.actor.host.publishedToastDescription'),
         }),
       onError: () =>
         toast({
@@ -149,7 +160,7 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
 
   function handleCancel() {
     cancelMutation.mutate(id, {
-      onSuccess: () => toast({ title: t('gameNightDetail.status.cancelled') }),
+      onSuccess: () => toast({ title: t('gameNightDetail.actor.host.cancelledToast') }),
       onError: () =>
         toast({
           title: t('common.error'),

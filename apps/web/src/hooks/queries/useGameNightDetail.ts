@@ -78,6 +78,11 @@ export type RsvpSubmitOutcome =
   | { kind: 'submitted'; response: RsvpResponse }
   | { kind: 'rejected'; status: 409 | 410; reason: string };
 
+export interface SubmitRsvpCallbacks {
+  readonly onSuccess?: (response: RsvpResponse) => void;
+  readonly onError?: (response: RsvpResponse, error: Error) => void;
+}
+
 export interface UseGameNightDetailReturn {
   readonly event: GameNightDto | undefined;
   readonly rsvps: readonly GameNightRsvpDto[] | undefined;
@@ -93,8 +98,17 @@ export interface UseGameNightDetailReturn {
    * Submit a new RSVP response. Pure orchestration — emits an outcome
    * descriptor so the caller can drive toasts. Network call is skipped when
    * outcome is 'no-op' or 'rejected'.
+   *
+   * For 'submitted' outcomes the optional `onSuccess` / `onError` callbacks
+   * fire AFTER the server response (mirroring `mutate(_, { onSuccess, onError })`
+   * from React Query). Callers should NOT show success toasts on the synchronous
+   * 'submitted' return — only on `onSuccess`, otherwise a failed network call
+   * leaves a false-positive toast on screen (issue caught in #1171 review).
    */
-  readonly submitRsvp: (response: RsvpResponse) => RsvpSubmitOutcome;
+  readonly submitRsvp: (
+    response: RsvpResponse,
+    callbacks?: SubmitRsvpCallbacks
+  ) => RsvpSubmitOutcome;
   /** Indicates whether the optimistic mutation is currently running. */
   readonly isSubmitting: boolean;
   /** Last rollback error (populated only on the most recent failed submit). */
@@ -162,7 +176,7 @@ export function useGameNightDetail(
   const pendingResponse: RsvpResponse | null =
     mutation.isPending && mutation.variables ? mutation.variables.response : null;
 
-  function submitRsvp(response: RsvpResponse): RsvpSubmitOutcome {
+  function submitRsvp(response: RsvpResponse, callbacks?: SubmitRsvpCallbacks): RsvpSubmitOutcome {
     if (!event) {
       return {
         kind: 'rejected',
@@ -170,13 +184,27 @@ export function useGameNightDetail(
         reason: 'Event not loaded.',
       };
     }
+    // Same-response check uses the viewer's actual RsvpStatus (not the lifecycle
+    // projection) so Maybe→Maybe is correctly classified as a no-op. The
+    // lifecycle projection collapses Maybe to Pending for state-machine purposes
+    // — without this guard, evaluateRsvpTransition({current:'Pending',desired:'Maybe'})
+    // returns `allowed` and fires an unnecessary POST. Issue caught in #1171 review.
+    if (viewerRsvp && viewerRsvp.status === response) {
+      return { kind: 'no-op' };
+    }
     const lifecycle = deriveLifecycle(viewerRsvp, event);
     const outcome = evaluateRsvpTransition({ current: lifecycle, desired: response });
     if (outcome.kind === 'no-op') return { kind: 'no-op' };
     if (outcome.kind === 'rejected') {
       return { kind: 'rejected', status: outcome.status, reason: outcome.reason };
     }
-    mutation.mutate({ response });
+    mutation.mutate(
+      { response },
+      {
+        onSuccess: () => callbacks?.onSuccess?.(response),
+        onError: error => callbacks?.onError?.(response, error),
+      }
+    );
     return { kind: 'submitted', response };
   }
 

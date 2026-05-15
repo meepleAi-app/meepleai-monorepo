@@ -2995,7 +2995,10 @@
         "edit": "Modifica",
         "cancel": "Annulla serata",
         "publish": "Pubblica",
-        "kickGuest": "Rimuovi"
+        "kickGuest": "Rimuovi",
+        "publishedToast": "Serata pubblicata",
+        "publishedToastDescription": "Gli invitati riceveranno una notifica.",
+        "cancelledToast": "Serata annullata"
       },
       "bystander": {
         "privateTitle": "Serata privata",

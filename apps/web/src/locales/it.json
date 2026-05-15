@@ -3010,12 +3010,19 @@
     },
     "participants": {
       "sectionTitle": "Partecipanti ({count})",
+      "hostLabel": "host",
       "rsvpStatus": {
         "accepted": "Confermato",
         "declined": "Declinato",
         "maybe": "Forse",
         "pending": "In attesa"
       }
+    },
+    "cancelled": {
+      "title": "Serata cancellata",
+      "meta": "Cancellata da {organizer}",
+      "reasonLabel": "Motivo:",
+      "ctaLabel": "Crea nuova serata"
     },
     "errors": {
       "notFound": {

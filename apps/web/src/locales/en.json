@@ -2957,12 +2957,19 @@
     },
     "participants": {
       "sectionTitle": "Participants ({count})",
+      "hostLabel": "host",
       "rsvpStatus": {
         "accepted": "Going",
         "declined": "Declined",
         "maybe": "Maybe",
         "pending": "Pending"
       }
+    },
+    "cancelled": {
+      "title": "Game night cancelled",
+      "meta": "Cancelled by {organizer}",
+      "reasonLabel": "Reason:",
+      "ctaLabel": "Create a new game night"
     },
     "errors": {
       "notFound": {

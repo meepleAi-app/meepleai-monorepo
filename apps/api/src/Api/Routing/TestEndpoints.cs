@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.Extensions;
+using Api.Helpers;
 using Api.Middleware;
 using Api.Middleware.Exceptions;
 using MediatR;
@@ -38,7 +39,7 @@ internal static class TestEndpoints
             var session = sessionResult.Session;
 
             logger.LogInformation("Admin {UserId} simulating error type: {ErrorType}",
-                session.User!.Id, LogValueSanitizer.Sanitize(request.ErrorType));
+                session.User!.Id, LogSanitizer.Sanitize(request.ErrorType));
 
             try
             {
@@ -61,13 +62,13 @@ internal static class TestEndpoints
             catch (ArgumentException ex)
             {
                 // Invalid error type
-                logger.LogWarning(ex, "Invalid error type: {ErrorType}", LogValueSanitizer.Sanitize(request.ErrorType));
+                logger.LogWarning(ex, "Invalid error type: {ErrorType}", LogSanitizer.Sanitize(request.ErrorType));
                 return Results.BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
                 // Expected simulated errors - log for Prometheus
-                logger.LogError(ex, "Simulated error: {ErrorType}", LogValueSanitizer.Sanitize(request.ErrorType));
+                logger.LogError(ex, "Simulated error: {ErrorType}", LogSanitizer.Sanitize(request.ErrorType));
 
                 // Return appropriate status code
                 if (string.Equals(request.ErrorType, "500", StringComparison.OrdinalIgnoreCase))

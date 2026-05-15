@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries.AgentDefinition;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.RagExecution;
 using Api.Extensions;
 using Api.Filters;
+using Api.Helpers;
 using Api.Middleware;
 using MediatR;
 
@@ -32,7 +33,7 @@ internal static class AdminAgentDefinitionEndpoints
 
             logger.LogInformation(
                 "Admin creating AgentDefinition: {Name}",
-                LogValueSanitizer.Sanitize(request.Name));
+                LogSanitizer.Sanitize(request.Name));
 
             var command = new CreateAgentDefinitionCommand(
                 Name: request.Name,

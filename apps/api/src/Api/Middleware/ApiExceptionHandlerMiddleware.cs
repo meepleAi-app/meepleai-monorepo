@@ -58,7 +58,7 @@ internal class ApiExceptionHandlerMiddleware
     private async Task HandleExceptionAsync(HttpContext context, Exception ex)
     {
         // Log the exception with full details
-        var sanitizedPath = SanitizePath(context.Request.Path);
+        var sanitizedPath = LogSanitizer.SanitizePath(context.Request.Path);
 
         _logger.LogError(ex,
             "Unhandled exception in API endpoint. Path: {Path}, Method: {Method}, TraceId: {TraceId}",
@@ -197,19 +197,6 @@ internal class ApiExceptionHandlerMiddleware
 
         // Fallback to request path if route pattern not available
         return null;
-    }
-
-    private static string SanitizePath(PathString path)
-    {
-        var rawPath = path.ToString();
-
-        if (string.IsNullOrEmpty(rawPath))
-        {
-            return rawPath;
-        }
-
-        return rawPath.Replace("\r", string.Empty, StringComparison.Ordinal)
-            .Replace("\n", string.Empty, StringComparison.Ordinal);
     }
 
     private static (int StatusCode, string ErrorType, string Message) MapExceptionToResponse(Exception ex)

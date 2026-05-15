@@ -28,3 +28,13 @@ export {
   type GameNightRsvpActionBarLabels,
   type GameNightRsvpActionBarProps,
 } from './GameNightRsvpActionBar';
+export {
+  GameNightDetailHero,
+  type GameNightDetailHeroLabels,
+  type GameNightDetailHeroProps,
+} from './GameNightDetailHero';
+export {
+  GameNightCancelledBanner,
+  type GameNightCancelledBannerLabels,
+  type GameNightCancelledBannerProps,
+} from './GameNightCancelledBanner';

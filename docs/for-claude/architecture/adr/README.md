@@ -56,6 +56,7 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 |-----|-------|------|--------|
 | [050](adr-050-pgvector-migration.md) | Migrazione Qdrant → pgvector | 2026-03-29 | Implemented |
 | [054](adr-054-devops-multi-branch-strategy.md) | DevOps Multi-Branch Strategy | 2026-05-08 | Accepted |
+| [058](adr-058-canonical-log-sanitizers.md) | Canonical Log Sanitizers (PII masking + log-forging) | 2026-05-15 | Proposed |
 
 ## ADR Lifecycle
 

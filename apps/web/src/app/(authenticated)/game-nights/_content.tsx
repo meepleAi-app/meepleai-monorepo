@@ -96,7 +96,12 @@ export function GameNightsContent(): React.JSX.Element {
   const rawView = sp.get('view');
   const view: GameNightsView = rawView === 'list' ? 'list' : 'calendar';
   const rawFilter = sp.get('filter');
-  const filter: FilterKey = isFilterKey(rawFilter) ? rawFilter : 'all';
+  // Legacy compat: pre-v2 ?tab=mine → organizing, ?tab=upcoming → all.
+  // Map only when ?filter= is absent to avoid clobbering explicit user state.
+  const legacyTab = sp.get('tab');
+  const filterFromTab: FilterKey | null =
+    rawFilter === null && legacyTab === 'mine' ? 'organizing' : null;
+  const filter: FilterKey = isFilterKey(rawFilter) ? rawFilter : (filterFromTab ?? 'all');
 
   function setParam(key: string, value: string): void {
     const next = new URLSearchParams(sp.toString());

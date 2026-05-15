@@ -95,7 +95,7 @@ test.describe('WS-C Conformity — mockup baseline bootstrap', () => {
       // Snapshot lands at __mockup__/{route.id}.{viewport}.png via project-level
       // snapshotPathTemplate. Bootstrap mode (Phase 3 workflow) passes
       // --update-snapshots to (re)generate; verify mode asserts existence.
-      await expect(page).toHaveScreenshot(route.id, {
+      await expect(page).toHaveScreenshot(`${route.id}.png`, {
         fullPage: true,
       });
     });

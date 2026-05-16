@@ -16,6 +16,20 @@ on:
       - 'LICENSE'
       - '.gitignore'
       - '.editorconfig'
+  push:
+    # Issue #1195 (FU#5 from #1181 closure): push trigger ensures every merge
+    # into integration branches generates a fresh CodeQL analysis registered
+    # against `refs/heads/<branch>`, so `code-scanning/alerts?ref=refs/heads/main-dev`
+    # stays current. Without it, PR analyses are only registered against
+    # `refs/pull/<N>/merge` and the branch ref drifts behind reality until
+    # the Monday-02:00-UTC cron.
+    branches: [main, main-staging, main-dev]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.editorconfig'
   schedule:
     - cron: '0 2 * * 1' # Weekly on Mondays
   workflow_dispatch:
@@ -40,6 +54,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Verify MaD sanitizer pack content (#1195 FU#3)
+        if: matrix.language == 'csharp'
+        env:
+          # Expected count = 6 LogSanitizer rows + 8 DataMasking rows = 14.
+          # Bump this when the pack legitimately grows; the gate's purpose is
+          # to catch silent regressions where rows get accidentally deleted or
+          # malformed (which CodeQL CLI rejects silently, see #1188 history).
+          EXPECTED_PACK_ROWS: '14'
+        run: |
+          set -euo pipefail
+          pack_file=".github/codeql/meepleai/sanitizers-extensions/models/sanitizers.model.yml"
+          if [ ! -f "$pack_file" ]; then
+            echo "::error file=$pack_file::MaD sanitizer pack file missing — barrier coverage disabled"
+            exit 1
+          fi
+          # Count tuple rows. Each barrierModel entry is a YAML inline-array line
+          # starting with '- [' inside the data: block. Robust against trailing
+          # spaces but matches the canonical formatting used in the pack.
+          actual=$(grep -cE '^\s*- \[' "$pack_file" || true)
+          if [ "$actual" -ne "$EXPECTED_PACK_ROWS" ]; then
+            echo "::error file=$pack_file::MaD barrier rowCount mismatch — expected=$EXPECTED_PACK_ROWS actual=$actual. If the pack legitimately changed, update EXPECTED_PACK_ROWS in security-scan.yml; otherwise restore the missing rows."
+            exit 1
+          fi
+          echo "::notice::MaD pack barrier rowCount OK: $actual"
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -68,9 +107,13 @@ jobs:
           dotnet build --no-restore
 
       - name: Perform CodeQL Analysis
+        id: codeql-analyze
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
+          # #1195 FU#1: pin output dir so the downstream cs/log-forging gate can
+          # read the SARIF deterministically without globbing.
+          output: ${{ runner.temp }}/codeql-sarif
         env:
           # Issue #1188 / ADR-058 §1.4: load the local MaD sanitizer pack via
           # the two-flag combo on `database run-queries`. Empirical iteration
@@ -92,6 +135,31 @@ jobs:
           CODEQL_ACTION_EXTRA_OPTIONS: >-
             ${{ matrix.language == 'csharp' && format('{{"database":{{"run-queries":["--additional-packs={0}/.github/codeql","--extension-packs=meepleai/sanitizers-extensions"]}}}}', github.workspace) || '{}' }}
         continue-on-error: true  # Code scanning might not be enabled in repo settings
+
+      - name: Check cs/log-forging alert threshold (#1195 FU#1)
+        if: matrix.language == 'csharp' && steps.codeql-analyze.conclusion == 'success'
+        env:
+          # Override via repo variable MAX_CS_LOG_FORGING_ALERTS for temporary
+          # emergency unblock (e.g. mid-refactor). Default 0 is strict: any
+          # new cs/log-forging finding means either a true positive (apply
+          # LogSanitizer.Sanitize per-site) or a barrier coverage gap (extend
+          # the MaD pack). See docs/for-developers/security/pii-safe-logging.md.
+          MAX_ALERTS: ${{ vars.MAX_CS_LOG_FORGING_ALERTS || '0' }}
+        run: |
+          set -euo pipefail
+          sarif="${{ runner.temp }}/codeql-sarif/${{ matrix.language }}.sarif"
+          if [ ! -f "$sarif" ]; then
+            echo "::warning::SARIF not found at $sarif — gate skipped (likely CodeQL upload disabled in repo settings)"
+            exit 0
+          fi
+          # Count cs/log-forging results in the SARIF. Use ruleId path because
+          # rules[] index references may not always resolve in compact SARIF.
+          actual=$(jq '[.runs[].results[]? | select(.ruleId == "cs/log-forging")] | length' "$sarif")
+          if [ "$actual" -gt "$MAX_ALERTS" ]; then
+            echo "::error::cs/log-forging open count ($actual) exceeds threshold ($MAX_ALERTS). Investigate: (a) apply LogSanitizer.Sanitize per-site for true positives, or (b) extend .github/codeql/meepleai/sanitizers-extensions/ for barrier coverage gaps, or (c) temporarily raise threshold via repo variable MAX_CS_LOG_FORGING_ALERTS. See ADR-058 + docs/for-developers/security/pii-safe-logging.md."
+            exit 1
+          fi
+          echo "::notice::cs/log-forging count OK: $actual / $MAX_ALERTS (threshold)"
 
   # Dependency scanning
   dependencies:

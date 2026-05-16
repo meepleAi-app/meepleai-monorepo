@@ -5,13 +5,14 @@ description: "Custom CodeQL configuration with false positive filters for Meeple
 disable-default-queries: false
 
 # Custom Models-as-Data sanitizer pack (ADR-058 §1.4).
-# Pack metadata is NOT declared here. Naming it in `packs:` triggers a registry
-# lookup at `database init` time that fails with "not found in ghcr.io" because
-# the pack is local-only. The right mechanism is injecting both
-# `--additional-packs=.github/codeql/extensions` (search path) and
+# Pack metadata is NOT declared here. The right mechanism is injecting both
+# `--additional-packs=<workspace>/.github/codeql/extensions` (search path) and
 # `--extension-packs=meepleai/sanitizers-extensions` (activation) into
 # `database run-queries` via CODEQL_ACTION_EXTRA_OPTIONS on the analyze step.
-# See .github/workflows/security-scan.yml.
+# Pack files live at:
+#   .github/codeql/extensions/meepleai/sanitizers-extensions/
+# Directory layout must match the pack name (meepleai/sanitizers-extensions)
+# for --extension-packs to resolve. See .github/workflows/security-scan.yml.
 
 # Query filters to reduce false positives
 query-filters:

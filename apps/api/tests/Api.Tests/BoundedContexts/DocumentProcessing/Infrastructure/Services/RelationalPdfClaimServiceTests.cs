@@ -20,6 +20,8 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 [Trait("BoundedContext", "DocumentProcessing")]
 public sealed class RelationalPdfClaimServiceTests : SharedDatabaseTestBase<RelationalPdfClaimService>
 {
+    private Guid _testUserId;
+
     public RelationalPdfClaimServiceTests(SharedTestcontainersFixture fixture) : base(fixture)
     {
     }
@@ -27,11 +29,24 @@ public sealed class RelationalPdfClaimServiceTests : SharedDatabaseTestBase<Rela
     protected override RelationalPdfClaimService CreateRepository(MeepleAiDbContext dbContext)
         => new RelationalPdfClaimService(dbContext);
 
+    private async Task SeedTestUserAsync()
+    {
+        _testUserId = Guid.NewGuid();
+        DbContext.Users.Add(new UserEntity
+        {
+            Id = _testUserId,
+            Email = $"claim-test-{_testUserId:N}@example.test",
+            CreatedAt = DateTime.UtcNow
+        });
+        await DbContext.SaveChangesAsync();
+    }
+
     [Fact]
     public async Task TryClaimPendingAsync_WhenPdfIsPending_ReturnsTrueAndTransitionsToExtracting()
     {
         // Arrange
         await ResetDatabaseAsync();
+        await SeedTestUserAsync();
         var pdfId = await SeedPdfAsync("Pending");
 
         // Act
@@ -48,6 +63,7 @@ public sealed class RelationalPdfClaimServiceTests : SharedDatabaseTestBase<Rela
     {
         // Arrange
         await ResetDatabaseAsync();
+        await SeedTestUserAsync();
         var pdfId = await SeedPdfAsync("Pending", processingError: "stale failure from prior worker");
 
         // Act
@@ -72,6 +88,7 @@ public sealed class RelationalPdfClaimServiceTests : SharedDatabaseTestBase<Rela
     {
         // Arrange
         await ResetDatabaseAsync();
+        await SeedTestUserAsync();
         var pdfId = await SeedPdfAsync(state);
 
         // Act
@@ -88,6 +105,7 @@ public sealed class RelationalPdfClaimServiceTests : SharedDatabaseTestBase<Rela
     {
         // Arrange
         await ResetDatabaseAsync();
+        await SeedTestUserAsync();
 
         // Act
         var claimed = await Repository.TryClaimPendingAsync(Guid.NewGuid(), CancellationToken.None);
@@ -101,6 +119,7 @@ public sealed class RelationalPdfClaimServiceTests : SharedDatabaseTestBase<Rela
     {
         // Arrange — single Pending PDF, two independent service instances (their own DbContext)
         await ResetDatabaseAsync();
+        await SeedTestUserAsync();
         var pdfId = await SeedPdfAsync("Pending");
 
         var sutA = Repository;
@@ -129,7 +148,7 @@ public sealed class RelationalPdfClaimServiceTests : SharedDatabaseTestBase<Rela
             FileName = "test.pdf",
             FilePath = "/tmp/test.pdf",
             FileSizeBytes = 1024,
-            UploadedByUserId = Guid.NewGuid(),
+            UploadedByUserId = _testUserId,
             ProcessingState = processingState,
             ProcessingError = processingError
         });

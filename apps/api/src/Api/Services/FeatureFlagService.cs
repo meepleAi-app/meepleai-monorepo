@@ -98,7 +98,7 @@ internal class FeatureFlagService : IFeatureFlagService
         if (tierSpecificFlag.HasValue)
         {
             _logger.LogDebug("Feature {FeatureName} for tier {Tier}: {Enabled} (tier-specific)",
-                LogSanitizer.Sanitize(featureName), tier.Value, tierSpecificFlag.Value);
+                LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value), tierSpecificFlag.Value);
             return tierSpecificFlag.Value;
         }
 
@@ -112,7 +112,7 @@ internal class FeatureFlagService : IFeatureFlagService
         }
 
         // Default: feature enabled for tier (backward compatibility - all tiers allowed by default)
-        _logger.LogDebug("Feature {FeatureName} for tier {Tier}: true (default - not found)", LogSanitizer.Sanitize(featureName), tier.Value);
+        _logger.LogDebug("Feature {FeatureName} for tier {Tier}: true (default - not found)", LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value));
         return true;
     }
 
@@ -299,7 +299,7 @@ internal class FeatureFlagService : IFeatureFlagService
             await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} enabled for tier {Tier} by {UserId}",
-                LogSanitizer.Sanitize(featureName), tier.Value, LogSanitizer.Sanitize(userId ?? "system"));
+                LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value), LogSanitizer.Sanitize(userId ?? "system"));
         }
         else
         {
@@ -317,7 +317,7 @@ internal class FeatureFlagService : IFeatureFlagService
             await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} created and enabled for tier {Tier} by {UserId}",
-                LogSanitizer.Sanitize(featureName), tier.Value, LogSanitizer.Sanitize(userId ?? "system"));
+                LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value), LogSanitizer.Sanitize(userId ?? "system"));
         }
     }
 
@@ -350,7 +350,7 @@ internal class FeatureFlagService : IFeatureFlagService
             await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} disabled for tier {Tier} by {UserId}",
-                LogSanitizer.Sanitize(featureName), tier.Value, LogSanitizer.Sanitize(userId ?? "system"));
+                LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value), LogSanitizer.Sanitize(userId ?? "system"));
         }
         else
         {
@@ -368,7 +368,7 @@ internal class FeatureFlagService : IFeatureFlagService
             await _mediator.Send(command).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} created and disabled for tier {Tier} by {UserId}",
-                LogSanitizer.Sanitize(featureName), tier.Value, LogSanitizer.Sanitize(userId ?? "system"));
+                LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value), LogSanitizer.Sanitize(userId ?? "system"));
         }
     }
 

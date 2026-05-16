@@ -21,15 +21,22 @@ query-filters:
   # CA1031: All 220 instances are properly documented with architectural patterns
   - exclude:
       id: cs/catch-of-all-exceptions
-  # RESTORED 2026-05-16 by PR #1187: this exclude was removed in PR #1183 on the
-  # assumption that the MaD sanitizer pack would suppress false positives. The
-  # path-based pack reference silently failed (see #1188). The exclude is kept
-  # here as a safety net while #1188 is being resolved. A follow-up PR after
-  # #1188 lands and the additional-packs load is empirically confirmed will
-  # remove this entry — at that point LogSanitizer.Sanitize call sites will be
-  # recognized as sanitizers and the rule can again surface true positives.
-  - exclude:
-      id: cs/log-forging
+  # NOTE 2026-05-16: blanket exclude for cs/log-forging removed (PR #1192 closing #1181).
+  # The MaD sanitizer pack at .github/codeql/meepleai/sanitizers-extensions registers
+  # LogSanitizer.Sanitize + LogSanitizer.SanitizePath + DataMasking.MaskCreditCard
+  # as `log-injection` barriers. Pack loads via CODEQL_ACTION_EXTRA_OPTIONS env var
+  # on the analyze step (see security-scan.yml). With those barriers active, the
+  # cs/log-forging rule surfaces only true positives where input flows directly to
+  # ILogger without sanitization — the original purpose of the rule.
+  #
+  # History:
+  #   - Pre-2025-11: exclude introduced (PR #1710) without empirical validation
+  #   - 2026-05-15 PR #1183: exclude removed in optimistic Phase 1.4 (MaD pack
+  #     didn't actually load — see #1188); 84 alerts surfaced as false positives
+  #   - 2026-05-16 PR #1187: exclude restored as safety net during #1188 resolution
+  #   - 2026-05-16 PR #1189: empirical pack-load mechanism delivered, 107 → 22 reduction
+  #   - 2026-05-16 PR #1191: file-content-store barriers extended, 22 → 7 reduction
+  #   - 2026-05-16 this PR: exclude removed for the second time, now empirically safe
 
 # Path filters to exclude test files and generated code
 paths-ignore:

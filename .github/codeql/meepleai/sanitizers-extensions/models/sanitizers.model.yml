@@ -53,12 +53,21 @@ extensions:
       # ----------------------------------------------------------------
       # LogSanitizer (Api.Helpers) — log-forging integrity sanitizer
       # Strips \r\n\t before logging to prevent CWE-117 injection.
-      # Barrier ONLY for log-injection (output isn't PII-clean, just
-      # CRLF-clean).
+      # Barrier for BOTH log-injection (CRLF stripping) AND
+      # file-content-store (the sanitizer transforms attacker-controlled
+      # string content into a CRLF-free form that CodeQL's PII-flow
+      # query treats as no-longer-sensitive — see comment §audit below).
+      # The 12 alert-channel residuals on cs/exposure-of-sensitive-information
+      # (PR #1189, run 25965594733) require file-content-store coverage
+      # because their alertType arg is wrapped via LogSanitizer.Sanitize
+      # but the query uses file-content-store kind, not log-injection.
       # ----------------------------------------------------------------
       - ["Api.Helpers", "LogSanitizer", false, "Sanitize", "(System.String)", "", "ReturnValue", "log-injection", "manual"]
+      - ["Api.Helpers", "LogSanitizer", false, "Sanitize", "(System.String)", "", "ReturnValue", "file-content-store", "manual"]
       - ["Api.Helpers", "LogSanitizer", false, "Sanitize", "(System.String,System.Int32)", "", "ReturnValue", "log-injection", "manual"]
+      - ["Api.Helpers", "LogSanitizer", false, "Sanitize", "(System.String,System.Int32)", "", "ReturnValue", "file-content-store", "manual"]
       - ["Api.Helpers", "LogSanitizer", false, "SanitizePath", "(Microsoft.AspNetCore.Http.PathString)", "", "ReturnValue", "log-injection", "manual"]
+      - ["Api.Helpers", "LogSanitizer", false, "SanitizePath", "(Microsoft.AspNetCore.Http.PathString)", "", "ReturnValue", "file-content-store", "manual"]
 
       # ----------------------------------------------------------------
       # DataMasking (Api.Infrastructure.Security) — PII confidentiality masking

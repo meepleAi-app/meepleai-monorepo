@@ -10,7 +10,7 @@ disable-default-queries: false
 # stop flagging call sites where these sanitizers are already applied.
 # See ADR-058 §1.4 and .github/codeql/extensions/meepleai-sanitizers/qlpack.yml
 packs:
-  - ./.github/codeql/extensions/meepleai-sanitizers
+  - .github/codeql/extensions/meepleai-sanitizers
 
 # Query filters to reduce false positives
 query-filters:

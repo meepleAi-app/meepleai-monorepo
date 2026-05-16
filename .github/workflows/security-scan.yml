@@ -90,7 +90,7 @@ jobs:
           # analyze step propagates to the underlying `codeql database
           # run-queries` invocation.
           CODEQL_ACTION_EXTRA_OPTIONS: >-
-            ${{ matrix.language == 'csharp' && format('{{"database":{{"run-queries":["--additional-packs={0}/.github/codeql/extensions","--extension-packs=meepleai/sanitizers-extensions"]}}}}', github.workspace) || '{}' }}
+            ${{ matrix.language == 'csharp' && format('{{"database":{{"run-queries":["--additional-packs={0}/.github/codeql","--extension-packs=meepleai/sanitizers-extensions"]}}}}', github.workspace) || '{}' }}
         continue-on-error: true  # Code scanning might not be enabled in repo settings
 
   # Dependency scanning

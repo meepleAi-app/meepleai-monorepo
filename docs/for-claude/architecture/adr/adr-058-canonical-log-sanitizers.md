@@ -1,11 +1,12 @@
 # ADR-058 — Canonical Log Sanitizer Strategy: PII Masking vs Log-Forging Protection
 
-**Status**: Proposed
-**Date**: 2026-05-15
+**Status**: Accepted (Phase 1 delivered, Phase 2/3 in progress)
+**Date**: 2026-05-15 (proposed), 2026-05-16 (accepted post-empirical confirmation)
 **Deciders**: @badsworm
 **Reviewers solicitati**: nessuno (decisione tecnica con scope contenuto a security tooling + 2 file utility; nessun impatto product-side, nessun cambio di contract API esterno)
 **Tracking**: Issue [#1181](https://github.com/meepleAi-app/meepleai-monorepo/issues/1181) (Phase 1 — CodeQL high alerts)
 **Supersedes**: —
+**Empirical confirmation**: 107 → 22 alert reduction (79%) on `cs/exposure-of-sensitive-information` measured via workflow_dispatch [25965594733](https://github.com/meepleAi-app/meepleai-monorepo/actions/runs/25965594733) after [PR #1189](https://github.com/meepleAi-app/meepleai-monorepo/pull/1189) landed the corrected pack-load mechanism.
 
 ## Context
 
@@ -71,29 +72,53 @@ Razionale per la direzione di consolidazione (`LogValueSanitizer` → `LogSaniti
 - Il codemod è meccanico (find/replace di identificatore + `using` directive)
 - La consolidazione inversa richiederebbe promuovere visibilità (internal → public) + cambio namespace, stesso cost
 
-**3) CodeQL recognition — registrare i sanitizer come `SanitizingMethod`.**
+**3) CodeQL recognition — registrare i sanitizer come `barrierModel`.**
 
-Estendere `.github/codeql/codeql-config.yml` con una custom query suite (o `qlpack` con `Models as Data`) che dichiari:
+> **Schema correction 2026-05-16 (empirical)**: la draft originale di questa sezione proponeva `extensible: sanitizerModel` con 10 colonne (`subtypes: true`, `Argument[0]` input field). Verifica contro CodeQL CLI 2.25.4 ha rivelato:
+> - C# usa `barrierModel`, NON `sanitizerModel`
+> - Tuple format è 9 colonne (no `input` field — l'intero `ReturnValue` è il barrier)
+> - `subtypes: false` corretto per static classes (cannot be subclassed)
+> - Threat-model kinds verificati: `log-injection` (per `cs/log-forging`), `file-content-store` (per `cs/exposure-of-sensitive-information`)
+> - Pack load NON via `packs:` in codeql-config.yml (rifiutato come "Invalid CodeQL pack specification"), ma via `CODEQL_ACTION_EXTRA_OPTIONS` env var che inietta `--additional-packs` + `--extension-packs` su `database run-queries` (vedi [PR #1189](https://github.com/meepleAi-app/meepleai-monorepo/pull/1189))
+> - Pack directory layout deve matchare il pack name: `.github/codeql/<scope>/<name>/` con `--additional-packs=.github/codeql`
+> - **CRITICAL semantic gotcha**: registrare metodi come `log-injection` barrier richiede che l'output sia GUARANTEED CRLF-free. Slicing/regex-replace su input tainted PRESERVA non-matched CRLF → unsafe. Solo `MaskCreditCard` (che strippa via `Where(char.IsDigit)`) è un genuine CRLF barrier in `DataMasking`. Tutti gli altri DataMasking methods sono `file-content-store` barriers only (PII content masking).
+
+Configurazione finale empiricamente validata (vedi `.github/codeql/meepleai/sanitizers-extensions/models/sanitizers.model.yml`):
 
 ```yaml
+# Pack metadata (.github/codeql/meepleai/sanitizers-extensions/qlpack.yml)
+name: meepleai/sanitizers-extensions
+version: 0.0.1
+library: true
+extensionTargets:
+  codeql/csharp-all: '*'
+dataExtensions:
+  - models/**/*.yml
+
+# Model entries (models/sanitizers.model.yml)
 extensions:
   - addsTo:
       pack: codeql/csharp-all
-      extensible: sanitizerModel
+      extensible: barrierModel
     data:
-      - ["Api.Infrastructure.Security", "DataMasking", true, "MaskEmail", "(System.String)", "", "Argument[0]", "log-injection", "manual"]
-      - ["Api.Infrastructure.Security", "DataMasking", true, "MaskString", "(System.String,System.Int32)", "", "Argument[0]", "log-injection", "manual"]
-      - ["Api.Infrastructure.Security", "DataMasking", true, "MaskJwt", "(System.String)", "", "Argument[0]", "log-injection", "manual"]
-      - ["Api.Infrastructure.Security", "DataMasking", true, "MaskCreditCard", "(System.String)", "", "Argument[0]", "log-injection", "manual"]
-      - ["Api.Infrastructure.Security", "DataMasking", true, "MaskIpAddress", "(System.String)", "", "Argument[0]", "log-injection", "manual"]
-      - ["Api.Helpers", "LogSanitizer", true, "Sanitize", "(System.String)", "", "Argument[0]", "log-injection", "manual"]
-      - ["Api.Helpers", "LogSanitizer", true, "Sanitize", "(System.String,System.Int32)", "", "Argument[0]", "log-injection", "manual"]
-      - ["Api.Helpers", "LogSanitizer", true, "SanitizePath", "(Microsoft.AspNetCore.Http.PathString)", "", "Argument[0]", "log-injection", "manual"]
+      # LogSanitizer — log-forging integrity barrier
+      - ["Api.Helpers", "LogSanitizer", false, "Sanitize", "(System.String)", "", "ReturnValue", "log-injection", "manual"]
+      # ... (3 LogSanitizer × log-injection)
+      # DataMasking — PII confidentiality barrier
+      - ["Api.Infrastructure.Security", "DataMasking", false, "MaskEmail", "(System.String)", "", "ReturnValue", "file-content-store", "manual"]
+      # ... (7 DataMasking × file-content-store + 1 MaskCreditCard × log-injection)
 ```
 
-Per `cs/exposure-of-sensitive-information` (CWE-359) la modellazione è equivalente con `sourceModel`/`sinkModel` appropriato — sintassi esatta da convalidare in Phase 1 contro la versione di CodeQL CLI in CI.
+Workflow snippet (`.github/workflows/security-scan.yml`):
+```yaml
+- name: Perform CodeQL Analysis
+  uses: github/codeql-action/analyze@v4
+  env:
+    CODEQL_ACTION_EXTRA_OPTIONS: >-
+      ${{ matrix.language == 'csharp' && format('{{"database":{{"run-queries":["--additional-packs={0}/.github/codeql","--extension-packs=meepleai/sanitizers-extensions"]}}}}', github.workspace) || '{}' }}
+```
 
-Verificare contestualmente perché l'exclude esistente di `cs/log-forging` (`codeql-config.yml:11-12`) non chiude l'alert #537: probabile config drift tra workflow `codeql.yml` e file di configurazione, oppure path filter che esclude `Routing/` per errore.
+Verifica esistenza in [PR #1189](https://github.com/meepleAi-app/meepleai-monorepo/pull/1189) (8 iterazioni empiriche per arrivare al fix).
 
 ## Alternatives considered
 

@@ -4,17 +4,23 @@ description: "Custom CodeQL configuration with false positive filters for Meeple
 # Disable specific queries that produce false positives
 disable-default-queries: false
 
+# Custom Models-as-Data extensions: registers MeepleAI canonical sanitizers
+# (DataMasking.Mask*, LogSanitizer.*) so taint-tracking queries (cs/log-forging,
+# cs/exposure-of-sensitive-information, cs/cleartext-storage-of-sensitive-information)
+# stop flagging call sites where these sanitizers are already applied.
+# See ADR-058 §1.4 and .github/codeql/extensions/meepleai-sanitizers/qlpack.yml
+packs:
+  - ./.github/codeql/extensions/meepleai-sanitizers
+
 # Query filters to reduce false positives
 query-filters:
-  # Exclude log forging warnings where LogForgingSanitizationPolicy is in use
-  # CWE-117: All 426 instances are false positives due to global sanitization policy
-  - exclude:
-      id: cs/log-forging
-
   # Exclude generic exception handling warnings where properly justified with #pragma
   # CA1031: All 220 instances are properly documented with architectural patterns
   - exclude:
       id: cs/catch-of-all-exceptions
+  # NOTE 2026-05-16: blanket exclude for cs/log-forging removed — Phase 1.4 (above)
+  # registers LogSanitizer.* as a sanitizerModel, so the rule can again surface true
+  # positives where input flows directly to ILogger without sanitization.
 
 # Path filters to exclude test files and generated code
 paths-ignore:

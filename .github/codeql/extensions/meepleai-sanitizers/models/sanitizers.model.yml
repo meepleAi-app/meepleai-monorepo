@@ -1,0 +1,41 @@
+# MeepleAI canonical sanitizers (ADR-058, issue #1181 Phase 1.4)
+#
+# Registers DataMasking.Mask* and LogSanitizer.* methods as value-flow summary
+# models so CodeQL stops flagging call sites that already pass through them.
+#
+# Kind "value" = data flows from input to output but TAINT does NOT propagate.
+# Effectively marks the method as a sanitizer for taint-tracking queries:
+# - cs/log-forging (CWE-117)
+# - cs/exposure-of-sensitive-information (CWE-359)
+# - cs/cleartext-storage-of-sensitive-information (CWE-312)
+#
+# C# tuple format (10 columns):
+#   namespace, type, subtypes, method, signature, ext, input, output, kind, provenance
+#
+# References:
+# - ADR-058 §1.4 Implementation plan
+# - https://codeql.github.com/docs/codeql-language-guides/customizing-library-models-for-csharp/
+extensions:
+  - addsTo:
+      pack: codeql/csharp-all
+      extensible: summaryModel
+    data:
+      # ----------------------------------------------------------------
+      # LogSanitizer (Api.Helpers) — log-forging integrity sanitizer
+      # Strips \r\n\t before logging to prevent CWE-117 injection.
+      # ----------------------------------------------------------------
+      - ["Api.Helpers", "LogSanitizer", false, "Sanitize", "(System.String)", "", "Argument[0]", "ReturnValue", "value", "manual"]
+      - ["Api.Helpers", "LogSanitizer", false, "Sanitize", "(System.String,System.Int32)", "", "Argument[0]", "ReturnValue", "value", "manual"]
+      - ["Api.Helpers", "LogSanitizer", false, "SanitizePath", "(Microsoft.AspNetCore.Http.PathString)", "", "Argument[0]", "ReturnValue", "value", "manual"]
+
+      # ----------------------------------------------------------------
+      # DataMasking (Api.Infrastructure.Security) — PII confidentiality masking
+      # Irreversibly transforms PII for safe logging (GDPR Art. 32).
+      # ----------------------------------------------------------------
+      - ["Api.Infrastructure.Security", "DataMasking", false, "MaskEmail", "(System.String)", "", "Argument[0]", "ReturnValue", "value", "manual"]
+      - ["Api.Infrastructure.Security", "DataMasking", false, "MaskString", "(System.String,System.Int32)", "", "Argument[0]", "ReturnValue", "value", "manual"]
+      - ["Api.Infrastructure.Security", "DataMasking", false, "MaskJwt", "(System.String)", "", "Argument[0]", "ReturnValue", "value", "manual"]
+      - ["Api.Infrastructure.Security", "DataMasking", false, "MaskCreditCard", "(System.String)", "", "Argument[0]", "ReturnValue", "value", "manual"]
+      - ["Api.Infrastructure.Security", "DataMasking", false, "MaskIpAddress", "(System.String)", "", "Argument[0]", "ReturnValue", "value", "manual"]
+      - ["Api.Infrastructure.Security", "DataMasking", false, "RedactConnectionString", "(System.String)", "", "Argument[0]", "ReturnValue", "value", "manual"]
+      - ["Api.Infrastructure.Security", "DataMasking", false, "MaskResponseBody", "(System.String,System.Int32)", "", "Argument[0]", "ReturnValue", "value", "manual"]

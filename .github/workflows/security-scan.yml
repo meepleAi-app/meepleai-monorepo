@@ -2,7 +2,11 @@ name: Security Scan
 
 on:
   pull_request:
-    branches: [main, main-staging]
+    # Phase 3 of #1181 (ADR-058): main-dev added so PII / log-forging
+    # regressions are caught at the first integration target, not only when
+    # they propagate to staging. paths-ignore below already excludes docs-only
+    # PRs so the cost stays bounded.
+    branches: [main, main-staging, main-dev]
     # Issue #850: docs-only PRs do not change dependency or code surface,
     # so SCA / SAST scans add no signal. The Monday-02:00-UTC cron still
     # runs the full scan weekly regardless of recent PR activity.

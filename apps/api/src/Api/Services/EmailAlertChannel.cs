@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Net.Mail;
+using Api.Helpers;
 using Api.Infrastructure.Security;
 using Microsoft.Extensions.Options;
 
@@ -94,7 +95,7 @@ internal class EmailAlertChannel : IAlertChannel
             // failure status. Throwing would prevent other channels from executing (Slack, PagerDuty).
             // Caller (AlertingService) tracks per-channel results for graceful degradation.
             // Context: Email failures are typically external (SMTP down, authentication expired)
-            _logger.LogError(ex, "Failed to send email alert for {AlertType}", alertType);
+            _logger.LogError(ex, "Failed to send email alert for {AlertType}", LogSanitizer.Sanitize(alertType));
             return false;
         }
     }

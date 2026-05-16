@@ -285,6 +285,7 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
 
         return new PdfProcessingPipelineService(
             _db,
+            new Api.Tests.TestHelpers.InMemoryPdfClaimService(_db),
             _pdfTextExtractorMock.Object,
             _tableExtractorMock.Object,
             _chunkingServiceMock.Object,

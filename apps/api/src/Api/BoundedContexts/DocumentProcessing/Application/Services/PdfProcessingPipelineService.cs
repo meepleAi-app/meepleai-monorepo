@@ -25,6 +25,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private const int EmbeddingBatchSize = 20;
 
     private readonly MeepleAiDbContext _db;
+    private readonly IPdfClaimService _pdfClaimService;
     private readonly IPdfTextExtractor _pdfTextExtractor;
     private readonly IPdfTableExtractor _tableExtractor;
     private readonly ITextChunkingService _chunkingService;
@@ -41,6 +42,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
+        IPdfClaimService pdfClaimService,
         IPdfTextExtractor pdfTextExtractor,
         IPdfTableExtractor tableExtractor,
         ITextChunkingService chunkingService,
@@ -56,6 +58,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IFeatureFlagService? featureFlagService = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
         _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
         _tableExtractor = tableExtractor ?? throw new ArgumentNullException(nameof(tableExtractor));
         _chunkingService = chunkingService ?? throw new ArgumentNullException(nameof(chunkingService));
@@ -83,48 +86,13 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
         try
         {
-            // Atomic claim: transition Pending → Extracting in a single UPDATE.
-            // - Returns 1 row if this worker successfully claimed the job.
-            // - Returns 0 rows if any other state (Uploading, Ready, Failed, …)
-            //   meaning another worker (e.g. the upload-time background task) owns it
-            //   or the PDF is already terminal. Stuck-state recovery is handled
-            //   separately by RetryFailedPdfsJob, not here.
-            // FindAsync would suffer L1-cache staleness when another scope writes the
-            // row mid-flight; an atomic UPDATE bypasses that entirely.
-            //
-            // Issue #890: ExecuteSqlInterpolatedAsync is relational-only. Unit tests
-            // that exercise this pipeline use the InMemory provider (no concurrency,
-            // no L1-cache staleness concern), where the equivalent operation is a
-            // tracked Find + SaveChanges. Production paths still go through the
-            // atomic SQL UPDATE.
-            int rowsClaimed;
-            if (_db.Database.IsRelational())
-            {
-                rowsClaimed = await _db.Database.ExecuteSqlInterpolatedAsync(
-                    $@"UPDATE pdf_documents
-                       SET processing_state = 'Extracting', ""ProcessingError"" = NULL
-                       WHERE ""Id"" = {pdfDocumentId} AND processing_state = 'Pending'",
-                    cancellationToken).ConfigureAwait(false);
-            }
-            else
-            {
-                var existing = await _db.PdfDocuments
-                    .FindAsync(new object[] { pdfDocumentId }, cancellationToken)
-                    .ConfigureAwait(false);
-                if (existing != null && string.Equals(existing.ProcessingState, "Pending", StringComparison.Ordinal))
-                {
-                    existing.ProcessingState = "Extracting";
-                    existing.ProcessingError = null;
-                    await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                    rowsClaimed = 1;
-                }
-                else
-                {
-                    rowsClaimed = 0;
-                }
-            }
-
-            if (rowsClaimed == 0)
+            // Atomic claim: transition Pending → Extracting in a single operation.
+            // Issue #892: extracted to IPdfClaimService — production uses raw SQL UPDATE
+            // (RelationalPdfClaimService) for atomic guarantees under contention; tests
+            // inject InMemoryPdfClaimService which uses tracked Find + SaveChanges.
+            // Stuck-state recovery is RetryFailedPdfsJob's responsibility, not the claim.
+            var claimed = await _pdfClaimService.TryClaimPendingAsync(pdfDocumentId, cancellationToken).ConfigureAwait(false);
+            if (!claimed)
             {
                 _logger.LogInformation(
                     "[PdfPipeline] PDF {PdfId} not in Pending state (already claimed or terminal), skipping",

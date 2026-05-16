@@ -152,6 +152,10 @@ internal static class DocumentProcessingServiceExtensions
         // Libro Game AI Assistant MVP Phase 1 — Task 1.6: parallel photo batch processor
         services.AddScoped<IPhotoBatchProcessor, PhotoBatchProcessor>();
 
+        // Issue #892: Atomic PDF claim service — raw SQL UPDATE against PostgreSQL
+        // for production. Tests inject the InMemoryPdfClaimService helper directly.
+        services.AddScoped<IPdfClaimService, RelationalPdfClaimService>();
+
         // Shared PDF processing pipeline (used by recovery job and future handler consolidation)
         services.AddScoped<IPdfProcessingPipelineService, PdfProcessingPipelineService>();
 

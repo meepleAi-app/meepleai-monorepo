@@ -144,7 +144,8 @@ public class NgramCopyrightLeakGuardScenarios
             () => guard.ScanAsync(longText, new[] { chunk }, cts.Token));
     }
 
-    [Fact]
+    [Trait("Category", TestCategories.Performance)]
+    [Fact(Skip = "Issue #892: replaced by NgramCopyrightLeakGuardBenchmark (BenchmarkDotNet) — the xUnit time-based assertion tracked CI environment noise, not algorithm behavior. See apps/api/tests/Api.Tests/Benchmarks/NgramCopyrightLeakGuardBenchmark.cs.")]
     public async Task Given_5ChunksOf1500Words_WhenScanned_ThenCompletesUnder50ms()
     {
         var guard = CreateGuard(threshold: 12);
@@ -158,10 +159,8 @@ public class NgramCopyrightLeakGuardScenarios
         sw.Stop();
 
         Assert.False(result.HasLeak);
-        // CI tolerance: 1000ms allowance on shared/contended runners (target <50ms locally,
-        // <500ms typical on a clean CI box). Issue #890: 521ms observed on a contended GH
-        // Actions runner — bumped to 1000ms to keep the assertion as a regression-catcher
-        // (flagging 20x+ degradations) without being a flake source.
+        // Local-only sanity bound — the authoritative perf signal is the BenchmarkDotNet
+        // run referenced in the Skip reason above.
         Assert.True(sw.ElapsedMilliseconds < 1000,
             $"Scan took {sw.ElapsedMilliseconds}ms, expected <1000ms on CI (target <50ms local)");
     }

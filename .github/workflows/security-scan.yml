@@ -51,34 +51,6 @@ jobs:
           # the workflow ignored the file → cs/log-forging exclude never fired,
           # alert #537 stayed open).
           config-file: ./.github/codeql/codeql-config.yml
-        env:
-          # Issue #1188 / ADR-058 §1.4: register the local MaD sanitizer pack at
-          # .github/codeql/extensions/meepleai-sanitizers/ via --additional-packs.
-          # This is necessary because the `packs:` key in codeql-config.yml accepts
-          # pack NAMES only (e.g. codeql/csharp-queries), not local paths. The env
-          # var below is the documented escape hatch that injects raw CLI flags
-          # into specific codeql commands.
-          #
-          # `--additional-packs` is only valid on commands that read packs from
-          # disk. Injecting into `database init` causes exit code 2 — verified
-          # empirically on run 25961568058.
-          #
-          # The codeql-action does NOT invoke `database analyze` directly; it
-          # decomposes into `database finalize` + `database run-queries` +
-          # SARIF interpretation in-process. `run-queries` is the command that
-          # loads queries, resolves data extensions, and runs the QL evaluator.
-          # Verified empirically on run 25961738132: env var path `analyze` was
-          # silently ignored, env var path `run-queries` is what matches.
-          #
-          # Format: nested keys = command path; arrays = extra flags.
-          # See https://github.com/github/codeql-action getExtraOptionsEnvParam
-          # and src/codeql.ts call sites for `getExtraOptionsFromEnv`.
-          CODEQL_ACTION_EXTRA_OPTIONS: |
-            {
-              "database": {
-                "run-queries": ["--additional-packs=.github/codeql/extensions"]
-              }
-            }
 
       # Build C# for analysis
       - name: Setup .NET
@@ -99,6 +71,26 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
+        env:
+          # Issue #1188 / ADR-058 §1.4: load the local MaD sanitizer pack via
+          # the two-flag combo on `database run-queries`. Empirical iteration
+          # journal:
+          #   - 25961568058: injected into `database init` → exit code 2
+          #     (--additional-packs not a valid init flag)
+          #   - 25961738132: env path "database.analyze" → silently ignored
+          #     (the action calls `run-queries`, not `analyze`)
+          #   - 25962279252: --additional-packs in run-queries but no
+          #     --extension-packs activation → flag accepted, pack on search
+          #     path, but extensions NOT loaded (no alert reduction)
+          #   - 25962852153: registry lookup failure when packs: declared in
+          #     codeql-config.yml (CodeQL CLI hits ghcr.io at init time)
+          # Working pattern (from homelabforge/shared-workflows): both
+          # --additional-packs (search path) AND --extension-packs (pack
+          # activation by name) on the analyze step, NOT init. The env var on
+          # analyze step propagates to the underlying `codeql database
+          # run-queries` invocation.
+          CODEQL_ACTION_EXTRA_OPTIONS: >-
+            ${{ matrix.language == 'csharp' && format('{{"database":{{"run-queries":["--additional-packs={0}/.github/codeql/extensions","--extension-packs=meepleai/sanitizers-extensions"]}}}}', github.workspace) || '{}' }}
         continue-on-error: true  # Code scanning might not be enabled in repo settings
 
   # Dependency scanning

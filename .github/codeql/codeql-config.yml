@@ -49,6 +49,13 @@ paths-ignore:
   - "**/node_modules/**"
   - "**/dist/**"
   - "**/.next/**"
+  # Issue #1196: synthetic CodeQL barrier probes (positive + negative).
+  # The lowercase `tests/` path does not match `**/Tests/**` on Linux runners
+  # (case-sensitive glob), so the probes need an explicit exclude here. They
+  # are intentionally scanned only by `.github/workflows/barrier-verification.yml`
+  # via `codeql-config-with-probes.yml`. See
+  # `docs/for-developers/specs/2026-05-17-codeql-barrier-probes.md`.
+  - "apps/api/tests/CodeqlBarrierSmoke/**"
 
 # Paths to include in analysis
 paths:

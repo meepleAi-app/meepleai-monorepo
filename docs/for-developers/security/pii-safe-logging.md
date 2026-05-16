@@ -189,6 +189,27 @@ If a class of false positives recurs (e.g. all `int` counts logged in a hot path
 
 ---
 
+## Barrier verification (#1196)
+
+The MaD sanitizer pack registration is itself a piece of configuration that can silently regress (paths-ignore drift, query-suite mismatch, pack-load failure — see PR #1188 for an instance where the pack appeared to load but didn't). To detect this, two synthetic probes under `apps/api/tests/CodeqlBarrierSmoke/Probes/` are exercised by `.github/workflows/barrier-verification.yml`:
+
+- **Sanitized.cs** — composes `LogSanitizer.Sanitize(DataMasking.MaskEmail(...))`. Expected to produce **zero** `cs/exposure-of-sensitive-information` alerts (barrier recognised).
+- **Unsanitized.cs** — logs a raw email. Expected to produce **≥1** alert (rule alive).
+
+The workflow runs **monthly** (first day of month, 04:00 UTC) and on demand via `workflow_dispatch`. If either expectation fails, Slack `#security` channel is paged.
+
+**To run on demand**:
+```bash
+gh workflow run barrier-verification.yml --field verbose=true
+gh run watch
+```
+
+The `verbose=true` input dumps the full SARIF probe-related rows so you can diagnose mismatches.
+
+**Do not delete or "fix" the probe files**. Their content is intentional. The workflow's first step asserts both files exist and fails loudly if either is missing. Design rationale lives in [`docs/for-developers/specs/2026-05-17-codeql-barrier-probes.md`](../specs/2026-05-17-codeql-barrier-probes.md).
+
+---
+
 ## When the helpers are insufficient
 
 If you need to log a new PII category not covered (e.g. phone numbers, IBAN, physical addresses):

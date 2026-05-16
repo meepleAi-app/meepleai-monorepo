@@ -131,7 +131,7 @@ public sealed class CookieHelpersHmacTests
             "not silently accepted.");
     }
 
-    [Fact]
+    [Fact(Skip = "C4 grace period hardcoded sunset (UserRoleCookieV1SunsetUtc = 2026-05-13) is now in the past; pre-sunset behaviour is no longer reachable from a real clock. To restore coverage, refactor CookieHelpers to take an ITimeProvider/clock seam and reintroduce this assertion under a controlled now, or replace with a post-sunset assertion (v1 cookie → null). Tracked separately from #892.")]
     public void ReadUserRoleCookie_FallbackV1_ReturnsRole_DuringGracePeriod()
     {
         // Only a v1 cookie is present (legacy session pre-deploy). During the

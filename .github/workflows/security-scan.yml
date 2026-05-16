@@ -59,18 +59,24 @@ jobs:
           # var below is the documented escape hatch that injects raw CLI flags
           # into specific codeql commands.
           #
-          # `--additional-packs` is only valid on `database analyze` (and a few
-          # pack/* subcommands). Injecting into `database init` causes exit code 2
-          # — verified empirically on run 25961568058. Only `analyze` is targeted.
-          # The pack is auto-discovered there because its qlpack.yml declares
-          # extensionTargets: codeql/csharp-all, which the security-extended suite
-          # transitively loads.
+          # `--additional-packs` is only valid on commands that read packs from
+          # disk. Injecting into `database init` causes exit code 2 — verified
+          # empirically on run 25961568058.
+          #
+          # The codeql-action does NOT invoke `database analyze` directly; it
+          # decomposes into `database finalize` + `database run-queries` +
+          # SARIF interpretation in-process. `run-queries` is the command that
+          # loads queries, resolves data extensions, and runs the QL evaluator.
+          # Verified empirically on run 25961738132: env var path `analyze` was
+          # silently ignored, env var path `run-queries` is what matches.
+          #
           # Format: nested keys = command path; arrays = extra flags.
-          # See https://github.com/github/codeql-action getExtraOptionsEnvParam.
+          # See https://github.com/github/codeql-action getExtraOptionsEnvParam
+          # and src/codeql.ts call sites for `getExtraOptionsFromEnv`.
           CODEQL_ACTION_EXTRA_OPTIONS: |
             {
               "database": {
-                "analyze": ["--additional-packs=.github/codeql/extensions"]
+                "run-queries": ["--additional-packs=.github/codeql/extensions"]
               }
             }
 

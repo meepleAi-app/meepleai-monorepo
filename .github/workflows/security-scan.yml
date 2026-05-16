@@ -51,6 +51,24 @@ jobs:
           # the workflow ignored the file → cs/log-forging exclude never fired,
           # alert #537 stayed open).
           config-file: ./.github/codeql/codeql-config.yml
+        env:
+          # Issue #1188 / ADR-058 §1.4: register the local MaD sanitizer pack at
+          # .github/codeql/extensions/meepleai-sanitizers/ via --additional-packs.
+          # This is necessary because the `packs:` key in codeql-config.yml accepts
+          # pack NAMES only (e.g. codeql/csharp-queries), not local paths. The env
+          # var below is the documented escape hatch that injects raw CLI flags
+          # into specific codeql commands. Both `database init` and `database
+          # analyze` need the flag so the pack is discoverable at config-parsing
+          # time AND when extensions auto-apply during analysis.
+          # Format: nested keys = command path; arrays = extra flags.
+          # See https://github.com/github/codeql-action getExtraOptionsEnvParam.
+          CODEQL_ACTION_EXTRA_OPTIONS: |
+            {
+              "database": {
+                "init": ["--additional-packs=.github/codeql/extensions"],
+                "analyze": ["--additional-packs=.github/codeql/extensions"]
+              }
+            }
 
       # Build C# for analysis
       - name: Setup .NET

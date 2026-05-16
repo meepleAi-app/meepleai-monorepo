@@ -82,7 +82,7 @@ internal class EmailAlertChannel : IAlertChannel
             _logger.LogInformation(
                 "Email alert sent to {Recipients} for {AlertType}",
                 string.Join(", ", _config.To.Select(DataMasking.MaskEmail)),
-                alertType);
+                LogSanitizer.Sanitize(alertType));
 
             return true;
         }

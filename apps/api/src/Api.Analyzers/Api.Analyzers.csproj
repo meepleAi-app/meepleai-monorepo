@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      Roslyn analyzers must target netstandard2.0 because they are loaded into the
+      MSBuild process (which runs on .NET Framework or the .NET runtime that ships
+      with the .NET SDK) and netstandard2.0 is the lowest-common-denominator that
+      both runtimes can load.
+    -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Api.Analyzers</RootNamespace>
+    <AssemblyName>Api.Analyzers</AssemblyName>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <!--
+      Suppress missing-XML-doc warnings (1591) and analyzer release tracking
+      (RS2008). Release tracking is opt-in; we document MAI001 in
+      docs/for-developers/security/pii-safe-logging.md and ADR-058 instead.
+      Reconsider RS2008 if the analyzer accumulates 3+ rules.
+    -->
+    <NoWarn>$(NoWarn);1591;RS2008</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Microsoft.CodeAnalysis.CSharp.Workspaces 4.8.0 is the latest stable release
+      that ships with the .NET 9 SDK toolchain (Roslyn 4.8.x). Pinning explicitly
+      so future .NET SDK upgrades surface incompatibilities via build errors
+      rather than silent ABI drift. Update only when the .NET SDK version bumps.
+    -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.8.0" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

@@ -8,6 +8,15 @@
     <AnalysisLevel>latest-Recommended</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!--
+      Issue #1197 (ADR-058 DX): MAI001 from the in-house NoPiiInLogAnalyzer is
+      a developer-experience signal, not an enforcement gate. CodeQL on PR/push
+      is the authoritative enforcement (issue #1195 FU#1 gate, threshold 0).
+      Keep MAI001 as a build warning so it shows in IDE / PR check logs but
+      does NOT fail builds (Roslyn analyzer is meant to be advisory; CodeQL
+      stays authoritative).
+    -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);MAI001</WarningsNotAsErrors>
     <!-- Living Documentation: Generate XML documentation file for API -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- Suppress warnings: 1591=missing XML comments, code quality warnings temporarily disabled for build -->
@@ -32,6 +41,18 @@
     <InternalsVisibleTo Include="Api.Tests" />
     <!-- Required for Moq to create proxies of internal types in generic contexts (e.g., ILogger<InternalService>) -->
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+  <!--
+    Issue #1197 — wire the in-house NoPiiInLogAnalyzer (MAI001) as a build-time
+    analyzer. ADR-058 + docs/for-developers/security/pii-safe-logging.md.
+    OutputItemType="Analyzer" + ReferenceOutputAssembly="false" attaches the
+    project as an analyzer without pulling its assembly into Api's output.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\Api.Analyzers\Api.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="3.7.413" />

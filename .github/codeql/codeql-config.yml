@@ -4,22 +4,16 @@ description: "Custom CodeQL configuration with false positive filters for Meeple
 # Disable specific queries that produce false positives
 disable-default-queries: false
 
-# Custom Models-as-Data extensions: registers MeepleAI canonical sanitizers
-# (DataMasking.Mask*, LogSanitizer.*) so taint-tracking queries (cs/log-forging,
-# cs/exposure-of-sensitive-information, cs/cleartext-storage-of-sensitive-information)
-# stop flagging call sites where these sanitizers are already applied.
-# See ADR-058 §1.4 and .github/codeql/extensions/meepleai-sanitizers/qlpack.yml
-#
-# TODO (#1181 follow-up): the path-based reference below is REJECTED by
-# CodeQL CLI 2.25.4 in CI with "WARNING: Invalid CodeQL pack specification ...
-# Ignoring." The packs: key here accepts pack NAMES only (e.g. codeql/csharp-queries),
-# not local paths. Local extension packs need a different load mechanism — either
-# the github/codeql-action/init `packs:` input or the `--additional-packs` CLI flag
-# via env. Until that's figured out, the cs/log-forging blanket exclude below is
-# RESTORED so the 84 alerts that surfaced after removing it don't pollute the
-# dashboard. Local extension files are kept in place for the eventual fix.
-packs:
-  - .github/codeql/extensions/meepleai-sanitizers
+# Custom Models-as-Data sanitizer pack (ADR-058 §1.4).
+# Pack metadata is NOT declared here. The right mechanism is injecting both
+# `--additional-packs=<workspace>/.github/codeql` (search path) and
+# `--extension-packs=meepleai/sanitizers-extensions` (activation) into
+# `database run-queries` via CODEQL_ACTION_EXTRA_OPTIONS on the analyze step.
+# Pack files live at:
+#   .github/codeql/meepleai/sanitizers-extensions/
+# Directory layout must match the pack name for --extension-packs to resolve.
+# Pattern mirrors homelabforge/mygarage (working reference).
+# See .github/workflows/security-scan.yml.
 
 # Query filters to reduce false positives
 query-filters:
@@ -27,11 +21,13 @@ query-filters:
   # CA1031: All 220 instances are properly documented with architectural patterns
   - exclude:
       id: cs/catch-of-all-exceptions
-  # RESTORED 2026-05-16: this exclude was removed in PR #1183 on the assumption
-  # that the MaD sanitizer pack above would suppress false positives. The pack
-  # loading via `packs:` path silently fails in CI (see TODO above), so the rule
-  # would otherwise report ~84 false positives across files that DO call
-  # LogSanitizer.Sanitize. Re-enable when the MaD load issue is resolved.
+  # RESTORED 2026-05-16 by PR #1187: this exclude was removed in PR #1183 on the
+  # assumption that the MaD sanitizer pack would suppress false positives. The
+  # path-based pack reference silently failed (see #1188). The exclude is kept
+  # here as a safety net while #1188 is being resolved. A follow-up PR after
+  # #1188 lands and the additional-packs load is empirically confirmed will
+  # remove this entry — at that point LogSanitizer.Sanitize call sites will be
+  # recognized as sanitizers and the rule can again surface true positives.
   - exclude:
       id: cs/log-forging
 

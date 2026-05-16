@@ -273,7 +273,7 @@ internal class HybridCacheService : IHybridCacheService
     {
         if (_redisDb == null)
         {
-            _logger.LogWarning("Redis not available for tag tracking. Tags will not be persisted: {CacheKey}", cacheKey);
+            _logger.LogWarning("Redis not available for tag tracking. Tags will not be persisted: {CacheKey}", LogSanitizer.Sanitize(cacheKey));
             return;
         }
 

@@ -98,12 +98,16 @@ _logger.LogDebug("Loaded user {@User}", DataMasking.SanitizeUser(user));
 ### Audit event (NOT operational log)
 
 ```csharp
-// Right — full email persisted in audit pipeline, NOT in ILogger
+// Right — full email persisted in audit pipeline, NOT in ILogger.
+// AuditService.LogAsync signature: userId, action, resource, resourceId,
+// result, details (string?), ipAddress?, userAgent?, cancellationToken?
 await _auditService.LogAsync(
     userId: user.Id.ToString(),
     action: "PASSWORD_RESET_REQUESTED",
     resource: "User",
-    details: new { Email = user.Email });
+    resourceId: user.Id.ToString(),
+    result: "Success",
+    details: JsonSerializer.Serialize(new { Email = user.Email }));
 // Operational log gets only the actionable summary
 _logger.LogInformation("Password reset requested for {UserId}", user.Id);
 ```
@@ -136,33 +140,40 @@ _logger.LogInformation("Login attempt {@User}", DataMasking.SanitizeUser(user));
 |---|---|
 | `MaskEmail(string?)` | `j***n@example.com` |
 | `MaskString(string?, int visibleChars = 4)` | `abcd...wxyz` |
-| `MaskJwt(string?)` | `eyJhbGciOi...***` |
+| `MaskJwt(string?)` | `eyJhbGciOiJIUzI1NiIs...***` (first 20 chars + `...***`) |
 | `MaskCreditCard(string?)` | `****-****-****-1234` |
 | `MaskIpAddress(string?)` | `192.168.1.***` (IPv4) — GDPR-compliant |
 | `RedactConnectionString(string?)` | password value redacted, other params preserved |
 | `MaskResponseBody(string?, int maxLength = 500)` | inline-redacts emails, bearer tokens, api_key, password, secret + truncates |
 | `SanitizeUser(UserEntity)` | anonymous object with safe fields only |
 
-> **Note on `RedactConnectionString`**: pattern-based, best-effort. Catches `password=`, `Password=`, `pwd:`. Does NOT catch uppercase `PASSWORD=`, MongoDB URIs, or URI-encoded form. Treat as defense-in-depth, not a primary safeguard.
+> **Note on `RedactConnectionString`**: pattern-based, best-effort. Catches `password=` / `PASSWORD=` / `pwd=` (case-insensitive) and `password:value` / `pwd:value` (key-colon form). Does NOT catch MongoDB / Redis URIs (`mongodb://user:pass@host`), URI-encoded passwords, or non-standard key names outside the three documented patterns. Treat as defense-in-depth, not a primary safeguard.
 
 ---
 
 ## How the guard rail works
 
-1. **CodeQL Models-as-Data pack** (`.github/codeql/extensions/meepleai-sanitizers`) registers every public method of `LogSanitizer` and `DataMasking` as a sanitizer for `cs/exposure-of-sensitive-information` and `cs/log-forging` queries.
+1. **CodeQL Models-as-Data pack** (`.github/codeql/extensions/meepleai-sanitizers`) registers every public **string-returning** method of `LogSanitizer` and `DataMasking` as a sanitizer for `cs/exposure-of-sensitive-information` and `cs/log-forging` queries. `SanitizeUser` is the one exception — it returns an anonymous object, which doesn't fit the `Argument[0] → ReturnValue` taint-flow shape. Call sites of `SanitizeUser` are recognized via the field-level masking inside the helper (each `Email = MaskEmail(...)` field already has its own sanitizer model).
 2. **`security-scan.yml`** runs CodeQL on every PR to `main-dev`/`main-staging`/`main` (Phase 3 of #1181).
 3. A PR that introduces `_logger.LogInformation("{Email}", rawEmail)` without `MaskEmail` triggers a new `cs/exposure-of-sensitive-information` alert. Branch protection on the target branch should require the CodeQL check to pass.
 4. Conversely, a PR that wraps the call in `DataMasking.MaskEmail(...)` is auto-recognized as safe by the MaD pack — no alert opened, no friction.
 
 ### Verifying the guard rail
 
-A synthetic test PR that intentionally adds:
+CodeQL `cs/exposure-of-sensitive-information` is a taint-tracking query: it needs an actual **taint source** (user input, HTTP request data, database read), not a hard-coded literal. A meaningful synthetic test PR adds something like:
 
 ```csharp
-_logger.LogInformation("DEBUG raw email {Email}", "test@example.com");
+// In an endpoint or controller
+app.MapGet("/_test/pii-guard", (string email, ILogger<Program> logger) =>
+{
+    logger.LogInformation("DEBUG raw email {Email}", email); // email is taint source
+    return Results.Ok();
+});
 ```
 
-…must open a `cs/exposure-of-sensitive-information` alert on the next CodeQL run. If it doesn't, the MaD pack or workflow trigger is broken — file a bug against this convention.
+…then runs CodeQL on the PR. The flow `Request query parameter → ILogger sink` without a sanitizer must open a `cs/exposure-of-sensitive-information` alert. If it doesn't, the MaD pack or workflow trigger is broken — file a bug against this convention.
+
+The complementary positive test wraps the sink in `DataMasking.MaskEmail(email)` and confirms the alert does **not** open.
 
 ---
 

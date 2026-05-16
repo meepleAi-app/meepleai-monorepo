@@ -32,6 +32,13 @@ public sealed class RelationalPdfClaimService : IPdfClaimService
         //     responsibility, not the claim service.
         // FindAsync would suffer L1-cache staleness when another scope writes the row
         // mid-flight; an atomic UPDATE bypasses that entirely.
+        //
+        // Identifier quoting mirrors PdfDocumentEntityConfiguration: `processing_state`
+        // has an explicit HasColumnName(snake_case) mapping, while `Id` and
+        // `ProcessingError` use EF Core's default PascalCase quoted column names. The
+        // RelationalPdfClaimServiceTests integration suite is the safety net if either
+        // mapping ever changes — without it a silent column-not-found at runtime is the
+        // only signal.
         var rowsClaimed = await _db.Database.ExecuteSqlInterpolatedAsync(
             $@"UPDATE pdf_documents
                SET processing_state = 'Extracting', ""ProcessingError"" = NULL

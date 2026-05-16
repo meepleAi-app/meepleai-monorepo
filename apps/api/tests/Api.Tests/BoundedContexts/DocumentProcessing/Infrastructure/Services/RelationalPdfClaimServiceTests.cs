@@ -117,20 +117,25 @@ public sealed class RelationalPdfClaimServiceTests : SharedDatabaseTestBase<Rela
     [Fact]
     public async Task TryClaimPendingAsync_TwoConcurrentClaimsOnSamePending_OnlyOneWins()
     {
-        // Arrange — single Pending PDF, two independent service instances (their own DbContext)
+        // Arrange — single Pending PDF, two independent service instances (their own DbContext).
         await ResetDatabaseAsync();
         await SeedTestUserAsync();
         var pdfId = await SeedPdfAsync("Pending");
 
+        // Own the second DbContext explicitly so it's disposed at the end of the test —
+        // CreateIndependentRepository() builds a context that the base class does not track
+        // for cleanup, and Task.WhenAll otherwise leaves the Npgsql connection in the pool
+        // until GC.
         var sutA = Repository;
-        var sutB = CreateIndependentRepository();
+        await using var independentCtx = CreateIndependentDbContext();
+        var sutB = CreateRepository(independentCtx);
 
-        // Act — fire both claims as close to simultaneously as possible
+        // Act — fire both claims as close to simultaneously as possible.
         var taskA = Task.Run(() => sutA.TryClaimPendingAsync(pdfId, CancellationToken.None));
         var taskB = Task.Run(() => sutB.TryClaimPendingAsync(pdfId, CancellationToken.None));
         await Task.WhenAll(taskA, taskB);
 
-        // Assert — atomic SQL UPDATE guarantees exactly one winner
+        // Assert — atomic SQL UPDATE guarantees exactly one winner.
         var winners = new[] { taskA.Result, taskB.Result };
         winners.Count(r => r).Should().Be(1, "exactly one concurrent claim must transition the row");
         winners.Count(r => !r).Should().Be(1, "the loser must observe the row already claimed");

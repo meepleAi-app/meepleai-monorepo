@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Extensions;
+using Api.Helpers;
 using MediatR;
 
 namespace Api.Routing;
@@ -86,7 +87,7 @@ internal static class AdminTestResultEndpoints
             logger.LogDebug(
                 "Admin {UserId} getting test results - TypologyId: {TypologyId}, SavedOnly: {SavedOnly}",
                 session.User!.Id,
-                typologyId,
+                LogSanitizer.Sanitize(typologyId?.ToString()),
                 savedOnly);
 
             var query = new GetTestResultsQuery(

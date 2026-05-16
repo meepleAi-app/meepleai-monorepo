@@ -138,7 +138,7 @@ internal static class ReportingEndpoints
             CancellationToken ct) =>
         {
             logger.LogDebug("GET /api/v1/admin/reports/executions - ReportId={ReportId}, Limit={Limit}",
-                reportId, limit);
+                LogSanitizer.Sanitize(reportId?.ToString()), limit);
 
             var query = new GetReportExecutionsQuery
             {

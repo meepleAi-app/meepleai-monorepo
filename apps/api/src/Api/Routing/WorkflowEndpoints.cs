@@ -241,7 +241,7 @@ internal static class WorkflowEndpoints
             };
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
-            logger.LogInformation("Template {TemplateId} imported successfully as workflow {WorkflowId}", id, result.WorkflowId);
+            logger.LogInformation("Template {TemplateId} imported successfully as workflow {WorkflowId}", LogSanitizer.Sanitize(id), result.WorkflowId);
             return Results.Ok(result);
         })
         .RequireSession() // Issue #1446: Automatic session validation

@@ -4,16 +4,16 @@ description: "Custom CodeQL configuration with false positive filters for Meeple
 # Disable specific queries that produce false positives
 disable-default-queries: false
 
-# Custom Models-as-Data extensions: registered via CODEQL_ACTION_EXTRA_OPTIONS
-# env var in .github/workflows/security-scan.yml (NOT here, because the `packs:`
-# key in this file accepts pack NAMES only — it rejects local paths with
-# "WARNING: Invalid CodeQL pack specification ... Ignoring.", silently breaking
-# the load. See issue #1188 for root-cause analysis).
-#
-# The pack at .github/codeql/extensions/meepleai-sanitizers/ has
-# extensionTargets: codeql/csharp-all, so once made discoverable via
-# --additional-packs, its summaryModel entries auto-apply to the C# taint queries.
-# See ADR-058 §1.4 and .github/codeql/extensions/meepleai-sanitizers/qlpack.yml
+# Custom Models-as-Data sanitizer pack (ADR-058 §1.4).
+# Reference by pack NAME (matches name in qlpack.yml). The pack is discoverable
+# via --additional-packs=.github/codeql/extensions injected on run-queries by
+# CODEQL_ACTION_EXTRA_OPTIONS in .github/workflows/security-scan.yml.
+# Path-based references here are rejected with "WARNING: Invalid CodeQL pack
+# specification" (see issue #1188); the action's packs: key wants names, not
+# paths. The name → path resolution then happens via the search-path injected
+# by --additional-packs at run-queries time.
+packs:
+  - meepleai/sanitizers-extensions
 
 # Query filters to reduce false positives
 query-filters:

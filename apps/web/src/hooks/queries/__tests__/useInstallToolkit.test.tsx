@@ -21,15 +21,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { toolkitDetailKeys } from '../useToolkitDetail';
 import { useInstallToolkit } from '../useInstallToolkit';
 
-vi.mock('@/lib/api/client', () => ({
-  apiClient: {
-    post: vi.fn(),
-  },
+import type { MockedApiClient } from '@/test-utils/api-client-mock';
+
+const mockApi = vi.hoisted<MockedApiClient>(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
+  head: vi.fn(),
+  options: vi.fn(),
 }));
+vi.mock('@/lib/api/client', () => ({ apiClient: mockApi }));
 
-import { apiClient } from '@/lib/api/client';
-
-const mockPost = apiClient.post as ReturnType<typeof vi.fn>;
+const mockPost = mockApi.post;
 
 const TOOLKIT_ID = '11111111-1111-1111-1111-111111111111';
 
@@ -60,7 +65,7 @@ describe('useInstallToolkit — request shape', () => {
     await result.current.mutateAsync({ toolkitId: TOOLKIT_ID });
 
     expect(mockPost).toHaveBeenCalledWith(
-      `/toolkits/${TOOLKIT_ID}/install`,
+      `/api/v1/toolkits/${TOOLKIT_ID}/install`,
       undefined,
       expect.anything()
     );

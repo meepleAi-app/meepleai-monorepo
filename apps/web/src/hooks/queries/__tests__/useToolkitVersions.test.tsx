@@ -4,7 +4,7 @@
  * useToolkitVersions unit tests — Wave 3 Phase 2 (Issue #805 / PR #732 §5.3.2).
  *
  * Coverage:
- *   - Stable URL `/toolkits/{id}/versions` and 10min staleTime mirror.
+ *   - Stable URL `/api/v1/toolkits/{id}/versions` and 10min staleTime mirror.
  *   - Schema validation forwards typed array (items unwrapped).
  *   - Empty / null fallback returns empty array.
  *   - `enabled: false` and missing toolkitId defer the request.
@@ -19,15 +19,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { TOOLKIT_VERSIONS_STALE_TIME_MS, useToolkitVersions } from '../useToolkitVersions';
 
-vi.mock('@/lib/api/client', () => ({
-  apiClient: {
-    get: vi.fn(),
-  },
+import type { MockedApiClient } from '@/test-utils/api-client-mock';
+
+const mockApi = vi.hoisted<MockedApiClient>(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
+  head: vi.fn(),
+  options: vi.fn(),
 }));
+vi.mock('@/lib/api/client', () => ({ apiClient: mockApi }));
 
-import { apiClient } from '@/lib/api/client';
-
-const mockGet = apiClient.get as ReturnType<typeof vi.fn>;
+const mockGet = mockApi.get;
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -71,7 +76,10 @@ describe('useToolkitVersions — request shape', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith(`/toolkits/${TOOLKIT_ID}/versions`, expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(
+      `/api/v1/toolkits/${TOOLKIT_ID}/versions`,
+      expect.anything()
+    );
   });
 
   it('does not fire when toolkitId is null', () => {

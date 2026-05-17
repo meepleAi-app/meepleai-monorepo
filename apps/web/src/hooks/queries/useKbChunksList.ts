@@ -68,7 +68,7 @@ export function useKbChunksList(
       const params = new URLSearchParams();
       params.set('limit', String(limit));
       if (pageParam) params.set('cursor', pageParam);
-      const path = `/kb-docs/${safeDocId}/chunks?${params.toString()}`;
+      const path = `/api/v1/kb-docs/${safeDocId}/chunks?${params.toString()}`;
       const response = await apiClient.get<KbChunksListResponse>(path, KbChunksListResponseSchema);
       // apiClient may return null on 401 — translate to an empty page so the
       // infinite query terminates cleanly without leaking a non-throwing null.

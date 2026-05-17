@@ -289,6 +289,16 @@ export default [
     plugins: {
       react: react,
       "react-hooks": reactHooks,
+      // PR #1230 review #2 follow-up: register the `local` plugin in the
+      // JS/JSX block too so any future *.{js,jsx} API client cannot
+      // silently bypass the /api/v1/ proxy guard. Today no JS API
+      // consumer exists, but the gate must be uniform across file
+      // extensions to remain meaningful.
+      "local": {
+        rules: {
+          "api-client-v1-prefix": apiClientV1Prefix,
+        },
+      },
     },
     rules: {
       "no-console": ["warn", { allow: ["warn", "error"] }],
@@ -299,6 +309,9 @@ export default [
       "react/prop-types": "off",
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
+      // Same gate as the TS block (line 263); see rule docstring at
+      // eslint-rules/api-client-v1-prefix.js for the rationale.
+      "local/api-client-v1-prefix": "error",
     },
     settings: {
       react: {

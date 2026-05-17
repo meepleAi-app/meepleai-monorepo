@@ -78,4 +78,12 @@ export type MockedApiClient = {
   readonly delete: Mock;
   readonly head: Mock;
   readonly options: Mock;
+  /**
+   * `HttpClient` exposes a `postFile` download/upload helper with a
+   * distinct (non-REST-verb) signature. Optional so the 7 verb defaults
+   * do not need to change for the common case. Declare it inline in your
+   * `vi.hoisted<MockedApiClient>(() => ({ ..., postFile: vi.fn() }))`
+   * factory when a test exercises file flows.
+   */
+  readonly postFile?: Mock;
 };

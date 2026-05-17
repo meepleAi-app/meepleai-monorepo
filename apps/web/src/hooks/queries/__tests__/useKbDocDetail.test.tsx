@@ -22,13 +22,20 @@ import { ApiError } from '@/lib/api/core/errors';
 
 import { KB_DOC_DETAIL_STALE_TIME_MS, useKbDocDetail } from '../useKbDocDetail';
 
-vi.mock('@/lib/api/client', () => ({
-  apiClient: { get: vi.fn() },
+import type { MockedApiClient } from '@/test-utils/api-client-mock';
+
+const mockApi = vi.hoisted<MockedApiClient>(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
+  head: vi.fn(),
+  options: vi.fn(),
 }));
+vi.mock('@/lib/api/client', () => ({ apiClient: mockApi }));
 
-import { apiClient } from '@/lib/api/client';
-
-const mockGet = apiClient.get as ReturnType<typeof vi.fn>;
+const mockGet = mockApi.get;
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -76,7 +83,7 @@ describe('useKbDocDetail — happy path', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith(`/kb-docs/${DOC_ID}`, expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(`/api/v1/kb-docs/${DOC_ID}`, expect.anything());
     expect(result.current.data?.status).toBe('ready');
     if (result.current.data?.status === 'ready') {
       expect(result.current.data.doc.title).toBe('Catan rulebook');
@@ -93,7 +100,7 @@ describe('useKbDocDetail — 423 Locked', () => {
     const lockedError = new ApiError({
       message: "KB document xxx is in processing state 'processing' — not yet ready.",
       statusCode: 423,
-      endpoint: `/kb-docs/${DOC_ID}`,
+      endpoint: `/api/v1/kb-docs/${DOC_ID}`,
     });
     mockGet.mockRejectedValue(lockedError);
 

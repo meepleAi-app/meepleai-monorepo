@@ -4,7 +4,7 @@ import { useRef } from 'react';
 
 import { Plus } from 'lucide-react';
 
-import { entityHsl } from '@/components/ui/data-display/meeple-card';
+import { entityHsl, entityHslText } from '@/components/ui/data-display/meeple-card';
 import { cn } from '@/lib/utils';
 
 import type { ConnectionBarProps, ConnectionPip } from './types';
@@ -42,7 +42,11 @@ function ConnectionPipButton({
   onClick: ConnectionBarProps['onPipClick'];
 }) {
   const ref = useRef<HTMLButtonElement>(null);
-  const color = entityHsl(pip.entityType);
+  // textColor uses darker variant for AA on light bg or entity-tinted bg.
+  // Solid entityHsl is tuned for "color as bg under white text" (4.5:1) but
+  // FAILS as text on light bg (~2.2-2.7:1 for empty pips with opacity-60,
+  // ~3.4:1 for non-empty without opacity). See #1094 Real-C-misc cleanup.
+  const textColor = entityHslText(pip.entityType);
   const Icon = pip.icon;
 
   const handleClick = () => {
@@ -60,18 +64,26 @@ function ConnectionPipButton({
       className={cn(
         'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all duration-200',
         'hover:scale-[1.03] hover:shadow-md focus-visible:ring-2 focus-visible:ring-current focus-visible:outline-none',
-        pip.isEmpty && 'border border-dashed opacity-60'
+        pip.isEmpty && 'border border-dashed'
       )}
       style={{
         backgroundColor: pip.isEmpty ? 'transparent' : entityHsl(pip.entityType, 0.1),
-        color,
+        color: textColor,
         borderColor: pip.isEmpty ? entityHsl(pip.entityType, 0.3) : 'transparent',
       }}
     >
-      <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+      {/* Icons get the dim treatment for "empty" semantic; text stays full opacity for AA */}
+      <Icon
+        className={cn('h-3.5 w-3.5', pip.isEmpty && 'opacity-60')}
+        strokeWidth={2}
+      />
       {pip.isEmpty ? (
         <>
-          <Plus aria-hidden="true" className="h-3 w-3" strokeWidth={2.5} />
+          <Plus
+            aria-hidden="true"
+            className="h-3 w-3 opacity-60"
+            strokeWidth={2.5}
+          />
           <span className="sr-only">+</span>
         </>
       ) : pip.count > 0 ? (

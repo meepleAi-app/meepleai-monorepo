@@ -190,7 +190,11 @@ Esecuzione segue le fasi già definite in #1181 (revised body 2026-05-15):
 ## References
 
 - Issue [#1181](https://github.com/meepleAi-app/meepleai-monorepo/issues/1181) — Phase 1 traccia l'esecuzione di questo ADR
+- Issue [#1196](https://github.com/meepleAi-app/meepleai-monorepo/issues/1196) — Barrier verification via synthetic probes (Acceptance bullet 5)
+- Spec [2026-05-17-codeql-barrier-probes.md](../../../for-developers/specs/2026-05-17-codeql-barrier-probes.md) — design Option C
+- Workflow `.github/workflows/barrier-verification.yml` — monthly cron + on-demand probe verification
 - Spec-panel session 2026-05-15 (memoria conversazione `/sc:spec-panel 1181`)
+- Spec-panel session 2026-05-16 (`/sc:spec-panel 1196`)
 - File esistenti:
   - `apps/api/src/Api/Infrastructure/Security/DataMasking.cs`
   - `apps/api/src/Api/Helpers/LogSanitizer.cs`

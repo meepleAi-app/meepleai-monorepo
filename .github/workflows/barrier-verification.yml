@@ -1,0 +1,181 @@
+name: CodeQL Barrier Verification
+
+# Issue #1196 — synthetic positive+negative probe verification for ADR-058 §5.
+# Runs monthly to assert:
+#   - sanitized probe produces 0 `cs/exposure-of-sensitive-information` alerts
+#     (barrier registration in MaD pack works)
+#   - unsanitized probe produces >=1 alert (the rule itself is alive)
+# See docs/for-developers/specs/2026-05-17-codeql-barrier-probes.md
+
+on:
+  schedule:
+    # First day of every month at 04:00 UTC. Offset from security-scan.yml's
+    # Monday 02:00 UTC cron to avoid concurrent CodeQL action contention.
+    - cron: '0 4 1 * *'
+  workflow_dispatch:
+    inputs:
+      verbose:
+        description: 'Dump full SARIF probe-related rows to log'
+        required: false
+        default: 'false'
+        type: boolean
+  # Also run when the probes / config / workflow itself change so a PR can
+  # validate end-to-end before being merged.
+  pull_request:
+    paths:
+      - 'apps/api/tests/CodeqlBarrierSmoke/**'
+      - '.github/codeql/codeql-config-with-probes.yml'
+      - '.github/codeql/meepleai/sanitizers-extensions/**'
+      - '.github/workflows/barrier-verification.yml'
+
+concurrency:
+  group: barrier-verification-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  verify-barrier:
+    name: Verify CodeQL barrier probes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Regression-guard — assert probe files still exist
+        # If a future refactor accidentally deletes either probe file, fail
+        # loudly here rather than silently producing a green run.
+        run: |
+          set -euo pipefail
+          for probe in \
+            apps/api/tests/CodeqlBarrierSmoke/Probes/Sanitized.cs \
+            apps/api/tests/CodeqlBarrierSmoke/Probes/Unsanitized.cs; do
+            if [ ! -f "$probe" ]; then
+              echo "::error file=$probe::Synthetic barrier probe deleted — barrier verification cannot run. Restore the file or update docs/for-developers/specs/2026-05-17-codeql-barrier-probes.md if removal is intentional."
+              exit 1
+            fi
+          done
+          echo "::notice::Both barrier probes present."
+
+      - name: Verify MaD sanitizer pack content
+        # Mirrors the gate in security-scan.yml. Expected count = 6 LogSanitizer
+        # rows + 8 DataMasking rows = 14. Bump deliberately when the pack grows.
+        env:
+          EXPECTED_PACK_ROWS: '14'
+        run: |
+          set -euo pipefail
+          pack_file=".github/codeql/meepleai/sanitizers-extensions/models/sanitizers.model.yml"
+          if [ ! -f "$pack_file" ]; then
+            echo "::error file=$pack_file::MaD sanitizer pack file missing — barrier coverage disabled"
+            exit 1
+          fi
+          actual=$(grep -cE '^\s*- \[' "$pack_file" || true)
+          if [ "$actual" -ne "$EXPECTED_PACK_ROWS" ]; then
+            echo "::error file=$pack_file::MaD barrier rowCount mismatch — expected=$EXPECTED_PACK_ROWS actual=$actual"
+            exit 1
+          fi
+          echo "::notice::MaD pack barrier rowCount OK: $actual"
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: csharp
+          queries: security-extended
+          # Variant config WITHOUT the CodeqlBarrierSmoke paths-ignore exclude.
+          config-file: ./.github/codeql/codeql-config-with-probes.yml
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore + Build probe project
+        working-directory: apps/api
+        run: |
+          sudo apt-get update && sudo apt-get install -y libgdiplus
+          dotnet restore tests/CodeqlBarrierSmoke/CodeqlBarrierSmoke.csproj
+          dotnet build tests/CodeqlBarrierSmoke/CodeqlBarrierSmoke.csproj --no-restore -c Release
+
+      - name: Perform CodeQL Analysis
+        id: codeql-analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: '/language:csharp-barrier-verification'
+          # Deterministic SARIF output path for the downstream assertion step.
+          output: ${{ runner.temp }}/codeql-sarif
+        env:
+          # Same pack-load mechanism as security-scan.yml (ADR-058 §1.4).
+          CODEQL_ACTION_EXTRA_OPTIONS: >-
+            {"database":{"run-queries":["--additional-packs=${{ github.workspace }}/.github/codeql","--extension-packs=meepleai/sanitizers-extensions"]}}
+
+      - name: Assert probe alert counts
+        env:
+          VERBOSE: ${{ inputs.verbose || 'false' }}
+        run: |
+          set -euo pipefail
+          sarif="${{ runner.temp }}/codeql-sarif/csharp.sarif"
+          if [ ! -f "$sarif" ]; then
+            echo "::error::SARIF not found at $sarif — CodeQL analyze step likely failed"
+            exit 1
+          fi
+
+          rule_id='cs/exposure-of-sensitive-information'
+
+          sanitized=$(jq --arg r "$rule_id" \
+            '[.runs[].results[]? | select(.ruleId == $r)
+              | select(.locations[0].physicalLocation.artifactLocation.uri
+                       | contains("CodeqlBarrierSmoke/Probes/Sanitized.cs"))] | length' "$sarif")
+
+          unsanitized=$(jq --arg r "$rule_id" \
+            '[.runs[].results[]? | select(.ruleId == $r)
+              | select(.locations[0].physicalLocation.artifactLocation.uri
+                       | contains("CodeqlBarrierSmoke/Probes/Unsanitized.cs"))] | length' "$sarif")
+
+          echo "::notice::Probe alert counts — sanitized=$sanitized unsanitized=$unsanitized"
+
+          if [ "$VERBOSE" = "true" ]; then
+            echo "----- Sanitized probe results -----"
+            jq --arg r "$rule_id" \
+              '[.runs[].results[]? | select(.ruleId == $r)
+                | select(.locations[0].physicalLocation.artifactLocation.uri | contains("CodeqlBarrierSmoke/Probes/Sanitized.cs"))]' "$sarif"
+            echo "----- Unsanitized probe results -----"
+            jq --arg r "$rule_id" \
+              '[.runs[].results[]? | select(.ruleId == $r)
+                | select(.locations[0].physicalLocation.artifactLocation.uri | contains("CodeqlBarrierSmoke/Probes/Unsanitized.cs"))]' "$sarif"
+          fi
+
+          failed=0
+          if [ "$sanitized" != "0" ]; then
+            echo "::error::Barrier broken — sanitized probe raised $sanitized alert(s). Investigate MaD pack registration (.github/codeql/meepleai/sanitizers-extensions/models/sanitizers.model.yml) and the pack-load mechanism in codeql-config-with-probes.yml."
+            failed=1
+          fi
+          if [ "$unsanitized" -lt 1 ]; then
+            echo "::error::Rule appears disabled — unsanitized probe raised 0 alerts. Check codeql-config-with-probes.yml query-filters and paths-ignore; verify cs/exposure-of-sensitive-information is still in security-extended."
+            failed=1
+          fi
+
+          if [ "$failed" -eq 1 ]; then
+            exit 1
+          fi
+          echo "::notice::Barrier verification PASSED."
+
+  notify-end:
+    if: always() && contains(join(needs.*.result, ','), 'failure')
+    needs: [verify-barrier]
+    uses: ./.github/workflows/notify-slack.yml
+    with:
+      event: failed
+      workflow_name: 'CodeQL Barrier Verification'
+      environment: security
+      is_critical: true
+      branch: ${{ github.head_ref || github.ref_name }}
+      actor: ${{ github.actor }}
+      commit_sha: ${{ github.sha }}
+      commit_message: ${{ github.event.head_commit.message || 'Scheduled run or manual trigger' }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
+      SLACK_CRITICAL_WEBHOOK_URL: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}

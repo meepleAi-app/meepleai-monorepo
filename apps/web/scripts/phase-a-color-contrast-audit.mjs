@@ -430,6 +430,11 @@ async function runOneTarget(browser, target, viewportName) {
   // observes the same colors a real user sees, not the transient frame.
   // This mirrors the a11y testing best practice: scan the stable visual
   // contract, not animation in-betweens.
+  //
+  // Component-side requirement: this flag only works if the animated
+  // container itself opts out via `motion-reduce:animate-none` (or
+  // equivalent `prefers-reduced-motion` media query). New dialogs/overlays
+  // MUST include the opt-out — treat it as part of the a11y contract.
   const context = await browser.newContext({
     ...device,
     colorScheme: target.theme,

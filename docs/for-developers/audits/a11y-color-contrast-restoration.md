@@ -359,6 +359,8 @@ This pattern produced the Real-C-E "catastrophic 1.06–1.28 ratio" rows in v3. 
 
 **General rule for new audit targets**: any state involving a Radix/Headless dialog, animated tooltip, popover, or `data-state` transition must be scanned under reduced-motion, otherwise expect spurious sub-2:1 contrast hits in the JSON artifact.
 
+**Component-side requirement (implicit dependency)**: the reduced-motion test rig only neutralises the animation when the component itself carries a `motion-reduce:animate-none` (or equivalent `prefers-reduced-motion` opt-out) on the animated container. Without that opt-out, `reducedMotion: 'reduce'` in the test context has no observable effect — the dialog would still fade in and the same false positives would return. New dialogs/overlays MUST include `motion-reduce:animate-none` on the animated element; treat this as part of the a11y contract, not an optional polish.
+
 ## §2 Root-cause grouping (Phase B preliminary)
 
 ### §2.0 Grouping methodology

@@ -518,6 +518,7 @@
   --color-entity-chat:    hsl(var(--c-chat));
   --color-entity-event:   hsl(var(--c-event));
   --color-entity-toolkit: hsl(var(--c-toolkit));
+  --color-entity-toolkit-text: hsl(var(--c-toolkit-text));  /* darker variant for AA when used as text on light bg (#1094 Real-C-E gamebook ready pill) */
   --color-entity-tool:    hsl(var(--c-tool));
 
   /* Font family utilities */
@@ -534,6 +535,7 @@
   /* Values match design-tokens.css --c-* tokens. Both used: --e-* feeds Tailwind utilities text-entity-X via @theme; --c-* used by entityHsl() helper. */
   --c-game: 25 95% 38%;       /* 4.82:1 ✅ (#587, gate #601, then #807) */
   --c-game-text: 25 95% 32%;  /* 6.14:1 ✅ darker variant when used as text on light bg (#1094 Real-C-B, mirrors design-tokens-canonical.css:45) */
+  --c-toolkit-text: 142 70% 24%;  /* ~5.6:1 ✅ darker variant for AA on light bg, paired with bg-entity-toolkit/12 (#1094 Real-C-E gamebook) */
   --c-player: 262 83% 45%;    /* 8.55:1 ✅ (#807: was L=58%) */
   --c-session: 240 60% 35%;   /* 12.22:1 ✅ (#807: was L=55%) */
   --c-agent: 38 92% 32%;      /* 4.87:1 ✅ (#807: was L=50%) */
@@ -691,6 +693,7 @@
      session-live, session-summary specs). */
   --c-game: 28 95% 58%;
   --c-game-text: 28 95% 70%;  /* 11.2:1 ✅ lighter variant for AA on dark bg (#1094 Real-C-B, mirrors design-tokens-canonical.css:199) */
+  --c-toolkit-text: 142 60% 72%;  /* lighter variant for AA on dark bg (#1094 Real-C-E gamebook) */
   --c-player: 262 75% 70%;
   --c-session: 235 70% 70%;
   --c-agent: 38 92% 62%;

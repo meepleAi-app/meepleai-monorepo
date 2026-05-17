@@ -44,6 +44,7 @@
    */
   --c-game-text: 25 95% 32%;
   --c-kb-text:   174 60% 28%; /* Real-C-F: hsl(174 60% 28%) ≈ #1d7268 vs #f7f3ee = 4.95:1 ✅ — replaces hardcoded #4ecdc4 (1.75:1 fail) */
+  --c-toolkit-text: 142 70% 24%; /* Real-C-E gamebook: hsl(142 70% 24%) ≈ #0f5d2b vs #e3f0e8 = ~5.6:1 ✅ — replaces text-entity-toolkit (4.16:1 fail on toolkit/12 bg) */
 
   /* ─── Semantic Colors ─── */
   --c-success: 142 70% 45%;
@@ -198,6 +199,7 @@
    */
   --c-game-text: 28 95% 70%;
   --c-kb-text:   174 60% 55%;
+  --c-toolkit-text: 142 60% 72%; /* Real-C-E gamebook dark: lighter variant for AA on dark bg */
 
   color-scheme: dark;
 }

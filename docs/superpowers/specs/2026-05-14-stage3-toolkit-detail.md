@@ -613,7 +613,7 @@ No downstream consumer of the new DTO fields outside the FE PR — revert is saf
 - Sibling spec: `docs/superpowers/specs/2026-05-13-player-detail-stage3-cluster-design.md`
 - Stage 3 umbrella: issue #1023
 - Stage 3 cluster: issue #1026
-- DetailPageLayout primitive: PR #1112, spec `2026-05-13-detail-page-layout-design.md`
+- DetailPageLayout primitive: PR #1112, spec `docs/for-developers/specs/2026-05-13-detail-page-layout-design.md`
 - AuthLogin rate-limit fix (CI smoke unblock): PR #1142, issue #1099
 - player-detail data-slot wrapper precedent: PR #1146, issue #1143
 - Token canonicalization (color rules): CLAUDE.md "Token Canonicalization" + `docs/for-developers/specs/2026-05-12-token-canonicalization.md`

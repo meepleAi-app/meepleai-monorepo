@@ -8,7 +8,7 @@
 
 **Tech Stack:** React 19, TypeScript, Tailwind 4, `clsx` for class composition, Vitest + React Testing Library for unit tests.
 
-**Spec:** `docs/superpowers/specs/2026-05-13-detail-page-layout-design.md`
+**Spec:** `docs/for-developers/specs/2026-05-13-detail-page-layout-design.md`
 
 **Branch (already created):** `feature/issue-1026-stage3-detail-page-layout` (parent: `main-dev`)
 
@@ -471,7 +471,7 @@ apps/web/src/components/ui/detail-layout/DetailPageLayout.test.tsx
 apps/web/src/components/ui/detail-layout/DetailPageLayout.tsx
 apps/web/src/components/ui/detail-layout/index.ts
 docs/superpowers/plans/2026-05-13-detail-page-layout.md
-docs/superpowers/specs/2026-05-13-detail-page-layout-design.md
+docs/for-developers/specs/2026-05-13-detail-page-layout-design.md
 ```
 
 (The two `docs/superpowers/` files were committed in earlier brainstorming + planning steps; everything else must be the three implementation files.)
@@ -500,7 +500,7 @@ No consumer migrated in this PR (spec NG1). First real consumer will be a separa
 
 ## Spec & plan
 
-- Design spec: `docs/superpowers/specs/2026-05-13-detail-page-layout-design.md`
+- Design spec: `docs/for-developers/specs/2026-05-13-detail-page-layout-design.md`
 - Implementation plan: `docs/superpowers/plans/2026-05-13-detail-page-layout.md`
 - Parent spec: `docs/for-developers/specs/2026-05-11-design-system-deversioning.md` §4
 

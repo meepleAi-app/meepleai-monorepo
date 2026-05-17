@@ -28,6 +28,8 @@
       with the analyzer's 4.8.0 binding. Direct API usage avoids the conflict.
     -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
+    <!-- CodeFixProvider tests need CodeActions / CodeFixes / Workspace APIs. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.8.0" />
   </ItemGroup>
 
   <ItemGroup>

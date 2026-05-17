@@ -18,7 +18,19 @@ When the same argument triggers multiple tiers, the analyzer emits only the high
 
 **Important — `LogSanitizer.Sanitize` is NOT a PII barrier**: it strips `\r\n\t` for log-forging (CWE-117 integrity), not PII content (CWE-359 confidentiality). The analyzer correctly flags a call wrapped via `LogSanitizer.Sanitize` if the placeholder name (or argument type, or identifier) suggests PII. Use `DataMasking.Mask*` for PII.
 
-**Deferred (Phase 3+)**: `CodeFixProvider` auto-wrap (Phase 3), NuGet packaging (Phase 4), additional edge-case detection (using-static call form, method-group invocation) tracked on issue #1197.
+### Auto-fix (lightbulb)
+
+`NoPiiInLogCodeFixProvider` registers a quick-fix for all three diagnostics. The lightbulb action wraps the offending argument with the appropriate `DataMasking.Mask*` method based on the diagnostic message (placeholder name, type FQN, or identifier name) and adds `using Api.Infrastructure.Security;` to the file if missing.
+
+Mapping (best-effort; developer can swap if heuristic is wrong):
+- email / emailAddress → `MaskEmail`
+- ipaddress / remoteIp / clientIp → `MaskIpAddress`
+- jwt / token / bearerToken → `MaskJwt`
+- password / phone / ssn / fallback → `MaskString`
+
+For Tier 1 (typed VO) fixes, the wrap appends `.Value` so the mask method receives a `string?` instead of the VO instance.
+
+**Deferred (Phase 4)**: NuGet packaging is YAGNI for the current single-monorepo. Track on issue #1197 if a sibling .NET project ever needs to consume the analyzer.
 
 ---
 

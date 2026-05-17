@@ -336,7 +336,36 @@
     "submit": "Submit",
     "success": "Success",
     "upload": "Upload",
-    "yes": "Yes"
+    "yes": "Yes",
+    "statusBanner": {
+      "dismiss": "Dismiss",
+      "severityLabel": {
+        "info": "Information",
+        "warning": "Warning",
+        "critical": "Critical"
+      },
+      "admin": {
+        "title": "Status banner",
+        "tabLabel": "Banner",
+        "messageLabel": "Message",
+        "messagePlaceholder": "Enter the banner message...",
+        "severityLabel": "Severity",
+        "isActiveLabel": "Banner active",
+        "startsAtLabel": "Starts at (optional)",
+        "endsAtLabel": "Ends at (optional)",
+        "saveButton": "Save banner",
+        "saving": "Saving...",
+        "savedSuccess": "Banner updated successfully",
+        "saveError": "Error while saving the banner",
+        "loadError": "Error loading the banner",
+        "loading": "Loading...",
+        "templates": {
+          "title": "Quick templates",
+          "investigating": "Incident investigating",
+          "resolved": "Incident resolved"
+        }
+      }
+    }
   },
   "comments": {
     "addComment": "Add Comment",

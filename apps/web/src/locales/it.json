@@ -327,7 +327,36 @@
     "submit": "Invia",
     "success": "Successo",
     "upload": "Carica",
-    "yes": "Sì"
+    "yes": "Sì",
+    "statusBanner": {
+      "dismiss": "Chiudi",
+      "severityLabel": {
+        "info": "Informazione",
+        "warning": "Avviso",
+        "critical": "Critico"
+      },
+      "admin": {
+        "title": "Banner di stato",
+        "tabLabel": "Banner",
+        "messageLabel": "Messaggio",
+        "messagePlaceholder": "Inserisci il messaggio del banner...",
+        "severityLabel": "Severità",
+        "isActiveLabel": "Banner attivo",
+        "startsAtLabel": "Inizio (opzionale)",
+        "endsAtLabel": "Fine (opzionale)",
+        "saveButton": "Salva banner",
+        "saving": "Salvataggio...",
+        "savedSuccess": "Banner aggiornato con successo",
+        "saveError": "Errore durante il salvataggio del banner",
+        "loadError": "Errore nel caricamento del banner",
+        "loading": "Caricamento...",
+        "templates": {
+          "title": "Template rapidi",
+          "investigating": "Incidente in corso",
+          "resolved": "Incidente risolto"
+        }
+      }
+    }
   },
   "comments": {
     "addComment": "Aggiungi Commento",

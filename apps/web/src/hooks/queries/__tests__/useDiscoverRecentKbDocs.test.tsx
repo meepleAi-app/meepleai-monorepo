@@ -95,7 +95,7 @@ describe('useDiscoverRecentKbDocs — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/kb-docs/recent?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/kb-docs/recent?limit=10', expect.anything());
   });
 
   it('clamps a fractional limit downward to integer', async () => {
@@ -106,7 +106,7 @@ describe('useDiscoverRecentKbDocs — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/kb-docs/recent?limit=7', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/kb-docs/recent?limit=7', expect.anything());
   });
 
   it('clamps a NaN limit to the default', async () => {
@@ -116,7 +116,7 @@ describe('useDiscoverRecentKbDocs — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/kb-docs/recent?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/kb-docs/recent?limit=10', expect.anything());
   });
 });
 

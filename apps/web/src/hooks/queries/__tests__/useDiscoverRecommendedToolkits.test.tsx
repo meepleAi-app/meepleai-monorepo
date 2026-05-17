@@ -91,7 +91,10 @@ describe('useDiscoverRecommendedToolkits — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/toolkits/recommended?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/toolkits/recommended?limit=10',
+      expect.anything()
+    );
   });
 
   it('clamps an oversize limit to 50', async () => {
@@ -101,7 +104,10 @@ describe('useDiscoverRecommendedToolkits — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/toolkits/recommended?limit=50', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/toolkits/recommended?limit=50',
+      expect.anything()
+    );
   });
 
   it('clamps a sub-1 limit to default 10', async () => {
@@ -111,7 +117,10 @@ describe('useDiscoverRecommendedToolkits — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/toolkits/recommended?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/toolkits/recommended?limit=10',
+      expect.anything()
+    );
   });
 });
 

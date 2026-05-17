@@ -93,7 +93,7 @@ describe('useDiscoverNewGames — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/catalog/games/new?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/catalog/games/new?limit=10', expect.anything());
   });
 
   it('clamps a limit > 50 to the validator ceiling', async () => {
@@ -103,7 +103,7 @@ describe('useDiscoverNewGames — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/catalog/games/new?limit=50', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/catalog/games/new?limit=50', expect.anything());
   });
 
   it('clamps a non-positive limit to the default', async () => {
@@ -113,7 +113,7 @@ describe('useDiscoverNewGames — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/catalog/games/new?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/catalog/games/new?limit=10', expect.anything());
   });
 });
 

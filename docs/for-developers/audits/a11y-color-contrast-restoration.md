@@ -499,9 +499,9 @@ Total deferred: ~44 nodes (~28% of #1094 inventory). The cluster pattern is well
 **Verified math (light theme)**:
 - `#9e3a05` (text) on `#f9eee6` (entity bg/0.10): ratio **6.14:1** ✅
 - `#9e3a05` (text) on `#f7eae1` (entity bg/0.12): ratio **5.82:1** ✅
-- `text-primary-700` (`hsl(25 95% 32%)`) on `bg-primary/10` blended bg: ≥ 5.5:1 ✅
+- `text-entity-game-text` (`hsl(25 95% 32%)`) on `bg-primary/10` blended bg: ≥ 5.5:1 ✅
 
-**Dark theme**: existing `--c-game: 28 95% 58%` and new `--c-game-text: 28 95% 70%` both AA-pass on dark backgrounds (verified in `design-tokens-canonical.css:199`). No regression.
+**Dark theme**: `--c-game-text: 28 95% 70%` flips lighter for dark bg via the live `[data-theme="dark"]` CSS override. All `text-entity-game-text` consumers (Tailwind utility reads `var(--c-game-text)`) inherit this correctly. **Crucially, the e3 fix path uses `text-entity-game-text`, NOT `text-primary-700`** — the latter is a `@theme inline` compile-time snapshot that does not react to the dark-theme override (resolved during code review on PR #1232, see commit history). All 4 consumers (Grid + List + ShelfCard + 2× TabPanel) use the live-CSS-var path → AA on both themes.
 
 | Sub-issue | Status | PR | Fix path | Files touched |
 |---|---|---|---|---:|

@@ -65,7 +65,7 @@ export function GamesTabPanel({
           </ul>
           <Link
             href={`/players/${playerId}/games`}
-            className="text-sm font-semibold text-primary-700 hover:underline"
+            className="text-sm font-semibold text-entity-game-text hover:underline"
           >
             {labels.viewAll}
           </Link>

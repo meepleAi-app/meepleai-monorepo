@@ -44,7 +44,7 @@ export function SessionsTabPanel({ stats, labels }: SessionsTabPanelProps): JSX.
           </div>
           <Link
             href={`/players/${stats.playerId}/sessions`}
-            className="text-sm font-semibold text-primary hover:underline"
+            className="text-sm font-semibold text-primary-700 hover:underline"
           >
             {labels.viewAll}
           </Link>

@@ -26,7 +26,14 @@ export type {
 export { FlipBack } from './features/FlipBack';
 export type { FlipBackProps, FlipBackSection } from './features/FlipBack';
 export { MeepleCardSkeleton } from './skeleton';
-export { entityColors, entityHsl, entityLabel, entityIcon, entityTokens } from './tokens';
+export {
+  entityColors,
+  entityHsl,
+  entityHslText,
+  entityLabel,
+  entityIcon,
+  entityTokens,
+} from './tokens';
 export { ConnectionChip } from './parts/ConnectionChip';
 export { ConnectionChipStrip } from './parts/ConnectionChipStrip';
 export { ConnectionChipPopover } from './parts/ConnectionChipPopover';

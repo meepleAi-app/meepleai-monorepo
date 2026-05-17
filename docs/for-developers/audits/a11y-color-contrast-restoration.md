@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Phase 0 + Phase A structural + **Phase A.live v4 complete** (33 targets, **103 nodes** post PR #1224/#1225 fixes — net -12 from v3 despite +6 new gamebook/session-summary/session-live targets adding +20). Phase C continues: Real-C-B ✅ partial (PR #1224 swap 8 hardcoded), Real-C-D ✅ partial (PR #1225 violet 3), Real-C-A ✅ fixed via modifier-scope refactor (#1221 PR — root-cause was `opacity-70` ancestor, NOT token darkness; see §3.1), Real-C-E pending (~2 catastrophic + ~10 newly-discovered c-kb catastrophic). Phase D blocked until 0 violations. |
+| Status | Phase 0 + Phase A structural + **Phase A.live v4 complete** (33 targets, **103 nodes** post PR #1224/#1225 fixes — net -12 from v3 despite +6 new gamebook/session-summary/session-live targets adding +20). Phase C: Real-C-A ✅ fixed (#1221 PR — modifier-scope refactor on SessionCardGrid/List; see §3.1), Real-C-B ✅ fixed (PR #1224 hardcoded swap + Real-C-B residue PR — JS-side `entityHslText()` helper + new `text-entity-game-text` utility + `text-primary-700` per-site swap; see §3.2), Real-C-D ✅ partial (PR #1225 violet 3), Real-C-E pending (~2 catastrophic + ~10 newly-discovered c-kb catastrophic). Phase D blocked until 0 violations. |
 | Started | 2026-05-17 |
 | Parent issue | [#1094](https://github.com/meepleAi-app/meepleai-monorepo/issues/1094) — restoration of `frontend-a11y` CI gate to blocking |
 | Phase 0 sub-issue | [#1209](https://github.com/meepleAi-app/meepleai-monorepo/issues/1209) — preface |
@@ -420,7 +420,7 @@ The 115 nodes captured in §1.4 v3 distribute across **4 active Real-Clusters** 
 | Real-Cluster ID | Pattern | Nodes v3 | Routes | Root cause | Recommended fix path |
 |---|---|---:|---|---|---|
 | ✅ **Real-C-A** (FIXED via #1221 PR) | ~~`text-muted-foreground` token darkness~~ → revised: `opacity-70` ancestor on abandoned-session cards | **~24** (was ~10 PoC) | `/sessions` (default + filtered-empty), `/session-summary` (all 4 states), `/library` (default + filtered-empty), `/player-detail` (default) | **REVISED — see §3.1 for math**: all 24 nodes share `.opacity-70` ancestor (SessionCardGrid/List when `isAbandoned`). Effective contrast computed via blend formula = ratio 2.94–3.41 regardless of base token (intrinsically AA-incompatible). | **(d) modifier-scope refactor** — remove `opacity-70` from root button; apply dim only to decorative children (accent bar, cover, border). Body text → full opacity → AA via existing `--muted-foreground` (6.9:1 on bg-card). See §3.1. |
-| **Real-C-B** | `--c-game` entity orange token (`hsl(25 95% 45%)` ≈ `#df6105`/`#c25405`) used as **text** or **border-as-text** | **~76** (was ~9 PoC) | `/sessions` (default + filtered-empty: 52), `/session-summary` (all 4 states: 8), `/library` (4), `/session-live` (4), `/player-detail` (4-8) | Entity orange is AA-safe for non-text (≥3:1) but FAILS for text (≥4.5:1). Pattern surfaces in 3 variants: (1) `text-[hsl(25,95%,45%)]` direct color, (2) `.border-[hsl(25,95%,45%)]` rendered with thin text-like outline that axe treats as text, (3) `.bg-primary/10` tinted backgrounds carrying primary-derived text. Total: **66% of all 115 v3 nodes** — the dominant fix opportunity. | **(b) introduce `--c-game-text` darker variant token** in `apps/web/src/styles/design-tokens-canonical.css`. Target `hsl(25 95% 32%)` or similar (math-verified ≥4.5:1 against `#f7f3ee`, `#f9eee6`, `#f1e3d7`). Cross-route swap via codemod for all `text-[hsl(25,95%,45%)]` / `text-primary` (when used as text) occurrences. Border-only usages of `--c-game` stay as-is (3:1 non-text OK). Coordinated with DS-15 owner under #1023 umbrella. ~1-2 PRs: token introduction + codemod swap. Single-cluster fix removes **76 nodes** = 66% of inventory. |
+| ✅ **Real-C-B** (FIXED via #1224 + Real-C-B residue PR) | `--c-game` entity orange (`hsl(25 95% 38%)`) used as **text** — variants: hardcoded inline, Tailwind `text-entity-game`, Tailwind `text-primary`, JS `entityHsl()` | **~76** PoC (30 residue post-#1224) | `/sessions` ConnectionChip (20), `/gamebook` indexing pill (4), `/library` ShelfCard add-btn (4), `/players/[id]` viewAll links (2) | Entity orange `l=38%` is AA-safe for non-text (≥3:1) but FAILS for text (≥4.5:1). Three variants surfaced: hardcoded (PR #1224), Tailwind utility (Real-C-B residue PR — uses existing `text-primary-700` + new `text-entity-game-text`), JS-side `entityHsl()` (new `entityHslText()` helper). | **(b)+(e1)+(e2)+(e3) — multi-step**: PR #1224 introduced `--c-game-text` token + swapped 8 hardcoded values. Real-C-B residue PR (this PR) extends to JS-side helper + Tailwind utility registration + per-site swap of `text-primary` → `text-primary-700`. See §3.2. |
 | ✅ **Real-C-C** (CLOSED via PR #1219) | `text-white` on `bg-orange-600` CTA | 1 | `/library` (mobile only) | `bg-orange-600` (#f54900) + text-white = 3.59 (fail 4.5). | Shifted to `bg-orange-700`/`800`/`900` lockstep. AA pass at 5.03. |
 | **Real-C-D (NEW v3)** | Hardcoded inline color tokens used as text | **~6** | `/session-live` (`text-[hsl(240,60%,70%)]` × 3), `/session-summary` (`text-blue-600` × 3) | Two distinct inline patterns: (a) violet `hsl(240,60%,70%)` (`#8585e0`) on dark `#2e2e2e` = 4.15 (fail by 0.35); (b) `text-blue-600` (`#155dfc`) on `#edebea` = 4.41 (fail by 0.09). Both are isolated DS-15-rule-disabled inline values. | **(c) per-surface override** — replace with semantic tokens that math-verify ≥4.5:1. ~2 micro-PRs (one per surface) or bundle into Real-C-B PR if same DS-15 token discussion happens. |
 | **Real-C-E (NEW v3 — catastrophic)** | Disabled-state / focus-state combinations with contrast ratio < 1.5 (axe `serious` impact) | **~2** | `/session-live` (`.bg-emerald-700` text on similar-tone bg = **ratio 1.08**), `/session-live` (`.border.focus-visible:ring-slate-400.px-4` = **ratio 1.06**) | Two outliers with nearly invisible contrast. Likely disabled-button states where fg+bg are both grayed to indicate disabled, but the resulting pair is illegible. | **(c) per-surface fix** — these are tiny single-component disabled-state regressions. ~1 micro-PR or bundle into the next session-live touch. Priority: HIGH despite small node count (a11y serious impact for the few users who hit the disabled state). |
@@ -474,6 +474,38 @@ Total deferred: ~44 nodes (~28% of #1094 inventory). The cluster pattern is well
 **Token decision** (light theme scope): the light-theme `--muted-foreground` (`globals.css:559`) value `30 12% 35%` ≈ `#6b5d4f` mathematically passes AA on both `bg-card` (ratio 6.9:1) and `bg-muted` (ratio 5.8:1) when applied WITHOUT opacity modifiers. The `--text-muted` literal `#9a8870` in `design-tokens-canonical.css:138` is dead code for these surfaces (overridden by Tailwind's `text-muted-foreground` utility which maps to `--muted-foreground`); audit/cleanup deferred to DS-16.
 
 **Dark theme caveat** (out of this PR's scope, flagged by spec-panel review): the dark-theme override `--muted-foreground: 0 0% 60%` (`globals.css:645`) ≈ `#999999` against dark `--card: 0 0% 18%` (`#2d2d2d`) yields ratio ≈ **3.8:1** — failing AA 4.5:1 for regular text. This is a pre-existing token weakness unrelated to the 24 light-theme `#90877f` nodes addressed in #1221, but it WILL surface as a Phase A.live dark-matrix violation when that matrix is run. Tracked for Phase A.live v5 follow-up (N+4 step) or a separate dark-theme `--muted-foreground` bump sub-issue.
+
+### §3.2 Real-C-B residue — JS-side + Tailwind-utility per-site swap
+
+🔬 **Discovery (PR for Real-C-B residue)**: post PR #1224 (which swapped 8 hardcoded `text-[hsl(25,95%,45%)]` to `--c-game-text`), 30 Phase A.live v4 residue nodes remain on 4 surfaces (counts include desktop+mobile viewport duplicates):
+
+| Surface | Nodi | Pattern | Source file |
+|---|---:|---|---|
+| `/sessions` ConnectionChip (game-entity chips) | 20 (10 ×2 viewports) | JS inline `color: entityHsl('game')` = `#c25405` on entity bg/0.10 | `ConnectionChipStripFooter.tsx:69` |
+| `/gamebook` indexing pill | 4 (2 fixtures ×2 viewports) | Tailwind `text-entity-game` on `bg-entity-game/12` | `GamebookCard.tsx:122` |
+| `/library` add-to-shelf button | 4 (1 ×2 viewports ×2 states) | Tailwind `text-primary` on `border-primary/30` | `ShelfCard.tsx:246` |
+| `/players/[id]` viewAll links | 2 (1 games + 1 sessions) | Tailwind `text-primary` standalone | `GamesTabPanel.tsx:68`, `SessionsTabPanel.tsx:47` |
+
+**Root cause variants** (all share entity-orange family but different mechanisms):
+1. JS-inline `entityHsl(game)` → `hsl(25 95% 38%)` ≈ `#bd5205`/`#c25405`: AA-tuned for "color as background under white text" (4.6:1) but FAILS as text on tinted-fill bg (4.03:1).
+2. Tailwind `text-entity-game` utility → `hsl(var(--c-game))` = same value: same root cause, different binding.
+3. Tailwind `text-primary` utility → `hsl(var(--primary))` = identical (since `--primary` and `--c-game` share `25 95% 38%`).
+
+**Fix path** (extends PR #1224 from "swap hardcoded values" to "swap JS-side helpers + Tailwind utilities"):
+- **(e1) JS-side**: introduce `entityHslText()` helper in `tokens.ts` mirroring CSS `--c-game-text` (`hsl(25 95% 32%)` ≈ `#9e3a05`). Swap ConnectionChip `color` style for non-empty chips.
+- **(e2) Tailwind utility**: register `--color-entity-game-text` in `globals.css` `@theme inline` block (uses existing `--c-game-text` from `design-tokens-canonical.css:45`); expose as `text-entity-game-text` utility. Swap in `GamebookCard.tsx`.
+- **(e3) text-primary swap**: replace `text-primary` → `text-primary-700` (already existing at `hsl(25 95% 32%)`, no new token needed) per-site. 3 files affected.
+
+**Verified math (light theme)**:
+- `#9e3a05` (text) on `#f9eee6` (entity bg/0.10): ratio **6.14:1** ✅
+- `#9e3a05` (text) on `#f7eae1` (entity bg/0.12): ratio **5.82:1** ✅
+- `text-primary-700` (`hsl(25 95% 32%)`) on `bg-primary/10` blended bg: ≥ 5.5:1 ✅
+
+**Dark theme**: existing `--c-game: 28 95% 58%` and new `--c-game-text: 28 95% 70%` both AA-pass on dark backgrounds (verified in `design-tokens-canonical.css:199`). No regression.
+
+| Sub-issue | Status | PR | Fix path | Files touched |
+|---|---|---|---|---:|
+| Real-C-B residue | ✅ fixed | (this PR) | (e1) + (e2) + (e3) | 7 (2 styles/tokens + 1 helper + 4 consumers) |
 
 **Test coverage updates** (this PR):
 - `SessionCardList.test.tsx`: rewritten `abandoned session` test to assert decorative-only dimming (root NOT opacity-70, cover IS opacity-60 + grayscale, border-l-entity-session/60).

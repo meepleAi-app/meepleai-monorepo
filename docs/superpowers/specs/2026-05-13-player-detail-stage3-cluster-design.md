@@ -267,7 +267,7 @@ Revert this single PR. The 5 Wave 3 component primitives are untouched; subroute
 
 ## 13. References
 
-- Composer primitive: `docs/superpowers/specs/2026-05-13-detail-page-layout-design.md` + PR #1112
+- Composer primitive: `docs/for-developers/specs/2026-05-13-detail-page-layout-design.md` + PR #1112
 - Parent spec: `docs/for-developers/specs/2026-05-11-design-system-deversioning.md` §3 Stage 3, §4 composability
 - Mockup: `admin-mockups/design_files/sp4-player-detail.jsx` + `sp4-player-detail.html`
 - Wave 3 component family: PR #724 — `apps/web/src/components/features/player-detail/`

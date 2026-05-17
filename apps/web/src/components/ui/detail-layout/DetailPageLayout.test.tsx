@@ -148,4 +148,23 @@ describe('DetailPageLayout', () => {
     );
     expect(screen.getByRole('complementary', { name: /related entities/i })).toBeInTheDocument();
   });
+
+  it('lets caller className override base utilities (Tailwind cascade — later-wins)', () => {
+    // Contract pin (spec-hardening #1126 / Crispin): clsx orders base utilities
+    // first and the caller-provided className last, so Tailwind's later-wins
+    // cascade lets the caller flip directional utilities (e.g. flex-row over
+    // the base flex-col) without removing the base class from the DOM. This
+    // pins the contract against accidental regression if someone refactors
+    // away from clsx to a different class composition utility.
+    const { container } = render(
+      <DetailPageLayout hero={<span>H</span>} className="flex-row">
+        <span>M</span>
+      </DetailPageLayout>,
+    );
+
+    const root = container.firstElementChild;
+    expect(root).not.toBeNull();
+    expect(root).toHaveClass('flex-row');
+    expect(root).toHaveClass('flex-col');
+  });
 });

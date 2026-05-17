@@ -29,6 +29,21 @@
   --c-toolkit: 142 70% 45%;
   --c-tool:    195 80% 50%;
 
+  /* ─── Entity Color TEXT variants (darker — for AA 4.5:1 text contrast) ─── *
+   * Entity colors above are sized for non-text usage (borders, backgrounds,
+   * decorative accents — pass WCAG AA 3:1 against light surfaces). When
+   * rendered as TEXT on cream/off-white surfaces (#f7f3ee / #f9eee6 / #f1e3d7),
+   * the lightness needs to drop ~13% to clear the AA 4.5:1 text threshold.
+   * Math verified via sRGB linearization + WCAG relative-luminance formula.
+   *   --c-game-text  hsl(25 95% 32%) ≈ #9e3a05 vs #f7f3ee = 6.14:1 ✅
+   *   Refs: #1094 Real-C-B, audit doc §2.5 v3, precedent #2026-05-12-dashboard-contrast.md
+   *
+   * Only --c-game-text is introduced today (covers the 76-node violation cluster
+   * captured by Phase A.live v3). Other entity-text variants will be added on
+   * demand as violations surface for them.
+   */
+  --c-game-text: 25 95% 32%;
+
   /* ─── Semantic Colors ─── */
   --c-success: 142 70% 45%;
   --c-warning: 38 92% 50%;
@@ -172,6 +187,12 @@
   --c-event:   350 85% 70%;
   --c-toolkit: 142 60% 58%;
   --c-tool:    195 75% 62%;
+
+  /* TEXT variant for dark theme: lighter to clear AA on dark bg.
+   *   --c-game-text  hsl(28 95% 70%) ≈ #fdb775 vs #14100a = 11.2:1 ✅
+   *   Refs: #1094 Real-C-B, audit doc §2.5 v3
+   */
+  --c-game-text: 28 95% 70%;
 
   color-scheme: dark;
 }

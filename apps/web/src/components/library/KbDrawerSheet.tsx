@@ -83,7 +83,7 @@ export function KbDrawerSheet({ open, onOpenChange, gameId, gameTitle }: KbDrawe
         <SheetContent side="right" className={cn('sm:max-w-lg', 'bg-card/80 backdrop-blur-xl')}>
           <SheetHeader className="pb-4 border-b border-border/30">
             <SheetTitle className="font-quicksand text-lg">
-              <span className="text-[hsl(25,95%,45%)]">KB</span>{' '}
+              <span className="text-[hsl(var(--c-game-text))]">KB</span>{' '}
               <span className="text-card-foreground">{gameTitle}</span>
             </SheetTitle>
             <div className="flex items-center gap-3 mt-1">

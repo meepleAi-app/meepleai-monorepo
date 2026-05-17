@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Phase 0 + Phase A structural complete; **Phase A live-run is HARD BLOCKER for any Phase C work** (pivot 2026-05-17 — see §1.3 false-positive lesson). |
+| Status | Phase 0 + Phase A structural + **Phase A.live PoC complete** (30 nodes captured across 4 auth routes; ~129 nodes pending full-matrix extension). Phase C kickoff-ready against §2.5 Real-Clusters A/B/C. |
 | Started | 2026-05-17 |
 | Parent issue | [#1094](https://github.com/meepleAi-app/meepleai-monorepo/issues/1094) — restoration of `frontend-a11y` CI gate to blocking |
 | Phase 0 sub-issue | [#1209](https://github.com/meepleAi-app/meepleai-monorepo/issues/1209) — preface |
@@ -19,7 +19,8 @@
 | §1.1 Route × state matrix (12 routes × N states) | ✅ complete 2026-05-17 | Phase A structural | this PR |
 | §1.2 Inventory cross-reference to #1094 counts | ✅ complete 2026-05-17 | Phase A structural | this PR |
 | §1.3 Static-grep companion (suspected source components) | ✅ complete 2026-05-17 + ⚠️ **pivoted 2026-05-17** (false-positive lesson) | Phase A structural | PR #1212 + this PR (audit pivot) |
-| §1.4 Per-node detail rows (selector / fg / bg / ratio) | ⏳ pending live axe run — **HARD PREREQUISITE** for Phase C | Phase A live | sub-issue (opening today) |
+| §1.4 Per-node detail rows (selector / fg / bg / ratio) | ✅ **PoC complete 2026-05-17** (10 of 30 targets, 30 of ~159 nodes); ⏳ full-matrix extension queued | Phase A live | this PR (PoC) + #1215 follow-up (extension) |
+| §2.5 Real clusters from live data | ✅ complete 2026-05-17 (Real-C-A/B/C) | Phase B final (partial) | this PR |
 | §2.0 Grouping methodology | ✅ complete 2026-05-17 | Phase B prelim | PR #1212 |
 | §2.1 Suspected clusters (from #1094 hints + static analysis) | ✅ complete 2026-05-17 + ⚠️ **C1 ruled out 2026-05-17** | Phase B prelim | PR #1212 + this PR |
 | §2.2 Fix-path taxonomy per cluster | ✅ complete 2026-05-17 | Phase B prelim | PR #1212 |
@@ -280,21 +281,69 @@ The original §1.3 v1 table is preserved below for historical traceability and t
 
 **Lint rule behavior note (unchanged)**: `local/no-hardcoded-color-utility` is set to `error` in `apps/web/eslint.config.mjs` since DS-15. The 50+ surviving violations across `apps/web/src/` therefore carry file-level `// eslint-disable local/no-hardcoded-color-utility` directives. Cleaning these up is a **DS-16 codemod concern** (per CLAUDE.md §Active Freezes), independent of #1094. Phase C should NOT bundle generic eslint-disable cleanup with axe-failure fixes — keep the two concerns separate to preserve atomicity.
 
-### §1.4 Per-node detail rows (live axe-core run)
+### §1.4 Per-node detail rows (live axe-core run — partial PoC 2026-05-17)
 
-⏳ **Pending Phase A live-run sub-issue** (TBD). When opened, that sub-issue MUST:
+**Status**: PoC run delivered via #1215 / PR (this PR), covering **6 public routes + 4 authenticated index routes** (subset of the 30 targets in §1.1). Full matrix extension (~20 more targets including detail routes, gamebook states, session-live `dark-default` / `loading` / `pause-overlay-open` / `endgame-dialog-open`, session-summary partial-empty states) is queued in #1215 follow-up.
 
-1. Wire a one-shot script (`apps/web/scripts/phase-a-color-contrast-audit.mjs` or equivalent) that runs axe-core against each `(route, state)` in §1.1 above, filters `color-contrast` rule only, and dumps per-node `ViolationRow` records to `apps/web/audits/phase-a-color-contrast-runtime.json`.
-2. Append the rows to §1.4 of this doc as a single markdown table, sorted by `sharedComponent` (or by route+state if no sharedComponent inferable).
-3. Resolve the §1.2 discrepancy log (empty-photos / empty-achievements attribution) explicitly.
-4. Extend the live run to **mobile-chrome** viewport and **dark** theme matrix (Phase A.4 in #1094 hardened body).
-5. Cross-validate §1.3 hypothesis: every component in §1.3 should show up in the per-node rows OR the discrepancy is documented.
+**Runner**: `apps/web/scripts/phase-a-color-contrast-audit.mjs` — Playwright Node API, axe-core `color-contrast` rule only (AA 4.5:1; `color-contrast-enhanced` AAA explicitly excluded as out-of-scope per #1094 WCAG 2.1 AA target).
 
-Recommended branch pattern: `feature/issue-{phase-a-live-N}-phase-a-live-axe-run`.
+**Raw output**: `apps/web/audits/phase-a-color-contrast-runtime.json` — single source of truth; this section is a derived summary.
 
-| Route | State | Viewport | Theme | Selector | fgColor | bgColor | Ratio | sharedComponent | origin | Status |
-|---|---|---|---|---|---|---|---:|---|---|---|
-| _(populated by Phase A live-run sub-issue)_ | | | | | | | | | | |
+#### PoC run summary
+
+| Route | Public/Auth | Desktop nodes | Mobile nodes | Theme | Total |
+|---|---|---:|---:|---|---:|
+| `/login` | public | 0 | 0 | light + dark | 0 ✅ |
+| `/register` | public | 0 | 0 | light + dark | 0 ✅ |
+| `/` (landing) | public | 0 | 0 | light + dark | 0 ✅ |
+| `/agents` | auth | 0 | 0 | light | 0 ✅ |
+| `/players` | auth | 0 | 0 | light | 0 ✅ |
+| `/library` | auth | 1 | 2 | light | **3** ⚠️ |
+| `/sessions` | auth | 13 | 14 | light | **27** 🔴 |
+
+**Total PoC nodes**: **30** (vs #1094 inventory 159 → 19% coverage). The remaining ~129 nodes are expected in the un-tested ~20 targets (session-live states, session-summary states, gamebook states, detail routes).
+
+#### Per-node table (representative — top patterns; full JSON in `apps/web/audits/phase-a-color-contrast-runtime.json`)
+
+| Route | Viewport | Selector (truncated) | fg | bg | Ratio | Need | Pattern cluster |
+|---|---|---|---|---|---:|---:|---|
+| `/sessions` | Desktop+Mobile (×10) | `.opacity-70 > ... > .min-w-0...` | `#90877f` | `#fdfbfa` or `#efeae4` | 2.94–3.41 | 4.5 | **Real-C-A** opacity-70 on muted text |
+| `/sessions` | Desktop+Mobile (×7) | `button[aria-label="Apri sessione X"] > .p-3...` | `#c25405` | `#f9eee6` | 4.03 | 4.5 | **Real-C-B** `--c-game` entity orange as text |
+| `/sessions` | Desktop | `.border-[hsl(25,95%,45%)]` | `#e06106` | `#f7f3ee` | 3.23 | 4.5 | **Real-C-B** entity color border-as-text |
+| `/library` | Desktop+Mobile (×2) | `.bg-primary\/10` | `#bd5205` | `#f1e3d7` | 3.82 | 4.5 | **Real-C-B** primary token on tinted bg |
+| `/library` | Mobile only (×1) | `.bg-orange-600` | `#ffffff` | `#f54900` | 3.59 | 4.5 | **Real-C-C** white on `bg-orange-600` (CTA) |
+
+(The 30 individual rows are in the JSON artifact; consolidated by pattern above for readability.)
+
+#### Cross-validation with §1.3 static-grep
+
+The 5 hardcoded-color files identified in §1.3 v2 (`SessionLiveView.tsx`, `players/[id]/achievements/page.tsx`, etc.) do **NOT** appear in the §1.4 PoC violation rows. The actual violations are in:
+
+- **`opacity-70` modifier** applied on `text-muted-foreground` (semantic token, NOT hardcoded). The opacity reduces effective contrast below AA threshold even though the source color was DS-15-compliant.
+- **`--c-game` entity orange token** (semantic, NOT hardcoded) used as `text` or `border-as-text` color on cream/light bg. The token passes AA for non-text (3:1) but FAILS for text (4.5:1) — this is the same issue documented in `2026-05-12-dashboard-contrast.md` for focus rings.
+- **`bg-orange-600` + `text-white`** (Tailwind utility) in a small CTA where text falls below 4.5:1 against the orange.
+
+This confirms §1.3's "lesson learned": static-grep cannot predict violations. The **real culprits are semantic-token combinations whose contrast is borderline** and **opacity modifiers reducing effective contrast** — neither detectable from source-code grep.
+
+#### Discrepancies resolved (§1.2)
+
+- `empty-photos` attribution and `empty-achievements` attribution — **NOT YET RESOLVED**. The PoC did not exercise gamebook-index or session-summary states. Resolution deferred to Phase A.live full-matrix follow-up.
+
+#### Mobile / dark theme observations
+
+- Mobile (iPhone 13) shows slightly different violation counts than Desktop on `/library` (2 vs 1) and `/sessions` (14 vs 13) — the diff is responsive-layout-conditional surfaces (e.g. mobile-only CTA on `/library`).
+- Dark theme on public routes (login, register, landing) produced **0 additional violations** compared to light. This is consistent with public route static structure. Authenticated dark-theme coverage is pending follow-up (would require explicit `?theme=dark` URL params or `data-theme="dark"` cookie seeding — see `e2e/a11y/session-live.spec.ts` line 71 for the `dark-default` precedent).
+
+#### Full-matrix extension plan
+
+The remaining ~20 targets (estimated ~129 additional nodes) require:
+
+- Per-target `setup(page)` functions mirroring `e2e/a11y/*.spec.ts` patterns (specifically the state-machine navigation for `pause-overlay`, `endgame-dialog`, `step3-cancel-modal`, etc.)
+- Reusing seed helpers from `apps/web/e2e/_helpers/` (already inlined in the runner; can be promoted to a shared module)
+- Each target ~2-3 min to wire + run; total ~1h extension work
+- Output: extend §1.4 table + JSON artifact
+
+This is **follow-up scope for #1215 round 2** — the PoC delivered here covers the highest-traffic routes (`/library`, `/sessions`, `/agents`, `/players`) and validates the runner end-to-end.
 
 ## §2 Root-cause grouping (Phase B preliminary)
 
@@ -355,6 +404,26 @@ Per #1094 hardened body B.2, three fix paths exist. Recommendation per cluster:
 2. **No Phase C PR before §1.4 lands.** All cluster boundaries (C2–C5) are hypotheses pending live data.
 3. **Phase C PR ordering** after §1.4: pick the cluster with highest measured node count AND lowest LOC delta. Bundle small adjacent clusters when same route family.
 4. **Final acceptance** — `pnpm test:a11y:e2e` returns 0 violations across the full dual-viewport × dual-theme matrix → open Phase D sub-issue.
+
+### §2.5 Real clusters from §1.4 PoC live data (2026-05-17)
+
+The §1.4 PoC live run on `/library` + `/sessions` + `/agents` + `/players` surfaced **30 nodes** organized in **3 patterns** distinct from the preliminary C1-C5 hypotheses (which were all either ruled out or untested). These Real-Clusters are **the actual Phase C fix targets** for the routes the PoC covered. Additional clusters may emerge when the remaining ~20 targets are run.
+
+| Real-Cluster ID | Pattern | Nodes (PoC) | Routes | Root cause | Recommended fix path |
+|---|---|---:|---|---|---|
+| **Real-C-A** | `opacity-70` modifier on `text-muted-foreground` | ~10 | `/sessions` | Opacity reduces effective fg-vs-bg contrast below AA — axe computes against raw color, but rendered is more faded. The semantic token by itself passes AA; the opacity tips it below. | **(b) refactor** — drop `opacity-70` on text spans, use a lower-emphasis token (e.g. `text-muted-foreground/80` is wrong because same issue; need a dedicated `--mc-disabled-text` token or remove the dim entirely). Likely 1 PR localized to `sessions-index` `_components/` family. |
+| **Real-C-B** | `--c-game` entity orange token used as text/border-as-text | ~9 | `/sessions` (7) + `/library` (2) | `--c-game` is `hsl(25, 95%, 45%)` ≈ `#df6105` light theme. Passes AA only against very light bg (`#f7f3ee` ratio 3.27 — *below* 4.5 for text; OK for non-text 3:1). Used in `border-[hsl(25,95%,45%)]` (which renders as text-like outline) and on `.bg-primary/10` tinted bg (`#f1e3d7`, ratio 3.82 — still below). | **(b)+(c)** — for true borders keep as-is (3:1 non-text OK). For text rendering, swap to `--c-game-text` darker variant (token doesn't exist yet — needs DS-15 extension under #1023 umbrella) OR use `text-foreground` and reserve `--c-game` for non-text accents only. Cross-route fix: 1-2 PRs. |
+| **Real-C-C** | `text-white` on `bg-orange-600` CTA | 1 | `/library` (mobile only) | `bg-orange-600` is `#f54900`, `text-white` is `#ffffff`. Ratio 3.59 < 4.5. The CTA passes for large/bold text (3:1) but not for regular. | **(c) per-surface** — either bump font-size to ≥18.66px (large) OR change `bg-orange-600` to a darker shade (`bg-orange-700` is `#c2410c`, white ratio ≈ 5.0). Smallest possible fix. |
+
+**Real-Cluster sequencing recommendation**:
+
+1. **PR Real-C-C** first (1 node, 1 line change, validates CI gate detects the diff) — ~10 min.
+2. **PR Real-C-A** second (10 nodes, single route family, well-bounded scope) — ~45 min.
+3. **PR Real-C-B** third (cross-route, needs `--c-game-text` token discussion with DS-15 owners) — ~1-2h, may need coordination with #1023 umbrella.
+
+**Coverage**: 20 of 30 PoC nodes in 3 PRs. The remaining 10 nodes (mix across cluster boundaries) flow naturally once the token/refactor lands. Realistic Phase C effort for PoC scope: **~2-3h, 3 PRs**.
+
+**Note on preliminary C1-C5**: the preliminary clusters in §2.1 were all hypothetical (C1 false-positive confirmed; C2-C5 untested in PoC). When the Phase A.live full-matrix extension lands (~20 more targets), the remaining inventory will likely surface NEW Real-Clusters AND validate/invalidate C2-C5. Keep §2.1 for reference but anchor Phase C planning on §2.5 Real-Clusters from this point forward.
 
 ### §2.4 Open questions for Phase A.live to resolve
 

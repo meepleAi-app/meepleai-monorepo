@@ -110,7 +110,7 @@ export function LiveScoringPanel({
                   {entry.playerName}
                   {isViewer && (
                     // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: session light-text variant in Tailwind arbitrary class; no light-text entity token exists
-                    <span className="ml-1 text-xs text-[hsl(240,60%,70%)]">
+                    <span className="ml-1 text-xs text-[hsl(240,60%,75%)]">
                       ({labels.myScoreLabel})
                     </span>
                   )}

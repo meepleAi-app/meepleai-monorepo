@@ -19,14 +19,20 @@ on:
         required: false
         default: 'false'
         type: boolean
-  # Also run when the probes / config / workflow itself change so a PR can
-  # validate end-to-end before being merged.
-  pull_request:
-    paths:
-      - 'apps/api/tests/CodeqlBarrierSmoke/**'
-      - '.github/codeql/codeql-config-with-probes.yml'
-      - '.github/codeql/meepleai/sanitizers-extensions/**'
-      - '.github/workflows/barrier-verification.yml'
+  # NOTE — no `pull_request` trigger by design.
+  #
+  # Empirical finding on PR #1203 (2026-05-17): the codeql-action's PR-event
+  # default is incremental/diff-only analysis. The unsanitized probe alert
+  # is therefore filtered out on any PR that does not modify the probe
+  # source file itself (because it is "pre-existing" relative to the base
+  # branch). This makes a `pull_request` trigger here unreliable: it
+  # passes on PRs that touch the probe files and falsely fails on every
+  # other PR.
+  #
+  # Validation cadence is sufficient via the monthly cron + on-demand
+  # `workflow_dispatch`. PR authors who modify probes/config/MaD pack
+  # should run `gh workflow run barrier-verification.yml --field
+  # verbose=true --ref <branch>` to validate before merge.
 
 concurrency:
   group: barrier-verification-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

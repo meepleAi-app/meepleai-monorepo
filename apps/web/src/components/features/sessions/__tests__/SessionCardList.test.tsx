@@ -9,7 +9,7 @@
  * 5. Shows turn label for in-progress sessions
  * 6. Fires onClick with the item on click
  * 7. aria-label uses openSessionAriaTemplate with gameName substitution
- * 8. Abandoned session has opacity-70 class
+ * 8. Abandoned session dims decorative cover (not body text) — WCAG AA fix #1221
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -120,9 +120,18 @@ describe('SessionCardList', () => {
     expect(el!.getAttribute('aria-label')).toBe('Apri sessione Wingspan');
   });
 
-  it('abandoned session has opacity-70 class applied', () => {
+  it('abandoned session dims decorative cover only — body text stays full opacity (#1221 Real-C-A)', () => {
     render(<SessionCardList item={ABANDONED_ITEM} onClick={vi.fn()} labels={LABELS} />);
-    const el = document.querySelector('[data-slot="session-card-list"]');
-    expect(el!.classList.contains('opacity-70')).toBe(true);
+    const root = document.querySelector('[data-slot="session-card-list"]');
+    expect(root).not.toBeNull();
+    // Root MUST NOT carry opacity-70 (would dim text and fail WCAG AA 4.5:1)
+    expect(root!.classList.contains('opacity-70')).toBe(false);
+    // Cover placeholder (first aria-hidden child) MUST carry opacity-60 grayscale dim
+    const cover = root!.querySelector('[aria-hidden="true"]');
+    expect(cover).not.toBeNull();
+    expect(cover!.className).toMatch(/opacity-60/);
+    expect(cover!.className).toMatch(/grayscale/);
+    // Left border MUST soften via /60 alpha when abandoned
+    expect(root!.className).toMatch(/border-l-entity-session\/60/);
   });
 });

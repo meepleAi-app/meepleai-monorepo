@@ -375,6 +375,12 @@ test.describe('Session live — accessibility @a11y', () => {
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
+    // Issue #1223 / refs #1094 Real-C-D + E: emulate reduced-motion BEFORE goto
+    // so the dialog's `motion-reduce:animate-none` skips the 200ms fade-in.
+    // axe-core scans immediately after the dialog mounts; without this, mid-
+    // animation alpha-composited colors trigger false-positive contrast hits
+    // (e.g. .bg-emerald-700 reported as 1.28 ratio vs the 4.78 stable state).
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await seedAuth(page);
     await page.goto(`/sessions/${FIXTURE_SESSION_ID}/live?fixture=host&dialog=pause`, {
       waitUntil: 'domcontentloaded',
@@ -402,6 +408,10 @@ test.describe('Session live — accessibility @a11y', () => {
 
   test('axe-core: no WCAG 2.1 AA violations with EndgameDialog open', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
+    // Issue #1223 / refs #1094 Real-C-D + E: see PauseOverlay scan above for
+    // rationale. Reduced-motion skips fade-in so axe sees the stable final
+    // state, not the transient mid-animation composited colors.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await seedAuth(page);
     await page.goto(`/sessions/${FIXTURE_SESSION_ID}/live?dialog=endgame`, {
       waitUntil: 'domcontentloaded',

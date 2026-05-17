@@ -133,5 +133,7 @@ describe('SessionCardList', () => {
     expect(cover!.className).toMatch(/grayscale/);
     // Left border MUST soften via /60 alpha when abandoned
     expect(root!.className).toMatch(/border-l-entity-session\/60/);
+    // Root border MUST soften via border-border/70 when abandoned (close ISSUE-1 from review)
+    expect(root!.className).toMatch(/border-border\/70/);
   });
 });

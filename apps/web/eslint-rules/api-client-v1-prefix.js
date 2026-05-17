@@ -1,5 +1,5 @@
 /**
- * ESLint rule: require `/api/v1/` prefix on apiClient HTTP calls.
+ * ESLint rule: require `/api/v1/` prefix on HttpClient HTTP calls.
  *
  * The browser-side `HttpClient.baseUrl` is `''` (see
  * `apps/web/src/lib/api/core/httpClient.ts:54-56`). Requests therefore go
@@ -8,14 +8,25 @@
  * only paths that begin with `/api/v1/` to the backend. Any other absolute
  * path lands on Next.js itself and 404s.
  *
- * This rule statically enforces the convention "every `apiClient.get/post/
- * put/patch/delete/head/options('/...')` literal MUST start with
- * `/api/v1/`". Dynamic paths (variables, function calls, BinaryExpression)
- * are intentionally skipped to avoid false positives — those need to be
- * vetted in code review.
+ * This rule statically enforces the convention "every
+ * `<client>.get/post/put/patch/delete/head/options('/...')` literal MUST
+ * start with `/api/v1/`" where `<client>` is any local identifier that
+ * either (a) was imported as `apiClient` from a `client` module or (b)
+ * was instantiated with `new HttpClient(...)` in the same file. Dynamic
+ * paths (variables, function calls, BinaryExpression) are intentionally
+ * skipped to avoid false positives — those need to be vetted in code
+ * review.
+ *
+ * The two-mode tracking is required because the codebase uses both
+ * patterns: the shared singleton `apiClient` (from
+ * `apps/web/src/lib/api/client.ts`) and local per-feature
+ * `const httpClient = new HttpClient()` instances (43+ files in admin/
+ * tabs, settings pages, etc.). All consume the same baseUrl='' contract,
+ * so all must respect the `/api/v1/` prefix.
  *
  * Refs:
  *   - PR #1229: fix(web) add /api/v1 prefix to 6 discover hooks (refs #1160)
+ *   - PR #1230: extend rule to track `new HttpClient()` instances
  *   - apps/web/src/lib/api/core/httpClient.ts:54-56 (baseUrl='' rationale)
  *   - apps/web/src/app/api/v1/[...path]/route.ts (proxy catch-all)
  *
@@ -25,7 +36,6 @@
 
 'use strict';
 
-const API_CLIENT_NAME = 'apiClient';
 const HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options']);
 const REQUIRED_PREFIX = '/api/v1/';
 
@@ -66,17 +76,61 @@ module.exports = {
     },
   },
   create(context) {
+    // Per-file set of local identifier names that resolve to an HttpClient
+    // instance. Populated by:
+    //   - ImportDeclaration: `import { apiClient [as X] } from '.../client'`
+    //   - VariableDeclarator: `const X = new HttpClient(...)`
+    // ESLint walks the AST top-down so imports and declarations are seen
+    // before any CallExpression on the file.
+    const trackedNames = new Set();
+
+    // Heuristic: only trust `apiClient` imports whose source path ends in
+    // `client` (e.g. `@/lib/api/client`, `./client`, `../client`). Stops
+    // false positives from unrelated modules that happen to export an
+    // identifier named `apiClient`.
+    function isClientModuleSource(source) {
+      if (typeof source !== 'string') return false;
+      return /(^|\/)client(\.[tj]sx?)?$/.test(source);
+    }
+
     return {
+      ImportDeclaration(node) {
+        if (!isClientModuleSource(node.source && node.source.value)) return;
+        for (const specifier of node.specifiers) {
+          if (
+            specifier.type === 'ImportSpecifier' &&
+            specifier.imported &&
+            specifier.imported.name === 'apiClient' &&
+            specifier.local &&
+            specifier.local.name
+          ) {
+            trackedNames.add(specifier.local.name);
+          }
+        }
+      },
+
+      VariableDeclarator(node) {
+        if (
+          node.init &&
+          node.init.type === 'NewExpression' &&
+          node.init.callee.type === 'Identifier' &&
+          node.init.callee.name === 'HttpClient' &&
+          node.id.type === 'Identifier'
+        ) {
+          trackedNames.add(node.id.name);
+        }
+      },
+
       CallExpression(node) {
         const callee = node.callee;
 
-        // Match exactly `apiClient.<method>(...)` (not computed, not chained).
+        // Match `<tracked-name>.<method>(...)` (not computed).
         if (
           !callee ||
           callee.type !== 'MemberExpression' ||
           callee.computed ||
           callee.object.type !== 'Identifier' ||
-          callee.object.name !== API_CLIENT_NAME ||
+          !trackedNames.has(callee.object.name) ||
           callee.property.type !== 'Identifier' ||
           !HTTP_METHODS.has(callee.property.name)
         ) {

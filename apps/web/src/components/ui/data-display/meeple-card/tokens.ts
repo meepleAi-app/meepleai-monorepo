@@ -52,16 +52,17 @@ export function entityHsl(entity: MeepleEntityType, alpha?: number): string {
  * Mirrors the CSS `--c-{entity}-text` tokens in
  * `apps/web/src/styles/design-tokens-canonical.css` (lines 45+193).
  *
- * Only `game` and `kb` have darker variants today (introduced for the
- * #1094 Real-C-B and Real-C-F clusters). For other entities, falls back to
- * `entityHsl()` solid until violations surface.
+ * `game`, `kb`, `toolkit` have darker variants today (introduced for the
+ * #1094 Real-C-B, Real-C-F, and Real-C-E clusters respectively). For other
+ * entities, falls back to `entityHsl()` solid until violations surface.
  *
- * Refs: #1094 Real-C-B, audit doc §2.5 + §3.2 (Real-C-B residue).
+ * Refs: #1094 Real-C-B, audit doc §2.5 + §3.2 (Real-C-B residue), §3.3 (toolkit).
  */
 const entityTextOverrides: Partial<Record<MeepleEntityType, { h: number; s: string; l: string }>> =
   {
     game: { h: 25, s: '95%', l: '32%' }, // matches --c-game-text light theme
     kb: { h: 174, s: '60%', l: '28%' }, // matches --c-kb-text light theme
+    toolkit: { h: 142, s: '70%', l: '24%' }, // matches --c-toolkit-text light theme (#1094 Real-C-E)
   };
 
 export function entityHslText(entity: MeepleEntityType, alpha?: number): string {

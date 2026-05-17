@@ -234,7 +234,7 @@ export function SessionQuickActions({
 
         {/* ── Advance Turn ─────────────────────────────────── */}
         <div className="rounded-lg border border-border bg-card p-3 space-y-2">
-          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+          <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
             <ArrowRightCircle className="h-4 w-4" />
             <span className="text-xs font-semibold uppercase tracking-wider">Avanza turno</span>
           </div>

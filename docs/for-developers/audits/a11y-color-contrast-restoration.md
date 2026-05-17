@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Phase 0 + Phase A structural + **Phase A.live v4 complete** (33 targets, **103 nodes** post PR #1224/#1225 fixes — net -12 from v3 despite +6 new gamebook/session-summary/session-live targets adding +20). Phase C: Real-C-A ✅ fixed (#1221 PR — modifier-scope refactor on SessionCardGrid/List; see §3.1), Real-C-B ✅ fixed (PR #1224 hardcoded swap + Real-C-B residue PR — JS-side `entityHslText()` helper + new `text-entity-game-text` utility + `text-primary-700` per-site swap; see §3.2), Real-C-D ✅ partial (PR #1225 violet 3), Real-C-E pending (~2 catastrophic + ~10 newly-discovered c-kb catastrophic). Phase D blocked until 0 violations. |
+| Status | Phase 0 + Phase A structural + **Phase A.live v4 complete** (33 targets, **103 nodes** post PR #1224/#1225 fixes — net -12 from v3 despite +6 new gamebook/session-summary/session-live targets adding +20). Phase C: Real-C-A ✅ fixed (#1221 PR — modifier-scope refactor on SessionCardGrid/List; see §3.1), Real-C-B ✅ fixed (PR #1224 hardcoded swap + Real-C-B residue PR — see §3.2), Real-C-D ✅ fixed (PR #1225 violet + Real-C-D+E residue PR — `text-blue-700` swap on SessionQuickActions; see §3.3), Real-C-E ✅ fixed (PR #1231 reduced-motion + Real-C-D+E residue PR — new `text-entity-toolkit-text` utility for gamebook ready pill; see §3.3). Real-C-F residue (~20 nodi cyan kb-link) + ~24 misc singletons pending in follow-up cycle. Phase D blocked until 0 violations. |
 | Started | 2026-05-17 |
 | Parent issue | [#1094](https://github.com/meepleAi-app/meepleai-monorepo/issues/1094) — restoration of `frontend-a11y` CI gate to blocking |
 | Phase 0 sub-issue | [#1209](https://github.com/meepleAi-app/meepleai-monorepo/issues/1209) — preface |
@@ -484,6 +484,31 @@ Total deferred: ~44 nodes (~28% of #1094 inventory). The cluster pattern is well
 **Token decision** (light theme scope): the light-theme `--muted-foreground` (`globals.css:559`) value `30 12% 35%` ≈ `#6b5d4f` mathematically passes AA on both `bg-card` (ratio 6.9:1) and `bg-muted` (ratio 5.8:1) when applied WITHOUT opacity modifiers. The `--text-muted` literal `#9a8870` in `design-tokens-canonical.css:138` is dead code for these surfaces (overridden by Tailwind's `text-muted-foreground` utility which maps to `--muted-foreground`); audit/cleanup deferred to DS-16.
 
 **Dark theme caveat** (out of this PR's scope, flagged by spec-panel review): the dark-theme override `--muted-foreground: 0 0% 60%` (`globals.css:645`) ≈ `#999999` against dark `--card: 0 0% 18%` (`#2d2d2d`) yields ratio ≈ **3.8:1** — failing AA 4.5:1 for regular text. This is a pre-existing token weakness unrelated to the 24 light-theme `#90877f` nodes addressed in #1221, but it WILL surface as a Phase A.live dark-matrix violation when that matrix is run. Tracked for Phase A.live v5 follow-up (N+4 step) or a separate dark-theme `--muted-foreground` bump sub-issue.
+
+### §3.3 Real-C-D residue + Real-C-E toolkit pattern
+
+🔬 **Discovery (PR for #1094 Real-C-D + Real-C-E)**:
+
+**Real-C-D residue** (4 nodi at ratio 4.49, fail by 0.01): single offender — `SessionQuickActions.tsx:237` "Avanza turno" header uses `text-blue-600 dark:text-blue-400` on `bg-card` (light = `#fdfbfa`). Captured on `/sessions/.../live?dialog={endgame,pause}` because dialog state forces SessionQuickActions to render (modal backdrop overlays it, axe scans both). Light-theme blue-600 = `#155dfc` is below 4.5:1.
+
+**Real-C-E re-classification** (post PR #1231): the original "catastrophic" Real-C-E (ratio 1.06-1.08 from `bg-emerald-700` + focus-ring) was an axe-during-animation artifact — closed by PR #1231 via reduced-motion emulation. What remains under the Real-C-E label is a **new pattern surfaced by v4**: gamebook `StatusPill` (ready variant) uses `text-entity-toolkit` on `bg-entity-toolkit/12` blended bg `#e3f0e8` = ratio 4.16 (fail by 0.34). Same family pattern as Real-C-B but for `toolkit` entity instead of `game`. 8 nodi (2 fixtures × 2 viewports × 2 instances per fixture).
+
+**Fix path**:
+- **(d1) Tailwind swap**: `SessionQuickActions.tsx:237` `text-blue-600` → `text-blue-700` (already exists in Tailwind default scale at `hsl 217 91% 36%` ≈ `#1d4ed8`, AA-pass on light bg). Dark theme retains `dark:text-blue-400`.
+- **(d2) toolkit text variant**: extend the entity-text token system introduced in PR #1224 (Real-C-B) + Real-C-B residue PR to support `toolkit`. New `--c-toolkit-text: 142 70% 24%` light / `142 60% 72%` dark (in both `globals.css` and `design-tokens-canonical.css` for SoT consistency). Register `--color-entity-toolkit-text` in `@theme inline`. Extend `entityTextOverrides` in `tokens.ts` to include `toolkit`. Swap `GamebookCard.tsx:110` `text-entity-toolkit` → `text-entity-toolkit-text` (ready pill only — other usages on different bg/12 surfaces deferred until audit captures them).
+
+**Verified math (light theme)**:
+- `text-blue-700` (`#1d4ed8`) on `bg-card` (`#fdfbfa`): ratio **~8.6:1** ✅
+- `--c-toolkit-text` `hsl(142 70% 24%)` ≈ `#0f5d2b` on `#e3f0e8` (bg-entity-toolkit/12 blended): ratio **~5.6:1** ✅
+
+**Deferred** (out of this PR's scope, surfaces in v4 audit but require separate investigation):
+- Real-C-F residue: 20 nodi `#4ecdc4` on `a[href$="sessions"] > span:nth-child(2)` (kb-entity link source unidentified, distributed across all session-live states). Needs deeper DOM tracing.
+- Misc small clusters: `#d2844b` (4 nodi `/sessions` ConnectionChip — possibly inherited from non-game entity), `#d79462`+`#ed697d` (4 nodi `/players/sara-rossi`), and ~10 other singletons. Total: 24 nodi pending in follow-up cycle.
+
+| Sub-issue | Status | PR | Fix path | Files touched |
+|---|---|---|---|---:|
+| Real-C-D residue (blue-600) | ✅ fixed | (this PR) | (d1) Tailwind swap | 1 |
+| Real-C-E toolkit pattern | ✅ fixed | (this PR) | (d2) new token + utility + swap | 4 |
 
 ### §3.2 Real-C-B residue — JS-side + Tailwind-utility per-site swap
 

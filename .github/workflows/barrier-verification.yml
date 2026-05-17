@@ -107,7 +107,13 @@ jobs:
           # Deterministic SARIF output path for the downstream assertion step.
           output: ${{ runner.temp }}/codeql-sarif
         env:
-          # Same pack-load mechanism as security-scan.yml (ADR-058 §1.4).
+          # Same pack-load mechanism as security-scan.yml (ADR-058 §1.4), but
+          # without the `format()` wrapper that file uses. The wrap there
+          # exists solely to guard the env var behind `matrix.language ==
+          # 'csharp'` (security-scan.yml runs both csharp + javascript). This
+          # workflow has only csharp, so the simpler direct expansion is
+          # correct — no curly-brace escaping for matrix expression is needed.
+          # See PR review notes on #1200.
           CODEQL_ACTION_EXTRA_OPTIONS: >-
             {"database":{"run-queries":["--additional-packs=${{ github.workspace }}/.github/codeql","--extension-packs=meepleai/sanitizers-extensions"]}}
 

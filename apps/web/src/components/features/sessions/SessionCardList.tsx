@@ -14,7 +14,8 @@
  *   - ScoringInline (full display)
  *   - ConnectionChipStripFooter: game chip + player count + chat count (max 3)
  *
- * Abandoned sessions: reduced opacity (0.7) per mockup.
+ * Abandoned sessions: dim only decorative elements (cover placeholder + left border);
+ * body text retains full opacity for WCAG AA compliance (issue #1221, Real-C-A).
  * In-progress sessions: mai-pulse class on wrapper for live dot animation.
  */
 
@@ -91,18 +92,21 @@ export function SessionCardList({
       className={clsx(
         'group relative w-full text-left',
         'flex items-stretch gap-0 overflow-hidden rounded-xl border border-border bg-card',
-        'border-l-[3px] border-l-entity-session',
+        'border-l-[3px]',
+        isAbandoned ? 'border-l-entity-session/60 border-border/70' : 'border-l-entity-session',
         'cursor-pointer transition-shadow hover:shadow-md',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        isAbandoned && 'opacity-70',
         isInProgress && 'mai-pulse',
         className
       )}
     >
-      {/* Cover placeholder */}
+      {/* Cover placeholder — dimmed + desaturated when abandoned */}
       <div
         aria-hidden="true"
-        className="flex w-[72px] shrink-0 items-center justify-center bg-entity-session/12 text-3xl"
+        className={clsx(
+          'flex w-[72px] shrink-0 items-center justify-center bg-entity-session/12 text-3xl',
+          isAbandoned && 'opacity-60 grayscale-[30%]'
+        )}
       >
         <span className="drop-shadow-sm">🎯</span>
       </div>

@@ -1,7 +1,7 @@
 /**
  * SessionCardGrid unit tests — Wave D.1 (Issue #735).
  *
- * 7 tests:
+ * 8 tests:
  * 1. Renders data-slot="session-card-grid"
  * 2. Sets data-item-id from item.id
  * 3. Shows gameName as title
@@ -9,6 +9,7 @@
  * 5. Shows ScoringInline (compact) in the body
  * 6. Fires onClick with item on click
  * 7. aria-label uses openSessionAriaTemplate with gameName substitution
+ * 8. Abandoned session dims decorative accent/cover (not body text) — WCAG AA fix #1221
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -47,6 +48,19 @@ const ITEM: SessionListItem = {
     { name: 'Marco', score: 72 },
     { name: 'Luca', score: 65 },
   ],
+  hasChat: false,
+};
+
+const ABANDONED_ITEM: SessionListItem = {
+  id: 'session-grid-abandoned',
+  gameName: 'Carcassonne',
+  date: '12 mar 2026',
+  when: '1 mese fa',
+  duration: '18m',
+  status: 'abandoned',
+  outcome: null,
+  playerCount: 2,
+  scores: [],
   hasChat: false,
 };
 
@@ -94,5 +108,24 @@ describe('SessionCardGrid', () => {
     render(<SessionCardGrid item={ITEM} onClick={vi.fn()} labels={LABELS} />);
     const el = document.querySelector('[data-slot="session-card-grid"]');
     expect(el!.getAttribute('aria-label')).toBe('Apri sessione Azul');
+  });
+
+  it('abandoned session dims decorative accent + cover only — body text stays full opacity (#1221 Real-C-A)', () => {
+    render(<SessionCardGrid item={ABANDONED_ITEM} onClick={vi.fn()} labels={LABELS} />);
+    const root = document.querySelector('[data-slot="session-card-grid"]');
+    expect(root).not.toBeNull();
+    // Root MUST NOT carry opacity-70 (would dim text and fail WCAG AA 4.5:1 contrast)
+    expect(root!.classList.contains('opacity-70')).toBe(false);
+    // Two decorative children (accent bar + cover area) — both aria-hidden
+    const decoratives = root!.querySelectorAll('[aria-hidden="true"]');
+    expect(decoratives.length).toBeGreaterThanOrEqual(2);
+    // First decorative is the accent bar: dimmed with opacity-50
+    expect(decoratives[0].className).toMatch(/opacity-50/);
+    // Second decorative is the cover area: dimmed with opacity-60 + grayscale
+    expect(decoratives[1].className).toMatch(/opacity-60/);
+    expect(decoratives[1].className).toMatch(/grayscale/);
+    // Body text (h3 title) MUST retain text-foreground (full opacity, AA-compliant)
+    const heading = root!.querySelector('h3');
+    expect(heading!.className).toMatch(/text-foreground/);
   });
 });

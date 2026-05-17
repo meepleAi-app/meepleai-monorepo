@@ -1,8 +1,18 @@
 # PII-Safe Logging Conventions
 
-**Status**: active — enforced by CodeQL Models-as-Data pack + `Security Scan` workflow on every PR to `main-dev`/`main-staging`/`main`
+**Status**: active — enforced by CodeQL Models-as-Data pack + `Security Scan` workflow on every PR/push to `main-dev`/`main-staging`/`main`, with in-IDE feedback via the `Api.Analyzers.NoPiiInLogAnalyzer` Roslyn analyzer (MAI001).
 
-**See also**: [ADR-058 — Canonical Log Sanitizers](../../for-claude/architecture/adr/adr-058-canonical-log-sanitizers.md), issue [#1181](https://github.com/meepleAi-app/meepleai-monorepo/issues/1181)
+**See also**: [ADR-058 — Canonical Log Sanitizers](../../for-claude/architecture/adr/adr-058-canonical-log-sanitizers.md), issues [#1181](https://github.com/meepleAi-app/meepleai-monorepo/issues/1181) (sanitizer infrastructure), [#1195](https://github.com/meepleAi-app/meepleai-monorepo/issues/1195) (CI hardening), [#1197](https://github.com/meepleAi-app/meepleai-monorepo/issues/1197) (Roslyn analyzer).
+
+## In-IDE feedback (MAI001)
+
+`Api.Analyzers.NoPiiInLogAnalyzer` runs at build time and emits diagnostic **MAI001** when it detects an `ILogger.Log*` call whose message template contains a PII-suggesting placeholder name (e.g. `{Email}`, `{Password}`, `{Token}`, `{Phone}`, `{Ssn}`, `{IpAddress}`) and the corresponding positional argument is NOT wrapped via the canonical `Api.Infrastructure.Security.DataMasking.Mask*` family.
+
+The analyzer is **advisory only** — the warning is mapped via `<WarningsNotAsErrors>MAI001</WarningsNotAsErrors>` in `Api.csproj` so it never fails a build. The authoritative gate stays the CodeQL `cs/log-forging` threshold check in `security-scan.yml` (issue #1195 FU#1). Treat the IDE warning as a developer convenience: fix at write-time, do not rely on it for security enforcement.
+
+**Phase 1 scope (current)**: Tier 3 detection — placeholder name match only, exact placeholder list above. Tier 1 (typed value objects: `Email`, `JwtToken`, etc.) and Tier 2 (parameter-name heuristic) and the auto-fix CodeFixProvider are tracked as Phase 2/3/4 follow-ups on issue #1197.
+
+**Important — `LogSanitizer.Sanitize` is NOT a PII barrier**: it strips `\r\n\t` for log-forging (CWE-117 integrity), not PII content (CWE-359 confidentiality). The analyzer correctly flags a call wrapped via `LogSanitizer.Sanitize` if the placeholder name suggests PII. Use `DataMasking.Mask*` for PII.
 
 ---
 

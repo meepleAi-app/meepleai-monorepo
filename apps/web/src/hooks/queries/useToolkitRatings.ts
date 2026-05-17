@@ -73,7 +73,7 @@ export function useToolkitRatings(
       params.set('limit', String(safeLimit));
       if (cursor) params.set('cursor', cursor);
       const response = await apiClient.get<ToolkitRatingsResponse>(
-        `/toolkits/${toolkitId}/ratings?${params.toString()}`,
+        `/api/v1/toolkits/${toolkitId}/ratings?${params.toString()}`,
         ToolkitRatingsResponseSchema
       );
       // apiClient returns null on 204; the backend guarantees a body for 200,

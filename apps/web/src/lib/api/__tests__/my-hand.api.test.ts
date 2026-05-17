@@ -16,7 +16,7 @@ describe('my-hand API client', () => {
     vi.clearAllMocks();
   });
 
-  it('getMyHand calls GET /users/me/hand', async () => {
+  it('getMyHand calls GET /api/v1/users/me/hand', async () => {
     (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue([
       {
         slotType: 'toolkit',
@@ -29,11 +29,11 @@ describe('my-hand API client', () => {
     ]);
 
     const result = await getMyHand();
-    expect(apiClient.get).toHaveBeenCalledWith('/users/me/hand');
+    expect(apiClient.get).toHaveBeenCalledWith('/api/v1/users/me/hand');
     expect(result).toHaveLength(1);
   });
 
-  it('updateHandSlot calls PUT /users/me/hand/{slotType}', async () => {
+  it('updateHandSlot calls PUT /api/v1/users/me/hand/{slotType}', async () => {
     const dto = {
       slotType: 'game',
       entityId: 'g-1',
@@ -50,7 +50,7 @@ describe('my-hand API client', () => {
       entityLabel: 'Catan',
       entityImageUrl: null,
     });
-    expect(apiClient.put).toHaveBeenCalledWith('/users/me/hand/game', {
+    expect(apiClient.put).toHaveBeenCalledWith('/api/v1/users/me/hand/game', {
       entityId: 'g-1',
       entityType: 'game',
       entityLabel: 'Catan',
@@ -59,11 +59,11 @@ describe('my-hand API client', () => {
     expect(result.entityId).toBe('g-1');
   });
 
-  it('clearHandSlot calls DELETE /users/me/hand/{slotType}', async () => {
+  it('clearHandSlot calls DELETE /api/v1/users/me/hand/{slotType}', async () => {
     (apiClient.delete as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
     await clearHandSlot('toolkit');
-    expect(apiClient.delete).toHaveBeenCalledWith('/users/me/hand/toolkit');
+    expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/users/me/hand/toolkit');
   });
 
   it('getMyHand returns empty array on null response', async () => {

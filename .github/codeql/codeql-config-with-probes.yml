@@ -34,10 +34,17 @@ paths:
   - apps/api/src/Api/Helpers/LogSanitizer.cs
   - apps/api/src/Api/Infrastructure/Security/DataMasking.cs
 
-# Probe project is 12 lines of code total — `security-and-quality` queryset
-# (used in the default config.yml) adds no signal here and slows the monthly
-# cron by 1-2 minutes. `security-extended` already includes
-# `cs/exposure-of-sensitive-information` which is the only rule the SARIF
-# assertion step filters on. See PR review notes on #1200.
+# IMPORTANT — both query suites are required.
+#
+# Empirical finding from PR #1203 attempt (2026-05-17): removing
+# `security-and-quality` caused the unsanitized probe to raise 0 alerts
+# (assertion expected ≥1), proving that `cs/exposure-of-sensitive-information`
+# is NOT included in `security-extended` for C# — it lives only in
+# `security-and-quality`. The code-reviewer agent's note on #1200 assumed
+# the rule was in `security-extended`; the assumption was wrong.
+#
+# DO NOT trim this list without first running barrier-verification.yml with
+# the proposed change and confirming `unsanitized ≥ 1` still holds.
 queries:
   - uses: security-extended
+  - uses: security-and-quality

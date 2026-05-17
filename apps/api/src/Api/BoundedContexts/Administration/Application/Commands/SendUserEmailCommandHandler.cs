@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Infrastructure.Security;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -50,7 +51,7 @@ internal sealed class SendUserEmailCommandHandler : IRequestHandler<SendUserEmai
         // NOTE: Email service integration pending - email infrastructure not yet available
         // Placeholder implementation: logs action for audit trail
         _logger.LogInformation("Email would be sent to {Email}: Subject='{Subject}'",
-            user.Email.Value, command.Subject);
+            DataMasking.MaskEmail(user.Email.Value), command.Subject);
 
         // Create audit log for the action
         var auditLog = new Api.BoundedContexts.Administration.Domain.Entities.AuditLog(

@@ -1,4 +1,5 @@
 using Api.Extensions;
+using Api.Infrastructure.Security;
 using System.Text.Json;
 
 namespace Api.Middleware;
@@ -116,7 +117,7 @@ internal class EmailVerificationMiddleware
             _logger.LogWarning(
                 "Blocking request for unverified user {UserId} (email: {Email}, grace period ended: {GracePeriodEnded})",
                 user.Id,
-                user.Email,
+                DataMasking.MaskEmail(user.Email),
                 gracePeriodEndsAt?.ToString("O") ?? "never set");
 
             return new

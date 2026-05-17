@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Security;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -122,7 +123,7 @@ internal sealed class InvitationCleanupService : BackgroundService
 
                 _logger.LogInformation(
                     "Cleaned up expired pending user {UserId} ({Email})",
-                    expiredUser.Id, expiredUser.Email);
+                    expiredUser.Id, DataMasking.MaskEmail(expiredUser.Email));
             }
             catch (Exception ex)
             {

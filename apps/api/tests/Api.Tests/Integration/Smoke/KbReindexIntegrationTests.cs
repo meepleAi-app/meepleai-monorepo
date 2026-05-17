@@ -45,8 +45,6 @@ public sealed class KbReindexIntegrationTests : IAsyncLifetime
     // Stable test IDs — SG2-specific, no collision with other smoke tests
     private static readonly Guid TestUserId = new("10000000-0000-0000-0000-000000000902");
     private static readonly Guid TestGameId = new("20000000-0000-0000-0000-000000000902");
-    private static readonly Guid TestPdfId = new("30000000-0000-0000-0000-000000000902");
-    private static readonly Guid TestSharedGameId = new("40000000-0000-0000-0000-000000000902");
 
     public KbReindexIntegrationTests(SharedTestcontainersFixture fixture)
     {

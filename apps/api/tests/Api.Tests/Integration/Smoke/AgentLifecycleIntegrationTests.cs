@@ -51,9 +51,8 @@ public sealed class AgentLifecycleIntegrationTests : IAsyncLifetime
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // Stable test IDs — SG3-specific, no collision with SG2 (902) or SG4 (901)
-    private static readonly Guid TestUserId   = new("10000000-0000-0000-0000-000000000904");
-    private static readonly Guid TestGameId   = new("20000000-0000-0000-0000-000000000904");
-    private static readonly Guid TestSharedGameId = new("40000000-0000-0000-0000-000000000904");
+    private static readonly Guid TestUserId = new("10000000-0000-0000-0000-000000000904");
+    private static readonly Guid TestGameId = new("20000000-0000-0000-0000-000000000904");
 
     public AgentLifecycleIntegrationTests(SharedTestcontainersFixture fixture)
     {

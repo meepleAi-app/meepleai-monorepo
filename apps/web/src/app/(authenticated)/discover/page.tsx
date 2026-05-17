@@ -2,35 +2,39 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
+import dynamic from 'next/dynamic';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import {
   DiscoverHero,
   DiscoverSearchBox,
   EntityFilterPillBar,
-  FooterCTA,
   HorizontalRow,
   type EntityFilter,
   type RowItemBase,
 } from '@/components/features/discover';
 import { HubLayout } from '@/components/layout/HubLayout';
 import { useCatalogTrending } from '@/hooks/queries/useCatalogTrending';
-import { useDiscoverNewGames } from '@/hooks/queries/useDiscoverNewGames';
-import { useDiscoverPopularAgents } from '@/hooks/queries/useDiscoverPopularAgents';
-import { useDiscoverRecentKbDocs } from '@/hooks/queries/useDiscoverRecentKbDocs';
-import { useDiscoverRecommendedToolkits } from '@/hooks/queries/useDiscoverRecommendedToolkits';
-import { useDiscoverTopContributors } from '@/hooks/queries/useDiscoverTopContributors';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 import { useTranslation } from '@/hooks/useTranslation';
 import { trackEvent } from '@/lib/analytics/track-event';
+
+// Lazy-loaded below-the-fold block (Rows 2-7 + FooterCTA + 5 useDiscover* hooks).
+// `ssr: false` is required because all below-the-fold hooks use TanStack Query
+// (client-only). Keeps `/discover` initial bundle within budget — see
+// .bundle-budgets.json. Pattern reference: play-records/page.tsx:18-21.
+const DiscoverBelowFoldRows = dynamic(
+  () => import('./_DiscoverBelowFoldRows').then(mod => ({ default: mod.DiscoverBelowFoldRows })),
+  {
+    ssr: false,
+    loading: () => <BelowFoldSkeleton />,
+  }
+);
 
 // Search is currently not implemented backend-side (GET /api/v1/catalog/search).
 // Setting this flag flips the SearchBox into disabled-shell mode + telemetry
 // per spec AC4. Flip to `true` when the endpoint lands (#728).
 const SEARCH_ENDPOINT_AVAILABLE = false;
-
-// Nearby events endpoint is pending #728. Disabled-shell per spec AC3.
-const EVENTS_ENDPOINT_AVAILABLE = false;
 
 const VALID_FILTERS: ReadonlyArray<EntityFilter> = [
   'all',
@@ -45,6 +49,28 @@ const VALID_FILTERS: ReadonlyArray<EntityFilter> = [
 function parseFilter(raw: string | null): EntityFilter {
   if (raw && (VALID_FILTERS as ReadonlyArray<string>).includes(raw)) return raw as EntityFilter;
   return 'all';
+}
+
+/**
+ * Skeleton placeholder for the below-the-fold lazy block. Reserves vertical
+ * space (~1400px ≈ 6 rows) to prevent CLS while the lazy chunk loads. Uses
+ * semantic tokens per CLAUDE.md "Token Canonicalization" rules (no
+ * `bg-slate-*` / `bg-zinc-*`).
+ */
+function BelowFoldSkeleton() {
+  return (
+    <div data-slot="discover-below-fold-skeleton" className="flex flex-col gap-8" aria-hidden>
+      {[320, 260, 180, 380, 200, 200].map((height, idx) => (
+        <div key={idx} className="flex flex-col gap-3">
+          <div className="h-6 w-48 bg-muted/40 rounded animate-pulse" />
+          <div
+            className="w-full bg-muted/30 rounded animate-pulse"
+            style={{ height: `${height}px` }}
+          />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /**
@@ -86,20 +112,11 @@ function DiscoverContent() {
     setEntity(parseFilter(searchParams.get('entity')));
   }, [searchParams]);
 
-  // ── Data hooks (live) ─────────────────────────────────────────────────────
+  // ── Data hooks (live) — only Row 1 stays here; Rows 2-7 hooks live in the
+  // lazy `_DiscoverBelowFoldRows` chunk.
   const trending = useCatalogTrending(10);
-  const newGames = useDiscoverNewGames({ limit: 10 });
-  const popularAgents = useDiscoverPopularAgents({ limit: 10 });
-  const recentKbDocs = useDiscoverRecentKbDocs({ limit: 10 });
-  const recommendedToolkits = useDiscoverRecommendedToolkits({ limit: 10 });
-  const topContributors = useDiscoverTopContributors({ limit: 10 });
-  // Events: backend not live (see flag above). Hook intentionally omitted —
-  // disabled-shell rendered instead.
 
-  // ── DTO → RowItemBase adapters ───────────────────────────────────────────
-  // Each hook returns its native DTO shape. We project to the generic
-  // RowItemBase contract that HorizontalRow consumes, keeping the component
-  // decoupled from per-row schema details.
+  // ── DTO → RowItemBase adapter for Row 1 (trending) ───────────────────────
   const trendingItems = useMemo<ReadonlyArray<RowItemBase>>(
     () =>
       (trending.data ?? []).map(g => ({
@@ -108,65 +125,6 @@ function DiscoverContent() {
         imageUrl: g.thumbnailUrl,
       })),
     [trending.data]
-  );
-
-  const newGameItems = useMemo<ReadonlyArray<RowItemBase>>(
-    () =>
-      (newGames.data ?? []).map(g => ({
-        id: g.id,
-        name: g.name,
-        publisher: g.publisher,
-        year: g.year,
-        imageUrl: g.imageUrl,
-      })),
-    [newGames.data]
-  );
-
-  const popularAgentItems = useMemo<ReadonlyArray<RowItemBase>>(
-    () =>
-      (popularAgents.data ?? []).map(a => ({
-        id: a.id,
-        name: a.name,
-        gameName: a.gameName,
-        installCount: a.installCount,
-        invocationCount: a.invocationCount,
-      })),
-    [popularAgents.data]
-  );
-
-  const recentKbDocItems = useMemo<ReadonlyArray<RowItemBase>>(
-    () =>
-      (recentKbDocs.data ?? []).map(d => ({
-        id: d.id,
-        title: d.title,
-        gameName: d.gameName,
-        docType: d.docType,
-        chunkCount: d.chunkCount,
-      })),
-    [recentKbDocs.data]
-  );
-
-  const recommendedToolkitItems = useMemo<ReadonlyArray<RowItemBase>>(
-    () =>
-      (recommendedToolkits.data ?? []).map(tk => ({
-        id: tk.id,
-        name: tk.name,
-        authorName: tk.authorName,
-        installCount: tk.installCount,
-        coverImageUrl: tk.coverImageUrl,
-      })),
-    [recommendedToolkits.data]
-  );
-
-  const topContributorItems = useMemo<ReadonlyArray<RowItemBase>>(
-    () =>
-      (topContributors.data ?? []).map(c => ({
-        id: c.id,
-        displayName: c.displayName,
-        avatarUrl: c.avatarUrl,
-        contributionCount: c.contributionCount,
-      })),
-    [topContributors.data]
   );
 
   // ── URL update helpers ────────────────────────────────────────────────────
@@ -237,17 +195,8 @@ function DiscoverContent() {
     [t]
   );
 
-  // ── Row visibility (client-side filter) ───────────────────────────────────
-  // A row is visible when filter is 'all' OR matches the row's entity tag.
-  const rowVisible = useCallback(
-    (rowEntity: EntityFilter | 'trending') => {
-      if (entity === 'all') return true;
-      // Trending and Games rows are both "games" for filter purposes
-      if (entity === 'games') return rowEntity === 'games' || rowEntity === 'trending';
-      return rowEntity === entity;
-    },
-    [entity]
-  );
+  // ── Row visibility for Row 1 (trending) ──────────────────────────────────
+  const trendingVisible = entity === 'all' || entity === 'games';
 
   return (
     <HubLayout searchPlaceholder={t('pages.discover.search.placeholder')}>
@@ -275,7 +224,7 @@ function DiscoverContent() {
       />
 
       <div data-slot="discover-rows" className="flex flex-col">
-        {/* Row 1 — Trending games */}
+        {/* Row 1 — Trending games (above the fold, eager) */}
         <HorizontalRow
           rowId="trending"
           variant="featured"
@@ -289,120 +238,16 @@ function DiscoverContent() {
           retryLabel={t('pages.discover.common.retry')}
           emptyLabel={t('pages.discover.common.empty')}
           viewAllLabel={t('pages.discover.common.viewAll')}
-          visible={rowVisible('trending')}
+          visible={trendingVisible}
         />
 
-        {/* Row 2 — New games */}
-        <HorizontalRow
-          rowId="games"
-          variant="featured"
-          title={t('pages.discover.rows.newGames.title')}
-          subtitle={t('pages.discover.rows.newGames.subtitle')}
-          items={newGameItems}
-          isLoading={newGames.isLoading}
-          isError={newGames.isError}
-          onRetry={() => newGames.refetch()}
+        {/* Rows 2-7 + FooterCTA — lazy-loaded below the fold */}
+        <DiscoverBelowFoldRows
+          entity={entity}
           onCardClick={handleCardClick}
-          retryLabel={t('pages.discover.common.retry')}
-          emptyLabel={t('pages.discover.common.empty')}
-          viewAllLabel={t('pages.discover.common.viewAll')}
-          visible={rowVisible('games')}
-        />
-
-        {/* Row 3 — Popular agents */}
-        <HorizontalRow
-          rowId="agents"
-          variant="compact"
-          title={t('pages.discover.rows.popularAgents.title')}
-          subtitle={t('pages.discover.rows.popularAgents.subtitle')}
-          items={popularAgentItems}
-          isLoading={popularAgents.isLoading}
-          isError={popularAgents.isError}
-          onRetry={() => popularAgents.refetch()}
-          onCardClick={handleCardClick}
-          retryLabel={t('pages.discover.common.retry')}
-          emptyLabel={t('pages.discover.common.empty')}
-          viewAllLabel={t('pages.discover.common.viewAll')}
-          visible={rowVisible('agents')}
-        />
-
-        {/* Row 4 — Recommended toolkits */}
-        <HorizontalRow
-          rowId="toolkits"
-          variant="grid"
-          title={t('pages.discover.rows.recommendedToolkits.title')}
-          subtitle={t('pages.discover.rows.recommendedToolkits.subtitle')}
-          items={recommendedToolkitItems}
-          isLoading={recommendedToolkits.isLoading}
-          isError={recommendedToolkits.isError}
-          onRetry={() => recommendedToolkits.refetch()}
-          onCardClick={handleCardClick}
-          retryLabel={t('pages.discover.common.retry')}
-          emptyLabel={t('pages.discover.common.empty')}
-          viewAllLabel={t('pages.discover.common.viewAll')}
-          visible={rowVisible('toolkits')}
-        />
-
-        {/* Row 5 — Recent KB docs */}
-        <HorizontalRow
-          rowId="kbs"
-          variant="list-row"
-          title={t('pages.discover.rows.recentKbDocs.title')}
-          subtitle={t('pages.discover.rows.recentKbDocs.subtitle')}
-          items={recentKbDocItems}
-          isLoading={recentKbDocs.isLoading}
-          isError={recentKbDocs.isError}
-          onRetry={() => recentKbDocs.refetch()}
-          onCardClick={handleCardClick}
-          retryLabel={t('pages.discover.common.retry')}
-          emptyLabel={t('pages.discover.common.empty')}
-          viewAllLabel={t('pages.discover.common.viewAll')}
-          visible={rowVisible('kbs')}
-        />
-
-        {/* Row 6 — Top contributors */}
-        <HorizontalRow
-          rowId="people"
-          variant="list-row"
-          title={t('pages.discover.rows.topContributors.title')}
-          subtitle={t('pages.discover.rows.topContributors.subtitle')}
-          items={topContributorItems}
-          isLoading={topContributors.isLoading}
-          isError={topContributors.isError}
-          onRetry={() => topContributors.refetch()}
-          onCardClick={handleCardClick}
-          retryLabel={t('pages.discover.common.retry')}
-          emptyLabel={t('pages.discover.common.empty')}
-          viewAllLabel={t('pages.discover.common.viewAll')}
-          visible={rowVisible('people')}
-        />
-
-        {/* Row 7 — Nearby events (disabled-shell, pending #728) */}
-        <HorizontalRow
-          rowId="events"
-          variant="list-row"
-          title={t('pages.discover.rows.nearbyEvents.title')}
-          subtitle={t('pages.discover.rows.nearbyEvents.subtitle')}
-          items={[]}
-          state={EVENTS_ENDPOINT_AVAILABLE ? 'enabled' : 'disabled'}
-          disabledTooltip={t('pages.discover.common.disabledPhase05')}
-          onVisible={EVENTS_ENDPOINT_AVAILABLE ? undefined : handleDisabledRowVisible}
-          visible={rowVisible('events')}
+          onDisabledRowVisible={handleDisabledRowVisible}
         />
       </div>
-
-      <FooterCTA
-        title={t('pages.discover.footer.title')}
-        description={t('pages.discover.footer.description')}
-        primaryCta={{
-          label: t('pages.discover.footer.primaryCta'),
-          href: '/library',
-        }}
-        secondaryCta={{
-          label: t('pages.discover.footer.secondaryCta'),
-          href: '/players',
-        }}
-      />
     </HubLayout>
   );
 }

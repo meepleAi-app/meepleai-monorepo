@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Phase 0 + Phase A structural + **Phase A.live PoC complete** (30 nodes captured across 4 auth routes; ~129 nodes pending full-matrix extension). Phase C kickoff-ready against §2.5 Real-Clusters A/B/C. |
+| Status | Phase 0 + Phase A structural + **Phase A.live extended matrix complete** (115 nodes captured across 27 targets; ~44 inventory nodes likely in un-tested gamebook quota/upload-step routes). Phase C kickoff-ready against §2.5 v3 Real-Clusters A/B/D/E (C closed in PR #1219). |
 | Started | 2026-05-17 |
 | Parent issue | [#1094](https://github.com/meepleAi-app/meepleai-monorepo/issues/1094) — restoration of `frontend-a11y` CI gate to blocking |
 | Phase 0 sub-issue | [#1209](https://github.com/meepleAi-app/meepleai-monorepo/issues/1209) — preface |
@@ -19,8 +19,8 @@
 | §1.1 Route × state matrix (12 routes × N states) | ✅ complete 2026-05-17 | Phase A structural | this PR |
 | §1.2 Inventory cross-reference to #1094 counts | ✅ complete 2026-05-17 | Phase A structural | this PR |
 | §1.3 Static-grep companion (suspected source components) | ✅ complete 2026-05-17 + ⚠️ **pivoted 2026-05-17** (false-positive lesson) | Phase A structural | PR #1212 + this PR (audit pivot) |
-| §1.4 Per-node detail rows (selector / fg / bg / ratio) | ✅ **PoC complete 2026-05-17** (10 of 30 targets, 30 of ~159 nodes); ⏳ full-matrix extension queued | Phase A live | this PR (PoC) + #1215 follow-up (extension) |
-| §2.5 Real clusters from live data | ✅ complete 2026-05-17 (Real-C-A/B/C) | Phase B final (partial) | this PR |
+| §1.4 Per-node detail rows (selector / fg / bg / ratio) | ✅ **Extension complete 2026-05-17** (27 of 30 targets, 115 of ~159 nodes — 72%); ⏳ ~44 nodes in 3 gamebook quota/upload state routes deferred to PR follow-up | Phase A live | PR #1217 PoC + #1218 (this PR) |
+| §2.5 Real clusters from live data | ✅ **v3 complete 2026-05-17** (Real-C-A/B/D/E refined post-extension; C closed PR #1219) | Phase B final | PR #1217 + #1218 |
 | §2.0 Grouping methodology | ✅ complete 2026-05-17 | Phase B prelim | PR #1212 |
 | §2.1 Suspected clusters (from #1094 hints + static analysis) | ✅ complete 2026-05-17 + ⚠️ **C1 ruled out 2026-05-17** | Phase B prelim | PR #1212 + this PR |
 | §2.2 Fix-path taxonomy per cluster | ✅ complete 2026-05-17 | Phase B prelim | PR #1212 |
@@ -254,6 +254,12 @@ The 12 spec files in `apps/web/src/e2e/a11y/` (verified via grep on `test.descri
 
 These were flagged to Phase 0 by the `/sc:spec-panel #1094` review (CRIT-1 reconciliation). Phase A live run output overrides the #1094 body numbers as source of truth.
 
+**✅ RESOLVED 2026-05-17 v3 (PR #1218 extension)**:
+- `empty-photos` is on `/sessions/[id]/summary` (6 nodes in v3 extension; spec line 117 attribution correct). `gamebook-index` was NOT tested in v3 (deferred) so cannot be confirmed independently, but the #1094 body attribution of "3 gamebook-index" appears to be a transcription error from the session-summary count of 3 (per viewport, total 6 with mobile).
+- `empty-achievements` is on `/sessions/[id]/summary` (6 nodes in v3 extension; spec line 130 attribution correct). The #1094 body attribution of "3 player-detail" is incorrect — `/player-detail` `default` state surfaces 9 violations of a *different* pattern (entity orange, Real-C-B), not empty-achievements. Likely a copy-paste error in the #1094 body inventory.
+
+In both cases, the spec files (`apps/web/e2e/a11y/session-summary.spec.ts`) had the correct attribution all along; the #1094 body inventory had two transcription errors. **No code or test correction needed** — only the audit doc as the new source of truth.
+
 ### §1.3 Static-grep companion (suspected source components)
 
 > ⚠️ **Lesson learned (2026-05-17, post §1.3 v1 dispatch)**: the static-grep heuristic below is **too coarse to predict color-contrast violations** without a live axe run. A direct inspection of the §1.3 v1 highest-confidence candidate revealed a **false positive**:
@@ -405,25 +411,41 @@ Per #1094 hardened body B.2, three fix paths exist. Recommendation per cluster:
 3. **Phase C PR ordering** after §1.4: pick the cluster with highest measured node count AND lowest LOC delta. Bundle small adjacent clusters when same route family.
 4. **Final acceptance** — `pnpm test:a11y:e2e` returns 0 violations across the full dual-viewport × dual-theme matrix → open Phase D sub-issue.
 
-### §2.5 Real clusters from §1.4 PoC live data (2026-05-17)
+### §2.5 Real clusters from §1.4 live data (2026-05-17 v3 — post-extension)
 
-The §1.4 PoC live run on `/library` + `/sessions` + `/agents` + `/players` surfaced **30 nodes** organized in **3 patterns** distinct from the preliminary C1-C5 hypotheses (which were all either ruled out or untested). These Real-Clusters are **the actual Phase C fix targets** for the routes the PoC covered. Additional clusters may emerge when the remaining ~20 targets are run.
+> **History**: v1 (PR #1217 PoC) identified Real-C-A/B/C from 30 nodes / 4 routes. v2 closed Real-C-C in PR #1219. **v3 (this PR #1218 extension)** refines based on 115 nodes / 27 targets (72% inventory coverage), confirming Real-C-A/B as the dominant clusters with measured node counts and adding Real-C-D (hardcoded inline tokens) + Real-C-E (catastrophic outliers).
 
-| Real-Cluster ID | Pattern | Nodes (PoC) | Routes | Root cause | Recommended fix path |
+The 115 nodes captured in §1.4 v3 distribute across **4 active Real-Clusters** (C is closed):
+
+| Real-Cluster ID | Pattern | Nodes v3 | Routes | Root cause | Recommended fix path |
 |---|---|---:|---|---|---|
-| **Real-C-A** | `opacity-70` modifier on `text-muted-foreground` | ~10 | `/sessions` | Opacity reduces effective fg-vs-bg contrast below AA — axe computes against raw color, but rendered is more faded. The semantic token by itself passes AA; the opacity tips it below. | **(b) refactor** — drop `opacity-70` on text spans, use a lower-emphasis token (e.g. `text-muted-foreground/80` is wrong because same issue; need a dedicated `--mc-disabled-text` token or remove the dim entirely). Likely 1 PR localized to `sessions-index` `_components/` family. |
-| **Real-C-B** | `--c-game` entity orange token used as text/border-as-text | ~9 | `/sessions` (7) + `/library` (2) | `--c-game` is `hsl(25, 95%, 45%)` ≈ `#df6105` light theme. Passes AA only against very light bg (`#f7f3ee` ratio 3.27 — *below* 4.5 for text; OK for non-text 3:1). Used in `border-[hsl(25,95%,45%)]` (which renders as text-like outline) and on `.bg-primary/10` tinted bg (`#f1e3d7`, ratio 3.82 — still below). | **(b)+(c)** — for true borders keep as-is (3:1 non-text OK). For text rendering, swap to `--c-game-text` darker variant (token doesn't exist yet — needs DS-15 extension under #1023 umbrella) OR use `text-foreground` and reserve `--c-game` for non-text accents only. Cross-route fix: 1-2 PRs. |
-| **Real-C-C** | `text-white` on `bg-orange-600` CTA | 1 | `/library` (mobile only) | `bg-orange-600` is `#f54900`, `text-white` is `#ffffff`. Ratio 3.59 < 4.5. The CTA passes for large/bold text (3:1) but not for regular. | **(c) per-surface** — either bump font-size to ≥18.66px (large) OR change `bg-orange-600` to a darker shade (`bg-orange-700` is `#c2410c`, white ratio ≈ 5.0). Smallest possible fix. |
+| **Real-C-A** | `text-muted-foreground` (token `#90877f`) on light backgrounds; also surfaces as `opacity-70` modifier OR small-font `[10.5px]/[11px]` variants | **~24** (was ~10 PoC) | `/sessions` (default + filtered-empty), `/session-summary` (all 4 states), `/library` (default + filtered-empty), `/player-detail` (default) | The `text-muted-foreground` token resolves to `#90877f` (warm taupe) on light theme. Against `bg-card` (`#fdfbfa`) ratio = 3.41; against `bg-muted` (`#efeae4`) ratio = 2.94 — BOTH below AA 4.5:1 for regular text. Small-font (10.5-11px) badges using muted are worst offenders. The PoC also flagged `opacity-70 > text-muted-foreground` (computed effective contrast lower); same root cause family. | **(a) token-level fix** — bump `--mc-fg-muted` token to a darker warm taupe with measured contrast ≥4.5:1 against both `--mc-bg-card` and `--mc-bg-muted`. Single-token swap affects all 24 nodes simultaneously. Coordinated with DS-15/16 token canonicalization (#1023). ~1 PR, 5-10 LOC in tokens.css + audit doc update. |
+| **Real-C-B** | `--c-game` entity orange token (`hsl(25 95% 45%)` ≈ `#df6105`/`#c25405`) used as **text** or **border-as-text** | **~76** (was ~9 PoC) | `/sessions` (default + filtered-empty: 52), `/session-summary` (all 4 states: 8), `/library` (4), `/session-live` (4), `/player-detail` (4-8) | Entity orange is AA-safe for non-text (≥3:1) but FAILS for text (≥4.5:1). Pattern surfaces in 3 variants: (1) `text-[hsl(25,95%,45%)]` direct color, (2) `.border-[hsl(25,95%,45%)]` rendered with thin text-like outline that axe treats as text, (3) `.bg-primary/10` tinted backgrounds carrying primary-derived text. Total: **66% of all 115 v3 nodes** — the dominant fix opportunity. | **(b) introduce `--c-game-text` darker variant token** in `apps/web/src/styles/design-tokens-canonical.css`. Target `hsl(25 95% 32%)` or similar (math-verified ≥4.5:1 against `#f7f3ee`, `#f9eee6`, `#f1e3d7`). Cross-route swap via codemod for all `text-[hsl(25,95%,45%)]` / `text-primary` (when used as text) occurrences. Border-only usages of `--c-game` stay as-is (3:1 non-text OK). Coordinated with DS-15 owner under #1023 umbrella. ~1-2 PRs: token introduction + codemod swap. Single-cluster fix removes **76 nodes** = 66% of inventory. |
+| ✅ **Real-C-C** (CLOSED via PR #1219) | `text-white` on `bg-orange-600` CTA | 1 | `/library` (mobile only) | `bg-orange-600` (#f54900) + text-white = 3.59 (fail 4.5). | Shifted to `bg-orange-700`/`800`/`900` lockstep. AA pass at 5.03. |
+| **Real-C-D (NEW v3)** | Hardcoded inline color tokens used as text | **~6** | `/session-live` (`text-[hsl(240,60%,70%)]` × 3), `/session-summary` (`text-blue-600` × 3) | Two distinct inline patterns: (a) violet `hsl(240,60%,70%)` (`#8585e0`) on dark `#2e2e2e` = 4.15 (fail by 0.35); (b) `text-blue-600` (`#155dfc`) on `#edebea` = 4.41 (fail by 0.09). Both are isolated DS-15-rule-disabled inline values. | **(c) per-surface override** — replace with semantic tokens that math-verify ≥4.5:1. ~2 micro-PRs (one per surface) or bundle into Real-C-B PR if same DS-15 token discussion happens. |
+| **Real-C-E (NEW v3 — catastrophic)** | Disabled-state / focus-state combinations with contrast ratio < 1.5 (axe `serious` impact) | **~2** | `/session-live` (`.bg-emerald-700` text on similar-tone bg = **ratio 1.08**), `/session-live` (`.border.focus-visible:ring-slate-400.px-4` = **ratio 1.06**) | Two outliers with nearly invisible contrast. Likely disabled-button states where fg+bg are both grayed to indicate disabled, but the resulting pair is illegible. | **(c) per-surface fix** — these are tiny single-component disabled-state regressions. ~1 micro-PR or bundle into the next session-live touch. Priority: HIGH despite small node count (a11y serious impact for the few users who hit the disabled state). |
 
-**Real-Cluster sequencing recommendation**:
+**Real-Cluster sequencing recommendation (v3 post-extension)**:
 
-1. **PR Real-C-C** first (1 node, 1 line change, validates CI gate detects the diff) — ~10 min.
-2. **PR Real-C-A** second (10 nodes, single route family, well-bounded scope) — ~45 min.
-3. **PR Real-C-B** third (cross-route, needs `--c-game-text` token discussion with DS-15 owners) — ~1-2h, may need coordination with #1023 umbrella.
+1. ✅ **PR Real-C-C** done (PR #1219 — 1 node, validated CI gate detects the diff, validated fix-path (c)).
+2. **PR Real-C-B** SECOND (highest impact: token-level fix resolves ~76 nodes = 66% of inventory) — needs `--c-game-text` token introduction + cross-route swap. Coordinated with DS-15 owner under #1023 umbrella. **~1-2h, 1-2 PRs.**
+3. **PR Real-C-A** THIRD (token-level fix resolves ~24 nodes = 21% of inventory) — bump `--mc-fg-muted` token to a darker warm taupe with measured contrast ≥4.5:1. **~1 PR, 5-10 LOC.**
+4. **PRs Real-C-D + Real-C-E** FOURTH (cleanup outliers ~8 nodes, can be bundled or split). **~30 min.**
 
-**Coverage**: 20 of 30 PoC nodes in 3 PRs. The remaining 10 nodes (mix across cluster boundaries) flow naturally once the token/refactor lands. Realistic Phase C effort for PoC scope: **~2-3h, 3 PRs**.
+**Why C-B before C-A in v3**: C-B's 76-node impact is 3× C-A's 24-node impact, and the C-B fix (`--c-game-text` new token) requires a longer-lead discussion with DS-15 owners, so kicking it off earlier maximizes parallelism between coordination and downstream Phase D readiness. C-A is a self-contained token bump that can ship in any sequence.
 
-**Note on preliminary C1-C5**: the preliminary clusters in §2.1 were all hypothetical (C1 false-positive confirmed; C2-C5 untested in PoC). When the Phase A.live full-matrix extension lands (~20 more targets), the remaining inventory will likely surface NEW Real-Clusters AND validate/invalidate C2-C5. Keep §2.1 for reference but anchor Phase C planning on §2.5 Real-Clusters from this point forward.
+**Coverage**: 4 PRs total resolve **~108 of 115 v3 nodes (94%)**. The remaining ~7 nodes are at cluster boundaries that will likely resolve as natural side-effects of the token fixes. Phase D gate flip becomes safe once all 4 PRs land AND the deferred ~44 gamebook quota/upload-step nodes are either fixed or confirmed AA-compliant via a final extension run.
+
+**Note on preliminary C1-C5**: the preliminary clusters in §2.1 were all hypothetical (C1 false-positive confirmed; C2-C5 mostly invalidated by live data). §2.5 v3 is the authoritative Phase C plan from this point forward. §2.1 is preserved for traceability/lesson-learned only.
+
+**Out-of-scope for v3** (queued for next Phase A.live extension or absorbed by token fixes):
+- `gamebook-index` quota-soft, quota-hard, empty-photos, loading states (~6 inventory nodes)
+- `gamebook-upload` step1-default, step1-no-results, step2-*, step3-* states (~8 inventory nodes)
+- `session-summary` diary-filter, ShareCard-dark-preview states (~12 inventory nodes)
+- `session-live` `loading` and `not-found` states (~12 inventory nodes — partial overlap with C-A/B once tested)
+- `agent-detail` `not-found` + other detail-route variants — confirmed AA-clean (0 nodes in v3 extension)
+
+Total deferred: ~44 nodes (~28% of #1094 inventory). The cluster pattern is well-understood; most deferred nodes likely fall into Real-C-A or Real-C-B once tested (same tokens, same surfaces).
 
 ### §2.4 Open questions for Phase A.live to resolve
 

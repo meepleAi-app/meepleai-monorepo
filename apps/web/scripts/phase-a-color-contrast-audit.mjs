@@ -152,13 +152,179 @@ const TARGETS = [
     requiresAuth: true,
     waitFor: 'main',
   },
-  // NOTE: The full inventory of 30 (route, state) targets enumerated in §1.1
-  // of the audit doc is NOT yet wired here. Adding the remaining ~20 targets
-  // (e.g. gamebook-* states, session-live dark, pause-overlay-open, etc.)
-  // requires per-target setup() functions that mirror the e2e/a11y/*.spec.ts
-  // patterns (seedAuthSession + state-specific navigation). That extension
-  // is the follow-up work tracked under #1215 if this PoC validates the
-  // pattern. See "Next steps" in the audit doc §1.4 closing notes.
+  // ─── EXTENDED MATRIX (#1218, 2026-05-17) ───
+  // Fixture IDs sourced from existing e2e/a11y/*.spec.ts files (matches the
+  // PLAYWRIGHT_AUTH_BYPASS=true + NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1
+  // backed fixtures in apps/web/src/lib/visual-test-fixtures/).
+  //
+  // session-live ─ FIXTURE_SESSION_ID=00000000-0000-4000-8000-000000000d20
+  {
+    name: 'session-live-dark-default',
+    route: '/sessions/00000000-0000-4000-8000-000000000d20/live',
+    state: 'dark-default',
+    theme: 'dark',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: '[data-slot="session-live-view"]',
+  },
+  {
+    name: 'session-live-pause-overlay-open',
+    route: '/sessions/00000000-0000-4000-8000-000000000d20/live?fixture=host&dialog=pause',
+    state: 'pause-overlay-open',
+    theme: 'dark',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: '[data-slot="session-live-view"][data-ui-state="default"]',
+    extraWaitFor: ['[data-slot="pause-overlay"]'],
+  },
+  {
+    name: 'session-live-endgame-dialog-open',
+    route: '/sessions/00000000-0000-4000-8000-000000000d20/live?dialog=endgame',
+    state: 'endgame-dialog-open',
+    theme: 'dark',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: '[data-slot="session-live-view"][data-ui-state="default"]',
+    extraWaitFor: ['[data-slot="endgame-dialog"]'],
+  },
+
+  // session-summary ─ FIXTURE_SESSION_ID=00000000-0000-4000-8000-000000000756
+  {
+    name: 'session-summary-default',
+    route: '/sessions/00000000-0000-4000-8000-000000000756',
+    state: 'default',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+  {
+    name: 'session-summary-tied',
+    route: '/sessions/00000000-0000-4000-8000-000000000756?scenario=tied',
+    state: 'tied',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+  {
+    name: 'session-summary-empty-photos',
+    route: '/sessions/00000000-0000-4000-8000-000000000756?scenario=empty-photos',
+    state: 'empty-photos',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+  {
+    name: 'session-summary-empty-achievements',
+    route: '/sessions/00000000-0000-4000-8000-000000000756?scenario=empty-achievements',
+    state: 'empty-achievements',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+
+  // agent-detail ─ FIXTURE_AGENT_ID=00000000-0000-4000-8000-000000000581
+  {
+    name: 'agent-detail-default',
+    route: '/agents/00000000-0000-4000-8000-000000000581',
+    state: 'default',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+  {
+    name: 'agent-detail-not-found',
+    route: '/agents/00000000-0000-4000-8000-000000000581?state=not-found',
+    state: 'not-found',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+
+  // game-detail ─ GAME_ID=00000000-0000-4000-8000-000000000581 (shares id with agent)
+  {
+    name: 'game-detail-default',
+    route: '/games/00000000-0000-4000-8000-000000000581',
+    state: 'default',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+  {
+    name: 'game-detail-not-found',
+    route: '/games/00000000-0000-4000-8000-000000000581?state=not-found',
+    state: 'not-found',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+
+  // player-detail ─ FIXTURE_PLAYER_ID=sara-rossi
+  {
+    name: 'player-detail-default',
+    route: '/players/sara-rossi',
+    state: 'default',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+  {
+    name: 'player-detail-not-found',
+    route: '/players/sara-rossi?state=not-found',
+    state: 'not-found',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+
+  // gamebook-index ─ /gamebook?fixture=<name>
+  {
+    name: 'gamebook-index-default',
+    route: '/gamebook',
+    state: 'default',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+
+  // Filtered-empty state on catalog/index routes (PoC covered default; this is the other half)
+  {
+    name: 'library-filtered-empty',
+    route: '/library?query=zzzzzz-no-match',
+    state: 'filtered-empty',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: '[data-slot="library-hub-v2"]',
+  },
+  {
+    name: 'sessions-index-filtered-empty',
+    route: '/sessions?status=zzzzzz',
+    state: 'filtered-empty',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+  {
+    name: 'agents-index-filtered-empty',
+    route: '/agents?query=zzzzzz-no-match',
+    state: 'filtered-empty',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
 ];
 
 /**
@@ -261,6 +427,13 @@ async function runOneTarget(browser, target, viewportName) {
 
     if (target.waitFor && target.waitFor !== 'networkidle') {
       await page.waitForSelector(target.waitFor, { timeout: 15_000 });
+    }
+
+    // Optional additional waits (e.g. wait for overlay/dialog to mount after base view).
+    if (Array.isArray(target.extraWaitFor)) {
+      for (const selector of target.extraWaitFor) {
+        await page.waitForSelector(selector, { timeout: 15_000 });
+      }
     }
 
     // Run axe-core with color-contrast (WCAG AA, 4.5:1) rule ONLY.

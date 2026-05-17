@@ -67,7 +67,7 @@ export function MobileCTAPill() {
         href={cta.href}
         className={cn(
           'flex items-center gap-2 px-5 py-3 rounded-full',
-          'bg-orange-600 hover:bg-orange-700 active:bg-orange-800',
+          'bg-orange-700 hover:bg-orange-800 active:bg-orange-900',
           'text-white text-sm font-semibold',
           'shadow-lg shadow-orange-900/30',
           'transition-colors duration-150'

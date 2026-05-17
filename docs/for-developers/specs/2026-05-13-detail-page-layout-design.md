@@ -162,7 +162,7 @@ Reading order equals DOM order — no CSS `order` reshuffling. The wrapper uses 
 | 7 | `className` passthrough on the root wrapper |
 | 8 | Reading order equals DOM order — render with a `<button>` placed inside each of hero / connections / tabs / children / footer, then assert that `Array.from(container.querySelectorAll('button'))` matches the expected source order (no `tabIndex` simulation needed, the test inspects static DOM order only) |
 | 9 | `connections={null}` renders the `<aside>` wrapper (explicit caller intent — `null !== undefined` per spec §4.1). Asserts `getByRole('complementary', { name: /related entities/i })` is present even though the slot is empty. |
-| 10 | **Caller `className` overrides base utilities** via Tailwind cascade. Render with `className="flex-row"` and assert the root has *both* `flex-row` (caller) and `flex-col` (base). Pins the contract that `clsx` orders caller-provided class last so Tailwind's later-wins applies — guards against accidental regression if someone refactors to a different class composition utility. (Added 2026-05-17 via #1126 / Crispin.) |
+| 10 | **Caller `className` overrides base utilities** via Tailwind cascade. Render with `className="flex-row"` and assert the root has *both* `flex-row` (caller) and `flex-col` (base). This is a **string-composition contract** assertion — jsdom does not run Tailwind, so the test pins the class *ordering in the DOM* (caller-class-last), which is the precondition Tailwind's later-wins cascade depends on at runtime. Guards against accidental regression if someone refactors `clsx('flex flex-col gap-6', className)` to put `className` first. (Added 2026-05-17 via #1126 / Crispin.) |
 
 Coverage target: 100% line and branch (component is roughly 30 lines, all in conditional slot wrappers).
 
@@ -200,11 +200,13 @@ Added 2026-05-17 (spec-hardening #1126 / Nygard finding).
 
 **Policy**:
 
-- Every Stage 3 cluster PR that adopts `DetailPageLayout` **must** include Playwright visual-regression baselines against its cluster's canonical mockup (`admin-mockups/design_files/sp4-<cluster>.jsx`). These baselines are produced by the existing workflow `.github/workflows/visual-regression-conformity.yml` (active on `main-dev` since 2026-05-12).
-- The `Conformity Gate (Desktop + Mobile)` check in that workflow fails the cluster PR if visual diff against the mockup exceeds **2%** (Desktop + Mobile measured independently).
-- **Composer regression checklist**: if a downstream cluster shows an unexpected visual diff > 2% on a PR that does *not* touch the cluster's own code, `DetailPageLayout.tsx` is on the investigation checklist (specifically: changes to slot order, landmark roles, or root `flex-col` base utilities). `git log --follow apps/web/src/components/ui/detail-layout/DetailPageLayout.tsx` is the first triage step.
+- Every Stage 3 cluster PR that adopts `DetailPageLayout` **must** include Playwright visual-regression baselines against its cluster's canonical mockup (`admin-mockups/design_files/sp4-<cluster>.jsx`). These baselines are intended to be enforced by `.github/workflows/visual-regression-conformity.yml` (wired into `main-dev` since 2026-05-12).
+- The `Conformity Gate (Desktop + Mobile)` check is governed by the per-project `maxDiffPixelRatio: 0.001` + `threshold: 0.2` thresholds in `apps/web/playwright.config.ts` (i.e. ≤0.1% of pixels may exceed the per-pixel threshold). The legacy "2%" framing from internal docs does **not** match the actual config — always cite `playwright.config.ts` as the source of truth.
+- **Phase 3 caveat** (per the workflow's own preamble at `.github/workflows/visual-regression-conformity.yml:14-17`): every spec is currently `test.fixme()`'d, so the gate runs but skips. It is opt-in wiring until Phase 3b lands per-route data stubs. Treat this policy as **forward-looking** until then.
+- **Path-filter caveat**: the workflow today triggers only on `library/**` route changes plus shared design tokens / Tailwind config / canonical mockup HTML. A PR that touches *only* `apps/web/src/components/ui/detail-layout/**` does **not** trigger the conformity workflow at all. Until `paths:` is extended to include `apps/web/src/components/ui/detail-layout/**` (follow-up out of this PR), composer-only edits rely on cluster-route consumers triggering the gate transitively.
+- **Composer regression checklist**: if a downstream cluster shows an unexpected visual diff above the configured threshold on a PR that does *not* touch the cluster's own code, `DetailPageLayout.tsx` is on the investigation checklist (specifically: changes to slot order, landmark roles, or root `flex-col` base utilities). `git log --follow apps/web/src/components/ui/detail-layout/DetailPageLayout.tsx` is the first triage step.
 
-**Why this matters**: post-PR #1112, the composer is consumed by `/players/[id]`, `/toolkits/[id]`, `/discover` (Stage 3 clusters merged via #1113 / #1145 / #1147). A subtle change here propagates to every consumer without showing up in `DetailPageLayout.test.tsx` (which is structural-only). Visual conformity is the only behavioral guard.
+**Why this matters**: post-PR #1112, the composer is consumed by `/players/[id]` (issue #1113 via PR #1138) and `/toolkits/[id]` (issue #1145 via PR #1163). `/discover` (issue #1147 via PR #1160) is a Stage 3 cluster that intentionally uses `HubLayout` instead of `DetailPageLayout` — it is a sibling, not a consumer of this composer. A subtle change in the composer propagates to the 2 actual consumers without showing up in `DetailPageLayout.test.tsx` (which is structural-only). Visual conformity will be the only behavioral guard once Phase 3b lands.
 
 **Out of scope** for this policy: tracking which consumers exist (the cluster list lives in spec `2026-05-11-design-system-deversioning.md` §3) and runtime telemetry (composer renders nothing observable — no metric to emit).
 
@@ -218,24 +220,42 @@ Added 2026-05-17 (spec-hardening #1126 / Nygard finding).
 
 Added 2026-05-17 (spec-hardening #1126 / Wiegers finding).
 
-The composer is on the hot path of every detail page — its blast radius equals the number of cluster consumers (3 today: player, toolkit, discover; up to 7 by end of Stage 3). The NFRs below are *contracts on the composer itself* — they bound the cost any new consumer pays when adopting it. Numbering is independent of the AC list in §9 to keep verifiability decoupled.
+The composer is on the hot path of every detail page — its blast radius equals the number of cluster consumers (2 today: `/players/[id]` and `/toolkits/[id]`; up to ~6 by end of Stage 3 as the remaining detail clusters land). The NFRs below are *contracts on the composer itself* — they bound the cost any new consumer pays when adopting it. Numbering is independent of the AC list in §9 to keep verifiability decoupled.
 
-| ID | Requirement | Verification command | Rationale |
-|---|---|---|---|
-| NFR1 | Bundle size of the composer (and its transitive imports) ≤ **1 KB gzipped** when imported in a sample consumer page. | `pnpm --filter web build && node scripts/analyze-bundle.mjs --component DetailPageLayout` (or equivalent ad-hoc check via `pnpm build --analyze`). | Composer ships in every detail route bundle. Anything beyond 1 KB gz suggests the slot-arranger has accidentally absorbed business logic (a CSS-in-JS dependency, a heavy `clsx` alternative, etc.). |
-| NFR2 | **Zero** `useState` and `useEffect` calls in `DetailPageLayout.tsx`. | `grep -E 'use(State\|Effect\|Reducer\|Ref\|LayoutEffect\|Memo\|Callback)\(' apps/web/src/components/ui/detail-layout/DetailPageLayout.tsx` → must return no matches. | Pins the §3 brainstorming decision "all-composition, no state". A hook here would tie the composer to a render lifecycle and break SSR purity. |
-| NFR3 | **Zero** context consumption inside the composer. | `grep -E 'useContext\(' apps/web/src/components/ui/detail-layout/DetailPageLayout.tsx` → must return no matches. | A composer that reads context becomes implicitly coupled to a provider tree. Callers should pass the data through props/children instead. |
-| NFR4 | **Zero** side effects on render: no DOM mutation outside JSX, no logging, no analytics, no subscriptions. | Visual code review on every PR that touches `DetailPageLayout.tsx`; reinforced by NFR2 (no `useEffect` = no observable side-effect host). | Predictable SSR + safe to call inside `Suspense` boundaries. Side effects belong in the cluster pages, not the layout. |
+| ID | Requirement | Rationale |
+|---|---|---|
+| NFR1 | Bundle size of the composer (and its transitive imports) ≤ **1 KB gzipped** when imported in a sample consumer page. | Composer ships in every detail route bundle. Anything beyond 1 KB gz suggests the slot-arranger has accidentally absorbed business logic (a CSS-in-JS dependency, a heavy `clsx` alternative, etc.). |
+| NFR2 | **Zero** `useState` and `useEffect` (or any other React hook) calls in `DetailPageLayout.tsx`. | Pins the §3 brainstorming decision "all-composition, no state". A hook here would tie the composer to a render lifecycle and break SSR purity. |
+| NFR3 | **Zero** context consumption inside the composer. | A composer that reads context becomes implicitly coupled to a provider tree. Callers should pass the data through props/children instead. |
+| NFR4 | **Zero** side effects on render: no DOM mutation outside JSX, no logging, no analytics, no subscriptions. | Predictable SSR + safe to call inside `Suspense` boundaries. Side effects belong in the cluster pages, not the layout. |
 
-**Enforcement**: NFR2 and NFR3 are mechanically checkable; a future CI step (`pnpm lint:nfr-composer` or similar) may codify them. NFR1 requires a one-shot bundle analyzer; it is not gated in CI today because the composer has no `import` graph beyond `react` + `clsx`, both of which are already shared with every page in the app.
+**Verification commands** (run from repo root):
 
-**Audit (2026-05-17)**: at commit time of this hardening PR, `DetailPageLayout.tsx` is 48 LOC, imports only `react` (type only) and `clsx`, declares no hooks, and renders JSX-only. All four NFRs are satisfied.
+```bash
+# NFR1 — bundle budget check (composer chunk shows up under "Stage 3 design system" bucket)
+pnpm --filter @meepleai/web build && node apps/web/scripts/check-bundle-budgets.mjs
+
+# NFR2 — must return ZERO matches
+grep -nE 'use(State|Effect|Reducer|Ref|LayoutEffect|Memo|Callback)\(' \
+  apps/web/src/components/ui/detail-layout/DetailPageLayout.tsx
+
+# NFR3 — must return ZERO matches
+grep -nE 'useContext\(' \
+  apps/web/src/components/ui/detail-layout/DetailPageLayout.tsx
+
+# NFR4 — manual code review on every PR touching DetailPageLayout.tsx
+#   (reinforced by NFR2: no useEffect = no observable side-effect host).
+```
+
+**Enforcement**: NFR2 and NFR3 are mechanically checkable; a future CI step (`pnpm lint:nfr-composer` or similar) may codify them. NFR1 requires the `check-bundle-budgets.mjs` script (already wired but not currently gated on the composer specifically); it is not gated in CI today because the composer has no `import` graph beyond `react` + `clsx`, both of which are already shared with every page in the app.
+
+**Audit (2026-05-17)**: at commit time of this hardening PR, `DetailPageLayout.tsx` is 48 LOC, imports only `react` (type only) and `clsx`, declares no hooks, and renders JSX-only. All four NFRs are satisfied. (Note: this LOC count is precise and load-bearing — if the file grows by any amount, refresh this audit line in the same PR.)
 
 ## 14. Evolution policy
 
 Added 2026-05-17 (spec-hardening #1126 / Fowler finding) — **stub**; full content deferred until ≥2 consumers exist.
 
-**Current consumer count**: 3 (`player-detail` via #1113, `toolkit-detail` FE via #1145, `discover` via #1147 — all merged post-PR #1112). The "wait for first consumer" precondition Fowler set is therefore satisfied; the full policy can be expanded in a follow-up PR.
+**Current consumer count**: 2 — `player-detail` (issue #1113 via PR #1138, merged 2026-05-13) and `toolkit-detail` FE (issue #1145 via PR #1163, merged 2026-05-14). `/discover` (issue #1147 via PR #1160) is a Stage 3 sibling but composes `HubLayout`, not `DetailPageLayout` — it is **not** counted here. The "wait for ≥2 consumers" precondition Fowler set is therefore satisfied; the full policy can be expanded in a follow-up PR.
 
 **Policy stub (to be expanded)**:
 

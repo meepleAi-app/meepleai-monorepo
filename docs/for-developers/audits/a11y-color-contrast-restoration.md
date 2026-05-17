@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Phase 0 + Phase A structural + **Phase A.live v4 complete** (33 targets, **103 nodes** post PR #1224/#1225 fixes — net -12 from v3 despite +6 new gamebook/session-summary/session-live targets adding +20). Phase C: Real-C-A ✅ fixed (#1221 PR — modifier-scope refactor on SessionCardGrid/List; see §3.1), Real-C-B ✅ fixed (PR #1224 hardcoded swap + Real-C-B residue PR — see §3.2), Real-C-D ✅ fixed (PR #1225 violet + Real-C-D+E residue PR — `text-blue-700` swap on SessionQuickActions; see §3.3), Real-C-E ✅ fixed (PR #1231 reduced-motion + Real-C-D+E residue PR — new `text-entity-toolkit-text` utility for gamebook ready pill; see §3.3). Real-C-F residue (~20 nodi cyan kb-link) + ~24 misc singletons pending in follow-up cycle. Phase D blocked until 0 violations. |
+| Status | Phase 0 + Phase A structural + **Phase A.live v4 complete** (33 targets, **103 nodes**). Phase C COMPLETE pending merge: Real-C-A ✅ #1228, Real-C-B ✅ #1224 + #1232, Real-C-D ✅ #1225 + #1235, Real-C-E ✅ #1231 + #1235, Real-C-F ✅ #1227 (20 nodi already closed; v4 JSON stale), Real-C-misc cleanup ✅ this PR (13 of 17 misc residue fixed — 9 ConnectionBar + 4 ConnectionChipStripFooter). 4 nodi deferred (axe-during-animation artifacts requiring reduced-motion test-infra extension, follow-up to PR #1231 — not blocking Phase D). Phase A.live v5 regeneration (N+4) pending to confirm 0 violations. |
 | Started | 2026-05-17 |
 | Parent issue | [#1094](https://github.com/meepleAi-app/meepleai-monorepo/issues/1094) — restoration of `frontend-a11y` CI gate to blocking |
 | Phase 0 sub-issue | [#1209](https://github.com/meepleAi-app/meepleai-monorepo/issues/1209) — preface |
@@ -484,6 +484,36 @@ Total deferred: ~44 nodes (~28% of #1094 inventory). The cluster pattern is well
 **Token decision** (light theme scope): the light-theme `--muted-foreground` (`globals.css:559`) value `30 12% 35%` ≈ `#6b5d4f` mathematically passes AA on both `bg-card` (ratio 6.9:1) and `bg-muted` (ratio 5.8:1) when applied WITHOUT opacity modifiers. The `--text-muted` literal `#9a8870` in `design-tokens-canonical.css:138` is dead code for these surfaces (overridden by Tailwind's `text-muted-foreground` utility which maps to `--muted-foreground`); audit/cleanup deferred to DS-16.
 
 **Dark theme caveat** (out of this PR's scope, flagged by spec-panel review): the dark-theme override `--muted-foreground: 0 0% 60%` (`globals.css:645`) ≈ `#999999` against dark `--card: 0 0% 18%` (`#2d2d2d`) yields ratio ≈ **3.8:1** — failing AA 4.5:1 for regular text. This is a pre-existing token weakness unrelated to the 24 light-theme `#90877f` nodes addressed in #1221, but it WILL surface as a Phase A.live dark-matrix violation when that matrix is run. Tracked for Phase A.live v5 follow-up (N+4 step) or a separate dark-theme `--muted-foreground` bump sub-issue.
+
+### §3.4 Real-C-misc cleanup (post Real-C-D/E)
+
+🔬 **Discovery (PR for #1094 misc cleanup)**: post N+3 (Real-C-D + Real-C-E), the Phase A.live v4 JSON still listed ~24 misc residue. Re-analysis with PR #1227 (Real-C-F closed) factored in reveals:
+
+**Already closed by PR #1227** (cc1d019af, merged before v4 audit was regenerated):
+- 20 nodi `#4ecdc4` on `a[href$="sessions"] > span:nth-child(2)` — PageHeader.tsx:53 + AdminSideDrawer.tsx:320 swapped to `hsl(var(--c-kb-text))`. Stale in JSON; verified resolved.
+
+**Fixed in this PR** (13 nodi):
+- **9 player ConnectionPip badges** (`/players/[id]`, span:nth-child(4) inside `button[data-testid="connection-pip-{game,event,agent,toolkit,chat}"]`): label inheriting button's `entityHsl(entity)` color at button-level `opacity-60` (when isEmpty). Per-entity ratios 2.22–2.74 (catastrophic on warm-cream bg). Same intrinsic AA-incompat as Real-C-A `opacity-70`.
+  - Fix: ConnectionBar.tsx now uses `entityHslText(entity)` for color regardless of isEmpty. Scope opacity-60 to the Icon/Plus children only (decorative dim cue), keep label at full opacity.
+- **4 /sessions ConnectionChip empty chips** (`/sessions`, span:nth-child(2)): empty chip had `color: solid + opacity: 0.55` at root style. Ratio ~2.6 catastrophic.
+  - Fix: ConnectionChipStripFooter empty chips now use `entityHslText` color (not solid), opacity-0.55 scoped to Icon only.
+
+**Entity text overrides extended** (tokens.ts): `entityTextOverrides` was 3 entries (game/kb/toolkit) post N+3, now covers `event` (l=32%, 5.2:1), `agent` (l=24%, 5.7:1), `chat` (l=38%, 5.4:1), `session` (l=32%, 6.0:1) — all AA-verified on `#f7f3ee` light bg. Falls back to `entityHsl()` solid for `player`/`kb`/`tool` (no fail captured yet).
+
+**Deferred to test-infra fix** (4 nodi, axe-during-animation artifacts — same class as PR #1231):
+- 3 PauseOverlay `?dialog=pause` (ratios 1.06, 1.25, 1.28 — fg/bg mid-animation alpha-blend on `bg-emerald-700` / focus-ring elements)
+- 1 `/register` skeleton `.animate-pulse` text (ratio 3.23 — opacity animation captured mid-cycle)
+
+**Reduced-motion emulation precedent**: PR #1231 closed similar catastrophic ratios on EndgameDialog + PauseOverlay during `fade-in` animation. The 4 remaining are the residue not covered by PR #1231's URL filter (specifically `?fixture=host&dialog=pause` variant + `/register` loading state). A follow-up PR extending PR #1231's reduced-motion list to these routes will close them. **Not blocking Phase D** since they are test-capture artifacts, not real-user regressions.
+
+| Sub-issue | Status | PR | Fix path | Files touched |
+|---|---|---|---|---:|
+| Real-C-F residue (20 nodi cyan) | ✅ already closed | #1227 (stale in v4 JSON) | swap to hsl(var(--c-kb-text)) | — |
+| Player ConnectionPip (9 nodi) | ✅ fixed | (this PR) | entityHslText + opacity-scope | 1 + tokens |
+| /sessions empty ConnectionChip (4 nodi) | ✅ fixed | (this PR) | entityHslText on empty | 1 |
+| Misc animation-captured (4 nodi) | ⏳ deferred | follow-up to PR #1231 | reduced-motion emulation extension | test infra |
+
+---
 
 ### §3.3 Real-C-D residue + Real-C-E toolkit pattern
 

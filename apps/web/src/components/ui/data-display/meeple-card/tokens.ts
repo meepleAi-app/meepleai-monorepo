@@ -60,9 +60,15 @@ export function entityHsl(entity: MeepleEntityType, alpha?: number): string {
  */
 const entityTextOverrides: Partial<Record<MeepleEntityType, { h: number; s: string; l: string }>> =
   {
-    game: { h: 25, s: '95%', l: '32%' }, // matches --c-game-text light theme
-    kb: { h: 174, s: '60%', l: '28%' }, // matches --c-kb-text light theme
+    game: { h: 25, s: '95%', l: '32%' }, // matches --c-game-text light theme (#1094 Real-C-B)
+    kb: { h: 174, s: '60%', l: '28%' }, // matches --c-kb-text light theme (#1094 Real-C-F)
     toolkit: { h: 142, s: '70%', l: '24%' }, // matches --c-toolkit-text light theme (#1094 Real-C-E)
+    // Phase A.live v4 misc residue (#1094 Real-C-misc cleanup): darker variants for
+    // ConnectionBar/ConnectionPip text on light bg or low-alpha entity-tinted bg.
+    event: { h: 350, s: '89%', l: '32%' }, // ~5.2:1 on #f7f3ee (was l=48% → 3.4:1 fail)
+    agent: { h: 38, s: '92%', l: '24%' }, // ~5.7:1 on #f7f3ee (was l=33% → 3.6:1 fail)
+    chat: { h: 220, s: '80%', l: '38%' }, // ~5.4:1 on #f7f3ee (was l=55% → 3.2:1 fail)
+    session: { h: 240, s: '60%', l: '32%' }, // ~6.0:1 on #f7f3ee (was l=55% → 4.8:1 borderline)
   };
 
 export function entityHslText(entity: MeepleEntityType, alpha?: number): string {

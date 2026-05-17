@@ -57,7 +57,7 @@ export function useDiscoverPopularAgents(
     queryKey: discoverPopularAgentsKeys.list(safeLimit),
     queryFn: async () => {
       const response = await apiClient.get<PopularAgentsResponse>(
-        `/agents/popular?limit=${safeLimit}`,
+        `/api/v1/agents/popular?limit=${safeLimit}`,
         PopularAgentsResponseSchema
       );
       return response?.items ?? [];

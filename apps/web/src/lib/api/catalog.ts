@@ -13,7 +13,7 @@ export interface TrendingGame {
 }
 
 export async function getTrendingGames(limit = 10): Promise<TrendingGame[]> {
-  const response = await apiClient.get<TrendingGame[]>(`/catalog/trending?limit=${limit}`);
+  const response = await apiClient.get<TrendingGame[]>(`/api/v1/catalog/trending?limit=${limit}`);
   return response ?? [];
 }
 

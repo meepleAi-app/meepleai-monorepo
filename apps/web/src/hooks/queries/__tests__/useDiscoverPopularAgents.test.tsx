@@ -94,7 +94,7 @@ describe('useDiscoverPopularAgents — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/agents/popular?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/agents/popular?limit=10', expect.anything());
   });
 
   it('clamps an oversize limit to 50', async () => {
@@ -104,7 +104,7 @@ describe('useDiscoverPopularAgents — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/agents/popular?limit=50', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/agents/popular?limit=50', expect.anything());
   });
 });
 

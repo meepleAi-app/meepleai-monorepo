@@ -57,7 +57,7 @@ export function useDiscoverNewGames(
     queryKey: discoverNewGamesKeys.list(safeLimit),
     queryFn: async () => {
       const response = await apiClient.get<NewGamesResponse>(
-        `/catalog/games/new?limit=${safeLimit}`,
+        `/api/v1/catalog/games/new?limit=${safeLimit}`,
         NewGamesResponseSchema
       );
       return response?.items ?? [];

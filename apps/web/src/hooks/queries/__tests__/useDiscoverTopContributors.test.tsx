@@ -95,7 +95,10 @@ describe('useDiscoverTopContributors — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/users/top-contributors?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/users/top-contributors?limit=10',
+      expect.anything()
+    );
   });
 
   it('clamps an oversize limit to 50', async () => {
@@ -105,7 +108,10 @@ describe('useDiscoverTopContributors — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/users/top-contributors?limit=50', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/users/top-contributors?limit=50',
+      expect.anything()
+    );
   });
 
   it('clamps a sub-1 limit to default 10', async () => {
@@ -115,7 +121,10 @@ describe('useDiscoverTopContributors — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/users/top-contributors?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/users/top-contributors?limit=10',
+      expect.anything()
+    );
   });
 });
 

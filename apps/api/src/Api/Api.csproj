@@ -9,14 +9,20 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!--
-      Issue #1197 (ADR-058 DX): MAI001 from the in-house NoPiiInLogAnalyzer is
-      a developer-experience signal, not an enforcement gate. CodeQL on PR/push
-      is the authoritative enforcement (issue #1195 FU#1 gate, threshold 0).
-      Keep MAI001 as a build warning so it shows in IDE / PR check logs but
-      does NOT fail builds (Roslyn analyzer is meant to be advisory; CodeQL
-      stays authoritative).
+      Issue #1197 (ADR-058 DX): MAI001/MAI002/MAI003 from the in-house
+      NoPiiInLogAnalyzer are developer-experience signals, not enforcement
+      gates. CodeQL on PR/push is the authoritative enforcement (issue #1195
+      FU#1 gate, threshold 0). Keep the analyzer diagnostics as build warnings
+      so they show in IDE / PR check logs but do NOT fail builds. Roslyn
+      analyzer is meant to be advisory; CodeQL stays authoritative.
+
+      Tier mapping (Phase 1 + 2):
+        - MAI001 (Tier 3): placeholder name match — Phase 1.
+        - MAI002 (Tier 1): argument is a typed PII value object — Phase 2a.
+        - MAI003 (Tier 2): argument identifier name heuristic — Phase 2b
+          (highest false-positive risk; reduce or [SuppressMessage] per-site).
     -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);MAI001</WarningsNotAsErrors>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);MAI001;MAI002;MAI003</WarningsNotAsErrors>
     <!-- Living Documentation: Generate XML documentation file for API -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- Suppress warnings: 1591=missing XML comments, code quality warnings temporarily disabled for build -->

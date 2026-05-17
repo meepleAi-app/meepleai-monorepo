@@ -1,18 +1,24 @@
 # PII-Safe Logging Conventions
 
-**Status**: active — enforced by CodeQL Models-as-Data pack + `Security Scan` workflow on every PR/push to `main-dev`/`main-staging`/`main`, with in-IDE feedback via the `Api.Analyzers.NoPiiInLogAnalyzer` Roslyn analyzer (MAI001).
+**Status**: active — enforced by CodeQL Models-as-Data pack + `Security Scan` workflow on every PR/push to `main-dev`/`main-staging`/`main`, with in-IDE feedback via the `Api.Analyzers.NoPiiInLogAnalyzer` Roslyn analyzer (MAI001 / MAI002 / MAI003).
 
 **See also**: [ADR-058 — Canonical Log Sanitizers](../../for-claude/architecture/adr/adr-058-canonical-log-sanitizers.md), issues [#1181](https://github.com/meepleAi-app/meepleai-monorepo/issues/1181) (sanitizer infrastructure), [#1195](https://github.com/meepleAi-app/meepleai-monorepo/issues/1195) (CI hardening), [#1197](https://github.com/meepleAi-app/meepleai-monorepo/issues/1197) (Roslyn analyzer).
 
-## In-IDE feedback (MAI001)
+## In-IDE feedback (MAI001 / MAI002 / MAI003)
 
-`Api.Analyzers.NoPiiInLogAnalyzer` runs at build time and emits diagnostic **MAI001** when it detects an `ILogger.Log*` call whose message template contains a PII-suggesting placeholder name (e.g. `{Email}`, `{Password}`, `{Token}`, `{Phone}`, `{Ssn}`, `{IpAddress}`) and the corresponding positional argument is NOT wrapped via the canonical `Api.Infrastructure.Security.DataMasking.Mask*` family.
+`Api.Analyzers.NoPiiInLogAnalyzer` runs at build time and emits three diagnostics across complementary detection tiers. All three are **advisory only** — mapped via `<WarningsNotAsErrors>MAI001;MAI002;MAI003</WarningsNotAsErrors>` in `Api.csproj` so they never fail a build. The authoritative gate stays the CodeQL `cs/log-forging` threshold check in `security-scan.yml` (issue #1195 FU#1).
 
-The analyzer is **advisory only** — the warning is mapped via `<WarningsNotAsErrors>MAI001</WarningsNotAsErrors>` in `Api.csproj` so it never fails a build. The authoritative gate stays the CodeQL `cs/log-forging` threshold check in `security-scan.yml` (issue #1195 FU#1). Treat the IDE warning as a developer convenience: fix at write-time, do not rely on it for security enforcement.
+| Diagnostic | Tier | Detection rule | Phase |
+|---|---|---|---|
+| **MAI001** | Tier 3 | Log message template contains a PII-suggesting placeholder (`{Email}`, `{Password}`, `{Token}`, `{Phone}`, `{Ssn}`, `{IpAddress}`, …) and the corresponding positional argument is NOT wrapped via `DataMasking.Mask*`. | Phase 1 |
+| **MAI002** | Tier 1 | Argument is an instance of a known PII *value object* type (curated list: `Email`, `PasswordHash`, `SessionToken`, `TotpSecret`, `BackupCode`). | Phase 2a |
+| **MAI003** | Tier 2 | Argument is an identifier reference (parameter / local / field / property) whose name matches a PII heuristic set (`email`, `password`, `token`, `phone`, `ssn`, `ipAddress`, …). Highest false-positive risk; rename the variable or `[SuppressMessage]` with justification when the heuristic is wrong. | Phase 2b |
 
-**Phase 1 scope (current)**: Tier 3 detection — placeholder name match only, exact placeholder list above. Tier 1 (typed value objects: `Email`, `JwtToken`, etc.) and Tier 2 (parameter-name heuristic) and the auto-fix CodeFixProvider are tracked as Phase 2/3/4 follow-ups on issue #1197.
+When the same argument triggers multiple tiers, the analyzer emits only the highest-priority diagnostic: **Tier 3 > Tier 1 > Tier 2**. The placeholder signal is the most actionable cue for the developer, so we surface that first.
 
-**Important — `LogSanitizer.Sanitize` is NOT a PII barrier**: it strips `\r\n\t` for log-forging (CWE-117 integrity), not PII content (CWE-359 confidentiality). The analyzer correctly flags a call wrapped via `LogSanitizer.Sanitize` if the placeholder name suggests PII. Use `DataMasking.Mask*` for PII.
+**Important — `LogSanitizer.Sanitize` is NOT a PII barrier**: it strips `\r\n\t` for log-forging (CWE-117 integrity), not PII content (CWE-359 confidentiality). The analyzer correctly flags a call wrapped via `LogSanitizer.Sanitize` if the placeholder name (or argument type, or identifier) suggests PII. Use `DataMasking.Mask*` for PII.
+
+**Deferred (Phase 3+)**: `CodeFixProvider` auto-wrap (Phase 3), NuGet packaging (Phase 4), additional edge-case detection (using-static call form, method-group invocation) tracked on issue #1197.
 
 ---
 

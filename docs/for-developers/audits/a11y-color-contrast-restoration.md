@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Phase 0 + Phase A structural (route/state matrix + static-grep companion) complete; Phase A live-run pending |
+| Status | Phase 0 + Phase A structural complete; **Phase A live-run is HARD BLOCKER for any Phase C work** (pivot 2026-05-17 — see §1.3 false-positive lesson). |
 | Started | 2026-05-17 |
 | Parent issue | [#1094](https://github.com/meepleAi-app/meepleai-monorepo/issues/1094) — restoration of `frontend-a11y` CI gate to blocking |
 | Phase 0 sub-issue | [#1209](https://github.com/meepleAi-app/meepleai-monorepo/issues/1209) — preface |
@@ -18,12 +18,12 @@
 | §1.0 Methodology disclaimer | ✅ complete 2026-05-17 | Phase A structural | this PR |
 | §1.1 Route × state matrix (12 routes × N states) | ✅ complete 2026-05-17 | Phase A structural | this PR |
 | §1.2 Inventory cross-reference to #1094 counts | ✅ complete 2026-05-17 | Phase A structural | this PR |
-| §1.3 Static-grep companion (suspected source components) | ✅ complete 2026-05-17 | Phase A structural | this PR |
-| §1.4 Per-node detail rows (selector / fg / bg / ratio) | ⏳ pending live axe run | Phase A live | sub-issue TBD |
-| §2.0 Grouping methodology | ✅ complete 2026-05-17 | Phase B prelim | this PR |
-| §2.1 Suspected clusters (from #1094 hints + static analysis) | ✅ complete 2026-05-17 | Phase B prelim | this PR |
-| §2.2 Fix-path taxonomy per cluster | ✅ complete 2026-05-17 | Phase B prelim | this PR |
-| §2.3 Effort breakdown per cluster | ✅ complete 2026-05-17 | Phase B prelim | this PR |
+| §1.3 Static-grep companion (suspected source components) | ✅ complete 2026-05-17 + ⚠️ **pivoted 2026-05-17** (false-positive lesson) | Phase A structural | PR #1212 + this PR (audit pivot) |
+| §1.4 Per-node detail rows (selector / fg / bg / ratio) | ⏳ pending live axe run — **HARD PREREQUISITE** for Phase C | Phase A live | sub-issue (opening today) |
+| §2.0 Grouping methodology | ✅ complete 2026-05-17 | Phase B prelim | PR #1212 |
+| §2.1 Suspected clusters (from #1094 hints + static analysis) | ✅ complete 2026-05-17 + ⚠️ **C1 ruled out 2026-05-17** | Phase B prelim | PR #1212 + this PR |
+| §2.2 Fix-path taxonomy per cluster | ✅ complete 2026-05-17 | Phase B prelim | PR #1212 |
+| §2.3 Effort breakdown per cluster | ✅ complete 2026-05-17 + ⚠️ **revised down to 2-4 PRs** | Phase B prelim | PR #1212 + this PR |
 | §3 Fix-pass tracking | ⏳ pending | Phase C | mini-PRs TBD |
 | §4 Gate-flip post-mortem | ⏳ pending | Phase D | sub-issue TBD |
 
@@ -255,20 +255,30 @@ These were flagged to Phase 0 by the `/sc:spec-panel #1094` review (CRIT-1 recon
 
 ### §1.3 Static-grep companion (suspected source components)
 
-Static grep against `apps/web/src/**/*.tsx` for **hardcoded** `text-(slate|gray|zinc|stone|neutral)-[1-9]00` classes (which the DS-15 `local/no-hardcoded-color-utility` ESLint rule SHOULD reject in error mode — surviving occurrences likely carry a file-level `// eslint-disable` directive). These are **suspected** contributors to color-contrast violations and prioritization candidates for Phase C, **subject to live axe-run confirmation**.
+> ⚠️ **Lesson learned (2026-05-17, post §1.3 v1 dispatch)**: the static-grep heuristic below is **too coarse to predict color-contrast violations** without a live axe run. A direct inspection of the §1.3 v1 highest-confidence candidate revealed a **false positive**:
+>
+> The 3 hardcoded `text-slate-[1-9]00` occurrences in `SessionLiveView.tsx` (lines 188, 219, 1007) are all `text-slate-100` or `text-slate-200` — **light** text — used **on a dark background** (`bg-[hsl(240,40%,8%)]`, the explicit `data-theme="dark"` session-live root, plus inherited dark bg for nested error/not-found shells). Mathematical contrast: `text-slate-100` (#f1f5f9) vs dark `hsl(240,40%,8%)` (~#0a0b1f) ≈ **14:1**, well above WCAG AA 4.5:1. Same math for `text-slate-200` (#e2e8f0) on the same bg ≈ **13:1**. These are **compliant**, not violations.
+>
+> **Root cause of the false positive**: the grep regex `text-(slate|gray|...)-[1-9]00` matches the full 100–900 shade range, but the dark shades (100–300) are the *correct* DS-15 choice for text on dark surfaces, not a debt pattern. A discriminating heuristic would require ALSO knowing the rendered background — which is unobtainable from static analysis alone.
+>
+> **Consequence for Phase B/C**: the §2.1 "C1 session-live single-file" cluster is **downgraded to 🔴 RULED OUT pending live axe data**. The component family may still have other violations (`text-muted-foreground` resolved against an unexpected bg, for example), but **the static-grep signal does not predict them**.
+>
+> **Phase A.live is therefore promoted from "complement" to HARD PREREQUISITE for any Phase C kickoff**. No Phase C PR ships without per-node axe data anchoring the fix target.
 
-| Component / file | Hardcoded text-color count | Inventory-relevant route(s) | Phase B cluster hypothesis |
+The original §1.3 v1 table is preserved below for historical traceability and to feed back into Phase A.live methodology (when running live axe, **invert** the regex: filter axe results by component path and check whether any of these hardcoded-color files actually appears in `sharedComponent` — that's the cross-check between static suspicion and live evidence).
+
+| Component / file | Hardcoded text-color count (any shade) | Inventory-relevant route(s) | Status after 2026-05-17 inspection |
 |---|---:|---|---|
-| `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx` | 3 | `/sessions/[id]/live` (covers `dark-default`, `loading`, `not-found`, `pause-overlay-open`, `endgame-dialog-open` = 5 of #1094 states, ~24 nodes by count attribution) | **C1 session-live cluster** — single-file fix candidate |
-| `apps/web/src/app/(authenticated)/players/[id]/achievements/page.tsx` | 1 | `/players/[id]` (subroute; covers `default` + possibly `empty-achievements` if #1094 attribution correct) | **C2 player subroutes** — small fix |
-| `apps/web/src/app/(authenticated)/players/[id]/sessions/page.tsx` | 1 | `/players/[id]` (subroute) | **C2 player subroutes** — same PR as above |
-| `apps/web/src/app/(authenticated)/library/proposals/MyProposalsClient.tsx` | 1 | `/library` (related subroute) | Possible contributor to `/library` `default` state |
-| `apps/web/src/app/(authenticated)/toolkit/play/page.tsx` | 1 | `/toolkit/play` (NOT in #1094 inventory) | Out of scope this round |
-| Admin pages (16 files, 40+ hardcoded counts) | 40+ | Admin routes (NOT in #1094 inventory) | Out of scope this round — admin a11y is a separate effort |
+| `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx` | 3 (all `text-slate-100`/`text-slate-200` on dark bg) | `/sessions/[id]/live` | ❌ **false positive** — 3/3 occurrences AA-compliant (light text on dark surface, ~13-14:1) |
+| `apps/web/src/app/(authenticated)/players/[id]/achievements/page.tsx` | 1 | `/players/[id]` subroute | ⏳ NOT yet inspected — apply same fg/bg check before Phase C |
+| `apps/web/src/app/(authenticated)/players/[id]/sessions/page.tsx` | 1 | `/players/[id]` subroute | ⏳ NOT yet inspected — same caveat |
+| `apps/web/src/app/(authenticated)/library/proposals/MyProposalsClient.tsx` | 1 | `/library` adjacent | ⏳ NOT yet inspected |
+| `apps/web/src/app/(authenticated)/toolkit/play/page.tsx` | 1 | `/toolkit/play` (NOT in inventory) | Out of scope |
+| Admin pages (16 files, 40+ counts) | 40+ | Admin routes (NOT in inventory) | Out of scope (separate a11y effort) |
 
-**Key observation**: the highest concentration of inventory-relevant hardcoded colors is in **`SessionLiveView.tsx`** (3 occurrences). Combined with #1094's count attribution (`session-live` likely contributes ~24 nodes across 5 states), this is the **#1 ROI candidate for Phase C first PR**. The fix is plausibly a 3-line tokens swap (`text-slate-X-[400-500]` → `text-muted-foreground` / `text-foreground-muted`).
+**Revised key observation**: the static-grep signal is **necessary but not sufficient** to identify violations. A surviving `text-slate-X` (any shade) outside the DS-15 token system is *evidence of debt* (the file carries an `// eslint-disable local/no-hardcoded-color-utility` directive), but only the live axe run determines whether that debt manifests as a *measured AA failure*. Phase C must target *measured* failures, not *suspected* debt.
 
-**Lint rule behavior note**: `local/no-hardcoded-color-utility` is set to `error` in `apps/web/eslint.config.mjs` since DS-15. The 50+ surviving violations across `apps/web/src/` therefore carry file-level `// eslint-disable local/no-hardcoded-color-utility` directives — these directives are the auditable list of remaining debt and Phase C should refactor them away wherever the file maps to an inventory-relevant route.
+**Lint rule behavior note (unchanged)**: `local/no-hardcoded-color-utility` is set to `error` in `apps/web/eslint.config.mjs` since DS-15. The 50+ surviving violations across `apps/web/src/` therefore carry file-level `// eslint-disable local/no-hardcoded-color-utility` directives. Cleaning these up is a **DS-16 codemod concern** (per CLAUDE.md §Active Freezes), independent of #1094. Phase C should NOT bundle generic eslint-disable cleanup with axe-failure fixes — keep the two concerns separate to preserve atomicity.
 
 ### §1.4 Per-node detail rows (live axe-core run)
 
@@ -301,15 +311,19 @@ The clustering rules used here:
 
 ### §2.1 Suspected clusters
 
-| Cluster ID | Name | Suspected sharedComponent | Routes affected | #1094 states covered | Estimated node attribution | Confidence |
-|---|---|---|---|---|---:|---|
-| **C1** | session-live single-file | `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx` (3 hardcoded text colors per §1.3) | `/sessions/[id]/live` | `dark-default`, `loading`, `not-found`, `pause-overlay-open`, `endgame-dialog-open` (5 inventory states) | ~24-30 nodes (per #1094 distribution: pause-overlay ×6 + endgame-dialog ×6 + dark-default-default-share + loading ×6 + not-found ×6) | 🟢 high |
-| **C2** | modal/overlay shared backdrop | TBD — likely a shared `<DialogOverlay>` or `<BackdropScrim>` primitive used by both `PauseOverlay` and `EndgameDialog` (Radix UI primitive likely) | `/sessions/[id]/live` (and possibly `/sessions/[id]/summary` if endgame-dialog state attribution overlaps) | `pause-overlay`, `endgame-dialog` | ~12 nodes (6 + 6 per #1094 count) | 🟡 medium (overlaps with C1 — live run disambiguates) |
-| **C3** | EmptyZone family across catalog routes | TBD — possibly a shared `<EmptyZone>` / `<MiniNav>` primitive used by `filtered-empty` and `not-found` across catalog index routes | `/agents`, `/games`, `/library`, `/sessions`, `/players`, plus `*-detail` `not-found` states | `filtered-empty` (×12), `not-found` (×6), `default` (partial — some `default` instances are empty-state-styled) | ~18-30 nodes (12 + 6 + partial) | 🟡 medium (lives across many routes — leverage is high IF a single primitive is the culprit; lives in many primitives if not) |
-| **C4** | session-summary partial-empty states | TBD — likely `session-summary` `_components/` family (e.g. `PhotosSection`, `AchievementsSection`) | `/sessions/[id]/summary` | `tied`, `empty-photos`, `empty-achievements` (if not actually session-summary), `diary-filter` | ~9-12 nodes (3 + 3 + 3 + partial) | 🟡 medium |
-| **C5** | gamebook routes residual | TBD — `gamebook-index` and `gamebook-upload` may share a loader/quota-banner primitive | `/gamebooks`, `/gamebooks/upload` | `step1-default`, `step1-no-results`, `quota-soft`, `quota-hard`, `loading` (partial), `empty-photos` (if gamebook-index not session-summary) | ~5-8 nodes (1+1+1+1 + partials) | 🟡 medium (small, leave for last) |
+> ⚠️ **Critical addendum (2026-05-17)**: §1.3 inspection revealed that the C1 cluster's static-grep signal is a **false positive** (see §1.3 yellow box above). C1 is downgraded from 🟢 high to 🔴 RULED OUT pending live data. The other clusters (C2–C5) were already 🟡 medium-confidence — their fate also depends on Phase A.live data. **Phase C cannot kick off any PR until Phase A.live lands per-node `sharedComponent` data**. The matrix below preserves cluster boundaries as *Phase A.live discriminators* (each row becomes a question to answer with live data), not as fix-ship-ready targets.
 
-**Total estimated coverage**: ~70-90 of 159 nodes covered by C1-C5 explicitly. Remaining ~70 nodes likely distributed across `default` state instances (19 in inventory), which need live-run data to cluster (each "default" state is a different route, so could be 1-2 nodes per route × 10-12 routes).
+| Cluster ID | Name | Suspected sharedComponent | Routes affected | #1094 states covered | Estimated node attribution | Status post-2026-05-17 |
+|---|---|---|---|---|---:|---|
+| **C1** | session-live single-file | `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx` | `/sessions/[id]/live` | `dark-default`, `loading`, `not-found`, `pause-overlay-open`, `endgame-dialog-open` (5 states) | ~24-30 nodes (per #1094 distribution) | 🔴 **RULED OUT** — static-grep hits are all compliant light-on-dark (~13-14:1). If session-live has real violations, root cause is elsewhere (likely nested components or color computed from CSS vars at runtime). Phase A.live answers. |
+| **C2** | modal/overlay shared backdrop | TBD — likely a shared `<DialogOverlay>` / `<BackdropScrim>` primitive used by `PauseOverlay` and `EndgameDialog` (Radix UI primitive variants) | `/sessions/[id]/live` (and possibly `/sessions/[id]/summary` if endgame-dialog attribution overlaps) | `pause-overlay`, `endgame-dialog` | ~12 nodes (6 + 6) | 🟡 medium (unaffected by C1 downgrade — independent hypothesis). Live run disambiguates. |
+| **C3** | EmptyZone family across catalog routes | TBD — possibly a shared `<EmptyZone>` / `<MiniNav>` primitive used by `filtered-empty` and `not-found` across catalog index routes | `/agents`, `/games`, `/library`, `/sessions`, `/players`, plus `*-detail` `not-found` states | `filtered-empty` (×12), `not-found` (×6), `default` (partial) | ~18-30 nodes (12 + 6 + partial) | 🟡 medium (unaffected by C1 downgrade). Highest potential leverage IF a single primitive is the culprit. |
+| **C4** | session-summary partial-empty states | TBD — likely `session-summary` `_components/` family (e.g. `PhotosSection`, `AchievementsSection`) | `/sessions/[id]/summary` | `tied`, `empty-photos`, `empty-achievements` (if not gamebook or player as #1094 inventory suggests), `diary-filter` | ~9-12 nodes (3 + 3 + 3 + partial) | 🟡 medium |
+| **C5** | gamebook routes residual | TBD — `gamebook-index` and `gamebook-upload` may share a loader/quota-banner primitive | `/gamebooks`, `/gamebooks/upload` | `step1-default`, `step1-no-results`, `quota-soft`, `quota-hard`, `loading` (partial), `empty-photos` (if gamebook not session-summary) | ~5-8 nodes (1+1+1+1 + partials) | 🟡 medium (small, low priority) |
+
+**Total estimated coverage post-C1-downgrade**: ~46-60 of 159 nodes covered by C2-C5 hypotheses. Remaining ~99+ nodes (including all the 24-30 previously attributed to C1) are now **unattributed** until Phase A.live lands per-node data.
+
+**Revised Phase C kickoff blocker**: NO Phase C PR opens until §1.4 live data exists. The previous statement that "C1 ships first as low-risk validator" is **retracted** — the C1 fix would have been a no-op (light text on dark surfaces is already compliant).
 
 ### §2.2 Fix-path taxonomy per cluster (Phase B.2)
 
@@ -327,20 +341,20 @@ Per #1094 hardened body B.2, three fix paths exist. Recommendation per cluster:
 
 | Cluster | Estimated LOC delta | Estimated effort | PR boundary recommendation |
 |---|---:|---:|---|
-| **C1** | 5-15 LOC | 30 min | **PR #1**: standalone, low-risk. First Phase C deliverable. Validate fix-path (a) for the rest of Phase C. |
-| **C2** | 20-40 LOC | 1 h | **PR #2**: if C1 confirms (a) works at low cost, otherwise (b) with explicit primitive extraction. |
-| **C3** | 20-60 LOC depending on whether ≥2 shared primitives | 1.5-2 h | **PR #3**: highest variance — open AFTER §1.4 live run confirms shared-primitive count. Bundle with C4 only if size stays <500 LOC per CLAUDE.md guidance. |
-| **C4** | 10-30 LOC | 45 min | **PR #4** (or bundled into PR #3 if same route family): session-summary-localized. |
-| **C5** | 5-15 LOC | 30 min | **PR #5** (or bundled into PR #1/#2): tiny, opportunistic with another PR. |
+| ~~**C1**~~ | — | — | ❌ **REMOVED** (2026-05-17 inspection) — static-grep hits are AA-compliant. No standalone Phase C PR for session-live unless §1.4 surfaces actual violations there. |
+| **C2** | 20-40 LOC | 1 h | **PR candidate** — opens after §1.4 confirms PauseOverlay/EndgameDialog actually have measured color-contrast failures in their backdrop/title combo. |
+| **C3** | 20-60 LOC depending on whether ≥2 shared primitives | 1.5-2 h | **PR candidate** — highest variance — open AFTER §1.4 live run confirms shared-primitive count (single primitive vs N>2). Bundle with C4 only if size stays <500 LOC per CLAUDE.md guidance. |
+| **C4** | 10-30 LOC | 45 min | **PR candidate** (or bundled into C3 if same route family). |
+| **C5** | 5-15 LOC | 30 min | **PR candidate** (small, opportunistic). |
 
-**Total Phase C estimated**: 4-5 PRs (target #1094 AC says "2-4"; we're slightly over due to gamebook isolation). Effort 4-5h cumulative, in line with #1094 hardened body estimate.
+**Revised Total Phase C estimated**: **2-4 PRs** (down from 4-5; C1 removed). Effort 3-4h cumulative. In line with #1094 hardened body estimate of "2-4 PRs".
 
-**Critical sequencing**:
+**Critical sequencing (post-2026-05-17 pivot)**:
 
-1. **Open Phase A.live sub-issue first** (resolves §1.4 + validates C1-C5 cluster boundaries).
-2. **PR #1 (C1 session-live)** — ships even if Phase A.live not complete, because §1.3 static evidence is high-confidence here and the fix is auto-contained.
-3. PRs #2-5 — open in order after Phase A.live data is in.
-4. **Final acceptance** — when running `pnpm test:a11y:e2e` returns 0 violations across the full matrix (dual-viewport, dual-theme), open the Phase D sub-issue.
+1. ✅ **Phase A.live sub-issue** is **THE single blocker** for any Phase C kickoff (see §1.4 checklist for sub-issue requirements). Static-grep alone cannot identify fix targets reliably (C1 demonstrated this).
+2. **No Phase C PR before §1.4 lands.** All cluster boundaries (C2–C5) are hypotheses pending live data.
+3. **Phase C PR ordering** after §1.4: pick the cluster with highest measured node count AND lowest LOC delta. Bundle small adjacent clusters when same route family.
+4. **Final acceptance** — `pnpm test:a11y:e2e` returns 0 violations across the full dual-viewport × dual-theme matrix → open Phase D sub-issue.
 
 ### §2.4 Open questions for Phase A.live to resolve
 

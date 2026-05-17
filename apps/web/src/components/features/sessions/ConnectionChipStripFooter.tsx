@@ -16,7 +16,7 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
-import { entityHsl, entityIcon } from '@/components/ui/data-display/meeple-card';
+import { entityHsl, entityHslText, entityIcon } from '@/components/ui/data-display/meeple-card';
 import type { MeepleEntityType } from '@/components/ui/data-display/meeple-card';
 
 export interface ConnectionChip {
@@ -48,6 +48,10 @@ export function ConnectionChipStripFooter({
         const entityType = chip.entity as MeepleEntityType;
         const icon = entityIcon[entityType];
         const solid = entityHsl(entityType);
+        // textColor uses darker variant for AA on light fill bg (#1094 Real-C-B):
+        // solid orange (l=38%) on bg-game/0.1 yields 4.03:1 (fail AA 4.5).
+        // textColor (l=32%) yields 6.14:1 ✅. See tokens.ts:entityTextOverrides.
+        const textColor = entityHslText(entityType);
         const fill = entityHsl(entityType, 0.1);
         const border = entityHsl(entityType, 0.2);
         const dashedBorder = entityHsl(entityType, 0.4);
@@ -66,7 +70,7 @@ export function ConnectionChipStripFooter({
               borderRadius: '9999px',
               background: isEmpty ? 'transparent' : fill,
               border: `1px ${isEmpty ? 'dashed' : 'solid'} ${isEmpty ? dashedBorder : border}`,
-              color: solid,
+              color: isEmpty ? solid : textColor,
               opacity: isEmpty ? 0.55 : 1,
             }}
             className="font-mono text-[9.5px] font-extrabold uppercase tracking-wider"

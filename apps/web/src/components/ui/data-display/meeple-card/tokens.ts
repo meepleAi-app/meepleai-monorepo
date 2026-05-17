@@ -41,6 +41,37 @@ export function entityHsl(entity: MeepleEntityType, alpha?: number): string {
   return `hsl(${c.h}, ${c.s}, ${c.l})`;
 }
 
+/**
+ * Darker text-only variant of entity colors for AA-safe use as text on light bg.
+ *
+ * The `entityHsl()` solid variant is tuned for "color used as background under
+ * white text" (matches `bg-entity-X` Tailwind utility). When the same entity
+ * color is used as TEXT on a light bg or tinted-fill bg (e.g. ConnectionChip,
+ * badge), the lightness needs to drop ~6-7% to clear AA 4.5:1.
+ *
+ * Mirrors the CSS `--c-{entity}-text` tokens in
+ * `apps/web/src/styles/design-tokens-canonical.css` (lines 45+193).
+ *
+ * Only `game` and `kb` have darker variants today (introduced for the
+ * #1094 Real-C-B and Real-C-F clusters). For other entities, falls back to
+ * `entityHsl()` solid until violations surface.
+ *
+ * Refs: #1094 Real-C-B, audit doc §2.5 + §3.2 (Real-C-B residue).
+ */
+const entityTextOverrides: Partial<Record<MeepleEntityType, { h: number; s: string; l: string }>> =
+  {
+    game: { h: 25, s: '95%', l: '32%' }, // matches --c-game-text light theme
+    kb: { h: 174, s: '60%', l: '28%' }, // matches --c-kb-text light theme
+  };
+
+export function entityHslText(entity: MeepleEntityType, alpha?: number): string {
+  const c = entityTextOverrides[entity] ?? entityColors[entity];
+  if (alpha !== undefined) {
+    return `hsla(${c.h}, ${c.s}, ${c.l}, ${alpha})`;
+  }
+  return `hsl(${c.h}, ${c.s}, ${c.l})`;
+}
+
 export const entityLabel: Record<MeepleEntityType, string> = {
   game: 'Game',
   player: 'Player',

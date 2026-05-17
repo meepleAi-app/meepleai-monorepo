@@ -119,7 +119,7 @@ function StatusPill({
       <span
         data-slot="gamebook-card-status"
         data-status="indexing"
-        className="inline-flex items-center gap-1.5 rounded-full bg-entity-game/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-entity-game"
+        className="inline-flex items-center gap-1.5 rounded-full bg-entity-game/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-entity-game-text"
       >
         <span
           aria-hidden="true"

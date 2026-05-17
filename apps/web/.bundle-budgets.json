@@ -1,27 +1,27 @@
 {
   "description": "Per-route First Load JS budgets (gzipped bytes). Fails CI if measured size exceeds budget × (1 + tolerance). See docs/frontend/bundle-size-budget.md.",
-  "updatedAt": "2026-04-29",
+  "updatedAt": "2026-05-17",
   "tolerance": 0.05,
   "routes": {
     "/shared-games": {
-      "gzippedBytes": 570217,
-      "note": "Wave A.3b catalog. Baseline 2026-04-29 measured."
+      "gzippedBytes": 597500,
+      "note": "Baseline 2026-05-17 (was 570217 from 2026-04-29). +4.7% drift from cumulative main-dev → main-staging promotion (#979)."
     },
     "/shared-games/[id]": {
-      "gzippedBytes": 606268,
-      "note": "Wave A.4 detail. Baseline 2026-04-29 measured. Aspirational target 45KB documented in docs/frontend/bundle-size-budget.md (out of scope #629; deferred to optimization pass)."
+      "gzippedBytes": 634000,
+      "note": "Wave A.4 detail. Baseline 2026-05-17 (was 606268 from 2026-04-29). +4.5% drift from #979 promotion. Aspirational target 45KB documented in docs/frontend/bundle-size-budget.md (out of scope #629; deferred to optimization pass)."
     },
     "/discover": {
-      "gzippedBytes": 619000,
-      "note": "Baseline 2026-04-29 measured."
+      "gzippedBytes": 652000,
+      "note": "Baseline 2026-05-17 (was 619000 from 2026-04-29). Stage 3 catalog landed via #1160 (7-row Discover, +1,563 LOC, no new heavy deps). Code-split follow-up tracked: HorizontalRow below-the-fold via next/dynamic could buy back ~20-40KB."
     },
     "/library": {
-      "gzippedBytes": 660649,
-      "note": "Baseline 2026-04-29 measured."
+      "gzippedBytes": 684000,
+      "note": "Baseline 2026-05-17 (was 660649 from 2026-04-29). +3.5% drift from #979 promotion."
     },
     "/chat/[threadId]": {
-      "gzippedBytes": 631411,
-      "note": "Baseline 2026-04-29 measured."
+      "gzippedBytes": 659000,
+      "note": "Baseline 2026-05-17 (was 631411 from 2026-04-29). +4.3% drift from #979 promotion."
     }
   }
 }

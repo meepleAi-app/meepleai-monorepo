@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Domain.Events;
 using Api.BoundedContexts.Authentication.Application.Services;
+using Api.Infrastructure.Security;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -28,14 +29,14 @@ internal sealed class StagingAllowlistCacheInvalidator
     public Task Handle(StagingAllowlistEntryAddedEvent notification, CancellationToken cancellationToken)
     {
         _guard.InvalidateCache();
-        _logger.LogDebug("Staging allowlist cache invalidated after add of {Email}", notification.Email);
+        _logger.LogDebug("Staging allowlist cache invalidated after add of {Email}", DataMasking.MaskEmail(notification.Email));
         return Task.CompletedTask;
     }
 
     public Task Handle(StagingAllowlistEntryRemovedEvent notification, CancellationToken cancellationToken)
     {
         _guard.InvalidateCache();
-        _logger.LogDebug("Staging allowlist cache invalidated after removal of {Email}", notification.Email);
+        _logger.LogDebug("Staging allowlist cache invalidated after removal of {Email}", DataMasking.MaskEmail(notification.Email));
         return Task.CompletedTask;
     }
 }

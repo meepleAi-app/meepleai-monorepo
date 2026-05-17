@@ -325,6 +325,69 @@ const TARGETS = [
     requiresAuth: true,
     waitFor: 'main',
   },
+
+  // ─── EXTENSION 2 (2026-05-17 — covers ~44 deferred §1.1 targets) ───
+  // Source URL patterns from apps/web/e2e/a11y/*.spec.ts lines 44, 48, 93, 114, 148, 166.
+
+  // session-live additional states (covers loading + not-found from #1094 inventory)
+  {
+    name: 'session-live-loading',
+    route: '/sessions/00000000-0000-4000-8000-000000000d20/live?state=loading',
+    state: 'loading',
+    theme: 'dark',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+  {
+    name: 'session-live-not-found',
+    route: '/sessions/00000000-0000-4000-8000-000000000d20/live?state=not-found',
+    state: 'not-found',
+    theme: 'dark',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+
+  // session-summary remaining states
+  {
+    name: 'session-summary-diary-score',
+    route: '/sessions/00000000-0000-4000-8000-000000000756?diary=score',
+    state: 'diary-filter',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+  {
+    name: 'session-summary-sharecard-dark-preview',
+    route: '/sessions/00000000-0000-4000-8000-000000000756?theme=dark',
+    state: 'ShareCard-dark-preview',
+    theme: 'light', // page is light, ShareCard preview is dark — preview-only override
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+
+  // gamebook-index quota states (highest #1094 inventory probability)
+  {
+    name: 'gamebook-index-quota-soft',
+    route: '/gamebook?fixture=quota-soft',
+    state: 'quota-soft',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
+  {
+    name: 'gamebook-index-quota-hard',
+    route: '/gamebook?fixture=quota-hard',
+    state: 'quota-hard',
+    theme: 'light',
+    viewports: ['Desktop Chrome', 'iPhone 13'],
+    requiresAuth: true,
+    waitFor: 'main',
+  },
 ];
 
 /**

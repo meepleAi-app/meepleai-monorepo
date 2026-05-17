@@ -1,14 +1,14 @@
 {
   "meta": {
-    "runStartedAt": "2026-05-17T14:50:55.303Z",
-    "runFinishedAt": "2026-05-17T14:52:24.093Z",
+    "runStartedAt": "2026-05-17T15:27:20.824Z",
+    "runFinishedAt": "2026-05-17T15:29:08.810Z",
     "baseUrl": "http://localhost:3000",
     "subset": "all",
     "only": null,
-    "targetCount": 27,
-    "runCount": 54,
-    "totalRunMs": 83915,
-    "totalViolations": 115,
+    "targetCount": 33,
+    "runCount": 66,
+    "totalRunMs": 101976,
+    "totalViolations": 103,
     "errorCount": 0,
     "runnerVersion": "0.1.0",
     "runnerScript": "apps/web/scripts/phase-a-color-contrast-audit.mjs",
@@ -19,91 +19,107 @@
     {
       "target": "login-light",
       "viewport": "Desktop Chrome",
-      "runMs": 5407,
+      "runMs": 6252,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "login-light",
       "viewport": "iPhone 13",
-      "runMs": 2044,
+      "runMs": 4362,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "login-dark",
       "viewport": "Desktop Chrome",
-      "runMs": 1891,
+      "runMs": 2085,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "login-dark",
       "viewport": "iPhone 13",
-      "runMs": 1960,
+      "runMs": 2024,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "register-light",
       "viewport": "Desktop Chrome",
-      "runMs": 2676,
+      "runMs": 2323,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "register-light",
       "viewport": "iPhone 13",
-      "runMs": 1903,
+      "runMs": 2053,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "register-dark",
       "viewport": "Desktop Chrome",
-      "runMs": 1882,
+      "runMs": 2524,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "register-dark",
       "viewport": "iPhone 13",
-      "runMs": 1901,
-      "violationCount": 0,
-      "violations": []
+      "runMs": 3577,
+      "violationCount": 1,
+      "violations": [
+        {
+          "route": "/register",
+          "state": "default",
+          "viewport": "iPhone 13",
+          "theme": "dark",
+          "selector": ".animate-pulse",
+          "fgColor": "#8e8986",
+          "bgColor": "#f9f7f5",
+          "contrastRatio": 3.23,
+          "expectedContrastRatio": null,
+          "fontSize": "12.0pt (16px)",
+          "fontWeight": "normal",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        }
+      ]
     },
     {
       "target": "landing-light",
       "viewport": "Desktop Chrome",
-      "runMs": 2039,
+      "runMs": 1945,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "landing-light",
       "viewport": "iPhone 13",
-      "runMs": 2067,
+      "runMs": 1954,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "landing-dark",
       "viewport": "Desktop Chrome",
-      "runMs": 1913,
+      "runMs": 2470,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "landing-dark",
       "viewport": "iPhone 13",
-      "runMs": 1854,
+      "runMs": 2354,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "library-default-light",
       "viewport": "Desktop Chrome",
-      "runMs": 1497,
+      "runMs": 1609,
       "violationCount": 1,
       "violations": [
         {
@@ -126,7 +142,7 @@
     {
       "target": "library-default-light",
       "viewport": "iPhone 13",
-      "runMs": 1399,
+      "runMs": 1472,
       "violationCount": 1,
       "violations": [
         {
@@ -149,52 +165,37 @@
     {
       "target": "agents-index-light",
       "viewport": "Desktop Chrome",
-      "runMs": 1166,
+      "runMs": 1200,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "agents-index-light",
       "viewport": "iPhone 13",
-      "runMs": 1098,
+      "runMs": 1122,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "players-index-light",
       "viewport": "Desktop Chrome",
-      "runMs": 1158,
+      "runMs": 1091,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "players-index-light",
       "viewport": "iPhone 13",
-      "runMs": 1052,
+      "runMs": 934,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "sessions-index-light",
       "viewport": "Desktop Chrome",
-      "runMs": 1314,
-      "violationCount": 13,
+      "runMs": 1409,
+      "violationCount": 12,
       "violations": [
-        {
-          "route": "/sessions",
-          "state": "default",
-          "viewport": "Desktop Chrome",
-          "theme": "light",
-          "selector": ".border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions",
           "state": "default",
@@ -380,24 +381,9 @@
     {
       "target": "sessions-index-light",
       "viewport": "iPhone 13",
-      "runMs": 1172,
-      "violationCount": 13,
+      "runMs": 1233,
+      "violationCount": 12,
       "violations": [
-        {
-          "route": "/sessions",
-          "state": "default",
-          "viewport": "iPhone 13",
-          "theme": "light",
-          "selector": ".border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions",
           "state": "default",
@@ -583,24 +569,9 @@
     {
       "target": "session-live-dark-default",
       "viewport": "Desktop Chrome",
-      "runMs": 2654,
-      "violationCount": 4,
+      "runMs": 1723,
+      "violationCount": 1,
       "violations": [
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live",
-          "state": "dark-default",
-          "viewport": "Desktop Chrome",
-          "theme": "dark",
-          "selector": ".w-full:nth-child(1) > .mt-4[aria-label=\"Page tabs\"] > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions/00000000-0000-4000-8000-000000000d20/live",
           "state": "dark-default",
@@ -612,36 +583,6 @@
           "contrastRatio": 1.75,
           "expectedContrastRatio": null,
           "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live",
-          "state": "dark-default",
-          "viewport": "Desktop Chrome",
-          "theme": "dark",
-          "selector": ".w-full:nth-child(2) > .mt-4[aria-label=\"Page tabs\"] > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live",
-          "state": "dark-default",
-          "viewport": "Desktop Chrome",
-          "theme": "dark",
-          "selector": ".text-\\[hsl\\(240\\,60\\%\\,70\\%\\)\\].font-medium.shrink-0",
-          "fgColor": "#8585e0",
-          "bgColor": "#2e2e2e",
-          "contrastRatio": 4.15,
-          "expectedContrastRatio": null,
-          "fontSize": "9.0pt (12px)",
           "fontWeight": "normal",
           "impact": "serious",
           "ruleId": "color-contrast"
@@ -651,24 +592,9 @@
     {
       "target": "session-live-dark-default",
       "viewport": "iPhone 13",
-      "runMs": 1020,
-      "violationCount": 3,
+      "runMs": 1024,
+      "violationCount": 1,
       "violations": [
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live",
-          "state": "dark-default",
-          "viewport": "iPhone 13",
-          "theme": "dark",
-          "selector": ".w-full:nth-child(1) > .mt-4[aria-label=\"Page tabs\"] > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions/00000000-0000-4000-8000-000000000d20/live",
           "state": "dark-default",
@@ -678,21 +604,6 @@
           "fgColor": "#4ecdc4",
           "bgColor": "#f7f3ee",
           "contrastRatio": 1.75,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live",
-          "state": "dark-default",
-          "viewport": "iPhone 13",
-          "theme": "dark",
-          "selector": ".w-full:nth-child(2) > .mt-4[aria-label=\"Page tabs\"] > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
           "expectedContrastRatio": null,
           "fontSize": "10.5pt (14px)",
           "fontWeight": "normal",
@@ -704,24 +615,9 @@
     {
       "target": "session-live-pause-overlay-open",
       "viewport": "Desktop Chrome",
-      "runMs": 1353,
-      "violationCount": 4,
+      "runMs": 1524,
+      "violationCount": 5,
       "violations": [
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?fixture=host&dialog=pause",
-          "state": "pause-overlay-open",
-          "viewport": "Desktop Chrome",
-          "theme": "dark",
-          "selector": ".w-full:nth-child(1) > .mt-4[aria-label=\"Page tabs\"] > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?fixture=host&dialog=pause",
           "state": "pause-overlay-open",
@@ -742,10 +638,10 @@
           "state": "pause-overlay-open",
           "viewport": "Desktop Chrome",
           "theme": "dark",
-          "selector": ".w-full:nth-child(2) > .mt-4[aria-label=\"Page tabs\"] > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
+          "selector": "#_r_1_",
+          "fgColor": "#8c898e",
+          "bgColor": "#88848b",
+          "contrastRatio": 1.06,
           "expectedContrastRatio": null,
           "fontSize": "10.5pt (14px)",
           "fontWeight": "normal",
@@ -756,79 +652,11 @@
           "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?fixture=host&dialog=pause",
           "state": "pause-overlay-open",
           "viewport": "Desktop Chrome",
-          "theme": "dark",
-          "selector": ".text-\\[hsl\\(240\\,60\\%\\,70\\%\\)\\].font-medium.shrink-0",
-          "fgColor": "#8585e0",
-          "bgColor": "#2e2e2e",
-          "contrastRatio": 4.15,
-          "expectedContrastRatio": null,
-          "fontSize": "9.0pt (12px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        }
-      ]
-    },
-    {
-      "target": "session-live-pause-overlay-open",
-      "viewport": "iPhone 13",
-      "runMs": 1235,
-      "violationCount": 6,
-      "violations": [
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?fixture=host&dialog=pause",
-          "state": "pause-overlay-open",
-          "viewport": "iPhone 13",
-          "theme": "dark",
-          "selector": ".w-full:nth-child(1) > .mt-4[aria-label=\"Page tabs\"] > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?fixture=host&dialog=pause",
-          "state": "pause-overlay-open",
-          "viewport": "iPhone 13",
-          "theme": "dark",
-          "selector": "a[href$=\"sessions\"] > span:nth-child(2)",
-          "fgColor": "#4ecdc4",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 1.75,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?fixture=host&dialog=pause",
-          "state": "pause-overlay-open",
-          "viewport": "iPhone 13",
-          "theme": "dark",
-          "selector": ".w-full:nth-child(2) > .mt-4[aria-label=\"Page tabs\"] > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?fixture=host&dialog=pause",
-          "state": "pause-overlay-open",
-          "viewport": "iPhone 13",
           "theme": "dark",
           "selector": ".bg-emerald-700",
-          "fgColor": "#a6a9b1",
-          "bgColor": "#9fa2ab",
-          "contrastRatio": 1.08,
+          "fgColor": "#a5b6ae",
+          "bgColor": "#8ba297",
+          "contrastRatio": 1.28,
           "expectedContrastRatio": null,
           "fontSize": "10.5pt (14px)",
           "fontWeight": "normal",
@@ -838,12 +666,50 @@
         {
           "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?fixture=host&dialog=pause",
           "state": "pause-overlay-open",
-          "viewport": "iPhone 13",
+          "viewport": "Desktop Chrome",
           "theme": "dark",
           "selector": ".border.focus-visible\\:ring-slate-400.px-4",
-          "fgColor": "#a7a2ae",
-          "bgColor": "#a29da9",
-          "contrastRatio": 1.06,
+          "fgColor": "#a6a5a4",
+          "bgColor": "#95928f",
+          "contrastRatio": 1.25,
+          "expectedContrastRatio": null,
+          "fontSize": "10.5pt (14px)",
+          "fontWeight": "normal",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        },
+        {
+          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?fixture=host&dialog=pause",
+          "state": "pause-overlay-open",
+          "viewport": "Desktop Chrome",
+          "theme": "dark",
+          "selector": ".text-blue-600",
+          "fgColor": "#155dfc",
+          "bgColor": "#efedeb",
+          "contrastRatio": 4.49,
+          "expectedContrastRatio": null,
+          "fontSize": "10.5pt (14px)",
+          "fontWeight": "normal",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        }
+      ]
+    },
+    {
+      "target": "session-live-pause-overlay-open",
+      "viewport": "iPhone 13",
+      "runMs": 1233,
+      "violationCount": 2,
+      "violations": [
+        {
+          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?fixture=host&dialog=pause",
+          "state": "pause-overlay-open",
+          "viewport": "iPhone 13",
+          "theme": "dark",
+          "selector": "a[href$=\"sessions\"] > span:nth-child(2)",
+          "fgColor": "#4ecdc4",
+          "bgColor": "#f7f3ee",
+          "contrastRatio": 1.75,
           "expectedContrastRatio": null,
           "fontSize": "10.5pt (14px)",
           "fontWeight": "normal",
@@ -870,24 +736,9 @@
     {
       "target": "session-live-endgame-dialog-open",
       "viewport": "Desktop Chrome",
-      "runMs": 1297,
-      "violationCount": 5,
+      "runMs": 1349,
+      "violationCount": 2,
       "violations": [
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?dialog=endgame",
-          "state": "endgame-dialog-open",
-          "viewport": "Desktop Chrome",
-          "theme": "dark",
-          "selector": ".w-full:nth-child(1) > .mt-4[aria-label=\"Page tabs\"] > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?dialog=endgame",
           "state": "endgame-dialog-open",
@@ -899,36 +750,6 @@
           "contrastRatio": 1.75,
           "expectedContrastRatio": null,
           "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?dialog=endgame",
-          "state": "endgame-dialog-open",
-          "viewport": "Desktop Chrome",
-          "theme": "dark",
-          "selector": ".w-full:nth-child(2) > .mt-4[aria-label=\"Page tabs\"] > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?dialog=endgame",
-          "state": "endgame-dialog-open",
-          "viewport": "Desktop Chrome",
-          "theme": "dark",
-          "selector": ".text-\\[hsl\\(240\\,60\\%\\,70\\%\\)\\].font-medium.shrink-0",
-          "fgColor": "#8585e0",
-          "bgColor": "#2e2e2e",
-          "contrastRatio": 4.15,
-          "expectedContrastRatio": null,
-          "fontSize": "9.0pt (12px)",
           "fontWeight": "normal",
           "impact": "serious",
           "ruleId": "color-contrast"
@@ -953,24 +774,9 @@
     {
       "target": "session-live-endgame-dialog-open",
       "viewport": "iPhone 13",
-      "runMs": 1139,
-      "violationCount": 4,
+      "runMs": 1371,
+      "violationCount": 2,
       "violations": [
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?dialog=endgame",
-          "state": "endgame-dialog-open",
-          "viewport": "iPhone 13",
-          "theme": "dark",
-          "selector": ".w-full:nth-child(1) > .mt-4[aria-label=\"Page tabs\"] > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?dialog=endgame",
           "state": "endgame-dialog-open",
@@ -980,21 +786,6 @@
           "fgColor": "#4ecdc4",
           "bgColor": "#f7f3ee",
           "contrastRatio": 1.75,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?dialog=endgame",
-          "state": "endgame-dialog-open",
-          "viewport": "iPhone 13",
-          "theme": "dark",
-          "selector": ".w-full:nth-child(2) > .mt-4[aria-label=\"Page tabs\"] > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
           "expectedContrastRatio": null,
           "fontSize": "10.5pt (14px)",
           "fontWeight": "normal",
@@ -1021,24 +812,9 @@
     {
       "target": "session-summary-default",
       "viewport": "Desktop Chrome",
-      "runMs": 2343,
-      "violationCount": 3,
+      "runMs": 1690,
+      "violationCount": 1,
       "violations": [
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756",
-          "state": "default",
-          "viewport": "Desktop Chrome",
-          "theme": "light",
-          "selector": ".w-full:nth-child(1) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions/00000000-0000-4000-8000-000000000756",
           "state": "default",
@@ -1048,21 +824,6 @@
           "fgColor": "#4ecdc4",
           "bgColor": "#f7f3ee",
           "contrastRatio": 1.75,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756",
-          "state": "default",
-          "viewport": "Desktop Chrome",
-          "theme": "light",
-          "selector": ".w-full:nth-child(2) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
           "expectedContrastRatio": null,
           "fontSize": "10.5pt (14px)",
           "fontWeight": "normal",
@@ -1074,24 +835,9 @@
     {
       "target": "session-summary-default",
       "viewport": "iPhone 13",
-      "runMs": 943,
-      "violationCount": 3,
+      "runMs": 1049,
+      "violationCount": 1,
       "violations": [
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756",
-          "state": "default",
-          "viewport": "iPhone 13",
-          "theme": "light",
-          "selector": ".w-full:nth-child(1) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions/00000000-0000-4000-8000-000000000756",
           "state": "default",
@@ -1101,21 +847,6 @@
           "fgColor": "#4ecdc4",
           "bgColor": "#f7f3ee",
           "contrastRatio": 1.75,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756",
-          "state": "default",
-          "viewport": "iPhone 13",
-          "theme": "light",
-          "selector": ".w-full:nth-child(2) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
           "expectedContrastRatio": null,
           "fontSize": "10.5pt (14px)",
           "fontWeight": "normal",
@@ -1127,24 +858,9 @@
     {
       "target": "session-summary-tied",
       "viewport": "Desktop Chrome",
-      "runMs": 969,
-      "violationCount": 3,
+      "runMs": 1063,
+      "violationCount": 1,
       "violations": [
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=tied",
-          "state": "tied",
-          "viewport": "Desktop Chrome",
-          "theme": "light",
-          "selector": ".w-full:nth-child(1) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=tied",
           "state": "tied",
@@ -1154,21 +870,6 @@
           "fgColor": "#4ecdc4",
           "bgColor": "#f7f3ee",
           "contrastRatio": 1.75,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=tied",
-          "state": "tied",
-          "viewport": "Desktop Chrome",
-          "theme": "light",
-          "selector": ".w-full:nth-child(2) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
           "expectedContrastRatio": null,
           "fontSize": "10.5pt (14px)",
           "fontWeight": "normal",
@@ -1180,24 +881,9 @@
     {
       "target": "session-summary-tied",
       "viewport": "iPhone 13",
-      "runMs": 978,
-      "violationCount": 3,
+      "runMs": 1066,
+      "violationCount": 1,
       "violations": [
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=tied",
-          "state": "tied",
-          "viewport": "iPhone 13",
-          "theme": "light",
-          "selector": ".w-full:nth-child(1) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=tied",
           "state": "tied",
@@ -1207,21 +893,6 @@
           "fgColor": "#4ecdc4",
           "bgColor": "#f7f3ee",
           "contrastRatio": 1.75,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=tied",
-          "state": "tied",
-          "viewport": "iPhone 13",
-          "theme": "light",
-          "selector": ".w-full:nth-child(2) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
           "expectedContrastRatio": null,
           "fontSize": "10.5pt (14px)",
           "fontWeight": "normal",
@@ -1233,24 +904,9 @@
     {
       "target": "session-summary-empty-photos",
       "viewport": "Desktop Chrome",
-      "runMs": 990,
-      "violationCount": 3,
+      "runMs": 1088,
+      "violationCount": 1,
       "violations": [
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=empty-photos",
-          "state": "empty-photos",
-          "viewport": "Desktop Chrome",
-          "theme": "light",
-          "selector": ".w-full:nth-child(1) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=empty-photos",
           "state": "empty-photos",
@@ -1260,21 +916,6 @@
           "fgColor": "#4ecdc4",
           "bgColor": "#f7f3ee",
           "contrastRatio": 1.75,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=empty-photos",
-          "state": "empty-photos",
-          "viewport": "Desktop Chrome",
-          "theme": "light",
-          "selector": ".w-full:nth-child(2) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
           "expectedContrastRatio": null,
           "fontSize": "10.5pt (14px)",
           "fontWeight": "normal",
@@ -1286,24 +927,9 @@
     {
       "target": "session-summary-empty-photos",
       "viewport": "iPhone 13",
-      "runMs": 926,
-      "violationCount": 3,
+      "runMs": 1091,
+      "violationCount": 1,
       "violations": [
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=empty-photos",
-          "state": "empty-photos",
-          "viewport": "iPhone 13",
-          "theme": "light",
-          "selector": ".w-full:nth-child(1) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=empty-photos",
           "state": "empty-photos",
@@ -1313,21 +939,6 @@
           "fgColor": "#4ecdc4",
           "bgColor": "#f7f3ee",
           "contrastRatio": 1.75,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=empty-photos",
-          "state": "empty-photos",
-          "viewport": "iPhone 13",
-          "theme": "light",
-          "selector": ".w-full:nth-child(2) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
           "expectedContrastRatio": null,
           "fontSize": "10.5pt (14px)",
           "fontWeight": "normal",
@@ -1339,24 +950,9 @@
     {
       "target": "session-summary-empty-achievements",
       "viewport": "Desktop Chrome",
-      "runMs": 1039,
-      "violationCount": 3,
+      "runMs": 3564,
+      "violationCount": 1,
       "violations": [
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=empty-achievements",
-          "state": "empty-achievements",
-          "viewport": "Desktop Chrome",
-          "theme": "light",
-          "selector": ".w-full:nth-child(1) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=empty-achievements",
           "state": "empty-achievements",
@@ -1366,21 +962,6 @@
           "fgColor": "#4ecdc4",
           "bgColor": "#f7f3ee",
           "contrastRatio": 1.75,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=empty-achievements",
-          "state": "empty-achievements",
-          "viewport": "Desktop Chrome",
-          "theme": "light",
-          "selector": ".w-full:nth-child(2) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
           "expectedContrastRatio": null,
           "fontSize": "10.5pt (14px)",
           "fontWeight": "normal",
@@ -1392,24 +973,9 @@
     {
       "target": "session-summary-empty-achievements",
       "viewport": "iPhone 13",
-      "runMs": 1020,
-      "violationCount": 3,
+      "runMs": 1035,
+      "violationCount": 1,
       "violations": [
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=empty-achievements",
-          "state": "empty-achievements",
-          "viewport": "iPhone 13",
-          "theme": "light",
-          "selector": ".w-full:nth-child(1) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=empty-achievements",
           "state": "empty-achievements",
@@ -1424,84 +990,69 @@
           "fontWeight": "normal",
           "impact": "serious",
           "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions/00000000-0000-4000-8000-000000000756?scenario=empty-achievements",
-          "state": "empty-achievements",
-          "viewport": "iPhone 13",
-          "theme": "light",
-          "selector": ".w-full:nth-child(2) > nav > .border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\].text-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\][aria-current=\"page\"]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
         }
       ]
     },
     {
       "target": "agent-detail-default",
       "viewport": "Desktop Chrome",
-      "runMs": 1690,
+      "runMs": 1692,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "agent-detail-default",
       "viewport": "iPhone 13",
-      "runMs": 1167,
+      "runMs": 1158,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "agent-detail-not-found",
       "viewport": "Desktop Chrome",
-      "runMs": 1042,
+      "runMs": 1079,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "agent-detail-not-found",
       "viewport": "iPhone 13",
-      "runMs": 1003,
+      "runMs": 1110,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "game-detail-default",
       "viewport": "Desktop Chrome",
-      "runMs": 2366,
+      "runMs": 1674,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "game-detail-default",
       "viewport": "iPhone 13",
-      "runMs": 1125,
+      "runMs": 1116,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "game-detail-not-found",
       "viewport": "Desktop Chrome",
-      "runMs": 1077,
+      "runMs": 1046,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "game-detail-not-found",
       "viewport": "iPhone 13",
-      "runMs": 1037,
+      "runMs": 1013,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "player-detail-default",
       "viewport": "Desktop Chrome",
-      "runMs": 2519,
+      "runMs": 1794,
       "violationCount": 6,
       "violations": [
         {
@@ -1584,7 +1135,7 @@
           "state": "default",
           "viewport": "Desktop Chrome",
           "theme": "light",
-          "selector": "div[data-slot=\"sessions-tab-panel\"] > .text-primary",
+          "selector": ".text-primary",
           "fgColor": "#bd5205",
           "bgColor": "#f7f3ee",
           "contrastRatio": 4.34,
@@ -1599,7 +1150,7 @@
     {
       "target": "player-detail-default",
       "viewport": "iPhone 13",
-      "runMs": 1185,
+      "runMs": 1260,
       "violationCount": 3,
       "violations": [
         {
@@ -1652,35 +1203,35 @@
     {
       "target": "player-detail-not-found",
       "viewport": "Desktop Chrome",
-      "runMs": 777,
+      "runMs": 1053,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "player-detail-not-found",
       "viewport": "iPhone 13",
-      "runMs": 1088,
+      "runMs": 1170,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "gamebook-index-default",
       "viewport": "Desktop Chrome",
-      "runMs": 1837,
+      "runMs": 1205,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "gamebook-index-default",
       "viewport": "iPhone 13",
-      "runMs": 979,
+      "runMs": 1132,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "library-filtered-empty",
       "viewport": "Desktop Chrome",
-      "runMs": 1490,
+      "runMs": 1502,
       "violationCount": 1,
       "violations": [
         {
@@ -1703,7 +1254,7 @@
     {
       "target": "library-filtered-empty",
       "viewport": "iPhone 13",
-      "runMs": 1413,
+      "runMs": 1443,
       "violationCount": 1,
       "violations": [
         {
@@ -1726,24 +1277,9 @@
     {
       "target": "sessions-index-filtered-empty",
       "viewport": "Desktop Chrome",
-      "runMs": 1263,
-      "violationCount": 13,
+      "runMs": 1341,
+      "violationCount": 12,
       "violations": [
-        {
-          "route": "/sessions?status=zzzzzz",
-          "state": "filtered-empty",
-          "viewport": "Desktop Chrome",
-          "theme": "light",
-          "selector": ".border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
         {
           "route": "/sessions?status=zzzzzz",
           "state": "filtered-empty",
@@ -1929,30 +1465,15 @@
     {
       "target": "sessions-index-filtered-empty",
       "viewport": "iPhone 13",
-      "runMs": 3316,
-      "violationCount": 13,
+      "runMs": 1277,
+      "violationCount": 12,
       "violations": [
         {
           "route": "/sessions?status=zzzzzz",
           "state": "filtered-empty",
           "viewport": "iPhone 13",
           "theme": "light",
-          "selector": ".border-\\[hsl\\(25\\,95\\%\\,45\\%\\)\\]",
-          "fgColor": "#e06106",
-          "bgColor": "#f7f3ee",
-          "contrastRatio": 3.23,
-          "expectedContrastRatio": null,
-          "fontSize": "10.5pt (14px)",
-          "fontWeight": "normal",
-          "impact": "serious",
-          "ruleId": "color-contrast"
-        },
-        {
-          "route": "/sessions?status=zzzzzz",
-          "state": "filtered-empty",
-          "viewport": "iPhone 13",
-          "theme": "light",
-          "selector": ".mai-pulse.group.text-left > .p-3.sm\\:items-center.sm\\:gap-4 > .items-start.sm\\:items-end.shrink-0 > .flex-wrap.gap-1[data-slot=\"connection-chip-strip-footer\"] > .text-\\[9\\.5px\\][data-entity=\"game\"][data-slot=\"connection-chip\"] > span:nth-child(2)",
+          "selector": ".mai-pulse.group.text-left > .p-3.sm\\:gap-4.sm\\:p-4 > .items-start.sm\\:items-end.shrink-0 > .flex-wrap.gap-1[data-slot=\"connection-chip-strip-footer\"] > .text-\\[9\\.5px\\][data-entity=\"game\"][data-slot=\"connection-chip\"] > span:nth-child(2)",
           "fgColor": "#c25405",
           "bgColor": "#f9eee6",
           "contrastRatio": 4.03,
@@ -1967,7 +1488,7 @@
           "state": "filtered-empty",
           "viewport": "iPhone 13",
           "theme": "light",
-          "selector": ".group.text-left[aria-label=\"Apri sessione Wingspan\"]:nth-child(2) > .p-3.sm\\:items-center.sm\\:gap-4 > .items-start.sm\\:items-end.shrink-0 > .flex-wrap.gap-1[data-slot=\"connection-chip-strip-footer\"] > .text-\\[9\\.5px\\][data-entity=\"game\"][data-slot=\"connection-chip\"] > span:nth-child(2)",
+          "selector": ".group.text-left[aria-label=\"Apri sessione Wingspan\"]:nth-child(2) > .p-3.sm\\:gap-4.sm\\:p-4 > .items-start.sm\\:items-end.shrink-0 > .flex-wrap.gap-1[data-slot=\"connection-chip-strip-footer\"] > .text-\\[9\\.5px\\][data-entity=\"game\"][data-slot=\"connection-chip\"] > span:nth-child(2)",
           "fgColor": "#c25405",
           "bgColor": "#f9eee6",
           "contrastRatio": 4.03,
@@ -1982,7 +1503,7 @@
           "state": "filtered-empty",
           "viewport": "iPhone 13",
           "theme": "light",
-          "selector": ".group.text-left[aria-label=\"Apri sessione Wingspan\"]:nth-child(3) > .p-3.sm\\:items-center.sm\\:gap-4 > .items-start.sm\\:items-end.shrink-0 > .flex-wrap.gap-1[data-slot=\"connection-chip-strip-footer\"] > .text-\\[9\\.5px\\][data-entity=\"game\"][data-slot=\"connection-chip\"] > span:nth-child(2)",
+          "selector": ".group.text-left[aria-label=\"Apri sessione Wingspan\"]:nth-child(3) > .p-3.sm\\:gap-4.sm\\:p-4 > .items-start.sm\\:items-end.shrink-0 > .flex-wrap.gap-1[data-slot=\"connection-chip-strip-footer\"] > .text-\\[9\\.5px\\][data-entity=\"game\"][data-slot=\"connection-chip\"] > span:nth-child(2)",
           "fgColor": "#c25405",
           "bgColor": "#f9eee6",
           "contrastRatio": 4.03,
@@ -1997,7 +1518,7 @@
           "state": "filtered-empty",
           "viewport": "iPhone 13",
           "theme": "light",
-          "selector": "button[aria-label=\"Apri sessione Azul\"] > .p-3.sm\\:items-center.sm\\:gap-4 > .items-start.sm\\:items-end.shrink-0 > .flex-wrap.gap-1[data-slot=\"connection-chip-strip-footer\"] > .text-\\[9\\.5px\\][data-entity=\"game\"][data-slot=\"connection-chip\"] > span:nth-child(2)",
+          "selector": "button[aria-label=\"Apri sessione Azul\"] > .p-3.sm\\:gap-4.sm\\:p-4 > .items-start.sm\\:items-end.shrink-0 > .flex-wrap.gap-1[data-slot=\"connection-chip-strip-footer\"] > .text-\\[9\\.5px\\][data-entity=\"game\"][data-slot=\"connection-chip\"] > span:nth-child(2)",
           "fgColor": "#c25405",
           "bgColor": "#f9eee6",
           "contrastRatio": 4.03,
@@ -2012,7 +1533,7 @@
           "state": "filtered-empty",
           "viewport": "iPhone 13",
           "theme": "light",
-          "selector": "button[aria-label=\"Apri sessione Ark Nova\"] > .p-3.sm\\:items-center.sm\\:gap-4 > .items-start.sm\\:items-end.shrink-0 > .flex-wrap.gap-1[data-slot=\"connection-chip-strip-footer\"] > .text-\\[9\\.5px\\][data-entity=\"game\"][data-slot=\"connection-chip\"] > span:nth-child(2)",
+          "selector": "button[aria-label=\"Apri sessione Ark Nova\"] > .p-3.sm\\:gap-4.sm\\:p-4 > .items-start.sm\\:items-end.shrink-0 > .flex-wrap.gap-1[data-slot=\"connection-chip-strip-footer\"] > .text-\\[9\\.5px\\][data-entity=\"game\"][data-slot=\"connection-chip\"] > span:nth-child(2)",
           "fgColor": "#c25405",
           "bgColor": "#f9eee6",
           "contrastRatio": 4.03,
@@ -2027,7 +1548,7 @@
           "state": "filtered-empty",
           "viewport": "iPhone 13",
           "theme": "light",
-          "selector": ".opacity-70 > .p-3.sm\\:items-center.sm\\:gap-4 > .min-w-0.flex-1.gap-1\\.5 > .flex-wrap.gap-1\\.5.flex > .text-\\[10\\.5px\\].font-semibold.text-muted-foreground",
+          "selector": ".opacity-70 > .p-3.sm\\:gap-4.sm\\:p-4 > .min-w-0.flex-1.gap-1\\.5 > .flex-wrap.gap-1\\.5.flex > .text-\\[10\\.5px\\].font-semibold.text-muted-foreground",
           "fgColor": "#90877f",
           "bgColor": "#fdfbfa",
           "contrastRatio": 3.41,
@@ -2042,7 +1563,7 @@
           "state": "filtered-empty",
           "viewport": "iPhone 13",
           "theme": "light",
-          "selector": ".opacity-70 > .p-3.sm\\:items-center.sm\\:gap-4 > .min-w-0.flex-1.gap-1\\.5 > .text-\\[11px\\].font-semibold.text-muted-foreground",
+          "selector": ".opacity-70 > .p-3.sm\\:gap-4.sm\\:p-4 > .min-w-0.flex-1.gap-1\\.5 > .text-\\[11px\\].font-semibold.text-muted-foreground",
           "fgColor": "#90877f",
           "bgColor": "#fdfbfa",
           "contrastRatio": 3.41,
@@ -2057,7 +1578,7 @@
           "state": "filtered-empty",
           "viewport": "iPhone 13",
           "theme": "light",
-          "selector": ".opacity-70 > .p-3.sm\\:items-center.sm\\:gap-4 > .min-w-0.flex-1.gap-1\\.5 > .gap-x-2.gap-y-1[data-slot=\"scoring-inline\"] > .text-\\[11\\.5px\\].tabular-nums.gap-1:nth-child(1) > span:nth-child(1)",
+          "selector": ".opacity-70 > .p-3.sm\\:gap-4.sm\\:p-4 > .min-w-0.flex-1.gap-1\\.5 > .gap-x-2.gap-y-1[data-slot=\"scoring-inline\"] > .text-\\[11\\.5px\\].tabular-nums.gap-1:nth-child(1) > span:nth-child(1)",
           "fgColor": "#90877f",
           "bgColor": "#fdfbfa",
           "contrastRatio": 3.41,
@@ -2072,7 +1593,7 @@
           "state": "filtered-empty",
           "viewport": "iPhone 13",
           "theme": "light",
-          "selector": ".opacity-70 > .p-3.sm\\:items-center.sm\\:gap-4 > .min-w-0.flex-1.gap-1\\.5 > .gap-x-2.gap-y-1[data-slot=\"scoring-inline\"] > .text-\\[11\\.5px\\].tabular-nums.gap-1:nth-child(1) > .rounded.px-1.bg-muted",
+          "selector": ".opacity-70 > .p-3.sm\\:gap-4.sm\\:p-4 > .min-w-0.flex-1.gap-1\\.5 > .gap-x-2.gap-y-1[data-slot=\"scoring-inline\"] > .text-\\[11\\.5px\\].tabular-nums.gap-1:nth-child(1) > .rounded.px-1.bg-muted",
           "fgColor": "#90877f",
           "bgColor": "#efeae4",
           "contrastRatio": 2.94,
@@ -2087,7 +1608,7 @@
           "state": "filtered-empty",
           "viewport": "iPhone 13",
           "theme": "light",
-          "selector": ".opacity-70 > .p-3.sm\\:items-center.sm\\:gap-4 > .min-w-0.flex-1.gap-1\\.5 > .gap-x-2.gap-y-1[data-slot=\"scoring-inline\"] > .text-\\[11\\.5px\\].tabular-nums.gap-1:nth-child(2) > span:nth-child(1)",
+          "selector": ".opacity-70 > .p-3.sm\\:gap-4.sm\\:p-4 > .min-w-0.flex-1.gap-1\\.5 > .gap-x-2.gap-y-1[data-slot=\"scoring-inline\"] > .text-\\[11\\.5px\\].tabular-nums.gap-1:nth-child(2) > span:nth-child(1)",
           "fgColor": "#90877f",
           "bgColor": "#fdfbfa",
           "contrastRatio": 3.41,
@@ -2102,7 +1623,7 @@
           "state": "filtered-empty",
           "viewport": "iPhone 13",
           "theme": "light",
-          "selector": ".opacity-70 > .p-3.sm\\:items-center.sm\\:gap-4 > .min-w-0.flex-1.gap-1\\.5 > .gap-x-2.gap-y-1[data-slot=\"scoring-inline\"] > .text-\\[11\\.5px\\].tabular-nums.gap-1:nth-child(2) > .rounded.px-1.bg-muted",
+          "selector": ".opacity-70 > .p-3.sm\\:gap-4.sm\\:p-4 > .min-w-0.flex-1.gap-1\\.5 > .gap-x-2.gap-y-1[data-slot=\"scoring-inline\"] > .text-\\[11\\.5px\\].tabular-nums.gap-1:nth-child(2) > .rounded.px-1.bg-muted",
           "fgColor": "#90877f",
           "bgColor": "#efeae4",
           "contrastRatio": 2.94,
@@ -2117,7 +1638,7 @@
           "state": "filtered-empty",
           "viewport": "iPhone 13",
           "theme": "light",
-          "selector": ".opacity-70 > .p-3.sm\\:items-center.sm\\:gap-4 > .items-start.sm\\:items-end.shrink-0 > .flex-wrap.gap-1[data-slot=\"connection-chip-strip-footer\"] > .text-\\[9\\.5px\\][data-entity=\"game\"][data-slot=\"connection-chip\"] > span:nth-child(2)",
+          "selector": ".opacity-70 > .p-3.sm\\:gap-4.sm\\:p-4 > .items-start.sm\\:items-end.shrink-0 > .flex-wrap.gap-1[data-slot=\"connection-chip-strip-footer\"] > .text-\\[9\\.5px\\][data-entity=\"game\"][data-slot=\"connection-chip\"] > span:nth-child(2)",
           "fgColor": "#d2844b",
           "bgColor": "#f8f0e8",
           "contrastRatio": 2.6,
@@ -2132,16 +1653,412 @@
     {
       "target": "agents-index-filtered-empty",
       "viewport": "Desktop Chrome",
-      "runMs": 1076,
+      "runMs": 1171,
       "violationCount": 0,
       "violations": []
     },
     {
       "target": "agents-index-filtered-empty",
       "viewport": "iPhone 13",
-      "runMs": 1166,
+      "runMs": 1091,
       "violationCount": 0,
       "violations": []
+    },
+    {
+      "target": "session-live-loading",
+      "viewport": "Desktop Chrome",
+      "runMs": 1002,
+      "violationCount": 1,
+      "violations": [
+        {
+          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?state=loading",
+          "state": "loading",
+          "viewport": "Desktop Chrome",
+          "theme": "dark",
+          "selector": ".gap-1.font-medium[href$=\"sessions\"] > span:nth-child(2)",
+          "fgColor": "#4ecdc4",
+          "bgColor": "#f7f3ee",
+          "contrastRatio": 1.75,
+          "expectedContrastRatio": null,
+          "fontSize": "10.5pt (14px)",
+          "fontWeight": "normal",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        }
+      ]
+    },
+    {
+      "target": "session-live-loading",
+      "viewport": "iPhone 13",
+      "runMs": 979,
+      "violationCount": 1,
+      "violations": [
+        {
+          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?state=loading",
+          "state": "loading",
+          "viewport": "iPhone 13",
+          "theme": "dark",
+          "selector": ".gap-1.font-medium[href$=\"sessions\"] > span:nth-child(2)",
+          "fgColor": "#4ecdc4",
+          "bgColor": "#f7f3ee",
+          "contrastRatio": 1.75,
+          "expectedContrastRatio": null,
+          "fontSize": "10.5pt (14px)",
+          "fontWeight": "normal",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        }
+      ]
+    },
+    {
+      "target": "session-live-not-found",
+      "viewport": "Desktop Chrome",
+      "runMs": 1057,
+      "violationCount": 1,
+      "violations": [
+        {
+          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?state=not-found",
+          "state": "not-found",
+          "viewport": "Desktop Chrome",
+          "theme": "dark",
+          "selector": ".gap-1.font-medium[href$=\"sessions\"] > span:nth-child(2)",
+          "fgColor": "#4ecdc4",
+          "bgColor": "#f7f3ee",
+          "contrastRatio": 1.75,
+          "expectedContrastRatio": null,
+          "fontSize": "10.5pt (14px)",
+          "fontWeight": "normal",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        }
+      ]
+    },
+    {
+      "target": "session-live-not-found",
+      "viewport": "iPhone 13",
+      "runMs": 1033,
+      "violationCount": 1,
+      "violations": [
+        {
+          "route": "/sessions/00000000-0000-4000-8000-000000000d20/live?state=not-found",
+          "state": "not-found",
+          "viewport": "iPhone 13",
+          "theme": "dark",
+          "selector": ".gap-1.font-medium[href$=\"sessions\"] > span:nth-child(2)",
+          "fgColor": "#4ecdc4",
+          "bgColor": "#f7f3ee",
+          "contrastRatio": 1.75,
+          "expectedContrastRatio": null,
+          "fontSize": "10.5pt (14px)",
+          "fontWeight": "normal",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        }
+      ]
+    },
+    {
+      "target": "session-summary-diary-score",
+      "viewport": "Desktop Chrome",
+      "runMs": 1088,
+      "violationCount": 1,
+      "violations": [
+        {
+          "route": "/sessions/00000000-0000-4000-8000-000000000756?diary=score",
+          "state": "diary-filter",
+          "viewport": "Desktop Chrome",
+          "theme": "light",
+          "selector": ".gap-1.font-medium[href$=\"sessions\"] > span:nth-child(2)",
+          "fgColor": "#4ecdc4",
+          "bgColor": "#f7f3ee",
+          "contrastRatio": 1.75,
+          "expectedContrastRatio": null,
+          "fontSize": "10.5pt (14px)",
+          "fontWeight": "normal",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        }
+      ]
+    },
+    {
+      "target": "session-summary-diary-score",
+      "viewport": "iPhone 13",
+      "runMs": 990,
+      "violationCount": 1,
+      "violations": [
+        {
+          "route": "/sessions/00000000-0000-4000-8000-000000000756?diary=score",
+          "state": "diary-filter",
+          "viewport": "iPhone 13",
+          "theme": "light",
+          "selector": ".gap-1.font-medium[href$=\"sessions\"] > span:nth-child(2)",
+          "fgColor": "#4ecdc4",
+          "bgColor": "#f7f3ee",
+          "contrastRatio": 1.75,
+          "expectedContrastRatio": null,
+          "fontSize": "10.5pt (14px)",
+          "fontWeight": "normal",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        }
+      ]
+    },
+    {
+      "target": "session-summary-sharecard-dark-preview",
+      "viewport": "Desktop Chrome",
+      "runMs": 1004,
+      "violationCount": 1,
+      "violations": [
+        {
+          "route": "/sessions/00000000-0000-4000-8000-000000000756?theme=dark",
+          "state": "ShareCard-dark-preview",
+          "viewport": "Desktop Chrome",
+          "theme": "light",
+          "selector": ".gap-1.font-medium[href$=\"sessions\"] > span:nth-child(2)",
+          "fgColor": "#4ecdc4",
+          "bgColor": "#f7f3ee",
+          "contrastRatio": 1.75,
+          "expectedContrastRatio": null,
+          "fontSize": "10.5pt (14px)",
+          "fontWeight": "normal",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        }
+      ]
+    },
+    {
+      "target": "session-summary-sharecard-dark-preview",
+      "viewport": "iPhone 13",
+      "runMs": 1026,
+      "violationCount": 1,
+      "violations": [
+        {
+          "route": "/sessions/00000000-0000-4000-8000-000000000756?theme=dark",
+          "state": "ShareCard-dark-preview",
+          "viewport": "iPhone 13",
+          "theme": "light",
+          "selector": ".gap-1.font-medium[href$=\"sessions\"] > span:nth-child(2)",
+          "fgColor": "#4ecdc4",
+          "bgColor": "#f7f3ee",
+          "contrastRatio": 1.75,
+          "expectedContrastRatio": null,
+          "fontSize": "10.5pt (14px)",
+          "fontWeight": "normal",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        }
+      ]
+    },
+    {
+      "target": "gamebook-index-quota-soft",
+      "viewport": "Desktop Chrome",
+      "runMs": 1133,
+      "violationCount": 3,
+      "violations": [
+        {
+          "route": "/gamebook?fixture=quota-soft",
+          "state": "quota-soft",
+          "viewport": "Desktop Chrome",
+          "theme": "light",
+          "selector": "button[aria-label=\"Apri manuale: Nanolith\"] > .p-3.sm\\:p-4.flex-1 > .flex-wrap.justify-between.gap-2 > .bg-entity-toolkit\\/12.text-entity-toolkit.py-1",
+          "fgColor": "#17823e",
+          "bgColor": "#e3f0e8",
+          "contrastRatio": 4.16,
+          "expectedContrastRatio": null,
+          "fontSize": "7.5pt (10px)",
+          "fontWeight": "bold",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        },
+        {
+          "route": "/gamebook?fixture=quota-soft",
+          "state": "quota-soft",
+          "viewport": "Desktop Chrome",
+          "theme": "light",
+          "selector": "button[aria-label=\"Apri manuale: Brass Birmingham\"] > .p-3.sm\\:p-4.flex-1 > .flex-wrap.justify-between.gap-2 > .bg-entity-toolkit\\/12.text-entity-toolkit.py-1",
+          "fgColor": "#17823e",
+          "bgColor": "#e3f0e8",
+          "contrastRatio": 4.16,
+          "expectedContrastRatio": null,
+          "fontSize": "7.5pt (10px)",
+          "fontWeight": "bold",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        },
+        {
+          "route": "/gamebook?fixture=quota-soft",
+          "state": "quota-soft",
+          "viewport": "Desktop Chrome",
+          "theme": "light",
+          "selector": ".bg-entity-game\\/12",
+          "fgColor": "#bd5205",
+          "bgColor": "#f7eae1",
+          "contrastRatio": 4.07,
+          "expectedContrastRatio": null,
+          "fontSize": "7.5pt (10px)",
+          "fontWeight": "bold",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        }
+      ]
+    },
+    {
+      "target": "gamebook-index-quota-soft",
+      "viewport": "iPhone 13",
+      "runMs": 1144,
+      "violationCount": 3,
+      "violations": [
+        {
+          "route": "/gamebook?fixture=quota-soft",
+          "state": "quota-soft",
+          "viewport": "iPhone 13",
+          "theme": "light",
+          "selector": "button[aria-label=\"Apri manuale: Nanolith\"] > .p-3.sm\\:p-4.flex-1 > .flex-wrap.justify-between.gap-2 > .bg-entity-toolkit\\/12.text-entity-toolkit.py-1",
+          "fgColor": "#17823e",
+          "bgColor": "#e3f0e8",
+          "contrastRatio": 4.16,
+          "expectedContrastRatio": null,
+          "fontSize": "7.5pt (10px)",
+          "fontWeight": "bold",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        },
+        {
+          "route": "/gamebook?fixture=quota-soft",
+          "state": "quota-soft",
+          "viewport": "iPhone 13",
+          "theme": "light",
+          "selector": "button[aria-label=\"Apri manuale: Brass Birmingham\"] > .p-3.sm\\:p-4.flex-1 > .flex-wrap.justify-between.gap-2 > .bg-entity-toolkit\\/12.text-entity-toolkit.py-1",
+          "fgColor": "#17823e",
+          "bgColor": "#e3f0e8",
+          "contrastRatio": 4.16,
+          "expectedContrastRatio": null,
+          "fontSize": "7.5pt (10px)",
+          "fontWeight": "bold",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        },
+        {
+          "route": "/gamebook?fixture=quota-soft",
+          "state": "quota-soft",
+          "viewport": "iPhone 13",
+          "theme": "light",
+          "selector": ".bg-entity-game\\/12",
+          "fgColor": "#bd5205",
+          "bgColor": "#f7eae1",
+          "contrastRatio": 4.07,
+          "expectedContrastRatio": null,
+          "fontSize": "7.5pt (10px)",
+          "fontWeight": "bold",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        }
+      ]
+    },
+    {
+      "target": "gamebook-index-quota-hard",
+      "viewport": "Desktop Chrome",
+      "runMs": 1221,
+      "violationCount": 3,
+      "violations": [
+        {
+          "route": "/gamebook?fixture=quota-hard",
+          "state": "quota-hard",
+          "viewport": "Desktop Chrome",
+          "theme": "light",
+          "selector": "button[aria-label=\"Apri manuale: Nanolith\"] > .p-3.sm\\:p-4.flex-1 > .flex-wrap.justify-between.gap-2 > .bg-entity-toolkit\\/12.text-entity-toolkit.py-1",
+          "fgColor": "#17823e",
+          "bgColor": "#e3f0e8",
+          "contrastRatio": 4.16,
+          "expectedContrastRatio": null,
+          "fontSize": "7.5pt (10px)",
+          "fontWeight": "bold",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        },
+        {
+          "route": "/gamebook?fixture=quota-hard",
+          "state": "quota-hard",
+          "viewport": "Desktop Chrome",
+          "theme": "light",
+          "selector": "button[aria-label=\"Apri manuale: Brass Birmingham\"] > .p-3.sm\\:p-4.flex-1 > .flex-wrap.justify-between.gap-2 > .bg-entity-toolkit\\/12.text-entity-toolkit.py-1",
+          "fgColor": "#17823e",
+          "bgColor": "#e3f0e8",
+          "contrastRatio": 4.16,
+          "expectedContrastRatio": null,
+          "fontSize": "7.5pt (10px)",
+          "fontWeight": "bold",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        },
+        {
+          "route": "/gamebook?fixture=quota-hard",
+          "state": "quota-hard",
+          "viewport": "Desktop Chrome",
+          "theme": "light",
+          "selector": ".bg-entity-game\\/12",
+          "fgColor": "#bd5205",
+          "bgColor": "#f7eae1",
+          "contrastRatio": 4.07,
+          "expectedContrastRatio": null,
+          "fontSize": "7.5pt (10px)",
+          "fontWeight": "bold",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        }
+      ]
+    },
+    {
+      "target": "gamebook-index-quota-hard",
+      "viewport": "iPhone 13",
+      "runMs": 1109,
+      "violationCount": 3,
+      "violations": [
+        {
+          "route": "/gamebook?fixture=quota-hard",
+          "state": "quota-hard",
+          "viewport": "iPhone 13",
+          "theme": "light",
+          "selector": "button[aria-label=\"Apri manuale: Nanolith\"] > .p-3.sm\\:p-4.flex-1 > .flex-wrap.justify-between.gap-2 > .bg-entity-toolkit\\/12.text-entity-toolkit.py-1",
+          "fgColor": "#17823e",
+          "bgColor": "#e3f0e8",
+          "contrastRatio": 4.16,
+          "expectedContrastRatio": null,
+          "fontSize": "7.5pt (10px)",
+          "fontWeight": "bold",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        },
+        {
+          "route": "/gamebook?fixture=quota-hard",
+          "state": "quota-hard",
+          "viewport": "iPhone 13",
+          "theme": "light",
+          "selector": "button[aria-label=\"Apri manuale: Brass Birmingham\"] > .p-3.sm\\:p-4.flex-1 > .flex-wrap.justify-between.gap-2 > .bg-entity-toolkit\\/12.text-entity-toolkit.py-1",
+          "fgColor": "#17823e",
+          "bgColor": "#e3f0e8",
+          "contrastRatio": 4.16,
+          "expectedContrastRatio": null,
+          "fontSize": "7.5pt (10px)",
+          "fontWeight": "bold",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        },
+        {
+          "route": "/gamebook?fixture=quota-hard",
+          "state": "quota-hard",
+          "viewport": "iPhone 13",
+          "theme": "light",
+          "selector": ".bg-entity-game\\/12",
+          "fgColor": "#bd5205",
+          "bgColor": "#f7eae1",
+          "contrastRatio": 4.07,
+          "expectedContrastRatio": null,
+          "fontSize": "7.5pt (10px)",
+          "fontWeight": "bold",
+          "impact": "serious",
+          "ruleId": "color-contrast"
+        }
+      ]
     }
   ]
 }

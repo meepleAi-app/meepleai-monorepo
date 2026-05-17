@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * ShelfCard Component
  *
@@ -152,7 +153,7 @@ export function ShelfCard({
             <div>
               {mechanicIcon && (
                 <span
-                  className="inline-flex items-center justify-center w-5 h-5 rounded bg-black/40 text-[10px]"
+                  className="inline-flex items-center justify-center w-5 h-5 rounded bg-foreground/40 text-[10px]"
                   data-testid="mechanic-icon"
                 >
                   {mechanicIcon}

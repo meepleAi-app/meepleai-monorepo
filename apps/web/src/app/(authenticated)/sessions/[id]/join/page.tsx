@@ -81,7 +81,7 @@ export default function JoinSessionPage({ params }: JoinPageProps) {
   if (!token) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-4">
-        <Card className="w-full max-w-sm bg-white/70 backdrop-blur-md">
+        <Card className="w-full max-w-sm bg-card/70 backdrop-blur-md">
           <CardContent className="px-6 py-8 text-center">
             <AlertCircle className="mx-auto mb-3 h-10 w-10 text-red-500" />
             <p className="text-sm text-muted-foreground font-nunito">
@@ -99,7 +99,7 @@ export default function JoinSessionPage({ params }: JoinPageProps) {
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
-      <Card className="w-full max-w-sm bg-white/70 backdrop-blur-md">
+      <Card className="w-full max-w-sm bg-card/70 backdrop-blur-md">
         <CardHeader className="pb-4 text-center">
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
             <Users className="h-6 w-6 text-amber-900" />

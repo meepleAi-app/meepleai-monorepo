@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 import type { ReactNode } from 'react';
@@ -88,7 +89,7 @@ export function FlipBack({
         {subtitle && <p className="text-[0.7rem] text-white/85">{subtitle}</p>}
         <span
           aria-hidden
-          className="absolute right-3 top-3 rounded-full border border-white/30 bg-white/15 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white backdrop-blur-sm"
+          className="absolute right-3 top-3 rounded-full border border-border bg-card/15 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white backdrop-blur-sm"
         >
           {entityLabel[entity]}
         </span>

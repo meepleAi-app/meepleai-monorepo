@@ -1,27 +1,35 @@
 namespace Api.BoundedContexts.Authentication.Application.Services;
 
 /// <summary>
-/// Guards staging environment access via email allowlist (DevOps wave 1).
+/// Guards staging environment access via email allowlist (DevOps Wave 1).
 /// </summary>
 /// <remarks>
-/// Reads <c>STAGING_ALLOWED_EMAILS</c> env var (CSV, case-insensitive, whitespace tolerant).
-/// Empty list = open access (default safe: dev and prod don't need this gate).
-/// Wave 2 will integrate with the existing <c>AccessRequest</c> BC for invite-based flow.
+/// Backed by the <c>staging_allowlist</c> table (#845) — superseded the
+/// <c>STAGING_ALLOWED_EMAILS</c> env-var implementation. Cached in memory with
+/// a short TTL; cache is also invalidated via domain events whenever the
+/// underlying table mutates (see <c>StagingAllowlistCacheInvalidator</c>).
+///
+/// Semantics changed in #845: empty allowlist now FAIL-CLOSED in Staging
+/// (returns false). The previous "empty = open" semantics were a latent
+/// landmine if the bootstrap seed failed silently.
 /// See <c>docs/for-developers/operations/devops-policy.md</c> §4.
 /// </remarks>
 public interface IStagingAccessGuard
 {
     /// <summary>
-    /// Returns <c>true</c> if email is in allowlist OR if allowlist is empty/unset.
-    /// Returns <c>false</c> if allowlist is non-empty AND email not in it
-    /// (or if email is null/whitespace).
+    /// Returns <c>true</c> if the email is in the (DB-backed) allowlist.
+    /// Returns <c>false</c> if the allowlist is empty (fail-closed) or the email is null/whitespace.
     /// </summary>
-    bool IsEmailAllowed(string email);
+    ValueTask<bool> IsEmailAllowedAsync(string email, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// True if <c>STAGING_ALLOWED_EMAILS</c> contains at least one entry.
-    /// Used by startup warning to detect misconfiguration window
-    /// (Staging environment with empty allowlist = silent pass-through).
+    /// True if the allowlist contains at least one entry. Used by startup warning.
     /// </summary>
-    bool HasNonEmptyAllowlist { get; }
+    ValueTask<bool> HasNonEmptyAllowlistAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Drops the in-memory cache. Called by domain event handlers on add/remove
+    /// to give admins an immediate-effect experience.
+    /// </summary>
+    void InvalidateCache();
 }

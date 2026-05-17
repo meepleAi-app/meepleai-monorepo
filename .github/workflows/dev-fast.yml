@@ -1,0 +1,189 @@
+# Dev Fast Path — blocking CI on PR to main-dev
+#
+# Per ADR-054 (DevOps Multi-Branch Strategy) and epic #842 / issue #846:
+# Keep the hot path narrow. Lint + typecheck + unit only. Target SLO < 3 min.
+# Heavier checks run async on push to main-dev via dev-async.yml.
+#
+# Path filters skip the workflow when irrelevant files (e.g. docs-only PRs)
+# change so we don't burn minutes on a docs PR.
+name: Dev Fast
+
+on:
+  pull_request:
+    branches: [main-dev]
+    paths:
+      - 'apps/web/**'
+      - 'apps/api/**'
+      - 'apps/orchestration-service/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'global.json'
+      - '.github/workflows/dev-fast.yml'
+      - '.github/actions/**'
+  workflow_dispatch:
+
+concurrency:
+  group: dev-fast-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      orchestration: ${{ steps.filter.outputs.orchestration }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
+        id: filter
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Issue #850: filter patterns must cover ALL paths that trigger
+          # this workflow, otherwise a workflow/action/orchestration change
+          # spawns a run where every job skips ("changes" runs alone, both
+          # downstream jobs skip → wasted minutes). The `workflow-meta`
+          # pseudo-pattern bundles all the cross-cutting paths.
+          filters: |
+            frontend:
+              - 'apps/web/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/dev-fast.yml'
+              - '.github/actions/setup-frontend/**'
+              - '.github/actions/setup-playwright/**'
+            backend:
+              - 'apps/api/**'
+              - 'global.json'
+              - '.github/workflows/dev-fast.yml'
+              - '.github/actions/setup-backend/**'
+            orchestration:
+              - 'apps/orchestration-service/**'
+
+  # Sharding strategy (incident #1115): the apps/web Vitest suite runs >15min
+  # in CI as a single job. Splitting into 3 parallel matrix shards drops
+  # wall-clock to ~5min per shard while preserving full coverage. Lint and
+  # typecheck stay in a separate fast job (no benefit from parallelism).
+  # The frontend-fast aggregator job below preserves the branch-protection
+  # required check name "Frontend Fast (lint + typecheck + unit)".
+
+  frontend-static:
+    name: Frontend Static (lint + typecheck)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+          cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+  frontend-tests:
+    name: Frontend Tests (shard ${{ matrix.shard }}/3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+          cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
+
+      - name: Unit tests (Vitest shard ${{ matrix.shard }}/3)
+        # Bypass the "test" pnpm script to forward the --shard flag cleanly.
+        # Vitest 3.x supports deterministic file-level sharding via --shard.
+        run: pnpm exec vitest run --shard ${{ matrix.shard }}/3
+
+  frontend-fast:
+    # Aggregator job — preserves the branch-protection required check name
+    # "Frontend Fast (lint + typecheck + unit)" introduced by #846 / #1086.
+    # Succeeds iff both upstream jobs succeeded, or both were legitimately
+    # skipped because the PR did not touch frontend paths.
+    name: Frontend Fast (lint + typecheck + unit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: [changes, frontend-static, frontend-tests]
+    if: ${{ always() }}
+    steps:
+      - name: Verify upstream results
+        run: |
+          STATIC="${{ needs.frontend-static.result }}"
+          TESTS="${{ needs.frontend-tests.result }}"
+          FRONTEND_CHANGED="${{ needs.changes.outputs.frontend }}"
+          EVENT="${{ github.event_name }}"
+          echo "event=$EVENT frontend-static=$STATIC frontend-tests=$TESTS frontend-changed=$FRONTEND_CHANGED"
+          # Skip early only for PRs that don't touch frontend (upstream jobs
+          # legitimately skipped). workflow_dispatch always runs upstream
+          # regardless of frontend-changed, so we must verify their results.
+          if [[ "$FRONTEND_CHANGED" != "true" ]] && [[ "$EVENT" != "workflow_dispatch" ]]; then
+            echo "No frontend changes on PR — aggregator passes (upstream legitimately skipped)."
+            exit 0
+          fi
+          if [[ "$STATIC" != "success" ]]; then
+            echo "frontend-static did not succeed (result=$STATIC)"
+            exit 1
+          fi
+          if [[ "$TESTS" != "success" ]]; then
+            echo "frontend-tests did not succeed across all shards (result=$TESTS)"
+            exit 1
+          fi
+          echo "All frontend checks passed."
+
+  backend-fast:
+    name: Backend Fast (build + unit)
+    runs-on: ubuntu-latest
+    # Issue #1161: raised from 5 → 8 minutes. The Release `dotnet build` step
+    # alone takes ~4min on ubuntu-latest runners (confirmed on PR #1156 cancels);
+    # combined with setup (~30s) and the test step (~30s) the 5-min budget
+    # leaves no headroom and the job is cancelled mid-test. 8 min gives a ~3min
+    # safety buffer. If observed wall-clock sustains > 6 min, revisit and
+    # consider splitting build + test into separate jobs (issue #1161 option b).
+    timeout-minutes: 8
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '9.0.x'
+          working-directory: apps/api
+          cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
+
+      - name: Build
+        working-directory: apps/api
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Unit tests
+        working-directory: apps/api/tests/Api.Tests
+        run: dotnet test --no-build --configuration Release --filter "Category=Unit" --verbosity quiet

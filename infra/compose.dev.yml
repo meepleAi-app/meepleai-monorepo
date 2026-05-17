@@ -65,6 +65,11 @@ services:
       RERANKER_URL: http://reranker-service:8003
       UNSTRUCTURED_API_URL: http://unstructured-service:8001
       SMOLDOCLING_API_URL: http://smoldocling-service:8002
+      # Issue #1099: passthrough for CI smoke tests to bypass AuthLogin
+      # rate limit (10 req/min/IP) which all smoke tests share a single IP.
+      # Empty in local dev → code treats it as disabled flag absent → rate
+      # limit stays enforced. CI workflow sets to "true" when running smoke.
+      DISABLE_RATE_LIMITING: ${DISABLE_RATE_LIMITING:-}
     volumes:
       - ./secrets:/app/infra/secrets:ro
 
@@ -74,7 +79,6 @@ services:
     build:
       args:
         NEXT_PUBLIC_API_BASE: http://localhost:8080
-        NEXT_PUBLIC_ALPHA_MODE: "true"
         NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED: "true"
     environment:
       API_BASE_URL: http://api:8080
@@ -102,7 +106,7 @@ services:
     ports: ["127.0.0.1:8003:8003"]
 
   orchestration-service:
-    env_file: [./secrets/database.secret, ./secrets/redis.secret]
+    env_file: [./secrets/database.secret, ./secrets/redis.secret, ./secrets/openrouter.secret]
     ports: ["127.0.0.1:8004:8004"]
     environment:
       EMBEDDING_SERVICE_URL: http://embedding-service:8000

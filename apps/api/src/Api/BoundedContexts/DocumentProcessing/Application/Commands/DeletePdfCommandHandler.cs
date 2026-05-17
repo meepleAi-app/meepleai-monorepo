@@ -46,7 +46,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
 
             var gameId = pdfDoc.SharedGameId;
 
-            // Delete associated vector document and vectors from Qdrant
+            // Delete associated vector document and vectors from pgvector
             await DeleteVectorDocumentAsync(pdfGuid, pdfId, cancellationToken).ConfigureAwait(false);
 
             // Delete PDF document record
@@ -92,7 +92,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
     }
 
     /// <summary>
-    /// Deletes vector document from database and Qdrant.
+    /// Deletes vector document from database (pgvector).
     /// </summary>
     private async Task DeleteVectorDocumentAsync(Guid pdfGuid, string pdfId, CancellationToken cancellationToken)
     {

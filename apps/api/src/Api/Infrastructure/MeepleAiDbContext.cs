@@ -111,6 +111,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ValidationAccuracyBaselineEntity> ValidationAccuracyBaselines => Set<ValidationAccuracyBaselineEntity>();
     public DbSet<AlertEntity> Alerts => Set<AlertEntity>(); // OPS-07
     public DbSet<AlertRuleEntity> AlertRules => Set<AlertRuleEntity>(); // ISSUE-921: Dynamic alert rules
+    public DbSet<StagingAllowlistEntity> StagingAllowlist => Set<StagingAllowlistEntity>(); // #845: DevOps Wave 1 staging email allowlist
     public DbSet<AlertConfigurationEntity> AlertConfigurations => Set<AlertConfigurationEntity>(); // ISSUE-921: Dynamic alert config
     public DbSet<ServiceHealthStateEntity> ServiceHealthStates => Set<ServiceHealthStateEntity>(); // ISSUE-448: Service health monitoring
     public DbSet<DatabaseMetricsSnapshotEntity> DatabaseMetricsSnapshots => Set<DatabaseMetricsSnapshotEntity>(); // Database growth tracking
@@ -201,8 +202,10 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink> EntityLinks => Set<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink>(); // ISSUE-5132: Entity relationships
     public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition> TierDefinitions => Set<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition>(); // D3: Tier system definitions
     public DbSet<RaptorSummaryEntity> RaptorSummaries => Set<RaptorSummaryEntity>(); // RAG Enhancement: RAPTOR hierarchical summaries
+    public DbSet<Entities.KnowledgeBase.KbReindexJobEntity> KbReindexJobs => Set<Entities.KnowledgeBase.KbReindexJobEntity>(); // ISSUE-941 / ADR-057: KB reindex async
     public DbSet<GameEntityRelationEntity> GameEntityRelations => Set<GameEntityRelationEntity>(); // RAG Enhancement: Graph RAG entity relations
     public DbSet<BoundedContexts.Administration.Domain.Entities.ServiceCallLogEntry> ServiceCallLogs => Set<BoundedContexts.Administration.Domain.Entities.ServiceCallLogEntry>(); // Admin logging: external service call history
+    internal DbSet<BoundedContexts.Administration.Domain.Aggregates.ProviderProbeAudit.ProviderProbeAuditEntry> ProviderProbeAuditEntries => Set<BoundedContexts.Administration.Domain.Aggregates.ProviderProbeAudit.ProviderProbeAuditEntry>(); // ISSUE-936: Provider token probe audit log
 
     // GST-001: SessionTracking bounded context (persistence entities)
     public DbSet<Api.Infrastructure.Entities.SessionTracking.SessionEntity> SessionTrackingSessions => Set<Api.Infrastructure.Entities.SessionTracking.SessionEntity>();

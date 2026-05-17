@@ -61,7 +61,7 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
-            SharedGameId =gameId,
+            SharedGameId = gameId,
             Name = "Gloomhaven Campaign Rules",
             Description = "User-created collection",
             CreatedByUserId = userId,
@@ -107,9 +107,9 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
         _dbContext.Games.AddRange(game1, game2);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var collection1 = new DocumentCollectionEntity { Id = Guid.NewGuid(), SharedGameId =game1Id, Name = "TM Collection 1", CreatedByUserId = userId, DocumentsJson = "[]" };
-        var collection2 = new DocumentCollectionEntity { Id = Guid.NewGuid(), SharedGameId =game2Id, Name = "SI Collection 1", CreatedByUserId = userId, DocumentsJson = "[]" };
-        var collection3 = new DocumentCollectionEntity { Id = Guid.NewGuid(), SharedGameId =game1Id, Name = "TM Collection 2", CreatedByUserId = userId, DocumentsJson = "[]" };
+        var collection1 = new DocumentCollectionEntity { Id = Guid.NewGuid(), SharedGameId = game1Id, Name = "TM Collection 1", CreatedByUserId = userId, DocumentsJson = "[]" };
+        var collection2 = new DocumentCollectionEntity { Id = Guid.NewGuid(), SharedGameId = game2Id, Name = "SI Collection 1", CreatedByUserId = userId, DocumentsJson = "[]" };
+        var collection3 = new DocumentCollectionEntity { Id = Guid.NewGuid(), SharedGameId = game1Id, Name = "TM Collection 2", CreatedByUserId = userId, DocumentsJson = "[]" };
 
         _dbContext.DocumentCollections.AddRange(collection1, collection2, collection3);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -158,17 +158,22 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "cleanup@test.com", DisplayName = "Cleanup", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "Pandemic" };
+        // DocumentCollection.SharedGameId FKs to shared_games (not games), so seed a SharedGameEntity.
+        var sharedGame = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
+        {
+            Id = gameId,
+            Title = "Pandemic",
+        };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(sharedGame);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var collectionId = Guid.NewGuid();
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
-            SharedGameId =gameId,
+            SharedGameId = gameId,
             Name = "Pandemic Rules",
             CreatedByUserId = userId,
             DocumentsJson = "[]"
@@ -206,8 +211,8 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var user1Collection = new DocumentCollectionEntity { Id = Guid.NewGuid(), SharedGameId =gameId, Name = "User1 Collection", CreatedByUserId = user1Id, DocumentsJson = "[]" };
-        var user2Collection = new DocumentCollectionEntity { Id = Guid.NewGuid(), SharedGameId =gameId, Name = "User2 Collection", CreatedByUserId = user2Id, DocumentsJson = "[]" };
+        var user1Collection = new DocumentCollectionEntity { Id = Guid.NewGuid(), SharedGameId = gameId, Name = "User1 Collection", CreatedByUserId = user1Id, DocumentsJson = "[]" };
+        var user2Collection = new DocumentCollectionEntity { Id = Guid.NewGuid(), SharedGameId = gameId, Name = "User2 Collection", CreatedByUserId = user2Id, DocumentsJson = "[]" };
 
         _dbContext.DocumentCollections.AddRange(user1Collection, user2Collection);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);

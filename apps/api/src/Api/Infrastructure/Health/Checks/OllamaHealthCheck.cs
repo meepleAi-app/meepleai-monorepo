@@ -25,10 +25,15 @@ public class OllamaHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
+        // OLLAMA_URL gating is performed at registration time in HealthCheckServiceExtensions:
+        // this check is registered only when OLLAMA_URL is configured.
         var ollamaUrl = _configuration["OLLAMA_URL"];
         if (string.IsNullOrWhiteSpace(ollamaUrl))
         {
-            return HealthCheckResult.Degraded("Ollama service not configured (OLLAMA_URL missing)");
+            // Defensive: if registration somehow drifted from configuration, surface
+            // Unhealthy so monitoring catches the misregistration rather than silently
+            // returning Degraded.
+            return HealthCheckResult.Unhealthy("Ollama health check registered without OLLAMA_URL — registration/config drift");
         }
 
         try

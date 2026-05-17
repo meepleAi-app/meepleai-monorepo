@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -21,6 +22,7 @@ import {
   BookOpen,
   UserCheck,
   Heart,
+  Globe,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -103,6 +105,7 @@ const SECTIONS: NavSection[] = [
 
 const SYSTEM_ITEMS: NavItem[] = [
   { label: 'Monitor', href: '/admin/monitor', icon: MonitorCheck },
+  { label: 'Providers', href: '/admin/providers', icon: Globe },
   { label: 'Config', href: '/admin/config', icon: Settings },
   { label: 'Notifications', href: '/admin/notifications/compose', icon: BellRing },
 ];
@@ -280,7 +283,7 @@ export function AdminSideDrawer({ open, onClose }: AdminSideDrawerProps) {
       {/* Overlay */}
       <div
         data-testid="drawer-overlay"
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+        className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-40"
         onClick={onClose}
         aria-hidden="true"
       />

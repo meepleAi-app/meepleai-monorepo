@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -222,7 +223,7 @@ export function ResumePhotoReview({
                             </div>
                           )}
                           {photo.caption && (
-                            <div className="absolute inset-x-0 bottom-0 bg-black/50 px-1.5 py-0.5">
+                            <div className="absolute inset-x-0 bottom-0 bg-foreground/50 px-1.5 py-0.5">
                               <p className="text-[10px] text-white line-clamp-1">{photo.caption}</p>
                             </div>
                           )}
@@ -269,7 +270,7 @@ export function ResumePhotoReview({
         >
           <DialogTitle className="sr-only">Photo viewer</DialogTitle>
           {lightboxUrl && (
-            <div className="relative bg-black flex items-center justify-center min-h-[300px]">
+            <div className="relative bg-foreground flex items-center justify-center min-h-[300px]">
               <img
                 src={lightboxUrl}
                 alt="Session photo"
@@ -279,7 +280,7 @@ export function ResumePhotoReview({
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white"
+                className="absolute top-2 right-2 bg-foreground/50 hover:bg-foreground/70 text-white"
                 onClick={() => setLightboxUrl(null)}
                 aria-label="Close"
                 data-testid="review-lightbox-close"

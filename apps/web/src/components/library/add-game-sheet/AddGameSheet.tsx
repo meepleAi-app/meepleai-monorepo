@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -141,7 +142,7 @@ export function AddGameSheet({
         className="w-full sm:max-w-[520px] lg:max-w-[580px] flex flex-col p-0"
       >
         {/* Header with step indicator */}
-        <SheetHeader className="border-b border-slate-800 px-6 pt-6 pb-4 space-y-4">
+        <SheetHeader className="border-b border-border px-6 pt-6 pb-4 space-y-4">
           <div className="flex items-center justify-between">
             <SheetTitle className="text-lg font-semibold text-slate-100">
               Aggiungi alla Collezione
@@ -149,7 +150,7 @@ export function AddGameSheet({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-slate-400 hover:text-slate-200"
+              className="h-8 w-8 text-muted-foreground hover:text-slate-200"
               onClick={handleClose}
             >
               <X className="h-4 w-4" />
@@ -185,7 +186,7 @@ export function AddGameSheet({
         </div>
 
         {/* Footer with navigation */}
-        <SheetFooter className="border-t border-slate-800 px-6 py-4 flex-row gap-3">
+        <SheetFooter className="border-t border-border px-6 py-4 flex-row gap-3">
           {!isFirstStep && (
             <Button variant="outline" onClick={handleBack} className="gap-1.5">
               <ChevronLeft className="h-4 w-4" />
@@ -203,10 +204,10 @@ export function AddGameSheet({
 
         {/* Close confirmation overlay */}
         {showCloseConfirm && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="mx-6 rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-xl max-w-sm">
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-foreground/60 backdrop-blur-sm">
+            <div className="mx-6 rounded-xl border border-border bg-card p-6 shadow-xl max-w-sm">
               <h3 className="text-base font-semibold text-slate-100 mb-2">Modifiche non salvate</h3>
-              <p className="text-sm text-slate-400 mb-5">
+              <p className="text-sm text-muted-foreground mb-5">
                 Hai modifiche non salvate. Vuoi chiudere e perdere le modifiche?
               </p>
               <div className="flex gap-3 justify-end">

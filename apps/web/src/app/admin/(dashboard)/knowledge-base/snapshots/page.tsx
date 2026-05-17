@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -73,7 +74,7 @@ function RestoreResultBanner({ result }: { result: KbImportResult }) {
           >
             {hasErrors ? 'Restore completato con errori' : 'Restore completato con successo'}
           </p>
-          <div className="mt-1 text-xs text-slate-600 dark:text-zinc-400 space-y-0.5">
+          <div className="mt-1 text-xs text-muted-foreground dark:text-muted-foreground space-y-0.5">
             <p>
               Documenti: {result.imported} importati · {result.skipped} già presenti ·{' '}
               {result.failed} falliti
@@ -109,16 +110,16 @@ function SnapshotCard({
   const isLatest = snapshot.id === 'latest';
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 px-4 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-4 py-4 px-4 rounded-xl hover:bg-muted dark:hover:bg-zinc-800/50 transition-colors">
       {/* Icon */}
       <div className="flex-shrink-0">
         <div
           className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-            isLatest ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-slate-100 dark:bg-zinc-700/50'
+            isLatest ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-muted dark:bg-zinc-700/50'
           }`}
         >
           <FileArchiveIcon
-            className={`h-5 w-5 ${isLatest ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-zinc-400'}`}
+            className={`h-5 w-5 ${isLatest ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground dark:text-muted-foreground'}`}
           />
         </div>
       </div>
@@ -126,7 +127,7 @@ function SnapshotCard({
       {/* Metadata */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-medium text-slate-900 dark:text-zinc-100 font-mono truncate">
+          <p className="text-sm font-medium text-foreground dark:text-zinc-100 font-mono truncate">
             {snapshot.id}
           </p>
           {isLatest && (
@@ -135,7 +136,7 @@ function SnapshotCard({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-500 dark:text-zinc-400">
+        <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground dark:text-muted-foreground">
           <span>{formatSnapshotDate(snapshot.exportedAt)}</span>
           {snapshot.totalDocuments !== null && (
             <span>
@@ -231,8 +232,8 @@ export default function KbSnapshotsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-100">Snapshot RAG</h1>
-          <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1">
+          <h1 className="text-2xl font-bold text-foreground dark:text-zinc-100">Snapshot RAG</h1>
+          <p className="text-sm text-muted-foreground dark:text-muted-foreground mt-1">
             Gestisci i backup della Knowledge Base. Ripristina uno snapshot per evitare di
             rielaborare i PDF.
           </p>
@@ -285,13 +286,13 @@ export default function KbSnapshotsPage() {
       </div>
 
       {/* Snapshots list */}
-      <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+      <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <ArchiveIcon className="h-4 w-4 text-purple-500" />
             Snapshot disponibili
             {snapshots.length > 0 && (
-              <span className="ml-auto text-sm font-normal text-slate-400 dark:text-zinc-500">
+              <span className="ml-auto text-sm font-normal text-muted-foreground dark:text-muted-foreground">
                 {snapshots.length} snapshot
               </span>
             )}
@@ -303,7 +304,7 @@ export default function KbSnapshotsPage() {
               {Array.from({ length: 4 }).map((_, i) => (
                 <div
                   key={i}
-                  className="h-16 rounded-xl bg-slate-100 dark:bg-zinc-700/50 animate-pulse"
+                  className="h-16 rounded-xl bg-muted dark:bg-zinc-700/50 animate-pulse"
                 />
               ))}
             </div>
@@ -313,7 +314,7 @@ export default function KbSnapshotsPage() {
               <span className="text-sm">Errore nel caricamento degli snapshot</span>
             </div>
           ) : snapshots.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-slate-400 dark:text-zinc-500">
+            <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground dark:text-muted-foreground">
               <ArchiveIcon className="h-10 w-10" />
               <p className="text-sm">Nessuno snapshot disponibile</p>
               <p className="text-xs text-center max-w-xs">

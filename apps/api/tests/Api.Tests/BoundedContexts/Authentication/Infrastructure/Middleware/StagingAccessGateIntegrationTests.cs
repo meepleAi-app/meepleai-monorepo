@@ -1,14 +1,16 @@
 using System.Net;
 using System.Security.Claims;
+using Api.BoundedContexts.Administration.Domain.Entities;
+using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Application.Services;
 using Api.BoundedContexts.Authentication.Infrastructure.Middleware;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xunit;
@@ -17,22 +19,11 @@ namespace Api.Tests.BoundedContexts.Authentication.Infrastructure.Middleware;
 
 /// <summary>
 /// Integration tests for the conditional registration of <see cref="StagingAccessMiddleware"/>
-/// based on <c>ASPNETCORE_ENVIRONMENT</c>. Replicates the wiring logic of
-/// <c>WebApplicationExtensions.ConfigureAuthMiddleware</c> via TestServer to verify the gate
-/// condition without booting the full app (which would require DB/Redis stack).
+/// based on <c>ASPNETCORE_ENVIRONMENT</c>. Rebuilt in #845 to drive the new DB-backed guard
+/// via a stub <see cref="IStagingAllowlistRepository"/>, exercising:
+/// (1) env-conditional registration, (2) auth claim extraction, (3) FAIL-CLOSED semantics
+/// (empty allowlist denies access in Staging).
 /// </summary>
-/// <remarks>
-/// Why TestServer instead of WebApplicationFactory&lt;Program&gt;: Program.cs has heavy startup
-/// dependencies (DbContext, Redis, embedding services). For testing JUST the env-based gate
-/// activation, TestServer with replicated wiring logic gives identical coverage without the
-/// startup cost.
-///
-/// What is replicated from production: the env check (<c>IsEnvironment("Staging")</c>) and
-/// the <c>app.UseMiddleware&lt;StagingAccessMiddleware&gt;()</c> call. What is NOT replicated:
-/// the eager root-container resolve of <see cref="IStagingAccessGuard"/> at startup and the
-/// empty-allowlist warning log (those are tested via unit tests). If you change the
-/// production wiring, this test should be updated to keep the mirror accurate.
-/// </remarks>
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Authentication")]
 public class StagingAccessGateIntegrationTests
@@ -42,12 +33,12 @@ public class StagingAccessGateIntegrationTests
         "staging gate active + email in allowlist => pass")]
     [InlineData("Staging", "allowed@example.com", "blocked@example.com", HttpStatusCode.Forbidden,
         "staging gate active + email NOT in allowlist => 403")]
-    [InlineData("Development", "allowed@example.com", "blocked@example.com", HttpStatusCode.OK,
+    [InlineData("Development", "", "anyone@example.com", HttpStatusCode.OK,
         "dev environment => gate not registered, all authenticated requests pass")]
-    [InlineData("Production", "allowed@example.com", "blocked@example.com", HttpStatusCode.OK,
+    [InlineData("Production", "", "anyone@example.com", HttpStatusCode.OK,
         "prod environment => gate not registered, all authenticated requests pass")]
-    [InlineData("Staging", "", "anyone@example.com", HttpStatusCode.OK,
-        "staging gate active but allowlist empty => default-safe pass-through")]
+    [InlineData("Staging", "", "anyone@example.com", HttpStatusCode.Forbidden,
+        "staging gate active + EMPTY allowlist => FAIL-CLOSED 403 (#845)")]
     public async Task ConditionalGate_OnlyDeniesAuthenticatedRequests_OnStagingWithPopulatedAllowlist(
         string aspNetCoreEnvironment,
         string allowlist,
@@ -66,25 +57,23 @@ public class StagingAccessGateIntegrationTests
     [Fact]
     public async Task ConditionalGate_DoesNotInterfere_WithUnauthenticatedRequests()
     {
-        // Even on Staging with populated allowlist, unauthenticated requests must
-        // pass through the staging gate (auth middleware handles 401 separately).
+        // Unauthenticated requests must pass through the staging gate even with
+        // populated allowlist — the auth middleware handles 401 separately.
         using var server = CreateServer(
             aspNetCoreEnvironment: "Staging",
             allowlist: "allowed@example.com",
-            authenticatedEmail: null /* unauthenticated */);
+            authenticatedEmail: null);
         using var client = server.CreateClient();
 
         var response = await client.GetAsync(new Uri("/probe", UriKind.Relative));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK,
-            "unauthenticated requests must NOT be denied by the staging gate (auth middleware territory)");
+            "unauthenticated requests must NOT be denied by the staging gate");
     }
 
     /// <summary>
-    /// Builds a TestServer that replicates the wiring logic of
-    /// <c>WebApplicationExtensions.ConfigureAuthMiddleware</c>:
-    /// register <see cref="IStagingAccessGuard"/>, then conditionally insert
-    /// <see cref="StagingAccessMiddleware"/> only when environment is "Staging".
+    /// Builds a TestServer that registers the new DB-backed <see cref="StagingAccessGuard"/>
+    /// with a stub <see cref="IStagingAllowlistRepository"/>, mirroring the production wiring.
     /// </summary>
     private static TestServer CreateServer(
         string aspNetCoreEnvironment,
@@ -97,26 +86,20 @@ public class StagingAccessGateIntegrationTests
                 webHost.UseTestServer();
                 webHost.UseEnvironment(aspNetCoreEnvironment);
 
-                webHost.ConfigureAppConfiguration((_, configBuilder) =>
-                {
-                    configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["STAGING_ALLOWED_EMAILS"] = allowlist,
-                        ["Staging:ContactEmail"] = "test-contact@example.com",
-                    });
-                });
-
                 webHost.ConfigureServices(services =>
                 {
+                    services.AddMemoryCache();
+                    services.AddSingleton<IStagingAllowlistRepository>(
+                        new StubAllowlistRepository(ParseAllowlist(allowlist)));
                     services.AddSingleton<IStagingAccessGuard, StagingAccessGuard>();
                 });
 
                 webHost.Configure((context, app) =>
                 {
-                    // Simulate authentication: inject ClaimsPrincipal if email provided
+                    // Simulate authentication
                     app.Use(async (ctx, next) =>
                     {
-                        if (authenticatedEmail != null)
+                        if (authenticatedEmail is not null)
                         {
                             var identity = new ClaimsIdentity(
                                 new[] { new Claim(ClaimTypes.Email, authenticatedEmail) },
@@ -126,9 +109,7 @@ public class StagingAccessGateIntegrationTests
                         await next().ConfigureAwait(false);
                     });
 
-                    // Mirror of WebApplicationExtensions.ConfigureAuthMiddleware staging gate.
-                    // If this block diverges from production, this test is the regression
-                    // signal: the production wiring should be updated too.
+                    // Mirror of WebApplicationExtensions staging gate.
                     if (context.HostingEnvironment.IsEnvironment("Staging"))
                     {
                         app.UseMiddleware<StagingAccessMiddleware>();
@@ -143,5 +124,48 @@ public class StagingAccessGateIntegrationTests
             });
 
         return hostBuilder.Start().GetTestServer();
+    }
+
+    private static IReadOnlySet<string> ParseAllowlist(string csv) =>
+        csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(e => e.ToLowerInvariant())
+            .ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Stub repository returning a fixed set of emails. Only <see cref="GetAllowedEmailsAsync"/>
+    /// is exercised by the guard hot-path; other members throw to surface unintended use.
+    /// </summary>
+    private sealed class StubAllowlistRepository : IStagingAllowlistRepository
+    {
+        private readonly IReadOnlySet<string> _emails;
+
+        public StubAllowlistRepository(IReadOnlySet<string> emails) => _emails = emails;
+
+        public Task<IReadOnlySet<string>> GetAllowedEmailsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(_emails);
+
+        public Task<StagingAllowlistEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<StagingAllowlistEntry>> GetAllAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<StagingAllowlistEntry?> GetByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<bool> ExistsByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task AddAsync(StagingAllowlistEntry entity, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task UpdateAsync(StagingAllowlistEntry entity, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task DeleteAsync(StagingAllowlistEntry entity, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 }

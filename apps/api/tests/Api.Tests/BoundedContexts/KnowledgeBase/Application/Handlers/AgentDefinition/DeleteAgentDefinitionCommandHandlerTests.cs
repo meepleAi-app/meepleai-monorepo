@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
+using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -19,14 +20,16 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers.AgentDefi
 public sealed class DeleteAgentDefinitionCommandHandlerTests
 {
     private readonly Mock<IAgentDefinitionRepository> _mockRepository;
+    private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<ILogger<DeleteAgentDefinitionCommandHandler>> _mockLogger;
     private readonly DeleteAgentDefinitionCommandHandler _handler;
 
     public DeleteAgentDefinitionCommandHandlerTests()
     {
         _mockRepository = new Mock<IAgentDefinitionRepository>();
+        _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockLogger = new Mock<ILogger<DeleteAgentDefinitionCommandHandler>>();
-        _handler = new DeleteAgentDefinitionCommandHandler(_mockRepository.Object, _mockLogger.Object);
+        _handler = new DeleteAgentDefinitionCommandHandler(_mockRepository.Object, _mockUnitOfWork.Object, _mockLogger.Object);
     }
 
     [Fact]

@@ -15,6 +15,6 @@ public enum ResourceType
     /// <summary>Redis cache memory (MB)</summary>
     CacheMemory = 2,
 
-    /// <summary>Qdrant vector database entries</summary>
+    /// <summary>pgvector vector database entries</summary>
     VectorStorage = 3
 }

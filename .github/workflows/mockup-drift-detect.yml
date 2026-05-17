@@ -1,0 +1,295 @@
+name: Mockup Drift Detection
+
+# WS-F.2 (issue #1072, umbrella #1066) — AC-F.4.
+#
+# Triggered on PRs that change files under `admin-mockups/design_files/**`.
+# For each changed mockup that carries an ownership header (WS-F.1) AND
+# whose `@route` matches a route in the WS-C conformity gate ownership map
+# (`apps/web/e2e/visual-conformity/mockup-ownership.bootstrap.json`), the
+# workflow opens or updates a companion `mockup-drift` issue tagged with the
+# affected routes. The issue reminds the reviewer to (a) dispatch the
+# bootstrap-mockup-baselines.yml workflow after the PR merges so the
+# committed baseline matches the new mockup, and (b) re-verify the
+# conformity gate produces an acceptable diff.
+#
+# Cron daily safety net: scans the last 24h of admin-mockups commits and
+# ensures a companion issue exists for each mockup change touching a mapped
+# route. Designed to recover from missed webhook deliveries.
+#
+# SLO: PR-trigger path opens/updates the issue within ~5 minutes of the PR
+# event (AC-F.4 PR-trigger SLO).
+
+on:
+  pull_request:
+    branches:
+      - main-dev
+      - main-staging
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
+    paths:
+      - 'admin-mockups/design_files/**'
+  schedule:
+    # Cron daily 06:00 UTC — safety net for missed webhooks (AC-F.4 fallback).
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      lookback_hours:
+        description: 'How far back to scan for un-covered mockup changes (cron mode only)'
+        required: false
+        default: '24'
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: mockup-drift-detect-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  pr-trigger:
+    name: PR drift companion
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Need full history to compute base..head diff on the PR.
+          fetch-depth: 0
+
+      - name: Identify changed mockups
+        id: changed
+        run: |
+          set -euo pipefail
+          base_sha='${{ github.event.pull_request.base.sha }}'
+          head_sha='${{ github.event.pull_request.head.sha }}'
+          changed=$(git diff --name-only "$base_sha" "$head_sha" -- 'admin-mockups/design_files/*.html' || true)
+          echo "files<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$changed" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          if [ -z "$changed" ]; then
+            echo "No mockup HTML files changed in this PR diff."
+          fi
+
+      - name: Open or update drift companion issue
+        if: steps.changed.outputs.files != ''
+        uses: actions/github-script@v8
+        env:
+          CHANGED_FILES: ${{ steps.changed.outputs.files }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_ACTION: ${{ github.event.action }}
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const { CHANGED_FILES, PR_NUMBER, PR_TITLE, PR_URL, PR_ACTION, PR_MERGED } = process.env;
+
+            const changedFiles = CHANGED_FILES.trim().split('\n').filter(Boolean);
+            if (changedFiles.length === 0) {
+              core.info('No changed mockup files; skipping.');
+              return;
+            }
+            core.info(`Changed mockups: ${changedFiles.join(', ')}`);
+
+            // Load WS-C ownership map (route → mockup binding).
+            const ownershipPath = 'apps/web/e2e/visual-conformity/mockup-ownership.bootstrap.json';
+            if (!fs.existsSync(ownershipPath)) {
+              core.warning(`${ownershipPath} not found — no conformity-mapped routes; skipping issue creation.`);
+              return;
+            }
+            const ownership = JSON.parse(fs.readFileSync(ownershipPath, 'utf8'));
+
+            // For each changed mockup file, find matching ownership entries.
+            const mappedHits = [];
+            for (const file of changedFiles) {
+              const mockupBase = path.basename(file);
+              const matches = ownership.routes.filter(r => r.mockup === mockupBase);
+              for (const m of matches) {
+                mappedHits.push({ file, route: m });
+              }
+            }
+
+            if (mappedHits.length === 0) {
+              core.notice(
+                `Changed ${changedFiles.length} mockup file(s) but none are mapped in ` +
+                `WS-C conformity gate ownership. No companion issue needed.`
+              );
+              return;
+            }
+
+            const markerTag = `<!-- mockup-drift-pr: ${PR_NUMBER} -->`;
+            const routeIds = mappedHits.map(h => h.route.id).sort().filter((v, i, a) => a.indexOf(v) === i);
+
+            // Search for an existing companion issue for this PR.
+            const { data: existing } = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${context.repo.owner}/${context.repo.repo} is:issue label:mockup-drift in:body "${markerTag}"`,
+            });
+
+            // PR merged event: do not create new issues — only nudge existing companion.
+            if (PR_ACTION === 'closed' && PR_MERGED === 'true') {
+              if (existing.total_count === 0) return;
+              const issue = existing.items[0];
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body:
+                  `PR ${PR_URL} merged. **Next steps**:\n\n` +
+                  `1. Dispatch the [\`Conformity — Bootstrap Mockup Baselines\`](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/workflows/bootstrap-mockup-baselines.yml) workflow with reason "mockup drift from PR #${PR_NUMBER}" so the committed \`__mockup__/*.png\` reflect the new mockup.\n` +
+                  `2. Verify the conformity gate produces an acceptable diff on the next route-change PR; if not, open a remediation PR.\n` +
+                  `3. Close this issue when the baselines are regenerated AND the gate is green.`,
+              });
+              return;
+            }
+
+            // PR closed-unmerged: auto-close companion.
+            if (PR_ACTION === 'closed' && PR_MERGED === 'false') {
+              if (existing.total_count === 0) return;
+              const issue = existing.items[0];
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `closed_by: auto-cancelled, PR #${PR_NUMBER} closed without merge.`,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+                state_reason: 'not_planned',
+              });
+              return;
+            }
+
+            // opened/synchronize/reopened: create or comment-update.
+            const body =
+              `${markerTag}\n\n` +
+              `## Mockup drift companion — PR #${PR_NUMBER}\n\n` +
+              `PR [${PR_TITLE}](${PR_URL}) changes mockup HTML that is mapped to the WS-C conformity gate ownership.\n\n` +
+              `### Changed mockups (mapped to conformity gate)\n\n` +
+              `| Mockup | Route id | Live path |\n|--------|---------|-----------|\n` +
+              mappedHits.map(h => `| \`${path.basename(h.file)}\` | \`${h.route.id}\` | \`${h.route.livePath}\` |`).join('\n') +
+              `\n\n` +
+              `### Reviewer checklist\n\n` +
+              `- [ ] Inspect the mockup diff for intentional vs accidental changes\n` +
+              `- [ ] After PR merge: dispatch \`bootstrap-mockup-baselines.yml\` so \`__mockup__/*.png\` matches the new mockup\n` +
+              `- [ ] Verify the conformity gate diff on the **next route-change PR** is within budget. If not, file a remediation PR.\n` +
+              `- [ ] Close this issue once baselines are committed AND conformity gate is green\n\n` +
+              `Refs: #1066 (umbrella), #1072 (WS-F), AC-F.4.`;
+
+            if (existing.total_count > 0) {
+              const issue = existing.items[0];
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body,
+              });
+              core.notice(`Updated companion issue #${issue.number}.`);
+            } else {
+              const { data: created } = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `[mockup-drift] PR #${PR_NUMBER} touches ${routeIds.join(', ')}`,
+                body,
+                labels: ['mockup-drift', 'area/frontend'],
+              });
+              core.notice(`Created companion issue #${created.number} for PR #${PR_NUMBER}.`);
+            }
+
+  cron-fallback:
+    name: Cron daily fallback
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Scan recent mockup-touching merges without companion
+        uses: actions/github-script@v8
+        env:
+          LOOKBACK_HOURS: ${{ github.event.inputs.lookback_hours || '24' }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const lookbackHours = Number(process.env.LOOKBACK_HOURS);
+            const sinceIso = new Date(Date.now() - lookbackHours * 3600 * 1000).toISOString();
+            core.info(`Cron fallback: looking back ${lookbackHours}h (since ${sinceIso}).`);
+
+            const ownershipPath = 'apps/web/e2e/visual-conformity/mockup-ownership.bootstrap.json';
+            if (!fs.existsSync(ownershipPath)) {
+              core.warning(`${ownershipPath} not found — exiting cron fallback.`);
+              return;
+            }
+            const ownership = JSON.parse(fs.readFileSync(ownershipPath, 'utf8'));
+            const mappedMockups = new Set(ownership.routes.map(r => r.mockup));
+
+            // List merged PRs in the lookback window that touch admin-mockups/design_files/**
+            // (gh search is the simplest API; for very high-volume repos we'd page).
+            const { data: search } = await github.rest.search.issuesAndPullRequests({
+              q:
+                `repo:${context.repo.owner}/${context.repo.repo} is:pr is:merged ` +
+                `merged:>=${sinceIso.slice(0, 10)}`,
+              per_page: 100,
+            });
+            core.info(`Found ${search.total_count} merged PR(s) in lookback window.`);
+
+            let nudged = 0;
+            for (const pr of search.items) {
+              const { data: files } = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+              });
+              const mockupHits = files
+                .filter(f => f.filename.startsWith('admin-mockups/design_files/') && f.filename.endsWith('.html'))
+                .filter(f => mappedMockups.has(path.basename(f.filename)));
+              if (mockupHits.length === 0) continue;
+
+              const markerTag = `<!-- mockup-drift-pr: ${pr.number} -->`;
+              const { data: existing } = await github.rest.search.issuesAndPullRequests({
+                q: `repo:${context.repo.owner}/${context.repo.repo} is:issue label:mockup-drift in:body "${markerTag}"`,
+              });
+              if (existing.total_count > 0) continue;
+
+              // No companion exists — create one retroactively.
+              const routes = ownership.routes
+                .filter(r => mockupHits.some(h => path.basename(h.filename) === r.mockup))
+                .map(r => r.id);
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `[mockup-drift] PR #${pr.number} (cron fallback) — ${routes.join(', ')}`,
+                body:
+                  `${markerTag}\n\n` +
+                  `## Mockup drift companion — created by cron fallback\n\n` +
+                  `The PR-trigger workflow did not post a companion for merged PR #${pr.number}, ` +
+                  `but the cron fallback detected mockup changes touching conformity-mapped routes. ` +
+                  `Treat this as if it had been opened during the PR review (AC-F.4 fallback path).\n\n` +
+                  `### Routes affected\n\n${routes.map(r => `- \`${r}\``).join('\n')}\n\n` +
+                  `### Next steps\n\n` +
+                  `1. Dispatch \`bootstrap-mockup-baselines.yml\` with reason "mockup drift from PR #${pr.number} (cron retroactive)".\n` +
+                  `2. Verify conformity gate on next route-change PR is within budget.\n` +
+                  `3. Close this issue once baselines committed + gate green.\n\n` +
+                  `Refs: #1066, #1072, AC-F.4.`,
+                labels: ['mockup-drift', 'area/frontend'],
+              });
+              nudged += 1;
+            }
+            if (nudged > 0) {
+              core.notice(`Cron fallback created ${nudged} retroactive companion issue(s).`);
+            } else {
+              core.info('Cron fallback: no missed drift companions found.');
+            }

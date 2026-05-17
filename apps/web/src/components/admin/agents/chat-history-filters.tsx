@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { useState } from 'react';
@@ -48,7 +49,7 @@ export function ChatHistoryFilters({
   };
 
   return (
-    <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-white/20 dark:border-zinc-700/40 shadow-lg">
+    <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-border dark:border-zinc-700/40 shadow-lg">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Agent */}
         <div>
@@ -56,7 +57,7 @@ export function ChatHistoryFilters({
             Agent
           </Label>
           <Select value={agent} onValueChange={handleAgentChange}>
-            <SelectTrigger id="agent-filter" className="bg-white/90 dark:bg-zinc-900">
+            <SelectTrigger id="agent-filter" className="bg-card/90 dark:bg-zinc-900">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -79,7 +80,7 @@ export function ChatHistoryFilters({
             type="date"
             value={date}
             onChange={e => handleDateChange(e.target.value)}
-            className="bg-white/90 dark:bg-zinc-900"
+            className="bg-card/90 dark:bg-zinc-900"
           />
         </div>
 
@@ -89,7 +90,7 @@ export function ChatHistoryFilters({
             Min Satisfaction
           </Label>
           <Select value={minSatisfaction} onValueChange={handleSatisfactionChange}>
-            <SelectTrigger id="satisfaction-filter" className="bg-white/90 dark:bg-zinc-900">
+            <SelectTrigger id="satisfaction-filter" className="bg-card/90 dark:bg-zinc-900">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

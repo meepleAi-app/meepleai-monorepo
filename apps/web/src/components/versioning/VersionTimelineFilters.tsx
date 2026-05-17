@@ -48,7 +48,7 @@ export const VersionTimelineFilters: React.FC<VersionTimelineFiltersProps> = ({
   };
 
   return (
-    <div className="bg-gray-50 rounded-lg p-4 mb-6">
+    <div className="bg-muted rounded-lg p-4 mb-6">
       <div className="flex flex-wrap gap-4 items-end">
         {/* Date Range */}
         <div className="flex gap-2">

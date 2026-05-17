@@ -1,706 +1,258 @@
+/**
+ * DashboardClient — Stage 3 cluster orchestrator for `/dashboard` (Issue #1164).
+ *
+ * REFACTOR-FORWARD replacement of PR #309 (chat/session-centric, 749 LOC) per
+ * spec `docs/superpowers/specs/2026-05-14-stage3-dashboard.md`.
+ *
+ * Composes Hero + 5 entity sections (Games / Players / Agents / Sessions /
+ * Events) in a responsive grid (mobile stacked, desktop 2×2 + Events full-width
+ * row). Players are derived from `useActiveSessions` (no list endpoint).
+ *
+ * Pattern: pure orchestrator, no business logic. Each section is a sibling
+ * route-private component under `_components/sections/`.
+ */
+
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useCallback, useMemo, type ReactElement } from 'react';
 
 import { useAuth } from '@/components/auth/AuthProvider';
-import { EntityZone } from '@/components/dashboard/EntityZone';
-import { GreetingStrip } from '@/components/dashboard/GreetingStrip';
-import { OwnershipConfirmDialog } from '@/components/dialogs/OwnershipConfirmDialog';
-import { HubLayout, type FilterChip } from '@/components/layout/HubLayout';
-import { MeepleCard } from '@/components/ui/data-display/meeple-card';
-import type { MeepleCardProps, MeepleEntityType } from '@/components/ui/data-display/meeple-card';
-import type { ManaPip } from '@/components/ui/data-display/meeple-card/parts/ManaPips';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useAgents } from '@/hooks/queries/useAgents';
-import { useBatchGameStatus } from '@/hooks/queries/useBatchGameStatus';
+import { useUpcomingGameNights } from '@/hooks/queries/useGameNights';
 import { useGames } from '@/hooks/queries/useGames';
-import { useAddGameToLibrary, useLibrary } from '@/hooks/queries/useLibrary';
-import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
-import { useRecentsStore } from '@/stores/use-recents';
+import { useLibraryStats } from '@/hooks/queries/useLibrary';
+import { useTranslation } from '@/hooks/useTranslation';
+import { trackEvent } from '@/lib/analytics/track-event';
 
-// ---------------------------------------------------------------------------
-// Filter chip definitions
-// ---------------------------------------------------------------------------
+import { DashboardHero, type DashboardHeroKpi } from './_components/DashboardHero';
+import { AgentsCompactGrid } from './_components/sections/AgentsCompactGrid';
+import { EventsList, type EventListItem } from './_components/sections/EventsList';
+import { GamesCarousel } from './_components/sections/GamesCarousel';
+import { PlayersAvatarList, type PlayerEntry } from './_components/sections/PlayersAvatarList';
+import {
+  SessionsTimeline,
+  type SessionTimelineItem,
+} from './_components/sections/SessionsTimeline';
 
-const GAMES_FILTERS: FilterChip[] = [
-  { id: 'all', label: 'Tutti' },
-  { id: 'recent', label: 'Recenti' },
-];
+const SESSION_STATUS_MAP: Record<string, SessionTimelineItem['status']> = {
+  InProgress: 'live',
+  Live: 'live',
+  Active: 'live',
+  Completed: 'completed',
+  Paused: 'paused',
+  Setup: 'setup',
+  Abandoned: 'abandoned',
+};
 
-// Catalog view (new-user) has no server-side sort by date — only "Tutti" makes sense
-const CATALOG_FILTERS: FilterChip[] = [{ id: 'all', label: 'Tutti' }];
-
-const SESSIONS_FILTERS: FilterChip[] = [
-  { id: 'all', label: 'Tutte' },
-  { id: 'active', label: 'Attive' },
-  { id: 'recent', label: 'Recenti' },
-];
-
-const AGENTS_FILTERS: FilterChip[] = [
-  { id: 'all', label: 'Tutti' },
-  { id: 'active', label: 'Attivi' },
-];
-
-// ---------------------------------------------------------------------------
-// Toolkit tools (static — no API required)
-// ---------------------------------------------------------------------------
-
-const TOOLKIT_TOOLS = [
-  { id: 'dice', icon: '🎲', name: 'Dado', desc: 'Lancia d4–d20' },
-  { id: 'timer', icon: '⏳', name: 'Clessidra', desc: 'Timer per turno' },
-  { id: 'score', icon: '📊', name: 'Scoreboard', desc: 'Punteggi multi-player' },
-  { id: 'token', icon: '🪙', name: 'Token', desc: 'Contatori risorse' },
-] as const;
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-function LoadingSkeleton({ count }: { count: number }) {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="h-40 rounded-xl bg-muted animate-pulse" />
-      ))}
-    </div>
-  );
+function mapSessionStatus(raw: string): SessionTimelineItem['status'] {
+  return SESSION_STATUS_MAP[raw] ?? 'completed';
 }
 
-// CTA for empty sections (sessions, agents)
-interface CtaAction {
-  label: string;
-  href: string;
-  primary?: boolean;
+function computeInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function EmptyCTA({
-  icon,
-  title,
-  sub,
-  actions,
-}: {
-  icon: string;
-  title: string;
-  sub: string;
-  actions: CtaAction[];
-}) {
-  return (
-    <div
-      className="flex flex-col items-center gap-3 py-6 px-4 text-center
-                 rounded-xl border border-dashed border-[rgba(180,130,80,0.25)] dark:border-[rgba(180,130,80,0.4)]
-                 bg-card"
-    >
-      <span className="text-3xl">{icon}</span>
-      <div>
-        <p className="font-[Quicksand] font-bold text-sm text-foreground">{title}</p>
-        <p className="text-xs text-muted-foreground/60 mt-1 max-w-[240px] mx-auto leading-relaxed">
-          {sub}
-        </p>
-      </div>
-      <div className="flex gap-2 flex-wrap justify-center">
-        {actions.map(a => (
-          <Link
-            key={a.href}
-            href={a.href}
-            className={
-              a.primary
-                ? 'inline-flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold font-[Quicksand] bg-amber-600 text-white shadow-[0_2px_8px_rgba(180,100,20,.25)]'
-                : 'inline-flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs font-bold font-[Quicksand] border border-amber-600 text-amber-600'
-            }
-          >
-            {a.label}
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
+function colorIndexFromName(name: string): number {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  return Math.abs(hash);
 }
 
-function MeepleCardGrid({
-  items,
-  isLoading,
-  emptyNode,
-}: {
-  items: MeepleCardProps[];
-  isLoading: boolean;
-  emptyNode?: React.ReactNode;
-}) {
-  if (isLoading) return <LoadingSkeleton count={6} />;
-  if (items.length === 0) {
-    if (emptyNode) return <>{emptyNode}</>;
-    return (
-      <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground/60">
-        <p className="text-sm font-medium">Nessun elemento.</p>
-      </div>
-    );
-  }
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-      {items.map(item => (
-        <MeepleCard key={item.id ?? item.title} {...item} />
-      ))}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Catalog games for new user — with "Aggiungi" button overlay
-// ---------------------------------------------------------------------------
-
-function CatalogGameCard({
-  game,
-  inLibrary,
-  onAdd,
-  adding,
-  hasKb,
-}: {
-  game: {
-    id: string;
-    title: string;
-    publisher?: string | null;
-    imageUrl?: string | null;
-    averageRating?: number | null;
-  };
-  inLibrary: boolean;
-  onAdd: (gameId: string) => void;
-  adding: boolean;
-  hasKb?: boolean;
-}) {
-  return (
-    <div
-      className="bg-card border border-border
-                 rounded-xl shadow-sm overflow-hidden flex flex-col"
-    >
-      {/* Thumbnail */}
-      <div className="relative h-[68px] flex items-center justify-center bg-gradient-to-br from-[#fdf0e0] to-[#fce8cc] dark:from-[hsl(25,20%,18%)] dark:to-[hsl(30,15%,15%)] overflow-hidden flex-shrink-0">
-        {game.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={game.imageUrl} alt={game.title} className="w-full h-full object-cover" />
-        ) : (
-          <span className="text-3xl select-none">🎲</span>
-        )}
-        {hasKb !== undefined && (
-          <span
-            className={`absolute top-1 right-1 px-1.5 py-0.5 rounded text-[8px] font-extrabold font-[Quicksand] text-white leading-none ${hasKb ? 'bg-green-500' : 'bg-muted-foreground/60'}`}
-          >
-            {hasKb ? 'KB ✓' : 'KB –'}
-          </span>
-        )}
-      </div>
-
-      {/* Info */}
-      <div className="px-2 pt-1.5 pb-1 flex-1 min-h-0">
-        <p
-          className="font-[Quicksand] font-bold text-[11px] leading-tight
-                     overflow-hidden line-clamp-2 text-foreground"
-        >
-          {game.title}
-        </p>
-        {game.publisher && (
-          <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{game.publisher}</p>
-        )}
-      </div>
-
-      {/* Add button */}
-      <button
-        onClick={() => !inLibrary && !adding && onAdd(game.id)}
-        disabled={inLibrary || adding}
-        aria-label={
-          inLibrary ? `${game.title} già in libreria` : `Aggiungi ${game.title} alla libreria`
-        }
-        className={
-          inLibrary
-            ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-muted text-muted-foreground/60 cursor-default'
-            : adding
-              ? 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-black/20 dark:bg-white/20 text-white cursor-wait'
-              : 'mx-1.5 mb-1.5 h-[22px] rounded-lg text-[10px] font-bold font-[Quicksand] flex items-center justify-center gap-1 bg-amber-600 text-white hover:opacity-90 active:scale-95 transition-transform'
-        }
-      >
-        <span className="text-xs leading-none">＋</span>
-        {inLibrary ? 'In libreria' : adding ? '…' : 'Aggiungi'}
-      </button>
-    </div>
-  );
-}
-
-function NewUserGamesBlock({
-  search,
-  onSearchChange,
-  filter,
-  onFilterChange,
-}: {
-  search: string;
-  onSearchChange: (v: string) => void;
-  filter: string;
-  onFilterChange: (v: string) => void;
-}) {
-  const { data: catalogData, isLoading } = useGames(undefined, undefined, 1, 20);
-  // Sort client-side by rating descending, take top 12
-  const games = useMemo(
-    () =>
-      [...(catalogData?.games ?? [])]
-        .sort((a, b) => {
-          // KB completeness first (spec annotation 1: "ordinati per KB completeness")
-          const aKb = a.hasKnowledgeBase ? 1 : 0;
-          const bKb = b.hasKnowledgeBase ? 1 : 0;
-          if (bKb !== aKb) return bKb - aKb;
-          return (b.averageRating ?? 0) - (a.averageRating ?? 0);
-        })
-        .slice(0, 12),
-    [catalogData]
-  );
-
-  const gameIds = useMemo(() => games.map(g => g.id), [games]);
-  const { data: batchStatus } = useBatchGameStatus(gameIds, gameIds.length > 0);
-
-  const addMutation = useAddGameToLibrary();
-  const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
-  const [confirmGame, setConfirmGame] = useState<{ id: string; title: string } | null>(null);
-  const router = useRouter();
-
-  const handleAdd = (gameId: string) => {
-    const game = games.find(g => g.id === gameId);
-    if (!game) return;
-    setConfirmGame({ id: game.id, title: game.title });
-  };
-
-  const handleConfirmOwnership = () => {
-    if (!confirmGame) return;
-    setAddingIds(prev => new Set(prev).add(confirmGame.id));
-    addMutation.mutate(
-      { gameId: confirmGame.id },
-      {
-        onSuccess: () => {
-          setAddingIds(prev => {
-            const next = new Set(prev);
-            next.delete(confirmGame.id);
-            return next;
-          });
-          setConfirmGame(null);
-          router.push(`/games/${confirmGame.id}`);
-        },
-        onError: () => {
-          setAddingIds(prev => {
-            const next = new Set(prev);
-            next.delete(confirmGame.id);
-            return next;
-          });
-        },
-      }
-    );
-  };
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return games;
-    const q = search.toLowerCase();
-    return games.filter(
-      g => g.title.toLowerCase().includes(q) || g.publisher?.toLowerCase().includes(q)
-    );
-  }, [games, search]);
-
-  return (
-    <HubLayout
-      searchPlaceholder="Cerca giochi..."
-      searchValue={search}
-      onSearchChange={onSearchChange}
-      filterChips={CATALOG_FILTERS}
-      activeFilterId={filter}
-      onFilterChange={onFilterChange}
-    >
-      {isLoading ? (
-        <LoadingSkeleton count={6} />
-      ) : (
-        <>
-          <p className="text-xs text-muted-foreground/60 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 rounded-lg px-3 py-2 mb-3 font-medium">
-            💡 Libreria vuota — ecco i top giochi dal catalogo. Aggiungili per iniziare!
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {filtered.map(game => {
-              const status = batchStatus?.results?.[game.id];
-              const inLibrary = status?.inLibrary ?? false;
-              return (
-                <CatalogGameCard
-                  key={game.id}
-                  game={game}
-                  inLibrary={inLibrary}
-                  onAdd={handleAdd}
-                  adding={addingIds.has(game.id)}
-                  hasKb={game.hasKnowledgeBase}
-                />
-              );
-            })}
-          </div>
-        </>
-      )}
-      <OwnershipConfirmDialog
-        open={!!confirmGame}
-        onOpenChange={open => {
-          if (!open) setConfirmGame(null);
-        }}
-        gameTitle={confirmGame?.title ?? ''}
-        onConfirm={handleConfirmOwnership}
-        confirming={addMutation.isPending}
-      />
-    </HubLayout>
-  );
-}
-
-function ToolkitGrid() {
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {TOOLKIT_TOOLS.map(tool => (
-        <Link
-          key={tool.id}
-          href={`/toolkit?tool=${tool.id}`}
-          className="flex flex-col items-center gap-1.5 rounded-xl border border-[hsl(142,30%,88%)] bg-[hsl(142,30%,96%)] p-4 text-center transition-all hover:-translate-y-0.5 hover:border-[hsl(142,70%,45%)] hover:shadow-md dark:border-[hsl(142,30%,25%)] dark:bg-[hsl(142,20%,12%)] dark:hover:border-[hsl(142,70%,40%)]"
-        >
-          <span className="text-[28px]">{tool.icon}</span>
-          <span className="font-quicksand text-[13px] font-bold text-[hsl(142,50%,30%)] dark:text-[hsl(142,50%,65%)]">
-            {tool.name}
-          </span>
-          <span className="text-[11px] text-muted-foreground">{tool.desc}</span>
-        </Link>
-      ))}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main DashboardClient
-// ---------------------------------------------------------------------------
-
-export function DashboardClient() {
+export function DashboardClient(): ReactElement {
+  const { t } = useTranslation();
   const { user } = useAuth();
-  const router = useRouter();
-  const displayName = user?.displayName ?? 'giocatore';
 
-  const [gamesSearch, setGamesSearch] = useState('');
-  const [gamesFilter, setGamesFilter] = useState('all');
+  // ── Data hooks ────────────────────────────────────────────────────────────
+  const gamesQuery = useGames(undefined, undefined, 1, 20);
+  const sessionsQuery = useActiveSessions(10);
+  const agentsQuery = useAgents();
+  const eventsQuery = useUpcomingGameNights();
+  const statsQuery = useLibraryStats();
 
-  const [sessionsSearch, setSessionsSearch] = useState('');
-  const [sessionsFilter, setSessionsFilter] = useState('all');
-
-  const [agentsSearch, setAgentsSearch] = useState('');
-  const [agentsFilter, setAgentsFilter] = useState('all');
-
-  useMiniNavConfig(
-    useMemo(
-      () => ({
-        breadcrumb: 'Home',
-        tabs: [{ id: 'overview', label: 'Overview', href: '/dashboard' }],
-        activeTabId: 'overview',
-      }),
-      []
-    )
-  );
-
-  // Register this page in recents for cross-page context memory
-  useEffect(() => {
-    useRecentsStore.getState().push({
-      id: 'section-dashboard',
-      entity: 'game',
-      title: 'Home',
-      href: '/dashboard',
-    });
-  }, []);
-
-  // Data fetching
-  const { data: libraryData, isLoading: libraryLoading } = useLibrary({ page: 1, pageSize: 12 });
-  const { data: sessionsData, isLoading: sessionsLoading } = useActiveSessions();
-  const { data: agentsData, isLoading: agentsLoading } = useAgents({ activeOnly: false });
-
-  // Detect new user: library loaded with no items
-  const isNewUser = !libraryLoading && (libraryData?.items ?? []).length === 0;
-
-  // ---------------------------------------------------------------------------
-  // Library → MeepleCardProps
-  // ---------------------------------------------------------------------------
-
-  const gameItems: MeepleCardProps[] = useMemo(() => {
-    const entries = libraryData?.items ?? [];
-    return entries.map(entry => {
-      const gameId = entry.gameId;
-      const manaPips: ManaPip[] = [
-        {
-          entityType: 'session',
-          count: 0,
-          onCreate: () =>
-            router.push(
-              `/sessions/new?gameId=${gameId}&gameName=${encodeURIComponent(entry.gameTitle)}`
-            ),
-          createLabel: 'Nuova sessione',
-        },
-        {
-          entityType: 'kb',
-          count: 0,
-          onCreate: () => router.push(`/games/${gameId}`),
-          createLabel: 'Carica documento',
-        },
-        {
-          entityType: 'agent',
-          count: 0,
-          onCreate: () => router.push(`/chat?gameId=${gameId}`),
-          createLabel: 'Crea agente',
-        },
-      ];
-      return {
-        id: entry.id,
-        entity: 'game' as MeepleEntityType,
-        title: entry.gameTitle,
-        subtitle: entry.gamePublisher ?? undefined,
-        imageUrl: entry.gameImageUrl ?? undefined,
-        rating: entry.averageRating ?? undefined,
-        variant: 'grid',
-        manaPips,
-      };
-    });
-  }, [libraryData, router]);
-
-  const filteredGameItems = useMemo(() => {
-    let result = gameItems;
-    if (gamesSearch.trim()) {
-      const q = gamesSearch.toLowerCase();
-      result = result.filter(
-        g => g.title.toLowerCase().includes(q) || g.subtitle?.toLowerCase().includes(q)
-      );
-    }
-    return result;
-  }, [gameItems, gamesSearch]);
-
-  // ---------------------------------------------------------------------------
-  // Sessions → MeepleCardProps
-  // ---------------------------------------------------------------------------
-
-  const sessionItems: MeepleCardProps[] = useMemo(() => {
-    const sessions = sessionsData?.sessions ?? [];
-    return sessions.map(session => {
-      const manaPips: ManaPip[] = [
-        {
-          entityType: 'game',
-          count: 1,
-          items: [
-            {
-              id: session.gameId,
-              label: session.gameId.slice(0, 8),
-              href: `/games/${session.gameId}`,
-            },
-          ],
-        },
-        {
-          entityType: 'player',
-          count: session.playerCount ?? 0,
-          items: (session.players ?? []).map(p => ({
-            id: p.playerName,
-            label: p.playerName,
-            href: `/sessions/${session.id}`,
-          })),
-        },
-      ];
-      return {
-        id: session.id,
-        entity: 'session' as MeepleEntityType,
-        title: `Sessione ${session.id.slice(0, 8)}`,
-        subtitle: session.status,
-        variant: 'grid',
-        manaPips,
-        status:
-          session.status.toLowerCase() === 'inprogress'
-            ? ('inprogress' as const)
-            : session.status.toLowerCase() === 'paused'
-              ? ('paused' as const)
-              : session.status.toLowerCase() === 'setup'
-                ? ('setup' as const)
-                : undefined,
-      };
-    });
-  }, [sessionsData]);
-
-  const filteredSessionItems = useMemo(() => {
-    let result = sessionItems;
-    if (sessionsSearch.trim()) {
-      const q = sessionsSearch.toLowerCase();
-      result = result.filter(s => s.title.toLowerCase().includes(q));
-    }
-    if (sessionsFilter === 'active') {
-      result = result.filter(s => s.status === 'inprogress' || s.status === 'setup');
-    }
-    return result;
-  }, [sessionItems, sessionsSearch, sessionsFilter]);
-
-  // ---------------------------------------------------------------------------
-  // Agents → MeepleCardProps
-  // ---------------------------------------------------------------------------
-
-  const agentItems: MeepleCardProps[] = useMemo(() => {
-    const agents: Array<{
-      id: string;
-      name: string;
-      type: string;
-      isActive: boolean;
-      gameId?: string | null;
-      gameName?: string | null;
-    }> = Array.isArray(agentsData) ? agentsData : [];
-    return agents.map(agent => {
-      const manaPips: ManaPip[] = [];
-      if (agent.gameId) {
-        manaPips.push({
-          entityType: 'game',
-          count: 1,
-          items: [
-            {
-              id: agent.gameId,
-              label: agent.gameName ?? agent.gameId.slice(0, 8),
-              href: `/games/${agent.gameId}`,
-            },
-          ],
+  // ── Derive Players from sessions (no list endpoint per AC0 Path C) ───────
+  const players = useMemo<ReadonlyArray<PlayerEntry>>(() => {
+    const sessions = sessionsQuery.data?.sessions ?? [];
+    const seen = new Map<string, PlayerEntry>();
+    for (const session of sessions) {
+      for (const player of session.players ?? []) {
+        const name = player.playerName;
+        if (!name || seen.has(name)) continue;
+        seen.set(name, {
+          name,
+          initials: computeInitials(name),
+          colorIndex: colorIndexFromName(name),
         });
       }
-      manaPips.push({
-        entityType: 'chat',
-        count: 0,
-        onCreate: () => router.push(`/chat?agentId=${agent.id}`),
-        createLabel: 'Avvia chat',
-      });
-      return {
-        id: agent.id,
-        entity: 'agent' as MeepleEntityType,
-        title: agent.name,
-        subtitle: agent.type,
-        variant: 'grid',
-        manaPips,
-        status: agent.isActive ? ('active' as const) : ('idle' as const),
-      };
-    });
-  }, [agentsData, router]);
-
-  const filteredAgentItems = useMemo(() => {
-    let result = agentItems;
-    if (agentsSearch.trim()) {
-      const q = agentsSearch.toLowerCase();
-      result = result.filter(
-        a => a.title.toLowerCase().includes(q) || a.subtitle?.toLowerCase().includes(q)
-      );
     }
-    if (agentsFilter === 'active') {
-      result = result.filter(a => a.status === 'active');
-    }
-    return result;
-  }, [agentItems, agentsSearch, agentsFilter]);
+    return Array.from(seen.values());
+  }, [sessionsQuery.data]);
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
+  // ── Map sessions to timeline items ───────────────────────────────────────
+  const sessionItems = useMemo<ReadonlyArray<SessionTimelineItem>>(() => {
+    const sessions = sessionsQuery.data?.sessions ?? [];
+    const games = gamesQuery.data?.games ?? [];
+    const gameById = new Map(games.map(g => [g.id, g.title]));
+    return sessions.map(s => ({
+      id: s.id,
+      title: gameById.get(s.gameId) ?? t('pages.dashboard.sections.sessions.untitled'),
+      status: mapSessionStatus(s.status),
+      playerCount: s.playerCount,
+      durationMinutes: s.durationMinutes ?? null,
+    }));
+  }, [sessionsQuery.data, gamesQuery.data, t]);
 
-  // Build stats for greeting strip
-  const stats = {
-    games: gameItems.length,
-    sessions: sessionItems.length,
-    agents: agentItems.length,
+  // ── Map events to list items ─────────────────────────────────────────────
+  const eventItems = useMemo<ReadonlyArray<EventListItem>>(() => {
+    const events = eventsQuery.data ?? [];
+    return events.map(e => ({
+      id: e.id,
+      title: e.title,
+      startsAt: e.scheduledAt,
+      location: e.location,
+      confirmedCount: e.acceptedCount,
+      pendingCount: e.pendingCount,
+    }));
+  }, [eventsQuery.data]);
+
+  // ── KPI assembly ──────────────────────────────────────────────────────────
+  const kpi = useMemo<DashboardHeroKpi>(
+    () => ({
+      games: statsQuery.data?.totalGames ?? 0,
+      sessions: sessionsQuery.data?.total ?? undefined,
+      // Hours-played and win-rate not yet exposed by useLibraryStats — fallback.
+      hoursPlayed: undefined,
+      winRate: undefined,
+    }),
+    [statsQuery.data, sessionsQuery.data]
+  );
+
+  // ── Telemetry handlers ────────────────────────────────────────────────────
+  const handleSectionViewAll = useCallback((sectionId: string, viewAllHref: string) => {
+    trackEvent('dashboard_view_all_clicked', { section: sectionId, viewAllHref });
+  }, []);
+
+  const handleEmptyCta = useCallback((sectionId: string, ctaHref: string) => {
+    trackEvent('dashboard_empty_cta_clicked', { section: sectionId, ctaHref });
+  }, []);
+
+  // ── Hero labels ───────────────────────────────────────────────────────────
+  const heroLabels = {
+    greetingMorning: t('pages.dashboard.hero.greetingMorning'),
+    greetingAfternoon: t('pages.dashboard.hero.greetingAfternoon'),
+    greetingEvening: t('pages.dashboard.hero.greetingEvening'),
+    subtitle: t('pages.dashboard.hero.subtitle'),
+    kpiGames: t('pages.dashboard.hero.kpiGames'),
+    kpiSessions: t('pages.dashboard.hero.kpiSessions'),
+    kpiHours: t('pages.dashboard.hero.kpiHours'),
+    kpiWinRate: t('pages.dashboard.hero.kpiWinRate'),
   };
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-7 px-4 pb-24 pt-4">
-      <GreetingStrip displayName={displayName} stats={stats} />
+    <main
+      data-slot="dashboard-client"
+      className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-4 sm:gap-5 sm:px-6 sm:py-6"
+    >
+      <DashboardHero
+        userName={user?.displayName ?? user?.email ?? t('pages.dashboard.hero.guestName')}
+        kpi={kpi}
+        labels={heroLabels}
+      />
 
-      {/* Games zone (orange) */}
-      <EntityZone entity="game" title="Giochi" count={gameItems.length} viewAllHref="/games">
-        {isNewUser ? (
-          <NewUserGamesBlock
-            search={gamesSearch}
-            onSearchChange={setGamesSearch}
-            filter={gamesFilter}
-            onFilterChange={setGamesFilter}
-          />
-        ) : (
-          <HubLayout
-            searchPlaceholder="Cerca giochi..."
-            searchValue={gamesSearch}
-            onSearchChange={setGamesSearch}
-            filterChips={GAMES_FILTERS}
-            activeFilterId={gamesFilter}
-            onFilterChange={setGamesFilter}
-          >
-            <MeepleCardGrid items={filteredGameItems} isLoading={libraryLoading} />
-          </HubLayout>
-        )}
-      </EntityZone>
-
-      {/* Sessions zone (indigo) — horizontal scroll */}
-      <EntityZone
-        entity="session"
-        title="Sessioni"
-        count={sessionItems.length}
-        viewAllHref="/sessions"
+      <div
+        data-slot="dashboard-sections-grid"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4"
       >
-        <HubLayout
-          searchPlaceholder="Filtra per stato..."
-          searchValue={sessionsSearch}
-          onSearchChange={setSessionsSearch}
-          filterChips={SESSIONS_FILTERS}
-          activeFilterId={sessionsFilter}
-          onFilterChange={setSessionsFilter}
-        >
-          {sessionsLoading ? (
-            <LoadingSkeleton count={4} />
-          ) : filteredSessionItems.length === 0 ? (
-            <EmptyCTA
-              icon="🎯"
-              title="Nessuna sessione"
-              sub="Inizia una nuova partita e traccia i tuoi progressi in tempo reale."
-              actions={[{ label: '＋ Crea sessione', href: '/sessions/new', primary: true }]}
-            />
-          ) : (
-            <div
-              role="region"
-              aria-label="Sessioni recenti"
-              tabIndex={0}
-              className="flex gap-3.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg"
-            >
-              {filteredSessionItems.map(item => (
-                <div key={item.id ?? item.title} className="w-[260px] shrink-0">
-                  <MeepleCard {...item} />
-                </div>
-              ))}
-            </div>
-          )}
-        </HubLayout>
-      </EntityZone>
+        <GamesCarousel
+          games={gamesQuery.data?.games ?? []}
+          totalCount={statsQuery.data?.totalGames ?? 0}
+          labels={{
+            title: t('pages.dashboard.sections.games.title'),
+            viewAllLabel: t('pages.dashboard.sections.games.viewAll'),
+            viewAllHref: '/library',
+            emptyTitle: t('pages.dashboard.sections.games.emptyTitle'),
+            emptyCta: t('pages.dashboard.sections.games.emptyCta'),
+            emptyCtaHref: '/library/add',
+          }}
+          onViewAllClick={handleSectionViewAll}
+          onEmptyCtaClick={handleEmptyCta}
+        />
 
-      {/* Agents zone (amber) */}
-      <EntityZone entity="agent" title="Agenti AI" count={agentItems.length} viewAllHref="/agents">
-        <HubLayout
-          searchPlaceholder="Cerca agenti..."
-          searchValue={agentsSearch}
-          onSearchChange={setAgentsSearch}
-          filterChips={AGENTS_FILTERS}
-          activeFilterId={agentsFilter}
-          onFilterChange={setAgentsFilter}
-        >
-          <MeepleCardGrid
-            items={filteredAgentItems}
-            isLoading={agentsLoading}
-            emptyNode={
-              <EmptyCTA
-                icon="🤖"
-                title="Nessun agente attivo"
-                sub="Avvia una chat con un agente AI per ricevere aiuto durante la partita."
-                actions={[
-                  { label: '💬 Avvia chat', href: '/chat', primary: true },
-                  { label: '＋ Crea agente', href: '/agents/new' },
-                ]}
-              />
-            }
-          />
-        </HubLayout>
-      </EntityZone>
+        <PlayersAvatarList
+          players={players}
+          totalCount={players.length}
+          labels={{
+            title: t('pages.dashboard.sections.players.title'),
+            viewAllLabel: t('pages.dashboard.sections.players.viewAll'),
+            viewAllHref: '/players',
+            countTemplate: t('pages.dashboard.sections.players.countTemplate'),
+            emptyTitle: t('pages.dashboard.sections.players.emptyTitle'),
+            emptyCta: t('pages.dashboard.sections.players.emptyCta'),
+            emptyCtaHref: '/players',
+          }}
+          onViewAllClick={handleSectionViewAll}
+          onEmptyCtaClick={handleEmptyCta}
+        />
 
-      {/* Toolkit zone (green) */}
-      <EntityZone entity="toolkit" title="Strumenti" count={TOOLKIT_TOOLS.length}>
-        <ToolkitGrid />
-      </EntityZone>
-    </div>
+        <AgentsCompactGrid
+          agents={agentsQuery.data ?? []}
+          labels={{
+            title: t('pages.dashboard.sections.agents.title'),
+            viewAllLabel: t('pages.dashboard.sections.agents.viewAll'),
+            viewAllHref: '/agents',
+            statusActive: t('pages.dashboard.sections.agents.statusActive'),
+            statusIdle: t('pages.dashboard.sections.agents.statusIdle'),
+            emptyTitle: t('pages.dashboard.sections.agents.emptyTitle'),
+            emptyCta: t('pages.dashboard.sections.agents.emptyCta'),
+            emptyCtaHref: '/hub/agents',
+          }}
+          onViewAllClick={handleSectionViewAll}
+          onEmptyCtaClick={handleEmptyCta}
+        />
+
+        <SessionsTimeline
+          sessions={sessionItems}
+          totalCount={sessionsQuery.data?.total ?? 0}
+          labels={{
+            title: t('pages.dashboard.sections.sessions.title'),
+            liveBadge: t('pages.dashboard.sections.sessions.liveBadge'),
+            viewAllLabel: t('pages.dashboard.sections.sessions.viewAll'),
+            viewAllHref: '/sessions',
+            playerCountTemplate: t('pages.dashboard.sections.sessions.playerCountTemplate'),
+            minutesTemplate: t('pages.dashboard.sections.sessions.minutesTemplate'),
+            emptyTitle: t('pages.dashboard.sections.sessions.emptyTitle'),
+            emptyCta: t('pages.dashboard.sections.sessions.emptyCta'),
+            emptyCtaHref: '/sessions/new',
+            statusLabels: {
+              live: t('pages.dashboard.sections.sessions.statusLive'),
+              completed: t('pages.dashboard.sections.sessions.statusCompleted'),
+              paused: t('pages.dashboard.sections.sessions.statusPaused'),
+              setup: t('pages.dashboard.sections.sessions.statusSetup'),
+              abandoned: t('pages.dashboard.sections.sessions.statusAbandoned'),
+            },
+          }}
+          onViewAllClick={handleSectionViewAll}
+          onEmptyCtaClick={handleEmptyCta}
+        />
+
+        <EventsList
+          events={eventItems}
+          labels={{
+            title: t('pages.dashboard.sections.events.title'),
+            viewAllLabel: t('pages.dashboard.sections.events.viewAll'),
+            viewAllHref: '/game-nights',
+            participantsTemplate: t('pages.dashboard.sections.events.participantsTemplate'),
+            emptyTitle: t('pages.dashboard.sections.events.emptyTitle'),
+            emptyCta: t('pages.dashboard.sections.events.emptyCta'),
+            emptyCtaHref: '/game-nights/new',
+          }}
+          onViewAllClick={handleSectionViewAll}
+          onEmptyCtaClick={handleEmptyCta}
+        />
+      </div>
+    </main>
   );
 }

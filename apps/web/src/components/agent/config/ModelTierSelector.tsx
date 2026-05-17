@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * Model Tier Selector - Tier-based model selection
  * Issue #3376
@@ -95,13 +96,13 @@ export function ModelTierSelector({ userTier = 'free', isAdmin = false }: ModelT
                   selectedTierId === tier.id
                     ? 'border-cyan-400 bg-cyan-500/10'
                     : accessible
-                      ? 'border-slate-700 bg-slate-900 hover:border-slate-600'
-                      : 'border-slate-800 bg-slate-900/50 opacity-50 cursor-not-allowed'
+                      ? 'border-border bg-card hover:border-border'
+                      : 'border-border bg-card opacity-50 cursor-not-allowed'
                 )}
               >
                 <span className={tier.color}>{tier.icon}</span>
                 <span className="text-sm font-medium">{tier.name}</span>
-                {!accessible && <Lock className="h-3 w-3 text-slate-500" />}
+                {!accessible && <Lock className="h-3 w-3 text-muted-foreground" />}
               </button>
             );
           })}
@@ -116,12 +117,12 @@ export function ModelTierSelector({ userTier = 'free', isAdmin = false }: ModelT
         </label>
 
         <Select value={selectedModelId || ''} onValueChange={setSelectedModel} disabled={isLoading}>
-          <SelectTrigger className="w-full bg-slate-900 border-slate-700">
+          <SelectTrigger className="w-full bg-card border-border">
             <SelectValue placeholder={isLoading ? 'Loading models...' : 'Choose AI model...'} />
           </SelectTrigger>
           <SelectContent>
             {filteredModels.length === 0 && !isLoading ? (
-              <div className="py-4 text-center text-sm text-slate-500">No models available</div>
+              <div className="py-4 text-center text-sm text-muted-foreground">No models available</div>
             ) : (
               tierOrder
                 .filter(tier => tier !== 'custom' || isAdmin)
@@ -150,15 +151,15 @@ export function ModelTierSelector({ userTier = 'free', isAdmin = false }: ModelT
                               <div className="flex flex-col">
                                 <span className="flex items-center gap-2">
                                   {model.name}
-                                  {!accessible && <Lock className="h-3 w-3 text-slate-500" />}
+                                  {!accessible && <Lock className="h-3 w-3 text-muted-foreground" />}
                                 </span>
                                 {model.description && (
-                                  <span className="text-xs text-slate-500">
+                                  <span className="text-xs text-muted-foreground">
                                     {model.description}
                                   </span>
                                 )}
                               </div>
-                              <span className="text-xs text-slate-400">
+                              <span className="text-xs text-muted-foreground">
                                 ${model.costPer1kInputTokens.toFixed(4)}/1k
                               </span>
                             </div>
@@ -172,7 +173,7 @@ export function ModelTierSelector({ userTier = 'free', isAdmin = false }: ModelT
           </SelectContent>
         </Select>
 
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           Higher tier models provide better reasoning at increased cost.
           {userTier !== 'premium' && ' Upgrade to access premium models.'}
         </p>

@@ -16,6 +16,12 @@ on:
         required: false
         default: "204.168.135.69"
 
+
+# Concurrency: prevent duplicate runs. See issue #850.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   issues: write

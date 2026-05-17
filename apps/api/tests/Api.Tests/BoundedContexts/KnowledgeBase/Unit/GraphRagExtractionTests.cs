@@ -40,6 +40,10 @@ public sealed class GraphRagExtractionTests : IDisposable
 
     private readonly Guid _pdfDocumentId = Guid.NewGuid();
     private readonly Guid _gameId = Guid.NewGuid();
+    // Issue #890 (review concern): keep games.Id distinct from shared_games.id so the
+    // resolver test exercises the real cross-table mapping rather than a degenerate
+    // case where the two Guids collapse to the same value.
+    private readonly Guid _sharedGameId = Guid.NewGuid();
 
     public GraphRagExtractionTests()
     {
@@ -67,7 +71,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WithEntityExtractor_CallsExtractAndSavesRelations()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         var longText = new string('A', 300); // >= 200 char threshold
         SetupExtractorToReturn(longText, 4);
         SetupChunkingToReturn(4);
@@ -117,7 +121,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WithoutEntityExtractor_DoesNotThrow()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         SetupExtractorToReturn(new string('A', 300), 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
@@ -141,7 +145,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WhenEntityExtractionThrows_ContinuesProcessing()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         SetupExtractorToReturn(new string('A', 300), 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
@@ -168,7 +172,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WithShortText_SkipsEntityExtraction()
     {
         // Arrange — text shorter than 200 chars
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         SetupExtractorToReturn("Short text.", 1);
         SetupChunkingToReturn(1);
         SetupEmbeddingsToReturn(1);
@@ -192,7 +196,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_WithEmptyExtractionResult_DoesNotSaveRelations()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         SetupExtractorToReturn(new string('A', 300), 4);
         SetupChunkingToReturn(4);
         SetupEmbeddingsToReturn(4);
@@ -223,7 +227,7 @@ public sealed class GraphRagExtractionTests : IDisposable
     public async Task ProcessAsync_TruncatesTextTo8000Chars()
     {
         // Arrange
-        SeedPdfDocument("Uploading");
+        SeedPdfDocument("Pending");
         var longText = new string('A', 15000); // Much longer than 8000
         SetupExtractorToReturn(longText, 4);
         SetupChunkingToReturn(4);
@@ -260,6 +264,7 @@ public sealed class GraphRagExtractionTests : IDisposable
 
         return new PdfProcessingPipelineService(
             _db,
+            new Api.Tests.TestHelpers.InMemoryPdfClaimService(_db),
             _pdfTextExtractorMock.Object,
             _tableExtractorMock.Object,
             _chunkingServiceMock.Object,
@@ -277,10 +282,24 @@ public sealed class GraphRagExtractionTests : IDisposable
 
     private void SeedPdfDocument(string state)
     {
+        // Issue #890: PdfGameIdResolver looks up Games by SharedGameId. Without a matching
+        // GameEntity, the resolver returns null and the pipeline skips entity extraction —
+        // which makes any Verify(_gameId) on the entity-extractor mock fail. Seed the Game
+        // with distinct Id (_gameId) and SharedGameId (_sharedGameId) so the resolver path
+        // games.Where(g => g.SharedGameId == pdf.SharedGameId).Select(g => g.Id) is
+        // exercised — not collapsed via Guid identity (review feedback on PR #891).
+        var game = new GameEntity
+        {
+            Id = _gameId,
+            Name = "Catan",
+            SharedGameId = _sharedGameId,
+        };
+        _db.Games.Add(game);
+
         var pdfDoc = new PdfDocumentEntity
         {
             Id = _pdfDocumentId,
-            SharedGameId = _gameId,
+            SharedGameId = _sharedGameId,
             FileName = "Catan Rules.pdf",
             FilePath = "/fake/path/test.pdf",
             ContentType = "application/pdf",

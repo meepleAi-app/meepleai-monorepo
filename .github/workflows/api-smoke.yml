@@ -1,0 +1,113 @@
+name: API Smoke (Bruno) — PR main-staging → main (prod promotion)
+
+on:
+  # Gate on staging → prod promotion only. Running on main-dev → main-staging
+  # was too eager: real-API smoke + 1 shared runner IP × cumulative login retries
+  # exceeds AuthLogin rate limit (10/min) and produces noise unrelated to the
+  # release diff. Nightly cron on main-dev (e2e-smoke-real-backend.yml) catches
+  # regressions earlier without gating the release flow.
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'apps/api/**'
+      - 'tests/api-smoke/**'
+      - 'tests/fixtures/smoke-test-users.sql'
+      - 'infra/**'
+      - '.github/workflows/api-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: api-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    timeout-minutes: 25
+    # SOFT-LAUNCH: do NOT block PR merge while infra stabilizes.
+    # Remove this after 30 scenarios green in CI for 2 consecutive weeks.
+    # See issue #910 DoD checklist.
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx (Linux only)
+        if: runner.os == 'Linux'
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4.0.0
+
+      - name: Generate placeholder secrets (CI cannot secrets-sync)
+        if: runner.os == 'Linux'
+        working-directory: infra
+        run: make secrets-setup
+
+      - name: Generate placeholder env files
+        if: runner.os == 'Linux'
+        working-directory: infra/env
+        shell: bash
+        run: |
+          cat > api.env.dev <<'APIENV'
+          POSTGRES_HOST=postgres
+          POSTGRES_PORT=5432
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+          INITIAL_ADMIN_EMAIL=smoke-user@meepleai.test
+          INITIAL_ADMIN_PASSWORD=SmokeUser1!!
+          INITIAL_ADMIN_DISPLAY_NAME=Smoke User
+          APIENV
+
+      - name: Boot dev stack
+        if: runner.os == 'Linux'
+        working-directory: infra
+        run: |
+          make dev-core
+          for i in {1..40}; do
+            if curl -fs http://localhost:8080/health 2>/dev/null; then
+              echo "API up"
+              break
+            fi
+            sleep 5
+          done
+
+      - name: Apply smoke-aaron fixture
+        if: runner.os == 'Linux'
+        run: |
+          cat tests/fixtures/smoke-test-users.sql | \
+            docker compose -f infra/docker-compose.yml -f infra/compose.dev.yml \
+            exec -T postgres psql -U meepleai -d meepleai_staging
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run smoke (Linux — bash)
+        if: runner.os == 'Linux'
+        env:
+          SMOKE_AARON_PASSWORD: SmokeAaron1!!
+        run: tests/api-smoke/run-smoke.sh --env local
+
+      - name: Run smoke (Windows — PowerShell)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          SMOKE_AARON_PASSWORD: SmokeAaron1!!
+        run: |
+          # Windows runner: use staging API (not local Docker stack) since Win runners
+          # boot dev stack is slow and we test runner cross-platform compat here.
+          # Real assertion is on Linux runner.
+          ./tests/api-smoke/run-smoke.ps1 -Env staging -Collection private-game
+
+      - name: Dump API logs on failure (Linux)
+        if: failure() && runner.os == 'Linux'
+        working-directory: infra
+        run: docker compose -f docker-compose.yml -f compose.dev.yml logs --tail=200 api postgres redis || true

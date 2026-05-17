@@ -58,7 +58,7 @@ import {
   type GamebookHeroLabels,
   type QuotaWidgetLabels,
   type QuotaWidgetVariant,
-} from '@/components/v2/gamebook';
+} from '@/components/features/gamebook';
 import { useGamebooks, useQuotaInfo } from '@/hooks/queries/useGamebooks';
 import { useTranslation } from '@/hooks/useTranslation';
 import {
@@ -171,7 +171,10 @@ export function GamebookIndexView(): ReactElement {
       const gamebooks = extractGamebooks(fsmCell);
       const gamebook = gamebooks.find(g => g.id === gamebookId);
       if (gamebook && gamebook.status === 'ready') {
-        router.push(`/gamebook/${gamebook.gameId}`);
+        // Navigate to the existing play route under /library/[gameId]/play.
+        // The /gamebook/[id] route was never implemented (issue #865) — the play
+        // surface lives under /library/games for historical reasons (PR #794+).
+        router.push(`/library/${gamebook.gameId}/play`);
       }
     },
     [fsmCell, router]
@@ -310,7 +313,7 @@ export function GamebookIndexView(): ReactElement {
           className="mx-auto flex max-w-[1280px] flex-col items-center gap-4 px-4 py-12 text-center sm:px-8"
         >
           <p className="text-lg font-semibold text-foreground">{t('gamebook.index.error.title')}</p>
-          <p className="text-sm text-slate-700">{t('gamebook.index.error.description')}</p>
+          <p className="text-sm text-foreground">{t('gamebook.index.error.description')}</p>
           <button
             type="button"
             onClick={handleRetry}

@@ -327,7 +327,7 @@ Tutte le risposte di errore seguono RFC 7807 (Problem Details):
 | 409 | Conflict | Duplicate resource (e.g., email) |
 | 422 | Unprocessable Entity | Business logic validation failed |
 | 500 | Internal Server Error | Server-side error |
-| 503 | Service Unavailable | Dependency unavailable (DB, Redis, Qdrant) |
+| 503 | Service Unavailable | Dependency unavailable (DB+pgvector, Redis) |
 
 ---
 
@@ -652,7 +652,7 @@ curl -X POST http://localhost:8080/api/v1/documents/upload \
       "status": "Healthy",
       "duration": "00:00:00.0500000"
     },
-    "qdrant": {
+    "pgvector": {
       "status": "Healthy",
       "duration": "00:00:00.0300000"
     },
@@ -691,8 +691,8 @@ curl -X POST http://localhost:8080/api/v1/documents/upload \
 
 - [Interactive API Explorer (Scalar)](http://localhost:8080/scalar/v1)
 - [OpenAPI Specification](http://localhost:8080/openapi/v1.json)
-- [Authentication Guide](../development/README.md#authentication)
-- [Rate Limiting Details](../architecture/adr/adr-020-rate-limiting.md)
+- **Authentication Guide** _(planned)_
+- **Rate Limiting Details** _(planned)_
 
 ---
 

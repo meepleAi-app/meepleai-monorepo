@@ -17,9 +17,9 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { AuthLayout } from '@/components/layouts';
-import { Btn } from '@/components/ui/v2/btn';
-import { InputField } from '@/components/ui/v2/input-field';
-import { PwdInput } from '@/components/ui/v2/pwd-input';
+import { Btn } from '@/components/ui/btn';
+import { InputField } from '@/components/ui/input-field';
+import { PwdInput } from '@/components/ui/pwd-input';
 import { getErrorMessage } from '@/lib/utils/errorHandler';
 
 // ──────────────────────────────────────────────
@@ -243,7 +243,7 @@ export function SetupAccountContent() {
       <AuthLayout title="Verifica in corso...">
         <div className="text-center space-y-4 py-8">
           <div className="animate-spin text-4xl mb-4">&#9203;</div>
-          <p className="text-slate-400">Verifica del token di invito...</p>
+          <p className="text-muted-foreground">Verifica del token di invito...</p>
         </div>
       </AuthLayout>
     );
@@ -307,7 +307,7 @@ export function SetupAccountContent() {
       >
         <div className="text-center space-y-4 py-4">
           <div className="text-6xl mb-4">&#9989;</div>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Reindirizzamento in corso...</p>
+          <p className="text-sm text-muted-foreground">Reindirizzamento in corso...</p>
           <div className="animate-spin text-2xl mx-auto w-fit">&#9203;</div>
         </div>
       </AuthLayout>
@@ -378,7 +378,7 @@ export function SetupAccountContent() {
               className={`flex items-center gap-2 ${
                 passwordValidation.minLength
                   ? 'text-green-400'
-                  : 'text-slate-500 dark:text-slate-400'
+                  : 'text-muted-foreground'
               }`}
             >
               <span aria-hidden="true">{passwordValidation.minLength ? '\u2713' : '\u25CB'}</span>
@@ -388,7 +388,7 @@ export function SetupAccountContent() {
               className={`flex items-center gap-2 ${
                 passwordValidation.hasUppercase
                   ? 'text-green-400'
-                  : 'text-slate-500 dark:text-slate-400'
+                  : 'text-muted-foreground'
               }`}
             >
               <span aria-hidden="true">
@@ -400,7 +400,7 @@ export function SetupAccountContent() {
               className={`flex items-center gap-2 ${
                 passwordValidation.hasLowercase
                   ? 'text-green-400'
-                  : 'text-slate-500 dark:text-slate-400'
+                  : 'text-muted-foreground'
               }`}
             >
               <span aria-hidden="true">
@@ -412,7 +412,7 @@ export function SetupAccountContent() {
               className={`flex items-center gap-2 ${
                 passwordValidation.hasNumber
                   ? 'text-green-400'
-                  : 'text-slate-500 dark:text-slate-400'
+                  : 'text-muted-foreground'
               }`}
             >
               <span aria-hidden="true">{passwordValidation.hasNumber ? '\u2713' : '\u25CB'}</span>

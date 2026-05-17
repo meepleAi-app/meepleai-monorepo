@@ -25,7 +25,7 @@ internal sealed class AccessRequestCreatedEventHandler : DomainEventHandlerBase<
     {
         Logger.LogInformation(
             "New access request {AccessRequestId} created for email {Email}",
-            domainEvent.AccessRequestId, domainEvent.Email);
+            domainEvent.AccessRequestId, DataMasking.MaskEmail(domainEvent.Email));
 
         try
         {

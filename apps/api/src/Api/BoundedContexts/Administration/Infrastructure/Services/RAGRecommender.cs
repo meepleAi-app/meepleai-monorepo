@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.Administration.Infrastructure.Services;
 #pragma warning disable S4487 // Unread private fields - Will be used in future RAG implementation
 
 /// <summary>
-/// Generates game recommendations using RAG with Qdrant vector similarity search.
+/// Generates game recommendations using RAG with pgvector vector similarity search.
 /// </summary>
 internal sealed class RAGRecommender : IRAGRecommender
 {
@@ -73,7 +73,7 @@ internal sealed class RAGRecommender : IRAGRecommender
             _logger.LogError(ex,
                 "Error generating RAG recommendations for user {UserId}. Falling back to empty insights.",
                 userId);
-            return new List<AIInsight>(); // Graceful degradation if Qdrant down
+            return new List<AIInsight>(); // Graceful degradation if pgvector down
         }
     }
 

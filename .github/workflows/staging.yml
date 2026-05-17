@@ -1,0 +1,92 @@
+# Staging Gate — additional blocking checks on PR to main-staging
+#
+# Per ADR-054 and epic #842 / issue #846: PRs promoting main-dev to
+# main-staging must clear the full suite plus accessibility + visual.
+# Target SLO < 10 min.
+#
+# Scope-limited: the full lint/build/test suite still runs via the legacy
+# ci.yml (which triggers on the same `pull_request: [main-staging]`); this
+# workflow adds the staging-only deltas (a11y + visual) without duplicating
+# what ci.yml already covers. ci.yml deprecation/consolidation is tracked
+# as a follow-up to keep this PR's scope reviewable.
+name: Staging Gate
+
+on:
+  pull_request:
+    branches: [main-staging]
+    # Issue #850: a11y + visual gates have no signal on docs-only PRs.
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.editorconfig'
+  workflow_dispatch:
+
+concurrency:
+  group: staging-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  a11y:
+    name: A11y unit smoke (Vitest accessibility specs)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: A11y specs (Vitest grep "a11y|accessibility")
+        # `pnpm test:a11y` runs `vitest run -t "(a11y|accessibility)"` —
+        # this is the Vitest unit-test surface, NOT a Playwright/axe-core
+        # E2E. A full Playwright + axe-core gate is tracked under #807/#1015
+        # alongside the baseline-diff work; for now this catches regressions
+        # in the existing a11y unit tests.
+        run: pnpm test:a11y
+        continue-on-error: true
+        # Issue #807/#1015 baseline-diff gating: track regression against
+        # `audits/a11y-baseline.json` rather than fail on every warning.
+        # Switched to blocking when baseline is established (see #1015).
+
+  visual-regression:
+    name: Visual Regression (Chromatic)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # `pnpm test:visual` invokes Chromatic, which requires
+    # `CHROMATIC_PROJECT_TOKEN`. Skip the job when the secret is not
+    # configured (e.g. forked PRs) rather than fail silently masked by
+    # `continue-on-error`. Once Chromatic is provisioned for the repo,
+    # this guard becomes a no-op.
+    if: ${{ vars.HAS_CHROMATIC_TOKEN == 'true' }}
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Chromatic needs full history for baseline diff
+      - uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Visual snapshot diff
+        env:
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+        run: pnpm test:visual
+        continue-on-error: true
+        # Same gating philosophy as a11y: warn-only during baseline ramp-up.

@@ -42,7 +42,7 @@
                         │    ▼                                        │
              :8080 ─────┤  api (.NET 9)                               │
                         │    │  ├──► postgres (pgvector)  :5432       │
-                        │    │  ├──► qdrant              :6333/:6334  │
+                        │    │  ├──► qdrant              :PostgreSQL :5432/:6334  │
                         │    │  ├──► redis               :6379        │
                         │    │  └──► orchestration-svc   :8004        │
                         │    │          ├──► embedding    :8000        │
@@ -68,7 +68,7 @@
 | Service | Image | Container | Profile | Port(s) | CPU | RAM |
 |---------|-------|-----------|---------|---------|-----|-----|
 | postgres | pgvector/pgvector:pg16 | meepleai-postgres | core | 5432 | 2.0 | 2G |
-| qdrant | qdrant/qdrant:v1.12.4 | meepleai-qdrant | core | 6333, 6334 | 2.0 | 4G |
+| qdrant | qdrant/qdrant:v1.12.4 | meepleai-qdrant | core | PostgreSQL :5432, 6334 | 2.0 | 4G |
 | redis | redis:7.4.1-alpine3.20 | meepleai-redis | core | 6379 | 1.0 | 1G |
 | api | custom build | meepleai-api | core | 8080 | 2.0 | 4G |
 | web | custom build | meepleai-web | core | 3000 | 1.0 | 1G |
@@ -323,7 +323,7 @@ docker compose ps
 | Admin password | 90 days | Update in `admin.secret` |
 | API keys (BGG, OpenRouter) | On compromise | Third-party service keys |
 | Redis password | 180 days | Restart Redis + all clients |
-| Qdrant API key | 180 days | Restart Qdrant + API |
+| pgvector API key | 180 days | Restart Qdrant + API |
 | All others | 365 days | Low-risk secrets |
 
 ### Security Rules
@@ -622,7 +622,7 @@ docker exec meepleai-postgres psql -U meepleai -c \
 |----------|-------|
 | Image | `qdrant/qdrant:v1.12.4` |
 | Container | `meepleai-qdrant` |
-| Ports | 6333 (HTTP API), 6334 (gRPC) |
+| Ports | PostgreSQL :5432 (HTTP API), 6334 (gRPC) |
 | Volume | `qdrant_data` → `/qdrant/storage` |
 | CPU / RAM Limit | 2.0 / 4G |
 | CPU / RAM Reserved | 1.0 / 2G |
@@ -635,24 +635,24 @@ docker exec meepleai-postgres psql -U meepleai -c \
 
 ```bash
 # Health check
-curl http://localhost:6333/healthz
+curl http://localhost:PostgreSQL :5432/healthz
 
 # Check cluster status
-curl http://localhost:6333/cluster -H "api-key: $QDRANT_API_KEY"
+curl http://localhost:PostgreSQL :5432/cluster -H "api-key: $QDRANT_API_KEY"
 
 # List collections
-curl http://localhost:6333/collections -H "api-key: $QDRANT_API_KEY"
+curl http://localhost:PostgreSQL :5432/collections -H "api-key: $QDRANT_API_KEY"
 
 # Collection details (point count, config)
-curl http://localhost:6333/collections/meepleai_documents \
+curl http://localhost:PostgreSQL :5432/collections/meepleai_documents \
   -H "api-key: $QDRANT_API_KEY"
 
 # Collection size and segment info
-curl http://localhost:6333/collections/meepleai_documents/cluster \
+curl http://localhost:PostgreSQL :5432/collections/meepleai_documents/cluster \
   -H "api-key: $QDRANT_API_KEY"
 
 # Count points in collection
-curl -X POST http://localhost:6333/collections/meepleai_documents/points/count \
+curl -X POST http://localhost:PostgreSQL :5432/collections/meepleai_documents/points/count \
   -H "api-key: $QDRANT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"exact": true}'
@@ -667,20 +667,20 @@ docker logs meepleai-qdrant --tail=50
 
 ```bash
 # Create snapshot of a collection
-curl -X POST "http://localhost:6333/collections/meepleai_documents/snapshots" \
+curl -X POST "http://localhost:PostgreSQL :5432/collections/meepleai_documents/snapshots" \
   -H "api-key: $QDRANT_API_KEY"
 
 # List snapshots
-curl "http://localhost:6333/collections/meepleai_documents/snapshots" \
+curl "http://localhost:PostgreSQL :5432/collections/meepleai_documents/snapshots" \
   -H "api-key: $QDRANT_API_KEY"
 
 # Download snapshot
-curl "http://localhost:6333/collections/meepleai_documents/snapshots/<snapshot_name>" \
+curl "http://localhost:PostgreSQL :5432/collections/meepleai_documents/snapshots/<snapshot_name>" \
   -H "api-key: $QDRANT_API_KEY" \
   --output qdrant_backup.snapshot
 
 # Full storage snapshot (all collections)
-curl -X POST "http://localhost:6333/snapshots" \
+curl -X POST "http://localhost:PostgreSQL :5432/snapshots" \
   -H "api-key: $QDRANT_API_KEY"
 ```
 
@@ -691,13 +691,13 @@ curl -X POST "http://localhost:6333/snapshots" \
 docker compose stop qdrant
 
 # Upload snapshot to restore
-curl -X POST "http://localhost:6333/collections/meepleai_documents/snapshots/upload" \
+curl -X POST "http://localhost:PostgreSQL :5432/collections/meepleai_documents/snapshots/upload" \
   -H "api-key: $QDRANT_API_KEY" \
   -H "Content-Type: multipart/form-data" \
   -F "snapshot=@qdrant_backup.snapshot"
 
 # Alternatively: restore from full snapshot
-curl -X POST "http://localhost:6333/snapshots/upload" \
+curl -X POST "http://localhost:PostgreSQL :5432/snapshots/upload" \
   -H "api-key: $QDRANT_API_KEY" \
   -F "snapshot=@full_backup.snapshot"
 
@@ -723,7 +723,7 @@ docker compose start qdrant
 #### Enable Memory-Mapped Storage (for large datasets)
 
 ```bash
-curl -X PATCH "http://localhost:6333/collections/meepleai_documents" \
+curl -X PATCH "http://localhost:PostgreSQL :5432/collections/meepleai_documents" \
   -H "api-key: $QDRANT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -736,7 +736,7 @@ curl -X PATCH "http://localhost:6333/collections/meepleai_documents" \
 #### Enable Scalar Quantization (reduce RAM ~4x)
 
 ```bash
-curl -X PATCH "http://localhost:6333/collections/meepleai_documents" \
+curl -X PATCH "http://localhost:PostgreSQL :5432/collections/meepleai_documents" \
   -H "api-key: $QDRANT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -753,7 +753,7 @@ curl -X PATCH "http://localhost:6333/collections/meepleai_documents" \
 
 ```bash
 # 1. Create snapshot before upgrade
-curl -X POST "http://localhost:6333/snapshots" -H "api-key: $QDRANT_API_KEY"
+curl -X POST "http://localhost:PostgreSQL :5432/snapshots" -H "api-key: $QDRANT_API_KEY"
 
 # 2. Update image tag in docker-compose.yml
 # image: qdrant/qdrant:v1.13.0
@@ -763,18 +763,18 @@ docker compose pull qdrant
 docker compose up -d qdrant
 
 # 4. Verify
-curl http://localhost:6333/healthz
-curl http://localhost:6333/collections/meepleai_documents -H "api-key: $QDRANT_API_KEY"
+curl http://localhost:PostgreSQL :5432/healthz
+curl http://localhost:PostgreSQL :5432/collections/meepleai_documents -H "api-key: $QDRANT_API_KEY"
 ```
 
 ### Troubleshooting
 
 | Symptom | Diagnosis | Fix |
 |---------|-----------|-----|
-| Health check fails | `curl http://localhost:6333/healthz` | Check logs: `docker logs meepleai-qdrant` |
+| Health check fails | `curl http://localhost:PostgreSQL :5432/healthz` | Check logs: `docker logs meepleai-qdrant` |
 | High memory usage | Collection growing beyond limit | Enable mmap or quantization |
 | Slow search | Large collection, no optimization | Rebuild HNSW index, enable quantization |
-| Collection not found | Wrong collection name | `curl localhost:6333/collections` to list |
+| Collection not found | Wrong collection name | `curl localhost:PostgreSQL :5432/collections` to list |
 | API key rejected | Secret mismatch | Verify `qdrant.secret` |
 | gRPC connection refused | Port 6334 not exposed | Check compose override exposes 6334 |
 
@@ -1802,7 +1802,7 @@ container_memory_usage_bytes / container_spec_memory_limit_bytes * 100
 # PostgreSQL active connections
 pg_stat_activity_count{state="active"}
 
-# Qdrant collection size
+# pgvector table size
 qdrant_collection_vectors_count{collection="meepleai_documents"}
 ```
 
@@ -2214,10 +2214,11 @@ S3_FORCE_PATH_STYLE=false
    └── If disk full:    docker system prune -f
 
 4. RESOLVE
-   ├── Apply fix (config change, restart, rollback)
+   ├── Apply fix (config change, restart, rollback*)
    ├── Verify health:  docker compose ps
    ├── Check logs:     docker logs <container> --tail=20
    └── Run smoke test: curl http://localhost:8080/
+   * For image-tag rollback procedure see rollback-runbook.md
 
 5. POST-MORTEM
    ├── Document: what happened, why, how fixed
@@ -2340,7 +2341,7 @@ ETA: [When resolution expected]
 |------|--------|----------|-----------|---------------|
 | PostgreSQL | `pg_dumpall` | Daily 3 AM | 7 days | 30-60 min |
 | Redis | BGSAVE + copy | Weekly | 4 weeks | < 5 min (or skip) |
-| Qdrant | Snapshot API | Weekly | 30 days | 15-30 min |
+| pgvector | Snapshot API | Weekly | 30 days | 15-30 min |
 | pdf_uploads | Volume tar.gz | Weekly | 30 days | 10-20 min |
 | Grafana data | Volume tar.gz | Monthly | 90 days | 5 min |
 | Secrets | Encrypted vault | On change | Permanent | 5 min |
@@ -2374,7 +2375,7 @@ echo "Redis: $(du -sh "$BACKUP_DIR/redis.rdb" | cut -f1)"
 
 # Qdrant
 echo "Backing up Qdrant..."
-curl -s -X POST "http://localhost:6333/collections/meepleai_documents/snapshots" \
+curl -s -X POST "http://localhost:PostgreSQL :5432/collections/meepleai_documents/snapshots" \
   -H "api-key: $QDRANT_API_KEY" > "$BACKUP_DIR/qdrant_snapshot_response.json"
 echo "Qdrant snapshot created."
 
@@ -2392,12 +2393,17 @@ echo "=== Backup complete ==="
 
 ### Disaster Recovery Procedures
 
+> **Rollback (image-tag revert)** for a single bad deploy lives in a dedicated runbook:
+> [**rollback-runbook.md**](./rollback-runbook.md) — covers bad image, bad migration, and slow-leak scenarios with RTO ≤ 10 min.
+> Use this section for **infrastructure-level** disasters (VPS loss, DB corruption, ransomware) where rollback alone is insufficient.
+
 #### Recovery Targets
 
-| Metric | Target |
-|--------|--------|
-| **RTO** (Recovery Time Objective) | < 2 hours |
-| **RPO** (Recovery Point Objective) | < 24 hours |
+| Metric | Target | Notes |
+|--------|--------|-------|
+| **RTO** (Recovery Time Objective) — DR scenarios | < 2 hours | This section |
+| **RTO** — single-deploy rollback | < 10 minutes | See [rollback-runbook.md §10](./rollback-runbook.md#10-raci--sla) |
+| **RPO** (Recovery Point Objective) | < 24 hours | Daily `backup.sh` cron |
 
 #### Scenario 1: VPS Failure (Total Loss)
 
@@ -2619,10 +2625,10 @@ docker exec meepleai-redis redis-cli -a "$REDIS_PASSWORD" FLUSHALL    # DANGER
 ### Qdrant
 
 ```bash
-curl http://localhost:6333/healthz
-curl http://localhost:6333/collections -H "api-key: $QDRANT_API_KEY"
-curl http://localhost:6333/collections/meepleai_documents -H "api-key: $QDRANT_API_KEY"
-curl -X POST "http://localhost:6333/snapshots" -H "api-key: $QDRANT_API_KEY"
+curl http://localhost:PostgreSQL :5432/healthz
+curl http://localhost:PostgreSQL :5432/collections -H "api-key: $QDRANT_API_KEY"
+curl http://localhost:PostgreSQL :5432/collections/meepleai_documents -H "api-key: $QDRANT_API_KEY"
+curl -X POST "http://localhost:PostgreSQL :5432/snapshots" -H "api-key: $QDRANT_API_KEY"
 ```
 
 ### EF Core Migrations
@@ -2682,8 +2688,6 @@ Frontend feature flags surface as `NEXT_PUBLIC_*` environment variables. Because
 
 | Flag | Default | Purpose | Owner |
 |------|---------|---------|-------|
-| `NEXT_PUBLIC_ALPHA_MODE` | `false` (dev: `true`) | Alpha Zero feature scope (auth, games, BGG, RAG chat, library). Build-time. | Product |
-| `NEXT_PUBLIC_MOCK_MODE` | `false` (dev: `true`) | Serves MSW mocks when backend is unavailable. | Frontend |
 | `NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED` | `false` (dev: `true`) | ADR-051 M2.1 admin-only Mechanic Extractor AI validation surfaces (`/admin/knowledge-base/mechanic-extractor/{dashboard,golden,review}`). Strict equality on the literal `'true'` — no truthy coercion. When off the routes return 404 and embedded gates render nothing. | Knowledge Base |
 
 To enable a flag in staging without touching `compose.staging.yml`, export it on the host shell before running `make staging`:

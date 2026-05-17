@@ -74,8 +74,8 @@ export function InterestsStep({ onComplete, onSkip }: InterestsStepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-quicksand text-lg font-semibold text-slate-900">What Do You Enjoy?</h2>
-        <p className="mt-1 text-sm text-slate-600">
+        <h2 className="font-quicksand text-lg font-semibold text-foreground">What Do You Enjoy?</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Select categories that interest you. This helps us personalize your experience.
         </p>
       </div>
@@ -96,7 +96,7 @@ export function InterestsStep({ onComplete, onSkip }: InterestsStepProps) {
                   'hover:border-amber-300 hover:bg-amber-50/50',
                   isSelected
                     ? 'border-amber-500 bg-amber-50 text-amber-900'
-                    : 'border-slate-200 bg-white text-slate-700'
+                    : 'border-border bg-card text-foreground'
                 )}
                 data-testid={`interest-${cat.id}`}
               >
@@ -110,7 +110,7 @@ export function InterestsStep({ onComplete, onSkip }: InterestsStepProps) {
         </div>
 
         {selected.size > 0 && (
-          <p className="text-center text-sm text-slate-500">{selected.size} selected</p>
+          <p className="text-center text-sm text-muted-foreground">{selected.size} selected</p>
         )}
 
         <div className="flex items-center gap-3">
@@ -126,7 +126,7 @@ export function InterestsStep({ onComplete, onSkip }: InterestsStepProps) {
           <button
             type="button"
             onClick={onSkip}
-            className="text-sm text-slate-500 hover:text-slate-700"
+            className="text-sm text-muted-foreground hover:text-foreground"
             data-testid="interests-skip"
           >
             Skip for now

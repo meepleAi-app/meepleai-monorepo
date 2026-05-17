@@ -5,6 +5,12 @@ on:
     - cron: '0 3 * * *'
   workflow_dispatch:
 
+
+# Concurrency: prevent duplicate runs. See issue #850.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   issues: write
@@ -17,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4.0.0
 
       - name: Generate placeholder secrets (CI cannot secrets-sync — no SSH key)
         working-directory: infra
@@ -34,6 +40,18 @@ jobs:
           NODE_ENV=production
           NEXT_TELEMETRY_DISABLED=1
           NEXT_PUBLIC_HYPERDX_API_KEY=demo
+          # #960 H4 step 4 (true root cause): smoke specs hit `(authenticated)`
+          # routes (/agents/[id], /games/[id], /players/[id], /library/games/[id]).
+          # apps/web/src/proxy.ts:386 trusts session cookies WITHOUT backend
+          # validation only when PLAYWRIGHT_AUTH_BYPASS=true AND the bypass is
+          # ALLOWED. The allow flag is `NODE_ENV !== 'production' || isVisualTestBuild`.
+          # Since NODE_ENV=production above, we need NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1
+          # so the bypass branch is alive in the production build (NEXT_PUBLIC_*
+          # is inlined at build time and would otherwise be dead-code-eliminated).
+          # Without this, the 6 detail-page specs that DON'T call smokeLogin
+          # never reach their not-found shell — the proxy redirects to /login.
+          PLAYWRIGHT_AUTH_BYPASS=true
+          NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1
           WEBENV
           # api.env.dev — backend container env
           # Seed initial admin matching SMOKE_USER_* in workflow env so smoke
@@ -53,8 +71,13 @@ jobs:
           HYPERDX_OTLP_ENDPOINT=http://meepleai-hyperdx:4317
           HYPERDX_API_KEY=demo
           INITIAL_ADMIN_EMAIL=smoke-user@meepleai.test
-          INITIAL_ADMIN_PASSWORD=SmokeUser1!
+          INITIAL_ADMIN_PASSWORD=SmokeUser1!!
           INITIAL_ADMIN_DISPLAY_NAME=Smoke User
+          # #960 H4: SessionCookie.Secure=false because CI runs frontend+backend
+          # on http://localhost:* — browsers refuse to attach cookies marked
+          # secure to non-HTTPS origins, blocking authenticated smoke specs.
+          # Production / Staging keep the default Secure=true (HTTPS enforced).
+          Authentication__SessionCookie__Secure=false
           APIENV
           # n8n.env.dev — minimal (n8n unused by smoke specs but referenced by compose)
           cat > n8n.env.dev <<'N8NENV'
@@ -69,6 +92,14 @@ jobs:
 
       - name: Boot dev stack (postgres + redis + api)
         working-directory: infra
+        env:
+          # Issue #1099: disable rate limiting in the API container so the
+          # smoke suite — which logs in once per spec from the same runner
+          # IP — doesn't exhaust the AuthLogin policy (10 req/min/IP) and
+          # cause cascading 429s on /api/v1/auth/login. Passthrough wired
+          # in compose.dev.yml; local dev leaves this unset and keeps the
+          # rate limiter active.
+          DISABLE_RATE_LIMITING: "true"
         run: |
           make dev-core
           for i in {1..40}; do
@@ -78,6 +109,11 @@ jobs:
             fi
             sleep 5
           done
+
+      - name: Apply smoke chat fixture (SharedGame + UserLibraryEntry for game-night specs)
+        run: |
+          docker exec -i meepleai-postgres psql -U meepleai -d meepleai_db \
+            < tests/fixtures/smoke-test-games.sql
 
       - name: Dump API logs on stack-up failure
         if: failure()
@@ -116,17 +152,96 @@ jobs:
             sleep 5
           done
 
+      # N1 (#960): always-on pre-test diagnostics — exposes container health
+      # and HTTP probe so investigation doesn't need local repro.
+      # Hightower CRITICAL: 30s of structured logs > hours of remote bisect.
+      - name: Pre-test diagnostics (always run)
+        if: always()
+        run: |
+          echo "::group::Web container status"
+          docker ps -a -f name=meepleai-web --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || true
+          echo "::endgroup::"
+          echo "::group::Web container logs (last 100 lines)"
+          docker logs meepleai-web --tail=100 2>&1 || echo "Container not present"
+          echo "::endgroup::"
+          echo "::group::Web HTTP probe (root + sample route)"
+          curl -sv http://localhost:3000 --max-time 10 -o /tmp/root.html 2>&1 | head -25 || true
+          echo "--- root response head:"
+          head -c 500 /tmp/root.html 2>/dev/null || true
+          curl -sv http://localhost:3000/library --max-time 10 -o /tmp/library.html 2>&1 | head -15 || true
+          echo "--- /library response head:"
+          head -c 500 /tmp/library.html 2>/dev/null || true
+          echo "::endgroup::"
+          echo "::group::API health"
+          curl -s http://localhost:8080/health || true
+          echo ""
+          echo "::endgroup::"
+          echo "::group::Smoke fixture verification (DB row + API response)"
+          docker exec -i meepleai-postgres psql -U meepleai -d meepleai_db -c \
+            "SELECT id, title, status, is_deleted, has_knowledge_base FROM shared_games WHERE id = '00000000-0000-4000-8000-000000053e1d';" || true
+          docker exec -i meepleai-postgres psql -U meepleai -d meepleai_db -c \
+            "SELECT \"Id\", \"UserId\", shared_game_id, \"OwnershipDeclaredAt\" FROM user_library_entries WHERE \"Id\" = '00000000-0000-4000-8000-000000053e1e';" || true
+          echo "--- API login + library detail probe ---"
+          curl -sS -X POST http://localhost:8080/api/v1/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"smoke-user@meepleai.test","password":"SmokeUser1!!"}' \
+            -c /tmp/cookies.txt -o /tmp/login.json -w "login HTTP %{http_code}\n" || true
+          head -c 200 /tmp/login.json 2>/dev/null
+          echo ""
+          curl -sS -X GET http://localhost:8080/api/v1/library/games/00000000-0000-4000-8000-000000053e1d \
+            -b /tmp/cookies.txt -o /tmp/detail.json -w "library detail HTTP %{http_code}\n" || true
+          head -c 800 /tmp/detail.json 2>/dev/null
+          echo ""
+          curl -sS -X GET http://localhost:8080/api/v1/shared-games/00000000-0000-4000-8000-000000053e1d \
+            -b /tmp/cookies.txt -o /tmp/sg-detail.json -w "shared-games detail HTTP %{http_code}\n" || true
+          head -c 600 /tmp/sg-detail.json 2>/dev/null
+          echo ""
+          echo "--- Set-Cookie response headers (login) ---"
+          curl -sS -D - -X POST http://localhost:8080/api/v1/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"smoke-user@meepleai.test","password":"SmokeUser1!!"}' \
+            -o /dev/null 2>&1 | grep -iE "set-cookie|access-control" | head -10 || true
+          echo "--- CORS preflight OPTIONS from origin :3000 ---"
+          curl -sS -D - -X OPTIONS http://localhost:8080/api/v1/library/games/00000000-0000-4000-8000-000000053e1d \
+            -H "Origin: http://localhost:3000" \
+            -H "Access-Control-Request-Method: GET" \
+            -H "Access-Control-Request-Headers: cookie" \
+            -o /dev/null -w "preflight HTTP %{http_code}\n" 2>&1 | grep -iE "access-control|allow|^HTTP|preflight" | head -10 || true
+          echo "--- Browser-like GET with Origin :3000 + cookie ---"
+          curl -sS -D - -X GET http://localhost:8080/api/v1/library/games/00000000-0000-4000-8000-000000053e1d \
+            -H "Origin: http://localhost:3000" \
+            -b /tmp/cookies.txt -o /tmp/browser-detail.json \
+            -w "browser-like GET HTTP %{http_code}\n" 2>&1 | grep -iE "access-control|^HTTP|browser-like" | head -10 || true
+          echo "--- Browser-like GET response body (first 400 chars) ---"
+          head -c 400 /tmp/browser-detail.json 2>/dev/null
+          echo ""
+          echo "--- Game-night endpoint probes (#960 Cat B) ---"
+          curl -sS -X GET http://localhost:8080/api/v1/knowledge-base/00000000-0000-4000-8000-000000053e1d/documents \
+            -b /tmp/cookies.txt -o /tmp/kb-docs.json \
+            -w "kb-documents HTTP %{http_code}\n" 2>&1 || true
+          head -c 300 /tmp/kb-docs.json 2>/dev/null
+          echo ""
+          curl -sS -X GET "http://localhost:8080/api/v1/chat-threads?gameId=00000000-0000-4000-8000-000000053e1d" \
+            -b /tmp/cookies.txt -o /tmp/chat-threads.json \
+            -w "chat-threads HTTP %{http_code}\n" 2>&1 || true
+          head -c 300 /tmp/chat-threads.json 2>/dev/null
+          echo ""
+          echo "::endgroup::"
 
       - name: Run smoke specs
         working-directory: apps/web
         env:
           SMOKE_API_BASE: http://localhost:8080
           SMOKE_USER_EMAIL: smoke-user@meepleai.test
-          SMOKE_USER_PASSWORD: SmokeUser1!
+          SMOKE_USER_PASSWORD: SmokeUser1!!
           # docker compose already provides web on :3000 (see infra/compose.dev.yml:72)
           # — skip Playwright's own webServer to avoid port collision
           PLAYWRIGHT_SKIP_WEB_SERVER: '1'
-        run: pnpm playwright test smoke-real-backend/ --project=desktop-chrome
+        # #1004 investigation: html reporter captures screenshot + error-context.md
+        # per failed test. Required to debug Cat B residual without local repro
+        # (artifact upload uses apps/web/playwright-report dir which dot reporter
+        # doesn't create).
+        run: pnpm playwright test smoke-real-backend/ --project=desktop-chrome --reporter=html,list
 
       - name: Upload report on failure
         if: failure()
@@ -136,16 +251,30 @@ jobs:
           path: apps/web/playwright-report
           retention-days: 7
 
-      - name: Open issue on failure
+      # N2 (#960): dedup — skip auto-issue if a smoke-failure issue is already
+      # open. Hightower MAJOR: avoids spam when a known regression keeps the
+      # workflow red across multiple runs (e.g. #960 itself).
+      - name: Open issue on failure (deduped)
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'smoke-failure',
+              state: 'open',
+              per_page: 5,
+            });
+            if (existing.data.length > 0) {
+              core.notice(`Skipping auto-issue: ${existing.data.length} open smoke-failure issue(s) already exist (#${existing.data.map(i => i.number).join(', #')}).`);
+              return;
+            }
             const today = new Date().toISOString().slice(0, 10);
-            github.rest.issues.create({
+            await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: `[SMOKE FAILURE] Nightly E2E smoke real backend — ${today}`,
               labels: ['bug', 'P0', 'smoke-failure'],
-              body: `Nightly smoke run failed. See [run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).\n\nCheck attached \`playwright-report-smoke\` artifact.`
+              body: `Nightly smoke run failed. See [run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).\n\nCheck attached \`playwright-report-smoke\` artifact + the new \`Pre-test diagnostics\` step output for container/HTTP probe data.`
             });

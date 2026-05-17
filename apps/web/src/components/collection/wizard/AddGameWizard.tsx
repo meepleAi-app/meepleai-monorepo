@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -96,13 +97,13 @@ export function AddGameWizard() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1
-              className="text-3xl font-bold text-slate-900 dark:text-white mb-2"
+              className="text-3xl font-bold text-foreground dark:text-white mb-2"
               data-testid={WIZARD_TEST_IDS.title}
             >
               {t('collection.addGameTitle')}
             </h1>
             <p
-              className="text-slate-600 dark:text-slate-400"
+              className="text-muted-foreground"
               data-testid={WIZARD_TEST_IDS.subtitle}
             >
               {t('collection.addGameSubtitle')}
@@ -132,7 +133,7 @@ export function AddGameWizard() {
                           ? 'bg-blue-600 text-white'
                           : isCompleted
                             ? 'bg-green-600 text-white'
-                            : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                            : 'bg-muted dark:bg-card text-muted-foreground'
                       }`}
                     >
                       {isCompleted ? '✓' : stepInfo.icon}
@@ -143,13 +144,13 @@ export function AddGameWizard() {
                           ? 'text-blue-600 dark:text-blue-400'
                           : isCompleted
                             ? 'text-green-600 dark:text-green-400'
-                            : 'text-slate-500 dark:text-slate-400'
+                            : 'text-muted-foreground'
                       }`}
                     >
                       {stepInfo.label}
                     </span>
                     <span
-                      className="text-xs text-slate-500 dark:text-slate-400"
+                      className="text-xs text-muted-foreground"
                       data-testid={WIZARD_TEST_IDS.stepDescription(stepInfo.number)}
                     >
                       {stepInfo.description}
@@ -159,7 +160,7 @@ export function AddGameWizard() {
                   {visualIndex < visualSteps.length - 1 && (
                     <div
                       className={`absolute top-6 left-1/2 w-full h-0.5 ${
-                        isCompleted ? 'bg-green-600' : 'bg-slate-200 dark:bg-slate-700'
+                        isCompleted ? 'bg-green-600' : 'bg-muted dark:bg-card'
                       }`}
                       style={{ transform: 'translateX(50%)' }}
                     />
@@ -178,7 +179,7 @@ export function AddGameWizard() {
         )}
 
         {/* Step Content with Animation */}
-        <Card className="p-6 bg-white dark:bg-slate-800 shadow-lg overflow-hidden">
+        <Card className="p-6 bg-card shadow-lg overflow-hidden">
           <div
             ref={stepContentRef}
             tabIndex={-1}
@@ -204,13 +205,13 @@ export function AddGameWizard() {
 
         {/* Summary Card */}
         {(reviewSummary.gameName !== 'Unknown Game' || reviewSummary.hasPdf) && (
-          <Card className="mt-6 p-4 bg-slate-100 dark:bg-slate-700/50">
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+          <Card className="mt-6 p-4 bg-muted">
+            <h3 className="text-sm font-semibold text-foreground mb-2">
               Summary
             </h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-slate-500">Game:</span>{' '}
+                <span className="text-muted-foreground">Game:</span>{' '}
                 <span className="font-medium">{reviewSummary.gameName}</span>
                 {reviewSummary.isCustom && (
                   <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
@@ -220,19 +221,19 @@ export function AddGameWizard() {
               </div>
               {reviewSummary.hasPdf && (
                 <div>
-                  <span className="text-slate-500">PDF:</span>{' '}
+                  <span className="text-muted-foreground">PDF:</span>{' '}
                   <span className="font-medium">{reviewSummary.pdfName}</span>
                 </div>
               )}
               {reviewSummary.players && (
                 <div>
-                  <span className="text-slate-500">Players:</span>{' '}
+                  <span className="text-muted-foreground">Players:</span>{' '}
                   <span className="font-medium">{reviewSummary.players}</span>
                 </div>
               )}
               {reviewSummary.playTime && (
                 <div>
-                  <span className="text-slate-500">Play Time:</span>{' '}
+                  <span className="text-muted-foreground">Play Time:</span>{' '}
                   <span className="font-medium">{reviewSummary.playTime}</span>
                 </div>
               )}

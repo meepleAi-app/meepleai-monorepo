@@ -54,8 +54,8 @@ export function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProp
   return (
     <div
       className={cn(
-        'rounded-xl border bg-white p-3 shadow-sm transition-all',
-        note.pinned ? 'border-[hsl(142,70%,45%)]/40 bg-[hsl(142,70%,45%)]/5' : 'border-gray-200'
+        'rounded-xl border bg-card p-3 shadow-sm transition-all',
+        note.pinned ? 'border-[hsl(142,70%,45%)]/40 bg-[hsl(142,70%,45%)]/5' : 'border-border'
       )}
       data-testid={`note-card-${note.id}`}
     >
@@ -66,14 +66,14 @@ export function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProp
             onChange={e => setDraft(e.target.value)}
             autoFocus
             rows={Math.max(2, draft.split('\n').length)}
-            className="w-full resize-none rounded-lg border border-gray-300 p-2 text-sm outline-none focus:border-[hsl(142,70%,45%)]"
+            className="w-full resize-none rounded-lg border border-border p-2 text-sm outline-none focus:border-[hsl(142,70%,45%)]"
             data-testid={`note-edit-${note.id}`}
           />
           <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={handleCancel}
-              className="rounded-lg px-3 py-1 text-xs text-gray-500 hover:bg-gray-100"
+              className="rounded-lg px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
             >
               Annulla
             </button>
@@ -92,7 +92,7 @@ export function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProp
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="flex-1 text-left text-sm text-gray-800 whitespace-pre-wrap"
+              className="flex-1 text-left text-sm text-foreground whitespace-pre-wrap"
               data-testid={`note-content-${note.id}`}
             >
               {note.pinned && <span className="mr-1">📌</span>}
@@ -102,7 +102,7 @@ export function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProp
               <button
                 type="button"
                 onClick={() => onTogglePin(note.id)}
-                className="rounded p-1 text-xs hover:bg-gray-100"
+                className="rounded p-1 text-xs hover:bg-muted"
                 title={note.pinned ? 'Rimuovi pin' : 'Pinna'}
                 data-testid={`note-pin-${note.id}`}
               >
@@ -119,7 +119,7 @@ export function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProp
               </button>
             </div>
           </div>
-          <div className="mt-1 flex items-center gap-2 text-[10px] text-gray-400">
+          <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
             {note.playerName && <span>{note.playerName}</span>}
             {note.playerName && <span>·</span>}
             <span>{formatRelative(note.updatedAt)}</span>

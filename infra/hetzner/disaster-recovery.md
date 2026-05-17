@@ -6,7 +6,7 @@
 
 This task added observability stack files in `infra/observability/`. The plan v2 referenced a file `infra/docker-compose.production.yml` and modifications to `infra/Caddyfile` — these are **plan drift**:
 
-- **Reality**: production stack is `infra/compose.prod.yml`; alpha stack `compose.alpha.yml`; MVP stack `compose.mvp.yml`. Edge ingress is **Cloudflare Tunnel** (cloudflared on VPS, post-PR #738 cutover) — Traefik decommissioned. Caddy is used only for MVP stack on Hetzner CAX31.
+- **Reality**: production stack is `infra/compose.prod.yml`; MVP stack `compose.mvp.yml`. Edge ingress is **Cloudflare Tunnel** (cloudflared on VPS, post-PR #738 cutover) — Traefik decommissioned. Caddy is used only for MVP stack on Hetzner CAX31.
 - **Decision (controller)**: observability stack lives in `infra/observability/compose.observability.yml` as standalone, deployable via `docker compose -f compose.prod.yml -f observability/compose.observability.yml up -d`. Aaron decides actual integration at deploy time.
 
 ## Scenario 1: CAX31 down/lost (RTO target: 2h)

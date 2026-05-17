@@ -8,15 +8,57 @@
     <AnalysisLevel>latest-Recommended</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!--
+      Issue #1197 (ADR-058 DX): MAI001/MAI002/MAI003 from the in-house
+      NoPiiInLogAnalyzer are developer-experience signals, not enforcement
+      gates. CodeQL on PR/push is the authoritative enforcement (issue #1195
+      FU#1 gate, threshold 0). Keep the analyzer diagnostics as build warnings
+      so they show in IDE / PR check logs but do NOT fail builds. Roslyn
+      analyzer is meant to be advisory; CodeQL stays authoritative.
+
+      Tier mapping (Phase 1 + 2):
+        - MAI001 (Tier 3): placeholder name match — Phase 1.
+        - MAI002 (Tier 1): argument is a typed PII value object — Phase 2a.
+        - MAI003 (Tier 2): argument identifier name heuristic — Phase 2b
+          (highest false-positive risk; reduce or [SuppressMessage] per-site).
+    -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);MAI001;MAI002;MAI003</WarningsNotAsErrors>
     <!-- Living Documentation: Generate XML documentation file for API -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- Suppress warnings: 1591=missing XML comments, code quality warnings temporarily disabled for build -->
     <NoWarn>$(NoWarn);1591;MA0016;MA0051;CA1859;CA1309;S1199;S1172;S3267;MA0048;S4144;S4136;S101;S3358;S6677;MA0132;S2139;S2971;S1066;S3263;CA1873</NoWarn>
   </PropertyGroup>
+
+  <!--
+    Patch 1 (Iter 2 Docker OOM): consente di disabilitare gli analyzer durante
+    `dotnet publish` Docker (peak memory ~800MB-1.5GB per SonarAnalyzer +
+    NetAnalyzers + Meziantou combinati). Gli analyzer continuano a girare in:
+      - `dotnet build` Debug locale (default)
+      - GitHub Actions CI workflow (Release senza SkipAnalyzers=true)
+    Attivazione via `-p:SkipAnalyzers=true` solo nel Dockerfile build stage.
+  -->
+  <PropertyGroup Condition="'$(SkipAnalyzers)' == 'true'">
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+    <RunAnalyzers>false</RunAnalyzers>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+  </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Api.Tests" />
     <!-- Required for Moq to create proxies of internal types in generic contexts (e.g., ILogger<InternalService>) -->
     <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+  <!--
+    Issue #1197 — wire the in-house NoPiiInLogAnalyzer (MAI001) as a build-time
+    analyzer. ADR-058 + docs/for-developers/security/pii-safe-logging.md.
+    OutputItemType="Analyzer" + ReferenceOutputAssembly="false" attaches the
+    project as an analyzer without pulling its assembly into Api's output.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\Api.Analyzers\Api.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="3.7.413" />
@@ -38,6 +80,10 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.14.0-beta.2" />
     <PackageReference Include="Otp.NET" Version="1.4.1" />
     <PackageReference Include="Parquet.Net" Version="5.5.0" />
+    <!-- GHSA-pggp-6c3x-2xmx: Parquet.Net 5.5.0 pulls Snappier 1.3.0 (vulnerable).
+         Override to 1.3.1 patched. Bumping Parquet.Net to 6.x is a breaking
+         change (ParquetSerializer.DeserializeAllAsync removed) — tracked separately. -->
+    <PackageReference Include="Snappier" Version="1.3.1" />
     <PackageReference Include="Pgvector.EntityFrameworkCore" Version="0.3.0" />
     <PackageReference Include="QRCoder" Version="1.7.0" />
     <PackageReference Include="Quartz" Version="3.13.1" />

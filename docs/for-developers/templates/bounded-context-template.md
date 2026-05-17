@@ -289,10 +289,10 @@ apps/api/src/Api/BoundedContexts/{Context}/
 ## 🔗 Related Documentation
 
 ### Architecture
-- [ADR-{number}: {Title}](../architecture/adr/adr-{number}-{slug}.md) - {Brief description}
+- `[ADR-{number}: {Title}](../architecture/adr/adr-{number}-{slug}.md)` - {Brief description}
 
 ### Other Bounded Contexts
-- [{RelatedContext}](./{related-context}.md) - {Relationship description}
+- `[{RelatedContext}](./{related-context}.md)` - {Relationship description}
 
 ### API Reference
 - [Scalar API Docs](http://localhost:8080/scalar/v1) - Interactive API explorer

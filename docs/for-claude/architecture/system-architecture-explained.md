@@ -12,7 +12,7 @@
 
 `v2.0` · `.NET 9` · `Next.js 16` · `Python AI` · `Docker Compose`
 
-[Diagramma PDF](../../claudedocs/MeepleAI-Architecture.pdf)
+**Diagramma PDF** _(planned)_
 
 </div>
 
@@ -122,7 +122,7 @@ Next.js ◀──WebSocket (SignalR)── .NET API
 | OpenRouter | HTTPS + SSE | ✅ | Inferenza LLM (Claude/GPT) |
 | BoardGameGeek | HTTPS + XML | ✅ | Import catalogo giochi |
 | PostgreSQL | TCP `:5432` | ✅ | EF Core + pgvector |
-| Qdrant | HTTP `:6333` / gRPC `:6334` | ✅ | Ricerca vettoriale |
+| pgvector | HTTP `:PostgreSQL :5432` / gRPC `:6334` | ✅ | Ricerca vettoriale |
 | Redis | TCP `:6379` | ✅ | HybridCache L2 + sessioni |
 | S3 / MinIO | HTTP `:9000` | ✅ | Blob storage PDF |
 | Embedding | HTTP POST `/embeddings` | ✅ | Generazione embeddings |
@@ -175,7 +175,7 @@ Next.js ◀──WebSocket (SignalR)── .NET API
 | Servizio | Porta | Stack | Descrizione |
 |----------|:-----:|-------|-------------|
 | **PostgreSQL 16** | `:5432` | EF Core + pgvector | DB relazionale + vettoriale. Soft delete, audit, concurrency |
-| **Qdrant** | `:6333` / `:6334` | Vector DB nativo | Ricerca vettoriale (cosine similarity). Solo via API .NET |
+| **Qdrant** | `:PostgreSQL :5432` / `:6334` | Vector DB nativo | Ricerca vettoriale (cosine similarity). Solo via API .NET |
 | **Redis 7.4** | `:6379` | HybridCache L2 | Cache distribuita + sessioni + cache semantica |
 | **S3 / MinIO** | `:9000` | S3-compatible | Blob storage per PDF. AES256, URL pre-firmati |
 
@@ -309,7 +309,7 @@ L'API .NET chiama Orchestration via `POST /execute`. L'Orchestration **richiama*
 | 1 | Next.js | .NET API | HTTP proxy | `/api/v1/* catch-all proxy` |
 | 2 | .NET API | OpenRouter | HTTPS + SSE | `LLM Inference (SSE stream)` |
 | 3 | .NET API | PostgreSQL | TCP (EF Core) | `EF Core + pgvector` |
-| 4 | .NET API | Qdrant | HTTP/gRPC | `Vector Search (cosine)` |
+| 4 | .NET API | pgvector | HTTP/gRPC | `Vector Search (cosine)` |
 | 5 | .NET API | Embedding | HTTP POST | `POST /embeddings` |
 | 6 | .NET API | Reranker | HTTP POST | `POST /rerank` |
 | 7 | .NET API | Orchestration | HTTP POST | `POST /execute` |
@@ -375,7 +375,7 @@ Alcuni servizi nel PDF non hanno frecce visibili. Ecco perch&eacute;:
 ```
 Browser → Next.js :3000 → .NET API :8080
   1. → Embedding :8000       genera vettore dalla query
-  2. → Qdrant :6333          ricerca vettoriale (cosine similarity)
+  2. → pgvector (PostgreSQL)          ricerca vettoriale (cosine similarity)
   3. → Reranker :8003        riordina per rilevanza
   4. → OpenRouter :443       genera risposta con contesto (LLM)
   5. ← SSE streaming         risposta → Next.js → Browser
@@ -393,7 +393,7 @@ Browser → Next.js :3000 → .NET API :8080
        → SmolDocling :8002   estrazione (Stage 2, VLM/OCR avanzato)
   4. → Chunking              nel .NET API (2000 chars, 200 overlap)
   5. → Embedding :8000       genera vettori per ogni chunk
-  6. → Qdrant :6333          salva vettori indicizzati
+  6. → pgvector (PostgreSQL)          salva vettori indicizzati
 ```
 
 ### 3. Multi-Agent
@@ -443,7 +443,7 @@ Browser → Next.js middleware → .NET API /api/v1/auth/login
 
 | Profilo | Servizi | Uso |
 |---------|---------|-----|
-| `minimal` | PostgreSQL, Redis, Qdrant, API, Web | Dev base senza AI |
+| `minimal` | PostgreSQL (with pgvector), Redis, API, Web | Dev base senza AI |
 | `dev` | minimal + Prometheus, Grafana, Mailpit, Alertmanager, cAdvisor | Dev con monitoraggio |
 | `ai` | dev + Embedding, Reranker, Orchestration, Unstructured, SmolDocling | Dev con AI completa |
 | `full` | ai + n8n, Ollama | Stack completo |
@@ -454,7 +454,7 @@ Browser → Next.js middleware → .NET API /api/v1/auth/login
 |--------|----------|-----------|
 | `postgres_data` | PostgreSQL | Dati relazionali + vettoriali |
 | `redis_data` | Redis | Cache + sessioni |
-| `qdrant_data` | Qdrant | Indici vettoriali |
+| `qdrant_data` | pgvector | Indici vettoriali |
 | `grafana_data` | Grafana | Dashboard configurate |
 
 ---
@@ -480,6 +480,6 @@ Browser → Next.js middleware → .NET API /api/v1/auth/login
 
 <div align="center">
 
-*Ultimo aggiornamento: 2026-02-19* · *Diagramma: [`MeepleAI-Architecture.pdf`](../../claudedocs/MeepleAI-Architecture.pdf)*
+*Ultimo aggiornamento: 2026-02-19* · *Diagramma: **`MeepleAI-Architecture.pdf`** _(planned)_*
 
 </div>

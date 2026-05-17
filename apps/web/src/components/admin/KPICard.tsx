@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 /**
  * KPICard Component - Issue #2785
  *
@@ -98,7 +99,7 @@ export function KPICard({
       className={cn(
         'group relative overflow-hidden rounded-xl border border-border/50 dark:border-border/30 bg-card/90 backdrop-blur-[12px] dark:bg-card dark:backdrop-blur-none p-5',
         'hover-card hover-shadow-meeple',
-        'dark:border-stone-800 dark:bg-stone-900',
+        'dark:border-border dark:bg-card',
         className
       )}
       data-testid={testId}
@@ -132,13 +133,13 @@ export function KPICard({
         </div>
 
         {/* Title */}
-        <p className="text-sm font-medium text-stone-500 dark:text-stone-400" data-testid={testId ? `${testId}-title` : undefined}>
+        <p className="text-sm font-medium text-muted-foreground" data-testid={testId ? `${testId}-title` : undefined}>
           {title}
         </p>
 
         {/* Value */}
         <p
-          className="mt-1 font-quicksand text-3xl font-bold text-stone-900 dark:text-white"
+          className="mt-1 font-quicksand text-3xl font-bold text-foreground dark:text-white"
           data-testid={testId ? `${testId}-value` : undefined}
         >
           {value}
@@ -156,7 +157,7 @@ export function KPICard({
               className={cn(
                 isPositiveTrend && 'text-green-600 dark:text-green-400',
                 isNegativeTrend && 'text-red-600 dark:text-red-400',
-                !isPositiveTrend && !isNegativeTrend && 'text-stone-500'
+                !isPositiveTrend && !isNegativeTrend && 'text-muted-foreground'
               )}
               data-testid={testId ? `${testId}-trend` : undefined}
             >
@@ -164,7 +165,7 @@ export function KPICard({
               {trend}%
             </span>
             {trendLabel && (
-              <span className="text-stone-400 dark:text-stone-500">
+              <span className="text-muted-foreground">
                 {trendLabel}
               </span>
             )}
@@ -173,7 +174,7 @@ export function KPICard({
 
         {/* Subtitle */}
         {subtitle && (
-          <p className="mt-2 text-sm text-stone-400 dark:text-stone-500">
+          <p className="mt-2 text-sm text-muted-foreground">
             {subtitle}
           </p>
         )}

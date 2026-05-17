@@ -101,13 +101,13 @@ function ToolButton({
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1',
         isActive
           ? 'bg-amber-100 dark:bg-amber-900/40 border border-amber-400 dark:border-amber-600 text-amber-800 dark:text-amber-200 shadow-sm'
-          : 'border border-transparent text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800'
+          : 'border border-transparent text-muted-foreground hover:bg-muted'
       )}
     >
       <span
         className={cn(
           'relative flex-shrink-0',
-          isActive ? 'text-amber-700 dark:text-amber-300' : 'text-stone-500 dark:text-stone-400'
+          isActive ? 'text-amber-700 dark:text-amber-300' : 'text-muted-foreground'
         )}
       >
         {tool.icon}
@@ -177,7 +177,7 @@ export function ToolRail({
           'hidden md:flex flex-col session-tool-rail',
           isCollapsed ? 'w-14' : 'w-48',
           'transition-[width] duration-200 ease-in-out',
-          'bg-stone-50 dark:bg-stone-900 border-r border-stone-200 dark:border-stone-700',
+          'bg-muted border-r border-border',
           'h-full min-h-0 overflow-y-auto overflow-x-hidden',
           className
         )}
@@ -190,7 +190,7 @@ export function ToolRail({
           aria-label={isCollapsed ? 'Espandi rail' : 'Comprimi rail'}
           className={cn(
             'flex items-center justify-center p-2 mx-1 mt-2 mb-3 rounded-md',
-            'text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800',
+            'text-muted-foreground hover:bg-muted',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500',
             'transition-colors duration-150',
             isCollapsed ? 'self-center' : 'self-end'
@@ -226,13 +226,13 @@ export function ToolRail({
         {customTools.length > 0 && (
           <>
             <div className="flex items-center px-2 my-3" title="Tool custom" aria-hidden="true">
-              <div className="flex-1 h-px bg-stone-200 dark:bg-stone-700" />
+              <div className="flex-1 h-px bg-muted dark:bg-card" />
               {!isCollapsed && (
-                <span className="px-2 text-xs text-stone-400 dark:text-stone-500 font-medium uppercase tracking-wider">
+                <span className="px-2 text-xs text-muted-foreground font-medium uppercase tracking-wider">
                   Custom
                 </span>
               )}
-              <div className="flex-1 h-px bg-stone-200 dark:bg-stone-700" />
+              <div className="flex-1 h-px bg-muted dark:bg-card" />
             </div>
 
             <div
@@ -260,7 +260,7 @@ export function ToolRail({
       <nav
         className={cn(
           'md:hidden fixed bottom-0 left-0 right-0 z-30',
-          'bg-stone-50 dark:bg-stone-900 border-t border-stone-200 dark:border-stone-700',
+          'bg-muted border-t border-border',
           'shadow-[0_-2px_8px_rgba(0,0,0,0.08)]'
         )}
         aria-label="Strumenti sessione"
@@ -286,7 +286,7 @@ export function ToolRail({
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500',
                 activeTool === tool.id
                   ? 'text-amber-700 dark:text-amber-300'
-                  : 'text-stone-500 dark:text-stone-400'
+                  : 'text-muted-foreground'
               )}
             >
               <span

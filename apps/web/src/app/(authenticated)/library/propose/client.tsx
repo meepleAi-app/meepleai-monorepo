@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -110,16 +111,16 @@ export function EditorProposalClient() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+            <h1 className="text-3xl font-bold text-foreground dark:text-white mb-2">
               Propose Game to Catalog
             </h1>
-            <p className="text-slate-600 dark:text-slate-400">
+            <p className="text-muted-foreground">
               Submit a game for admin approval to shared catalog
             </p>
           </div>
           <button
             onClick={() => router.push('/library')}
-            className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            className="px-4 py-2 text-muted-foreground hover:text-foreground dark:hover:text-white"
           >
             ← Cancel
           </button>
@@ -136,18 +137,18 @@ export function EditorProposalClient() {
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl mb-2 transition-colors ${
                   isActive ? 'bg-blue-600 text-white' :
                   isCompleted ? 'bg-green-600 text-white' :
-                  'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                  'bg-muted dark:bg-card text-muted-foreground'
                 }`}>
                   {isCompleted ? '✓' : step.icon}
                 </div>
                 <span className={`text-sm font-medium ${
-                  isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-slate-500'
+                  isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-muted-foreground'
                 }`}>
                   {step.label}
                 </span>
                 {index < STEPS.length - 1 && (
                   <div className={`absolute top-6 left-1/2 w-full h-0.5 ${
-                    isCompleted ? 'bg-green-600' : 'bg-slate-200 dark:bg-slate-700'
+                    isCompleted ? 'bg-green-600' : 'bg-muted dark:bg-card'
                   }`} style={{ transform: 'translateX(50%)' }} />
                 )}
               </div>

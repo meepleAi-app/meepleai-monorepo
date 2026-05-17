@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import { type ReactNode } from 'react';
@@ -105,8 +106,8 @@ export function ChatMessageBubble({
         {isUser ? initials(authorName) : '🎲'}
       </div>
       <div className={cn('flex min-w-0 flex-1 flex-col gap-2', isUser && 'items-end')}>
-        <div className="flex items-center gap-2 text-[0.66rem] font-semibold text-[var(--nh-text-muted)]">
-          <span className="font-quicksand font-extrabold text-[var(--nh-text-secondary)]">
+        <div className="flex items-center gap-2 text-[0.66rem] font-semibold text-[var(--text-muted)]">
+          <span className="font-quicksand font-extrabold text-[var(--text-sec)]">
             {authorName}
           </span>
           <span>· {timestamp}</span>
@@ -116,7 +117,7 @@ export function ChatMessageBubble({
             'rounded-2xl px-4 py-3.5 font-nunito text-[0.88rem] leading-relaxed',
             isUser
               ? 'rounded-tr-md'
-              : 'rounded-tl-md border border-[var(--nh-border-default)] bg-[var(--nh-bg-elevated)] text-[var(--nh-text-primary)] shadow-[var(--shadow-warm-sm)]'
+              : 'rounded-tl-md border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text)] shadow-[var(--shadow-warm-sm)]'
           )}
           style={
             isUser
@@ -135,7 +136,7 @@ export function ChatMessageBubble({
                   <img
                     src={url}
                     alt={`Immagine ${idx + 1}`}
-                    className="h-15 w-20 cursor-pointer rounded-md border border-white/10 object-cover transition-opacity hover:opacity-80"
+                    className="h-15 w-20 cursor-pointer rounded-md border border-border object-cover transition-opacity hover:opacity-80"
                   />
                 </a>
               ))}

@@ -27,8 +27,7 @@ Hallucination Rate: 0% (0/20)  - ✅ PASS
 Latency <5s Rate:   100%       - ✅ PASS
 ```
 
-**Documenti**:
-- [RAG Validation 20Q](rag-validation-20q.md) - Ultimi risultati di validazione
+**Documenti**: i risultati live della validazione 20Q sono in `docs/quality/rag-validation-20q.md` (eseguibile via `pwsh tools/run-rag-validation-20q.ps1`). Nota: il file potrebbe non esistere finché lo script non viene eseguito almeno una volta — vedi sezione "Quality Tools" sotto.
 
 ---
 
@@ -36,14 +35,12 @@ Latency <5s Rate:   100%       - ✅ PASS
 
 **Backend** (xUnit + Testcontainers):
 - **Target**: 90%+ coverage
-- **Current**: [Test Coverage Report 2026-02-15](test-coverage-report-2026-02-15.md)
-- **Tests**: 13,134 total | 12,946 passed (98.6%) | Unit: 12,117/12,131 (99.97%)
+- **Current snapshot 2026-02-15**: 13,134 total | 12,946 passed (98.6%) | Unit: 12,117/12,131 (99.97%)
 - **Epic**: [#3005 - Test Coverage](https://github.com/your-org/meepleai-monorepo/issues/3005)
 
 **Frontend** (Vitest + v8 coverage):
 - **Target**: 85%+ coverage
-- **Current**: [Test Coverage Report 2026-02-15](test-coverage-report-2026-02-15.md)
-- **Tests**: 13,606 total | 13,490 passed (99.1%) | 9 flaky (timing-related)
+- **Current snapshot 2026-02-15**: 13,606 total | 13,490 passed (99.1%) | 9 flaky (timing-related)
 - **Coverage**: Branches 87.62% | Functions 79.10% | Lines 69.56% | Statements 69.56%
 - **Epic**: [#3005 - Test Coverage](https://github.com/your-org/meepleai-monorepo/issues/3005)
 
@@ -85,7 +82,7 @@ cd apps/web && pnpm test:e2e
 - [Backend Testing](../testing/backend/) - xUnit + Testcontainers
 - [Frontend Testing](../testing/frontend/) - Vitest patterns
 - [E2E Testing](../testing/e2e/) - Playwright guides
-- [Accessibility Guidelines](./accessibility-guidelines.md) - WCAG 2.1 AA compliance
+- [API Smoke Tests (Bruno)](./api-smoke/README.md) - HTTP contract smoke per CRUD 4 domini. Trigger CI: PR `main-dev → main-staging`. Persona: `smoke-aaron@meepleai.test` (free-tier).
 
 ---
 

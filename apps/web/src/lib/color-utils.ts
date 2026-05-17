@@ -1,4 +1,4 @@
-import type { EntityType } from '@/components/ui/v2/entity-tokens';
+import type { EntityType } from '@/components/ui/entity-tokens';
 
 /**
  * Build an `hsl()` color string referencing a CSS entity color variable.

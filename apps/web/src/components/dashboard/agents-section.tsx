@@ -13,7 +13,6 @@ import Link from 'next/link';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useRecentAgents } from '@/hooks/queries/useRecentAgents';
-import { IS_ALPHA_MODE } from '@/lib/alpha-mode';
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 
 // ─── Section header ───────────────────────────────────────────────────────────
@@ -50,6 +49,7 @@ function AgentCard({ agent }: { agent: AgentDto }) {
     >
       {/* Icon */}
       <span
+        // eslint-disable-next-line local/no-hardcoded-color-utility -- white text on gradient bg (style prop); mockup .e-bg pattern
         className="flex items-center justify-center w-9 h-9 rounded-lg text-white shrink-0"
         style={{ background: 'linear-gradient(135deg, hsl(38,92%,50%), hsl(38,92%,32%))' }}
         aria-hidden
@@ -100,9 +100,7 @@ function AgentCardSkeleton() {
 // ─── Public component ─────────────────────────────────────────────────────────
 
 export function AgentsDashboardSection() {
-  const { data: agents = [], isLoading } = useRecentAgents(2, !IS_ALPHA_MODE);
-
-  if (IS_ALPHA_MODE) return null;
+  const { data: agents = [], isLoading } = useRecentAgents(2);
 
   return (
     <section>

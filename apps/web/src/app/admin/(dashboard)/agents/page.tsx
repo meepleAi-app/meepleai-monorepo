@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
@@ -202,7 +203,7 @@ export default function MissionControlPage() {
       },
       unknown: {
         label: 'Non Configurato',
-        className: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+        className: 'bg-muted text-muted-foreground dark:bg-card dark:text-muted-foreground',
       },
     };
     const v = variants[status];
@@ -264,7 +265,7 @@ export default function MissionControlPage() {
       {/* Row 1 — KPI Cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {/* Esecuzioni Oggi */}
-        <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+        <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-1">
               <Activity className="h-4 w-4" />
@@ -289,7 +290,7 @@ export default function MissionControlPage() {
         </Card>
 
         {/* Latenza Media */}
-        <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+        <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
               <Clock className="h-4 w-4" />
@@ -312,7 +313,7 @@ export default function MissionControlPage() {
         </Card>
 
         {/* Error Rate */}
-        <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+        <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
           <CardContent className="pt-4 pb-3 px-4">
             <div
               className={`flex items-center gap-2 mb-1 ${errorRate >= 0.05 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}
@@ -332,7 +333,7 @@ export default function MissionControlPage() {
         </Card>
 
         {/* Token Consumati */}
-        <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+        <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-1">
               <Zap className="h-4 w-4" />
@@ -357,7 +358,7 @@ export default function MissionControlPage() {
         </Card>
 
         {/* Costo Oggi */}
-        <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+        <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
               <CircleDollarSign className="h-4 w-4" />
@@ -383,7 +384,7 @@ export default function MissionControlPage() {
       {/* Row 2 — Health + Quick Actions */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Service Health */}
-        <Card className="lg:col-span-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+        <Card className="lg:col-span-2 bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold">Stato Servizi</CardTitle>
           </CardHeader>
@@ -395,7 +396,7 @@ export default function MissionControlPage() {
                 return (
                   <div
                     key={svc.name}
-                    className="flex items-center justify-between rounded-lg border border-slate-200/60 dark:border-zinc-700/40 px-3 py-2"
+                    className="flex items-center justify-between rounded-lg border border-border/60 dark:border-zinc-700/40 px-3 py-2"
                   >
                     <div className="flex items-center gap-2">
                       <Icon className="h-4 w-4 text-muted-foreground" />
@@ -418,7 +419,7 @@ export default function MissionControlPage() {
         </Card>
 
         {/* Azioni Rapide */}
-        <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+        <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold">Azioni Rapide</CardTitle>
           </CardHeader>
@@ -442,7 +443,7 @@ export default function MissionControlPage() {
       </div>
 
       {/* Row 3 — Recent Executions */}
-      <Card className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border-slate-200/60 dark:border-zinc-700/60">
+      <Card className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl border-border/60 dark:border-zinc-700/60">
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-sm font-semibold">Ultime Esecuzioni RAG</CardTitle>
           <Link
@@ -467,7 +468,7 @@ export default function MissionControlPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200/60 dark:border-zinc-700/40 text-left">
+                  <tr className="border-b border-border/60 dark:border-zinc-700/40 text-left">
                     <th className="pb-2 font-medium text-muted-foreground">Query</th>
                     <th className="pb-2 font-medium text-muted-foreground">Strategy</th>
                     <th className="pb-2 font-medium text-muted-foreground text-right">Latenza</th>
@@ -479,7 +480,7 @@ export default function MissionControlPage() {
                   {executions.map(exec => (
                     <tr
                       key={exec.id}
-                      className="border-b border-slate-100/60 dark:border-zinc-800/40 last:border-0"
+                      className="border-b border-border/60 dark:border-zinc-800/40 last:border-0"
                     >
                       <td className="py-2 pr-4 max-w-[280px] truncate">{exec.query}</td>
                       <td className="py-2 pr-4">

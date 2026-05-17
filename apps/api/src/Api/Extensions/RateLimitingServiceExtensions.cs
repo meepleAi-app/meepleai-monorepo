@@ -30,6 +30,8 @@ namespace Api.Extensions;
 /// - AgentCreation:        10 req/min  — AI agent creation (per user)
 /// - ContactForm:           5 req/hour — anonymous contact form spam prevention (IP-based)
 /// - AccessRequest:         5 req/hour — access request spam prevention (IP-based)
+/// - AdminProviderProbe:   10 req/min  — provider token probes per user (Issue #936)
+/// - AdminProviderProbeGlobal: 60 req/h — provider token probes per provider name (Issue #936)
 /// </summary>
 internal static class RateLimitingServiceExtensions
 {
@@ -115,6 +117,13 @@ internal static class RateLimitingServiceExtensions
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
                 options.AddPolicy("AccessRequest", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                // Issue #936: Admin provider probe policies (G3)
+                options.AddPolicy("AdminProviderProbe", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("AdminProviderProbeGlobal", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
             });
 
@@ -488,6 +497,42 @@ internal static class RateLimitingServiceExtensions
                     {
                         Window = TimeSpan.FromHours(1),
                         PermitLimit = 5,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 19: AdminProviderProbe - 10 req/min per user for provider token probes (Issue #936, G3)
+            // Probes call upstream provider APIs; per-user limit prevents abuse / runaway costs.
+            options.AddPolicy("AdminProviderProbe", httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"admin-provider-probe-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 10,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 20: AdminProviderProbeGlobal - 60 req/h per provider name (Issue #936, G3)
+            // Bounds total probe load per provider regardless of which admin triggers it.
+            options.AddPolicy("AdminProviderProbeGlobal", httpContext =>
+            {
+                var providerName = (httpContext.Request.RouteValues["name"] as string) ?? "unknown";
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"admin-provider-probe-global-{providerName}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromHours(1),
+                        PermitLimit = 60,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,

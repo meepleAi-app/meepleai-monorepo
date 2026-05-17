@@ -99,9 +99,9 @@ describe('TemplateCarousel', () => {
 
       render(<TemplateCarousel />);
 
-      // Check for unselected template styling
+      // Unselected template uses semantic border (post DS-15: border-slate-700 → border-border)
       const unselectedButton = screen.getByText('Strategy Guide').closest('button');
-      expect(unselectedButton?.className).toContain('border-slate-700');
+      expect(unselectedButton?.className).toContain('border-border');
     });
   });
 

@@ -62,7 +62,7 @@ export function EntityLinkPreviewRow({
           'cursor-pointer rounded-b-2xl',
           'text-xs font-nunito text-left',
           'transition-all duration-[350ms] cubic-bezier[0.4,0,0.2,1]',
-          'hover:bg-white/10',
+          'hover:bg-card/10',
           'focus:outline-none',
           className
         )}

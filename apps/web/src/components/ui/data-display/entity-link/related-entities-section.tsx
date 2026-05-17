@@ -131,7 +131,7 @@ export function RelatedEntitiesSection({
               'px-2.5 py-1 text-xs font-medium',
               'text-muted-foreground transition-all duration-150',
               'hover:border-border hover:bg-muted hover:text-foreground',
-              'focus:outline-none focus:ring-2 focus:ring-slate-300'
+              'focus:outline-none focus:ring-2 focus:ring-border'
             )}
             aria-label="Add new connection"
           >

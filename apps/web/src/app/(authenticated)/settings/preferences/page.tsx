@@ -17,9 +17,9 @@ import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/primitives/button';
 import { Label } from '@/components/ui/primitives/label';
-import { SettingsList } from '@/components/ui/v2/settings-list';
-import { SettingsRow } from '@/components/ui/v2/settings-row';
-import { ToggleSwitch } from '@/components/ui/v2/toggle-switch';
+import { SettingsList } from '@/components/ui/settings-list';
+import { SettingsRow } from '@/components/ui/settings-row';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { userKeys } from '@/hooks/queries/useCurrentUser';
 import { useToast } from '@/hooks/useToast';
 import { api } from '@/lib/api';

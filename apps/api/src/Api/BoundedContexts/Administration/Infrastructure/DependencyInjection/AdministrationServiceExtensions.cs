@@ -39,6 +39,7 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<IAlertConfigurationRepository, AlertConfigurationRepository>();  // Issue #2112: Missing DI registration
         services.AddScoped<IAlertRuleRepository, AlertRuleRepository>();  // Issue #2112: Missing DI registration
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+        services.AddScoped<IStagingAllowlistRepository, StagingAllowlistRepository>();  // #845: DevOps Wave 1
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
         // ISSUE-916: Reporting repositories

@@ -20,7 +20,7 @@ export function DiceResultDisplay({ result, isRolling }: DiceResultDisplayProps)
   return (
     <div
       className={cn(
-        'flex flex-col items-center gap-2 rounded-xl bg-gray-50 p-4 transition-transform',
+        'flex flex-col items-center gap-2 rounded-xl bg-muted p-4 transition-transform',
         isRolling && 'animate-dice-shake'
       )}
       data-testid="dice-result-display"
@@ -30,25 +30,25 @@ export function DiceResultDisplay({ result, isRolling }: DiceResultDisplayProps)
         {result.rolls.map((value, i) => (
           <span
             key={i}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-sm font-semibold text-foreground"
           >
             {value}
           </span>
         ))}
         {result.modifier !== 0 && (
-          <span className="flex h-8 items-center px-1 text-sm font-medium text-gray-500">
+          <span className="flex h-8 items-center px-1 text-sm font-medium text-muted-foreground">
             {result.modifier > 0 ? `+${result.modifier}` : result.modifier}
           </span>
         )}
       </div>
 
       {/* Total */}
-      <div className="text-3xl font-bold text-gray-900" data-testid="dice-result-total">
+      <div className="text-3xl font-bold text-foreground" data-testid="dice-result-total">
         {result.total}
       </div>
 
       {/* Formula label */}
-      <div className="text-xs text-gray-400">{result.formula}</div>
+      <div className="text-xs text-muted-foreground">{result.formula}</div>
 
       {/* Inline keyframes for the shake animation */}
       <style jsx>{`

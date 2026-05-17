@@ -1,6 +1,7 @@
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Entities;
 using Api.Infrastructure;
+using Api.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.UserNotifications.Infrastructure.Services;
@@ -67,7 +68,7 @@ internal sealed class EmailOutboxService : IEmailOutboxService
             _logger.LogInformation(
                 "Enqueued email {IdempotencyKey} for {ToEmail}",
                 idempotencyKey,
-                toEmail);
+                DataMasking.MaskEmail(toEmail));
             return true;
         }
         catch (DbUpdateException ex) when (IsUniqueViolation(ex))

@@ -34,8 +34,8 @@ export function CounterTool({ id, name, initialValue, min, max, onAction }: Coun
   const atMax = max !== undefined && counter.value >= max;
 
   return (
-    <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-4">
-      <div className="text-center text-sm font-semibold text-slate-700">{counter.name}</div>
+    <div className="space-y-2 rounded-lg border border-border bg-card p-4">
+      <div className="text-center text-sm font-semibold text-foreground">{counter.name}</div>
       <div className="flex items-center justify-center gap-4">
         <Button
           variant="outline"
@@ -52,7 +52,7 @@ export function CounterTool({ id, name, initialValue, min, max, onAction }: Coun
           −
         </Button>
         <span
-          className="w-16 text-center text-3xl font-bold tabular-nums text-slate-800"
+          className="w-16 text-center text-3xl font-bold tabular-nums text-foreground"
           data-testid="counter-value"
         >
           {counter.value}
@@ -73,14 +73,14 @@ export function CounterTool({ id, name, initialValue, min, max, onAction }: Coun
         </Button>
       </div>
       {(min !== undefined || max !== undefined) && (
-        <p className="text-center text-xs text-slate-400">
+        <p className="text-center text-xs text-muted-foreground">
           {min ?? '−∞'} – {max ?? '+∞'}
         </p>
       )}
       <Button
         variant="ghost"
         size="sm"
-        className="w-full text-xs text-slate-400"
+        className="w-full text-xs text-muted-foreground"
         onClick={() => {
           resetCounter(id);
           onAction?.('reset', initialValue);

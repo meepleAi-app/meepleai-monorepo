@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 import { useState, useCallback } from 'react';
 
 import { useAlertDialog } from '@/hooks/useAlertDialog';
@@ -216,20 +217,20 @@ export function CommentItem({
   return (
     <div
       className={cn(
-        'p-3 border border-gray-300 rounded mb-3',
-        comment.isResolved ? 'bg-gray-100 opacity-70' : 'bg-gray-50'
+        'p-3 border border-border rounded mb-3',
+        comment.isResolved ? 'bg-muted opacity-70' : 'bg-muted'
       )}
     >
       <div className="flex justify-between items-start mb-2">
         <div>
           <strong className="text-sm">{comment.userDisplayName}</strong>
           {comment.atomId && (
-            <span className="ml-2 text-xs text-gray-600 bg-blue-50 px-1.5 py-0.5 rounded-sm">
+            <span className="ml-2 text-xs text-muted-foreground bg-blue-50 px-1.5 py-0.5 rounded-sm">
               Regola: {comment.atomId}
             </span>
           )}
           {comment.lineNumber !== null && (
-            <span className="ml-2 text-xs text-gray-600 bg-orange-50 px-1.5 py-0.5 rounded-sm">
+            <span className="ml-2 text-xs text-muted-foreground bg-orange-50 px-1.5 py-0.5 rounded-sm">
               Line {comment.lineNumber}
             </span>
           )}
@@ -242,7 +243,7 @@ export function CommentItem({
             </span>
           )}
         </div>
-        <div className="text-xs text-gray-600">
+        <div className="text-xs text-muted-foreground">
           {new Date(comment.createdAt).toLocaleString()}
           {comment.updatedAt && ' (modificato)'}
         </div>
@@ -254,7 +255,7 @@ export function CommentItem({
             value={editText}
             onChange={e => setEditText(e.target.value)}
             disabled={isDisabled}
-            className="w-full min-h-[80px] p-2 border border-gray-400 rounded text-sm font-[inherit] mb-2 resize-y"
+            className="w-full min-h-[80px] p-2 border border-border rounded text-sm font-[inherit] mb-2 resize-y"
           />
           <div className="flex gap-2">
             <button
@@ -263,7 +264,7 @@ export function CommentItem({
               className={cn(
                 'px-3 py-1.5 text-white border-0 rounded text-sm',
                 isDisabled || !editText.trim()
-                  ? 'bg-gray-400 cursor-not-allowed'
+                  ? 'bg-muted-foreground cursor-not-allowed'
                   : 'bg-green-600 cursor-pointer hover:bg-green-700'
               )}
             >
@@ -274,7 +275,7 @@ export function CommentItem({
               disabled={isDisabled}
               className={cn(
                 'px-3 py-1.5 bg-gray-600 text-white border-0 rounded text-sm',
-                isDisabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-700'
+                isDisabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-card'
               )}
             >
               Annulla
@@ -285,7 +286,7 @@ export function CommentItem({
         <div>
           {/* Line context snippet if available */}
           {comment.lineContext && (
-            <div className="p-2 bg-white border border-gray-300 rounded mb-2 text-sm font-mono text-gray-600">
+            <div className="p-2 bg-card border border-border rounded mb-2 text-sm font-mono text-muted-foreground">
               {comment.lineContext}
             </div>
           )}
@@ -299,7 +300,7 @@ export function CommentItem({
 
           {/* Mentioned users display */}
           {comment.mentionedUserIds && comment.mentionedUserIds.length > 0 && (
-            <div className="text-xs text-gray-600 mb-2">
+            <div className="text-xs text-muted-foreground mb-2">
               <span className="italic">Mentioned: {comment.mentionedUserIds.length} user(s)</span>
             </div>
           )}
@@ -313,7 +314,7 @@ export function CommentItem({
                 className={cn(
                   'px-2.5 py-1 text-white border-0 rounded text-xs',
                   isDisabled
-                    ? 'bg-gray-400 cursor-not-allowed'
+                    ? 'bg-muted-foreground cursor-not-allowed'
                     : 'bg-blue-500 cursor-pointer hover:bg-blue-600'
                 )}
                 aria-label="Edit comment"
@@ -328,7 +329,7 @@ export function CommentItem({
                 className={cn(
                   'px-2.5 py-1 text-white border-0 rounded text-xs',
                   isDisabled
-                    ? 'bg-gray-400 cursor-not-allowed'
+                    ? 'bg-muted-foreground cursor-not-allowed'
                     : 'bg-red-600 cursor-pointer hover:bg-red-700'
                 )}
                 aria-label="Delete comment"
@@ -344,7 +345,7 @@ export function CommentItem({
                 className={cn(
                   'px-2.5 py-1 text-white border-0 rounded text-xs',
                   isDisabled
-                    ? 'bg-gray-400 cursor-not-allowed'
+                    ? 'bg-muted-foreground cursor-not-allowed'
                     : 'bg-blue-500 cursor-pointer hover:bg-blue-600'
                 )}
                 aria-label="Reply to comment"
@@ -360,9 +361,9 @@ export function CommentItem({
                 className={cn(
                   'px-2.5 py-1 text-white border-0 rounded text-xs',
                   isDisabled
-                    ? 'bg-gray-400 cursor-not-allowed'
+                    ? 'bg-muted-foreground cursor-not-allowed'
                     : comment.isResolved
-                      ? 'bg-gray-600 cursor-pointer hover:bg-gray-700'
+                      ? 'bg-gray-600 cursor-pointer hover:bg-card'
                       : 'bg-green-600 cursor-pointer hover:bg-green-700'
                 )}
                 aria-label={comment.isResolved ? 'Reopen comment' : 'Mark as resolved'}
@@ -376,13 +377,13 @@ export function CommentItem({
 
       {/* Reply form */}
       {isReplying && (
-        <div className="mt-3 pt-3 border-t border-gray-300">
+        <div className="mt-3 pt-3 border-t border-border">
           <textarea
             value={replyText}
             onChange={e => setReplyText(e.target.value)}
             placeholder="Scrivi una risposta..."
             disabled={isDisabled}
-            className="w-full min-h-[60px] p-2 border border-gray-400 rounded text-sm font-[inherit] resize-y"
+            className="w-full min-h-[60px] p-2 border border-border rounded text-sm font-[inherit] resize-y"
           />
           <div className="flex gap-2 mt-2">
             <button
@@ -391,7 +392,7 @@ export function CommentItem({
               className={cn(
                 'px-3 py-1.5 text-white border-0 rounded text-sm',
                 isDisabled || !replyText.trim()
-                  ? 'bg-gray-400 cursor-not-allowed'
+                  ? 'bg-muted-foreground cursor-not-allowed'
                   : 'bg-green-600 cursor-pointer hover:bg-green-700'
               )}
             >
@@ -402,7 +403,7 @@ export function CommentItem({
               disabled={isDisabled}
               className={cn(
                 'px-3 py-1.5 bg-gray-600 text-white border-0 rounded text-sm',
-                isDisabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-700'
+                isDisabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-card'
               )}
             >
               Annulla
@@ -413,7 +414,7 @@ export function CommentItem({
 
       {/* Threaded replies (recursive rendering) */}
       {comment.replies && comment.replies.length > 0 && depth < maxDepth && (
-        <div className="ml-5 mt-3 border-l-2 border-gray-300 pl-3">
+        <div className="ml-5 mt-3 border-l-2 border-border pl-3">
           {comment.replies.map(reply => (
             <CommentItem
               key={reply.id}

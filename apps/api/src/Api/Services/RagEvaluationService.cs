@@ -356,7 +356,7 @@ internal class RagEvaluationService : IRagEvaluationService
     {
         var stopwatch = Stopwatch.StartNew();
 
-        // Vector store (Qdrant) has been removed — evaluate with empty search results.
+        // Legacy vector-only evaluation deprecated — pgvector hybrid is canonical.
         stopwatch.Stop();
 
         // Calculate metrics against empty results (all metrics will be zero)

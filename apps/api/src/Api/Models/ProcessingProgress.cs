@@ -136,7 +136,7 @@ public enum ProcessingStep
     Embedding = 3,
 
     /// <summary>
-    /// Vectors are being stored in Qdrant database (80-100%)
+    /// Vectors are being stored in pgvector (PostgreSQL) (80-100%)
     /// </summary>
     Indexing = 4,
 

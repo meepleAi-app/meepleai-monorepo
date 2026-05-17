@@ -1,0 +1,47 @@
+# Issue #985 (G4): LLM provider quota / credit alerting.
+# Fires when remaining USD drops below thresholds.
+#
+# Metrics source: ObservableGauge callbacks in ProviderQuotaMetricsRegistrar
+# (apps/api/src/Api/Observability/Metrics/ProviderQuotaMetricsRegistrar.cs).
+# Backend: ProviderQuotaService (HybridCache 5min) → IProviderQuotaProvider per-provider impl.
+#
+# Alert ratio is only computed for providers exposing both remaining AND limit
+# (e.g., OpenRouter with cap). For pay-as-you-go providers (DeepSeek), no limit metric is
+# emitted and alerts do not fire — graceful by design.
+
+groups:
+  - name: meepleai_provider_quota_recording_rules
+    interval: 30s
+    rules:
+      # Ratio remaining/limit per provider. Only present when both metrics exist.
+      - record: meepleai:provider:quota_remaining_ratio
+        expr: |
+          meepleai_provider_quota_remaining_usd
+          /
+          meepleai_provider_quota_limit_usd
+
+  - name: meepleai_provider_quota_alerts
+    rules:
+      - alert: ProviderQuotaWarning
+        expr: meepleai:provider:quota_remaining_ratio < 0.20
+        for: 5m
+        labels:
+          severity: warning
+          subsystem: llm-provider
+        annotations:
+          summary: "Provider {{ $labels.provider }} quota below 20%"
+          description: |
+            Remaining/limit ratio for provider {{ $labels.provider }}: {{ $value | humanize }}.
+            Action: top up credit or reduce LLM call rate.
+
+      - alert: ProviderQuotaCritical
+        expr: meepleai:provider:quota_remaining_ratio < 0.05
+        for: 1m
+        labels:
+          severity: critical
+          subsystem: llm-provider
+        annotations:
+          summary: "Provider {{ $labels.provider }} quota below 5%"
+          description: |
+            Remaining/limit ratio for provider {{ $labels.provider }}: {{ $value | humanize }}.
+            Imminent chat downtime — top up credit immediately.

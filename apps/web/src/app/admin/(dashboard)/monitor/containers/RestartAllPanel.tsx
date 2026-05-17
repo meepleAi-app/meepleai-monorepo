@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -174,7 +175,7 @@ export function RestartAllPanel() {
   return (
     <section
       data-testid="restart-all-panel"
-      className="rounded-xl border bg-white/70 p-6 backdrop-blur-md dark:bg-zinc-900/70"
+      className="rounded-xl border bg-card/70 p-6 backdrop-blur-md dark:bg-zinc-900/70"
     >
       {/* Header */}
       <div className="mb-5 flex items-center gap-3">

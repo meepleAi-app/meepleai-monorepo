@@ -1,20 +1,26 @@
 'use client';
 
+/* eslint-disable local/no-hardcoded-color-utility --
+ * Hero component renders white text + inverted white-button CTA on an inline
+ * `style={{ background: 'linear-gradient(...)' }}` parent. The rule only
+ * inspects className strings, so it cannot see the colored bg in the style
+ * prop. Pattern is mockup-faithful (.e-bg / hero convention). DS-12 (ui
+ * primitives) will introduce a shared <EntityHero> that encodes the bg via
+ * className, at which point this exemption can be removed.
+ */
+
 import { formatDistanceToNow } from 'date-fns';
 import { it as itLocale } from 'date-fns/locale';
 import { CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/primitives/button';
-import { IS_ALPHA_MODE } from '@/lib/alpha-mode';
 
 interface GameNightHeroProps {
   gameNight: { id: string; title: string; scheduledAt: string };
 }
 
 export function GameNightHero({ gameNight }: GameNightHeroProps) {
-  if (IS_ALPHA_MODE) return null;
-
   const timeUntil = formatDistanceToNow(new Date(gameNight.scheduledAt), {
     addSuffix: false,
     locale: itLocale,

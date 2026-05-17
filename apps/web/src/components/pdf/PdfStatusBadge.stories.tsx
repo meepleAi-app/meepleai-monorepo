@@ -168,7 +168,7 @@ export const Failed: Story = {
 export const DarkMode: Story = {
   name: 'All States (Dark Mode)',
   render: () => (
-    <div className="dark bg-gray-900 p-6 rounded-lg">
+    <div className="dark bg-card p-6 rounded-lg">
       <div className="flex flex-wrap gap-3">
         <PdfStatusBadge state="pending" />
         <PdfStatusBadge state="uploading" />

@@ -1609,6 +1609,288 @@
         }
       }
     },
+    "discover": {
+      "miniNav": {
+        "breadcrumb": "Scopri",
+        "tabAll": "Scopri"
+      },
+      "hero": {
+        "title": "Scopri la community",
+        "subtitle": "Esplora giochi, agenti, toolkit, KB e contributor. Filtra per entità o cerca tra il catalogo."
+      },
+      "search": {
+        "placeholder": "Cerca giochi, agenti, toolkit…",
+        "disabledTooltip": "Ricerca disponibile in Phase 0.5"
+      },
+      "filters": {
+        "ariaLabel": "Filtra per entità",
+        "all": "Tutti",
+        "games": "Giochi",
+        "agents": "Agenti",
+        "toolkits": "Toolkit",
+        "kbs": "KB",
+        "people": "Persone",
+        "events": "Eventi"
+      },
+      "rows": {
+        "trending": {
+          "title": "Trending",
+          "subtitle": "I giochi più giocati questa settimana"
+        },
+        "newGames": {
+          "title": "Giochi nuovi",
+          "subtitle": "Ultimi titoli aggiunti al catalogo"
+        },
+        "popularAgents": {
+          "title": "Agenti più installati",
+          "subtitle": "Agenti AI con il maggior numero di invocazioni"
+        },
+        "recommendedToolkits": {
+          "title": "Toolkit consigliati",
+          "subtitle": "Bundle di strumenti popolari nella community"
+        },
+        "recentKbDocs": {
+          "title": "KB recenti",
+          "subtitle": "Documenti indicizzati negli ultimi giorni"
+        },
+        "topContributors": {
+          "title": "Top contributor",
+          "subtitle": "Utenti che hanno arricchito di più il catalogo"
+        },
+        "nearbyEvents": {
+          "title": "Eventi vicini",
+          "subtitle": "Game night e tornei nella tua zona"
+        }
+      },
+      "common": {
+        "viewAll": "Vedi tutto",
+        "retry": "Riprova",
+        "empty": "Nessun elemento disponibile al momento.",
+        "disabledPhase05": "Disponibile in Phase 0.5"
+      },
+      "footer": {
+        "title": "Pronto a giocare?",
+        "description": "Aggiungi giochi alla tua libreria o invita amici per pianificare una serata.",
+        "primaryCta": "Esplora la libreria",
+        "secondaryCta": "Invita amici"
+      }
+    },
+    "hub": {
+      "common": {
+        "searchPlaceholder": "Cerca per titolo o autore…",
+        "filterAriaLabel": "Filtri catalogo",
+        "filters": {
+          "all": "Tutti",
+          "featured": "In evidenza",
+          "new": "Nuovi",
+          "top": "Top"
+        },
+        "filteredEmptyTitle": "Nessun risultato",
+        "filteredEmptyBody": "Prova a modificare i filtri o la ricerca.",
+        "errorTitle": "Errore di caricamento",
+        "errorBody": "Si è verificato un errore. Riprova fra qualche istante.",
+        "retry": "Riprova",
+        "resultsCountTemplate": "{filtered} di {total} risultati"
+      },
+      "games": {
+        "badge": "Hub · /hub/games · Pubblico",
+        "title": "Catalogo giochi della community",
+        "subtitle": "Esplora i giochi indicizzati dalla community. Accedi per aggiungerli alla tua libreria.",
+        "kpi": {
+          "total": "Giochi totali",
+          "featured": "In evidenza",
+          "recent": "Recenti"
+        },
+        "emptyTitle": "Catalogo vuoto",
+        "emptyBody": "Nessun gioco pubblico è ancora stato aggiunto al catalogo della community.",
+        "stickyCta": {
+          "title": "Accedi per installare",
+          "description": "Crea un account gratuito per aggiungere giochi alla tua libreria personale.",
+          "buttonLabel": "Accedi"
+        }
+      },
+      "agents": {
+        "badge": "Hub · /hub/agents",
+        "title": "Agenti community",
+        "subtitle": "Scopri agenti AI condivisi dalla community per i tuoi giochi preferiti.",
+        "installLabel": "Installa agente",
+        "invocationsTemplate": "{count} invocazioni",
+        "kpi": {
+          "total": "Agenti",
+          "popular": "Popolari",
+          "gameAgents": "Game-specific"
+        },
+        "emptyTitle": "Nessun agente disponibile",
+        "emptyBody": "La community non ha ancora pubblicato agenti AI."
+      },
+      "toolkits": {
+        "badge": "Hub · /hub/toolkits",
+        "title": "Toolkit community",
+        "subtitle": "Toolkit di strumenti condivisi dalla community per arricchire le tue sessioni.",
+        "installLabel": "Installa toolkit",
+        "toolsTemplate": "{count} strumenti",
+        "installsTemplate": "{count} installazioni",
+        "kpi": {
+          "total": "Toolkit",
+          "featured": "In evidenza",
+          "installs": "Installazioni totali"
+        },
+        "emptyTitle": "Nessun toolkit disponibile",
+        "emptyBody": "La community non ha ancora pubblicato toolkit."
+      }
+    },
+    "dashboard": {
+      "hero": {
+        "guestName": "amico",
+        "greetingMorning": "Buongiorno",
+        "greetingAfternoon": "Buon pomeriggio",
+        "greetingEvening": "Buonasera",
+        "subtitle": "Ecco una panoramica di tutto: giochi in libreria, gruppo di gioco, agenti AI, sessioni e prossimi eventi.",
+        "kpiGames": "Giochi",
+        "kpiSessions": "Sessioni",
+        "kpiHours": "Ore giocate",
+        "kpiWinRate": "Win rate"
+      },
+      "sections": {
+        "games": {
+          "title": "Giochi",
+          "viewAll": "Vedi libreria",
+          "emptyTitle": "Nessun gioco in libreria.",
+          "emptyCta": "+ Aggiungi gioco"
+        },
+        "players": {
+          "title": "Gruppo di gioco",
+          "viewAll": "Tutti i giocatori",
+          "countTemplate": "{visible} di {total}",
+          "emptyTitle": "Nessun gruppo di gioco ancora.",
+          "emptyCta": "+ Invita amici"
+        },
+        "agents": {
+          "title": "Agenti AI",
+          "viewAll": "Tutti",
+          "statusActive": "Attivo",
+          "statusIdle": "Inattivo",
+          "emptyTitle": "Nessun agente AI attivo.",
+          "emptyCta": "Esplora /hub/agents"
+        },
+        "sessions": {
+          "title": "Sessioni",
+          "liveBadge": "Live",
+          "viewAll": "Tutte",
+          "playerCountTemplate": "{count} giocatori",
+          "minutesTemplate": "{count} min",
+          "untitled": "Sessione",
+          "emptyTitle": "Nessuna sessione attiva o recente.",
+          "emptyCta": "+ Crea sessione",
+          "statusLive": "Live",
+          "statusCompleted": "Conclusa",
+          "statusPaused": "In pausa",
+          "statusSetup": "In preparazione",
+          "statusAbandoned": "Abbandonata"
+        },
+        "events": {
+          "title": "Prossime serate",
+          "viewAll": "Calendario",
+          "participantsTemplate": "{confirmed}/{total} conferme",
+          "emptyTitle": "Nessuna serata gioco pianificata.",
+          "emptyCta": "+ Pianifica serata"
+        }
+      }
+    },
+    "toolkitDetail": {
+      "loading": {
+        "ariaLabel": "Caricamento toolkit…"
+      },
+      "error": {
+        "title": "Impossibile caricare il toolkit",
+        "description": "Si è verificato un errore di rete. Riprova o torna al catalogo.",
+        "retry": "Riprova"
+      },
+      "notFound": {
+        "title": "Toolkit non trovato",
+        "description": "Il toolkit richiesto non esiste o è stato rimosso."
+      },
+      "hero": {
+        "authorChipPrefix": "di",
+        "gameChipPrefix": "per",
+        "statsHeading": "Statistiche del toolkit",
+        "installCount": "Installazioni",
+        "rating": "Valutazione",
+        "version": "Versione",
+        "noRatings": "Nessuna valutazione"
+      },
+      "tabs": {
+        "ariaLabel": "Sezioni del toolkit",
+        "overview": "Panoramica",
+        "agent": "Agente",
+        "kb": "Knowledge Base",
+        "tools": "Strumenti",
+        "versions": "Versioni",
+        "ratings": "Recensioni",
+        "disabledTooltip": "Disponibile in Phase 5"
+      },
+      "connectionBar": {
+        "ariaLabel": "Entità collegate al toolkit",
+        "emptyHint": "Dato non ancora disponibile"
+      },
+      "pips": {
+        "agent": "Agente",
+        "kb": "KB",
+        "tools": "Strumenti",
+        "game": "Gioco",
+        "author": "Autore",
+        "sessions": "Sessioni"
+      },
+      "overview": {
+        "descriptionHeading": "Descrizione",
+        "metaHeading": "Dettagli",
+        "meta": {
+          "license": "Licenza",
+          "version": "Versione",
+          "size": "Dimensione",
+          "published": "Pubblicato il",
+          "unknown": "—"
+        },
+        "includesHeading": "Cosa include"
+      },
+      "includes": {
+        "agent": "Agente",
+        "kbDocs": "Documenti KB",
+        "tools": "Strumenti"
+      },
+      "tools": {
+        "heading": "Strumenti inclusi",
+        "description": "Il toolkit include i seguenti strumenti utilizzabili nelle sessioni.",
+        "countTemplate": "{count} strumenti",
+        "emptyTitle": "Nessuno strumento",
+        "emptyBody": "Questo toolkit non contiene strumenti configurati."
+      },
+      "disabled": {
+        "phase5Badge": "Disponibile in Phase 5",
+        "agent": {
+          "title": "Dettagli agente",
+          "description": "I dettagli del system prompt dell'agente saranno disponibili in una versione successiva (#822)."
+        },
+        "kb": {
+          "title": "Documenti KB",
+          "description": "L'elenco dei documenti KB associati sarà disponibile in una versione successiva (#822)."
+        },
+        "versions": {
+          "title": "Storico versioni",
+          "description": "La timeline delle versioni e i changelog saranno disponibili in una versione successiva (#822)."
+        },
+        "ratings": {
+          "title": "Valutazioni e recensioni",
+          "description": "Le recensioni della community saranno disponibili in una versione successiva (#819)."
+        }
+      },
+      "footer": {
+        "editAction": "Modifica toolkit",
+        "publishAction": "Pubblica nuova versione",
+        "installAction": "Installa toolkit",
+        "shareAction": "Condividi"
+      }
+    },
     "sessions": {
       "metadata": {
         "title": "Le mie partite — MeepleAI",
@@ -1784,6 +2066,39 @@
         "games": "Giochi giocati",
         "sessions": "Sessioni",
         "stats": "Statistiche dettagliate"
+      },
+      "connections": {
+        "topGames": "Top giochi",
+        "sessions": "Partite",
+        "gameNights": "Game Nights",
+        "agents": "Agenti usati",
+        "toolkits": "Toolkit",
+        "chats": "Chat"
+      },
+      "tabs": {
+        "ariaLabel": "Sezioni del giocatore",
+        "sessions": {
+          "label": "Partite",
+          "title": "Sessioni recenti",
+          "viewAll": "Vedi tutte",
+          "empty": "Nessuna partita registrata",
+          "totalLabel": "Totale partite"
+        },
+        "games": {
+          "label": "Giochi",
+          "title": "Giochi giocati",
+          "viewAll": "Vedi tutti",
+          "empty": "Nessun gioco giocato",
+          "playsSuffix": "partite"
+        },
+        "toolkits": {
+          "label": "Toolkit",
+          "title": "Toolkit",
+          "comingSoon": "I toolkit del giocatore arriveranno presto"
+        },
+        "achievements": {
+          "label": "Achievement"
+        }
       }
     },
     "agentDetail": {
@@ -2639,6 +2954,172 @@
         "title": "Impossibile caricare la libreria",
         "description": "Connessione instabile. Riprova fra un momento.",
         "retry": "🔄 Riprova"
+      }
+    }
+  },
+  "gameNightDetail": {
+    "hero": {
+      "scheduledOn": "{date}",
+      "organizedBy": "Organizzata da {name}",
+      "location": "{location}",
+      "capacity": "{accepted} confermati di {max}",
+      "capacityUncapped": "{accepted} confermati",
+      "pendingCount": "· {count} in attesa"
+    },
+    "status": {
+      "draft": "Bozza",
+      "published": "Attiva",
+      "completed": "Completata",
+      "cancelled": "Annullata",
+      "inProgress": "In corso"
+    },
+    "rsvp": {
+      "sectionTitle": "La tua risposta",
+      "accept": "Partecipo",
+      "maybe": "Forse",
+      "decline": "Non partecipo",
+      "saving": "Salvataggio…",
+      "confirmedToast": "Partecipazione confermata",
+      "declinedToast": "Risposta registrata",
+      "maybeToast": "Risposta registrata",
+      "errors": {
+        "generic": "Impossibile inviare la risposta.",
+        "capacityExceeded": "Capacity raggiunta — non ci sono più posti disponibili.",
+        "directConflict": "Modifica la tua risposta a 'Forse' prima di cambiare tra accettato/declinato.",
+        "cancelledGone": "La serata è stata cancellata — la tua risposta non può essere registrata.",
+        "timeout": "Connessione lenta, riprova fra un momento."
+      }
+    },
+    "actor": {
+      "host": {
+        "edit": "Modifica",
+        "cancel": "Annulla serata",
+        "publish": "Pubblica",
+        "kickGuest": "Rimuovi",
+        "publishedToast": "Serata pubblicata",
+        "publishedToastDescription": "Gli invitati riceveranno una notifica.",
+        "cancelledToast": "Serata annullata"
+      },
+      "bystander": {
+        "privateTitle": "Serata privata",
+        "privateBody": "Solo gli invitati possono vedere i dettagli di questa serata.",
+        "requestInvite": "Richiedi invito"
+      }
+    },
+    "tabs": {
+      "details": "Dettagli",
+      "voting": "Voting",
+      "chat": "Chat"
+    },
+    "participants": {
+      "sectionTitle": "Partecipanti ({count})",
+      "hostLabel": "host",
+      "rsvpStatus": {
+        "accepted": "Confermato",
+        "declined": "Declinato",
+        "maybe": "Forse",
+        "pending": "In attesa"
+      }
+    },
+    "cancelled": {
+      "title": "Serata cancellata",
+      "meta": "Cancellata da {organizer}",
+      "reasonLabel": "Motivo:",
+      "ctaLabel": "Crea nuova serata"
+    },
+    "errors": {
+      "notFound": {
+        "title": "Serata non trovata",
+        "body": "La serata che cerchi non esiste o è stata rimossa.",
+        "cta": "Torna al calendario"
+      },
+      "loadFailed": {
+        "title": "Impossibile caricare la serata",
+        "body": "Connessione instabile. Riprova fra un momento.",
+        "retry": "Riprova"
+      },
+      "concurrentEdit": {
+        "title": "Modifiche aggiornate",
+        "body": "Qualcuno ha aggiornato la serata mentre stavi guardando. Ricarica per vedere le ultime modifiche.",
+        "reload": "Ricarica",
+        "dismiss": "Annulla"
+      }
+    }
+  },
+  "gameNightsIndex": {
+    "header": {
+      "kicker": "Game nights",
+      "title": "Serate di gioco",
+      "countLine": "{total} serate questo mese · {confirmed} confermate",
+      "ctaNew": "Nuova serata"
+    },
+    "view": {
+      "tablistAriaLabel": "Vista serate",
+      "calendar": "Calendario",
+      "list": "Lista"
+    },
+    "filter": {
+      "ariaLabel": "Filtra per ruolo",
+      "all": "Tutte",
+      "organizing": "Organizzo",
+      "invited": "Invitato",
+      "completed": "Concluse"
+    },
+    "status": {
+      "confirmed": "Confermata",
+      "planned": "In programma",
+      "cancelled": "Annullata",
+      "completed": "Conclusa"
+    },
+    "calendar": {
+      "prevMonth": "Mese precedente",
+      "nextMonth": "Mese successivo",
+      "today": "Oggi",
+      "todayBadge": "Oggi",
+      "dayLabels": "Lun,Mar,Mer,Gio,Ven,Sab,Dom",
+      "dayAriaLabel": "Giorno {day}{events, plural, =0 {} =1 {, 1 evento} other {, # eventi}}",
+      "overflow": "+{count} altri",
+      "footerCount": "{total} serate · {cancelled} annullate",
+      "legend": {
+        "event": "Serata",
+        "cancelled": "Annullata",
+        "today": "Oggi"
+      }
+    },
+    "list": {
+      "groupSubCurrent": "Mese corrente",
+      "groupSubPast": "Storico",
+      "groupCount": "{count} {count, plural, =1 {serata} other {serate}}",
+      "participants": "{count} {count, plural, =1 {partecipante} other {partecipanti}}",
+      "organizingBadge": "● Organizzo",
+      "cta": {
+        "edit": "Modifica",
+        "viewSummary": "Vedi summary →",
+        "reschedule": "Riprogramma",
+        "accept": "✓ Partecipo",
+        "maybe": "Forse"
+      }
+    },
+    "drawer": {
+      "title": "{day} {month} {year}",
+      "subtitle": "{count} {count, plural, =1 {serata} other {serate}} in programma",
+      "close": "Chiudi",
+      "addOnDay": "+ Aggiungi serata in questo giorno"
+    },
+    "states": {
+      "empty": {
+        "title": "Nessuna serata in programma",
+        "body": "Crea la prima serata per organizzare le tue partite, invitare il gruppo e tenere traccia di chi gioca a cosa.",
+        "cta": "+ Crea la prima serata"
+      },
+      "filteredEmpty": {
+        "title": "Nessuna serata in questo filtro",
+        "body": "Cambia filtro o crea una nuova serata."
+      },
+      "error": {
+        "title": "Impossibile caricare le serate",
+        "body": "C'è stato un problema. Riprova fra un momento.",
+        "retry": "Riprova"
       }
     }
   }

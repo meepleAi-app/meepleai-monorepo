@@ -46,7 +46,7 @@ import {
   type KbDocEntry,
   type KbDocsState,
   type SettingsState,
-} from '@/components/v2/agent-detail';
+} from '@/components/features/agent-detail';
 import { useAgent } from '@/hooks/queries/useAgent';
 import { useAgentConfig } from '@/hooks/queries/useAgentConfig';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';

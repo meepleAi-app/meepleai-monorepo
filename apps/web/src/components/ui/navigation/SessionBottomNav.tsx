@@ -34,7 +34,7 @@ export function SessionBottomNav({ activeTab, onTabChange }: SessionBottomNavPro
         'fixed bottom-0 inset-x-0 z-40',
         'flex items-center justify-around',
         'h-[var(--size-session-bottom-nav)]',
-        'bg-[var(--gaming-bg-elevated)] border-t border-[var(--gaming-border-glass)]',
+        'bg-[var(--bg-card)] border-t border-[var(--glass-border)]',
         'safe-area-pb'
       )}
     >
@@ -52,7 +52,7 @@ export function SessionBottomNav({ activeTab, onTabChange }: SessionBottomNavPro
               className={cn(
                 'flex flex-col items-center justify-center gap-0.5 px-4 py-1',
                 'text-[10px] font-medium transition-colors',
-                active ? 'text-[var(--gaming-text-accent)]' : 'text-[var(--gaming-text-secondary)]'
+                active ? 'text-[var(--brand-fg)]' : 'text-[var(--text-sec)]'
               )}
             >
               <Icon className="h-5 w-5" />

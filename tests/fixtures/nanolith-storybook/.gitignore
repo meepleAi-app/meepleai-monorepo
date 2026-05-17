@@ -1,0 +1,22 @@
+# Foto reali Storybook Nanolith (copyright © Side Room Studios)
+# Solo dev locale, mai committare
+local/
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.heic
+*.heif
+
+# Eccezioni: fixture sintetiche/redacted committabili
+!synthetic/**
+!**/*-redacted.jpg
+!**/*-redacted.png
+!**/*-synthetic.jpg
+!**/*-synthetic.png
+
+# Override: file metadata e doc sempre committati
+!README.md
+!.gitignore
+!*.json
+!*.md

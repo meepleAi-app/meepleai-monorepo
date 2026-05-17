@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * LockedSlotCard - Premium upgrade CTA with locked slot visualization
  * Issue #3247 (FRONT-011)
@@ -125,7 +126,7 @@ export function LockedSlotCard({
               <div className="mt-0.5 shrink-0">{benefit.icon}</div>
               <div>
                 <p className="text-xs font-medium text-white">{benefit.title}</p>
-                <p className="text-[10px] text-slate-400">{benefit.description}</p>
+                <p className="text-[10px] text-muted-foreground">{benefit.description}</p>
               </div>
             </div>
           ))}
@@ -143,7 +144,7 @@ export function LockedSlotCard({
 
         {/* Tier Badge */}
         <div className="absolute top-3 right-3">
-          <span className="px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+          <span className="px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider rounded-full bg-card text-muted-foreground border border-border">
             {currentTier}
           </span>
         </div>
@@ -151,13 +152,13 @@ export function LockedSlotCard({
 
       {/* Pricing Modal (Placeholder for Stripe) */}
       <Dialog open={isPricingModalOpen} onOpenChange={setIsPricingModalOpen}>
-        <DialogContent className="sm:max-w-md bg-slate-900 border-slate-800">
+        <DialogContent className="sm:max-w-md bg-card border-border">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-purple-400" />
               Premium Tier Coming Soon!
             </DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               Join the waitlist to be notified when Premium is available.
             </DialogDescription>
           </DialogHeader>
@@ -167,7 +168,7 @@ export function LockedSlotCard({
             <div className="rounded-lg border border-purple-500/30 bg-purple-500/10 p-4">
               <div className="flex items-baseline gap-2 mb-2">
                 <span className="text-3xl font-bold text-white">€9.99</span>
-                <span className="text-sm text-slate-400">/month</span>
+                <span className="text-sm text-muted-foreground">/month</span>
               </div>
               <p className="text-xs text-slate-300">
                 Unlock all premium features and maximize your board game experience.
@@ -195,7 +196,7 @@ export function LockedSlotCard({
               >
                 Join Waitlist
               </Button>
-              <p className="text-[10px] text-center text-slate-500 mt-2">
+              <p className="text-[10px] text-center text-muted-foreground mt-2">
                 We&apos;ll notify you when Premium launches. No spam, promise.
               </p>
             </div>
@@ -207,7 +208,7 @@ export function LockedSlotCard({
             className="absolute top-4 right-4 rounded-sm opacity-70 ring-offset-slate-900 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2"
             aria-label="Close"
           >
-            <X className="h-4 w-4 text-slate-400" />
+            <X className="h-4 w-4 text-muted-foreground" />
           </button>
         </DialogContent>
       </Dialog>

@@ -25,20 +25,14 @@ public class SmolDoclingHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
-        // Skip active probe if this extractor is not the selected provider — avoids
-        // false Unhealthy for optional services that are intentionally not deployed.
-        var provider = _configuration["PdfProcessing:Extractor:Provider"] ?? "Orchestrator";
-        var usesSmolDocling = provider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase) ||
-                              provider.Equals("SmolDocling", StringComparison.OrdinalIgnoreCase);
-        if (!usesSmolDocling)
-        {
-            return HealthCheckResult.Degraded($"SmolDocling not in use (Provider={provider})");
-        }
-
+        // Provider gating is performed at registration time in HealthCheckServiceExtensions:
+        // this check is registered only when PdfProcessing:Extractor:Provider routes to SmolDocling.
         var smoldoclingUrl = _configuration["PdfProcessing:Extractor:SmolDocling:ApiUrl"];
         if (string.IsNullOrWhiteSpace(smoldoclingUrl))
         {
-            return HealthCheckResult.Degraded("SmolDocling API not configured");
+            // Provider selected but URL missing — real misconfiguration, surface as Unhealthy
+            // so monitoring catches it (consistent with OllamaHealthCheck handling).
+            return HealthCheckResult.Unhealthy("SmolDocling API URL missing — provider selected but PdfProcessing:Extractor:SmolDocling:ApiUrl unset");
         }
 
         try

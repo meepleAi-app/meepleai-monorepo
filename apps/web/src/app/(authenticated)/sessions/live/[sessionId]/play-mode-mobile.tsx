@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * PlayModeMobile — Full mobile play experience with 4-tab layout
  *
@@ -283,7 +284,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
         rightActions={
           <button
             onClick={() => setShowEndConfirm(true)}
-            className="flex items-center gap-1 text-xs font-medium text-red-400 hover:text-red-300 px-2 py-1 rounded-lg hover:bg-white/5"
+            className="flex items-center gap-1 text-xs font-medium text-red-400 hover:text-red-300 px-2 py-1 rounded-lg hover:bg-card/5"
           >
             <LogOut className="h-3.5 w-3.5" />
             Termina
@@ -299,7 +300,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
             {/* Timer */}
             <div className="flex flex-col items-center gap-1">
               <Timer className="h-5 w-5 text-amber-500" />
-              <span className="text-3xl font-mono font-bold tabular-nums text-[var(--gaming-text-primary,white)]">
+              <span className="text-3xl font-mono font-bold tabular-nums text-[var(--text,white)]">
                 {formatTime(elapsedSeconds)}
               </span>
               <span className="text-xs text-muted-foreground">Tempo di gioco</span>
@@ -327,7 +328,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
 
             {/* Scoreboard summary */}
             <div>
-              <h3 className="text-sm font-semibold mb-2 text-[var(--gaming-text-secondary,#ccc)]">
+              <h3 className="text-sm font-semibold mb-2 text-[var(--text-sec,#ccc)]">
                 Classifica
               </h3>
               <LiveScoreboard players={scoreboardPlayers} isRealTime />
@@ -338,7 +339,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
         {/* ——— Tab: Punteggi ——— */}
         {activeTab === 'scores' && (
           <div className="p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-[var(--gaming-text-secondary,#ccc)]">
+            <h3 className="text-sm font-semibold text-[var(--text-sec,#ccc)]">
               Tocca un giocatore per aggiornare il punteggio
             </h3>
             <div className="space-y-2">
@@ -354,7 +355,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
                   }
                   className={cn(
                     'flex items-center gap-3 w-full rounded-xl px-4 py-3 text-left transition-colors',
-                    'bg-white/5 hover:bg-white/10 border border-white/10'
+                    'bg-card/5 hover:bg-card/10 border border-border'
                   )}
                 >
                   <div
@@ -393,7 +394,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
         {/* ——— Tab: Giocatori ——— */}
         {activeTab === 'players' && (
           <div className="p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-[var(--gaming-text-secondary,#ccc)]">
+            <h3 className="text-sm font-semibold text-[var(--text-sec,#ccc)]">
               Giocatori ({players.filter(p => p.isActive).length})
             </h3>
             <div className="space-y-2">
@@ -409,7 +410,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
                         'flex items-center gap-3 rounded-xl px-4 py-3 border transition-all',
                         isTurn
                           ? 'border-amber-500/50 bg-amber-500/10'
-                          : 'border-white/10 bg-white/5'
+                          : 'border-border bg-card/5'
                       )}
                     >
                       {/* Avatar */}
@@ -495,7 +496,7 @@ export function PlayModeMobile({ sessionId }: PlayModeMobileProps) {
             <button
               type="button"
               onClick={() => setShowEndConfirm(false)}
-              className="flex-1 rounded-xl bg-white/10 py-3 text-sm font-medium hover:bg-white/20"
+              className="flex-1 rounded-xl bg-card/10 py-3 text-sm font-medium hover:bg-card/20"
             >
               Annulla
             </button>

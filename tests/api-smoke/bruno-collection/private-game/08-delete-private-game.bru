@@ -1,0 +1,17 @@
+meta {
+  name: SG1 — Delete private game (cleanup smoke run)
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{apiBase}}/api/v1/private-games/{{smokePrivateGameId}}
+}
+
+tests {
+  // Strict assertion enabled by #943 Phase A — pre-request reset guarantees a
+  // clean state, so the priv game created earlier in the run must exist here.
+  test("returns 204 NoContent", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}

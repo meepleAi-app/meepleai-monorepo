@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using System.Globalization;
 using Api.Extensions;
+using Api.Helpers;
 using Api.Models;
 using Api.Services;
 
@@ -105,7 +106,7 @@ internal class RateLimitingMiddleware
             // SEC-I4: Error level so alerting detects rate limit infrastructure failures (e.g. Redis down)
             _logger.LogError(ex,
                 "SEC-I4: Rate limiting fail-open. Redis may be down — all requests allowed without rate limiting. Path: {Path}, Method: {Method}",
-                LogValueSanitizer.SanitizePath(context.Request.Path), LogValueSanitizer.Sanitize(context.Request.Method));
+                LogSanitizer.SanitizePath(context.Request.Path), LogSanitizer.Sanitize(context.Request.Method));
             await _next(context).ConfigureAwait(false);
             return;
         }

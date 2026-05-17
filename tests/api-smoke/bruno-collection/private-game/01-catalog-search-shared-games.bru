@@ -1,0 +1,32 @@
+meta {
+  name: SG1 — Catalog search GET /shared-games (#893 fix verification)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{apiBase}}/api/v1/shared-games?pageNumber=1&pageSize=20
+}
+
+script:post-response {
+  const body = res.getBody();
+  if (body && body.items && body.items.length > 0) {
+    bru.setVar("smokeSharedGameId", body.items[0].id);
+    if (body.items[0].bggId) {
+      bru.setVar("smokeSharedGameBggId", body.items[0].bggId);
+    }
+  }
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("response has items array + paging metadata", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("items");
+    expect(Array.isArray(body.items)).to.be.true;
+    // Paging fields may be totalCount/page/pageSize OR pageNumber depending on response shape
+    expect(body.totalCount !== undefined || body.total !== undefined).to.be.true;
+  });
+}

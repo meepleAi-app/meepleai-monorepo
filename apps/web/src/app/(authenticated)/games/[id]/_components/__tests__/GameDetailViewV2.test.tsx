@@ -59,6 +59,16 @@ vi.mock('@/hooks/queries/useLibrary', () => ({
     // (the '' case is intentional — hook gates internally via enabled && !!gameId)
     return useLibraryGameDetailSpy(gameId);
   },
+  useAddGameToLibrary: () => ({
+    mutate: vi.fn(),
+    mutateAsync: vi.fn(),
+    isPending: false,
+    isError: false,
+    isSuccess: false,
+    error: null,
+    data: undefined,
+    reset: vi.fn(),
+  }),
 }));
 
 // ─── useGameAgents mock ───────────────────────────────────────────────────

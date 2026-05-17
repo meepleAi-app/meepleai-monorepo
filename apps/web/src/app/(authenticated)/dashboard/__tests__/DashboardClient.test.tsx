@@ -1,3 +1,16 @@
+/**
+ * DashboardClient — Stage 3 cluster smoke tests (Issue #1164).
+ *
+ * Replaces the previous PR #309 test that targeted the old chat/session-centric
+ * orchestrator. The new test exercises the REFACTOR-FORWARD shape:
+ *   - Hero renders greeting + 4 KPI grid
+ *   - All 5 sections render (Games / Players / Agents / Sessions / Events)
+ *   - Empty-state path renders empty CTAs when all hooks return zero data
+ *
+ * Detailed per-section tests (variants, telemetry, live badge, derivation) are
+ * deferred per spec AC11 (matches sibling Stage 3 FE PRs #1151/#1153/#1160/#1163).
+ */
+
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -8,162 +21,82 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/components/auth/AuthProvider', () => ({
   useAuth: () => ({
-    user: { id: 'u1', displayName: 'Marco' },
+    user: { id: 'u1', displayName: 'Marco', email: 'marco@example.com' },
   }),
 }));
 
-vi.mock('@/lib/stores/mini-nav-config-store', () => {
-  const state = { config: null, setConfig: vi.fn(), clear: vi.fn() };
-  return {
-    useMiniNavConfigStore: (selector?: (s: typeof state) => unknown) =>
-      selector ? selector(state) : state,
-  };
-});
-
-vi.mock('@/hooks/queries/useLibrary', () => ({
-  useLibrary: vi.fn(() => ({ data: { items: [] }, isLoading: false })),
-  useAddGameToLibrary: () => ({ mutateAsync: vi.fn() }),
-}));
-
-vi.mock('@/hooks/queries/useActiveSessions', () => ({
-  useActiveSessions: () => ({ data: { sessions: [] }, isLoading: false }),
-}));
-
-vi.mock('@/hooks/queries/useAgents', () => ({
-  useAgents: () => ({ data: [], isLoading: false }),
+const mockTranslate = (key: string): string => key;
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({ t: mockTranslate }),
 }));
 
 vi.mock('@/hooks/queries/useGames', () => ({
-  useGames: vi.fn(() => ({ data: { games: [] }, isLoading: false })),
+  useGames: vi.fn(() => ({ data: { games: [], total: 0 }, isLoading: false })),
 }));
 
-vi.mock('@/hooks/queries/useBatchGameStatus', () => ({
-  useBatchGameStatus: () => ({ data: { results: {} } }),
+vi.mock('@/hooks/queries/useActiveSessions', () => ({
+  useActiveSessions: vi.fn(() => ({
+    data: { sessions: [], total: 0, page: 1, pageSize: 10 },
+    isLoading: false,
+  })),
 }));
 
-import { useLibrary } from '@/hooks/queries/useLibrary';
-import { useGames } from '@/hooks/queries/useGames';
+vi.mock('@/hooks/queries/useAgents', () => ({
+  useAgents: vi.fn(() => ({ data: [], isLoading: false })),
+}));
+
+vi.mock('@/hooks/queries/useGameNights', () => ({
+  useUpcomingGameNights: vi.fn(() => ({ data: [], isLoading: false })),
+}));
+
+vi.mock('@/hooks/queries/useLibrary', () => ({
+  useLibraryStats: vi.fn(() => ({
+    data: { totalGames: 0, favoriteGames: 0, privatePdfs: 0 },
+    isLoading: false,
+  })),
+}));
+
+vi.mock('@/lib/analytics/track-event', () => ({
+  trackEvent: vi.fn(),
+}));
+
 import { DashboardClient } from '../DashboardClient';
 
-describe('DashboardClient', () => {
+describe('DashboardClient (Stage 3 cluster)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useLibrary).mockReturnValue({
-      data: { items: [] },
-      isLoading: false,
-    } as ReturnType<typeof useLibrary>);
-    vi.mocked(useGames).mockReturnValue({
-      data: { games: [] },
-      isLoading: false,
-    } as ReturnType<typeof useGames>);
   });
 
-  it('renders the greeting with the user name', () => {
+  it('renders the dashboard hero with greeting', () => {
     render(<DashboardClient />);
-    expect(screen.getByText(/Marco/)).toBeInTheDocument();
+    // Greeting key is rendered as the translation key string in mock; presence is sufficient.
+    expect(screen.getByText(/Marco/i)).toBeInTheDocument();
   });
 
-  it('renders hub block titles', () => {
-    render(<DashboardClient />);
-    expect(screen.getAllByText(/Giochi/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Sessioni/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Agenti/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Strumenti/i).length).toBeGreaterThan(0);
+  it('renders all 5 sections via data-slot', () => {
+    const { container } = render(<DashboardClient />);
+    const sections = container.querySelectorAll('[data-slot="dashboard-section"]');
+    expect(sections.length).toBe(5);
+
+    const sectionIds = Array.from(sections).map(el => el.getAttribute('data-section-id'));
+    expect(sectionIds).toEqual(
+      expect.arrayContaining(['games', 'players', 'agents', 'sessions', 'events'])
+    );
   });
 
-  it('shows catalog hint for new user with empty library', () => {
-    render(<DashboardClient />);
-    expect(screen.getByText(/Libreria vuota/i)).toBeInTheDocument();
+  it('renders the hero KPI grid', () => {
+    const { container } = render(<DashboardClient />);
+    const kpiGrid = container.querySelector('[data-slot="dashboard-hero-kpi-grid"]');
+    expect(kpiGrid).not.toBeNull();
+    const kpiCards = container.querySelectorAll('[data-slot="dashboard-kpi-card"]');
+    expect(kpiCards.length).toBe(4);
   });
 
-  it('shows empty CTA for sessions', () => {
-    render(<DashboardClient />);
-    expect(screen.getByText(/Nessuna sessione/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Crea sessione/i })).toBeInTheDocument();
-  });
-
-  it('shows empty CTA for agents with two actions', () => {
-    render(<DashboardClient />);
-    expect(screen.getByText(/Nessun agente attivo/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Avvia chat/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Crea agente/i })).toBeInTheDocument();
-  });
-
-  it('renders toolkit tools', () => {
-    render(<DashboardClient />);
-    expect(screen.getByText('Dado')).toBeInTheDocument();
-    expect(screen.getByText('Clessidra')).toBeInTheDocument();
-    expect(screen.getByText('Scoreboard')).toBeInTheDocument();
-  });
-
-  describe('returning user (library has games)', () => {
-    beforeEach(() => {
-      vi.mocked(useLibrary).mockReturnValue({
-        data: {
-          items: [
-            {
-              id: 'lib-1',
-              gameId: 'g1',
-              gameTitle: 'Puerto Rico',
-              gamePublisher: 'Alea',
-              gameImageUrl: null,
-              averageRating: 8.5,
-            },
-          ],
-          total: 1,
-          page: 1,
-          pageSize: 12,
-        },
-        isLoading: false,
-      } as ReturnType<typeof useLibrary>);
-    });
-
-    it('does NOT show catalog hint banner for returning user', () => {
-      render(<DashboardClient />);
-      expect(screen.queryByText(/Libreria vuota/i)).not.toBeInTheDocument();
-    });
-
-    it('shows library game title for returning user', () => {
-      render(<DashboardClient />);
-      expect(screen.getByText('Puerto Rico')).toBeInTheDocument();
-    });
-  });
-
-  describe('new user catalog sort — KB-first', () => {
-    beforeEach(() => {
-      vi.mocked(useGames).mockReturnValue({
-        data: {
-          games: [
-            // rating più alta ma senza KB
-            {
-              id: 'g1',
-              title: 'Game NoKB High Rating',
-              publisher: 'Pub',
-              createdAt: '2024-01-01T00:00:00Z',
-              averageRating: 9.5,
-              hasKnowledgeBase: false,
-            },
-            // rating più bassa ma con KB
-            {
-              id: 'g2',
-              title: 'Game WithKB Low Rating',
-              publisher: 'Pub',
-              createdAt: '2024-01-01T00:00:00Z',
-              averageRating: 7.0,
-              hasKnowledgeBase: true,
-            },
-          ],
-        },
-        isLoading: false,
-      } as ReturnType<typeof useGames>);
-    });
-
-    it('renders KB game before non-KB game regardless of rating', () => {
-      render(<DashboardClient />);
-      const gameNames = screen.getAllByText(/Game (WithKB|NoKB)/);
-      // First match should be the KB game
-      expect(gameNames[0]).toHaveTextContent('Game WithKB Low Rating');
-      expect(gameNames[1]).toHaveTextContent('Game NoKB High Rating');
-    });
+  it('shows empty CTAs when all hooks return zero data', () => {
+    const { container } = render(<DashboardClient />);
+    // Each section should render its empty-state when no data; verifying via dashed border presence.
+    // (Exhaustive empty-CTA assertions deferred to follow-up per spec AC11.)
+    const dashedBorders = container.querySelectorAll('.border-dashed');
+    expect(dashedBorders.length).toBeGreaterThanOrEqual(5);
   });
 });

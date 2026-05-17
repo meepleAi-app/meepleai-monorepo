@@ -228,7 +228,7 @@ export function RuleSourceCard({
               className={cn(
                 'border-l-2 pl-3 py-1',
                 'text-sm font-nunito',
-                'text-stone-700 dark:text-stone-300',
+                'text-foreground',
                 isFull ? 'border-l-[hsl(174,60%,40%)] italic' : 'border-l-amber-500'
               )}
               data-testid="citation-quote"
@@ -250,12 +250,12 @@ export function RuleSourceCard({
                 activeCitation.snippet ? (
                   <>
                     <p>&ldquo;{activeCitation.snippet}&rdquo;</p>
-                    <p className="mt-1 text-xs not-italic text-stone-500 dark:text-stone-400">
+                    <p className="mt-1 text-xs not-italic text-muted-foreground">
                       — Regolamento, p.{activeCitation.pageNumber}
                     </p>
                   </>
                 ) : (
-                  <p className="not-italic text-stone-500 dark:text-stone-400">
+                  <p className="not-italic text-muted-foreground">
                     Pagina {activeCitation.pageNumber}
                   </p>
                 )
@@ -263,12 +263,12 @@ export function RuleSourceCard({
               quoteContent ? (
                 <>
                   <p>{quoteContent}</p>
-                  <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     — Regolamento, p.{activeCitation.pageNumber}
                   </p>
                 </>
               ) : (
-                <p className="text-stone-500 dark:text-stone-400">
+                <p className="text-muted-foreground">
                   Vedi pagina {activeCitation.pageNumber} del regolamento
                 </p>
               )}
@@ -315,7 +315,7 @@ export function RuleSourceCard({
               {/* Upsell CTA for protected tier */}
               {!isFull && (
                 <div
-                  className="inline-flex items-center gap-1.5 text-xs text-stone-500"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
                   data-testid="upsell-cta"
                 >
                   <Lock className="h-3 w-3 flex-shrink-0" />

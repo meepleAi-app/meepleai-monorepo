@@ -21,8 +21,10 @@ namespace Api.BoundedContexts.GameToolkit.Application.Queries.GetToolkitDetail;
 ///   <item><c>PublishedAt</c>: derived from <c>UpdatedAt</c> when
 ///         <c>IsPublished</c> + <c>TemplateStatus == Approved</c>; null otherwise.</item>
 ///   <item><c>YankedAt</c>: no yank workflow yet; always null in v1.</item>
-///   <item><c>CurrentVersion</c>: GameToolkitEntity stores int Version;
-///         surfaced as <c>"1.0.{version}"</c> until semver schema lands.</item>
+///   <item><c>CurrentVersion</c>: Issue #1144 — now reads <c>VersionSemver</c>
+///         (e.g. <c>"0.1.0"</c> default, <c>"2.0.0"</c> when user-set). The
+///         legacy <c>"1.0.{int}"</c> synthesised format predates #1144 and
+///         no longer applies.</item>
 /// </list>
 ///
 /// FE wire shape mirrors PR #732 §5.3.1 TypeScript interface exactly so the
@@ -45,7 +47,16 @@ internal sealed record ToolkitDetailDto(
     DateTime CreatedAt,
     DateTime? PublishedAt,
     DateTime? YankedAt,
-    string CurrentVersion);
+    string CurrentVersion,
+    // ── Issue #1144 — Stage 3 marketplace extension (appended for binary compat) ──
+    // License:   SPDX-like string (e.g. "CC BY-SA 4.0"). Nullable; FE hides meta row.
+    // GameName:  LEFT JOIN of GameEntity via GameToolkit.GameId. Null when toolkit
+    //            has no game or the game is soft-deleted.
+    // SizeBytes: UTF-8 byte count of AgentConfig + all tool/template JSON columns.
+    //            Nullable per spec §5.5.2 versioning policy; impl always populates.
+    string? License = null,
+    string? GameName = null,
+    long? SizeBytes = null);
 
 /// <summary>
 /// Truncated agent summary embedded in <see cref="ToolkitDetailDto"/>.

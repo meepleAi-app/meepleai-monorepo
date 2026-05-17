@@ -41,7 +41,7 @@ export function ArbitroVerdictCard({ verdict }: ArbitroVerdictCardProps) {
 
       {/* Optional note */}
       {verdict.note && (
-        <p className="text-xs text-gray-500 font-nunito italic border-t border-amber-200 pt-2">
+        <p className="text-xs text-muted-foreground font-nunito italic border-t border-amber-200 pt-2">
           {verdict.note}
         </p>
       )}

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Api.Configuration;
+using Api.Helpers;
 using Api.Middleware;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Options;
@@ -80,7 +81,7 @@ internal class HybridCacheService : IHybridCacheService
             // Only increment hit counter if this was actually a cache hit (not a factory execution)
             // HybridCache doesn't expose hit/miss directly, so we approximate:
             // If no exception and result returned quickly, assume hit
-            _logger.LogDebug("Cache HIT for key: {CacheKey}", LogValueSanitizer.Sanitize(cacheKey));
+            _logger.LogDebug("Cache HIT for key: {CacheKey}", LogSanitizer.Sanitize(cacheKey));
             Interlocked.Increment(ref _totalHits);
 
             return result;
@@ -100,7 +101,7 @@ internal class HybridCacheService : IHybridCacheService
 
     private async Task<T> ExecuteFactoryAsync<T>(Func<CancellationToken, Task<T>> factory, string cacheKey, CancellationToken cancellationToken) where T : class
     {
-        _logger.LogDebug("Cache MISS for key: {CacheKey}. Executing factory.", LogValueSanitizer.Sanitize(cacheKey));
+        _logger.LogDebug("Cache MISS for key: {CacheKey}. Executing factory.", LogSanitizer.Sanitize(cacheKey));
         Interlocked.Increment(ref _totalMisses);
 
         var value = await factory(cancellationToken).ConfigureAwait(false);
@@ -134,19 +135,19 @@ internal class HybridCacheService : IHybridCacheService
         switch (ex)
         {
             case RedisConnectionException:
-                _logger.LogError(ex, "Redis connection failed for key {CacheKey}. Falling back to factory.", LogValueSanitizer.Sanitize(cacheKey));
+                _logger.LogError(ex, "Redis connection failed for key {CacheKey}. Falling back to factory.", LogSanitizer.Sanitize(cacheKey));
                 break;
             case RedisTimeoutException:
-                _logger.LogWarning(ex, "Redis timeout for key {CacheKey}. Falling back to factory.", LogValueSanitizer.Sanitize(cacheKey));
+                _logger.LogWarning(ex, "Redis timeout for key {CacheKey}. Falling back to factory.", LogSanitizer.Sanitize(cacheKey));
                 break;
             case InvalidOperationException:
-                _logger.LogError(ex, "Invalid cache operation for key {CacheKey}. Falling back to factory.", LogValueSanitizer.Sanitize(cacheKey));
+                _logger.LogError(ex, "Invalid cache operation for key {CacheKey}. Falling back to factory.", LogSanitizer.Sanitize(cacheKey));
                 break;
             case JsonException:
-                _logger.LogError(ex, "JSON serialization error for key {CacheKey}. Falling back to factory.", LogValueSanitizer.Sanitize(cacheKey));
+                _logger.LogError(ex, "JSON serialization error for key {CacheKey}. Falling back to factory.", LogSanitizer.Sanitize(cacheKey));
                 break;
             default:
-                _logger.LogError(ex, "Cache error for key {CacheKey}. Falling back to factory.", LogValueSanitizer.Sanitize(cacheKey));
+                _logger.LogError(ex, "Cache error for key {CacheKey}. Falling back to factory.", LogSanitizer.Sanitize(cacheKey));
                 break;
         }
 
@@ -186,7 +187,7 @@ internal class HybridCacheService : IHybridCacheService
         // Remove tag tracking for this key
         UntrackKey(cacheKey);
 
-        _logger.LogInformation("Removed cache entry: {CacheKey}", LogValueSanitizer.Sanitize(cacheKey));
+        _logger.LogInformation("Removed cache entry: {CacheKey}", LogSanitizer.Sanitize(cacheKey));
     }
 
     /// <inheritdoc />
@@ -272,7 +273,7 @@ internal class HybridCacheService : IHybridCacheService
     {
         if (_redisDb == null)
         {
-            _logger.LogWarning("Redis not available for tag tracking. Tags will not be persisted: {CacheKey}", cacheKey);
+            _logger.LogWarning("Redis not available for tag tracking. Tags will not be persisted: {CacheKey}", LogSanitizer.Sanitize(cacheKey));
             return;
         }
 
@@ -289,15 +290,15 @@ internal class HybridCacheService : IHybridCacheService
                 _redisDb.KeyExpire(redisKey, _tagExpiration, CommandFlags.FireAndForget);
             }
 
-            _logger.LogDebug("Tracked {TagCount} tags for cache key: {CacheKey}", tags.Length, LogValueSanitizer.Sanitize(cacheKey));
+            _logger.LogDebug("Tracked {TagCount} tags for cache key: {CacheKey}", tags.Length, LogSanitizer.Sanitize(cacheKey));
         }
         catch (RedisConnectionException ex)
         {
-            _logger.LogWarning(ex, "Redis connection failed while tracking tags for key {CacheKey}", LogValueSanitizer.Sanitize(cacheKey));
+            _logger.LogWarning(ex, "Redis connection failed while tracking tags for key {CacheKey}", LogSanitizer.Sanitize(cacheKey));
         }
         catch (RedisTimeoutException ex)
         {
-            _logger.LogWarning(ex, "Redis timeout while tracking tags for key {CacheKey}", LogValueSanitizer.Sanitize(cacheKey));
+            _logger.LogWarning(ex, "Redis timeout while tracking tags for key {CacheKey}", LogSanitizer.Sanitize(cacheKey));
         }
         catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException)
         {
@@ -306,7 +307,7 @@ internal class HybridCacheService : IHybridCacheService
             // (Redis errors, serialization issues) should not prevent the primary cache operation from succeeding.
             // We log the warning for monitoring but allow the cache entry to be created without tags.
             // Context: Redis operations can fail in various ways (serialization, network, permissions)
-            _logger.LogWarning(ex, "Unexpected error tracking tags for key {CacheKey}", LogValueSanitizer.Sanitize(cacheKey));
+            _logger.LogWarning(ex, "Unexpected error tracking tags for key {CacheKey}", LogSanitizer.Sanitize(cacheKey));
         }
     }
 
@@ -314,7 +315,7 @@ internal class HybridCacheService : IHybridCacheService
     {
         if (_redisDb == null || _redis == null)
         {
-            _logger.LogDebug("Redis not available for untracking key: {CacheKey}", LogValueSanitizer.Sanitize(cacheKey));
+            _logger.LogDebug("Redis not available for untracking key: {CacheKey}", LogSanitizer.Sanitize(cacheKey));
             return;
         }
 
@@ -326,7 +327,7 @@ internal class HybridCacheService : IHybridCacheService
             var endpoints = _redis.GetEndPoints();
             if (endpoints.Length == 0)
             {
-                _logger.LogWarning("No Redis endpoints available for untracking key: {CacheKey}", LogValueSanitizer.Sanitize(cacheKey));
+                _logger.LogWarning("No Redis endpoints available for untracking key: {CacheKey}", LogSanitizer.Sanitize(cacheKey));
                 return;
             }
 
@@ -338,15 +339,15 @@ internal class HybridCacheService : IHybridCacheService
                 _redisDb.SetRemove(redisKey, cacheKey, CommandFlags.FireAndForget);
             }
 
-            _logger.LogDebug("Untracked cache key from all tags: {CacheKey}", LogValueSanitizer.Sanitize(cacheKey));
+            _logger.LogDebug("Untracked cache key from all tags: {CacheKey}", LogSanitizer.Sanitize(cacheKey));
         }
         catch (RedisConnectionException ex)
         {
-            _logger.LogWarning(ex, "Redis connection failed while untracking key {CacheKey}", LogValueSanitizer.Sanitize(cacheKey));
+            _logger.LogWarning(ex, "Redis connection failed while untracking key {CacheKey}", LogSanitizer.Sanitize(cacheKey));
         }
         catch (RedisTimeoutException ex)
         {
-            _logger.LogWarning(ex, "Redis timeout while untracking key {CacheKey}", LogValueSanitizer.Sanitize(cacheKey));
+            _logger.LogWarning(ex, "Redis timeout while untracking key {CacheKey}", LogSanitizer.Sanitize(cacheKey));
         }
         catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException)
         {
@@ -355,7 +356,7 @@ internal class HybridCacheService : IHybridCacheService
             // (Redis errors, key scanning issues) should not prevent the primary cache removal operation.
             // We log the warning for monitoring but allow the cache entry to be removed.
             // Context: Redis KEYS scanning can fail in various ways (permissions, large key sets, network)
-            _logger.LogWarning(ex, "Unexpected error untracking key {CacheKey}", LogValueSanitizer.Sanitize(cacheKey));
+            _logger.LogWarning(ex, "Unexpected error untracking key {CacheKey}", LogSanitizer.Sanitize(cacheKey));
         }
     }
 

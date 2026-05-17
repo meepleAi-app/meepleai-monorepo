@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 /**
  * Game Detail Client Component - New Admin Dashboard
  *
@@ -28,6 +29,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { EditGameDrawer } from '@/components/admin/shared-games/EditGameDrawer';
 import { GameProcessingQueue } from '@/components/admin/shared-games/GameProcessingQueue';
 import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
 import { PdfUploadSection } from '@/components/admin/shared-games/PdfUploadSection';
@@ -100,7 +102,7 @@ function DocumentItem({
   }, []);
 
   return (
-    <div className="rounded-lg border bg-white/60 dark:bg-zinc-800/60 p-4 space-y-3">
+    <div className="rounded-lg border bg-card/60 dark:bg-zinc-800/60 p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
@@ -186,6 +188,9 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
 
   // ── Agent linking state ──────────────────────────────────────────────────
   const [selectedAgentId, setSelectedAgentId] = useState('');
+
+  // ── Edit Game drawer ─────────────────────────────────────────────────────
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
 
   const { data: linkedAgent, isLoading: linkedAgentLoading } = useQuery({
     queryKey: ['admin', 'shared-games', gameId, 'linked-agent'],
@@ -310,7 +315,12 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
               RAG Setup
             </Button>
           </Link>
-          <Button variant="outline" size="sm" disabled title="Edit functionality coming soon">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditDrawerOpen(true)}
+            data-testid="edit-game-trigger"
+          >
             Edit Game
           </Button>
         </div>
@@ -318,7 +328,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
 
       {/* Tabs */}
       <Tabs defaultValue="details">
-        <TabsList className="bg-white/60 dark:bg-zinc-800/60">
+        <TabsList className="bg-card/60 dark:bg-zinc-800/60">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="documents">
             Documents{documents && documents.length > 0 ? ` (${documents.length})` : ''}
@@ -332,7 +342,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
             {/* Left: description + info */}
             <div className="md:col-span-2 space-y-4">
               {/* Description */}
-              <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+              <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
                 <CardHeader>
                   <CardTitle className="font-quicksand">Description</CardTitle>
                 </CardHeader>
@@ -344,7 +354,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
               </Card>
 
               {/* Game Info */}
-              <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+              <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
                 <CardHeader>
                   <CardTitle className="font-quicksand">Game Information</CardTitle>
                 </CardHeader>
@@ -404,7 +414,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
 
             {/* Right: image + metadata */}
             <div className="space-y-4">
-              <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+              <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
                 <CardContent className="p-4">
                   <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted">
                     {hasImage ? (
@@ -424,7 +434,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+              <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
                 <CardHeader>
                   <CardTitle className="text-sm font-quicksand">Metadata</CardTitle>
                 </CardHeader>
@@ -448,7 +458,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
         {/* ── Agent Tab ───────────────────────────────────────────────────── */}
         <TabsContent value="agent" className="space-y-6 mt-6">
           {/* Current linked agent */}
-          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+          <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
             <CardHeader>
               <CardTitle className="font-quicksand flex items-center gap-2">
                 <Bot className="h-5 w-5" />
@@ -522,7 +532,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
 
           {/* Link new agent — only shown when no agent is linked */}
           {!linkedAgent && !linkedAgentLoading && (
-            <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+            <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
               <CardHeader>
                 <CardTitle className="font-quicksand text-base">Link an Agent</CardTitle>
                 <CardDescription>
@@ -580,7 +590,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
           )}
 
           {/* KB Cards status */}
-          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+          <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
             <CardHeader>
               <CardTitle className="font-quicksand text-base flex items-center gap-2">
                 Knowledge Base Status
@@ -648,7 +658,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
           </div>
 
           {/* Upload */}
-          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+          <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
             <CardHeader>
               <CardTitle className="font-quicksand">Upload Document</CardTitle>
               <CardDescription>
@@ -664,7 +674,7 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
           <GameProcessingQueue gameId={gameId} />
 
           {/* Document list */}
-          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/50 dark:border-zinc-700/50">
+          <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
             <CardHeader>
               <CardTitle className="font-quicksand">Documents</CardTitle>
               <CardDescription>
@@ -705,6 +715,10 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {game && (
+        <EditGameDrawer open={editDrawerOpen} onOpenChange={setEditDrawerOpen} game={game} />
+      )}
     </div>
   );
 }

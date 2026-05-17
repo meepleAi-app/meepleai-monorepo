@@ -33,19 +33,19 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// <summary>
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// Comprehensive integration tests for PDF indexing workflow (Issue #1690).
-/// Tests the complete indexing pipeline using SharedTestcontainersFixture and Qdrant container.
+/// Tests the complete indexing pipeline using SharedTestcontainersFixture and pgvector container.
 /// Uses SharedTestcontainersFixture for PostgreSQL (Docker hijack prevention, Issue #2031).
 ///
 /// Test Categories:
 /// 1. Happy Path: Index valid PDF with all steps
 /// 2. Text Extraction: Index with text extraction completion check
 /// 3. Vector Generation: Index with embedding generation
-/// 4. Qdrant Storage: Index with Qdrant persistence
+/// 4. pgvector Storage: Index with Qdrant persistence
 /// 5. Large PDF: Index large PDF with chunking
 /// 6. Failure Recovery: Index with failure scenarios
 /// 7. Re-indexing: Re-index existing PDF
 ///
-/// Infrastructure: SharedTestcontainersFixture (PostgreSQL) + Qdrant (individual container)
+/// Infrastructure: SharedTestcontainersFixture (PostgreSQL) + pgvector (individual container)
 /// Coverage Target: ≥90% for IndexPdfCommandHandler
 /// Execution Time Target: <20s
 /// </summary>

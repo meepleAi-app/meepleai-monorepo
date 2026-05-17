@@ -16,9 +16,9 @@
 import { useRouter } from 'next/navigation';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import { HeroGradient } from '@/components/ui/hero-gradient';
 import { Separator } from '@/components/ui/navigation/separator';
 import { Button } from '@/components/ui/primitives/button';
-import { HeroGradient } from '@/components/ui/v2/hero-gradient';
 import { useTranslation } from '@/hooks/useTranslation';
 
 // Value keys for the values section (must match i18n keys in pages.about.values.*)
@@ -53,7 +53,7 @@ export default function AboutPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+            <p className="text-muted-foreground leading-relaxed">
               {t('pages.about.mission.content')}
             </p>
           </CardContent>
@@ -68,7 +68,7 @@ export default function AboutPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+            <p className="text-muted-foreground leading-relaxed">
               {t('pages.about.story.content')}
             </p>
           </CardContent>
@@ -91,7 +91,7 @@ export default function AboutPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <p className="text-sm text-muted-foreground">
                     {t(`pages.about.values.${key}.description`)}
                   </p>
                 </CardContent>
@@ -111,14 +111,14 @@ export default function AboutPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+            <p className="text-muted-foreground leading-relaxed">
               {t('pages.about.team.content')}
             </p>
           </CardContent>
         </Card>
 
         {/* Footer Navigation */}
-        <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4 pt-8 border-t border-slate-200 dark:border-slate-700">
+        <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4 pt-8 border-t border-border">
           <Button variant="ghost" onClick={() => router.push('/')}>
             ← {locale === 'it' ? 'Torna alla Home' : 'Back to Home'}
           </Button>

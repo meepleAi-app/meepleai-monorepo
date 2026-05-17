@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 /**
@@ -41,7 +42,7 @@ export default function GoldenSetGamePickerPage() {
         </p>
       </div>
 
-      <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/60">
+      <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/60">
         <CardContent className="pt-6">
           {isLoading && (
             <div className="space-y-2">
@@ -68,7 +69,7 @@ export default function GoldenSetGamePickerPage() {
                 <li key={game.id}>
                   <Link
                     href={`/admin/knowledge-base/mechanic-extractor/golden/${game.id}`}
-                    className="flex items-center justify-between gap-3 px-2 py-3 text-sm hover:bg-slate-50 dark:hover:bg-zinc-800/40 rounded transition-colors"
+                    className="flex items-center justify-between gap-3 px-2 py-3 text-sm hover:bg-muted dark:hover:bg-zinc-800/40 rounded transition-colors"
                   >
                     <span className="font-medium text-foreground">{game.title}</span>
                     <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />

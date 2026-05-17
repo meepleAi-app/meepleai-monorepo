@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 /**
@@ -98,34 +99,34 @@ export function PublishStep({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-2">
+        <h2 className="text-2xl font-semibold text-foreground dark:text-white mb-2">
           Pubblica nella Libreria Condivisa
         </h2>
-        <p className="text-slate-600 dark:text-slate-400">
+        <p className="text-muted-foreground">
           Seleziona lo stato di approvazione e pubblica il gioco nel catalogo condiviso.
         </p>
       </div>
 
       {/* Game Summary */}
-      <Card className="p-4 bg-slate-50 dark:bg-slate-800/50 space-y-3">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+      <Card className="p-4 bg-muted space-y-3">
+        <h3 className="text-sm font-semibold text-foreground">
           Riepilogo Gioco
         </h3>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="text-slate-500">Nome Gioco:</span>{' '}
+            <span className="text-muted-foreground">Nome Gioco:</span>{' '}
             <span className="font-medium">{gameName}</span>
           </div>
           <div>
-            <span className="text-slate-500">PDF Regolamento:</span>{' '}
+            <span className="text-muted-foreground">PDF Regolamento:</span>{' '}
             <span className="font-medium">{pdfFileName}</span>
           </div>
           <div className="col-span-2">
-            <span className="text-slate-500">Game ID:</span>{' '}
+            <span className="text-muted-foreground">Game ID:</span>{' '}
             <span className="font-mono text-xs">{gameId}</span>
           </div>
           <div className="col-span-2">
-            <span className="text-slate-500">PDF ID:</span>{' '}
+            <span className="text-muted-foreground">PDF ID:</span>{' '}
             <span className="font-mono text-xs">{pdfId}</span>
           </div>
         </div>
@@ -145,14 +146,14 @@ export function PublishStep({
               <SelectItem key={option.value} value={option.value}>
                 <div className="flex flex-col py-1">
                   <span className="font-medium">{option.label}</span>
-                  <span className="text-xs text-slate-500">{option.description}</span>
+                  <span className="text-xs text-muted-foreground">{option.description}</span>
                 </div>
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         {selectedOption && (
-          <p className="text-sm text-slate-600 dark:text-slate-400">
+          <p className="text-sm text-muted-foreground">
             <span className="font-semibold">Selezione:</span> {selectedOption.description}
           </p>
         )}

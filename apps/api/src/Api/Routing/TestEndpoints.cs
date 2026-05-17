@@ -1,6 +1,8 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.Extensions;
+using Api.Helpers;
 using Api.Middleware;
+using Api.Middleware.Exceptions;
 using MediatR;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
@@ -37,7 +39,7 @@ internal static class TestEndpoints
             var session = sessionResult.Session;
 
             logger.LogInformation("Admin {UserId} simulating error type: {ErrorType}",
-                session.User!.Id, LogValueSanitizer.Sanitize(request.ErrorType));
+                session.User!.Id, LogSanitizer.Sanitize(request.ErrorType));
 
             try
             {
@@ -60,13 +62,13 @@ internal static class TestEndpoints
             catch (ArgumentException ex)
             {
                 // Invalid error type
-                logger.LogWarning(ex, "Invalid error type: {ErrorType}", LogValueSanitizer.Sanitize(request.ErrorType));
+                logger.LogWarning(ex, "Invalid error type: {ErrorType}", LogSanitizer.Sanitize(request.ErrorType));
                 return Results.BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
                 // Expected simulated errors - log for Prometheus
-                logger.LogError(ex, "Simulated error: {ErrorType}", LogValueSanitizer.Sanitize(request.ErrorType));
+                logger.LogError(ex, "Simulated error: {ErrorType}", LogSanitizer.Sanitize(request.ErrorType));
 
                 // Return appropriate status code
                 if (string.Equals(request.ErrorType, "500", StringComparison.OrdinalIgnoreCase))
@@ -116,6 +118,51 @@ internal static class TestEndpoints
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status429TooManyRequests)
         .Produces(StatusCodes.Status504GatewayTimeout);
+
+        // POST /api/v1/test/reset-smoke-aaron - Wipe smoke-aaron persona data (any authenticated user, dev/staging only).
+        // Issue #943 — Bruno smoke pre-request hook. See ResetSmokeAaronCommandHandler for the triple-gate.
+        //
+        // Why session-only (not admin-only): the triple-gate in the handler is already
+        // strong enough — production blocks via IsProduction() check independent of
+        // the config flag, and the target user is hardcoded (cannot be supplied by
+        // the caller). Requiring admin would force the Bruno smoke collection to
+        // maintain admin credentials separately from the smoke-aaron free-tier
+        // persona it is actually testing. Self-reset is acceptable here.
+        group.MapPost("/test/reset-smoke-aaron", async (
+            HttpContext context,
+            IMediator mediator,
+            ILogger<Program> logger,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
+            logger.LogWarning(
+                "User {UserId} invoking smoke-aaron reset",
+                session!.User!.Id);
+
+            try
+            {
+                var result = await mediator.Send(new ResetSmokeAaronCommand(), ct).ConfigureAwait(false);
+                return Results.Ok(result);
+            }
+            catch (ForbiddenException ex)
+            {
+                logger.LogWarning(ex, "Smoke-aaron reset denied: {Reason}", ex.Message);
+                return Results.Problem(
+                    title: "Reset denied",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+        })
+        .RequireSession()
+        .RequireRateLimiting("Admin")
+        .WithName("ResetSmokeAaron")
+        .WithTags("Testing")
+        .WithDescription("Wipe smoke-aaron's transactional data so Bruno smoke runs from an empty state. Any authenticated user, dev/staging only — triple-gate enforced in handler.")
+        .Produces<ResetSmokeAaronResult>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden);
 
         return group;
     }

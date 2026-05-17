@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import Link from 'next/link';
@@ -19,7 +20,7 @@ export function TopBarLogo() {
       >
         ◆
       </span>
-      <span className="text-[var(--text-primary)]">Meeple</span>
+      <span className="text-[var(--text)]">Meeple</span>
       <span className="-ml-2.5" style={{ color: 'hsl(25 95% 42%)' }}>
         Ai
       </span>

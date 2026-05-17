@@ -96,7 +96,7 @@ export function PipelinePanel({
     return (
       <PipelineShell>
         <div className="flex flex-col items-center justify-center py-10 text-center">
-          <Activity className="h-10 w-10 text-gray-300 mb-3" />
+          <Activity className="h-10 w-10 text-foreground mb-3" />
           <p className="font-nunito text-sm text-muted-foreground">
             Seleziona un gioco per visualizzare la pipeline
           </p>
@@ -189,7 +189,7 @@ export function PipelinePanel({
 /** Shared panel chrome with title */
 function PipelineShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border bg-white/70 backdrop-blur-sm p-4 space-y-4">
+    <div className="rounded-xl border bg-card/70 backdrop-blur-sm p-4 space-y-4">
       <div className="flex items-center gap-2">
         <Activity className="h-4 w-4 text-amber-600" />
         <h3 className="font-quicksand text-sm font-semibold">Pipeline</h3>

@@ -92,10 +92,10 @@ export function DiaryEventRow({ event }: DiaryEventRowProps) {
 
   return (
     <div
-      className="flex items-start gap-2 py-1.5 text-xs text-gray-600"
+      className="flex items-start gap-2 py-1.5 text-xs text-muted-foreground"
       data-testid={`diary-event-${event.id}`}
     >
-      <span className="shrink-0 font-mono text-[10px] text-gray-400">{time}</span>
+      <span className="shrink-0 font-mono text-[10px] text-muted-foreground">{time}</span>
       <span className="shrink-0">{icon}</span>
       <span className="flex-1 leading-snug">{desc}</span>
     </div>

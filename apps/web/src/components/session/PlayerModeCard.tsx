@@ -75,7 +75,7 @@ export function PlayerModeCard({
               value={scoreInput}
               onChange={e => setScoreInput(e.target.value)}
               placeholder="Score"
-              className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
+              className="w-20 rounded-md border border-border px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
               aria-label="Score value"
             />
             <button
@@ -109,7 +109,7 @@ export function PlayerModeCard({
             className={`flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               isReady
                 ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-muted text-foreground hover:bg-muted'
             }`}
             aria-label={isReady ? 'Ready' : 'Mark as ready'}
           >
@@ -122,7 +122,7 @@ export function PlayerModeCard({
         {isHost && isActive && (
           <button
             onClick={onPauseSession}
-            className="flex items-center gap-1 rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+            className="flex items-center gap-1 rounded-md bg-muted px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             aria-label="Pause session"
           >
             <Pause className="h-4 w-4" />
@@ -144,7 +144,7 @@ export function PlayerModeCard({
 
       {/* Participants List */}
       <div className="space-y-1.5">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Players ({participants.length})
         </h3>
         <div className="space-y-1">
@@ -154,7 +154,7 @@ export function PlayerModeCard({
               className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-sm ${
                 p.id === currentParticipant.id
                   ? 'bg-indigo-50 font-medium text-indigo-700'
-                  : 'text-gray-600'
+                  : 'text-muted-foreground'
               }`}
             >
               <span className="flex items-center gap-1.5">
@@ -169,7 +169,7 @@ export function PlayerModeCard({
                   </span>
                 )}
                 {p.id === currentParticipant.id && (
-                  <span className="text-[10px] text-gray-400">(you)</span>
+                  <span className="text-[10px] text-muted-foreground">(you)</span>
                 )}
               </span>
               <span className="font-mono text-xs tabular-nums">{p.totalScore}</span>

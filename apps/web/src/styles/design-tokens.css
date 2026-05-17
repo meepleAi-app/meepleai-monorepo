@@ -169,17 +169,17 @@
      * ============================================================================ */
 
     /* Unified tokens (dark = default, consumed by all components) */
-    --bg-base: var(--gaming-bg-base);
-    --bg-elevated: var(--gaming-bg-elevated);
-    --bg-glass: var(--gaming-bg-glass);
-    --border-glass: var(--gaming-border-glass);
-    --border-glass-hover: var(--gaming-border-glass-hover);
+    --bg: var(--bg);
+    --bg-card: var(--bg-card);
+    --glass-bg: var(--glass-bg);
+    --glass-border: var(--glass-border);
+    --border-glass-hover: var(--glass-border);
     --bg-glass-hover: rgba(255, 255, 255, 0.08);
     --border-glass-strong: rgba(255, 255, 255, 0.18);
-    --text-primary: var(--gaming-text-primary);
-    --text-secondary: var(--gaming-text-secondary);
-    --text-tertiary: var(--gaming-text-tertiary);
-    --text-accent: var(--gaming-text-accent);
+    --text: var(--text);
+    --text-sec: var(--text-sec);
+    --text-muted: var(--text-muted);
+    --text-accent: var(--brand-fg);
 
     /* Border-radius hierarchy */
     --radius-sheet: 1.25rem;   /* 20px — sheets/drawers top-only */
@@ -188,14 +188,14 @@
     --radius-pill: 3.125rem;   /* 50px — chips/pills */
 
     /* Legacy aliases (backwards compat — remove after full migration) */
-    --nh-bg-base: #faf8f5;
-    --nh-bg-surface: #fffcf8;
-    --nh-bg-surface-end: #f5f0e8;
-    --nh-bg-elevated: #fffcf8;
-    --nh-border-default: rgba(160,120,60,0.08);
-    --nh-text-primary: #1a1a1a;
-    --nh-text-secondary: #5a4a35;
-    --nh-text-muted: #8a7a65;
+    --bg: #faf8f5;
+    --bg-card: #fffcf8;
+    --bg-muted: #f5f0e8;
+    --bg-card: #fffcf8;
+    --border: rgba(160,120,60,0.08);
+    --text: #1a1a1a;
+    --text-sec: #5a4a35;
+    --text-muted: #8a7a65;
 
     /* Focus ring */
     --ring-width: 2px;
@@ -361,29 +361,34 @@
     --color-entity-tool: 195 80% 50%;     /* Sky Blue — Epic #412 */
 
     /* Short aliases for v2 mockup compatibility (direct values, not var()) */
-    --e-game: 25 95% 45%;
-    --e-player: 262 83% 58%;
-    --e-session: 240 60% 55%;
-    --e-agent: 38 92% 50%;
-    --e-document: 210 40% 55%;
-    --e-chat: 220 80% 55%;
-    --e-event: 350 89% 60%;
+    --c-game: 25 95% 45%;
+    --c-player: 262 83% 58%;
+    --c-session: 240 60% 55%;
+    --c-agent: 38 92% 50%;
+    --c-kb: 210 40% 55%;
+    --c-chat: 220 80% 55%;
+    --c-event: 350 89% 60%;
 
     /* ============================================================================
      * V2 Entity & Semantic Colors (Issue #572 — V2 Phase 0)
      * Aligned with admin-mockups/design_files/tokens.css (design system source of truth).
      * Consumed by `entityHsl(entity, alpha?)` helper from src/lib/color-utils.ts.
      * Dark-mode overrides under `.dark` block below.
+     *
+     * #807 audit Iter 2 (2026-05-09): all 9 light tokens verified ≥ 4.5:1 on bg-card #FFFFFF.
+     * Audit deliverable: docs/for-developers/frontend/v2-a11y-token-audit.md
+     * Cyan/teal/yellow hues (kb, tool, agent, toolkit) require lower L values
+     * (perceptually light luminance — see hue-based perception note in audit).
      * ============================================================================ */
-    --c-game:    25 95% 38%;     /* Orange — WCAG AA: Darkened from 45% for 4.5:1 contrast with white text (Issue #587, gate #601) */
-    --c-player:  262 83% 58%;    /* Purple */
-    --c-session: 240 60% 55%;    /* Indigo */
-    --c-agent:   38 92% 50%;     /* Amber */
-    --c-kb:      174 60% 40%;    /* Teal — replaces V1 --color-entity-document Slate */
-    --c-chat:    220 80% 55%;    /* Blue */
-    --c-event:   350 89% 60%;    /* Rose */
-    --c-toolkit: 142 70% 45%;    /* Green — Wave 1 SP4 (new entity) */
-    --c-tool:    195 80% 50%;    /* Sky Blue */
+    --c-game:    25 95% 38%;     /* Orange — 4.82:1 (was L=45%, FAIL — see #587, gate #601, then #807) */
+    --c-player:  262 83% 45%;    /* Purple — 8.55:1 (#807: was L=58%, FAIL 3.18:1) */
+    --c-session: 240 60% 35%;    /* Indigo — 12.22:1 (#807: was L=55%, FAIL 3.95:1) */
+    --c-agent:   38 92% 32%;     /* Amber — 4.87:1 (#807: was L=50%, FAIL 2.81:1; yellow hue) */
+    --c-kb:      174 60% 30%;    /* Teal — 5.12:1 (#807: was L=40%, FAIL 3.09:1; cyan hue) */
+    --c-chat:    220 80% 40%;    /* Blue — 7.72:1 (#807: was L=55%, FAIL 3.71:1) */
+    --c-event:   350 89% 38%;    /* Rose — 6.79:1 (#807: was L=60%, FAIL 3.45:1) */
+    --c-toolkit: 142 70% 30%;    /* Green — 4.88:1 (#807: was L=45%, FAIL 4.02:1) */
+    --c-tool:    195 80% 32%;    /* Sky Blue — 5.44:1 (#807: was L=50%, FAIL 2.95:1; cyan hue) */
 
     --c-success: 142 70% 45%;
     --c-warning: 38 92% 50%;
@@ -543,14 +548,14 @@
   /* Dark mode adjustments */
   .dark {
     /* Hybrid Warm-Modern palette — dark overrides */
-    --nh-bg-base: #14120e;
-    --nh-bg-surface: #1e1b16;
-    --nh-bg-surface-end: #27231c;
-    --nh-bg-elevated: #302b22;
-    --nh-border-default: rgba(200,160,100,0.08);
-    --nh-text-primary: #f0ece4;
-    --nh-text-secondary: #a09080;
-    --nh-text-muted: #6a5d4e;
+    --bg: #14120e;
+    --bg-card: #1e1b16;
+    --bg-muted: #27231c;
+    --bg-card: #302b22;
+    --border: rgba(200,160,100,0.08);
+    --text: #f0ece4;
+    --text-sec: #a09080;
+    --text-muted: #6a5d4e;
 
     /* Shadows need to be darker in dark mode */
     --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
@@ -629,16 +634,16 @@
 
   /* Light mode overrides — apply via class="light" on <html> */
   .light {
-    --bg-base: #faf8f5;
-    --bg-elevated: #fffcf8;
-    --bg-glass: rgba(160, 120, 60, 0.04);
-    --border-glass: rgba(160, 120, 60, 0.08);
+    --bg: #faf8f5;
+    --bg-card: #fffcf8;
+    --glass-bg: rgba(160, 120, 60, 0.04);
+    --glass-border: rgba(160, 120, 60, 0.08);
     --border-glass-hover: rgba(160, 120, 60, 0.14);
     --bg-glass-hover: rgba(160, 120, 60, 0.07);
     --border-glass-strong: rgba(160, 120, 60, 0.22);
-    --text-primary: #1a1a1a;
-    --text-secondary: #5a4a35;
-    --text-tertiary: #8a7a65;
+    --text: #1a1a1a;
+    --text-sec: #5a4a35;
+    --text-muted: #8a7a65;
     --text-accent: hsl(25, 95%, 38%);
   }
 }

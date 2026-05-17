@@ -32,7 +32,7 @@ function statusLabel(state: string): { text: string; color: string; pulse: boole
     case 'error':
       return { text: 'Fallito', color: 'bg-red-500', pulse: false };
     default:
-      return { text: state, color: 'bg-gray-500', pulse: false };
+      return { text: state, color: 'bg-muted-foreground', pulse: false };
   }
 }
 
@@ -41,7 +41,7 @@ function statusLabel(state: string): { text: string; color: string; pulse: boole
 function StatusBadge({ state }: { state: string }) {
   const { text, color, pulse } = statusLabel(state);
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
       <span className={`h-1.5 w-1.5 rounded-full ${color} ${pulse ? 'animate-pulse' : ''}`} />
       {text}
     </span>
@@ -82,7 +82,7 @@ function DocumentRow({
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="truncate text-sm text-gray-200">{doc.fileName}</span>
+          <span className="truncate text-sm text-foreground">{doc.fileName}</span>
           {doc.isPrivate && (
             <span className="shrink-0 rounded bg-violet-500/20 px-1.5 py-0.5 text-[10px] text-violet-300">
               (privato)
@@ -90,9 +90,9 @@ function DocumentRow({
           )}
         </div>
         <div className="mt-0.5 flex items-center gap-2">
-          <span className="text-xs text-gray-500">{doc.documentType}</span>
+          <span className="text-xs text-muted-foreground">{doc.documentType}</span>
           {doc.pageCount != null && (
-            <span className="text-xs text-gray-500">{doc.pageCount} pag.</span>
+            <span className="text-xs text-muted-foreground">{doc.pageCount} pag.</span>
           )}
         </div>
       </div>
@@ -213,7 +213,7 @@ export function DocumentSelectionPanel({
 
   if (!wizardMode && !hasAgent && data) {
     return (
-      <p className="rounded-md border border-[#30363d] bg-[#21262d] px-4 py-3 text-sm text-gray-400">
+      <p className="rounded-md border border-[#30363d] bg-[#21262d] px-4 py-3 text-sm text-muted-foreground">
         Crea un agente prima di selezionare documenti
       </p>
     );
@@ -221,7 +221,7 @@ export function DocumentSelectionPanel({
 
   if (isEmpty) {
     return (
-      <p className="rounded-md border border-[#30363d] bg-[#21262d] px-4 py-3 text-sm text-gray-400">
+      <p className="rounded-md border border-[#30363d] bg-[#21262d] px-4 py-3 text-sm text-muted-foreground">
         Nessun documento disponibile
       </p>
     );
@@ -232,7 +232,7 @@ export function DocumentSelectionPanel({
       {/* Base documents (radio) */}
       {data && data.baseDocuments.length > 0 && (
         <section>
-          <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-400">
+          <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Documento base
           </h4>
           <div className="space-y-2">
@@ -254,7 +254,7 @@ export function DocumentSelectionPanel({
       {/* Additional documents (checkbox) */}
       {data && data.additionalDocuments.length > 0 && (
         <section>
-          <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-400">
+          <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Documenti aggiuntivi
           </h4>
           <div className="space-y-2">

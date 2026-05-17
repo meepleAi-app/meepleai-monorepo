@@ -37,7 +37,7 @@ function ToolSection({
     <div>
       <div className="mb-2 flex items-center gap-1.5">
         <Icon className="h-3.5 w-3.5 text-indigo-500" />
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-nunito">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-nunito">
           {title} ({count})
         </h3>
       </div>
@@ -56,7 +56,7 @@ function ToolCard({
   color?: string;
 }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-lg bg-white/60 px-3 py-2">
+    <div className="flex items-center gap-2.5 rounded-lg bg-card/60 px-3 py-2">
       {color && (
         <div
           className="h-3 w-3 rounded-full flex-shrink-0"
@@ -64,8 +64,8 @@ function ToolCard({
         />
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-slate-700 font-nunito truncate">{name}</p>
-        <p className="text-xs text-slate-500 font-nunito truncate">{details}</p>
+        <p className="text-sm font-semibold text-foreground font-nunito truncate">{name}</p>
+        <p className="text-xs text-muted-foreground font-nunito truncate">{details}</p>
       </div>
     </div>
   );
@@ -82,7 +82,7 @@ interface ToolkitTabProps {
 export function ToolkitTab({ data }: ToolkitTabProps) {
   if (!data) {
     return (
-      <div className="flex h-48 flex-col items-center justify-center gap-2 text-slate-400">
+      <div className="flex h-48 flex-col items-center justify-center gap-2 text-muted-foreground">
         <Wrench className="h-8 w-8 opacity-30" />
         <span className="font-nunito text-sm">No toolkit configured</span>
       </div>
@@ -164,23 +164,23 @@ export function ToolkitTab({ data }: ToolkitTabProps) {
 
       {/* Templates summary */}
       {(data.scoringTemplate || data.turnTemplate) && (
-        <div className="border-t border-slate-100 pt-3">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500 font-nunito">
+        <div className="border-t border-border pt-3">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground font-nunito">
             Templates
           </h3>
           <div className="grid grid-cols-2 gap-2">
             {data.scoringTemplate && (
-              <div className="rounded-lg bg-white/50 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-wider text-slate-400">Scoring</p>
-                <p className="text-xs font-medium text-slate-700">
+              <div className="rounded-lg bg-card/50 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Scoring</p>
+                <p className="text-xs font-medium text-foreground">
                   {data.scoringTemplate.scoreType} · {data.scoringTemplate.dimensions.length} dim
                 </p>
               </div>
             )}
             {data.turnTemplate && (
-              <div className="rounded-lg bg-white/50 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-wider text-slate-400">Turns</p>
-                <p className="text-xs font-medium text-slate-700">
+              <div className="rounded-lg bg-card/50 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Turns</p>
+                <p className="text-xs font-medium text-foreground">
                   {data.turnTemplate.turnOrderType}
                   {data.turnTemplate.phases.length > 0 && ` · ${data.turnTemplate.phases.length} phases`}
                 </p>

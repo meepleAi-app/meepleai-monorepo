@@ -67,7 +67,7 @@ import {
   type LibrarySelectionMode,
   type LibraryTabConfig,
   type LibraryViewMode,
-} from '@/components/v2/library';
+} from '@/components/features/library';
 import {
   useLibrary,
   useLibraryActivity,
@@ -305,9 +305,13 @@ export function LibraryHubV2(): ReactElement {
         });
         return;
       }
-      router.push(`/games/${entryId}`);
+      // Look up the entry's gameId — the grid hands us entryId for selection
+      // semantics, but navigation must use the canonical game id.
+      const entry = filtered.find(e => e.id === entryId);
+      const targetId = entry?.gameId ?? entryId;
+      router.push(`/library/${targetId}`);
     },
-    [router, selectionMode]
+    [router, selectionMode, filtered]
   );
 
   const handleEnterSelectMode = useCallback((entryId?: string) => {

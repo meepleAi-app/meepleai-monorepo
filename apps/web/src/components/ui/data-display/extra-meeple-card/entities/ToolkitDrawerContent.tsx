@@ -113,7 +113,7 @@ export function ToolkitDrawerContent({ entityId }: ToolkitDrawerContentProps) {
         onValueChange={v => setActiveTab(v as ToolkitTab)}
         className="flex flex-1 flex-col"
       >
-        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-slate-100/80 rounded-lg p-1">
+        <TabsList className="mx-4 mt-3 h-10 w-auto justify-start gap-1 bg-muted/80 rounded-lg p-1">
           <EntityTabTrigger
             value="overview"
             icon={Wrench}
@@ -182,7 +182,7 @@ export function ToolkitDrawerContent({ entityId }: ToolkitDrawerContentProps) {
                   className={
                     data.isPublished
                       ? 'inline-flex items-center rounded-full bg-green-100 px-2.5 py-1 font-nunito text-xs font-bold text-green-700'
-                      : 'inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 font-nunito text-xs font-bold text-slate-600'
+                      : 'inline-flex items-center rounded-full bg-muted px-2.5 py-1 font-nunito text-xs font-bold text-muted-foreground'
                   }
                 >
                   {data.isPublished ? 'Pubblicato' : 'Bozza'}
@@ -191,7 +191,7 @@ export function ToolkitDrawerContent({ entityId }: ToolkitDrawerContentProps) {
 
               {/* Description */}
               {data.description && (
-                <p className="font-nunito text-xs text-slate-600 leading-relaxed">
+                <p className="font-nunito text-xs text-muted-foreground leading-relaxed">
                   {data.description}
                 </p>
               )}
@@ -202,22 +202,22 @@ export function ToolkitDrawerContent({ entityId }: ToolkitDrawerContentProps) {
           <TabsContent value="template" className="mt-0">
             <div className="space-y-2">
               {allTools.length === 0 ? (
-                <p className="font-nunito text-xs text-slate-400 text-center py-8">
+                <p className="font-nunito text-xs text-muted-foreground text-center py-8">
                   Nessuno strumento configurato
                 </p>
               ) : (
                 allTools.map((tool, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between rounded-lg bg-white/50 border border-slate-200/40 p-2.5"
+                    className="flex items-center justify-between rounded-lg bg-card/50 border border-border/40 p-2.5"
                   >
                     <div className="min-w-0">
-                      <p className="font-nunito text-xs font-medium text-slate-700 truncate">
+                      <p className="font-nunito text-xs font-medium text-foreground truncate">
                         {tool.name}
                       </p>
-                      <p className="font-nunito text-[10px] text-slate-400">{tool.config}</p>
+                      <p className="font-nunito text-[10px] text-muted-foreground">{tool.config}</p>
                     </div>
-                    <span className="ml-2 shrink-0 rounded-full bg-slate-100 px-2 py-0.5 font-nunito text-[10px] font-medium text-slate-600">
+                    <span className="ml-2 shrink-0 rounded-full bg-muted px-2 py-0.5 font-nunito text-[10px] font-medium text-muted-foreground">
                       {tool.category}
                     </span>
                   </div>
@@ -230,25 +230,25 @@ export function ToolkitDrawerContent({ entityId }: ToolkitDrawerContentProps) {
           <TabsContent value="storico" className="mt-0">
             <div className="space-y-2">
               {data.history.length === 0 ? (
-                <p className="font-nunito text-xs text-slate-400 text-center py-8">
+                <p className="font-nunito text-xs text-muted-foreground text-center py-8">
                   Nessuna versione precedente
                 </p>
               ) : (
                 data.history.map((entry, idx) => (
                   <div
                     key={idx}
-                    className="flex items-start gap-2.5 rounded-lg bg-white/50 border border-slate-200/40 p-2.5"
+                    className="flex items-start gap-2.5 rounded-lg bg-card/50 border border-border/40 p-2.5"
                   >
-                    <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 font-quicksand text-xs font-bold text-slate-600">
+                    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 font-quicksand text-xs font-bold text-muted-foreground">
                       v{entry.version}
                     </span>
                     <div className="flex-1 min-w-0">
                       {entry.note && (
-                        <p className="font-nunito text-xs font-medium text-slate-700">
+                        <p className="font-nunito text-xs font-medium text-foreground">
                           {entry.note}
                         </p>
                       )}
-                      <p className="font-nunito text-[10px] text-slate-400">
+                      <p className="font-nunito text-[10px] text-muted-foreground">
                         {new Date(entry.updatedAt).toLocaleDateString('it-IT')}
                       </p>
                     </div>

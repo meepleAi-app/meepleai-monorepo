@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
 using Api.Middleware;
@@ -25,6 +26,7 @@ internal static class ChatSessionEndpoints
         MapGetRecentSessionsEndpoint(group);
         MapGetSessionLimitEndpoint(group);
         MapDeleteSessionEndpoint(group);
+        MapRenameSessionEndpoint(group);
 
         return group;
     }
@@ -90,6 +92,15 @@ internal static class ChatSessionEndpoints
             .RequireSession()
             .WithTags("ChatSessions")
             .WithDescription("Delete a chat session");
+    }
+
+    private static void MapRenameSessionEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/chat/sessions/{sessionId:guid}/rename", HandleRenameSession)
+            .WithName("RenameChatSession")
+            .RequireSession()
+            .WithTags("ChatSessions")
+            .WithDescription("Rename a chat session. Returns 400 with disambiguation hint if the UUID belongs to a ChatThread instead of a ChatSession.");
     }
 
     private static async Task<IResult> HandleCreateSession(
@@ -248,6 +259,44 @@ internal static class ChatSessionEndpoints
 
         return Results.NoContent();
     }
+
+    private static async Task<IResult> HandleRenameSession(
+        [FromRoute] Guid sessionId,
+        [FromBody] RenameChatSessionRequest body,
+        [FromServices] IMediator mediator,
+        [FromServices] IChatSessionRepository sessionRepository,
+        [FromServices] IChatThreadRepository threadRepository,
+        CancellationToken cancellationToken)
+    {
+        // Naming disambiguation: detect if caller passed a ChatThread UUID to a ChatSession endpoint
+        var sessionExists = await sessionRepository.ExistsAsync(sessionId, cancellationToken).ConfigureAwait(false);
+        if (!sessionExists)
+        {
+            var thread = await threadRepository.GetByIdAsync(sessionId, cancellationToken).ConfigureAwait(false);
+            if (thread != null)
+            {
+                return Results.BadRequest(new
+                {
+                    error = "INVALID_ENTITY_TYPE",
+                    hint = "The provided UUID belongs to a ChatThread (use POST /chat/threads/{id}/title) not a ChatSession"
+                });
+            }
+
+            return Results.NotFound();
+        }
+
+        var command = new RenameChatSessionCommand(SessionId: sessionId, Title: body.Title);
+
+        try
+        {
+            var dto = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+            return Results.Ok(dto);
+        }
+        catch (Api.Middleware.Exceptions.NotFoundException)
+        {
+            return Results.NotFound();
+        }
+    }
 }
 
 // Request/Response DTOs
@@ -269,3 +318,5 @@ internal record AddChatSessionMessageRequest(
     Dictionary<string, object>? Metadata = null);
 
 internal record AddChatSessionMessageResponse(Guid MessageId);
+
+internal record RenameChatSessionRequest(string Title);

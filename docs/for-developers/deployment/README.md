@@ -93,16 +93,13 @@ COMPOSE_FILE=docker-compose.yml;compose.dev.yml
 ### Branch Strategy
 
 ```
-feature/*  --PR-->  main-dev  --merge-->  main-staging  (auto-deploy meepleai.app)
-                        |
-                   frontend-dev  (frontend features)
+feature/*  --PR-->  main-dev  --merge-->  main-staging  (auto-deploy meepleai.app)  --PR-->  main
 ```
 
 | Branch | Scopo | Deploy | CI |
 |--------|-------|--------|-----|
 | `feature/*` | Sviluppo feature | Nessuno | PR check |
 | `main-dev` | Integrazione sviluppo | Nessuno | CI completa |
-| `frontend-dev` | Feature frontend | Nessuno | CI completa |
 | `main-staging` | Ambiente attivo | meepleai.app (auto) | CI + Deploy |
 | `main` | Futuro production | Non attivo | Predisposta |
 
@@ -165,7 +162,7 @@ ssh -i ~/.ssh/meepleai-staging deploy@204.168.135.69
 | Unstructured | https://meepleai.app/services/unstructured | 8001 |
 | SmolDocling | https://meepleai.app/services/smoldocling | 8002 |
 | Ollama | https://meepleai.app/services/ollama | 11434 |
-| Qdrant | https://meepleai.app/services/qdrant | 6333 |
+| pgvector | https://meepleai.app/services/qdrant | PostgreSQL :5432 |
 | Grafana | https://meepleai.app/grafana | 3000 |
 | Prometheus | https://meepleai.app/prometheus | 9090 |
 
@@ -398,7 +395,7 @@ sudo ufw allow 22/tcp 80/tcp 443/tcp && sudo ufw enable
 ```bash
 curl http://localhost:8080/health                     # API
 docker exec meepleai-postgres pg_isready -U postgres  # DB
-curl http://localhost:6333/healthz                     # Qdrant
+curl http://localhost:PostgreSQL :5432/healthz                     # Qdrant
 docker exec meepleai-redis redis-cli ping             # Redis
 ```
 
@@ -412,19 +409,19 @@ docker exec meepleai-redis redis-cli ping             # Redis
 
 | Guida | Contenuto |
 |-------|-----------|
-| [Staging Setup](./staging-setup-guide.md) | Setup server staging completo |
-| [SSH Manual Deploy](./ssh-manual-deploy.md) | Deploy manuale via SSH |
-| [Docker Versioning](./docker-versioning-guide.md) | Image tagging, GHCR |
+| **Staging Setup** _(planned)_ | Setup server staging completo |
+| **SSH Manual Deploy** _(planned)_ | Deploy manuale via SSH |
+| **Docker Versioning** _(planned)_ | Image tagging, GHCR |
 | [Deployment Workflows](./deployment-workflows-guide.md) | Pipeline staging → production |
-| [R2 Storage](./r2-storage-configuration-guide.md) | Cloudflare R2 setup |
-| [Infrastructure Cost](./infrastructure-cost-summary.md) | Budget per fase |
-| [Domain Setup](./domain-setup-guide.md) | DNS, SSL, Cloudflare |
-| [Environments](./environments.md) | Differenze dev/staging/prod |
-| [Email/TOTP](./email-totp-services.md) | Email and TOTP services |
-| [BGG API](./boardgamegeek-api-setup.md) | BoardGameGeek API setup |
-| [Cost Optimization](./github-alternatives-cost-optimization.md) | GitHub Alternatives & Cost |
+| **R2 Storage** _(planned)_ | Cloudflare R2 setup |
+| **Infrastructure Cost** _(planned)_ | Budget per fase |
+| **Domain Setup** _(planned)_ | DNS, SSL, Cloudflare |
+| **Environments** _(planned)_ | Differenze dev/staging/prod |
+| **Email/TOTP** _(planned)_ | Email and TOTP services |
+| **BGG API** _(planned)_ | BoardGameGeek API setup |
+| **Cost Optimization** _(planned)_ | GitHub Alternatives & Cost |
 
-**Related**: [Monitoring](../development/README.md#monitoring), [Testing](../testing/README.md), [Security](../security/README.md)
+**Related**: **Monitoring** _(planned)_, [Testing](../testing/README.md), [Security](../security/README.md)
 
 ---
 

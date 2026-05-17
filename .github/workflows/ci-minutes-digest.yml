@@ -20,6 +20,12 @@ on:
         default: '7'
         type: string
 
+
+# Concurrency: prevent duplicate runs. See issue #850.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions:
   actions: read
   contents: read

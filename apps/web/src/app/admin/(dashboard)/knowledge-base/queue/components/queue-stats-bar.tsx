@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import type { ComponentType } from 'react';
@@ -65,7 +66,7 @@ export function QueueStatsBar() {
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="h-16 bg-white/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-slate-200/60 dark:border-zinc-700/40 animate-pulse"
+            className="h-16 bg-card/40 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-border/60 dark:border-zinc-700/40 animate-pulse"
           />
         ))}
       </div>
@@ -88,7 +89,7 @@ export function QueueStatsBar() {
         return (
           <div
             key={stat.label}
-            className="flex items-center gap-3 px-4 py-3 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-zinc-700/50"
+            className="flex items-center gap-3 px-4 py-3 bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/50 dark:border-zinc-700/50"
           >
             <div className={`p-1.5 rounded-lg ${stat.bgColor}`}>
               <Icon className={`h-4 w-4 ${stat.color}`} />
@@ -102,7 +103,7 @@ export function QueueStatsBar() {
       })}
 
       <div
-        className="flex items-center gap-3 px-4 py-3 bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-zinc-700/50"
+        className="flex items-center gap-3 px-4 py-3 bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-border/50 dark:border-zinc-700/50"
         aria-label="ETA totale per svuotare la coda"
       >
         <div className="p-1.5 rounded-lg bg-orange-50 dark:bg-orange-900/20">

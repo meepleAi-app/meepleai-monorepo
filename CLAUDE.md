@@ -9,7 +9,6 @@
 | Start Dev (full) | `make dev` | `infra/` |
 | Start Dev (core) | `make dev-core` | `infra/` |
 | Dev from Snapshot | `make dev-from-snapshot` | `infra/` — [guide](./docs/for-developers/workflows/snapshot-seed-workflow.md) |
-| Alpha Mode | `make alpha` | `infra/` |
 | Bake Snapshot | `make seed-index` | `infra/` — raro, indicizza tutti i PDF |
 | Integration | `make tunnel && make integration` | `infra/` — **Git Bash only (Windows)** |
 | Deploy Staging | `make staging` | `infra/` (on server) |
@@ -26,16 +25,9 @@
 - **Docker commands**: always use `pwsh -c "docker logs meepleai-api --tail=50"` — piping in bash breaks
 - **Integration scripts**: run in **Git Bash** (not PowerShell/CMD). Requires SSH key `~/.ssh/meepleai-staging`
 
-### Alpha Mode
+### Invite-only Registration
 
-Set `ALPHA_MODE=true` (backend) and `NEXT_PUBLIC_ALPHA_MODE=true` (frontend) to enable Alpha Zero.
-`NEXT_PUBLIC_ALPHA_MODE` is **build-time** — requires rebuild, not just restart.
-
-| Aspect | Alpha Scope |
-|--------|------------|
-| Features | Auth → Games + BGG → PDF upload → RAG Chat → Library |
-| Active BCs | Authentication, GameManagement, DocumentProcessing, KnowledgeBase, UserLibrary |
-| Admin | Overview, Users, Content (trimmed) only |
+Controlled at runtime via admin toggle (`/admin/config` → General → Registration Mode), backed by `RegistrationMode` config (DB-persisted). When `publicRegistrationEnabled=false`, `/register` shows the request-access popup (`RequestAccessForm`) instead of the standard form. No env var, no redeploy.
 
 ## Stack
 
@@ -122,27 +114,31 @@ cd ../../infra && make dev        # All services (make dev-core = no AI/monitori
 
 ### Git Workflow
 
-**Branches**: `main-dev` (dev) | `frontend-dev` (frontend) | `main` (prod) | `feature/issue-{n}-{desc}`
+> **Reference**: full rationale in [ADR-054 — DevOps Multi-Branch Strategy](./docs/for-claude/architecture/adr/adr-054-devops-multi-branch-strategy.md). Tracking epic: [#842](https://github.com/meepleAi-app/meepleai-monorepo/issues/842).
 
-**🔴 PR Target Rule**: Feature branches MUST merge to their parent branch
+**Branches**: `main-dev` (dev) | `main-staging` (release) | `main` (prod) | `feature/issue-{n}-{desc}`
+
+**🔴 PR Target Rule**: Feature branches MUST merge to their parent branch (typically `main-dev`)
 
 ```bash
-git checkout frontend-dev && git pull
+git checkout main-dev && git pull
 git checkout -b feature/issue-123-desc
-git config branch.feature/issue-123-desc.parent frontend-dev
+git config branch.feature/issue-123-desc.parent main-dev
 # work → commit → test → push
 git push -u origin feature/issue-123-desc
-# PR to frontend-dev (NOT main!) → merge → git branch -D feature/issue-123-desc
+# PR to main-dev → merge (auto-deletes branch on merge)
 ```
+
+> **Note**: `frontend-dev` and `backend-dev` were retired on 2026-05-09 (issue #897). All feature branches now target `main-dev` directly. Auto-delete on merge is enabled at repo level — no need to `git branch -D` after PR merge.
 
 **🔴 Branch Hygiene Rule** (issue #806): ALWAYS switch to the parent branch BEFORE creating a feature branch. Never run `git checkout -b feature/...` while HEAD is on another in-progress feature branch — it absorbs the other branch's commits into your new branch's ancestry. Concurrent multi-terminal workflows (incl. AI agentic sessions) are particularly prone to this.
 
 **Pre-creation safety check** — run before `git checkout -b`:
 
 ```bash
-# Verify HEAD is on the intended parent (main-dev / frontend-dev / main),
+# Verify HEAD is on the intended parent (main-dev / main),
 # NOT on another feature/* branch
-git branch --show-current  # MUST print main-dev, frontend-dev, or main
+git branch --show-current  # MUST print main-dev or main
 git status                 # MUST show clean tree
 git pull --ff-only         # MUST succeed (no divergence)
 git checkout -b feature/issue-{n}-{desc}
@@ -264,14 +260,38 @@ tests/Api.Tests/          # Backend test suite
 
 ### 🔒 Active Freezes
 
-**SP6 v2 expansion FREEZE** (issued 2026-05-06, see [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808))
+**Design System De-versioning FREEZE — LIFTED 2026-05-11** (umbrella #1023)
 
-- ❌ NO new components under `apps/web/src/components/v2/**` using `hsl(*, 89%, 48%)` + `hsla(*, 89%, *, 0.10)` token pattern
-- ❌ NO new SP6 v2 routes (`/gamebook/**`, `/agents/**`) until A11y token redesign ([#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807) Fase 2) lands on `main-dev`
-- ❌ NO migration of legacy components to current v2 design tokens
-- ✅ ALLOWED: bugfix on existing v2 surfaces, performance, tests, i18n, docs, A11y fixes
-- 🟡 CASE-BY-CASE: bugfix that *adds* new v2 component (e.g. error boundary), hot-fix
-- A11y CI job (`Frontend - A11y E2E`) is now `continue-on-error: true` until token redesign — restore blocking when [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807) Fase 2 completes
+Stage 2 path-migration completed by PR #1032 on 2026-05-11. The unblock condition ("Until Stage 2 path-migration PR lands") is satisfied. Canonical paths are now active:
+- Feature compositions → `apps/web/src/components/features/<feature>/`
+- Primitives → `apps/web/src/components/ui/<primitive>/`
+
+The legacy directories `apps/web/src/components/v2/**` and `apps/web/src/components/ui/v2/**` are empty post-codemod; do not re-introduce them.
+
+Stage 3 (#1026) — conformity fixes per cluster — is in progress. New cluster work (`dashboard`, `hub/<entity>`) is **blocked on creation of canonical mockups** in `admin-mockups/design_files/sp4-dashboard.jsx` and `sp4-hub-*.jsx` (raised by spec-panel review 2026-05-13). Reference: [`docs/for-developers/specs/2026-05-11-design-system-deversioning.md`](./docs/for-developers/specs/2026-05-11-design-system-deversioning.md) §12.
+
+> **Historical**: SP6 v2 expansion FREEZE (issued 2026-05-06 per [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808), tied to A11y audit [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807)) was **lifted on 2026-05-10** by PR #876 (token redesign — AA-compliant CSS vars + entity Tailwind utilities). Issues #807 and #808 are both CLOSED. Restore A11y CI job (`Frontend - A11y E2E`) to blocking (`continue-on-error: false`) when verified green on `main-dev`.
+
+**Token Canonicalization** — Tier 1+2+3+4 complete, 0 project-wide violations (2026-05-12, spec [`2026-05-12-token-canonicalization.md`](./docs/for-developers/specs/2026-05-12-token-canonicalization.md)).
+
+The runtime imports `admin-mockups/design_files/tokens.css` as `apps/web/src/styles/design-tokens-canonical.css`. Legacy v1 names (`--bg-base`, `--gaming-bg-*`, `--nh-bg-*`, `--e-*`) are still aliased via `token-bridge.css` because ~120 CSS-side consumers reference them directly via `var(--*)` literals. The bridge will be removed in **DS-16** (CSS variable migration codemod), separate from this token-class migration.
+
+Theming uses `[data-theme="light|dark"]` (next-themes applies both `class="dark"` AND `data-theme="dark"`). **Default theme is light** (mockup cream `#f7f3ee`), dark accessible via user toggle.
+
+When writing new components:
+- ✅ Use semantic tokens: `bg-background`, `bg-card`, `bg-muted`, `text-foreground`, `text-muted-foreground`, `border-border`, `border-border-strong`.
+- ✅ Use entity utilities: `bg-entity-game`, `text-entity-session`, `ring-entity-event/30`, etc.
+- ❌ Forbidden by ESLint rule `local/no-hardcoded-color-utility` (mode: **error** since DS-15): `bg-white`, `bg-slate-*`, `text-gray-*`, `border-zinc-*`, etc. (full neutral palette).
+
+Exemption: `text-white` / `border-white` / `ring-white` ARE allowed when the same className declares a colored bg (entity utility, gradient, arbitrary `bg-[hsl(…)]`, hue palette, semantic `bg-primary/secondary/accent`). This is the mockup `.e-bg` pattern.
+
+Run `pnpm lint:tokens` to regenerate the inventory in `audits/2026-05-12-token-violations.md`.
+
+**Deferred decisions** (planned for DS-16):
+- `--admin-*` token family (admin inline gradients still file-level eslint-disable).
+- `--mc-*` MeepleCard palette consolidation.
+- CSS variable migration (`var(--bg-base)` → `var(--bg)`) — bridge removal.
+- Audit of file-level `eslint-disable local/no-hardcoded-color-utility` directives; convert to line-level or refactor via primitives where feasible.
 
 ### DDD Rules
 

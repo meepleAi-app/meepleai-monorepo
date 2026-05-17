@@ -12,7 +12,7 @@ export function RecentGamesRow() {
     return (
       <div className="flex gap-3 overflow-x-auto px-4 py-2 scrollbar-none">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-32 w-24 shrink-0 animate-pulse rounded-lg bg-white/5" />
+          <div key={i} className="h-32 w-24 shrink-0 animate-pulse rounded-lg bg-muted" />
         ))}
       </div>
     );
@@ -23,7 +23,7 @@ export function RecentGamesRow() {
 
   return (
     <section>
-      <h2 className="mb-2 px-4 text-sm font-medium text-[var(--gaming-text-secondary)]">
+      <h2 className="mb-2 px-4 text-sm font-medium text-[var(--text-sec)]">
         Giochi recenti
       </h2>
       <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-none">

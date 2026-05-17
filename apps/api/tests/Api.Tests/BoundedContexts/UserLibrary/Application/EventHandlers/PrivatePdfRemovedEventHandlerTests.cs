@@ -11,7 +11,7 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Application.EventHandlers;
 /// <summary>
 /// Unit tests for PrivatePdfRemovedEventHandler.
 /// Issue #3651: Tests for vector cleanup when private PDF is removed.
-/// NOTE: Vector store (Qdrant) has been removed — handler is now a no-op that only logs.
+/// NOTE: Legacy vector cleanup deprecated — handler is now a no-op that only logs.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "UserLibrary")]

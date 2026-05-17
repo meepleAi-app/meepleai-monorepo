@@ -25,20 +25,14 @@ public class UnstructuredHealthCheck : IHealthCheck
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
-        // Skip active probe if this extractor is not the selected provider — avoids
-        // false Unhealthy for optional services that are intentionally not deployed.
-        var provider = _configuration["PdfProcessing:Extractor:Provider"] ?? "Orchestrator";
-        var usesUnstructured = provider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase) ||
-                               provider.Equals("Unstructured", StringComparison.OrdinalIgnoreCase);
-        if (!usesUnstructured)
-        {
-            return HealthCheckResult.Degraded($"Unstructured not in use (Provider={provider})");
-        }
-
+        // Provider gating is performed at registration time in HealthCheckServiceExtensions:
+        // this check is registered only when PdfProcessing:Extractor:Provider routes to Unstructured.
         var unstructuredUrl = _configuration["PdfProcessing:Extractor:Unstructured:ApiUrl"];
         if (string.IsNullOrWhiteSpace(unstructuredUrl))
         {
-            return HealthCheckResult.Degraded("Unstructured API not configured");
+            // Provider selected but URL missing — real misconfiguration, surface as Unhealthy
+            // so monitoring catches it (consistent with OllamaHealthCheck handling).
+            return HealthCheckResult.Unhealthy("Unstructured API URL missing — provider selected but PdfProcessing:Extractor:Unstructured:ApiUrl unset");
         }
 
         try

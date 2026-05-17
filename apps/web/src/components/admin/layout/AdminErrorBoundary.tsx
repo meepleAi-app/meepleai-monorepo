@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { Component, type ErrorInfo, type ReactNode } from 'react';
@@ -44,7 +45,7 @@ export class AdminErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="flex items-center justify-center min-h-[400px] p-6">
-          <div className="max-w-md w-full rounded-2xl border border-red-200/60 dark:border-red-900/40 bg-white/70 dark:bg-zinc-800/50 backdrop-blur-sm p-8 text-center">
+          <div className="max-w-md w-full rounded-2xl border border-red-200/60 dark:border-red-900/40 bg-card/70 dark:bg-zinc-800/50 backdrop-blur-sm p-8 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-red-100/80 dark:bg-red-900/30 mb-4">
               <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
             </div>
@@ -81,7 +82,7 @@ export class AdminErrorBoundary extends Component<Props, State> {
                 </button>
 
                 {showDetails && (
-                  <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-slate-100 dark:bg-zinc-900 p-3 text-left text-xs text-red-700 dark:text-red-400">
+                  <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-muted dark:bg-zinc-900 p-3 text-left text-xs text-red-700 dark:text-red-400">
                     {error.message}
                     {error.stack && `\n\n${error.stack}`}
                   </pre>

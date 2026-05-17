@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -163,10 +164,10 @@ export function SearchSelectGame() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-2">
+        <h2 className="text-2xl font-semibold text-foreground dark:text-white mb-2">
           Search or Create Game
         </h2>
-        <p className="text-slate-600 dark:text-slate-400">
+        <p className="text-muted-foreground">
           Search the shared game catalog or create a custom game entry
         </p>
       </div>
@@ -174,7 +175,7 @@ export function SearchSelectGame() {
       {/* Search Input */}
       <div className="space-y-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Search by game title..."
@@ -185,7 +186,7 @@ export function SearchSelectGame() {
           />
         </div>
         {debouncedQuery && !loading && (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             {totalCount} game{totalCount !== 1 ? 's' : ''} found
           </p>
         )}
@@ -195,7 +196,7 @@ export function SearchSelectGame() {
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="p-4 border-2 border-slate-200 dark:border-slate-700 rounded-lg">
+            <div key={i} className="p-4 border-2 border-border rounded-lg">
               <Skeleton className="h-5 w-3/4 mb-2" />
               <Skeleton className="h-4 w-1/2 mb-2" />
               <Skeleton className="h-3 w-2/3" />
@@ -230,7 +231,7 @@ export function SearchSelectGame() {
                 className={`p-4 border-2 rounded-lg text-left transition-colors hover:border-blue-400 ${
                   selectedGameId === game.id
                     ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    : 'border-border hover:bg-muted'
                 }`}
               >
                 <div className="flex gap-3">
@@ -244,15 +245,15 @@ export function SearchSelectGame() {
                       loading="lazy"
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 rounded bg-muted flex items-center justify-center flex-shrink-0">
                       <span className="text-xl">🎲</span>
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-slate-900 dark:text-white truncate">
+                    <h3 className="font-semibold text-foreground dark:text-white truncate">
                       {game.title}
                     </h3>
-                    <p className="text-sm text-slate-500 mt-0.5">
+                    <p className="text-sm text-muted-foreground mt-0.5">
                       {game.yearPublished > 0 && `${game.yearPublished} • `}
                       {game.minPlayers > 0 && game.maxPlayers > 0 && (
                         <span>
@@ -299,11 +300,11 @@ export function SearchSelectGame() {
 
       {/* No Results State */}
       {!loading && debouncedQuery && results.length === 0 && !error && (
-        <div className="p-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
-          <p className="text-slate-600 dark:text-slate-400 mb-2">
+        <div className="p-6 text-center border-2 border-dashed border-border rounded-lg">
+          <p className="text-muted-foreground mb-2">
             No games found for &quot;{debouncedQuery}&quot;
           </p>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             Try a different search term or create a custom game
           </p>
         </div>
@@ -311,14 +312,14 @@ export function SearchSelectGame() {
 
       {/* Divider */}
       <div className="flex items-center gap-4">
-        <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
-        <span className="text-sm text-slate-500">OR</span>
-        <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+        <div className="flex-1 h-px bg-muted dark:bg-card" />
+        <span className="text-sm text-muted-foreground">OR</span>
+        <div className="flex-1 h-px bg-muted dark:bg-card" />
       </div>
 
       {/* Create Custom Game */}
-      <div className="p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-center">
-        <p className="text-slate-600 dark:text-slate-400 mb-3">
+      <div className="p-4 border-2 border-dashed border-border dark:border-border rounded-lg text-center">
+        <p className="text-muted-foreground mb-3">
           Can&apos;t find your game? Create a custom entry.
         </p>
         <Button variant="outline" onClick={handleCreateCustom}>

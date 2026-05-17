@@ -70,18 +70,18 @@ public sealed class VectorDocumentRepositoryTests : IClassFixture<SharedTestcont
         Guid? privateGameId = null,
         string processingState = "Ready",
         string fileName = "test.pdf") => new()
-    {
-        Id = Guid.NewGuid(),
-        SharedGameId = sharedGameId,
-        PrivateGameId = privateGameId,
-        FileName = fileName,
-        FilePath = $"/tmp/{fileName}",
-        FileSizeBytes = 100,
-        ContentType = "application/pdf",
-        UploadedByUserId = Guid.NewGuid(),
-        UploadedAt = DateTime.UtcNow,
-        ProcessingState = processingState,
-    };
+        {
+            Id = Guid.NewGuid(),
+            SharedGameId = sharedGameId,
+            PrivateGameId = privateGameId,
+            FileName = fileName,
+            FilePath = $"/tmp/{fileName}",
+            FileSizeBytes = 100,
+            ContentType = "application/pdf",
+            UploadedByUserId = Guid.NewGuid(),
+            UploadedAt = DateTime.UtcNow,
+            ProcessingState = processingState,
+        };
 
     /// <summary>
     /// TDD regression test: after removing the legacy bridge, resolution via sharedGameId

@@ -655,7 +655,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     }
 
     /// <summary>
-    /// Indexes document chunks in Qdrant and saves text chunks to PostgreSQL for hybrid search.
+    /// Indexes document chunks in pgvector and saves text chunks to PostgreSQL for hybrid search.
     /// </summary>
     private async Task IndexAndStoreChunksAsync(
         string pdfId,
@@ -668,9 +668,8 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         IServiceScope scope,
         CancellationToken cancellationToken)
     {
-        // Vector store (Qdrant) has been removed — skip vector indexing.
 
-        // Update vector document with chunk count (no Qdrant indexing)
+        // Update vector document with chunk count (no pgvector indexing)
         await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS)

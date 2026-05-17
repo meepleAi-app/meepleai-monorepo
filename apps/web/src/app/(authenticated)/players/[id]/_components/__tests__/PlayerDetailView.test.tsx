@@ -156,14 +156,19 @@ describe('PlayerDetailView', () => {
     });
 
     const { container } = renderView('sara-rossi');
-    expect(getBySlot(container, 'player-detail-view')).toBeDefined();
+    expect(getBySlot(container, 'detail-page-layout')).toBeDefined();
   });
 
   // ── Cell 5: success with data → default render ──────────────────────────────
 
   it('Cell 5: renders default view when stats are loaded', () => {
     const { container } = renderView('sara-rossi');
+    // #1143: feature-specific wrapper that 4 E2E specs (smoke / a11y /
+    // v2-states / sp4-visual) use as the readiness anchor for the default
+    // branch. Guards against the regression that #1138 introduced when the
+    // DetailPageLayout primitive replaced the legacy wrapper.
     expect(getBySlot(container, 'player-detail-view')).toBeDefined();
+    expect(getBySlot(container, 'detail-page-layout')).toBeDefined();
   });
 
   it('Cell 5: renders PlayerHero with displayName decoded from URL slug', () => {
@@ -191,7 +196,7 @@ describe('PlayerDetailView', () => {
 
     // Should render default view without crashing
     const { container } = renderView('test-player');
-    expect(getBySlot(container, 'player-detail-view')).toBeDefined();
+    expect(getBySlot(container, 'detail-page-layout')).toBeDefined();
   });
 
   // ── favoriteGameName extraction ──────────────────────────────────────────────
@@ -216,7 +221,7 @@ describe('PlayerDetailView', () => {
     // Verify the FavoriteAgentCard renders (not-found/error/loading NOT shown).
     expect(getBySlot(container, 'player-detail-favorite-agent')).toBeDefined();
     // Verify default render (not a shell) — main data-slot present
-    expect(getBySlot(container, 'player-detail-view')).toBeDefined();
+    expect(getBySlot(container, 'detail-page-layout')).toBeDefined();
   });
 
   // ── URL state overrides ──────────────────────────────────────────────────────
@@ -247,19 +252,55 @@ describe('PlayerDetailView', () => {
   it('IS_VISUAL_TEST_BUILD=false: real data path used, renders default view normally', () => {
     // This test verifies fixture=null path (IS_VISUAL_TEST_BUILD=false in our mock)
     const { container } = renderView('sara-rossi');
-    expect(getBySlot(container, 'player-detail-view')).toBeDefined();
+    expect(getBySlot(container, 'detail-page-layout')).toBeDefined();
   });
 
-  // ── AchievementBadgeGrid viewAllHref subroute ────────────────────────────────
+  // ── AchievementBadgeGrid is rendered in the Achievements tab ─────────────────
 
-  it('AchievementBadgeGrid is present in default render with link to /players/{playerId}/achievements', () => {
+  it('AchievementBadgeGrid renders inside the Achievements tab (?tab=achievements)', () => {
+    mockSearchParams.set('tab', 'achievements');
     const { container } = renderView('marco-bianchi');
 
     const achievementGrid = getBySlot(container, 'player-detail-achievement-grid');
     expect(achievementGrid).toBeDefined();
-
-    // achievementCount defaults to 0 (TBD schema) — viewAll link absent when count=0
-    // Verify the grid is rendered (not a shell)
     expect(queryBySlot(container, 'player-detail-not-found')).toBeNull();
+    mockSearchParams.delete('tab');
+  });
+
+  // ── Stage 3 cluster: DetailPageLayout adoption + URL tab state ───────────────
+
+  it('default render wraps content in DetailPageLayout with overview region + tabs', () => {
+    const { container } = renderView('sara-rossi');
+    expect(getBySlot(container, 'detail-page-layout')).toBeDefined();
+    expect(getBySlot(container, 'player-overview-region')).toBeDefined();
+    expect(getBySlot(container, 'player-detail-tabs')).toBeDefined();
+  });
+
+  it('renders the Sessions tab panel by default (no ?tab=)', () => {
+    const { container } = renderView('sara-rossi');
+    expect(getBySlot(container, 'sessions-tab-panel')).toBeDefined();
+    expect(queryBySlot(container, 'games-tab-panel')).toBeNull();
+  });
+
+  it('renders the Games tab panel when ?tab=games', () => {
+    mockSearchParams.set('tab', 'games');
+    const { container } = renderView('sara-rossi');
+    expect(getBySlot(container, 'games-tab-panel')).toBeDefined();
+    expect(queryBySlot(container, 'sessions-tab-panel')).toBeNull();
+    mockSearchParams.delete('tab');
+  });
+
+  it('renders the Toolkits tab panel when ?tab=toolkits', () => {
+    mockSearchParams.set('tab', 'toolkits');
+    const { container } = renderView('sara-rossi');
+    expect(getBySlot(container, 'toolkits-tab-panel')).toBeDefined();
+    mockSearchParams.delete('tab');
+  });
+
+  it('falls back to the Sessions tab when ?tab= is an unknown key', () => {
+    mockSearchParams.set('tab', 'bogus');
+    const { container } = renderView('sara-rossi');
+    expect(getBySlot(container, 'sessions-tab-panel')).toBeDefined();
+    mockSearchParams.delete('tab');
   });
 });

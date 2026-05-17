@@ -81,7 +81,7 @@ export function PdfMetricsDisplay({
   if (isLoading && !metrics) {
     return (
       <div className={className} data-testid="pdf-metrics-loading">
-        <div className="h-12 w-full animate-pulse rounded bg-gray-200" />
+        <div className="h-12 w-full animate-pulse rounded bg-muted" />
       </div>
     );
   }

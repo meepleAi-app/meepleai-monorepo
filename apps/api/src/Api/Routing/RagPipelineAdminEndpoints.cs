@@ -324,7 +324,7 @@ internal static class RagPipelineAdminEndpoints
             logger.LogInformation(
                 "Admin {AdminId} testing RAG pipeline: query='{Query}'",
                 session!.User!.Id,
-                LogValueSanitizer.Sanitize(request.TestQuery));
+                LogSanitizer.Sanitize(request.TestQuery));
 
             // Execute test command to get event stream
             IAsyncEnumerable<RagPipelineTestEvent> eventStream;

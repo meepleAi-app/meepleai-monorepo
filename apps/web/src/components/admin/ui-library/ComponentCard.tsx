@@ -28,7 +28,7 @@ export function ComponentCard({ entry }: ComponentCardProps) {
           {isInteractive ? (
             <Zap className="h-3.5 w-3.5 text-amber-500" aria-label="Interactive" />
           ) : (
-            <Camera className="h-3.5 w-3.5 text-slate-400" aria-label="Static" />
+            <Camera className="h-3.5 w-3.5 text-muted-foreground" aria-label="Static" />
           )}
         </span>
       </div>

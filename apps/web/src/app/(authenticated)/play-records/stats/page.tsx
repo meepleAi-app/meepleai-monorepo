@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 /**
@@ -19,9 +20,9 @@ import { cn } from '@/lib/utils';
 
 function KpiCard({ value, label }: { value: string | number; label: string }) {
   return (
-    <div className="flex-shrink-0 flex flex-col items-center justify-center rounded-xl bg-white/5 border border-white/8 px-4 py-3 min-w-[80px]">
+    <div className="flex-shrink-0 flex flex-col items-center justify-center rounded-xl bg-card/5 border border-border px-4 py-3 min-w-[80px]">
       <span className="text-2xl font-bold text-white font-quicksand">{value}</span>
-      <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/40 text-center leading-tight">
+      <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground text-center leading-tight">
         {label}
       </span>
     </div>
@@ -57,7 +58,7 @@ export default function StatisticsPage() {
     : [];
 
   return (
-    <div className="flex flex-col min-h-full bg-[var(--gaming-bg-base)]" data-testid="stats-page">
+    <div className="flex flex-col min-h-full bg-[var(--bg)]" data-testid="stats-page">
       <MobileHeader title="Le mie statistiche" onBack={() => router.back()} />
 
       <div className="flex-1 px-4 pt-3 pb-12 flex flex-col gap-5">
@@ -68,12 +69,12 @@ export default function StatisticsPage() {
               {[...Array(4)].map((_, i) => (
                 <div
                   key={i}
-                  className="flex-shrink-0 h-20 w-20 animate-pulse rounded-xl bg-white/5"
+                  className="flex-shrink-0 h-20 w-20 animate-pulse rounded-xl bg-card/5"
                 />
               ))}
             </div>
-            <div className="h-40 animate-pulse rounded-xl bg-white/5" />
-            <div className="h-40 animate-pulse rounded-xl bg-white/5" />
+            <div className="h-40 animate-pulse rounded-xl bg-card/5" />
+            <div className="h-40 animate-pulse rounded-xl bg-card/5" />
           </div>
         )}
 
@@ -107,7 +108,7 @@ export default function StatisticsPage() {
                 <span className="text-5xl">📊</span>
                 <div>
                   <p className="text-base font-bold text-white">Nessuna statistica</p>
-                  <p className="mt-1 text-sm text-white/40">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     Registra partite per vedere le tue statistiche!
                   </p>
                 </div>
@@ -117,24 +118,24 @@ export default function StatisticsPage() {
             {/* Top giochi più giocati */}
             {topGames.length > 0 && (
               <div className="flex flex-col gap-2" data-testid="top-games">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30 px-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">
                   Giochi più giocati
                 </p>
-                <div className="rounded-xl bg-white/5 border border-white/8 px-4 py-3 flex flex-col gap-3">
+                <div className="rounded-xl bg-card/5 border border-border px-4 py-3 flex flex-col gap-3">
                   {topGames.map(([game, count], i) => (
                     <div key={game} className="flex flex-col gap-1">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-white/40 w-4">{i + 1}.</span>
+                          <span className="text-xs font-bold text-muted-foreground w-4">{i + 1}.</span>
                           <span className="text-sm font-semibold text-white truncate max-w-[180px]">
                             {game}
                           </span>
                         </div>
-                        <span className="text-xs font-bold text-white/50 ml-2 flex-shrink-0">
+                        <span className="text-xs font-bold text-foreground/80 ml-2 flex-shrink-0">
                           {count}x
                         </span>
                       </div>
-                      <div className="ml-6 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                      <div className="ml-6 h-1.5 rounded-full bg-card/5 overflow-hidden">
                         <div
                           className="h-full rounded-full bg-amber-500/60"
                           style={{ width: `${(count / maxCount) * 100}%` }}
@@ -149,14 +150,14 @@ export default function StatisticsPage() {
             {/* Punteggi medi per gioco */}
             {avgScoreGames.length > 0 && (
               <div className="flex flex-col gap-2" data-testid="avg-scores">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/30 px-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">
                   Punteggio medio
                 </p>
-                <div className="rounded-xl bg-white/5 border border-white/8 px-4 py-3 flex flex-col gap-2">
+                <div className="rounded-xl bg-card/5 border border-border px-4 py-3 flex flex-col gap-2">
                   {avgScoreGames.map(({ game, avg }) => (
                     <div
                       key={game}
-                      className="flex items-center justify-between py-1 border-b border-white/5 last:border-0"
+                      className="flex items-center justify-between py-1 border-b border-border last:border-0"
                     >
                       <span className="text-sm font-semibold text-white truncate max-w-[200px]">
                         {game}
@@ -182,7 +183,7 @@ export default function StatisticsPage() {
                 <span className="text-2xl">🏆</span>
                 <div>
                   <p className="text-sm font-bold text-amber-300">{winRate}% di vittorie</p>
-                  <p className="text-xs text-white/40">
+                  <p className="text-xs text-muted-foreground">
                     {stats.totalWins} vittorie su {stats.totalSessions} partite
                   </p>
                 </div>

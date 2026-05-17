@@ -23,9 +23,9 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
-import { SettingsList } from '@/components/ui/v2/settings-list';
-import { SettingsRow } from '@/components/ui/v2/settings-row';
-import { ToggleSwitch } from '@/components/ui/v2/toggle-switch';
+import { SettingsList } from '@/components/ui/settings-list';
+import { SettingsRow } from '@/components/ui/settings-row';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useToast } from '@/hooks/useToast';
 

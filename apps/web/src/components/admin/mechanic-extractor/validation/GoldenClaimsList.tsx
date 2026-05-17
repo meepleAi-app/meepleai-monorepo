@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 /**
  * Mechanic Extractor — AI Comprehension Validation (ADR-051 Sprint 1 / Task 36)
  *
@@ -108,7 +109,7 @@ export function GoldenClaimsList({ sharedGameId, claims }: GoldenClaimsListProps
     return (
       <div
         data-testid="golden-claims-list"
-        className="rounded-md border border-dashed border-slate-300 bg-white/40 p-6 text-center text-sm text-muted-foreground dark:border-zinc-700 dark:bg-zinc-900/40"
+        className="rounded-md border border-dashed border-border bg-card/40 p-6 text-center text-sm text-muted-foreground dark:border-zinc-700 dark:bg-zinc-900/40"
       >
         No golden claims yet. Use the &quot;New claim&quot; button to add the first one.
       </div>
@@ -123,7 +124,7 @@ export function GoldenClaimsList({ sharedGameId, claims }: GoldenClaimsListProps
             {SECTION_LABEL[group.section]}{' '}
             <span className="text-muted-foreground">({group.claims.length})</span>
           </h3>
-          <div className="rounded-md border border-slate-200 bg-white/70 dark:border-zinc-700 dark:bg-zinc-900/40">
+          <div className="rounded-md border border-border bg-card/70 dark:border-zinc-700 dark:bg-zinc-900/40">
             <Table>
               <TableHeader>
                 <TableRow>

@@ -1,6 +1,6 @@
 {
-  "description": "Baseline JS bundle size for prod build (no mock). Update manually in dedicated PRs. Last bump rebaselines post-SP6 Libro Game migration: Phase A Nanolith demo (#790) + Phase B /gamebook index Tier M (#792) + Phase C contract (#794) + Phase C.1 Foundation (#796) + Phase C.2 Interactions (#800) — 11 new gamebook components + 14-state wizard FSM + camera/offline/confidence libs.",
-  "updatedAt": "2026-05-06",
-  "totalBytes": 13797614,
+  "description": "Baseline JS bundle size for prod build (no mock). Update manually in dedicated PRs. Last bump rebaselines post-#871 IA consolidation (Nanolith libro-game): adds LibroGameDetailView (305 LOC), CampaignSetupDrawer (515 LOC), is-libro-game helper, and incorporates Stage 2 de-versioning (PR #1025) rename impact on chunk hashing.",
+  "updatedAt": "2026-05-11",
+  "totalBytes": 14371308,
   "toleranceBytes": 10240
 }

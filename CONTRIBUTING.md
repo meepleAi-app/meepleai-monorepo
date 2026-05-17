@@ -69,10 +69,7 @@ Discussion happens in the issue thread before implementation begins.
 
 1. **Fork the repository** (external contributors) or create a feature branch (organization members).
 2. **Branch naming**: `feature/<short-description>` or `feature/issue-<n>-<desc>` for issue work.
-3. **Branch from the correct parent**:
-   - `main-dev` for general work
-   - `frontend-dev` for frontend-only changes
-   - See [`CLAUDE.md`](./CLAUDE.md#git-workflow) §"Git Workflow" for details
+3. **Branch from `main-dev`**: see [`CLAUDE.md`](./CLAUDE.md#git-workflow) §"Git Workflow" for the canonical flow.
 4. **Keep PRs focused** — one logical change per PR. Easier to review, easier to revert.
 5. **Self-review before requesting review**:
    - All tests pass locally
@@ -176,8 +173,8 @@ Husky `commit-msg` hook validates on every commit; CI re-validates.
 | Branch | Purpose |
 |--------|---------|
 | `main` | Production releases |
+| `main-staging` | Pre-production release branch (PRs from `main-dev`) |
 | `main-dev` | Active development integration |
-| `frontend-dev` | Frontend-specific feature integration |
 | `feature/issue-<n>-<desc>` | Issue-driven feature work |
 | `feature/<descriptive-name>` | Non-issue feature work |
 

@@ -104,7 +104,7 @@ export function TurnOrderTool({
 
   if (!turnOrder) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[300px] gap-3 text-stone-500 dark:text-stone-400">
+      <div className="flex flex-col items-center justify-center min-h-[300px] gap-3 text-muted-foreground">
         <RotateCcw className="w-8 h-8 opacity-40" aria-hidden="true" />
         <p className="text-sm italic">Ordine di turno non ancora configurato.</p>
       </div>
@@ -120,7 +120,7 @@ export function TurnOrderTool({
     >
       {/* Header: title + round badge */}
       <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-stone-800 dark:text-stone-200">
+        <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
           <RotateCcw className="w-4 h-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />
           Ordine di Turno
         </h2>
@@ -151,7 +151,7 @@ export function TurnOrderTool({
                 'flex items-center gap-3 px-4 py-3 rounded-lg border transition-all duration-300',
                 isCurrent
                   ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-400 dark:border-amber-600 shadow-sm'
-                  : 'bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700'
+                  : 'bg-card border-border'
               )}
               aria-current={isCurrent ? 'step' : undefined}
             >
@@ -161,7 +161,7 @@ export function TurnOrderTool({
                   'flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold',
                   isCurrent
                     ? 'bg-amber-500 dark:bg-amber-400 text-white'
-                    : 'bg-stone-200 dark:bg-stone-700 text-stone-500 dark:text-stone-400'
+                    : 'bg-muted dark:bg-card text-muted-foreground'
                 )}
                 aria-hidden="true"
               >
@@ -174,7 +174,7 @@ export function TurnOrderTool({
                   'flex-1 text-sm font-medium',
                   isCurrent
                     ? 'text-amber-900 dark:text-amber-100'
-                    : 'text-stone-700 dark:text-stone-300'
+                    : 'text-foreground'
                 )}
               >
                 {playerName}
@@ -187,7 +187,7 @@ export function TurnOrderTool({
                 </span>
               )}
               {isNext && (
-                <span className="flex items-center gap-1 text-[10px] font-medium text-stone-400 dark:text-stone-500">
+                <span className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
                   <ChevronRight className="w-3 h-3" aria-hidden="true" />
                   Prossimo
                 </span>
@@ -199,7 +199,7 @@ export function TurnOrderTool({
 
       {/* Host-only action buttons */}
       {isHost && (
-        <div className="flex items-center gap-3 pt-2 border-t border-stone-200 dark:border-stone-700">
+        <div className="flex items-center gap-3 pt-2 border-t border-border">
           {/* Advance turn */}
           {onAdvanceTurn && (
             <button
@@ -232,9 +232,9 @@ export function TurnOrderTool({
               disabled={isResetting}
               className={cn(
                 'px-3 py-2 rounded-lg text-sm font-medium',
-                'text-stone-600 dark:text-stone-400',
-                'border border-stone-300 dark:border-stone-600',
-                'hover:bg-stone-100 dark:hover:bg-stone-800',
+                'text-muted-foreground',
+                'border border-border',
+                'hover:bg-muted',
                 'transition-colors duration-150',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1',
                 'disabled:opacity-60 disabled:cursor-not-allowed'

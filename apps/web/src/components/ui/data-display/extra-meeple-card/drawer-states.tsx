@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 primitive — see token-bridge-map.md for migration plan. */
 'use client';
 
 import { AlertCircle, RefreshCw, Wrench } from 'lucide-react';
@@ -20,21 +21,21 @@ export function DrawerLoadingSkeleton({ 'data-testid': testId }: { 'data-testid'
       aria-label="Caricamento in corso"
     >
       {/* Fake hero image */}
-      <div className="h-[140px] w-full animate-pulse rounded-xl bg-slate-200" />
+      <div className="h-[140px] w-full animate-pulse rounded-xl bg-muted" />
       {/* Fake tab strip */}
       <div className="flex gap-2">
         {[80, 110, 70].map(w => (
-          <div key={w} className="h-8 animate-pulse rounded-lg bg-slate-200" style={{ width: w }} />
+          <div key={w} className="h-8 animate-pulse rounded-lg bg-muted" style={{ width: w }} />
         ))}
       </div>
       {/* Fake stat cards */}
       <div className="grid grid-cols-3 gap-2">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-16 animate-pulse rounded-lg bg-slate-200" />
+          <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />
         ))}
       </div>
       {/* Fake text block */}
-      <div className="h-20 w-full animate-pulse rounded-lg bg-slate-200" />
+      <div className="h-20 w-full animate-pulse rounded-lg bg-muted" />
     </div>
   );
 }
@@ -57,19 +58,19 @@ export function DrawerErrorState({
     >
       <AlertCircle className="h-10 w-10 text-red-400" aria-hidden="true" />
       <div className="space-y-1">
-        <p className="font-quicksand text-sm font-semibold text-slate-700">
+        <p className="font-quicksand text-sm font-semibold text-foreground">
           Si è verificato un errore
         </p>
-        <p className="font-nunito text-xs text-slate-500">{error}</p>
+        <p className="font-nunito text-xs text-muted-foreground">{error}</p>
       </div>
       {onRetry && (
         <button
           onClick={onRetry}
           className={cn(
             'flex items-center gap-1.5 rounded-lg',
-            'bg-slate-100 px-3 py-1.5',
-            'font-nunito text-xs font-medium text-slate-700',
-            'transition-colors duration-150 hover:bg-slate-200',
+            'bg-muted px-3 py-1.5',
+            'font-nunito text-xs font-medium text-foreground',
+            'transition-colors duration-150 hover:bg-muted',
             'focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1'
           )}
         >
@@ -88,12 +89,12 @@ export function DrawerComingSoon({ label, issueNumber }: { label: string; issueN
       className="flex flex-col items-center justify-center gap-3 p-8 text-center"
       data-testid={DRAWER_TEST_IDS.COMING_SOON(issueNumber)}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-        <Wrench className="h-5 w-5 text-slate-400" aria-hidden="true" />
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+        <Wrench className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
       </div>
       <div className="space-y-1">
-        <p className="font-quicksand text-sm font-semibold text-slate-600">{label}</p>
-        <p className="font-nunito text-xs text-slate-400">In arrivo — Issue #{issueNumber}</p>
+        <p className="font-quicksand text-sm font-semibold text-muted-foreground">{label}</p>
+        <p className="font-nunito text-xs text-muted-foreground">In arrivo — Issue #{issueNumber}</p>
       </div>
     </div>
   );

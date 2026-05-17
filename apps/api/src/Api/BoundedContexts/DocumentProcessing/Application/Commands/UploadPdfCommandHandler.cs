@@ -731,16 +731,16 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             "Quota reserved for user {UserId}, PDF {PdfId}, expires at {ExpiresAt}",
             userId, storageResult.FileId, reservationResult.ExpiresAt);
 
-        // Start background processing via fire-and-forget (immediate attempt)
+        // Start background processing via fire-and-forget (immediate attempt).
+        // Recovery for PDFs stuck in non-terminal states is handled separately by
+        // RetryFailedPdfsJob (Quartz, every 5 min). Enqueueing here would have the
+        // Quartz worker race the BG task end-to-end on the same PDF — both indexing,
+        // both finalizing, the second one's MarkFailed clobbering the first one's
+        // Ready state. The atomic claim added in PdfProcessingPipelineService still
+        // protects the recovery path.
         _backgroundTaskService.ExecuteWithCancellation(
             storageResult.FileId!,
             (ct) => ProcessPdfAsync(storageResult.FileId!, storageResult.FilePath!, userId, ct));
-
-        // Also enqueue in the Quartz-based queue as a reliable fallback.
-        // If the fire-and-forget Task.Run completes first, the Quartz job will find
-        // the PDF already in Ready state and skip it. If Task.Run fails silently,
-        // the Quartz job will process it from Pending.
-        await EnqueueForProcessingSafelyAsync(pdfDoc.Id, userId, cancellationToken).ConfigureAwait(false);
 
         await InvalidateCacheSafelyAsync(gameId, "PDF upload", cancellationToken).ConfigureAwait(false);
 
@@ -836,13 +836,11 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             return new PdfUploadResult(false, storageResult.ErrorMessage ?? "Failed to store file", null);
         }
 
-        // Start background processing (no quota needed for private game PDFs)
+        // Start background processing (no quota needed for private game PDFs).
+        // Recovery handled by RetryFailedPdfsJob — see comment in the regular path.
         _backgroundTaskService.ExecuteWithCancellation(
             pdfDoc!.Id.ToString(),
             ct => ProcessPdfAsync(pdfDoc.Id.ToString(), pdfDoc.FilePath, userId, ct));
-
-        // Quartz fallback (same pattern as regular game path)
-        await EnqueueForProcessingSafelyAsync(pdfDoc.Id, userId, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "PDF uploaded successfully for private game {PrivateGameId}: {FileName} ({FileSize} bytes)",

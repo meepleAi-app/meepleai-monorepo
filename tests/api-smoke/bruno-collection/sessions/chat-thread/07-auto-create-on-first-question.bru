@@ -1,0 +1,41 @@
+meta {
+  name: SG4-CT1 — ChatThread auto-create on first POST /chat-threads
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{apiBase}}/api/v1/chat-threads
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "gameId": "{{smokeGameId}}",
+    "title": "SG4 smoke thread",
+    "initialMessage": "What are the victory conditions in this game?"
+  }
+}
+
+script:post-response {
+  // Capture threadId for rename, close/reopen, and delete steps
+  const body = res.getBody();
+  if (body && body.id) {
+    bru.setVar("chatThreadId", body.id);
+  }
+}
+
+tests {
+  test("returns 201 Created", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  test("thread id is present", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("id");
+  });
+  test("title matches", function() {
+    const body = res.getBody();
+    expect(body.title).to.equal("SG4 smoke thread");
+  });
+}

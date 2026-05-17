@@ -486,34 +486,34 @@ pnpm update <package-name>
 ## Resources
 
 ### Development Guides
-- **[Visual Studio Code Setup](guida-visualcode.md)** ⭐ Task automation, troubleshooting, Docker workflow
+- ****Visual Studio Code Setup** _(planned)_** ⭐ Task automation, troubleshooting, Docker workflow
 - [Git Workflow](git-workflow.md)
-- [Operational Guide](operational-guide.md)
-- [Documentation Tools](documentation-tools-guide.md)
+- **Operational Guide** _(planned)_
+- **Documentation Tools** _(planned)_
 
 ### Docker Documentation ⭐ NEW
 Complete Docker Compose guides for local development:
-- **[Quick Start (5 min)](docker/quick-start.md)** - Get running fast
-- **[Service Endpoints](docker/service-endpoints.md)** - All URLs and test commands
-- **[Clean Builds](docker/clean-builds.md)** - Medium & full reset strategies
-- **[Common Commands](docker/common-commands.md)** - Daily command cheatsheet
-- **[Troubleshooting](docker/troubleshooting.md)** - Port conflicts, memory/CPU issues
-- **[Docker Profiles](docker/docker-profiles.md)** - Minimal, dev, AI, observability, full
-- **[Advanced Features](docker/advanced-features.md)** - Overrides, optimization, IDE integration
+- ****Quick Start (5 min)** _(planned)_** - Get running fast
+- ****Service Endpoints** _(planned)_** - All URLs and test commands
+- ****Clean Builds** _(planned)_** - Medium & full reset strategies
+- ****Common Commands** _(planned)_** - Daily command cheatsheet
+- ****Troubleshooting** _(planned)_** - Port conflicts, memory/CPU issues
+- ****Docker Profiles** _(planned)_** - Minimal, dev, AI, observability, full
+- ****Advanced Features** _(planned)_** - Overrides, optimization, IDE integration
 
 ### Configuration
-- [Local Secrets Setup](local-secrets-setup.md)
-- [Configuration Values Guide](configuration-values-guide.md)
-- [Local Environment Startup](local-environment-startup-guide.md)
+- **Local Secrets Setup** _(planned)_
+- **Configuration Values Guide** _(planned)_
+- **Local Environment Startup** _(planned)_
 
 ### Architecture
-- [Architecture Overview](../architecture/overview/system-architecture.md)
-- [ADRs](../architecture/adr/)
-- [Bounded Context READMEs](../../apps/api/src/Api/BoundedContexts/)
+- **Architecture Overview** _(planned)_
+- **ADRs** _(planned)_
+- **Bounded Context READMEs** _(planned)_
 
 ### API & Testing
 - [API Documentation](http://localhost:8080/scalar/v1)
-- [Living Documentation Guide](../living-documentation.md)
+- **Living Documentation Guide** _(planned)_
 
 ---
 

@@ -239,9 +239,9 @@ export function CommentThread({
       )}
 
       {isLoading ? (
-        <p className="text-gray-600 text-sm">Caricamento commenti...</p>
+        <p className="text-muted-foreground text-sm">Caricamento commenti...</p>
       ) : comments.length === 0 ? (
-        <p className="text-gray-600 text-sm italic">
+        <p className="text-muted-foreground text-sm italic">
           {lineNumber !== null
             ? `Nessun commento su questa riga. ${canComment ? 'Sii il primo a commentare!' : ''}`
             : `Nessun commento ancora. ${canComment ? 'Sii il primo a commentare!' : ''}`}

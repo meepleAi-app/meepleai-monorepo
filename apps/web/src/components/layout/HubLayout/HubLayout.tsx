@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import { GalleryHorizontal, LayoutGrid, List, Search } from 'lucide-react';
@@ -52,7 +53,7 @@ export function HubLayout({
           {/* Search bar */}
           <div className="relative flex-1">
             <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--nh-text-muted,#94a3b8)] pointer-events-none"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted,#94a3b8)] pointer-events-none"
               size={16}
               aria-hidden="true"
             />
@@ -64,10 +65,10 @@ export function HubLayout({
               aria-label={searchPlaceholder}
               className={cn(
                 'w-full h-10 pl-10 pr-4',
-                'bg-white/90 border border-black/[0.07] rounded-2xl shadow-sm',
-                'text-sm text-[var(--nh-text-primary,#1a1a1a)]',
-                'placeholder:text-[var(--nh-text-muted,#94a3b8)]',
-                'outline-none focus-visible:ring-2 focus-visible:ring-[var(--nh-text-primary,#1a1a1a)]/20',
+                'bg-card/90 border border-black/[0.07] rounded-2xl shadow-sm',
+                'text-sm text-[var(--text,#1a1a1a)]',
+                'placeholder:text-[var(--text-muted,#94a3b8)]',
+                'outline-none focus-visible:ring-2 focus-visible:ring-[var(--text,#1a1a1a)]/20',
                 'transition-shadow'
               )}
             />
@@ -93,8 +94,8 @@ export function HubLayout({
                   className={cn(
                     'p-1.5 rounded-lg transition-colors',
                     viewMode === mode
-                      ? 'text-[var(--nh-text-primary,#1a1a1a)]'
-                      : 'text-[var(--nh-text-muted,#94a3b8)] hover:text-[var(--nh-text-secondary,#5a4a35)]'
+                      ? 'text-[var(--text,#1a1a1a)]'
+                      : 'text-[var(--text-muted,#94a3b8)] hover:text-[var(--text-sec,#5a4a35)]'
                   )}
                 >
                   <Icon size={18} />
@@ -124,11 +125,11 @@ export function HubLayout({
                     'rounded-2xl px-3 py-1 text-xs font-bold font-[Quicksand]',
                     'border transition-colors',
                     isActive
-                      ? 'bg-[var(--nh-text-primary,#1a1a1a)] text-white border-transparent'
+                      ? 'bg-[var(--text,#1a1a1a)] text-white border-transparent'
                       : [
-                          'bg-[var(--nh-bg-surface,#fffcf8)]',
+                          'bg-[var(--bg-card,#fffcf8)]',
                           'border-black/[0.07]',
-                          'text-[var(--nh-text-secondary,#5a4a35)]',
+                          'text-[var(--text-sec,#5a4a35)]',
                           'hover:border-black/[0.14]',
                         ]
                   )}

@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or decorative inline gradient; mockup .e-bg pattern. Will be re-evaluated in DS-15 finalization audit. */
 'use client';
 
 import Link from 'next/link';
@@ -18,9 +19,9 @@ export function MiniNavSlot() {
   return (
     <div
       data-testid="mini-nav-slot"
-      className="h-12 flex items-center gap-1 px-7 pl-[104px] border-b border-[var(--border-glass)] bg-[var(--bg-base)]"
+      className="h-12 flex items-center gap-1 px-7 pl-[104px] border-b border-[var(--glass-border)] bg-[var(--bg)]"
     >
-      <div className="text-xs font-semibold text-[var(--text-tertiary)] mr-5">
+      <div className="text-xs font-semibold text-[var(--text-muted)] mr-5">
         <span aria-hidden>›</span> {config.breadcrumb}
       </div>
       {config.tabs.map(tab => {
@@ -33,13 +34,13 @@ export function MiniNavSlot() {
             className={cn(
               'relative px-3.5 py-2 rounded-lg text-[0.78rem] font-bold flex items-center gap-1.5 transition-colors',
               active
-                ? 'text-[var(--text-primary)]'
-                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]'
+                ? 'text-[var(--text)]'
+                : 'text-[var(--text-sec)] hover:bg-[var(--bg-card)]'
             )}
           >
             {tab.label}
             {tab.count !== undefined && (
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[var(--bg-glass)] text-[var(--text-secondary)]">
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[var(--glass-bg)] text-[var(--text-sec)]">
                 {tab.count}
               </span>
             )}

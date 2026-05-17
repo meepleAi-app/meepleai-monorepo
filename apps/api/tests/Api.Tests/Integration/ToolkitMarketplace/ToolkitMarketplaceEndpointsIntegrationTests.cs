@@ -136,8 +136,18 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
         // ratingAverage is null; ratingCount is 0.
         detail.GetProperty("ratingAverage").ValueKind.Should().Be(JsonValueKind.Null);
         detail.GetProperty("ratingCount").GetInt32().Should().Be(0);
-        // currentVersion shape: "1.0.{int}".
-        detail.GetProperty("currentVersion").GetString().Should().StartWith("1.0.");
+        // Issue #1144: currentVersion now reads VersionSemver column.
+        // Seeder doesn't set it explicitly → DB default "0.1.0" applies.
+        detail.GetProperty("currentVersion").GetString().Should().Be("0.1.0");
+        // Issue #1144 — marketplace extension fields present.
+        detail.GetProperty("license").ValueKind.Should().Be(JsonValueKind.Null);
+        // gameName populated via LEFT JOIN on GameEntity seeded inside SeedToolkitAsync.
+        detail.GetProperty("gameName").GetString().Should().Be($"Game for Public Toolkit");
+        // sizeBytes = sum of UTF-8 bytes across AgentConfig + tool/template JSONB.
+        // All tool/template columns are NULL in this seed → sizeBytes = 0.
+        detail.GetProperty("sizeBytes").GetInt64().Should().Be(0L);
+        // description falls back to synthetic when entity.Description is null.
+        detail.GetProperty("description").GetString().Should().StartWith("Toolkit \"Public Toolkit\"");
         // publishedAt populated for approved+published toolkit.
         detail.GetProperty("publishedAt").ValueKind.Should().Be(JsonValueKind.String);
         // yankedAt always null in v1.
@@ -148,6 +158,120 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
         viewerContext.GetProperty("hasInstalled").GetBoolean().Should().BeFalse();
         // canRate = hasInstalled && !isOwner. With v1 stub hasInstalled=false → canRate=false.
         viewerContext.GetProperty("canRate").GetBoolean().Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Issue #1144 — AC1 / spec §9.2. Verifies the marketplace extension
+    /// fields surface correctly when explicitly set on the entity, complementing
+    /// the null-case coverage above.
+    /// </summary>
+    [Fact]
+    public async Task ToolkitDetail_WithMarketplaceFieldsSet_SurfacesAllFields()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (authorId, authorToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+        var toolkit = await SeedToolkitAsync(
+            dbContext,
+            authorId: authorId,
+            name: "Marketplace Toolkit",
+            isPublished: true,
+            templateStatus: TemplateStatus.Approved,
+            agentConfig: "{\"systemPrompt\":\"Help players win.\"}"); // 31 UTF-8 bytes
+
+        // Promote toolkit with the marketplace extension fields via direct UPDATE.
+        // SeedToolkitAsync seeds defaults; this test exercises the populated case.
+        await dbContext.Database.ExecuteSqlRawAsync(
+            "UPDATE \"GameToolkits\" SET \"Description\" = {0}, \"License\" = {1}, \"VersionSemver\" = {2} WHERE \"Id\" = {3}",
+            "A bird-themed strategy toolkit.",
+            "CC BY-SA 4.0",
+            "2.0.0",
+            toolkit.Id);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            $"/api/v1/toolkits/{toolkit.Id}",
+            authorToken);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var detail = body.GetProperty("toolkit");
+        // Real Description (NOT synthetic fallback).
+        detail.GetProperty("description").GetString().Should().Be("A bird-themed strategy toolkit.");
+        // License surfaces verbatim.
+        detail.GetProperty("license").GetString().Should().Be("CC BY-SA 4.0");
+        // VersionSemver now drives currentVersion (was synthetic "1.0.{int}").
+        detail.GetProperty("currentVersion").GetString().Should().Be("2.0.0");
+        // GameName via LEFT JOIN on GameEntity seeded inside SeedToolkitAsync.
+        detail.GetProperty("gameName").GetString().Should().Be("Game for Marketplace Toolkit");
+        // SizeBytes = UTF-8 byte count of the AgentConfig JSONB column. Postgres
+        // normalises JSONB (adds whitespace after colons) so we don't assert an
+        // exact byte count — only that it is plausibly the AgentConfig payload
+        // (between 30 and 60 bytes for the seed value used here). Exact-byte
+        // assertions live in the in-memory unit tests where the column text
+        // round-trips verbatim.
+        detail.GetProperty("sizeBytes").GetInt64().Should().BeInRange(30L, 60L);
+    }
+
+    /// <summary>
+    /// Issue #1144 — AC2 (partial). The migration applied the 3 expected
+    /// columns to the GameToolkits table with the expected types and
+    /// nullability. Down() reversal is exercised by the EF migration tooling
+    /// itself; this test asserts the Up() outcome state because that's what
+    /// production callers will rely on.
+    /// </summary>
+    [Fact]
+    public async Task Migration_ExtendGameToolkitWithMarketplaceFields_AddedExpectedColumns()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        // Query information_schema to confirm the 3 new columns exist with
+        // the expected types, nullability, and defaults.
+        var conn = dbContext.Database.GetDbConnection();
+        await conn.OpenAsync();
+        try
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT column_name, data_type, is_nullable, column_default
+                FROM information_schema.columns
+                WHERE table_name = 'GameToolkits'
+                  AND column_name IN ('Description', 'License', 'VersionSemver')
+                ORDER BY column_name;";
+            using var reader = await cmd.ExecuteReaderAsync();
+            var rows = new List<(string Column, string DataType, string IsNullable, string? Default)>();
+            while (await reader.ReadAsync())
+            {
+                rows.Add((
+                    reader.GetString(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    reader.IsDBNull(3) ? null : reader.GetString(3)));
+            }
+
+            rows.Should().HaveCount(3, "the migration must add all 3 marketplace columns");
+
+            var desc = rows.Single(r => r.Column == "Description");
+            desc.DataType.Should().Be("character varying");
+            desc.IsNullable.Should().Be("YES");
+
+            var lic = rows.Single(r => r.Column == "License");
+            lic.DataType.Should().Be("character varying");
+            lic.IsNullable.Should().Be("YES");
+
+            var semver = rows.Single(r => r.Column == "VersionSemver");
+            semver.DataType.Should().Be("character varying");
+            semver.IsNullable.Should().Be("NO");
+            semver.Default.Should().NotBeNullOrEmpty("VersionSemver must have a default for new inserts");
+            semver.Default.Should().Contain("0.1.0");
+        }
+        finally
+        {
+            await conn.CloseAsync();
+        }
     }
 
     [Fact]
@@ -602,6 +726,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
     /// (via <see cref="GameEntity"/> mapping that points to the SharedGame
     /// row) is satisfied by inserting a sibling SharedGame first.
     /// </summary>
+    [Obsolete]
     private static async Task<GameToolkitEntity> SeedToolkitAsync(
         MeepleAiDbContext dbContext,
         Guid authorId,

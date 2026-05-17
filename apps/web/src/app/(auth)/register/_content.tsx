@@ -8,9 +8,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { buildOAuthUrl } from '@/components/auth/oauth-url';
 import { RegisterForm, type RegisterSubmitPayload } from '@/components/auth/RegisterForm';
 import { RequestAccessForm } from '@/components/auth/RequestAccessForm';
-import { AuthCard } from '@/components/ui/v2/auth-card';
-import { Divider } from '@/components/ui/v2/divider';
-import { OAuthButton } from '@/components/ui/v2/oauth-buttons';
+import { AuthCard } from '@/components/ui/auth-card';
+import { Divider } from '@/components/ui/divider';
+import { OAuthButton } from '@/components/ui/oauth-buttons';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { trackSignUp } from '@/lib/analytics/flywheel-events';
@@ -30,7 +30,7 @@ type RegistrationMode = 'loading' | 'public' | 'invite-only';
 export function RegisterFallback() {
   const { t } = useTranslation();
   return (
-    <main className="min-h-dvh flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-300">
+    <main className="min-h-dvh flex items-center justify-center bg-muted text-muted-foreground">
       {t('auth.register.loadingMessage')}
     </main>
   );

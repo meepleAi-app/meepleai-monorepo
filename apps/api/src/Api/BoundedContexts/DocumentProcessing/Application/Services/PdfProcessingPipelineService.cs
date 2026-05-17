@@ -25,6 +25,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private const int EmbeddingBatchSize = 20;
 
     private readonly MeepleAiDbContext _db;
+    private readonly IPdfClaimService _pdfClaimService;
     private readonly IPdfTextExtractor _pdfTextExtractor;
     private readonly IPdfTableExtractor _tableExtractor;
     private readonly ITextChunkingService _chunkingService;
@@ -41,6 +42,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
+        IPdfClaimService pdfClaimService,
         IPdfTextExtractor pdfTextExtractor,
         IPdfTableExtractor tableExtractor,
         ITextChunkingService chunkingService,
@@ -56,6 +58,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IFeatureFlagService? featureFlagService = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
         _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
         _tableExtractor = tableExtractor ?? throw new ArgumentNullException(nameof(tableExtractor));
         _chunkingService = chunkingService ?? throw new ArgumentNullException(nameof(chunkingService));
@@ -83,33 +86,32 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
         try
         {
-            // Load and validate
+            // Atomic claim: transition Pending → Extracting in a single operation.
+            // Issue #892: extracted to IPdfClaimService — production uses raw SQL UPDATE
+            // (RelationalPdfClaimService) for atomic guarantees under contention; tests
+            // inject InMemoryPdfClaimService which uses tracked Find + SaveChanges.
+            // Stuck-state recovery is RetryFailedPdfsJob's responsibility, not the claim.
+            var claimed = await _pdfClaimService.TryClaimPendingAsync(pdfDocumentId, cancellationToken).ConfigureAwait(false);
+            if (!claimed)
+            {
+                _logger.LogInformation(
+                    "[PdfPipeline] PDF {PdfId} not in Pending state (already claimed or terminal), skipping",
+                    pdfId);
+                return;
+            }
+
+            // Re-load with tracked entity for the rest of the pipeline.
             var pdfDoc = await _db.PdfDocuments
                 .FindAsync(new object[] { pdfDocumentId }, cancellationToken)
                 .ConfigureAwait(false);
 
             if (pdfDoc == null)
             {
-                _logger.LogError("[PdfPipeline] PDF document {PdfId} not found in database", pdfId);
+                _logger.LogError("[PdfPipeline] PDF document {PdfId} disappeared after claim", pdfId);
                 return;
             }
-
-            // Idempotency: skip if already completed or failed
-            var readyState = nameof(PdfProcessingState.Ready);
-            var failedState = nameof(PdfProcessingState.Failed);
-            if (string.Equals(pdfDoc.ProcessingState, readyState, StringComparison.Ordinal)
-                || string.Equals(pdfDoc.ProcessingState, failedState, StringComparison.Ordinal))
-            {
-                _logger.LogInformation(
-                    "[PdfPipeline] PDF {PdfId} already in terminal state ({Status}), skipping",
-                    pdfId, pdfDoc.ProcessingState);
-                return;
-            }
-
-            // Issue #4215: Transition to Extracting state
-            pdfDoc.ProcessingState = "Extracting";
-            pdfDoc.ProcessingError = null;
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            // Refresh tracked entity to reflect the UPDATE we just executed.
+            await _db.Entry(pdfDoc).ReloadAsync(cancellationToken).ConfigureAwait(false);
 
             // Step 1: Extract text
             _logger.LogInformation("[PdfPipeline] Step 1/4: Extracting text from {PdfId}", pdfId);
@@ -197,25 +199,39 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 #pragma warning restore CA1031
             }
 
+            // RAPTOR.RaptorSummaries and GraphRAG.GameEntityRelations both have FK
+            // on games.Id. For PDFs uploaded against a SharedGame, resolve the
+            // matching games row via PdfGameIdResolver (returns null if no
+            // games-table peer exists). Naively using pdfDoc.SharedGameId
+            // produces FK violations because shared_games.id ≠ games.Id.
+            var raptorGameId = await PdfGameIdResolver
+                .ResolveAsync(_db, pdfDoc, cancellationToken)
+                .ConfigureAwait(false);
+
             // === RAPTOR: Build hierarchical summary tree (optional, non-blocking) ===
             // Check if raptor-retrieval enhancement is globally enabled before spending LLM tokens
             var raptorEnabled = _featureFlagService != null
                 && await _featureFlagService.IsEnabledAsync("rag.enhancement.raptor-retrieval").ConfigureAwait(false);
 
-            if (_raptorIndexer != null && raptorEnabled && chunks.Count > 3)
+            if (raptorEnabled && _raptorIndexer != null && raptorGameId is null)
+            {
+                _logger.LogInformation(
+                    "[PdfPipeline] Skipping RAPTOR for PDF {PdfId}: no games-table peer (SharedGameId={SharedId}, PrivateGameId={PrivateId})",
+                    pdfDoc.Id, pdfDoc.SharedGameId, pdfDoc.PrivateGameId);
+            }
+            else if (_raptorIndexer != null && raptorEnabled && chunks.Count > 3 && raptorGameId is { } gid)
             {
                 try
                 {
                     var chunkTexts = chunks.Select(c => c.Text).ToList();
-                    var gameId = pdfDoc.SharedGameId ?? Guid.Empty;
                     var raptorResult = await _raptorIndexer.BuildTreeAsync(
-                        pdfDoc.Id, gameId,
+                        pdfDoc.Id, gid,
                         chunkTexts, maxLevels: 3, cancellationToken).ConfigureAwait(false);
 
                     if (raptorResult.TotalNodes > 0)
                     {
                         await SaveRaptorSummariesAsync(
-                            pdfDoc.Id, gameId,
+                            pdfDoc.Id, gid,
                             raptorResult.Summaries, cancellationToken).ConfigureAwait(false);
 
                         _logger.LogInformation(
@@ -229,7 +245,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                     _logger.LogWarning(ex,
                         "[PdfPipeline] RAPTOR indexing failed for PDF {PdfId}, continuing without hierarchical summaries",
                         pdfDoc.Id);
-                    // Non-blocking: document processing continues even if RAPTOR fails
+                    DetachUnsavedChanges<RaptorSummaryEntity>();
                 }
 #pragma warning restore CA1031
             }
@@ -239,14 +255,19 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             var graphRagEnabled = _featureFlagService != null
                 && await _featureFlagService.IsEnabledAsync("rag.enhancement.graph-traversal").ConfigureAwait(false);
 
-            if (_entityExtractor is not null && graphRagEnabled && fullText.Length >= 200)
+            if (graphRagEnabled && _entityExtractor is not null && raptorGameId is null)
+            {
+                _logger.LogInformation(
+                    "[PdfPipeline] Skipping Graph RAG for PDF {PdfId}: no games-table peer",
+                    pdfDoc.Id);
+            }
+            else if (_entityExtractor is not null && graphRagEnabled && fullText.Length >= 200 && raptorGameId is { } graphGid)
             {
                 try
                 {
-                    var gameId = pdfDoc.SharedGameId ?? Guid.Empty;
                     var gameTitle = pdfDoc.FileName ?? "Unknown";
                     var extraction = await _entityExtractor.ExtractEntitiesAsync(
-                        gameId, gameTitle,
+                        graphGid, gameTitle,
                         fullText[..Math.Min(fullText.Length, 8000)],
                         cancellationToken).ConfigureAwait(false);
 
@@ -255,7 +276,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                         var entities = extraction.Relations.Select(r => new GameEntityRelationEntity
                         {
                             Id = Guid.NewGuid(),
-                            GameId = gameId,
+                            GameId = graphGid,
                             SourceEntity = r.SourceEntity,
                             SourceType = r.SourceType,
                             Relation = r.Relation,
@@ -279,6 +300,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                     _logger.LogWarning(ex,
                         "[PdfPipeline] Graph RAG extraction failed for PDF {PdfId}, continuing",
                         pdfDoc.Id);
+                    DetachUnsavedChanges<GameEntityRelationEntity>();
                 }
 #pragma warning restore CA1031
             }
@@ -296,9 +318,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             pdfDoc.ProcessingState = "Indexing";
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            // Step 4b: Index in Qdrant
+            // Step 4b: Index in pgvector
             _logger.LogInformation("[PdfPipeline] Step 4b/5: Indexing {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
-            await IndexInQdrantAsync(pdfDoc, translatedChunks, embeddings, cancellationToken).ConfigureAwait(false);
+            await IndexInVectorStoreAsync(pdfDoc, translatedChunks, embeddings, cancellationToken).ConfigureAwait(false);
             await SaveTextChunksAsync(pdfDoc, allChunkInputs, cancellationToken).ConfigureAwait(false);
 
             // Issue #4215: Mark as Ready (final state)
@@ -496,7 +518,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         return allEmbeddings;
     }
 
-    private async Task IndexInQdrantAsync(
+    private async Task IndexInVectorStoreAsync(
         PdfDocumentEntity pdfDoc,
         List<(DocumentChunkInput chunk, string lang, bool isTranslation)> translatedChunks,
         List<float[]> embeddings,
@@ -650,6 +672,23 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _db.RaptorSummaries.Add(entity);
         }
         await _db.SaveChangesAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Detaches Added/Modified entities of a given type from the change tracker.
+    /// Used in catch blocks of optional, non-blocking enhancement steps so a
+    /// failed SaveChangesAsync does not poison subsequent saves with the same
+    /// unflushed entities (and thus the same error).
+    /// </summary>
+    private void DetachUnsavedChanges<TEntity>() where TEntity : class
+    {
+        var entries = _db.ChangeTracker.Entries<TEntity>()
+            .Where(e => e.State is EntityState.Added or EntityState.Modified)
+            .ToList();
+        foreach (var entry in entries)
+        {
+            entry.State = EntityState.Detached;
+        }
     }
 
     private async Task MarkFailedAsync(PdfDocumentEntity pdfDoc, string errorMessage)

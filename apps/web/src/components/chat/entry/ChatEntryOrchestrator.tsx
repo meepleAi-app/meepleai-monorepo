@@ -209,12 +209,27 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
     hasAgentAvailable && (selectedAgentType !== null || selectedCustomAgentId !== null);
 
   // Direct game mode: loading spinner while resolving agents
+  // Issue #923: AgentSelector must be mounted (offscreen) so its useEffect
+  // fires the API call and resolves `isLoadingCustomAgents` via the
+  // onCustomAgentsResolved callback. Otherwise the page deadlocks on
+  // "Preparazione..." because the callback never runs.
   if (
     isDirectGameMode &&
     (isLoadingCustomAgents || isCreating || (customAgents.length === 1 && !error))
   ) {
     return (
       <div className="min-h-dvh bg-background flex items-center justify-center">
+        {/* Headless agent resolver — drives onCustomAgentsResolved while spinner is visible */}
+        <div aria-hidden="true" className="sr-only">
+          <AgentSelector
+            gameId={selectedGameId}
+            onSelectSystemAgent={handleSystemAgentSelect}
+            onSelectCustomAgent={handleCustomAgentSelect}
+            selectedAgentType={selectedAgentType}
+            selectedCustomAgentId={selectedCustomAgentId}
+            onCustomAgentsResolved={handleCustomAgentsResolved}
+          />
+        </div>
         <div className="text-center">
           <div className="h-8 w-8 border-3 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground font-nunito">
@@ -310,7 +325,7 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
             >
               {isCreating ? (
                 <>
-                  <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="h-4 w-4 border-2 border-border border-t-white rounded-full animate-spin" />
                   Creazione in corso...
                 </>
               ) : (

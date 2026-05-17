@@ -20,8 +20,8 @@ import {
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { SettingsList } from '@/components/ui/v2/settings-list';
-import { SettingsRow } from '@/components/ui/v2/settings-row';
+import { SettingsList } from '@/components/ui/settings-list';
+import { SettingsRow } from '@/components/ui/settings-row';
 import { api } from '@/lib/api';
 
 export default function SecuritySettingsPage() {
@@ -207,7 +207,7 @@ export default function SecuritySettingsPage() {
                 Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
               </p>
 
-              <div className="bg-white p-4 rounded-lg mx-auto w-fit">
+              <div className="bg-card p-4 rounded-lg mx-auto w-fit">
                 <Image
                   src={setupData.qrCodeUrl}
                   alt="2FA QR Code"

@@ -477,7 +477,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     /// <summary>
     /// Tests cancellation during vector store indexing operation.
     ///
-    /// <para><b>Production Scenario:</b> Qdrant indexing timeout or user cancellation</para>
+    /// <para><b>Production Scenario:</b> pgvector indexing timeout or user cancellation</para>
     /// <para><b>Expected Behavior:</b> Maintain consistency, no corrupted vector indices</para>
     /// </summary>
     [Fact(Timeout = 30000)]

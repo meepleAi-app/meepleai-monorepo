@@ -1,6 +1,7 @@
 using System.Reflection;
 using Api.BoundedContexts.Authentication.Application.Attributes;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.Infrastructure.Security;
 using MediatR;
 
 namespace Api.BoundedContexts.Authentication.Application.Behaviors;
@@ -81,7 +82,7 @@ internal sealed class TwoFactorEnforcementBehavior<TRequest, TResponse> : IPipel
             _logger.LogWarning(
                 "TwoFactorEnforcementBehavior[shadow]: user {UserId} ({Email}) invoked 2FA-required command "
                 + "{CommandType} WITHOUT 2FA enabled. Reason: {Reason}. MaxAge: {MaxAgeMinutes}min",
-                user.Id, user.Email, typeof(TRequest).Name, attr.Reason ?? "(unspecified)", attr.MaxAgeMinutes);
+                user.Id, DataMasking.MaskEmail(user.Email), typeof(TRequest).Name, attr.Reason ?? "(unspecified)", attr.MaxAgeMinutes);
         }
         else
         {

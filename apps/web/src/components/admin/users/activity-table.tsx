@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { useEffect } from 'react';
@@ -121,7 +122,7 @@ export function ActivityTable({
 
   if (isLoading) {
     return (
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border border-amber-200/50 dark:border-zinc-700/50 rounded-lg p-8 text-center text-muted-foreground">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border border-amber-200/50 dark:border-zinc-700/50 rounded-lg p-8 text-center text-muted-foreground">
         Caricamento log...
       </div>
     );
@@ -129,14 +130,14 @@ export function ActivityTable({
 
   if (isError) {
     return (
-      <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border border-amber-200/50 dark:border-zinc-700/50 rounded-lg p-8 text-center text-red-600">
+      <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border border-amber-200/50 dark:border-zinc-700/50 rounded-lg p-8 text-center text-red-600">
         Impossibile caricare il log di attività.
       </div>
     );
   }
 
   return (
-    <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border border-amber-200/50 dark:border-zinc-700/50 rounded-lg overflow-hidden">
+    <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border border-amber-200/50 dark:border-zinc-700/50 rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -172,9 +173,9 @@ export function ActivityTable({
               entries.map(entry => (
                 <tr
                   key={entry.id}
-                  className="hover:bg-slate-50/50 dark:hover:bg-zinc-900/50 transition-colors"
+                  className="hover:bg-muted/50 dark:hover:bg-zinc-900/50 transition-colors"
                 >
-                  <td className="py-3 px-4 font-mono text-sm text-slate-600 dark:text-zinc-400">
+                  <td className="py-3 px-4 font-mono text-sm text-muted-foreground dark:text-muted-foreground">
                     {formatTimestamp(entry.createdAt)}
                   </td>
                   <td className="py-3 px-4">
@@ -184,18 +185,18 @@ export function ActivityTable({
                           {getUserInitials(entry.userName)}
                         </div>
                         <div>
-                          <div className="font-medium text-slate-900 dark:text-zinc-100">
+                          <div className="font-medium text-foreground dark:text-zinc-100">
                             {entry.userName}
                           </div>
                           {entry.userEmail && (
-                            <div className="text-xs text-slate-500 dark:text-zinc-400">
+                            <div className="text-xs text-muted-foreground dark:text-muted-foreground">
                               {entry.userEmail}
                             </div>
                           )}
                         </div>
                       </div>
                     ) : (
-                      <span className="text-slate-400 text-sm">Sistema</span>
+                      <span className="text-muted-foreground text-sm">Sistema</span>
                     )}
                   </td>
                   <td className="py-3 px-4">
@@ -203,25 +204,25 @@ export function ActivityTable({
                       variant="outline"
                       className={
                         actionTypeColors[entry.action] ??
-                        'bg-slate-100 text-slate-900 dark:bg-slate-900/30 dark:text-slate-300'
+                        'bg-muted text-foreground dark:bg-card dark:text-slate-300'
                       }
                     >
                       {formatAction(entry.action)}
                     </Badge>
                   </td>
-                  <td className="py-3 px-4 text-slate-700 dark:text-zinc-300">
+                  <td className="py-3 px-4 text-foreground dark:text-zinc-300">
                     {entry.resource}
                     {entry.resourceId && (
-                      <span className="text-xs text-slate-400 ml-1">({entry.resourceId})</span>
+                      <span className="text-xs text-muted-foreground ml-1">({entry.resourceId})</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 font-mono text-sm text-slate-600 dark:text-zinc-400">
+                  <td className="py-3 px-4 font-mono text-sm text-muted-foreground dark:text-muted-foreground">
                     {entry.ipAddress ?? '—'}
                   </td>
                   <td className="py-3 px-4 text-right">
                     <Badge
                       variant="outline"
-                      className={resultColors[entry.result] ?? 'bg-slate-100 text-slate-900'}
+                      className={resultColors[entry.result] ?? 'bg-muted text-foreground'}
                     >
                       {entry.result}
                     </Badge>

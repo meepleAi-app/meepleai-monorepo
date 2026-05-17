@@ -1,0 +1,50 @@
+name: "MeepleAI CodeQL Configuration (with synthetic barrier probes)"
+description: |
+  Variant of codeql-config.yml used ONLY by .github/workflows/barrier-verification.yml
+  (issue #1196). The single difference from the default config is the absence of the
+  `apps/api/tests/CodeqlBarrierSmoke/**` exclude in paths-ignore, allowing the
+  synthetic probes to be analysed.
+  See docs/for-developers/specs/2026-05-17-codeql-barrier-probes.md.
+
+disable-default-queries: false
+
+# Same MaD sanitizer pack load mechanism documented in codeql-config.yml.
+# Activation happens via CODEQL_ACTION_EXTRA_OPTIONS in barrier-verification.yml.
+
+query-filters:
+  - exclude:
+      id: cs/catch-of-all-exceptions
+
+# Probes deliberately scanned here — DO NOT add CodeqlBarrierSmoke to this list.
+paths-ignore:
+  - "**/Tests/**"
+  - "**/test/**"
+  - "**/obj/**"
+  - "**/bin/**"
+  - "**/*.Designer.cs"
+  - "**/Migrations/**"
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/.next/**"
+
+# Restrict scope to the probe project so the workflow stays fast and the SARIF
+# only contains alerts attributable to the synthetic file set.
+paths:
+  - apps/api/tests/CodeqlBarrierSmoke
+  - apps/api/src/Api/Helpers/LogSanitizer.cs
+  - apps/api/src/Api/Infrastructure/Security/DataMasking.cs
+
+# IMPORTANT — both query suites are required.
+#
+# Empirical finding from PR #1203 attempt (2026-05-17): removing
+# `security-and-quality` caused the unsanitized probe to raise 0 alerts
+# (assertion expected ≥1), proving that `cs/exposure-of-sensitive-information`
+# is NOT included in `security-extended` for C# — it lives only in
+# `security-and-quality`. The code-reviewer agent's note on #1200 assumed
+# the rule was in `security-extended`; the assumption was wrong.
+#
+# DO NOT trim this list without first running barrier-verification.yml with
+# the proposed change and confirming `unsanitized ≥ 1` still holds.
+queries:
+  - uses: security-extended
+  - uses: security-and-quality

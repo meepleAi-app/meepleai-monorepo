@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 'use client';
 
 import { useState } from 'react';
@@ -46,7 +47,7 @@ export function EnrichmentQueueTab() {
   return (
     <div className="space-y-6">
       {/* Enqueue All Skeletons */}
-      <div className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-slate-200/60 dark:border-zinc-700/60 p-6 space-y-4">
+      <div className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-border/60 dark:border-zinc-700/60 p-6 space-y-4">
         <h3 className="font-quicksand text-lg font-semibold text-foreground">
           Enqueue All Skeletons
         </h3>
@@ -65,7 +66,7 @@ export function EnrichmentQueueTab() {
       </div>
 
       {/* Selective operations */}
-      <div className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-slate-200/60 dark:border-zinc-700/60 p-6 space-y-4">
+      <div className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-border/60 dark:border-zinc-700/60 p-6 space-y-4">
         <h3 className="font-quicksand text-lg font-semibold text-foreground">
           Selective Operations
         </h3>
@@ -130,7 +131,7 @@ export function EnrichmentQueueTab() {
 
       {/* Results */}
       {lastEnqueueResult && (
-        <div className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-slate-200/60 dark:border-zinc-700/60 p-6">
+        <div className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-border/60 dark:border-zinc-700/60 p-6">
           <div className="flex items-center gap-2 mb-3">
             <CheckCircle2 className="h-5 w-5 text-emerald-500" />
             <span className="font-quicksand font-semibold text-foreground">Enqueue Result</span>
@@ -144,7 +145,7 @@ export function EnrichmentQueueTab() {
       )}
 
       {lastCompleteResult && (
-        <div className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-slate-200/60 dark:border-zinc-700/60 p-6">
+        <div className="bg-card/90 dark:bg-zinc-800/90 backdrop-blur-xl rounded-2xl border border-border/60 dark:border-zinc-700/60 p-6">
           <div className="flex items-center gap-2 mb-3">
             <CheckCircle2 className="h-5 w-5 text-emerald-500" />
             <span className="font-quicksand font-semibold text-foreground">

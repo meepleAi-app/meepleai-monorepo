@@ -220,7 +220,7 @@ else
     '{
       title: $title,
       yearPublished: 2024,
-      description: "Nanolith — campaign-driven gamebook for the Iter 1 dogfooding demo (multi-day storybook + on-demand encounter book).",
+      description: "Nanolith - campaign-driven gamebook for the Iter 1 dogfooding demo (multi-day storybook + on-demand encounter book).",
       minPlayers: 1,
       maxPlayers: 4,
       playingTimeMinutes: 240,
@@ -269,21 +269,29 @@ echo "game,$NANOLITH_GAME_TITLE,$GAME_ID,OK" >> "$RESULTS_FILE"
 # Returns the document id on stdout (empty string if absent).
 lookup_pdf_id() {
   local filename="$1"
-  curl -sS -b "$ADMIN_COOKIE_JAR" "$API_BASE/admin/shared-games/$GAME_ID/documents" 2>/dev/null \
-    | jq -r --arg f "$filename" \
-        '(.items // .documents // . // [])[] | select((.fileName // .filename // .name // "") == $f) | (.id // .Id // .documentId // empty)' \
+  # /admin/pdfs is the authoritative listing; per-game documents endpoint
+  # returns [] until processing reaches Ready (game-document link is created
+  # at the end of the pipeline, not at upload).
+  curl -sS -b "$ADMIN_COOKIE_JAR" "$API_BASE/admin/pdfs" 2>/dev/null \
+    | jq -r --arg f "$filename" --arg gid "$GAME_ID" \
+        '.items[]? | select(.fileName == $f and (.gameId // "") == $gid) | .id' 2>/dev/null \
     | head -1
 }
 
 # Helper to wait for a PDF to reach Ready/Failed state.
+# Polls /admin/pdfs (authoritative EF state) instead of /pdfs/{id}/progress
+# which has been observed returning stale "Uploading" snapshots during chunking.
 wait_for_pdf() {
   local pdf_id="$1" filename="$2"
   local elapsed=0
   while [ "$elapsed" -lt "$POLL_MAX_SEC" ]; do
-    STATUS=$(curl -sS -b "$ADMIN_COOKIE_JAR" "$API_BASE/pdfs/$pdf_id/progress" 2>/dev/null || echo "{}")
-    STATE=$(echo "$STATUS" | jq -r '.currentStep // .currentState // "unknown"')
-    PCT=$(echo "$STATUS" | jq -r '.percentComplete // .overallProgress // 0')
-    printf "  [%4ds] %s — %s (%s%%)\n" "$elapsed" "$filename" "$STATE" "$PCT"
+    STATUS=$(curl -sS -b "$ADMIN_COOKIE_JAR" "$API_BASE/admin/pdfs" 2>/dev/null || echo '{"items":[]}')
+    DOC=$(echo "$STATUS" | jq -c --arg id "$pdf_id" '.items[]? | select(.id == $id)')
+    STATE=$(echo "$DOC" | jq -r '.processingState // "unknown"')
+    PCT=$(echo "$DOC" | jq -r '.progressPercentage // 0')
+    CHUNKS=$(echo "$DOC" | jq -r '.chunkCount // 0')
+    PAGES=$(echo "$DOC" | jq -r '.pageCount // 0')
+    printf "  [%4ds] %s — %s (%s%% pages=%s chunks=%s)\n" "$elapsed" "$filename" "$STATE" "$PCT" "$PAGES" "$CHUNKS" >&2
     case "$STATE" in
       Ready|Completed|Indexed)  return 0 ;;
       Failed)                   return 1 ;;
@@ -329,7 +337,10 @@ upload_or_skip_pdf() {
   fi
 
   local pdf_id
-  pdf_id=$(echo "$up_body" | jq -r '.documentId // .id // .Id // empty' 2>/dev/null || true)
+  # Idempotency: when the same PDF was already uploaded in a previous run,
+  # the API returns {"existingKbFound": true, "existingKb": {"pdfDocumentId": "..."}}
+  # instead of {"documentId": "..."}. Accept both response shapes.
+  pdf_id=$(echo "$up_body" | jq -r '.documentId // .id // .Id // .existingKb.pdfDocumentId // empty' 2>/dev/null || true)
   [ -z "$pdf_id" ] && fail "  Upload OK but documentId missing in response: $up_body"
   ok "  Upload accepted: $pdf_id"
 
@@ -352,10 +363,17 @@ upload_or_skip_pdf "$PDF_PRESS_START_FILENAME"  "pdf_press_start"
 log "Ensuring agent '$NANOLITH_AGENT_NAME' exists"
 
 # Look up existing user agents for this game (badsworm session).
-AGENT_LIST=$(curl -sS -b "$USER_COOKIE_JAR" "$API_BASE/agents?gameId=$GAME_ID" 2>/dev/null || echo "[]")
-AGENT_ID=$(echo "$AGENT_LIST" | jq -r --arg name "$NANOLITH_AGENT_NAME" \
-  '(.items // .data // . // [])[] | select((.name // .Name // "") == $name) | (.id // .Id // empty)' \
-  2>/dev/null | head -1)
+# /agents returns {success, agents:[], count}. Some endpoints return arrays directly,
+# so try multiple shapes via `try ... catch empty`.
+AGENT_LIST=$(curl -sS -b "$USER_COOKIE_JAR" "$API_BASE/agents?gameId=$GAME_ID" 2>/dev/null || echo '{"agents":[]}')
+AGENT_ID=$(echo "$AGENT_LIST" \
+  | jq -r --arg name "$NANOLITH_AGENT_NAME" '
+      ((.agents // .items // .data // (try . | arrays) // [])
+       | .[]?
+       | select((.name // .Name // "") == $name)
+       | (.id // .Id // empty)
+      )' 2>/dev/null \
+  | head -1 || true)
 
 if [ -n "$AGENT_ID" ] && [ "$AGENT_ID" != "null" ]; then
   ok "Agent already exists: $AGENT_ID"
@@ -369,7 +387,7 @@ else
     '{
       gameId: $gameId,
       addToCollection: true,
-      agentType: "rulebook",
+      agentType: "rag",
       agentName: $name,
       strategyName: "rag-default",
       strategyParameters: {},

@@ -138,7 +138,7 @@ etc.";
                 return SetupGuideGenerationResult.CreateDefault();
             }
 
-            // Step 2: Search Qdrant for setup-related chunks
+            // Step 2: Search pgvector for setup-related chunks
             var (searchSuccess, context, allReferences, confidence) = await SearchSetupContextAsync(
                 gameId, queryEmbedding!, cancellationToken).ConfigureAwait(false);
             if (!searchSuccess)
@@ -176,7 +176,7 @@ etc.";
         // Rationale: Setup guide is a helpful feature but not critical. If RAG/LLM pipeline
         // fails, returning default steps allows the API to respond successfully and
         // lets the UI display fallback content. Throwing would cause stream errors and poor UX.
-        // Context: Failures typically from Qdrant/OpenRouter/LLM timeout or rate limiting
+        // Context: Failures typically from pgvector/OpenRouter/LLM timeout or rate limiting
 #pragma warning restore S125
         catch (Exception ex)
         {
@@ -209,14 +209,13 @@ etc.";
     /// <summary>
     /// Searches for setup-related context chunks.
     /// Returns (success, context, references, confidence).
-    /// NOTE: Qdrant dependency removed — always returns no results (triggers default steps).
     /// </summary>
     private Task<(bool success, string? context, List<Snippet>? references, double? confidence)> SearchSetupContextAsync(
         string gameId,
         float[] queryEmbedding,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("No RAG results for game {GameId} — Qdrant removed, using default steps", gameId);
+        _logger.LogInformation("No RAG results for game {GameId}  (legacy path) using default steps", gameId);
         return Task.FromResult<(bool, string?, List<Snippet>?, double?)>((false, null, null, null));
     }
 

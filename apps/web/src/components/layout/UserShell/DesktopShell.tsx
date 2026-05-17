@@ -19,7 +19,7 @@ export function DesktopShell({ children }: DesktopShellProps) {
   const [searchOpen, setSearchOpen] = useState(false);
 
   return (
-    <div className="min-h-dvh flex flex-col bg-[var(--bg-base)]">
+    <div className="min-h-dvh flex flex-col bg-[var(--bg)]">
       <TopBarV2
         onHamburgerClick={() => setDrawerOpen(true)}
         onSearchClick={() => setSearchOpen(true)}
@@ -27,7 +27,9 @@ export function DesktopShell({ children }: DesktopShellProps) {
 
       <SessionBanner />
 
-      <main className="flex-1 overflow-y-auto overflow-x-clip">{children}</main>
+      <main id="main-content" className="flex-1 overflow-y-auto overflow-x-clip">
+        {children}
+      </main>
 
       <MobileCTAPill />
       <ChatSlideOverPanel />

@@ -196,7 +196,8 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             || type == NotificationType.AdminStaleShareRequests
             || type == NotificationType.RateLimitReached
             || type == NotificationType.SlackConnectionRevoked
-            || type == NotificationType.MechanicAnalysisRejected)
+            || type == NotificationType.MechanicAnalysisRejected
+            || type == NotificationType.AgentCreationFailed)
             return NotificationSeverity.Warning;
 
         if (type == NotificationType.DocumentReady
@@ -228,6 +229,7 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
         if (type == NotificationType.GameNightReminder) return "Promemoria Serata";
         if (type == NotificationType.GameNightCancelled) return "Serata annullata";
         if (type == NotificationType.AgentReady) return "Agente pronto";
+        if (type == NotificationType.AgentCreationFailed) return "Creazione agent fallita";
         if (type == NotificationType.LoanReminder) return "Promemoria prestito";
         if (type == NotificationType.RateLimitApproaching) return "Quota in avvicinamento";
         if (type == NotificationType.RateLimitReached) return "Quota raggiunta";

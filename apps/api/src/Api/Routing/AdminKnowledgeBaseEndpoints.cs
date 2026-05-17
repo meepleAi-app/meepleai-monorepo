@@ -12,7 +12,7 @@ namespace Api.Routing;
 
 /// <summary>
 /// Admin endpoints for Knowledge Base management.
-/// Issues #4654, #4655, #4785: KB endpoints with real data from Qdrant, DB, and processing queue.
+/// Issues #4654, #4655, #4785: KB endpoints with real data from pgvector, DB, and processing queue.
 /// </summary>
 internal static class AdminKnowledgeBaseEndpoints
 {

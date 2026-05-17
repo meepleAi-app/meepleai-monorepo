@@ -1,0 +1,34 @@
+meta {
+  name: SG4-CS1b — ChatSession add message
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{apiBase}}/api/v1/chat/sessions/{{chatSessionId}}/messages
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "role": "user",
+    "content": "How many action points does a player get per turn?"
+  }
+}
+
+script:pre-request {
+  if (!bru.getVar("chatSessionId")) {
+    throw new Error("chatSessionId not set — run 04-lifecycle-create first");
+  }
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("response contains messageId", function() {
+    const body = res.getBody();
+    expect(body).to.have.property("messageId");
+  });
+}

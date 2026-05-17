@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or admin-decorative inline gradient; DS-13a admin scope, mockup .e-bg pattern. Future: extract --admin-* token family (deferred to DS-15 audit). */
 /**
  * Admin Compose Notification Page
  *
@@ -89,7 +90,7 @@ export default function ComposeNotificationPage() {
         {/* Form - 3 columns */}
         <div className="lg:col-span-3 space-y-6">
           {/* Channels */}
-          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+          <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
             <CardHeader>
               <CardTitle className="text-base">Channels</CardTitle>
             </CardHeader>
@@ -99,7 +100,7 @@ export default function ComposeNotificationPage() {
           </Card>
 
           {/* Recipients */}
-          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+          <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
             <CardHeader>
               <CardTitle className="text-base">Recipients</CardTitle>
             </CardHeader>
@@ -109,7 +110,7 @@ export default function ComposeNotificationPage() {
           </Card>
 
           {/* Message */}
-          <Card className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md border-slate-200/60 dark:border-zinc-700/40">
+          <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/60 dark:border-zinc-700/40">
             <CardHeader>
               <CardTitle className="text-base">Message</CardTitle>
             </CardHeader>
@@ -117,7 +118,7 @@ export default function ComposeNotificationPage() {
               <div>
                 <Label className="text-sm font-medium">Title</Label>
                 <Input
-                  className="mt-1.5 bg-white/70 dark:bg-zinc-800/70"
+                  className="mt-1.5 bg-card/70 dark:bg-zinc-800/70"
                   placeholder="Notification title"
                   value={title}
                   onChange={e => setTitle(e.target.value)}
@@ -128,7 +129,7 @@ export default function ComposeNotificationPage() {
               <div>
                 <Label className="text-sm font-medium">Body</Label>
                 <Textarea
-                  className="mt-1.5 min-h-[120px] bg-white/70 dark:bg-zinc-800/70"
+                  className="mt-1.5 min-h-[120px] bg-card/70 dark:bg-zinc-800/70"
                   placeholder="Write your notification message..."
                   value={message}
                   onChange={e => setMessage(e.target.value)}

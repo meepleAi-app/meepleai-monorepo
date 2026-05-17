@@ -2,10 +2,16 @@ name: Backend Missing Gate
 
 on:
   pull_request:
-    branches: [main, main-dev, frontend-dev]
+    branches: [main, main-staging]
     paths:
       - 'apps/web/src/**/*.ts'
       - 'apps/web/src/**/*.tsx'
+
+
+# Concurrency: prevent duplicate runs. See issue #850.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

@@ -3,7 +3,7 @@
  * Issue #5042 — Library + Game Detail Hub
  *
  * Canonical route: /library/[gameId]
- * (replaces /library/games/[gameId] — permanent redirect in next.config.js)
+ * (replaces /library/[gameId] — permanent redirect in next.config.js)
  *
  * Renders PageHeader with contextual tabs (Dettagli · Agente · Toolkit · FAQ)
  * and a primary action for chat. The gameId is dynamic — read from URL params.

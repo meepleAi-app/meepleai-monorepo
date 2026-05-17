@@ -31,7 +31,7 @@ describe('ModelsTable', () => {
     const toggle = geminiRow.querySelector('button')!;
 
     // Should have gray background (disabled)
-    expect(toggle).toHaveClass('bg-gray-200');
+    expect(toggle).toHaveClass('bg-muted'); // post DS-15 semantic token
 
     // Click to enable
     fireEvent.click(toggle);
@@ -41,7 +41,7 @@ describe('ModelsTable', () => {
 
     // Click again to disable
     fireEvent.click(toggle);
-    expect(toggle).toHaveClass('bg-gray-200');
+    expect(toggle).toHaveClass('bg-muted'); // post DS-15 semantic token
   });
 
   it('shows cost and latency metrics', () => {

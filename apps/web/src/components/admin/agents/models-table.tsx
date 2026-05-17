@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { useState } from 'react';
@@ -72,9 +73,9 @@ export function ModelsTable() {
   };
 
   return (
-    <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-amber-200/50 dark:border-zinc-700/50 overflow-hidden">
-      <div className="p-6 border-b border-slate-200 dark:border-zinc-700">
-        <h2 className="font-quicksand text-xl font-bold text-slate-900 dark:text-zinc-100">
+    <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl border border-amber-200/50 dark:border-zinc-700/50 overflow-hidden">
+      <div className="p-6 border-b border-border dark:border-zinc-700">
+        <h2 className="font-quicksand text-xl font-bold text-foreground dark:text-zinc-100">
           AI Models
         </h2>
       </div>
@@ -104,13 +105,13 @@ export function ModelsTable() {
           </thead>
           <tbody className="divide-y divide-slate-200 dark:divide-zinc-700">
             {models.map((model) => (
-              <tr key={model.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-900/50">
+              <tr key={model.id} className="hover:bg-muted/50 dark:hover:bg-zinc-900/50">
                 <td className="py-3 px-4">
-                  <Badge variant="outline" className="bg-gray-100 text-gray-900 dark:bg-gray-900/30 dark:text-gray-300">
+                  <Badge variant="outline" className="bg-muted text-foreground dark:bg-card dark:text-foreground">
                     {model.provider}
                   </Badge>
                 </td>
-                <td className="py-3 px-4 font-medium text-slate-900 dark:text-zinc-100">
+                <td className="py-3 px-4 font-medium text-foreground dark:text-zinc-100">
                   {model.name}
                 </td>
                 <td className="py-3 px-4 text-center">
@@ -119,21 +120,21 @@ export function ModelsTable() {
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       model.enabled
                         ? 'bg-green-500 dark:bg-green-600'
-                        : 'bg-gray-200 dark:bg-zinc-700'
+                        : 'bg-muted dark:bg-zinc-700'
                     }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${
                         model.enabled ? 'translate-x-6' : 'translate-x-1'
                       }`}
                     />
                     <span className="sr-only">Toggle {model.name}</span>
                   </button>
                 </td>
-                <td className="py-3 px-4 text-right font-mono text-sm text-slate-600 dark:text-zinc-400">
+                <td className="py-3 px-4 text-right font-mono text-sm text-muted-foreground dark:text-muted-foreground">
                   ${model.costPer1k.toFixed(4)}
                 </td>
-                <td className="py-3 px-4 text-right font-mono text-sm text-slate-600 dark:text-zinc-400">
+                <td className="py-3 px-4 text-right font-mono text-sm text-muted-foreground dark:text-muted-foreground">
                   {model.avgLatency}s
                 </td>
                 <td className="py-3 px-4 text-right">

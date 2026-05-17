@@ -66,7 +66,7 @@ export function QuickCardsCarousel({ items }: QuickCardsCarouselProps) {
 function getDefaultHref(item: QuickCardItem): string {
   switch (item.entity) {
     case 'game':
-      return `/library/games/${item.id}`;
+      return `/library/${item.id}`;
     case 'agent':
       return `/agents/${item.id}`;
     case 'session':

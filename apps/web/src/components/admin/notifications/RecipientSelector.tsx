@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import {
@@ -32,7 +33,7 @@ export function RecipientSelector({ value, onChange }: RecipientSelectorProps) {
           value={value.type}
           onValueChange={(type: string) => onChange({ type: type as RecipientSelection['type'] })}
         >
-          <SelectTrigger className="w-full mt-1.5 bg-white/70 dark:bg-zinc-800/70">
+          <SelectTrigger className="w-full mt-1.5 bg-card/70 dark:bg-zinc-800/70">
             <SelectValue placeholder="Select recipients" />
           </SelectTrigger>
           <SelectContent>
@@ -50,7 +51,7 @@ export function RecipientSelector({ value, onChange }: RecipientSelectorProps) {
             value={value.role ?? ''}
             onValueChange={(role: string) => onChange({ ...value, role })}
           >
-            <SelectTrigger className="w-full mt-1.5 bg-white/70 dark:bg-zinc-800/70">
+            <SelectTrigger className="w-full mt-1.5 bg-card/70 dark:bg-zinc-800/70">
               <SelectValue placeholder="Select role" />
             </SelectTrigger>
             <SelectContent>
@@ -68,7 +69,7 @@ export function RecipientSelector({ value, onChange }: RecipientSelectorProps) {
         <div>
           <Label className="text-sm font-medium">User IDs (comma-separated)</Label>
           <Input
-            className="mt-1.5 bg-white/70 dark:bg-zinc-800/70"
+            className="mt-1.5 bg-card/70 dark:bg-zinc-800/70"
             placeholder="uuid1, uuid2, ..."
             value={(value.userIds ?? []).join(', ')}
             onChange={e => {

@@ -11,7 +11,7 @@
  *
  * Usage:
  *   - On /library/private: pass the most recently created private game's ID to enable Steps 2-5
- *   - On /library/games/{id}: pass gameId for full per-game tracking
+ *   - On /library/{id}: pass gameId for full per-game tracking
  *   - Pass no gameId to show only step-1 status (game not yet created)
  */
 
@@ -202,7 +202,7 @@ export function JourneyProgress({ gameId, agentDefinitionId, className }: Journe
         id: 'create-agent',
         label: 'Crea agente',
         status: step4Status,
-        href: gameId ? `/library/games/${gameId}/agent` : undefined,
+        href: gameId ? `/library/${gameId}/agent` : undefined,
       },
       {
         id: 'chat',

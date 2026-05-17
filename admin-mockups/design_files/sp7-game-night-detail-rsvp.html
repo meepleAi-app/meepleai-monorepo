@@ -4,6 +4,17 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=1440"/>
   <title>SP7-B · Game Night · Detail + RSVP — MeepleAI</title>
+  <!--
+    Mockup: sp7-game-night-detail-rsvp
+    Route:  /game-nights/[id]
+    Scope:  SP7 spec-hardening hero + RSVP cluster (issue #951). Covers guest
+            RSVP flow + host action row + cancelled banner. Tabbed surface
+            (Voting/Chat) and mobile sticky CTA deferred to follow-up.
+    Stati:  default · cancelled · not-found · loading
+    Persona: Guest invitato (RSVP Pending/Accepted/Maybe/Declined),
+             Host (organizerId === viewerId), Bystander (private event).
+    Sorgente: e2e/v2-states/game-night-detail.spec.ts (5 AC-H1 scenarios)
+  -->
 
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>

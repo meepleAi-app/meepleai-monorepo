@@ -359,7 +359,7 @@ export const DarkMode: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark max-w-3xl mx-auto p-6 bg-slate-900 min-h-screen">
+      <div className="dark max-w-3xl mx-auto p-6 bg-card min-h-screen">
         <Story />
       </div>
     ),
@@ -377,7 +377,7 @@ export const DarkModeProcessing: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark max-w-3xl mx-auto p-6 bg-slate-900 min-h-screen">
+      <div className="dark max-w-3xl mx-auto p-6 bg-card min-h-screen">
         <Story />
       </div>
     ),
@@ -395,7 +395,7 @@ export const DarkModeCompleted: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark max-w-3xl mx-auto p-6 bg-slate-900 min-h-screen">
+      <div className="dark max-w-3xl mx-auto p-6 bg-card min-h-screen">
         <Story />
       </div>
     ),
@@ -413,7 +413,7 @@ export const DarkModeError: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark max-w-3xl mx-auto p-6 bg-slate-900 min-h-screen">
+      <div className="dark max-w-3xl mx-auto p-6 bg-card min-h-screen">
         <Story />
       </div>
     ),

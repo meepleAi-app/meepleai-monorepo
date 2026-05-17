@@ -29,7 +29,7 @@ export function FlipCard({ front, back, trigger = 'card', className = '' }: Flip
                 e.stopPropagation();
                 handleFlip();
               }}
-              className="absolute bottom-2 right-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/85 text-xs shadow-sm backdrop-blur-sm"
+              className="absolute bottom-2 right-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-card/85 text-xs shadow-sm backdrop-blur-sm"
             >
               🔄
             </button>
@@ -42,7 +42,7 @@ export function FlipCard({ front, back, trigger = 'card', className = '' }: Flip
               e.stopPropagation();
               handleFlip();
             }}
-            className="absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/85 text-xs shadow-sm backdrop-blur-sm"
+            className="absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-card/85 text-xs shadow-sm backdrop-blur-sm"
           >
             ✕
           </button>

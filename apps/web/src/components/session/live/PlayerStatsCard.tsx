@@ -28,8 +28,8 @@ export interface PlayerStatsCardProps {
 function StatRow({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-gray-500 font-nunito">{label}</span>
-      <span className="font-quicksand font-semibold text-sm text-gray-900">{value}</span>
+      <span className="text-xs text-muted-foreground font-nunito">{label}</span>
+      <span className="font-quicksand font-semibold text-sm text-foreground">{value}</span>
     </div>
   );
 }
@@ -76,11 +76,11 @@ export function PlayerStatsCard({ userId, gameId }: PlayerStatsCardProps) {
   if (loading) {
     return (
       <div
-        className="rounded-xl border border-white/40 bg-white/70 backdrop-blur-md shadow-sm p-4 flex items-center justify-center gap-2"
+        className="rounded-xl border border-border bg-card/70 backdrop-blur-md shadow-sm p-4 flex items-center justify-center gap-2"
         data-testid="player-stats-card"
       >
-        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-        <span className="text-sm text-gray-500 font-nunito">Loading stats...</span>
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <span className="text-sm text-muted-foreground font-nunito">Loading stats...</span>
       </div>
     );
   }
@@ -98,19 +98,19 @@ export function PlayerStatsCard({ userId, gameId }: PlayerStatsCardProps) {
 
   return (
     <div
-      className="rounded-xl border border-white/40 bg-white/70 backdrop-blur-md shadow-sm p-4 space-y-3"
+      className="rounded-xl border border-border bg-card/70 backdrop-blur-md shadow-sm p-4 space-y-3"
       data-testid="player-stats-card"
     >
       {/* Header */}
       <div className="flex items-center gap-2">
         <BarChart3 className="h-4 w-4 text-amber-600" />
-        <h3 className="font-quicksand font-semibold text-sm text-gray-900">
+        <h3 className="font-quicksand font-semibold text-sm text-foreground">
           {gameId ? 'Game Stats' : 'Overall Stats'}
         </h3>
       </div>
 
       {aggregated.totalPlayed === 0 ? (
-        <p className="text-sm text-gray-500 font-nunito italic">No games played yet</p>
+        <p className="text-sm text-muted-foreground font-nunito italic">No games played yet</p>
       ) : (
         <div className="space-y-2">
           {/* Win/Loss */}

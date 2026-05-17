@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * GameTableZoneTools — Tools & management zone for the Game Table
  *
@@ -167,7 +168,7 @@ export function GameTableZoneTools({
     <div className="space-y-3">
       {/* Toolkit link */}
       <Link
-        href={`/library/games/${gameId}/toolkit`}
+        href={`/library/${gameId}/toolkit`}
         className={`${CARD_ROW} flex items-center gap-3 text-[#e6edf3] hover:border-amber-500/50 transition-colors`}
         data-testid="toolkit-link"
       >

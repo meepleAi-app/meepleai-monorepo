@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * SessionLiveView — Wave D.2 Interactions sub-PR (Issue #750).
  *
@@ -63,7 +64,7 @@ import {
   type MobileTab,
   type PlayerRosterLiveLabels,
   type TurnIndicatorLabels,
-} from '@/components/v2/session-live';
+} from '@/components/features/session-live';
 import {
   ConnectionLostBanner,
   LiveAgentChat,
@@ -75,7 +76,7 @@ import {
   type LiveSessionNotesLabels,
   type RightColumnTabsLabels,
   type SessionToolsRailLabels,
-} from '@/components/v2/session-live';
+} from '@/components/features/session-live';
 import { useSession } from '@/hooks/queries/useActiveSessions';
 import { useTranslation } from '@/hooks/useTranslation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
@@ -101,11 +102,13 @@ import { useSessionLiveStream } from '@/lib/session-live/use-session-live-stream
 // ─── Lazy dialogs (orchestrator-side lazy import per Task 3 spec) ──────────────
 
 const PauseOverlay = lazy(() =>
-  import('@/components/v2/session-live/PauseOverlay').then(m => ({ default: m.PauseOverlay }))
+  import('@/components/features/session-live/PauseOverlay').then(m => ({ default: m.PauseOverlay }))
 );
 
 const EndgameDialog = lazy(() =>
-  import('@/components/v2/session-live/EndgameDialog').then(m => ({ default: m.EndgameDialog }))
+  import('@/components/features/session-live/EndgameDialog').then(m => ({
+    default: m.EndgameDialog,
+  }))
 );
 
 // ─── SessionId validation ─────────────────────────────────────────────────────
@@ -153,14 +156,14 @@ function LoadingShell({ ariaLabel }: { ariaLabel: string }): ReactElement {
     >
       {/* Desktop: 3-column skeleton */}
       <div className="hidden lg:flex flex-1 gap-4">
-        <div className="w-[280px] shrink-0 rounded-lg bg-slate-700/40 h-64" />
-        <div className="flex-1 rounded-lg bg-slate-700/40 h-64" />
-        <div className="w-[340px] shrink-0 rounded-lg bg-slate-700/40 h-64" />
+        <div className="w-[280px] shrink-0 rounded-lg bg-card h-64" />
+        <div className="flex-1 rounded-lg bg-card h-64" />
+        <div className="w-[340px] shrink-0 rounded-lg bg-card h-64" />
       </div>
       {/* Mobile: single-column skeleton */}
       <div className="flex flex-col gap-4 lg:hidden">
-        <div className="h-32 rounded-lg bg-slate-700/40" />
-        <div className="h-48 rounded-lg bg-slate-700/40" />
+        <div className="h-32 rounded-lg bg-card" />
+        <div className="h-48 rounded-lg bg-card" />
       </div>
     </div>
   );
@@ -183,7 +186,7 @@ function ErrorShell({
       className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center"
     >
       <p className="text-lg font-semibold text-slate-200">{title}</p>
-      <p className="text-sm text-slate-400">{description}</p>
+      <p className="text-sm text-muted-foreground">{description}</p>
       <button
         type="button"
         onClick={onRetry}
@@ -214,7 +217,7 @@ function NotFoundShell({
       className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center"
     >
       <p className="text-lg font-semibold text-slate-200">{title}</p>
-      <p className="text-sm text-slate-400">{description}</p>
+      <p className="text-sm text-muted-foreground">{description}</p>
       <button
         type="button"
         onClick={onBack}

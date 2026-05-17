@@ -33,9 +33,11 @@ internal static class AuthenticationServiceExtensions
         // Admin Invitation Flow: singleton channel for game suggestion processing
         services.AddSingleton<GameSuggestionChannel>();
 
-        // DevOps wave 1: staging email allowlist guard.
-        // Singleton: parses STAGING_ALLOWED_EMAILS once at construction, immutable HashSet read-only.
+        // DevOps Wave 1 (#845): staging email allowlist guard.
+        // Singleton: backed by IMemoryCache with 60s TTL + domain-event invalidation.
+        // Reads from staging_allowlist DB table via IServiceScopeFactory on cache miss.
         // Used by StagingAccessMiddleware (active only when ASPNETCORE_ENVIRONMENT=Staging).
+        services.AddMemoryCache();
         services.AddSingleton<IStagingAccessGuard, StagingAccessGuard>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs

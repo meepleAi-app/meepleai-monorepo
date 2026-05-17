@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.Commands.Invitation;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.Security;
 using Api.SharedKernel.Application.EventHandlers;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -49,7 +50,7 @@ internal sealed class AccessRequestApprovedEventHandler : DomainEventHandlerBase
         {
             Logger.LogError(ex,
                 "Failed to create invitation for approved access request {AccessRequestId}, email {Email}",
-                domainEvent.AccessRequestId, domainEvent.Email);
+                domainEvent.AccessRequestId, DataMasking.MaskEmail(domainEvent.Email));
             // Approval stands. Admin can resend via invitation UI.
         }
     }

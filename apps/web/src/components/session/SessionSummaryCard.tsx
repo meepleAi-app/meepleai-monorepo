@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import React from 'react';
@@ -44,7 +45,7 @@ export function SessionSummaryCard({
       <div className="flex flex-col items-center gap-2">
         <Trophy className="h-10 w-10 text-amber-400" aria-hidden="true" />
         <h2 className="text-xl font-bold text-white">Partita Terminata!</h2>
-        <p className="text-sm text-[var(--gaming-text-secondary,#aaa)]">{gameName}</p>
+        <p className="text-sm text-[var(--text-sec,#aaa)]">{gameName}</p>
       </div>
 
       {/* Ranked player list */}
@@ -52,7 +53,7 @@ export function SessionSummaryCard({
         {sorted.map((player, index) => (
           <li
             key={player.id}
-            className="flex items-center justify-between rounded-xl bg-white/5 px-4 py-2"
+            className="flex items-center justify-between rounded-xl bg-card/5 px-4 py-2"
           >
             <div className="flex items-center gap-3">
               <span className="text-xl" aria-label={`Posizione ${index + 1}`}>
@@ -66,7 +67,7 @@ export function SessionSummaryCard({
       </ol>
 
       {/* Duration */}
-      <p className="text-sm text-[var(--gaming-text-secondary,#aaa)]">Durata: {durationLabel}</p>
+      <p className="text-sm text-[var(--text-sec,#aaa)]">Durata: {durationLabel}</p>
 
       {/* Actions */}
       <div className="flex w-full flex-col gap-3">
@@ -77,7 +78,7 @@ export function SessionSummaryCard({
         )}
         <Link
           href="/"
-          className="text-center text-sm text-[var(--gaming-text-secondary,#aaa)] underline-offset-4 hover:underline"
+          className="text-center text-sm text-[var(--text-sec,#aaa)] underline-offset-4 hover:underline"
         >
           Torna alla Home
         </Link>

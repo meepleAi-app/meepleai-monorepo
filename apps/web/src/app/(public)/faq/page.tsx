@@ -19,9 +19,9 @@ import { type JSX, Suspense, useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
-import { Btn } from '@/components/ui/v2/btn';
-import { AccordionItem, CategoryTabs, FAQSearchBar, QuickAnswerCard } from '@/components/ui/v2/faq';
-import { HeroGradient } from '@/components/ui/v2/hero-gradient';
+import { Btn } from '@/components/ui/btn';
+import { AccordionItem, CategoryTabs, FAQSearchBar, QuickAnswerCard } from '@/components/ui/faq';
+import { HeroGradient } from '@/components/ui/hero-gradient';
 import { useFaqHashQuery } from '@/hooks/useFaqHashQuery';
 import { useTranslation } from '@/hooks/useTranslation';
 import { type CategoryId, type FAQ, FAQ_CATEGORIES, FAQS, POPULAR_FAQS } from '@/lib/faq/data';

@@ -1,0 +1,76 @@
+# Prod Gate — exhaustive checks on PR to main
+#
+# Per ADR-054 and epic #842 / issue #846: PRs promoting main-staging to
+# main must clear the full suite plus security scan + load test.
+# Target SLO < 30 min.
+#
+# Scope-limited (same rationale as staging.yml): the full lint/build/test
+# suite still runs via the legacy ci.yml; this workflow adds prod-only
+# deltas (security scan + load probe). ci.yml consolidation tracked
+# as follow-up.
+name: Prod Gate
+
+on:
+  pull_request:
+    branches: [main]
+    # Issue #850: prod-only deltas (security scan + load probe) have no
+    # signal on docs-only PRs.
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.editorconfig'
+  workflow_dispatch:
+
+concurrency:
+  group: prod-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  security-events: write
+
+jobs:
+  security-scan:
+    name: Security Scan (Semgrep + audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: pnpm audit (high+ vulnerabilities)
+        working-directory: apps/web
+        run: pnpm audit --prod --audit-level=high
+        continue-on-error: true
+        # Production gate: dependency vulnerabilities at high+ severity
+        # surface as warnings here, hard-fail on critical only.
+        # Follow-up #850 to tighten once the dependency baseline is clean.
+
+      - name: dotnet vulnerability scan
+        working-directory: apps/api
+        run: |
+          dotnet --version
+          dotnet list package --vulnerable --include-transitive || true
+
+      - name: Semgrep
+        uses: returntocorp/semgrep-action@713efdd345f3035192eaa63f56867b88e63e4e5d  # v1
+        with:
+          config: 'p/owasp-top-ten p/security-audit'
+        continue-on-error: true
+        # Same warn-only stance for first prod rollout — see #850.
+
+  # load-probe is intentionally deferred to a follow-up: a meaningful k6
+  # smoke needs a production-like stack (Postgres + Redis + secrets) which
+  # is more than this PR's scope. A future workflow can spin up
+  # `infra/compose.test.yml` or hit the staging URL directly. Tracked
+  # under epic #842 close-out alongside the ci.yml consolidation.

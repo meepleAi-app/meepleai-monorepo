@@ -25,7 +25,7 @@ function AgentContextCard({ gameId, gameName }: { gameId?: string; gameName?: st
     return (
       <div
         data-testid="no-game-placeholder"
-        className="flex items-center gap-2 rounded-md bg-slate-100 px-2 py-2 text-xs text-slate-400"
+        className="flex items-center gap-2 rounded-md bg-muted px-2 py-2 text-xs text-muted-foreground"
       >
         <Bot className="h-3.5 w-3.5 shrink-0" />
         <span>Nessun gioco collegato</span>
@@ -45,7 +45,7 @@ function AgentContextCard({ gameId, gameName }: { gameId?: string; gameName?: st
 function SidebarSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <p className="px-1 text-[10px] font-semibold tracking-wider text-slate-400">{label}</p>
+      <p className="px-1 text-[10px] font-semibold tracking-wider text-muted-foreground">{label}</p>
       {children}
     </div>
   );
@@ -76,15 +76,15 @@ function RecentThreadItem({
       data-testid={`thread-item-${thread.id}`}
       onClick={onClick}
       className={cn(
-        'flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-slate-100',
+        'flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-muted',
         isSelected && 'border border-blue-300/60 bg-blue-100'
       )}
     >
-      <div className="flex items-center justify-between gap-1 text-[10px] text-slate-400">
+      <div className="flex items-center justify-between gap-1 text-[10px] text-muted-foreground">
         <span>{date}</span>
         <span>{thread.messageCount}m</span>
       </div>
-      <p className="line-clamp-2 text-slate-600">{preview}</p>
+      <p className="line-clamp-2 text-muted-foreground">{preview}</p>
     </button>
   );
 }
@@ -95,14 +95,14 @@ const statusDotClass: Record<KbDocumentPreview['status'], string> = {
   indexed: 'bg-emerald-500',
   processing: 'bg-amber-500',
   failed: 'bg-red-500',
-  none: 'bg-slate-400',
+  none: 'bg-muted-foreground',
 };
 
 function KbDocItem({ doc }: { doc: KbDocumentPreview }) {
   return (
     <div className="flex items-center gap-1.5 px-2 py-1">
       <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', statusDotClass[doc.status])} />
-      <span className="truncate text-xs text-slate-600">{doc.fileName}</span>
+      <span className="truncate text-xs text-muted-foreground">{doc.fileName}</span>
     </div>
   );
 }
@@ -161,7 +161,7 @@ function AgentChatArea({
   // 1. Loading readiness
   if (readinessLoading) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 text-slate-400">
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />
         <span className="text-xs">Verifica disponibilità agente…</span>
       </div>
@@ -173,9 +173,9 @@ function AgentChatArea({
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
         <AlertCircle className="h-8 w-8 text-amber-400" />
-        <p className="text-sm font-semibold text-slate-700">Agente non configurato</p>
+        <p className="text-sm font-semibold text-foreground">Agente non configurato</p>
         {readiness.blockingReason && (
-          <p className="text-xs text-slate-500">{readiness.blockingReason}</p>
+          <p className="text-xs text-muted-foreground">{readiness.blockingReason}</p>
         )}
         <button
           className="mt-1 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
@@ -198,7 +198,7 @@ function AgentChatArea({
   if (selectedThreadId === 'new') {
     if (creating) {
       return (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-slate-400">
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
           <span className="text-xs">Creazione chat in corso…</span>
         </div>
@@ -219,10 +219,10 @@ function AgentChatArea({
   return (
     <div
       data-testid="chat-empty-state"
-      className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center text-slate-400"
+      className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center text-muted-foreground"
     >
       <MessageSquare className="h-8 w-8" />
-      <p className="text-sm font-semibold text-slate-600">Chat con {agentName}</p>
+      <p className="text-sm font-semibold text-muted-foreground">Chat con {agentName}</p>
       <p className="text-xs">Seleziona una chat recente oppure avvia una nuova conversazione</p>
     </div>
   );
@@ -252,7 +252,7 @@ export const AgentChatDrawerLayout = React.memo(function AgentChatDrawerLayout({
       {/* Sidebar */}
       <aside
         data-testid="agent-chat-sidebar"
-        className="w-[220px] shrink-0 flex flex-col gap-4 overflow-y-auto border-r border-slate-200/60 bg-slate-50/80 px-3 py-4"
+        className="w-[220px] shrink-0 flex flex-col gap-4 overflow-y-auto border-r border-border/60 bg-muted/80 px-3 py-4"
       >
         <AgentContextCard gameId={data.gameId} gameName={data.gameName} />
 
@@ -270,7 +270,7 @@ export const AgentChatDrawerLayout = React.memo(function AgentChatDrawerLayout({
           className={cn(
             'flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold font-nunito',
             buttonDisabled
-              ? 'cursor-not-allowed bg-slate-200 text-slate-400'
+              ? 'cursor-not-allowed bg-muted text-muted-foreground'
               : 'bg-blue-600 text-white hover:bg-blue-700'
           )}
         >
@@ -280,9 +280,9 @@ export const AgentChatDrawerLayout = React.memo(function AgentChatDrawerLayout({
 
         <SidebarSection label="CHAT RECENTI">
           {threadsLoading ? (
-            <Loader2 className="mx-auto h-4 w-4 animate-spin text-slate-400" />
+            <Loader2 className="mx-auto h-4 w-4 animate-spin text-muted-foreground" />
           ) : threads.length === 0 ? (
-            <p className="px-2 text-xs text-slate-400">Nessuna chat</p>
+            <p className="px-2 text-xs text-muted-foreground">Nessuna chat</p>
           ) : (
             threads
               .slice(0, 8)
@@ -299,9 +299,9 @@ export const AgentChatDrawerLayout = React.memo(function AgentChatDrawerLayout({
 
         <SidebarSection label="KNOWLEDGE BASE">
           {docsLoading ? (
-            <Loader2 className="mx-auto h-4 w-4 animate-spin text-slate-400" />
+            <Loader2 className="mx-auto h-4 w-4 animate-spin text-muted-foreground" />
           ) : docs.length === 0 ? (
-            <p className="px-2 text-xs text-slate-400">Nessun documento</p>
+            <p className="px-2 text-xs text-muted-foreground">Nessun documento</p>
           ) : (
             docs.slice(0, 5).map(doc => <KbDocItem key={doc.id} doc={doc} />)
           )}

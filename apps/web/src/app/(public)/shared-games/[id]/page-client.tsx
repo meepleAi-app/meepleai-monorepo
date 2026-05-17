@@ -37,7 +37,7 @@ import {
   tabId,
   tabPanelId,
   type TabKey,
-} from '@/components/ui/v2/shared-game-detail';
+} from '@/components/ui/detail-layout';
 import { useSharedGameDetail } from '@/hooks/useSharedGameDetail';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useUrlHashState } from '@/hooks/useUrlHashState';

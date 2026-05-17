@@ -56,11 +56,11 @@ export function SessionSnapshotPanel({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="flex items-center gap-2 font-quicksand text-lg font-bold text-[var(--nh-text-primary)]">
+          <h2 className="flex items-center gap-2 font-quicksand text-lg font-bold text-[var(--text)]">
             <Camera className="h-5 w-5 text-amber-500" />
             Stato Partita
           </h2>
-          <p className="mt-0.5 font-nunito text-xs text-[var(--nh-text-muted)]">
+          <p className="mt-0.5 font-nunito text-xs text-[var(--text-muted)]">
             {snapshotList.length === 0
               ? 'Nessuno snapshot ancora'
               : `${snapshotList.length} snapshot`}
@@ -81,22 +81,22 @@ export function SessionSnapshotPanel({
 
       {/* Loading */}
       {isLoading && (
-        <p className="py-6 text-center font-nunito text-sm text-[var(--nh-text-muted)]">
+        <p className="py-6 text-center font-nunito text-sm text-[var(--text-muted)]">
           Caricamento snapshot...
         </p>
       )}
 
       {/* Empty state */}
       {!isLoading && snapshotList.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-stone-300 py-10">
-          <ImageOff className="h-10 w-10 text-stone-300" />
-          <p className="font-nunito text-sm text-[var(--nh-text-muted)]">
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-10">
+          <ImageOff className="h-10 w-10 text-foreground" />
+          <p className="font-nunito text-sm text-[var(--text-muted)]">
             Scatta una foto del tavolo per analizzare lo stato della partita
           </p>
           <button
             type="button"
             onClick={() => setDialogOpen(true)}
-            className="rounded-lg border border-[var(--nh-border-default)] bg-white px-4 py-2 font-nunito text-xs font-medium text-[var(--nh-text-primary)] transition-colors hover:bg-stone-50"
+            className="rounded-lg border border-[var(--border)] bg-card px-4 py-2 font-nunito text-xs font-medium text-[var(--text)] transition-colors hover:bg-muted"
           >
             <Camera className="mr-1.5 inline-block h-3.5 w-3.5" />
             Primo snapshot

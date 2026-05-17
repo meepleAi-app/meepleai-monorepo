@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -68,7 +69,7 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
   const trendIcons = {
     up: <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />,
     down: <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />,
-    neutral: <Minus className="h-3 w-3 text-slate-400" />,
+    neutral: <Minus className="h-3 w-3 text-muted-foreground" />,
   };
 
   if (variant === 'compact') {
@@ -98,7 +99,7 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
 
           <div className="relative flex items-center gap-2 mb-4">
             <Trophy className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            <h2 className="font-bold text-lg text-slate-900 dark:text-amber-50 tracking-tight">
+            <h2 className="font-bold text-lg text-foreground tracking-tight">
               Current Leaders
             </h2>
           </div>
@@ -120,10 +121,10 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
 
       {/* Detailed Score Table */}
       {data.rounds.length > 0 && (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 shadow-lg">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
           {/* Table Header */}
-          <div className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-4 py-3">
-            <h3 className="font-bold text-sm uppercase tracking-wider text-slate-600 dark:text-slate-400">
+          <div className="border-b border-border bg-muted px-4 py-3">
+            <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">
               Score Breakdown
             </h3>
           </div>
@@ -131,15 +132,15 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
           {/* Scrollable Table */}
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+              <thead className="border-b border-border bg-muted">
                 <tr>
-                  <th className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-800/50 px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                  <th className="sticky left-0 z-10 bg-muted px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     Player
                   </th>
                   {data.rounds.map(round => (
                     <th
                       key={round}
-                      className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 whitespace-nowrap"
+                      className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap"
                     >
                       R{round}
                     </th>
@@ -147,7 +148,7 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
                   {data.categories.map(category => (
                     <th
                       key={category}
-                      className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 whitespace-nowrap"
+                      className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap"
                     >
                       {category}
                     </th>
@@ -157,7 +158,7 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+              <tbody className="divide-y divide-border">
                 {data.participants
                   .sort((a, b) => b.totalScore - a.totalScore)
                   .map(participant => {
@@ -167,15 +168,15 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
                     return (
                       <tr
                         key={participant.id}
-                        className={`transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/30 ${
+                        className={`transition-colors hover:bg-muted ${
                           participant.isCurrentUser ? 'bg-amber-50/30 dark:bg-amber-950/10' : ''
                         } ${isAnimating ? 'animate-pulse' : ''}`}
                       >
                         {/* Player Name - Sticky */}
-                        <td className="sticky left-0 z-10 bg-white dark:bg-slate-800/50 px-4 py-3">
+                        <td className="sticky left-0 z-10 bg-card px-4 py-3">
                           <div className="flex items-center gap-2">
                             <div
-                              className="h-8 w-8 flex items-center justify-center rounded-md text-xs font-bold text-white shadow-sm ring-1 ring-black/10"
+                              className="h-8 w-8 flex items-center justify-center rounded-md text-xs font-bold text-white shadow-sm ring-1 ring-border"
                               style={{
                                 background: `linear-gradient(135deg, ${participant.avatarColor} 0%, ${participant.avatarColor}dd 100%)`,
                               }}
@@ -189,10 +190,10 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
                                 .slice(0, 2)}
                             </div>
                             <div className="min-w-0">
-                              <div className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
+                              <div className="font-semibold text-sm text-foreground truncate">
                                 {participant.displayName}
                               </div>
-                              <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 {trendIcons[trend]}
                                 <span>Rank #{participant.rank}</span>
                               </div>
@@ -205,7 +206,7 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
                           const roundScore = getScoresByParticipant(participant.id, round);
                           return (
                             <td key={round} className="px-4 py-3 text-center">
-                              <span className="font-mono text-sm font-semibold tabular-nums text-slate-700 dark:text-slate-300">
+                              <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
                                 {roundScore > 0 ? `+${roundScore}` : roundScore || '-'}
                               </span>
                             </td>
@@ -221,7 +222,7 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
                             .reduce((sum, s) => sum + s.scoreValue, 0);
                           return (
                             <td key={category} className="px-4 py-3 text-center">
-                              <span className="font-mono text-sm font-semibold tabular-nums text-slate-700 dark:text-slate-300">
+                              <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
                                 {categoryScores || '-'}
                               </span>
                             </td>
@@ -248,7 +249,7 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
       {/* Other Participants (Rank > 3) */}
       {data.participants.filter(p => !p.rank || p.rank > 3).length > 0 && (
         <div className="space-y-2">
-          <h3 className="font-bold text-sm uppercase tracking-wider text-slate-600 dark:text-slate-400 px-1">
+          <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground px-1">
             Other Players
           </h3>
           {data.participants
@@ -266,7 +267,7 @@ export function Scoreboard({ data, isRealTime = false, variant = 'full' }: Score
 
       {/* Real-time indicator */}
       {isRealTime && (
-        <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />

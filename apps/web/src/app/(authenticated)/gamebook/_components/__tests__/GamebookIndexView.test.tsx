@@ -344,7 +344,7 @@ describe('GamebookIndexView — navigation', () => {
     expect(routerPush).toHaveBeenCalledWith('/gamebook/upload');
   });
 
-  it('GamebookCard click (status=ready) navigates to /gamebook/[gameId]', () => {
+  it('GamebookCard click (status=ready) navigates to /library/[gameId]/play', () => {
     setHookSuccess();
     renderView();
     // Pick the first ready gamebook (Nanolith)
@@ -356,11 +356,12 @@ describe('GamebookIndexView — navigation', () => {
     expect(firstReadyId).toBeTruthy();
     // The card is a button when ready — click it.
     fireEvent.click(readyCards[0] as HTMLElement);
-    // Expected gameId from default fixture: Nanolith → '00000000-0000-4000-8000-0000000c0001'
-    expect(routerPush).toHaveBeenCalledWith(expect.stringMatching(/^\/gamebook\//));
+    // Expected target: /library/{gameId}/play (existing route under
+    // /library — the /gamebook/[id] route was never implemented, see issue #865).
+    expect(routerPush).toHaveBeenCalledWith(expect.stringMatching(/^\/library\/[^/]+\/play$/));
     // Specifically, the first ready gamebook is Nanolith.
     const expectedGameId = gamebookIndexFixtures.default.gamebooks[0].gameId;
-    expect(routerPush).toHaveBeenCalledWith(`/gamebook/${expectedGameId}`);
+    expect(routerPush).toHaveBeenCalledWith(`/library/${expectedGameId}/play`);
   });
 
   it('GamebookCard click does NOT fire push for status=indexing card', () => {

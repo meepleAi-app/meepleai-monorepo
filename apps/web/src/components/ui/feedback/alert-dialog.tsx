@@ -67,7 +67,7 @@ export function AlertDialog({
     success: <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />,
     warning: <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />,
     error: <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />,
-    loading: <Loader2 className="h-5 w-5 text-gray-600 dark:text-gray-400 animate-spin" />,
+    loading: <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />,
   };
 
   const bgColorMap: Record<AlertVariant, string> = {
@@ -75,7 +75,7 @@ export function AlertDialog({
     success: 'bg-green-100 dark:bg-green-900/20',
     warning: 'bg-yellow-100 dark:bg-yellow-900/20',
     error: 'bg-red-100 dark:bg-red-900/20',
-    loading: 'bg-gray-100 dark:bg-gray-900/20',
+    loading: 'bg-muted',
   };
 
   const iconLabelMap: Record<AlertVariant, string> = {

@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -13,9 +14,9 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <see cref="Domain.Entities.AgentDefinition"/> and returns the updated view.
 /// </summary>
 /// <remarks>
-/// Persistence pattern mirrors <c>UpdateUserAgentCommandHandler</c>: the repository
-/// <c>UpdateAsync</c> calls <c>DbContext.SaveChangesAsync</c> internally so no explicit
-/// <c>IUnitOfWork</c> is required.
+/// Persistence pattern (ADR-056): repository <c>UpdateAsync</c> mutates the
+/// change-tracker only; this handler invokes <c>IUnitOfWork.SaveChangesAsync</c>
+/// explicitly to persist.
 /// Range validation is delegated to <see cref="AgentDefinitionConfig.Create"/>; invalid
 /// inputs surface as <see cref="ArgumentException"/> which the route maps to <c>400</c>.
 /// SelectedDocumentIds is accepted on the wire but not persisted in MVP (same as PR #695).
@@ -24,13 +25,16 @@ internal sealed class UpdateAgentConfigurationCommandHandler
     : IRequestHandler<UpdateAgentConfigurationCommand, AgentConfigurationDto?>
 {
     private readonly IAgentDefinitionRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UpdateAgentConfigurationCommandHandler> _logger;
 
     public UpdateAgentConfigurationCommandHandler(
         IAgentDefinitionRepository repository,
+        IUnitOfWork unitOfWork,
         ILogger<UpdateAgentConfigurationCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -64,6 +68,7 @@ internal sealed class UpdateAgentConfigurationCommandHandler
         agent.UpdateConfig(newConfig);
 
         await _repository.UpdateAsync(agent, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Updated AgentDefinition {Id} configuration (Model='{Model}', MaxTokens={MaxTokens}, Temperature={Temperature})",

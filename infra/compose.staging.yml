@@ -36,6 +36,14 @@ services:
 
   api:
     restart: always
+    # Staging must NEVER fall back to the local `meepleai-api:latest` image
+    # (built by compose.dev.yml). Manual restarts (`make staging-minimal`)
+    # would otherwise silently run stale code. The deploy workflow injects
+    # API_IMAGE from `needs.build.outputs.api_image`; for manual recovery on
+    # the VPS use:
+    #   export API_IMAGE=ghcr.io/meepleai-app/meepleai-monorepo/api:staging-<sha>
+    image: ${API_IMAGE:?API_IMAGE env var required for staging — set to GHCR tag}
+    pull_policy: always
     # CF Tunnel exposure: bind 8080 on localhost (IPv4 + IPv6 dual-stack)
     # cloudflared resolves localhost → ::1 first; without IPv6 binding it returns 502.
     ports:
@@ -56,6 +64,10 @@ services:
       ASPNETCORE_ENVIRONMENT: Staging
       ASPNETCORE_URLS: http://+:8080
       SEED_PROFILE: Staging
+      # F4 (hotfix #818): DataProtection keys must persist across container
+      # restarts. Without persisted keys every API restart invalidates every
+      # meepleai_user_role_v2 cookie. Path matches the named volume mount below.
+      DATAPROTECTION__KEYSPATH: /app/dataprotection
       # DevOps wave 1: STAGING_ALLOWED_EMAILS loaded from admin.secret env_file above.
       # Empty value = open access (warning logged at startup). To populate:
       # echo "STAGING_ALLOWED_EMAILS=badsworm@gmail.com" >> infra/secrets/admin.secret
@@ -88,6 +100,10 @@ services:
       PdfProcessing__Extractor__Unstructured__ApiUrl: "http://unstructured-service:8001"
     volumes:
       - ./secrets:/app/infra/secrets:ro
+      # F4: persisted DataProtection key ring (see DATAPROTECTION__KEYSPATH above).
+      # Dedicated named volume — must NOT share with /app/pdf_uploads which is
+      # rotated when uploads are pruned.
+      - dataprotection-keys-staging:/app/dataprotection
     # Traefik labels removed — staging now via Cloudflare Tunnel (cloudflared service on VPS).
     # Routes meepleai.app/* and api.meepleai.app/* are configured in CF dashboard tunnel public hostnames.
     logging:
@@ -96,6 +112,9 @@ services:
 
   web:
     restart: always
+    # Same rationale as api.image above — explicit GHCR image required.
+    image: ${WEB_IMAGE:?WEB_IMAGE env var required for staging — set to GHCR tag}
+    pull_policy: always
     # CF Tunnel exposure: bind 3000 on localhost (IPv4 + IPv6 dual-stack)
     # cloudflared resolves localhost → ::1 first; without IPv6 binding it returns 502.
     ports:
@@ -185,6 +204,10 @@ services:
 
   orchestration-service:
     restart: always
+    env_file:
+      - ./secrets/database.secret
+      - ./secrets/redis.secret
+      - ./secrets/openrouter.secret
     deploy:
       resources:
         limits:
@@ -261,3 +284,10 @@ volumes:
     name: meepleai-prometheus-staging
   grafana-staging:
     name: meepleai-grafana-staging
+  # F4 (hotfix #818): persistent DataProtection key ring for the API.
+  # Mounted at /app/dataprotection in the api service and read via
+  # DATAPROTECTION__KEYSPATH. Must survive container recreate; no PII inside,
+  # but rotation is non-trivial — invalidates all meepleai_user_role_v2
+  # cookies in the wild.
+  dataprotection-keys-staging:
+    name: meepleai-dataprotection-keys-staging

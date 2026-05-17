@@ -1,0 +1,176 @@
+/**
+ * ConnectionBar — Wave D.3 v2 component (Issue #756).
+ *
+ * Horizontal pip strip rendering the session's content density at a glance —
+ * one pip per major content category (gioco, giocatori, agente, chat, foto,
+ * serata). Empty categories render as dashed-border ghosts at reduced opacity.
+ *
+ * Mockup mapping:
+ *   - admin-mockups/design_files/sp4-session-summary-parts.jsx (ConnectionBar)
+ *
+ * Contract reference: docs/frontend/contracts/sessions-id-summary-hooks.md §5.3.
+ *
+ * MeepleCard divergence (Gate C): inline pip strip — neither a card nor a
+ * MeepleCard list variant. DIVERGE.
+ *
+ * A11y:
+ *   - `role="status"` (sealed completion info, no live updates).
+ *   - Each pip is a button so clicks scroll-anchor to the matching section.
+ *   - Empty pip ghosts get a `title` attribute explaining the empty state.
+ *
+ * Pure component: orchestrator resolves all label strings + counts via labels.
+ */
+
+import type { ReactElement } from 'react';
+
+import clsx from 'clsx';
+
+import { ENTITY_TEXT_HSL } from '@/lib/sessions-summary';
+
+export type ConnectionBarEntity =
+  | 'game'
+  | 'player'
+  | 'agent'
+  | 'chat'
+  | 'kb'
+  | 'event'
+  | 'session'
+  | 'toolkit';
+
+/**
+ * Text colour for the pip — darkened variants from `ENTITY_TEXT_HSL` to meet
+ * WCAG AA SC 1.4.3 (≥ 4.5:1) when blended over `bg-card/80` + entity-tinted
+ * alpha 0.1 background. Issue #756 a11y hotfix.
+ *
+ * Decorative chrome (border + background tint) — `ENTITY_BG_ALPHA` and
+ * `ENTITY_RING_ALPHA` below — keep the original lighter palette so visual
+ * baselines drift minimally. Only the foreground colour darkens.
+ */
+const ENTITY_TEXT: Record<ConnectionBarEntity, string> = ENTITY_TEXT_HSL;
+
+// P2 #807 Task 6+7+8: ENTITY_TEXT already uses ENTITY_TEXT_HSL (token-aligned).
+// ENTITY_BG_ALPHA + ENTITY_RING_ALPHA remain inline HSL — fed into JS style objects
+// (background + border CSS properties with alpha). Cannot use Tailwind utilities here.
+// TODO #807-followup: replace with CSS vars when entity color vars gain alpha-stop support
+const ENTITY_BG_ALPHA: Record<ConnectionBarEntity, string> = {
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
+  game: 'hsla(25, 95%, 39%, 0.1)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
+  player: 'hsla(262, 83%, 58%, 0.1)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
+  agent: 'hsla(38, 92%, 33%, 0.1)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
+  chat: 'hsla(220, 80%, 55%, 0.1)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
+  kb: 'hsla(210, 40%, 48%, 0.1)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
+  event: 'hsla(350, 89%, 48%, 0.1)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
+  session: 'hsla(240, 60%, 45%, 0.1)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha bg fed into JS style prop; Tailwind not applicable
+  toolkit: 'hsla(142, 70%, 31%, 0.1)',
+};
+
+const ENTITY_RING_ALPHA: Record<ConnectionBarEntity, string> = {
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
+  game: 'hsla(25, 95%, 39%, 0.3)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
+  player: 'hsla(262, 83%, 58%, 0.3)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
+  agent: 'hsla(38, 92%, 33%, 0.3)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
+  chat: 'hsla(220, 80%, 55%, 0.3)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
+  kb: 'hsla(210, 40%, 48%, 0.3)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
+  event: 'hsla(350, 89%, 48%, 0.3)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
+  session: 'hsla(240, 60%, 45%, 0.3)',
+  // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: entity alpha ring fed into JS style prop; Tailwind not applicable
+  toolkit: 'hsla(142, 70%, 31%, 0.3)',
+};
+
+export interface ConnectionBarPip {
+  readonly entity: ConnectionBarEntity;
+  readonly emoji: string;
+  readonly label: string;
+  readonly count: number;
+  /** Optional anchor href (e.g. "#section-game") for scroll navigation. */
+  readonly href?: string;
+}
+
+export interface ConnectionBarLabels {
+  /** A11y label for the strip (e.g. "Andamento partita"). */
+  readonly title: string;
+  /** Title attribute for empty pips ("Nessun evento registrato"). */
+  readonly emptyEvent: string;
+}
+
+export interface ConnectionBarProps {
+  /** Pips to render — orchestrator computes from session/diary counts. */
+  readonly pips: readonly ConnectionBarPip[];
+  readonly labels: ConnectionBarLabels;
+  readonly className?: string;
+}
+
+export function ConnectionBar({ pips, labels, className }: ConnectionBarProps): ReactElement {
+  return (
+    <div
+      data-slot="connection-bar"
+      role="status"
+      aria-label={labels.title}
+      className={clsx(
+        'flex gap-1.5 overflow-x-auto px-4 py-2.5 sm:px-8',
+        'border-b border-border bg-card/80 backdrop-blur-sm',
+        '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        className
+      )}
+    >
+      {pips.map(p => {
+        const isEmpty = p.count === 0;
+        const baseStyle = isEmpty
+          ? {
+              background: 'transparent',
+              border: `1px dashed ${ENTITY_RING_ALPHA[p.entity]}`,
+              opacity: 0.6,
+            }
+          : {
+              background: ENTITY_BG_ALPHA[p.entity],
+              border: `1px solid ${ENTITY_RING_ALPHA[p.entity]}`,
+            };
+        const Tag = p.href ? 'a' : 'span';
+        return (
+          <Tag
+            key={p.entity}
+            {...(p.href ? { href: p.href } : {})}
+            data-slot="connection-bar-pip"
+            data-entity={p.entity}
+            data-empty={isEmpty || undefined}
+            title={isEmpty ? labels.emptyEvent : undefined}
+            className={clsx(
+              'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1',
+              'font-mono text-[10px] font-extrabold uppercase tracking-wide',
+              'no-underline transition-colors',
+              p.href && 'cursor-pointer'
+            )}
+            style={{
+              ...baseStyle,
+              color: ENTITY_TEXT[p.entity],
+            }}
+          >
+            <span aria-hidden="true">{p.emoji}</span>
+            {!isEmpty && (
+              <span
+                className="rounded-full px-1.5 py-0 font-extrabold"
+                style={{ background: ENTITY_RING_ALPHA[p.entity] }}
+              >
+                {p.count}
+              </span>
+            )}
+            <span>{p.label}</span>
+          </Tag>
+        );
+      })}
+    </div>
+  );
+}

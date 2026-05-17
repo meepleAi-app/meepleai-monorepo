@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13b admin scope (see token-bridge-map.md for --admin-* decision deferred to DS-15). */
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -45,7 +46,7 @@ export function GameKbDocuments({ gameId }: Props) {
       {data.documents.map(doc => (
         <div
           key={doc.id}
-          className="flex items-center justify-between p-3 border rounded-lg bg-white/60 dark:bg-zinc-800/60"
+          className="flex items-center justify-between p-3 border rounded-lg bg-card/60 dark:bg-zinc-800/60"
         >
           <div className="flex items-center gap-3">
             <Badge variant={doc.indexingStatus === 'completed' ? 'default' : 'secondary'}>

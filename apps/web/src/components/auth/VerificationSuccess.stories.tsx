@@ -49,7 +49,7 @@ const meta = {
   },
   decorators: [
     Story => (
-      <div className="w-full max-w-md p-6 bg-white dark:bg-slate-800 rounded-lg shadow-lg">
+      <div className="w-full max-w-md p-6 bg-card rounded-lg shadow-lg">
         <Story />
       </div>
     ),
@@ -262,7 +262,7 @@ export const DarkMode: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark w-full max-w-md p-6 bg-slate-900 rounded-lg shadow-lg">
+      <div className="dark w-full max-w-md p-6 bg-card rounded-lg shadow-lg">
         <Story />
       </div>
     ),
@@ -283,7 +283,7 @@ export const DarkModeNoEmail: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark w-full max-w-md p-6 bg-slate-900 rounded-lg shadow-lg">
+      <div className="dark w-full max-w-md p-6 bg-card rounded-lg shadow-lg">
         <Story />
       </div>
     ),
@@ -310,7 +310,7 @@ export const DarkModeMobile: Story = {
   },
   decorators: [
     Story => (
-      <div className="dark w-full max-w-md p-6 bg-slate-900 rounded-lg shadow-lg">
+      <div className="dark w-full max-w-md p-6 bg-card rounded-lg shadow-lg">
         <Story />
       </div>
     ),

@@ -52,6 +52,10 @@ internal sealed class NotificationType : ValueObject
     // ISSUE-5009: Agent ready notification (merged agent_linked + agent_auto_created)
     public static readonly NotificationType AgentReady = new("agent_ready");
 
+    // ISSUE-940: Failure twin of AgentReady — fires when AutoCreateAgentOnPdfReady
+    // could not create an agent (tier quota, feature locked, generic failure).
+    public static readonly NotificationType AgentCreationFailed = new("agent_creation_failed");
+
     // ISSUE-5084/5085: OpenRouter threshold alert — RPM and budget (admin)
     public static readonly NotificationType AdminOpenRouterThresholdAlert = new("admin_openrouter_threshold_alert");
 
@@ -149,6 +153,7 @@ internal sealed class NotificationType : ValueObject
             "game_proposal_in_review" => GameProposalInReview,
             "game_proposal_kb_merged" => GameProposalKbMerged,
             "agent_ready" => AgentReady,
+            "agent_creation_failed" => AgentCreationFailed,
             "admin_openrouter_threshold_alert" => AdminOpenRouterThresholdAlert,
             "admin_openrouter_daily_summary" => AdminOpenRouterDailySummary,
             "admin_system_health_alert" => AdminSystemHealthAlert,

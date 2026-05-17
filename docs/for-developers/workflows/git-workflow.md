@@ -23,7 +23,9 @@
 
 **main-staging → main Quality Gates**: Backend 90% coverage, Frontend 85%, Integration tests, Security scan, Performance check (optional)
 
-**Child Branches**: `frontend-dev`, `backend-dev` → merge into `main-dev`
+**Feature Branches**: `feature/issue-{n}-{desc}` → PR into `main-dev` (auto-deletes on merge)
+
+> **Historical**: `frontend-dev` and `backend-dev` were retired on 2026-05-09 (issue #897). All feature branches now target `main-dev` directly.
 
 ---
 
@@ -50,7 +52,7 @@ git checkout main-dev && git merge feature/issue-123-search && git push
 git branch -D feature/issue-123-search && git push origin --delete feature/issue-123-search
 ```
 
-**Shortcuts**: Direct commit to `main-dev` (small changes) or use `frontend-dev`/`backend-dev` for isolation
+**Shortcuts**: For trivial changes, direct commit to `main-dev` is allowed. For all other work, use a `feature/issue-{n}-{desc}` branch.
 
 ### Release to Staging
 
@@ -116,7 +118,7 @@ git branch -D hotfix/critical-bug && git push origin --delete hotfix/critical-bu
 
 ### main-dev CI (`.github/workflows/main-dev-ci.yml`)
 
-**Trigger**: Push to `main-dev`, `frontend-dev`, `backend-dev`
+**Trigger**: Push to `main-dev`
 
 | Job | Steps | Blocking |
 |-----|-------|----------|

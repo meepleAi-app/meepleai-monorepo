@@ -106,7 +106,7 @@ export function TimerDisplay({ remaining, total, status }: TimerDisplayProps) {
           </span>
         )}
         {status === 'paused' && (
-          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
             Pausa
           </span>
         )}

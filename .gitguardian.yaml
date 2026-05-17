@@ -9,6 +9,21 @@ ignore-paths:
   - apps/web/src/**/__tests__/
   - apps/web/src/**/*.test.tsx
   - apps/web/src/**/*.test.ts
+  # Python service tests: literal stub keys used only to exercise pydantic
+  # property branches (e.g. `Settings.is_llm_configured`), not real secrets.
+  # Same rationale as the apps/web test exclusions above.
+  - apps/orchestration-service/tests/
+  - apps/embedding-service/tests/
+  - apps/reranker-service/tests/
+  - apps/smoldocling-service/tests/
+  - apps/unstructured-service/tests/
+  # E2E demo fixtures + smoke scripts: hardcoded test-account credentials (badsworm
+  # demo persona on staging), not production secrets. Same rationale as src test files.
+  - apps/web/e2e/
+  - infra/scripts/demo-smoke-*.sh
+  # Audit reports list UI component paths (e.g. `pwd-input/pwd-input.tsx`)
+  # that GG generic-password detector flags as false positives.
+  - docs/for-developers/audits/
   - infra/secrets/*.secret.example
   # I7 (auth security fixes): blocklist of common passwords used to REJECT
   # weak choices at registration. The literals are the very strings users

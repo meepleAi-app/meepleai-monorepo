@@ -199,7 +199,7 @@ export default function ChatListPage() {
           <div className="p-4">
             <Button
               onClick={() => router.push('/chat/new')}
-              className="w-full bg-[hsl(var(--e-game))] hover:bg-[hsl(var(--e-game))]/90 text-white font-semibold"
+              className="w-full bg-[hsl(var(--c-game))] hover:bg-[hsl(var(--c-game))]/90 text-white font-semibold"
             >
               <Plus className="w-4 h-4 mr-2" />
               Nuova chat

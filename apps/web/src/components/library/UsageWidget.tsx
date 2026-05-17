@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * UsageWidget — User usage summary card
  * Game Night Improvvisata
@@ -82,7 +83,7 @@ function QuotaRow({ label, current, max }: QuotaRowProps) {
 
 function UsageWidgetSkeleton() {
   return (
-    <div className="rounded-xl border bg-white/70 backdrop-blur-md p-4 space-y-3 animate-pulse">
+    <div className="rounded-xl border bg-card/70 backdrop-blur-md p-4 space-y-3 animate-pulse">
       <div className="h-5 w-24 rounded bg-muted" />
       <div className="space-y-2">
         {[1, 2, 3, 4].map(i => (
@@ -137,7 +138,7 @@ export function UsageWidget({ tier = 'free', variant = 'full', className }: Usag
     return (
       <div
         className={cn(
-          'rounded-xl border bg-white/70 backdrop-blur-md p-4 text-xs text-muted-foreground',
+          'rounded-xl border bg-card/70 backdrop-blur-md p-4 text-xs text-muted-foreground',
           className
         )}
       >
@@ -163,7 +164,7 @@ export function UsageWidget({ tier = 'free', variant = 'full', className }: Usag
   return (
     <div
       className={cn(
-        'rounded-xl border bg-white/70 backdrop-blur-md',
+        'rounded-xl border bg-card/70 backdrop-blur-md',
         'dark:bg-zinc-900/70',
         isCompact ? 'p-3 space-y-2' : 'p-4 space-y-3',
         className

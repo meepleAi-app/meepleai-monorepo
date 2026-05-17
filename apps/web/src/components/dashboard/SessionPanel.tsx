@@ -58,7 +58,7 @@ function ManaPipRow({ sessionId }: { sessionId: string }) {
           key={entityType}
           type="button"
           aria-label={`Open ${label}`}
-          className="h-6 w-6 rounded-full border-2 border-white/20 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-6 w-6 rounded-full border-2 border-border transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           style={{ backgroundColor: color }}
           data-testid={`mana-pip-${entityType}`}
           onClick={() => openDeckStack(entityType, sessionId)}
@@ -112,14 +112,14 @@ export function SessionPanel() {
         <button
           type="button"
           data-testid="session-pause-resume"
-          className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-white/10 transition-colors"
+          className="flex-1 rounded-lg border border-border bg-card/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
           onClick={() => (isPaused ? resumeSession() : pauseSession())}
         >
           {isPaused ? 'Resume' : 'Pause'}
         </button>
         <Link
           href={`/sessions/${slot.sessionId}/chat`}
-          className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-white/10 transition-colors text-center"
+          className="flex-1 rounded-lg border border-border bg-card/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors text-center"
           data-testid="session-chat-agent"
         >
           Chat Agent

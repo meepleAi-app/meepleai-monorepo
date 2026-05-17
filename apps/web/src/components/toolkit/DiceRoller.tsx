@@ -46,15 +46,15 @@ export function DiceRoller({ config, actorLabel, onRoll }: DiceRollerProps) {
 
   return (
     <div
-      className="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
+      className="space-y-3 rounded-lg border border-border bg-card p-4"
       data-testid="dice-roller"
     >
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-700">{config.name}</span>
-        {actorLabel && <span className="text-xs text-slate-400">{actorLabel}</span>}
+        <span className="text-sm font-semibold text-foreground">{config.name}</span>
+        {actorLabel && <span className="text-xs text-muted-foreground">{actorLabel}</span>}
       </div>
 
-      {config.customFaces && <p className="text-xs text-slate-500">{config.description}</p>}
+      {config.customFaces && <p className="text-xs text-muted-foreground">{config.description}</p>}
 
       <Button onClick={handleRoll} className="w-full" aria-label={`Tira ${config.name}`}>
         🎲 Tira {config.name}
@@ -84,7 +84,7 @@ export function DiceRoller({ config, actorLabel, onRoll }: DiceRollerProps) {
             </span>
           )}
           {isMulti && !isCustom && (
-            <p className="text-sm font-semibold text-slate-600">
+            <p className="text-sm font-semibold text-muted-foreground">
               Totale: <span data-testid="dice-total">{result.total}</span>
             </p>
           )}

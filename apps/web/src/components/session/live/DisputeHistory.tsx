@@ -58,7 +58,7 @@ export function DisputeHistory({ sessionId: _sessionId }: DisputeHistoryProps) {
       <Button
         variant="ghost"
         size="sm"
-        className="w-full justify-between font-nunito text-gray-600 hover:text-gray-800"
+        className="w-full justify-between font-nunito text-muted-foreground hover:text-foreground"
         onClick={() => setIsOpen(prev => !prev)}
         aria-expanded={isOpen}
       >
@@ -75,8 +75,8 @@ export function DisputeHistory({ sessionId: _sessionId }: DisputeHistoryProps) {
           {disputes.map(dispute => (
             <div key={dispute.id} className="space-y-1.5">
               {/* Dispute description */}
-              <p className="text-xs text-gray-500 font-nunito px-1">
-                <span className="font-medium text-gray-700">{dispute.raisedByPlayerName}</span>
+              <p className="text-xs text-muted-foreground font-nunito px-1">
+                <span className="font-medium text-foreground">{dispute.raisedByPlayerName}</span>
                 {' — '}
                 {dispute.description}
               </p>
@@ -89,7 +89,7 @@ export function DisputeHistory({ sessionId: _sessionId }: DisputeHistoryProps) {
                     <span
                       className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-nunito font-medium ${
                         confidenceBadge[dispute.confidence]?.className ??
-                        'bg-gray-100 text-gray-600'
+                        'bg-muted text-muted-foreground'
                       }`}
                     >
                       {confidenceBadge[dispute.confidence]?.label ?? dispute.confidence}
@@ -101,7 +101,7 @@ export function DisputeHistory({ sessionId: _sessionId }: DisputeHistoryProps) {
                     <span
                       className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-nunito font-medium ${
                         outcomeBadge[dispute.outcome as keyof typeof outcomeBadge]?.className ??
-                        'bg-gray-100 text-gray-600'
+                        'bg-muted text-muted-foreground'
                       }`}
                     >
                       {outcomeBadge[dispute.outcome as keyof typeof outcomeBadge]?.label ??
@@ -111,7 +111,7 @@ export function DisputeHistory({ sessionId: _sessionId }: DisputeHistoryProps) {
 
                   {/* Vote counts */}
                   {(dispute.votesAccepted !== undefined || dispute.votesRejected !== undefined) && (
-                    <span className="text-xs font-nunito text-gray-500">
+                    <span className="text-xs font-nunito text-muted-foreground">
                       {dispute.votesAccepted ?? 0} ✓ / {dispute.votesRejected ?? 0} ✗
                     </span>
                   )}

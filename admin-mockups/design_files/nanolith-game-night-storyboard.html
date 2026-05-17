@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Nanolith Game Night Storyboard</title>
+<!--
+  Storyboard: nanolith-game-night-storyboard
+  Scope: timeline narrativa end-to-end di una game night Nanolith.
+         Single-file storyboard che embedda gli iframe dei 10 mockup nanolith-runthrough-*
+         organizzati in 3 fasi (T-30 preparazione, T0 sessione attiva, T+post save/resume).
+         Use case: agente Tutor per regole, traduzione paragrafi (storybook + encounter
+         book), gestione glossary, quota tier free.
+  Persona: Aaron (badsworm@gmail.com), gruppo A (Marco/Giulia/Luca), Nanolith libro game.
+  Goal:    validazione visuale del flusso completo prima dell'implementazione FE.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  /* ─── Top hero ─── */
+  .hero {
+    padding: var(--s-9) var(--s-6) var(--s-7); text-align: center;
+    background:
+      radial-gradient(circle at 20% 30%, hsl(var(--c-session) / 0.18), transparent 55%),
+      radial-gradient(circle at 80% 40%, hsl(var(--c-game) / 0.15), transparent 60%),
+      var(--bg);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: var(--z-sticky); backdrop-filter: blur(12px); background-color: var(--glass-bg);
+  }
+  .hero .kicker {
+    display: inline-block; padding: var(--s-1) var(--s-3); border-radius: var(--r-pill);
+    background: hsl(var(--c-session) / 0.15); color: hsl(var(--c-session));
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: var(--s-3);
+  }
+  .hero h1 {
+    font-family: var(--f-display); font-size: var(--fs-4xl); font-weight: var(--fw-ext);
+    margin: 0 0 var(--s-2); letter-spacing: -0.02em;
+  }
+  .hero .sub { color: var(--text-sec); font-size: var(--fs-lg); margin: 0 0 var(--s-5); max-width: 720px; margin-inline: auto; }
+  .hero .meta { display: inline-flex; gap: var(--s-3); flex-wrap: wrap; justify-content: center; }
+  .hero .meta .item {
+    display: inline-flex; align-items: center; gap: var(--s-1); padding: var(--s-1) var(--s-3);
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-sec);
+  }
+  .hero .theme-tog { position: absolute; top: var(--s-4); right: var(--s-5); background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-pill); padding: var(--s-1) var(--s-3); font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer; }
+
+  /* ─── ManaPips legend (sticky) ─── */
+  .pip-legend {
+    padding: var(--s-3) var(--s-6); border-bottom: 1px solid var(--border-light);
+    background: var(--bg-muted); display: flex; gap: var(--s-4); flex-wrap: wrap; justify-content: center;
+  }
+  .pip-legend .it { display: inline-flex; align-items: center; gap: var(--s-1); font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-sec); }
+  .pip-legend .d { width: 8px; height: 8px; border-radius: 50%; }
+  .pip-legend .d.kb      { background: hsl(var(--c-kb)); }
+  .pip-legend .d.chat    { background: hsl(var(--c-chat)); }
+  .pip-legend .d.session { background: hsl(var(--c-session)); }
+  .pip-legend .d.agent   { background: hsl(var(--c-agent)); }
+  .pip-legend .d.player  { background: hsl(var(--c-player)); }
+  .pip-legend .d.event   { background: hsl(var(--c-event)); }
+  .pip-legend .d.toolkit { background: hsl(var(--c-toolkit)); }
+
+  /* ─── Phase header ─── */
+  .phase {
+    padding: var(--s-9) var(--s-6) var(--s-3); max-width: 1500px; margin: 0 auto;
+    border-top: 1px dashed var(--border);
+  }
+  .phase:first-of-type { border-top: 0; }
+  .phase .ph-row { display: flex; align-items: center; gap: var(--s-4); margin-bottom: var(--s-2); }
+  .phase .time {
+    font-family: var(--f-mono); font-size: var(--fs-lg); font-weight: var(--fw-bold);
+    padding: var(--s-2) var(--s-3); border-radius: var(--r-md); flex-shrink: 0;
+  }
+  .phase.prep .time { background: hsl(var(--c-info) / 0.12); color: hsl(var(--c-info)); }
+  .phase.play .time { background: hsl(var(--c-session) / 0.15); color: hsl(var(--c-session)); }
+  .phase.post .time { background: hsl(var(--c-toolkit) / 0.12); color: hsl(var(--c-toolkit)); }
+  .phase h2 { font-family: var(--f-display); font-size: var(--fs-3xl); font-weight: var(--fw-bold); margin: 0; }
+  .phase .ph-desc { color: var(--text-sec); font-size: var(--fs-md); margin: 0 0 var(--s-5); max-width: 900px; }
+  .phase .jtbd {
+    display: inline-flex; gap: var(--s-2); align-items: center; padding: var(--s-2) var(--s-3);
+    background: hsl(var(--c-game) / 0.06); border: 1px solid hsl(var(--c-game) / 0.2);
+    border-radius: var(--r-md); margin-bottom: var(--s-5); font-size: var(--fs-sm); color: var(--text-sec);
+  }
+  .phase .jtbd strong { color: hsl(var(--c-game)); font-family: var(--f-display); font-weight: var(--fw-bold); }
+
+  /* ─── Step grid ─── */
+  .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: var(--s-5); padding-bottom: var(--s-5); }
+
+  .step {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--dur-sm) var(--ease-out), box-shadow var(--dur-sm) var(--ease-out);
+  }
+  .step:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+  .step .head { padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--border-light); display: flex; align-items: flex-start; gap: var(--s-3); }
+  .step .num {
+    flex-shrink: 0; width: 36px; height: 36px; border-radius: var(--r-md);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--f-mono); font-weight: var(--fw-bold); font-size: var(--fs-md);
+    background: hsl(var(--c-session) / 0.12); color: hsl(var(--c-session));
+  }
+  .step.edge .num { background: hsl(var(--c-warning) / 0.15); color: hsl(var(--c-warning)); }
+  .step.outcome .num { background: hsl(var(--c-success) / 0.15); color: hsl(var(--c-success)); }
+  .step.outcome.defeat .num { background: hsl(var(--c-danger) / 0.15); color: hsl(var(--c-danger)); }
+  .step .info { flex: 1; min-width: 0; }
+  .step .info .ts { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin-bottom: 2px; }
+  .step .info h3 { font-family: var(--f-display); font-size: var(--fs-md); font-weight: var(--fw-bold); margin: 0 0 4px; line-height: 1.2; }
+  .step .info .desc { font-size: var(--fs-sm); color: var(--text-sec); margin: 0; line-height: var(--lh-snug); }
+
+  .step .pips { padding: var(--s-2) var(--s-4); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .manapip { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .manapip .badge { position: absolute; top: -7px; left: 50%; transform: translateX(-50%); min-width: 14px; padding: 0 3px; height: 11px; line-height: 11px; border-radius: var(--r-pill); color: #fff; font-family: var(--f-mono); font-size: 8px; font-weight: var(--fw-bold); text-align: center; }
+  .manapip.kb      { background: hsl(var(--c-kb)); }       .manapip.kb .badge      { background: hsl(var(--c-kb)); }
+  .manapip.chat    { background: hsl(var(--c-chat)); }     .manapip.chat .badge    { background: hsl(var(--c-chat)); }
+  .manapip.session { background: hsl(var(--c-session)); }  .manapip.session .badge { background: hsl(var(--c-session)); }
+  .manapip.agent   { background: hsl(var(--c-agent)); }    .manapip.agent .badge   { background: hsl(var(--c-agent)); }
+  .manapip.player  { background: hsl(var(--c-player)); }   .manapip.player .badge  { background: hsl(var(--c-player)); }
+  .manapip.event   { background: hsl(var(--c-event)); }    .manapip.event .badge   { background: hsl(var(--c-event)); }
+  .manapip.toolkit { background: hsl(var(--c-toolkit)); }  .manapip.toolkit .badge { background: hsl(var(--c-toolkit)); }
+
+  /* iframe preview */
+  .step .preview {
+    height: 320px; background: var(--bg-muted); position: relative; overflow: hidden;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .step .preview iframe {
+    width: 1280px; height: 853px; border: 0;
+    transform: scale(0.36); transform-origin: top left;
+    pointer-events: none;
+    background: var(--bg);
+  }
+  .step .preview .scrim {
+    position: absolute; inset: 0; cursor: pointer;
+    background: linear-gradient(0deg, rgba(0,0,0,0.04), transparent 30%);
+  }
+  .step .preview .open-overlay {
+    position: absolute; bottom: var(--s-3); right: var(--s-3);
+    padding: var(--s-1) var(--s-3); border-radius: var(--r-pill);
+    background: hsl(var(--c-session)); color: #fff; border: 0;
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-xs);
+    cursor: pointer; box-shadow: 0 4px 12px hsl(var(--c-session) / 0.4);
+    display: inline-flex; align-items: center; gap: var(--s-1);
+  }
+  .step .preview .open-overlay:hover { transform: translateY(-1px); }
+  .step.edge .preview .open-overlay { background: hsl(var(--c-warning)); box-shadow: 0 4px 12px hsl(var(--c-warning) / 0.4); }
+  .step.outcome .preview .open-overlay { background: hsl(var(--c-success)); box-shadow: 0 4px 12px hsl(var(--c-success) / 0.4); }
+  .step.outcome.defeat .preview .open-overlay { background: hsl(var(--c-danger)); }
+
+  .step .foot {
+    padding: var(--s-2) var(--s-4); border-top: 1px solid var(--border-light);
+    display: flex; gap: var(--s-2); align-items: center;
+  }
+  .step .foot .route {
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);
+    flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .step .foot .state-pill {
+    padding: 1px var(--s-2); border-radius: var(--r-sm);
+    background: hsl(var(--c-game) / 0.12); color: hsl(var(--c-game));
+    font-family: var(--f-mono); font-size: 9px; font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+
+  /* ─── Edge & outcome lanes ─── */
+  .lane { background: hsl(var(--c-warning) / 0.04); border: 1px dashed hsl(var(--c-warning) / 0.3); border-radius: var(--r-lg); padding: var(--s-5); margin-top: var(--s-5); }
+  .lane.outcome { background: hsl(var(--c-success) / 0.04); border-color: hsl(var(--c-success) / 0.3); }
+  .lane .lane-h { font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.08em; color: hsl(var(--c-warning)); margin: 0 0 var(--s-3); }
+  .lane.outcome .lane-h { color: hsl(var(--c-success)); }
+
+  /* ─── Iframe modal overlay ─── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: var(--z-modal);
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-overlay iframe { width: 92%; height: 92%; border: 0; border-radius: var(--r-lg); background: var(--bg); box-shadow: var(--shadow-lg); }
+  .modal-overlay .close {
+    position: fixed; top: var(--s-5); right: var(--s-5);
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--bg-card); border: 1px solid var(--border-strong);
+    color: var(--text); font-size: 20px; cursor: pointer;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ─── Footer summary ─── */
+  .summary {
+    padding: var(--s-9) var(--s-6); background: var(--bg-muted);
+    border-top: 1px solid var(--border);
+    max-width: 1500px; margin: var(--s-9) auto 0;
+  }
+  .summary h2 { font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-3); }
+  .summary .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--s-3); }
+  .summary .stat { padding: var(--s-4); background: var(--bg-card); border-radius: var(--r-lg); border: 1px solid var(--border-light); }
+  .summary .stat .v { font-family: var(--f-mono); font-size: var(--fs-3xl); font-weight: var(--fw-bold); }
+  .summary .stat.kb .v      { color: hsl(var(--c-kb)); }
+  .summary .stat.chat .v    { color: hsl(var(--c-chat)); }
+  .summary .stat.session .v { color: hsl(var(--c-session)); }
+  .summary .stat.event .v   { color: hsl(var(--c-event)); }
+  .summary .stat.toolkit .v { color: hsl(var(--c-toolkit)); }
+  .summary .stat .l { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--s-1); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  *:focus-visible { outline: 2px solid hsl(var(--c-session)); outline-offset: 2px; }
+</style>
+</head>
+
+<body>
+
+<button class="theme-tog" id="theme-btn" type="button" aria-label="Cambia tema"
+        style="position: fixed; top: var(--s-4); right: var(--s-5); z-index: var(--z-sticky);
+               background: var(--bg-card); border: 1px solid var(--border);
+               border-radius: var(--r-pill); padding: var(--s-1) var(--s-3);
+               font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer;">🌗 Tema</button>
+
+<header class="hero">
+  <span class="kicker">📖 Storyboard end-to-end</span>
+  <h1>Game Night Nanolith</h1>
+  <p class="sub">Aaron + gruppo A (Marco · Giulia · Luca) giocano una sera Nanolith — libro game inglese — con l'assistente AI Tutor per regole, tutorial, traduzione paragrafi e gestione del libro game.</p>
+  <div class="meta">
+    <span class="item">👤 Aaron · badsworm@gmail.com</span>
+    <span class="item">🎲 Nanolith · Side Room 2024</span>
+    <span class="item">📅 Sera tipo · 20:30 → 01:00</span>
+    <span class="item">🤖 Nanolith Tutor · DeepSeek IT</span>
+    <span class="item">📄 KB 142 pag indicizzate</span>
+  </div>
+</header>
+
+<nav class="pip-legend" aria-label="Legenda ManaPips">
+  <span class="it"><span class="d kb"></span>kb (pagine)</span>
+  <span class="it"><span class="d chat"></span>chat (Q&A)</span>
+  <span class="it"><span class="d session"></span>session</span>
+  <span class="it"><span class="d agent"></span>agent (Tutor)</span>
+  <span class="it"><span class="d player"></span>player</span>
+  <span class="it"><span class="d event"></span>event (encounter)</span>
+  <span class="it"><span class="d toolkit"></span>toolkit (glossario)</span>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     FASE 1 · PREPARAZIONE (T-30 · 20:30)
+     ═══════════════════════════════════════════════════════════ -->
+<section class="phase prep" aria-labelledby="ph1">
+  <div class="ph-row">
+    <span class="time">T−30 · 20:30</span>
+    <h2 id="ph1">Fase 1 · Preparazione pre-sera</h2>
+  </div>
+  <p class="ph-desc">30 minuti prima dell'arrivo del gruppo, Aaron apre l'app sul telefono, trova Nanolith in libreria, crea la campagna e fa qualche domanda di setup all'agente Tutor.</p>
+  <div class="jtbd"><strong>🔨 JTBD J1 · Rules tutor</strong> — "Voglio essere pronto a guidare il setup senza leggere 24 pagine di Press Start in inglese."</div>
+
+  <div class="steps">
+
+    <article class="step">
+      <header class="head">
+        <span class="num">00</span>
+        <div class="info">
+          <div class="ts">T−7d · una tantum</div>
+          <h3>Onboarding libro game · pre-condizione</h3>
+          <p class="desc">Settimana prima della sera: Aaron carica i 2 PDF (Press Start 36MB + Rules 101MB), KB indicizza (1.842 chunks), agente "Arbitro Nanolith" creato. 4 stati: prereq-missing → uploading → indexing → ready. Una sola volta nella vita del libro game.</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip kb"><span class="badge">0→142</span></span><span class="manapip agent"><span class="badge">0→1</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-game-onboarding.html#s4" loading="lazy" title="Onboarding ready"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-game-onboarding.html"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-game-onboarding.html">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">/library/nanolith (prereq gate)</span><span class="state-pill">04-ready ✓</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">01</span>
+        <div class="info">
+          <div class="ts">20:30 · Mobile</div>
+          <h3>Apre libreria</h3>
+          <p class="desc">Aaron sblocca il telefono, apre MeepleAI, atterra su /library. Nanolith above-the-fold con badge "📖 libro game".</p>
+        </div>
+      </header>
+      <div class="pips" aria-label="Entity counts">
+        <span class="manapip kb"><span class="badge">142</span></span>
+        <span class="manapip chat"><span class="badge">8</span></span>
+        <span class="manapip session"><span class="badge">0</span></span>
+      </div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-library-search.html#s1" loading="lazy" title="Library default grid"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-library-search.html" aria-label="Apri"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-library-search.html">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">/library</span><span class="state-pill">01-default-grid</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">02</span>
+        <div class="info">
+          <div class="ts">20:31</div>
+          <h3>Cerca "nano"</h3>
+          <p class="desc">Aaron digita nella search. Live filter, Nanolith unico risultato in 3s. ManaPips lg con kb/chat/session inline.</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">8</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-library-search.html#s2" loading="lazy" title="Library search"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-library-search.html#s2"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-library-search.html#s2">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">/library?q=nano</span><span class="state-pill">02-search-filtered</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">03</span>
+        <div class="info">
+          <div class="ts">20:32</div>
+          <h3>Apre game detail</h3>
+          <p class="desc">Hero card + meta (2–4 giocatori, 3–4h, BGG 8.2) + CTA primary "📖 Avvia libro game" prominente above-the-fold.</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">8</span></span><span class="manapip agent"><span class="badge">1</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-game-detail.html" loading="lazy" title="Game detail"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-game-detail.html"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-game-detail.html">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">/library/nanolith</span><span class="state-pill">01-default</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">04</span>
+        <div class="info">
+          <div class="ts">20:33</div>
+          <h3>Resume picker · first time</h3>
+          <p class="desc">Mai giocato. Onboarding hero con 3 feature card (KB · Q&A IT · foto storybook) + CTA "Inizia campagna".</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip session"><span class="badge">0</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-resume-picker.html#s1" loading="lazy" title="First time"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-resume-picker.html#s1"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-resume-picker.html#s1">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">/library/nanolith/play</span><span class="state-pill">01-first-time</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">05</span>
+        <div class="info">
+          <div class="ts">20:34</div>
+          <h3>Setup wizard · step 1</h3>
+          <p class="desc">Drawer bottom-sheet. Nome "Campagna con i ragazzi" + preset Gruppo A (Marco/Giulia/Luca) preselezionato.</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip session"><span class="badge">1</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-setup-wizard.html#s1" loading="lazy" title="Setup step 1"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-setup-wizard.html#s1"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-setup-wizard.html#s1">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">…drawer overlay</span><span class="state-pill">01-step1-name</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">06</span>
+        <div class="info">
+          <div class="ts">20:34</div>
+          <h3>Setup wizard · step 2 players</h3>
+          <p class="desc">4 player chip (Aaron host + Marco/Giulia/Luca guest). Add custom. Suggerimento agente "4 giocatori = difficoltà bilanciata".</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip player"><span class="badge">4</span></span><span class="manapip agent"><span class="badge">1</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-setup-wizard.html#s2" loading="lazy" title="Setup step 2"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-setup-wizard.html#s2"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-setup-wizard.html#s2">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">…drawer overlay</span><span class="state-pill">02-step2-players</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">07</span>
+        <div class="info">
+          <div class="ts">20:35</div>
+          <h3>Setup wizard · step 3 conferma</h3>
+          <p class="desc">Review card con cover-mini + meta (preset/giocatori/lingua/durata) + ManaPips lg (kb·agent·player). CTA "📖 Inizia sessione".</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip agent"><span class="badge">1</span></span><span class="manapip player"><span class="badge">4</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-setup-wizard.html#s3" loading="lazy" title="Setup step 3"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-setup-wizard.html#s3"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-setup-wizard.html#s3">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">…drawer overlay</span><span class="state-pill">03-step3-confirm</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">08</span>
+        <div class="info">
+          <div class="ts">20:42</div>
+          <h3>Setup chat · "come si fa il setup per 4 giocatori?"</h3>
+          <p class="desc">Aaron query Tutor IT. Risposta 5-step + citation <strong>Press Start p.3-7</strong>. Confidence alta, &lt;8s.</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">9</span></span><span class="manapip agent"><span class="badge">1</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-setup-chat.html" loading="lazy" title="Setup chat default"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-setup-chat.html"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-setup-chat.html">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">…/play/{cmp}?tab=chat</span><span class="state-pill">01-default</span></div>
+    </article>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     FASE 2 · GIOCATORI AL TAVOLO (T+0 · 21:00 → 01:00)
+     ═══════════════════════════════════════════════════════════ -->
+<section class="phase play" aria-labelledby="ph2">
+  <div class="ph-row">
+    <span class="time">T+0 · 21:00</span>
+    <h2 id="ph2">Fase 2 · Sessione attiva al tavolo</h2>
+  </div>
+  <p class="ph-desc">Arrivano Marco, Giulia, Luca. Si gioca 3–4 ore. Aaron usa l'app come schermo unico per: leggere il paragrafo corrente, fotografare le pagine successive in EN per traduzione IT, gestire encounter, fare Q&A regole.</p>
+  <div class="jtbd"><strong>🔨 JTBD J2+J3+J4 simultanei</strong> — translator (~ogni 5min) + encounter manager (~ogni 20min) + memory keeper (glossario continuo).</div>
+
+  <div class="steps">
+
+    <article class="step">
+      <header class="head">
+        <span class="num">09</span>
+        <div class="info">
+          <div class="ts">21:00 · play shell</div>
+          <h3>Play session · paragrafo §289</h3>
+          <p class="desc">Vista runtime default. Story tab con paragrafo IT + glossary pill inline (Voidstone, Reaver). Toolbar: 📷 photo · ⚔️ encounter · 📚 glossary. Chat strip laterale (Tutor live).</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">12</span></span><span class="manapip event"><span class="badge">3</span></span><span class="manapip toolkit"><span class="badge">34</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-play-session.html#s1" loading="lazy" title="Play session story"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-play-session.html#s1"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-play-session.html#s1">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">…/play/{cmp}</span><span class="state-pill">01-story-tab</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">10</span>
+        <div class="info">
+          <div class="ts">21:55 · J2</div>
+          <h3>Photo translate · storybook pag EN</h3>
+          <p class="desc">Aaron tappa 📷, scatta foto della pagina storybook in inglese. OCR + LLM IT in ≤ 6s. Reading-mode minimalista, 1.5m visibility.</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip event"><span class="badge">3</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-translate-viewer.html" loading="lazy" title="Translate storybook"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-translate-viewer.html"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-translate-viewer.html">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">…/play/{cmp}/translate</span><span class="state-pill">storybook</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">11a</span>
+        <div class="info">
+          <div class="ts">22:30 · J3 encounter photo</div>
+          <h3>Encounter Book · foto → cheatsheet on-demand</h3>
+          <p class="desc">Storybook §147 cita "→ Encounter §218 (Reaver Camp)". Aaron fotografa la pagina Encounter Book. Pipeline OCR + parse stats/options/conditions in ≤ 6s. Layout cheatsheet card compatto (no prose). 4 stati: entry-from-story · segmenting · cheatsheet-rendered · resolved-back. NO long-term cache (ephemeral §9.1).</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip event"><span class="badge">+1</span></span><span class="manapip kb"><span class="badge">142</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-encounter-cheatsheet.html#s3" loading="lazy" title="Encounter cheatsheet rendered"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-encounter-cheatsheet.html"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-encounter-cheatsheet.html">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">…/play/{cmp}/encounter</span><span class="state-pill">03-cheatsheet-rendered</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">11</span>
+        <div class="info">
+          <div class="ts">22:31 · J3 encounter</div>
+          <h3>Encounter tab · 2 × Reaver</h3>
+          <p class="desc">Party profana l'altare → spawn encounter §294. Stats parsed dalla foto encounter book (HP 14, AC 12, DMG 2d6). Dice CTA event-color.</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip event"><span class="badge">4</span></span><span class="manapip toolkit"><span class="badge">34</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-play-session.html#s2" loading="lazy" title="Encounter tab"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-play-session.html#s2"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-play-session.html#s2">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">…/play/{cmp}?tab=encounter</span><span class="state-pill">02-encounter-tab</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">12</span>
+        <div class="info">
+          <div class="ts">22:33 · J1 rules</div>
+          <h3>Chat overlay · regola stacking malus</h3>
+          <p class="desc">Marco chiede: "se ho 2 ferite il malus −2 si cumula?". Aaron query Tutor. Risposta streaming + citation <strong>Rules p.94 §6.3.2</strong> + conf alta in 7.2s.</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip chat"><span class="badge">15</span></span><span class="manapip kb"><span class="badge">142</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-play-session.html#s3" loading="lazy" title="Chat overlay"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-play-session.html#s3"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-play-session.html#s3">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">…/play/{cmp}?focus=chat</span><span class="state-pill">03-chat-overlay</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">13</span>
+        <div class="info">
+          <div class="ts">22:18 · J4 memory</div>
+          <h3>Glossary inline · "Reaver → Razziatore"</h3>
+          <p class="desc">Aaron tappa la pill "Razziatrice" nel paragrafo. Sheet glossary editor sale dal basso. Lista esistente (34 termini). Save toolkit-color.</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip toolkit"><span class="badge">35</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-play-session.html#s4" loading="lazy" title="Glossary inline"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-play-session.html#s4"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-play-session.html#s4">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">…/play/{cmp}?glossary=add</span><span class="state-pill">04-glossary-inline</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">14</span>
+        <div class="info">
+          <div class="ts">22:20 · edit conflict</div>
+          <h3>Glossary editor · advanced</h3>
+          <p class="desc">Vista dettagliata editor con 4 stati: pristine · edited · save-error · collision (sovrascrivi/cambia). Conflict desktop con pannello laterale.</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip toolkit"><span class="badge">35</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-glossary-editor.html" loading="lazy" title="Glossary editor"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-glossary-editor.html"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-glossary-editor.html">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">…overlay sheet</span><span class="state-pill">edit-collision</span></div>
+    </article>
+
+  </div>
+
+  <!-- ─── EDGE LANE: errori e edge ─── -->
+  <div class="lane">
+    <h3 class="lane-h">⚠ Edge case · scenari non-happy path</h3>
+    <div class="steps">
+
+      <article class="step edge">
+        <header class="head">
+          <span class="num">E1</span>
+          <div class="info">
+            <div class="ts">edge · low confidence</div>
+            <h3>Chat · "setup variante 5 giocatori"</h3>
+            <p class="desc">Aaron pone una domanda edge. Agente risponde con disclaimer "non sono sicuro" + confidence bassa visibile.</p>
+          </div>
+        </header>
+        <div class="pips"><span class="manapip chat"><span class="badge">16</span></span></div>
+        <div class="preview">
+          <iframe src="nanolith-runthrough-setup-chat.html#s2" loading="lazy" title="Low confidence"></iframe>
+          <button class="scrim" data-open="nanolith-runthrough-setup-chat.html#s2"></button>
+          <button class="open-overlay" data-open="nanolith-runthrough-setup-chat.html#s2">↗ Apri</button>
+        </div>
+        <div class="foot"><span class="route">…?tab=chat</span><span class="state-pill">02-conf-bassa</span></div>
+      </article>
+
+      <article class="step edge">
+        <header class="head">
+          <span class="num">E2</span>
+          <div class="info">
+            <div class="ts">edge · out of context</div>
+            <h3>Chat · "setup di Tainted Grail"</h3>
+            <p class="desc">Aaron chiede di un altro gioco. Agente declina educatamente + suggerisce change game.</p>
+          </div>
+        </header>
+        <div class="pips"><span class="manapip chat"><span class="badge">17</span></span></div>
+        <div class="preview">
+          <iframe src="nanolith-runthrough-setup-chat.html#s3" loading="lazy" title="Out of context"></iframe>
+          <button class="scrim" data-open="nanolith-runthrough-setup-chat.html#s3"></button>
+          <button class="open-overlay" data-open="nanolith-runthrough-setup-chat.html#s3">↗ Apri</button>
+        </div>
+        <div class="foot"><span class="route">…?tab=chat</span><span class="state-pill">03-out-of-ctx</span></div>
+      </article>
+
+      <article class="step edge">
+        <header class="head">
+          <span class="num">E3</span>
+          <div class="info">
+            <div class="ts">edge · quota</div>
+            <h3>Quota chat esaurita (10/giorno)</h3>
+            <p class="desc">Aaron tier free, 11ª query. Modal quota-credits blocca chat. Upgrade path o wait next day. Mockup migrato da SP6.</p>
+          </div>
+        </header>
+        <div class="pips"><span class="manapip chat"><span class="badge">10</span></span></div>
+        <div class="preview">
+          <iframe src="nanolith-runthrough-quota-credits.html" loading="lazy" title="Quota credits"></iframe>
+          <button class="scrim" data-open="nanolith-runthrough-quota-credits.html"></button>
+          <button class="open-overlay" data-open="nanolith-runthrough-quota-credits.html">↗ Apri</button>
+        </div>
+        <div class="foot"><span class="route">…modal + /account/checkout</span><span class="state-pill">quota-raggiunta</span></div>
+      </article>
+
+      <article class="step edge">
+        <header class="head">
+          <span class="num">E4</span>
+          <div class="info">
+            <div class="ts">edge · failure modes</div>
+            <h3>Error states · 4 stati tecnici trasversali</h3>
+            <p class="desc">4 stati di degradazione coperti: stream-timeout (chat &gt; 30s no token) · OCR-fail (foto conf &lt; 0.3) · LLM-503 (provider down, 3 retry + fallback offline) · segmentation-fail (OCR ok ma 0 §). Tutti con cost-note "non addebitato" + ≥ 2 azioni di recupero + telemetry dogfood.</p>
+          </div>
+        </header>
+        <div class="pips"><span class="manapip chat"><span class="badge">!</span></span><span class="manapip event"><span class="badge">!</span></span></div>
+        <div class="preview">
+          <iframe src="nanolith-runthrough-error-states.html#s3" loading="lazy" title="Error LLM 503"></iframe>
+          <button class="scrim" data-open="nanolith-runthrough-error-states.html"></button>
+          <button class="open-overlay" data-open="nanolith-runthrough-error-states.html">↗ Apri</button>
+        </div>
+        <div class="foot"><span class="route">trasversale</span><span class="state-pill">stream-timeout · ocr-fail · 503 · seg-fail</span></div>
+      </article>
+
+    </div>
+  </div>
+
+  <!-- ─── OUTCOME LANE ─── -->
+  <div class="lane outcome">
+    <h3 class="lane-h">🏁 Outcome alternativi · fine sessione/campagna</h3>
+    <div class="steps">
+
+      <article class="step outcome">
+        <header class="head">
+          <span class="num">O1</span>
+          <div class="info">
+            <div class="ts">01:24 · happy path</div>
+            <h3>Victory · campagna completata</h3>
+            <p class="desc">Party finisce l'epilogo §612 con finale buono (#2/4). Hero verde + highlights timeline + stats finali campagna intera.</p>
+          </div>
+        </header>
+        <div class="pips"><span class="manapip session"><span class="badge">7</span></span><span class="manapip event"><span class="badge">22</span></span><span class="manapip kb"><span class="badge">142</span></span></div>
+        <div class="preview">
+          <iframe src="nanolith-runthrough-session-end.html#s2" loading="lazy" title="Victory"></iframe>
+          <button class="scrim" data-open="nanolith-runthrough-session-end.html#s2"></button>
+          <button class="open-overlay" data-open="nanolith-runthrough-session-end.html#s2">↗ Apri</button>
+        </div>
+        <div class="foot"><span class="route">…modal overlay</span><span class="state-pill">02-victory 🏆</span></div>
+      </article>
+
+      <article class="step outcome defeat">
+        <header class="head">
+          <span class="num">O2</span>
+          <div class="info">
+            <div class="ts">22:11 · party wipe</div>
+            <h3>Defeat · boss Architetto</h3>
+            <p class="desc">Party sconfitto al boss §445. Hero rosso. Checkpoint disponibile §412 (12 min fa). CTA "Riprendi" (entity=session) o "Termina campagna".</p>
+          </div>
+        </header>
+        <div class="pips"><span class="manapip event"><span class="badge">33</span></span></div>
+        <div class="preview">
+          <iframe src="nanolith-runthrough-session-end.html#s3" loading="lazy" title="Defeat"></iframe>
+          <button class="scrim" data-open="nanolith-runthrough-session-end.html#s3"></button>
+          <button class="open-overlay" data-open="nanolith-runthrough-session-end.html#s3">↗ Apri</button>
+        </div>
+        <div class="foot"><span class="route">…modal overlay</span><span class="state-pill">03-defeat 💀</span></div>
+      </article>
+
+      <article class="step outcome">
+        <header class="head">
+          <span class="num">O3</span>
+          <div class="info">
+            <div class="ts">cancel · destructive</div>
+            <h3>Cancel · archivia campagna</h3>
+            <p class="desc">Aaron decide di abbandonare. Conferma destructive con warning. ManaPips split: persistenti (kb, glossario) vs archiviati (event, sessions).</p>
+          </div>
+        </header>
+        <div class="pips"><span class="manapip toolkit"><span class="badge">34</span></span></div>
+        <div class="preview">
+          <iframe src="nanolith-runthrough-session-end.html#s4" loading="lazy" title="Cancel"></iframe>
+          <button class="scrim" data-open="nanolith-runthrough-session-end.html#s4"></button>
+          <button class="open-overlay" data-open="nanolith-runthrough-session-end.html#s4">↗ Apri</button>
+        </div>
+        <div class="foot"><span class="route">…?confirm=abandon</span><span class="state-pill">04-cancelled ⚠</span></div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     FASE 3 · SAVE & RESUME (T+post · domani sera)
+     ═══════════════════════════════════════════════════════════ -->
+<section class="phase post" aria-labelledby="ph3">
+  <div class="ph-row">
+    <span class="time">T+post</span>
+    <h2 id="ph3">Fase 3 · Save now, resume tomorrow</h2>
+  </div>
+  <p class="ph-desc">Mezzanotte: party stanco, devono fermarsi a metà capitolo. Aaron salva lo stato. Domani sera riapre l'app, il resume picker mostra l'hero con pulsing dot e percentuale di campagna.</p>
+  <div class="jtbd"><strong>🔨 JTBD J4 · Memory keeper</strong> — "Voglio fermare ora senza perdere niente, e domani tornare esattamente dove ho lasciato."</div>
+
+  <div class="steps">
+
+    <article class="step">
+      <header class="head">
+        <span class="num">15</span>
+        <div class="info">
+          <div class="ts">00:47 · paused</div>
+          <h3>Session end · paused</h3>
+          <p class="desc">Aaron preme "Esci". Modal con hero session-color + resume card pulse + stats sessione corrente. CTA "Riprendi più tardi".</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip session"><span class="badge">1</span></span><span class="manapip event"><span class="badge">8</span></span><span class="manapip kb"><span class="badge">142</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-session-end.html#s1" loading="lazy" title="Paused"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-session-end.html#s1"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-session-end.html#s1">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">…modal overlay</span><span class="state-pill">01-paused ⏸</span></div>
+    </article>
+
+    <article class="step">
+      <header class="head">
+        <span class="num">16</span>
+        <div class="info">
+          <div class="ts">domani · 21:00</div>
+          <h3>Resume picker · single resume</h3>
+          <p class="desc">Aaron riapre /library/nanolith/play. Hero "Riprendi dove avevi lasciato" con §289, ultima sessione 1g fa, pulsing dot session-color.</p>
+        </div>
+      </header>
+      <div class="pips"><span class="manapip session"><span class="badge">1</span></span></div>
+      <div class="preview">
+        <iframe src="nanolith-runthrough-resume-picker.html#s2" loading="lazy" title="Single resume"></iframe>
+        <button class="scrim" data-open="nanolith-runthrough-resume-picker.html#s2"></button>
+        <button class="open-overlay" data-open="nanolith-runthrough-resume-picker.html#s2">↗ Apri</button>
+      </div>
+      <div class="foot"><span class="route">/library/nanolith/play</span><span class="state-pill">02-single-resume</span></div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SUMMARY counters totali
+     ═══════════════════════════════════════════════════════════ -->
+<section class="summary">
+  <h2>📊 Game night Nanolith · counter totali agente</h2>
+  <p style="color: var(--text-sec); margin: 0 0 var(--s-5);">Stima singola sera con gruppo A. Tier free, agente Nanolith Tutor (DeepSeek IT).</p>
+  <div class="grid">
+    <div class="stat kb"><div class="v">142</div><div class="l">📄 KB pagine indicizzate</div></div>
+    <div class="stat chat"><div class="v">15–17</div><div class="l">💬 Q&A regole (T2 cap)</div></div>
+    <div class="stat event"><div class="v">3–4</div><div class="l">⚔️ Encounter fotografati</div></div>
+    <div class="stat session"><div class="v">1</div><div class="l">⏳ Sessione attiva</div></div>
+    <div class="stat toolkit"><div class="v">+5</div><div class="l">📚 Termini glossario (da 30 a 35)</div></div>
+    <div class="stat kb"><div class="v">~8</div><div class="l">📷 Foto storybook tradotte IT</div></div>
+  </div>
+</section>
+
+<!-- iframe modal overlay -->
+<div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-label="Mockup fullscreen">
+  <button class="close" id="modal-close" aria-label="Chiudi">✕</button>
+  <iframe id="modal-iframe" src="about:blank" title="Mockup viewer"></iframe>
+</div>
+
+<script>
+  // Theme toggle
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const r = document.documentElement;
+    r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+
+  // Open mockup in modal overlay
+  const overlay = document.getElementById('modal-overlay');
+  const overlayIframe = document.getElementById('modal-iframe');
+  const overlayClose = document.getElementById('modal-close');
+
+  document.querySelectorAll('[data-open]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = btn.getAttribute('data-open');
+      overlayIframe.src = target;
+      overlay.classList.add('open');
+      overlayClose.focus();
+    });
+  });
+
+  function closeModal() {
+    overlay.classList.remove('open');
+    overlayIframe.src = 'about:blank';
+  }
+
+  overlayClose.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeModal(); });
+</script>
+
+</body>
+</html>

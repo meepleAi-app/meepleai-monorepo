@@ -1,0 +1,174 @@
+name: Conformity — Debt Gate (Cross-Branch)
+
+# WS-C Phase 4b (issue #1069, umbrella #1066) — AC-C.5.4.
+#
+# Required check on PR `main-dev → main-staging` and `main-staging → main`.
+# Enumerates open issues with label `conformity-debt`, parses the machine-
+# readable header `<!-- conformity-debt: ...; expiry=YYYY-MM-DD; ... -->`,
+# and fails the gate if at least one has `expiry < now`.
+#
+# This is what gives AC-C.5 its teeth: a waiver applied on a feature PR to
+# main-dev does NOT silently escape into staging or production. The gate
+# forces a human decision: extend the waiver (open a new PR with a fresh
+# rationale + later Expiry) OR remediate (close the debt-issue via a PR
+# that conforms the route).
+#
+# Branch protection update (manual, post-merge):
+#   gh api repos/meepleAi-app/meepleai-monorepo/branches/main-staging/protection \
+#     --method PUT --raw-field required_status_checks='{"strict":false,
+#     "contexts":["GitGuardian Security Checks","Conformity Debt Gate"]}'
+#   (and the same on `main` branch)
+#
+# (See `docs/for-developers/testing/frontend/mockup-conformity.md` for setup.)
+
+on:
+  pull_request:
+    branches:
+      - main-staging
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+
+concurrency:
+  group: conformity-debt-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: Conformity Debt Gate
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Enumerate open conformity-debt issues and check expiry
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const targetBranch = context.payload.pull_request.base.ref;
+            core.info(`Conformity debt gate for PR → ${targetBranch}`);
+
+            // Paginate all open issues with the label.
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'conformity-debt',
+              state: 'open',
+              per_page: 100,
+            });
+
+            core.info(`Found ${issues.length} open conformity-debt issue(s).`);
+
+            const now = new Date();
+            const today = now.toISOString().slice(0, 10);
+            const expired = [];
+            const active = [];
+            const malformed = [];
+
+            // Header marker:
+            // <!-- conformity-debt: routes=X,Y; expiry=YYYY-MM-DD; waiver-key=ABC; pr=N -->
+            const HEADER_RE = /<!--\s*conformity-debt:\s*([^>]+?)\s*-->/;
+            for (const issue of issues) {
+              const match = (issue.body ?? '').match(HEADER_RE);
+              if (!match) {
+                malformed.push({ number: issue.number, title: issue.title, reason: 'missing header' });
+                continue;
+              }
+              const fields = {};
+              for (const part of match[1].split(';')) {
+                const eq = part.indexOf('=');
+                if (eq === -1) continue;
+                fields[part.slice(0, eq).trim()] = part.slice(eq + 1).trim();
+              }
+              if (!fields.expiry) {
+                malformed.push({ number: issue.number, title: issue.title, reason: 'missing expiry=' });
+                continue;
+              }
+              const expiry = new Date(fields.expiry + 'T23:59:59Z');
+              if (Number.isNaN(expiry.getTime())) {
+                malformed.push({ number: issue.number, title: issue.title, reason: `unparseable expiry "${fields.expiry}"` });
+                continue;
+              }
+              const record = {
+                number: issue.number,
+                title: issue.title,
+                url: issue.html_url,
+                routes: fields.routes ?? '(unspecified)',
+                expiry: fields.expiry,
+                originPR: fields.pr ?? '(unspecified)',
+              };
+              if (expiry < now) expired.push(record);
+              else active.push(record);
+            }
+
+            core.info(`Active waivers (within expiry): ${active.length}`);
+            core.info(`Expired waivers (blocking):     ${expired.length}`);
+            core.info(`Malformed headers (warning):    ${malformed.length}`);
+
+            for (const w of malformed) {
+              core.warning(`Issue #${w.number} "${w.title}": ${w.reason}. Header should be of the form <!-- conformity-debt: routes=...; expiry=YYYY-MM-DD; waiver-key=...; pr=... -->`);
+            }
+
+            const STICKY_MARKER = '<!-- conformity-debt-gate-sticky -->';
+
+            async function getStickyComment() {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                per_page: 100,
+              });
+              return comments.find(c => c.body && c.body.startsWith(STICKY_MARKER));
+            }
+
+            async function postOrUpdate(body) {
+              const existing = await getStickyComment();
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                  body,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  body,
+                });
+              }
+            }
+
+            if (expired.length === 0) {
+              const summary = active.length === 0
+                ? `${STICKY_MARKER}\n## ✅ Conformity Debt Gate — no active waivers\n\nNo open \`conformity-debt\` issues. Promotion to \`${targetBranch}\` is unblocked.`
+                : `${STICKY_MARKER}\n## ✅ Conformity Debt Gate — ${active.length} active waiver(s) within expiry\n\n| Issue | Routes | Expiry | Origin PR |\n|-------|--------|--------|-----------|\n` +
+                  active.map(w => `| [#${w.number}](${w.url}) | \`${w.routes}\` | ${w.expiry} | #${w.originPR} |`).join('\n') +
+                  `\n\nAll waivers expire after **${today}**. Gate passes.`;
+              await postOrUpdate(summary);
+              return;
+            }
+
+            const fail = `${STICKY_MARKER}\n## ❌ Conformity Debt Gate — ${expired.length} expired waiver(s) block promotion to \`${targetBranch}\`\n\n` +
+              `Per AC-C.5.4, promotion to \`main-staging\` / \`main\` is blocked while any \`conformity-debt\` issue has an expiry in the past.\n\n` +
+              `### Expired (blocking)\n\n| Issue | Routes | Expired on | Origin PR |\n|-------|--------|------------|-----------|\n` +
+              expired.map(w => `| [#${w.number}](${w.url}) | \`${w.routes}\` | ${w.expiry} | #${w.originPR} |`).join('\n') +
+              `\n\n### How to unblock\n\nFor each expired entry, choose **one**:\n\n` +
+              `1. **Remediate** — open a PR that conforms the route(s) and uses \`Closes #<issue>\` to close the debt-issue (AC-C.5.6.1).\n` +
+              `2. **Manual re-validate** — apply the \`waiver-revalidated\` label on a PR demonstrating conformance (AC-C.5.6.2).\n` +
+              `3. **Extend the waiver** — open a fresh PR with a new \`conformity-waiver\` rationale + later \`Expiry:\`. The new waiver supersedes the expired one (max +90d from today).\n\n` +
+              `### Active waivers (within expiry, informational)\n\n` +
+              (active.length === 0
+                ? '_(none)_'
+                : `| Issue | Routes | Expiry | Origin PR |\n|-------|--------|--------|-----------|\n` +
+                  active.map(w => `| [#${w.number}](${w.url}) | \`${w.routes}\` | ${w.expiry} | #${w.originPR} |`).join('\n')) +
+              `\n\nRefs: #1066 (umbrella), #1069 (WS-C), AC-C.5.4.`;
+
+            await postOrUpdate(fail);
+
+            core.setFailed(`${expired.length} expired conformity-debt issue(s) block promotion to ${targetBranch}.`);

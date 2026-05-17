@@ -13,7 +13,7 @@ Catalog flag, dual-mode component, e codice legacy candidati per rimozione, con 
 
 ❌ **NON eseguire durante P1 deploy verification**: scope mixing P1 vs cleanup rende impossibile attribuire regressioni. Tutto il lavoro qui catalogato attende P1 acceptance closed.
 
-❌ **NON toccare `IS_ALPHA_MODE`** (22+ usages): è feature gate per Alpha Zero mode (subset features per early testers). NON è un v2/legacy switch. Vivente per design.
+~~❌ **NON toccare `IS_ALPHA_MODE`** (22+ usages): è feature gate per Alpha Zero mode (subset features per early testers). NON è un v2/legacy switch. Vivente per design.~~ **OBSOLETO**: rimosso in PR #949 (commit `e8a940264`, 2026-05-10). Invite-only ora controllato a runtime da `RegistrationMode` admin toggle (DB-persisted), nessun env flag.
 
 ✅ **Eseguire come PR atomiche** post-P1, una per Tier (Tier 1 prima, Tier 2 dopo verifica caso-per-caso).
 
@@ -156,7 +156,7 @@ export type CitationData = Citation;          // ← target removal
 
 | Item | Razionale |
 |------|-----------|
-| `IS_ALPHA_MODE` (22+ usages) | Feature gate Alpha Zero mode, NON è v2/legacy switch. Rimuoverlo abilita features non pronte (sessions/agents UI completa). Build-time flag dichiarato design |
+| ~~`IS_ALPHA_MODE` (22+ usages)~~ | ~~Feature gate Alpha Zero mode, NON è v2/legacy switch.~~ **OBSOLETO**: rimosso in PR #949 (2026-05-10) — features non pronte ora *permanentemente* abilitate; invite-only via `RegistrationMode` admin toggle |
 | File con commenti `kept as legacy fallback for when [backend] is implemented` | Hanno semantica futura — backend in fieri |
 | `@deprecated` markers senza alternative documentata | Possono essere rumore, lasciare per ora |
 

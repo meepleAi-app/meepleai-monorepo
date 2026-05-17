@@ -2,7 +2,7 @@ namespace Api.Services;
 
 /// <summary>
 /// Document chunk with embedding.
-/// Extracted from QdrantService.cs — used across multiple bounded contexts.
+/// Used across multiple bounded contexts (RAG, hybrid search, indexing).
 /// </summary>
 internal record DocumentChunk
 {
@@ -33,7 +33,7 @@ internal record IndexResult
 }
 
 /// <summary>
-/// Result of search operation (legacy Qdrant-style).
+/// Result of vector search operation (pgvector-backed).
 /// </summary>
 internal record SearchResult
 {

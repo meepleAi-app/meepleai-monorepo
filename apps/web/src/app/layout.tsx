@@ -13,6 +13,13 @@ import { Quicksand, Nunito } from 'next/font/google';
 import { AppProviders } from './providers';
 
 import type { Metadata, Viewport } from 'next';
+// Token system load order (DS-16, 2026-05-12-token-canonicalization.md):
+//   1. design-tokens-canonical.css — single source of truth (mockup-faithful)
+//   2. globals.css                 — Tailwind layer + component utilities
+//   3. domain-specific stylesheets
+// Bridge layer (token-bridge.css) was removed in DS-16 after the codemod
+// renamed all consumer references to canonical names.
+import '../styles/design-tokens-canonical.css';
 import '../styles/globals.css';
 import '../styles/diff-viewer.css';
 import '../styles/agent-theme.css';
@@ -64,8 +71,11 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // SSR theme hint (DS-1): `data-theme="light"` matches the mockup default.
+  // next-themes will rewrite this attribute client-side based on user
+  // preference / localStorage. The hint prevents FOUC on first paint.
   return (
-    <html lang="it" suppressHydrationWarning>
+    <html lang="it" data-theme="light" suppressHydrationWarning>
       <body className={`${quicksand.variable} ${nunito.variable}`} suppressHydrationWarning>
         <AppProviders>{children}</AppProviders>
       </body>

@@ -1,0 +1,40 @@
+meta {
+  name: SG4-ND1b — Pass ChatThread UUID to /chat/sessions rename → 400 INVALID_ENTITY_TYPE hint
+  type: http
+  seq: 17
+}
+
+post {
+  url: {{apiBase}}/api/v1/chat/sessions/{{disambiguationThreadId}}/rename
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "This should fail with disambiguation 400"
+  }
+}
+
+script:pre-request {
+  // The UUID passed here is a ChatThread id, not a ChatSession id.
+  // The endpoint detects the entity type mismatch and returns 400 with a hint.
+  if (!bru.getVar("disambiguationThreadId")) {
+    throw new Error("disambiguationThreadId not set — run 10-threadid-to-session-rename-400-hint first");
+  }
+}
+
+tests {
+  test("returns 400 Bad Request for thread UUID", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+  test("error code is INVALID_ENTITY_TYPE", function() {
+    const body = res.getBody();
+    expect(body.error).to.equal("INVALID_ENTITY_TYPE");
+  });
+  test("hint mentions ChatThread and correct endpoint", function() {
+    const body = res.getBody();
+    expect(body.hint).to.include("ChatThread");
+    expect(body.hint).to.include("chat/threads");
+  });
+}

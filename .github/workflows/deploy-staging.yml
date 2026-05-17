@@ -270,10 +270,16 @@ jobs:
           NEXT_PUBLIC_API_BASE: http://localhost:8080
           NODE_OPTIONS: '--max-old-space-size=4096'
 
-  # Build and push Docker images (only changed components)
+  # Build and push Docker images (only changed components).
+  # ALWAYS runs on ubuntu-latest (cloud) — never on self-hosted runner.
+  # The self-hosted runner is the staging VPS itself (CAX31, 7.5GB RAM); when
+  # build runs there the dotnet publish + next build inside docker buildx
+  # ARM64 cross-compile drove the VPS into swap thrashing (load avg >90,
+  # SSH unresponsive). Cloud runner has more RAM and isolates build pressure.
+  # See incident 2026-05-08: deploy run 25563055758.
   build:
     name: Build Images
-    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 90
     needs: [pre-deploy-check, detect-changes]
     if: always() && (needs.pre-deploy-check.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true)) && (needs.detect-changes.outputs.deploy_api == 'true' || needs.detect-changes.outputs.deploy_web == 'true')
@@ -361,7 +367,7 @@ jobs:
 
       - name: Build and Push API Image
         if: needs.detect-changes.outputs.deploy_api == 'true'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7.1.0
         with:
           context: .
           file: ./apps/api/src/Api/Dockerfile
@@ -377,7 +383,7 @@ jobs:
 
       - name: Build and Push Web Image
         if: needs.detect-changes.outputs.deploy_web == 'true'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7.1.0
         with:
           context: ./apps/web
           file: ./apps/web/Dockerfile
@@ -602,7 +608,7 @@ jobs:
       # Option 1: SSH Deploy (VPS/Dedicated Server)
       - name: Deploy via SSH
         if: vars.DEPLOY_METHOD == 'ssh'
-        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f  # v1.2.2
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
@@ -920,7 +926,7 @@ jobs:
 
       - name: Update Server Baseline
         if: always() && steps.metrics.outputs.json != ''
-        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f  # v1.2.2
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2  # v1.2.5
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}

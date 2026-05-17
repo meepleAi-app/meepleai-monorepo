@@ -19,7 +19,7 @@ name: Visual Regression — Migrated Routes
 
 on:
   pull_request:
-    branches: [main, main-dev, main-staging, frontend-dev]
+    branches: [main, main-staging]
     paths:
       - 'apps/web/src/**'
       - 'apps/web/e2e/visual-migrated/**'

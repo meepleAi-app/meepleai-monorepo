@@ -219,7 +219,7 @@ public sealed class RetrievalStepBackPlugin : RagPluginBase
         string retrievalType,
         CancellationToken cancellationToken)
     {
-        // Simulated retrieval - in production, this integrates with Qdrant
+        // Simulated retrieval - in production, this integrates with pgvector
         var chunks = new List<RetrievedChunk>();
         var random = new Random(StringComparer.Ordinal.GetHashCode(query));
 

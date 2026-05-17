@@ -24,8 +24,8 @@ import {
   type SharedGameDetailV2,
   type TopContributor,
 } from '@/lib/api/shared-games';
+import { getSsrMessages } from '@/lib/i18n/ssr';
 import { tryLoadVisualTestFixture } from '@/lib/shared-games/visual-test-fixture';
-import itMessages from '@/locales/it.json';
 
 import { SharedGameDetailPageClient } from './page-client';
 
@@ -34,12 +34,12 @@ import type { Metadata } from 'next';
 export const revalidate = 60;
 
 /**
- * SSR-safe i18n metadata source. The `IntlProvider` only runs in the
- * client tree, so `generateMetadata` cannot use `useTranslations`.
- * We import the IT catalogue (project default — see `locales/index.ts`
- * `DEFAULT_LOCALE = LOCALES.IT`) directly. Wave A.4 follow-up — Issue #617.
+ * SSR-safe i18n metadata source. `generateMetadata` runs server-side
+ * (outside the `IntlProvider` client tree), so we resolve labels via
+ * the static helper. Wave A.4 follow-up — Issue #617; helper extracted
+ * in Issue #1101.
  */
-const SSR_METADATA = itMessages.pages.sharedGameDetail.metadata;
+const SSR_METADATA = getSsrMessages('pages.sharedGameDetail.metadata');
 
 interface SharedGameDetailRouteParams {
   readonly id: string;

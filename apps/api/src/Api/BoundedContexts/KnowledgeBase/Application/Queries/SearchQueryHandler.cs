@@ -136,7 +136,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         IReadOnlyList<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
-        // Get candidate embeddings from repository (already filtered and ranked by Qdrant)
+        // Get candidate embeddings from repository (already filtered and ranked by pgvector)
         var embeddings = await _embeddingRepository.SearchByVectorAsync(
             gameId, queryVector, topK, minScore, documentIds, cancellationToken).ConfigureAwait(false);
 
@@ -151,12 +151,12 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
             embeddings.Count, gameId);
 
         // Convert embeddings to SearchResults directly
-        // Note: Qdrant already scored and filtered results by minScore, so we use rank-based scoring
+        // Note: pgvector already scored and filtered results by minScore, so we use rank-based scoring
         // This avoids recalculating cosine similarity with placeholder vectors (which would always be 0)
         var results = embeddings.Select((embedding, index) =>
         {
             // Calculate a score based on rank (first result gets highest score, decays with rank)
-            // This preserves Qdrant's ranking while providing a meaningful confidence value
+            // This preserves pgvector's ranking while providing a meaningful confidence value
             var rankBasedScore = 1.0 - (index * 0.05); // First = 1.0, Second = 0.95, etc.
             var clampedScore = Math.Max(minScore, Math.Min(1.0, rankBasedScore));
             var confidence = new Confidence(clampedScore);

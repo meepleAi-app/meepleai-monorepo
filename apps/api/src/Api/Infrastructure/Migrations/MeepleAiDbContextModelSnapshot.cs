@@ -25,6 +25,57 @@ namespace Api.Infrastructure.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "vector");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Api.BoundedContexts.Administration.Domain.Aggregates.ProviderProbeAudit.ProviderProbeAuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_id");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("error_code");
+
+                    b.Property<int>("LatencyMs")
+                        .HasColumnType("integer")
+                        .HasColumnName("latency_ms");
+
+                    b.Property<int>("Outcome")
+                        .HasColumnType("integer")
+                        .HasColumnName("outcome");
+
+                    b.Property<DateTime>("ProbedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("probed_at");
+
+                    b.Property<string>("ProviderName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("provider_name");
+
+                    b.Property<string>("TokenFingerprint")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("token_fingerprint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorId", "ProbedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_provider_probe_audit_actor_probed_at");
+
+                    b.HasIndex("ProviderName", "ProbedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_provider_probe_audit_provider_probed_at");
+
+                    b.ToTable("provider_probe_audit_entries", "administration");
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.Administration.Domain.Aggregates.RagExecution.RagExecution", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1735,6 +1786,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -1744,6 +1799,12 @@ namespace Api.Infrastructure.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -2362,7 +2423,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<string[]>("AppliedGlossaryTerms")
+                    b.PrimitiveCollection<string[]>("AppliedGlossaryTerms")
                         .IsRequired()
                         .HasColumnType("text[]")
                         .HasColumnName("applied_glossary_terms");
@@ -3018,6 +3079,59 @@ namespace Api.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("service_health_states");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.Administration.StagingAllowlistEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AddedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("added_at");
+
+                    b.Property<Guid?>("AddedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("added_by_user_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("email");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasDatabaseName("ix_staging_allowlist_email_active")
+                        .HasFilter("is_deleted = false");
+
+                    b.HasIndex("IsDeleted")
+                        .HasDatabaseName("ix_staging_allowlist_is_deleted");
+
+                    b.ToTable("staging_allowlist", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AgentFeedbackEntity", b =>
@@ -6159,6 +6273,10 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<string>("DiceToolsJson")
                         .HasColumnType("jsonb");
 
@@ -6172,6 +6290,10 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<bool>("IsTemplate")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("License")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -6236,6 +6358,13 @@ namespace Api.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(1);
+
+                    b.Property<string>("VersionSemver")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("0.1.0");
 
                     b.HasKey("Id");
 
@@ -7028,6 +7157,51 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("GameId");
 
                     b.ToTable("GameEntityRelations");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.KbReindexJobEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ProcessedPdfs")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("TotalPdfs")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("GameId", "UserId", "Status");
+
+                    b.ToTable("kb_reindex_jobs", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.ModelChangeLogEntity", b =>
@@ -14444,6 +14618,9 @@ namespace Api.Infrastructure.Migrations
                             b1.Property<int>("MaxSessionQueries")
                                 .HasColumnType("integer")
                                 .HasColumnName("max_session_queries");
+
+                            b1.Property<bool>("RaptorRebuildEnabled")
+                                .HasColumnType("boolean");
 
                             b1.Property<bool>("SessionSaveEnabled")
                                 .HasColumnType("boolean")

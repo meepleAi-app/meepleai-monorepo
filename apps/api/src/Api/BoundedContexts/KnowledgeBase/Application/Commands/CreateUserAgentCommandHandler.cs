@@ -3,6 +3,10 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
+using Api.SharedKernel.Services;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -23,24 +27,30 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 ///   <item>Default strategy: <c>AgentStrategy.HybridSearch()</c> when not provided.</item>
 ///   <item>Default name: <c>"{AgentType} for {GameName}"</c> if not provided.</item>
 /// </list>
-/// Persistence pattern mirrors <c>CreateAgentDefinitionCommandHandler</c>:
-/// repository's <c>AddAsync</c> calls <c>DbContext.SaveChangesAsync</c> internally,
-/// so no <c>IUnitOfWork</c> is required.
+/// Persistence pattern (ADR-056): repository <c>AddAsync</c> mutates the
+/// change-tracker only; this handler invokes <c>IUnitOfWork.SaveChangesAsync</c>
+/// explicitly to persist.
 /// </remarks>
 internal sealed class CreateUserAgentCommandHandler
     : IRequestHandler<CreateUserAgentCommand, AgentDto>
 {
     private readonly IAgentDefinitionRepository _repository;
     private readonly ISharedGameRepository _sharedGameRepository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ITierEnforcementService _tierEnforcementService;
     private readonly ILogger<CreateUserAgentCommandHandler> _logger;
 
     public CreateUserAgentCommandHandler(
         IAgentDefinitionRepository repository,
         ISharedGameRepository sharedGameRepository,
+        ITierEnforcementService tierEnforcementService,
+        IUnitOfWork unitOfWork,
         ILogger<CreateUserAgentCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
+        _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -51,6 +61,19 @@ internal sealed class CreateUserAgentCommandHandler
             throw new ArgumentException("AgentType is required", nameof(request));
         if (request.GameId == Guid.Empty)
             throw new ArgumentException("GameId is required", nameof(request));
+
+        // Issue #904: SG3 — Quota check: enforce agent slot limit for the user's subscription tier.
+        // Uses TierAction.CreateAgent which maps to limits.MaxAgents in TierEnforcementService.
+        var canCreate = await _tierEnforcementService
+            .CanPerformAsync(request.UserId, TierAction.CreateAgent, cancellationToken)
+            .ConfigureAwait(false);
+        if (!canCreate)
+        {
+            var limits = await _tierEnforcementService
+                .GetLimitsAsync(request.UserId, cancellationToken)
+                .ConfigureAwait(false);
+            throw new TierQuotaExceededException("AgentSlots", limits.MaxAgents);
+        }
 
         // Resolve game name (also validates the game exists in the catalog).
         var gameNames = await _sharedGameRepository
@@ -86,6 +109,12 @@ internal sealed class CreateUserAgentCommandHandler
         if (!agent.IsActive) agent.Activate();
 
         await _repository.AddAsync(agent, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Record usage so CanPerformAsync reflects the new count on next call (Redis atomic counter).
+        await _tierEnforcementService
+            .RecordUsageAsync(request.UserId, TierAction.CreateAgent, cancellationToken)
+            .ConfigureAwait(false);
 
         _logger.LogInformation(
             "Created user-owned AgentDefinition {Id} '{Name}' linked to SharedGame {GameId} for user {UserId}",

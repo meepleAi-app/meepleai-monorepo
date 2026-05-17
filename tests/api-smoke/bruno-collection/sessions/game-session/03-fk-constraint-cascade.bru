@@ -1,0 +1,34 @@
+meta {
+  name: SG4-GS3 — Get completed GameSession (FK cascade guard)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{apiBase}}/api/v1/sessions/{{gameSessionId}}
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  // Verify the completed session is still accessible — confirms no accidental
+  // cascade delete from finalize. FK cascade (private-game → session) is tested
+  // conceptually here: a completed session must persist independently.
+  if (!bru.getVar("gameSessionId")) {
+    throw new Error("gameSessionId not set — run 01 and 02 first");
+  }
+}
+
+tests {
+  test("returns 200 OK for completed session", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("status is still Completed after retrieval", function() {
+    const body = res.getBody();
+    expect(body.status).to.equal("Completed");
+  });
+  test("session id matches", function() {
+    const body = res.getBody();
+    expect(body.id).to.equal(bru.getVar("gameSessionId"));
+  });
+}

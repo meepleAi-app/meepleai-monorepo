@@ -44,8 +44,8 @@ export function SpectatorModeCard({
   return (
     <div className={`space-y-4 ${className}`} data-testid="spectator-mode-card">
       {/* Spectator Banner */}
-      <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+      <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Eye className="h-4 w-4" />
           <span className="font-medium">Spectator Mode</span>
         </div>
@@ -61,22 +61,22 @@ export function SpectatorModeCard({
           </button>
         )}
 
-        {hasRequested && <span className="text-xs text-gray-400">Request sent</span>}
+        {hasRequested && <span className="text-xs text-muted-foreground">Request sent</span>}
       </div>
 
       {/* Live Scoreboard (Read-Only) */}
       <div className="space-y-1.5">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Live Scoreboard
         </h3>
         <div className="space-y-1">
           {sortedParticipants.map((p, index) => (
             <div
               key={p.id}
-              className="flex items-center justify-between rounded-md bg-white px-2.5 py-2 text-sm shadow-sm"
+              className="flex items-center justify-between rounded-md bg-card px-2.5 py-2 text-sm shadow-sm"
             >
               <span className="flex items-center gap-2">
-                <span className="w-5 text-center font-mono text-xs text-gray-400">
+                <span className="w-5 text-center font-mono text-xs text-muted-foreground">
                   #{index + 1}
                 </span>
                 <span
@@ -97,7 +97,7 @@ export function SpectatorModeCard({
       </div>
 
       {/* Chat allowed hint */}
-      <div className="flex items-center gap-1.5 text-xs text-gray-400">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <MessageSquare className="h-3 w-3" />
         <span>Chat is available while spectating</span>
       </div>

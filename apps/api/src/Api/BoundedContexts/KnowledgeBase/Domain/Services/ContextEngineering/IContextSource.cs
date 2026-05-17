@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.ContextEngineering;
 /// </summary>
 /// <remarks>
 /// Context sources include:
-/// - Static Knowledge (game rules RAG from Qdrant)
+/// - Static Knowledge (game rules RAG from pgvector)
 /// - Dynamic Memory (conversation history from PostgreSQL)
 /// - Agent State (game board snapshots)
 /// - Tool Metadata (available actions registry)

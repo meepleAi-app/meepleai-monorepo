@@ -6,7 +6,10 @@
 @import "./design-tokens.css";
 @import "./premium-gaming.css";
 
-@custom-variant dark (&:is(.dark *));
+/* DS-1 (2026-05-12 token canonicalization): dark variant honours both
+ * the legacy `.dark` class (compat) and the canonical `[data-theme="dark"]`
+ * attribute (now set by next-themes — see ThemeProvider.tsx). */
+@custom-variant dark (&:is(.dark *, [data-theme="dark"] *));
 
 @theme {
   /* Remove all brand color shade references - migrating to semantic tokens */
@@ -203,8 +206,8 @@
     @apply antialiased;
     font-family: var(--font-nunito, var(--font-sans));
     position: relative;
-    background: var(--bg-base);
-    color: var(--text-primary);
+    background: var(--bg);
+    color: var(--text);
     /* Safety net: prevent horizontal page scroll on mobile viewports */
     overflow-x: clip;
   }
@@ -506,15 +509,15 @@
   --color-meeple-light-orange: hsl(30 100% 94%);
 
   /* Entity color utilities (v0app design system) */
-  --color-entity-game:    hsl(var(--e-game));
-  --color-entity-player:  hsl(var(--e-player));
-  --color-entity-session: hsl(var(--e-session));
-  --color-entity-agent:   hsl(var(--e-agent));
-  --color-entity-kb:      hsl(var(--e-document));
-  --color-entity-chat:    hsl(var(--e-chat));
-  --color-entity-event:   hsl(var(--e-event));
-  --color-entity-toolkit: hsl(var(--e-toolkit));
-  --color-entity-tool:    hsl(var(--e-tool));
+  --color-entity-game:    hsl(var(--c-game));
+  --color-entity-player:  hsl(var(--c-player));
+  --color-entity-session: hsl(var(--c-session));
+  --color-entity-agent:   hsl(var(--c-agent));
+  --color-entity-kb:      hsl(var(--c-kb));
+  --color-entity-chat:    hsl(var(--c-chat));
+  --color-entity-event:   hsl(var(--c-event));
+  --color-entity-toolkit: hsl(var(--c-toolkit));
+  --color-entity-tool:    hsl(var(--c-tool));
 
   /* Font family utilities */
   --font-heading: var(--font-quicksand), system-ui, sans-serif;
@@ -526,16 +529,17 @@
 }
 
 :root {
-  /* MeepleCard v2 entity color shortcuts (Issue #4604) */
-  --e-game: 25 95% 38%;            /* WCAG AA: Darkened to 38% for 4.5:1 contrast with white text (Issue #587, gate #601) */
-  --e-player: 262 83% 58%;
-  --e-session: 240 60% 55%;
-  --e-agent: 38 92% 50%;
-  --e-document: 174 60% 40%;  /* KB teal — aligned with Claude Design v1 mockup (--c-kb) */
-  --e-chat: 220 80% 55%;
-  --e-event: 350 89% 60%;
-  --e-toolkit: 142 70% 45%;  /* Toolkit green — aligned with Claude Design v1 mockup (--c-toolkit) */
-  --e-tool: 195 80% 50%;     /* Sky Blue — Epic #412 */
+  /* MeepleCard v2 entity color shortcuts (Issue #4604, AA-aligned via #807 Iter 2 audit 2026-05-09) */
+  /* Values match design-tokens.css --c-* tokens. Both used: --e-* feeds Tailwind utilities text-entity-X via @theme; --c-* used by entityHsl() helper. */
+  --c-game: 25 95% 38%;       /* 4.82:1 ✅ (#587, gate #601, then #807) */
+  --c-player: 262 83% 45%;    /* 8.55:1 ✅ (#807: was L=58%) */
+  --c-session: 240 60% 35%;   /* 12.22:1 ✅ (#807: was L=55%) */
+  --c-agent: 38 92% 32%;      /* 4.87:1 ✅ (#807: was L=50%) */
+  --c-kb: 174 60% 30%;  /* 5.12:1 ✅ KB teal (#807: was L=40%, cyan hue requires lower L) */
+  --c-chat: 220 80% 40%;      /* 7.72:1 ✅ (#807: was L=55%) */
+  --c-event: 350 89% 38%;     /* 6.79:1 ✅ (#807: was L=60%) */
+  --c-toolkit: 142 70% 30%;   /* 4.88:1 ✅ Toolkit green (#807: was L=45%) */
+  --c-tool: 195 80% 32%;      /* 5.44:1 ✅ Sky Blue Epic #412 (#807: was L=50%) */
 
   /* Base theme tokens - Opzione A: Playful Boardroom */
   --radius: 0.625rem;
@@ -593,15 +597,15 @@
   --color-neutral-400: hsl(30 12% 72%);
   --color-neutral-600: hsl(30 12% 45%);
 
-  /* NOTE: --bg-base, --bg-elevated, --text-primary, --text-secondary, --text-tertiary
+  /* NOTE: --bg, --bg-card, --text, --text-sec, --text-muted
      are now unified tokens defined in design-tokens.css (dark-first).
      Do NOT redefine them here. Use the unified tokens directly. */
-  --bg-primary: var(--bg-base);
+  --bg-primary: var(--bg);
   --bg-secondary: hsl(30 20% 94%);
   --bg-tertiary: hsl(30 18% 90%);
 
-  --border-primary: hsl(var(--border));
-  --border-secondary: hsl(30 12% 75%);
+  --border: hsl(var(--border));
+  --border-strong: hsl(30 12% 75%);
 
   --text-inverse: hsl(var(--primary-foreground));
 
@@ -621,7 +625,9 @@
   --font-weight-bold: var(--font-bold);
 }
 
-.dark {
+/* DS-1: dual selector — `.dark` (legacy class) OR `[data-theme="dark"]`
+ * (canonical attribute set by next-themes per ThemeProvider.tsx). */
+:is(.dark, [data-theme="dark"]) {
   /* Base theme tokens - Dark Professional (Issue #2965) */
   --background: 0 0% 10%;           /* #1a1a1a - Neutral dark gray */
   --foreground: 30 25% 90%;         /* #e8e4d8 - Warm beige text */
@@ -676,14 +682,29 @@
   --color-neutral-400: hsl(0 0% 34%);
   --color-neutral-600: hsl(0 0% 46%);
 
-  /* NOTE: --bg-base, --bg-elevated, --text-primary, --text-secondary, --text-tertiary
+  /* Entity color utilities — dark mode overrides.
+     Lighter HSLs to maintain WCAG AA contrast on dark bg (#0f0a1a).
+     Mirrors --c-* tokens in design-tokens.css .dark block.
+     Issue #807 follow-up: A11y dark theme contrast fix (sessions-index, gamebook,
+     session-live, session-summary specs). */
+  --c-game: 28 95% 58%;
+  --c-player: 262 75% 70%;
+  --c-session: 235 70% 70%;
+  --c-agent: 38 92% 62%;
+  --c-kb: 174 60% 55%;
+  --c-chat: 218 80% 68%;
+  --c-event: 350 85% 70%;
+  --c-toolkit: 142 60% 58%;
+  --c-tool: 195 75% 62%;
+
+  /* NOTE: --bg, --bg-card, --text, --text-sec, --text-muted
      are unified tokens from design-tokens.css. Do NOT redefine here. */
-  --bg-primary: var(--bg-base);
+  --bg-primary: var(--bg);
   --bg-secondary: hsl(0 0% 15%);
   --bg-tertiary: hsl(0 0% 20%);
 
-  --border-primary: hsl(var(--border));
-  --border-secondary: hsl(0 0% 30%);
+  --border: hsl(var(--border));
+  --border-strong: hsl(0 0% 30%);
 
   --text-inverse: hsl(var(--primary-foreground));
 

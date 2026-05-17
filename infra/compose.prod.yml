@@ -175,6 +175,21 @@ services:
           cpus: '2'
           memory: 4G
 
+  orchestration-service:
+    restart: always
+    env_file:
+      - ./secrets/prod/database.secret
+      - ./secrets/prod/redis.secret
+      - ./secrets/prod/openrouter.secret
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
   # ===========================================================================
   # Monitoring — exposed via CF Tunnel ingress (configured separately on VPS)
   # ===========================================================================

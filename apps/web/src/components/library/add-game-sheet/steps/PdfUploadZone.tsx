@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -124,7 +125,7 @@ export function PdfUploadZone({
           'relative rounded-xl border-2 border-dashed p-6 text-center transition-colors cursor-pointer',
           dragActive && 'border-teal-400 bg-teal-400/5',
           file && !dragActive && 'border-teal-500/50 bg-teal-500/5',
-          !file && !dragActive && 'border-slate-700 hover:border-slate-500 hover:bg-slate-800/30',
+          !file && !dragActive && 'border-border hover:border-border hover:bg-card',
           disabled && 'pointer-events-none opacity-50'
         )}
         onDrop={handleDrop}
@@ -159,13 +160,13 @@ export function PdfUploadZone({
             <FileText className="h-8 w-8 text-teal-400" />
             <div className="text-left">
               <p className="text-sm font-medium text-slate-200">{file.name}</p>
-              <p className="text-xs text-slate-500">{formatSize(file.size)}</p>
+              <p className="text-xs text-muted-foreground">{formatSize(file.size)}</p>
             </div>
             {!uploading && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-slate-500 hover:text-slate-300"
+                className="h-6 w-6 text-muted-foreground hover:text-slate-300"
                 onClick={e => {
                   e.stopPropagation();
                   handleClearFile();
@@ -178,11 +179,11 @@ export function PdfUploadZone({
           </div>
         ) : (
           <div className="space-y-1.5">
-            <Upload className="mx-auto h-8 w-8 text-slate-500" />
+            <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
             <p className="text-sm font-medium text-slate-300">
               Trascina un PDF o clicca per selezionare
             </p>
-            <p className="text-xs text-slate-500">PDF fino a 50 MB</p>
+            <p className="text-xs text-muted-foreground">PDF fino a 50 MB</p>
           </div>
         )}
       </div>
@@ -190,11 +191,11 @@ export function PdfUploadZone({
       {/* Progress bar */}
       {uploading && (
         <div className="space-y-1.5" data-testid="pdf-upload-progress">
-          <div className="flex justify-between text-xs text-slate-400">
+          <div className="flex justify-between text-xs text-muted-foreground">
             <span>Caricamento in corso...</span>
             <span>{uploadProgress}%</span>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
+          <div className="h-1.5 overflow-hidden rounded-full bg-card">
             <div
               className="h-full rounded-full bg-teal-500 transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}

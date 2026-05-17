@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * Game Actions Modal Component (Issue #3151)
  *
@@ -34,12 +35,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/overlays/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
 import type { GameStateType } from '@/lib/api/schemas/library.schemas';
 import { cn } from '@/lib/utils';
 
@@ -114,9 +110,7 @@ export function GameActionsModal({
                 />
               )}
               <div>
-                <DialogTitle className="font-quicksand text-2xl font-bold">
-                  {gameTitle}
-                </DialogTitle>
+                <DialogTitle className="font-quicksand text-2xl font-bold">{gameTitle}</DialogTitle>
                 <p className="text-sm text-muted-foreground mt-1">Azioni Rapide</p>
               </div>
             </div>
@@ -125,7 +119,7 @@ export function GameActionsModal({
 
         <div className="space-y-2 mt-4">
           {/* Primary Action: Chatta (navigate to game detail page) */}
-          <Link href={`/library/games/${gameId}`} onClick={handleClose}>
+          <Link href={`/library/${gameId}`} onClick={handleClose}>
             <button className="w-full flex items-center gap-4 p-4 rounded-xl bg-blue-50 border-2 border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-all group text-left">
               <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <MessageCircle className="w-5 h-5 text-white" />
@@ -142,8 +136,8 @@ export function GameActionsModal({
 
           {/* Use Agent (if configured) */}
           {hasAgent && (
-            <Link href={`/library/games/${gameId}?autoStart=true`} onClick={handleClose}>
-              <button className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all group text-left">
+            <Link href={`/library/${gameId}?autoStart=true`} onClick={handleClose}>
+              <button className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-border hover:bg-muted hover:border-border transition-all group text-left">
                 <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Play className="w-4 h-4 text-green-700" />
                 </div>
@@ -160,7 +154,7 @@ export function GameActionsModal({
           {/* Configure Agent */}
           <button
             onClick={() => handleActionClick(onConfigureAgent)}
-            className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all group text-left"
+            className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-border hover:bg-muted hover:border-border transition-all group text-left"
           >
             <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Settings className="w-4 h-4 text-purple-700" />
@@ -176,7 +170,7 @@ export function GameActionsModal({
           {/* Edit Notes */}
           <button
             onClick={() => handleActionClick(onEditNotes)}
-            className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all group text-left"
+            className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-border hover:bg-muted hover:border-border transition-all group text-left"
           >
             <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Edit2 className="w-4 h-4 text-amber-700" />
@@ -190,7 +184,7 @@ export function GameActionsModal({
           {/* Upload PDF */}
           <button
             onClick={() => handleActionClick(onUploadPdf)}
-            className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all group text-left"
+            className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-border hover:bg-muted hover:border-border transition-all group text-left"
           >
             <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Upload className="w-4 h-4 text-blue-700" />
@@ -201,15 +195,15 @@ export function GameActionsModal({
             </div>
           </button>
 
-          <div className="h-px bg-gray-200 my-3"></div>
+          <div className="h-px bg-muted my-3"></div>
 
           {/* Change State - Submenu Toggle */}
           <button
             onClick={() => setShowStateSubmenu(!showStateSubmenu)}
-            className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all group text-left"
+            className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-border hover:bg-muted hover:border-border transition-all group text-left"
           >
-            <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <RefreshCw className="w-4 h-4 text-gray-700" />
+            <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-muted flex items-center justify-center group-hover:scale-110 transition-transform">
+              <RefreshCw className="w-4 h-4 text-foreground" />
             </div>
             <div className="flex-1">
               <div className="font-medium">Cambia Stato</div>
@@ -219,7 +213,7 @@ export function GameActionsModal({
             </div>
             <ChevronRight
               className={cn(
-                'w-4 h-4 text-gray-400 transition-transform',
+                'w-4 h-4 text-muted-foreground transition-transform',
                 showStateSubmenu && 'rotate-90'
               )}
             />
@@ -227,11 +221,11 @@ export function GameActionsModal({
 
           {/* State Submenu */}
           {showStateSubmenu && (
-            <div className="ml-6 space-y-1 pl-6 border-l-2 border-gray-200">
+            <div className="ml-6 space-y-1 pl-6 border-l-2 border-border">
               <button
                 onClick={() => handleActionClick(() => onChangeState('Nuovo'))}
                 disabled={currentState === 'Nuovo'}
-                className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
                 <span className="text-sm font-medium">Segna come Nuovo</span>
@@ -239,7 +233,7 @@ export function GameActionsModal({
               <button
                 onClick={() => handleActionClick(() => onChangeState('InPrestito'))}
                 disabled={currentState === 'InPrestito'}
-                className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="w-2 h-2 rounded-full bg-red-500"></div>
                 <span className="text-sm font-medium">Segna In Prestito</span>
@@ -247,7 +241,7 @@ export function GameActionsModal({
               <button
                 onClick={() => handleActionClick(() => onChangeState('Owned'))}
                 disabled={currentState === 'Owned'}
-                className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                 <span className="text-sm font-medium">Segna come Posseduto</span>
@@ -255,7 +249,7 @@ export function GameActionsModal({
               <button
                 onClick={() => handleActionClick(() => onChangeState('Wishlist'))}
                 disabled={currentState === 'Wishlist'}
-                className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
                 <span className="text-sm font-medium">Aggiungi a Wishlist</span>
@@ -266,7 +260,7 @@ export function GameActionsModal({
           {/* Toggle Favorite */}
           <button
             onClick={() => handleActionClick(onToggleFavorite)}
-            className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all group text-left"
+            className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-border hover:bg-muted hover:border-border transition-all group text-left"
           >
             <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-rose-100 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Heart className={cn('w-4 h-4 text-rose-700', isFavorite && 'fill-rose-700')} />
@@ -285,7 +279,7 @@ export function GameActionsModal({
           {onShare && (
             <button
               onClick={() => handleActionClick(onShare)}
-              className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all group text-left"
+              className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-border hover:bg-muted hover:border-border transition-all group text-left"
             >
               <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Share2 className="w-4 h-4 text-indigo-700" />
@@ -302,7 +296,7 @@ export function GameActionsModal({
             <>
               <button
                 onClick={() => setShowSessionSubmenu(!showSessionSubmenu)}
-                className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all group text-left"
+                className="w-full flex items-center gap-4 p-3.5 rounded-lg border border-border hover:bg-muted hover:border-border transition-all group text-left"
               >
                 <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-teal-100 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <FileText className="w-4 h-4 text-teal-700" />
@@ -315,7 +309,7 @@ export function GameActionsModal({
                 </div>
                 <ChevronRight
                   className={cn(
-                    'w-4 h-4 text-gray-400 transition-transform',
+                    'w-4 h-4 text-muted-foreground transition-transform',
                     showSessionSubmenu && 'rotate-90'
                   )}
                 />
@@ -323,22 +317,22 @@ export function GameActionsModal({
 
               {/* Session Submenu */}
               {showSessionSubmenu && (
-                <div className="ml-6 space-y-1 pl-6 border-l-2 border-gray-200">
+                <div className="ml-6 space-y-1 pl-6 border-l-2 border-border">
                   <button
                     onClick={() => handleActionClick(onManageSession)}
-                    className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                    className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted transition-colors text-left"
                   >
                     <span className="text-sm font-medium">Crea nuova partita</span>
                   </button>
                   <button
                     onClick={() => handleActionClick(onManageSession)}
-                    className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                    className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted transition-colors text-left"
                   >
                     <span className="text-sm font-medium">Carica partita salvata</span>
                   </button>
                   <button
                     onClick={() => handleActionClick(onManageSession)}
-                    className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                    className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted transition-colors text-left"
                   >
                     <span className="text-sm font-medium">Elimina partite</span>
                   </button>
@@ -347,7 +341,7 @@ export function GameActionsModal({
             </>
           )}
 
-          <div className="h-px bg-gray-200 my-3"></div>
+          <div className="h-px bg-muted my-3"></div>
 
           {/* Destructive Action: Remove */}
           <button

@@ -92,7 +92,7 @@ import {
   type SessionSummaryHeroLabels,
   type ShareCardTheme,
   type ShareChannel,
-} from '@/components/v2/session-summary';
+} from '@/components/features/session-summary';
 import { useSessionDetail } from '@/hooks/queries/useSessionDetail';
 import { useSessionDiaryQuery } from '@/hooks/queries/useSessionFlow';
 import { useSessionVisionSnapshots } from '@/hooks/queries/useSessionSnapshots';

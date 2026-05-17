@@ -157,8 +157,8 @@ describe('SlotCards', () => {
 
     it('applies available styling to available slots', () => {
       render(<SlotCards />, { wrapper: createWrapper() });
-      // Check for available slot styling (slate border)
-      const slots = document.querySelectorAll('.border-slate-700');
+      // Available slot uses semantic border (post DS-15: border-slate-700 → border-border)
+      const slots = document.querySelectorAll('.border-border');
       expect(slots.length).toBe(3);
     });
   });

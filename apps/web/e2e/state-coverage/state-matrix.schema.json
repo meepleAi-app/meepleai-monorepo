@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "https://meepleai.app/schemas/state-matrix.schema.json",
+  "title": "State Coverage Matrix",
+  "description": "WS-D Mockup state coverage tracking. Issue #1070 (umbrella #1066).",
+  "type": "object",
+  "required": ["generated_at", "total_mockups", "enforced_count", "entries"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp. Bumped only when content effectively differs."
+    },
+    "total_mockups": { "type": "integer", "minimum": 0 },
+    "enforced_count": { "type": "integer", "minimum": 0 },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/MockupStateEntry" }
+    }
+  },
+  "definitions": {
+    "MockupStateEntry": {
+      "type": "object",
+      "required": [
+        "mockup_path",
+        "route",
+        "declared_states",
+        "covered_states",
+        "missing",
+        "enforced"
+      ],
+      "properties": {
+        "mockup_path": {
+          "type": "string",
+          "pattern": "^admin-mockups/design_files/[\\w-]+\\.html$"
+        },
+        "route": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }]
+        },
+        "declared_states": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "States declared in mockup `Stati:` comment line. Order preserves author declaration order."
+        },
+        "covered_states": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "States covered by Playwright tests. Manually curated; preserved across regenerations."
+        },
+        "missing": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "declared_states - covered_states. Computed."
+        },
+        "enforced": {
+          "type": "boolean",
+          "description": "If true, CI gate fails on missing.length > 0. Bootstrap: all false."
+        }
+      }
+    }
+  }
+}

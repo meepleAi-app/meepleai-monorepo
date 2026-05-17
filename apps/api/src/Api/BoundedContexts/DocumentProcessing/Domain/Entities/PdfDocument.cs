@@ -539,7 +539,7 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
     /// <summary>
     /// Sets whether this document is active for RAG search.
-    /// Issue #5446: Deactivated docs remain in Qdrant but excluded from search.
+    /// Issue #5446: Deactivated docs remain in pgvector but excluded from search.
     /// </summary>
     public void SetActiveForRag(bool isActive)
     {

@@ -46,9 +46,9 @@ namespace Api.Tests.Integration;
 /// 2. Large File Handling (3+ tests): Near limit, over limit, timeout
 /// 3. Concurrent Upload Tests (2+ tests): Race conditions, isolation
 /// 4. Storage Failure Scenarios (4+ tests): Disk full, permissions, rollback
-/// 5. Integration Points (5+ tests): DB persistence, file storage, Qdrant, events, cleanup
+/// 5. Integration Points (5+ tests): DB persistence, file storage, pgvector, events, cleanup
 ///
-/// Infrastructure: PostgreSQL (SharedTestcontainersFixture), Redis (real cache), Qdrant (mocked for now)
+/// Infrastructure: PostgreSQL (SharedTestcontainersFixture), Redis (real cache), pgvector (mocked for now)
 /// </summary>
 [Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]

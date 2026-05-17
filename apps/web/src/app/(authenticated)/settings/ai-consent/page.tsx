@@ -10,9 +10,9 @@ import React, { useEffect, useState } from 'react';
 import { Brain, Globe, Save, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
-import { SettingsList } from '@/components/ui/v2/settings-list';
-import { SettingsRow } from '@/components/ui/v2/settings-row';
-import { ToggleSwitch } from '@/components/ui/v2/toggle-switch';
+import { SettingsList } from '@/components/ui/settings-list';
+import { SettingsRow } from '@/components/ui/settings-row';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { useToast } from '@/hooks/useToast';
 
 const CURRENT_CONSENT_VERSION = '1.0.0';

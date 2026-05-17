@@ -8,11 +8,11 @@
 
 | Risorsa | Percorso | Descrizione |
 |---------|----------|-------------|
-| **System Architecture** | [overview/system-architecture.md](./overview/system-architecture.md) | Overview completo dello stack |
+| **System Architecture** | **overview/system-architecture.md** _(planned)_ | Overview completo dello stack |
 | **ADR Index** | [adr/README.md](./adr/README.md) | Architecture Decision Records |
-| **DDD Quick Reference** | [ddd/quick-reference.md](./ddd/quick-reference.md) | Pattern DDD e Bounded Contexts |
+| **DDD Quick Reference** | **ddd/quick-reference.md** _(planned)_ | Pattern DDD e Bounded Contexts |
 | **Diagrams** | [diagrams/README.md](./diagrams/README.md) | Mermaid diagrams (CQRS, RAG, PDF pipeline) |
-| **Bounded Contexts** | [../bounded-contexts/README.md](../bounded-contexts/README.md) | 18 BC con responsabilità e pattern |
+| **Bounded Contexts** | **../bounded-contexts/README.md** _(planned)_ | 18 BC con responsabilità e pattern |
 
 ---
 
@@ -55,8 +55,8 @@
 ## Infrastruttura Docker
 
 Per setup Docker Compose, Traefik e monitoring, vedi:
-- **[Deployment Guide](../deployment/README.md)** — guida completa all'infrastruttura
-- **[Development Docker](../development/docker/README.md)** — ambiente locale
+- ****Deployment Guide** _(planned)_** — guida completa all'infrastruttura
+- ****Development Docker** _(planned)_** — ambiente locale
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Libro Game AI Assistant — Vision Document
-status: draft
+status: 🟢 ACTIVE reference (vision document, no expiry)
 type: vision-doc
 date: 2026-05-04
 authors: [DegrassiAaron]

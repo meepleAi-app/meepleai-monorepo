@@ -3,12 +3,14 @@
 import { Suspense, useState, useMemo } from 'react';
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
+import { GamesRecentRail } from '@/components/features/games';
 import { HubLayout, type FilterChip } from '@/components/layout/HubLayout';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { useGames } from '@/hooks/queries/useGames';
+import { useRecentLibraryGames } from '@/hooks/queries/useRecentLibraryGames';
 import { useMiniNavConfig } from '@/hooks/useMiniNavConfig';
 
 import { GamesLibraryView } from './_components/GamesLibraryView';
@@ -39,7 +41,7 @@ function LoadingSkeleton() {
 
 function EmptyCatalog() {
   return (
-    <div className="flex flex-col items-center gap-3 py-16 px-4 text-center text-[var(--nh-text-muted,#94a3b8)]">
+    <div className="flex flex-col items-center gap-3 py-16 px-4 text-center text-[var(--text-muted,#94a3b8)]">
       <span className="text-5xl">🔍</span>
       <p className="font-medium">Nessun gioco nel catalogo.</p>
       <p className="text-sm">Prova a cambiare i filtri di ricerca.</p>
@@ -49,7 +51,7 @@ function EmptyCatalog() {
 
 function EmptyKB() {
   return (
-    <div className="flex flex-col items-center gap-3 py-16 px-4 text-center text-[var(--nh-text-muted,#94a3b8)]">
+    <div className="flex flex-col items-center gap-3 py-16 px-4 text-center text-[var(--text-muted,#94a3b8)]">
       <span className="text-5xl">📚</span>
       <p className="font-medium">Nessun documento nella Knowledge Base.</p>
       <p className="text-sm">Carica i regolamenti dei tuoi giochi per abilitare l&apos;AI.</p>
@@ -68,6 +70,36 @@ function GamesHubContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'carousel'>('grid');
 
   const { data: catalogData, isLoading: catalogLoading } = useGames(undefined, undefined, 1, 20);
+
+  const router = useRouter();
+  const recentGames = useRecentLibraryGames(5, activeTab === 'library');
+
+  const recentRailItems = useMemo(
+    () =>
+      recentGames.entries.map(e => ({
+        id: e.gameId,
+        title: e.gameTitle,
+        imageUrl: e.gameImageUrl ?? undefined,
+        kbBadge: (e.kbIndexedCount > 0
+          ? 'ready'
+          : e.kbProcessingCount > 0
+            ? 'processing'
+            : 'none') as 'ready' | 'processing' | 'none',
+      })),
+    [recentGames.entries]
+  );
+
+  const recentRail = (
+    <GamesRecentRail
+      items={recentRailItems}
+      isLoading={recentGames.isLoading}
+      labels={{
+        sectionTitle: 'Giochi recenti',
+        emptyHint: 'Inizia a giocare per vedere qui i tuoi titoli recenti.',
+      }}
+      onSelect={id => router.push(`/library/${id}?tab=aiChat`)}
+    />
+  );
 
   useMiniNavConfig({
     breadcrumb: 'Giochi',
@@ -107,7 +139,12 @@ function GamesHubContent() {
 
   // ---- Library tab uses dedicated v2 orchestrator (Wave B.1 Issue #633) ----
   if (activeTab === 'library') {
-    return <GamesLibraryView />;
+    return (
+      <>
+        {recentRail}
+        <GamesLibraryView />
+      </>
+    );
   }
 
   // ---- Determine active tab state (library handled by early return above) ----
@@ -120,47 +157,50 @@ function GamesHubContent() {
   const topActions = (
     <Link
       href="/games/new"
-      className="inline-flex items-center gap-1 h-9 px-3 text-sm font-semibold rounded-2xl bg-[var(--nh-text-primary,#1a1a1a)] text-white shrink-0"
+      className="inline-flex items-center gap-1 h-9 px-3 text-sm font-semibold rounded-2xl bg-[var(--text,#1a1a1a)] text-white shrink-0"
     >
       ＋
     </Link>
   );
 
   return (
-    <HubLayout
-      searchPlaceholder="Cerca giochi..."
-      filterChips={currentFilters}
-      activeFilterId={activeFilter}
-      onFilterChange={setActiveFilter}
-      searchValue={search}
-      onSearchChange={setSearch}
-      viewMode={viewMode}
-      onViewModeChange={setViewMode}
-      showViewToggle
-      topActions={topActions}
-    >
-      {isLoading ? (
-        <LoadingSkeleton />
-      ) : items.length === 0 ? (
-        activeTab === 'catalog' ? (
-          <EmptyCatalog />
+    <>
+      {recentRail}
+      <HubLayout
+        searchPlaceholder="Cerca giochi..."
+        filterChips={currentFilters}
+        activeFilterId={activeFilter}
+        onFilterChange={setActiveFilter}
+        searchValue={search}
+        onSearchChange={setSearch}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        showViewToggle
+        topActions={topActions}
+      >
+        {isLoading ? (
+          <LoadingSkeleton />
+        ) : items.length === 0 ? (
+          activeTab === 'catalog' ? (
+            <EmptyCatalog />
+          ) : (
+            <EmptyKB />
+          )
         ) : (
-          <EmptyKB />
-        )
-      ) : (
-        <div
-          className={
-            viewMode === 'list'
-              ? 'flex flex-col gap-2 px-4 pb-24'
-              : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-4 pb-24'
-          }
-        >
-          {items.map(item => (
-            <MeepleCard key={item.id} {...item} />
-          ))}
-        </div>
-      )}
-    </HubLayout>
+          <div
+            className={
+              viewMode === 'list'
+                ? 'flex flex-col gap-2 px-4 pb-24'
+                : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-4 pb-24'
+            }
+          >
+            {items.map(item => (
+              <MeepleCard key={item.id} {...item} />
+            ))}
+          </div>
+        )}
+      </HubLayout>
+    </>
   );
 }
 

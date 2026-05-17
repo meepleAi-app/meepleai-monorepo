@@ -22,15 +22,15 @@ export function SnapshotCard({ snapshot, isLatest, className }: SnapshotCardProp
   return (
     <div
       className={cn(
-        'rounded-xl border bg-[var(--nh-bg-elevated)] p-3 shadow-sm transition-all',
-        isLatest ? 'border-amber-300 ring-1 ring-amber-200' : 'border-[var(--nh-border-default)]',
+        'rounded-xl border bg-[var(--bg-card)] p-3 shadow-sm transition-all',
+        isLatest ? 'border-amber-300 ring-1 ring-amber-200' : 'border-[var(--border)]',
         className
       )}
     >
       {/* Header row */}
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="font-quicksand text-sm font-bold text-[var(--nh-text-primary)]">
+          <span className="font-quicksand text-sm font-bold text-[var(--text)]">
             Turno {snapshot.turnNumber}
           </span>
           {isLatest && (
@@ -67,7 +67,7 @@ export function SnapshotCard({ snapshot, isLatest, className }: SnapshotCardProp
                 <img
                   src={img.downloadUrl ?? ''}
                   alt={`Snapshot turno ${snapshot.turnNumber}`}
-                  className="h-16 w-20 rounded-lg border border-[var(--nh-border-default)] object-cover transition-opacity hover:opacity-80"
+                  className="h-16 w-20 rounded-lg border border-[var(--border)] object-cover transition-opacity hover:opacity-80"
                 />
               </a>
             ))}
@@ -77,11 +77,11 @@ export function SnapshotCard({ snapshot, isLatest, className }: SnapshotCardProp
       {/* Caption + timestamp */}
       <div className="flex items-end justify-between gap-2">
         {snapshot.caption && (
-          <p className="flex-1 font-nunito text-xs text-[var(--nh-text-secondary)] line-clamp-2">
+          <p className="flex-1 font-nunito text-xs text-[var(--text-sec)] line-clamp-2">
             {snapshot.caption}
           </p>
         )}
-        <span className="shrink-0 font-mono text-[10px] text-[var(--nh-text-muted)]">
+        <span className="shrink-0 font-mono text-[10px] text-[var(--text-muted)]">
           {timeLabel}
         </span>
       </div>

@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Nanolith Runthrough · Session End</title>
+<!--
+  Mockup: nanolith-runthrough-session-end
+  Route:  overlay su /library/nanolith/play/{campaignId}
+  Scope:  Phase A runthrough — net-new flow: fine sessione/campagna.
+          Modal bottom-sheet full-height su mobile, modal centrato 560px su desktop.
+          Pattern: DR-1 (bottom-sheet) + modal centered overlay.
+  Stati:  state-01-paused    (save & exit, sessione interrotta, resume disponibile)
+          state-02-victory   (campagna completata, outcome positivo)
+          state-03-defeat    (party wipe, retry o abbandona)
+          state-04-cancelled (abbandono campagna, conferma destructive)
+  UI:     MeepleCard entity="session" variant="hero" per outcome card
+          ManaPips lg con count finale (kb · chat · player · event)
+          .stat-tile per stats summary
+  Persona: Aaron (badsworm@gmail.com), gruppo A (Marco/Giulia/Luca).
+  Vincolo SMART A4: outcome chiaro ≤ 2s, recovery action discoverable.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  .top { position: sticky; top: 0; z-index: var(--z-sticky); backdrop-filter: blur(12px); background: var(--glass-bg); border-bottom: 1px solid var(--border); padding: var(--s-4) var(--s-6); display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+  .top h1 { font-family: var(--f-display); font-size: var(--fs-lg); margin: 0; font-weight: var(--fw-bold); }
+  .top .route { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); padding: 2px var(--s-2); border-radius: var(--r-sm); background: var(--bg-muted); }
+  .top .spacer { flex: 1; }
+  .top button { background: var(--bg-card); border: 1px solid var(--border); color: var(--text); border-radius: var(--r-pill); padding: var(--s-1) var(--s-3); font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer; }
+
+  .stage { padding: var(--s-7) var(--s-6); max-width: 1700px; margin: 0 auto; }
+  .state-section { margin-bottom: var(--s-10); }
+  .state-section .label { display: inline-block; padding: var(--s-1) var(--s-3); background: hsl(var(--c-session) / 0.12); color: hsl(var(--c-session)); border-radius: var(--r-pill); font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--s-2); }
+  .state-section .label .cmp { margin-left: var(--s-2); padding: 1px var(--s-2); background: var(--bg); color: hsl(var(--c-session)); border-radius: var(--r-sm); font-size: 10px; }
+  .state-section h2 { font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-2); }
+  .state-section .desc { color: var(--text-sec); margin: 0 0 var(--s-6); font-size: var(--fs-md); }
+  .frames { display: flex; gap: var(--s-9); flex-wrap: wrap; align-items: flex-start; }
+
+  .phone { width: 375px; min-height: 740px; background: var(--bg); border-radius: 36px; overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; position: relative; }
+  .phone-sbar { height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 6px 22px 0; font-size: 12px; font-weight: var(--fw-bold); font-family: var(--f-display); color: var(--text-sec); }
+  .phone .frame-label, .desktop .frame-label { position: absolute; top: -28px; left: 50%; transform: translateX(-50%); font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+  .desktop { width: 880px; height: 620px; background: var(--bg); border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; position: relative; }
+  .desktop .frame-label { left: 0; transform: none; }
+  .desktop .titlebar { height: 28px; background: var(--bg-muted); flex-shrink: 0; display: flex; align-items: center; padding: 0 var(--s-3); gap: 6px; border-bottom: 1px solid var(--border-light); }
+  .desktop .titlebar .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .desktop .titlebar .dot.r { background: #ff605c; }
+  .desktop .titlebar .dot.y { background: #ffbd44; }
+  .desktop .titlebar .dot.g { background: #00ca4e; }
+  .desktop .titlebar .url { margin-left: var(--s-3); padding: 2px var(--s-3); background: var(--bg-card); border-radius: var(--r-sm); font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); flex: 1; }
+
+  /* ─── Backdrop (play-session in background, dimmed) ─── */
+  .backdrop {
+    flex: 1; position: relative; overflow: hidden;
+    background:
+      linear-gradient(0deg, rgba(0,0,0,0.7), rgba(0,0,0,0.7)),
+      radial-gradient(circle at 30% 30%, hsl(var(--c-session) / 0.35), transparent 55%),
+      linear-gradient(135deg, #1a1530, #0d0a1a);
+  }
+  .backdrop .ghost {
+    position: absolute; top: var(--s-5); left: var(--s-4); right: var(--s-4);
+    color: rgba(255,255,255,0.35); font-family: var(--f-mono); font-size: var(--fs-xs);
+  }
+  .backdrop .ghost-para {
+    position: absolute; top: var(--s-7); left: var(--s-4); right: var(--s-4);
+    color: rgba(255,255,255,0.45); font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold);
+  }
+
+  /* ─── MODAL · bottom-sheet (mobile, full-height) ─── */
+  .modal-mobile {
+    position: absolute; left: 0; right: 0; bottom: 0; top: 80px; z-index: var(--z-modal);
+    background: var(--bg-card); border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+    box-shadow: var(--shadow-drawer);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal-mobile .handle { width: 36px; height: 4px; background: var(--border); border-radius: var(--r-pill); margin: var(--s-2) auto var(--s-1); }
+
+  /* ─── MODAL · centered (desktop, 560px) ─── */
+  .modal-desktop {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 560px; max-height: 90%; z-index: var(--z-modal);
+    background: var(--bg-card); border: 1px solid var(--border-strong);
+    border-radius: var(--r-xl); box-shadow: var(--shadow-lg);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ─── Hero outcome card ─── */
+  .outcome-hero {
+    padding: var(--s-6) var(--s-5) var(--s-4); position: relative;
+    text-align: center; overflow: hidden;
+  }
+  .outcome-hero.victory { background: linear-gradient(135deg, hsl(var(--c-success) / 0.14), hsl(var(--c-session) / 0.08)); }
+  .outcome-hero.paused  { background: linear-gradient(135deg, hsl(var(--c-session) / 0.14), hsl(var(--c-info) / 0.08)); }
+  .outcome-hero.defeat  { background: linear-gradient(135deg, hsl(var(--c-danger) / 0.12), hsl(var(--c-warning) / 0.08)); }
+  .outcome-hero.cancel  { background: var(--bg-muted); }
+
+  .outcome-hero .ico-wrap {
+    width: 88px; height: 88px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 44px; margin: 0 auto var(--s-3);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  }
+  .outcome-hero.victory .ico-wrap { background: hsl(var(--c-success) / 0.18); color: hsl(var(--c-success)); }
+  .outcome-hero.paused  .ico-wrap { background: hsl(var(--c-session) / 0.18); color: hsl(var(--c-session)); }
+  .outcome-hero.defeat  .ico-wrap { background: hsl(var(--c-danger) / 0.18); color: hsl(var(--c-danger)); }
+  .outcome-hero.cancel  .ico-wrap { background: var(--bg-card); color: var(--text-muted); }
+
+  .outcome-hero .tag {
+    display: inline-block; padding: 2px var(--s-3); border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: var(--s-2);
+  }
+  .outcome-hero.victory .tag { background: hsl(var(--c-success) / 0.18); color: hsl(var(--c-success)); }
+  .outcome-hero.paused  .tag { background: hsl(var(--c-session) / 0.18); color: hsl(var(--c-session)); }
+  .outcome-hero.defeat  .tag { background: hsl(var(--c-danger) / 0.18); color: hsl(var(--c-danger)); }
+  .outcome-hero.cancel  .tag { background: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border); }
+
+  .outcome-hero h2 { font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-1); }
+  .outcome-hero .sub { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin: 0; }
+
+  /* ─── Modal body ─── */
+  .mbody { flex: 1; overflow-y: auto; padding: var(--s-4) var(--s-5); }
+  .mbody h3 { font-family: var(--f-display); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0 0 var(--s-2); }
+
+  /* ─── Stats tiles grid ─── */
+  .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-2); margin-bottom: var(--s-4); }
+  .stats-grid.desk { grid-template-columns: repeat(4, 1fr); }
+  .stat-tile {
+    padding: var(--s-3); border-radius: var(--r-md);
+    background: var(--bg-muted); border: 1px solid var(--border-light);
+  }
+  .stat-tile .v { font-family: var(--f-mono); font-size: var(--fs-2xl); font-weight: var(--fw-bold); line-height: 1; font-variant-numeric: tabular-nums; }
+  .stat-tile .l { font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--s-1); font-family: var(--f-mono); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-tile.kb   .v { color: hsl(var(--c-kb)); }
+  .stat-tile.chat .v { color: hsl(var(--c-chat)); }
+  .stat-tile.session .v { color: hsl(var(--c-session)); }
+  .stat-tile.player .v { color: hsl(var(--c-player)); }
+  .stat-tile.event .v { color: hsl(var(--c-event)); }
+  .stat-tile.toolkit .v { color: hsl(var(--c-toolkit)); }
+
+  /* ─── ManaPips canonical (lg with labels) ─── */
+  .manapips { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: var(--s-3); border-radius: var(--r-md); background: var(--bg-muted); margin-bottom: var(--s-4); }
+  .manapips h4 { font-family: var(--f-display); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0 var(--s-2) 0 0; flex-shrink: 0; }
+  .manapip { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .manapip .badge { position: absolute; top: -7px; left: 50%; transform: translateX(-50%); min-width: 14px; padding: 0 3px; height: 11px; line-height: 11px; border-radius: var(--r-pill); color: #fff; font-family: var(--f-mono); font-size: 8px; font-weight: var(--fw-bold); text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+  .manapip.kb      { background: hsl(var(--c-kb)); }       .manapip.kb .badge      { background: hsl(var(--c-kb)); }
+  .manapip.chat    { background: hsl(var(--c-chat)); }     .manapip.chat .badge    { background: hsl(var(--c-chat)); }
+  .manapip.session { background: hsl(var(--c-session)); }  .manapip.session .badge { background: hsl(var(--c-session)); }
+  .manapip.player  { background: hsl(var(--c-player)); }   .manapip.player .badge  { background: hsl(var(--c-player)); }
+  .manapip.event   { background: hsl(var(--c-event)); }    .manapip.event .badge   { background: hsl(var(--c-event)); }
+  .manapip.toolkit { background: hsl(var(--c-toolkit)); }  .manapip.toolkit .badge { background: hsl(var(--c-toolkit)); }
+  .lbl { font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-semi); margin: 0 var(--s-2) 0 4px; }
+  .lbl.kb      { color: hsl(var(--c-kb)); }
+  .lbl.chat    { color: hsl(var(--c-chat)); }
+  .lbl.session { color: hsl(var(--c-session)); }
+  .lbl.player  { color: hsl(var(--c-player)); }
+  .lbl.event   { color: hsl(var(--c-event)); }
+  .lbl.toolkit { color: hsl(var(--c-toolkit)); }
+
+  /* ─── Highlight list (key moments / decisions) ─── */
+  .highlights { display: flex; flex-direction: column; gap: var(--s-2); margin-bottom: var(--s-4); }
+  .hl-row { display: flex; gap: var(--s-3); padding: var(--s-2) var(--s-3); border-left: 3px solid hsl(var(--c-event) / 0.55); background: var(--bg); border-radius: 0 var(--r-sm) var(--r-sm) 0; font-size: var(--fs-sm); }
+  .hl-row .when { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); flex-shrink: 0; min-width: 50px; }
+  .hl-row .what { flex: 1; color: var(--text-sec); }
+  .hl-row .what strong { color: var(--text); }
+
+  /* ─── Resume card (paused state) ─── */
+  .resume-card {
+    padding: var(--s-3) var(--s-4); border-radius: var(--r-md);
+    background: hsl(var(--c-session) / 0.06); border: 1px solid hsl(var(--c-session) / 0.25);
+    display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-4);
+  }
+  .resume-card .pulse { width: 10px; height: 10px; border-radius: 50%; background: hsl(var(--c-session)); animation: pulse 2s cubic-bezier(0.66,0,0.34,1) infinite; flex-shrink: 0; }
+  @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 hsl(var(--c-session) / 0); } 50% { box-shadow: 0 0 0 8px hsl(var(--c-session) / 0.15); } }
+  .resume-card .info { flex: 1; }
+  .resume-card .info .v { font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md); }
+  .resume-card .info .s { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+
+  /* ─── Destructive warning (cancel state) ─── */
+  .destructive-warn {
+    padding: var(--s-3) var(--s-4); border-radius: var(--r-md);
+    background: hsl(var(--c-danger) / 0.06); border: 1px solid hsl(var(--c-danger) / 0.3);
+    margin-bottom: var(--s-4); display: flex; gap: var(--s-3);
+  }
+  .destructive-warn .ico { font-size: 22px; flex-shrink: 0; }
+  .destructive-warn .info { flex: 1; font-size: var(--fs-sm); color: var(--text-sec); }
+  .destructive-warn .info strong { color: hsl(var(--c-danger)); font-family: var(--f-display); display: block; margin-bottom: var(--s-1); }
+
+  /* ─── Modal footer ─── */
+  .mfooter {
+    padding: var(--s-3) var(--s-5); border-top: 1px solid var(--border-light);
+    display: flex; gap: var(--s-2); flex-shrink: 0; align-items: center;
+  }
+  .btn-out { padding: var(--s-3) var(--s-4); border-radius: var(--r-md); background: var(--bg-card); border: 1px solid var(--border); color: var(--text); font-family: var(--f-display); font-weight: var(--fw-semi); cursor: pointer; font-size: var(--fs-md); }
+  .btn-out:hover { background: var(--bg-hover); }
+  .btn-fill {
+    padding: var(--s-3) var(--s-5); border-radius: var(--r-md);
+    background: hsl(var(--c-session)); border: 0; color: #fff;
+    font-family: var(--f-display); font-weight: var(--fw-bold); cursor: pointer;
+    font-size: var(--fs-md); display: inline-flex; align-items: center; gap: var(--s-1);
+    flex: 1; justify-content: center;
+    box-shadow: 0 4px 14px hsl(var(--c-session) / 0.35);
+  }
+  .btn-fill:hover { transform: translateY(-1px); }
+  .btn-fill.success { background: hsl(var(--c-success)); box-shadow: 0 4px 14px hsl(var(--c-success) / 0.35); }
+  .btn-fill.danger  { background: hsl(var(--c-danger));  box-shadow: 0 4px 14px hsl(var(--c-danger) / 0.35); }
+  .btn-fill.warning { background: hsl(var(--c-warning)); box-shadow: 0 4px 14px hsl(var(--c-warning) / 0.35); }
+
+  .close-x { width: 28px; height: 28px; border-radius: 50%; background: var(--bg-muted); border: 0; font-size: 14px; cursor: pointer; position: absolute; top: var(--s-3); right: var(--s-3); z-index: 1; }
+
+  *:focus-visible { outline: 2px solid hsl(var(--c-session)); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .resume-card .pulse { animation: none; } }
+</style>
+</head>
+
+<body>
+
+<header class="top">
+  <h1>Nanolith Runthrough · Session End <span style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin-left: 8px;">[modal overlay]</span></h1>
+  <span class="route">/library/nanolith/play/{campaignId}</span>
+  <span class="spacer"></span>
+  <button id="theme-btn">🌗 Tema</button>
+</header>
+
+<main class="stage">
+
+  <!-- STATO 01 · PAUSED (save & exit) -->
+  <section class="state-section" aria-labelledby="s1">
+    <span class="label">Stato 01 · Paused (save & exit)<span class="cmp">SessionEndModal · PausedOutcome</span></span>
+    <h2 id="s1">Aaron mette in pausa — sessione salvata, resume disponibile</h2>
+    <p class="desc">Default flow: Aaron preme "esci" durante la sessione (es. amici vanno via, deve continuare domani). Save dello stato + stats parziali + CTA "Riprendi più tardi". ManaPips show counts attuali. Resume card mostra il pulse session-color.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · paused">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>23:47</span><span>📶 🔋 64%</span></div>
+        <div class="backdrop">
+          <div class="ghost">Capitolo 4 · §289</div>
+          <div class="ghost-para">La grotta dei Reaver</div>
+        </div>
+        <div class="modal-mobile" role="dialog" aria-label="Sessione in pausa">
+          <div class="handle"></div>
+          <button class="close-x">✕</button>
+          <div class="outcome-hero paused">
+            <div class="ico-wrap">⏸️</div>
+            <span class="tag">In pausa</span>
+            <h2>Sessione salvata</h2>
+            <p class="sub">Campagna con i ragazzi · §289 · 3h 17m giocate</p>
+          </div>
+
+          <div class="mbody">
+            <div class="resume-card">
+              <span class="pulse" aria-hidden="true"></span>
+              <div class="info">
+                <div class="v">Pronto a riprendere</div>
+                <div class="s">Stato salvato 23:47 · Capitolo 4 in corso</div>
+              </div>
+            </div>
+
+            <h3>Statistiche sessione</h3>
+            <div class="stats-grid">
+              <div class="stat-tile kb"><div class="v">12</div><div class="l">Q&A regole</div></div>
+              <div class="stat-tile event"><div class="v">8</div><div class="l">Paragrafi</div></div>
+              <div class="stat-tile toolkit"><div class="v">3</div><div class="l">Encounter</div></div>
+              <div class="stat-tile chat"><div class="v">2</div><div class="l">Foto traduzione</div></div>
+            </div>
+
+            <div class="manapips" aria-label="ManaPips sessione">
+              <h4>Entità</h4>
+              <span class="manapip kb"><span class="badge">142</span></span><span class="lbl kb">kb</span>
+              <span class="manapip chat"><span class="badge">12</span></span><span class="lbl chat">chat</span>
+              <span class="manapip player"><span class="badge">4</span></span><span class="lbl player">player</span>
+              <span class="manapip event"><span class="badge">3</span></span><span class="lbl event">event</span>
+            </div>
+          </div>
+          <div class="mfooter">
+            <button class="btn-out">Riepilogo</button>
+            <button class="btn-fill">Riprendi più tardi →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · paused">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/abc123</span></div>
+        <div class="backdrop" style="display: flex; align-items: center; justify-content: center;">
+          <div class="modal-desktop" role="dialog">
+            <button class="close-x">✕</button>
+            <div class="outcome-hero paused">
+              <div class="ico-wrap">⏸️</div>
+              <span class="tag">In pausa</span>
+              <h2>Sessione salvata</h2>
+              <p class="sub">Campagna con i ragazzi · §289 · 3h 17m giocate</p>
+            </div>
+            <div class="mbody">
+              <div class="resume-card"><span class="pulse"></span><div class="info"><div class="v">Pronto a riprendere</div><div class="s">Stato salvato 23:47 · Capitolo 4 in corso</div></div></div>
+              <h3>Statistiche sessione</h3>
+              <div class="stats-grid desk">
+                <div class="stat-tile kb"><div class="v">12</div><div class="l">Q&A regole</div></div>
+                <div class="stat-tile event"><div class="v">8</div><div class="l">Paragrafi</div></div>
+                <div class="stat-tile toolkit"><div class="v">3</div><div class="l">Encounter</div></div>
+                <div class="stat-tile chat"><div class="v">2</div><div class="l">Foto trad</div></div>
+              </div>
+              <div class="manapips"><h4>Entità</h4><span class="manapip kb"><span class="badge">142</span></span><span class="lbl kb">kb</span><span class="manapip chat"><span class="badge">12</span></span><span class="lbl chat">chat</span><span class="manapip player"><span class="badge">4</span></span><span class="lbl player">player</span><span class="manapip event"><span class="badge">3</span></span><span class="lbl event">event</span></div>
+            </div>
+            <div class="mfooter"><button class="btn-out">Riepilogo dettagliato</button><button class="btn-fill">Riprendi più tardi →</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATO 02 · VICTORY -->
+  <section class="state-section" aria-labelledby="s2">
+    <span class="label">Stato 02 · Victory<span class="cmp">SessionEndModal · VictoryOutcome</span></span>
+    <h2 id="s2">Campagna completata — outcome positivo + highlights</h2>
+    <p class="desc">Happy path: Aaron e party completano la storyline. Hero verde success + stats finali campagna intera. Highlights timeline (3-4 key moments). CTA "Condividi outcome" + "Nuova campagna".</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · victory">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>01:24</span><span>📶 🔋 38%</span></div>
+        <div class="backdrop"><div class="ghost-para" style="color: rgba(255,255,255,0.55);">Epilogo · §612</div></div>
+        <div class="modal-mobile" role="dialog">
+          <div class="handle"></div>
+          <button class="close-x">✕</button>
+          <div class="outcome-hero victory">
+            <div class="ico-wrap">🏆</div>
+            <span class="tag">Vittoria</span>
+            <h2>Campagna completata!</h2>
+            <p class="sub">Campagna con i ragazzi · 612 paragrafi · 14h 32m totali</p>
+          </div>
+          <div class="mbody">
+            <h3>Highlights campagna</h3>
+            <div class="highlights">
+              <div class="hl-row"><span class="when">Cap 2</span><span class="what"><strong>Patto con i Reaver</strong> — scelta narrativa, +1 alleato</span></div>
+              <div class="hl-row"><span class="when">Cap 4</span><span class="what">Boss <strong>Architetto</strong> sconfitto al 2° tentativo</span></div>
+              <div class="hl-row"><span class="when">Cap 6</span><span class="what">Glossario completato · <strong>34 termini</strong></span></div>
+              <div class="hl-row"><span class="when">Epil.</span><span class="what"><strong>Finale buono</strong> · ending #2 di 4</span></div>
+            </div>
+            <h3>Stats finali</h3>
+            <div class="stats-grid">
+              <div class="stat-tile session"><div class="v">7</div><div class="l">Sessioni</div></div>
+              <div class="stat-tile event"><div class="v">612</div><div class="l">Paragrafi</div></div>
+              <div class="stat-tile kb"><div class="v">89</div><div class="l">Q&A</div></div>
+              <div class="stat-tile toolkit"><div class="v">22</div><div class="l">Encounter</div></div>
+            </div>
+            <div class="manapips">
+              <h4>Entità</h4>
+              <span class="manapip kb"><span class="badge">142</span></span><span class="lbl kb">kb</span>
+              <span class="manapip chat"><span class="badge">89</span></span><span class="lbl chat">chat</span>
+              <span class="manapip session"><span class="badge">7</span></span><span class="lbl session">session</span>
+              <span class="manapip event"><span class="badge">22</span></span><span class="lbl event">event</span>
+            </div>
+          </div>
+          <div class="mfooter">
+            <button class="btn-out">📤 Condividi</button>
+            <button class="btn-fill success">📖 Nuova campagna →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · victory">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/abc123?state=victory</span></div>
+        <div class="backdrop" style="display: flex; align-items: center; justify-content: center;">
+          <div class="modal-desktop">
+            <button class="close-x">✕</button>
+            <div class="outcome-hero victory">
+              <div class="ico-wrap">🏆</div>
+              <span class="tag">Vittoria</span>
+              <h2>Campagna completata!</h2>
+              <p class="sub">Campagna con i ragazzi · 612 paragrafi · 14h 32m</p>
+            </div>
+            <div class="mbody">
+              <h3>Highlights</h3>
+              <div class="highlights">
+                <div class="hl-row"><span class="when">Cap 2</span><span class="what"><strong>Patto Reaver</strong> · +1 alleato</span></div>
+                <div class="hl-row"><span class="when">Cap 4</span><span class="what">Boss <strong>Architetto</strong> sconfitto</span></div>
+                <div class="hl-row"><span class="when">Epil.</span><span class="what"><strong>Finale buono</strong> · ending #2/4</span></div>
+              </div>
+              <h3>Stats finali</h3>
+              <div class="stats-grid desk">
+                <div class="stat-tile session"><div class="v">7</div><div class="l">Sessioni</div></div>
+                <div class="stat-tile event"><div class="v">612</div><div class="l">Paragrafi</div></div>
+                <div class="stat-tile kb"><div class="v">89</div><div class="l">Q&A</div></div>
+                <div class="stat-tile toolkit"><div class="v">22</div><div class="l">Encounter</div></div>
+              </div>
+              <div class="manapips"><h4>Entità</h4><span class="manapip kb"><span class="badge">142</span></span><span class="lbl kb">kb</span><span class="manapip chat"><span class="badge">89</span></span><span class="lbl chat">chat</span><span class="manapip session"><span class="badge">7</span></span><span class="lbl session">session</span><span class="manapip event"><span class="badge">22</span></span><span class="lbl event">event</span></div>
+            </div>
+            <div class="mfooter"><button class="btn-out">📤 Condividi outcome</button><button class="btn-fill success">📖 Nuova campagna →</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATO 03 · DEFEAT -->
+  <section class="state-section" aria-labelledby="s3">
+    <span class="label">Stato 03 · Defeat (party wipe)<span class="cmp">SessionEndModal · DefeatOutcome</span></span>
+    <h2 id="s3">Party wipe — retry o riparti dal checkpoint</h2>
+    <p class="desc">Edge negativo: boss letale, party sconfitto. Hero danger + tono empatico. CTA "Riprendi dal checkpoint" (entity=session) + "Termina campagna" (out). Stats parziali sessione.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · defeat">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>22:11</span><span>📶 🔋 72%</span></div>
+        <div class="backdrop"><div class="ghost-para">Boss · L'Architetto §445</div></div>
+        <div class="modal-mobile">
+          <div class="handle"></div>
+          <button class="close-x">✕</button>
+          <div class="outcome-hero defeat">
+            <div class="ico-wrap">💀</div>
+            <span class="tag">Sconfitta</span>
+            <h2>Party sconfitto</h2>
+            <p class="sub">L'Architetto · Capitolo 4 · §445</p>
+          </div>
+          <div class="mbody">
+            <div style="padding: var(--s-3) var(--s-4); background: hsl(var(--c-warning) / 0.08); border: 1px solid hsl(var(--c-warning) / 0.25); border-radius: var(--r-md); margin-bottom: var(--s-4); font-size: var(--fs-sm); color: var(--text-sec);">
+              <strong style="color: hsl(var(--c-warning)); font-family: var(--f-display);">⚠ Checkpoint disponibile</strong><br>
+              Ultima safe area: <strong>§412 · Accampamento</strong> (12 min fa).
+            </div>
+            <h3>Sessione corrente</h3>
+            <div class="stats-grid">
+              <div class="stat-tile event"><div class="v">33</div><div class="l">Paragrafi</div></div>
+              <div class="stat-tile toolkit"><div class="v">5</div><div class="l">Encounter</div></div>
+              <div class="stat-tile kb"><div class="v">8</div><div class="l">Q&A</div></div>
+              <div class="stat-tile chat"><div class="v">1</div><div class="l">Foto trad</div></div>
+            </div>
+          </div>
+          <div class="mfooter">
+            <button class="btn-out">Termina campagna</button>
+            <button class="btn-fill warning">⟲ Riprendi dal checkpoint</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · defeat">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/abc123?state=defeat</span></div>
+        <div class="backdrop" style="display: flex; align-items: center; justify-content: center;">
+          <div class="modal-desktop">
+            <button class="close-x">✕</button>
+            <div class="outcome-hero defeat">
+              <div class="ico-wrap">💀</div>
+              <span class="tag">Sconfitta</span>
+              <h2>Party sconfitto</h2>
+              <p class="sub">L'Architetto · §445</p>
+            </div>
+            <div class="mbody">
+              <div style="padding: var(--s-3) var(--s-4); background: hsl(var(--c-warning) / 0.08); border: 1px solid hsl(var(--c-warning) / 0.25); border-radius: var(--r-md); margin-bottom: var(--s-4); font-size: var(--fs-sm);"><strong style="color: hsl(var(--c-warning));">⚠ Checkpoint disponibile</strong> · §412 Accampamento (12 min fa)</div>
+              <h3>Sessione corrente</h3>
+              <div class="stats-grid desk">
+                <div class="stat-tile event"><div class="v">33</div><div class="l">Paragrafi</div></div>
+                <div class="stat-tile toolkit"><div class="v">5</div><div class="l">Encounter</div></div>
+                <div class="stat-tile kb"><div class="v">8</div><div class="l">Q&A</div></div>
+                <div class="stat-tile chat"><div class="v">1</div><div class="l">Foto trad</div></div>
+              </div>
+            </div>
+            <div class="mfooter"><button class="btn-out">Termina campagna</button><button class="btn-fill warning">⟲ Riprendi dal checkpoint</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATO 04 · CANCELLED (abandon) -->
+  <section class="state-section" aria-labelledby="s4">
+    <span class="label">Stato 04 · Cancelled (abandon)<span class="cmp">SessionEndModal · AbandonConfirm</span></span>
+    <h2 id="s4">Aaron abbandona la campagna — conferma destructive</h2>
+    <p class="desc">Edge destructive: Aaron sceglie "Termina campagna" dal menu. Conferma esplicita con warning rosso. Spiega impatto: progresso, glossario, history persi (o archiviati).</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · cancelled">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>22:14</span><span>📶 🔋 70%</span></div>
+        <div class="backdrop"><div class="ghost">Conferma abbandono</div></div>
+        <div class="modal-mobile">
+          <div class="handle"></div>
+          <button class="close-x">✕</button>
+          <div class="outcome-hero cancel">
+            <div class="ico-wrap">⚠️</div>
+            <span class="tag">Conferma</span>
+            <h2>Terminare la campagna?</h2>
+            <p class="sub">Campagna con i ragazzi · §445</p>
+          </div>
+          <div class="mbody">
+            <div class="destructive-warn">
+              <span class="ico">🚨</span>
+              <div class="info">
+                <strong>Azione irreversibile</strong>
+                Il progresso narrativo verrà archiviato (read-only). Il glossario sarà preservato e riutilizzabile in future campagne Nanolith.
+              </div>
+            </div>
+            <h3>Cosa verrà archiviato</h3>
+            <div class="manapips">
+              <h4>Persistenti</h4>
+              <span class="manapip kb"><span class="badge">142</span></span><span class="lbl kb">kb</span>
+              <span class="manapip toolkit"><span class="badge">34</span></span><span class="lbl toolkit">glossario</span>
+            </div>
+            <div class="manapips" style="background: hsl(var(--c-danger) / 0.06); border: 1px solid hsl(var(--c-danger) / 0.2);">
+              <h4 style="color: hsl(var(--c-danger));">Archiviati</h4>
+              <span class="manapip event"><span class="badge">445</span></span><span class="lbl event">progresso</span>
+              <span class="manapip session"><span class="badge">4</span></span><span class="lbl session">sessioni</span>
+            </div>
+          </div>
+          <div class="mfooter">
+            <button class="btn-out">Annulla</button>
+            <button class="btn-fill danger">Conferma e archivia</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · cancelled">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/abc123?confirm=abandon</span></div>
+        <div class="backdrop" style="display: flex; align-items: center; justify-content: center;">
+          <div class="modal-desktop">
+            <button class="close-x">✕</button>
+            <div class="outcome-hero cancel">
+              <div class="ico-wrap">⚠️</div>
+              <span class="tag">Conferma</span>
+              <h2>Terminare la campagna?</h2>
+              <p class="sub">Campagna con i ragazzi · §445</p>
+            </div>
+            <div class="mbody">
+              <div class="destructive-warn"><span class="ico">🚨</span><div class="info"><strong>Azione irreversibile</strong>Il progresso narrativo verrà archiviato (read-only). Il glossario sarà preservato per future campagne.</div></div>
+              <h3>Persistenti dopo archiviazione</h3>
+              <div class="manapips"><h4>Persistenti</h4><span class="manapip kb"><span class="badge">142</span></span><span class="lbl kb">kb</span><span class="manapip toolkit"><span class="badge">34</span></span><span class="lbl toolkit">glossario</span></div>
+              <div class="manapips" style="background: hsl(var(--c-danger) / 0.06); border: 1px solid hsl(var(--c-danger) / 0.2);"><h4 style="color: hsl(var(--c-danger));">Archiviati</h4><span class="manapip event"><span class="badge">445</span></span><span class="lbl event">progresso</span><span class="manapip session"><span class="badge">4</span></span><span class="lbl session">sessioni</span></div>
+            </div>
+            <div class="mfooter"><button class="btn-out">Annulla</button><button class="btn-fill danger">Conferma e archivia</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const r = document.documentElement;
+    r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+</script>
+</body>
+</html>

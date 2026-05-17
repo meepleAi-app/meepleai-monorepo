@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Nanolith Runthrough · Library Search</title>
+<!--
+  Mockup: nanolith-runthrough-library-search
+  Route:  /library
+  Scope:  Phase A runthrough — entry-point libreria, Aaron cerca/filtra Nanolith.
+  UI:     MeepleCard entity="game" variant="grid" + ManaPips canonical cluster
+          (8px dot + floating count badge, max 3 visible + overflow "+N").
+  Stati:  state-01-default-grid     (12 giochi, Nanolith con badge libro-game)
+          state-02-search-filtered  ("nano" → 1 risultato + highlight match)
+          state-03-empty-no-match   ("zelda" → empty state)
+          state-04-filter-librogame (chip "libro game" attivo)
+  Persona: Aaron (badsworm@gmail.com), 30 min pre-sera gruppo A (Marco/Giulia/Luca).
+  Vincolo A1: trovare Nanolith ≤ 3 tap / ≤ 5s.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  .top { position: sticky; top: 0; z-index: var(--z-sticky); backdrop-filter: blur(12px); background: var(--glass-bg); border-bottom: 1px solid var(--border); padding: var(--s-4) var(--s-6); display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+  .top h1 { font-family: var(--f-display); font-size: var(--fs-lg); margin: 0; font-weight: var(--fw-bold); }
+  .top .route { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); padding: 2px var(--s-2); border-radius: var(--r-sm); background: var(--bg-muted); }
+  .top .spacer { flex: 1; }
+  .top button { background: var(--bg-card); border: 1px solid var(--border); color: var(--text); border-radius: var(--r-pill); padding: var(--s-1) var(--s-3); font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer; }
+
+  .stage { padding: var(--s-7) var(--s-6); max-width: 1600px; margin: 0 auto; }
+  .state-section { margin-bottom: var(--s-10); }
+  .state-section .label { display: inline-block; padding: var(--s-1) var(--s-3); background: hsl(var(--c-game) / 0.12); color: hsl(var(--c-game)); border-radius: var(--r-pill); font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--s-2); }
+  .state-section .label .cmp { margin-left: var(--s-2); padding: 1px var(--s-2); background: var(--bg); color: hsl(var(--c-game)); border-radius: var(--r-sm); font-size: 10px; }
+  .state-section h2 { font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-2); }
+  .state-section .desc { color: var(--text-sec); margin: 0 0 var(--s-6); font-size: var(--fs-md); }
+  .frames { display: flex; gap: var(--s-9); flex-wrap: wrap; align-items: flex-start; }
+
+  .phone { width: 375px; min-height: 740px; background: var(--bg); border-radius: 36px; overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; position: relative; }
+  .phone-sbar { height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 6px 22px 0; font-size: 12px; font-weight: var(--fw-bold); font-family: var(--f-display); color: var(--text-sec); }
+  .phone .frame-label, .desktop .frame-label { position: absolute; top: -28px; left: 50%; transform: translateX(-50%); font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+  .desktop { width: 880px; height: 620px; background: var(--bg); border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; position: relative; }
+  .desktop .frame-label { left: 0; transform: none; }
+  .desktop .titlebar { height: 28px; background: var(--bg-muted); flex-shrink: 0; display: flex; align-items: center; padding: 0 var(--s-3); gap: 6px; border-bottom: 1px solid var(--border-light); }
+  .desktop .titlebar .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .desktop .titlebar .dot.r { background: #ff605c; }
+  .desktop .titlebar .dot.y { background: #ffbd44; }
+  .desktop .titlebar .dot.g { background: #00ca4e; }
+  .desktop .titlebar .url { margin-left: var(--s-3); padding: 2px var(--s-3); background: var(--bg-card); border-radius: var(--r-sm); font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); flex: 1; }
+
+  /* App bar + search */
+  .appbar { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--border-light); flex-shrink: 0; }
+  .appbar h2 { font-family: var(--f-display); font-size: var(--fs-lg); font-weight: var(--fw-bold); margin: 0; flex: 1; }
+  .appbar .count { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); padding: 2px var(--s-2); border-radius: var(--r-sm); background: var(--bg-muted); }
+
+  .search-bar { padding: var(--s-3) var(--s-4); display: flex; gap: var(--s-2); align-items: center; }
+  .search-input { flex: 1; display: flex; align-items: center; gap: var(--s-2); padding: var(--s-3); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg-card); }
+  .search-input.focused { border-color: hsl(var(--c-game)); box-shadow: 0 0 0 3px hsl(var(--c-game) / 0.18); }
+  .search-input .icon { font-size: 16px; color: var(--text-muted); }
+  .search-input input { flex: 1; border: 0; background: transparent; outline: 0; color: var(--text); font-family: var(--f-body); font-size: var(--fs-md); }
+  .search-input .clear { background: var(--bg-muted); border: 0; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; cursor: pointer; color: var(--text-muted); }
+
+  /* Filter chips */
+  .filters { padding: 0 var(--s-4) var(--s-3); display: flex; gap: var(--s-2); overflow-x: auto; flex-wrap: nowrap; }
+  .chip { flex-shrink: 0; padding: 6px var(--s-3); border-radius: var(--r-pill); background: var(--bg-card); border: 1px solid var(--border); font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-semi); color: var(--text-sec); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+  .chip.active { background: hsl(var(--c-game) / 0.15); border-color: hsl(var(--c-game) / 0.45); color: hsl(var(--c-game)); }
+  .chip .x { width: 14px; height: 14px; border-radius: 50%; background: hsl(var(--c-game)); color: #fff; font-size: 10px; display: inline-flex; align-items: center; justify-content: center; }
+
+  /* ────────────────────────────────────────────────────────────
+     MEEPLECARD — entity-typed card (game variant=grid)
+     Spec apps/web/src/components/ui/data-display/meeple-card/
+     ──────────────────────────────────────────────────────────── */
+  .grid { padding: var(--s-3) var(--s-4) var(--s-5); display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-3); }
+  .grid.desk { grid-template-columns: repeat(4, 1fr); }
+
+  .mcard {
+    --e: var(--c-game);
+    border-radius: var(--r-lg); overflow: hidden; background: var(--bg-card);
+    border: 1px solid var(--border-light); cursor: pointer; position: relative;
+    transition: transform var(--dur-sm) var(--ease-out), box-shadow var(--dur-sm) var(--ease-out), border-color var(--dur-sm) var(--ease-out);
+    display: flex; flex-direction: column;
+  }
+  .mcard:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: hsl(var(--e) / 0.45); }
+  .mcard.highlight { border-color: hsl(var(--e) / 0.5); box-shadow: 0 0 0 3px hsl(var(--e) / 0.15); }
+
+  .mcard .cover { aspect-ratio: 4/3; position: relative; display: flex; align-items: flex-end; padding: var(--s-2); color: #fff; }
+  .mcard .cover .corner-badge { position: absolute; top: var(--s-2); right: var(--s-2); padding: 2px var(--s-2); border-radius: var(--r-sm); background: hsl(var(--c-session)); color: #fff; font-family: var(--f-mono); font-size: 9px; font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.06em; display: inline-flex; align-items: center; gap: 3px; box-shadow: 0 2px 6px hsl(var(--c-session) / 0.35); }
+  .mcard .cover.nano  { background: radial-gradient(circle at 30% 30%, hsl(var(--c-session) / 0.55), transparent 55%), radial-gradient(circle at 75% 70%, hsl(var(--c-game) / 0.45), transparent 60%), linear-gradient(135deg, #1a1530, #0d0a1a); }
+  .mcard .cover.gloom { background: linear-gradient(135deg, #2a1f0d, #4a3318); }
+  .mcard .cover.cata  { background: linear-gradient(135deg, #1c2e3a, #0f1b24); }
+  .mcard .cover.ark   { background: linear-gradient(135deg, #2d1a3a, #15091e); }
+  .mcard .cover.duke  { background: linear-gradient(135deg, #3a2a1a, #1f1610); }
+  .mcard .cover.brass { background: linear-gradient(135deg, #4a3520, #261c12); }
+  .mcard .cover.spirit{ background: linear-gradient(135deg, #1a3a30, #0e201c); }
+  .mcard .cover.wing  { background: linear-gradient(135deg, #3a2a40, #1c1320); }
+
+  .mcard .body { padding: var(--s-3) var(--s-3) var(--s-1); flex: 1; }
+  .mcard .ti { font-family: var(--f-display); font-size: var(--fs-md); font-weight: var(--fw-bold); color: var(--text); margin: 0; line-height: 1.2; }
+  .mcard .pub { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; font-family: var(--f-mono); }
+
+  /* ────────────────────────────────────────────────────────────
+     MANAPIPS — canonical cluster (parts/ManaPips.tsx)
+     Size md: 8px dot + floating count badge above
+     Max 3 visible + "+N" overflow
+     Colors via entity HSL tokens (--c-kb, --c-chat, --c-session, --c-agent, --c-player, --c-event)
+     ──────────────────────────────────────────────────────────── */
+  .manapips { display: flex; align-items: center; gap: 4px; padding: var(--s-2) var(--s-3) var(--s-3); }
+  .manapip { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; transition: transform var(--dur-xs) var(--ease-out); }
+  .manapip:hover { transform: scale(1.25); }
+  .manapip .badge { position: absolute; top: -7px; left: 50%; transform: translateX(-50%); min-width: 14px; padding: 0 3px; height: 11px; line-height: 11px; border-radius: var(--r-pill); color: #fff; font-family: var(--f-mono); font-size: 8px; font-weight: var(--fw-bold); text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+  .manapip.kb      { background: hsl(var(--c-kb)); }       .manapip.kb .badge      { background: hsl(var(--c-kb)); }
+  .manapip.chat    { background: hsl(var(--c-chat)); }     .manapip.chat .badge    { background: hsl(var(--c-chat)); }
+  .manapip.session { background: hsl(var(--c-session)); }  .manapip.session .badge { background: hsl(var(--c-session)); }
+  .manapip.agent   { background: hsl(var(--c-agent)); }    .manapip.agent .badge   { background: hsl(var(--c-agent)); }
+  .manapip.player  { background: hsl(var(--c-player)); }   .manapip.player .badge  { background: hsl(var(--c-player)); }
+  .manapip.event   { background: hsl(var(--c-event)); }    .manapip.event .badge   { background: hsl(var(--c-event)); }
+  .manapip.empty   { background: hsl(0 0% 60%); opacity: 0.55; }
+  .manapip.empty .badge { display: none; }
+  .manapip-overflow { font-family: var(--f-mono); font-size: 9px; font-weight: var(--fw-semi); color: var(--text-muted); margin-left: 2px; }
+
+  /* ManaPips size="lg" — used in featured/hero variant w/ inline labels */
+  .manapips.lg .manapip { width: 12px; height: 12px; }
+  .manapips.lg .lbl { font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-semi); margin: 0 var(--s-2) 0 4px; }
+  .manapips.lg .lbl.kb      { color: hsl(var(--c-kb)); }
+  .manapips.lg .lbl.chat    { color: hsl(var(--c-chat)); }
+  .manapips.lg .lbl.session { color: hsl(var(--c-session)); }
+
+  /* Empty state */
+  .empty-state { padding: var(--s-9) var(--s-5); text-align: center; }
+  .empty-state .ico { font-size: 56px; margin-bottom: var(--s-4); opacity: 0.6; }
+  .empty-state h3 { font-family: var(--f-display); font-size: var(--fs-xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-2); }
+  .empty-state p { color: var(--text-sec); margin: 0 0 var(--s-5); font-size: var(--fs-md); }
+  .empty-state .btn-out { padding: var(--s-3) var(--s-4); border-radius: var(--r-md); background: var(--bg-card); border: 1px solid var(--border); font-family: var(--f-display); font-weight: var(--fw-semi); color: var(--text); cursor: pointer; }
+
+  /* Bottom nav mobile */
+  .bottom-nav { display: flex; border-top: 1px solid var(--border-light); padding: var(--s-2) var(--s-3); gap: var(--s-3); justify-content: space-around; flex-shrink: 0; }
+  .bnav { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--s-1); font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); cursor: pointer; }
+  .bnav.active { color: hsl(var(--c-game)); }
+  .bnav .em { font-size: 18px; }
+
+  /* Desktop sidebar */
+  .desktop-body { display: flex; flex: 1; overflow: hidden; }
+  .desktop-side { width: 220px; flex-shrink: 0; border-right: 1px solid var(--border-light); padding: var(--s-4); overflow-y: auto; }
+  .desktop-main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+  .side-h { font-family: var(--f-display); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0 0 var(--s-2); }
+  .side-link { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-3); border-radius: var(--r-md); color: var(--text-sec); cursor: pointer; font-size: var(--fs-md); margin-bottom: 2px; }
+  .side-link.active { background: hsl(var(--c-game) / 0.12); color: hsl(var(--c-game)); font-weight: var(--fw-semi); }
+
+  /* Manapips legend (educational, top of state-01) */
+  .legend { display: inline-flex; gap: var(--s-3); padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--bg-muted); margin-bottom: var(--s-5); flex-wrap: wrap; }
+  .legend .item { display: inline-flex; align-items: center; gap: var(--s-1); font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-sec); }
+  .legend .d { width: 8px; height: 8px; border-radius: 50%; }
+  .legend .d.kb      { background: hsl(var(--c-kb)); }
+  .legend .d.chat    { background: hsl(var(--c-chat)); }
+  .legend .d.session { background: hsl(var(--c-session)); }
+  .legend .d.agent   { background: hsl(var(--c-agent)); }
+
+  *:focus-visible { outline: 2px solid hsl(var(--c-game)); outline-offset: 2px; }
+</style>
+</head>
+
+<body>
+
+<header class="top">
+  <h1>Nanolith Runthrough · Library Search</h1>
+  <span class="route">/library</span>
+  <span class="spacer"></span>
+  <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
+</header>
+
+<main class="stage">
+
+  <!-- STATO 01 · DEFAULT GRID -->
+  <section class="state-section" aria-labelledby="s1">
+    <span class="label">Stato 01 · Default Grid<span class="cmp">LibraryHub + MeepleCard</span></span>
+    <h2 id="s1">Libreria 12 giochi — Nanolith con badge libro-game</h2>
+    <p class="desc">Aaron loggato apre /library. Grid 12 giochi, Nanolith above-the-fold con badge entity=session "📖 libro-game" + ManaPips canonical (kb 142 · chat 8 · session 0 · agent 1 → +1 overflow). Discoverable in &lt; 3s.</p>
+
+    <div class="legend" role="group" aria-label="Legenda ManaPips">
+      <span class="item"><span class="d kb"></span>kb (pagine indicizzate)</span>
+      <span class="item"><span class="d chat"></span>chat (conversazioni)</span>
+      <span class="item"><span class="d session"></span>session (partite attive)</span>
+      <span class="item"><span class="d agent"></span>agent (AI tutor)</span>
+    </div>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · default">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:42</span><span>📶 🔋 91%</span></div>
+        <div class="appbar"><h2>Libreria</h2><span class="count">12 giochi</span></div>
+        <div class="search-bar"><div class="search-input"><span class="icon">🔍</span><input placeholder="Cerca nei tuoi giochi…" readonly></div></div>
+        <div class="filters">
+          <span class="chip active">Tutti</span>
+          <span class="chip">📖 Libro game</span>
+          <span class="chip">🎲 Strategici</span>
+          <span class="chip">⚔️ Coop</span>
+        </div>
+        <div class="grid">
+          <article class="mcard highlight" aria-label="Nanolith — libro game">
+            <div class="cover nano"><span class="corner-badge">📖 libro game</span></div>
+            <div class="body"><h3 class="ti">Nanolith</h3><div class="pub">Side Room · 2024</div></div>
+            <div class="manapips" role="list" aria-label="Entità collegate">
+              <span class="manapip kb"      role="listitem" title="kb · 142"><span class="badge">142</span></span>
+              <span class="manapip chat"    role="listitem" title="chat · 8"><span class="badge">8</span></span>
+              <span class="manapip session empty" role="listitem" title="session · 0"></span>
+              <span class="manapip-overflow">+1</span>
+            </div>
+          </article>
+
+          <article class="mcard"><div class="cover gloom"></div><div class="body"><h3 class="ti">Gloomhaven</h3><div class="pub">Cephalofair · 2017</div></div><div class="manapips"><span class="manapip kb"><span class="badge">89</span></span><span class="manapip chat"><span class="badge">3</span></span><span class="manapip session"><span class="badge">1</span></span></div></article>
+          <article class="mcard"><div class="cover cata"></div><div class="body"><h3 class="ti">Catan</h3><div class="pub">Kosmos · 1995</div></div><div class="manapips"><span class="manapip kb"><span class="badge">24</span></span><span class="manapip session empty"></span></div></article>
+          <article class="mcard"><div class="cover ark"></div><div class="body"><h3 class="ti">Arkham Horror</h3><div class="pub">FFG · 2018</div></div><div class="manapips"><span class="manapip kb"><span class="badge">56</span></span><span class="manapip chat"><span class="badge">2</span></span></div></article>
+          <article class="mcard"><div class="cover brass"></div><div class="body"><h3 class="ti">Brass</h3><div class="pub">Roxley · 2018</div></div><div class="manapips"><span class="manapip kb"><span class="badge">32</span></span></div></article>
+          <article class="mcard"><div class="cover spirit"></div><div class="body"><h3 class="ti">Spirit Island</h3><div class="pub">GTG · 2017</div></div><div class="manapips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip chat"><span class="badge">1</span></span></div></article>
+        </div>
+        <div class="bottom-nav">
+          <div class="bnav active"><span class="em">📚</span><span>Libreria</span></div>
+          <div class="bnav"><span class="em">💬</span><span>Chat</span></div>
+          <div class="bnav"><span class="em">🎲</span><span>Sessioni</span></div>
+          <div class="bnav"><span class="em">⚙️</span><span>Profilo</span></div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · default">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library</span></div>
+        <div class="desktop-body">
+          <aside class="desktop-side">
+            <h4 class="side-h">Navigazione</h4>
+            <div class="side-link active">📚 Libreria</div>
+            <div class="side-link">💬 Chat</div>
+            <div class="side-link">🎲 Sessioni</div>
+            <div class="side-link">🗓️ Game nights</div>
+            <h4 class="side-h" style="margin-top: var(--s-5);">Categorie</h4>
+            <div class="side-link">📖 Libro game (1)</div>
+            <div class="side-link">⚔️ Coop (4)</div>
+            <div class="side-link">🎲 Strategici (7)</div>
+          </aside>
+          <div class="desktop-main">
+            <div class="appbar"><h2>Libreria · 12 giochi</h2><span class="count">Aaron · badsworm</span></div>
+            <div class="search-bar"><div class="search-input"><span class="icon">🔍</span><input placeholder="Cerca…" readonly></div></div>
+            <div class="grid desk">
+              <article class="mcard highlight"><div class="cover nano"><span class="corner-badge">📖 libro game</span></div><div class="body"><h3 class="ti">Nanolith</h3><div class="pub">Side Room · 2024</div></div><div class="manapips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">8</span></span><span class="manapip session empty"></span><span class="manapip-overflow">+1</span></div></article>
+              <article class="mcard"><div class="cover gloom"></div><div class="body"><h3 class="ti">Gloomhaven</h3><div class="pub">Cephalofair · 2017</div></div><div class="manapips"><span class="manapip kb"><span class="badge">89</span></span><span class="manapip chat"><span class="badge">3</span></span><span class="manapip session"><span class="badge">1</span></span></div></article>
+              <article class="mcard"><div class="cover cata"></div><div class="body"><h3 class="ti">Catan</h3><div class="pub">Kosmos · 1995</div></div><div class="manapips"><span class="manapip kb"><span class="badge">24</span></span></div></article>
+              <article class="mcard"><div class="cover ark"></div><div class="body"><h3 class="ti">Arkham Horror</h3><div class="pub">FFG · 2018</div></div><div class="manapips"><span class="manapip kb"><span class="badge">56</span></span><span class="manapip chat"><span class="badge">2</span></span></div></article>
+              <article class="mcard"><div class="cover brass"></div><div class="body"><h3 class="ti">Brass</h3><div class="pub">Roxley · 2018</div></div><div class="manapips"><span class="manapip kb"><span class="badge">32</span></span></div></article>
+              <article class="mcard"><div class="cover spirit"></div><div class="body"><h3 class="ti">Spirit Island</h3><div class="pub">GTG · 2017</div></div><div class="manapips"><span class="manapip kb"><span class="badge">47</span></span><span class="manapip chat"><span class="badge">1</span></span></div></article>
+              <article class="mcard"><div class="cover duke"></div><div class="body"><h3 class="ti">Duke</h3><div class="pub">CD · 2013</div></div><div class="manapips"><span class="manapip kb"><span class="badge">18</span></span></div></article>
+              <article class="mcard"><div class="cover wing"></div><div class="body"><h3 class="ti">Wingspan</h3><div class="pub">Stonemaier · 2019</div></div><div class="manapips"><span class="manapip kb"><span class="badge">29</span></span></div></article>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATO 02 · SEARCH FILTERED -->
+  <section class="state-section" aria-labelledby="s2">
+    <span class="label">Stato 02 · Search Filtered<span class="cmp">LibrarySearchFilter</span></span>
+    <h2 id="s2">Aaron digita "nano" — grid filtra a 1 risultato</h2>
+    <p class="desc">Live filter su title/publisher. Highlight match. Count "1 di 12". ManaPips invariato (kb 142 · chat 8 · session 0 · +1).</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · search">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:42</span><span>📶 🔋 91%</span></div>
+        <div class="appbar"><h2>Libreria</h2><span class="count">1 di 12</span></div>
+        <div class="search-bar"><div class="search-input focused"><span class="icon">🔍</span><input value="nano" readonly><button class="clear" type="button" aria-label="Cancella">×</button></div></div>
+        <div class="filters"><span class="chip active">Tutti</span><span class="chip">📖 Libro game</span><span class="chip">🎲 Strategici</span></div>
+        <div class="grid">
+          <article class="mcard highlight">
+            <div class="cover nano"><span class="corner-badge">📖 libro game</span></div>
+            <div class="body"><h3 class="ti"><mark style="background: hsl(var(--c-game) / 0.3); color: inherit; padding: 0 2px; border-radius: 3px;">Nano</mark>lith</h3><div class="pub">Side Room · 2024</div></div>
+            <div class="manapips lg" aria-label="ManaPips full">
+              <span class="manapip kb"><span class="badge">142</span></span><span class="lbl kb">kb</span>
+              <span class="manapip chat"><span class="badge">8</span></span><span class="lbl chat">chat</span>
+              <span class="manapip session empty"></span><span class="lbl session">session</span>
+            </div>
+          </article>
+        </div>
+        <div style="padding: var(--s-3) var(--s-4); text-align: center; color: var(--text-muted); font-size: var(--fs-xs); font-family: var(--f-mono);">11 giochi nascosti dal filtro</div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · search">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library?q=nano</span></div>
+        <div class="desktop-body">
+          <aside class="desktop-side"><h4 class="side-h">Navigazione</h4><div class="side-link active">📚 Libreria</div></aside>
+          <div class="desktop-main">
+            <div class="appbar"><h2>Libreria · 1 risultato</h2><span class="count">filtro: "nano"</span></div>
+            <div class="search-bar"><div class="search-input focused"><span class="icon">🔍</span><input value="nano" readonly><button class="clear">×</button></div></div>
+            <div class="grid desk">
+              <article class="mcard highlight"><div class="cover nano"><span class="corner-badge">📖 libro game</span></div><div class="body"><h3 class="ti"><mark style="background: hsl(var(--c-game) / 0.3); color: inherit; padding: 0 2px; border-radius: 3px;">Nano</mark>lith</h3><div class="pub">Side Room · 2024</div></div><div class="manapips lg"><span class="manapip kb"><span class="badge">142</span></span><span class="lbl kb">kb</span><span class="manapip chat"><span class="badge">8</span></span><span class="lbl chat">chat</span><span class="manapip session empty"></span><span class="lbl session">session</span></div></article>
+            </div>
+            <div style="padding: var(--s-3) var(--s-4); color: var(--text-muted); font-size: var(--fs-xs); font-family: var(--f-mono);">11 giochi nascosti · <a href="#" style="color: hsl(var(--c-game));">cancella ricerca</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATO 03 · EMPTY NO MATCH -->
+  <section class="state-section" aria-labelledby="s3">
+    <span class="label">Stato 03 · No Match<span class="cmp">LibraryEmptyState</span></span>
+    <h2 id="s3">Search senza risultati — "zelda"</h2>
+    <p class="desc">Edge case del runthrough A. Empty state con CTA recovery "Sfoglia catalogo pubblico".</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · empty">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:42</span><span>📶 🔋 91%</span></div>
+        <div class="appbar"><h2>Libreria</h2><span class="count">0 di 12</span></div>
+        <div class="search-bar"><div class="search-input focused"><span class="icon">🔍</span><input value="zelda" readonly><button class="clear">×</button></div></div>
+        <div class="empty-state">
+          <div class="ico">🔍</div>
+          <h3>Nessun gioco trovato</h3>
+          <p>Non hai "zelda" in libreria. Sfoglia il catalogo pubblico.</p>
+          <button class="btn-out">🌐 Sfoglia catalogo</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · empty">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library?q=zelda</span></div>
+        <div class="desktop-body">
+          <aside class="desktop-side"><h4 class="side-h">Navigazione</h4><div class="side-link active">📚 Libreria</div></aside>
+          <div class="desktop-main">
+            <div class="appbar"><h2>Libreria · 0 risultati</h2></div>
+            <div class="search-bar"><div class="search-input focused"><span class="icon">🔍</span><input value="zelda" readonly><button class="clear">×</button></div></div>
+            <div class="empty-state" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <div class="ico">🔍</div>
+              <h3>Nessun gioco trovato per "zelda"</h3>
+              <p>Sfoglia il catalogo pubblico per aggiungerlo alla libreria.</p>
+              <button class="btn-out">🌐 Sfoglia catalogo</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATO 04 · FILTER LIBRO-GAME -->
+  <section class="state-section" aria-labelledby="s4">
+    <span class="label">Stato 04 · Filter libro-game<span class="cmp">LibraryFilterChip</span></span>
+    <h2 id="s4">Aaron filtra per "libro game" — solo Nanolith</h2>
+    <p class="desc">Discoverability alternativa: click chip "📖 Libro game". Counter "1 di 12". Chip X per remove.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · filter">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:42</span><span>📶 🔋 91%</span></div>
+        <div class="appbar"><h2>Libreria</h2><span class="count">1 di 12</span></div>
+        <div class="search-bar"><div class="search-input"><span class="icon">🔍</span><input placeholder="Cerca…" readonly></div></div>
+        <div class="filters">
+          <span class="chip">Tutti</span>
+          <span class="chip active">📖 Libro game <span class="x">×</span></span>
+          <span class="chip">🎲 Strategici</span>
+          <span class="chip">⚔️ Coop</span>
+        </div>
+        <div class="grid">
+          <article class="mcard highlight"><div class="cover nano"><span class="corner-badge">📖 libro game</span></div><div class="body"><h3 class="ti">Nanolith</h3><div class="pub">Side Room · 2024</div></div><div class="manapips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">8</span></span><span class="manapip session empty"></span><span class="manapip-overflow">+1</span></div></article>
+        </div>
+        <div style="padding: var(--s-3) var(--s-4); text-align: center; color: var(--text-muted); font-size: var(--fs-xs); font-family: var(--f-mono);">Filtro: solo libro game · 11 esclusi</div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · filter">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library?filter=libro-game</span></div>
+        <div class="desktop-body">
+          <aside class="desktop-side">
+            <h4 class="side-h">Filtri attivi</h4>
+            <div class="side-link active">📖 Libro game ×</div>
+            <h4 class="side-h" style="margin-top: var(--s-5);">Altri filtri</h4>
+            <div class="side-link">⚔️ Coop (4)</div>
+            <div class="side-link">🎲 Strategici (7)</div>
+          </aside>
+          <div class="desktop-main">
+            <div class="appbar"><h2>Libreria · 1 risultato</h2><span class="count">filtro: libro-game</span></div>
+            <div class="grid desk">
+              <article class="mcard highlight"><div class="cover nano"><span class="corner-badge">📖 libro game</span></div><div class="body"><h3 class="ti">Nanolith</h3><div class="pub">Side Room · 2024</div></div><div class="manapips lg"><span class="manapip kb"><span class="badge">142</span></span><span class="lbl kb">kb</span><span class="manapip chat"><span class="badge">8</span></span><span class="lbl chat">chat</span><span class="manapip session empty"></span><span class="lbl session">session</span></div></article>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const r = document.documentElement;
+    r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+</script>
+</body>
+</html>

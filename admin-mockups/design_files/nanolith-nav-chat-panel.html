@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Nav · Chat Panel Slide-Over (D4 + D7)</title>
+<!--
+  Mockup: nanolith-nav-chat-panel
+  Scope:  N3 — global chat panel come overlay slide-over (NON route).
+          Implementa decisione D4=C (hybrid: route /chat per deep-link + overlay default)
+          e D7 (per-session history persistente per ogni campagna).
+  Stati:  state-01-closed          — chiuso, solo trigger button visibile
+          state-02-open-no-session — overlay aperto, no session live → thread picker globale
+          state-03-per-session     — overlay aperto durante session → carica history campagna
+          state-04-streaming       — query in corso, streaming + citation in arrivo
+  Trigger: chat-btn in TopBar (desktop) o bottom-nav slot 3 (mobile, quando no session)
+           o session-toolbar slot 4 (mobile, in session)
+  Persona: Aaron (badsworm@gmail.com). Pattern slide-over compatibile con
+           ChatSlideOverPanel + useChatPanel esistenti (PR #344).
+  Decisione D7: chat panel carica history specifica della session corrente.
+                Se no session, mostra recent threads + picker.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  .stage-top { position: sticky; top: 0; z-index: var(--z-sticky); backdrop-filter: blur(12px); background: var(--glass-bg); border-bottom: 1px solid var(--border); padding: var(--s-4) var(--s-6); display: flex; align-items: center; gap: var(--s-4); }
+  .stage-top h1 { font-family: var(--f-display); font-size: var(--fs-lg); margin: 0; font-weight: var(--fw-bold); }
+  .stage-top .spacer { flex: 1; }
+  .stage-top button { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-pill); padding: var(--s-1) var(--s-3); font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer; color: var(--text); }
+
+  .stage { padding: var(--s-7) var(--s-6); max-width: 1700px; margin: 0 auto; }
+  .state-section { margin-bottom: var(--s-10); }
+  .state-section .label { display: inline-block; padding: var(--s-1) var(--s-3); background: hsl(var(--c-chat) / 0.12); color: hsl(var(--c-chat)); border-radius: var(--r-pill); font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--s-2); }
+  .state-section .label .cmp { margin-left: var(--s-2); padding: 1px var(--s-2); background: var(--bg); color: hsl(var(--c-chat)); border-radius: var(--r-sm); font-size: 10px; }
+  .state-section h2 { font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-2); }
+  .state-section .desc { color: var(--text-sec); margin: 0 0 var(--s-6); font-size: var(--fs-md); }
+  .frames { display: flex; gap: var(--s-9); flex-wrap: wrap; align-items: flex-start; }
+
+  /* Phone & desktop frames */
+  .phone { width: 375px; min-height: 720px; background: var(--bg); border-radius: 36px; overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; position: relative; }
+  .phone-sbar { height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 6px 22px 0; font-size: 12px; font-weight: var(--fw-bold); font-family: var(--f-display); color: var(--text-sec); }
+  .phone .frame-label, .desktop .frame-label { position: absolute; top: -28px; left: 50%; transform: translateX(-50%); font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+  .desktop { width: 1000px; height: 600px; background: var(--bg); border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; position: relative; }
+  .desktop .frame-label { left: 0; transform: none; }
+  .desktop .titlebar { height: 28px; background: var(--bg-muted); flex-shrink: 0; display: flex; align-items: center; padding: 0 var(--s-3); gap: 6px; border-bottom: 1px solid var(--border-light); }
+  .desktop .titlebar .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .desktop .titlebar .dot.r { background: #ff605c; }
+  .desktop .titlebar .dot.y { background: #ffbd44; }
+  .desktop .titlebar .dot.g { background: #00ca4e; }
+  .desktop .titlebar .url { margin-left: var(--s-3); padding: 2px var(--s-3); background: var(--bg-card); border-radius: var(--r-sm); font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); flex: 1; }
+
+  /* Background page (dimmed) */
+  .bg-page { flex: 1; padding: var(--s-4); background: var(--bg-muted); position: relative; }
+  .bg-page .placeholder { padding: var(--s-3); border-radius: var(--r-md); background: var(--bg-card); border: 1px solid var(--border-light); margin-bottom: var(--s-2); }
+  .bg-page .placeholder .sk { height: 10px; background: var(--bg-muted); border-radius: var(--r-sm); margin-bottom: var(--s-1); }
+  .bg-page .placeholder .sk.short { max-width: 60%; }
+
+  /* Floating trigger button (closed state) */
+  .chat-fab {
+    position: absolute; bottom: var(--s-5); right: var(--s-5); z-index: 5;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: hsl(var(--c-chat)); color: #fff; border: 0;
+    box-shadow: 0 8px 24px hsl(var(--c-chat) / 0.4);
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    cursor: pointer;
+  }
+  .chat-fab .badge { position: absolute; top: -2px; right: -2px; min-width: 20px; height: 20px; border-radius: var(--r-pill); background: hsl(var(--c-event)); color: #fff; font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold); display: inline-flex; align-items: center; justify-content: center; padding: 0 5px; border: 2px solid var(--bg); }
+
+  /* ─── Backdrop (when open) ─── */
+  .backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(6px); z-index: 10; }
+
+  /* ─── Slide-over panel ─── */
+  .slide-over {
+    position: absolute; top: 0; right: 0; bottom: 0; z-index: 20;
+    background: var(--bg-card); border-left: 1px solid var(--border);
+    box-shadow: var(--shadow-lg); display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .slide-over.mobile { left: 0; border-left: 0; }
+  .slide-over.desk { width: 460px; }
+
+  /* Panel header */
+  .panel-h { padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: var(--s-3); flex-shrink: 0; background: var(--bg-card); }
+  .panel-h .ag { width: 36px; height: 36px; border-radius: 50%; background: hsl(var(--c-agent) / 0.18); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .panel-h .info { flex: 1; min-width: 0; }
+  .panel-h .info .ti { font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md); margin: 0; }
+  .panel-h .info .sub { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .panel-h .close { width: 32px; height: 32px; border-radius: 50%; background: var(--bg-muted); border: 0; font-size: 14px; cursor: pointer; flex-shrink: 0; }
+
+  /* Context switcher */
+  .ctx-switch {
+    display: inline-flex; gap: var(--s-1); padding: 2px; background: var(--bg-muted);
+    border-radius: var(--r-pill); border: 1px solid var(--border-light); margin: var(--s-2) var(--s-4);
+  }
+  .ctx-switch .it { padding: 4px var(--s-2); font-family: var(--f-mono); font-size: 10px; color: var(--text-sec); border-radius: var(--r-pill); cursor: pointer; }
+  .ctx-switch .it.active { background: var(--bg-card); color: hsl(var(--c-chat)); font-weight: var(--fw-bold); box-shadow: var(--shadow-xs); }
+
+  /* Per-session banner */
+  .session-banner {
+    margin: var(--s-2) var(--s-4); padding: var(--s-2) var(--s-3);
+    border-radius: var(--r-md); background: hsl(var(--c-session) / 0.08);
+    border: 1px solid hsl(var(--c-session) / 0.3);
+    display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-xs);
+  }
+  .session-banner .pulse { width: 8px; height: 8px; border-radius: 50%; background: hsl(var(--c-session)); animation: pulse 2s cubic-bezier(0.66,0,0.34,1) infinite; flex-shrink: 0; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 hsl(var(--c-session) / 0.5); } 70% { box-shadow: 0 0 0 8px hsl(var(--c-session) / 0); } 100% { box-shadow: 0 0 0 0 hsl(var(--c-session) / 0); } }
+  .session-banner .info { flex: 1; }
+  .session-banner .info .ti { font-family: var(--f-display); font-weight: var(--fw-bold); color: hsl(var(--c-session)); }
+  .session-banner .info .sub { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+
+  /* Thread picker (no session state) */
+  .thread-list { flex: 1; overflow-y: auto; padding: var(--s-2) var(--s-4); }
+  .thread-list h4 { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin: var(--s-3) 0 var(--s-2); }
+  .thread { padding: var(--s-2); border-radius: var(--r-md); border: 1px solid var(--border-light); background: var(--bg); margin-bottom: var(--s-2); cursor: pointer; display: flex; gap: var(--s-2); align-items: flex-start; }
+  .thread:hover { border-color: hsl(var(--c-chat) / 0.4); }
+  .thread .ico { width: 28px; height: 28px; border-radius: 50%; background: hsl(var(--c-game) / 0.12); color: hsl(var(--c-game)); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .thread .info { flex: 1; min-width: 0; }
+  .thread .info .ti { font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thread .info .preview { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thread .meta { font-family: var(--f-mono); font-size: 9px; color: var(--text-muted); flex-shrink: 0; }
+
+  /* Messages */
+  .messages { flex: 1; overflow-y: auto; padding: var(--s-3) var(--s-4); display: flex; flex-direction: column; gap: var(--s-2); }
+  .bubble { padding: var(--s-2) var(--s-3); border-radius: var(--r-md); font-size: var(--fs-sm); max-width: 88%; line-height: var(--lh-snug); }
+  .bubble.user { align-self: flex-end; background: hsl(var(--c-chat)); color: #fff; }
+  .bubble.agent { align-self: flex-start; background: var(--bg-muted); color: var(--text); border: 1px solid var(--border-light); }
+  .bubble.typing { display: inline-flex; gap: 4px; padding: var(--s-3); align-items: center; }
+  .bubble.typing span { width: 6px; height: 6px; border-radius: 50%; background: hsl(var(--c-agent)); animation: typing 1.4s ease-in-out infinite; }
+  .bubble.typing span:nth-child(2) { animation-delay: 0.2s; }
+  .bubble.typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+  .ts { font-family: var(--f-mono); font-size: 9px; color: var(--text-muted); align-self: center; margin: var(--s-2) 0 var(--s-1); }
+  .citation { margin-top: var(--s-2); padding: var(--s-2); border-radius: var(--r-sm); background: var(--bg-card); border-left: 3px solid hsl(var(--c-kb)); font-family: var(--f-mono); font-size: 10px; color: var(--text-sec); }
+  .citation strong { color: hsl(var(--c-kb)); }
+  .conf { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: var(--r-pill); font-family: var(--f-mono); font-size: 9px; font-weight: var(--fw-bold); margin-left: var(--s-1); background: hsl(var(--c-success) / 0.15); color: hsl(var(--c-success)); }
+
+  /* Input row */
+  .input-row { padding: var(--s-2) var(--s-3); border-top: 1px solid var(--border-light); display: flex; gap: var(--s-2); align-items: center; flex-shrink: 0; }
+  .input-row input { flex: 1; padding: var(--s-2) var(--s-3); border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--bg); font-family: var(--f-body); font-size: var(--fs-sm); outline: 0; }
+  .input-row input:focus { border-color: hsl(var(--c-chat)); box-shadow: 0 0 0 3px hsl(var(--c-chat) / 0.15); }
+  .input-row .send { width: 36px; height: 36px; border-radius: 50%; background: hsl(var(--c-chat)); color: #fff; border: 0; font-size: 16px; cursor: pointer; flex-shrink: 0; }
+  .input-row .send[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+  /* Quota row */
+  .quota-row { padding: var(--s-1) var(--s-3); background: var(--bg-muted); border-top: 1px solid var(--border-light); font-family: var(--f-mono); font-size: 9px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; }
+  .quota-row .free { color: hsl(var(--c-warning)); font-weight: var(--fw-bold); }
+
+  /* Note */
+  .note { padding: var(--s-3); border-left: 3px solid hsl(var(--c-info)); background: hsl(var(--c-info) / 0.05); border-radius: 0 var(--r-md) var(--r-md) 0; margin-top: var(--s-4); font-size: var(--fs-sm); color: var(--text-sec); max-width: 760px; }
+  .note strong { color: hsl(var(--c-info)); font-family: var(--f-display); font-weight: var(--fw-bold); }
+
+  *:focus-visible { outline: 2px solid hsl(var(--c-chat)); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .bubble.typing span, .session-banner .pulse { animation: none; } }
+</style>
+</head>
+<body>
+
+<header class="stage-top">
+  <h1>Nanolith Nav · Chat Panel Slide-Over (D4 + D7)</h1>
+  <span class="spacer"></span>
+  <button id="theme-btn" type="button">🌗 Tema</button>
+</header>
+
+<main class="stage">
+
+  <section class="state-section">
+    <span class="label">Stato 01 · Closed (trigger)<span class="cmp">ChatPanel · FabButton</span></span>
+    <h2>Chat panel chiuso — trigger floating in bottom-right (mobile) o topbar (desktop)</h2>
+    <p class="desc">Lo stato di default. Su mobile può apparire come FAB se la session-toolbar non lo include. Su desktop è la chat-btn della TopBar (vedi N1). Badge mostra unread count.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · closed">
+        <span class="frame-label">Mobile · 375px · trigger FAB</span>
+        <div class="phone-sbar"><span>16:42</span><span>📶 🔋 85%</span></div>
+        <div class="bg-page">
+          <div class="placeholder"><div class="sk"></div><div class="sk short"></div></div>
+          <div class="placeholder"><div class="sk"></div></div>
+          <div class="placeholder"><div class="sk short"></div></div>
+          <button class="chat-fab" aria-label="Apri chat">💬<span class="badge">3</span></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="state-section">
+    <span class="label">Stato 02 · Open · No session<span class="cmp">ChatPanel · GlobalThreadPicker</span></span>
+    <h2>Aaron apre la chat senza sessione attiva — thread picker globale</h2>
+    <p class="desc">Senza sessione, il panel mostra thread recenti + "New thread". Ogni thread linkato a un gioco specifico (entity=game icon + name). D4=C: pulsante "↗ Apri in /chat" per deep-link mode.</p>
+
+    <div class="frames">
+      <div class="desktop" role="region" aria-label="Desktop · open no session">
+        <span class="frame-label">Desktop · chat overlay, no session attiva</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library ← overlay chat</span></div>
+        <div style="display: flex; flex: 1; position: relative;">
+          <div class="bg-page" style="flex: 1; background: var(--bg-muted);">
+            <div class="placeholder"><div class="sk"></div><div class="sk short"></div></div>
+            <div class="placeholder"><div class="sk"></div></div>
+          </div>
+          <div class="backdrop" style="right: 460px;"></div>
+          <aside class="slide-over desk" role="dialog" aria-label="Chat panel">
+            <div class="panel-h">
+              <div class="ag">🤖</div>
+              <div class="info"><div class="ti">Chat globale</div><div class="sub">Scegli un thread o cerca regole</div></div>
+              <button class="close" aria-label="Chiudi" title="Esc">✕</button>
+            </div>
+            <div class="ctx-switch" role="tablist">
+              <span class="it active">Recenti</span>
+              <span class="it">Per gioco</span>
+              <span class="it">Tutti</span>
+            </div>
+            <div class="thread-list">
+              <h4>Oggi</h4>
+              <div class="thread"><div class="ico">🎲</div><div class="info"><div class="ti">Nanolith · setup 4 giocatori</div><div class="preview">Press Start p.3-7 spiega che…</div></div><div class="meta">2h fa</div></div>
+              <div class="thread"><div class="ico" style="background: hsl(var(--c-event) / 0.12); color: hsl(var(--c-event));">⚔️</div><div class="info"><div class="ti">Gloomhaven · scenario 17</div><div class="preview">Tassa di "weak summon" cumula con…</div></div><div class="meta">5h fa</div></div>
+              <h4>Ieri</h4>
+              <div class="thread"><div class="ico">🎲</div><div class="info"><div class="ti">Brass: Birmingham · prestiti</div><div class="preview">I prestiti aumentano la VP penalty…</div></div><div class="meta">ieri</div></div>
+            </div>
+            <div class="input-row">
+              <input type="text" placeholder="Chiedi qualcosa…" />
+              <button class="send">➤</button>
+            </div>
+            <div class="quota-row">
+              <span>💎 Tier free · <strong>7/10</strong> query oggi</span>
+              <span style="color: hsl(var(--c-chat)); cursor: pointer;">↗ Apri in /chat</span>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>💡 Pattern chiave (D4=C):</strong> il panel overlay è il default. Il link "↗ Apri in /chat" preserva la possibilità di deep-link / share / fullscreen quando serve.
+    </div>
+  </section>
+
+  <section class="state-section">
+    <span class="label">Stato 03 · Open · Per-session<span class="cmp">ChatPanel · SessionHistoryAutoLoad</span></span>
+    <h2>Aaron in sessione Nanolith — chat carica history specifica campagna</h2>
+    <p class="desc">D7 per-session: appena Aaron apre il chat durante sessione attiva, il panel mostra <strong>session banner</strong> in alto (pulse + "Campagna con i ragazzi") e carica direttamente la chat della campagna corrente. Aaron NON deve scegliere thread — context-aware automatico.</p>
+
+    <div class="frames">
+      <div class="desktop" role="region" aria-label="Desktop · per-session">
+        <span class="frame-label">Desktop · chat overlay durante sessione Nanolith</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/abc123 ← overlay</span></div>
+        <div style="display: flex; flex: 1; position: relative;">
+          <div class="bg-page" style="flex: 1; background: var(--bg-muted);">
+            <div class="placeholder"><div class="sk"></div><div class="sk short"></div></div>
+            <div class="placeholder"><div class="sk"></div></div>
+          </div>
+          <div class="backdrop" style="right: 460px;"></div>
+          <aside class="slide-over desk" role="dialog">
+            <div class="panel-h">
+              <div class="ag">🤖</div>
+              <div class="info"><div class="ti">Nanolith Tutor</div><div class="sub">Per-session · DeepSeek IT · 12 query oggi</div></div>
+              <button class="close">✕</button>
+            </div>
+            <div class="session-banner">
+              <span class="pulse"></span>
+              <div class="info"><div class="ti">Campagna con i ragazzi · §289</div><div class="sub">Cap 4 · 3h 17m · 4 giocatori</div></div>
+            </div>
+            <div class="messages">
+              <div class="ts">22:14 · oggi</div>
+              <div class="bubble user">Setup per 4 giocatori?</div>
+              <div class="bubble agent">Ecco i 5 step dal Press Start: 1) Tavolo, 2) Carte iniziali, 3) Tracking sheet, 4) Token energia, 5) Storybook a §1.<div class="citation"><strong>Press Start p.3-7</strong> · accuracy 94%</div><span class="conf">● alta</span></div>
+              <div class="ts">22:33</div>
+              <div class="bubble user">Marco chiede se può usare oggetto §271 ora</div>
+              <div class="bubble agent">Sì, oggetti non perdibili sono usabili in non-combattimento.<div class="citation"><strong>Rules p.42 §3.7</strong></div><span class="conf">● alta</span></div>
+            </div>
+            <div class="input-row">
+              <input type="text" placeholder="Chiedi al Tutor su questa campagna…" />
+              <button class="send">➤</button>
+            </div>
+            <div class="quota-row">
+              <span>💎 Tier free · <strong>12/15</strong> bonus session</span>
+              <span>history salvata · per-session</span>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <div class="phone" role="region" aria-label="Mobile · per-session full-screen">
+        <span class="frame-label">Mobile · 375px · panel full-screen</span>
+        <div class="phone-sbar"><span>22:34</span><span>📶 🔋 56%</span></div>
+        <aside class="slide-over mobile" style="position: absolute; inset: 32px 0 0; z-index: 20;">
+          <div class="panel-h">
+            <div class="ag">🤖</div>
+            <div class="info"><div class="ti">Tutor</div><div class="sub">Per-session · 12 oggi</div></div>
+            <button class="close">✕</button>
+          </div>
+          <div class="session-banner"><span class="pulse"></span><div class="info"><div class="ti">§289 · 3h 17m</div><div class="sub">Cap 4</div></div></div>
+          <div class="messages">
+            <div class="bubble user">Setup 4 giocatori?</div>
+            <div class="bubble agent">5 step da Press Start: tavolo, carte, sheet, token, storybook §1.<div class="citation"><strong>p.3-7</strong> · 94%</div></div>
+            <div class="bubble user">Oggetto §271 ora?</div>
+            <div class="bubble agent">Sì, non perdibile.<div class="citation"><strong>p.42</strong></div></div>
+          </div>
+          <div class="input-row">
+            <input type="text" placeholder="Chiedi…" />
+            <button class="send">➤</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>💡 Pattern chiave (D7):</strong> per-session history è la differenza UX più importante. Il Tutor "ricorda" tutto della campagna corrente (Marco/Giulia/Luca, capitoli giocati, decisioni narrative) → risposte contestuali, non query a freddo.
+    </div>
+  </section>
+
+  <section class="state-section">
+    <span class="label">Stato 04 · Streaming<span class="cmp">ChatPanel · LiveQuery</span></span>
+    <h2>Query in corso — streaming + citation in arrivo</h2>
+    <p class="desc">Aaron invia una nuova query. Il bubble user appare immediato, il bubble agent inizia con typing dots (●●●) poi cambia a streaming text + citation finale in 7s. Input row disabilitato durante streaming (rate-limit).</p>
+
+    <div class="frames">
+      <div class="desktop" role="region" aria-label="Desktop · streaming">
+        <span class="frame-label">Desktop · streaming query</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/abc123 ← chat streaming</span></div>
+        <div style="display: flex; flex: 1; position: relative;">
+          <div class="bg-page" style="flex: 1; background: var(--bg-muted);">
+            <div class="placeholder"><div class="sk"></div></div>
+          </div>
+          <div class="backdrop" style="right: 460px;"></div>
+          <aside class="slide-over desk">
+            <div class="panel-h"><div class="ag">🤖</div><div class="info"><div class="ti">Nanolith Tutor · streaming</div><div class="sub">in corso · 4s</div></div><button class="close">✕</button></div>
+            <div class="session-banner"><span class="pulse"></span><div class="info"><div class="ti">Campagna con i ragazzi · §294</div><div class="sub">encounter Reaver</div></div></div>
+            <div class="messages">
+              <div class="bubble user">Se ho 2 ferite il malus −2 si cumula con quello del Reaver?</div>
+              <div class="bubble agent">I malus di ferita cumulano solo con malus situazionali (oscurità, distanza)…</div>
+              <div class="bubble agent typing"><span></span><span></span><span></span></div>
+            </div>
+            <div class="input-row">
+              <input type="text" placeholder="In attesa risposta…" disabled />
+              <button class="send" disabled>➤</button>
+            </div>
+            <div class="quota-row">
+              <span>● live streaming · 4.2s</span>
+              <span>13/15 · prossima query in attesa</span>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>💡 Pattern chiave:</strong> input disabled durante streaming previene query parallele (server load) e race-condition citation. Riabilitato al completamento del response + citation rendering. Cancel button (esc o ✕ inline) può interrompere stream.
+    </div>
+  </section>
+
+</main>
+
+<script>
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const r = document.documentElement;
+    r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+</script>
+</body>
+</html>

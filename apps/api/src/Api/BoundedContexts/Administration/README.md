@@ -118,7 +118,7 @@ Audit Log Created
   - Average API response time
   - Cache hit rate
   - Database query performance
-  - Qdrant query latency
+  - pgvector query latency
 
 ### Dashboard Endpoint
 ```bash
@@ -292,7 +292,7 @@ Vedi `Infrastructure/Entities/Administration/`:
 
 ### Health Checks
 - `/health/live`: Liveness probe
-- `/health/ready`: Readiness probe (includes DB, Redis, Qdrant checks)
+- `/health/ready`: Readiness probe (includes DB, Redis, pgvector checks)
 
 ### Metrics (Prometheus)
 - `meepleai_users_total`

@@ -1,0 +1,36 @@
+meta {
+  name: SG4-ND1 — Thread UUID to /chat/sessions rename → 400 INVALID_ENTITY_TYPE
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{apiBase}}/api/v1/chat-threads
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "gameId": "{{smokeGameId}}",
+    "title": "SG4 disambiguation probe thread"
+  }
+}
+
+script:post-response {
+  // First create a ChatThread so we have a real threadId.
+  // The actual disambiguation test is in 10b-send-threadid-to-session-endpoint.bru
+  const body = res.getBody();
+  if (body && body.id) {
+    bru.setVar("disambiguationThreadId", body.id);
+  }
+}
+
+tests {
+  test("thread created for disambiguation test", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+  test("disambiguationThreadId captured", function() {
+    expect(bru.getVar("disambiguationThreadId")).to.exist;
+  });
+}

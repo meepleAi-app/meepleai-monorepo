@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin tools chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13d admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
 import { CheckCircle, Loader2, XCircle, Zap } from 'lucide-react';
@@ -32,7 +33,7 @@ export function PipelineTest() {
   const { mutate, data, isPending } = usePipelineTest();
 
   return (
-    <div className="rounded-lg border border-slate-200/60 dark:border-zinc-700/60 bg-white/90 dark:bg-zinc-800/90 p-4 space-y-3">
+    <div className="rounded-lg border border-border/60 dark:border-zinc-700/60 bg-card/90 dark:bg-zinc-800/90 p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Zap className="h-4 w-4 text-amber-500" />

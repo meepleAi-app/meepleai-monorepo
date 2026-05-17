@@ -1,0 +1,33 @@
+meta {
+  name: SG4-CT2 — ChatThread rename via PATCH title
+  type: http
+  seq: 12
+}
+
+patch {
+  url: {{apiBase}}/api/v1/chat-threads/{{chatThreadId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "SG4 smoke thread — renamed"
+  }
+}
+
+script:pre-request {
+  if (!bru.getVar("chatThreadId")) {
+    throw new Error("chatThreadId not set — run 07-auto-create first");
+  }
+}
+
+tests {
+  test("returns 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("updated title in response", function() {
+    const body = res.getBody();
+    expect(body.title).to.equal("SG4 smoke thread — renamed");
+  });
+}

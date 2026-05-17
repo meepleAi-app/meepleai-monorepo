@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MeepleAI — Nanolith Runthrough · Setup Wizard Drawer</title>
+<!--
+  Mockup: nanolith-runthrough-setup-wizard
+  Route:  /library/{gameId}  (drawer overlay, no route change)
+  Scope:  Phase A runthrough — net-new flow: Aaron clicca "📖 Avvia libro game"
+          su game-detail e apre un drawer wizard (3 step) per creare una nuova
+          campagna senza lasciare il contesto. Pattern: bottom-sheet mobile,
+          side-drawer 480px desktop (DR-1 + DR-2 da 03-drawer-variants.html).
+  Stati:  state-01-step1-name      (input nome campagna + preset gruppo)
+          state-02-step2-players   (4 player chip: Aaron + Marco/Giulia/Luca, add custom)
+          state-03-step3-confirm   (review + CTA "Inizia sessione")
+          state-04-validation-err  (nome vuoto → inline error)
+  UI:     MeepleCard entity="player" variant="compact" per player chip
+          ManaPips canonical (kb 142 · agent 1 · player 4) nel summary step 3
+  Persona: Aaron (badsworm@gmail.com), gruppo A predefinito (Marco/Giulia/Luca)
+           o gruppo B alternativo (fidanzata).
+  Vincolo SMART A2: setup completato ≤ 30s, ≤ 4 tap.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+
+<style>
+  body { background: var(--bg); color: var(--text); font-family: var(--f-body); margin: 0; }
+
+  .top { position: sticky; top: 0; z-index: var(--z-sticky); backdrop-filter: blur(12px); background: var(--glass-bg); border-bottom: 1px solid var(--border); padding: var(--s-4) var(--s-6); display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+  .top h1 { font-family: var(--f-display); font-size: var(--fs-lg); margin: 0; font-weight: var(--fw-bold); }
+  .top .route { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); padding: 2px var(--s-2); border-radius: var(--r-sm); background: var(--bg-muted); }
+  .top .spacer { flex: 1; }
+  .top button { background: var(--bg-card); border: 1px solid var(--border); color: var(--text); border-radius: var(--r-pill); padding: var(--s-1) var(--s-3); font-family: var(--f-mono); font-size: var(--fs-xs); cursor: pointer; }
+
+  .stage { padding: var(--s-7) var(--s-6); max-width: 1700px; margin: 0 auto; }
+  .state-section { margin-bottom: var(--s-10); }
+  .state-section .label { display: inline-block; padding: var(--s-1) var(--s-3); background: hsl(var(--c-session) / 0.12); color: hsl(var(--c-session)); border-radius: var(--r-pill); font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--s-2); }
+  .state-section .label .cmp { margin-left: var(--s-2); padding: 1px var(--s-2); background: var(--bg); color: hsl(var(--c-session)); border-radius: var(--r-sm); font-size: 10px; }
+  .state-section h2 { font-family: var(--f-display); font-size: var(--fs-2xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-2); }
+  .state-section .desc { color: var(--text-sec); margin: 0 0 var(--s-6); font-size: var(--fs-md); }
+  .frames { display: flex; gap: var(--s-9); flex-wrap: wrap; align-items: flex-start; }
+
+  .phone { width: 375px; min-height: 740px; background: var(--bg); border-radius: 36px; overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; position: relative; }
+  .phone-sbar { height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 6px 22px 0; font-size: 12px; font-weight: var(--fw-bold); font-family: var(--f-display); color: var(--text-sec); }
+  .phone .frame-label, .desktop .frame-label { position: absolute; top: -28px; left: 50%; transform: translateX(-50%); font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+  .desktop { width: 880px; height: 620px; background: var(--bg); border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; position: relative; }
+  .desktop .frame-label { left: 0; transform: none; }
+  .desktop .titlebar { height: 28px; background: var(--bg-muted); flex-shrink: 0; display: flex; align-items: center; padding: 0 var(--s-3); gap: 6px; border-bottom: 1px solid var(--border-light); }
+  .desktop .titlebar .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .desktop .titlebar .dot.r { background: #ff605c; }
+  .desktop .titlebar .dot.y { background: #ffbd44; }
+  .desktop .titlebar .dot.g { background: #00ca4e; }
+  .desktop .titlebar .url { margin-left: var(--s-3); padding: 2px var(--s-3); background: var(--bg-card); border-radius: var(--r-sm); font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); flex: 1; }
+
+  /* ─── BACKDROP (Nanolith game-detail in background, blurred) ─── */
+  .backdrop {
+    flex: 1; position: relative; overflow: hidden;
+    background:
+      linear-gradient(0deg, rgba(0,0,0,0.45), rgba(0,0,0,0.55)),
+      radial-gradient(circle at 30% 30%, hsl(var(--c-session) / 0.45), transparent 55%),
+      radial-gradient(circle at 75% 70%, hsl(var(--c-game) / 0.35), transparent 60%),
+      linear-gradient(135deg, #1a1530, #0d0a1a);
+    filter: blur(0.5px);
+  }
+  .backdrop .ghost-title {
+    position: absolute; top: var(--s-7); left: var(--s-4); right: var(--s-4);
+    color: rgba(255,255,255,0.55); font-family: var(--f-display); font-size: var(--fs-3xl); font-weight: var(--fw-bold);
+  }
+  .backdrop .ghost-sub {
+    position: absolute; top: calc(var(--s-7) + 44px); left: var(--s-4);
+    color: rgba(255,255,255,0.4); font-family: var(--f-mono); font-size: var(--fs-xs);
+  }
+
+  /* ─── DRAWER · bottom-sheet (mobile) ─── */
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: var(--z-drawer);
+    background: var(--bg-card); border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+    box-shadow: var(--shadow-drawer); display: flex; flex-direction: column;
+    max-height: 80%; transition: transform var(--dur-md) var(--ease-out);
+  }
+  .sheet .handle {
+    width: 36px; height: 4px; background: var(--border); border-radius: var(--r-pill);
+    margin: var(--s-2) auto var(--s-1);
+  }
+  .sheet .sheet-h {
+    padding: var(--s-3) var(--s-4); display: flex; align-items: center; gap: var(--s-3);
+    border-bottom: 1px solid var(--border-light);
+  }
+  .sheet .sheet-h .ico {
+    width: 36px; height: 36px; border-radius: var(--r-md); background: hsl(var(--c-session) / 0.15);
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .sheet .sheet-h .t { flex: 1; }
+  .sheet .sheet-h .t .ti { font-family: var(--f-display); font-size: var(--fs-md); font-weight: var(--fw-bold); margin: 0; }
+  .sheet .sheet-h .t .sub { font-size: var(--fs-xs); color: var(--text-muted); font-family: var(--f-mono); margin-top: 2px; }
+  .sheet .sheet-h .close { width: 28px; height: 28px; border-radius: 50%; background: var(--bg-muted); border: 0; font-size: 14px; cursor: pointer; }
+
+  /* ─── DRAWER · side (desktop) ─── */
+  .side-drawer {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 480px; z-index: var(--z-drawer);
+    background: var(--bg-card); border-left: 1px solid var(--border);
+    box-shadow: var(--shadow-lg); display: flex; flex-direction: column;
+  }
+  .side-drawer .sheet-h { border-bottom: 1px solid var(--border-light); }
+
+  /* ─── Stepper ─── */
+  .stepper { display: flex; padding: var(--s-3) var(--s-4); gap: var(--s-2); border-bottom: 1px solid var(--border-light); }
+  .step-pill { flex: 1; padding: var(--s-2); border-radius: var(--r-md); background: var(--bg-muted); border: 1px solid var(--border-light); text-align: center; font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+  .step-pill.active { background: hsl(var(--c-session) / 0.15); border-color: hsl(var(--c-session) / 0.45); color: hsl(var(--c-session)); font-weight: var(--fw-bold); }
+  .step-pill.done { background: hsl(var(--c-success) / 0.12); border-color: hsl(var(--c-success) / 0.35); color: hsl(var(--c-success)); }
+  .step-pill .n { font-family: var(--f-mono); font-weight: var(--fw-bold); margin-right: 4px; }
+
+  /* ─── Sheet body ─── */
+  .sbody { padding: var(--s-4); flex: 1; overflow-y: auto; }
+  .sbody h3 { font-family: var(--f-display); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0 0 var(--s-2); }
+
+  /* ─── Input field ─── */
+  .field { margin-bottom: var(--s-4); }
+  .field label { display: block; font-family: var(--f-display); font-size: var(--fs-sm); font-weight: var(--fw-semi); color: var(--text-sec); margin-bottom: var(--s-1); }
+  .field input[type="text"] {
+    width: 100%; padding: var(--s-3); border: 1px solid var(--border); border-radius: var(--r-md);
+    background: var(--bg); color: var(--text); font-family: var(--f-body); font-size: var(--fs-md); outline: 0;
+    transition: border-color var(--dur-sm) var(--ease-out), box-shadow var(--dur-sm) var(--ease-out);
+  }
+  .field input[type="text"]:focus { border-color: hsl(var(--c-session)); box-shadow: 0 0 0 3px hsl(var(--c-session) / 0.18); }
+  .field .hint { font-size: var(--fs-xs); color: var(--text-muted); margin-top: var(--s-1); font-family: var(--f-mono); }
+  .field.error input[type="text"] { border-color: hsl(var(--c-danger)); box-shadow: 0 0 0 3px hsl(var(--c-danger) / 0.15); }
+  .field.error .hint { color: hsl(var(--c-danger)); font-weight: var(--fw-semi); }
+
+  /* ─── Preset selector (radio cards) ─── */
+  .presets { display: flex; flex-direction: column; gap: var(--s-2); }
+  .preset {
+    display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3);
+    border: 1px solid var(--border-light); border-radius: var(--r-md); cursor: pointer;
+    background: var(--bg);
+  }
+  .preset.selected { border-color: hsl(var(--c-session) / 0.5); background: hsl(var(--c-session) / 0.06); }
+  .preset .radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0; position: relative; }
+  .preset.selected .radio { border-color: hsl(var(--c-session)); }
+  .preset.selected .radio::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: hsl(var(--c-session)); }
+  .preset .info { flex: 1; }
+  .preset .info .ti { font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md); }
+  .preset .info .sub { font-size: var(--fs-xs); color: var(--text-muted); font-family: var(--f-mono); margin-top: 2px; }
+  .preset .count { font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold); padding: 2px var(--s-2); border-radius: var(--r-sm); background: hsl(var(--c-player) / 0.15); color: hsl(var(--c-player)); }
+
+  /* ─── Player chips (MeepleCard entity="player" variant="compact") ─── */
+  .pchips { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
+  .pchip {
+    display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-3);
+    border-radius: var(--r-md); border: 1px solid hsl(var(--c-player) / 0.35);
+    background: hsl(var(--c-player) / 0.08);
+    transition: transform var(--dur-sm) var(--ease-out);
+  }
+  .pchip:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .pchip .avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: hsl(var(--c-player));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-xs); flex-shrink: 0;
+  }
+  .pchip .info { flex: 1; min-width: 0; }
+  .pchip .nm { font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pchip .role { font-family: var(--f-mono); font-size: 10px; color: hsl(var(--c-player)); }
+  .pchip .x { width: 18px; height: 18px; border-radius: 50%; background: var(--bg-card); border: 0; color: var(--text-muted); font-size: 11px; cursor: pointer; }
+  .pchip.host { border-color: hsl(var(--c-session) / 0.55); background: hsl(var(--c-session) / 0.1); }
+  .pchip.host .avatar { background: hsl(var(--c-session)); }
+  .pchip.host .role { color: hsl(var(--c-session)); }
+  .pchip.add {
+    border-style: dashed; background: transparent; color: var(--text-muted);
+    justify-content: center; cursor: pointer;
+  }
+  .pchip.add:hover { border-color: hsl(var(--c-player)); color: hsl(var(--c-player)); }
+  .pchip.add .lbl { font-family: var(--f-display); font-size: var(--fs-sm); font-weight: var(--fw-semi); }
+
+  /* ─── Step 3 review card (MeepleCard summary) ─── */
+  .review-card {
+    border: 1px solid hsl(var(--c-session) / 0.3); border-radius: var(--r-lg);
+    background: linear-gradient(135deg, hsl(var(--c-session) / 0.06), hsl(var(--c-game) / 0.04));
+    padding: var(--s-4); margin-bottom: var(--s-4);
+  }
+  .review-card .game-row { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3); }
+  .review-card .cover-mini {
+    width: 56px; height: 56px; border-radius: var(--r-md);
+    background: radial-gradient(circle at 30% 30%, hsl(var(--c-session) / 0.55), transparent 55%), linear-gradient(135deg, #1a1530, #0d0a1a);
+    flex-shrink: 0; position: relative;
+  }
+  .review-card .cover-mini .b { position: absolute; bottom: -4px; right: -4px; padding: 1px 4px; border-radius: var(--r-xs); background: hsl(var(--c-session)); color: #fff; font-family: var(--f-mono); font-size: 8px; font-weight: var(--fw-bold); }
+  .review-card .info-col { flex: 1; }
+  .review-card .ti { font-family: var(--f-display); font-size: var(--fs-lg); font-weight: var(--fw-bold); margin: 0; }
+  .review-card .sub { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+
+  /* ManaPips inline review (lg w/ labels) */
+  .review-card .manapips { display: flex; align-items: center; gap: 4px; padding-top: var(--s-3); border-top: 1px dashed var(--border); }
+  .manapip { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .manapip .badge { position: absolute; top: -7px; left: 50%; transform: translateX(-50%); min-width: 14px; padding: 0 3px; height: 11px; line-height: 11px; border-radius: var(--r-pill); color: #fff; font-family: var(--f-mono); font-size: 8px; font-weight: var(--fw-bold); text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+  .manapip.kb      { background: hsl(var(--c-kb)); }       .manapip.kb .badge      { background: hsl(var(--c-kb)); }
+  .manapip.agent   { background: hsl(var(--c-agent)); }    .manapip.agent .badge   { background: hsl(var(--c-agent)); }
+  .manapip.player  { background: hsl(var(--c-player)); }   .manapip.player .badge  { background: hsl(var(--c-player)); }
+  .manapip.session { background: hsl(var(--c-session)); }
+  .lbl { font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-semi); margin: 0 var(--s-2) 0 4px; }
+  .lbl.kb     { color: hsl(var(--c-kb)); }
+  .lbl.agent  { color: hsl(var(--c-agent)); }
+  .lbl.player { color: hsl(var(--c-player)); }
+
+  /* Review meta rows */
+  .meta-row { display: flex; justify-content: space-between; align-items: center; padding: var(--s-2) 0; border-bottom: 1px dashed var(--border-light); font-size: var(--fs-sm); }
+  .meta-row:last-child { border-bottom: 0; }
+  .meta-row .k { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .meta-row .v { font-family: var(--f-display); font-weight: var(--fw-semi); color: var(--text); }
+
+  /* ─── Sheet footer ─── */
+  .sfooter {
+    padding: var(--s-3) var(--s-4); border-top: 1px solid var(--border-light);
+    display: flex; gap: var(--s-2); align-items: center; flex-shrink: 0;
+  }
+  .btn-out { padding: var(--s-3) var(--s-4); border-radius: var(--r-md); background: var(--bg-card); border: 1px solid var(--border); color: var(--text); font-family: var(--f-display); font-weight: var(--fw-semi); cursor: pointer; font-size: var(--fs-md); }
+  .btn-out:hover { background: var(--bg-hover); }
+  .btn-fill { padding: var(--s-3) var(--s-5); border-radius: var(--r-md); background: hsl(var(--c-session)); border: 0; color: #fff; font-family: var(--f-display); font-weight: var(--fw-bold); cursor: pointer; font-size: var(--fs-md); display: inline-flex; align-items: center; gap: var(--s-1); flex: 1; justify-content: center; box-shadow: 0 4px 14px hsl(var(--c-session) / 0.35); }
+  .btn-fill:hover { transform: translateY(-1px); box-shadow: 0 6px 18px hsl(var(--c-session) / 0.45); }
+  .btn-fill[disabled] { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+  *:focus-visible { outline: 2px solid hsl(var(--c-session)); outline-offset: 2px; }
+</style>
+</head>
+
+<body>
+
+<header class="top">
+  <h1>Nanolith Runthrough · Setup Wizard <span style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin-left: 8px;">[drawer overlay]</span></h1>
+  <span class="route">/library/nanolith</span>
+  <span class="spacer"></span>
+  <button id="theme-btn" type="button">🌗 Tema</button>
+</header>
+
+<main class="stage">
+
+  <!-- STATO 01 · STEP 1 NAME -->
+  <section class="state-section" aria-labelledby="s1">
+    <span class="label">Stato 01 · Step 1 · Name<span class="cmp">SetupWizardDrawer · NameStep</span></span>
+    <h2 id="s1">Bottom-sheet aperto — nome campagna + preset gruppo</h2>
+    <p class="desc">Aaron clicca "📖 Avvia libro game" sul game-detail. Drawer slide-up. Step 1/3: nome campagna + scelta preset (gruppo A "Marco/Giulia/Luca" preselezionato, gruppo B "Fidanzata", custom). Backdrop Nanolith blurrato resta visibile per orientamento.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · step 1">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:43</span><span>📶 🔋 91%</span></div>
+        <div class="backdrop">
+          <div class="ghost-title">Nanolith</div>
+          <div class="ghost-sub">Side Room · 2024 · libro game</div>
+        </div>
+        <div class="sheet" role="dialog" aria-label="Wizard setup campagna · step 1">
+          <div class="handle"></div>
+          <div class="sheet-h">
+            <div class="ico">📖</div>
+            <div class="t"><div class="ti">Nuova campagna</div><div class="sub">Nanolith · libro game</div></div>
+            <button class="close" aria-label="Chiudi">✕</button>
+          </div>
+          <div class="stepper">
+            <div class="step-pill active"><span class="n">1</span>Nome</div>
+            <div class="step-pill"><span class="n">2</span>Giocatori</div>
+            <div class="step-pill"><span class="n">3</span>Conferma</div>
+          </div>
+          <div class="sbody">
+            <div class="field">
+              <label for="name1">Nome campagna</label>
+              <input id="name1" type="text" value="Campagna con i ragazzi"/>
+              <div class="hint">Suggerimento: usa un nome che ricordi il gruppo</div>
+            </div>
+            <h3>Preset gruppo</h3>
+            <div class="presets">
+              <label class="preset selected">
+                <span class="radio"></span>
+                <div class="info"><div class="ti">Gruppo A · I ragazzi</div><div class="sub">Marco, Giulia, Luca</div></div>
+                <span class="count">4 giocatori</span>
+              </label>
+              <label class="preset">
+                <span class="radio"></span>
+                <div class="info"><div class="ti">Gruppo B · Coppia</div><div class="sub">Solo con la fidanzata</div></div>
+                <span class="count">2 giocatori</span>
+              </label>
+              <label class="preset">
+                <span class="radio"></span>
+                <div class="info"><div class="ti">Custom</div><div class="sub">Aggiungi giocatori manualmente</div></div>
+                <span class="count">1+</span>
+              </label>
+            </div>
+          </div>
+          <div class="sfooter">
+            <button class="btn-out">Annulla</button>
+            <button class="btn-fill">Avanti →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · step 1">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith?wizard=open</span></div>
+        <div style="display: flex; flex: 1; overflow: hidden; position: relative;">
+          <div class="backdrop" style="flex: 1;"><div class="ghost-title" style="font-size: var(--fs-4xl);">Nanolith</div><div class="ghost-sub">Side Room · 2024 · libro game · KB indicizzato 142 pag</div></div>
+          <div class="side-drawer" role="dialog" aria-label="Wizard setup campagna · step 1">
+            <div class="sheet-h">
+              <div class="ico" style="width: 36px; height: 36px; border-radius: var(--r-md); background: hsl(var(--c-session) / 0.15); display: flex; align-items: center; justify-content: center; font-size: 18px;">📖</div>
+              <div class="t"><div class="ti">Nuova campagna</div><div class="sub">Nanolith · libro game</div></div>
+              <button class="close">✕</button>
+            </div>
+            <div class="stepper">
+              <div class="step-pill active"><span class="n">1</span>Nome</div>
+              <div class="step-pill"><span class="n">2</span>Giocatori</div>
+              <div class="step-pill"><span class="n">3</span>Conferma</div>
+            </div>
+            <div class="sbody">
+              <div class="field"><label>Nome campagna</label><input type="text" value="Campagna con i ragazzi"/><div class="hint">Usa un nome che ricordi il gruppo</div></div>
+              <h3>Preset gruppo</h3>
+              <div class="presets">
+                <label class="preset selected"><span class="radio"></span><div class="info"><div class="ti">Gruppo A · I ragazzi</div><div class="sub">Marco, Giulia, Luca</div></div><span class="count">4 giocatori</span></label>
+                <label class="preset"><span class="radio"></span><div class="info"><div class="ti">Gruppo B · Coppia</div><div class="sub">Solo con la fidanzata</div></div><span class="count">2 giocatori</span></label>
+                <label class="preset"><span class="radio"></span><div class="info"><div class="ti">Custom</div><div class="sub">Aggiungi manualmente</div></div><span class="count">1+</span></label>
+              </div>
+            </div>
+            <div class="sfooter"><button class="btn-out">Annulla</button><button class="btn-fill">Avanti →</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATO 02 · STEP 2 PLAYERS -->
+  <section class="state-section" aria-labelledby="s2">
+    <span class="label">Stato 02 · Step 2 · Players<span class="cmp">SetupWizardDrawer · PlayersStep</span></span>
+    <h2 id="s2">Step 2/3 — 4 player chip + add custom</h2>
+    <p class="desc">Aaron (host, badge entity=session) + Marco, Giulia, Luca (entity=player). MeepleCard variant="compact" con avatar iniziale. Add custom button con border dashed. Counter "4/6 giocatori".</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · step 2">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:43</span><span>📶 🔋 91%</span></div>
+        <div class="backdrop"><div class="ghost-title">Nanolith</div></div>
+        <div class="sheet" role="dialog" aria-label="Step 2">
+          <div class="handle"></div>
+          <div class="sheet-h"><div class="ico">👥</div><div class="t"><div class="ti">Giocatori</div><div class="sub">4 di 6 · gruppo A</div></div><button class="close">✕</button></div>
+          <div class="stepper">
+            <div class="step-pill done"><span class="n">✓</span>Nome</div>
+            <div class="step-pill active"><span class="n">2</span>Giocatori</div>
+            <div class="step-pill"><span class="n">3</span>Conferma</div>
+          </div>
+          <div class="sbody">
+            <h3>Party · 4 giocatori</h3>
+            <div class="pchips">
+              <div class="pchip host" role="listitem">
+                <div class="avatar">A</div>
+                <div class="info"><div class="nm">Aaron</div><div class="role">⭐ Host · tu</div></div>
+              </div>
+              <div class="pchip">
+                <div class="avatar">M</div>
+                <div class="info"><div class="nm">Marco</div><div class="role">guest</div></div>
+                <button class="x">×</button>
+              </div>
+              <div class="pchip">
+                <div class="avatar">G</div>
+                <div class="info"><div class="nm">Giulia</div><div class="role">guest</div></div>
+                <button class="x">×</button>
+              </div>
+              <div class="pchip">
+                <div class="avatar">L</div>
+                <div class="info"><div class="nm">Luca</div><div class="role">guest</div></div>
+                <button class="x">×</button>
+              </div>
+              <div class="pchip add" role="button" tabindex="0">
+                <span class="lbl">＋ Aggiungi giocatore</span>
+              </div>
+            </div>
+            <h3 style="margin-top: var(--s-5);">Suggerimento agente</h3>
+            <div style="padding: var(--s-3); background: hsl(var(--c-agent) / 0.08); border: 1px solid hsl(var(--c-agent) / 0.25); border-radius: var(--r-md); display: flex; gap: var(--s-3); align-items: flex-start;">
+              <span style="font-size: 18px;">🤖</span>
+              <div style="flex: 1; font-size: var(--fs-sm); color: var(--text-sec);">
+                <strong style="color: hsl(var(--c-agent)); font-family: var(--f-display);">Nanolith Tutor</strong> consiglia <strong>4 giocatori</strong> per la prima campagna (difficoltà bilanciata).
+              </div>
+            </div>
+          </div>
+          <div class="sfooter">
+            <button class="btn-out">← Indietro</button>
+            <button class="btn-fill">Avanti →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · step 2">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith?wizard=players</span></div>
+        <div style="display: flex; flex: 1; overflow: hidden; position: relative;">
+          <div class="backdrop" style="flex: 1;"><div class="ghost-title" style="font-size: var(--fs-4xl);">Nanolith</div></div>
+          <div class="side-drawer" role="dialog">
+            <div class="sheet-h"><div class="ico" style="width: 36px; height: 36px; border-radius: var(--r-md); background: hsl(var(--c-session) / 0.15); display: flex; align-items: center; justify-content: center; font-size: 18px;">👥</div><div class="t"><div class="ti">Giocatori</div><div class="sub">4 di 6 · gruppo A</div></div><button class="close">✕</button></div>
+            <div class="stepper">
+              <div class="step-pill done"><span class="n">✓</span>Nome</div>
+              <div class="step-pill active"><span class="n">2</span>Giocatori</div>
+              <div class="step-pill"><span class="n">3</span>Conferma</div>
+            </div>
+            <div class="sbody">
+              <h3>Party · 4 giocatori</h3>
+              <div class="pchips">
+                <div class="pchip host"><div class="avatar">A</div><div class="info"><div class="nm">Aaron</div><div class="role">⭐ Host · tu</div></div></div>
+                <div class="pchip"><div class="avatar">M</div><div class="info"><div class="nm">Marco</div><div class="role">guest</div></div><button class="x">×</button></div>
+                <div class="pchip"><div class="avatar">G</div><div class="info"><div class="nm">Giulia</div><div class="role">guest</div></div><button class="x">×</button></div>
+                <div class="pchip"><div class="avatar">L</div><div class="info"><div class="nm">Luca</div><div class="role">guest</div></div><button class="x">×</button></div>
+                <div class="pchip add"><span class="lbl">＋ Aggiungi giocatore</span></div>
+              </div>
+            </div>
+            <div class="sfooter"><button class="btn-out">← Indietro</button><button class="btn-fill">Avanti →</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATO 03 · STEP 3 CONFIRM -->
+  <section class="state-section" aria-labelledby="s3">
+    <span class="label">Stato 03 · Step 3 · Confirm<span class="cmp">SetupWizardDrawer · ConfirmStep</span></span>
+    <h2 id="s3">Step 3/3 — review card con ManaPips + CTA "Inizia sessione"</h2>
+    <p class="desc">Review card con cover-mini Nanolith, badge libro-game, meta-rows (nome/preset/giocatori/lingua/durata stimata) e ManaPips canonical (kb 142 · agent 1 · player 4) come summary entity. CTA primary session-color.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · step 3">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:43</span><span>📶 🔋 91%</span></div>
+        <div class="backdrop"><div class="ghost-title">Nanolith</div></div>
+        <div class="sheet" role="dialog" aria-label="Step 3">
+          <div class="handle"></div>
+          <div class="sheet-h"><div class="ico">✅</div><div class="t"><div class="ti">Conferma setup</div><div class="sub">Tutto pronto?</div></div><button class="close">✕</button></div>
+          <div class="stepper">
+            <div class="step-pill done"><span class="n">✓</span>Nome</div>
+            <div class="step-pill done"><span class="n">✓</span>Giocatori</div>
+            <div class="step-pill active"><span class="n">3</span>Conferma</div>
+          </div>
+          <div class="sbody">
+            <article class="review-card" aria-label="Riepilogo campagna">
+              <div class="game-row">
+                <div class="cover-mini"><span class="b">📖</span></div>
+                <div class="info-col">
+                  <h3 class="ti">Campagna con i ragazzi</h3>
+                  <div class="sub">Nanolith · gruppo A · IT</div>
+                </div>
+              </div>
+              <div class="meta-row"><span class="k">Preset</span><span class="v">Gruppo A · I ragazzi</span></div>
+              <div class="meta-row"><span class="k">Giocatori</span><span class="v">Aaron · Marco · Giulia · Luca</span></div>
+              <div class="meta-row"><span class="k">Lingua agente</span><span class="v">Italiano</span></div>
+              <div class="meta-row"><span class="k">Durata stimata</span><span class="v">3–4 ore</span></div>
+              <div class="manapips" aria-label="ManaPips campagna">
+                <span class="manapip kb"><span class="badge">142</span></span><span class="lbl kb">kb</span>
+                <span class="manapip agent"><span class="badge">1</span></span><span class="lbl agent">agent</span>
+                <span class="manapip player"><span class="badge">4</span></span><span class="lbl player">player</span>
+              </div>
+            </article>
+            <div style="padding: var(--s-3); background: hsl(var(--c-info) / 0.08); border: 1px solid hsl(var(--c-info) / 0.25); border-radius: var(--r-md); font-size: var(--fs-sm); color: var(--text-sec);">
+              <strong style="color: hsl(var(--c-info));">ℹ️ Cosa succede ora:</strong> verrà creata una nuova campagna persistente. Potrai aprirla dal resume picker in qualsiasi momento.
+            </div>
+          </div>
+          <div class="sfooter">
+            <button class="btn-out">← Indietro</button>
+            <button class="btn-fill">📖 Inizia sessione</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · step 3">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith?wizard=confirm</span></div>
+        <div style="display: flex; flex: 1; overflow: hidden; position: relative;">
+          <div class="backdrop" style="flex: 1;"><div class="ghost-title" style="font-size: var(--fs-4xl);">Nanolith</div></div>
+          <div class="side-drawer">
+            <div class="sheet-h"><div class="ico" style="width: 36px; height: 36px; border-radius: var(--r-md); background: hsl(var(--c-session) / 0.15); display: flex; align-items: center; justify-content: center; font-size: 18px;">✅</div><div class="t"><div class="ti">Conferma setup</div><div class="sub">Tutto pronto?</div></div><button class="close">✕</button></div>
+            <div class="stepper">
+              <div class="step-pill done"><span class="n">✓</span>Nome</div>
+              <div class="step-pill done"><span class="n">✓</span>Giocatori</div>
+              <div class="step-pill active"><span class="n">3</span>Conferma</div>
+            </div>
+            <div class="sbody">
+              <article class="review-card">
+                <div class="game-row"><div class="cover-mini"><span class="b">📖</span></div><div class="info-col"><h3 class="ti">Campagna con i ragazzi</h3><div class="sub">Nanolith · gruppo A · IT</div></div></div>
+                <div class="meta-row"><span class="k">Preset</span><span class="v">Gruppo A</span></div>
+                <div class="meta-row"><span class="k">Giocatori</span><span class="v">Aaron · Marco · Giulia · Luca</span></div>
+                <div class="meta-row"><span class="k">Lingua</span><span class="v">Italiano</span></div>
+                <div class="meta-row"><span class="k">Durata</span><span class="v">3–4h</span></div>
+                <div class="manapips"><span class="manapip kb"><span class="badge">142</span></span><span class="lbl kb">kb</span><span class="manapip agent"><span class="badge">1</span></span><span class="lbl agent">agent</span><span class="manapip player"><span class="badge">4</span></span><span class="lbl player">player</span></div>
+              </article>
+            </div>
+            <div class="sfooter"><button class="btn-out">← Indietro</button><button class="btn-fill">📖 Inizia sessione</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATO 04 · VALIDATION ERROR -->
+  <section class="state-section" aria-labelledby="s4">
+    <span class="label">Stato 04 · Validation Error<span class="cmp">SetupWizardDrawer · ErrorState</span></span>
+    <h2 id="s4">Step 1 — nome vuoto, "Avanti" disabilitato, hint danger</h2>
+    <p class="desc">Edge: Aaron cancella il nome e clicca "Avanti". Field error inline + bottone disabilitato. Recovery immediato.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile · error">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>20:43</span><span>📶 🔋 91%</span></div>
+        <div class="backdrop"><div class="ghost-title">Nanolith</div></div>
+        <div class="sheet" role="dialog">
+          <div class="handle"></div>
+          <div class="sheet-h"><div class="ico">📖</div><div class="t"><div class="ti">Nuova campagna</div><div class="sub">Nanolith · libro game</div></div><button class="close">✕</button></div>
+          <div class="stepper">
+            <div class="step-pill active"><span class="n">1</span>Nome</div>
+            <div class="step-pill"><span class="n">2</span>Giocatori</div>
+            <div class="step-pill"><span class="n">3</span>Conferma</div>
+          </div>
+          <div class="sbody">
+            <div class="field error">
+              <label>Nome campagna</label>
+              <input type="text" value="" placeholder="Es. Campagna con i ragazzi" aria-invalid="true" aria-describedby="err1"/>
+              <div id="err1" class="hint">⚠ Il nome non può essere vuoto. Almeno 3 caratteri.</div>
+            </div>
+            <h3>Preset gruppo</h3>
+            <div class="presets">
+              <label class="preset selected"><span class="radio"></span><div class="info"><div class="ti">Gruppo A · I ragazzi</div><div class="sub">Marco, Giulia, Luca</div></div><span class="count">4</span></label>
+              <label class="preset"><span class="radio"></span><div class="info"><div class="ti">Gruppo B · Coppia</div><div class="sub">Fidanzata</div></div><span class="count">2</span></label>
+            </div>
+          </div>
+          <div class="sfooter">
+            <button class="btn-out">Annulla</button>
+            <button class="btn-fill" disabled>Avanti →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop · error">
+        <span class="frame-label">Desktop · 1440px (scaled)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith?wizard=open</span></div>
+        <div style="display: flex; flex: 1; overflow: hidden; position: relative;">
+          <div class="backdrop" style="flex: 1;"><div class="ghost-title" style="font-size: var(--fs-4xl);">Nanolith</div></div>
+          <div class="side-drawer">
+            <div class="sheet-h"><div class="ico" style="width: 36px; height: 36px; border-radius: var(--r-md); background: hsl(var(--c-session) / 0.15); display: flex; align-items: center; justify-content: center; font-size: 18px;">📖</div><div class="t"><div class="ti">Nuova campagna</div><div class="sub">Nanolith</div></div><button class="close">✕</button></div>
+            <div class="stepper">
+              <div class="step-pill active"><span class="n">1</span>Nome</div>
+              <div class="step-pill"><span class="n">2</span>Giocatori</div>
+              <div class="step-pill"><span class="n">3</span>Conferma</div>
+            </div>
+            <div class="sbody">
+              <div class="field error"><label>Nome campagna</label><input type="text" value="" placeholder="Es. Campagna con i ragazzi"/><div class="hint">⚠ Il nome non può essere vuoto. Almeno 3 caratteri.</div></div>
+              <h3>Preset gruppo</h3>
+              <div class="presets">
+                <label class="preset selected"><span class="radio"></span><div class="info"><div class="ti">Gruppo A</div><div class="sub">Marco, Giulia, Luca</div></div><span class="count">4</span></label>
+                <label class="preset"><span class="radio"></span><div class="info"><div class="ti">Gruppo B</div><div class="sub">Fidanzata</div></div><span class="count">2</span></label>
+              </div>
+            </div>
+            <div class="sfooter"><button class="btn-out">Annulla</button><button class="btn-fill" disabled>Avanti →</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  document.getElementById('theme-btn').addEventListener('click', () => {
+    const r = document.documentElement;
+    r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+</script>
+</body>
+</html>

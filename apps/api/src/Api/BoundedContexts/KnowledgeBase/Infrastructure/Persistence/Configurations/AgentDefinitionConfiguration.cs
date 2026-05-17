@@ -125,5 +125,17 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
             .HasColumnName("last_invoked_at");
 
         builder.HasIndex("_typologySlug").HasDatabaseName("ix_agent_definitions_typology_slug");
+
+        // Soft-delete support (Issue #904: SG3 — agent lifecycle)
+        // HasQueryFilter automatically excludes soft-deleted agents from all normal queries.
+        builder.Property(a => a.IsDeleted)
+            .HasColumnName("is_deleted")
+            .HasDefaultValue(false)
+            .IsRequired();
+
+        builder.Property(a => a.DeletedAt)
+            .HasColumnName("deleted_at");
+
+        builder.HasQueryFilter(a => !a.IsDeleted);
     }
 }

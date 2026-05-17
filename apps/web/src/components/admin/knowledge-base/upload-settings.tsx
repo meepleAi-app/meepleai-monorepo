@@ -1,3 +1,4 @@
+/* eslint-disable local/no-hardcoded-color-utility -- admin KB chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13b admin scope (see token-bridge-map.md for --admin-* decision deferred to DS-15). */
 'use client';
 
 import { InfoIcon, CpuIcon, LanguagesIcon, ScissorsIcon } from 'lucide-react';
@@ -12,9 +13,9 @@ import { Badge } from '@/components/ui/badge';
  */
 export function UploadSettings() {
   return (
-    <div className="bg-white/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-slate-200/50 dark:border-zinc-700/50">
+    <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-border/50 dark:border-zinc-700/50">
       <div className="flex items-center gap-2 mb-6">
-        <h2 className="font-quicksand text-xl font-bold text-slate-900 dark:text-zinc-100">
+        <h2 className="font-quicksand text-xl font-bold text-foreground dark:text-zinc-100">
           Processing Settings
         </h2>
         <Badge variant="outline" className="text-xs">Read-only</Badge>
@@ -33,35 +34,35 @@ export function UploadSettings() {
         {/* Embedding Model */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <CpuIcon className="w-4 h-4 text-slate-500" />
-            <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">
+            <CpuIcon className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground dark:text-zinc-300">
               Embedding Model
             </span>
           </div>
           <div className="ml-6 space-y-1">
-            <p className="text-sm text-slate-900 dark:text-zinc-100 font-mono">
+            <p className="text-sm text-foreground dark:text-zinc-100 font-mono">
               intfloat/multilingual-e5-large
             </p>
-            <p className="text-xs text-slate-500">1024 dimensions</p>
+            <p className="text-xs text-muted-foreground">1024 dimensions</p>
           </div>
         </div>
 
         {/* Chunking */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <ScissorsIcon className="w-4 h-4 text-slate-500" />
-            <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">
+            <ScissorsIcon className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground dark:text-zinc-300">
               Chunking
             </span>
           </div>
           <div className="ml-6 grid grid-cols-2 gap-2">
             <div>
-              <p className="text-xs text-slate-500">Default Chunk Size</p>
-              <p className="text-sm text-slate-900 dark:text-zinc-100">512 tokens</p>
+              <p className="text-xs text-muted-foreground">Default Chunk Size</p>
+              <p className="text-sm text-foreground dark:text-zinc-100">512 tokens</p>
             </div>
             <div>
-              <p className="text-xs text-slate-500">Overlap</p>
-              <p className="text-sm text-slate-900 dark:text-zinc-100">20%</p>
+              <p className="text-xs text-muted-foreground">Overlap</p>
+              <p className="text-sm text-foreground dark:text-zinc-100">20%</p>
             </div>
           </div>
         </div>
@@ -69,8 +70,8 @@ export function UploadSettings() {
         {/* Supported Languages */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <LanguagesIcon className="w-4 h-4 text-slate-500" />
-            <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">
+            <LanguagesIcon className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground dark:text-zinc-300">
               Supported Languages
             </span>
           </div>
@@ -91,10 +92,10 @@ export function UploadSettings() {
 
         {/* Processing Pipeline */}
         <div className="space-y-1.5">
-          <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">
+          <span className="text-sm font-medium text-foreground dark:text-zinc-300">
             Pipeline Steps
           </span>
-          <div className="ml-0 flex items-center gap-1 text-xs text-slate-500">
+          <div className="ml-0 flex items-center gap-1 text-xs text-muted-foreground">
             <Badge variant="outline" className="text-xs">Upload</Badge>
             <span>→</span>
             <Badge variant="outline" className="text-xs">Extract</Badge>
@@ -108,26 +109,26 @@ export function UploadSettings() {
         </div>
 
         {/* Upload Limits */}
-        <div className="space-y-1.5 pt-2 border-t border-slate-200/50 dark:border-zinc-700/50">
-          <span className="text-sm font-medium text-slate-700 dark:text-zinc-300">
+        <div className="space-y-1.5 pt-2 border-t border-border/50 dark:border-zinc-700/50">
+          <span className="text-sm font-medium text-foreground dark:text-zinc-300">
             Upload Limits
           </span>
           <div className="ml-0 grid grid-cols-2 gap-2 text-sm">
             <div>
-              <p className="text-xs text-slate-500">Max File Size</p>
-              <p className="text-slate-900 dark:text-zinc-100">500 MB</p>
+              <p className="text-xs text-muted-foreground">Max File Size</p>
+              <p className="text-foreground dark:text-zinc-100">500 MB</p>
             </div>
             <div>
-              <p className="text-xs text-slate-500">Chunked Upload</p>
-              <p className="text-slate-900 dark:text-zinc-100">&gt; 10 MB</p>
+              <p className="text-xs text-muted-foreground">Chunked Upload</p>
+              <p className="text-foreground dark:text-zinc-100">&gt; 10 MB</p>
             </div>
             <div>
-              <p className="text-xs text-slate-500">Accepted Formats</p>
-              <p className="text-slate-900 dark:text-zinc-100">PDF</p>
+              <p className="text-xs text-muted-foreground">Accepted Formats</p>
+              <p className="text-foreground dark:text-zinc-100">PDF</p>
             </div>
             <div>
-              <p className="text-xs text-slate-500">Concurrent Sessions</p>
-              <p className="text-slate-900 dark:text-zinc-100">3 per user</p>
+              <p className="text-xs text-muted-foreground">Concurrent Sessions</p>
+              <p className="text-foreground dark:text-zinc-100">3 per user</p>
             </div>
           </div>
         </div>

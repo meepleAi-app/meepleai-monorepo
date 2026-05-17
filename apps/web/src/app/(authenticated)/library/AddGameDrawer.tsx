@@ -174,7 +174,7 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
                 startAtPdf
                 onComplete={() => {
                   onClose();
-                  router.push(`/library/games/${catalogSelection.gameId}`);
+                  router.push(`/library/${catalogSelection.gameId}`);
                 }}
                 onCancel={() => setStep('catalog')}
               />

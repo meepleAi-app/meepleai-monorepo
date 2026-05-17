@@ -12,10 +12,10 @@
 
 | Audience | Start Here |
 |----------|------------|
-| **Developers** | [Implementation Guide](10-implementation-guide.md) |
-| **Architects** | [Technical Reference](15-technical-reference.md) |
+| **Developers** | **Implementation Guide** _(planned)_ |
+| **Architects** | **Technical Reference** _(planned)_ |
 | **Business** | [HOW-IT-WORKS.md](HOW-IT-WORKS.md) |
-| **Everyone** | [Interactive Dashboard](/rag) |
+| **Everyone** | **Interactive Dashboard** _(at `/rag` in the running app)_ |
 
 ---
 
@@ -30,7 +30,7 @@ POC Implemented ████████████░░░░░░░░ ~55
 | Component | POC Status | TOMAC-RAG Plan |
 |-----------|------------|----------------|
 | **Hybrid Search** | Implemented | Same |
-| **Vector Search (Qdrant)** | Implemented | Same |
+| **Vector Search (pgvector)** | Implemented | Same |
 | **Keyword Search (PostgreSQL)** | Implemented | Same |
 | **RRF Fusion** | Implemented | Same |
 | **LLM Generation** | Implemented | Enhanced |
@@ -57,7 +57,7 @@ User Query
 │ HYBRID SEARCH                                           │
 │ ┌─────────────────┐    ┌─────────────────┐             │
 │ │ SEMANTIC        │    │ KEYWORD         │             │
-│ │ Qdrant :6333    │    │ PostgreSQL :5432│             │
+│ │ pgvector (PostgreSQL)    │    │ PostgreSQL :5432│             │
 │ │ cosine sim      │    │ tsvector FTS    │             │
 │ │ HNSW index      │    │ ts_rank_cd      │             │
 │ └────────┬────────┘    └────────┬────────┘             │
@@ -133,7 +133,7 @@ Response (Streaming)
 ├─────────────────────────────────────────────────────────┤
 │ L3: RETRIEVAL                                           │
 │ Vector + Keyword + RRF Fusion (adaptive depth)          │
-│ Qdrant + PostgreSQL + Optional Reranker                 │
+│ PostgreSQL (with pgvector) + Optional Reranker                 │
 ├─────────────────────────────────────────────────────────┤
 │ L4: CRAG EVALUATION                                     │
 │ T5-Large evaluator + Web search fallback                │
@@ -198,7 +198,7 @@ Response (Streaming)
 | Service | Port | Purpose | Status |
 |---------|------|---------|--------|
 | PostgreSQL | 5432 | FTS + Storage | Running |
-| Qdrant | 6333 | Vector DB | Running |
+| pgvector | PostgreSQL :5432 | extension | Running |
 | Redis | 6379 | Cache | Running |
 | Ollama | 11434 | Local LLM | Running |
 | Embedding | 8000 | text-embedding-3-large | Running |
@@ -214,32 +214,32 @@ Response (Streaming)
 | Doc | Description |
 |-----|-------------|
 | [HOW-IT-WORKS.md](HOW-IT-WORKS.md) | System walkthrough |
-| [15-technical-reference.md](15-technical-reference.md) | Code-level reference |
+| **15-technical-reference.md** _(planned)_ | Code-level reference |
 
 ### Layer Docs
 | Doc | Description |
 |-----|-------------|
-| [02-layer1-routing.md](02-layer1-routing.md) | L1: Strategy routing |
-| [03-layer2-caching.md](03-layer2-caching.md) | L2: Semantic cache |
-| [04-layer3-retrieval.md](04-layer3-retrieval.md) | L3: Hybrid search |
-| [05-layer4-crag-evaluation.md](05-layer4-crag-evaluation.md) | L4: CRAG quality gate |
-| [06-layer5-generation.md](06-layer5-generation.md) | L5: LLM generation |
-| [07-layer6-validation.md](07-layer6-validation.md) | L6: Self-RAG validation |
+| **02-layer1-routing.md** _(planned)_ | L1: Strategy routing |
+| **03-layer2-caching.md** _(planned)_ | L2: Semantic cache |
+| **04-layer3-retrieval.md** _(planned)_ | L3: Hybrid search |
+| **05-layer4-crag-evaluation.md** _(planned)_ | L4: CRAG quality gate |
+| **06-layer5-generation.md** _(planned)_ | L5: LLM generation |
+| **07-layer6-validation.md** _(planned)_ | L6: Self-RAG validation |
 
 ### Implementation
 | Doc | Description |
 |-----|-------------|
-| [10-implementation-guide.md](10-implementation-guide.md) | Code examples |
-| [11-testing-strategy.md](11-testing-strategy.md) | Test specs |
-| [12-monitoring-metrics.md](12-monitoring-metrics.md) | Prometheus + Grafana |
-| [13-deployment-rollout.md](13-deployment-rollout.md) | 12-week roadmap |
+| **10-implementation-guide.md** _(planned)_ | Code examples |
+| **11-testing-strategy.md** _(planned)_ | Test specs |
+| **12-monitoring-metrics.md** _(planned)_ | Prometheus + Grafana |
+| **13-deployment-rollout.md** _(planned)_ | 12-week roadmap |
 
 ### Appendices
 | Doc | Description |
 |-----|-------------|
-| [appendix/E-model-pricing-2026.md](appendix/E-model-pricing-2026.md) | LLM pricing |
-| [appendix/F-calculation-formulas.md](appendix/F-calculation-formulas.md) | Token/cost formulas |
-| [appendix/G-admin-configuration-system.md](appendix/G-admin-configuration-system.md) | Admin config |
+| **appendix/E-model-pricing-2026.md** _(planned)_ | LLM pricing |
+| **appendix/F-calculation-formulas.md** _(planned)_ | Token/cost formulas |
+| **appendix/G-admin-configuration-system.md** _(planned)_ | Admin config |
 | [variants/README.md](variants/README.md) | 15 RAG variants catalog |
 
 ### Future (Roadmap)
@@ -286,8 +286,8 @@ http://localhost:3000/rag
 ## Infographic
 
 Download the visual architecture diagram:
-- **PDF**: [meepleai-rag-architecture.pdf](meepleai-rag-architecture.pdf)
-- **Web**: [/docs/meepleai-rag-architecture.pdf](/docs/meepleai-rag-architecture.pdf)
+- **PDF**: **meepleai-rag-architecture.pdf** _(planned)_
+- **Web**: served at `/docs/meepleai-rag-architecture.pdf` _(planned)_
 
 ---
 

@@ -414,9 +414,31 @@ async function runOneTarget(browser, target, viewportName) {
   const device = devices[viewportName];
   if (!device) throw new Error(`Unknown viewport device: ${viewportName}`);
 
+  // reducedMotion: 'reduce' — issue #1223 / refs #1094 Real-C-D + E.
+  //
+  // Dialog overlays (PauseOverlay, EndgameDialog) use Tailwind
+  // `motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200`.
+  // axe-core scans immediately after `extraWaitFor` resolves the dialog
+  // selector, BEFORE the 200ms fade-in opacity transition completes.
+  // Composited mid-animation alpha values yield false-positive
+  // color-contrast violations (e.g. .bg-emerald-700 reported as
+  // fg #a5b6ae / bg #8ba297 ratio 1.28, when the stable final state is
+  // emerald-700 #047857 with text-white = 4.78:1 AA-pass).
+  //
+  // Emulating reduced-motion triggers `motion-reduce:animate-none` on the
+  // dialog containers, instantly settling them to final opacity. axe then
+  // observes the same colors a real user sees, not the transient frame.
+  // This mirrors the a11y testing best practice: scan the stable visual
+  // contract, not animation in-betweens.
+  //
+  // Component-side requirement: this flag only works if the animated
+  // container itself opts out via `motion-reduce:animate-none` (or
+  // equivalent `prefers-reduced-motion` media query). New dialogs/overlays
+  // MUST include the opt-out — treat it as part of the a11y contract.
   const context = await browser.newContext({
     ...device,
     colorScheme: target.theme,
+    reducedMotion: 'reduce',
   });
   const page = await context.newPage();
   const startedAt = Date.now();

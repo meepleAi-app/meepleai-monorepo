@@ -4,7 +4,7 @@
  * useToolkitDetail unit tests — Wave 3 Phase 2 (Issue #805 / PR #732 §5.3.1).
  *
  * Coverage:
- *   - Stable URL shape `/toolkits/{id}` and 10min staleTime mirror.
+ *   - Stable URL shape `/api/v1/toolkits/{id}` and 10min staleTime mirror.
  *   - Schema validation forwards typed envelope.
  *   - 404 / 401 / null fallback (apiClient returns null) → null result.
  *   - `enabled: false` defers the request.
@@ -22,15 +22,20 @@ import { TOOLKIT_DETAIL_STALE_TIME_MS, useToolkitDetail } from '../useToolkitDet
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-vi.mock('@/lib/api/client', () => ({
-  apiClient: {
-    get: vi.fn(),
-  },
+import type { MockedApiClient } from '@/test-utils/api-client-mock';
+
+const mockApi = vi.hoisted<MockedApiClient>(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
+  head: vi.fn(),
+  options: vi.fn(),
 }));
+vi.mock('@/lib/api/client', () => ({ apiClient: mockApi }));
 
-import { apiClient } from '@/lib/api/client';
-
-const mockGet = apiClient.get as ReturnType<typeof vi.fn>;
+const mockGet = mockApi.get;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -97,7 +102,7 @@ describe('useToolkitDetail — request shape', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith(`/toolkits/${TOOLKIT_ID}`, expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(`/api/v1/toolkits/${TOOLKIT_ID}`, expect.anything());
   });
 
   it('does not fire when toolkitId is null', () => {

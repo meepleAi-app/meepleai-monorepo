@@ -43,6 +43,7 @@
    * demand as violations surface for them.
    */
   --c-game-text: 25 95% 32%;
+  --c-kb-text:   174 60% 28%; /* Real-C-F: hsl(174 60% 28%) ≈ #1d7268 vs #f7f3ee = 4.95:1 ✅ — replaces hardcoded #4ecdc4 (1.75:1 fail) */
 
   /* ─── Semantic Colors ─── */
   --c-success: 142 70% 45%;
@@ -188,11 +189,15 @@
   --c-toolkit: 142 60% 58%;
   --c-tool:    195 75% 62%;
 
-  /* TEXT variant for dark theme: lighter to clear AA on dark bg.
+  /* TEXT variants for dark theme: lighter to clear AA on dark bg.
    *   --c-game-text  hsl(28 95% 70%) ≈ #fdb775 vs #14100a = 11.2:1 ✅
-   *   Refs: #1094 Real-C-B, audit doc §2.5 v3
+   *   --c-kb-text    hsl(174 60% 55%) ≈ #4ecdc4 vs #14100a = 9.87:1 ✅
+   *     (= --c-kb dark value; already AA-safe on dark — the violation
+   *      was solely the light-theme rendering of this dark-shade hex)
+   *   Refs: #1094 Real-C-B + Real-C-F
    */
   --c-game-text: 28 95% 70%;
+  --c-kb-text:   174 60% 55%;
 
   color-scheme: dark;
 }

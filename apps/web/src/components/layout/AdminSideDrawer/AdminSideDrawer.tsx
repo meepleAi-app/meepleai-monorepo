@@ -317,7 +317,7 @@ export function AdminSideDrawer({ open, onClose }: AdminSideDrawerProps) {
               href="/dashboard"
               onClick={onClose}
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors mb-2"
-              style={{ color: '#4ecdc4' }}
+              style={{ color: 'hsl(var(--c-kb-text))' }}
             >
               <ChevronLeft className="h-4 w-4 shrink-0" />
               <span>Torna all&apos;app</span>

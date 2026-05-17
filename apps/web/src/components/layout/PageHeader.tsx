@@ -50,7 +50,7 @@ export function PageHeader({
           <Link
             href={parentHref!}
             className="inline-flex items-center gap-1 text-sm font-medium"
-            style={{ color: '#4ecdc4' }}
+            style={{ color: 'hsl(var(--c-kb-text))' }}
           >
             <span aria-hidden="true">←</span>
             <span>{parentLabel}</span>

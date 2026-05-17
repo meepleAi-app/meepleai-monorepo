@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Phase 0 + Phase A structural + **Phase A.live extended matrix complete** (115 nodes captured across 27 targets; ~44 inventory nodes likely in un-tested gamebook quota/upload-step routes). Phase C kickoff-ready against §2.5 v3 Real-Clusters A/B/D/E (C closed in PR #1219). |
+| Status | Phase 0 + Phase A structural + **Phase A.live v4 complete** (33 targets, **103 nodes** post PR #1224/#1225 fixes — net -12 from v3 despite +6 new gamebook/session-summary/session-live targets adding +20). Phase C continues: Real-C-B ✅ partial (PR #1224 swap 8 hardcoded), Real-C-D ✅ partial (PR #1225 violet 3), Real-C-A pending #1221, Real-C-E pending (~2 catastrophic + ~10 newly-discovered c-kb catastrophic). Phase D blocked until 0 violations. |
 | Started | 2026-05-17 |
 | Parent issue | [#1094](https://github.com/meepleAi-app/meepleai-monorepo/issues/1094) — restoration of `frontend-a11y` CI gate to blocking |
 | Phase 0 sub-issue | [#1209](https://github.com/meepleAi-app/meepleai-monorepo/issues/1209) — preface |
@@ -19,8 +19,8 @@
 | §1.1 Route × state matrix (12 routes × N states) | ✅ complete 2026-05-17 | Phase A structural | this PR |
 | §1.2 Inventory cross-reference to #1094 counts | ✅ complete 2026-05-17 | Phase A structural | this PR |
 | §1.3 Static-grep companion (suspected source components) | ✅ complete 2026-05-17 + ⚠️ **pivoted 2026-05-17** (false-positive lesson) | Phase A structural | PR #1212 + this PR (audit pivot) |
-| §1.4 Per-node detail rows (selector / fg / bg / ratio) | ✅ **Extension complete 2026-05-17** (27 of 30 targets, 115 of ~159 nodes — 72%); ⏳ ~44 nodes in 3 gamebook quota/upload state routes deferred to PR follow-up | Phase A live | PR #1217 PoC + #1218 (this PR) |
-| §2.5 Real clusters from live data | ✅ **v3 complete 2026-05-17** (Real-C-A/B/D/E refined post-extension; C closed PR #1219) | Phase B final | PR #1217 + #1218 |
+| §1.4 Per-node detail rows (selector / fg / bg / ratio) | ✅ **v4 ext2 complete 2026-05-17** (33 of 36 effective targets, 103 of ~127 nodes — 81%); ⏳ deferred ~24 (gamebook-upload step states ~12, more detail-route not-found variants ~12) for v5 if needed | Phase A live | PR #1217 + #1218 + this PR (ext2) |
+| §2.5 Real clusters from live data | ✅ **v4 complete 2026-05-17** (post PR #1224/#1225 net -32 nodes vs v3 baseline despite +20 newly-discovered) | Phase B final | PR #1217 + #1218 + #1224 + #1225 + this PR |
 | §2.0 Grouping methodology | ✅ complete 2026-05-17 | Phase B prelim | PR #1212 |
 | §2.1 Suspected clusters (from #1094 hints + static analysis) | ✅ complete 2026-05-17 + ⚠️ **C1 ruled out 2026-05-17** | Phase B prelim | PR #1212 + this PR |
 | §2.2 Fix-path taxonomy per cluster | ✅ complete 2026-05-17 | Phase B prelim | PR #1212 |

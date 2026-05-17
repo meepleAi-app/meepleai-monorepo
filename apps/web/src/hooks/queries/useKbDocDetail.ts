@@ -78,7 +78,7 @@ export function useKbDocDetail(
     queryFn: async () => {
       if (!isValid) return null;
       try {
-        const doc = await apiClient.get<KbDocDetail>(`/kb-docs/${docId}`, KbDocDetailSchema);
+        const doc = await apiClient.get<KbDocDetail>(`/api/v1/kb-docs/${docId}`, KbDocDetailSchema);
         if (!doc) return null;
         return { status: 'ready', doc } satisfies KbDocEnvelope;
       } catch (err) {

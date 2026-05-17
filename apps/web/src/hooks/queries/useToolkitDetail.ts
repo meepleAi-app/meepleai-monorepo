@@ -54,7 +54,7 @@ export function useToolkitDetail(
     queryFn: async () => {
       if (!isValid) return null;
       const response = await apiClient.get<ToolkitDetailResponse>(
-        `/toolkits/${toolkitId}`,
+        `/api/v1/toolkits/${toolkitId}`,
         ToolkitDetailResponseSchema
       );
       // null is returned by apiClient on 401/404/circuit-open — surface as

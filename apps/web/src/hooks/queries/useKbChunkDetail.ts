@@ -60,7 +60,7 @@ export function useKbChunkDetail(
     queryFn: async () => {
       if (!isValid) return null;
       const response = await apiClient.get<KbChunkDetail>(
-        `/kb-docs/${docId}/chunks/${chunkId}`,
+        `/api/v1/kb-docs/${docId}/chunks/${chunkId}`,
         KbChunkDetailSchema
       );
       return response ?? null;

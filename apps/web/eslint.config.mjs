@@ -19,6 +19,9 @@ import noInlineHslV2 from "./eslint-rules/no-inline-hsl-v2.js";
 // DS-2 token canonicalization — forbids hardcoded Tailwind neutral classes
 // (spec: docs/for-developers/specs/2026-05-12-token-canonicalization.md)
 import noHardcodedColorUtility from "./eslint-rules/no-hardcoded-color-utility.js";
+// API proxy guard — apiClient.{get,post,...} paths must start with /api/v1/
+// (post-#1229 regression preventer; rationale in rule docstring)
+import apiClientV1Prefix from "./eslint-rules/api-client-v1-prefix.js";
 
 export default [
   {
@@ -101,6 +104,7 @@ export default [
           "no-hardcoded-hex": noHardcodedHex,
           "no-inline-hsl-v2": noInlineHslV2,
           "no-hardcoded-color-utility": noHardcodedColorUtility,
+          "api-client-v1-prefix": apiClientV1Prefix,
         },
       },
     },
@@ -249,6 +253,12 @@ export default [
       // SEC-008: Prevent incomplete sanitization (CWE-116)
       // Custom rule to detect unsafe .replace() patterns that don't escape backslashes
       "local/no-incomplete-sanitization": "error",
+
+      // API proxy guard — every apiClient.{get,post,put,patch,delete,head,options}
+      // path literal MUST start with `/api/v1/`. Regression preventer for the
+      // class of bug fixed in PR #1229 (refs #1160). Rationale in the rule's
+      // docstring at eslint-rules/api-client-v1-prefix.js.
+      "local/api-client-v1-prefix": "error",
     },
     settings: {
       react: {

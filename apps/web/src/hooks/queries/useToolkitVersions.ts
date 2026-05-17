@@ -54,7 +54,7 @@ export function useToolkitVersions(
     queryFn: async () => {
       if (!isValid) return [];
       const response = await apiClient.get<ToolkitVersionsResponse>(
-        `/toolkits/${toolkitId}/versions`,
+        `/api/v1/toolkits/${toolkitId}/versions`,
         ToolkitVersionsResponseSchema
       );
       return response?.items ?? [];

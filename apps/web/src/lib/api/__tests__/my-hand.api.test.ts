@@ -1,15 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import type { MockedApiClient } from '@/test-utils/api-client-mock';
+
 import { getMyHand, updateHandSlot, clearHandSlot } from '../my-hand';
 
-vi.mock('../client', () => ({
-  apiClient: {
-    get: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  },
+const mockApi = vi.hoisted<MockedApiClient>(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
+  head: vi.fn(),
+  options: vi.fn(),
 }));
-
-import { apiClient } from '../client';
+vi.mock('../client', () => ({ apiClient: mockApi }));
 
 describe('my-hand API client', () => {
   beforeEach(() => {
@@ -17,7 +21,7 @@ describe('my-hand API client', () => {
   });
 
   it('getMyHand calls GET /api/v1/users/me/hand', async () => {
-    (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue([
+    mockApi.get.mockResolvedValue([
       {
         slotType: 'toolkit',
         entityId: null,
@@ -29,7 +33,7 @@ describe('my-hand API client', () => {
     ]);
 
     const result = await getMyHand();
-    expect(apiClient.get).toHaveBeenCalledWith('/api/v1/users/me/hand');
+    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/users/me/hand');
     expect(result).toHaveLength(1);
   });
 
@@ -42,7 +46,7 @@ describe('my-hand API client', () => {
       entityImageUrl: null,
       pinnedAt: '2026-04-09T00:00:00Z',
     };
-    (apiClient.put as ReturnType<typeof vi.fn>).mockResolvedValue(dto);
+    mockApi.put.mockResolvedValue(dto);
 
     const result = await updateHandSlot('game', {
       entityId: 'g-1',
@@ -50,7 +54,7 @@ describe('my-hand API client', () => {
       entityLabel: 'Catan',
       entityImageUrl: null,
     });
-    expect(apiClient.put).toHaveBeenCalledWith('/api/v1/users/me/hand/game', {
+    expect(mockApi.put).toHaveBeenCalledWith('/api/v1/users/me/hand/game', {
       entityId: 'g-1',
       entityType: 'game',
       entityLabel: 'Catan',
@@ -60,14 +64,14 @@ describe('my-hand API client', () => {
   });
 
   it('clearHandSlot calls DELETE /api/v1/users/me/hand/{slotType}', async () => {
-    (apiClient.delete as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    mockApi.delete.mockResolvedValue(undefined);
 
     await clearHandSlot('toolkit');
-    expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/users/me/hand/toolkit');
+    expect(mockApi.delete).toHaveBeenCalledWith('/api/v1/users/me/hand/toolkit');
   });
 
   it('getMyHand returns empty array on null response', async () => {
-    (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    mockApi.get.mockResolvedValue(null);
     const result = await getMyHand();
     expect(result).toEqual([]);
   });

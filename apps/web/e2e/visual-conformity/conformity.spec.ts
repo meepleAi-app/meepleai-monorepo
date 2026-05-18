@@ -65,6 +65,19 @@ const RUNBOOKS: Record<string, RouteRunbook> = {
     search: '?state=default',
     readySelector: 'main',
   },
+  'player-detail': {
+    // PlayerDetailView short-circuits to Sara Rossi fixture when
+    // NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1 (baked into CI prod build).
+    // ?state=default is the explicit no-op override that confirms fixture path.
+    search: '?state=default',
+    readySelector: '[data-slot="player-detail-view"]',
+  },
+  'game-nights-index': {
+    // No build-time fixture for game-nights (tracked as Open Issue §1 in spec).
+    // Live route in CI without backend renders empty state — matched by
+    // mockup marker on DesktopFrame #06 Empty (spec Risk R6 mitigation path a).
+    readySelector: '[data-testid="game-nights-empty"]',
+  },
 };
 
 async function waitForRouteReady(page: Page, runbook: RouteRunbook): Promise<void> {

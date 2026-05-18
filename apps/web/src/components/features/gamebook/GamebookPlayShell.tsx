@@ -50,7 +50,16 @@ export function GamebookPlayShell({
   };
 
   const handleOpenChat = () => {
-    openChat();
+    // Issue #1288 Bug 3 — preselect game context from active campaign so the
+    // chat panel doesn't open with an empty alphabetic sidebar.
+    // TODO follow-up: replace title fallback with real game name + kbStatus
+    // when Bug 2 cross-BC counter composition lands.
+    openChat({
+      id: gameId,
+      name: data.title,
+      pdfCount: 0,
+      kbStatus: 'ready',
+    });
   };
 
   return (

@@ -95,6 +95,14 @@
     position: relative;
     transform-origin: top left;
   }
+  /* Conformity gate override (#1269): the marked desktop frame renders
+     full-size (1280px) instead of the gallery-scaled 720px so that the
+     bootstrap baseline matches the live route render dimensions. */
+  .desktop[data-conformity-screen] {
+    width: 1280px;
+    height: auto;
+    min-height: 720px;
+  }
   .desktop .frame-label {
     position: absolute; top: -28px; left: 0;
     font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted);

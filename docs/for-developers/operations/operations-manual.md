@@ -2221,10 +2221,13 @@ S3_FORCE_PATH_STYLE=false
    * For image-tag rollback procedure see rollback-runbook.md
 
 5. POST-MORTEM
-   ├── Document: what happened, why, how fixed
-   ├── Identify: prevention measures
-   └── Implement: monitoring improvements
+   ├── Document: use post-mortem-template.md (9 sections, < 30 min fill)
+   ├── Storage: post-mortems/YYYY-MM-DD-<slug>.md
+   ├── Identify: prevention measures (5-whys root cause)
+   └── Implement: monitoring improvements (each as action item with owner+date+priority)
 ```
+
+> See [`post-mortem-template.md`](./post-mortem-template.md) for the canonical template and [`post-mortems/2026-05-03-wave-b2-agents-backend-missing.md`](./post-mortems/2026-05-03-wave-b2-agents-backend-missing.md) for a worked example.
 
 ### Quick Response Commands
 

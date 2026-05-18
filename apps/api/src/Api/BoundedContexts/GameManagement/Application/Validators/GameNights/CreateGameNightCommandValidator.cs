@@ -92,5 +92,37 @@ internal sealed class CreateGameNightCommandValidator : AbstractValidator<Create
             .Must(cmd => (cmd.InvitedUserIds?.Count ?? 0) + (cmd.InvitedEmails?.Count ?? 0) <= MaxCombinedInvitees)
             .WithMessage($"Combined invited users and emails cannot exceed {MaxCombinedInvitees}")
             .WithName(nameof(CreateGameNightCommand.InvitedEmails));
+
+        // Issue #950 (W1-PR1) — code review PR #1289 feedback:
+        // Reject duplicate emails (case-insensitive + trim) before they reach the chain
+        // loop in CreateGameNightCommandHandler. The sub-handler
+        // CreateGameNightInvitationByEmailCommandHandler normalizes
+        // (Trim + ToLowerInvariant) and throws ConflictException on the 2nd duplicate
+        // (after the 1st invitation has already been committed). Catching duplicates here
+        // turns a partial-success 409 into a 400 validation error before any persistence.
+        RuleFor(x => x.InvitedEmails)
+            .Must(emails => emails == null || HasNoCaseInsensitiveDuplicates(emails))
+            .WithMessage("InvitedEmails cannot contain duplicate emails (case-insensitive)")
+            .When(x => x.InvitedEmails is { Count: > 1 });
+    }
+
+    private static bool HasNoCaseInsensitiveDuplicates(IReadOnlyList<string> emails)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var email in emails)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                // Format/empty checks fire from RuleForEach; skip them here so the
+                // dedup error doesn't double-flag malformed inputs.
+                continue;
+            }
+
+            if (!seen.Add(email.Trim()))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 }

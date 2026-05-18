@@ -187,6 +187,41 @@ public sealed class CreateGameNightCommandValidatorTests
     }
 
     // ────────────────────────────────────────────────────────────────────────
+    // Deduplication (case-insensitive + whitespace-trim) — code review feedback PR #1289
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Validate_WithExactDuplicateEmails_Fails()
+    {
+        var cmd = MakeCommand(null, new List<string> { "alice@example.com", "alice@example.com" });
+
+        var result = _validator.TestValidate(cmd);
+
+        result.ShouldHaveValidationErrorFor(x => x.InvitedEmails);
+    }
+
+    [Fact]
+    public void Validate_WithCaseInsensitiveDuplicateEmails_Fails()
+    {
+        var cmd = MakeCommand(null, new List<string> { "Alice@Example.com", "alice@example.com" });
+
+        var result = _validator.TestValidate(cmd);
+
+        result.ShouldHaveValidationErrorFor(x => x.InvitedEmails);
+    }
+
+    [Fact]
+    public void Validate_WithUniqueEmailsDifferingByCase_Passes()
+    {
+        // Sanity: only true duplicates after normalization trigger the rule.
+        var cmd = MakeCommand(null, new List<string> { "alice@example.com", "BOB@example.com" });
+
+        var result = _validator.TestValidate(cmd);
+
+        result.ShouldNotHaveValidationErrorFor(x => x.InvitedEmails);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
     // Backward compatibility: null/empty InvitedEmails preserves existing behavior
     // ────────────────────────────────────────────────────────────────────────
 

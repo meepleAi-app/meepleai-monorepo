@@ -41,7 +41,7 @@ describe('alertConfigApi', () => {
 
       const result = await alertConfigApi.getAll();
 
-      expect(mockGet).toHaveBeenCalledWith('/admin/alert-configuration');
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/alert-configuration');
       expect(result).toEqual(mockConfigs);
     });
 
@@ -67,7 +67,7 @@ describe('alertConfigApi', () => {
 
       const result = await alertConfigApi.getByCategory('Security');
 
-      expect(mockGet).toHaveBeenCalledWith('/admin/alert-configuration/Security');
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/alert-configuration/Security');
       expect(result).toEqual(mockConfig);
     });
 
@@ -93,7 +93,7 @@ describe('alertConfigApi', () => {
 
       const result = await alertConfigApi.update(updateData);
 
-      expect(mockPut).toHaveBeenCalledWith('/admin/alert-configuration', updateData);
+      expect(mockPut).toHaveBeenCalledWith('/api/v1/admin/alert-configuration', updateData);
       expect(result).toEqual(mockResponse);
     });
 

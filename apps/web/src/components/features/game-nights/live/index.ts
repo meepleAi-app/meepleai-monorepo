@@ -18,3 +18,12 @@ export type {
   PlannedGameStatus,
   PlannedGameWinner,
 } from '@/components/features/game-nights/live/PlannedGamesPane';
+
+export { NightLiveHub } from '@/components/features/game-nights/live/NightLiveHub';
+export type {
+  NightLiveHubProps,
+  NightLiveHubNight,
+  NightLiveHubCurrentGame,
+  NightLiveStatus,
+  MobileTab,
+} from '@/components/features/game-nights/live/NightLiveHub';

@@ -1,5 +1,5 @@
 /**
- * WS-C Phase 2 — Mockup baseline bootstrap.
+ * WS-C Phase 2 — Mockup baseline bootstrap (single-screen mode, v2).
  *
  * Run ONLY by Phase 3 `bootstrap-mockup-baselines.yml` workflow (manual dispatch
  * + auto-trigger on `admin-mockups/design_files/**` change) and from local dev
@@ -7,15 +7,24 @@
  *
  * Iterates each entry in `mockup-ownership.bootstrap.json`, navigates the
  * corresponding mockup HTML on the static server (:5174), waits for React + JSX
- * + fonts to settle, then captures `__mockup__/{route.id}.{viewport}.png` as the
- * canonical reference for `conformity.spec.ts`.
+ * + fonts to settle, then captures the screenshot of the SINGLE element marked
+ * with `data-conformity-screen="default-{viewport}"`.
  *
- * Refs: #1069 (WS-C), #1066 (umbrella), AC-C.6 baseline storage.
+ * Hard-fails if the marker is missing or duplicated — the contract is documented
+ * in the spec (Marker Contract section) and enforced by `conformity-marker-utils.ts`.
+ *
+ * Refs: #1269 (single-screen refactor), #1069 (WS-C), #1066 (umbrella), AC-C.6.
+ * Spec: docs/superpowers/specs/2026-05-18-conformity-baseline-single-screen-design.md
  */
 import { join } from 'node:path';
 
 import { test, expect, type Page } from '@playwright/test';
 
+import {
+  buildMarkerSelector,
+  getViewportFromProjectName,
+  validateMarkerCount,
+} from '../../scripts/conformity-marker-utils';
 import { loadOwnership } from '../../scripts/conformity-ownership';
 
 const ownershipPath = join(__dirname, 'mockup-ownership.bootstrap.json');
@@ -87,17 +96,28 @@ test.describe('WS-C Conformity — mockup baseline bootstrap', () => {
   test.describe.configure({ retries: 0 });
 
   for (const route of ownership.routes) {
-    test(`mockup baseline: ${route.id} (${route.mockup})`, async ({ page }) => {
+    test(`mockup baseline: ${route.id} (${route.mockup})`, async ({ page }, testInfo) => {
+      const viewport = getViewportFromProjectName(testInfo.project.name);
+      const markerValue = `default-${viewport}`;
+      const selector = buildMarkerSelector(viewport);
+
       const url = `/${route.mockup}`;
       await page.goto(url, { waitUntil: 'networkidle' });
       await waitForMockupReady(page);
 
+      // Single-screen marker contract enforcement (spec §Marker Contract).
+      // The mockup HTML must expose exactly ONE element matching the marker
+      // for the current viewport. Hard-fail with actionable message otherwise.
+      const target = page.locator(selector);
+      const count = await target.count();
+      validateMarkerCount(count, route.mockup, markerValue);
+
       // Snapshot lands at __mockup__/{route.id}.{viewport}.png via project-level
       // snapshotPathTemplate. Bootstrap mode (Phase 3 workflow) passes
       // --update-snapshots to (re)generate; verify mode asserts existence.
-      await expect(page).toHaveScreenshot(`${route.id}.png`, {
-        fullPage: true,
-      });
+      // Capture ONLY the marked locator (not fullPage) so the baseline matches
+      // the single-screen live render rather than the multi-state catalog.
+      await expect(target).toHaveScreenshot(`${route.id}.png`);
     });
   }
 });

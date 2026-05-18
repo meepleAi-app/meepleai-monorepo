@@ -1385,8 +1385,11 @@ const DesktopFrameInner = (props) => (
   </div>
 );
 
-const PhoneShell = ({ label, desc, children }) => (
-  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 10 }}>
+const PhoneShell = ({ label, desc, children, conformityMarker }) => (
+  <div
+    style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 10 }}
+    {...(conformityMarker ? { 'data-conformity-screen': conformityMarker } : {})}
+  >
     <div style={{
       fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-sec)',
       textTransform:'uppercase', letterSpacing:'.08em', fontWeight: 700,
@@ -1399,8 +1402,11 @@ const PhoneShell = ({ label, desc, children }) => (
   </div>
 );
 
-const DesktopFrame = ({ label, desc, children, fullWidth }) => (
-  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 12, width:'100%' }}>
+const DesktopFrame = ({ label, desc, children, fullWidth, conformityMarker }) => (
+  <div
+    style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 12, width:'100%' }}
+    {...(conformityMarker ? { 'data-conformity-screen': conformityMarker } : {})}
+  >
     <div style={{
       fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-sec)',
       textTransform:'uppercase', letterSpacing:'.08em', fontWeight: 700,
@@ -1476,8 +1482,12 @@ function App() {
 
         <div className="section-label">Mobile · 375 — 8 stati / variazioni</div>
         <div className="phones-grid">
-          {MOBILE_STATES.map(s => (
-            <PhoneShell key={s.id} label={s.label} desc={s.desc}>
+          {MOBILE_STATES.map((s, idx) => (
+            <PhoneShell
+              key={s.id}
+              label={s.label}
+              desc={s.desc}
+              conformityMarker={idx === 0 ? 'default-mobile' : undefined}>
               <PhoneScreen
                 stateOverride={s.state || null}
                 initialTab={s.tab}
@@ -1490,7 +1500,8 @@ function App() {
         <div className="section-label">Desktop · 1440 — 5 stati chiave</div>
         <div style={{ display:'flex', flexDirection:'column', gap: 36 }}>
           <DesktopFrame label="09 · Desktop · All · Grid 4-col + Activity rail"
-            desc="Vista power-user completa: hero pieno (stats + 3 CTA), 6 tabs, filtri cross-entity sticky, grid 4-col mix entity. Sidebar destra 'Ultime modifiche' timeline + scorciatoie.">
+            desc="Vista power-user completa: hero pieno (stats + 3 CTA), 6 tabs, filtri cross-entity sticky, grid 4-col mix entity. Sidebar destra 'Ultime modifiche' timeline + scorciatoie."
+            conformityMarker="default-desktop">
             <DesktopFrameInner stateOverride={null} initialTab="all" initialView="grid" withRail/>
           </DesktopFrame>
 

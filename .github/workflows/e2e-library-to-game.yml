@@ -55,12 +55,16 @@ jobs:
         run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
       - name: Cache pnpm store
+        # Issue #850 AC-3: include `.npmrc` in hash so registry/config changes
+        # also invalidate. AC-7: `vars.CACHE_VERSION` is the global
+        # emergency-invalidation knob: `gh variable set CACHE_VERSION --body v2`
+        # flushes all caches at once.
         uses: actions/cache@v4
         with:
           path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: pnpm-${{ vars.CACHE_VERSION || 'v1' }}-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', '.npmrc') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+            pnpm-${{ vars.CACHE_VERSION || 'v1' }}-${{ runner.os }}-
 
       - name: Install dependencies
         working-directory: apps/web

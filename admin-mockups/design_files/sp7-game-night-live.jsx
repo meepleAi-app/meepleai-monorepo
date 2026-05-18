@@ -29,19 +29,19 @@
    - auto-save toast bg       = entityHsl('toolkit', 0.1) green tint
    - pause overlay accent     = var(--c-warning)     amber
 
-   Componenti v2 emersi (per impl post-merge)
-   - GameNightLiveHub          → apps/web/src/components/ui/v2/game-night-live-hub/
-   - LiveHubTopBar             → ui/v2/live-hub-top-bar/
-   - LiveHubToolbar            → ui/v2/live-hub-toolbar/      (Pausa · Transition · End)
-   - PlannedGamesPane          → ui/v2/planned-games-pane/
-   - PlannedGameRow            → ui/v2/planned-game-row/      (status ✅ / 🔴 / ⏳)
-   - CurrentGameCard           → ui/v2/current-game-card/
-   - CrossGameDiaryTimeline    → ui/v2/cross-game-diary-timeline/  (aggregato multi-session)
-   - DiaryInlineWidget         → ui/v2/diary-inline-widget/         (320×400 export riusabile)
-   - AutoSaveToast             → ui/v2/auto-save-toast/             (60s tick, bottom-right)
-   - LiveHubMobileTabs         → ui/v2/live-hub-mobile-tabs/
-   - PauseOverlay              → ui/v2/pause-overlay/               (riuso da sp4-session-live)
-   - TransitionPendingPane     → ui/v2/transition-pending-pane/
+   Componenti emersi (per impl post-merge — paths canonical Stage 2 PR #1025)
+   - GameNightLiveHub          → apps/web/src/components/features/game-nights/game-night-live-hub/
+   - LiveHubTopBar             → features/game-nights/live-hub-top-bar/
+   - LiveHubToolbar            → features/game-nights/live-hub-toolbar/      (Pausa · Transition · End)
+   - PlannedGamesPane          → features/game-nights/planned-games-pane/
+   - PlannedGameRow            → features/game-nights/planned-game-row/      (status ✅ / 🔴 / ⏳)
+   - CurrentGameCard           → features/game-nights/current-game-card/
+   - CrossGameDiaryTimeline    → features/game-nights/cross-game-diary-timeline/  (aggregato multi-session)
+   - DiaryInlineWidget         → features/game-nights/diary-inline-widget/         (320×400 export riusabile)
+   - AutoSaveToast             → components/ui/auto-save-toast/                    (primitive riusabile · 60s tick, bottom-right)
+   - LiveHubMobileTabs         → features/game-nights/live-hub-mobile-tabs/
+   - PauseOverlay              → features/sessions/pause-overlay/                  (riuso da sp4-session-live, già esistente)
+   - TransitionPendingPane     → features/game-nights/transition-pending-pane/
 
    Riusi pattern
    - ConnectionBar / ConnectionPip   — wave 1 (rendering 1:1 PR #568)
@@ -86,7 +86,7 @@ const byPid = Object.fromEntries(PLAYERS.map(p => [p.id, p]));
 const GAMES = [
   { id:'gs-brass-1',   gameId:'g-brass',    title:'Brass: Birmingham', publisher:'Roxley',
     emoji:'🏭', cover:['hsl(220 35% 28%)','hsl(28 60% 38%)'],
-    estimated:'120m', actual:'113m', winnerId:'p-marco', score:'142–128',
+    estimated:'120m', actual:'113m', winnerId:'p-davide', score:'178–142',
     sessionId:'s-brass-may17', status:'completed', order: 1, startedAt:'21:02', endedAt:'22:55' },
   { id:'gs-spirit-1',  gameId:'g-spirit',   title:'Spirit Island', publisher:'GMT',
     emoji:'🌋', cover:['hsl(210 50% 30%)','hsl(150 50% 38%)'],
@@ -117,8 +117,8 @@ const DIARY = [
     text:'Aaron pesca 4 carte (mano era 2)' },
   { id:'d08', t:'22:48', game:'gs-brass-1',  kind:'score',  icon:'📊', actors:['p-marco'],
     text:'Marco completa rete Birmingham (+12 link points)' },
-  { id:'d09', t:'22:55', game:'gs-brass-1',  kind:'end',    icon:'🏆', actors:['p-marco'],
-    text:'🏆 Marco vince Brass Birmingham 142–128' },
+  { id:'d09', t:'22:55', game:'gs-brass-1',  kind:'end',    icon:'🏆', actors:['p-davide'],
+    text:'🏆 Davide vince Brass Birmingham 178–142' },
   // ── Transition ───────────────────────────────────────
   { id:'d10', t:'23:00', game:null,           kind:'system', icon:'↻', actors:[],
     text:'Setup Spirit Island · 4 spiriti scelti random' },

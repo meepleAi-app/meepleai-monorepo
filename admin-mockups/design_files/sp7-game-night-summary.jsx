@@ -35,15 +35,15 @@
    - share success toast          = entityHsl('toolkit') green
    - archived banner              = var(--text-muted)
 
-   Componenti v2 emersi
-   - NightSummaryHero            → apps/web/src/components/ui/v2/night-summary-hero/
-   - MVPBanner                   → ui/v2/mvp-banner/
-   - KPIStatGrid + KPIStatCard   → ui/v2/kpi-stat-grid/
-   - PerGameRecapRow             → ui/v2/per-game-recap-row/
-   - CollapsedDiaryByGame        → ui/v2/collapsed-diary-by-game/ (CrossGame collapsed mode)
-   - NightPhotoGallery           → ui/v2/night-photo-gallery/
-   - ShareSuccessToast           → ui/v2/share-success-toast/ (varianti per archive/copy/x)
-   - ArchivedBanner              → ui/v2/archived-banner/
+   Componenti emersi (paths canonical Stage 2 PR #1025)
+   - NightSummaryHero            → apps/web/src/components/features/game-nights/night-summary-hero/
+   - MVPBanner                   → features/game-nights/mvp-banner/
+   - KPIStatGrid + KPIStatCard   → components/ui/kpi-stat-grid/                     (primitive riusabile)
+   - PerGameRecapRow             → features/game-nights/per-game-recap-row/
+   - CollapsedDiaryByGame        → features/game-nights/collapsed-diary-by-game/    (CrossGame collapsed mode)
+   - NightPhotoGallery           → features/game-nights/night-photo-gallery/
+   - ShareSuccessToast           → components/ui/share-success-toast/               (primitive riusabile · varianti per archive/copy/x)
+   - ArchivedBanner              → components/ui/archived-banner/                   (primitive riusabile)
 
    Riusi pattern
    - CrossGameDiaryTimeline (sp7-k) — qui in mode collapsed-by-game

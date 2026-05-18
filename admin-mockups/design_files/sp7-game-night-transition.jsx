@@ -29,14 +29,14 @@
    - Skip submodal          = var(--c-warning)
    - End night submodal     = var(--c-danger)
 
-   Componenti v2 emersi
-   - GameTransitionDialog       → apps/web/src/components/ui/v2/game-transition-dialog/
-   - TransitionRecapPanel       → ui/v2/transition-recap-panel/    (left col)
-   - TransitionPreviewPanel     → ui/v2/transition-preview-panel/  (right col)
-   - KBRulesQuickGlance         → ui/v2/kb-rules-quick-glance/     (3 bullet · skeleton · offline fallback)
-   - SetupChecklist             → ui/v2/setup-checklist/           (icone + check)
-   - TopThreeScoreList          → ui/v2/top-three-score-list/      (rank + avatar + score)
-   - TransitionConfirmSubmodal  → ui/v2/transition-confirm-submodal/
+   Componenti emersi (paths canonical Stage 2 PR #1025)
+   - GameTransitionDialog       → apps/web/src/components/features/game-nights/game-transition-dialog/
+   - TransitionRecapPanel       → features/game-nights/transition-recap-panel/    (left col)
+   - TransitionPreviewPanel     → features/game-nights/transition-preview-panel/  (right col)
+   - KBRulesQuickGlance         → components/ui/kb-rules-quick-glance/            (primitive riusabile · 3 bullet · skeleton · offline fallback)
+   - SetupChecklist             → components/ui/setup-checklist/                  (primitive riusabile · icone + check)
+   - TopThreeScoreList          → features/game-nights/top-three-score-list/      (rank + avatar + score, specifico session/night-recap)
+   - TransitionConfirmSubmodal  → features/game-nights/transition-confirm-submodal/
 
    Riusi pattern
    - PauseOverlay / EndgameDialog (sp4) — backdrop + bottom-sheet mobile
@@ -530,7 +530,7 @@ const DialogHeader = ({ mobile, onClose }) => (
     }} aria-hidden="true">➡️</div>
     <div style={{ flex: 1, minWidth: 0 }}>
       <MonoKicker size={9.5} color={entityHsl('event')}>Game transition · #GN-042</MonoKicker>
-      <div style={{
+      <div id="sp7-l-dialog-title" style={{
         fontFamily:'var(--f-display)', fontSize: 14.5, fontWeight: 800,
         color:'var(--text)', letterSpacing:'-.01em',
       }}>Pronti per il prossimo gioco?</div>

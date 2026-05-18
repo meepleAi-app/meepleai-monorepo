@@ -65,6 +65,16 @@ const RUNBOOKS: Record<string, RouteRunbook> = {
     search: '?state=default',
     readySelector: 'main',
   },
+  // Stage 3 cluster #1113 — `PlayerDetailView` short-circuits to the
+  // `Sara Rossi` fixture when `IS_VISUAL_TEST_BUILD` is enabled. No URL
+  // override needed; the hero + stats grid render synchronously from the
+  // fixture so we wait on both data-slots before screenshot (matches the
+  // pattern in `visual-migrated/sp4-player-detail.spec.ts`).
+  // Refs: #1269 (this fix), #683 (route migration), #1113 (cluster).
+  'player-detail': {
+    readySelector: '[data-slot="player-detail-view"]',
+    contentSelector: '[data-slot="player-detail-stats-grid"]',
+  },
 };
 
 async function waitForRouteReady(page: Page, runbook: RouteRunbook): Promise<void> {

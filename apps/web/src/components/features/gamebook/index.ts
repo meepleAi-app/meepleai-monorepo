@@ -128,3 +128,17 @@ export type { SegmentPickerProps } from '@/components/features/gamebook/SegmentP
 
 export { TranslationPane } from '@/components/features/gamebook/TranslationPane';
 export type { TranslationPaneProps } from '@/components/features/gamebook/TranslationPane';
+
+// SP6 Iter 1.B — quota/credits checkout modal (#953)
+export { CheckoutModal } from '@/components/features/gamebook/CheckoutModal';
+export type {
+  CheckoutLabels,
+  CheckoutModalProps,
+  CheckoutQuota,
+} from '@/components/features/gamebook/CheckoutModal';
+
+export { SoftWarningCredits } from '@/components/features/gamebook/SoftWarningCredits';
+export type {
+  SoftWarningCreditsLabels,
+  SoftWarningCreditsProps,
+} from '@/components/features/gamebook/SoftWarningCredits';

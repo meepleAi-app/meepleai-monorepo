@@ -645,10 +645,16 @@ The `infra/scripts/dr-walkthrough-reminder.sh` script runs via cron (`0 9 1 1,4,
 This runbook intentionally references work that is **out-of-scope** but adjacent. Tracked as follow-up issues:
 
 - [ ] [#1087](https://github.com/meepleAi-app/meepleai-monorepo/issues/1087) — **CI migration safety gate**: parse SQL artifacts in `staging.yml`, fail on forbidden patterns from §8.2
-- [ ] [#1088](https://github.com/meepleAi-app/meepleai-monorepo/issues/1088) — **Post-mortem template doc**: structured Markdown template at `docs/for-developers/operations/post-mortem-template.md`
+- [x] [#1088](https://github.com/meepleAi-app/meepleai-monorepo/issues/1088) — **Post-mortem template doc**: structured Markdown template at [`post-mortem-template.md`](./post-mortem-template.md) ✅ done
 - [ ] [#1089](https://github.com/meepleAi-app/meepleai-monorepo/issues/1089) — **Status banner FE component**: implement in-app banner (refs §12.3) with admin controls
 
-### 14.3 Post-mortem skeleton (until full template exists)
+### 14.3 Post-mortem template
+
+Use [`post-mortem-template.md`](./post-mortem-template.md) for the canonical structured template (9 sections + storage convention `post-mortems/YYYY-MM-DD-<slug>.md`). Target fill time: < 30 min for a typical P1 incident.
+
+Worked example: [`post-mortems/2026-05-03-wave-b2-agents-backend-missing.md`](./post-mortems/2026-05-03-wave-b2-agents-backend-missing.md) (P2, fix-forward instead of rollback).
+
+Quick skeleton (for in-incident scratchpad before transcribing to the template):
 
 ```markdown
 # Post-mortem — <Incident title> (YYYY-MM-DD)
@@ -664,21 +670,16 @@ One paragraph: what happened, impact, how we fixed it.
 - HH:MM — Smoke validation passed
 
 ## Root cause
-What allowed the broken code to reach prod / staging? Where did the
-review / CI / monitoring gap occur?
+5-whys analysis. What allowed the broken code to reach prod / staging?
 
 ## Resolution
 What action restored service. Reference §6 scenario.
 
-## What went well
-Concrete: list 2-3 things.
-
-## What went poorly
-Concrete: list 2-3 things. No blame.
+## What went well / poorly
+Concrete: 2-3 items each, no blame.
 
 ## Action items
-- [ ] <Concrete, dated, owner-assigned action>
-- [ ] ...
+- [ ] <Concrete, dated, owner-assigned action, priority P1/P2/P3, tracking issue>
 ```
 
 ---

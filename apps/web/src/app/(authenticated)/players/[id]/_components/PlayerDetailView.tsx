@@ -436,10 +436,13 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
     comingSoon: t('pages.playerDetail.tabs.toolkits.comingSoon'),
   };
 
-  let tabPanel: ReactElement;
+  // #1094 ARIA fix: wrap tabPanel in role="tabpanel" + matching id so that
+  // PlayerTabs' aria-controls="tabpanel-player-detail-{key}" resolves to a
+  // real element (was firing axe aria-valid-attr-value otherwise).
+  let tabPanelInner: ReactElement;
   switch (tab) {
     case 'games':
-      tabPanel = (
+      tabPanelInner = (
         <GamesTabPanel
           playerId={safePlayerId}
           gamePlayCounts={gamePlayCounts}
@@ -448,10 +451,10 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
       );
       break;
     case 'toolkits':
-      tabPanel = <ToolkitsTabPanel labels={toolkitsLabels} />;
+      tabPanelInner = <ToolkitsTabPanel labels={toolkitsLabels} />;
       break;
     case 'achievements':
-      tabPanel = (
+      tabPanelInner = (
         <AchievementBadgeGrid
           count={safeProfile.achievementCount}
           viewAllHref={`/players/${safePlayerId}/achievements`}
@@ -461,9 +464,19 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
       break;
     case 'sessions':
     default:
-      tabPanel = <SessionsTabPanel stats={safeProfile} labels={sessionsLabels} />;
+      tabPanelInner = <SessionsTabPanel stats={safeProfile} labels={sessionsLabels} />;
       break;
   }
+  const tabPanel: ReactElement = (
+    <div
+      role="tabpanel"
+      id={`tabpanel-player-detail-${tab}`}
+      aria-labelledby={`tab-player-detail-${tab}`}
+      tabIndex={0}
+    >
+      {tabPanelInner}
+    </div>
+  );
 
   return (
     <div data-slot="player-detail-view">

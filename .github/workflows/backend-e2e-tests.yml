@@ -60,12 +60,16 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Cache NuGet packages
+        # Issue #850 AC-3: tight key fingerprint includes Directory.Packages.props
+        # and global.json so SDK/centralized-package changes also invalidate.
+        # AC-7: `vars.CACHE_VERSION` is the global emergency-invalidation knob:
+        # `gh variable set CACHE_VERSION --body v2` flushes all caches at once.
         uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ hashFiles('**/*.csproj') }}
+          key: nuget-${{ vars.CACHE_VERSION || 'v1' }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props', 'global.json') }}
           restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-nuget-
+            nuget-${{ vars.CACHE_VERSION || 'v1' }}-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Restore Dependencies
         working-directory: apps/api

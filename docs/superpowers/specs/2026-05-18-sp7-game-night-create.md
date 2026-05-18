@@ -11,7 +11,7 @@
 | **Authors** | spec-panel (Wiegers/Fowler/Newman/Nygard/Adzic/Cockburn) |
 | **Branch** | `feature/issue-950-spec-game-night-create` |
 | **Re-panel target** | ≥ 8.0/10 from 5.1/10 baseline |
-| **Hardening** | 2026-05-18b — 5 open decisions resolved (see §17) |
+| **Hardening** | 2026-05-18b — 5 open decisions resolved (see §17); 2026-05-18c — Week 1 panel findings applied (see §20) |
 
 ## 1. Problem statement
 
@@ -121,13 +121,62 @@ Audit run 2026-05-18 via `grep -rn "MapGet" apps/api/src/Api/Routing` + schema i
 
 | Need | Endpoint | Status | Resolution |
 |---|---|---|---|
-| Player autocomplete | `GET /api/v1/players?q={query}` | ❌ **missing** | Add in `AgentMemoryEndpoints.cs` or new `PlayersEndpoints.cs` (BC `AgentMemory` already owns `/players/me/*`). Pagination optional V1. |
+| Player autocomplete | `GET /api/v1/users/search?q={query}` | ⚠️ **partial reuse** | **A1 resolved 2026-05-18c**: `SearchUsersQuery` already exists in BC `Administration` (`apps/api/src/Api/BoundedContexts/Administration/Application/Queries/SearchUsersQuery.cs`) with minLength=2 enforced (handler L:28-31), MaxResults param, error-safe (returns empty on exception). Currently used in 2 admin endpoints. **Implementation**: NO new query/handler — add thin authenticated-user endpoint (NOT admin-only) that calls `SearchUsersQuery` via `IMediator.Send()`. Endpoint path renamed `/users/search?q=` (was `/players?q=`) for BC alignment (User entity, not Player). FE hook `usePlayerSearch` preserves mockup terminology via translation adapter. |
 | User library games | `GET /api/v1/users/me/library/games` | ✅ **existing** | Confirmed via `useLibrary` hook + `api.library.getLibrary(params)` client; backend route owns BC `UserLibrary`. |
-| Conflict check | `GET /api/v1/game-nights/check-conflict?at={iso}` | ❌ **missing** | Add in BC `GameManagement` group. Query: SELECT events WHERE scheduledAt OVERLAPS [at-2h, at+2h] AND (organizerId=user OR userId IN invitees). |
-| Regulars | `GET /api/v1/users/me/regulars` | ❌ **missing** | **D3 resolved 2026-05-18b**: Add in BC `GameManagement` (NOT `AgentMemory` as original spec proposed). Rationale: regulars aggregate from `game_nights.invitedUserIds` historical events (event-level) — same BC that owns game-nights. AgentMemory's "guest player claims" is a different concept (proxy players, not event participants). |
-| **Schema** | `CreateGameNightCommand` | ⚠️ **email-gap** | Currently `InvitedUserIds: List<Guid>?` only. Mockup state-06 mixes email+user. **D1 resolved 2026-05-18b**: Option A — extend command with `InvitedEmails: List<string>?`. Independent from #847 (different aggregates: #847 = staging access tokens in BC Authentication; #950 = event invitees in BC GameManagement). |
+| Conflict check | `GET /api/v1/game-nights/check-conflict?at={iso}` | ❌ **missing** | Add in BC `GameManagement` group. Query: SELECT events WHERE scheduledAt OVERLAPS [at-2h, at+2h] AND (organizerId=user OR userId IN invitees). **Timeout**: 500ms server-side (PostgreSQL with date index), 1.5s client AbortController (W1 §7b). |
+| Regulars | `GET /api/v1/game-nights/regulars` | ❌ **missing** | **D3 resolved 2026-05-18b**: Add in BC `GameManagement` (NOT `AgentMemory` as original spec proposed). **A2 resolved 2026-05-18c**: path renamed `/users/me/regulars` → `/game-nights/regulars` for BC ownership consistency (BC owns path prefix). Rationale: regulars aggregate from `game_nights.invitedUserIds` historical events (event-level) — same BC that owns game-nights. Stale 5min server cache invalidated on `GameNightPublished` event (P2 §9b). |
+| **Schema** | `CreateGameNightCommand` | ⚠️ **email-gap** | Currently `InvitedUserIds: List<Guid>?` only. Mockup state-06 mixes email+user. **D1 resolved 2026-05-18b**: Option A — extend command with `InvitedEmails: List<string>?`. **R3 resolved 2026-05-18c**: validator must enforce `InvitedUserIds.Count + InvitedEmails.Count ≤ 49 combined` (NOT 49+49=98). Independent from #847 (different aggregates: #847 = staging access tokens in BC Authentication; #950 = event invitees in BC GameManagement). |
 
-**Risk** (updated 2026-05-18b): like Wave 3 INDEX (#732 4-week backend roadmap), this introduces 3 new endpoints + 1 schema extension across 2 BCs (AgentMemory for player search + GameManagement for conflict/regulars/schema). Recommended sequencing: backend Phase 1 (endpoints + schema) → frontend Foundation (hooks) → frontend implementation.
+**Risk** (updated 2026-05-18c): scope reduced from "3 new endpoints + 1 schema" to "2 new endpoints + 1 thin-wrapper endpoint + 1 schema" across **1 BC** (GameManagement) + thin endpoint coordination with BC Administration. Performance risk: `users.display_name` + `users.email` need `pg_trgm` GIN index for sub-100ms autocomplete (P1 §15). Recommended sequencing: backend Phase 1 (endpoints + schema + index) → frontend Foundation (hooks) → frontend implementation.
+
+## 7b. Backend endpoint contracts (added 2026-05-18c)
+
+Per Wiegers R1 (testability) and Adzic G1 (executable scenarios). All endpoints require authenticated user session.
+
+### 7b.1 `GET /api/v1/users/search?q={q}&limit={N}`
+
+| Field | Value |
+|---|---|
+| **Auth** | Authenticated user (NOT admin-only) |
+| **Query: `q`** | string, minLength=2, maxLength=100. Trimmed. Empty/short → empty array. |
+| **Query: `limit`** | int, default=20, max=50. Server-side clamp. |
+| **Response 200** | `UserSearchResultDto[]` — `{ id: Guid, displayName: string, email: string }[]`. Sorted by `displayName` ASC. Max `limit` entries. |
+| **Response 400** | `q` exceeds 100 chars |
+| **Response 401** | Unauthenticated |
+| **Response 429** | Rate limit exceeded (10 req/sec per user) |
+| **Performance** | < 100ms p95 with pg_trgm GIN index. Without index: < 500ms acceptable for V1. |
+| **Reuses** | `Api.BoundedContexts.Administration.Application.Queries.SearchUsersQuery` |
+
+### 7b.2 `GET /api/v1/game-nights/regulars?limit={N}`
+
+| Field | Value |
+|---|---|
+| **Auth** | Authenticated user; returns regulars **for current user** (organizer perspective) |
+| **Query: `limit`** | int, default=10, max=30 |
+| **Response 200** | `RegularDto[]` — `{ id: Guid, displayName: string, email: string, eventCount: int, lastInvitedAt: DateTimeOffset }[]`. Sorted by `eventCount` DESC, then `lastInvitedAt` DESC. |
+| **Response 401** | Unauthenticated |
+| **Aggregation** | `game_night_invitations` JOIN `users` WHERE organizer_id = current_user AND invited_at > NOW() - INTERVAL '12 months' GROUP BY invited_user_id ORDER BY COUNT(*) DESC LIMIT N |
+| **Cache** | Server: 5min memory cache keyed by `userId`, invalidated on `GameNightPublishedEvent` (P2 §9b). Client: 5min staletime via React Query. |
+
+### 7b.3 `GET /api/v1/game-nights/check-conflict?at={iso}`
+
+| Field | Value |
+|---|---|
+| **Auth** | Authenticated user; checks **current user's** calendar |
+| **Query: `at`** | ISO 8601 datetime offset (e.g. `2026-06-01T20:00:00+02:00`). Required. |
+| **Response 200** | `ConflictCheckDto` — `{ hasConflict: bool, conflicts: ConflictEntryDto[] }`. `conflicts: { id: Guid, title: string, scheduledAt: DateTimeOffset, role: "organizer" | "invitee" }[]`. |
+| **Response 400** | `at` invalid ISO or > 2 years in future |
+| **Response 401** | Unauthenticated |
+| **Timeout** | 500ms server-side via `CancellationToken`; client AbortController 1.5s; on timeout returns `{ hasConflict: false, conflicts: [] }` + emits `gamenight.conflict-check.timeout` counter (P2 §9b). |
+| **Query semantics** | `SELECT id, title, scheduled_at FROM game_nights WHERE scheduled_at BETWEEN @at - INTERVAL '2 hours' AND @at + INTERVAL '2 hours' AND status IN ('Draft', 'Published') AND (organizer_id = @userId OR EXISTS (SELECT 1 FROM game_night_invitations WHERE game_night_id = id AND invited_user_id = @userId))` |
+
+### 7b.4 `POST /api/v1/game-nights` (extended schema)
+
+| Field | Value |
+|---|---|
+| **Added field** | `invitedEmails: string[]?` — RFC 5321 format, max 200 chars each |
+| **Combined validation** | `invitedUserIds.Count + invitedEmails.Count ≤ 49` (NOT 49+49=98) |
+| **Migration** | Additive column `invited_emails: text[] NOT NULL DEFAULT '{}'` on `game_night_invitations` parent table — existing rows backfill to empty array. Migration must include UP+DOWN scripts (Crispin T2). |
 
 ## 8. State management decision
 
@@ -256,6 +305,25 @@ Future UX integration possible (e.g. when #847 ships, an email-only invitee rece
 - [ ] AC-B.2: `v2-migration-matrix.md` row: id `game-night-create`, status `done`, PR ref
 - [ ] AC-B.3: `mockup-ownership.bootstrap.json` entry + conformity baseline via `bootstrap-mockup-baselines.yml` (single screen, not multi-state catalog — avoid #1276 architectural pitfall)
 
+## 9b. Observability (added 2026-05-18c per Nygard panel)
+
+Backend Prometheus counters emitted by handlers:
+
+```
+gamenight_create_attempts_total{outcome="success|failure|validation_error"}
+gamenight_create_retry_total{attempt="1|2|3"}
+gamenight_conflict_check_total{outcome="no_conflict|conflict_detected|timeout|error"}
+gamenight_conflict_check_duration_seconds (histogram, buckets: 0.05, 0.1, 0.25, 0.5, 1, 2, 5)
+gamenight_users_search_total{outcome="empty_query|results|rate_limited|error"}
+gamenight_regulars_cache_total{outcome="hit|miss|invalidated"}
+```
+
+Client-side analytics events (existing `analytics.ts`):
+
+- `gamenight.create.{started, succeeded, failed}` with `{ stepCount, invitedUserCount, invitedEmailCount, gameCount, decideAtGroup }`
+- `gamenight.conflict-check.{queried, conflict, override, failed}`
+- `gamenight.draft.{saved, restored, discarded}`
+
 ## 12. Gherkin scenarios (Adzic ≥ 6)
 
 ### Scenario 1: Happy path desktop
@@ -328,6 +396,87 @@ And the submit payload has `gameIds: []` (empty array, not undefined)
 And the RSVP-card preview shows "Giochi: da decidere al gruppo"
 ```
 
+## 12b. Backend Gherkin scenarios (added 2026-05-18c per Adzic G1)
+
+### BE-1: User search empty/short query returns empty
+
+```gherkin
+Given the system contains 1000 users
+When GET /api/v1/users/search?q= (empty)
+Then response is 200 with []
+When GET /api/v1/users/search?q=a (1 char)
+Then response is 200 with []
+```
+
+### BE-2: User search respects default limit
+
+```gherkin
+Given 50 users with displayName starting "ali"
+When GET /api/v1/users/search?q=ali
+Then response is 200 with 20 entries (default limit)
+And entries are sorted by displayName ASC
+```
+
+### BE-3: User search rate limited
+
+```gherkin
+Given an authenticated user
+When 11 GET /api/v1/users/search?q=foo are sent within 1 second
+Then the 11th response is 429 Too Many Requests
+And the counter gamenight_users_search_total{outcome="rate_limited"} is incremented
+```
+
+### BE-4: Conflict check OVERLAPS query
+
+```gherkin
+Given user U1 has GameNight A scheduled at 2026-06-01T20:00:00Z (Published)
+When U1 sends GET /api/v1/game-nights/check-conflict?at=2026-06-01T19:00:00Z
+Then response is 200 with { hasConflict: true, conflicts: [A] }
+When U1 sends GET /api/v1/game-nights/check-conflict?at=2026-06-01T23:00:00Z
+Then response is 200 with { hasConflict: false, conflicts: [] }
+```
+
+### BE-5: Conflict check timeout returns no-conflict gracefully
+
+```gherkin
+Given the PostgreSQL query takes 700ms (exceeds 500ms server timeout)
+When GET /api/v1/game-nights/check-conflict?at=<future>
+Then response is 200 with { hasConflict: false, conflicts: [] }
+And counter gamenight_conflict_check_total{outcome="timeout"} is incremented
+```
+
+### BE-6: Regulars sorted by event count desc
+
+```gherkin
+Given U1 has invited: U2 (5 events), U3 (3 events), U4 (1 event) in last 12 months
+When U1 sends GET /api/v1/game-nights/regulars
+Then response is 200 with [U2, U3, U4] (sorted by eventCount DESC)
+And each entry includes eventCount + lastInvitedAt
+```
+
+### BE-7: Validator enforces combined invitee limit
+
+```gherkin
+Given CreateGameNightCommand with invitedUserIds.Count=40 and invitedEmails.Count=10
+When validator runs
+Then validation fails with "Combined invited users and emails cannot exceed 49"
+
+Given CreateGameNightCommand with invitedUserIds.Count=25 and invitedEmails.Count=24
+When validator runs
+Then validation passes (total=49)
+```
+
+### BE-8: Migration backward-compat
+
+```gherkin
+Given a Postgres database with the pre-migration schema (no invited_emails column)
+When the migration applies
+Then game_night_invitations.invited_emails column exists with type text[]
+And existing rows have invited_emails = '{}' (empty array, NOT NULL)
+When the migration DOWN script applies
+Then the column is removed without data loss to invited_user_ids
+```
+
 ## 13. Test strategy
 
 - **Foundation tests**: pure reducer + validators + fixture sentinel.
@@ -341,12 +490,28 @@ And the RSVP-card preview shows "Giochi: da decidere al gruppo"
 ## 14. Sequencing
 
 ```
-Week 1 (backend):
-  - Phase 1a: GET /api/v1/players?q= (BC AgentMemory)
-  - Phase 1b: GET /api/v1/users/me/regulars (BC AgentMemory)
-  - Phase 1c: GET /api/v1/game-nights/check-conflict (BC GameManagement)
-  - Phase 1d: Schema extension `InvitedEmails: List<string>?` (CreateGameNightCommand + Validator)
-  - Verify GET /api/v1/users/me/library/games (likely exists, document)
+Week 1 (backend) — updated 2026-05-18c:
+  PR-W1.1 (schema + validator + migration):
+    - 1d: Schema extension `InvitedEmails: List<string>?` (CreateGameNightCommand + Validator + DTO)
+    - 1d': EF Core migration: invited_emails text[] NOT NULL DEFAULT '{}' (additive)
+    - 1d'': Combined validator: invitedUserIds.Count + invitedEmails.Count ≤ 49
+    - Tests: handler unit + integration (Testcontainers Postgres) + migration UP+DOWN test
+    - AC: ≥85% coverage on validator, 100% on combined-limit logic
+
+  PR-W1.2 (3 endpoints):
+    - 1a: GET /api/v1/users/search?q= (thin wrapper reusing SearchUsersQuery from BC Administration)
+         + RequireAuthenticatedUser middleware (NOT admin-only)
+         + Rate limit attribute (10 req/sec authenticated user)
+    - 1b: GET /api/v1/game-nights/regulars (BC GameManagement — path renamed from /users/me/regulars)
+         + 5min memory cache + GameNightPublishedEvent invalidation handler
+    - 1c: GET /api/v1/game-nights/check-conflict (BC GameManagement)
+         + 500ms server timeout via CancellationToken
+         + pg_trgm index migration on users(display_name, email) — required for 1a perf
+    - Tests: handler unit (mocked repo) + endpoint integration (TestServer + Testcontainers)
+            + 8 Gherkin BE scenarios from §12b
+    - AC: ≥85% coverage per handler, 100% on critical paths (timeout, rate-limit, combined-limit)
+
+  Verify: GET /api/v1/users/me/library/games (✅ confirmed existing — no work needed)
 
 Week 2 (frontend Foundation):
   - Commit 1 (Foundation): reducer + validators + fixture + i18n + 3 NEW hooks
@@ -365,16 +530,20 @@ Critical path: Week 1 backend is sequential blocker (mirror Wave 3 INDEX backend
 
 If backend cannot start Week 1, Foundation ships with stub hooks (returning empty), implementation degrades gracefully (regulars empty, autocomplete shows "Nessun risultato"), and we re-prioritize backend ASAP.
 
-## 15. Risks + mitigations
+## 15. Risks + mitigations (updated 2026-05-18c per Nygard P1-P3)
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Backend endpoints delayed | High | High (blocks Steps 3 + 1 conflict) | Stub hooks pattern (Wave 3 INDEX precedent); Foundation can ship without backend |
-| Schema email-gap unresolved | High | Medium (Option A vs B) | This spec recommends Option A + coordinate with #847; Option B is the fallback |
+| Backend endpoints delayed | Medium (scope reduced by reuse) | High (blocks Steps 3 + 1 conflict) | Stub hooks pattern (Wave 3 INDEX precedent); Foundation can ship without backend. SearchUsersQuery reuse removes 1 dependency. |
+| Schema email-gap unresolved | Resolved (D1) | — | Option A accepted §10 |
 | Conformity catalog mismatch | Medium | Medium | Lesson from #1276 — bootstrap single canonical screen only, no multi-state mockup baseline |
 | Reducer complexity drift | Low | Medium | Pure-function discipline + 100% reducer unit coverage gate |
 | Autosave cross-user leak | Low | High (PII leak) | localStorage key includes `userId`; clear on logout via auth hook |
 | Bundle budget | Medium | Low | New components fit within Wave 3 budget; estimate +50 KB gzip; if > +80 KB consider code-split per step |
+| **NEW** `/users/search` perf degradation | High at > 10K users | Medium (UX latency) | **pg_trgm GIN index** on `users(display_name, email)` — required as part of PR-W1.2 migration. Without index: ILIKE scan ~200ms at 1K users, > 1s at 10K. |
+| **NEW** User enumeration via `/users/search` | Medium | Medium (privacy) | Rate limit 10 req/sec per authenticated user (P3 §15). Future: confirm response shape doesn't expose PII beyond `displayName + email` (already minimal) |
+| **NEW** Conflict-check query timeout in prod | Medium | Low (degrades to no-conflict UX) | 500ms server `CancellationToken` + Prometheus counter `gamenight_conflict_check_total{outcome="timeout"}` for alerting |
+| **NEW** Cache invalidation drift on `/regulars` | Low | Low (stale data ≤ 5min) | `GameNightPublishedEvent` handler invalidates `regulars:{userId}` cache key. Test: integration test creating GN → re-query regulars → assert new entry visible |
 
 ## 16. References
 
@@ -450,3 +619,53 @@ These are tracked as inline comments here and can be addressed in the Foundation
 ### Outcome
 
 ✅ **Implementation dispatch unblocked**. Week 1 backend can begin per §14 sequencing. The spec remains the source of truth; any deviation during implementation must amend §18 with a new change-log entry.
+
+## 20. Week 1 implementation panel hardening — 2026-05-18c
+
+7-expert panel review (Wiegers/Fowler/Newman/Nygard/Crispin/Adzic/Cockburn, critique mode) on Week 1 implementation readiness. Identified 5 P0 + 6 P1 issues; all addressed inline in this amendment.
+
+### P0 — applied
+
+| # | Expert | Issue | Resolution |
+|---|---|---|---|
+| **A1** | Fowler / Newman | BC routing collision: spec proposed `/players?q=` in BC AgentMemory but AgentMemory `players/me/*` = player profile, NOT registered users | §7: endpoint renamed `/users/search?q=` reusing `SearchUsersQuery` from BC Administration (already implemented at `apps/api/src/Api/BoundedContexts/Administration/Application/Queries/SearchUsersQuery.cs`). No new query/handler. |
+| **R1** | Wiegers | Missing contracts (minLength, limit, pagination, hasMore) for `/players?q=` | §7b.1: minLength=2 (handler L:28-31), default limit=20, max=50, sorted DESC ASC. R1 resolved — minLength **already implemented** in existing handler. |
+| **R3** | Wiegers | Validator can be bypassed with 49 userIds + 49 emails = 98 | §7b.4 + §14 PR-W1.1: combined validator `InvitedUserIds.Count + InvitedEmails.Count ≤ 49`. BE-7 Gherkin covers. |
+| **P1** | Nygard | `/users/search` table scan without pg_trgm index | §15 risk added; PR-W1.2 includes `pg_trgm` GIN migration on `users(display_name, email)`. |
+| **T2** | Crispin | Migration needs UP+DOWN test for backward-compat | §14 PR-W1.1 AC: migration UP+DOWN test. BE-8 Gherkin covers. |
+
+### P1 — applied
+
+| # | Expert | Issue | Resolution |
+|---|---|---|---|
+| **A2** | Fowler | Path `/users/me/regulars` mismatches D3 BC ownership (GameManagement) | §7: path renamed `/game-nights/regulars` (BC owns path prefix). |
+| **R2** | Wiegers | Conflict-check missing timeout SLA | §7b.3: 500ms server timeout via `CancellationToken`, 1.5s client AbortController. BE-5 Gherkin covers. |
+| **P2** | Nygard | Cache invalidation for `/regulars` undefined | §7b.2 + §15: 5min memory cache invalidated on `GameNightPublishedEvent` handler. |
+| **P3** | Nygard | Rate limit missing for `/users/search` | §7b.1 + §15: 10 req/sec per authenticated user. BE-3 Gherkin covers. |
+| **T1** | Crispin | Week 1 missing test deliverables ACs | §14 PR-W1.1 + PR-W1.2: ≥85% coverage AC, integration test Testcontainers, 8 BE scenarios. |
+| **G1** | Adzic | Missing BE Gherkin scenarios | §12b added (8 scenarios: BE-1 through BE-8). |
+
+### Non-applied (deferred)
+
+| # | Expert | Issue | Deferred to |
+|---|---|---|---|
+| **N1** | Newman | Verify `game_night_invitations` table ownership BC | PR-W1.1 implementation (audit-as-you-build). Likely already in BC GameManagement based on directory structure observed. |
+| **N2** | Newman | Per-call API versioning convention | Tracked as non-blocker §19; can land with Foundation. |
+| **Obs1** | Nygard | Observability counter set | §9b added inline — implementation tracked in PR-W1.2 acceptance. |
+
+### Score impact
+
+Estimated 8.29/10 → **8.7/10** (Wiegers R1-R3 testable contracts + Fowler/Newman A1-A2 BC ownership corrected + Nygard P1-P3 production hardening + Crispin T1-T2 ACs + Adzic G1 BE scenarios).
+
+### PR strategy
+
+Per Cockburn recommendation: **2 PR Week 1** (decomposition into 4 PR rejected as too granular for ~6-8h work):
+
+- **PR-W1.1**: Schema + Validator + Migration (~3h)
+- **PR-W1.2**: 3 endpoints + pg_trgm index + cache (~5h)
+
+Both PR target `main-dev`. Foundation FE (Week 2) blocks on PR-W1.2 merge.
+
+### Next action
+
+Implementation can begin on PR-W1.1 (schema migration is independent of other endpoints). PR-W1.2 follows after PR-W1.1 merge.

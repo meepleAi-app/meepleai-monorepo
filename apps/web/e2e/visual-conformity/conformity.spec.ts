@@ -54,12 +54,25 @@ interface RouteRunbook {
   readySelector: string;
   /** Optional secondary selector for slower-rendering content. */
   contentSelector?: string;
+  /**
+   * Optional CSS selector for the screenshot capture target. Defaults to `'main'`.
+   *
+   * Issue #1269: must be symmetric with bootstrap.spec.ts which captures the
+   * `[data-conformity-screen="default-{viewport}"]` locator on the mockup side.
+   * On the live route side, `'main'` is the standard wrapper for authenticated
+   * routes, giving comparable single-screen dimensions to the mockup marker
+   * scope. Override per-route if a tighter wrapper is more semantically aligned.
+   */
+  screenshotSelector?: string;
 }
 
 const RUNBOOKS: Record<string, RouteRunbook> = {
   library: {
     readySelector: '[data-slot="library-hub-v2"]',
     contentSelector: '[data-slot="library-grid-card"]',
+    // Capture the LibraryHub wrapper directly — semantically equivalent to the
+    // mockup DesktopFrame #09 marked with data-conformity-screen="default-desktop".
+    screenshotSelector: '[data-slot="library-hub-v2"]',
   },
   'library-game-detail': {
     search: '?state=default',
@@ -67,16 +80,23 @@ const RUNBOOKS: Record<string, RouteRunbook> = {
   },
   'player-detail': {
     // PlayerDetailView short-circuits to Sara Rossi fixture when
-    // NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1 (baked into CI prod build).
-    // ?state=default is the explicit no-op override that confirms fixture path.
+    // NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1 (baked into CI prod build by
+    // visual-regression-conformity.yml). ?state=default is the explicit no-op
+    // override that confirms fixture path.
     search: '?state=default',
     readySelector: '[data-slot="player-detail-view"]',
+    // Capture the PlayerDetailView wrapper directly — semantically equivalent
+    // to the mockup DesktopFrame Desktop · 01 Overview marker.
+    screenshotSelector: '[data-slot="player-detail-view"]',
   },
   'game-nights-index': {
     // No build-time fixture for game-nights (tracked as Open Issue §1 in spec).
     // Live route in CI without backend renders empty state — matched by
     // mockup marker on DesktopFrame #06 Empty (spec Risk R6 mitigation path a).
     readySelector: '[data-testid="game-nights-empty"]',
+    // Use 'main' as screenshot target so the header (GameNightsHeader) is
+    // included alongside the empty body, matching the mockup #06 frame scope.
+    screenshotSelector: 'main',
   },
 };
 
@@ -139,9 +159,15 @@ test.describe('WS-C Conformity — route vs mockup baseline', () => {
       await page.goto(target, { waitUntil: 'domcontentloaded' });
       await waitForRouteReady(page, runbook);
 
+      // Issue #1269: capture the screenshotSelector locator (default 'main')
+      // instead of fullPage. This is symmetric with bootstrap.spec.ts which
+      // captures the [data-conformity-screen="default-{viewport}"] locator
+      // on the mockup side. fullPage would re-introduce the multi-state
+      // dimension mismatch that the single-screen refactor was designed to fix.
+      const screenshotLocator = page.locator(runbook.screenshotSelector ?? 'main');
+
       // Per-route override the project-level expect defaults.
-      await expect(page).toHaveScreenshot(`${route.id}.png`, {
-        fullPage: true,
+      await expect(screenshotLocator).toHaveScreenshot(`${route.id}.png`, {
         threshold: route.threshold,
         maxDiffPixelRatio: route.conformityRatio,
         // Mask dynamic zones to avoid flake (timestamps, randomized counters).

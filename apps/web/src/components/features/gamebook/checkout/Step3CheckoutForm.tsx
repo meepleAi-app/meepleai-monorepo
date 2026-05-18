@@ -1,3 +1,5 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white on entity-colored CTA + spinner border-white on parent's entity-toolkit bg. Mockup .e-bg pattern; DS-12 will introduce primitives encoding bg via className. */
+
 'use client';
 
 import type { ReactElement, ReactNode } from 'react';

@@ -1,3 +1,5 @@
+/* eslint-disable local/no-hardcoded-color-utility -- text-white / bg-white on entity-colored CTA + radio dot. Mockup .e-bg pattern; DS-12 will introduce primitives encoding bg via className. */
+
 'use client';
 
 import type { ReactElement } from 'react';

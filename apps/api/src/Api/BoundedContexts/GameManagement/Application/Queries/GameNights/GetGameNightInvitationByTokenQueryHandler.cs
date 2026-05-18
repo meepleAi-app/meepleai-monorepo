@@ -136,7 +136,8 @@ internal sealed class GetGameNightInvitationByTokenQueryHandler
             PrimaryGameId: primaryGameId,
             PrimaryGameName: primaryGameName,
             PrimaryGameImageUrl: primaryGameImageUrl,
-            AlreadyRespondedAs: MapAlreadyRespondedAs(invitation.Status));
+            AlreadyRespondedAs: MapAlreadyRespondedAs(invitation.Status),
+            RespondedByName: invitation.RespondedByName);
     }
 
     private static string? MapAlreadyRespondedAs(GameNightInvitationStatus status) => status switch

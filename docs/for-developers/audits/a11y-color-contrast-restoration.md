@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Phase 0 + Phase A structural + **Phase A.live v4 complete** (33 targets, **103 nodes**). Phase C COMPLETE pending merge: Real-C-A ✅ #1228, Real-C-B ✅ #1224 + #1232, Real-C-D ✅ #1225 + #1235, Real-C-E ✅ #1231 + #1235, Real-C-F ✅ #1227 (20 nodi already closed; v4 JSON stale), Real-C-misc cleanup ✅ this PR (13 of 17 misc residue fixed — 9 ConnectionBar + 4 ConnectionChipStripFooter). 4 nodi deferred (axe-during-animation artifacts requiring reduced-motion test-infra extension, follow-up to PR #1231 — not blocking Phase D). Phase A.live v5 regeneration (N+4) pending to confirm 0 violations. |
+| Status | **✅ COMPLETE — Phase D gate flipped 2026-05-18**. v11 axe run on commit `ab1feaf4f`: **0 color-contrast + 0 ARIA violations** across 96 a11y tests. Trajectory: v4 baseline 103 color-contrast + ~11 ARIA → v11 0 (**-100%**). All 4 phases delivered: Phase 0 (preface) #1210, Phase A (per-node inventory) #1217+#1218+#1220+#1226, Phase B (cluster grouping) #1212, Phase C (Real-C-A→Real-C-misc + ARIA + scrollable-region) #1219+#1224+#1225+#1227+#1228+#1231+#1232+#1235+#1237+#1248+#1249+#1252+#1254+#1256+#1257+#1260, Phase D (gate flip + ci.yml rewrite) this PR. See §4 for post-mortem. |
 | Started | 2026-05-17 |
 | Parent issue | [#1094](https://github.com/meepleAi-app/meepleai-monorepo/issues/1094) — restoration of `frontend-a11y` CI gate to blocking |
 | Phase 0 sub-issue | [#1209](https://github.com/meepleAi-app/meepleai-monorepo/issues/1209) — preface |
@@ -582,7 +582,59 @@ Total deferred: ~44 nodes (~28% of #1094 inventory). The cluster pattern is well
 
 ## §4 Gate-flip post-mortem
 
-⏳ **Pending Phase D** — see #1094 Phase D AC. After the gate flips to blocking, this section documents the unblock event, the rewritten `ci.yml` comment, and the closure cross-references.
+✅ **Phase D complete — 2026-05-18**. `frontend-a11y` CI gate flipped to blocking on commit `ab1feaf4f` (post v11 axe run = 0 violations).
+
+### §4.1 Unblock event
+
+The gate was non-blocking (`continue-on-error: true`) from PR #876 (#807 token redesign, 2026-05-09) onwards, awaiting #1094's broader cleanup. After Phase A.live v11 confirmed 0 color-contrast + 0 ARIA violations across 96 a11y tests, the `continue-on-error: true` line at `ci.yml:644` was removed and the job was promoted to the required-jobs list at `ci.yml:751`.
+
+### §4.2 Reduction trajectory
+
+| Run | Color-contrast | ARIA | Other | Tests fail |
+|---|---:|---:|---:|---:|
+| v4 baseline (post #1090) | 103 | ~11 | — | 36 |
+| v5 (post #1237 N+3.5) | 8 | ~11 | — | 22 |
+| v6 (post #1249 N+3.7) | 0 | ~11 | — | 15 |
+| v7 (post #1252 N+4.5) | 0 | 0 | 1 (scrollable-region-focusable) | 10 |
+| v8 (post #1254 N+4.6) | 4 (FAQ regression from #1250) | 0 | 0 | 8 |
+| v9 (post #1256 N+4.7) | 4 (FAQ still — c-game-text/0.25 too dark) | 0 | 0 | 8 |
+| v10 (post #1257 N+4.7b) | 4 (FAQ still — 9px strict AA on /0.12) | 0 | 0 | 8 |
+| **v11 (post #1260 N+4.7c)** | **0** | **0** | **0** | **7 (test-infra flakes, not axe)** |
+
+**Cumulative**: 103+11+1 = ~115 violation surfaces resolved across 17 PRs in 1 day.
+
+### §4.3 ci.yml rewrite
+
+- Removed `continue-on-error: true` from `frontend-a11y` job (line 644).
+- Rewrote the comment block at `ci.yml:616-633`:
+  - Removed stale `#752` reference (CLOSED 2026-05-12 via #876; superseded by #1094).
+  - Documented #1094 closure via this Phase D PR.
+  - Listed all 17 contributing PRs.
+  - Clarified #1015 is **complementary** (release-level baseline-diff), NOT a substitute.
+- Updated NOTE at `ci.yml:744-750` to remove the "advisory group" rationale (a11y no longer advisory).
+- Added `frontend-a11y` to required-jobs loop at `ci.yml:751`.
+
+### §4.4 Test-infrastructure flakes (NOT axe violations)
+
+v11 has 7 failing tests that are **not** axe violations:
+- Playwright `toBeFocused()` timing assertions (gamebook-upload, session-summary diary)
+- PauseOverlay ESC dialog close timing
+- session-summary-hero fixture loading timeouts (4 tests)
+
+These pre-date Phase C work and are independent of the a11y restoration. Tracked separately as test-script reliability follow-up.
+
+### §4.5 Closure cross-references
+
+- **Closes**: #1094 (canonical A11y restoration plan)
+- **Supersedes**: #1179 (duplicate)
+- **Complements**: #1015 (release-level baseline-diff, NOT a substitute)
+- **Historical**: #752 (closed 2026-05-12 via #876, superseded by #1094)
+
+### §4.6 Follow-up debt (logged, NOT blocking)
+
+- Real-C-misc dark-theme limitation on `entityHslText()` JS helper — documented in `tokens.ts` JSDoc. Migrate dark-theme consumers to Tailwind utility / CSS var inline style when violations surface.
+- `text-entity-document` (~3.48:1 on cream) — pre-existing AA latent fail, NOT captured by current axe routes. Track via follow-up issue.
+- 7 test-infra flakes (timing + fixture loading) — track via separate epic.
 
 ---
 

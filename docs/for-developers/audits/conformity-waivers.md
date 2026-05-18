@@ -52,3 +52,9 @@ the AC-C.5.7 weekly summary at
 
 <!-- New entries appended below by conformity-debt-issue.yml. The most recent
      month appears first by reading order once a few months accumulate. -->
+
+## 2026-05
+
+| Date | PR | Routes | Expiry | Waiver key | Reason (excerpt) |
+|------|-----|--------|--------|------------|-------------------|
+| 2026-05-18 | [#1267](https://github.com/meepleAi-app/meepleai-monorepo/pull/1267) | `library,library-game-detail,player-detail,game-nights-index` | 2026-06-17 | `506ce318cd0f57cd` | PR aggiunge solo un nuovo mockup (sp4-kb-globale) e NON tocca codice route. I fail su library/players/game-nights sono p |

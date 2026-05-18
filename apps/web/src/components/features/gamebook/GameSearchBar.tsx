@@ -89,7 +89,11 @@ export function GameSearchBar({
     readonly label: string;
     readonly activeCls: string;
   }> = [
-    { key: 'catalog', label: labels.tabsCatalog, activeCls: 'border-entity-game text-entity-game' },
+    {
+      key: 'catalog',
+      label: labels.tabsCatalog,
+      activeCls: 'border-entity-game text-entity-game-text',
+    },
     { key: 'bgg', label: labels.tabsBgg, activeCls: 'border-entity-document text-entity-document' },
   ];
 

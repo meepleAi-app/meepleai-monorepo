@@ -52,6 +52,17 @@ export const PublicGameNightInvitationSchema = z.object({
   primaryGameName: z.string().nullable(),
   primaryGameImageUrl: z.string().nullable(),
   alreadyRespondedAs: z.enum(['Accepted', 'Declined']).nullable(),
+  /**
+   * Issue #1169 backend delta: guest-supplied display name captured at RSVP
+   * time, used to render "Already responded as 'Marco'" surfaces on the public
+   * /join/event/[code] page. Null for pending invitations and for historical
+   * responses persisted before the column was added.
+   *
+   * Optional in the JSON wire (omitted by backends that have not shipped the
+   * delta) — type stays `string | null | undefined` to preserve compatibility
+   * with the Wave A.5b legacy `/invites/[token]` consumer.
+   */
+  respondedByName: z.string().nullable().optional(),
 });
 
 export type PublicGameNightInvitation = z.infer<typeof PublicGameNightInvitationSchema>;
@@ -67,6 +78,11 @@ export type RsvpAction = 'Accepted' | 'Declined';
  * persist a single value into FSM state. The `kind` discriminator drives
  * UI state derivation (`accepted-success` / `declined` / `token-expired` /
  * `error`) without surfacing HTTP plumbing to components.
+ *
+ * Issue #1169 added `rate-limited` (HTTP 429) for the public /join/event/[code]
+ * surface — backend imposes 10 req/min/IP on POST. The optional `retryAfter`
+ * (seconds) is parsed from the `Retry-After` response header when present so
+ * the UI can render a countdown.
  */
 export type RespondToInvitationResult =
   | {
@@ -82,6 +98,14 @@ export type RespondToInvitationResult =
   | {
       readonly kind: 'gone';
       readonly reason: 'expired' | 'cancelled' | 'past-expiry';
+    }
+  | {
+      readonly kind: 'rate-limited';
+      readonly retryAfter: number | null;
+    }
+  | {
+      readonly kind: 'invalid-display-name';
+      readonly message: string;
     };
 
 // ========== Errors ==========
@@ -110,6 +134,34 @@ export class InvitationNotFoundError extends Error {
   constructor(token: string) {
     super(`Invitation token not found: ${token.slice(0, 6)}…`);
     this.name = 'InvitationNotFoundError';
+  }
+}
+
+/**
+ * Issue #1169: 410 Gone on the GET endpoint — token is in a terminal state
+ * (Expired or Cancelled). Distinct from `InvitationNotFoundError` (404) and
+ * `InvitationFetchError` (transient) so the public /join/event/[code] surface
+ * can route directly to the dedicated 410 banner without an extra refetch.
+ */
+export class InvitationGoneError extends Error {
+  constructor(token: string) {
+    super(`Invitation token is in a terminal state: ${token.slice(0, 6)}…`);
+    this.name = 'InvitationGoneError';
+  }
+}
+
+/**
+ * Issue #1169: 429 Too Many Requests from the public read endpoint (60/min/IP)
+ * or respond endpoint (10/min/IP). `retryAfter` is the parsed Retry-After
+ * header in seconds (null when header missing or non-numeric).
+ */
+export class InvitationRateLimitedError extends Error {
+  public readonly retryAfter: number | null;
+
+  constructor(retryAfter: number | null) {
+    super('Invitation rate limit exceeded');
+    this.name = 'InvitationRateLimitedError';
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -160,6 +212,24 @@ export async function getInvitation(
     throw new InvitationNotFoundError(token);
   }
 
+  if (response.status === 410) {
+    // Token-expired / cancelled on the GET path. Distinct from generic fetch
+    // failure so the FSM can route to the dedicated 410 surface (issue #1169).
+    throw new InvitationGoneError(token);
+  }
+
+  if (response.status === 429) {
+    // Backend rate-limit (60 req/min/IP). Surfaced as a typed error so the
+    // public /join/event surface can render a rate-limited banner with a
+    // Retry-After countdown when present (issue #1169).
+    const retryAfterRaw = response.headers.get('Retry-After');
+    const retryAfter =
+      retryAfterRaw && /^\d+$/.test(retryAfterRaw.trim())
+        ? Number.parseInt(retryAfterRaw.trim(), 10)
+        : null;
+    throw new InvitationRateLimitedError(retryAfter);
+  }
+
   if (!response.ok) {
     throw new InvitationFetchError(
       response.status,
@@ -187,13 +257,33 @@ export async function getInvitation(
  * POST the RSVP action. Maps every D2(b) outcome onto the discriminated
  * union — never throws on 409 or 410 because those are valid FSM transitions.
  * Throws `InvitationFetchError` on 5xx / network / parse / unknown 4xx.
+ *
+ * Issue #1169 additions:
+ *   - Optional `displayName` (≤120 chars, trimmed by backend). Wire field is
+ *     `displayName` per the backend `RespondToInvitationByTokenRequest` shape
+ *     (NOT `responderDisplayName` — that name lives only on the internal
+ *     MediatR command). Whitespace-only strings are sent as `null`.
+ *   - 429 rate-limited outcome (backend cap: 10 req/min/IP). `Retry-After`
+ *     header parsed when present.
+ *   - 400 invalid-display-name surface for length cap violations bypassed
+ *     by the frontend (defensive — UI already enforces maxlength).
  */
 export async function respondToInvitation(
   token: string,
-  action: RsvpAction
+  action: RsvpAction,
+  displayName?: string | null
 ): Promise<RespondToInvitationResult> {
   const base = getApiBase();
   const url = `${base}/api/v1/game-nights/invitations/${encodeURIComponent(token)}/respond`;
+
+  // Backend wire body shape: { response: 'Accepted' | 'Declined', displayName?: string }.
+  // The endpoint maps `response` → `RespondToGameNightInvitationByTokenCommand.Response`
+  // and `displayName` → `RespondToGameNightInvitationByTokenCommand.ResponderDisplayName`.
+  const trimmed = typeof displayName === 'string' ? displayName.trim() : null;
+  const requestBody: Record<string, string> = { response: action };
+  if (trimmed && trimmed.length > 0) {
+    requestBody.displayName = trimmed;
+  }
 
   let response: Response;
   try {
@@ -204,7 +294,7 @@ export async function respondToInvitation(
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      body: JSON.stringify({ action }),
+      body: JSON.stringify(requestBody),
     });
   } catch (cause) {
     throw new InvitationFetchError(null, 'Network error responding to invitation', { cause });
@@ -226,6 +316,14 @@ export async function respondToInvitation(
       });
     }
     return { kind: 'success', action, invitation: parsed.data };
+  }
+
+  if (response.status === 400) {
+    const body = (await response.json().catch(() => ({}))) as { error?: string };
+    return {
+      kind: 'invalid-display-name',
+      message: body.error ?? 'Display name is invalid.',
+    };
   }
 
   if (response.status === 409) {
@@ -250,6 +348,15 @@ export async function respondToInvitation(
           ? 'past-expiry'
           : 'expired';
     return { kind: 'gone', reason };
+  }
+
+  if (response.status === 429) {
+    const retryAfterRaw = response.headers.get('Retry-After');
+    const retryAfter =
+      retryAfterRaw && /^\d+$/.test(retryAfterRaw.trim())
+        ? Number.parseInt(retryAfterRaw.trim(), 10)
+        : null;
+    return { kind: 'rate-limited', retryAfter };
   }
 
   if (response.status === 404) {

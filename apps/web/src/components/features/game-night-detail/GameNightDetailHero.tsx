@@ -47,8 +47,22 @@ export interface GameNightDetailHeroProps {
   readonly labels: GameNightDetailHeroLabels;
   readonly organizerId: string;
   readonly organizerName: string;
-  /** Click handler for the location button — opens map / details in caller. */
+  /**
+   * Click handler for the location button — opens map / details in caller.
+   * In `mode='public'` the prop is silently ignored: the public RSVP surface
+   * renders a static location label without the interactive map affordance to
+   * avoid leaking guest interaction context to anonymous viewers (issue #1169).
+   */
   readonly onOpenLocation?: () => void;
+  /**
+   * Render mode (issue #1169). Defaults to `'authenticated'` for backward
+   * compatibility with the original /game-nights/[id] route. `'public'` is
+   * used by the anonymous /join/event/[code] surface — currently visually
+   * identical, but the prop is wired so future deltas (e.g. hiding the
+   * organizer-meta line for privacy, removing the location button) can be
+   * applied without re-threading callers.
+   */
+  readonly mode?: 'authenticated' | 'public';
   readonly className?: string;
 }
 
@@ -73,15 +87,20 @@ export function GameNightDetailHero({
   organizerId,
   organizerName,
   onOpenLocation,
+  mode = 'authenticated',
   className,
 }: GameNightDetailHeroProps): React.JSX.Element {
   const isCancelled = status === 'Cancelled';
   const accentTextClass = ACCENT_TEXT_BY_STATUS[status];
+  // In public mode the location is rendered as static text to avoid the map
+  // interaction affordance for anonymous viewers (issue #1169).
+  const resolvedOnOpenLocation = mode === 'public' ? undefined : onOpenLocation;
 
   return (
     <header
       data-testid="game-night-detail-hero"
       data-status={status}
+      data-mode={mode}
       className={clsx(
         'relative overflow-hidden border-b border-border px-4 py-5 md:px-6 md:py-6',
         GRADIENT_BY_STATUS[status],
@@ -121,10 +140,10 @@ export function GameNightDetailHero({
           </div>
 
           {labels.locationLine !== undefined &&
-            (onOpenLocation ? (
+            (resolvedOnOpenLocation ? (
               <button
                 type="button"
-                onClick={onOpenLocation}
+                onClick={resolvedOnOpenLocation}
                 className="group flex items-center gap-2 self-start text-left text-muted-foreground hover:text-foreground"
               >
                 <span

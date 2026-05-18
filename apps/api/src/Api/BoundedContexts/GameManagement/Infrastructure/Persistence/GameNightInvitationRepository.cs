@@ -180,6 +180,7 @@ internal class GameNightInvitationRepository : RepositoryBase, IGameNightInvitat
             ExpiresAt = domain.ExpiresAt,
             RespondedAt = domain.RespondedAt,
             RespondedByUserId = domain.RespondedByUserId,
+            RespondedByName = domain.RespondedByName,
             CreatedAt = domain.CreatedAt,
             CreatedBy = domain.CreatedBy
         };
@@ -203,7 +204,8 @@ internal class GameNightInvitationRepository : RepositoryBase, IGameNightInvitat
             respondedAt: entity.RespondedAt,
             respondedByUserId: entity.RespondedByUserId,
             createdAt: entity.CreatedAt,
-            createdBy: entity.CreatedBy);
+            createdBy: entity.CreatedBy,
+            respondedByName: entity.RespondedByName);
 
         // Reconstitute is a pure factory and does not raise events — defensive clear in case
         // base AggregateRoot ctor introduces any (matches GameNightEventRepository pattern).

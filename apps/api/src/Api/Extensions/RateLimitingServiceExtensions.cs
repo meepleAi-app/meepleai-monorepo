@@ -32,6 +32,8 @@ namespace Api.Extensions;
 /// - AccessRequest:         5 req/hour — access request spam prevention (IP-based)
 /// - AdminProviderProbe:   10 req/min  — provider token probes per user (Issue #936)
 /// - AdminProviderProbeGlobal: 60 req/h — provider token probes per provider name (Issue #936)
+/// - GameNightTokenRead:   60 req/min  — public RSVP token lookup per IP (Issue #1169)
+/// - GameNightTokenRespond: 10 req/min — public RSVP submission per IP (Issue #1169)
 /// </summary>
 internal static class RateLimitingServiceExtensions
 {
@@ -124,6 +126,13 @@ internal static class RateLimitingServiceExtensions
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
                 options.AddPolicy("AdminProviderProbeGlobal", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                // Issue #1169: Public game-night RSVP token policies (disabled in tests)
+                options.AddPolicy("GameNightTokenRead", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("GameNightTokenRespond", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
             });
 
@@ -533,6 +542,49 @@ internal static class RateLimitingServiceExtensions
                     {
                         Window = TimeSpan.FromHours(1),
                         PermitLimit = 60,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 21: GameNightTokenRead - 60 req/min per IP for public RSVP token lookups (Issue #1169)
+            // Public, unauthenticated GET. Bound at the IP level because the
+            // partition key for anonymous traffic is the source IP; legitimate
+            // guest UX is a single read per page load, so 60/min gives ample
+            // headroom for retry/refresh while making enumeration loud.
+            options.AddPolicy("GameNightTokenRead", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"game-night-token-read-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 60,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 22: GameNightTokenRespond - 10 req/min per IP for public RSVP submissions (Issue #1169)
+            // Public, unauthenticated POST. Tighter than the read policy because
+            // each submission mutates state and triggers downstream notifications.
+            // A real guest needs at most a handful of attempts (typo recovery,
+            // accidental re-submit); 10/min leaves comfortable margin while
+            // bounding the cost of token-replay / mass-RSVP scripting.
+            options.AddPolicy("GameNightTokenRespond", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"game-night-token-respond-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 10,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,

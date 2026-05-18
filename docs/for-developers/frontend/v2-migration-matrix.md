@@ -435,10 +435,16 @@ the PR review.
 |--------|-----------|------|-------|--------|----|----|
 | `sp7-game-night-detail-rsvp.jsx` | `GameNightAvatar` | `apps/web/src/components/features/game-night-detail/GameNightAvatar.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
 | `sp7-game-night-detail-rsvp.jsx` | `GameNightStatusBadge` | `apps/web/src/components/features/game-night-detail/GameNightStatusBadge.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
-| `sp7-game-night-detail-rsvp.jsx` | `GameNightRsvpRow` | `apps/web/src/components/features/game-night-detail/GameNightRsvpRow.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
-| `sp7-game-night-detail-rsvp.jsx` | `GameNightRsvpActionBar` | `apps/web/src/components/features/game-night-detail/GameNightRsvpActionBar.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
-| `sp7-game-night-detail-rsvp.jsx` | `GameNightDetailHero` | `apps/web/src/components/features/game-night-detail/GameNightDetailHero.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightRsvpRow` | `apps/web/src/components/features/game-night-detail/GameNightRsvpRow.tsx` | `/game-nights/[id]` · `/join/event/[code]` | done | #1171 · #1169 (`mode='public'`) | T A V |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightRsvpActionBar` | `apps/web/src/components/features/game-night-detail/GameNightRsvpActionBar.tsx` | `/game-nights/[id]` · `/join/event/[code]` | done | #1171 · #1169 (`mode='public'` hides Maybe) | T A V |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightDetailHero` | `apps/web/src/components/features/game-night-detail/GameNightDetailHero.tsx` | `/game-nights/[id]` · `/join/event/[code]` | done | #1171 · #1169 (`mode='public'`) | T A V |
 | `sp7-game-night-detail-rsvp.jsx` | `GameNightCancelledBanner` | `apps/web/src/components/features/game-night-detail/GameNightCancelledBanner.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
+| `sp7-game-night-join-public.jsx` | `PublicRsvpForm` | `apps/web/src/components/features/game-night-detail/PublicRsvpForm.tsx` | `/join/event/[code]` | done | #1169 | T A V |
+| `sp7-game-night-join-public.jsx` | `InvalidTokenError` | `apps/web/src/components/features/game-night-detail/error-states/InvalidTokenError.tsx` | `/join/event/[code]` | done | #1169 | T A V |
+| `sp7-game-night-join-public.jsx` | `ExpiredOrCancelledError` | `apps/web/src/components/features/game-night-detail/error-states/ExpiredOrCancelledError.tsx` | `/join/event/[code]` | done | #1169 | T A V |
+| `sp7-game-night-join-public.jsx` | `RateLimitedError` | `apps/web/src/components/features/game-night-detail/error-states/RateLimitedError.tsx` | `/join/event/[code]` | done | #1169 | T A V |
+| `sp7-game-night-join-public.jsx` | `GenericError` | `apps/web/src/components/features/game-night-detail/error-states/GenericError.tsx` | `/join/event/[code]` | done | #1169 | T A V |
+| `sp7-game-night-join-public.jsx` | `PublicJoinEventView` (orchestrator) | `apps/web/src/app/(public)/join/event/[code]/_components/PublicJoinEventView.tsx` | `/join/event/[code]` | done | #1169 | T A V |
 
 **Deferred (planned follow-up)**:
 - Tabbed surface (Dettagli / Voting / Chat) — `GameNightDetailTabs`, `GameVoteCard`, `VotingTiedResolver`, `GameNightChatStream` — out of AC-H1..H5 scope (mockup lines 600+).

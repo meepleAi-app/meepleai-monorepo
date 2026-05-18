@@ -117,23 +117,27 @@ internal static class GameNightEndpoints
 
         gameNights.MapGet("/invitations/{token}", HandleGetGameNightInvitationByToken)
             .AllowAnonymous()
+            .RequireRateLimiting("GameNightTokenRead")
             .Produces<PublicGameNightInvitationDto>(200)
             .Produces(404)
             .Produces(410)
+            .Produces(429)
             .WithName("GetGameNightInvitationByToken")
             .WithSummary("Get a game night invitation by token")
-            .WithDescription("Public endpoint to retrieve a game night invitation by its opaque token. Returns 410 Gone for terminal states (Expired, Cancelled).");
+            .WithDescription("Public endpoint to retrieve a game night invitation by its opaque token. Returns 410 Gone for terminal states (Expired, Cancelled). Rate-limited at 60 req/min per IP (issue #1169).");
 
         gameNights.MapPost("/invitations/{token}/respond", HandleRespondToGameNightInvitationByToken)
             .AllowAnonymous()
+            .RequireRateLimiting("GameNightTokenRespond")
             .Produces<PublicGameNightInvitationDto>(200)
             .Produces(400)
             .Produces(404)
             .Produces(409)
             .Produces(410)
+            .Produces(429)
             .WithName("RespondToGameNightInvitationByToken")
             .WithSummary("Respond to a game night invitation by token")
-            .WithDescription("Public endpoint to submit an Accepted or Declined response. Optional auth: authenticated callers have their UserId attached. Idempotent on same-state; conflicts on switching across statuses.");
+            .WithDescription("Public endpoint to submit an Accepted or Declined response, optionally with a guest display name (issue #1169). Optional auth: authenticated callers have their UserId attached. Idempotent on same-state; conflicts on switching across statuses. Rate-limited at 10 req/min per IP.");
 
         gameNights.MapPost("/{gameNightId:guid}/invitations", HandleCreateGameNightInvitationByEmail)
             .RequireAuthenticatedUser()
@@ -328,13 +332,37 @@ internal static class GameNightEndpoints
             return Results.BadRequest(new { error = "Invalid response. Must be Accepted or Declined." });
         }
 
+        // Issue #1169: optional guest display name. Trim here so the persisted
+        // form matches what the UI will echo back via PublicGameNightInvitationDto.RespondedByName.
+        // Length is enforced at the endpoint because RespondToGameNightInvitationByTokenCommand
+        // is `ICommand` (no TResponse) and MediatR's pipeline behaviors are
+        // registered against IRequest<TResponse> — the FluentValidation
+        // ValidationBehavior therefore does NOT run for void commands here.
+        // The aggregate's NormalizeRespondedByName is defense-in-depth only.
+        var displayName = string.IsNullOrWhiteSpace(request.DisplayName)
+            ? null
+            : request.DisplayName.Trim();
+
+        if (displayName is not null
+            && displayName.Length > Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent
+                .GameNightInvitation.MaxRespondedByNameLength)
+        {
+            return Results.BadRequest(new
+            {
+                error = $"Display name must be "
+                    + $"{Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent.GameNightInvitation.MaxRespondedByNameLength}"
+                    + " characters or fewer."
+            });
+        }
+
         var rawUserId = httpContext.User.GetUserId();
         var responderUserId = rawUserId == Guid.Empty ? (Guid?)null : rawUserId;
 
         var command = new RespondToGameNightInvitationByTokenCommand(
             Token: token,
             Response: status,
-            ResponderUserId: responderUserId);
+            ResponderUserId: responderUserId,
+            ResponderDisplayName: displayName);
 
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
 
@@ -480,7 +508,16 @@ internal static class GameNightEndpoints
 
     // Public token-based RSVP request records (Issue #607)
     private sealed record CreateInvitationByEmailRequest(string Email);
-    private sealed record RespondToInvitationByTokenRequest(string Response);
+
+    /// <summary>
+    /// Public RSVP-by-token request body. <c>DisplayName</c> is optional
+    /// (issue #1169): when omitted the response is recorded anonymously;
+    /// when present it is trimmed and capped at 120 characters by the
+    /// validator before reaching the aggregate.
+    /// </summary>
+    private sealed record RespondToInvitationByTokenRequest(
+        string Response,
+        string? DisplayName = null);
 
     // Game Night Experience v2 request records
     private sealed record StartGameNightSessionRequest(Guid GameId, string GameTitle);

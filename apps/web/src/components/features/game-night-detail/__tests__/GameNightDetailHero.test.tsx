@@ -120,4 +120,49 @@ describe('GameNightDetailHero', () => {
     const hero = screen.getByTestId('game-night-detail-hero');
     expect(within(hero).getByText('Annullata')).toBeInTheDocument();
   });
+
+  describe('mode prop (issue #1169)', () => {
+    it('defaults to data-mode="authenticated" when prop is omitted', () => {
+      render(<GameNightDetailHero {...baseProps} labels={baseLabels} />);
+      expect(screen.getByTestId('game-night-detail-hero')).toHaveAttribute(
+        'data-mode',
+        'authenticated'
+      );
+    });
+
+    it('sets data-mode="public" when mode="public" is passed', () => {
+      render(<GameNightDetailHero {...baseProps} labels={baseLabels} mode="public" />);
+      expect(screen.getByTestId('game-night-detail-hero')).toHaveAttribute('data-mode', 'public');
+    });
+
+    it('suppresses the location button affordance in mode="public"', () => {
+      const onOpenLocation = vi.fn();
+      render(
+        <GameNightDetailHero
+          {...baseProps}
+          labels={{ ...baseLabels, locationLine: 'Casa Marco · Padova' }}
+          onOpenLocation={onOpenLocation}
+          mode="public"
+        />
+      );
+      // Location is rendered as static text, not as an interactive button.
+      expect(screen.getByText('Casa Marco · Padova')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Casa Marco · Padova/ })).not.toBeInTheDocument();
+    });
+
+    it('still renders the location button in mode="authenticated" (default)', async () => {
+      const user = userEvent.setup();
+      const onOpenLocation = vi.fn();
+      render(
+        <GameNightDetailHero
+          {...baseProps}
+          labels={{ ...baseLabels, locationLine: 'Casa Marco · Padova' }}
+          onOpenLocation={onOpenLocation}
+        />
+      );
+      const btn = screen.getByRole('button', { name: /Casa Marco · Padova/ });
+      await user.click(btn);
+      expect(onOpenLocation).toHaveBeenCalledOnce();
+    });
+  });
 });

@@ -38,7 +38,9 @@ const { useQuery } = await import('@tanstack/react-query');
 import {
   getInvitation,
   InvitationFetchError,
+  InvitationGoneError,
   InvitationNotFoundError,
+  InvitationRateLimitedError,
   type PublicGameNightInvitation,
 } from '@/lib/api/game-night-invitations';
 
@@ -196,6 +198,46 @@ describe('useGameNightInvitation (Wave A.5b)', () => {
     const transient = new InvitationFetchError(503, 'Server unavailable');
     expect(capturedRetry!(0, transient)).toBe(true); // first failure → retry
     expect(capturedRetry!(1, transient)).toBe(false); // second failure → stop
+  });
+
+  it('does NOT retry on InvitationGoneError (issue #1169 — 410 is terminal)', () => {
+    let capturedRetry: ((failureCount: number, error: Error) => boolean) | undefined;
+    vi.mocked(useQuery).mockImplementation((opts: Record<string, unknown>) => {
+      capturedRetry = opts.retry as (failureCount: number, error: Error) => boolean;
+      return {
+        data: undefined,
+        isLoading: false,
+        isFetching: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof useQuery>;
+    });
+
+    renderHook(() => useGameNightInvitation({ token: 'tok-abc' }));
+
+    expect(capturedRetry).toBeDefined();
+    expect(capturedRetry!(0, new InvitationGoneError('tok-abc'))).toBe(false);
+  });
+
+  it('does NOT retry on InvitationRateLimitedError (issue #1169 — 429 is structural)', () => {
+    let capturedRetry: ((failureCount: number, error: Error) => boolean) | undefined;
+    vi.mocked(useQuery).mockImplementation((opts: Record<string, unknown>) => {
+      capturedRetry = opts.retry as (failureCount: number, error: Error) => boolean;
+      return {
+        data: undefined,
+        isLoading: false,
+        isFetching: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof useQuery>;
+    });
+
+    renderHook(() => useGameNightInvitation({ token: 'tok-abc' }));
+
+    expect(capturedRetry).toBeDefined();
+    expect(capturedRetry!(0, new InvitationRateLimitedError(30))).toBe(false);
   });
 
   it('exposes refetch as a void-returning async function', async () => {

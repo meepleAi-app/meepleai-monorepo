@@ -49,6 +49,13 @@ public class GameNightInvitationEntity
     [Column("responded_by_user_id")]
     public Guid? RespondedByUserId { get; set; }
 
+    /// <summary>
+    /// Optional guest display name captured at RSVP time. Issue #1169.
+    /// </summary>
+    [Column("responded_by_name")]
+    [MaxLength(120)]
+    public string? RespondedByName { get; set; }
+
     [Required]
     [Column("created_at")]
     public DateTimeOffset CreatedAt { get; set; }

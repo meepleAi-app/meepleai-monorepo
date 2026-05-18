@@ -368,6 +368,17 @@ the PR review.
 | `nanolith-runthrough-game-detail.html` | `LibroGameDetailView` | `apps/web/src/components/v2/gamebook/LibroGameDetailView.tsx` | `/library/[gameId]` (libro variant) | done | #1037 | T A V |
 | `nanolith-runthrough-setup-wizard.html` | `CampaignSetupDrawer` | `apps/web/src/components/v2/gamebook/CampaignSetupDrawer.tsx` | `/library/[gameId]` (libro variant — drawer) | done | #1037 | T A V |
 
+### Libro-game checkout flow — `/gamebook` (embedded modal) — 2 components — **Tier M**
+
+> Quota/credits checkout flow triggered from the existing `QuotaWidget`
+> upgrade CTA on `/gamebook`. 100% frontend (no backend, no real Stripe).
+> Pack catalog hardcoded. See spec
+> [`docs/superpowers/specs/2026-05-18-issue-953-gamebook-checkout-modal-design.md`](../../superpowers/specs/2026-05-18-issue-953-gamebook-checkout-modal-design.md).
+
+| Mockup | Component | Path | Route | Status | PR | AC |
+|--------|-----------|------|-------|--------|----|----|
+| `sp6-libro-game-quota-credits.jsx` | `CheckoutModal` (4 step) + `SoftWarningCredits` (toast/modal) | `apps/web/src/components/features/gamebook/{CheckoutModal,SoftWarningCredits}.tsx` | `/gamebook` (embedded) | done | #TBD-PR | T A V |
+
 ## SP6 — Nanolith libro-game gap-coverage (post-storyboard 2026-05-12) — 3 components
 
 > **Added 2026-05-12** post mockup gap analysis: 3 mockup blocker/nice-to-have aggiunti

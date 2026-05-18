@@ -6,7 +6,7 @@
 >
 > **Audience**: developers looking for "which mockup file do I need for route X?".
 >
-> **Last updated**: 2026-05-12. Keep in sync with
+> **Last updated**: 2026-05-18. Keep in sync with
 > [`docs/for-developers/frontend/v2-migration-matrix.md`](../docs/for-developers/frontend/v2-migration-matrix.md)
 > Route Index section.
 
@@ -105,6 +105,9 @@
 |------|------|---------------|
 | `sp7-game-night-create.html` | page-mock | `/game-nights/new` |
 | `sp7-game-night-detail-rsvp.html` | page-mock | `/game-nights/[id]`, `/game-nights/[id]/edit` |
+| `sp7-game-night-live.html` | page-mock | `/game-nights/[id]/live` (issue #487 screen #4+#7) |
+| `sp7-game-night-transition.html` | component-mock | Modal opened from `/game-nights/[id]/live` (issue #487 screen #5) |
+| `sp7-game-night-summary.html` | page-mock | `/game-nights/[id]/summary` (issue #487 screen #6) |
 
 ## Nanolith — Runthrough storyboard (Aaron Iter 1)
 
@@ -132,10 +135,10 @@
 
 | Type | Count |
 |------|------:|
-| page-mock | 46 |
-| component-mock | 15 |
+| page-mock | 48 |
+| component-mock | 16 |
 | dev-fixture | 10 |
-| **Total** | **71** |
+| **Total** | **74** |
 
 > The `*.jsx` twins of `*.html` files are not double-counted (the JSX is the
 > implementation companion of the HTML reference). Listing them separately

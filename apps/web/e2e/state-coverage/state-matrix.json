@@ -1,7 +1,7 @@
 {
   "$schema": "./state-matrix.schema.json",
-  "generated_at": "2026-05-15T09:22:09.817Z",
-  "total_mockups": 65,
+  "generated_at": "2026-05-18T06:43:09.489Z",
+  "total_mockups": 68,
   "enforced_count": 1,
   "entries": [
     {
@@ -618,6 +618,30 @@
         "not-found",
         "loading"
       ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-live.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-summary.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-transition.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
       "enforced": false
     }
   ]

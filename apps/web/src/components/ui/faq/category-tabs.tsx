@@ -107,10 +107,12 @@ export function CategoryTabs({
                   'min-w-4 text-center font-mono text-[9px] font-extrabold tabular-nums',
                   'rounded-full px-1.5 py-px',
                   isActive
-                    ? // bg alpha 0.12 + c-game-text → AA-safe ~6.14:1 on light. Previously
-                      // /0.25 alpha caused 3.7:1 (bg too dark for the darker text variant)
-                      // since both lightness moves shrank the differential. (#1094 follow-up)
-                      'bg-[hsl(var(--c-game)/0.12)] text-[hsl(var(--c-game-text))] dark:bg-[hsl(var(--c-game)/0.4)] dark:text-foreground'
+                    ? // 9px font requires strict AA 4.5:1. Even darker --c-game-text
+                      // (l=32% = #9f4504) on warm-tinted bg yields 4.35:1 (fail). Use
+                      // neutral text-foreground (near-black on light, near-white on dark)
+                      // inside the orange-tinted pill — pill itself remains the entity
+                      // visual cue, count is neutral readable. (#1094 follow-up)
+                      'bg-[hsl(var(--c-game)/0.12)] text-foreground dark:bg-[hsl(var(--c-game)/0.4)]'
                     : 'bg-[hsl(var(--bg-muted))] text-[hsl(var(--text-muted))]'
                 )}
               >

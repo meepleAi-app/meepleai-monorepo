@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -263,6 +263,23 @@ export function NightLiveClientView({ nightId: _nightId }: NightLiveClientViewPr
   const handleBack = useCallback(() => {
     router.push(`/game-nights/${_nightId}`);
   }, [router, _nightId]);
+
+  // Global Escape listener: closes the transition modal regardless of focus.
+  // The backdrop's local onKeyDown only fires when focus is on the backdrop,
+  // which never happens via keyboard nav. This effect ensures Escape works
+  // even when focus is inside the dialog content.
+  useEffect(() => {
+    if (!transitionOpen) return undefined;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        handleTransitionClose();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [transitionOpen, handleTransitionClose]);
 
   return (
     <>

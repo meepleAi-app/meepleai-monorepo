@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -101,6 +101,16 @@ export function NightSummaryClientView({ nightId: _nightId }: NightSummaryClient
     visible: boolean;
     subline?: string;
   }>({ visible: false });
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup pending toast timer on unmount to avoid setState on unmounted component
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleShare = useCallback(() => {
     const url = `meepleai.app/s/${_nightId.slice(0, 12)}`;
@@ -111,8 +121,13 @@ export function NightSummaryClientView({ nightId: _nightId }: NightSummaryClient
       visible: true,
       subline: `${url} · sparisce in 3s`,
     });
-    window.setTimeout(() => {
+    // Replace any previous pending timer so rapid re-shares don't race
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = setTimeout(() => {
       setShareSuccess({ visible: false });
+      toastTimerRef.current = null;
     }, 3000);
   }, [_nightId]);
 

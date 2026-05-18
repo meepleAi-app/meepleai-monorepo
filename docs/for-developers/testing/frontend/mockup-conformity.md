@@ -290,6 +290,120 @@ Initial snapshot committed in this PR: **61 mockups**, 2 canonical, 3 verified, 
 | **post-merge** Dispatch `bootstrap-mockup-baselines.yml` workflow → auto-PR lands `__mockup__/*.png` → conformity gate produces real diff | manual |
 | **Branch protection update** — add `Conformity Waiver Rationale`, `Conformity Debt Gate`, `Mockup Ownership Header` to required checks on main-dev/main-staging/main | manual |
 
+## Single-screen baseline marker contract
+
+> **Introduced 2026-05-18** (issue #1269) — fixes the structural diff between
+> multi-state mockup gallery captures and single-screen live route renders.
+
+### Why
+
+Mockup HTML files under `admin-mockups/design_files/` are **design catalogs**
+that stack every state variant (default + loading + empty + error + mobile +
+desktop) vertically. Capturing `fullPage` of the mockup produces a 4000-12000px
+tall baseline, while the live Next.js route renders a single screen of
+900-1800px. The diff was always ~80% pixels different, regardless of
+implementation faithfulness.
+
+### Contract
+
+Every mockup mapped in `mockup-ownership.bootstrap.json` MUST expose exactly
+ONE element matching the marker pattern, per viewport:
+
+```html
+<div data-conformity-screen="default-desktop">
+  <!-- The exact content the live route renders at 1280×N viewport -->
+</div>
+<div data-conformity-screen="default-mobile">
+  <!-- The exact content the live route renders at 375×N viewport -->
+</div>
+```
+
+**Rules** (enforced by `apps/web/scripts/conformity-marker-utils.ts`):
+
+- Exactly **one** element per `data-conformity-screen` value per mockup.
+- Marker values are case-sensitive lowercase: `default-desktop`, `default-mobile`.
+- The marked element MUST be in normal document flow (no `position:absolute`,
+  no `transform:scale(…)`) so `boundingBox()` returns full content dimensions.
+- The marked element MUST NOT be hidden via `display:none`, `visibility:hidden`,
+  or `opacity:0`.
+- **v1 scope**: only `default-{viewport}` supported. Future multi-state
+  (e.g. `empty-desktop`) would extend via `ownership.json` `screens: []` field.
+
+### Hard-fail behavior
+
+If a mockup lacks the marker, `bootstrap.spec.ts` throws:
+
+```
+Mockup <filename> missing required marker. Add data-conformity-screen="default-<viewport>"
+to the element that represents the canonical default <viewport> screen.
+```
+
+If a mockup has the marker on 2+ elements:
+
+```
+Mockup <filename> has <N> elements with data-conformity-screen="default-<viewport>".
+Exactly one is required.
+```
+
+These errors are by design — silent fallbacks would re-introduce the original
+bug. Add the marker before mapping a new route in `mockup-ownership.bootstrap.json`.
+
+### How to apply marker to a new mockup
+
+**React-bootstrapped mockup (`*.jsx`)** — pattern: extend wrapper component:
+
+```jsx
+const DesktopFrame = ({ label, desc, children, conformityMarker }) => (
+  <div
+    style={{ /* original styles */ }}
+    {...(conformityMarker ? { 'data-conformity-screen': conformityMarker } : {})}
+  >
+    {children}
+  </div>
+);
+
+// Apply to the canonical scene:
+<DesktopFrame
+  label="Desktop · 01 · Default"
+  conformityMarker="default-desktop">
+  <YourDefaultScene/>
+</DesktopFrame>
+```
+
+**Pure-HTML mockup (`*.html`)** — add attribute directly:
+
+```html
+<section class="state-section" aria-labelledby="s1">
+  <span class="label">Stato 1 · Default</span>
+  <h2 id="s1">Default state</h2>
+  <div class="frames">
+    <div class="desktop" data-conformity-screen="default-desktop">
+      <!-- canonical default desktop content -->
+    </div>
+    <div class="phone" data-conformity-screen="default-mobile">
+      <!-- canonical default mobile content -->
+    </div>
+  </div>
+</section>
+```
+
+### Choosing which scene to mark
+
+Pick the scene that matches what the **live route renders deterministically in
+CI** (without backend at `:8080`):
+
+- Routes with `IS_VISUAL_TEST_BUILD` fixture (e.g. `/library`, `/players/[id]`):
+  mark the **populated default** scene (fixture renders deterministic data).
+- Routes without fixture (e.g. `/game-nights`): mark the **empty state** scene
+  (live route renders empty state when no backend data is available).
+
+If neither matches, you have two options:
+
+1. Add a build-time `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED` short-circuit
+   to the route's orchestrator (pattern: see `lib/library/visual-test-fixture.ts`).
+2. Document the case in `mockup-ownership.bootstrap.json` `notes` and open a
+   follow-up issue.
+
 ## Running locally
 
 ```bash

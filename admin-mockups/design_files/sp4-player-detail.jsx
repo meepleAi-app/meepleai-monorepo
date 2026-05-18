@@ -1297,8 +1297,11 @@ const MobileScreen = ({ stateOverride, variant, initialTab }) => {
   );
 };
 
-const PhoneShell = ({ label, desc, children }) => (
-  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 10 }}>
+const PhoneShell = ({ label, desc, children, conformityMarker }) => (
+  <div
+    style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 10 }}
+    {...(conformityMarker ? { 'data-conformity-screen': conformityMarker } : {})}
+  >
     <div style={{
       fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-sec)',
       textTransform:'uppercase', letterSpacing:'.08em', fontWeight: 700,
@@ -1311,10 +1314,13 @@ const PhoneShell = ({ label, desc, children }) => (
   </div>
 );
 
-const DesktopFrame = ({ label, desc, children }) => {
+const DesktopFrame = ({ label, desc, children, conformityMarker }) => {
   const player = (children?.props?.variant === 'guest') ? GUEST_PLAYER : PLAYER;
   return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 12, width:'100%' }}>
+    <div
+      style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 12, width:'100%' }}
+      {...(conformityMarker ? { 'data-conformity-screen': conformityMarker } : {})}
+    >
       <div style={{
         fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-sec)',
         textTransform:'uppercase', letterSpacing:'.08em', fontWeight: 700,
@@ -1423,7 +1429,8 @@ const App = () => {
       {/* Desktop variants */}
       <section style={{ maxWidth: 1440, margin:'0 auto', display:'flex', flexDirection:'column', gap: 32 }}>
         <DesktopFrame label="Desktop · 01 · Registered · Overview"
-          desc="Hero 128px avatar gradient + nome 36 + handle/città/membro mono + 4 stat top-line + ConnectionBar 6 pip sticky + tabs animated underline + body 2-col grid (KPI top, agente preferito, top games leaderboard, trend chart).">
+          desc="Hero 128px avatar gradient + nome 36 + handle/città/membro mono + 4 stat top-line + ConnectionBar 6 pip sticky + tabs animated underline + body 2-col grid (KPI top, agente preferito, top games leaderboard, trend chart)."
+          conformityMarker="default-desktop">
           <DesktopScreen variant="registered" initialTab="overview"/>
         </DesktopFrame>
 
@@ -1475,8 +1482,12 @@ const App = () => {
         <div style={{
           display:'flex', flexWrap:'wrap', gap: 32, justifyContent:'center',
         }}>
-          {MOBILE_STATES.map(m => (
-            <PhoneShell key={m.id} label={m.label} desc={m.desc}>
+          {MOBILE_STATES.map((m, idx) => (
+            <PhoneShell
+              key={m.id}
+              label={m.label}
+              desc={m.desc}
+              conformityMarker={idx === 0 ? 'default-mobile' : undefined}>
               <MobileScreen stateOverride={m.stateOverride} variant={m.variant} initialTab={m.tab}/>
             </PhoneShell>
           ))}

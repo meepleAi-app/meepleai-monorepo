@@ -2129,9 +2129,15 @@ export function CheckoutModal({
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
-      if (!next) onClose();
+      if (!next) {
+        // Reset state for next open. Step rolls back to initialStep;
+        // payment sub-state returns to filled.
+        setStep(initialStep);
+        setPaymentSubState('filled');
+        onClose();
+      }
     },
-    [onClose]
+    [onClose, initialStep]
   );
 
   const handlePay = useCallback(() => {
@@ -2148,7 +2154,9 @@ export function CheckoutModal({
     }, PAYMENT_LATENCY_MS);
   }, [__testPaymentResult, onPurchaseSuccess, pack.id, pack.credits]);
 
-  if (!open) return null;
+  // Note: do NOT early-return when !open. Radix Dialog manages portal
+  // mount/unmount internally via `open` prop. Returning null breaks exit
+  // animations and the controlled `onOpenChange` contract.
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -2595,7 +2603,7 @@ Note: the QuotaWidget consumes `quota` from the orchestrator FSM (`deriveGameboo
 - where `onUpgradeClick` is passed
 - what variant logic computes (already returns `'default' | 'soft' | 'hard'`)
 
-- [ ] **Step 2: Add state + handlers**
+- [ ] **Step 2: Add state + handlers + resetDate formatter**
 
 In `GamebookIndexView.tsx`, near the top of the component body (after existing hook calls):
 
@@ -2621,19 +2629,34 @@ const handlePurchaseSuccess = useCallback((packId: CheckoutPackId, creditsAdded:
   // quota query here when real backend lands.
   console.info('[gamebook] purchase success (visual-only)', { packId, creditsAdded });
 }, []);
+
+// quota.resetDate is ISO datetime ("2026-06-01T00:00:00.000Z"); format to
+// human-readable Italian ("1 giugno"). Stable across SSR/CSR by using a fixed locale.
+const formattedResetDate = useMemo(() => {
+  try {
+    const d = new Date(quota.resetDate);
+    if (Number.isNaN(d.getTime())) return '1° del mese prossimo';
+    return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'long' }).format(d);
+  } catch {
+    return '1° del mese prossimo';
+  }
+}, [quota.resetDate]);
 ```
 
-Add imports at the top:
+Also add `useMemo` to the React imports list.
+
+Add imports at the top — merge with existing React import if present (do not duplicate). The component likely already imports `useState`/`useEffect`; extend the named import:
 
 ```typescript
-import { useCallback, useState } from 'react';
+// Extend existing 'react' import
+import { useCallback, useMemo, useState } from 'react';
+
+// New imports
 import { CheckoutModal } from '@/components/features/gamebook/CheckoutModal';
 import { SoftWarningCredits } from '@/components/features/gamebook/SoftWarningCredits';
 import { useSoftWarningDismissal } from '@/lib/gamebook/hooks/useSoftWarningDismissal';
 import type { CheckoutPackId } from '@/lib/gamebook/checkout-packs';
 ```
-
-(If `useState`/`useCallback` are already imported, do not duplicate.)
 
 - [ ] **Step 3: Update `QuotaWidget` invocation**
 
@@ -2661,7 +2684,7 @@ After the existing main render block (last `</div>` or fragment close), insert:
         used={quota.used}
         total={quota.total}
         variant="toast-mobile"
-        labels={softWarningLabels}
+        labels={SOFT_WARNING_LABELS}
         onUpgrade={() => {
           dismissSoftWarning();
           setCheckoutInitialStep(2);
@@ -2676,7 +2699,7 @@ After the existing main render block (last `</div>` or fragment close), insert:
         used={quota.used}
         total={quota.total}
         variant="modal-desktop"
-        labels={softWarningLabels}
+        labels={SOFT_WARNING_LABELS}
         onUpgrade={() => {
           dismissSoftWarning();
           setCheckoutInitialStep(2);
@@ -2694,19 +2717,19 @@ After the existing main render block (last `</div>` or fragment close), insert:
   quota={{
     used: quota.used,
     total: quota.total,
-    resetDate: quota.resetDate ?? '1° del mese prossimo',
+    resetDate: formattedResetDate,
     previousCredits: 0,
   }}
   userEmail={userEmail}
-  labels={checkoutLabels}
+  labels={CHECKOUT_LABELS}
   onClose={() => setCheckoutOpen(false)}
   onPurchaseSuccess={handlePurchaseSuccess}
 />
 ```
 
-Where `softWarningLabels`, `checkoutLabels`, and `userEmail` come from:
-- `softWarningLabels` and `checkoutLabels`: add hardcoded Italian labels at the top of the file (placed inline; future i18n extraction is out-of-scope per spec).
-- `userEmail`: read from the session via the existing auth context. Search the file for an existing `useSession` or `useUser` hook; if absent, pass `userEmail=""` as a placeholder (Step 4's receipt link will render with empty email — acceptable for MVP since this is visual-only).
+Where `SOFT_WARNING_LABELS`, `CHECKOUT_LABELS`, and `userEmail` come from:
+- `SOFT_WARNING_LABELS` and `CHECKOUT_LABELS`: hardcoded Italian labels at the top of the file (placed inline; future i18n extraction is out-of-scope per spec). See Step 5 below for the exact constants.
+- `userEmail`: read from the session via the existing auth context. Search the file for an existing `useSession`/`useUser`/`useAuthSession` hook (likely already imported elsewhere in `(authenticated)` routes). If absent, pass `userEmail=""` as a placeholder (Step 4's receipt link renders empty email — acceptable for MVP since this is visual-only).
 
 - [ ] **Step 5: Add the labels constants at top of file**
 
@@ -2807,49 +2830,48 @@ out of scope)."
 **Files:**
 - Create: `apps/web/e2e/gamebook-checkout-modal.spec.ts`
 
-- [ ] **Step 1: Read existing E2E helper patterns**
+- [ ] **Step 1: Confirm helper + fixture pattern**
 
 ```bash
-cd apps/web && head -50 e2e/_helpers/*.ts | head -100
+cd apps/web && head -40 e2e/_helpers/seedAuthSession.ts
+cat apps/web/src/lib/gamebook-index/visual-test-fixture.ts | grep -A 2 "quota-soft"
 ```
 
-Identify the auth helper (typically `loginAsUser` or similar) and the fixture-injection mechanism used by other `@ci` specs.
+Confirms: auth helper is `seedAuthSession(page, { role: 'user' })`; quota state is seeded via the `?fixture=quota-soft` URL hatch (fixture-injected at orchestrator level). The `STATE_OVERRIDE_ENABLED` gate evaluates true in dev/test (Playwright runs against dev server). NO route interception needed — the fixture already provides `quota = { used: 47, total: 50, resetDate: ISO, tier: 'free' }`.
 
 - [ ] **Step 2: Write E2E spec**
 
 ```typescript
 // apps/web/e2e/gamebook-checkout-modal.spec.ts
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
-import { loginAsTestUser } from './_helpers/auth';
+import { seedAuthSession } from './_helpers/seedAuthSession';
+import { seedCookieConsent } from './_helpers/seedCookieConsent';
 
 /**
  * @ci E2E happy path for the gamebook checkout modal (#953).
  *
- * Quota state is seeded at 47/50 via the visual-test-fixture pattern
- * (no backend endpoint exists; this is the Gate B approach used by
- * other gamebook specs).
+ * Quota state is seeded at 47/50 via `?fixture=quota-soft` URL hatch
+ * (visual-test-fixture pattern; no backend endpoint exists — Gate B).
  */
 
 test.describe('@ci gamebook checkout modal', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAsTestUser(page);
-    // Inject quota fixture override via route interception
-    await page.route('**/api/v1/users/me/quota*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ used: 47, total: 50, resetDate: '1 giugno' }),
-      });
-    });
-    // Clear sessionStorage so soft warning shows
+  test.beforeEach(async ({ page, context }) => {
+    await seedAuthSession(page);
+    await seedCookieConsent(context);
+    // Clear sessionStorage so the soft warning auto-shows
     await page.addInitScript(() => {
-      sessionStorage.removeItem('gamebook.soft-warning.dismissed-at');
+      try {
+        sessionStorage.removeItem('gamebook.soft-warning.dismissed-at');
+      } catch {
+        // sessionStorage may not exist on initial load; ignore
+      }
     });
   });
 
   test('soft warning → upgrade → step 2 → 3 → 4 → close', async ({ page }) => {
-    await page.goto('/gamebook');
+    // ?fixture=quota-soft seeds quota at 47/50 via visual-test-fixture
+    await page.goto('/gamebook?fixture=quota-soft');
 
     // Soft warning visible (mobile or desktop)
     const softWarning = page
@@ -2888,7 +2910,7 @@ test.describe('@ci gamebook checkout modal', () => {
   });
 
   test('ESC closes the modal at any step', async ({ page }) => {
-    await page.goto('/gamebook');
+    await page.goto('/gamebook?fixture=quota-soft');
     const softWarning = page
       .locator('[data-slot="soft-warning-toast"], [data-slot="soft-warning-modal"]')
       .first();
@@ -2945,6 +2967,8 @@ import { useState } from 'react';
 
 import { CheckoutModal, type CheckoutLabels } from '@/components/features/gamebook/CheckoutModal';
 import { SoftWarningCredits } from '@/components/features/gamebook/SoftWarningCredits';
+import { Step3CheckoutForm } from '@/components/features/gamebook/checkout/Step3CheckoutForm';
+import { Step4Success } from '@/components/features/gamebook/checkout/Step4Success';
 
 const LABELS: CheckoutLabels = {
   modalTitle: (s) => `Checkout · passo ${s} di 4`,
@@ -3029,8 +3053,6 @@ export const Step2PackPicker: Story = {
 export const Step3CheckoutFilled: Story = {
   render: () => {
     // Compose the modal-shell-like wrapper around a directly-rendered Step3CheckoutForm
-    // Import locally to keep meta default to CheckoutModal
-    const { Step3CheckoutForm } = require('@/components/features/gamebook/checkout/Step3CheckoutForm');
     return (
       <div style={{ maxWidth: 520, margin: '40px auto', border: '1px solid var(--border)', borderRadius: 12 }}>
         <Step3CheckoutForm
@@ -3051,7 +3073,6 @@ export const Step3CheckoutFilled: Story = {
 
 export const Step3CheckoutLoading: Story = {
   render: () => {
-    const { Step3CheckoutForm } = require('@/components/features/gamebook/checkout/Step3CheckoutForm');
     return (
       <div style={{ maxWidth: 520, margin: '40px auto', border: '1px solid var(--border)', borderRadius: 12 }}>
         <Step3CheckoutForm
@@ -3072,7 +3093,6 @@ export const Step3CheckoutLoading: Story = {
 
 export const Step3CheckoutFailed: Story = {
   render: () => {
-    const { Step3CheckoutForm } = require('@/components/features/gamebook/checkout/Step3CheckoutForm');
     return (
       <div style={{ maxWidth: 520, margin: '40px auto', border: '1px solid var(--border)', borderRadius: 12 }}>
         <Step3CheckoutForm
@@ -3093,7 +3113,6 @@ export const Step3CheckoutFailed: Story = {
 
 export const Step4Success: Story = {
   render: () => {
-    const { Step4Success } = require('@/components/features/gamebook/checkout/Step4Success');
     return (
       <div style={{ maxWidth: 520, margin: '40px auto', border: '1px solid var(--border)', borderRadius: 12 }}>
         <Step4Success
@@ -3203,10 +3222,26 @@ The PR number will be filled at PR-open time (Task 16). For now, leave a placeho
 - [ ] **Step 3: Bundle measurement**
 
 ```bash
-cd apps/web && pnpm build 2>&1 | tee /tmp/build-after.log
+cd apps/web && pnpm build 2>&1 | tee build-after-953.log
+grep -E "/(authenticated)/gamebook" build-after-953.log | head -3
+# Expect a line like:  ┌ ƒ /(authenticated)/gamebook  12.4 kB  213 kB
 ```
 
-Capture the `/gamebook` route size from the build output. Compare against a pre-task baseline if you have one (otherwise, simply record the delta in the PR description).
+Compare First Load JS column (rightmost) against the same row in a pre-task `git stash; pnpm build; git stash pop` baseline:
+
+```bash
+# Baseline (one-off — only needed if not previously captured)
+git stash
+pnpm build 2>&1 | grep -E "/(authenticated)/gamebook" > build-baseline-953.log
+git stash pop
+
+# Diff
+diff build-baseline-953.log build-after-953.log
+```
+
+Record the kB delta in the PR description. If it exceeds the 12 KB budget from spec AC-12, investigate (likely candidate: unused Radix re-export tree-shake failure).
+
+Clean up logs: `rm build-baseline-953.log build-after-953.log`.
 
 - [ ] **Step 4: Commit**
 

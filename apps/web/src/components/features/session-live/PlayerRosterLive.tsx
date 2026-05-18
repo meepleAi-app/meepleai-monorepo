@@ -95,7 +95,10 @@ export function PlayerRosterLive({
             >
               {/* Left: online dot + name */}
               <div className="flex min-w-0 items-center gap-2">
+                {/* role="img" is required for aria-label on generic span (#1094 ARIA fix).
+                    Without role, axe flags aria-prohibited-attr on the default 'generic' role. */}
                 <span
+                  role="img"
                   title={player.isOnline ? labels.onlineLabel : labels.offlineLabel}
                   aria-label={player.isOnline ? labels.onlineLabel : labels.offlineLabel}
                   className={[

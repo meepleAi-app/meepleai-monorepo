@@ -16,8 +16,9 @@
  *
  * A11y:
  *   - Filter pills use `useTablistKeyboardNav` (Wave A.6 reusable hook). The
- *     active filter has `tabIndex=0` + `aria-pressed=true`; siblings
- *     `tabIndex=-1` and `aria-pressed=false`.
+ *     active filter has `tabIndex=0` + `aria-selected=true`; siblings
+ *     `tabIndex=-1` and `aria-selected=false`. aria-pressed was removed
+ *     because it is prohibited on role="tab" per WCAG (#1094 ARIA fix).
  *   - Each turn collapsible: `<button aria-expanded={open} aria-controls={id}>`
  *     + sibling `<div id={id}>` (when open).
  *
@@ -147,7 +148,6 @@ export function SessionDiaryTimeline({
                 else tabRefs.current.delete(filter);
               }}
               tabIndex={active ? 0 : -1}
-              aria-pressed={active}
               aria-selected={active}
               onKeyDown={e => handleKeyDown(e, filter)}
               onClick={() => onFilterChange(filter)}

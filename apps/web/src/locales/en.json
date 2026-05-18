@@ -1269,6 +1269,72 @@
         }
       }
     },
+    "gameNightJoin": {
+      "metadata": {
+        "title": "Game night RSVP — MeepleAI",
+        "description": "Confirm or decline your attendance for this game night."
+      },
+      "publicBanner": "You're viewing a public invitation. Your response will be shared with the host.",
+      "hero": {
+        "invitedBy": "{hostName} invited you to",
+        "scheduledLabel": "When",
+        "locationLabel": "Where",
+        "locationMissing": "Location to be confirmed"
+      },
+      "form": {
+        "sectionTitle": "Your response",
+        "displayNameLabel": "Your name (optional)",
+        "displayNamePlaceholder": "e.g. Marco",
+        "displayNameHelper": "Helps the host recognize you. Up to 120 characters.",
+        "displayNameTooLong": "The name must be 120 characters or fewer.",
+        "accept": "I'm in",
+        "decline": "Can't make it",
+        "submitting": "Submitting…",
+        "submitSuccess": "Response submitted!",
+        "alreadyRespondedHeading": "You've already responded",
+        "alreadyRespondedAnonymousAccepted": "You accepted this invitation.",
+        "alreadyRespondedAnonymousDeclined": "You declined this invitation.",
+        "alreadyRespondedNamedAccepted": "You accepted as \"{name}\".",
+        "alreadyRespondedNamedDeclined": "You declined as \"{name}\".",
+        "changeResponse": "Change response"
+      },
+      "error": {
+        "invalidToken": {
+          "heading": "Invitation not found",
+          "body": "This link doesn't match any active invitation. Double-check that it's complete and try again.",
+          "homeCta": "Go to home"
+        },
+        "expired": {
+          "heading": "Invitation expired",
+          "body": "This invitation is no longer valid. Ask the host to send you a new one."
+        },
+        "cancelled": {
+          "heading": "Game night cancelled",
+          "body": "The host has cancelled this game night. Nothing personal!"
+        },
+        "requestNewInviteCta": "Request a new invite",
+        "homeCta": "Go to home",
+        "rateLimited": {
+          "heading": "Too many requests",
+          "body": "You've submitted too many responses in a short window. Please wait a moment and try again.",
+          "countdown": "Retry in {seconds, plural, one {1 second} other {# seconds}}",
+          "retryCta": "Retry now"
+        },
+        "generic": {
+          "heading": "Something went wrong",
+          "body": "We couldn't reach the server. Check your connection and try again.",
+          "retryCta": "Retry"
+        }
+      },
+      "cta": {
+        "createAccount": {
+          "title": "Want to keep track of your game nights?",
+          "body": "Create a free account to manage your invitations, see stats, and get reminders.",
+          "button": "Create account"
+        }
+      },
+      "loading": "Loading invitation…"
+    },
     "join": {
       "metadata": {
         "title": "Join the Alpha — MeepleAI",

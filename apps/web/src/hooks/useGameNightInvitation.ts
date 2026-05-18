@@ -26,7 +26,9 @@ import { useQuery } from '@tanstack/react-query';
 
 import {
   getInvitation,
+  InvitationGoneError,
   InvitationNotFoundError,
+  InvitationRateLimitedError,
   type PublicGameNightInvitation,
 } from '@/lib/api/game-night-invitations';
 
@@ -59,8 +61,12 @@ export function useGameNightInvitation(
     staleTime: STALE_MS,
     enabled: args.token.length > 0,
     retry: (failureCount, error) => {
-      // 404 token is a structural UX state, not a transient error — don't retry.
+      // 404 token unknown, 410 token in terminal state, and 429 rate-limited are
+      // structural UX states (not transient errors) — don't retry. Other errors
+      // (network / 5xx) get a single retry to recover from transient failures.
       if (error instanceof InvitationNotFoundError) return false;
+      if (error instanceof InvitationGoneError) return false;
+      if (error instanceof InvitationRateLimitedError) return false;
       return failureCount < 1;
     },
   });

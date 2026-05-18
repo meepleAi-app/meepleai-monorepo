@@ -186,11 +186,12 @@ describe('useRespondToInvitation (Wave A.5b)', () => {
   });
 
   describe('mutationFn wiring', () => {
-    it('configures mutationFn to invoke respondToInvitation with token + action', async () => {
+    it('configures mutationFn to invoke respondToInvitation with token + action + displayName', async () => {
       let capturedMutationFn:
         | ((vars: {
             token: string;
             action: 'Accepted' | 'Declined';
+            displayName?: string | null;
           }) => Promise<RespondToInvitationResult>)
         | undefined;
 
@@ -204,8 +205,35 @@ describe('useRespondToInvitation (Wave A.5b)', () => {
 
       expect(capturedMutationFn).toBeDefined();
       const out = await capturedMutationFn!({ token: 'tok-xyz', action: 'Accepted' });
-      expect(respondToInvitation).toHaveBeenCalledWith('tok-xyz', 'Accepted');
+      // Issue #1169: third arg is the optional displayName, defaults to null
+      // when omitted by the caller.
+      expect(respondToInvitation).toHaveBeenCalledWith('tok-xyz', 'Accepted', null);
       expect(out).toEqual(SUCCESS_RESULT);
+    });
+
+    it('forwards a typed displayName through the mutationFn (issue #1169)', async () => {
+      let capturedMutationFn:
+        | ((vars: {
+            token: string;
+            action: 'Accepted' | 'Declined';
+            displayName?: string | null;
+          }) => Promise<RespondToInvitationResult>)
+        | undefined;
+
+      vi.mocked(useMutation).mockImplementation((opts: Record<string, unknown>) => {
+        capturedMutationFn = opts.mutationFn as typeof capturedMutationFn;
+        return buildMockMutation();
+      });
+      vi.mocked(respondToInvitation).mockResolvedValue(SUCCESS_RESULT);
+
+      renderHook(() => useRespondToInvitation({ token: 'tok-xyz' }));
+
+      await capturedMutationFn!({
+        token: 'tok-xyz',
+        action: 'Declined',
+        displayName: 'Marco',
+      });
+      expect(respondToInvitation).toHaveBeenCalledWith('tok-xyz', 'Declined', 'Marco');
     });
   });
 
@@ -218,8 +246,28 @@ describe('useRespondToInvitation (Wave A.5b)', () => {
 
       const out = await result.current.submit('Accepted');
 
-      expect(mutateAsync).toHaveBeenCalledWith({ token: 'tok-abc', action: 'Accepted' });
+      // displayName defaults to null when caller omits it (issue #1169).
+      expect(mutateAsync).toHaveBeenCalledWith({
+        token: 'tok-abc',
+        action: 'Accepted',
+        displayName: null,
+      });
       expect(out).toEqual(SUCCESS_RESULT);
+    });
+
+    it('forwards an explicit displayName through mutateAsync (issue #1169)', async () => {
+      const mutateAsync = vi.fn().mockResolvedValue(SUCCESS_RESULT);
+      vi.mocked(useMutation).mockReturnValue(buildMockMutation({ mutateAsync }));
+
+      const { result } = renderHook(() => useRespondToInvitation({ token: 'tok-abc' }));
+
+      await result.current.submit('Accepted', 'Marco');
+
+      expect(mutateAsync).toHaveBeenCalledWith({
+        token: 'tok-abc',
+        action: 'Accepted',
+        displayName: 'Marco',
+      });
     });
 
     it('returns null and SWALLOWS rejection on error (no unhandled rejection)', async () => {
@@ -234,7 +282,11 @@ describe('useRespondToInvitation (Wave A.5b)', () => {
       const out = await result.current.submit('Declined');
 
       expect(out).toBeNull();
-      expect(mutateAsync).toHaveBeenCalledWith({ token: 'tok-abc', action: 'Declined' });
+      expect(mutateAsync).toHaveBeenCalledWith({
+        token: 'tok-abc',
+        action: 'Declined',
+        displayName: null,
+      });
     });
 
     it('passes the supplied action through to mutateAsync', async () => {
@@ -246,8 +298,48 @@ describe('useRespondToInvitation (Wave A.5b)', () => {
       await result.current.submit('Accepted');
       await result.current.submit('Declined');
 
-      expect(mutateAsync).toHaveBeenNthCalledWith(1, { token: 'tok-abc', action: 'Accepted' });
-      expect(mutateAsync).toHaveBeenNthCalledWith(2, { token: 'tok-abc', action: 'Declined' });
+      expect(mutateAsync).toHaveBeenNthCalledWith(1, {
+        token: 'tok-abc',
+        action: 'Accepted',
+        displayName: null,
+      });
+      expect(mutateAsync).toHaveBeenNthCalledWith(2, {
+        token: 'tok-abc',
+        action: 'Declined',
+        displayName: null,
+      });
+    });
+  });
+
+  describe('issue #1169 FSM extensions', () => {
+    it('derives rate-limited when result.kind="rate-limited"', () => {
+      const RATE_LIMITED: RespondToInvitationResult = {
+        kind: 'rate-limited',
+        retryAfter: 30,
+      };
+      vi.mocked(useMutation).mockReturnValue(
+        buildMockMutation({ status: 'success', data: RATE_LIMITED })
+      );
+
+      const { result } = renderHook(() => useRespondToInvitation({ token: 'tok-abc' }));
+
+      expect(result.current.state).toBe('rate-limited');
+      expect(result.current.result).toEqual(RATE_LIMITED);
+    });
+
+    it('derives invalid-display-name when result.kind="invalid-display-name"', () => {
+      const INVALID: RespondToInvitationResult = {
+        kind: 'invalid-display-name',
+        message: 'Display name must be 120 characters or fewer.',
+      };
+      vi.mocked(useMutation).mockReturnValue(
+        buildMockMutation({ status: 'success', data: INVALID })
+      );
+
+      const { result } = renderHook(() => useRespondToInvitation({ token: 'tok-abc' }));
+
+      expect(result.current.state).toBe('invalid-display-name');
+      expect(result.current.result).toEqual(INVALID);
     });
   });
 

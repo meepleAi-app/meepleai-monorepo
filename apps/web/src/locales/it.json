@@ -1319,6 +1319,72 @@
         }
       }
     },
+    "gameNightJoin": {
+      "metadata": {
+        "title": "RSVP serata gioco — MeepleAI",
+        "description": "Conferma o declina la tua partecipazione alla serata di gioco."
+      },
+      "publicBanner": "Stai vedendo un invito pubblico. La tua risposta verrà condivisa con l'organizzatore.",
+      "hero": {
+        "invitedBy": "{hostName} ti ha invitato a",
+        "scheduledLabel": "Quando",
+        "locationLabel": "Dove",
+        "locationMissing": "Luogo da definire"
+      },
+      "form": {
+        "sectionTitle": "La tua risposta",
+        "displayNameLabel": "Il tuo nome (opzionale)",
+        "displayNamePlaceholder": "Es. Marco",
+        "displayNameHelper": "Aiuta l'organizzatore a riconoscerti. Massimo 120 caratteri.",
+        "displayNameTooLong": "Il nome deve essere di 120 caratteri o meno.",
+        "accept": "Confermo",
+        "decline": "Non posso",
+        "submitting": "Invio risposta…",
+        "submitSuccess": "Risposta inviata!",
+        "alreadyRespondedHeading": "Hai già risposto",
+        "alreadyRespondedAnonymousAccepted": "Hai confermato la partecipazione.",
+        "alreadyRespondedAnonymousDeclined": "Hai declinato l'invito.",
+        "alreadyRespondedNamedAccepted": "Hai confermato come \"{name}\".",
+        "alreadyRespondedNamedDeclined": "Hai declinato come \"{name}\".",
+        "changeResponse": "Cambia risposta"
+      },
+      "error": {
+        "invalidToken": {
+          "heading": "Invito non trovato",
+          "body": "Questo link non corrisponde a nessun invito attivo. Controlla che sia completo e riprova.",
+          "homeCta": "Vai alla home"
+        },
+        "expired": {
+          "heading": "Invito scaduto",
+          "body": "Questo invito non è più valido. Chiedi all'organizzatore di rimandartelo."
+        },
+        "cancelled": {
+          "heading": "Serata annullata",
+          "body": "L'organizzatore ha annullato questa serata. Niente di personale!"
+        },
+        "requestNewInviteCta": "Richiedi un nuovo invito",
+        "homeCta": "Vai alla home",
+        "rateLimited": {
+          "heading": "Troppe richieste",
+          "body": "Hai inviato troppe risposte in poco tempo. Attendi qualche secondo prima di riprovare.",
+          "countdown": "Riprova tra {seconds, plural, one {1 secondo} other {# secondi}}",
+          "retryCta": "Riprova adesso"
+        },
+        "generic": {
+          "heading": "Qualcosa è andato storto",
+          "body": "Non siamo riusciti a contattare il server. Controlla la connessione e riprova.",
+          "retryCta": "Riprova"
+        }
+      },
+      "cta": {
+        "createAccount": {
+          "title": "Vuoi tenere traccia delle tue serate?",
+          "body": "Crea un account gratuito per gestire i tuoi inviti, vedere le statistiche e ricevere promemoria.",
+          "button": "Crea account"
+        }
+      },
+      "loading": "Caricamento invito…"
+    },
     "join": {
       "metadata": {
         "title": "Entra nell'Alpha — MeepleAI",

@@ -97,4 +97,24 @@ describe('GameNightRsvpActionBar', () => {
     // Entity tokens for selected state come from BUTTONS config — verify success palette applied.
     expect(acceptBtn.className).toContain('bg-success');
   });
+
+  describe('mode prop (issue #1169)', () => {
+    it('defaults to authenticated mode (all three buttons + Maybe visible)', () => {
+      renderBar();
+      expect(screen.getByTestId('rsvp-btn-accepted')).toBeInTheDocument();
+      expect(screen.getByTestId('rsvp-btn-maybe')).toBeInTheDocument();
+      expect(screen.getByTestId('rsvp-btn-declined')).toBeInTheDocument();
+      const region = screen.getByRole('region', { name: 'La tua risposta' });
+      expect(region).toHaveAttribute('data-mode', 'authenticated');
+    });
+
+    it('hides the Maybe button in mode="public" (backend only accepts Accepted/Declined)', () => {
+      renderBar({ mode: 'public' });
+      expect(screen.getByTestId('rsvp-btn-accepted')).toBeInTheDocument();
+      expect(screen.queryByTestId('rsvp-btn-maybe')).not.toBeInTheDocument();
+      expect(screen.getByTestId('rsvp-btn-declined')).toBeInTheDocument();
+      const region = screen.getByRole('region', { name: 'La tua risposta' });
+      expect(region).toHaveAttribute('data-mode', 'public');
+    });
+  });
 });

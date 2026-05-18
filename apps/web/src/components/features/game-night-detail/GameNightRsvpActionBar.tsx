@@ -46,6 +46,13 @@ export interface GameNightRsvpActionBarProps {
   readonly disabled?: boolean;
   /** Click handler. The hook layer is responsible for transition validation. */
   readonly onSelect: (response: RsvpResponse) => void;
+  /**
+   * Render mode (issue #1169). Defaults to `'authenticated'`. In `'public'`
+   * mode the "Maybe" affordance is hidden — the public RSVP backend only
+   * supports `Accepted` and `Declined`, mirroring the
+   * `POST /api/v1/game-nights/invitations/{token}/respond` validator.
+   */
+  readonly mode?: 'authenticated' | 'public';
   readonly className?: string;
 }
 
@@ -87,14 +94,20 @@ export function GameNightRsvpActionBar({
   pendingResponse,
   disabled = false,
   onSelect,
+  mode = 'authenticated',
   className,
 }: GameNightRsvpActionBarProps): React.JSX.Element {
   const anyPending = pendingResponse !== null;
   const allDisabled = disabled || anyPending;
+  // Public RSVP backend (POST /game-nights/invitations/{token}/respond) only
+  // accepts Accepted/Declined per the validator. Surfacing Maybe in that mode
+  // would let users click a button that would return 400 (issue #1169).
+  const visibleButtons = mode === 'public' ? BUTTONS.filter(b => b.response !== 'Maybe') : BUTTONS;
 
   return (
     <section
       data-testid="game-night-rsvp-action-bar"
+      data-mode={mode}
       aria-label={labels.sectionTitle}
       className={clsx('rounded-lg border border-border bg-card p-4', className)}
     >
@@ -103,7 +116,7 @@ export function GameNightRsvpActionBar({
       </h2>
 
       <div className="flex flex-wrap gap-2">
-        {BUTTONS.map(btn => {
+        {visibleButtons.map(btn => {
           const isCurrent = currentResponse === btn.response;
           const isPending = pendingResponse === btn.response;
           return (

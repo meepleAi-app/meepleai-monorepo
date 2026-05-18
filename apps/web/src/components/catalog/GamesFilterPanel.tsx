@@ -317,7 +317,7 @@ export function GamesFilterPanel({ isCollapsed }: GamesFilterPanelProps) {
 
         setHasFetchedRefData(true);
       } catch {
-        // Mark as fetched so loading message doesn't persist forever
+        if (cancelled) return;
         setHasFetchedRefData(true);
       }
     }

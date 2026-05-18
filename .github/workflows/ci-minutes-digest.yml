@@ -53,11 +53,16 @@ jobs:
           # at 10 pages (1000 runs) to avoid runaway API consumption on busy
           # weeks. The default branch is main; the same query covers all
           # branches/events.
+          #
+          # Note: `gh api --slurp --jq` was deprecated and now errors out
+          # ("the --slurp option is not supported with --jq or --template").
+          # Workaround: pipe --paginate output through `jq -s` (slurp client-side)
+          # then apply the projection in a second jq pass. See issue #850 AC-5
+          # (this workflow was failing since 2026-04-13 due to this regression).
           gh api \
             "repos/$REPO/actions/runs?per_page=100&created=>$CUTOFF" \
             --paginate \
-            --slurp \
-            --jq '[.[].workflow_runs[] | select(.run_started_at != null and .updated_at != null) | {
+          | jq -s '[.[].workflow_runs[] | select(.run_started_at != null and .updated_at != null) | {
               name: .name,
               workflow_id: .workflow_id,
               conclusion: (.conclusion // "in_progress"),

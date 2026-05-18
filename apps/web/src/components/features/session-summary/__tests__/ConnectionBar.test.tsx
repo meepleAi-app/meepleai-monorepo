@@ -87,4 +87,34 @@ describe('ConnectionBar', () => {
     render(<ConnectionBar pips={[]} labels={LABELS} />);
     expect(document.querySelectorAll('[data-slot="connection-bar-pip"]').length).toBe(0);
   });
+
+  // #1094 Real-C-misc regression guard: opacity-0.6 must be scoped to the
+  // emoji <span aria-hidden="true"> only, NOT the wrapper. Wrapper-level
+  // opacity dims the label text → catastrophic AA fail (~2.94:1).
+  it('scopes opacity dim to emoji span only on empty pips (not wrapper) — #1094 Real-C-misc', () => {
+    render(<ConnectionBar pips={PIPS} labels={LABELS} />);
+    // Find any empty pip (count === 0)
+    const emptyPip = document.querySelector(
+      '[data-slot="connection-bar-pip"][data-empty="true"]'
+    ) as HTMLElement;
+    expect(emptyPip).not.toBeNull();
+    // Wrapper MUST NOT carry opacity (would fail AA on label text)
+    expect(emptyPip.style.opacity).toBe('');
+    // Emoji span (first aria-hidden child) MUST carry opacity 0.6
+    const emojiSpan = emptyPip.querySelector('[aria-hidden="true"]') as HTMLElement;
+    expect(emojiSpan).not.toBeNull();
+    expect(emojiSpan.style.opacity).toBe('0.6');
+  });
+
+  it('label span on empty pip has no opacity dim (AA compliance) — #1094 Real-C-misc', () => {
+    render(<ConnectionBar pips={PIPS} labels={LABELS} />);
+    const emptyPip = document.querySelector(
+      '[data-slot="connection-bar-pip"][data-empty="true"]'
+    ) as HTMLElement;
+    expect(emptyPip).not.toBeNull();
+    // Last <span> is the label; it must NOT carry opacity
+    const spans = emptyPip.querySelectorAll('span');
+    const labelSpan = spans[spans.length - 1] as HTMLElement;
+    expect(labelSpan.style.opacity).toBe('');
+  });
 });

@@ -139,6 +139,25 @@ describe('GameSearchCard (catalog source)', () => {
     expect(screen.getByText('Già indicizzato')).toBeTruthy();
   });
 
+  // #1094 Real-C-E regression guard: indexed badge must use the darker
+  // text-entity-toolkit-text variant (l=24%) for AA on bg-entity-toolkit/12.
+  it('indexed badge uses text-entity-toolkit-text token (AA contrast) — #1094 Real-C-E', () => {
+    render(
+      <GameSearchCard
+        game={CATALOG_GAME}
+        source="catalog"
+        isSelected={false}
+        onClick={vi.fn()}
+        labels={LABELS}
+      />
+    );
+    const badge = document.querySelector(
+      '[data-slot="game-search-card-indexed-badge"]'
+    ) as HTMLElement;
+    expect(badge).not.toBeNull();
+    expect(badge.className).toContain('text-entity-toolkit-text');
+  });
+
   it('omits alreadyIndexed badge when isIndexed=false', () => {
     render(
       <GameSearchCard

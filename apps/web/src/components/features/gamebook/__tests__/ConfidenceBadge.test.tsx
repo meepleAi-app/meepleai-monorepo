@@ -96,7 +96,8 @@ describe('ConfidenceBadge', () => {
     // Post-#807: inline style replaced with Tailwind entity-token utilities.
     // high → toolkit entity; medium → agent; low → event.
     expect(badge.className).toMatch(/bg-entity-toolkit\/15/);
-    expect(badge.className).toMatch(/text-entity-toolkit/);
+    // Post-#1094 Real-C-E: text variant uses darker --c-toolkit-text for AA
+    expect(badge.className).toMatch(/text-entity-toolkit-text/);
   });
 
   it('applies className when provided', () => {

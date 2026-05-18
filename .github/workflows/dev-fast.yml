@@ -166,10 +166,13 @@ jobs:
     # Issue #1161: raised from 5 → 8 minutes. The Release `dotnet build` step
     # alone takes ~4min on ubuntu-latest runners (confirmed on PR #1156 cancels);
     # combined with setup (~30s) and the test step (~30s) the 5-min budget
-    # leaves no headroom and the job is cancelled mid-test. 8 min gives a ~3min
-    # safety buffer. If observed wall-clock sustains > 6 min, revisit and
-    # consider splitting build + test into separate jobs (issue #1161 option b).
-    timeout-minutes: 8
+    # leaves no headroom and the job is cancelled mid-test.
+    # Issue #833 (PR #1271): raised 8 → 12 minutes after sustained wall-clock
+    # of ~8m20s on consecutive runs (cache-miss-warm-runner), exceeding the
+    # 8min cap. The 12-min budget gives ~3min headroom. Per issue #1161 note,
+    # this trigger justifies splitting build + test into separate jobs (option b);
+    # tracked as follow-up.
+    timeout-minutes: 12
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     steps:

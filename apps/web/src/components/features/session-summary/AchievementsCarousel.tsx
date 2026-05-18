@@ -105,12 +105,18 @@ export function AchievementsCarousel({
           {labels.unlockedCount}
         </span>
       </div>
+      {/* tabIndex={0} required for axe scrollable-region-focusable: keyboard
+          users must be able to focus the scrollable container to use arrow keys.
+          aria-label provides accessible name (#1094 ARIA fix). */}
       <ul
         role="list"
+        tabIndex={0}
+        aria-label={labels.title}
         className={clsx(
           'flex gap-2 overflow-x-auto pb-1',
           '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-          '[scroll-snap-type:x_mandatory]'
+          '[scroll-snap-type:x_mandatory]',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm'
         )}
       >
         {achievements.map(a => {

@@ -218,7 +218,8 @@ internal static class GameNightEndpoints
             Location: request.Location,
             MaxPlayers: request.MaxPlayers,
             GameIds: request.GameIds,
-            InvitedUserIds: request.InvitedUserIds);
+            InvitedUserIds: request.InvitedUserIds,
+            InvitedEmails: request.InvitedEmails);
 
         var id = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Created($"/api/v1/game-nights/{id}", id);
@@ -492,7 +493,8 @@ internal static class GameNightEndpoints
         string? Location = null,
         int? MaxPlayers = null,
         List<Guid>? GameIds = null,
-        List<Guid>? InvitedUserIds = null);
+        List<Guid>? InvitedUserIds = null,
+        List<string>? InvitedEmails = null);
 
     private sealed record UpdateGameNightRequest(
         string Title,

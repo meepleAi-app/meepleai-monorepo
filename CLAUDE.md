@@ -260,15 +260,17 @@ tests/Api.Tests/          # Backend test suite
 
 ### 🔒 Active Freezes
 
-**Design System De-versioning FREEZE — LIFTED 2026-05-11** (umbrella #1023)
+**Design System De-versioning — COMPLETE 2026-05-18** (umbrella #1023 closed, Stage 3 #1026 closed)
 
-Stage 2 path-migration completed by PR #1032 on 2026-05-11. The unblock condition ("Until Stage 2 path-migration PR lands") is satisfied. Canonical paths are now active:
+All 3 stages shipped (Stage 1 audit #1024 → Stage 2 path-migration #1025/PR #1032 → Stage 3 conformity fixes #1026). Canonical paths are active:
 - Feature compositions → `apps/web/src/components/features/<feature>/`
 - Primitives → `apps/web/src/components/ui/<primitive>/`
 
 The legacy directories `apps/web/src/components/v2/**` and `apps/web/src/components/ui/v2/**` are empty post-codemod; do not re-introduce them.
 
-Stage 3 (#1026) — conformity fixes per cluster — is in progress. New cluster work (`dashboard`, `hub/<entity>`) is **blocked on creation of canonical mockups** in `admin-mockups/design_files/sp4-dashboard.jsx` and `sp4-hub-*.jsx` (raised by spec-panel review 2026-05-13). Reference: [`docs/for-developers/specs/2026-05-11-design-system-deversioning.md`](./docs/for-developers/specs/2026-05-11-design-system-deversioning.md) §12.
+Stage 3 conformity fixes shipped per cluster (player-detail, toolkit-detail BE+FE, discover, dashboard REFACTOR-FORWARD, hub/<entity> 3-routes, game-nights runtime) + DetailPageLayout primitive (PR #1112) cross-cutting. Spec: [`docs/for-developers/specs/2026-05-11-design-system-deversioning.md`](./docs/for-developers/specs/2026-05-11-design-system-deversioning.md).
+
+Outstanding conformity-debt waiver: **#1269** — 4 routes (library, library-game-detail, player-detail, game-nights-index) with visual conformity gate waiver expiring **2026-06-17** (origin PR #1267 added a new mockup with pre-existing fails on untouched routes). Future PR `Closes #1269` must pass `conformity-gate.yml` green on those 4 routes.
 
 > **Historical**: SP6 v2 expansion FREEZE (issued 2026-05-06 per [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808), tied to A11y audit [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807)) was **lifted on 2026-05-10** by PR #876 (token redesign — AA-compliant CSS vars + entity Tailwind utilities). Issues #807 and #808 are both CLOSED. **A11y CI restore tracked by [#1094](https://github.com/meepleAi-app/meepleai-monorepo/issues/1094)** (OPEN, P2, canonical Phase 0→D plan, ~6-7h): ~159 violation nodes across 13 states remain (entity-token alpha-blend contrast post-DS-15 + session-live/summary ARIA defects). `Frontend - A11y E2E` stays advisory (`continue-on-error: true`) until #1094 Phase D ships. Original blocker #752 closed 2026-05-12 via #876; supersedes #1179 (duplicate); complements (does not substitute) #1015 release-level baseline-diff gating.
 

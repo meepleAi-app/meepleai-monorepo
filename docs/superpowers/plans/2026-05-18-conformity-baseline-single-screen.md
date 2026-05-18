@@ -14,6 +14,20 @@
 
 ---
 
+## Implementation addendum (post-execution)
+
+During Task 1 execution, the helper file location was changed from the plan's original `apps/web/e2e/visual-conformity/marker-utils.ts` to `apps/web/scripts/conformity-marker-utils.ts` because vitest's project config excludes `**/e2e/**` from unit test discovery. The new location follows the existing pattern of `apps/web/scripts/conformity-ownership.ts` + `conformity-ownership.test.ts` (test file co-located in `scripts/` root, not in `__tests__/` subdirectory — the latter convention is used by other scripts but `conformity-ownership` family lives in scripts root).
+
+The `bootstrap.spec.ts` import path is `'../../scripts/conformity-marker-utils'` instead of the plan's `'./marker-utils'`.
+
+All other plan tasks (file paths under `admin-mockups/`, `conformity.spec.ts` RUNBOOK additions, docs path) were implemented as specified.
+
+During Task 11 code review, one BLOCKER issue (score 92) was identified and fixed in commit `f5a8971e6`: `conformity.spec.ts` was still using `fullPage: true` instead of a locator-scoped screenshot, which would have re-introduced the dimension mismatch. The fix adds optional `screenshotSelector?: string` to RouteRunbook with default `'main'` and per-route explicit overrides for library, player-detail, and game-nights-index.
+
+The references below to `e2e/visual-conformity/marker-utils.ts` and `e2e/visual-conformity/__tests__/marker-utils.test.ts` should be read as the historical plan; the shipped code uses `scripts/conformity-marker-utils.{ts,test.ts}`.
+
+---
+
 ## File Structure (locked-in decisions)
 
 | File | Responsibility | Action |

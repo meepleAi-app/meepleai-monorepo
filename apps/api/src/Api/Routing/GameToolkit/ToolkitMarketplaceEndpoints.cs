@@ -1,5 +1,8 @@
 using Api.BoundedContexts.GameToolkit.Application.Commands.InstallToolkit;
+using Api.BoundedContexts.GameToolkit.Application.Commands.PublishToolkitVersion;
+using Api.BoundedContexts.GameToolkit.Application.Commands.YankToolkitVersion;
 using Api.BoundedContexts.GameToolkit.Application.Queries.GetRecommendedToolkits;
+using Api.BoundedContexts.GameToolkit.Application.Queries.GetSystemPrompt;
 using Api.BoundedContexts.GameToolkit.Application.Queries.GetToolkitDetail;
 using Api.BoundedContexts.GameToolkit.Application.Queries.GetToolkitRatings;
 using Api.BoundedContexts.GameToolkit.Application.Queries.GetToolkitVersions;
@@ -126,6 +129,65 @@ internal static class ToolkitMarketplaceEndpoints
                 + "ship in Phase 5. Wave 3 Phase 4b (Issue #805 / PR #732 §5.3.4).")
             .Produces(StatusCodes.Status501NotImplemented)
             .Produces(StatusCodes.Status401Unauthorized);
+
+        // ── GET /api/v1/toolkits/{toolkitId}/system-prompt ─────────────────
+        // Issue #822 / Phase 5 PR-2 (spec-panel 2026-05-18 §2): owner sees the
+        // full prompt + agent mode + timestamp; public sees mode + char count
+        // only. Visibility check mirrors /toolkits/{id} detail.
+        toolkits.MapGet("/{toolkitId:guid}/system-prompt", HandleGetSystemPrompt)
+            .WithName("GetToolkitSystemPrompt")
+            .WithSummary("Get marketplace toolkit agent system-prompt projection")
+            .WithDescription(
+                "Returns either a SystemPromptOwnerDto (FullPrompt + AgentMode + GeneratedAt) "
+                + "when viewer is the toolkit author, or a SystemPromptPublicDto (AgentMode + "
+                + "CharacterCount) otherwise. 404 when the toolkit is missing or hidden "
+                + "(non-author + unpublished). Cache: 10min HybridCache partitioned by "
+                + "viewer class (owner/public). Issue #822 Phase 5 PR-2.")
+            .Produces<SystemPromptResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // ── POST /api/v1/toolkits/{toolkitId}/versions ─────────────────────
+        // Issue #822 / Phase 5 PR-2 (spec-panel 2026-05-18 §3): publish a new
+        // semver version. Owner-only enforcement; 409 on duplicate or
+        // non-monotonic version. Emits ToolkitVersionPublishedEvent + flushes
+        // the cache invalidation matrix per spec-panel §5.
+        toolkits.MapPost("/{toolkitId:guid}/versions", HandlePublishToolkitVersion)
+            .WithName("PublishToolkitVersion")
+            .WithSummary("Publish a new toolkit version (owner only)")
+            .WithDescription(
+                "Creates a new ToolkitVersion row, flips GameToolkit.IsPublished=true, "
+                + "bumps VersionSemver. 403 when caller is not the author. "
+                + "409 when versionNumber duplicates an existing row (including yanked) "
+                + "or is not strictly greater than the latest non-yanked version. "
+                + "Issue #822 Phase 5 PR-2.")
+            .Produces<PublishedToolkitVersionResponse>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        // ── POST /api/v1/toolkits/{toolkitId}/versions/{versionId}/yank ────
+        // Issue #822 / Phase 5 PR-2 (spec-panel 2026-05-18 §1 + §4): yank
+        // (soft-delete + audit) a published version. Cascades to
+        // GameToolkit.IsPublished=false if no non-yanked versions remain.
+        toolkits.MapPost("/{toolkitId:guid}/versions/{versionId:guid}/yank", HandleYankToolkitVersion)
+            .WithName("YankToolkitVersion")
+            .WithSummary("Yank (soft-delete) a published toolkit version (owner only)")
+            .WithDescription(
+                "Marks the version with YankedAt/YankedBy/YankReason. The row remains "
+                + "for audit + installed-user reads but is filtered from marketplace listings. "
+                + "Version numbers are permanently retired — cannot be re-published. "
+                + "Cascade: if this yank leaves the toolkit with zero non-yanked versions, "
+                + "GameToolkit.IsPublished flips to false in the same transaction. "
+                + "Issue #822 Phase 5 PR-2.")
+            .Produces<YankedToolkitVersionResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
 
         // ── POST /api/v1/toolkits/{toolkitId}/install ──────────────────────
         toolkits.MapPost("/{toolkitId:guid}/install", HandleInstallToolkit)
@@ -273,4 +335,89 @@ internal static class ToolkitMarketplaceEndpoints
             ? Results.NotFound()
             : Results.Ok(response);
     }
+
+    // ── Phase 5 PR-2 endpoint handlers (issue #822) ──────────────────────────
+
+    private static async Task<IResult> HandleGetSystemPrompt(
+        Guid toolkitId,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var viewerId = httpContext.User.GetUserId();
+        if (viewerId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var query = new GetSystemPromptQuery(toolkitId, viewerId);
+        var response = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+
+        return response is null
+            ? Results.NotFound()
+            : Results.Ok(response);
+    }
+
+    private static async Task<IResult> HandlePublishToolkitVersion(
+        Guid toolkitId,
+        HttpContext httpContext,
+        [FromBody] PublishVersionRequestBody body,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var viewerId = httpContext.User.GetUserId();
+        if (viewerId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new PublishToolkitVersionCommand(
+            ToolkitId: toolkitId,
+            ViewerId: viewerId,
+            VersionNumber: body.VersionNumber,
+            Changelog: body.Changelog);
+
+        var response = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+
+        return response is null
+            ? Results.NotFound()
+            : Results.Created(
+                $"/api/v1/toolkits/{toolkitId}/versions/{response.Id}",
+                response);
+    }
+
+    private static async Task<IResult> HandleYankToolkitVersion(
+        Guid toolkitId,
+        Guid versionId,
+        HttpContext httpContext,
+        [FromBody] YankVersionRequestBody body,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var viewerId = httpContext.User.GetUserId();
+        if (viewerId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new YankToolkitVersionCommand(
+            ToolkitId: toolkitId,
+            VersionId: versionId,
+            ViewerId: viewerId,
+            Reason: body.Reason);
+
+        var response = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+
+        return response is null
+            ? Results.NotFound()
+            : Results.Ok(response);
+    }
+
+    // ── Inline request body DTOs (route-local; not part of the BC contract) ──
+
+    /// <summary>JSON body for POST /toolkits/{id}/versions (issue #822 PR-2).</summary>
+    internal sealed record PublishVersionRequestBody(string VersionNumber, string? Changelog);
+
+    /// <summary>JSON body for POST /toolkits/{id}/versions/{versionId}/yank (issue #822 PR-2).</summary>
+    internal sealed record YankVersionRequestBody(string Reason);
 }

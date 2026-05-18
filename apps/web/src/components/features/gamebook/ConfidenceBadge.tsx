@@ -60,7 +60,7 @@ export interface ConfidenceBadgeProps {
 }
 
 // CONF_COLORS palette (mockup §) — replaced inline HSL with Tailwind entity-token classes (P2 #807 Task 6+7+8):
-//   high   green: toolkit entity (bg-entity-toolkit/15 + text-entity-toolkit)
+//   high   green: toolkit entity (bg-entity-toolkit/15 + text-entity-toolkit-text) — text variant for AA (#1094 Real-C-E)
 //   medium amber: agent entity  (bg-entity-agent/18  + text-entity-agent)
 //   low    rose:  event entity  (bg-entity-event/15  + text-entity-event)
 const PALETTE: Record<ConfidenceLevel, { cls: string }> = {

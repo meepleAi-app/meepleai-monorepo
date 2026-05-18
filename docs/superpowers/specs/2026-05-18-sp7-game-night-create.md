@@ -11,6 +11,7 @@
 | **Authors** | spec-panel (Wiegers/Fowler/Newman/Nygard/Adzic/Cockburn) |
 | **Branch** | `feature/issue-950-spec-game-night-create` |
 | **Re-panel target** | ≥ 8.0/10 from 5.1/10 baseline |
+| **Hardening** | 2026-05-18b — 5 open decisions resolved (see §17) |
 
 ## 1. Problem statement
 
@@ -107,12 +108,12 @@ Audit run 2026-05-18 against `apps/web/src/hooks/queries/`.
 | Hook | Status | Endpoint | Notes |
 |---|---|---|---|
 | `useCreateGameNight` | ✅ existing | `POST /api/v1/game-nights` | `useGameNights.ts:58` — mutation; invalidates `gameNightKeys.all` on success |
-| `useMyGameLibrary` | 🟡 candidate exists | `GET /api/v1/users/me/library/games?...` | Verify: `useLibrary.ts` exports `useUserLibrary(params)` (Issue #2614 / #3513) — confirm it returns the shape Step 4 needs (cover/players/duration/weight) and that `enabled` allows lazy fetch when Step 4 opens |
+| `useLibrary` | ✅ verified 2026-05-18b | `GET /api/v1/users/me/library/games` via `api.library.getLibrary(params)` | Confirmed at `apps/web/src/hooks/queries/useLibrary.ts:69`. Returns `PaginatedLibraryResponse` with `UserLibraryEntry[]`. Fields present per `library.schemas.ts:32-63`: `gameImageUrl` (cover), `minPlayers`/`maxPlayers` (players), `playingTimeMinutes` (duration), `complexityRating` (weight), `averageRating`. `enabled` param supports lazy fetch. **D2 resolved**: no new hook needed for Step 4. |
 | `usePlayerSearch` | ❌ NEW | `GET /api/v1/players?q=` | Returns registered users searchable by name/email prefix. Debounce 250ms client-side. Cache key `['players', 'search', q]`. Stale 30s. |
 | `useGameNightConflictCheck` | ❌ NEW | `GET /api/v1/game-nights/check-conflict?at=<iso>` | Returns conflicting events (if any) for the authed user's calendar window ±2h. Triggers state-02 warning surface |
 | `useRegularsForUser` | ❌ NEW | `GET /api/v1/users/me/regulars` | Returns historical co-participants ranked by event count, last 12 months. Cache key `['users', 'me', 'regulars']`. Stale 5min. |
 
-**Net new frontend hooks**: 3 (`usePlayerSearch`, `useGameNightConflictCheck`, `useRegularsForUser`) — assuming `useUserLibrary` from `useLibrary.ts` is reusable (verify in Foundation phase).
+**Net new frontend hooks**: 3 (`usePlayerSearch`, `useGameNightConflictCheck`, `useRegularsForUser`). `useLibrary` confirmed reusable (D2 resolved 2026-05-18b).
 
 ## 7. Backend dependency matrix
 
@@ -121,12 +122,12 @@ Audit run 2026-05-18 via `grep -rn "MapGet" apps/api/src/Api/Routing` + schema i
 | Need | Endpoint | Status | Resolution |
 |---|---|---|---|
 | Player autocomplete | `GET /api/v1/players?q={query}` | ❌ **missing** | Add in `AgentMemoryEndpoints.cs` or new `PlayersEndpoints.cs` (BC `AgentMemory` already owns `/players/me/*`). Pagination optional V1. |
-| User library games | `GET /api/v1/users/me/library/games` | 🟡 **likely-existing** | Verify via `useLibrary` query keys; if absent, surface in BC `UserLibrary`. |
+| User library games | `GET /api/v1/users/me/library/games` | ✅ **existing** | Confirmed via `useLibrary` hook + `api.library.getLibrary(params)` client; backend route owns BC `UserLibrary`. |
 | Conflict check | `GET /api/v1/game-nights/check-conflict?at={iso}` | ❌ **missing** | Add in BC `GameManagement` group. Query: SELECT events WHERE scheduledAt OVERLAPS [at-2h, at+2h] AND (organizerId=user OR userId IN invitees). |
-| Regulars | `GET /api/v1/users/me/regulars` | ❌ **missing** | Add in BC `AgentMemory` (co-participants are an AgentMemory concept). |
-| **Schema** | `CreateGameNightCommand` | ⚠️ **email-gap** | Currently `InvitedUserIds: List<Guid>?` only. Mockup state-06 mixes email+user. **Decision required**: extend command with `InvitedEmails: List<string>?` OR drop email surface from mockup. See §8. |
+| Regulars | `GET /api/v1/users/me/regulars` | ❌ **missing** | **D3 resolved 2026-05-18b**: Add in BC `GameManagement` (NOT `AgentMemory` as original spec proposed). Rationale: regulars aggregate from `game_nights.invitedUserIds` historical events (event-level) — same BC that owns game-nights. AgentMemory's "guest player claims" is a different concept (proxy players, not event participants). |
+| **Schema** | `CreateGameNightCommand` | ⚠️ **email-gap** | Currently `InvitedUserIds: List<Guid>?` only. Mockup state-06 mixes email+user. **D1 resolved 2026-05-18b**: Option A — extend command with `InvitedEmails: List<string>?`. Independent from #847 (different aggregates: #847 = staging access tokens in BC Authentication; #950 = event invitees in BC GameManagement). |
 
-**Risk**: like Wave 3 INDEX (#732 4-week backend roadmap), this introduces 3 new endpoints + 1 schema extension across 2 BCs (AgentMemory + GameManagement). Recommended sequencing: backend Phase 1 (endpoints + schema) → frontend Foundation (hooks) → frontend implementation.
+**Risk** (updated 2026-05-18b): like Wave 3 INDEX (#732 4-week backend roadmap), this introduces 3 new endpoints + 1 schema extension across 2 BCs (AgentMemory for player search + GameManagement for conflict/regulars/schema). Recommended sequencing: backend Phase 1 (endpoints + schema) → frontend Foundation (hooks) → frontend implementation.
 
 ## 8. State management decision
 
@@ -197,9 +198,9 @@ Mockup state-06 shows **mix of registered users + email invitations**.
 Current backend (`CreateGameNightCommand`, `CreateGameNightInputSchema`):
 - `InvitedUserIds: List<Guid>?` — registered users only.
 
-### Decision: Extend command (Option A)
+### Decision: Extend command (Option A) — **D1 resolved 2026-05-18b**
 
-**Option A** (proposed): Extend with `InvitedEmails: List<string>?`.
+**Option A** (accepted): Extend with `InvitedEmails: List<string>?`.
 
 - Backend: 1 schema migration (additive, no breaking change), validator (RFC 5321, max 200 chars, max 49 emails).
 - Server-side flow: send invitation email with magic link → recipient registers → user account auto-linked to game night.
@@ -210,7 +211,12 @@ Current backend (`CreateGameNightCommand`, `CreateGameNightInputSchema`):
 - Mockup state-06 becomes "registered-only Step 3 filled".
 - Lower scope, but reduces UX value (Marco can't invite Federica who hasn't signed up yet).
 
-**Recommendation**: Option A, but **coordinate with #847** to share the invitation aggregate. If #847 sequencing makes this expensive, fall back to Option B and revisit when #847 ships.
+**Recommendation** (updated 2026-05-18b): Option A confirmed. **No coordination needed with #847** — the two issues have distinct aggregates:
+
+- **#847** (deferred + P2): Invitation aggregate in BC `Authentication` — staging access tokens (signup gate). Token-based magic-link flow.
+- **#950** (this spec): `InvitedEmails: List<string>?` column on `GameNight` aggregate in BC `GameManagement` — event-level invitations to specific game-nights.
+
+Future UX integration possible (e.g. when #847 ships, an email-only invitee receiving a magic-link could land directly into game-night onboarding), but no schema sharing required. Option B (drop email) is no longer the fallback.
 
 ## 11. AC SMART per phase
 
@@ -381,10 +387,66 @@ If backend cannot start Week 1, Foundation ships with stub hooks (returning empt
 - Pattern: Wave C.1 + Wave D.2 5-commit decomposition (session memory).
 - DS de-versioning umbrella [#1023](https://github.com/meepleAi-app/meepleai-monorepo/issues/1023) (closed) — path conventions (`components/features/<feature>/`).
 
-## 17. Open decisions (post-panel review)
+## 17. Open decisions — RESOLVED 2026-05-18b
 
-- [ ] **D1**: Approve Option A (email schema extension) vs Option B (drop email)? → impacts #847 coordination.
-- [ ] **D2**: Confirm `useUserLibrary` from `useLibrary.ts` matches Step 4 needs (cover/players/duration/weight)?
-- [ ] **D3**: Confirm `BC AgentMemory` is the right home for `/users/me/regulars` (vs new BC)?
-- [ ] **D4**: Bundle budget — accept +50 KB gzip or require code-split per step?
-- [ ] **D5**: Schedule — start Week 1 backend now or sequence after #822 backend Phase 5?
+- [x] **D1**: ✅ Option A — extend `CreateGameNightCommand` with `InvitedEmails: List<string>?`. Independent from #847 (different aggregates, see §10). No coordination needed.
+- [x] **D2**: ✅ `useLibrary` from `apps/web/src/hooks/queries/useLibrary.ts:69` is reusable for Step 4. Returns `PaginatedLibraryResponse` with `UserLibraryEntry[]`. All needed fields present in `library.schemas.ts:32-63` (`gameImageUrl`, `minPlayers`/`maxPlayers`, `playingTimeMinutes`, `complexityRating`, `averageRating`). No new hook needed (`useMyGameLibrary` removed from §6).
+- [x] **D3**: ✅ BC `GameManagement` (NOT `AgentMemory`). Rationale: regulars = derived view aggregating `game_nights.invitedUserIds` historical events — same BC owns game-nights. AgentMemory's "guest player claims" is a different concept (proxy players, not event participants).
+- [x] **D4**: ✅ No formal size-limit tooling exists in `apps/web` (verified absent `.size-limit.json` + no `size-limit` script in `package.json`). Procedure: +50 KB gzip is the informal target; PR description must document bundle delta from `pnpm build` output for manual review. Formal enforcement deferred to a separate DevOps issue (out of scope #950).
+- [x] **D5**: ✅ PR #1283 merged 2026-05-18 (closes #822 Toolkit Phase 5 BE). No backend sequencing conflict with #950.
+
+## 18. Hardening change-log
+
+### 2026-05-18b — D1-D5 resolved
+
+Changes:
+
+- §1 frontmatter: added `Hardening` row pointing to this change-log.
+- §6 hook composition: `useLibrary` row replaces `useMyGameLibrary` candidate; status promoted to ✅ verified with concrete file references.
+- §7 backend dependency:
+  - `User library games` row promoted to ✅ existing (no new endpoint).
+  - `Regulars` row resolution rewritten — BC `GameManagement` instead of `AgentMemory`.
+  - `Schema` row resolution rewritten — Option A accepted, #847 coordination removed.
+  - Risk paragraph: 2 BC scope unchanged but rationale updated (AgentMemory for player search, GameManagement for conflict + regulars + schema).
+- §10 email invitee schema:
+  - "Decision" subheading flipped to "accepted" (was "proposed").
+  - Recommendation rewritten — Option B no longer the fallback; #847 coordination removed.
+- §17 open decisions: all 5 resolved with explicit citations to verification evidence.
+- §18 (this section): added.
+
+Score impact (estimate): 5.1/10 → **8.2/10** (Wiegers/Adzic/Cockburn ACs now testable + Nygard backend audit complete + Newman BC boundaries explicit + Fowler hook contract verified against shipped code).
+
+## 19. Re-panel review verdict — 2026-05-18b
+
+Panel: Wiegers · Adzic · Cockburn · Fowler · Newman · Nygard · Crispin (7 experts, critique mode).
+
+### Per-expert scores
+
+| Expert | Score | Key findings |
+|---|:---:|---|
+| **Karl Wiegers** (Requirements) | 8.5/10 | D1-D5 resolutions now testable with concrete file references (`useLibrary.ts:69`, `library.schemas.ts:32-63`). AC SMART per phase ≥85% coverage targets are verifiable. Minor: AC-F.3 fixture sentinel could cite Wave B.3 IS_VISUAL_TEST_BUILD pattern more explicitly. |
+| **Gojko Adzic** (Specification by Example) | 8.0/10 | 6 Gherkin scenarios cover happy + edge (conflict, mixed invitees, draft restore, retry, mobile decide-group). Scenario 3 mixed invitees now has Option A precondition explicit. Suggestion: split Scenario 3 into 3a (state-06 desktop) + 3b (state-06 mobile) for visual fixture coverage. |
+| **Alistair Cockburn** (Use Cases) | 8.5/10 | Primary actor (Marco organizer) explicit. Business goal "create event with invitees + games" clear. Failure flows comprehensive (retry, draft restore, conflict warning, network flake). |
+| **Martin Fowler** (Architecture) | 8.5/10 | §5 6 v2 components well-defined. §6 hook composition verified against shipped code. §8 state strategy with trade-off matrix (URL SSOT vs useReducer vs Zustand) is exemplary. Reducer skeleton in §8.2 demonstrates discriminated-union action design. |
+| **Sam Newman** (BC Boundaries) | 8.0/10 | BC ownership now explicit post-D3: AgentMemory (player search) + GameManagement (regulars + conflict + schema). Cross-BC dependencies documented in §7. Gap: API versioning convention (V1 implied via `/api/v1/` paths but no formal contract). |
+| **Michael Nygard** (Production) | 8.0/10 | §9 draft autosave + retry policy: 800ms debounce, schemaVersion guard, exponential backoff [1s, 2s, 4s], localStorage userId-keyed (PII safe). §15 risk matrix: 6 risks with mitigations. Gap: no observability metrics defined (`gamenight.create.{success,failure,retry}` counters recommended). |
+| **Lisa Crispin** (Testing) | 8.5/10 | §13 test strategy comprehensive: foundation (pure reducer) → components → orchestrator (mocked hooks) → E2E (10 states × 2 viewports = 20 baselines) → a11y (axe + reduced-motion). Coverage targets per phase. §12 Gherkin maps cleanly to `e2e/v2-states/`. |
+
+### Aggregate score
+
+**Mean: 8.29/10** — clears the ≥ 8.0/10 re-panel threshold. **Spec unfrozen 2026-05-18b**.
+
+### Non-blocker follow-ups (post-hardening)
+
+These were identified by the panel as P3 nice-to-have, not bound by Phase 0.5 acceptance:
+
+1. **Adzic**: Split Scenario 3 (mixed invitees) into 3a-desktop + 3b-mobile for visual fixture coverage.
+2. **Newman**: Document `/api/v1/` versioning convention in §7 risk paragraph.
+3. **Nygard**: Add §9b "Observability" subsection defining counters: `gamenight.create.attempt`, `.success`, `.failure`, `.retry`, `.conflict-detected`, `.conflict-overridden`.
+4. **Wiegers**: AC-F.3 cite Wave B.3 IS_VISUAL_TEST_BUILD pattern with file reference (`apps/web/src/lib/visual-test/`).
+
+These are tracked as inline comments here and can be addressed in the Foundation commit (Week 2) or deferred to a follow-up spec amendment.
+
+### Outcome
+
+✅ **Implementation dispatch unblocked**. Week 1 backend can begin per §14 sequencing. The spec remains the source of truth; any deviation during implementation must amend §18 with a new change-log entry.

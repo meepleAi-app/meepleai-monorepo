@@ -50,6 +50,25 @@ internal sealed class UserGamebookViewRepository : IUserGamebookViewRepository
                                  && c.GameId == entry.SharedGameId!.Value
                                  && !c.IsDeleted)
                              .Max(c => (DateTime?)c.UpdatedAt.UtcDateTime)
+                         let sessionsCount = _dbContext.GamebookCampaignSessions
+                             .Count(c => c.OwnerUserId == userId
+                                 && c.GameId == entry.SharedGameId!.Value
+                                 && !c.IsDeleted)
+                         let chunkCount = _dbContext.TextChunks
+                             .Count(t => t.SharedGameId == entry.SharedGameId!.Value)
+                         let readyPdfCount = _dbContext.PdfDocuments
+                             .Count(p => p.SharedGameId == entry.SharedGameId!.Value
+                                 && p.ProcessingState == "Ready")
+                         let indexingPdfCount = _dbContext.PdfDocuments
+                             .Count(p => p.SharedGameId == entry.SharedGameId!.Value
+                                 && (p.ProcessingState == "Pending"
+                                     || p.ProcessingState == "Extracting"
+                                     || p.ProcessingState == "Chunking"
+                                     || p.ProcessingState == "Embedding"
+                                     || p.ProcessingState == "Indexing"))
+                         let failedPdfCount = _dbContext.PdfDocuments
+                             .Count(p => p.SharedGameId == entry.SharedGameId!.Value
+                                 && p.ProcessingState == "Failed")
                          select new UserGamebookViewItem(
                              entry.Id,
                              shared.Id,
@@ -58,6 +77,11 @@ internal sealed class UserGamebookViewRepository : IUserGamebookViewRepository
                              string.IsNullOrEmpty(shared.ImageUrl) ? null : shared.ImageUrl,
                              hasActiveCampaign,
                              entry.PrivateGameId != null,
+                             chunkCount,
+                             sessionsCount,
+                             readyPdfCount,
+                             indexingPdfCount,
+                             failedPdfCount,
                              latestCampaignUpdate ?? entry.AddedAt);
 
         var privateSide = from entry in _dbContext.UserLibraryEntries.AsNoTracking()
@@ -66,6 +90,21 @@ internal sealed class UserGamebookViewRepository : IUserGamebookViewRepository
                               && entry.SharedGameId == null
                           join priv in _dbContext.PrivateGames.AsNoTracking()
                               on entry.PrivateGameId equals priv.Id
+                          let chunkCount = _dbContext.TextChunks
+                              .Count(t => t.GameId == priv.Id)
+                          let readyPdfCount = _dbContext.PdfDocuments
+                              .Count(p => p.PrivateGameId == priv.Id
+                                  && p.ProcessingState == "Ready")
+                          let indexingPdfCount = _dbContext.PdfDocuments
+                              .Count(p => p.PrivateGameId == priv.Id
+                                  && (p.ProcessingState == "Pending"
+                                      || p.ProcessingState == "Extracting"
+                                      || p.ProcessingState == "Chunking"
+                                      || p.ProcessingState == "Embedding"
+                                      || p.ProcessingState == "Indexing"))
+                          let failedPdfCount = _dbContext.PdfDocuments
+                              .Count(p => p.PrivateGameId == priv.Id
+                                  && p.ProcessingState == "Failed")
                           select new UserGamebookViewItem(
                               entry.Id,
                               priv.Id,
@@ -74,6 +113,11 @@ internal sealed class UserGamebookViewRepository : IUserGamebookViewRepository
                               priv.ImageUrl,
                               false,
                               true,
+                              chunkCount,
+                              0,
+                              readyPdfCount,
+                              indexingPdfCount,
+                              failedPdfCount,
                               entry.AddedAt);
 
         var combined = await sharedSide.Concat(privateSide).ToListAsync(cancellationToken)

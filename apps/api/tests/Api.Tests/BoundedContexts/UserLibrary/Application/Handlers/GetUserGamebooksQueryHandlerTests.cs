@@ -56,6 +56,11 @@ public class GetUserGamebooksQueryHandlerTests
             Cover: "https://cdn.example.com/nanolith.jpg",
             HasActiveCampaign: true,
             HasPrivatePdf: false,
+            ChunkCount: 8842,
+            SessionsCount: 2,
+            ReadyPdfCount: 120,
+            IndexingPdfCount: 3,
+            FailedPdfCount: 33,
             LastActivityAt: lastActivity);
 
         _viewRepoMock
@@ -74,6 +79,72 @@ public class GetUserGamebooksQueryHandlerTests
         card.Year.Should().Be(2024);
         card.Cover.Should().Be("https://cdn.example.com/nanolith.jpg");
         card.Status.Should().Be("ready");
+        card.Chunks.Should().Be(8842);
+        card.SessionsCount.Should().Be(2);
+        card.Pages.Should().Be(120);
+        card.TotalPages.Should().Be(156);
+    }
+
+    [Fact]
+    public async Task Handle_WithIndexingPdfsOnly_ReturnsIndexingStatus()
+    {
+        // Arrange — no Ready PDFs yet, some are still processing
+        var userId = Guid.NewGuid();
+        var entry = new UserGamebookViewItem(
+            LibraryEntryId: Guid.NewGuid(),
+            GameId: Guid.NewGuid(),
+            Title: "Just Uploaded",
+            Year: 2024,
+            Cover: null,
+            HasActiveCampaign: true,
+            HasPrivatePdf: false,
+            ChunkCount: 0,
+            SessionsCount: 0,
+            ReadyPdfCount: 0,
+            IndexingPdfCount: 2,
+            FailedPdfCount: 0,
+            LastActivityAt: DateTime.UtcNow);
+
+        _viewRepoMock
+            .Setup(r => r.GetGamebookEntriesAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { entry });
+
+        // Act
+        var result = await CreateHandler().Handle(new GetUserGamebooksQuery(userId), CancellationToken.None);
+
+        // Assert
+        result[0].Status.Should().Be("indexing");
+    }
+
+    [Fact]
+    public async Task Handle_WithFailedPdfsOnly_ReturnsErrorStatus()
+    {
+        // Arrange — all PDFs failed processing
+        var userId = Guid.NewGuid();
+        var entry = new UserGamebookViewItem(
+            LibraryEntryId: Guid.NewGuid(),
+            GameId: Guid.NewGuid(),
+            Title: "Broken",
+            Year: 2024,
+            Cover: null,
+            HasActiveCampaign: false,
+            HasPrivatePdf: true,
+            ChunkCount: 0,
+            SessionsCount: 0,
+            ReadyPdfCount: 0,
+            IndexingPdfCount: 0,
+            FailedPdfCount: 1,
+            LastActivityAt: DateTime.UtcNow);
+
+        _viewRepoMock
+            .Setup(r => r.GetGamebookEntriesAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { entry });
+
+        // Act
+        var result = await CreateHandler().Handle(new GetUserGamebooksQuery(userId), CancellationToken.None);
+
+        // Assert
+        result[0].Status.Should().Be("error");
     }
 
     [Fact]
@@ -91,6 +162,11 @@ public class GetUserGamebooksQueryHandlerTests
             Cover: null,
             HasActiveCampaign: true,
             HasPrivatePdf: false,
+            ChunkCount: 100,
+            SessionsCount: 1,
+            ReadyPdfCount: 1,
+            IndexingPdfCount: 0,
+            FailedPdfCount: 0,
             LastActivityAt: now.AddDays(-5));
 
         var newer = new UserGamebookViewItem(
@@ -101,6 +177,11 @@ public class GetUserGamebooksQueryHandlerTests
             Cover: null,
             HasActiveCampaign: true,
             HasPrivatePdf: false,
+            ChunkCount: 500,
+            SessionsCount: 3,
+            ReadyPdfCount: 5,
+            IndexingPdfCount: 0,
+            FailedPdfCount: 0,
             LastActivityAt: now);
 
         _viewRepoMock
@@ -129,6 +210,11 @@ public class GetUserGamebooksQueryHandlerTests
             Cover: null,
             HasActiveCampaign: false,
             HasPrivatePdf: true,
+            ChunkCount: 0,
+            SessionsCount: 0,
+            ReadyPdfCount: 1,
+            IndexingPdfCount: 0,
+            FailedPdfCount: 0,
             LastActivityAt: DateTime.UtcNow);
 
         _viewRepoMock

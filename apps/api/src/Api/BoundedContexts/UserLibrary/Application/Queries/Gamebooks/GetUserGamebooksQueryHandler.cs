@@ -50,13 +50,31 @@ internal sealed class GetUserGamebooksQueryHandler
         Title: entry.Title,
         Publisher: null,
         Year: entry.Year,
-        Pages: 0,
-        TotalPages: 0,
-        Chunks: 0,
-        Status: "ready",
+        Pages: entry.ReadyPdfCount,
+        TotalPages: entry.ReadyPdfCount + entry.IndexingPdfCount + entry.FailedPdfCount,
+        Chunks: entry.ChunkCount,
+        Status: DeriveStatus(entry),
         Cover: entry.Cover,
         Emoji: null,
         QaCount: 0,
-        SessionsCount: 0,
+        SessionsCount: entry.SessionsCount,
         ErrorMsg: null);
+
+    /// <summary>
+    /// Derives the gamebook status badge value from PDF processing counts.
+    ///
+    /// Rules (AC-4):
+    ///   - "ready"     → at least one PDF in Ready state (KB queryable)
+    ///   - "indexing"  → no Ready PDFs but at least one in transition states
+    ///   - "error"     → no Ready/Indexing PDFs but at least one Failed
+    ///   - "ready"     → fallback (e.g. library entry with no PDFs yet, treated
+    ///                   as ready so the card renders without warning UI)
+    /// </summary>
+    private static string DeriveStatus(UserGamebookViewItem entry)
+    {
+        if (entry.ReadyPdfCount > 0) return "ready";
+        if (entry.IndexingPdfCount > 0) return "indexing";
+        if (entry.FailedPdfCount > 0) return "error";
+        return "ready";
+    }
 }

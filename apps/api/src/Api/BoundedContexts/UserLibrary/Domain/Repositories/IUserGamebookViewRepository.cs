@@ -52,6 +52,11 @@ internal interface IUserGamebookViewRepository
 ///   - <see cref="Cover"/>: SharedGames.ImageUrl OR PrivateGames.ImageUrl
 ///   - <see cref="HasActiveCampaign"/>: EXISTS gamebook_campaign_sessions WHERE owner_user_id = userId AND game_id = SharedGameId AND NOT is_deleted
 ///   - <see cref="HasPrivatePdf"/>: PrivateGameId NOT NULL (the library entry references a private game)
+///   - <see cref="ChunkCount"/>: COUNT(text_chunks) WHERE shared_game_id = GameId — knowledge base size signal
+///   - <see cref="SessionsCount"/>: COUNT(gamebook_campaign_sessions) WHERE game_id = GameId AND owner_user_id = userId AND NOT is_deleted
+///   - <see cref="ReadyPdfCount"/>: COUNT(pdf_documents WHERE shared_game_id = GameId AND processing_state = 'Ready')
+///   - <see cref="IndexingPdfCount"/>: COUNT(pdf_documents WHERE shared_game_id = GameId AND processing_state IN ('Pending','Extracting','Chunking','Embedding','Indexing'))
+///   - <see cref="FailedPdfCount"/>: COUNT(pdf_documents WHERE shared_game_id = GameId AND processing_state = 'Failed')
 ///   - <see cref="LastActivityAt"/>: MAX(library_entry.AddedAt, campaign.updated_at) for ordering
 /// </summary>
 internal sealed record UserGamebookViewItem(
@@ -62,4 +67,9 @@ internal sealed record UserGamebookViewItem(
     string? Cover,
     bool HasActiveCampaign,
     bool HasPrivatePdf,
+    int ChunkCount,
+    int SessionsCount,
+    int ReadyPdfCount,
+    int IndexingPdfCount,
+    int FailedPdfCount,
     DateTime LastActivityAt);

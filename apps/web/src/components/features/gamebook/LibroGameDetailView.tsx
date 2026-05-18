@@ -114,13 +114,28 @@ export function LibroGameDetailView({ gameDetail }: LibroGameDetailViewProps): R
             <MetaStat value={yearLabel} label="anno" />
           </div>
 
-          {/* Connection pip bar */}
+          {/* Connection pip bar
+              Issue #1288 Bug 2 — chunkCount/sessionsCount popolati da
+              /api/v1/gamebooks merge in useLibraryGameDetail. Fallback ai
+              vecchi placeholder per giochi non-gamebook (no campaign, no
+              private PDF) — quei numeri restano 0 di proposito.
+          */}
           <div className="flex flex-wrap gap-2 px-4 pb-4">
-            <Pip kind="kb" count={gameDetail.hasRagAccess ? 1 : 0} label="KB" emoji="📄" />
+            <Pip
+              kind="kb"
+              count={gameDetail.chunkCount ?? (gameDetail.hasRagAccess ? 1 : 0)}
+              label="KB"
+              emoji="📄"
+            />
             <Pip kind="chat" count={0} label="chat" emoji="💬" />
             <Pip kind="agent" count={gameDetail.hasRagAccess ? 1 : 0} label="Tutor" emoji="🤖" />
             <Pip kind="player" count={0} label="giocatori" emoji="👤" />
-            <Pip kind="session" count={gameDetail.timesPlayed} label="partite" emoji="🎯" />
+            <Pip
+              kind="session"
+              count={gameDetail.sessionsCount ?? gameDetail.timesPlayed}
+              label="partite"
+              emoji="🎯"
+            />
           </div>
         </article>
 
@@ -268,15 +283,9 @@ function InfoPanel({ detail }: { detail: LibraryGameDetail }): ReactElement {
           </span>
           <div>
             <div className="font-quicksand font-semibold text-[hsl(var(--c-kb))]">
-              {detail.hasRagAccess
-                ? 'Regole indicizzate · pronte per Q&A'
-                : 'KB non ancora indicizzato'}
+              {deriveKbBadgeTitle(detail)}
             </div>
-            <div className="mt-0.5 text-[11px] text-[#5a4a38]">
-              {detail.hasRagAccess
-                ? "L'agente può citare paragrafi durante la sessione"
-                : 'Carica il PDF regole per abilitare Q&A'}
-            </div>
+            <div className="mt-0.5 text-[11px] text-[#5a4a38]">{deriveKbBadgeSubtitle(detail)}</div>
           </div>
         </div>
       </div>
@@ -303,4 +312,26 @@ function formatPlayTime(minutes: number): string {
   const low = Math.floor(hours);
   const high = Math.ceil(hours);
   return `${low}–${high}h`;
+}
+
+/**
+ * Issue #1288 Bug 2 — KB readiness badge title from kbStatus (gamebook qualified
+ * entries) with fallback to hasRagAccess (legacy/non-gamebook entries).
+ */
+function deriveKbBadgeTitle(detail: LibraryGameDetail): string {
+  if (detail.kbStatus === 'indexing') return 'Indicizzazione in corso…';
+  if (detail.kbStatus === 'error') return 'Errore durante l’indicizzazione';
+  if (detail.kbStatus === 'ready') return 'Regole indicizzate · pronte per Q&A';
+  return detail.hasRagAccess ? 'Regole indicizzate · pronte per Q&A' : 'KB non ancora indicizzato';
+}
+
+function deriveKbBadgeSubtitle(detail: LibraryGameDetail): string {
+  if (detail.kbStatus === 'indexing')
+    return 'Il pipeline OCR/embedding sta lavorando sui PDF caricati.';
+  if (detail.kbStatus === 'error')
+    return 'Uno o più PDF hanno fallito il processing. Ricarica le regole o contatta l’assistenza.';
+  if (detail.kbStatus === 'ready') return "L'agente può citare paragrafi durante la sessione";
+  return detail.hasRagAccess
+    ? "L'agente può citare paragrafi durante la sessione"
+    : 'Carica il PDF regole per abilitare Q&A';
 }

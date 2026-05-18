@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 
 export interface SetupChecklistItem {
+  readonly id?: string;
   readonly icon?: string;
   readonly text: string;
   readonly done?: boolean;
@@ -30,9 +31,9 @@ export function SetupChecklist({
         </span>
       </div>
       <ul className="flex flex-col gap-1 m-0 p-0 list-none">
-        {items.map((item, i) => (
+        {items.map(item => (
           <li
-            key={i}
+            key={item.id ?? item.text}
             className={[
               'flex items-center gap-2.5 rounded-sm px-2.5 py-1',
               item.done

@@ -31,7 +31,7 @@ const TONE_VALUE_TEXT: Record<EntityType, string> = {
   kb: 'text-entity-document',
   chat: 'text-entity-chat',
   event: 'text-entity-event',
-  toolkit: 'text-entity-toolkit-text',
+  toolkit: 'text-entity-toolkit',
   tool: 'text-entity-tool',
 };
 

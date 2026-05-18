@@ -90,7 +90,7 @@ describe('KPIStatCard', () => {
     ['event', 'border-t-entity-event', 'text-entity-event'],
     ['player', 'border-t-entity-player', 'text-entity-player'],
     ['chat', 'border-t-entity-chat', 'text-entity-chat'],
-    ['toolkit', 'border-t-entity-toolkit', 'text-entity-toolkit-text'],
+    ['toolkit', 'border-t-entity-toolkit', 'text-entity-toolkit'],
     ['game', 'border-t-entity-game', 'text-entity-game'],
     ['kb', 'border-t-entity-document', 'text-entity-document'],
   ] as const)('applies tone=%s utility classes', (tone, borderClass, textClass) => {

@@ -3,6 +3,7 @@ import type { JSX } from 'react';
 export type KBRulesQuickGlanceStatus = 'ok' | 'loading' | 'error';
 
 export interface KBRule {
+  readonly id?: string;
   readonly icon?: string;
   readonly text: string;
   readonly src?: string;
@@ -128,9 +129,9 @@ export function KBRulesQuickGlance({
         </span>
       </div>
       <ul className="flex flex-col gap-1.5 m-0 p-0 list-none">
-        {rules.map((rule, i) => (
+        {rules.map(rule => (
           <li
-            key={i}
+            key={rule.id ?? rule.text}
             className={[
               'flex items-center gap-2 rounded-sm px-2.5 py-1.5',
               'bg-[hsl(var(--c-kb)/0.06)] border border-[hsl(var(--c-kb)/0.22)]',

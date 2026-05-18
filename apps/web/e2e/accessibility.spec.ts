@@ -428,6 +428,15 @@ test.describe('Accessibility - Authenticated Pages', () => {
 // ============================================================================
 
 test.describe('Accessibility - Comprehensive Audit', () => {
+  // #1094 follow-up (review on #1249 MEDIUM-1): emit reduced-motion to
+  // neutralize mid-animation captures (e.g. /register .animate-pulse).
+  // Without this beforeEach, the Comprehensive Audit's /register test
+  // can capture #7c7874-family colors mid-pulse at 4.09:1 AA fail.
+  // Components must carry `motion-reduce:animate-none` for this to take effect.
+  test.beforeEach(async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+  });
+
   const publicPages = [
     { name: 'Landing Page', url: '/' },
     { name: 'Games Catalog', url: '/board-game-ai/games' },

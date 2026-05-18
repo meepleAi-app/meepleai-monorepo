@@ -377,7 +377,7 @@ the PR review.
 
 | Mockup | Component | Path | Route | Status | PR | AC |
 |--------|-----------|------|-------|--------|----|----|
-| `sp6-libro-game-quota-credits.jsx` | `CheckoutModal` (4 step) + `SoftWarningCredits` (toast/modal) | `apps/web/src/components/features/gamebook/{CheckoutModal,SoftWarningCredits}.tsx` | `/gamebook` (embedded) | done | #TBD-PR | T A V |
+| `sp6-libro-game-quota-credits.jsx` | `CheckoutModal` (4 step) + `SoftWarningCredits` (toast/modal) | `apps/web/src/components/features/gamebook/{CheckoutModal,SoftWarningCredits}.tsx` | `/gamebook` (embedded) | done | #1291 | T A V |
 
 ## SP6 — Nanolith libro-game gap-coverage (post-storyboard 2026-05-12) — 3 components
 

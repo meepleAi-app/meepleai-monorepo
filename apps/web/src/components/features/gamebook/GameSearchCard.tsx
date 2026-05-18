@@ -211,7 +211,7 @@ export function GameSearchCard({
             {showAlreadyIndexed && (
               <span
                 data-slot="game-search-card-indexed-badge"
-                className="inline-flex items-center gap-1 rounded-full bg-entity-toolkit/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-entity-toolkit"
+                className="inline-flex items-center gap-1 rounded-full bg-entity-toolkit/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-entity-toolkit-text"
               >
                 {labels.alreadyIndexedBadge}
               </span>

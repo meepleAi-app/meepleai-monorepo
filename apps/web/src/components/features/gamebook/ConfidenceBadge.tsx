@@ -64,7 +64,7 @@ export interface ConfidenceBadgeProps {
 //   medium amber: agent entity  (bg-entity-agent/18  + text-entity-agent)
 //   low    rose:  event entity  (bg-entity-event/15  + text-entity-event)
 const PALETTE: Record<ConfidenceLevel, { cls: string }> = {
-  high: { cls: 'bg-entity-toolkit/15 text-entity-toolkit' },
+  high: { cls: 'bg-entity-toolkit/15 text-entity-toolkit-text' },
   medium: { cls: 'bg-entity-agent/18 text-entity-agent' },
   low: { cls: 'bg-entity-event/15 text-entity-event' },
 };

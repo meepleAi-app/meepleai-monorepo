@@ -29,6 +29,11 @@ import { useGameNightConflictCheck } from '@/lib/game-nights/hooks/useGameNightC
 import { useGameNightDraftPersist } from '@/lib/game-nights/hooks/useGameNightDraftPersist';
 import { usePlayerSearch } from '@/lib/game-nights/hooks/usePlayerSearch';
 import { useRegularsForUser } from '@/lib/game-nights/hooks/useRegularsForUser';
+import {
+  IS_VISUAL_TEST_BUILD,
+  getWizardFixture,
+  parseFixtureParam,
+} from '@/lib/game-nights/wizard-fixture';
 import { initialWizardState, wizardReducer } from '@/lib/game-nights/wizard-reducer';
 import type { WizardStep } from '@/lib/game-nights/wizard-types';
 import { buildSubmitPayload } from '@/lib/game-nights/wizard-validators';
@@ -149,16 +154,31 @@ export function NewGameNightContent(): ReactElement {
   // URL → initial step. The wizard reducer source-of-truths the rest;
   // we only sync `?step=` (data is kept in reducer, not URL — spec §8).
   const initialStep = parseStep(searchParams.get('step'));
-  const [state, dispatch] = useReducer(wizardReducer, {
-    ...initialWizardState,
-    step: initialStep,
-  });
+
+  // Visual-test hatch: when running under
+  // `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1` (bootstrap-mockup-baselines
+  // workflow), `?fixture=<state-id>` short-circuits the initial reducer
+  // state to a deterministic FSM snapshot. Production builds constant-fold
+  // `IS_VISUAL_TEST_BUILD` to `false` so this branch is dead code.
+  const fixtureParam = parseFixtureParam(searchParams.get('fixture'));
+  const fixtureState = IS_VISUAL_TEST_BUILD && fixtureParam ? getWizardFixture(fixtureParam) : null;
+
+  const [state, dispatch] = useReducer(
+    wizardReducer,
+    fixtureState ?? { ...initialWizardState, step: initialStep }
+  );
 
   const [title, setTitle] = useState('');
   const [playerSearchQuery, setPlayerSearchQuery] = useState('');
 
   // ─── Autosave: load draft on mount, persist on changes, clear on success
-  const draftPersist = useGameNightDraftPersist({ userId, state });
+  // Disabled when the visual-test fixture is active so baselines stay
+  // deterministic (no localStorage churn during workflow runs).
+  const draftPersist = useGameNightDraftPersist({
+    userId,
+    state,
+    enabled: fixtureState == null,
+  });
   const draftRestoredRef = useRef(false);
   useEffect(() => {
     if (draftRestoredRef.current) return;

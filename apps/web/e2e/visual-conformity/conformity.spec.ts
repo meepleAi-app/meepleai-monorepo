@@ -98,6 +98,16 @@ const RUNBOOKS: Record<string, RouteRunbook> = {
     // included alongside the empty body, matching the mockup #06 frame scope.
     screenshotSelector: 'main',
   },
+  'game-night-create': {
+    // Issue #950 W4 — wizard uses ?fixture=<state-id> to short-circuit to a
+    // deterministic FSM state when IS_VISUAL_TEST_BUILD=true. `step1-date` is
+    // the canonical default-screen marker on the mockup (`data-conformity-screen
+    // ="default-desktop"`), so the live shot for the conformity gate uses the
+    // same fixture.
+    search: '?fixture=step1-date',
+    readySelector: '[data-slot="game-night-create-wizard"]',
+    screenshotSelector: '[data-slot="game-night-create-wizard"]',
+  },
 };
 
 async function waitForRouteReady(page: Page, runbook: RouteRunbook): Promise<void> {

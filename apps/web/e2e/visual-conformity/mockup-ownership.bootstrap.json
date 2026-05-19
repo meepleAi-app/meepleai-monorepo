@@ -59,6 +59,21 @@
         "apps/web/src/hooks/queries/useGameNights.ts"
       ],
       "notes": "Stage 3 #1170 commit 4. Functional + a11y coverage in e2e/v2-states/game-nights-index.spec.ts (5 scenarios x 3 viewports). Visual baselines deferred — auto-generated on Linux CI via visual-regression-migrated workflow (bootstrap mode)."
+    },
+    {
+      "id": "game-night-create",
+      "livePath": "/game-nights/new",
+      "mockup": "sp7-game-night-create.html",
+      "triggerPaths": [
+        "apps/web/src/app/(authenticated)/game-nights/new/**",
+        "apps/web/src/components/features/game-night-create/**",
+        "apps/web/src/lib/game-nights/wizard-reducer.ts",
+        "apps/web/src/lib/game-nights/wizard-validators.ts",
+        "apps/web/src/lib/game-nights/wizard-fixture.ts",
+        "apps/web/src/lib/game-nights/wizard-types.ts",
+        "apps/web/src/lib/game-nights/hooks/**"
+      ],
+      "notes": "Issue #950 W4 — SP7 4-step wizard. 10 FSM fixture states captured via ?fixture=<state-id> hatch (see lib/game-nights/wizard-fixture.ts). E2E in e2e/v2-states/game-night-create.spec.ts (FSM coverage + Gherkin scenarios) + e2e/a11y/game-night-create.spec.ts (axe-core WCAG 2.1 AA + reduced-motion). Visual baselines auto-generated on Linux CI via visual-regression-migrated workflow (bootstrap mode)."
     }
   ]
 }

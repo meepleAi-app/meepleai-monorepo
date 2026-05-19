@@ -604,7 +604,7 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             BlobStorageResult storageResult;
             using (var stream = file.OpenReadStream())
             {
-                storageResult = await _blobStorageService.StoreAsync(stream, fileName, gameId ?? privateGameId?.ToString() ?? string.Empty, cancellationToken).ConfigureAwait(false);
+                storageResult = await _blobStorageService.StoreAsync(stream, fileName, BlobCategory.Pdf, gameId ?? privateGameId?.ToString() ?? string.Empty, cancellationToken).ConfigureAwait(false);
             }
 
             if (!storageResult.Success || string.IsNullOrWhiteSpace(storageResult.FileId))
@@ -781,7 +781,7 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
     {
         try
         {
-            await _blobStorageService.DeleteAsync(fileId, gameId, cancellationToken).ConfigureAwait(false);
+            await _blobStorageService.DeleteAsync(fileId, BlobCategory.Pdf, gameId, cancellationToken).ConfigureAwait(false);
             _db.PdfDocuments.Remove(pdfDoc);
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }

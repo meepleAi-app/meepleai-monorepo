@@ -150,7 +150,7 @@ internal sealed class ExtractGameMetadataFromPdfByPdfIdQueryHandler
     {
         try
         {
-            var stream = await _blobStorageService.RetrieveAsync(fileId, bucket, ct).ConfigureAwait(false);
+            var stream = await _blobStorageService.RetrieveAsync(fileId, BlobCategory.Pdf, bucket, ct).ConfigureAwait(false);
             if (stream == null)
                 _logger.LogWarning("[{RequestId}] PDF not found: fileId={FileId}, bucket={Bucket}", requestId, fileId, bucket);
             return stream;

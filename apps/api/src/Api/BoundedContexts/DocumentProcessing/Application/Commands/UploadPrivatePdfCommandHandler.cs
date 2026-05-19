@@ -143,7 +143,7 @@ internal sealed class UploadPrivatePdfCommandHandler : ICommandHandler<UploadPri
         using (var stream = command.PdfFile.OpenReadStream())
         {
             storageResult = await _blobStorageService.StoreAsync(
-                stream, sanitizedFileName, gameIdString, cancellationToken).ConfigureAwait(false);
+                stream, sanitizedFileName, BlobCategory.Pdf, gameIdString, cancellationToken).ConfigureAwait(false);
         }
 
         if (!storageResult.Success || string.IsNullOrWhiteSpace(storageResult.FileId))

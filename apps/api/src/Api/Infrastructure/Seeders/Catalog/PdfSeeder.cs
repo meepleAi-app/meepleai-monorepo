@@ -168,7 +168,7 @@ internal static class PdfSeeder
                 // Stream from seed bucket → store into primary blob
                 var stream = await seedBlob.OpenReadAsync(blobKey, ct).ConfigureAwait(false);
                 await using var _ = stream.ConfigureAwait(false);
-                var result = await primaryBlob.StoreAsync(stream, fileName, PdfStorageKey.ForPdf(pdfId), ct).ConfigureAwait(false);
+                var result = await primaryBlob.StoreAsync(stream, fileName, BlobCategory.Pdf, PdfStorageKey.ForPdf(pdfId), ct).ConfigureAwait(false);
 
                 if (!result.Success)
                 {
@@ -278,7 +278,7 @@ internal static class PdfSeeder
             try
             {
                 // Extract fileId from filePath — use the path segment as-is
-                await primaryBlob.DeleteAsync(filePath, gameIdStr, ct).ConfigureAwait(false);
+                await primaryBlob.DeleteAsync(filePath, BlobCategory.Pdf, gameIdStr, ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

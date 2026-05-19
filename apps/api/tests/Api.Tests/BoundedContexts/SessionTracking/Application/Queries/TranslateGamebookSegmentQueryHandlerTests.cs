@@ -69,6 +69,16 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         public Task<GamebookGlossaryEntry?> GetByTermAsync(Guid campaignId, string termEn, CancellationToken cancellationToken = default)
             => Task.FromResult(Store.FirstOrDefault(x => x.CampaignId == campaignId && x.TermEn == termEn));
 
+        // Issue #1312: cross-entry termIt collision lookup. Case-insensitive + trimmed
+        // to mirror the production EF Core ILIKE-based implementation.
+        public Task<GamebookGlossaryEntry?> GetByTermItAsync(Guid campaignId, string termIt, CancellationToken cancellationToken = default)
+        {
+            var needle = (termIt ?? string.Empty).Trim();
+            return Task.FromResult(Store.FirstOrDefault(x =>
+                x.CampaignId == campaignId
+                && string.Equals(x.TermIt.Trim(), needle, StringComparison.OrdinalIgnoreCase)));
+        }
+
         public Task<GamebookGlossaryEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
             => Task.FromResult(Store.FirstOrDefault(x => x.Id == id));
 

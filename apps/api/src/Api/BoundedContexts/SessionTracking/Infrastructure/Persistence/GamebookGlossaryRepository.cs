@@ -24,6 +24,20 @@ internal sealed class GamebookGlossaryRepository : IGamebookGlossaryRepository
         => _db.GamebookGlossaryEntries
             .FirstOrDefaultAsync(x => x.CampaignId == campaignId && x.TermEn == termEn, cancellationToken);
 
+    public Task<GamebookGlossaryEntry?> GetByTermItAsync(Guid campaignId, string termIt, CancellationToken cancellationToken = default)
+    {
+        // Issue #1312: case-insensitive + whitespace-tolerant cross-entry lookup.
+        // Postgres-side comparison via ILIKE keeps the predicate translatable
+        // without an extra round trip; the caller is responsible for passing
+        // the user-supplied raw value (we trim + lowercase inside this method).
+        var needle = (termIt ?? string.Empty).Trim();
+        return _db.GamebookGlossaryEntries
+            .FirstOrDefaultAsync(
+                x => x.CampaignId == campaignId
+                     && EF.Functions.ILike(x.TermIt.Trim(), needle),
+                cancellationToken);
+    }
+
     public Task<GamebookGlossaryEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => _db.GamebookGlossaryEntries.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 

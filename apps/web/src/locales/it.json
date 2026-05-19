@@ -2998,6 +2998,13 @@
       "retry": "Riprova",
       "error": {
         "saveFailed": "Salvataggio fallito. Riprova."
+      },
+      "collision": {
+        "title": "Traduzione già in uso",
+        "body": "Un'altra voce ({termEn}) usa già questa traduzione italiana.",
+        "overwrite": "Sovrascrivi",
+        "changeTranslation": "Cambia traduzione",
+        "sidePanelLabel": "Voce in conflitto"
       }
     },
     "play": {

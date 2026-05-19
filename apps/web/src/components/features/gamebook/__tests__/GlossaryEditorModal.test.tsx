@@ -424,6 +424,197 @@ describe('AC-6 — Desktop layout', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Issue #1312 — Collision state (s04-m + s04-d)
+// ---------------------------------------------------------------------------
+
+describe('#1312 AC-3 — CollisionBanner renders on 409', () => {
+  it('shows the collision banner with overwrite + change-translation actions when backend returns 409', async () => {
+    const user = userEvent.setup();
+    setUpsertResponder(() =>
+      HttpResponse.json(
+        {
+          error: 'glossary_term_collision',
+          message: 'Another entry already uses this translation',
+          collidingEntryId: '99999999-9999-4999-8999-999999999999',
+          collidingTermEn: 'Chaosstone',
+        },
+        { status: 409 }
+      )
+    );
+
+    const onSaved = vi.fn();
+    renderModal(
+      <GlossaryEditorModal
+        campaignId={CAMPAIGN_ID}
+        entry={ENTRY}
+        onSaved={onSaved}
+        onClose={() => {}}
+      />
+    );
+
+    const itInput = screen.getByRole('textbox', { name: /italian translation/i });
+    await user.clear(itInput);
+    await user.type(itInput, 'Pietra del Caos');
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+
+    const banner = await screen.findByTestId('glossary-editor-collision');
+    expect(banner).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /overwrite/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /change translation/i })).toBeInTheDocument();
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+});
+
+describe('#1312 AC-5 — [Change translation] returns focus to input without resetting', () => {
+  it('clears the collision state and returns focus to the IT input with the edited value preserved', async () => {
+    const user = userEvent.setup();
+    setUpsertResponder(() =>
+      HttpResponse.json(
+        {
+          error: 'glossary_term_collision',
+          collidingEntryId: '99999999-9999-4999-8999-999999999999',
+          collidingTermEn: 'Chaosstone',
+        },
+        { status: 409 }
+      )
+    );
+
+    renderModal(
+      <GlossaryEditorModal
+        campaignId={CAMPAIGN_ID}
+        entry={ENTRY}
+        onClose={() => {}}
+      />
+    );
+
+    const itInput = screen.getByRole('textbox', { name: /italian translation/i });
+    await user.clear(itInput);
+    await user.type(itInput, 'Pietra del Caos');
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+
+    await screen.findByTestId('glossary-editor-collision');
+
+    // Click [Change translation]. Banner dismisses; input value preserved; focus returns to input.
+    await user.click(screen.getByRole('button', { name: /change translation/i }));
+
+    expect(screen.queryByTestId('glossary-editor-collision')).not.toBeInTheDocument();
+    expect(itInput).toHaveValue('Pietra del Caos');
+    await waitFor(() => {
+      expect(document.activeElement).toBe(itInput);
+    });
+  });
+});
+
+describe('#1312 AC-6 — Desktop side-panel shows the colliding entry', () => {
+  it('renders the side-panel with the conflicting EN → IT pair when forceLayout=desktop', async () => {
+    const user = userEvent.setup();
+    setUpsertResponder(() =>
+      HttpResponse.json(
+        {
+          error: 'glossary_term_collision',
+          collidingEntryId: '99999999-9999-4999-8999-999999999999',
+          collidingTermEn: 'Chaosstone',
+        },
+        { status: 409 }
+      )
+    );
+
+    renderModal(
+      <GlossaryEditorModal
+        campaignId={CAMPAIGN_ID}
+        entry={ENTRY}
+        onClose={() => {}}
+        forceLayout="desktop"
+      />
+    );
+
+    const itInput = screen.getByRole('textbox', { name: /italian translation/i });
+    await user.clear(itInput);
+    await user.type(itInput, 'Pietra del Caos');
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+
+    await screen.findByTestId('glossary-editor-collision');
+    const sidePanel = screen.getByTestId('glossary-editor-collision-side-panel');
+    expect(sidePanel).toHaveTextContent('Chaosstone');
+    expect(sidePanel).toHaveTextContent('Pietra del Caos');
+  });
+
+  it('does NOT render the side-panel in mobile layout even on collision', async () => {
+    const user = userEvent.setup();
+    setUpsertResponder(() =>
+      HttpResponse.json(
+        {
+          error: 'glossary_term_collision',
+          collidingEntryId: '99999999-9999-4999-8999-999999999999',
+          collidingTermEn: 'Chaosstone',
+        },
+        { status: 409 }
+      )
+    );
+
+    renderModal(
+      <GlossaryEditorModal
+        campaignId={CAMPAIGN_ID}
+        entry={ENTRY}
+        onClose={() => {}}
+        forceLayout="mobile"
+      />
+    );
+
+    const itInput = screen.getByRole('textbox', { name: /italian translation/i });
+    await user.clear(itInput);
+    await user.type(itInput, 'Pietra del Caos');
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+
+    await screen.findByTestId('glossary-editor-collision');
+    expect(screen.queryByTestId('glossary-editor-collision-side-panel')).not.toBeInTheDocument();
+  });
+});
+
+describe('#1312 AC-7 — axe finds zero violations on collision states', () => {
+  async function reachCollisionState(forceLayout: 'mobile' | 'desktop') {
+    const user = userEvent.setup();
+    setUpsertResponder(() =>
+      HttpResponse.json(
+        {
+          error: 'glossary_term_collision',
+          collidingEntryId: '99999999-9999-4999-8999-999999999999',
+          collidingTermEn: 'Chaosstone',
+        },
+        { status: 409 }
+      )
+    );
+
+    const result = renderModal(
+      <GlossaryEditorModal
+        campaignId={CAMPAIGN_ID}
+        entry={ENTRY}
+        onClose={() => {}}
+        forceLayout={forceLayout}
+      />
+    );
+    const itInput = screen.getByRole('textbox', { name: /italian translation/i });
+    await user.clear(itInput);
+    await user.type(itInput, 'Pietra del Caos');
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+    await screen.findByTestId('glossary-editor-collision');
+    return result.container;
+  }
+
+  it('s04-m mobile collision', async () => {
+    const container = await reachCollisionState('mobile');
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it('s04-d desktop collision with side-panel', async () => {
+    const container = await reachCollisionState('desktop');
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // AC-9 — i18n integration (it locale)
 // ---------------------------------------------------------------------------
 

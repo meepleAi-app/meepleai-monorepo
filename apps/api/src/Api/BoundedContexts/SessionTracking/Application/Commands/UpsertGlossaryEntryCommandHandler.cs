@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
+using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using MediatR;
@@ -31,6 +32,17 @@ internal sealed class UpsertGlossaryEntryCommandHandler
             throw new ConflictException("Forbidden");
 
         var existing = await _glossary.GetByIdAsync(cmd.EntryId, cancellationToken).ConfigureAwait(false);
+
+        // Issue #1312: cross-entry termIt collision check. We allow the same
+        // entry to set its own termIt to its current value (no-op) and only
+        // flag a collision when a DIFFERENT entry already uses the target.
+        var colliding = await _glossary
+            .GetByTermItAsync(cmd.CampaignId, cmd.TermIt, cancellationToken)
+            .ConfigureAwait(false);
+        if (colliding is not null && colliding.Id != cmd.EntryId)
+        {
+            throw new GlossaryTermCollisionException(colliding.Id, colliding.TermEn);
+        }
 
         GamebookGlossaryEntry entry;
         if (existing is null)

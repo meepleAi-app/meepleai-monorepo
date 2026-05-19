@@ -1,14 +1,17 @@
 /**
- * GlossaryEditorModal — issue #952.
+ * GlossaryEditorModal — issue #952 + #1312.
  *
  * Floats above the libro-game `TranslateViewer` when the user taps an inline
  * glossary pill on a translated paragraph. Locks the EN source term, lets the
  * user edit the IT translation, and dispatches an upsert via
  * `useUpsertGlossary`.
  *
- * State-04 collision (target IT already in use by another entry) is OUT OF
- * SCOPE for this PR — the backend `UpsertGlossaryEntryCommandHandler` does not
- * detect cross-entry duplicates; collision UI is tracked as a follow-up.
+ * Issue #1312: state-04 collision UI shipped on top of the #952 base. When
+ * the backend detects another entry on the same campaign already uses the
+ * candidate IT translation, it returns 409 with `collidingEntryId` +
+ * `collidingTermEn`. The modal then surfaces a `CollisionBanner` with two
+ * actions: `[Overwrite]` (currently dismisses pending product decision —
+ * see footnote) and `[Change translation]` (returns focus to the input).
  *
  * Spec: `docs/superpowers/specs/2026-05-19-glossary-editor-modal-952.md`
  */
@@ -18,7 +21,10 @@
 import { useCallback, useEffect, useId, useReducer, useRef, type ReactElement } from 'react';
 
 import { useTranslation } from '@/hooks/useTranslation';
-import type { GamebookGlossaryEntry } from '@/lib/api/gamebook-glossary';
+import {
+  GlossaryTermCollisionError,
+  type GamebookGlossaryEntry,
+} from '@/lib/api/gamebook-glossary';
 import { useUpsertGlossary } from '@/lib/gamebook/hooks/useGamebookGlossary';
 
 // ---------------------------------------------------------------------------
@@ -39,32 +45,57 @@ export interface GlossaryEditorModalProps {
 }
 
 // ---------------------------------------------------------------------------
-// Reducer (4 transitions; see spec §6 hardened)
+// Reducer (#1312 extends to 5 transitions; collision state added)
 // ---------------------------------------------------------------------------
+
+interface CollidingEntry {
+  readonly id: string;
+  readonly termEn: string;
+}
 
 type ModalState = {
   itValue: string;
   initialIt: string;
-  status: 'idle' | 'saving' | 'error';
+  status: 'idle' | 'saving' | 'error' | 'collision';
   errorMessage: string | null;
+  collidingEntry: CollidingEntry | null;
 };
 
 type ModalAction =
   | { type: 'edit'; value: string }
   | { type: 'submit' }
   | { type: 'submit_ok' }
-  | { type: 'submit_fail'; message: string };
+  | { type: 'submit_fail'; message: string }
+  | { type: 'submit_collision'; collidingEntry: CollidingEntry }
+  | { type: 'change_value' };
 
 function modalReducer(state: ModalState, action: ModalAction): ModalState {
   switch (action.type) {
     case 'edit':
-      return { ...state, itValue: action.value, status: 'idle', errorMessage: null };
+      return {
+        ...state,
+        itValue: action.value,
+        status: 'idle',
+        errorMessage: null,
+        collidingEntry: null,
+      };
     case 'submit':
-      return { ...state, status: 'saving', errorMessage: null };
+      return { ...state, status: 'saving', errorMessage: null, collidingEntry: null };
     case 'submit_ok':
-      return { ...state, status: 'idle', errorMessage: null };
+      return { ...state, status: 'idle', errorMessage: null, collidingEntry: null };
     case 'submit_fail':
-      return { ...state, status: 'error', errorMessage: action.message };
+      return { ...state, status: 'error', errorMessage: action.message, collidingEntry: null };
+    case 'submit_collision':
+      return {
+        ...state,
+        status: 'collision',
+        errorMessage: null,
+        collidingEntry: action.collidingEntry,
+      };
+    case 'change_value':
+      // Issue #1312 AC-5: dismiss the collision banner WITHOUT resetting the
+      // input value. Status returns to idle so the user can re-edit and resubmit.
+      return { ...state, status: 'idle', errorMessage: null, collidingEntry: null };
     default:
       return state;
   }
@@ -76,6 +107,7 @@ function makeInitialState(entry: GamebookGlossaryEntry): ModalState {
     initialIt: entry.termIt,
     status: 'idle',
     errorMessage: null,
+    collidingEntry: null,
   };
 }
 
@@ -86,6 +118,7 @@ const EMPTY_MODAL_STATE: ModalState = {
   initialIt: '',
   status: 'idle',
   errorMessage: null,
+  collidingEntry: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -103,9 +136,6 @@ export function GlossaryEditorModal({
   const upsert = useUpsertGlossary(campaignId);
   const titleId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
-  // Reducer is initialized with a sentinel "empty" state when entry is null;
-  // the early-return below ensures the modal doesn't render in that case, so
-  // the sentinel is never observed by the rendered tree.
   const [state, dispatch] = useReducer(
     modalReducer,
     entry,
@@ -122,7 +152,7 @@ export function GlossaryEditorModal({
     return () => window.removeEventListener('keydown', handler);
   }, [entry, onClose]);
 
-  // Focus the IT input on mount — the natural starting action for the user.
+  // Focus the IT input on mount.
   useEffect(() => {
     if (entry) inputRef.current?.focus();
   }, [entry]);
@@ -138,18 +168,42 @@ export function GlossaryEditorModal({
           onSaved?.(saved);
         },
         onError: err => {
+          // Issue #1312: 409 collision is dispatched into a dedicated state
+          // so the FE can render the recovery banner instead of the generic
+          // error path.
+          if (err instanceof GlossaryTermCollisionError) {
+            dispatch({
+              type: 'submit_collision',
+              collidingEntry: {
+                id: err.collidingEntryId,
+                termEn: err.collidingTermEn,
+              },
+            });
+            return;
+          }
           dispatch({ type: 'submit_fail', message: err.message });
         },
       }
     );
   }, [entry, state.itValue, upsert, onSaved]);
 
+  const handleChangeTranslation = useCallback(() => {
+    dispatch({ type: 'change_value' });
+    // Defer focus to next tick so the state update + re-render commit first.
+    queueMicrotask(() => inputRef.current?.focus());
+  }, []);
+
+  const handleOverwrite = useCallback(() => {
+    // FE AC-4 (deferred): pending product decision on overwrite semantics
+    // (DELETE-then-PUT vs `force: true` flag). For now, dismissing the
+    // collision banner mirrors the [Change translation] flow — the user is
+    // never silently misled. Tracked as a P2 follow-up.
+    dispatch({ type: 'change_value' });
+  }, []);
+
   if (!entry) return null;
 
   const isDirty = state.itValue !== state.initialIt;
-  // Layout: explicit prop wins; otherwise mobile is the safe default at SSR
-  // time (matchMedia is jsdom-flaky and the production breakpoint is owned by
-  // the parent layout via CSS). Visual tests pass `forceLayout` explicitly.
   const layout: 'mobile' | 'desktop' = forceLayout ?? 'mobile';
 
   return (
@@ -210,6 +264,36 @@ export function GlossaryEditorModal({
             </button>
           </div>
         )}
+
+        {state.status === 'collision' && state.collidingEntry !== null && (
+          <div role="alert" data-testid="glossary-editor-collision">
+            <h3>{t('gamebook.glossaryEditor.collision.title')}</h3>
+            <p>
+              {t('gamebook.glossaryEditor.collision.body', {
+                termEn: state.collidingEntry.termEn,
+              })}
+            </p>
+            <button type="button" onClick={handleOverwrite}>
+              {t('gamebook.glossaryEditor.collision.overwrite')}
+            </button>
+            <button type="button" onClick={handleChangeTranslation}>
+              {t('gamebook.glossaryEditor.collision.changeTranslation')}
+            </button>
+          </div>
+        )}
+
+        {/* Issue #1312 AC-6: desktop side-panel surfacing the conflicting entry. */}
+        {layout === 'desktop' &&
+          state.status === 'collision' &&
+          state.collidingEntry !== null && (
+            <aside
+              data-testid="glossary-editor-collision-side-panel"
+              aria-label={t('gamebook.glossaryEditor.collision.sidePanelLabel')}
+            >
+              <p>{state.collidingEntry.termEn}</p>
+              <p>{state.itValue}</p>
+            </aside>
+          )}
 
         <button
           type="button"

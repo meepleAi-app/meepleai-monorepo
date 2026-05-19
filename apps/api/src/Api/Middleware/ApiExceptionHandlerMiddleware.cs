@@ -1,4 +1,5 @@
 using System;
+using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.Helpers;
 using Api.Middleware.Exceptions;
 using Api.Observability;
@@ -77,6 +78,14 @@ internal class ApiExceptionHandlerMiddleware
         if (ex is TierLimitExceededException tierLimitEx)
         {
             await HandleTierLimitExceptionAsync(context, tierLimitEx).ConfigureAwait(false);
+            return;
+        }
+
+        // Issue #1312: glossary termIt collision — returns 409 with collidingEntryId
+        // + collidingTermEn so the FE can render the collision banner.
+        if (ex is GlossaryTermCollisionException glossaryCollisionEx)
+        {
+            await HandleGlossaryCollisionAsync(context, glossaryCollisionEx).ConfigureAwait(false);
             return;
         }
 
@@ -175,6 +184,39 @@ internal class ApiExceptionHandlerMiddleware
             current = tierLimitException.Current,
             max = tierLimitException.Max,
             upgradeUrl = tierLimitException.UpgradeUrl,
+            correlationId = context.TraceIdentifier,
+            timestamp = DateTime.UtcNow
+        };
+
+        await context.Response.WriteAsJsonAsync(errorResponse).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Handles <see cref="GlossaryTermCollisionException"/> with HTTP 409 and a
+    /// body carrying the colliding entry's identifiers so the FE collision UI
+    /// can render the recovery actions. Issue #1312.
+    /// </summary>
+    private async Task HandleGlossaryCollisionAsync(
+        HttpContext context,
+        GlossaryTermCollisionException glossaryCollisionException)
+    {
+        var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
+
+        MeepleAiMetrics.RecordApiError(
+            exception: glossaryCollisionException,
+            httpStatusCode: StatusCodes.Status409Conflict,
+            endpoint: endpoint,
+            isUnhandled: true);
+
+        context.Response.StatusCode = StatusCodes.Status409Conflict;
+        context.Response.ContentType = "application/json";
+
+        var errorResponse = new
+        {
+            error = "glossary_term_collision",
+            message = glossaryCollisionException.Message,
+            collidingEntryId = glossaryCollisionException.CollidingEntryId,
+            collidingTermEn = glossaryCollisionException.CollidingTermEn,
             correlationId = context.TraceIdentifier,
             timestamp = DateTime.UtcNow
         };

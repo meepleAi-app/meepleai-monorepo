@@ -8,16 +8,18 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <summary>
 /// Handler for <see cref="GetParagraphQuery"/>.
 ///
-/// Implements a two-strategy retrieval approach:
+/// Implements a two-strategy retrieval approach that dispatches on
+/// <see cref="GetParagraphQuery.LookupKey"/>:
 /// 1. <b>Numbered lookup</b>: queries <c>photo_batch_pages</c> directly for the page text.
-///    Fast and deterministic when OCR has already processed the page.
+///    - For <see cref="ParagraphLookupKey.ByPageNumber"/>: filter by physical page index.
+///    - For <see cref="ParagraphLookupKey.ByParagraphNumber"/> (issue #747): filter by
+///      the narrative paragraph identifier extracted into <c>paragraph_numbers</c>.
 /// 2. <b>Semantic fallback</b>: when numbered text is absent, delegates to
-///    <see cref="SearchQueryHandler"/> to perform a hybrid RAG search and surface the
-///    closest matching passages from the game's knowledge base.
+///    <see cref="SearchQueryHandler"/> for a hybrid RAG search.
 ///
 /// Authorization: validates batch ownership before any data access.
 ///
-/// Libro Game AI Assistant MVP Phase 3 — G4.
+/// Libro Game AI Assistant MVP Phase 3 — G4. Issue #747 PR-B.
 ///
 /// NOTE on semantic-fallback unit testing: <see cref="SearchQueryHandler"/> is a concrete
 /// class with a non-virtual <c>Handle</c> method and six infrastructure dependencies.
@@ -36,9 +38,15 @@ internal sealed class GetParagraphQueryHandler(
         GetParagraphQuery query,
         CancellationToken cancellationToken)
     {
-        // Validate page number early — delegates to a static helper where 'pageNumber'
-        // is a real method parameter (required by CA2208/MA0015/S3928).
-        ValidatePageNumber(query.PageNumber);
+        ArgumentNullException.ThrowIfNull(query);
+
+        if (query.LookupKey is null)
+            throw new ArgumentException("LookupKey must not be null", nameof(query));
+
+        // Eager validation: lookup-key shape is malformed → ArgumentOutOfRange before
+        // any DB call. Keeps the test surface (and the 400 response shape) identical to
+        // the pre-#747 page-number path.
+        ValidateLookupKey(query.LookupKey);
 
         // Authorization: only the batch owner may read page text.
         var belongs = await repo.BelongsToUserAsync(
@@ -47,27 +55,28 @@ internal sealed class GetParagraphQueryHandler(
         if (!belongs)
             throw new NotFoundException("PhotoBatchUpload", query.PhotoBatchUploadId.ToString());
 
-        // Strategy 1: Numbered lookup.
-        var pageText = await repo.GetPageTextAsync(
-            query.PhotoBatchUploadId, query.PageNumber, cancellationToken).ConfigureAwait(false);
+        // Strategy 1: Numbered lookup — dispatch on LookupKey type.
+        var (resolvedPageNumber, pageText) = await ResolveNumberedLookupAsync(
+            query.PhotoBatchUploadId, query.LookupKey, cancellationToken).ConfigureAwait(false);
 
         if (!string.IsNullOrWhiteSpace(pageText))
         {
             logger.LogDebug(
-                "[GetParagraphQuery] Page {Page} of batch {BatchId}: numbered lookup succeeded ({Chars} chars)",
-                query.PageNumber, query.PhotoBatchUploadId, pageText.Length);
+                "[GetParagraphQuery] Numbered lookup succeeded on batch {BatchId} for {LookupKey} ({Chars} chars, page {PageNumber})",
+                query.PhotoBatchUploadId, query.LookupKey, pageText.Length, resolvedPageNumber);
 
-            return new ParagraphDto(
-                PageNumber: query.PageNumber,
-                Text: pageText,
-                FallbackUsed: false,
-                FallbackMethod: null);
+            return BuildResponse(
+                pageNumber: resolvedPageNumber,
+                text: pageText,
+                fallbackUsed: false,
+                fallbackMethod: null,
+                lookupKey: query.LookupKey);
         }
 
         // Strategy 2: Semantic fallback.
-        // Numbered text absent (page not yet indexed or blank) — fetch the batch aggregate
-        // to validate the page number is within bounds and to obtain the GameId needed
-        // for the RAG search.
+        // Numbered text absent (page not yet indexed, blank, or paragraph not extracted).
+        // For ByPageNumber we also validate the requested page is within the batch's
+        // declared total — preserves the 400 contract from the legacy implementation.
         var upload = await repo.GetByIdAsync(
             query.PhotoBatchUploadId, cancellationToken).ConfigureAwait(false);
 
@@ -76,10 +85,11 @@ internal sealed class GetParagraphQueryHandler(
         if (upload is null)
             throw new NotFoundException("PhotoBatchUpload", query.PhotoBatchUploadId.ToString());
 
-        ValidatePageNumber(query.PageNumber, upload.TotalPages);
+        if (query.LookupKey is ParagraphLookupKey.ByPageNumber pageKey)
+            ValidatePageInRange(pageKey.PageNumber, upload.TotalPages);
 
         var hint = string.IsNullOrWhiteSpace(query.SemanticFallbackHint)
-            ? $"page {query.PageNumber} content"
+            ? DefaultHintFor(query.LookupKey)
             : query.SemanticFallbackHint;
 
         try
@@ -98,14 +108,15 @@ internal sealed class GetParagraphQueryHandler(
                 : string.Empty;
 
             logger.LogInformation(
-                "[GetParagraphQuery] Page {Page} of batch {BatchId}: numbered text absent, semantic fallback returned {Count} result(s)",
-                query.PageNumber, query.PhotoBatchUploadId, results.Count);
+                "[GetParagraphQuery] Numbered text absent for {LookupKey} on batch {BatchId}; semantic fallback returned {Count} result(s)",
+                query.LookupKey, query.PhotoBatchUploadId, results.Count);
 
-            return new ParagraphDto(
-                PageNumber: query.PageNumber,
-                Text: fallbackText,
-                FallbackUsed: true,
-                FallbackMethod: "semantic");
+            return BuildResponse(
+                pageNumber: resolvedPageNumber,
+                text: fallbackText,
+                fallbackUsed: true,
+                fallbackMethod: "semantic",
+                lookupKey: query.LookupKey);
         }
         catch (Exception ex) when (ex is not OperationCanceledException
                                    && ex is not ArgumentOutOfRangeException
@@ -114,30 +125,117 @@ internal sealed class GetParagraphQueryHandler(
             // Graceful degradation: a RAG search failure should not surface as a 500.
             // Return empty text with fallback flag set so the caller can decide.
             logger.LogWarning(ex,
-                "[GetParagraphQuery] Semantic fallback failed for page {Page} of batch {BatchId}; returning empty text",
-                query.PageNumber, query.PhotoBatchUploadId);
+                "[GetParagraphQuery] Semantic fallback failed for {LookupKey} on batch {BatchId}; returning empty text",
+                query.LookupKey, query.PhotoBatchUploadId);
 
-            return new ParagraphDto(
-                PageNumber: query.PageNumber,
-                Text: string.Empty,
-                FallbackUsed: true,
-                FallbackMethod: "semantic");
+            return BuildResponse(
+                pageNumber: resolvedPageNumber,
+                text: string.Empty,
+                fallbackUsed: true,
+                fallbackMethod: "semantic",
+                lookupKey: query.LookupKey);
         }
     }
 
     /// <summary>
-    /// Validates <paramref name="pageNumber"/> is within the allowed range.
+    /// Routes the numbered lookup to the right repository call based on the discriminator.
+    /// Returns the physical page number that backed the response (0 when no row matched)
+    /// alongside the extracted text (null when the row exists but text is empty, or when
+    /// no row matched).
     /// </summary>
-    /// <param name="pageNumber">The 1-based page number to validate.</param>
-    /// <param name="totalPages">
-    /// Optional upper bound (batch total). When <c>0</c> (default) only the lower-bound
-    /// check is performed.
-    /// </param>
-    private static void ValidatePageNumber(int pageNumber, int totalPages = 0)
+    private async Task<(int PageNumber, string? Text)> ResolveNumberedLookupAsync(
+        Guid uploadId,
+        ParagraphLookupKey lookupKey,
+        CancellationToken cancellationToken)
     {
-        ArgumentOutOfRangeException.ThrowIfLessThan(pageNumber, 1);
+        switch (lookupKey)
+        {
+            case ParagraphLookupKey.ByPageNumber byPage:
+                var byPageText = await repo.GetPageTextAsync(
+                    uploadId, byPage.PageNumber, cancellationToken).ConfigureAwait(false);
+                return (byPage.PageNumber, byPageText);
 
+            case ParagraphLookupKey.ByParagraphNumber byParagraph:
+                var byParagraphMatch = await repo.GetPageTextByParagraphNumberAsync(
+                    uploadId, byParagraph.ParagraphNumber, cancellationToken).ConfigureAwait(false);
+                return byParagraphMatch is null ? (0, null) : byParagraphMatch.Value;
+
+            default:
+                // Compiler enforces exhaustiveness via the sealed hierarchy, but the runtime
+                // guard catches a future record added without updating the switch.
+                throw new ArgumentOutOfRangeException(
+                    nameof(lookupKey),
+                    lookupKey,
+                    $"Unsupported {nameof(ParagraphLookupKey)} variant.");
+        }
+    }
+
+    /// <summary>
+    /// Validates the embedded number for each lookup variant. Lower bound only; the upper
+    /// bound for <see cref="ParagraphLookupKey.ByPageNumber"/> requires the batch aggregate
+    /// (validated lazily in the fallback branch).
+    /// </summary>
+    private static void ValidateLookupKey(ParagraphLookupKey lookupKey)
+    {
+        switch (lookupKey)
+        {
+            case ParagraphLookupKey.ByPageNumber byPage:
+                if (byPage.PageNumber < 1)
+                    throw new ArgumentOutOfRangeException(
+                        nameof(lookupKey),
+                        byPage.PageNumber,
+                        $"PageNumber must be ≥ 1; got {byPage.PageNumber}.");
+                break;
+            case ParagraphLookupKey.ByParagraphNumber byParagraph:
+                if (byParagraph.ParagraphNumber < 1)
+                    throw new ArgumentOutOfRangeException(
+                        nameof(lookupKey),
+                        byParagraph.ParagraphNumber,
+                        $"ParagraphNumber must be ≥ 1; got {byParagraph.ParagraphNumber}.");
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(lookupKey),
+                    lookupKey,
+                    $"Unsupported {nameof(ParagraphLookupKey)} variant.");
+        }
+    }
+
+    private static void ValidatePageInRange(int pageNumber, int totalPages)
+    {
         if (totalPages > 0)
             ArgumentOutOfRangeException.ThrowIfGreaterThan(pageNumber, totalPages);
     }
+
+    /// <summary>
+    /// Builds the response DTO, surfacing <see cref="ParagraphDto.ParagraphNumber"/> only
+    /// when the caller used <see cref="ParagraphLookupKey.ByParagraphNumber"/> so existing
+    /// page-based consumers see no schema change.
+    /// </summary>
+    private static ParagraphDto BuildResponse(
+        int pageNumber,
+        string text,
+        bool fallbackUsed,
+        string? fallbackMethod,
+        ParagraphLookupKey lookupKey)
+    {
+        var paragraphNumber = lookupKey is ParagraphLookupKey.ByParagraphNumber byParagraph
+            ? byParagraph.ParagraphNumber
+            : (int?)null;
+
+        return new ParagraphDto(
+            PageNumber: pageNumber,
+            Text: text,
+            FallbackUsed: fallbackUsed,
+            FallbackMethod: fallbackMethod,
+            ParagraphNumber: paragraphNumber);
+    }
+
+    private static string DefaultHintFor(ParagraphLookupKey lookupKey)
+        => lookupKey switch
+        {
+            ParagraphLookupKey.ByPageNumber byPage => $"page {byPage.PageNumber} content",
+            ParagraphLookupKey.ByParagraphNumber byParagraph => $"paragraph {byParagraph.ParagraphNumber} content",
+            _ => "page content",
+        };
 }

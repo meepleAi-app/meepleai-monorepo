@@ -28,8 +28,8 @@ internal interface IPhotoBatchUploadRepository : IRepository<PhotoBatchUpload, G
     Task<string?> GetPageTextAsync(Guid uploadId, int pageNumber, CancellationToken ct = default);
 
     /// <summary>
-    /// Returns the extracted text of the first page in a batch whose
-    /// <c>paragraph_numbers</c> array contains <paramref name="paragraphNumber"/>,
+    /// Returns the physical page number and extracted text of the first page in a batch
+    /// whose <c>paragraph_numbers</c> array contains <paramref name="paragraphNumber"/>,
     /// or <c>null</c> when no page matches.
     /// Issue #747: paragraph-number lookup distinct from physical page index.
     /// </summary>
@@ -38,8 +38,11 @@ internal interface IPhotoBatchUploadRepository : IRepository<PhotoBatchUpload, G
     /// pipeline cannot disambiguate; the first page (ordered by <c>page_number</c>) is
     /// returned to keep behavior deterministic. Callers needing every match should issue
     /// a dedicated query.
+    /// <para>The tuple's <c>PageNumber</c> lets the calling handler surface the physical
+    /// location back to the consumer; <c>Text</c> may still be null if the page row
+    /// exists but its OCR text wasn't persisted (rare; semantic fallback handles it).</para>
     /// </remarks>
-    Task<string?> GetPageTextByParagraphNumberAsync(
+    Task<(int PageNumber, string? Text)?> GetPageTextByParagraphNumberAsync(
         Guid uploadId,
         int paragraphNumber,
         CancellationToken ct = default);

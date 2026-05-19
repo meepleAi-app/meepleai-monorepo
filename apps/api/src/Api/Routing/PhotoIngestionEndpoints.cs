@@ -15,9 +15,10 @@ namespace Api.Routing;
 /// Exposes upload and status-polling for scanned rulebook photo batches.
 ///
 /// Endpoints:
-///   POST /api/v1/photo-batches                                 — submit a new photo batch
-///   GET  /api/v1/photo-batches/{id}                            — poll status / per-page results
-///   GET  /api/v1/photo-batches/{id}/paragraphs/{pageNumber}    — retrieve OCR text for a page (G4)
+///   POST /api/v1/photo-batches                                                — submit a new photo batch
+///   GET  /api/v1/photo-batches/{id}                                           — poll status / per-page results
+///   GET  /api/v1/photo-batches/{id}/paragraphs/{pageNumber}                   — retrieve OCR text by physical page (G4 legacy)
+///   GET  /api/v1/photo-batches/{id}/paragraphs/by-paragraph/{paragraphNumber} — retrieve OCR text by narrative paragraph (#747)
 /// </summary>
 internal static class PhotoIngestionEndpoints
 {
@@ -45,7 +46,7 @@ internal static class PhotoIngestionEndpoints
             .WithDescription("Returns the current status of a photo batch including per-page OCR results and thumbnail URLs. Only the batch owner may call this endpoint.");
 
         // GET /photo-batches/{batchId}/paragraphs/{pageNumber} — retrieve OCR text for a page (G4)
-        group.MapGet("/photo-batches/{batchId:guid}/paragraphs/{pageNumber:int}", HandleGetParagraph)
+        group.MapGet("/photo-batches/{batchId:guid}/paragraphs/{pageNumber:int}", HandleGetParagraphByPage)
             .RequireAuthenticatedUser()
             .Produces<ParagraphDto>(200)
             .Produces(400)
@@ -59,28 +60,65 @@ internal static class PhotoIngestionEndpoints
                 "Only the batch owner may call this endpoint. " +
                 "Libro Game AI Assistant MVP Phase 3 — G4.");
 
+        // GET /photo-batches/{batchId}/paragraphs/by-paragraph/{paragraphNumber} — retrieve OCR text by narrative paragraph (#747)
+        group.MapGet("/photo-batches/{batchId:guid}/paragraphs/by-paragraph/{paragraphNumber:int}", HandleGetParagraphByParagraph)
+            .RequireAuthenticatedUser()
+            .Produces<ParagraphDto>(200)
+            .Produces(400)
+            .Produces(401)
+            .Produces(404)
+            .WithTags("PhotoIngestion")
+            .WithSummary("Get OCR text by narrative paragraph number")
+            .WithDescription(
+                "Returns the extracted OCR text of the first photo whose `paragraph_numbers` array contains the requested narrative paragraph. " +
+                "When no page carries the paragraph a semantic RAG search is used as fallback. " +
+                "Only the batch owner may call this endpoint. " +
+                "Issue #747 PR-B.");
+
         return group;
     }
 
     #region Handlers
 
-    private static async Task<IResult> HandleGetParagraph(
+    private static Task<IResult> HandleGetParagraphByPage(
         Guid batchId,
         int pageNumber,
         [FromQuery] string? hint,
         HttpContext httpContext,
         [FromServices] IMediator mediator,
         CancellationToken cancellationToken)
+        => DispatchParagraphQueryAsync(
+            httpContext,
+            mediator,
+            userId => GetParagraphQuery.ByPage(batchId, pageNumber, userId, hint),
+            cancellationToken);
+
+    private static Task<IResult> HandleGetParagraphByParagraph(
+        Guid batchId,
+        int paragraphNumber,
+        [FromQuery] string? hint,
+        HttpContext httpContext,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+        => DispatchParagraphQueryAsync(
+            httpContext,
+            mediator,
+            userId => GetParagraphQuery.ByParagraph(batchId, paragraphNumber, userId, hint),
+            cancellationToken);
+
+    private static async Task<IResult> DispatchParagraphQueryAsync(
+        HttpContext httpContext,
+        IMediator mediator,
+        Func<Guid, GetParagraphQuery> queryFactory,
+        CancellationToken cancellationToken)
     {
         var userId = ExtractUserId(httpContext);
         if (userId == Guid.Empty)
             return Results.Unauthorized();
 
-        var query = new GetParagraphQuery(batchId, pageNumber, userId, hint);
-
         try
         {
-            var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
+            var result = await mediator.Send(queryFactory(userId), cancellationToken).ConfigureAwait(false);
             return Results.Ok(result);
         }
         catch (ArgumentOutOfRangeException ex)

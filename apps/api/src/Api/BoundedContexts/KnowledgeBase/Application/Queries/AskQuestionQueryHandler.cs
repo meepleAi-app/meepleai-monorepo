@@ -7,11 +7,13 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
+using Api.Configuration;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Translation;
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
@@ -49,6 +51,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly IHouseRuleMatcher _houseRuleMatcher;
     private readonly IPricingEngine _pricingEngine;
     private readonly IGenericTranslationService _genericTranslationService;
+    private readonly IOptionsMonitor<LlmQueryComplexityRoutingOptions> _routingOptions;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
 
     public AskQuestionQueryHandler(
@@ -68,6 +71,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         IHouseRuleMatcher houseRuleMatcher,
         IPricingEngine pricingEngine,
         IGenericTranslationService genericTranslationService,
+        IOptionsMonitor<LlmQueryComplexityRoutingOptions> routingOptions,
         ILogger<AskQuestionQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
@@ -86,6 +90,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _houseRuleMatcher = houseRuleMatcher ?? throw new ArgumentNullException(nameof(houseRuleMatcher));
         _pricingEngine = pricingEngine ?? throw new ArgumentNullException(nameof(pricingEngine));
         _genericTranslationService = genericTranslationService ?? throw new ArgumentNullException(nameof(genericTranslationService));
+        _routingOptions = routingOptions ?? throw new ArgumentNullException(nameof(routingOptions));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -102,10 +107,18 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogDebug(
             "[AskQuestionHandler] QueryComplexityAnalyzer: Question={Question}, RoutingTier={RoutingTier}",
             query.Question, queryRoutingTier);
-#pragma warning disable S1135, MA0026 // Deferred: requires ILlmService per-call model-override support (not yet available)
-        // TODO: Pass queryRoutingTier to ILlmService for model selection when per-call model-override support is available.
-        // Currently the tier is captured in RagQueryMetrics.Strategy for observability only.
-#pragma warning restore S1135, MA0026
+
+        // Issue #562: tier → model override resolved from `LlmRouting:QueryComplexityModels`.
+        // When the per-tier value is empty/null the handler keeps using the default model
+        // selected by ILlmService (backward-compatible no-op). Otherwise the routing
+        // dispatches through ILlmService.GenerateCompletionWithModelAsync (Issue #4332).
+        var modelOverride = _routingOptions.CurrentValue.ResolveOverride(queryRoutingTier);
+        if (modelOverride is not null)
+        {
+            _logger.LogDebug(
+                "[AskQuestionHandler] Per-tier model override active: Tier={Tier}, Model={Model}",
+                queryRoutingTier, modelOverride);
+        }
 
         // RAG access enforcement
         if (query.UserId.HasValue)
@@ -303,7 +316,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogDebug("[AskQuestionHandler] Step 4: Generating LLM answer...");
         var sw4 = System.Diagnostics.Stopwatch.StartNew();
         var (llmResponse, llmResult) = await GenerateLlmAnswerAndRecordMetricsAsync(
-            systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+            systemPrompt, userPrompt, modelOverride, cancellationToken).ConfigureAwait(false);
         sw4.Stop();
         _logger.LogInformation("[AskQuestionHandler] Step 4 DONE: LLM generation completed in {ElapsedMs}ms - Response: {ResponseLength} chars",
             sw4.ElapsedMilliseconds, llmResponse?.Length ?? 0);
@@ -468,13 +481,25 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private async Task<(string llmResponse, LlmCompletionResult llmResult)> GenerateLlmAnswerAndRecordMetricsAsync(
         string systemPrompt,
         string userPrompt,
+        string? modelOverride,
         CancellationToken cancellationToken)
     {
-        var llmResult = await _llmService.GenerateCompletionAsync(
-            systemPrompt,
-            userPrompt,
-            RequestSource.RagPipeline,
-            cancellationToken).ConfigureAwait(false);
+        // Issue #562: when modelOverride is provided (from LlmRouting:QueryComplexityModels),
+        // dispatch through GenerateCompletionWithModelAsync (Issue #4332). Otherwise
+        // fall back to the default model selection on ILlmService.
+        var llmResult = modelOverride is not null
+            ? await _llmService.GenerateCompletionWithModelAsync(
+                modelOverride,
+                systemPrompt,
+                userPrompt,
+                RequestSource.RagPipeline,
+                maxTokens: null,
+                cancellationToken).ConfigureAwait(false)
+            : await _llmService.GenerateCompletionAsync(
+                systemPrompt,
+                userPrompt,
+                RequestSource.RagPipeline,
+                cancellationToken).ConfigureAwait(false);
 
         var llmResponse = llmResult.Response;
 

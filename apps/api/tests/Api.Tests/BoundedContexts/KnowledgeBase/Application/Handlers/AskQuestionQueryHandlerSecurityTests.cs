@@ -210,6 +210,9 @@ public class AskQuestionQueryHandlerSecurityTests
                 DurationMs = 250
             });
 
+        var routingOptionsMonitor = new Mock<Microsoft.Extensions.Options.IOptionsMonitor<Api.Configuration.LlmQueryComplexityRoutingOptions>>();
+        routingOptionsMonitor.Setup(m => m.CurrentValue).Returns(new Api.Configuration.LlmQueryComplexityRoutingOptions());
+
         _handler = new AskQuestionQueryHandler(
             _searchHandler,
             _mockQualityService.Object,
@@ -227,6 +230,7 @@ public class AskQuestionQueryHandlerSecurityTests
             CreatePermissiveHouseRuleMatcherMock(),
             CreatePermissivePricingEngineMock(),
             CreateNoOpTranslationServiceMock(),
+            routingOptionsMonitor.Object,
             _mockLogger.Object);
     }
 

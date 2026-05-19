@@ -61,31 +61,41 @@ public sealed class GetRegularsQueryHandlerTests : IDisposable
         return user;
     }
 
-    private async Task<GameNightEventEntity> SeedGameNightAsync(Guid organizerId, DateTimeOffset? createdAt = null)
+    private async Task<GameNightEventEntity> SeedGameNightAsync(
+        Guid organizerId,
+        DateTimeOffset? scheduledAt = null)
     {
+        // Past by default so the regulars handler's "past + window" filter
+        // (PR #1294 review fix) admits the seeded events unless a test explicitly
+        // overrides scheduledAt to a future date to validate exclusion.
+        var effective = scheduledAt ?? DateTimeOffset.UtcNow.AddDays(-1);
         var gn = new GameNightEventEntity
         {
             Id = Guid.NewGuid(),
             OrganizerId = organizerId,
             Title = "Test Night",
-            ScheduledAt = (createdAt ?? DateTimeOffset.UtcNow).AddDays(7),
+            ScheduledAt = effective,
             GameIdsJson = "[]",
             Status = "Draft",
-            CreatedAt = createdAt ?? DateTimeOffset.UtcNow,
+            CreatedAt = effective,
         };
         _dbContext.GameNightEvents.Add(gn);
         await _dbContext.SaveChangesAsync();
         return gn;
     }
 
-    private async Task SeedRsvpAsync(Guid eventId, Guid userId, DateTimeOffset? createdAt = null)
+    private async Task SeedRsvpAsync(
+        Guid eventId,
+        Guid userId,
+        DateTimeOffset? createdAt = null,
+        string status = "Pending")
     {
         var rsvp = new GameNightRsvpEntity
         {
             Id = Guid.NewGuid(),
             EventId = eventId,
             UserId = userId,
-            Status = "Pending",
+            Status = status,
             CreatedAt = createdAt ?? DateTimeOffset.UtcNow,
         };
         _dbContext.GameNightRsvps.Add(rsvp);
@@ -156,25 +166,94 @@ public sealed class GetRegularsQueryHandlerTests : IDisposable
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // 12-month window
+    // 12-month window — based on game night ScheduledAt (PR #1294 review fix)
     // ────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Handle_ExcludesRsvpsOlderThan12Months()
+    public async Task Handle_ExcludesGameNightsScheduledMoreThan12MonthsAgo()
     {
         var organizer = await SeedUserAsync();
         var old = await SeedUserAsync("OldFriend");
         var recent = await SeedUserAsync("RecentFriend");
-        var gn1 = await SeedGameNightAsync(organizer.Id);
-        var gn2 = await SeedGameNightAsync(organizer.Id);
 
-        await SeedRsvpAsync(gn1.Id, old.Id, DateTimeOffset.UtcNow.AddMonths(-13));
-        await SeedRsvpAsync(gn2.Id, recent.Id, DateTimeOffset.UtcNow.AddMonths(-1));
+        // Old event: scheduledAt 13 months ago (regardless of rsvp.CreatedAt) → EXCLUDED
+        var oldNight = await SeedGameNightAsync(organizer.Id, scheduledAt: DateTimeOffset.UtcNow.AddMonths(-13));
+        await SeedRsvpAsync(oldNight.Id, old.Id, createdAt: DateTimeOffset.UtcNow.AddMonths(-13));
+
+        // Recent event: scheduledAt 1 month ago → INCLUDED
+        var recentNight = await SeedGameNightAsync(organizer.Id, scheduledAt: DateTimeOffset.UtcNow.AddMonths(-1));
+        await SeedRsvpAsync(recentNight.Id, recent.Id);
 
         var result = await _sut.Handle(new GetRegularsQuery(organizer.Id), CancellationToken.None);
 
         result.Should().ContainSingle();
         result[0].Id.Should().Be(recent.Id);
+    }
+
+    [Fact]
+    public async Task Handle_ExcludesFutureGameNights()
+    {
+        // Spec §7b.2: regulars come from PAST game nights. Future-scheduled events
+        // should not contribute to the "current play patterns" ranking.
+        var organizer = await SeedUserAsync();
+        var futureInvitee = await SeedUserAsync("FutureFriend");
+        var pastInvitee = await SeedUserAsync("PastFriend");
+
+        var futureNight = await SeedGameNightAsync(organizer.Id, scheduledAt: DateTimeOffset.UtcNow.AddDays(30));
+        await SeedRsvpAsync(futureNight.Id, futureInvitee.Id);
+
+        var pastNight = await SeedGameNightAsync(organizer.Id, scheduledAt: DateTimeOffset.UtcNow.AddDays(-7));
+        await SeedRsvpAsync(pastNight.Id, pastInvitee.Id);
+
+        var result = await _sut.Handle(new GetRegularsQuery(organizer.Id), CancellationToken.None);
+
+        result.Should().ContainSingle();
+        result[0].Id.Should().Be(pastInvitee.Id);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // RSVP status filtering (PR #1294 review fix)
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_ExcludesDeclinedRsvps()
+    {
+        // A user who declined every invitation is not a "regular" by play patterns.
+        var organizer = await SeedUserAsync();
+        var declined = await SeedUserAsync("Declined");
+        var attending = await SeedUserAsync("Attending");
+        var pastNight = await SeedGameNightAsync(organizer.Id, scheduledAt: DateTimeOffset.UtcNow.AddDays(-7));
+
+        await SeedRsvpAsync(pastNight.Id, declined.Id, status: "Declined");
+        await SeedRsvpAsync(pastNight.Id, attending.Id, status: "Accepted");
+
+        var result = await _sut.Handle(new GetRegularsQuery(organizer.Id), CancellationToken.None);
+
+        result.Should().ContainSingle();
+        result[0].Id.Should().Be(attending.Id);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Organizer self-exclusion (PR #1294 review fix)
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_ExcludesOrganizerSelfFromOwnRegulars()
+    {
+        // Edge case: organizer was added to their own RSVPs list (legacy seed data
+        // or accidental self-invite). They should never appear in their own
+        // regulars suggestion list.
+        var organizer = await SeedUserAsync("Organizer");
+        var friend = await SeedUserAsync("Friend");
+        var pastNight = await SeedGameNightAsync(organizer.Id, scheduledAt: DateTimeOffset.UtcNow.AddDays(-7));
+
+        await SeedRsvpAsync(pastNight.Id, organizer.Id, status: "Accepted");
+        await SeedRsvpAsync(pastNight.Id, friend.Id, status: "Accepted");
+
+        var result = await _sut.Handle(new GetRegularsQuery(organizer.Id), CancellationToken.None);
+
+        result.Should().ContainSingle();
+        result[0].Id.Should().Be(friend.Id);
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -229,8 +308,10 @@ public sealed class GetRegularsQueryHandlerTests : IDisposable
     {
         var organizer = await SeedUserAsync();
         var alice = await SeedUserAsync(displayName: "Alice", email: "alice@example.com");
-        var gn = await SeedGameNightAsync(organizer.Id);
-        await SeedRsvpAsync(gn.Id, alice.Id, DateTimeOffset.UtcNow.AddDays(-7));
+        // PR #1294 review fix: LastInvitedAt is sourced from GameNight.ScheduledAt
+        // (event-occurrence semantic), not GameNightRsvp.CreatedAt (invitation-creation).
+        var gn = await SeedGameNightAsync(organizer.Id, scheduledAt: DateTimeOffset.UtcNow.AddDays(-7));
+        await SeedRsvpAsync(gn.Id, alice.Id);
 
         var result = await _sut.Handle(new GetRegularsQuery(organizer.Id), CancellationToken.None);
 

@@ -59,9 +59,11 @@ internal sealed class CheckGameNightConflictQueryHandler
 
         // Pull active candidate events in the window the user is invited to but
         // does NOT organize (those are already in `organizerHits`).
+        // PR #1294 review fix: exclude Declined RSVPs — a user who explicitly
+        // declined an invitation has freed that slot in their calendar.
         var inviteeHits = await _context.GameNightRsvps
             .AsNoTracking()
-            .Where(r => r.UserId == query.UserId)
+            .Where(r => r.UserId == query.UserId && r.Status != "Declined")
             .Join(
                 _context.GameNightEvents.AsNoTracking()
                     .Where(gn => gn.OrganizerId != query.UserId

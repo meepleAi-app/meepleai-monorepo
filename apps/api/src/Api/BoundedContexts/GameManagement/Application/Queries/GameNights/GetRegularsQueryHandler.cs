@@ -31,32 +31,47 @@ internal sealed class GetRegularsQueryHandler : IQueryHandler<GetRegularsQuery, 
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var cutoff = DateTimeOffset.UtcNow.Subtract(RegularsWindow);
+        var now = DateTimeOffset.UtcNow;
+        var cutoff = now.Subtract(RegularsWindow);
 
-        // Pull the raw RSVPs in the window scoped to the organizer's game nights,
-        // joined with the User projection needed for the DTO. Grouping is done in
-        // memory (post-ToListAsync) because EF Core InMemory does not support
-        // composite-key GroupBy → Select translation, and Postgres group cardinality
-        // is bounded by the number of distinct invitees (≤ 49 × N events) which
-        // remains small in practice.
+        // PR #1294 review fixes:
+        //   - Window predicate uses GameNight.ScheduledAt (when the event happened)
+        //     instead of GameNightRsvp.CreatedAt (when the invitation was issued).
+        //     The spec describes "past co-participants in the last 12 months", which
+        //     is an event-occurrence semantic, not an invitation-creation one.
+        //   - Future-scheduled events are excluded so "current play patterns" don't
+        //     surface invitees from events that haven't happened yet.
+        //   - Declined RSVPs are excluded: a string of declines is the opposite of
+        //     a regular play pattern.
+        //   - The organizer themselves is excluded from their own regulars list
+        //     even if seed/test data has them in the RSVP table.
+        //
+        // Grouping is done in memory (post-ToListAsync) because EF Core InMemory
+        // does not support composite-key GroupBy → Select translation, and Postgres
+        // group cardinality is bounded by the number of distinct invitees per
+        // organizer in the window (small in practice).
         var raw = await _context.GameNightRsvps
             .AsNoTracking()
-            .Where(r => r.CreatedAt > cutoff)
+            .Where(rsvp => rsvp.Status != "Declined")
+            .Where(rsvp => rsvp.UserId != query.UserId)
             .Join(
-                _context.GameNightEvents.AsNoTracking().Where(gn => gn.OrganizerId == query.UserId),
+                _context.GameNightEvents.AsNoTracking()
+                    .Where(gn => gn.OrganizerId == query.UserId
+                        && gn.ScheduledAt > cutoff
+                        && gn.ScheduledAt <= now),
                 rsvp => rsvp.EventId,
                 gn => gn.Id,
-                (rsvp, _) => rsvp)
+                (rsvp, gn) => new { rsvp.UserId, gn.ScheduledAt })
             .Join(
                 _context.Users.AsNoTracking(),
-                rsvp => rsvp.UserId,
+                pair => pair.UserId,
                 user => user.Id,
-                (rsvp, user) => new
+                (pair, user) => new
                 {
                     user.Id,
                     user.DisplayName,
                     user.Email,
-                    rsvp.CreatedAt,
+                    pair.ScheduledAt,
                 })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -68,7 +83,7 @@ internal sealed class GetRegularsQueryHandler : IQueryHandler<GetRegularsQuery, 
                 DisplayName: group.Key.DisplayName ?? group.Key.Email,
                 Email: group.Key.Email,
                 EventCount: group.Count(),
-                LastInvitedAt: group.Max(x => x.CreatedAt)))
+                LastInvitedAt: group.Max(x => x.ScheduledAt)))
             .OrderByDescending(dto => dto.EventCount)
             .ThenByDescending(dto => dto.LastInvitedAt)
             .Take(query.Limit)

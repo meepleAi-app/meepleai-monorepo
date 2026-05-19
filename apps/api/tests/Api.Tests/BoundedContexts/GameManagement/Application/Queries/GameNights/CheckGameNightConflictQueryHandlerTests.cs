@@ -82,14 +82,14 @@ public sealed class CheckGameNightConflictQueryHandlerTests : IDisposable
         return gn;
     }
 
-    private async Task SeedRsvpAsync(Guid eventId, Guid userId)
+    private async Task SeedRsvpAsync(Guid eventId, Guid userId, string status = "Pending")
     {
         _dbContext.GameNightRsvps.Add(new GameNightRsvpEntity
         {
             Id = Guid.NewGuid(),
             EventId = eventId,
             UserId = userId,
-            Status = "Pending",
+            Status = status,
             CreatedAt = DateTimeOffset.UtcNow,
         });
         await _dbContext.SaveChangesAsync();
@@ -230,6 +230,42 @@ public sealed class CheckGameNightConflictQueryHandlerTests : IDisposable
 
         var result = await _sut.Handle(
             new CheckGameNightConflictQuery(user.Id, proposedAt),
+            CancellationToken.None);
+
+        result.HasConflict.Should().BeTrue();
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Declined RSVPs do not block the calendar (PR #1294 review fix)
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_WithDeclinedInvitation_DoesNotReturnConflict()
+    {
+        var marco = await SeedUserAsync();
+        var alice = await SeedUserAsync();
+        var proposedAt = DateTimeOffset.UtcNow.AddDays(7);
+        var aliceNight = await SeedGameNightAsync(alice.Id, proposedAt.AddHours(1));
+        await SeedRsvpAsync(aliceNight.Id, marco.Id, status: "Declined");
+
+        var result = await _sut.Handle(
+            new CheckGameNightConflictQuery(marco.Id, proposedAt),
+            CancellationToken.None);
+
+        result.HasConflict.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_WithAcceptedInvitation_ReturnsConflict()
+    {
+        var marco = await SeedUserAsync();
+        var alice = await SeedUserAsync();
+        var proposedAt = DateTimeOffset.UtcNow.AddDays(7);
+        var aliceNight = await SeedGameNightAsync(alice.Id, proposedAt.AddHours(1));
+        await SeedRsvpAsync(aliceNight.Id, marco.Id, status: "Accepted");
+
+        var result = await _sut.Handle(
+            new CheckGameNightConflictQuery(marco.Id, proposedAt),
             CancellationToken.None);
 
         result.HasConflict.Should().BeTrue();

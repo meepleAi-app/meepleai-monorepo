@@ -23,10 +23,15 @@ export function useSoftWarningDismissal(
   used: number,
   total: number
 ): { readonly shouldShow: boolean; readonly dismiss: () => void } {
-  const initialDismissed =
-    typeof sessionStorage !== 'undefined' &&
-    sessionStorage.getItem(SOFT_WARNING_STORAGE_KEY) !== null;
-  const [dismissed, setDismissed] = useState<boolean>(initialDismissed);
+  // Lazy initializer so the sessionStorage read happens only on the client.
+  // During SSR the arrow function never runs and `dismissed` defaults to false,
+  // preventing the hydration mismatch that would occur if a prior tab session
+  // had stored a dismissal timestamp.
+  const [dismissed, setDismissed] = useState<boolean>(
+    () =>
+      typeof sessionStorage !== 'undefined' &&
+      sessionStorage.getItem(SOFT_WARNING_STORAGE_KEY) !== null
+  );
 
   const dismiss = useCallback(() => {
     if (typeof sessionStorage !== 'undefined') {

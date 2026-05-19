@@ -28,7 +28,7 @@ describe('SoftWarningCredits', () => {
     expect(screen.getByText(/47\/50/)).toBeInTheDocument();
   });
 
-  it('modal-desktop variant renders role=dialog with aria-modal', () => {
+  it('modal-desktop variant renders inside shadcn Dialog with role=dialog', () => {
     render(
       <SoftWarningCredits
         used={47}
@@ -39,8 +39,11 @@ describe('SoftWarningCredits', () => {
         onDismiss={vi.fn()}
       />
     );
+    // Radix Dialog provides focus trap + ESC + aria-modal at runtime. We
+    // assert the role here; the primitive's a11y is covered by Radix tests.
     const dialog = screen.getByRole('dialog');
-    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(dialog).toBeInTheDocument();
+    expect(document.querySelector('[data-slot="soft-warning-modal"]')).toBeInTheDocument();
   });
 
   it('subtitle interpolates remaining count', () => {

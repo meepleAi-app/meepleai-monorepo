@@ -89,6 +89,7 @@ export function CheckoutModal({
     (next: boolean) => {
       if (!next) {
         setStep(initialStep);
+        setSelectedPack('starter');
         setPaymentSubState('filled');
         onClose();
       }

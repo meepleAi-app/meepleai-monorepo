@@ -171,28 +171,57 @@ internal sealed class StorageOperationOutboxBackgroundService : BackgroundServic
             var s3Client = s3Storage.S3Client;
             var bucket = s3Storage.Options.BucketName;
 
-            // Copy legacy → new. CopyObjectAsync is atomic on the S3 side; if
-            // it succeeds the new key is durable before we delete the legacy.
-            await s3Client.CopyObjectAsync(new CopyObjectRequest
+            // Resilience to mid-migration cleanup races (review finding #3):
+            // if NewKey already exists (CopyObject succeeded on a previous
+            // attempt + DeleteObject failed) AND LegacyKey is gone (external
+            // cleanup, e.g. the orphan-cleanup script from PR #1316), we
+            // would otherwise call CopyObjectAsync against a missing source
+            // and burn retries until FailedPermanent — even though the move
+            // is effectively complete. Pre-check both keys and short-circuit
+            // to the delete step (or skip the move entirely).
+            var newKeyExists = await KeyExistsAsync(s3Client, bucket, row.NewKey, cancellationToken).ConfigureAwait(false);
+            if (!newKeyExists)
             {
-                SourceBucket = bucket,
-                SourceKey = row.LegacyKey,
-                DestinationBucket = bucket,
-                DestinationKey = row.NewKey,
-                ServerSideEncryptionMethod = s3Storage.Options.EnableEncryption
-                    ? ServerSideEncryptionMethod.AES256
-                    : ServerSideEncryptionMethod.None,
-            }, cancellationToken).ConfigureAwait(false);
+                // Standard path: copy legacy → new. CopyObjectAsync is atomic
+                // on the S3 side; if it succeeds the new key is durable
+                // before we delete the legacy.
+                await s3Client.CopyObjectAsync(new CopyObjectRequest
+                {
+                    SourceBucket = bucket,
+                    SourceKey = row.LegacyKey,
+                    DestinationBucket = bucket,
+                    DestinationKey = row.NewKey,
+                    ServerSideEncryptionMethod = s3Storage.Options.EnableEncryption
+                        ? ServerSideEncryptionMethod.AES256
+                        : ServerSideEncryptionMethod.None,
+                }, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Storage outbox: NewKey {NewKey} already exists (prior attempt or external migration); skipping copy",
+                    row.NewKey);
+            }
 
-            // Delete legacy after successful copy. If this fails, the row stays
-            // Pending — next attempt will see the new key already in place
-            // (CopyObjectAsync is idempotent under identical source/dest) and
-            // re-issue the delete.
-            await s3Client.DeleteObjectAsync(new DeleteObjectRequest
+            // Delete legacy. If the key was already cleaned up externally we
+            // swallow the NoSuchKey error — the migration goal (object lives
+            // at NewKey, not at LegacyKey) is already satisfied.
+            try
             {
-                BucketName = bucket,
-                Key = row.LegacyKey,
-            }, cancellationToken).ConfigureAwait(false);
+                await s3Client.DeleteObjectAsync(new DeleteObjectRequest
+                {
+                    BucketName = bucket,
+                    Key = row.LegacyKey,
+                }, cancellationToken).ConfigureAwait(false);
+            }
+            catch (AmazonS3Exception delEx)
+                when (delEx.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogInformation(
+                    delEx,
+                    "Storage outbox: LegacyKey {LegacyKey} already deleted externally; treating as success",
+                    row.LegacyKey);
+            }
 
             row.Status = "Sent";
             row.SentAt = _timeProvider.GetUtcNow().UtcDateTime;
@@ -257,5 +286,26 @@ internal sealed class StorageOperationOutboxBackgroundService : BackgroundServic
     {
         const int MaxLen = 1990;
         return message.Length <= MaxLen ? message : message[..MaxLen] + "...";
+    }
+
+    /// <summary>
+    /// Lightweight existence probe via <c>ListObjectsV2</c> with prefix=key
+    /// and MaxKeys=1. Returns true if S3 contains an object at exactly the
+    /// supplied key. Used by the move pre-check (review finding #3) to avoid
+    /// burning retries on copy-against-missing-source races.
+    /// </summary>
+    private static async Task<bool> KeyExistsAsync(IAmazonS3 s3Client, string bucket, string key, CancellationToken ct)
+    {
+        var response = await s3Client.ListObjectsV2Async(new ListObjectsV2Request
+        {
+            BucketName = bucket,
+            Prefix = key,
+            MaxKeys = 1,
+        }, ct).ConfigureAwait(false);
+
+        // ListObjectsV2 prefix-match: confirm the returned object key matches
+        // exactly (Prefix is a "starts-with" filter, so e.g. requesting key
+        // "a/b" could match "a/b" AND "a/bc/d").
+        return response.S3Objects.Any(o => string.Equals(o.Key, key, StringComparison.Ordinal));
     }
 }

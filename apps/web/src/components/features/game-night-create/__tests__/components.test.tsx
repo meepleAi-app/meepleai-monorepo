@@ -57,6 +57,7 @@ const playerLabels = {
   emailDuplicate: 'Email già aggiunta',
   inviteeCount: (n: number) => `${n} invitati`,
   limitWarning: (max: number) => `Max ${max} invitati`,
+  searching: 'Ricerca…',
 };
 
 const gameLabels = {
@@ -79,6 +80,13 @@ const previewLabels = {
   noLocation: 'Luogo da definire',
   gamesTbd: 'Giochi: al gruppo',
   gamesNone: 'Nessun gioco',
+  sectionWhen: 'Quando',
+  sectionWhere: 'Dove',
+  sectionWhat: 'Cosa',
+  sectionWho: 'Chi',
+  kindHome: 'Casa mia',
+  kindFriend: 'Casa di un amico',
+  kindOnline: 'Online',
 };
 
 describe('GameNightDateTimePicker', () => {

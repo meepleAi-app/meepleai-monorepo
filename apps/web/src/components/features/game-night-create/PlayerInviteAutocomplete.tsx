@@ -29,6 +29,12 @@ export interface PlayerInviteAutocompleteLabels {
   readonly emailDuplicate: string;
   readonly inviteeCount: (count: number) => string;
   readonly limitWarning: (max: number) => string;
+  /**
+   * Visible status text rendered while the player-search query is in flight.
+   * PR #1297 review fix: previously the loading region reused
+   * `searchAriaLabel`, which is an input *label*, not a status announcement.
+   */
+  readonly searching: string;
 }
 
 export interface PlayerInviteAutocompleteProps {
@@ -92,11 +98,17 @@ export function PlayerInviteAutocomplete({
       email: user.email,
     };
     if (existingKeys.has(inviteeKey(invitee))) return;
+    // PR #1297 review fix: clear stale `emailError` when the user picks a
+    // search result. Programmatic `onQueryChange('')` doesn't trigger the
+    // DOM input's `onChange`, so the error wouldn't reset otherwise.
+    setEmailError(null);
     onAddInvitee(invitee);
     onQueryChange('');
   };
 
   const handleAddRegular = (regular: RegularDto): void => {
+    // `handleAddUser` already clears the email error + query, so no
+    // additional bookkeeping needed here.
     handleAddUser({
       id: regular.id,
       displayName: regular.displayName,
@@ -152,8 +164,13 @@ export function PlayerInviteAutocomplete({
       </div>
 
       {searchResults.length > 0 && (
+        // PR #1297 review fix: dropped `role="listbox"` + `role="option"` +
+        // `aria-selected={false}`. A proper listbox would need
+        // `aria-activedescendant` + arrow-key navigation wired through the
+        // input; we ship the simpler native-button list here and revisit
+        // with a real combobox pattern when keyboard nav is wired in
+        // W3-PR2. Native <button> children are still fully keyboard-accessible.
         <ul
-          role="listbox"
           aria-label={labels.searchAriaLabel}
           className="flex flex-col gap-1 rounded-md border border-border bg-card"
           data-slot="game-night-create-step3-results"
@@ -168,7 +185,7 @@ export function PlayerInviteAutocomplete({
               })
             );
             return (
-              <li key={result.id} role="option" aria-selected={false}>
+              <li key={result.id}>
                 <button
                   type="button"
                   onClick={() => handleAddUser(result)}
@@ -185,8 +202,10 @@ export function PlayerInviteAutocomplete({
       )}
 
       {isSearching && (
+        // PR #1297 review fix: announce a dedicated "searching" message,
+        // not the input's aria-label.
         <p role="status" aria-live="polite" className="text-xs text-muted-foreground">
-          {labels.searchAriaLabel}
+          {labels.searching}
         </p>
       )}
 

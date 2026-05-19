@@ -3278,7 +3278,8 @@
       "emailDuplicate": "Email già aggiunta",
       "inviteeCount": "{count} {count, plural, =1 {invitato} other {invitati}}",
       "limitWarning": "Massimo {max} invitati totali.",
-      "limitExceeded": "Hai raggiunto il limite di {max} invitati."
+      "limitExceeded": "Hai raggiunto il limite di {max} invitati.",
+      "searching": "Ricerca in corso…"
     },
     "step4": {
       "label": "Cosa giocate",
@@ -3300,7 +3301,14 @@
       "noDate": "Data da scegliere",
       "noLocation": "Luogo da definire",
       "gamesTbd": "Giochi: da decidere al gruppo",
-      "gamesNone": "Nessun gioco selezionato"
+      "gamesNone": "Nessun gioco selezionato",
+      "sectionWhen": "Quando",
+      "sectionWhere": "Dove",
+      "sectionWhat": "Cosa",
+      "sectionWho": "Chi",
+      "kindHome": "Casa mia",
+      "kindFriend": "Casa di un amico",
+      "kindOnline": "Online"
     },
     "submit": {
       "creating": "Creazione in corso…",

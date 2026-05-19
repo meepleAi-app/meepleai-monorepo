@@ -21,6 +21,16 @@ export interface RSVPCardLivePreviewLabels {
   readonly noLocation: string;
   readonly gamesTbd: string;
   readonly gamesNone: string;
+  // PR #1297 review fix: section headers + location-fallback strings
+  // must flow through the labels contract so non-IT locales don't leak
+  // Italian into the preview card.
+  readonly sectionWhen: string;
+  readonly sectionWhere: string;
+  readonly sectionWhat: string;
+  readonly sectionWho: string;
+  readonly kindHome: string;
+  readonly kindFriend: string;
+  readonly kindOnline: string;
 }
 
 export interface RSVPCardLivePreviewProps {
@@ -38,13 +48,16 @@ function locationLine(
 ): string {
   if (kind === 'tbd') return labels.noLocation;
   if (details.trim().length > 0) return details;
+  // PR #1297 review fix: each kind routes through labels (was hardcoded IT;
+  // the `home` branch also produced the literal string "Casa di home" due to
+  // an incorrect concat from an unfinished placeholder).
   switch (kind) {
     case 'home':
-      return 'Casa di ' + (kind as string);
+      return labels.kindHome;
     case 'friend':
-      return 'Casa di un amico';
+      return labels.kindFriend;
     case 'online':
-      return 'Online';
+      return labels.kindOnline;
   }
 }
 
@@ -99,21 +112,21 @@ export function RSVPCardLivePreview({
 
       <dl className="flex flex-col gap-2 text-sm">
         <div>
-          <dt className="text-xs uppercase text-muted-foreground">Quando</dt>
+          <dt className="text-xs uppercase text-muted-foreground">{labels.sectionWhen}</dt>
           <dd className="text-foreground">{formatDate(state.date.iso, labels.noDate)}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-muted-foreground">Dove</dt>
+          <dt className="text-xs uppercase text-muted-foreground">{labels.sectionWhere}</dt>
           <dd className="text-foreground">
             {locationLine(state.location.kind, state.location.details, labels)}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-muted-foreground">Cosa</dt>
+          <dt className="text-xs uppercase text-muted-foreground">{labels.sectionWhat}</dt>
           <dd className="text-foreground">{gamesLine(state, games, labels)}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase text-muted-foreground">Chi</dt>
+          <dt className="text-xs uppercase text-muted-foreground">{labels.sectionWho}</dt>
           <dd className="text-foreground">
             {state.invitees.length === 0
               ? '—'

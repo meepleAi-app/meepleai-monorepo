@@ -388,7 +388,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         string? capturedFilename = null;
         _blobStorageServiceMock
             .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
-            .Callback<Stream, string, string, CancellationToken>((stream, filename, gameId, ct) =>
+            .Callback<Stream, string, BlobCategory, string, CancellationToken>((stream, filename, category, resourceKey, ct) =>
             {
                 capturedFilename = filename;
             })
@@ -457,7 +457,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         string? capturedFilename = null;
         _blobStorageServiceMock
             .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
-            .Callback<Stream, string, string, CancellationToken>((stream, filename, gameId, ct) =>
+            .Callback<Stream, string, BlobCategory, string, CancellationToken>((stream, filename, category, resourceKey, ct) =>
             {
                 capturedFilename = filename;
             })

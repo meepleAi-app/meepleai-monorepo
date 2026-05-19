@@ -127,10 +127,12 @@ export function LibraryHubV2(): ReactElement {
   const removeMutation = useRemoveGameFromLibrary();
 
   // Activity feed (Issue #642 — Wave B.3 followup):
-  // Powers the RecentActivityRail sidebar. Server emits 'added' and
-  // 'state-changed' events from UserLibraryEntries; we map them onto the
-  // 4-kind RecentActivityRail contract (other kinds remain wire-ready for
-  // future event types). Unknown kinds are dropped to keep the contract tight.
+  // Powers the RecentActivityRail sidebar. The server now emits all four
+  // backend event types: 'added' + 'state-changed' (projected from
+  // UserLibraryEntries timestamps) and 'removed' + 'session-recorded'
+  // (projected from domain_event_logs after issue #661). We map them
+  // onto the 5-kind RecentActivityRail contract. Unknown kinds remain
+  // dropped to keep the contract tight against future backend changes.
   const activityQuery = useLibraryActivity(20);
   const activityItems = useMemo<readonly ActivityItem[]>(() => {
     const raw = activityQuery.data ?? [];
@@ -148,7 +150,7 @@ export function LibraryHubV2(): ReactElement {
           kind = 'play';
           break;
         case 'removed':
-          kind = null; // Not surfaced today; backend doesn't emit yet.
+          kind = 'removed';
           break;
         default:
           kind = null;

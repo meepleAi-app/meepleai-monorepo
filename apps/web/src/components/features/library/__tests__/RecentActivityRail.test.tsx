@@ -28,6 +28,10 @@ const sampleItems: readonly ActivityItem[] = [
     timestamp: '2026-04-28T08:00:00.000Z',
   },
   { id: 'a4', kind: 'rating-changed', entityTitle: 'Root', timestamp: '2026-04-27T08:00:00.000Z' },
+  // Issue #661 PR-B AC-9: 'removed' must be a first-class kind so the activity
+  // feed can surface GameRemovedFromLibraryEvent rows now that PR-A's
+  // DomainEventLog is persisting them and the query handler projects them.
+  { id: 'a5', kind: 'removed', entityTitle: 'Azul', timestamp: '2026-04-26T08:00:00.000Z' },
 ];
 
 describe('RecentActivityRail (Wave B.3)', () => {
@@ -64,7 +68,7 @@ describe('RecentActivityRail (Wave B.3)', () => {
     it('renders one list item per activity (length match)', () => {
       const { container } = render(<RecentActivityRail items={sampleItems} />);
       const items = container.querySelectorAll('[data-slot="library-activity-item"]');
-      expect(items).toHaveLength(4);
+      expect(items).toHaveLength(5);
     });
 
     it('renders entityTitle text for each activity item', () => {
@@ -73,13 +77,14 @@ describe('RecentActivityRail (Wave B.3)', () => {
       expect(screen.getByText('Wingspan')).toBeInTheDocument();
       expect(screen.getByText('Brass: Birmingham')).toBeInTheDocument();
       expect(screen.getByText('Root')).toBeInTheDocument();
+      expect(screen.getByText('Azul')).toBeInTheDocument();
     });
 
     it('exposes data-activity-kind on each item for per-kind styling', () => {
       const { container } = render(<RecentActivityRail items={sampleItems} />);
       const items = container.querySelectorAll('[data-slot="library-activity-item"]');
       const kinds = Array.from(items).map(node => node.getAttribute('data-activity-kind'));
-      expect(kinds).toEqual(['play', 'add', 'kb-indexed', 'rating-changed']);
+      expect(kinds).toEqual(['play', 'add', 'kb-indexed', 'rating-changed', 'removed']);
     });
   });
 });

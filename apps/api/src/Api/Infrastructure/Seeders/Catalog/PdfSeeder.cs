@@ -315,9 +315,17 @@ internal static class PdfSeeder
     /// Extracts the bare fileId from a storage path of shape
     /// <c>pdf_uploads/{resourceKey}/{fileId}_{sanitizedFileName}</c>.
     /// Returns null if the path does not match the expected layout.
+    /// Exposed as <c>internal</c> for unit testing the null-return branches
+    /// (no path separator, trailing slash, no underscore in segment, leading
+    /// underscore in segment).
     /// </summary>
-    private static string? ExtractFileIdFromPath(string filePath)
+    internal static string? ExtractFileIdFromPath(string filePath)
     {
+        if (string.IsNullOrEmpty(filePath))
+        {
+            return null;
+        }
+
         // Platform-independent separators: '/' for S3 + URL-style, '\\' on Windows local FS.
         var lastSeparator = filePath.AsSpan().LastIndexOfAny(PathSeparators);
         if (lastSeparator < 0 || lastSeparator == filePath.Length - 1)
@@ -327,6 +335,7 @@ internal static class PdfSeeder
 
         var fileName = filePath[(lastSeparator + 1)..];
         var underscoreIndex = fileName.IndexOf('_', StringComparison.Ordinal);
+        // <= 0 covers: not found (-1) AND leading underscore (= 0 ⇒ empty fileId).
         if (underscoreIndex <= 0)
         {
             return null;

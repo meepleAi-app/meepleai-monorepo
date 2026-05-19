@@ -297,4 +297,44 @@ public sealed class PdfSeederBlobTests
         _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         db.PdfDocuments.Should().BeEmpty();
     }
+
+    // ---------------------------------------------------------------
+    // ExtractFileIdFromPath edge cases (review finding #3 follow-up)
+    // ---------------------------------------------------------------
+
+    [Theory]
+    // Happy paths — S3 forward-slash + Windows backslash layouts
+    [InlineData("pdf_uploads/gameId/abc123_rulebook.pdf", "abc123")]
+    [InlineData("pdf_uploads\\gameId\\abc123_rulebook.pdf", "abc123")]
+    [InlineData("C:\\storage\\pdf_uploads\\gameId\\fedcba_doc.pdf", "fedcba")]
+    // GUID-N fileId (32 hex chars, no underscores, no hyphens) — production shape
+    [InlineData("pdf_uploads/game/abcdef01234567890123456789abcdef_file.pdf", "abcdef01234567890123456789abcdef")]
+    // Filename contains underscore — only FIRST underscore in last segment splits fileId/filename
+    [InlineData("pdf_uploads/gameId/abc123_my_file_v2.pdf", "abc123")]
+    public void ExtractFileIdFromPath_ValidPaths_ReturnsFileId(string filePath, string expectedFileId)
+    {
+        var result = PdfSeeder.ExtractFileIdFromPath(filePath);
+        result.Should().Be(expectedFileId);
+    }
+
+    [Theory]
+    // Null / empty
+    [InlineData(null)]
+    [InlineData("")]
+    // No path separator → can't isolate last segment
+    [InlineData("singleSegment_file.pdf")]
+    [InlineData("noSeparatorNorUnderscore")]
+    // Trailing slash → no filename after last separator
+    [InlineData("pdf_uploads/gameId/")]
+    [InlineData("pdf_uploads\\gameId\\")]
+    // Last segment has no underscore → can't isolate fileId from filename
+    [InlineData("pdf_uploads/gameId/justAFile.pdf")]
+    [InlineData("pdf_uploads/gameId/no-underscore-here")]
+    // Leading underscore in last segment → fileId would be empty
+    [InlineData("pdf_uploads/gameId/_leadingUnderscore.pdf")]
+    public void ExtractFileIdFromPath_InvalidPaths_ReturnsNull(string? filePath)
+    {
+        var result = PdfSeeder.ExtractFileIdFromPath(filePath!);
+        result.Should().BeNull();
+    }
 }

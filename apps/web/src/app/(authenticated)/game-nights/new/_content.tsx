@@ -33,7 +33,7 @@ import { initialWizardState, wizardReducer } from '@/lib/game-nights/wizard-redu
 import type { WizardStep } from '@/lib/game-nights/wizard-types';
 import { buildSubmitPayload } from '@/lib/game-nights/wizard-validators';
 
-const TOTAL_STEPS = 4 as const;
+const _TOTAL_STEPS = 4 as const;
 const SUBMIT_RETRY_DELAYS_MS: readonly number[] = [1000, 2000, 4000];
 
 function parseStep(value: string | null): WizardStep {

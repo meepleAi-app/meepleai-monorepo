@@ -436,7 +436,8 @@ public class AskQuestionQueryHandlerPhase2Tests
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    private AskQuestionQueryHandler BuildHandler() =>
+    private AskQuestionQueryHandler BuildHandler(
+        Api.Configuration.LlmQueryComplexityRoutingOptions? routingOverrides = null) =>
         new(
             _searchHandler,
             _mockQualityService.Object,
@@ -454,7 +455,16 @@ public class AskQuestionQueryHandlerPhase2Tests
             _mockHouseRuleMatcher.Object,
             _mockPricingEngine.Object,
             _mockTranslationService.Object,
+            BuildRoutingMonitor(routingOverrides ?? new Api.Configuration.LlmQueryComplexityRoutingOptions()),
             _mockLogger.Object);
+
+    private static Microsoft.Extensions.Options.IOptionsMonitor<Api.Configuration.LlmQueryComplexityRoutingOptions> BuildRoutingMonitor(
+        Api.Configuration.LlmQueryComplexityRoutingOptions value)
+    {
+        var monitor = new Mock<Microsoft.Extensions.Options.IOptionsMonitor<Api.Configuration.LlmQueryComplexityRoutingOptions>>();
+        monitor.Setup(m => m.CurrentValue).Returns(value);
+        return monitor.Object;
+    }
 
     private void SetupDefaultMocks(Guid gameId)
     {
@@ -592,5 +602,125 @@ public class AskQuestionQueryHandlerPhase2Tests
         mock.Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         return mock.Object;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Issue #562 — per-tier LLM model dispatch tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_WithLowTierOverride_DispatchesGenerateCompletionWithModelAsync()
+    {
+        // Arrange — short factual query → Low tier (per QueryComplexityAnalyzer).
+        // Config sets explicit override for Low.
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "answer");
+
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _mockHouseRuleMatcher
+            .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        _mockLlmService
+            .Setup(s => s.GenerateCompletionWithModelAsync(
+                "openai/gpt-4o-mini",
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<RequestSource>(),
+                It.IsAny<int?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(
+                response: "answer",
+                usage: new LlmUsage(10, 10, 20),
+                cost: new LlmCost
+                {
+                    InputCost = 0.001m,
+                    OutputCost = 0.002m,
+                    ModelId = "openai/gpt-4o-mini",
+                    Provider = "openai"
+                }));
+
+        // "Quanti giocatori?" matches LowComplexityPrefix "quanti" → Low tier.
+        var query = new AskQuestionQuery(GameId: gameId, Question: "Quanti giocatori sono?");
+
+        var handler = BuildHandler(new Api.Configuration.LlmQueryComplexityRoutingOptions
+        {
+            Low = "openai/gpt-4o-mini"
+        });
+
+        // Act
+        await handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert — override dispatched, default path NOT called.
+        _mockLlmService.Verify(s => s.GenerateCompletionWithModelAsync(
+            "openai/gpt-4o-mini",
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<RequestSource>(),
+            It.IsAny<int?>(),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+        _mockLlmService.Verify(s => s.GenerateCompletionAsync(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<RequestSource>(),
+            It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WithNoTierOverride_FallsBackToDefaultGenerateCompletionAsync()
+    {
+        // Arrange — empty routing config → handler uses default GenerateCompletionAsync path.
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "answer");
+
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _mockHouseRuleMatcher
+            .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        var query = new AskQuestionQuery(GameId: gameId, Question: "Quanti giocatori sono?");
+        var handler = BuildHandler(); // default empty options
+
+        // Act
+        await handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert — fall back to default path, NO override dispatch.
+        _mockLlmService.Verify(s => s.GenerateCompletionAsync(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<RequestSource>(),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+        _mockLlmService.Verify(s => s.GenerateCompletionWithModelAsync(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<RequestSource>(),
+            It.IsAny<int?>(),
+            It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public void LlmQueryComplexityRoutingOptions_ResolveOverride_ReturnsNullForEmptyOrWhitespace()
+    {
+        // Contract: empty/whitespace tier overrides resolve to null so the handler
+        // dispatches to GenerateCompletionAsync (backward-compatible no-op).
+        var opts = new Api.Configuration.LlmQueryComplexityRoutingOptions
+        {
+            Low = "",
+            Medium = "   ",
+            High = "openai/gpt-4o"
+        };
+
+        opts.ResolveOverride(QueryRoutingTier.Low).Should().BeNull();
+        opts.ResolveOverride(QueryRoutingTier.Medium).Should().BeNull();
+        opts.ResolveOverride(QueryRoutingTier.High).Should().Be("openai/gpt-4o");
     }
 }

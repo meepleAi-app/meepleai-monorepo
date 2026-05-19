@@ -263,6 +263,8 @@ builder.Services.Configure<RateLimitConfiguration>(builder.Configuration.GetSect
 builder.Services.Configure<FollowUpQuestionsConfiguration>(builder.Configuration.GetSection("FollowUpQuestions")); // CHAT-02
 builder.Services.Configure<RagPromptsConfiguration>(builder.Configuration.GetSection("RagPrompts")); // AI-07.1: RAG prompt templates
 builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSection("HybridCache")); // PERF-05: HybridCache configuration
+builder.Services.Configure<LlmQueryComplexityRoutingOptions>(
+    builder.Configuration.GetSection(LlmQueryComplexityRoutingOptions.SectionName)); // Issue #562: per-call model override by query complexity tier
 builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
 builder.Services.Configure<WeeklyEvaluationConfiguration>(builder.Configuration.GetSection("QualityEvaluation")); // BGAI-042: Weekly evaluation configuration
 builder.Services.Configure<BggImportQueueConfiguration>(builder.Configuration.GetSection("BggImportQueue")); // ISSUE-3541: BGG import queue configuration

@@ -5,7 +5,7 @@ using Api.Services.Pdf;
 using FluentAssertions;
 using Xunit;
 
-namespace Api.Tests.Unit.Services;
+namespace Api.Tests.DevTools;
 
 /// <summary>
 /// Smoke test for issue #1314 PR 1 (signature refactor).

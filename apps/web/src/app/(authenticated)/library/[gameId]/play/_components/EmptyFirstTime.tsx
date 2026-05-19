@@ -24,7 +24,7 @@ export function EmptyFirstTime({
     <section
       data-testid="gamebook-resume-empty-first-time"
       data-state="state-01-first-time"
-      className="flex flex-col gap-5 px-4 py-6 max-w-screen-sm mx-auto"
+      className="flex flex-col gap-5 px-4 py-6 max-w-screen-sm lg:max-w-2xl mx-auto"
     >
       <div
         aria-hidden

@@ -121,4 +121,42 @@ describe('GamebookResumeShell — dispatch logic (mockup G 4 stati)', () => {
 
     expect(screen.getByTestId('gamebook-resume-shell-error')).toBeInTheDocument();
   });
+
+  // Issue #954 — desktop responsive variants (mockup state-02-desktop-split-view + state-03-desktop-grid).
+  it('renders ResumeHero with desktop split-view sidebar wrapper at lg+', () => {
+    vi.mocked(hookModule.useUserCampaigns).mockReturnValue({
+      data: [buildCampaign()],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    wrap(<GamebookResumeShell gameId="g1" />);
+
+    const hero = screen.getByTestId('gamebook-resume-hero');
+    // Split-view container uses lg:grid + lg:grid-cols-[380px_minmax(0,1fr)]
+    expect(hero.className).toMatch(/lg:grid/);
+    expect(hero.className).toMatch(/lg:grid-cols-\[380px_minmax\(0,1fr\)\]/);
+    // Sidebar wrapper (hidden on mobile, visible on lg+)
+    const sidebar = screen.getByTestId('gamebook-resume-hero-sidebar');
+    expect(sidebar.className).toMatch(/hidden/);
+    expect(sidebar.className).toMatch(/lg:block/);
+    // Main pane remains rendered
+    expect(screen.getByTestId('gamebook-resume-hero-main')).toBeInTheDocument();
+  });
+
+  it('renders MultiCampaignList with lg:grid-cols-2 grid at lg+', () => {
+    vi.mocked(hookModule.useUserCampaigns).mockReturnValue({
+      data: [buildCampaign({ id: 'c1', title: 'A' }), buildCampaign({ id: 'c2', title: 'B' })],
+      isLoading: false,
+      isError: false,
+    } as never);
+
+    wrap(<GamebookResumeShell gameId="g1" />);
+
+    const list = screen.getByTestId('gamebook-resume-multi-list');
+    // The container itself is the section; the inner <ul> carries the responsive grid.
+    const ul = list.querySelector('ul');
+    expect(ul).not.toBeNull();
+    expect(ul!.className).toMatch(/lg:grid-cols-2/);
+  });
 });

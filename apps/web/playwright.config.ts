@@ -577,6 +577,21 @@ export default defineConfig({
                   // `next start` (inlined at build time — flag must be present when CI runs
                   // `pnpm build` ahead of `next start`).
                   NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED: 'true',
+                  // Issue #1315 — `next start` runtime evaluates `proxy.ts` middleware
+                  // each request. The middleware's `isAuthBypassAllowed` guard is
+                  // `NODE_ENV !== 'production' || isVisualTestBuild`. `next start` sets
+                  // NODE_ENV=production, so without this flag the bypass requires the
+                  // build-time `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED` to ALSO be set
+                  // at *runtime* on the spawned process (Next.js does NOT replay
+                  // `NEXT_PUBLIC_*` build-time vars onto the server-side process.env
+                  // for middleware/server components). The CI workflow already sets
+                  // this var for `pnpm build` so client bundles inline correctly; here
+                  // we mirror it onto the webServer process so the server-side proxy
+                  // sees the same signal. Without this, `(authenticated)` routes using
+                  // `page.context().route()` API mocks (no `?fixture=` hatch) redirect
+                  // to /login because `isSessionCookieValid` falls through to a backend
+                  // fetch that times out in CI.
+                  NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED: '1',
                 },
               },
               mockupServer,

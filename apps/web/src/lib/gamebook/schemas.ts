@@ -83,18 +83,33 @@ export function batchProgressPercent(dto: PhotoBatchStatus): number {
 }
 
 // ============================================================================
-// Paragraph — returned by GET /api/v1/photo-batches/{batchId}/paragraphs/{pageNumber}
+// Paragraph — returned by:
+//   GET /api/v1/photo-batches/{batchId}/paragraphs/{pageNumber}
+//   GET /api/v1/photo-batches/{batchId}/paragraphs/by-paragraph/{paragraphNumber}
 // ============================================================================
 
 /**
  * A single extracted paragraph for a given page of a photo batch.
  * Corresponds to Phase 3 Task 3.5a endpoint (G4 PR #716).
+ *
+ * Issue #1303 (FE follow-up of #747 PR-B `0ba93671a`):
+ *  - `pageNumber` relaxed to `nonnegative()` — backend returns 0 when a
+ *    by-paragraph lookup misses the numbered path and falls back to semantic
+ *    search (no physical page row matched the requested paragraph).
+ *  - `paragraphNumber` added — set only when the caller used the by-paragraph
+ *    endpoint; null for legacy page-based lookups.
+ *
+ * BACKEND INVARIANT (PR-B): paragraphNumber is either null (page lookup OR
+ * by-paragraph + semantic-fallback) or >= 1 (by-paragraph + numbered match).
+ * The `.positive()` guard is intentional — a `0` value would indicate a
+ * backend regression and `safeParse` rejecting it is the desired behavior.
  */
 export const ParagraphSchema = z.object({
-  pageNumber: z.number().int().positive(),
+  pageNumber: z.number().int().nonnegative(),
   text: z.string(),
   fallbackUsed: z.boolean(),
   fallbackMethod: z.string().nullable(),
+  paragraphNumber: z.number().int().positive().nullable().default(null),
 });
 
 export type Paragraph = z.infer<typeof ParagraphSchema>;

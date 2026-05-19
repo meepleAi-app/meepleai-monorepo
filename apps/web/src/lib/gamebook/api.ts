@@ -55,7 +55,7 @@ export async function getPhotoBatchStatus(
 }
 
 /**
- * Fetch a single extracted paragraph for a given page of a photo batch.
+ * Fetch a single extracted paragraph by physical page number.
  *
  * Endpoint: GET /api/v1/photo-batches/{batchId}/paragraphs/{pageNumber}?hint=...
  * Introduced by G4 (PR #716) — Phase 3 Task 3.5a.
@@ -73,6 +73,36 @@ export async function getParagraph(
   const url = hint
     ? `/api/v1/photo-batches/${batchId}/paragraphs/${pageNumber}?hint=${encodeURIComponent(hint)}`
     : `/api/v1/photo-batches/${batchId}/paragraphs/${pageNumber}`;
+  const result = await apiClient.get<Paragraph>(url, ParagraphSchema);
+  if (!result) throw new Error('Empty paragraph response');
+  return result;
+}
+
+/**
+ * Fetch a single extracted paragraph by narrative paragraph number.
+ *
+ * Endpoint:
+ *   GET /api/v1/photo-batches/{batchId}/paragraphs/by-paragraph/{paragraphNumber}?hint=...
+ *
+ * Introduced by #747 PR-B (`0ba93671a`). Use when the caller indexes content
+ * by gamebook paragraph IDs (Tainted Grail, ISS Vanguard, Nanolith) rather
+ * than physical photo page index. Backend dispatches via
+ * `ParagraphLookupKey.ByParagraphNumber` and falls back to semantic search
+ * when no page carries the requested paragraph (response has
+ * `fallbackUsed: true`, `fallbackMethod: 'semantic'`, `pageNumber: 0`).
+ *
+ * @param batchId         - Batch UUID whose pages have been processed
+ * @param paragraphNumber - 1-based narrative paragraph number
+ * @param hint            - Optional OCR/translation hint for disambiguation
+ * @returns Paragraph DTO, throws on empty / error response
+ */
+export async function getParagraphByParagraphNumber(
+  batchId: string,
+  paragraphNumber: number,
+  hint?: string
+): Promise<Paragraph> {
+  const base = `/api/v1/photo-batches/${batchId}/paragraphs/by-paragraph/${paragraphNumber}`;
+  const url = hint ? `${base}?hint=${encodeURIComponent(hint)}` : base;
   const result = await apiClient.get<Paragraph>(url, ParagraphSchema);
   if (!result) throw new Error('Empty paragraph response');
   return result;

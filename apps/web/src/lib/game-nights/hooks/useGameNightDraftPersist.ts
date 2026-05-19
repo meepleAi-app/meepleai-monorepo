@@ -134,6 +134,7 @@ export function useGameNightDraftPersist({
     };
     // Persist whenever the persisted shape changes; the `draft` branch is
     // intentionally excluded (autosave status doesn't trigger another save).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- excluding `state.draft` is intentional; see comment above
   }, [enabled, userId, state.step, state.date, state.location, state.invitees, state.games]);
 
   return {

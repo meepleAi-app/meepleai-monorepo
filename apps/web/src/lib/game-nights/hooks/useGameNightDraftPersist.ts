@@ -119,22 +119,29 @@ export function useGameNightDraftPersist({
   const [isPending, setIsPending] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Capture the latest `state` in a ref so the effect's deps array can list
+  // only the persisted slices (and skip `state.draft`, which is autosave
+  // status — including it would trigger an infinite re-save loop). The
+  // effect reads through the ref, so react-hooks/exhaustive-deps stays happy.
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  const { step, date, location, invitees, games } = state;
+
   useEffect(() => {
     if (!enabled || !userId) return undefined;
 
     setIsPending(true);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      writeDraft(userId, state);
+      writeDraft(userId, stateRef.current);
       setIsPending(false);
     }, DEBOUNCE_MS);
 
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-    // Persist whenever the persisted shape changes; the `draft` branch is
-    // intentionally excluded (autosave status doesn't trigger another save).
-  }, [enabled, userId, state.step, state.date, state.location, state.invitees, state.games]);
+  }, [enabled, userId, step, date, location, invitees, games]);
 
   return {
     initialDraft,

@@ -146,6 +146,8 @@ git checkout -b feature/issue-{n}-{desc}
 
 If `git branch --show-current` prints `feature/...`, STOP. Run `git checkout main-dev && git pull` first.
 
+See also: [CONTRIBUTING.md § Branch Hygiene](./CONTRIBUTING.md#-branch-hygiene--before-creating-a-feature-branch) for the human-facing version (includes opening-PR checklist + recovery via `git rebase --onto`).
+
 **Commits**: `feat|fix|docs|refactor|test|chore(scope): description`
 
 ### Feature Development Flow

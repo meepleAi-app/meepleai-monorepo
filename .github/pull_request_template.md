@@ -81,6 +81,7 @@ Frontend: cd apps/web && pnpm test:coverage
 ## Checklist
 
 - [ ] Code follows project style guidelines (see [CONTRIBUTING.md](../CONTRIBUTING.md#coding-standards))
+- [ ] **Confirmed this PR's commit list is scoped to its title** (no absorbed/unrelated commits from a sibling branch — see [Branch Hygiene](../CONTRIBUTING.md#-branch-hygiene--before-creating-a-feature-branch) #806)
 - [ ] Self-review of code completed
 - [ ] Comments added for complex logic
 - [ ] Documentation updated (if applicable)

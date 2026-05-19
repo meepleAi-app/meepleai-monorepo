@@ -150,6 +150,12 @@ async function mockGameNightApis(page: Page, options: MockOptions): Promise<void
     }
     await route.continue();
   });
+  // Issue #1315 — diary endpoint returns a raw `DiaryEntryDto[]`, not a
+  // paginated envelope. The previous `{ items: [] }` shape was returned as-is
+  // by `getGameNightDiary` (no zod validation on the result), so the
+  // `[...entries]` spread in `GameNightDiaryPanel:36` threw `TypeError: entries
+  // is not iterable` and surfaced via the Next.js `error.tsx` boundary as
+  // "Errore serate di gioco" instead of the hero render.
   await page
     .context()
     .route(new RegExp(`/api/v1/game-nights/${EVENT_ID}/diary(\\?.*)?$`), async (route: Route) => {
@@ -157,7 +163,7 @@ async function mockGameNightApis(page: Page, options: MockOptions): Promise<void
         return route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ items: [] }),
+          body: JSON.stringify([]),
         });
       }
       await route.continue();

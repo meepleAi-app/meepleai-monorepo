@@ -14,6 +14,7 @@ import {
 
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { api } from '@/lib/api';
+import { fetchUserGamebooks } from '@/lib/api/gamebooks-list';
 import type { LibraryActivityItem } from '@/lib/api/schemas/library-activity.schemas';
 import type {
   PaginatedLibraryResponse,
@@ -763,6 +764,13 @@ export interface LibraryGameDetail {
   isAvailableForPlay: boolean;
   hasCustomPdf: boolean;
   hasRagAccess: boolean;
+  // Issue #1288 Bug 2 — counter aggregati e KB status derivato.
+  // Popolati via merge con `/api/v1/gamebooks` quando la library entry
+  // qualifica come gamebook (active campaign OR private PDF). Zero/null
+  // negli altri casi.
+  chunkCount?: number;
+  sessionsCount?: number;
+  kbStatus?: 'ready' | 'indexing' | 'error';
   // Game metadata
   gameTitle: string;
   gamePublisher: string | null;
@@ -873,18 +881,36 @@ export function useLibraryGameDetail(
       // shared-catalog browse, AND private-game ownership (e.g. Nanolith
       // dogfood). Without the PrivateGame fallback, page.tsx:76 collapses
       // owned private games into a misleading "Gioco non trovato" state.
-      const [gameDetail, sharedGame, privateGame] = await Promise.all([
+      const [gameDetail, sharedGame, privateGame, gamebooks] = await Promise.all([
         api.library.getGameDetail(gameId).catch(() => null),
         api.sharedGames.getById(gameId).catch(() => null),
         api.library.getPrivateGame(gameId).catch(() => null),
+        // Issue #1288 Bug 2 — merge counter aggregati dal nuovo endpoint
+        // /api/v1/gamebooks (popolato solo per entry con campagna attiva o
+        // PDF privato). Catch → null per giochi senza qualifica gamebook.
+        fetchUserGamebooks().catch(() => [] as const),
       ]);
+
+      // Cerca lo stesso gameId nell'elenco gamebooks per estrarre i counter
+      // reali (chunks, sessionsCount, kbStatus).
+      const gamebookMatch = gamebooks.find(g => g.gameId === gameId);
+      const gamebookStats = gamebookMatch
+        ? {
+            chunkCount: gamebookMatch.chunks,
+            sessionsCount: gamebookMatch.sessionsCount,
+            kbStatus: (gamebookMatch.status === 'indexing' || gamebookMatch.status === 'error'
+              ? gamebookMatch.status
+              : 'ready') as 'ready' | 'indexing' | 'error',
+          }
+        : null;
 
       if (!gameDetail) {
         // PrivateGame ownership takes priority over catalog fallback: an owned
         // private game is more specific than a community-only entry, and
         // typically a private-game UUID will NOT match shared_games anyway.
         if (privateGame) {
-          return mapPrivateGameToLibraryGameDetail(privateGame);
+          const mapped = mapPrivateGameToLibraryGameDetail(privateGame);
+          return gamebookStats ? { ...mapped, ...gamebookStats } : mapped;
         }
         // Game not in user's library → fall back to catalog-only view (G1).
         // The detail page must render for ANY shared_game so the user can
@@ -929,6 +955,7 @@ export function useLibraryGameDetail(
           designers: sharedGame.designers,
           publishers: sharedGame.publishers,
           bggId: sharedGame.bggId,
+          ...(gamebookStats ?? {}),
         };
       }
 
@@ -976,6 +1003,14 @@ export function useLibraryGameDetail(
         result.designers = sharedGame.designers;
         result.publishers = sharedGame.publishers;
         result.bggId = sharedGame.bggId;
+      }
+
+      // Issue #1288 Bug 2 — merge counter aggregati gamebook se questa
+      // library entry qualifica come gamebook (active campaign OR private PDF).
+      if (gamebookStats) {
+        result.chunkCount = gamebookStats.chunkCount;
+        result.sessionsCount = gamebookStats.sessionsCount;
+        result.kbStatus = gamebookStats.kbStatus;
       }
 
       return result;

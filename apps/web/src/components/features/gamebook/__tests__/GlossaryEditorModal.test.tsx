@@ -154,9 +154,11 @@ describe('AC-2 — Dirty edit + diff hint', () => {
     const saveButton = screen.getByRole('button', { name: /^save$/i });
     expect(saveButton).not.toBeDisabled();
 
-    // Diff hint contains the original value with line-through styling.
+    // Diff hint contains the original value with the Tailwind line-through utility.
+    // Tailwind CSS is not loaded in jsdom, so we assert via className rather than
+    // computed style (the production CSS resolves to `text-decoration: line-through`).
     const diffHint = screen.getByText('Pietra del Vuoto');
-    expect(diffHint).toHaveStyle({ textDecoration: 'line-through' });
+    expect(diffHint).toHaveClass('line-through');
   });
 });
 

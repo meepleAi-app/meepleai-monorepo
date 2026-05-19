@@ -2940,10 +2940,7 @@
       "title": "Edit glossary entry",
       "termEnLabel": "Source term",
       "termItLabel": "Italian translation",
-      "termItPlaceholder": "Enter translation",
-      "previousValueLabel": "Previous value",
       "save": "Save",
-      "cancel": "Cancel",
       "close": "Close",
       "retry": "Retry",
       "error": {

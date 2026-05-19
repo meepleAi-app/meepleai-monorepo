@@ -198,7 +198,7 @@ export function GlossaryEditorModal({
 
         {isDirty && (
           <p data-slot="glossary-editor-diff-hint">
-            <span style={{ textDecoration: 'line-through' }}>{state.initialIt}</span>
+            <span className="line-through">{state.initialIt}</span>
           </p>
         )}
 

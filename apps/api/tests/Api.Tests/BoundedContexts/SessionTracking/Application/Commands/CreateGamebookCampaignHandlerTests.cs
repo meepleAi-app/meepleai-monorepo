@@ -2,6 +2,8 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using FluentAssertions;
+using MediatR;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
@@ -34,7 +36,8 @@ public sealed class CreateGamebookCampaignHandlerTests
     {
         // Arrange
         var repo = new FakeRepo();
-        var handler = new CreateGamebookCampaignHandler(repo);
+        var mediator = new Mock<IMediator>();
+        var handler = new CreateGamebookCampaignHandler(repo, mediator.Object);
         var gameId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var cmd = new CreateGamebookCampaignCommand(gameId, userId, "My Campaign");
@@ -55,7 +58,7 @@ public sealed class CreateGamebookCampaignHandlerTests
     public void Constructor_WhenRepoIsNull_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new CreateGamebookCampaignHandler(null!);
+        var act = () => new CreateGamebookCampaignHandler(null!, new Mock<IMediator>().Object);
 
         // Assert
         act.Should().Throw<ArgumentNullException>().WithParameterName("repo");

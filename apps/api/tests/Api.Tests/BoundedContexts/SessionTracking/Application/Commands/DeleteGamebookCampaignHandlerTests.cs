@@ -3,6 +3,8 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using FluentAssertions;
+using MediatR;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
@@ -39,7 +41,8 @@ public sealed class DeleteGamebookCampaignHandlerTests
     private static (FakeRepo repo, DeleteGamebookCampaignHandler handler, GamebookCampaignSession session) BuildSut()
     {
         var repo = new FakeRepo();
-        var handler = new DeleteGamebookCampaignHandler(repo);
+        var mediator = new Mock<IMediator>();
+        var handler = new DeleteGamebookCampaignHandler(repo, mediator.Object);
         var userId = Guid.NewGuid();
         var session = GamebookCampaignSession.Create(Guid.NewGuid(), userId, "Doomed Campaign");
         repo.Store.Add(session);

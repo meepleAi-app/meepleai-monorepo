@@ -112,9 +112,14 @@ internal class MeepleAiDbContextFactory : IDesignTimeDbContextFactory<MeepleAiDb
             // No-op: don't collect events during migrations
         }
 
-        public IReadOnlyList<IDomainEvent> GetAndClearEvents()
+        public IReadOnlyList<IDomainEvent> GetAndClearEvents() => Array.Empty<IDomainEvent>();
+
+        // Issue #661: new IDomainEventCollector members for atomic-save flow.
+        public IReadOnlyList<IDomainEvent> PeekEvents() => Array.Empty<IDomainEvent>();
+
+        public void Clear()
         {
-            return Array.Empty<IDomainEvent>();
+            // No-op: design-time context never collects events.
         }
     }
 }

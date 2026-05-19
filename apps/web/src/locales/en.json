@@ -3194,7 +3194,8 @@
       "conflictRoleOrganizer": "You're hosting",
       "conflictRoleInvitee": "Invited",
       "continueAnyway": "Continue anyway",
-      "changeDate": "Change date"
+      "changeDate": "Change date",
+      "checking": "Checking for conflicts…"
     },
     "step2": {
       "label": "Where you play",

@@ -610,7 +610,7 @@ instead.
 | `/sessions/[id]/{play,notes,players,scoreboard,join}` | `sp4-session-live.html` [partial] | Sub-views |
 | `/sessions/live/[id]` (+ `/agent`, `/photos`, `/players`, `/scores`) | `sp4-session-live.html` + `nanolith-runthrough-session-end.html` | — |
 | `/game-nights` | `sp4-game-nights-index.html` | Tier L pending |
-| `/game-nights/new` | `sp7-game-night-create.html` | — |
+| `/game-nights/new` | `sp7-game-night-create.html` | Tier L+ W3 done (PR #1297 components, PR #1302 orchestrator); W4 E2E + baselines pending |
 | `/game-nights/[id]` · `/[id]/edit` | `sp7-game-night-detail-rsvp.html` + `nanolith-game-night-storyboard.html` | Tier M done (PR #1171, RSVP cluster); tabbed/host surfaces pending |
 
 ### Authenticated — Play Records, Toolkit, Gamebook, Agents, KB

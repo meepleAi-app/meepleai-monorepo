@@ -76,7 +76,9 @@ function buildWizardLabels(
       conflictRoleOrganizer: t('gameNightCreate.step1.conflictRoleOrganizer'),
       conflictRoleInvitee: t('gameNightCreate.step1.conflictRoleInvitee'),
       continueAnyway: t('gameNightCreate.step1.continueAnyway'),
-      checking: t('gameNightCreate.step1.continueAnyway'),
+      // PR #1302 review fix: was reusing `continueAnyway` due to a
+      // copy-paste — now wired to the dedicated `checking` key.
+      checking: t('gameNightCreate.step1.checking'),
     },
     step2: {
       label: t('gameNightCreate.step2.label'),
@@ -216,6 +218,18 @@ export function NewGameNightContent(): ReactElement {
   const createMutation = useCreateGameNight();
   const [isSubmittingWithRetry, setIsSubmittingWithRetry] = useState(false);
 
+  // PR #1302 review fix: unmount guard for the multi-second retry loop.
+  // Without this, a user navigating away mid-retry would still trigger
+  // setIsSubmittingWithRetry(false) on the unmounted tree (React warning)
+  // and the late `router.push` would fire on a route the user already left.
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const handleSubmit = async (): Promise<void> => {
     if (isSubmittingWithRetry) return;
     const payloadResult = buildSubmitPayload(state, { title });
@@ -251,9 +265,11 @@ export function NewGameNightContent(): ReactElement {
     let lastError: unknown = null;
 
     for (let attempt = 0; attempt < delays.length; attempt++) {
+      if (!isMountedRef.current) return;
       if (delays[attempt] > 0) {
         await new Promise<void>(r => setTimeout(r, delays[attempt]));
       }
+      if (!isMountedRef.current) return;
       try {
         id = await createMutation.mutateAsync(mutationInput);
         break;
@@ -262,6 +278,7 @@ export function NewGameNightContent(): ReactElement {
       }
     }
 
+    if (!isMountedRef.current) return;
     setIsSubmittingWithRetry(false);
 
     if (id) {
@@ -278,9 +295,12 @@ export function NewGameNightContent(): ReactElement {
       description: t('gameNightCreate.submit.errorBody'),
       variant: 'destructive',
     });
-    // lastError surfaces via toast; the wizard stays mounted with the
-    // user's data intact so they can retry or save the draft and exit.
-    void lastError;
+    // PR #1302 review fix: log retry exhaustion to console so SRE has a
+    // breadcrumb when investigating client-side submit failures. The toast
+    // is the user-facing surface.
+    if (lastError) {
+      console.error('[gamenight.create] retry exhausted', lastError);
+    }
   };
 
   const labels = useMemo(() => buildWizardLabels(t), [t]);

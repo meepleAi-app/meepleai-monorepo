@@ -3247,7 +3247,8 @@
       "conflictRoleOrganizer": "Organizzi",
       "conflictRoleInvitee": "Invitato",
       "continueAnyway": "Continua comunque",
-      "changeDate": "Cambia data"
+      "changeDate": "Cambia data",
+      "checking": "Verifica conflitti in corso…"
     },
     "step2": {
       "label": "Dove giocate",

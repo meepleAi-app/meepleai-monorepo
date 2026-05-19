@@ -2945,6 +2945,13 @@
       "retry": "Retry",
       "error": {
         "saveFailed": "Save failed. Retry."
+      },
+      "collision": {
+        "title": "Translation already in use",
+        "body": "Another entry ({termEn}) already uses this Italian translation.",
+        "overwrite": "Overwrite",
+        "changeTranslation": "Change translation",
+        "sidePanelLabel": "Conflicting entry"
       }
     },
     "play": {

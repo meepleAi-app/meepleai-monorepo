@@ -505,6 +505,10 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
+// Issue #1314 PR 2: wire the current-layout-version ObservableGauge once
+// the DI root is built. Idempotent — safe across HotReload restarts.
+Api.Observability.MeepleAiMetrics.RegisterStorageLayoutVersionGauge(app.Services);
+
 #if DEBUG
 if (app.Environment.IsDevelopment())
 {

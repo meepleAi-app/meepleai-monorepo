@@ -10,10 +10,12 @@ using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 using Api.Helpers;
+using Api.Infrastructure;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.Services.Rag;
 using Api.Observability;
+using Api.SharedKernel.Application;
 using FluentValidation;
 
 namespace Api.Extensions;
@@ -42,6 +44,9 @@ internal static class ApplicationServiceExtensions
         // Issue #1185: RuleSpecService migrated to CQRS pattern in GameManagement bounded context
         // Issue #1189: RuleSpec Comment/Diff services migrated to CQRS pattern
         services.AddScoped<Api.BoundedContexts.GameManagement.Domain.Services.RuleSpecDiffDomainService>();
+
+        // Issue #1320: Cross-BC game data resolver (SharedGame + PrivateGame dual-source lookup)
+        services.AddScoped<IGameCoreDataProvider, GameCoreDataProvider>();
 
         // CONFIG-01: Dynamic configuration service (still used by legacy services/helpers)
         services.AddScoped<IConfigurationService, ConfigurationService>();

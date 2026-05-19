@@ -1,3 +1,4 @@
+using Api.BoundedContexts.UserLibrary.Domain.Events;
 using Api.SharedKernel.Domain.Interfaces;
 
 namespace Api.Infrastructure.DomainEventLog;
@@ -27,9 +28,11 @@ public static class EventTypeRegistry
     // without polluting the production registration.
     private static Dictionary<Type, string> _aliasByType = new()
     {
-        // PR-A ships infrastructure with an empty registry. PR-B adds:
-        //   [typeof(LibraryEntryRemovedEvent)] = "library.entry.removed",
-        //   [typeof(GameSessionRecordedEvent)] = "library.session.recorded",
+        // Issue #661 PR-B — UserLibrary events powering the activity feed.
+        // Adding a type here makes it durably logged AND dispatched via MediatR.
+        // Adding a type does NOT change the existing in-memory dispatch behavior.
+        [typeof(GameRemovedFromLibraryEvent)] = "library.entry.removed",
+        [typeof(GameSessionRecordedEvent)] = "library.session.recorded",
     };
 
     /// <summary>

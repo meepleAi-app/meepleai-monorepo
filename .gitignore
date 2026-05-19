@@ -263,3 +263,10 @@ infra/dotnet-watch.log
 data/snapshots/*.dump
 data/snapshots/*.dump.sha256
 data/snapshots/.latest
+
+# Backups directory (issue #1320 — game entity reset)
+infra/backups/*.dump
+infra/backups/*.csv
+infra/backups/*.txt
+!infra/backups/.gitkeep
+!infra/backups/README.md

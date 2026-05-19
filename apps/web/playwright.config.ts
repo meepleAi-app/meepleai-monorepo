@@ -374,6 +374,14 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         baseURL: 'http://localhost:3000',
         viewport: { width: 1440, height: 900 },
+        // Issue #1315 follow-up — force `it` locale so text-based assertions
+        // (e.g. `getByRole('heading', { name: /serata non trovata/i })`) match
+        // the project's primary language. Without this, Playwright Chrome
+        // defaults to `en-US` and `IntlProvider`'s `getBrowserLocale()` resolves
+        // to `en`, producing English strings the specs don't match. The mockup
+        // baselines that conformity verifies are also IT, so locale parity
+        // across the v2-states test surface is the right default.
+        locale: 'it-IT',
       },
       expect: {
         toHaveScreenshot: {
@@ -391,6 +399,7 @@ export default defineConfig({
         ...devices['Pixel 5'],
         baseURL: 'http://localhost:3000',
         viewport: { width: 375, height: 812 },
+        locale: 'it-IT',
       },
       expect: {
         toHaveScreenshot: {

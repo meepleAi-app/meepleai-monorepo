@@ -344,7 +344,7 @@ builder.Services.AddMediatR(cfg =>
 builder.Services.AddVectorSearchServices(builder.Configuration);
 builder.Services.AddDomainServices();
 builder.Services.AddAiServices();
-builder.Services.AddPdfServices();
+builder.Services.AddPdfServices(builder.Configuration);
 builder.Services.AddChatServices();
 builder.Services.AddAdminServices();
 builder.Services.AddBggServices();
@@ -504,6 +504,10 @@ if (builder.Environment.IsDevelopment())
 #endif
 
 var app = builder.Build();
+
+// Issue #1314 PR 2: wire the current-layout-version ObservableGauge once
+// the DI root is built. Idempotent — safe across HotReload restarts.
+Api.Observability.MeepleAiMetrics.RegisterStorageLayoutVersionGauge(app.Services);
 
 #if DEBUG
 if (app.Environment.IsDevelopment())

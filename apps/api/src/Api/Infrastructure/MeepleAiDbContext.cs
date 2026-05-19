@@ -259,6 +259,10 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.UserNotifications.Infrastructure.Entities.EmailOutboxEntity> EmailOutbox
         => Set<BoundedContexts.UserNotifications.Infrastructure.Entities.EmailOutboxEntity>();
 
+    // Issue #1314 PR 2: outbox pattern for storage layout migration (legacy → categorized).
+    public DbSet<BoundedContexts.DocumentProcessing.Infrastructure.Entities.StorageOperationOutboxEntity> StorageOperationOutbox
+        => Set<BoundedContexts.DocumentProcessing.Infrastructure.Entities.StorageOperationOutboxEntity>();
+
     // Issue #52: Email template admin management
     public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity> EmailTemplates => Set<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity>();
 

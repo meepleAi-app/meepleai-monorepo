@@ -125,7 +125,11 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
             };
 
             var logger = new Mock<ILogger<S3BlobStorageService>>().Object;
-            _sut = new S3BlobStorageService(_s3Client, _options, logger);
+            _sut = new S3BlobStorageService(
+                _s3Client,
+                _options,
+                Microsoft.Extensions.Options.Options.Create(new StorageLayoutOptions()),
+                logger);
 
             // Quick smoke test to verify S3 connectivity
             using var probe = new MemoryStream("probe"u8.ToArray());

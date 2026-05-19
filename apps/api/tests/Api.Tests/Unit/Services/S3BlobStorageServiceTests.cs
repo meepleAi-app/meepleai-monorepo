@@ -2,6 +2,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Api.Services.Pdf;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using System.Net;
 using Xunit;
@@ -34,7 +35,14 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             ForcePathStyle = false
         };
 
-        _sut = new S3BlobStorageService(_mockS3Client.Object, _options, _mockLogger.Object);
+        // PR 2 introduces StorageLayoutOptions. Default is Legacy write + Dual
+        // read which matches pre-PR-2 behavior, so existing test assertions
+        // (legacy `pdf_uploads/...` prefix) still hold.
+        _sut = new S3BlobStorageService(
+            _mockS3Client.Object,
+            _options,
+            Options.Create(new StorageLayoutOptions()),
+            _mockLogger.Object);
     }
 
     public void Dispose()

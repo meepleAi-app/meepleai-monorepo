@@ -523,6 +523,14 @@ internal static class InfrastructureServiceExtensions
             BoundedContexts.UserNotifications.Infrastructure.Services.EmailOutboxService>();
         services.AddHostedService<Infrastructure.BackgroundServices.EmailOutboxBackgroundService>();
 
+        // Issue #1314 PR 2: storage-layout migration outbox + drainer. Same
+        // pattern as email outbox above (scoped service + hosted drainer).
+        // The drainer no-ops when StorageLayout:MigrationEnabled=false.
+        services.AddScoped<
+            BoundedContexts.DocumentProcessing.Application.Services.IStorageOperationOutboxService,
+            BoundedContexts.DocumentProcessing.Infrastructure.Services.StorageOperationOutboxService>();
+        services.AddHostedService<Infrastructure.BackgroundServices.StorageOperationOutboxBackgroundService>();
+
         // Issue #936: Infisical secrets management client (POC)
         services.AddHttpClient("Infisical", client =>
         {

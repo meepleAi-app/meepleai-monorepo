@@ -149,6 +149,10 @@ internal static class DocumentProcessingServiceExtensions
         services.AddScoped<IDocumentChunker, PageTextChunker>();
         services.AddScoped<IKnowledgeBaseIndexer, KnowledgeBaseIndexer>();
 
+        // Issue #747 PR-C: narrative paragraph-number extraction from OCR text.
+        // Stateless + compiled regex → safe as Singleton; reused across all batches.
+        services.AddSingleton<IParagraphNumberExtractor, RegexParagraphNumberExtractor>();
+
         // Libro Game AI Assistant MVP Phase 1 — Task 1.6: parallel photo batch processor
         services.AddScoped<IPhotoBatchProcessor, PhotoBatchProcessor>();
 

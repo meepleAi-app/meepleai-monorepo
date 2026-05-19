@@ -34,6 +34,7 @@ namespace Api.Extensions;
 /// - AdminProviderProbeGlobal: 60 req/h — provider token probes per provider name (Issue #936)
 /// - GameNightTokenRead:   60 req/min  — public RSVP token lookup per IP (Issue #1169)
 /// - GameNightTokenRespond: 10 req/min — public RSVP submission per IP (Issue #1169)
+/// - UsersSearch:         600 req/min  — authenticated player autocomplete (10 req/s, Issue #950 W1-PR2)
 /// </summary>
 internal static class RateLimitingServiceExtensions
 {
@@ -133,6 +134,10 @@ internal static class RateLimitingServiceExtensions
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
                 options.AddPolicy("GameNightTokenRespond", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                // Issue #950 (W1-PR2): authenticated user-search autocomplete (disabled in tests)
+                options.AddPolicy("UsersSearch", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
             });
 
@@ -585,6 +590,27 @@ internal static class RateLimitingServiceExtensions
                     {
                         Window = TimeSpan.FromMinutes(1),
                         PermitLimit = 10,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 23: UsersSearch - 600 req/min per authenticated user for player autocomplete (Issue #950 W1-PR2)
+            // Authenticated GET on /api/v1/users/search?q=. Spec §7b.1 / §15 P3 — Nygard
+            // panel flagged user-enumeration risk on an open autocomplete endpoint.
+            // 10 req/s sustained is generous (the FE wizard debounces 250ms client-side,
+            // ~4 keystrokes/s); the cap exists to bound scripted enumeration not slow it.
+            options.AddPolicy("UsersSearch", httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"users-search-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 600,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,

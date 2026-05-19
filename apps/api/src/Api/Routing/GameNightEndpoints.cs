@@ -45,6 +45,25 @@ internal static class GameNightEndpoints
             .WithSummary("Get my game nights")
             .WithDescription("Retrieves game nights where the user is organizer or invited.");
 
+        // Issue #950 (W1-PR2): regulars feed for Step 3 wizard suggestion list.
+        gameNights.MapGet("/regulars", HandleGetRegulars)
+            .RequireAuthenticatedUser()
+            .Produces<IReadOnlyList<RegularDto>>(200)
+            .Produces(401)
+            .WithName("GetRegulars")
+            .WithSummary("Get my regular co-participants")
+            .WithDescription("Returns registered users invited to past game nights organized by the current user (12-month window), ranked by event count. Spec §7b.2.");
+
+        // Issue #950 (W1-PR2): conflict-check feed for Step 1 wizard date warning.
+        gameNights.MapGet("/check-conflict", HandleCheckConflict)
+            .RequireAuthenticatedUser()
+            .Produces<ConflictCheckDto>(200)
+            .Produces(400)
+            .Produces(401)
+            .WithName("CheckGameNightConflict")
+            .WithSummary("Check for game night scheduling conflicts")
+            .WithDescription("Returns conflicts within ±2 hours of the proposed start time for the current user's calendar (as organizer or invitee). Spec §7b.3.");
+
         gameNights.MapGet("/{id:guid}", HandleGetGameNightById)
             .RequireAuthenticatedUser()
             .Produces<GameNightDto>(200)
@@ -450,6 +469,47 @@ internal static class GameNightEndpoints
     {
         var userId = httpContext.User.GetUserId();
         var result = await mediator.Send(new GetMyGameNightsQuery(userId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    // Issue #950 (W1-PR2): regulars feed for Step 3 wizard suggestion list. Spec §7b.2.
+    private static async Task<IResult> HandleGetRegulars(
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken,
+        [FromQuery] int? limit = null)
+    {
+        var userId = httpContext.User.GetUserId();
+
+        // Spec §7b.2: default limit 10, max 30. Clamp server-side to prevent
+        // unbounded queries via query-string manipulation.
+        var clamped = Math.Clamp(limit ?? 10, 1, 30);
+
+        var result = await mediator.Send(new GetRegularsQuery(userId, clamped), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    // Issue #950 (W1-PR2): conflict-check feed for Step 1 wizard date warning. Spec §7b.3.
+    private static async Task<IResult> HandleCheckConflict(
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        [FromQuery] DateTimeOffset? at,
+        CancellationToken cancellationToken)
+    {
+        if (!at.HasValue)
+        {
+            return Results.BadRequest(new { error = "Query parameter 'at' is required (ISO 8601 datetime offset)." });
+        }
+
+        // Spec §7b.3: reject horizons further than 2 years out — defensive bound
+        // against accidental Unix-epoch-style overflows from clients.
+        if (at.Value > DateTimeOffset.UtcNow.AddYears(2))
+        {
+            return Results.BadRequest(new { error = "Query parameter 'at' cannot be more than 2 years in the future." });
+        }
+
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator.Send(new CheckGameNightConflictQuery(userId, at.Value), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

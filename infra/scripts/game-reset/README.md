@@ -80,4 +80,15 @@ This script:
 
 **"role does not exist"**: check `DATABASE_URL` credentials match your docker compose env.
 
-**"permission denied"**: scripts not executable. Run `chmod +x *.sh lib/*.sh`.
+**"permission denied"**: scripts not executable. Run `chmod +x *.sh` from this directory. (Do NOT chmod `lib/common.sh` — it's sourced, not executed.)
+
+## Production invocation
+
+For `ENV_NAME=prod`, scripts require the explicit `--i-mean-it` confirmation flag. With Make:
+
+```bash
+make game-reset-backup ENV=prod IMEANIT=--i-mean-it
+make game-reset-mapping ENV=prod IMEANIT=--i-mean-it
+```
+
+Without `IMEANIT=--i-mean-it`, scripts abort with exit 77.

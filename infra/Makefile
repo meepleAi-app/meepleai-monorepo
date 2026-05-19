@@ -357,6 +357,9 @@ game-reset-help: ## Show game-reset workflow help
 	@echo "  make game-reset-mapping ENV=dev             # export bridge CSV (requires backup first)"
 	@echo "  make game-reset-rollback-rehearse           # disposable docker test of rollback"
 	@echo ""
+	@echo "For prod, pass IMEANIT=--i-mean-it (production safety guard):"
+	@echo "  make game-reset-backup ENV=prod IMEANIT=--i-mean-it"
+	@echo ""
 	@echo "Per env, create infra/scripts/game-reset/.env.<ENV> from .env.example."
 
 game-reset-backup: ## Pre-flight DB backup (ENV=dev|staging|prod)

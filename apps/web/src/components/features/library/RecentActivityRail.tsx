@@ -28,7 +28,7 @@ import clsx from 'clsx';
 
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 
-export type ActivityKind = 'play' | 'add' | 'kb-indexed' | 'rating-changed';
+export type ActivityKind = 'play' | 'add' | 'kb-indexed' | 'rating-changed' | 'removed';
 
 export interface ActivityItem {
   readonly id: string;
@@ -50,6 +50,7 @@ const KIND_ICON: Record<ActivityKind, string> = {
   add: '➕',
   'kb-indexed': '📖',
   'rating-changed': '⭐',
+  removed: '🗑️',
 };
 
 export function RecentActivityRail({

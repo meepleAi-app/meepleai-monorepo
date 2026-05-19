@@ -317,6 +317,10 @@ builder.Services.AddHostedService<Api.Infrastructure.BackgroundServices.RagBacku
 // ADR-051 Sprint 2 / Task 8: Mechanic-recalc async pipeline worker (Pending → Running → terminal).
 builder.Services.AddHostedService<Api.Infrastructure.BackgroundServices.MechanicRecalcBackgroundService>();
 
+// Issue #1292 (AC-6.4): warm-up gamebook index cache for dogfood accounts + superadmins
+// 30s after startup. Background fire-and-forget — does NOT block IHost.StartAsync.
+builder.Services.AddHostedService<Api.Observability.GamebookCacheWarmupService>();
+
 // Issue #1449: FluentValidation for CQRS pipeline
 builder.Services.AddFluentValidation();
 

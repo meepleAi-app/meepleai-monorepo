@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using MediatR;
@@ -14,10 +15,12 @@ namespace Api.BoundedContexts.SessionTracking.Application.Commands;
 public class DeleteGamebookCampaignHandler : IRequestHandler<DeleteGamebookCampaignCommand>
 {
     private readonly IGamebookCampaignSessionRepository _repo;
+    private readonly IMediator _mediator;
 
-    public DeleteGamebookCampaignHandler(IGamebookCampaignSessionRepository repo)
+    public DeleteGamebookCampaignHandler(IGamebookCampaignSessionRepository repo, IMediator mediator)
     {
         _repo = repo ?? throw new ArgumentNullException(nameof(repo));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
     public async Task Handle(DeleteGamebookCampaignCommand cmd, CancellationToken cancellationToken)
@@ -30,5 +33,11 @@ public class DeleteGamebookCampaignHandler : IRequestHandler<DeleteGamebookCampa
 
         session.SoftDelete(cmd.CallerUserId);
         await _repo.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Issue #1292 (AC-6.2): notify gamebook index cache so the deleted
+        // campaign disappears from next GET /api/v1/gamebooks within 500ms.
+        await _mediator.Publish(
+            new GamebookCampaignDeletedDomainEvent(session.Id, session.GameId, session.OwnerUserId),
+            cancellationToken).ConfigureAwait(false);
     }
 }

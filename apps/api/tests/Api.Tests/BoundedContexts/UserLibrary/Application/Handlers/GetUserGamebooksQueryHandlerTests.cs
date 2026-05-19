@@ -1,6 +1,7 @@
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries.Gamebooks;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Moq;
@@ -9,19 +10,37 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.UserLibrary.Application.Handlers;
 
 /// <summary>
-/// Unit tests for <see cref="GetUserGamebooksQueryHandler"/> (Issue #1288).
+/// Unit tests for <see cref="GetUserGamebooksQueryHandler"/> (Issue #1288 + #1292).
 ///
-/// Verifies the handler composes <see cref="IUserGamebookViewRepository"/>
-/// correctly and maps to <see cref="GamebookCardDataDto"/>.
+/// Verifies:
+///   - composition of <see cref="IUserGamebookViewRepository"/> + mapping to
+///     <see cref="GamebookCardDataDto"/> (issue #1288)
+///   - cache key + tag contract through <see cref="IHybridCacheService"/>
+///     (issue #1292 AC-6.1/AC-6.2)
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "UserLibrary")]
 public class GetUserGamebooksQueryHandlerTests
 {
     private readonly Mock<IUserGamebookViewRepository> _viewRepoMock = new(MockBehavior.Strict);
+    private readonly Mock<IUserLibraryRepository> _userLibraryRepoMock = new(MockBehavior.Loose);
+    private readonly Mock<IHybridCacheService> _cacheMock = new(MockBehavior.Strict);
+
+    public GetUserGamebooksQueryHandlerTests()
+    {
+        // Default cache behaviour: passthrough to factory (simulates cache miss + populate).
+        _cacheMock
+            .Setup(c => c.GetOrCreateAsync(
+                It.IsAny<string>(),
+                It.IsAny<Func<CancellationToken, Task<List<UserGamebookViewItem>>>>(),
+                It.IsAny<string[]?>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns((string _, Func<CancellationToken, Task<List<UserGamebookViewItem>>> factory, string[]? _, TimeSpan? _, CancellationToken ct) => factory(ct));
+    }
 
     private GetUserGamebooksQueryHandler CreateHandler() =>
-        new(_viewRepoMock.Object);
+        new(_viewRepoMock.Object, _userLibraryRepoMock.Object, _cacheMock.Object);
 
     [Fact]
     public async Task Handle_WithNoEntries_ReturnsEmptyList()
@@ -237,5 +256,48 @@ public class GetUserGamebooksQueryHandlerTests
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    // Issue #1292 — Cache contract verification.
+
+    [Fact]
+    public async Task Handle_UsesCanonicalCacheKeyAndTag()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var expectedKey = $"userlibrary:gamebooks:view:{userId}";
+        var expectedTag = $"user:{userId}";
+
+        _viewRepoMock
+            .Setup(r => r.GetGamebookEntriesAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<UserGamebookViewItem>());
+        _userLibraryRepoMock
+            .Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+
+        // Act
+        await CreateHandler().Handle(new GetUserGamebooksQuery(userId), CancellationToken.None);
+
+        // Assert
+        _cacheMock.Verify(c => c.GetOrCreateAsync(
+            expectedKey,
+            It.IsAny<Func<CancellationToken, Task<List<UserGamebookViewItem>>>>(),
+            It.Is<string[]?>(tags => tags != null && tags.Length == 1 && tags[0] == expectedTag),
+            It.Is<TimeSpan?>(t => t.HasValue && t.Value == TimeSpan.FromMinutes(5)),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task BuildCacheKey_FollowsExpectedPattern()
+    {
+        // Arrange / Act
+        var userId = Guid.Parse("c8ff6a6b-c764-4f63-9ea8-f3c0705225c1");
+        var key = GetUserGamebooksQueryHandler.BuildCacheKey(userId);
+        var tag = GetUserGamebooksQueryHandler.BuildUserTag(userId);
+
+        // Assert — exact strings for contract testing.
+        key.Should().Be("userlibrary:gamebooks:view:c8ff6a6b-c764-4f63-9ea8-f3c0705225c1");
+        tag.Should().Be("user:c8ff6a6b-c764-4f63-9ea8-f3c0705225c1");
     }
 }

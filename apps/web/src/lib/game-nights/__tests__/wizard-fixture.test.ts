@@ -35,9 +35,13 @@ describe('getWizardFixture (production build)', () => {
 });
 
 describe('getWizardFixture (visual-test build)', () => {
-  const previousEnv = process.env.NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED;
+  // Snapshot the env var per-test (not at describe-scope) so cross-file
+  // pollution under a future non-isolated Vitest config can't leak a stale
+  // "previous" value into our afterEach restore.
+  let previousEnv: string | undefined;
 
   beforeEach(() => {
+    previousEnv = process.env.NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED;
     process.env.NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED = '1';
   });
 

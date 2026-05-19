@@ -16,7 +16,10 @@ import { WIZARD_DRAFT_SCHEMA_VERSION, type LocationKind, type WizardState } from
 // ────────────────────────────────────────────────────────────────────────────
 // Constants — kept in sync with the BE CreateGameNightCommandValidator.
 // See apps/api/src/Api/BoundedContexts/GameManagement/Application/Validators/
-//   GameNights/CreateGameNightCommandValidator.cs:13-15
+//   GameNights/CreateGameNightCommandValidator.cs:
+//     - MaxCombinedInvitees (49) at L20 of that file
+//     - MaxEmailLength      (200) at L25
+//     - EmailFormatRegex     at L32-35
 // ────────────────────────────────────────────────────────────────────────────
 
 export const MAX_COMBINED_INVITEES = 49;

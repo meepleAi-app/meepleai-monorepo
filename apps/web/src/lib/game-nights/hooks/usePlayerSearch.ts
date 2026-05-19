@@ -43,6 +43,14 @@ export const PLAYER_SEARCH_DEFAULT_DEBOUNCE_MS = 250;
 
 export const PLAYER_SEARCH_DEFAULT_LIMIT = 20;
 
+/**
+ * Hard ceiling honored by `GET /api/v1/users/search` (PR #1294 W1-PR2
+ * adds server-side `Math.Clamp(limit, 1, 50)`). Mirroring the cap
+ * client-side keeps the React Query cache key stable and prevents the
+ * UI from silently displaying fewer results than the user requested.
+ */
+export const PLAYER_SEARCH_MAX_LIMIT = 50;
+
 function useDebouncedValue<T>(value: T, ms: number): T {
   const [debounced, setDebounced] = useState(value);
 
@@ -62,13 +70,19 @@ export function usePlayerSearch({
 }: UsePlayerSearchOptions): UseQueryResult<UserSearchResult[], Error> & {
   debouncedQuery: string;
 } {
+  // PR #1296 review-fix: clamp limit client-side so cache keys stay stable
+  // and the UI doesn't silently receive fewer results than the caller asked
+  // for. Mirrors the BE clamp + matches the parallel pattern in
+  // `useRegularsForUser`.
+  const safeLimit = Math.min(Math.max(limit, 1), PLAYER_SEARCH_MAX_LIMIT);
+
   const trimmed = query.trim();
   const debouncedQuery = useDebouncedValue(trimmed, debounceMs);
   const shouldFetch = enabled && debouncedQuery.length >= PLAYER_SEARCH_MIN_QUERY_LENGTH;
 
   const result = useQuery({
-    queryKey: playerSearchKeys.query(debouncedQuery, limit),
-    queryFn: () => api.auth.searchUsers(debouncedQuery, limit),
+    queryKey: playerSearchKeys.query(debouncedQuery, safeLimit),
+    queryFn: () => api.auth.searchUsers(debouncedQuery, safeLimit),
     enabled: shouldFetch,
     // 30s stale: typing the same prefix multiple times within 30s reuses the
     // cached payload without re-hitting the BE (spec §6 cache hint).

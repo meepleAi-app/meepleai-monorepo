@@ -73,6 +73,51 @@ public sealed class BlobStorageServiceLayoutTests : IDisposable
     }
 
     [Fact]
+    public async Task RetrieveAsync_ReadModeDual_PrefersNewLayoutWhenBothExist()
+    {
+        // Phase 2 ordering invariant: once the drainer has moved an object
+        // to the new prefix, subsequent reads MUST serve from the new copy,
+        // not from the legacy copy (which is about to be / has been deleted).
+        // Reverting the probe order in TryResolveKeyAsync / EnumerateReadDirs
+        // would silently break this invariant — this test guards against it.
+
+        var writerLegacy = CreateSut(new StorageLayoutOptions { WriteMode = StorageWriteMode.Legacy });
+        var writerNew = CreateSut(new StorageLayoutOptions { WriteMode = StorageWriteMode.New });
+
+        // Plant distinct payloads under each layout so we can identify which
+        // copy was served. The fileId returned by the legacy upload is the
+        // one we'll query — the new-layout write uses a different fileId so
+        // we plant it manually under the same fileId to simulate a successful
+        // drainer move.
+        using (var stream = new MemoryStream(new byte[] { 0xAA }))
+        {
+            await writerLegacy.StoreAsync(stream, "f.pdf", BlobCategory.Pdf, "g-both");
+        }
+
+        var legacyDir = Path.Combine(_basePath, "g-both");
+        var legacyFiles = Directory.GetFiles(legacyDir, "*");
+        var fileId = ExtractFileIdFromFileName(legacyFiles[0]);
+
+        // Simulate the drainer's post-CopyObject state: same fileId exists
+        // under BOTH layouts. The new-layout copy has different bytes (0xBB).
+        var newDir = Path.Combine(_basePath, "pdfs", "g-both");
+        Directory.CreateDirectory(newDir);
+        await File.WriteAllBytesAsync(Path.Combine(newDir, $"{fileId}_f.pdf"), new byte[] { 0xBB });
+
+        var reader = CreateSut(new StorageLayoutOptions { ReadMode = StorageReadMode.Dual });
+
+        using var retrieved = await reader.RetrieveAsync(fileId, BlobCategory.Pdf, "g-both");
+
+        retrieved.Should().NotBeNull();
+        var buf = new byte[1];
+        var bytesRead = await retrieved!.ReadAsync(buf.AsMemory());
+        bytesRead.Should().Be(1);
+        buf[0].Should().Be(0xBB,
+            because: "Dual ReadMode MUST serve the NEW layout copy when both exist " +
+                     "— reverting this priority would break Phase 2 cutover correctness");
+    }
+
+    [Fact]
     public async Task RetrieveAsync_ReadModeDual_FindsLegacyWhenNewMissing()
     {
         // Arrange: write under Legacy, read under Dual → should fall back.

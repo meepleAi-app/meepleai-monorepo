@@ -42,4 +42,26 @@ internal sealed class DomainEventCollector : IDomainEventCollector
             return events;
         }
     }
+
+    /// <summary>
+    /// Non-destructive snapshot. See <see cref="IDomainEventCollector.PeekEvents"/>.
+    /// </summary>
+    public IReadOnlyList<IDomainEvent> PeekEvents()
+    {
+        lock (_lock)
+        {
+            return _collectedEvents.ToList();
+        }
+    }
+
+    /// <summary>
+    /// Drops the collected events. See <see cref="IDomainEventCollector.Clear"/>.
+    /// </summary>
+    public void Clear()
+    {
+        lock (_lock)
+        {
+            _collectedEvents.Clear();
+        }
+    }
 }

@@ -1,9 +1,9 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
+using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
-using Api.SharedKernel.Exceptions;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Moq;
@@ -40,20 +40,16 @@ public sealed class UpsertGlossaryEntryCommandHandlerTests
             _glossaryMock.Object);
     }
 
-    private static GamebookGlossaryEntry MakeEntry(string termEn, string termIt, Guid? id = null)
+    private static GamebookGlossaryEntry MakeEntry(string termEn, string termIt)
     {
-        var entry = GamebookGlossaryEntry.Create(
+        // The factory generates an Id; tests that need a specific Id read it back
+        // via `entry.Id` after construction (see AC-2 below for the self-update flow).
+        return GamebookGlossaryEntry.Create(
             CampaignId,
             termEn,
             termIt,
             GlossarySource.Manual,
             OwnerId);
-        if (id.HasValue)
-        {
-            // The factory generates an Id; integration tests can't rebind it, but for
-            // unit tests we accept what `Create` gave us and pass it through the mock.
-        }
-        return entry;
     }
 
     // -------------------------------------------------------------------------

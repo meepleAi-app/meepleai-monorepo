@@ -1,4 +1,5 @@
 using System;
+using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.Helpers;
 using Api.Middleware.Exceptions;
 using Api.Observability;

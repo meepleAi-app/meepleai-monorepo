@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Api.Middleware.Exceptions;
 using Microsoft.AspNetCore.Http;
 
-namespace Api.SharedKernel.Exceptions;
+namespace Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 
 /// <summary>
 /// Thrown by <c>UpsertGlossaryEntryCommandHandler</c> when the target Italian
@@ -11,6 +11,9 @@ namespace Api.SharedKernel.Exceptions;
 /// Issue #1312 — surfaces the colliding entry's identifier and English source
 /// term so the frontend can render the collision banner (state-04) with the
 /// `[Sovrascrivi]` / `[Cambia traduzione]` recovery actions.
+///
+/// Lives in the SessionTracking bounded context (domain-specific exception
+/// per CLAUDE.md DDD rules: "Domain-specific exceptions e.g. GameNotFoundException").
 /// </summary>
 public sealed class GlossaryTermCollisionException : HttpException
 {

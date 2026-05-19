@@ -1,9 +1,9 @@
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
+using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
-using Api.SharedKernel.Exceptions;
 using MediatR;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Commands;

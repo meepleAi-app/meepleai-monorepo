@@ -6,11 +6,13 @@
  * labels injected by orchestrator via the Wave D.3 pre-resolved-labels
  * pattern.
  *
- * `TranslateParagraphDemo` is the Phase A demo component (kept exported for
- * the Nanolith one-shot flow under /gamebook/[gameId]/play).
- *
  * SP6 Phase C.1.B Task B (Issue #789) appends the 5 read-only wizard
  * components for /gamebook/upload Tier L Foundation sub-PR.
+ *
+ * `TranslateParagraphDemo` (Phase A Path 5a Nanolith demo workaround) was
+ * dropped by #1306 after #747 sequence shipped the by-paragraph endpoint
+ * via PR-B (`0ba93671a`) and the FE hook via PR #1307. The translation flow
+ * in production is owned by `TranslateViewer` + `useTranslateSegmentSSE`.
  */
 
 // Phase B (SP6 #788)
@@ -41,10 +43,6 @@ export type {
 
 export { GamebookCardSkeleton } from '@/components/features/gamebook/GamebookCardSkeleton';
 export type { GamebookCardSkeletonProps } from '@/components/features/gamebook/GamebookCardSkeleton';
-
-// Phase A demo component (preserved):
-export { TranslateParagraphDemo } from '@/components/features/gamebook/TranslateParagraphDemo';
-export type { TranslateParagraphDemoProps } from '@/components/features/gamebook/TranslateParagraphDemo';
 
 // Phase C.1.B Task B — /gamebook/upload wizard read-only components (SP6 #789)
 export { StepIndicator } from '@/components/features/gamebook/StepIndicator';

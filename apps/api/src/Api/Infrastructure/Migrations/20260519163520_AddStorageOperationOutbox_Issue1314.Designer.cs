@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -13,9 +14,11 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260519163520_AddStorageOperationOutbox_Issue1314")]
+    partial class AddStorageOperationOutbox_Issue1314
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -4516,56 +4519,6 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_step_log_entries_step_id");
 
                     b.ToTable("step_log_entries", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.DomainEventLog.DomainEventLogEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("AggregateId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AggregateType")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<Guid>("EventId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("EventType")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<DateTime>("LoggedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("OccurredAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PayloadJson")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EventId")
-                        .IsUnique()
-                        .HasDatabaseName("ux_domain_event_logs_eventid");
-
-                    b.HasIndex("LoggedAt")
-                        .HasDatabaseName("ix_domain_event_logs_loggedat");
-
-                    b.HasIndex("UserId", "LoggedAt")
-                        .IsDescending(false, true)
-                        .HasDatabaseName("ix_domain_event_logs_user_loggedat");
-
-                    b.ToTable("domain_event_logs", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.EmailVerificationEntity", b =>

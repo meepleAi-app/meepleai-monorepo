@@ -2,6 +2,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Api.Helpers;
 using Api.Infrastructure.Security;
+using Microsoft.Extensions.Options;
 
 namespace Api.Services.Pdf;
 
@@ -11,17 +12,28 @@ namespace Api.Services.Pdf;
 /// </summary>
 internal sealed class S3BlobStorageService : IBlobStorageService
 {
+    /// <summary>
+    /// Legacy S3 prefix used by PR 1 (pre-layout-migration). All read paths
+    /// fall back to this prefix when <see cref="StorageLayoutOptions.ReadMode"/>
+    /// is <see cref="StorageReadMode.Dual"/> or <see cref="StorageReadMode.Legacy"/>.
+    /// </summary>
+    internal const string LegacyPrefix = "pdf_uploads";
+
     private readonly IAmazonS3 _s3Client;
     private readonly S3StorageOptions _options;
+    private readonly StorageLayoutOptions _layoutOptions;
     private readonly ILogger<S3BlobStorageService> _logger;
 
     public S3BlobStorageService(
         IAmazonS3 s3Client,
         S3StorageOptions options,
+        IOptions<StorageLayoutOptions> layoutOptions,
         ILogger<S3BlobStorageService> logger)
     {
         _s3Client = s3Client ?? throw new ArgumentNullException(nameof(s3Client));
         _options = options ?? throw new ArgumentNullException(nameof(options));
+        ArgumentNullException.ThrowIfNull(layoutOptions);
+        _layoutOptions = layoutOptions.Value;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -97,26 +109,14 @@ internal sealed class S3BlobStorageService : IBlobStorageService
             PathSecurity.ValidateIdentifier(fileId, nameof(fileId));
             PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
-            // PR 1 behavior preservation: prefix unchanged from legacy gameId-based layout.
-            // PR 2 will switch to category.ToS3Folder() behind STORAGE_WRITE_MODE flag.
-            var prefix = $"pdf_uploads/{resourceKey}/{fileId}_";
-
-            var listRequest = new ListObjectsV2Request
-            {
-                BucketName = _options.BucketName,
-                Prefix = prefix,
-                MaxKeys = 1
-            };
-
-            var listResponse = await _s3Client.ListObjectsV2Async(listRequest, ct).ConfigureAwait(false);
-
-            if (listResponse.S3Objects.Count == 0)
+            // PR 2: layout-aware key resolution via TryResolveKeyAsync. Honors
+            // StorageLayoutOptions.ReadMode (Legacy / New / Dual-with-fallback).
+            var s3Key = await TryResolveKeyAsync(fileId, category, resourceKey, ct).ConfigureAwait(false);
+            if (s3Key is null)
             {
                 _logger.LogWarning("File not found in S3 for {FileId} in {Category}/{ResourceKey}", fileId, category, resourceKey);
                 return null;
             }
-
-            var s3Key = listResponse.S3Objects[0].Key;
 
             var getRequest = new GetObjectRequest
             {
@@ -158,36 +158,36 @@ internal sealed class S3BlobStorageService : IBlobStorageService
             PathSecurity.ValidateIdentifier(fileId, nameof(fileId));
             PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
-            // Find the exact S3 key (since filename may vary)
-            // PR 1 behavior preservation: prefix unchanged from legacy gameId-based layout.
-            var prefix = $"pdf_uploads/{resourceKey}/{fileId}_";
-
-            var listRequest = new ListObjectsV2Request
+            // PR 2: delete the object under BOTH layouts when ReadMode is Dual,
+            // so a mid-migration delete cleans up both copies. List up to 10
+            // matching objects per layout to handle the edge case of a
+            // duplicate fileId (should not happen but defensive).
+            var matchedAny = false;
+            foreach (var prefix in EnumerateReadPrefixes(category, resourceKey, fileId))
             {
-                BucketName = _options.BucketName,
-                Prefix = prefix,
-                MaxKeys = 10 // Allow multiple files with same ID (edge case)
-            };
+                var listResponse = await _s3Client.ListObjectsV2Async(new ListObjectsV2Request
+                {
+                    BucketName = _options.BucketName,
+                    Prefix = prefix,
+                    MaxKeys = 10,
+                }, ct).ConfigureAwait(false);
 
-            var listResponse = await _s3Client.ListObjectsV2Async(listRequest, ct).ConfigureAwait(false);
+                foreach (var s3Object in listResponse.S3Objects)
+                {
+                    matchedAny = true;
+                    await _s3Client.DeleteObjectAsync(new DeleteObjectRequest
+                    {
+                        BucketName = _options.BucketName,
+                        Key = s3Object.Key,
+                    }, ct).ConfigureAwait(false);
+                    _logger.LogInformation("Deleted file from S3: {Key}", s3Object.Key);
+                }
+            }
 
-            if (listResponse.S3Objects.Count == 0)
+            if (!matchedAny)
             {
                 _logger.LogWarning("File not found for deletion: {FileId} in {Category}/{ResourceKey}", fileId, category, resourceKey);
                 return false;
-            }
-
-            // Delete all matching files
-            foreach (var s3Object in listResponse.S3Objects)
-            {
-                var deleteRequest = new DeleteObjectRequest
-                {
-                    BucketName = _options.BucketName,
-                    Key = s3Object.Key
-                };
-
-                await _s3Client.DeleteObjectAsync(deleteRequest, ct).ConfigureAwait(false);
-                _logger.LogInformation("Deleted file from S3: {Key}", s3Object.Key);
             }
 
             return true;
@@ -228,21 +228,10 @@ internal sealed class S3BlobStorageService : IBlobStorageService
             PathSecurity.ValidateIdentifier(fileId, nameof(fileId));
             PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
-            // PR 1 behavior preservation: prefix unchanged from legacy gameId-based layout.
-            var prefix = $"pdf_uploads/{resourceKey}/{fileId}_";
-
-            var listRequest = new ListObjectsV2Request
-            {
-                BucketName = _options.BucketName,
-                Prefix = prefix,
-                MaxKeys = 1
-            };
-
-            // Proper async with cancellation support
-            var listResponse = await _s3Client.ListObjectsV2Async(listRequest, cancellationToken)
-                .ConfigureAwait(false);
-
-            return listResponse.S3Objects.Count > 0;
+            // PR 2: layout-aware existence check. Returns true if ANY prefix
+            // (new or legacy, per ReadMode) resolves to a stored object.
+            var resolved = await TryResolveKeyAsync(fileId, category, resourceKey, cancellationToken).ConfigureAwait(false);
+            return resolved is not null;
         }
         catch (ArgumentException)
         {
@@ -270,16 +259,95 @@ internal sealed class S3BlobStorageService : IBlobStorageService
 
     /// <summary>
     /// Constructs the canonical S3 key for a blob.
-    /// PR 1 of issue #1314 preserves the legacy <c>pdf_uploads/</c> prefix regardless
-    /// of <paramref name="category"/> to keep S3 key output byte-identical pre/post
-    /// the signature refactor. PR 2 will wire <see cref="BlobCategoryExtensions.ToS3Folder"/>
-    /// here behind the <c>STORAGE_WRITE_MODE</c> feature flag.
+    /// PR 2 of issue #1314 honors <see cref="StorageLayoutOptions.WriteMode"/>:
+    /// in <see cref="StorageWriteMode.Legacy"/> the key is rendered under the
+    /// legacy <c>pdf_uploads/</c> prefix; in <see cref="StorageWriteMode.New"/>
+    /// (and <see cref="StorageWriteMode.Dual"/>, reserved for rollback) it is
+    /// rendered under the categorized prefix via
+    /// <see cref="BlobCategoryExtensions.ToS3Folder"/>.
     /// </summary>
-    private static string GetS3Key(string fileId, BlobCategory category, string resourceKey, string sanitizedFileName)
+    private string GetS3Key(string fileId, BlobCategory category, string resourceKey, string sanitizedFileName)
+        => GetS3KeyForLayout(fileId, category, resourceKey, sanitizedFileName, _layoutOptions.WriteMode);
+
+    private static string GetS3KeyForLayout(string fileId, BlobCategory category, string resourceKey, string sanitizedFileName, StorageWriteMode mode)
     {
-        // PR 1: behavior preservation — ignore `category`, render legacy prefix.
-        _ = category;
-        return $"pdf_uploads/{resourceKey}/{fileId}_{sanitizedFileName}";
+        var prefix = mode switch
+        {
+            StorageWriteMode.Legacy => LegacyPrefix,
+            StorageWriteMode.Dual => LegacyPrefix, // Dual-write writes the legacy copy first; the new copy is enqueued via the outbox.
+            StorageWriteMode.New => category.ToS3Folder(),
+            _ => LegacyPrefix,
+        };
+        return $"{prefix}/{resourceKey}/{fileId}_{sanitizedFileName}";
+    }
+
+    /// <summary>
+    /// S3 prefix shape <c>{prefix}/{resourceKey}/{fileId}_</c> used by the
+    /// <c>ListObjectsV2</c> probes inside Retrieve / Delete / Exists / Presign.
+    /// Returns the layout dictated by <see cref="StorageLayoutOptions.ReadMode"/>:
+    /// <see cref="StorageReadMode.New"/> probes only the categorized prefix,
+    /// <see cref="StorageReadMode.Legacy"/> probes only the legacy prefix,
+    /// <see cref="StorageReadMode.Dual"/> probes the new prefix first and
+    /// falls back to the legacy prefix on miss.
+    /// </summary>
+    private async Task<string?> TryResolveKeyAsync(
+        string fileId,
+        BlobCategory category,
+        string resourceKey,
+        CancellationToken ct)
+    {
+        async Task<string?> ProbeAsync(string prefixKey)
+        {
+            var listResponse = await _s3Client
+                .ListObjectsV2Async(new ListObjectsV2Request
+                {
+                    BucketName = _options.BucketName,
+                    Prefix = prefixKey,
+                    MaxKeys = 1,
+                }, ct)
+                .ConfigureAwait(false);
+            return listResponse.S3Objects.Count > 0 ? listResponse.S3Objects[0].Key : null;
+        }
+
+        var newPrefix = $"{category.ToS3Folder()}/{resourceKey}/{fileId}_";
+        var legacyPrefix = $"{LegacyPrefix}/{resourceKey}/{fileId}_";
+
+        return _layoutOptions.ReadMode switch
+        {
+            StorageReadMode.New => await ProbeAsync(newPrefix).ConfigureAwait(false),
+            StorageReadMode.Legacy => await ProbeAsync(legacyPrefix).ConfigureAwait(false),
+            StorageReadMode.Dual => await ProbeAsync(newPrefix).ConfigureAwait(false)
+                                   ?? await ProbeAsync(legacyPrefix).ConfigureAwait(false),
+            _ => await ProbeAsync(legacyPrefix).ConfigureAwait(false),
+        };
+    }
+
+    /// <summary>
+    /// Enumerates the prefixes that <see cref="DeleteAsync"/> must scan based
+    /// on <see cref="StorageLayoutOptions.ReadMode"/>. In Dual mode both
+    /// layouts are deleted to ensure a complete cleanup mid-migration.
+    /// </summary>
+    private IEnumerable<string> EnumerateReadPrefixes(BlobCategory category, string resourceKey, string fileId)
+    {
+        var newPrefix = $"{category.ToS3Folder()}/{resourceKey}/{fileId}_";
+        var legacyPrefix = $"{LegacyPrefix}/{resourceKey}/{fileId}_";
+
+        switch (_layoutOptions.ReadMode)
+        {
+            case StorageReadMode.New:
+                yield return newPrefix;
+                break;
+            case StorageReadMode.Legacy:
+                yield return legacyPrefix;
+                break;
+            case StorageReadMode.Dual:
+                yield return newPrefix;
+                yield return legacyPrefix;
+                break;
+            default:
+                yield return legacyPrefix;
+                break;
+        }
     }
 
     /// <summary>
@@ -298,26 +366,15 @@ internal sealed class S3BlobStorageService : IBlobStorageService
             PathSecurity.ValidateIdentifier(fileId, nameof(fileId));
             PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
-            // Find the exact S3 key
-            // PR 1 behavior preservation: prefix unchanged from legacy gameId-based layout.
-            var prefix = $"pdf_uploads/{resourceKey}/{fileId}_";
-
-            var listRequest = new ListObjectsV2Request
-            {
-                BucketName = _options.BucketName,
-                Prefix = prefix,
-                MaxKeys = 1
-            };
-
-            var listResponse = await _s3Client.ListObjectsV2Async(listRequest).ConfigureAwait(false);
-
-            if (listResponse.S3Objects.Count == 0)
+            // PR 2: layout-aware key resolution; presign whatever the active
+            // ReadMode finds (new-only / legacy-only / dual-with-fallback).
+            var s3Key = await TryResolveKeyAsync(fileId, category, resourceKey, CancellationToken.None).ConfigureAwait(false);
+            if (s3Key is null)
             {
                 _logger.LogWarning("Cannot generate pre-signed URL: file not found {FileId} in {Category}/{ResourceKey}", fileId, category, resourceKey);
                 return null;
             }
 
-            var s3Key = listResponse.S3Objects[0].Key;
             var expiry = expirySeconds ?? _options.PresignedUrlExpirySeconds;
 
             var request = new GetPreSignedUrlRequest

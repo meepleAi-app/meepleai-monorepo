@@ -344,7 +344,7 @@ builder.Services.AddMediatR(cfg =>
 builder.Services.AddVectorSearchServices(builder.Configuration);
 builder.Services.AddDomainServices();
 builder.Services.AddAiServices();
-builder.Services.AddPdfServices();
+builder.Services.AddPdfServices(builder.Configuration);
 builder.Services.AddChatServices();
 builder.Services.AddAdminServices();
 builder.Services.AddBggServices();

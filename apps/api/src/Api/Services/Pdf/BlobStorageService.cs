@@ -1,5 +1,6 @@
 using Api.Helpers;
 using Api.Infrastructure.Security;
+using Microsoft.Extensions.Options;
 
 namespace Api.Services.Pdf;
 
@@ -10,12 +11,16 @@ namespace Api.Services.Pdf;
 internal class BlobStorageService : IBlobStorageService
 {
     private readonly string _storageBasePath;
+    private readonly StorageLayoutOptions _layoutOptions;
     private readonly ILogger<BlobStorageService> _logger;
 
     public BlobStorageService(
         IConfiguration config,
+        IOptions<StorageLayoutOptions> layoutOptions,
         ILogger<BlobStorageService> logger)
     {
+        ArgumentNullException.ThrowIfNull(layoutOptions);
+        _layoutOptions = layoutOptions.Value;
         _logger = logger;
         _storageBasePath = config["PDF_STORAGE_PATH"] ?? Path.Combine(Directory.GetCurrentDirectory(), "pdf_uploads");
 
@@ -27,18 +32,58 @@ internal class BlobStorageService : IBlobStorageService
         }
     }
 
+    /// <summary>
+    /// Resolves the on-disk subdirectory under which a blob lives, based on
+    /// <see cref="StorageLayoutOptions.WriteMode"/> (for writes) or each
+    /// <see cref="StorageReadMode"/> candidate (for reads).
+    /// Legacy layout uses <c>{_storageBasePath}/{resourceKey}/</c>; the new
+    /// categorized layout uses <c>{_storageBasePath}/{category.ToS3Folder()}/{resourceKey}/</c>.
+    /// </summary>
+    private string ResolveResourceDir(BlobCategory category, string resourceKey, bool forNewLayout)
+    {
+        if (forNewLayout)
+        {
+            var categoryFolder = category.ToS3Folder();
+            var categoryDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, categoryFolder);
+            return PathSecurity.ValidatePathIsInDirectory(categoryDir, resourceKey);
+        }
+
+        return PathSecurity.ValidatePathIsInDirectory(_storageBasePath, resourceKey);
+    }
+
+    private IEnumerable<string> EnumerateReadDirs(BlobCategory category, string resourceKey)
+    {
+        switch (_layoutOptions.ReadMode)
+        {
+            case StorageReadMode.New:
+                yield return ResolveResourceDir(category, resourceKey, forNewLayout: true);
+                break;
+            case StorageReadMode.Legacy:
+                yield return ResolveResourceDir(category, resourceKey, forNewLayout: false);
+                break;
+            case StorageReadMode.Dual:
+                yield return ResolveResourceDir(category, resourceKey, forNewLayout: true);
+                yield return ResolveResourceDir(category, resourceKey, forNewLayout: false);
+                break;
+            default:
+                yield return ResolveResourceDir(category, resourceKey, forNewLayout: false);
+                break;
+        }
+    }
+
     public async Task<BlobStorageResult> StoreAsync(Stream stream, string fileName, BlobCategory category, string resourceKey, CancellationToken ct = default)
     {
-        // PR 1 behavior preservation: ignore `category`, render legacy single-folder layout
-        // under _storageBasePath/{resourceKey}/. PR 2 will branch on category behind feature flag.
-        _ = category;
         try
         {
             // SECURITY: Validate resourceKey to prevent path traversal
             PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
             var fileId = Guid.NewGuid().ToString("N");
-            var resourceDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, resourceKey);
+            // PR 2: WriteMode.New routes to the categorized subdirectory; Legacy
+            // (and Dual which writes the legacy copy first) routes to the
+            // resourceKey-only subdirectory under _storageBasePath.
+            var forNewLayout = _layoutOptions.WriteMode == StorageWriteMode.New;
+            var resourceDir = ResolveResourceDir(category, resourceKey, forNewLayout);
             Directory.CreateDirectory(resourceDir);
 
             var sanitizedFileName = SanitizeFileName(fileName);
@@ -82,7 +127,6 @@ internal class BlobStorageService : IBlobStorageService
 
     public Task<Stream?> RetrieveAsync(string fileId, BlobCategory category, string resourceKey, CancellationToken ct = default)
     {
-        _ = category; // PR 1 behavior preservation
         FileStream? fileStream = null;
         try
         {
@@ -90,18 +134,27 @@ internal class BlobStorageService : IBlobStorageService
             PathSecurity.ValidateIdentifier(fileId, nameof(fileId));
             PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
-            var resourceDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, resourceKey);
-            var files = Directory.GetFiles(resourceDir, $"{fileId}_*");
-
-            if (files.Length == 0)
+            // PR 2: layout-aware retrieval — probe each candidate directory in
+            // ReadMode order. First non-empty match wins.
+            foreach (var resourceDir in EnumerateReadDirs(category, resourceKey))
             {
-                _logger.LogWarning("File not found for {FileId} in {ResourceKey}", fileId, resourceKey);
-                return Task.FromResult<Stream?>(null);
+                if (!Directory.Exists(resourceDir))
+                {
+                    continue;
+                }
+
+                var files = Directory.GetFiles(resourceDir, $"{fileId}_*");
+                if (files.Length == 0)
+                {
+                    continue;
+                }
+
+                fileStream = new FileStream(files[0], FileMode.Open, FileAccess.Read, FileShare.Read);
+                return Task.FromResult<Stream?>(fileStream);
             }
 
-            var filePath = files[0];
-            fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            return Task.FromResult<Stream?>(fileStream);
+            _logger.LogWarning("File not found for {FileId} in {ResourceKey}", fileId, resourceKey);
+            return Task.FromResult<Stream?>(null);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -123,26 +176,34 @@ internal class BlobStorageService : IBlobStorageService
 
     public async Task<bool> DeleteAsync(string fileId, BlobCategory category, string resourceKey, CancellationToken ct = default)
     {
-        _ = category; // PR 1 behavior preservation
         try
         {
             // SECURITY: Validate parameters to prevent path traversal (SEC-738, CWE-22, CWE-73)
             PathSecurity.ValidateIdentifier(fileId, nameof(fileId));
             PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
-            var resourceDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, resourceKey);
-            var files = Directory.GetFiles(resourceDir, $"{fileId}_*");
+            // PR 2: layout-aware deletion — sweep every candidate directory in
+            // ReadMode order so a mid-migration delete cleans up both copies.
+            var deletedAny = false;
+            foreach (var resourceDir in EnumerateReadDirs(category, resourceKey))
+            {
+                if (!Directory.Exists(resourceDir))
+                {
+                    continue;
+                }
 
-            if (files.Length == 0)
+                foreach (var file in Directory.GetFiles(resourceDir, $"{fileId}_*"))
+                {
+                    File.Delete(file);
+                    _logger.LogInformation("Deleted file at {FilePath}", file);
+                    deletedAny = true;
+                }
+            }
+
+            if (!deletedAny)
             {
                 _logger.LogWarning("File not found for deletion: {FileId} in {ResourceKey}", fileId, resourceKey);
                 return false;
-            }
-
-            foreach (var file in files)
-            {
-                File.Delete(file);
-                _logger.LogInformation("Deleted file at {FilePath}", file);
             }
 
             return await Task.FromResult(true).ConfigureAwait(false);
@@ -173,32 +234,41 @@ internal class BlobStorageService : IBlobStorageService
 
     public string GetStoragePath(string fileId, BlobCategory category, string resourceKey, string fileName)
     {
-        _ = category; // PR 1 behavior preservation
         // SECURITY: Validate resourceKey to prevent path traversal
         PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
-        var resourceDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, resourceKey);
+        // PR 2: GetStoragePath returns the path under the active WriteMode layout
+        // (the path callers would observe when storing a new blob).
+        var forNewLayout = _layoutOptions.WriteMode == StorageWriteMode.New;
+        var resourceDir = ResolveResourceDir(category, resourceKey, forNewLayout);
         var sanitizedFileName = SanitizeFileName(fileName);
         return Path.Combine(resourceDir, $"{fileId}_{sanitizedFileName}");
     }
 
     public Task<bool> ExistsAsync(string fileId, BlobCategory category, string resourceKey, CancellationToken cancellationToken = default)
     {
-        _ = category; // PR 1 behavior preservation
         try
         {
             // SECURITY: Validate parameters to prevent path traversal (SEC-738, CWE-22, CWE-73)
             PathSecurity.ValidateIdentifier(fileId, nameof(fileId));
             PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
-            var resourceDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, resourceKey);
-            if (!Directory.Exists(resourceDir))
+            // PR 2: layout-aware existence check — return true if ANY candidate
+            // directory contains a file matching the fileId prefix.
+            foreach (var resourceDir in EnumerateReadDirs(category, resourceKey))
             {
-                return Task.FromResult(false);
+                if (!Directory.Exists(resourceDir))
+                {
+                    continue;
+                }
+
+                if (Directory.GetFiles(resourceDir, $"{fileId}_*").Length > 0)
+                {
+                    return Task.FromResult(true);
+                }
             }
 
-            var files = Directory.GetFiles(resourceDir, $"{fileId}_*");
-            return Task.FromResult(files.Length > 0);
+            return Task.FromResult(false);
         }
         catch (ArgumentException)
         {

@@ -35,7 +35,12 @@ const FIXTURE_STATES = [
   'step1-warning',
   'step2-location',
   'step3-empty',
-  'step3-typing',
+  // PR #1305 review fix: `step3-typing` removed — it returns state
+  // identical to `step3-empty` (the autocomplete dropdown is driven by
+  // sibling React state, not the wizard reducer), so the snapshot would
+  // be byte-identical. Tracking as W3-orchestrator follow-up: surface a
+  // dedicated reducer slot for the autocomplete-typing state if we want
+  // distinct visual coverage.
   'step3-filled',
   'step4-games',
   'step4-decide-group',

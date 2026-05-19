@@ -1143,8 +1143,13 @@ const PhoneTopNav = ({ title = 'Nuova serata' }) => (
   </div>
 );
 
-const MobileScreen = ({ step, variant, anchor, label, gherkin, primaryLabel = 'Avanti →' }) => (
-  <section id={anchor} data-screen-label={`SP7-A · ${label}`} className="phone-shell">
+const MobileScreen = ({ step, variant, anchor, label, gherkin, primaryLabel = 'Avanti →', conformityMarker }) => (
+  <section
+    id={anchor}
+    data-screen-label={`SP7-A · ${label}`}
+    className="phone-shell"
+    {...(conformityMarker ? { 'data-conformity-screen': conformityMarker } : {})}
+  >
     <div className="state-caption">
       <span className="state-id">{anchor.replace('state-', '#')}</span>
       <span className="state-label">📱 {label}</span>
@@ -1354,8 +1359,13 @@ const RSVPLivePreview = () => {
   );
 };
 
-const DesktopSplitForm = ({ anchor, label }) => (
-  <section id={anchor} data-screen-label={`SP7-A · ${label}`} className="desktop-shell">
+const DesktopSplitForm = ({ anchor, label, conformityMarker }) => (
+  <section
+    id={anchor}
+    data-screen-label={`SP7-A · ${label}`}
+    className="desktop-shell"
+    {...(conformityMarker ? { 'data-conformity-screen': conformityMarker } : {})}
+  >
     <div className="state-caption">
       <span className="state-id">{anchor.replace('state-', '#')}</span>
       <span className="state-label">🖥️ {label}</span>
@@ -1561,7 +1571,7 @@ const App = () => {
             <span className="section-meta">8 stati · iPhone 15 viewport</span>
           </div>
           <div className="mobile-grid">
-            {STATES.map(s => (
+            {STATES.map((s, idx) => (
               <MobileScreen
                 key={s.id}
                 anchor={s.id}
@@ -1570,6 +1580,7 @@ const App = () => {
                 label={s.label}
                 gherkin={s.gherkin}
                 primaryLabel={s.step === 4 ? '✓ Crea serata' : 'Avanti →'}
+                conformityMarker={idx === 0 ? 'default-mobile' : undefined}
               />
             ))}
           </div>
@@ -1598,6 +1609,7 @@ const App = () => {
           <DesktopSplitForm
             anchor="state-10-desktop-split"
             label="10 · Desktop · Step 1 + RSVP live preview (8-col / 4-col)"
+            conformityMarker="default-desktop"
           />
         </div>
 

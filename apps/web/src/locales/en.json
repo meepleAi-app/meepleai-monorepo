@@ -3164,5 +3164,117 @@
         "retry": "Retry"
       }
     }
+  },
+  "gameNightCreate": {
+    "title": "New game night",
+    "subtitle": "Plan a game night in 4 steps.",
+    "nav": {
+      "back": "Back",
+      "next": "Next",
+      "submit": "Create event",
+      "saveDraft": "Save draft and exit",
+      "cancel": "Cancel"
+    },
+    "steps": {
+      "step1": "When",
+      "step2": "Where",
+      "step3": "Who",
+      "step4": "What",
+      "progress": "Step {current} of {total}"
+    },
+    "step1": {
+      "label": "Date and time",
+      "placeholder": "Pick a date",
+      "helper": "At least 1 hour in the future.",
+      "calendarLabel": "Calendar",
+      "timeLabel": "Time",
+      "conflictWarningTitle": "You're already busy",
+      "conflictWarningBody": "{count, plural, =1 {One event overlaps} other {{count} events overlap}} this time slot.",
+      "conflictListLabel": "Overlapping events",
+      "conflictRoleOrganizer": "You're hosting",
+      "conflictRoleInvitee": "Invited",
+      "continueAnyway": "Continue anyway",
+      "changeDate": "Change date"
+    },
+    "step2": {
+      "label": "Where you play",
+      "kindHome": "My place",
+      "kindFriend": "A friend's place",
+      "kindOnline": "Online",
+      "kindTbd": "To be decided",
+      "detailsLabel": "Details",
+      "detailsPlaceholder": "Address, Zoom link, directions…",
+      "detailsHelper": "Visible only to invitees."
+    },
+    "step3": {
+      "label": "Who to invite",
+      "searchPlaceholder": "Search a player or type an email…",
+      "searchAriaLabel": "Search a player",
+      "emptyStateTitle": "Add your first invitees",
+      "emptyStateBody": "Search by name or email. Your regular co-players appear below.",
+      "regularsTitle": "Your regulars",
+      "regularsHelper": "Sorted by how often you've played together recently.",
+      "regularsEmpty": "No regular co-players yet.",
+      "addRegular": "Add",
+      "addedChipLabel": "{name} added to invitees",
+      "remove": "Remove",
+      "addEmail": "Invite by email",
+      "emailLabel": "New invitee email",
+      "emailPlaceholder": "name@example.com",
+      "emailInvalid": "Invalid email",
+      "emailDuplicate": "Email already added",
+      "inviteeCount": "{count} {count, plural, =1 {invitee} other {invitees}}",
+      "limitWarning": "Maximum {max} invitees total.",
+      "limitExceeded": "You've hit the {max} invitees limit."
+    },
+    "step4": {
+      "label": "What to play",
+      "decideAtGroupLabel": "Let the group decide",
+      "decideAtGroupHelper": "We'll pick games together that evening.",
+      "selectedCount": "{count} {count, plural, =1 {game selected} other {games selected}}",
+      "libraryHeader": "From your library",
+      "libraryEmpty": "Your library is empty. Add games to suggest them.",
+      "selectGame": "Select {name}",
+      "deselectGame": "Deselect {name}",
+      "limitWarning": "Maximum {max} games per night."
+    },
+    "preview": {
+      "title": "Invitation preview",
+      "subtitle": "What invitees will see.",
+      "rsvpCta": "RSVP",
+      "rsvpAccept": "✓ I'm in",
+      "rsvpDecline": "✗ Can't make it",
+      "noDate": "Date to be decided",
+      "noLocation": "Location to be decided",
+      "gamesTbd": "Games: decided at the group",
+      "gamesNone": "No games picked"
+    },
+    "submit": {
+      "creating": "Creating…",
+      "successToast": "Event created",
+      "errorTitle": "Creation failed",
+      "errorBody": "Something went wrong. Try again in a moment.",
+      "retry": "Retry",
+      "saveDraft": "Save draft and exit",
+      "retryAttempt": "Attempt {attempt} of {max}"
+    },
+    "draft": {
+      "savedAt": "Draft saved {time}",
+      "savedStatus": "Saved",
+      "savingStatus": "Saving…",
+      "errorStatus": "Save error",
+      "restoredBanner": "Draft restored",
+      "discardDraft": "Discard draft",
+      "discardConfirm": "Discard the saved draft? This action cannot be undone.",
+      "discardConfirmCancel": "Cancel",
+      "discardConfirmConfirm": "Discard"
+    },
+    "a11y": {
+      "wizardLabel": "Game night create wizard",
+      "stepperLabel": "Game night creation progress",
+      "inviteesListLabel": "Invitees list",
+      "gamesListLabel": "Suggested games list",
+      "previewLabel": "Invitation preview"
+    }
   }
 }

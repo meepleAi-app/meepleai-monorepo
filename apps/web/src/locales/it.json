@@ -3217,5 +3217,117 @@
         "retry": "Riprova"
       }
     }
+  },
+  "gameNightCreate": {
+    "title": "Nuova serata",
+    "subtitle": "Pianifica una serata di gioco in 4 step.",
+    "nav": {
+      "back": "Indietro",
+      "next": "Avanti",
+      "submit": "Crea evento",
+      "saveDraft": "Salva bozza e esci",
+      "cancel": "Annulla"
+    },
+    "steps": {
+      "step1": "Quando",
+      "step2": "Dove",
+      "step3": "Chi",
+      "step4": "Cosa",
+      "progress": "Step {current} di {total}"
+    },
+    "step1": {
+      "label": "Data e ora",
+      "placeholder": "Seleziona data",
+      "helper": "Almeno 1 ora nel futuro.",
+      "calendarLabel": "Calendario",
+      "timeLabel": "Orario",
+      "conflictWarningTitle": "Hai già un impegno",
+      "conflictWarningBody": "{count, plural, =1 {Un evento si sovrappone} other {{count} eventi si sovrappongono}} a questo orario.",
+      "conflictListLabel": "Eventi sovrapposti",
+      "conflictRoleOrganizer": "Organizzi",
+      "conflictRoleInvitee": "Invitato",
+      "continueAnyway": "Continua comunque",
+      "changeDate": "Cambia data"
+    },
+    "step2": {
+      "label": "Dove giocate",
+      "kindHome": "Casa mia",
+      "kindFriend": "Casa di un amico",
+      "kindOnline": "Online",
+      "kindTbd": "Da definire",
+      "detailsLabel": "Dettagli",
+      "detailsPlaceholder": "Indirizzo, link Zoom, indicazioni…",
+      "detailsHelper": "Visibili solo agli invitati."
+    },
+    "step3": {
+      "label": "Chi invitare",
+      "searchPlaceholder": "Cerca un giocatore o digita un'email…",
+      "searchAriaLabel": "Cerca un giocatore",
+      "emptyStateTitle": "Aggiungi i primi invitati",
+      "emptyStateBody": "Cerca per nome o email. I tuoi compagni di gioco abituali appaiono qui sotto.",
+      "regularsTitle": "I tuoi abituali",
+      "regularsHelper": "Ordinati per frequenza nelle ultime serate.",
+      "regularsEmpty": "Nessun giocatore abituale ancora.",
+      "addRegular": "Aggiungi",
+      "addedChipLabel": "{name} aggiunto agli invitati",
+      "remove": "Rimuovi",
+      "addEmail": "Invita per email",
+      "emailLabel": "Email del nuovo invitato",
+      "emailPlaceholder": "email@esempio.com",
+      "emailInvalid": "Email non valida",
+      "emailDuplicate": "Email già aggiunta",
+      "inviteeCount": "{count} {count, plural, =1 {invitato} other {invitati}}",
+      "limitWarning": "Massimo {max} invitati totali.",
+      "limitExceeded": "Hai raggiunto il limite di {max} invitati."
+    },
+    "step4": {
+      "label": "Cosa giocate",
+      "decideAtGroupLabel": "Lascia decidere al gruppo",
+      "decideAtGroupHelper": "Decideremo i giochi insieme la sera.",
+      "selectedCount": "{count} {count, plural, =1 {gioco selezionato} other {giochi selezionati}}",
+      "libraryHeader": "Dalla tua libreria",
+      "libraryEmpty": "La tua libreria è vuota. Aggiungi giochi per consigliarli.",
+      "selectGame": "Seleziona {name}",
+      "deselectGame": "Deseleziona {name}",
+      "limitWarning": "Massimo {max} giochi per serata."
+    },
+    "preview": {
+      "title": "Anteprima invito",
+      "subtitle": "Quello che vedranno gli invitati.",
+      "rsvpCta": "RSVP",
+      "rsvpAccept": "✓ Partecipo",
+      "rsvpDecline": "✗ Non posso",
+      "noDate": "Data da scegliere",
+      "noLocation": "Luogo da definire",
+      "gamesTbd": "Giochi: da decidere al gruppo",
+      "gamesNone": "Nessun gioco selezionato"
+    },
+    "submit": {
+      "creating": "Creazione in corso…",
+      "successToast": "Evento creato",
+      "errorTitle": "Creazione fallita",
+      "errorBody": "Qualcosa è andato storto. Riprova fra un momento.",
+      "retry": "Riprova",
+      "saveDraft": "Salva bozza e esci",
+      "retryAttempt": "Tentativo {attempt} di {max}"
+    },
+    "draft": {
+      "savedAt": "Bozza salvata {time}",
+      "savedStatus": "Salvato",
+      "savingStatus": "Salvataggio…",
+      "errorStatus": "Errore di salvataggio",
+      "restoredBanner": "Bozza ripristinata",
+      "discardDraft": "Scarta bozza",
+      "discardConfirm": "Vuoi scartare la bozza salvata? Questa azione non può essere annullata.",
+      "discardConfirmCancel": "Annulla",
+      "discardConfirmConfirm": "Scarta"
+    },
+    "a11y": {
+      "wizardLabel": "Wizard creazione serata",
+      "stepperLabel": "Avanzamento creazione serata",
+      "inviteesListLabel": "Lista invitati",
+      "gamesListLabel": "Lista giochi proposti",
+      "previewLabel": "Anteprima invito"
+    }
   }
 }

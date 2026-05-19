@@ -100,6 +100,25 @@ internal sealed class PhotoBatchUploadRepository : RepositoryBase, IPhotoBatchUp
     }
 
     /// <inheritdoc/>
+    public async Task<string?> GetPageTextByParagraphNumberAsync(
+        Guid uploadId,
+        int paragraphNumber,
+        CancellationToken ct = default)
+    {
+        // Npgsql translates Array.Contains to PostgreSQL `paragraphNumber = ANY(paragraph_numbers)`,
+        // which uses the GIN index defined in PhotoBatchPageEntityConfiguration when the array
+        // operator is `@>` and falls back to a seq-scan otherwise. EF Core's `Contains` keeps the
+        // query LINQ-translatable across providers (in-memory test uses the same predicate).
+        return await DbContext.PhotoBatchPages
+            .AsNoTracking()
+            .Where(p => p.PhotoBatchUploadId == uploadId && p.ParagraphNumbers.Contains(paragraphNumber))
+            .OrderBy(p => p.PageNumber)
+            .Select(p => p.ExtractedText)
+            .FirstOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> BelongsToUserAsync(Guid uploadId, Guid userId, CancellationToken ct = default)
     {
         return await DbContext.PhotoBatchUploads

@@ -37,6 +37,14 @@ public sealed class PhotoBatchPage : Entity<Guid>
     /// <summary>Gets the raw text extracted from this page, if available.</summary>
     public string? ExtractedText { get; private set; }
 
+    /// <summary>
+    /// Gets the narrative paragraph numbers detected on this page.
+    /// Issue #747: enables paragraph-number lookup distinct from physical page index.
+    /// Empty array when the OCR pipeline hasn't extracted paragraph IDs yet — preserves
+    /// legacy upload behavior and makes the field non-breaking for existing rows.
+    /// </summary>
+    public int[] ParagraphNumbers { get; private set; } = [];
+
     /// <summary>Gets the UTC timestamp when this page was indexed.</summary>
     public DateTime IndexedAt { get; private set; }
 
@@ -46,6 +54,8 @@ public sealed class PhotoBatchPage : Entity<Guid>
 
     /// <summary>
     /// Creates a new <see cref="PhotoBatchPage"/> after OCR processing.
+    /// Issue #747: <paramref name="paragraphNumbers"/> is optional to preserve callers
+    /// that don't (yet) extract narrative paragraph IDs.
     /// </summary>
     public static PhotoBatchPage Create(
         Guid batchId,
@@ -55,7 +65,8 @@ public sealed class PhotoBatchPage : Entity<Guid>
         PageOrientation orientation,
         bool isBlank,
         string[] warnings,
-        string? extractedText)
+        string? extractedText,
+        int[]? paragraphNumbers = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(blobKey);
 
@@ -71,6 +82,7 @@ public sealed class PhotoBatchPage : Entity<Guid>
             IsBlank = isBlank,
             Warnings = warnings ?? [],
             ExtractedText = extractedText,
+            ParagraphNumbers = paragraphNumbers ?? [],
             IndexedAt = DateTime.UtcNow
         };
     }

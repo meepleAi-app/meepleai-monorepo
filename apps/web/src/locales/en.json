@@ -3225,7 +3225,8 @@
       "emailDuplicate": "Email already added",
       "inviteeCount": "{count} {count, plural, =1 {invitee} other {invitees}}",
       "limitWarning": "Maximum {max} invitees total.",
-      "limitExceeded": "You've hit the {max} invitees limit."
+      "limitExceeded": "You've hit the {max} invitees limit.",
+      "searching": "Searching…"
     },
     "step4": {
       "label": "What to play",
@@ -3247,7 +3248,14 @@
       "noDate": "Date to be decided",
       "noLocation": "Location to be decided",
       "gamesTbd": "Games: decided at the group",
-      "gamesNone": "No games picked"
+      "gamesNone": "No games picked",
+      "sectionWhen": "When",
+      "sectionWhere": "Where",
+      "sectionWhat": "What",
+      "sectionWho": "Who",
+      "kindHome": "My place",
+      "kindFriend": "A friend's place",
+      "kindOnline": "Online"
     },
     "submit": {
       "creating": "Creating…",

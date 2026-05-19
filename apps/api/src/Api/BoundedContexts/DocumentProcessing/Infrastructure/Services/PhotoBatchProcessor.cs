@@ -133,7 +133,7 @@ internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
         CancellationToken ct)
     {
         // 1. Retrieve blob from storage.
-        var stream = await _blob.RetrieveAsync(descriptor.BlobKey, gameIdString, ct).ConfigureAwait(false);
+        var stream = await _blob.RetrieveAsync(descriptor.BlobKey, BlobCategory.PhotoBatch, gameIdString, ct).ConfigureAwait(false);
         if (stream is null)
         {
             _logger.LogWarning(

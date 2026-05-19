@@ -1,3 +1,4 @@
+using System.Buffers;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure.Entities;
@@ -168,7 +169,7 @@ internal static class PdfSeeder
                 // Stream from seed bucket → store into primary blob
                 var stream = await seedBlob.OpenReadAsync(blobKey, ct).ConfigureAwait(false);
                 await using var _ = stream.ConfigureAwait(false);
-                var result = await primaryBlob.StoreAsync(stream, fileName, PdfStorageKey.ForPdf(pdfId), ct).ConfigureAwait(false);
+                var result = await primaryBlob.StoreAsync(stream, fileName, BlobCategory.Pdf, PdfStorageKey.ForPdf(pdfId), ct).ConfigureAwait(false);
 
                 if (!result.Success)
                 {
@@ -272,13 +273,26 @@ internal static class PdfSeeder
         ILogger logger,
         CancellationToken ct)
     {
-        // Best-effort delete from primary blob
+        // Best-effort delete from primary blob.
+        //
+        // filePath shape (S3 + local): "pdf_uploads/{resourceKey}/{fileId}_{sanitizedFileName}".
+        // DeleteAsync expects the bare fileId (without prefix/underscore/filename).
+        // Review finding #3: previously the full filePath was passed as fileId, which
+        // failed PathSecurity.ValidateIdentifier silently — fix below extracts just the
+        // fileId GUID-without-hyphens segment.
         if (!string.IsNullOrEmpty(filePath))
         {
             try
             {
-                // Extract fileId from filePath — use the path segment as-is
-                await primaryBlob.DeleteAsync(filePath, gameIdStr, ct).ConfigureAwait(false);
+                var fileId = ExtractFileIdFromPath(filePath);
+                if (!string.IsNullOrEmpty(fileId))
+                {
+                    await primaryBlob.DeleteAsync(fileId, BlobCategory.Pdf, gameIdStr, ct).ConfigureAwait(false);
+                }
+                else
+                {
+                    logger.LogWarning("PdfSeeder: cannot extract fileId from path '{FilePath}', skipping blob delete", filePath);
+                }
             }
             catch (Exception ex)
             {
@@ -293,5 +307,40 @@ internal static class PdfSeeder
             db.PdfDocuments.Remove(entity);
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
         }
+    }
+
+    private static readonly SearchValues<char> PathSeparators = SearchValues.Create("/\\");
+
+    /// <summary>
+    /// Extracts the bare fileId from a storage path of shape
+    /// <c>pdf_uploads/{resourceKey}/{fileId}_{sanitizedFileName}</c>.
+    /// Returns null if the path does not match the expected layout.
+    /// Exposed as <c>internal</c> for unit testing the null-return branches
+    /// (no path separator, trailing slash, no underscore in segment, leading
+    /// underscore in segment).
+    /// </summary>
+    internal static string? ExtractFileIdFromPath(string filePath)
+    {
+        if (string.IsNullOrEmpty(filePath))
+        {
+            return null;
+        }
+
+        // Platform-independent separators: '/' for S3 + URL-style, '\\' on Windows local FS.
+        var lastSeparator = filePath.AsSpan().LastIndexOfAny(PathSeparators);
+        if (lastSeparator < 0 || lastSeparator == filePath.Length - 1)
+        {
+            return null;
+        }
+
+        var fileName = filePath[(lastSeparator + 1)..];
+        var underscoreIndex = fileName.IndexOf('_', StringComparison.Ordinal);
+        // <= 0 covers: not found (-1) AND leading underscore (= 0 ⇒ empty fileId).
+        if (underscoreIndex <= 0)
+        {
+            return null;
+        }
+
+        return fileName[..underscoreIndex];
     }
 }

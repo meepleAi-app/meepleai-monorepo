@@ -94,7 +94,7 @@ public sealed class PdfSeederBlobTests
 
         // Assert
         _seedBlob.Verify(x => x.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         db.PdfDocuments.Should().BeEmpty();
     }
 
@@ -115,7 +115,7 @@ public sealed class PdfSeederBlobTests
 
         // Post-migration (2026-04-19): seeder stores under pdfs/{pdfId}/ bucket, not pdfs/{gameId}/.
         // pdfId is generated inside the seeder, so match any bucket key here.
-        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(true, "file123", "/blobs/file123", 4));
 
         var manifest = CreateManifest(CreateBlobEntry());
@@ -212,7 +212,7 @@ public sealed class PdfSeederBlobTests
             _primaryBlob.Object, _seedBlob.Object, _logger.Object, CancellationToken.None);
 
         // Assert — no store call, still only 1 doc
-        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         db.PdfDocuments.ToList().Should().HaveCount(1);
     }
 
@@ -234,9 +234,9 @@ public sealed class PdfSeederBlobTests
 
         // Post-migration (2026-04-19): seeder stores under pdfs/{pdfId}/ bucket, not pdfs/{gameId}/.
         // pdfId is generated inside the seeder, so match any bucket key here.
-        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(true, "newfile", "/blobs/newfile", 4));
-        _primaryBlob.Setup(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _primaryBlob.Setup(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var manifest = CreateManifest(CreateBlobEntry(pdfSha256: "newhash"));
@@ -294,7 +294,47 @@ public sealed class PdfSeederBlobTests
 
         // Assert
         _seedBlob.Verify(x => x.OpenReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         db.PdfDocuments.Should().BeEmpty();
+    }
+
+    // ---------------------------------------------------------------
+    // ExtractFileIdFromPath edge cases (review finding #3 follow-up)
+    // ---------------------------------------------------------------
+
+    [Theory]
+    // Happy paths — S3 forward-slash + Windows backslash layouts
+    [InlineData("pdf_uploads/gameId/abc123_rulebook.pdf", "abc123")]
+    [InlineData("pdf_uploads\\gameId\\abc123_rulebook.pdf", "abc123")]
+    [InlineData("C:\\storage\\pdf_uploads\\gameId\\fedcba_doc.pdf", "fedcba")]
+    // GUID-N fileId (32 hex chars, no underscores, no hyphens) — production shape
+    [InlineData("pdf_uploads/game/abcdef01234567890123456789abcdef_file.pdf", "abcdef01234567890123456789abcdef")]
+    // Filename contains underscore — only FIRST underscore in last segment splits fileId/filename
+    [InlineData("pdf_uploads/gameId/abc123_my_file_v2.pdf", "abc123")]
+    public void ExtractFileIdFromPath_ValidPaths_ReturnsFileId(string filePath, string expectedFileId)
+    {
+        var result = PdfSeeder.ExtractFileIdFromPath(filePath);
+        result.Should().Be(expectedFileId);
+    }
+
+    [Theory]
+    // Null / empty
+    [InlineData(null)]
+    [InlineData("")]
+    // No path separator → can't isolate last segment
+    [InlineData("singleSegment_file.pdf")]
+    [InlineData("noSeparatorNorUnderscore")]
+    // Trailing slash → no filename after last separator
+    [InlineData("pdf_uploads/gameId/")]
+    [InlineData("pdf_uploads\\gameId\\")]
+    // Last segment has no underscore → can't isolate fileId from filename
+    [InlineData("pdf_uploads/gameId/justAFile.pdf")]
+    [InlineData("pdf_uploads/gameId/no-underscore-here")]
+    // Leading underscore in last segment → fileId would be empty
+    [InlineData("pdf_uploads/gameId/_leadingUnderscore.pdf")]
+    public void ExtractFileIdFromPath_InvalidPaths_ReturnsNull(string? filePath)
+    {
+        var result = PdfSeeder.ExtractFileIdFromPath(filePath!);
+        result.Should().BeNull();
     }
 }

@@ -93,11 +93,7 @@ public sealed class SeedCatalogBlobIntegrationTests
 
         var pdfFileId = Guid.NewGuid();
         _primaryBlob
-            .Setup(x => x.StoreAsync(
-                It.IsAny<Stream>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(
                 Success: true,
                 FileId: pdfFileId.ToString(),
@@ -190,9 +186,7 @@ public sealed class SeedCatalogBlobIntegrationTests
             .ReturnsAsync(() => new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
 
         _primaryBlob
-            .Setup(x => x.StoreAsync(
-                It.IsAny<Stream>(), It.IsAny<string>(),
-                It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => new BlobStorageResult(
                 Success: true,
                 FileId: Guid.NewGuid().ToString(),
@@ -213,11 +207,7 @@ public sealed class SeedCatalogBlobIntegrationTests
         pdfs.Should().NotContain(p => p.FileName == "unknown_rulebook.pdf");
 
         // The missing gameMap entry did not cause any blob store call
-        _primaryBlob.Verify(x => x.StoreAsync(
-            It.IsAny<Stream>(),
-            "unknown_rulebook.pdf",
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()),
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), "unknown_rulebook.pdf", It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -271,9 +261,7 @@ public sealed class SeedCatalogBlobIntegrationTests
         _seedBlob.Setup(x => x.OpenReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
         _primaryBlob
-            .Setup(x => x.StoreAsync(
-                It.IsAny<Stream>(), It.IsAny<string>(),
-                It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => new BlobStorageResult(
                 Success: true,
                 FileId: Guid.NewGuid().ToString(),
@@ -300,9 +288,7 @@ public sealed class SeedCatalogBlobIntegrationTests
         secondRunCount.Should().Be(1, "re-seeding with unchanged hash must not create duplicates");
 
         // StoreAsync invoked exactly once — second call short-circuits on hash match
-        _primaryBlob.Verify(x => x.StoreAsync(
-            It.IsAny<Stream>(), It.IsAny<string>(),
-            It.IsAny<string>(), It.IsAny<CancellationToken>()),
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }

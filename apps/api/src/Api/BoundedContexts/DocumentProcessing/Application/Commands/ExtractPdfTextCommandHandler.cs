@@ -59,6 +59,7 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
         var bucketKey = PdfStorageKey.ForPdf(pdf.Id);
         var fileStream = await _blobStorage.RetrieveAsync(
             bucketKey,
+            BlobCategory.Pdf,
             bucketKey,
             cancellationToken).ConfigureAwait(false);
 

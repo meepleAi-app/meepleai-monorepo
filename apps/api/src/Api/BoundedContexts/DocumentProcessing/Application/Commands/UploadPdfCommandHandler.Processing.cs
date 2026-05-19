@@ -193,7 +193,7 @@ internal partial class UploadPdfCommandHandler
         // E2E fix: Use blob storage service instead of direct filesystem access (supports S3/R2)
         // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
         var bucketKey = PdfStorageKey.ForPdf(pdfDoc.Id);
-        var fileStream = await _blobStorageService.RetrieveAsync(pdfId, bucketKey, cancellationToken).ConfigureAwait(false);
+        var fileStream = await _blobStorageService.RetrieveAsync(pdfId, BlobCategory.Pdf, bucketKey, cancellationToken).ConfigureAwait(false);
         if (fileStream == null)
         {
             // Fallback to local filesystem for backward compatibility

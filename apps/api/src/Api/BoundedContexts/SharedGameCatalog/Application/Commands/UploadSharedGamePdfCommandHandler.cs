@@ -83,7 +83,8 @@ internal sealed class UploadSharedGamePdfCommandHandler
         var storageResult = await _blobStorageService.StoreAsync(
             fileStream,
             fileName,
-            gameId: $"shared-game-{command.SharedGameId}",
+            category: BlobCategory.Pdf,
+            resourceKey: $"shared-game-{command.SharedGameId}",
             ct: cancellationToken).ConfigureAwait(false);
 
         if (!storageResult.Success)

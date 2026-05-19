@@ -44,7 +44,7 @@ public class UploadGameImageCommandHandlerTests
             ImageType: ImageType.Image);
 
         _storageServiceMock
-            .Setup(s => s.StoreAsync(It.IsAny<Stream>(), "test.png", gameId, It.IsAny<CancellationToken>()))
+            .Setup(s => s.StoreAsync(It.IsAny<Stream>(), "test.png", BlobCategory.GameImage, gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(
                 Success: true,
                 FileId: fileId,
@@ -164,7 +164,7 @@ public class UploadGameImageCommandHandlerTests
             ImageType: ImageType.Image);
 
         _storageServiceMock
-            .Setup(s => s.StoreAsync(It.IsAny<Stream>(), "test.png", gameId, It.IsAny<CancellationToken>()))
+            .Setup(s => s.StoreAsync(It.IsAny<Stream>(), "test.png", BlobCategory.GameImage, gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(
                 Success: false,
                 FileId: null,

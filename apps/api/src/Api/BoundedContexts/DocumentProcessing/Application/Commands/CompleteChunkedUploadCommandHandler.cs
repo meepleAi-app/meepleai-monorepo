@@ -122,6 +122,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                         {
                             await _blobStorageService.DeleteAsync(
                                 storageResult.FileId,
+                                BlobCategory.Pdf,
                                 (session.PrivateGameId ?? session.GameId)?.ToString() ?? string.Empty,
                                 cancellationToken).ConfigureAwait(false);
                         }
@@ -274,6 +275,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             storageResult = await _blobStorageService.StoreAsync(
                 assembledStream,
                 sanitizedFileName,
+                BlobCategory.Pdf,
                 (session.PrivateGameId ?? session.GameId)?.ToString() ?? "wizard-temp",
                 cancellationToken).ConfigureAwait(false);
         }

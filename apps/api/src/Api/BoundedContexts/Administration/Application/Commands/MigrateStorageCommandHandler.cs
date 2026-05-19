@@ -90,7 +90,7 @@ internal sealed class MigrateStorageCommandHandler : IRequestHandler<MigrateStor
                 var fileId = fileNameWithId[..underscoreIndex];
 
                 // Check if file already exists on S3
-                var exists = await _storageService.ExistsAsync(fileId, gameId, cancellationToken)
+                var exists = await _storageService.ExistsAsync(fileId, BlobCategory.Pdf, gameId, cancellationToken)
                     .ConfigureAwait(false);
 
                 if (exists)

@@ -51,7 +51,7 @@ internal sealed class GetPdfPageImageQueryHandler : IQueryHandler<GetPdfPageImag
             throw new InvalidOperationException($"Cannot extract fileId from path: {pdfDoc.FilePath}");
 
         // Retrieve PDF bytes from blob storage
-        var pdfStream = await _blobStorageService.RetrieveAsync(fileId, bucket, cancellationToken).ConfigureAwait(false);
+        var pdfStream = await _blobStorageService.RetrieveAsync(fileId, BlobCategory.Pdf, bucket, cancellationToken).ConfigureAwait(false);
         if (pdfStream == null)
             throw new NotFoundException($"PDF file not found in storage: {fileId}/{bucket}");
 

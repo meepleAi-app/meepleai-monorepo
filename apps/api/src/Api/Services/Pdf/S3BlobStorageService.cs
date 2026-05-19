@@ -35,16 +35,16 @@ internal sealed class S3BlobStorageService : IBlobStorageService
     /// </summary>
     internal S3StorageOptions Options => _options;
 
-    public async Task<BlobStorageResult> StoreAsync(Stream stream, string fileName, string gameId, CancellationToken ct = default)
+    public async Task<BlobStorageResult> StoreAsync(Stream stream, string fileName, BlobCategory category, string resourceKey, CancellationToken ct = default)
     {
         try
         {
-            // SECURITY: Validate gameId to prevent path traversal
-            PathSecurity.ValidateIdentifier(gameId, nameof(gameId));
+            // SECURITY: Validate resourceKey to prevent path traversal
+            PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
             var fileId = Guid.NewGuid().ToString("N");
             var sanitizedFileName = SanitizeFileName(fileName);
-            var s3Key = GetS3Key(fileId, gameId, sanitizedFileName);
+            var s3Key = GetS3Key(fileId, category, resourceKey, sanitizedFileName);
 
             var request = new PutObjectRequest
             {
@@ -72,7 +72,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
         }
         catch (AmazonS3Exception ex)
         {
-            _logger.LogError(ex, "S3 error storing file for game {GameId}: {ErrorCode}", gameId, ex.ErrorCode);
+            _logger.LogError(ex, "S3 error storing file in {Category}/{ResourceKey}: {ErrorCode}", category, resourceKey, ex.ErrorCode);
             return new BlobStorageResult(false, null, null, 0, $"S3 error: {ex.Message}");
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -83,23 +83,23 @@ internal sealed class S3BlobStorageService : IBlobStorageService
             // S3 operations can throw various runtime exceptions (timeouts, network errors, authentication failures).
             // We must catch all exceptions to return error results instead of crashing the service.
             // Context: S3 operations can fail in unpredictable ways across different network conditions
-            _logger.LogError(ex, "Unexpected error storing file for game {GameId}", gameId);
+            _logger.LogError(ex, "Unexpected error storing file in {Category}/{ResourceKey}", category, resourceKey);
             return new BlobStorageResult(false, null, null, 0, ex.Message);
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }
 
-    public async Task<Stream?> RetrieveAsync(string fileId, string gameId, CancellationToken ct = default)
+    public async Task<Stream?> RetrieveAsync(string fileId, BlobCategory category, string resourceKey, CancellationToken ct = default)
     {
         try
         {
             // SECURITY: Validate parameters to prevent path traversal (SEC-738, CWE-22, CWE-73)
             PathSecurity.ValidateIdentifier(fileId, nameof(fileId));
-            PathSecurity.ValidateIdentifier(gameId, nameof(gameId));
+            PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
-            // S3 key pattern: pdf_uploads/{gameId}/{fileId}_{filename}
-            // We need to list objects with prefix to find the exact key (since filename may vary)
-            var prefix = $"pdf_uploads/{gameId}/{fileId}_";
+            // PR 1 behavior preservation: prefix unchanged from legacy gameId-based layout.
+            // PR 2 will switch to category.ToS3Folder() behind STORAGE_WRITE_MODE flag.
+            var prefix = $"pdf_uploads/{resourceKey}/{fileId}_";
 
             var listRequest = new ListObjectsV2Request
             {
@@ -112,7 +112,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
 
             if (listResponse.S3Objects.Count == 0)
             {
-                _logger.LogWarning("File not found in S3 for {FileId} in game {GameId}", fileId, gameId);
+                _logger.LogWarning("File not found in S3 for {FileId} in {Category}/{ResourceKey}", fileId, category, resourceKey);
                 return null;
             }
 
@@ -133,7 +133,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            _logger.LogWarning(ex, "File not found in S3 for {FileId} in game {GameId}", fileId, gameId);
+            _logger.LogWarning(ex, "File not found in S3 for {FileId} in {Category}/{ResourceKey}", fileId, category, resourceKey);
             return null;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -144,22 +144,23 @@ internal sealed class S3BlobStorageService : IBlobStorageService
             // S3 operations can throw various runtime exceptions (timeouts, network errors, authentication failures).
             // We must catch all exceptions to return null instead of crashing the service.
             // Context: S3 operations can fail in unpredictable ways across different network conditions
-            _logger.LogError(ex, "Error retrieving file {FileId} for game {GameId}", fileId, gameId);
+            _logger.LogError(ex, "Error retrieving file {FileId} for {Category}/{ResourceKey}", fileId, category, resourceKey);
             return null;
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }
 
-    public async Task<bool> DeleteAsync(string fileId, string gameId, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(string fileId, BlobCategory category, string resourceKey, CancellationToken ct = default)
     {
         try
         {
             // SECURITY: Validate parameters to prevent path traversal (SEC-738, CWE-22, CWE-73)
             PathSecurity.ValidateIdentifier(fileId, nameof(fileId));
-            PathSecurity.ValidateIdentifier(gameId, nameof(gameId));
+            PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
             // Find the exact S3 key (since filename may vary)
-            var prefix = $"pdf_uploads/{gameId}/{fileId}_";
+            // PR 1 behavior preservation: prefix unchanged from legacy gameId-based layout.
+            var prefix = $"pdf_uploads/{resourceKey}/{fileId}_";
 
             var listRequest = new ListObjectsV2Request
             {
@@ -172,7 +173,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
 
             if (listResponse.S3Objects.Count == 0)
             {
-                _logger.LogWarning("File not found for deletion: {FileId} in game {GameId}", fileId, gameId);
+                _logger.LogWarning("File not found for deletion: {FileId} in {Category}/{ResourceKey}", fileId, category, resourceKey);
                 return false;
             }
 
@@ -193,7 +194,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
         }
         catch (AmazonS3Exception ex)
         {
-            _logger.LogWarning(ex, "S3 error deleting file {FileId} for game {GameId}: {ErrorCode}", fileId, gameId, ex.ErrorCode);
+            _logger.LogWarning(ex, "S3 error deleting file {FileId} for {Category}/{ResourceKey}: {ErrorCode}", fileId, category, resourceKey, ex.ErrorCode);
             return false;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -204,30 +205,31 @@ internal sealed class S3BlobStorageService : IBlobStorageService
             // S3 operations can throw various runtime exceptions (timeouts, network errors, authentication failures).
             // We must catch all exceptions to return false instead of crashing the service.
             // Context: S3 operations can fail in unpredictable ways across different network conditions
-            _logger.LogWarning(ex, "Unexpected error deleting file {FileId} for game {GameId}", fileId, gameId);
+            _logger.LogWarning(ex, "Unexpected error deleting file {FileId} for {Category}/{ResourceKey}", fileId, category, resourceKey);
             return false;
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }
 
-    public string GetStoragePath(string fileId, string gameId, string fileName)
+    public string GetStoragePath(string fileId, BlobCategory category, string resourceKey, string fileName)
     {
-        // SECURITY: Validate gameId to prevent path traversal
-        PathSecurity.ValidateIdentifier(gameId, nameof(gameId));
+        // SECURITY: Validate resourceKey to prevent path traversal
+        PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
         var sanitizedFileName = SanitizeFileName(fileName);
-        return GetS3Key(fileId, gameId, sanitizedFileName);
+        return GetS3Key(fileId, category, resourceKey, sanitizedFileName);
     }
 
-    public async Task<bool> ExistsAsync(string fileId, string gameId, CancellationToken cancellationToken = default)
+    public async Task<bool> ExistsAsync(string fileId, BlobCategory category, string resourceKey, CancellationToken cancellationToken = default)
     {
         try
         {
             // SECURITY: Validate parameters to prevent path traversal (SEC-738, CWE-22, CWE-73)
             PathSecurity.ValidateIdentifier(fileId, nameof(fileId));
-            PathSecurity.ValidateIdentifier(gameId, nameof(gameId));
+            PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
-            var prefix = $"pdf_uploads/{gameId}/{fileId}_";
+            // PR 1 behavior preservation: prefix unchanged from legacy gameId-based layout.
+            var prefix = $"pdf_uploads/{resourceKey}/{fileId}_";
 
             var listRequest = new ListObjectsV2Request
             {
@@ -244,7 +246,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
         }
         catch (ArgumentException)
         {
-            // Invalid gameId - path traversal attempt
+            // Invalid resourceKey - path traversal attempt
             return false;
         }
         catch (System.Security.SecurityException)
@@ -254,40 +256,51 @@ internal sealed class S3BlobStorageService : IBlobStorageService
         }
         catch (AmazonS3Exception ex)
         {
-            _logger.LogWarning(ex, "S3 error checking file existence {FileId} in game {GameId}: {ErrorCode}", fileId, gameId, ex.ErrorCode);
+            _logger.LogWarning(ex, "S3 error checking file existence {FileId} in {Category}/{ResourceKey}: {ErrorCode}", fileId, category, resourceKey, ex.ErrorCode);
             return false;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Unexpected error checking file existence {FileId} in game {GameId}", fileId, gameId);
+            _logger.LogWarning(ex, "Unexpected error checking file existence {FileId} in {Category}/{ResourceKey}", fileId, category, resourceKey);
             return false;
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }
 
-    private static string GetS3Key(string fileId, string gameId, string sanitizedFileName)
+    /// <summary>
+    /// Constructs the canonical S3 key for a blob.
+    /// PR 1 of issue #1314 preserves the legacy <c>pdf_uploads/</c> prefix regardless
+    /// of <paramref name="category"/> to keep S3 key output byte-identical pre/post
+    /// the signature refactor. PR 2 will wire <see cref="BlobCategoryExtensions.ToS3Folder"/>
+    /// here behind the <c>STORAGE_WRITE_MODE</c> feature flag.
+    /// </summary>
+    private static string GetS3Key(string fileId, BlobCategory category, string resourceKey, string sanitizedFileName)
     {
-        return $"pdf_uploads/{gameId}/{fileId}_{sanitizedFileName}";
+        // PR 1: behavior preservation — ignore `category`, render legacy prefix.
+        _ = category;
+        return $"pdf_uploads/{resourceKey}/{fileId}_{sanitizedFileName}";
     }
 
     /// <summary>
-    /// Generates a pre-signed URL for secure, temporary file downloads
+    /// Generates a pre-signed URL for secure, temporary file downloads.
     /// </summary>
-    /// <param name="fileId">File ID to generate URL for</param>
-    /// <param name="gameId">Game ID for organization</param>
-    /// <param name="expirySeconds">URL expiration time (optional, defaults to configured value)</param>
-    /// <returns>Pre-signed download URL or null if file not found</returns>
-    public async Task<string?> GetPresignedDownloadUrlAsync(string fileId, string gameId, int? expirySeconds = null)
+    /// <param name="fileId">File ID to generate URL for.</param>
+    /// <param name="category">Blob category for folder organization (PR 2 wiring).</param>
+    /// <param name="resourceKey">Opaque resource identifier used as folder key.</param>
+    /// <param name="expirySeconds">URL expiration time (optional, defaults to configured value).</param>
+    /// <returns>Pre-signed download URL or null if file not found.</returns>
+    public async Task<string?> GetPresignedDownloadUrlAsync(string fileId, BlobCategory category, string resourceKey, int? expirySeconds = null)
     {
         try
         {
             // SECURITY: Validate parameters to prevent path traversal
             PathSecurity.ValidateIdentifier(fileId, nameof(fileId));
-            PathSecurity.ValidateIdentifier(gameId, nameof(gameId));
+            PathSecurity.ValidateIdentifier(resourceKey, nameof(resourceKey));
 
             // Find the exact S3 key
-            var prefix = $"pdf_uploads/{gameId}/{fileId}_";
+            // PR 1 behavior preservation: prefix unchanged from legacy gameId-based layout.
+            var prefix = $"pdf_uploads/{resourceKey}/{fileId}_";
 
             var listRequest = new ListObjectsV2Request
             {
@@ -300,7 +313,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
 
             if (listResponse.S3Objects.Count == 0)
             {
-                _logger.LogWarning("Cannot generate pre-signed URL: file not found {FileId} in game {GameId}", fileId, gameId);
+                _logger.LogWarning("Cannot generate pre-signed URL: file not found {FileId} in {Category}/{ResourceKey}", fileId, category, resourceKey);
                 return null;
             }
 
@@ -325,13 +338,13 @@ internal sealed class S3BlobStorageService : IBlobStorageService
         }
         catch (AmazonS3Exception ex)
         {
-            _logger.LogError(ex, "S3 error generating pre-signed URL for {FileId} in game {GameId}: {ErrorCode}", fileId, gameId, ex.ErrorCode);
+            _logger.LogError(ex, "S3 error generating pre-signed URL for {FileId} in {Category}/{ResourceKey}: {ErrorCode}", fileId, category, resourceKey, ex.ErrorCode);
             return null;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error generating pre-signed URL for {FileId} in game {GameId}", fileId, gameId);
+            _logger.LogError(ex, "Unexpected error generating pre-signed URL for {FileId} in {Category}/{ResourceKey}", fileId, category, resourceKey);
             return null;
         }
 #pragma warning restore CA1031 // Do not catch general exception types

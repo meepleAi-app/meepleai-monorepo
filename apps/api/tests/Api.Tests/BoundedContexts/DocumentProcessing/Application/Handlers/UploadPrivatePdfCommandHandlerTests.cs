@@ -377,7 +377,7 @@ public class UploadPrivatePdfCommandHandlerTests
             .ReturnsAsync(libraryEntry);
 
         _mockBlobStorageService
-            .Setup(s => s.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(false, null, null, 0, "Storage unavailable"));
 
         // Act
@@ -411,7 +411,7 @@ public class UploadPrivatePdfCommandHandlerTests
             .ReturnsAsync(libraryEntry);
 
         _mockBlobStorageService
-            .Setup(s => s.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(true, pdfId.ToString(), $"/storage/{gameId}/{pdfId}/rulebook.pdf", 1024));
 
         // Act
@@ -462,7 +462,7 @@ public class UploadPrivatePdfCommandHandlerTests
             .ReturnsAsync(libraryEntry);
 
         _mockBlobStorageService
-            .Setup(s => s.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(true, pdfId.ToString(), $"/storage/{gameId}/{pdfId}/passwd.pdf", 1024));
 
         // Act

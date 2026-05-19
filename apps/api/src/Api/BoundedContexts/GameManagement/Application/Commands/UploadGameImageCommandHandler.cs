@@ -125,7 +125,8 @@ internal class UploadGameImageCommandHandler : ICommandHandler<UploadGameImageCo
             var storageResult = await _storageService.StoreAsync(
                 stream: command.FileStream,
                 fileName: command.FileName,
-                gameId: command.GameId,
+                category: BlobCategory.GameImage,
+                resourceKey: command.GameId,
                 ct: cancellationToken
             ).ConfigureAwait(false);
 

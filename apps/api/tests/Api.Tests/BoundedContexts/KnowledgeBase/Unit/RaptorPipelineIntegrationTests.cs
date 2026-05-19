@@ -325,7 +325,7 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
     private void SetupBlobStorageToReturn()
     {
         _blobStorageServiceMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 })); // %PDF header
     }
 

@@ -66,7 +66,7 @@ internal sealed class SessionAttachmentService : ISessionAttachmentService
 
         // Upload original
         var originalResult = await _blobStorage.StoreAsync(
-            fileStream, photoFileName, storageFolder, ct).ConfigureAwait(false);
+            fileStream, photoFileName, BlobCategory.SessionPhoto, storageFolder, ct).ConfigureAwait(false);
 
         if (!originalResult.Success)
         {
@@ -90,7 +90,7 @@ internal sealed class SessionAttachmentService : ISessionAttachmentService
             {
                 var thumbFileName = $"{playerId:N}_{Guid.NewGuid():N}_thumb.jpg";
                 var thumbResult = await _blobStorage.StoreAsync(
-                    thumbnailStream, thumbFileName, storageFolder, ct).ConfigureAwait(false);
+                    thumbnailStream, thumbFileName, BlobCategory.SessionPhoto, storageFolder, ct).ConfigureAwait(false);
 
                 if (thumbResult.Success)
                 {
@@ -134,7 +134,7 @@ internal sealed class SessionAttachmentService : ISessionAttachmentService
         if (fileId != null && folder != null)
         {
             var presignedUrl = await _blobStorage.GetPresignedDownloadUrlAsync(
-                fileId, folder, DownloadUrlExpirySeconds).ConfigureAwait(false);
+                fileId, BlobCategory.SessionPhoto, folder, DownloadUrlExpirySeconds).ConfigureAwait(false);
             if (presignedUrl != null)
             {
                 return presignedUrl;
@@ -162,7 +162,7 @@ internal sealed class SessionAttachmentService : ISessionAttachmentService
         var (fileId, folder) = ParseBlobPath(blobPath);
         if (fileId != null && folder != null)
         {
-            var deleted = await _blobStorage.DeleteAsync(fileId, folder).ConfigureAwait(false);
+            var deleted = await _blobStorage.DeleteAsync(fileId, BlobCategory.SessionPhoto, folder).ConfigureAwait(false);
             if (!deleted)
             {
                 _logger.LogWarning("Failed to delete blob at path: {Path}", blobPath);

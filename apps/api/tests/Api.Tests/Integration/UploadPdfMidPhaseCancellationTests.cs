@@ -206,12 +206,12 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         if (!services.Any(s => s.ServiceType == typeof(IBlobStorageService)))
         {
             var blobStorageMock = new Mock<IBlobStorageService>();
-            blobStorageMock.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((Stream stream, string fileName, string gameId, CancellationToken ct) =>
+            blobStorageMock.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Stream stream, string fileName, BlobCategory category, string resourceKey, CancellationToken ct) =>
                 {
                     // Sanitize filename for filesystem safety (tests may use malicious filenames)
                     var safeFileName = string.Join("_", fileName.Split(Path.GetInvalidFileNameChars()));
-                    var filePath = Path.Combine(_testDataDirectory!, $"{gameId}_{safeFileName}");
+                    var filePath = Path.Combine(_testDataDirectory!, $"{resourceKey}_{safeFileName}");
                     using var fileStream = File.Create(filePath);
                     stream.CopyTo(fileStream);
                     return new BlobStorageResult(true, Guid.NewGuid().ToString(), filePath, stream.Length, null);
@@ -324,8 +324,8 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
         // Mock blob storage that delays then throws
         var midWriteBlob = new Mock<IBlobStorageService>();
-        midWriteBlob.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(async (Stream stream, string fileName, string gameId, CancellationToken ct) =>
+        midWriteBlob.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(async (Stream stream, string fileName, BlobCategory category, string resourceKey, CancellationToken ct) =>
             {
                 await Task.Delay(TestConstants.Timing.LargeDelay, ct); // Will throw TaskCanceledException
                 return new BlobStorageResult(false, null, null, 0, "Never reached");

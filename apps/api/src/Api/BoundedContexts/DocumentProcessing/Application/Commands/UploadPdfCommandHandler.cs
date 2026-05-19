@@ -600,11 +600,23 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
     {
         try
         {
+            // Resolve resourceKey early to surface validation errors with a clear message
+            // instead of letting an empty string propagate to PathSecurity.ValidateIdentifier
+            // and produce a misleading "Unexpected error storing file" log (review finding #1).
+            var resourceKey = gameId ?? privateGameId?.ToString();
+            if (string.IsNullOrWhiteSpace(resourceKey))
+            {
+                _logger.LogError(
+                    "Cannot upload PDF '{FileName}': neither gameId nor privateGameId provided",
+                    fileName);
+                return (false, new BlobStorageResult(false, null, null, 0, "PDF upload requires gameId or privateGameId"), null);
+            }
+
             // Store file in blob storage
             BlobStorageResult storageResult;
             using (var stream = file.OpenReadStream())
             {
-                storageResult = await _blobStorageService.StoreAsync(stream, fileName, gameId ?? privateGameId?.ToString() ?? string.Empty, cancellationToken).ConfigureAwait(false);
+                storageResult = await _blobStorageService.StoreAsync(stream, fileName, BlobCategory.Pdf, resourceKey, cancellationToken).ConfigureAwait(false);
             }
 
             if (!storageResult.Success || string.IsNullOrWhiteSpace(storageResult.FileId))
@@ -781,7 +793,7 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
     {
         try
         {
-            await _blobStorageService.DeleteAsync(fileId, gameId, cancellationToken).ConfigureAwait(false);
+            await _blobStorageService.DeleteAsync(fileId, BlobCategory.Pdf, gameId, cancellationToken).ConfigureAwait(false);
             _db.PdfDocuments.Remove(pdfDoc);
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }

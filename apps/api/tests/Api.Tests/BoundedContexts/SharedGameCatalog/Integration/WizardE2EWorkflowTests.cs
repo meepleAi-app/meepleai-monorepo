@@ -63,7 +63,7 @@ public class WizardE2EWorkflowTests
         var uploadedFilePath = "file-abc_20260216.pdf";
 
         _blobStorageMock
-            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), "catan-rules.pdf", "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), "catan-rules.pdf", BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(
                 Success: true,
                 FileId: "file-abc",
@@ -85,7 +85,7 @@ public class WizardE2EWorkflowTests
             NullLogger<ExtractGameMetadataFromPdfQueryHandler>.Instance);
 
         _blobStorageMock
-            .Setup(b => b.RetrieveAsync("file-abc", "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync("file-abc", BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(System.Text.Encoding.UTF8.GetBytes("PDF content for Catan rules")));
 
         _pdfExtractorMock
@@ -178,7 +178,7 @@ public class WizardE2EWorkflowTests
         var mockPdfFile = CreateValidMockPdfFile("obscure-game.pdf", 1_048_576);
 
         _blobStorageMock
-            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), "obscure-game.pdf", "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), "obscure-game.pdf", BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(
                 Success: true, FileId: "file-xyz",
                 FilePath: "file-xyz_20260216.pdf",
@@ -197,7 +197,7 @@ public class WizardE2EWorkflowTests
             NullLogger<ExtractGameMetadataFromPdfQueryHandler>.Instance);
 
         _blobStorageMock
-            .Setup(b => b.RetrieveAsync("file-xyz", "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync("file-xyz", BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(new byte[100]));
 
         _pdfExtractorMock
@@ -258,7 +258,7 @@ public class WizardE2EWorkflowTests
         var mockPdfFile = CreateValidMockPdfFile("scanned-image.pdf", 5_000_000);
 
         _blobStorageMock
-            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), "scanned-image.pdf", "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), "scanned-image.pdf", BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(
                 Success: true, FileId: "file-img",
                 FilePath: "file-img_20260216.pdf",
@@ -277,7 +277,7 @@ public class WizardE2EWorkflowTests
             NullLogger<ExtractGameMetadataFromPdfQueryHandler>.Instance);
 
         _blobStorageMock
-            .Setup(b => b.RetrieveAsync("file-img", "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync("file-img", BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(new byte[100]));
 
         _pdfExtractorMock
@@ -303,7 +303,7 @@ public class WizardE2EWorkflowTests
             NullLogger<ExtractGameMetadataFromPdfQueryHandler>.Instance);
 
         _blobStorageMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(new byte[100]));
 
         _pdfExtractorMock

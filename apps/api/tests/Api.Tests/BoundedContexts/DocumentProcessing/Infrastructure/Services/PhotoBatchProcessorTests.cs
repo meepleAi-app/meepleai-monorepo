@@ -81,7 +81,7 @@ public class PhotoBatchProcessorTests
 
         _repo.FindByIdWithPagesAsync(batchId, Arg.Any<CancellationToken>()).Returns(batch);
 
-        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<BlobCategory>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(_ => (Stream)new MemoryStream(new byte[] { 10, 20, 30 }));
 
         _preprocessor.PreprocessAsync(Arg.Any<byte[]>(), Arg.Any<CancellationToken>())
@@ -114,7 +114,7 @@ public class PhotoBatchProcessorTests
 
         _repo.FindByIdWithPagesAsync(batchId, Arg.Any<CancellationToken>()).Returns(batch);
 
-        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<BlobCategory>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(_ => (Stream)new MemoryStream(new byte[] { 1, 2, 3 }));
 
         _preprocessor.PreprocessAsync(Arg.Any<byte[]>(), Arg.Any<CancellationToken>())
@@ -144,7 +144,7 @@ public class PhotoBatchProcessorTests
         _repo.FindByIdWithPagesAsync(batchId, Arg.Any<CancellationToken>()).Returns(batch);
 
         // Sequential calls: first returns valid stream, second returns null
-        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<BlobCategory>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(
                 _ => (Stream?)new MemoryStream(new byte[] { 1 }),
                 _ => (Stream?)null);
@@ -191,7 +191,7 @@ public class PhotoBatchProcessorTests
         var batchId = batch.Id;
 
         _repo.FindByIdWithPagesAsync(batchId, Arg.Any<CancellationToken>()).Returns(batch);
-        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<BlobCategory>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(_ => (Stream)new MemoryStream(new byte[] { 99 }));
         _preprocessor.PreprocessAsync(Arg.Any<byte[]>(), Arg.Any<CancellationToken>())
             .Returns(MakePreprocessResult(confidence: 0.95));
@@ -218,7 +218,7 @@ public class PhotoBatchProcessorTests
         var batchId = batch.Id;
 
         _repo.FindByIdWithPagesAsync(batchId, Arg.Any<CancellationToken>()).Returns(batch);
-        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<BlobCategory>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(_ => (Stream)new MemoryStream(new byte[] { 1 }));
         _preprocessor.PreprocessAsync(Arg.Any<byte[]>(), Arg.Any<CancellationToken>())
             .Returns(MakePreprocessResult());
@@ -251,7 +251,7 @@ public class PhotoBatchProcessorTests
         var batchId = batch.Id;
 
         _repo.FindByIdWithPagesAsync(batchId, Arg.Any<CancellationToken>()).Returns(batch);
-        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<BlobCategory>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(_ => (Stream)new MemoryStream(new byte[] { 1, 2, 3 }));
         _preprocessor.PreprocessAsync(Arg.Any<byte[]>(), Arg.Any<CancellationToken>())
             .Returns(MakePreprocessResult(text: "Move your piece forward three spaces.", confidence: 0.9, isBlank: false));
@@ -289,7 +289,7 @@ public class PhotoBatchProcessorTests
         var batchId = batch.Id;
 
         _repo.FindByIdWithPagesAsync(batchId, Arg.Any<CancellationToken>()).Returns(batch);
-        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<BlobCategory>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(_ => (Stream)new MemoryStream(new byte[] { 1 }));
         _preprocessor.PreprocessAsync(Arg.Any<byte[]>(), Arg.Any<CancellationToken>())
             .Returns(MakePreprocessResult(text: "", confidence: 0.3, isBlank: true));
@@ -318,7 +318,7 @@ public class PhotoBatchProcessorTests
         var batchId = batch.Id;
 
         _repo.FindByIdWithPagesAsync(batchId, Arg.Any<CancellationToken>()).Returns(batch);
-        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _blob.RetrieveAsync(Arg.Any<string>(), Arg.Any<BlobCategory>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(_ => (Stream)new MemoryStream(new byte[] { 1, 2, 3 }));
         _preprocessor.PreprocessAsync(Arg.Any<byte[]>(), Arg.Any<CancellationToken>())
             .Returns(MakePreprocessResult(text: "Some board game text.", confidence: 0.85));

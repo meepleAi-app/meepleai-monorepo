@@ -72,17 +72,19 @@ public sealed class PhotoBatchUploadRepositoryIntegrationTests : IAsyncLifetime
     // -----------------------------------------------------------------------
 
     [Fact]
-    public async Task GetPageTextByParagraphNumber_MatchingPage_ReturnsExtractedText()
+    public async Task GetPageTextByParagraphNumber_MatchingPage_ReturnsPageNumberAndExtractedText()
     {
         // Arrange — single batch with one page tagged with paragraph 42.
         var batchId = await SeedBatchWithPagesAsync(
             (PageNumber: 3, Text: "Il pedone si sposta di una casella.", ParagraphNumbers: new[] { 42 }));
 
         // Act
-        var text = await _repository.GetPageTextByParagraphNumberAsync(batchId, 42, Token);
+        var match = await _repository.GetPageTextByParagraphNumberAsync(batchId, 42, Token);
 
-        // Assert
-        text.Should().Be("Il pedone si sposta di una casella.");
+        // Assert — issue #747 PR-B: signature now returns (PageNumber, Text) tuple.
+        match.Should().NotBeNull();
+        match!.Value.PageNumber.Should().Be(3);
+        match!.Value.Text.Should().Be("Il pedone si sposta di una casella.");
     }
 
     [Fact]
@@ -93,10 +95,10 @@ public sealed class PhotoBatchUploadRepositoryIntegrationTests : IAsyncLifetime
             (PageNumber: 1, Text: "Pagina 1", ParagraphNumbers: new[] { 10, 11 }));
 
         // Act
-        var text = await _repository.GetPageTextByParagraphNumberAsync(batchId, 42, Token);
+        var match = await _repository.GetPageTextByParagraphNumberAsync(batchId, 42, Token);
 
         // Assert
-        text.Should().BeNull();
+        match.Should().BeNull();
     }
 
     [Fact]
@@ -110,10 +112,10 @@ public sealed class PhotoBatchUploadRepositoryIntegrationTests : IAsyncLifetime
             (PageNumber: 1, Text: "Queried batch text", ParagraphNumbers: new[] { 7 }));
 
         // Act
-        var text = await _repository.GetPageTextByParagraphNumberAsync(queriedBatchId, 42, Token);
+        var match = await _repository.GetPageTextByParagraphNumberAsync(queriedBatchId, 42, Token);
 
         // Assert — repository must filter by PhotoBatchUploadId.
-        text.Should().BeNull();
+        match.Should().BeNull();
     }
 
     [Fact]
@@ -127,10 +129,12 @@ public sealed class PhotoBatchUploadRepositoryIntegrationTests : IAsyncLifetime
             (PageNumber: 2, Text: "Pagina 2 con paragrafo 7", ParagraphNumbers: new[] { 7 }));
 
         // Act
-        var text = await _repository.GetPageTextByParagraphNumberAsync(batchId, 7, Token);
+        var match = await _repository.GetPageTextByParagraphNumberAsync(batchId, 7, Token);
 
         // Assert
-        text.Should().Be("Pagina 2 con paragrafo 7");
+        match.Should().NotBeNull();
+        match!.Value.PageNumber.Should().Be(2, "lowest page_number wins the deterministic tie-break");
+        match!.Value.Text.Should().Be("Pagina 2 con paragrafo 7");
     }
 
     [Fact]
@@ -141,10 +145,10 @@ public sealed class PhotoBatchUploadRepositoryIntegrationTests : IAsyncLifetime
             (PageNumber: 1, Text: "Legacy page (no paragraphs)", ParagraphNumbers: Array.Empty<int>()));
 
         // Act
-        var text = await _repository.GetPageTextByParagraphNumberAsync(batchId, 42, Token);
+        var match = await _repository.GetPageTextByParagraphNumberAsync(batchId, 42, Token);
 
         // Assert
-        text.Should().BeNull();
+        match.Should().BeNull();
     }
 
     [Fact]
@@ -154,10 +158,14 @@ public sealed class PhotoBatchUploadRepositoryIntegrationTests : IAsyncLifetime
         var batchId = await SeedBatchWithPagesAsync(
             (PageNumber: 4, Text: "Spread con paragrafi 10-12", ParagraphNumbers: new[] { 10, 11, 12 }));
 
-        // Act + Assert — every paragraph number in the array must return the page text.
-        (await _repository.GetPageTextByParagraphNumberAsync(batchId, 10, Token)).Should().Be("Spread con paragrafi 10-12");
-        (await _repository.GetPageTextByParagraphNumberAsync(batchId, 11, Token)).Should().Be("Spread con paragrafi 10-12");
-        (await _repository.GetPageTextByParagraphNumberAsync(batchId, 12, Token)).Should().Be("Spread con paragrafi 10-12");
+        // Act + Assert — every paragraph number in the array must return the same page tuple.
+        foreach (var paragraph in new[] { 10, 11, 12 })
+        {
+            var match = await _repository.GetPageTextByParagraphNumberAsync(batchId, paragraph, Token);
+            match.Should().NotBeNull($"paragraph {paragraph} is on page 4");
+            match!.Value.PageNumber.Should().Be(4);
+            match!.Value.Text.Should().Be("Spread con paragrafi 10-12");
+        }
     }
 
     // -----------------------------------------------------------------------

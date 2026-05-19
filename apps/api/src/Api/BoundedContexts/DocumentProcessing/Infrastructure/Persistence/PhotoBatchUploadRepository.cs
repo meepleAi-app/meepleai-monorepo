@@ -100,22 +100,26 @@ internal sealed class PhotoBatchUploadRepository : RepositoryBase, IPhotoBatchUp
     }
 
     /// <inheritdoc/>
-    public async Task<string?> GetPageTextByParagraphNumberAsync(
+    public async Task<(int PageNumber, string? Text)?> GetPageTextByParagraphNumberAsync(
         Guid uploadId,
         int paragraphNumber,
         CancellationToken ct = default)
     {
-        // Npgsql translates Array.Contains to PostgreSQL `paragraphNumber = ANY(paragraph_numbers)`,
-        // which uses the GIN index defined in PhotoBatchPageEntityConfiguration when the array
-        // operator is `@>` and falls back to a seq-scan otherwise. EF Core's `Contains` keeps the
-        // query LINQ-translatable across providers (in-memory test uses the same predicate).
-        return await DbContext.PhotoBatchPages
+        // Npgsql translates `Array.Contains(x)` on a column-typed `integer[]` to
+        // `x = ANY(paragraph_numbers)` (not `paragraph_numbers @> ARRAY[x]`). The default
+        // `array_ops` GIN index registered in PhotoBatchPageEntityConfiguration accelerates
+        // `@>` / `&&` but not `= ANY()`, so at large row counts this predicate falls back
+        // to a seq-scan. Acceptable while photo_batch_pages is small; revisit if perf AC
+        // tightens (issue #747 PR-C will populate paragraph_numbers densely).
+        var match = await DbContext.PhotoBatchPages
             .AsNoTracking()
             .Where(p => p.PhotoBatchUploadId == uploadId && p.ParagraphNumbers.Contains(paragraphNumber))
             .OrderBy(p => p.PageNumber)
-            .Select(p => p.ExtractedText)
+            .Select(p => new { p.PageNumber, p.ExtractedText })
             .FirstOrDefaultAsync(ct)
             .ConfigureAwait(false);
+
+        return match is null ? null : (match.PageNumber, match.ExtractedText);
     }
 
     /// <inheritdoc/>

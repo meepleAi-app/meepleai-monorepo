@@ -1,42 +1,25 @@
 /**
- * Create Game Night Page
- * Issue #33 — P3 Game Night Frontend
+ * /game-nights/new — wizard route entry point.
+ *
+ * Issue #950 W3 Commit 3: swapped from the legacy single-form
+ * GameNightForm to the 4-step wizard orchestrator.
+ *
+ * Spec: docs/superpowers/specs/2026-05-18-sp7-game-night-create.md §11
+ * (AC-O.1, AC-O.2).
  */
 
-'use client';
+import { Suspense, type ReactElement } from 'react';
 
-import { useRouter } from 'next/navigation';
+import { NewGameNightContent } from './_content';
 
-import { useCreateGameNight } from '@/hooks/queries/useGameNights';
-import { useToast } from '@/hooks/useToast';
-import type { CreateGameNightInput } from '@/lib/api/schemas/game-nights.schemas';
-
-import { GameNightForm } from '../_components/GameNightForm';
-
-export default function NewGameNightPage() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const createMutation = useCreateGameNight();
-
-  function handleSubmit(data: CreateGameNightInput) {
-    createMutation.mutate(data, {
-      onSuccess: id => {
-        toast({ title: 'Serata creata', description: 'La serata è stata creata come bozza.' });
-        router.push(`/game-nights/${id}`);
-      },
-      onError: () => {
-        toast({
-          title: 'Errore',
-          description: 'Impossibile creare la serata.',
-          variant: 'destructive',
-        });
-      },
-    });
-  }
-
+export default function NewGameNightPage(): ReactElement {
+  // The wizard reads `?step=` via useSearchParams; Next.js requires the
+  // calling client tree to be wrapped in Suspense for the static prerender
+  // bailout. The fallback is intentionally minimal — the wizard mounts
+  // within a few hundred ms once the route shell is hydrated.
   return (
-    <div className="p-4">
-      <GameNightForm onSubmit={handleSubmit} isSubmitting={createMutation.isPending} />
-    </div>
+    <Suspense fallback={null}>
+      <NewGameNightContent />
+    </Suspense>
   );
 }

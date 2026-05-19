@@ -71,9 +71,16 @@ function buildEventDto(overrides: EventFixture): unknown {
   };
 }
 
+// Issue #1315 — `GameNightRsvpDtoSchema` validates `id` as `z.string().uuid()`.
+// The previous synthesis `${rsvp.userId.slice(0, 8)}-rsvp` produced strings like
+// "00000000-rsvp" which fail UUID validation and silently reject the entire
+// `getRsvps()` response, propagating to `useGameNightDetail.isError=true` and
+// rendering the not-found shell. Synthesize a deterministic v4 UUID per user
+// instead — substitute the trailing 12 chars (the node identifier) with
+// "f1f1f1f1f1f1" so callers can distinguish rsvp IDs from user IDs at a glance.
 function buildRsvpDto(rsvp: RsvpFixture): unknown {
   return {
-    id: `${rsvp.userId.slice(0, 8)}-rsvp`,
+    id: `${rsvp.userId.slice(0, 24)}f1f1f1f1f1f1`,
     userId: rsvp.userId,
     userName: rsvp.userName,
     status: rsvp.status,

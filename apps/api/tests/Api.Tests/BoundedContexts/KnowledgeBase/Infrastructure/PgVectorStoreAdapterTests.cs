@@ -36,7 +36,11 @@ public sealed class PgVectorStoreAdapterTests
             options,
             Mock.Of<MediatR.IMediator>(),
             Mock.Of<Api.SharedKernel.Application.Services.IDomainEventCollector>(),
-            Mock.Of<IDataProtectionProvider>())
+            Mock.Of<IDataProtectionProvider>(),
+            // Issue #661: MeepleAiDbContext ctor gained an optional ILogger<MeepleAiDbContext>
+            // 5th param. Castle's proxy generator (used by Moq) does NOT resolve C# default
+            // parameter values for positional args, so we must pass it explicitly.
+            (Microsoft.Extensions.Logging.ILogger<MeepleAiDbContext>?)null)
         { CallBase = false };
 
         _mockDatabase = new Mock<DatabaseFacade>(_mockContext.Object);

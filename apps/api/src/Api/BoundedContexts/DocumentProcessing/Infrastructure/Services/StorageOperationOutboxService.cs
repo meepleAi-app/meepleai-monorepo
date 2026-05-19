@@ -95,19 +95,25 @@ internal sealed class StorageOperationOutboxService : IStorageOperationOutboxSer
 
     private static bool IsUniqueViolation(DbUpdateException ex)
     {
-        // Postgres unique-violation surfaces as SqlState 23505 inside the
-        // inner exception. We avoid taking a hard dependency on Npgsql here
-        // by sniffing the type name + message — good enough for an idempotent
-        // dedup path.
+        // Postgres unique-violation surfaces as SqlState 23505 (ISO/IEC 9075
+        // stable across Postgres versions). Read via reflection to avoid a
+        // hard compile-time Npgsql reference; the `SqlState` property name is
+        // a stable part of Npgsql's PostgresException contract and Npgsql is
+        // already a runtime dependency of the application.
+        //
+        // Why not message-sniff on the index name? The previous approach was
+        // fragile: it required the literal index name to appear verbatim in
+        // the exception message, which is not contractual. Future Postgres
+        // versions could format the message differently and break the dedup
+        // path silently.
         var inner = ex.InnerException;
         if (inner is null)
         {
             return false;
         }
 
-        var typeName = inner.GetType().FullName ?? string.Empty;
-        var message = inner.Message ?? string.Empty;
-        return typeName.Contains("PostgresException", StringComparison.OrdinalIgnoreCase)
-            && message.Contains("IX_storage_operation_outbox_legacy_key", StringComparison.OrdinalIgnoreCase);
+        var sqlStateProperty = inner.GetType().GetProperty("SqlState");
+        return sqlStateProperty?.GetValue(inner) is string sqlState
+            && string.Equals(sqlState, "23505", StringComparison.Ordinal);
     }
 }

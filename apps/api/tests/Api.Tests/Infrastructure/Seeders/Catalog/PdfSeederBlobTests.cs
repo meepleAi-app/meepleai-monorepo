@@ -94,7 +94,7 @@ public sealed class PdfSeederBlobTests
 
         // Assert
         _seedBlob.Verify(x => x.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         db.PdfDocuments.Should().BeEmpty();
     }
 
@@ -115,7 +115,7 @@ public sealed class PdfSeederBlobTests
 
         // Post-migration (2026-04-19): seeder stores under pdfs/{pdfId}/ bucket, not pdfs/{gameId}/.
         // pdfId is generated inside the seeder, so match any bucket key here.
-        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(true, "file123", "/blobs/file123", 4));
 
         var manifest = CreateManifest(CreateBlobEntry());
@@ -212,7 +212,7 @@ public sealed class PdfSeederBlobTests
             _primaryBlob.Object, _seedBlob.Object, _logger.Object, CancellationToken.None);
 
         // Assert — no store call, still only 1 doc
-        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         db.PdfDocuments.ToList().Should().HaveCount(1);
     }
 
@@ -234,9 +234,9 @@ public sealed class PdfSeederBlobTests
 
         // Post-migration (2026-04-19): seeder stores under pdfs/{pdfId}/ bucket, not pdfs/{gameId}/.
         // pdfId is generated inside the seeder, so match any bucket key here.
-        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(true, "newfile", "/blobs/newfile", 4));
-        _primaryBlob.Setup(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _primaryBlob.Setup(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         var manifest = CreateManifest(CreateBlobEntry(pdfSha256: "newhash"));
@@ -294,7 +294,7 @@ public sealed class PdfSeederBlobTests
 
         // Assert
         _seedBlob.Verify(x => x.OpenReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         db.PdfDocuments.Should().BeEmpty();
     }
 }

@@ -196,7 +196,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         if (!services.Any(s => s.ServiceType == typeof(IBlobStorageService)))
         {
             var blobStorageMock = new Mock<IBlobStorageService>();
-            blobStorageMock.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>()!, It.IsAny<string>()!, It.IsAny<CancellationToken>()))
+            blobStorageMock.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>()!, It.IsAny<BlobCategory>(), It.IsAny<string>()!, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Stream stream, string fileName, string gameId, CancellationToken ct) =>
                 {
                     var filePath = Path.Combine(_testDataDirectory!, $"{gameId}_{fileName}");
@@ -204,7 +204,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
                     stream.CopyTo(fileStream);
                     return new BlobStorageResult(true, Guid.NewGuid().ToString(), filePath, stream.Length, null);
                 });
-            blobStorageMock.Setup(b => b.DeleteAsync(It.IsAny<string>()!, It.IsAny<string>()!, It.IsAny<CancellationToken>()))
+            blobStorageMock.Setup(b => b.DeleteAsync(It.IsAny<string>()!, It.IsAny<BlobCategory>(), It.IsAny<string>()!, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
             services.AddSingleton<IBlobStorageService>(blobStorageMock.Object);
         }
@@ -758,7 +758,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         // Mock blob storage that always fails
         var failingBlobStorage = new Mock<IBlobStorageService>();
-        failingBlobStorage.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        failingBlobStorage.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(false, null, null, 0, "Simulated storage failure"));
         services.AddSingleton<IBlobStorageService>(failingBlobStorage.Object);
 
@@ -1008,7 +1008,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         var permissionDeniedStorage = new Mock<IBlobStorageService>();
-        permissionDeniedStorage.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        permissionDeniedStorage.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(false, null, null, 0, "Access denied: Insufficient permissions"));
         services.AddSingleton<IBlobStorageService>(permissionDeniedStorage.Object);
 

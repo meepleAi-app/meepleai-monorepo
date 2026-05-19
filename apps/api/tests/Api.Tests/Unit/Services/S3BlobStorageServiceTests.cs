@@ -63,7 +63,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             .ReturnsAsync(putResponse);
 
         // Act
-        var result = await _sut.StoreAsync(stream, fileName, gameId);
+        var result = await _sut.StoreAsync(stream, fileName, BlobCategory.Pdf, gameId);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -94,7 +94,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             .ThrowsAsync(new AmazonS3Exception("Access denied"));
 
         // Act
-        var result = await _sut.StoreAsync(stream, fileName, gameId);
+        var result = await _sut.StoreAsync(stream, fileName, BlobCategory.Pdf, gameId);
 
         // Assert
         result.Success.Should().BeFalse();
@@ -135,7 +135,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             .ReturnsAsync(getResponse);
 
         // Act
-        var result = await _sut.RetrieveAsync(fileId, gameId);
+        var result = await _sut.RetrieveAsync(fileId, BlobCategory.Pdf, gameId);
 
         // Assert
         result.Should().NotBeNull();
@@ -168,7 +168,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             .ReturnsAsync(listResponse);
 
         // Act
-        var result = await _sut.RetrieveAsync(fileId, gameId);
+        var result = await _sut.RetrieveAsync(fileId, BlobCategory.Pdf, gameId);
 
         // Assert
         result.Should().BeNull();
@@ -201,7 +201,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             .ThrowsAsync(new AmazonS3Exception("Not found") { StatusCode = HttpStatusCode.NotFound });
 
         // Act
-        var result = await _sut.RetrieveAsync(fileId, gameId);
+        var result = await _sut.RetrieveAsync(fileId, BlobCategory.Pdf, gameId);
 
         // Assert
         result.Should().BeNull();
@@ -239,7 +239,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             .ReturnsAsync(deleteResponse);
 
         // Act
-        var result = await _sut.DeleteAsync(fileId, gameId);
+        var result = await _sut.DeleteAsync(fileId, BlobCategory.Pdf, gameId);
 
         // Assert
         result.Should().BeTrue();
@@ -270,7 +270,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             .ReturnsAsync(listResponse);
 
         // Act
-        var result = await _sut.DeleteAsync(fileId, gameId);
+        var result = await _sut.DeleteAsync(fileId, BlobCategory.Pdf, gameId);
 
         // Assert
         result.Should().BeFalse();
@@ -289,7 +289,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var fileName = "test.pdf";
 
         // Act
-        var result = _sut.GetStoragePath(fileId, gameId, fileName);
+        var result = _sut.GetStoragePath(fileId, BlobCategory.Pdf, gameId, fileName);
 
         // Assert
         result.Should().Be($"pdf_uploads/{gameId}/{fileId}_test.pdf");
@@ -305,7 +305,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
 
         // Act & Assert
         var act = () =>
-            _sut.GetStoragePath(fileId, invalidGameId, fileName);
+            _sut.GetStoragePath(fileId, BlobCategory.Pdf, invalidGameId, fileName);
         act.Should().Throw<ArgumentException>();
     }
 
@@ -331,7 +331,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             .ReturnsAsync(listResponse);
 
         // Act
-        var result = await _sut.ExistsAsync(fileId, gameId);
+        var result = await _sut.ExistsAsync(fileId, BlobCategory.Pdf, gameId);
 
         // Assert
         result.Should().BeTrue();
@@ -356,7 +356,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             .ReturnsAsync(listResponse);
 
         // Act
-        var result = await _sut.ExistsAsync(fileId, gameId);
+        var result = await _sut.ExistsAsync(fileId, BlobCategory.Pdf, gameId);
 
         // Assert
         result.Should().BeFalse();
@@ -370,7 +370,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var invalidGameId = "../../../etc/passwd";
 
         // Act
-        var result = await _sut.ExistsAsync(fileId, invalidGameId);
+        var result = await _sut.ExistsAsync(fileId, BlobCategory.Pdf, invalidGameId);
 
         // Assert
         result.Should().BeFalse();
@@ -403,7 +403,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             .ReturnsAsync(expectedUrl);
 
         // Act
-        var result = await _sut.GetPresignedDownloadUrlAsync(fileId, gameId);
+        var result = await _sut.GetPresignedDownloadUrlAsync(fileId, BlobCategory.Pdf, gameId);
 
         // Assert
         result.Should().NotBeNull();
@@ -436,7 +436,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             .ReturnsAsync(listResponse);
 
         // Act
-        var result = await _sut.GetPresignedDownloadUrlAsync(fileId, gameId);
+        var result = await _sut.GetPresignedDownloadUrlAsync(fileId, BlobCategory.Pdf, gameId);
 
         // Assert
         result.Should().BeNull();
@@ -474,7 +474,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             .ReturnsAsync(expectedUrl);
 
         // Act
-        var result = await _sut.GetPresignedDownloadUrlAsync(fileId, gameId, customExpiry);
+        var result = await _sut.GetPresignedDownloadUrlAsync(fileId, BlobCategory.Pdf, gameId, customExpiry);
 
         // Assert
         result.Should().NotBeNull();

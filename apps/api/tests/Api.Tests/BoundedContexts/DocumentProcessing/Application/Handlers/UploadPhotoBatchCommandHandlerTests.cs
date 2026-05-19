@@ -30,7 +30,7 @@ public class UploadPhotoBatchCommandHandlerTests
     {
         // Stub StoreAsync to return a success result (signature: string gameId, not Guid)
         _blob
-            .StoreAsync(Arg.Any<Stream>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .StoreAsync(Arg.Any<Stream>(), Arg.Any<string>(), Arg.Any<BlobCategory>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new BlobStorageResult(
                 Success: true,
                 FileId: Guid.NewGuid().ToString(),
@@ -73,6 +73,7 @@ public class UploadPhotoBatchCommandHandlerTests
         await _blob.Received(1).StoreAsync(
             Arg.Any<Stream>(),
             Arg.Any<string>(),
+            BlobCategory.Pdf,
             cmd.GameId.ToString(),
             Arg.Any<CancellationToken>());
         await _mediator.Received(1).Send(
@@ -105,6 +106,7 @@ public class UploadPhotoBatchCommandHandlerTests
         await _blob.Received(3).StoreAsync(
             Arg.Any<Stream>(),
             Arg.Any<string>(),
+            BlobCategory.Pdf,
             cmd.GameId.ToString(),
             Arg.Any<CancellationToken>());
     }

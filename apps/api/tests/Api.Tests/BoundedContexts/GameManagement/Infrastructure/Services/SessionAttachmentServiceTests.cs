@@ -65,7 +65,7 @@ public sealed class SessionAttachmentServiceTests
         using var stream = CreateMinimalJpegStream();
 
         _blobStorageMock
-            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(false, null, null, 0, "S3 error"));
 
         var result = await _sut.UploadAsync(
@@ -85,7 +85,7 @@ public sealed class SessionAttachmentServiceTests
         var storagePath = $"session-photos-abc/{fileId}_photo.jpg";
 
         _blobStorageMock
-            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(true, fileId, storagePath, 5000));
 
         var result = await _sut.UploadAsync(
@@ -106,8 +106,8 @@ public sealed class SessionAttachmentServiceTests
         string? capturedFolder = null;
 
         _blobStorageMock
-            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<Stream, string, string, CancellationToken>((_, _, folder, _) => capturedFolder = folder)
+            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<Stream, string, BlobCategory, string, CancellationToken>((_, _, _, folder, _) => capturedFolder = folder)
             .ReturnsAsync(new BlobStorageResult(true, "fid", "path", 100));
 
         await _sut.UploadAsync(
@@ -126,8 +126,8 @@ public sealed class SessionAttachmentServiceTests
         string? capturedFileName = null;
 
         _blobStorageMock
-            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<Stream, string, string, CancellationToken>((_, fileName, _, _) => capturedFileName = fileName)
+            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<Stream, string, BlobCategory, string, CancellationToken>((_, fileName, _, _, _) => capturedFileName = fileName)
             .ReturnsAsync(new BlobStorageResult(true, "fid", "path", 100));
 
         await _sut.UploadAsync(
@@ -148,9 +148,8 @@ public sealed class SessionAttachmentServiceTests
         var callCount = 0;
 
         _blobStorageMock
-            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<Stream, string, string, CancellationToken>((_, fileName, _, _) =>
-            {
+            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<Stream, string, BlobCategory, string, CancellationToken>((_, fileName, _, _, _) => {
                 callCount++;
                 if (callCount == 1) capturedFileName = fileName; // Capture only the original upload
             })
@@ -172,7 +171,7 @@ public sealed class SessionAttachmentServiceTests
 
         var callCount = 0;
         _blobStorageMock
-            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() =>
             {
                 callCount++;
@@ -200,7 +199,7 @@ public sealed class SessionAttachmentServiceTests
     {
         var blobUrl = "folder/fileId_photo.jpg";
         _blobStorageMock
-            .Setup(x => x.GetPresignedDownloadUrlAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>()))
+            .Setup(x => x.GetPresignedDownloadUrlAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync("https://s3.example.com/signed-url");
 
         var result = await _sut.GetDownloadUrlAsync(blobUrl);
@@ -213,7 +212,7 @@ public sealed class SessionAttachmentServiceTests
     {
         var blobUrl = "folder/fileId_photo.jpg";
         _blobStorageMock
-            .Setup(x => x.GetPresignedDownloadUrlAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>()))
+            .Setup(x => x.GetPresignedDownloadUrlAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync((string?)null);
 
         var result = await _sut.GetDownloadUrlAsync(blobUrl);
@@ -238,8 +237,8 @@ public sealed class SessionAttachmentServiceTests
     {
         var deletedIds = new List<string>();
         _blobStorageMock
-            .Setup(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<string, string, CancellationToken>((fileId, _, _) => deletedIds.Add(fileId))
+            .Setup(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, BlobCategory, string, CancellationToken>((fileId, _, _, _) => deletedIds.Add(fileId))
             .ReturnsAsync(true);
 
         await _sut.DeleteBlobsAsync("folder/abc_photo.jpg", "folder/def_thumb.jpg");
@@ -254,8 +253,8 @@ public sealed class SessionAttachmentServiceTests
     {
         var deleteCount = 0;
         _blobStorageMock
-            .Setup(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<string, string, CancellationToken>((_, _, _) => deleteCount++)
+            .Setup(x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, BlobCategory, string, CancellationToken>((_, _, _, _) => deleteCount++)
             .ReturnsAsync(true);
 
         await _sut.DeleteBlobsAsync("folder/abc_photo.jpg", null);

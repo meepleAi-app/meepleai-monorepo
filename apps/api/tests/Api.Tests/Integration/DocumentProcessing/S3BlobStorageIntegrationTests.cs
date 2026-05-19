@@ -129,14 +129,14 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
 
             // Quick smoke test to verify S3 connectivity
             using var probe = new MemoryStream("probe"u8.ToArray());
-            var probeResult = await _sut.StoreAsync(probe, "probe.txt", "healthcheck");
+            var probeResult = await _sut.StoreAsync(probe, "probe.txt", BlobCategory.Pdf, "healthcheck");
             if (!probeResult.Success)
             {
                 Console.WriteLine($"S3 connectivity probe failed: {probeResult.ErrorMessage}. Tests will be skipped.");
                 _skipTests = true;
                 return;
             }
-            await _sut.DeleteAsync(probeResult.FileId!, "healthcheck");
+            await _sut.DeleteAsync(probeResult.FileId!, BlobCategory.Pdf, "healthcheck");
         }
         catch (Exception ex)
         {
@@ -167,7 +167,7 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         var gameId = Guid.NewGuid().ToString("N");
 
         // Act
-        var result = await _sut.StoreAsync(stream, "test-document.pdf", gameId);
+        var result = await _sut.StoreAsync(stream, "test-document.pdf", BlobCategory.Pdf, gameId);
 
         // Assert
         result.Success.Should().BeTrue();
@@ -186,11 +186,11 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         var content = "Exists check content"u8.ToArray();
         using var stream = new MemoryStream(content);
         var gameId = Guid.NewGuid().ToString("N");
-        var storeResult = await _sut.StoreAsync(stream, "exists-test.pdf", gameId);
+        var storeResult = await _sut.StoreAsync(stream, "exists-test.pdf", BlobCategory.Pdf, gameId);
         storeResult.Success.Should().BeTrue();
 
         // Act
-        var exists = await _sut.ExistsAsync(storeResult.FileId!, gameId);
+        var exists = await _sut.ExistsAsync(storeResult.FileId!, BlobCategory.Pdf, gameId);
 
         // Assert
         exists.Should().BeTrue();
@@ -205,11 +205,11 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         var originalContent = "Retrieve test content - should match exactly"u8.ToArray();
         using var storeStream = new MemoryStream(originalContent);
         var gameId = Guid.NewGuid().ToString("N");
-        var storeResult = await _sut.StoreAsync(storeStream, "retrieve-test.pdf", gameId);
+        var storeResult = await _sut.StoreAsync(storeStream, "retrieve-test.pdf", BlobCategory.Pdf, gameId);
         storeResult.Success.Should().BeTrue();
 
         // Act
-        using var retrievedStream = await _sut.RetrieveAsync(storeResult.FileId!, gameId);
+        using var retrievedStream = await _sut.RetrieveAsync(storeResult.FileId!, BlobCategory.Pdf, gameId);
 
         // Assert
         retrievedStream.Should().NotBeNull();
@@ -228,11 +228,11 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         var content = "Presigned URL test content"u8.ToArray();
         using var stream = new MemoryStream(content);
         var gameId = Guid.NewGuid().ToString("N");
-        var storeResult = await _sut.StoreAsync(stream, "presigned-test.pdf", gameId);
+        var storeResult = await _sut.StoreAsync(stream, "presigned-test.pdf", BlobCategory.Pdf, gameId);
         storeResult.Success.Should().BeTrue();
 
         // Act
-        var url = await _sut.GetPresignedDownloadUrlAsync(storeResult.FileId!, gameId, expirySeconds: 300);
+        var url = await _sut.GetPresignedDownloadUrlAsync(storeResult.FileId!, BlobCategory.Pdf, gameId, expirySeconds: 300);
 
         // Assert
         url.Should().NotBeNull();
@@ -257,16 +257,16 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         var content = "Delete test content"u8.ToArray();
         using var stream = new MemoryStream(content);
         var gameId = Guid.NewGuid().ToString("N");
-        var storeResult = await _sut.StoreAsync(stream, "delete-test.pdf", gameId);
+        var storeResult = await _sut.StoreAsync(stream, "delete-test.pdf", BlobCategory.Pdf, gameId);
         storeResult.Success.Should().BeTrue();
-        (await _sut.ExistsAsync(storeResult.FileId!, gameId)).Should().BeTrue();
+        (await _sut.ExistsAsync(storeResult.FileId!, BlobCategory.Pdf, gameId)).Should().BeTrue();
 
         // Act
-        var deleted = await _sut.DeleteAsync(storeResult.FileId!, gameId);
+        var deleted = await _sut.DeleteAsync(storeResult.FileId!, BlobCategory.Pdf, gameId);
 
         // Assert
         deleted.Should().BeTrue();
-        (await _sut.ExistsAsync(storeResult.FileId!, gameId)).Should().BeFalse();
+        (await _sut.ExistsAsync(storeResult.FileId!, BlobCategory.Pdf, gameId)).Should().BeFalse();
     }
 
     [Fact]
@@ -275,7 +275,7 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         SkipIfNotAvailable();
 
         // Act
-        var result = await _sut.ExistsAsync("file123", "../../../etc/passwd");
+        var result = await _sut.ExistsAsync("file123", BlobCategory.Pdf, "../../../etc/passwd");
 
         // Assert
         result.Should().BeFalse();
@@ -290,7 +290,7 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         var gameId = Guid.NewGuid().ToString("N");
 
         // Act
-        var result = await _sut.RetrieveAsync("nonexistentfile", gameId);
+        var result = await _sut.RetrieveAsync("nonexistentfile", BlobCategory.Pdf, gameId);
 
         // Assert
         result.Should().BeNull();
@@ -305,7 +305,7 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         var gameId = Guid.NewGuid().ToString("N");
 
         // Act
-        var result = await _sut.DeleteAsync("nonexistentfile", gameId);
+        var result = await _sut.DeleteAsync("nonexistentfile", BlobCategory.Pdf, gameId);
 
         // Assert
         result.Should().BeFalse();
@@ -320,7 +320,7 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
         var gameId = Guid.NewGuid().ToString("N");
 
         // Act
-        var result = await _sut.GetPresignedDownloadUrlAsync("nonexistentfile", gameId);
+        var result = await _sut.GetPresignedDownloadUrlAsync("nonexistentfile", BlobCategory.Pdf, gameId);
 
         // Assert
         result.Should().BeNull();
@@ -364,28 +364,28 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
 
         // 1. Store
         using var storeStream = new MemoryStream(content);
-        var storeResult = await _sut.StoreAsync(storeStream, "lifecycle-test.pdf", gameId);
+        var storeResult = await _sut.StoreAsync(storeStream, "lifecycle-test.pdf", BlobCategory.Pdf, gameId);
         (storeResult.Success).Should().BeTrue("Store failed");
 
         // 2. Exists
-        (await _sut.ExistsAsync(storeResult.FileId!, gameId)).Should().BeTrue("Exists failed after Store");
+        (await _sut.ExistsAsync(storeResult.FileId!, BlobCategory.Pdf, gameId)).Should().BeTrue("Exists failed after Store");
 
         // 3. Retrieve and verify content
-        using var retrieveStream = await _sut.RetrieveAsync(storeResult.FileId!, gameId);
+        using var retrieveStream = await _sut.RetrieveAsync(storeResult.FileId!, BlobCategory.Pdf, gameId);
         retrieveStream.Should().NotBeNull();
         using var ms = new MemoryStream();
         await retrieveStream.CopyToAsync(ms);
         ms.ToArray().Should().BeEquivalentTo(content);
 
         // 4. Presigned URL
-        var url = await _sut.GetPresignedDownloadUrlAsync(storeResult.FileId!, gameId);
+        var url = await _sut.GetPresignedDownloadUrlAsync(storeResult.FileId!, BlobCategory.Pdf, gameId);
         url.Should().NotBeNull();
 
         // 5. Delete
-        (await _sut.DeleteAsync(storeResult.FileId!, gameId)).Should().BeTrue("Delete failed");
+        (await _sut.DeleteAsync(storeResult.FileId!, BlobCategory.Pdf, gameId)).Should().BeTrue("Delete failed");
 
         // 6. Verify deletion
-        (await _sut.ExistsAsync(storeResult.FileId!, gameId)).Should().BeFalse("File still exists after Delete");
-        (await _sut.RetrieveAsync(storeResult.FileId!, gameId)).Should().BeNull();
+        (await _sut.ExistsAsync(storeResult.FileId!, BlobCategory.Pdf, gameId)).Should().BeFalse("File still exists after Delete");
+        (await _sut.RetrieveAsync(storeResult.FileId!, BlobCategory.Pdf, gameId)).Should().BeNull();
     }
 }

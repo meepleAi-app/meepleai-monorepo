@@ -70,7 +70,7 @@ public class ExtractGameMetadataFromPdfQueryIntegrationTests
         result.ConfidenceScore.Should().BeGreaterThanOrEqualTo(0.8);
 
         _blobStorageServiceMock.Verify(
-            b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()),
+            b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()),
             Times.Once);
         _pdfTextExtractorMock.Verify(
             p => p.ExtractTextAsync(It.IsAny<Stream>(), true, It.IsAny<CancellationToken>()),
@@ -170,7 +170,7 @@ public class ExtractGameMetadataFromPdfQueryIntegrationTests
             UserId: Guid.NewGuid());
 
         _blobStorageServiceMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("S3 service unavailable"));
 
         // Act
@@ -274,7 +274,7 @@ public class ExtractGameMetadataFromPdfQueryIntegrationTests
         var tokenReceived = false;
 
         _blobStorageServiceMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .Callback<string, string, CancellationToken>((_, _, ct) =>
             {
                 tokenReceived = ct == cts.Token;
@@ -299,7 +299,7 @@ public class ExtractGameMetadataFromPdfQueryIntegrationTests
     private void SetupPdfRetrieval(Stream pdfStream)
     {
         _blobStorageServiceMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => pdfStream);
     }
 

@@ -57,7 +57,7 @@ public class WizardConcurrencyAndPerformanceTests
                 var fileId = $"file-{sessionIndex}";
 
                 blobMock
-                    .Setup(b => b.StoreAsync(It.IsAny<Stream>(), fileName, "wizard-temp", It.IsAny<CancellationToken>()))
+                    .Setup(b => b.StoreAsync(It.IsAny<Stream>(), fileName, BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new BlobStorageResult(
                         Success: true,
                         FileId: fileId,
@@ -111,7 +111,7 @@ public class WizardConcurrencyAndPerformanceTests
 
                 // fileId format: handler extracts fileId by splitting filename on '_'
                 blobMock
-                    .Setup(b => b.RetrieveAsync(fileId, "wizard-temp", It.IsAny<CancellationToken>()))
+                    .Setup(b => b.RetrieveAsync(fileId, BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new MemoryStream(new byte[100]));
 
                 pdfExtractorMock
@@ -188,7 +188,7 @@ public class WizardConcurrencyAndPerformanceTests
         const long fileSizeBytes = 40_000_000;
 
         blobMock
-            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(
                 Success: true,
                 FileId: "file-large",
@@ -222,7 +222,7 @@ public class WizardConcurrencyAndPerformanceTests
 
         // fileId format: handler extracts fileId by splitting filename on '_'
         blobMock
-            .Setup(b => b.RetrieveAsync("file-perf", "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync("file-perf", BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new MemoryStream(new byte[500]));
 
         pdfExtractorMock
@@ -306,7 +306,7 @@ public class WizardConcurrencyAndPerformanceTests
                     var fileName = $"upload-{index}.pdf";
 
                     blobMock
-                        .Setup(b => b.StoreAsync(It.IsAny<Stream>(), fileName, "wizard-temp", It.IsAny<CancellationToken>()))
+                        .Setup(b => b.StoreAsync(It.IsAny<Stream>(), fileName, BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
                         .ReturnsAsync(new BlobStorageResult(
                             Success: true, FileId: $"file-{index}",
                             FilePath: $"file-{index}_{index}.pdf",
@@ -335,7 +335,7 @@ public class WizardConcurrencyAndPerformanceTests
                     var llmServiceMock = new Mock<ILlmService>();
 
                     blobMock
-                        .Setup(b => b.RetrieveAsync($"file-{index}", "wizard-temp", It.IsAny<CancellationToken>()))
+                        .Setup(b => b.RetrieveAsync($"file-{index}", BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
                         .ReturnsAsync(new MemoryStream(new byte[100]));
 
                     pdfExtractorMock
@@ -376,7 +376,7 @@ public class WizardConcurrencyAndPerformanceTests
         var blobMock = new Mock<IBlobStorageService>();
 
         blobMock
-            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .Returns<Stream, string, string, CancellationToken>(async (_, _, _, ct) =>
             {
                 await Task.Delay(5000, ct); // Simulate slow storage

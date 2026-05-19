@@ -207,7 +207,7 @@ public class ExtractGameMetadataFromPdfQueryHandlerTests
             UserId: Guid.NewGuid());
 
         _blobStorageServiceMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync((Stream?)null);
 
         // Act
@@ -229,7 +229,7 @@ public class ExtractGameMetadataFromPdfQueryHandlerTests
             UserId: Guid.NewGuid());
 
         _blobStorageServiceMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new IOException("S3 connection timeout"));
 
         // Act
@@ -581,7 +581,7 @@ public class ExtractGameMetadataFromPdfQueryHandlerTests
         var tokenPassed = false;
 
         _blobStorageServiceMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .Callback<string, string, CancellationToken>((_, _, ct) =>
             {
                 tokenPassed = ct == cts.Token;
@@ -629,7 +629,7 @@ public class ExtractGameMetadataFromPdfQueryHandlerTests
             UserId: Guid.NewGuid());
 
         _blobStorageServiceMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Simulated crash"));
 
         // Act
@@ -657,7 +657,7 @@ public class ExtractGameMetadataFromPdfQueryHandlerTests
     private void SetupPdfRetrieval()
     {
         _blobStorageServiceMock
-            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(() =>
             {
                 var pdfContent = "%PDF-1.4\ntest content\n%%EOF";

@@ -116,7 +116,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
     {
         // Mock BlobStorage service (default: success)
         var blobStorageMock = new Mock<IBlobStorageService>();
-        blobStorageMock.Setup(b => b.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        blobStorageMock.Setup(b => b.DeleteAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         services.AddSingleton<IBlobStorageService>(blobStorageMock.Object);
 
@@ -430,7 +430,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
 
         // Create mock BlobStorage that fails
         var blobStorageMock = new Mock<IBlobStorageService>();
-        blobStorageMock.Setup(b => b.DeleteAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        blobStorageMock.Setup(b => b.DeleteAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Blob storage unavailable"));
 
         var handler = new DeletePdfCommandHandler(

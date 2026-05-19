@@ -270,3 +270,7 @@ infra/backups/*.csv
 infra/backups/*.txt
 !infra/backups/.gitkeep
 !infra/backups/README.md
+
+# Per-environment config for game-reset scripts (never commit actual values)
+infra/scripts/game-reset/.env.*
+!infra/scripts/game-reset/.env.example

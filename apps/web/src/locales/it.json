@@ -2989,6 +2989,17 @@
         }
       }
     },
+    "glossaryEditor": {
+      "title": "Modifica voce di glossario",
+      "termEnLabel": "Termine originale",
+      "termItLabel": "Traduzione italiana",
+      "save": "Salva",
+      "close": "Chiudi",
+      "retry": "Riprova",
+      "error": {
+        "saveFailed": "Salvataggio fallito. Riprova."
+      }
+    },
     "play": {
       "loading": "Caricamento...",
       "pageNumber": "Pagina {num}",

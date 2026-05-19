@@ -22,6 +22,7 @@ import { playersHandlers } from './players.handlers';
 import { notificationsHandlers } from './notifications.handlers';
 import { badgesHandlers } from './badges.handlers';
 import { gamebookHandlers } from './gamebook.handlers';
+import { gamebookGlossaryHandlers } from './gamebook-glossary.handlers';
 
 /**
  * All MSW request handlers
@@ -45,6 +46,7 @@ export const handlers = [
   ...notificationsHandlers,
   ...badgesHandlers,
   ...gamebookHandlers,
+  ...gamebookGlossaryHandlers,
 ];
 
 // Re-export individual handler groups for selective use
@@ -89,3 +91,10 @@ export {
   getCapturedGamebookRequests,
   resetCapturedGamebookRequests,
 } from './gamebook.handlers';
+export {
+  gamebookGlossaryHandlers,
+  getCapturedGlossaryUpserts,
+  resetCapturedGlossaryUpserts,
+  setUpsertResponder,
+  resetGlossaryResponder,
+} from './gamebook-glossary.handlers';

@@ -140,3 +140,7 @@ export type {
   SoftWarningCreditsLabels,
   SoftWarningCreditsProps,
 } from '@/components/features/gamebook/SoftWarningCredits';
+
+// Issue #952 — Glossary editor modal (4 in-scope states; state-04 collision deferred to #952-followup)
+export { GlossaryEditorModal } from '@/components/features/gamebook/GlossaryEditorModal';
+export type { GlossaryEditorModalProps } from '@/components/features/gamebook/GlossaryEditorModal';

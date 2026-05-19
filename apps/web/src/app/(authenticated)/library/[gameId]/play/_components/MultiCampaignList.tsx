@@ -72,7 +72,7 @@ export function MultiCampaignList({
     <section
       data-testid="gamebook-resume-multi-list"
       data-state="state-03-multi-campaign"
-      className="max-w-screen-sm mx-auto px-4 py-6 space-y-4"
+      className="mx-auto px-4 py-6 space-y-4 max-w-screen-sm lg:max-w-6xl"
     >
       <header>
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -86,7 +86,9 @@ export function MultiCampaignList({
         </p>
       </header>
 
-      <ul className="flex flex-col gap-3">
+      {/* Desktop: 2-col grid (mockup state-03-desktop-grid).
+          Mobile: stack vertical (default). */}
+      <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
         {campaigns.map((campaign, idx) => {
           const accent = idx === 0 ? 'var(--c-game)' : 'var(--c-agent)';
           const days = daysSince(campaign.lastReadAt);

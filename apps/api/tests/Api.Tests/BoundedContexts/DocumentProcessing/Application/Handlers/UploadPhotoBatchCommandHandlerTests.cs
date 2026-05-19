@@ -73,7 +73,7 @@ public class UploadPhotoBatchCommandHandlerTests
         await _blob.Received(1).StoreAsync(
             Arg.Any<Stream>(),
             Arg.Any<string>(),
-            BlobCategory.Pdf,
+            BlobCategory.PhotoBatch,
             cmd.GameId.ToString(),
             Arg.Any<CancellationToken>());
         await _mediator.Received(1).Send(
@@ -106,7 +106,7 @@ public class UploadPhotoBatchCommandHandlerTests
         await _blob.Received(3).StoreAsync(
             Arg.Any<Stream>(),
             Arg.Any<string>(),
-            BlobCategory.Pdf,
+            BlobCategory.PhotoBatch,
             cmd.GameId.ToString(),
             Arg.Any<CancellationToken>());
     }

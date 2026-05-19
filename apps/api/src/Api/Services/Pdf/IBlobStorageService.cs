@@ -31,6 +31,14 @@ public enum BlobCategory
 
     /// <summary>Gamebook scanned photos. Target prefix <c>gamebook-photos/{gamebookId}/</c>.</summary>
     GamebookPhoto,
+
+    /// <summary>
+    /// JPEG photo batches uploaded for OCR + text extraction (Libro Game AI Assistant camera pipeline).
+    /// Each batch is N per-page captures of a physical rulebook/gamebook. Distinct from
+    /// <see cref="GamebookPhoto"/> (which is per-photo session storage) and <see cref="Pdf"/>
+    /// (which is the binary PDF document itself). Target prefix <c>photo-batches/{gameId}/</c>.
+    /// </summary>
+    PhotoBatch,
 }
 
 internal static class BlobCategoryExtensions
@@ -48,6 +56,7 @@ internal static class BlobCategoryExtensions
         BlobCategory.GameImage => "game-images",
         BlobCategory.VisionSnapshot => "vision-snapshots",
         BlobCategory.GamebookPhoto => "gamebook-photos",
+        BlobCategory.PhotoBatch => "photo-batches",
         _ => throw new ArgumentOutOfRangeException(nameof(category), category, null),
     };
 }

@@ -58,7 +58,7 @@ internal sealed class UploadPhotoBatchCommandHandler
             var fileName = $"photo-batch-{batch.Id}-page-{i:D3}.jpg";
 
             using var stream = new MemoryStream(photoBytes);
-            await _blob.StoreAsync(stream, fileName, BlobCategory.Pdf, cmd.GameId.ToString(), cancellationToken).ConfigureAwait(false);
+            await _blob.StoreAsync(stream, fileName, BlobCategory.PhotoBatch, cmd.GameId.ToString(), cancellationToken).ConfigureAwait(false);
         }
 
         // 3. Enqueue background processing (fire-and-forget via IBackgroundTaskService)

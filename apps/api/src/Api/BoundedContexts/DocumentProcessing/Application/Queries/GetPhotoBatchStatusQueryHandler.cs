@@ -46,7 +46,7 @@ internal sealed class GetPhotoBatchStatusQueryHandler
 
         // Parallel signed URLs — no CancellationToken on GetPresignedDownloadUrlAsync (interface contract)
         var thumbnailUrlTasks = pageEntries
-            .Select(p => _blob.GetPresignedDownloadUrlAsync(p.BlobKey, BlobCategory.Pdf, gameIdString, expirySeconds: 900));
+            .Select(p => _blob.GetPresignedDownloadUrlAsync(p.BlobKey, BlobCategory.PhotoBatch, gameIdString, expirySeconds: 900));
         var thumbnailUrls = await Task.WhenAll(thumbnailUrlTasks).ConfigureAwait(false);
 
         var pageDtos = pageEntries

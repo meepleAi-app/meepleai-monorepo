@@ -28,6 +28,12 @@ public class PhotoBatchProcessorTests
     private readonly IPhotoPreprocessor _preprocessor = Substitute.For<IPhotoPreprocessor>();
     private readonly IDocumentChunker _chunker = Substitute.For<IDocumentChunker>();
     private readonly IKnowledgeBaseIndexer _kbIndexer = Substitute.For<IKnowledgeBaseIndexer>();
+    // Issue #747 PR-C: real (regex) extractor used here — it's pure, stateless,
+    // and the OCR text fed by these tests doesn't carry paragraph headers, so
+    // the extractor returns empty arrays without polluting the test's
+    // PhotoBatchPage assertions. Dedicated extractor tests live in
+    // RegexParagraphNumberExtractorTests.
+    private readonly IParagraphNumberExtractor _paragraphExtractor = new RegexParagraphNumberExtractor();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
 
     private PhotoBatchProcessor CreateSut(int maxParallelism = 4)
@@ -45,6 +51,7 @@ public class PhotoBatchProcessorTests
             _preprocessor,
             _chunker,
             _kbIndexer,
+            _paragraphExtractor,
             _uow,
             config,
             NullLogger<PhotoBatchProcessor>.Instance);
@@ -223,7 +230,7 @@ public class PhotoBatchProcessorTests
         // Empty config → no MaxParallelism key
         var config = new ConfigurationBuilder().Build();
         var sut = new PhotoBatchProcessor(
-            _repo, _blob, _preprocessor, _chunker, _kbIndexer, _uow, config,
+            _repo, _blob, _preprocessor, _chunker, _kbIndexer, _paragraphExtractor, _uow, config,
             NullLogger<PhotoBatchProcessor>.Instance);
 
         // Act — should not throw, default parallelism applied

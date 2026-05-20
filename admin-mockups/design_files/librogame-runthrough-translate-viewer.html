@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MeepleAI — Nanolith Runthrough · Photo Translate Viewer</title>
+<title>MeepleAI — Librogame Runthrough · Photo Translate Viewer</title>
 <!--
-  Mockup: nanolith-runthrough-translate-viewer
+  Mockup: librogame-runthrough-translate-viewer
   Route:  /library/{gameId}/play/{campaignId}/translate
   Scope:  Phase A runthrough — pipeline foto → segmentazione → traduzione fullscreen (N3 baseline)
   Stati:  A · camera-ready    (CameraViewfinder primitive, frame tratteggiato + scatto button)
@@ -412,8 +412,8 @@
 <body>
 
 <header class="top">
-  <h1>Nanolith Runthrough · Photo Translate Viewer</h1>
-  <span class="route">/library/nanolith/play/{campaignId}/translate</span>
+  <h1>Librogame Runthrough · Photo Translate Viewer</h1>
+  <span class="route">/library/librogame/play/{campaignId}/translate</span>
   <span class="spacer"></span>
   <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
 </header>
@@ -462,7 +462,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – camera ready (drop zone)">
         <span class="frame-label">Desktop · 1440px (drop zone fallback)</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate</span></div>
         <div class="appbar">
           <button class="back">←</button>
           <span class="crumbs"><strong>Sera con i ragazzi</strong> · 📷 Carica pagina · §147</span>
@@ -523,7 +523,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – segmenting" aria-busy="true">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Analisi pagina…</span></div>
         <div style="flex: 1; padding: var(--s-7); display: flex; gap: var(--s-7); align-items: flex-start;">
           <div class="photo-preview" style="width: 280px; flex-shrink: 0;"><span class="scan"></span></div>
@@ -568,13 +568,13 @@
 
           <article class="segment-card" role="button" tabindex="0">
             <div class="pn-row"><span class="pn">§146</span><span class="match exact">Match esatto</span></div>
-            <p class="preview">"The hall was silent as the Reaver chieftain rose from his throne. His eyes, hollow as the Voidstone..."</p>
+            <p class="preview">"The hall was silent as the Goblin chieftain rose from his throne. His eyes, hollow as the Voidstone..."</p>
             <div class="actions"><span class="ocr-conf">🔍 confidence 0.93</span><button class="btn-sm-fill">Traduci</button></div>
           </article>
 
           <article class="segment-card target" role="button" tabindex="0" aria-current="true">
             <div class="pn-row"><span class="pn">§147</span><span class="match exact">Match esatto · target</span></div>
-            <p class="preview">"As Niamh approached the altar, the air grew thick with whispers. The Reaver guards drew their blades, eyes gleaming with bloodlust..."</p>
+            <p class="preview">"As Niamh approached the altar, the air grew thick with whispers. The Goblin guards drew their blades, eyes gleaming with bloodlust..."</p>
             <div class="actions"><span class="ocr-conf">🔍 confidence 0.96</span><button class="btn-sm-fill" autofocus>▶ Traduci §147</button></div>
           </article>
 
@@ -588,7 +588,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – segments list">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · 3 paragrafi trovati</span><button class="right-tool" aria-label="Rifotografa">📷</button></div>
         <div style="flex: 1; display: flex; overflow: hidden;">
           <aside style="width: 240px; flex-shrink: 0; border-right: 1px solid var(--border-light); padding: var(--s-4);">
@@ -602,8 +602,8 @@
               <h2>Paragrafi trovati nella pagina</h2>
               <span class="ocr-quality">📊 OCR 0.91 · 3 segmenti</span>
             </div>
-            <article class="segment-card"><div class="pn-row"><span class="pn">§146</span><span class="match exact">Match esatto</span></div><p class="preview">"The hall was silent as the Reaver chieftain rose from his throne. His eyes, hollow as the Voidstone..."</p><div class="actions"><span class="ocr-conf">🔍 0.93</span><button class="btn-sm-fill">Traduci §146</button></div></article>
-            <article class="segment-card target" aria-current="true"><div class="pn-row"><span class="pn">§147</span><span class="match exact">Match esatto · target</span></div><p class="preview">"As Niamh approached the altar, the air grew thick with whispers. The Reaver guards drew their blades, eyes gleaming with bloodlust..."</p><div class="actions"><span class="ocr-conf">🔍 0.96</span><button class="btn-sm-fill" autofocus>▶ Traduci §147</button></div></article>
+            <article class="segment-card"><div class="pn-row"><span class="pn">§146</span><span class="match exact">Match esatto</span></div><p class="preview">"The hall was silent as the Goblin chieftain rose from his throne. His eyes, hollow as the Voidstone..."</p><div class="actions"><span class="ocr-conf">🔍 0.93</span><button class="btn-sm-fill">Traduci §146</button></div></article>
+            <article class="segment-card target" aria-current="true"><div class="pn-row"><span class="pn">§147</span><span class="match exact">Match esatto · target</span></div><p class="preview">"As Niamh approached the altar, the air grew thick with whispers. The Goblin guards drew their blades, eyes gleaming with bloodlust..."</p><div class="actions"><span class="ocr-conf">🔍 0.96</span><button class="btn-sm-fill" autofocus>▶ Traduci §147</button></div></article>
             <article class="segment-card"><div class="pn-row"><span class="pn">§148</span><span class="match partial">Match parziale</span></div><p class="preview">"If you choose to fight, turn to §201. If you flee through the back passage, turn to §189..."</p><div class="actions"><span class="ocr-conf">🔍 0.78</span><button class="btn-sm-fill">Traduci §148</button></div></article>
           </div>
         </div>
@@ -628,7 +628,7 @@
           <div class="translating-header">
             <span class="pn">§147</span>
             <div class="meta">
-              <div class="v">Capitolo 4 — La grotta dei Reaver</div>
+              <div class="v">Capitolo 4 — La grotta dei Goblin</div>
               <div class="s">streaming SSE · 2.3s</div>
             </div>
           </div>
@@ -644,7 +644,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – translating">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>§147</strong> · traduzione in corso · streaming</span></div>
         <div class="translating-shell" style="flex-direction: row; gap: var(--s-7); padding: var(--s-7);">
           <div style="flex-shrink: 0; width: 280px;">
@@ -653,7 +653,7 @@
               <span class="pn">§147</span>
               <div class="meta">
                 <div class="v">Capitolo 4</div>
-                <div class="s">La grotta dei Reaver</div>
+                <div class="s">La grotta dei Goblin</div>
               </div>
             </div>
             <div class="translation-progress" style="margin-top: var(--s-3);">
@@ -663,7 +663,7 @@
           </div>
           <div style="flex: 1; padding-top: var(--s-5);">
             <div class="stream-text" aria-live="polite">
-              Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri. Le guardie Reaver sguainarono le lame, gli occhi che brillavano<span class="cursor"></span>
+              Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri. Le guardie Goblin sguainarono le lame, gli occhi che brillavano<span class="cursor"></span>
             </div>
           </div>
         </div>
@@ -694,12 +694,12 @@
             <div class="pn-big">§147</div>
           </header>
           <div class="viewer-text" aria-live="polite">
-            <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri. Le guardie Reaver sguainarono le lame, gli occhi che brillavano di sete di sangue, mentre la <span class="glossary-pill" role="button" tabindex="0" aria-label="Termine glossario">📒 Pietra del Vuoto</span> pulsava di una luce malata sulla pietra.</p>
+            <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri. Le guardie Goblin sguainarono le lame, gli occhi che brillavano di sete di sangue, mentre la <span class="glossary-pill" role="button" tabindex="0" aria-label="Termine glossario">📒 Pietra del Vuoto</span> pulsava di una luce malata sulla pietra.</p>
             <p><em>«Tornate indietro, mortali» sibilò il capitano. «Questo luogo non è per voi.»</em></p>
             <p>Niamh strinse l'elsa della spada, sentendo l'eco di antichi giuramenti vibrare nell'acciaio. Aveva due scelte.</p>
           </div>
           <div class="glossary-footnote" aria-label="Glossario applicato">
-            <strong>📒 Glossario applicato:</strong> Pietra del Vuoto · Niamh · Reaver
+            <strong>📒 Glossario applicato:</strong> Pietra del Vuoto · Niamh · Goblin
           </div>
         </div>
         <div class="viewer-toolbar">
@@ -715,7 +715,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – fullscreen viewer">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate?p=147</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate?p=147</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs">§147 · traduzione · 30/47 paragrafi</span><button class="right-tool" aria-label="Menu">⋯</button></div>
         <div class="viewer-page" style="padding: var(--s-7) var(--s-9);">
           <header class="viewer-header">
@@ -723,11 +723,11 @@
             <div class="pn-big" style="font-size: 56px;">§147</div>
           </header>
           <div class="viewer-text">
-            <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri. Le guardie Reaver sguainarono le lame, gli occhi che brillavano di sete di sangue, mentre la <span class="glossary-pill" role="button" tabindex="0">📒 Pietra del Vuoto</span> pulsava di una luce malata sulla pietra.</p>
+            <p>Mentre Niamh si avvicinava all'altare, l'aria si fece densa di sussurri. Le guardie Goblin sguainarono le lame, gli occhi che brillavano di sete di sangue, mentre la <span class="glossary-pill" role="button" tabindex="0">📒 Pietra del Vuoto</span> pulsava di una luce malata sulla pietra.</p>
             <p><em>«Tornate indietro, mortali» sibilò il capitano. «Questo luogo non è per voi.»</em></p>
             <p>Niamh strinse l'elsa della spada, sentendo l'eco di antichi giuramenti vibrare nell'acciaio. Aveva due scelte.</p>
           </div>
-          <div class="glossary-footnote"><strong>📒 Glossario applicato:</strong> Pietra del Vuoto · Niamh · Reaver</div>
+          <div class="glossary-footnote"><strong>📒 Glossario applicato:</strong> Pietra del Vuoto · Niamh · Goblin</div>
         </div>
         <div class="viewer-toolbar">
           <button class="nav-btn">← §146</button>
@@ -788,7 +788,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – low confidence">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Foto poco leggibile</span></div>
         <div style="flex: 1; padding: var(--s-7); display: flex; gap: var(--s-7); align-items: flex-start;">
           <div style="width: 280px; flex-shrink: 0;">

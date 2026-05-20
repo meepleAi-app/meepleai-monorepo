@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MeepleAI — Nanolith Game Night Storyboard</title>
+<title>MeepleAI — Librogame Game Night Storyboard</title>
 <!--
-  Storyboard: nanolith-game-night-storyboard
-  Scope: timeline narrativa end-to-end di una game night Nanolith.
-         Single-file storyboard che embedda gli iframe dei 10 mockup nanolith-runthrough-*
+  Storyboard: librogame-game-night-storyboard
+  Scope: timeline narrativa end-to-end di una game night Eldoria.
+         Single-file storyboard che embedda gli iframe dei 10 mockup librogame-runthrough-*
          organizzati in 3 fasi (T-30 preparazione, T0 sessione attiva, T+post save/resume).
          Use case: agente Tutor per regole, traduzione paragrafi (storybook + encounter
          book), gestione glossary, quota tier free.
-  Persona: Aaron (badsworm@gmail.com), gruppo A (Marco/Giulia/Luca), Nanolith libro game.
+  Persona: Aaron (badsworm@gmail.com), gruppo A (Marco/Giulia/Luca), Eldoria libro game.
   Goal:    validazione visuale del flusso completo prima dell'implementazione FE.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -222,13 +222,13 @@
 
 <header class="hero">
   <span class="kicker">📖 Storyboard end-to-end</span>
-  <h1>Game Night Nanolith</h1>
-  <p class="sub">Aaron + gruppo A (Marco · Giulia · Luca) giocano una sera Nanolith — libro game inglese — con l'assistente AI Tutor per regole, tutorial, traduzione paragrafi e gestione del libro game.</p>
+  <h1>Game Night Eldoria</h1>
+  <p class="sub">Aaron + gruppo A (Marco · Giulia · Luca) giocano una sera Eldoria — libro game inglese — con l'assistente AI Tutor per regole, tutorial, traduzione paragrafi e gestione del libro game.</p>
   <div class="meta">
     <span class="item">👤 Aaron · badsworm@gmail.com</span>
-    <span class="item">🎲 Nanolith · Side Room 2024</span>
+    <span class="item">🎲 Eldoria · Side Room 2024</span>
     <span class="item">📅 Sera tipo · 20:30 → 01:00</span>
-    <span class="item">🤖 Nanolith Tutor · DeepSeek IT</span>
+    <span class="item">🤖 Game Tutor · DeepSeek IT</span>
     <span class="item">📄 KB 142 pag indicizzate</span>
   </div>
 </header>
@@ -251,7 +251,7 @@
     <span class="time">T−30 · 20:30</span>
     <h2 id="ph1">Fase 1 · Preparazione pre-sera</h2>
   </div>
-  <p class="ph-desc">30 minuti prima dell'arrivo del gruppo, Aaron apre l'app sul telefono, trova Nanolith in libreria, crea la campagna e fa qualche domanda di setup all'agente Tutor.</p>
+  <p class="ph-desc">30 minuti prima dell'arrivo del gruppo, Aaron apre l'app sul telefono, trova Eldoria in libreria, crea la campagna e fa qualche domanda di setup all'agente Tutor.</p>
   <div class="jtbd"><strong>🔨 JTBD J1 · Rules tutor</strong> — "Voglio essere pronto a guidare il setup senza leggere 24 pagine di Press Start in inglese."</div>
 
   <div class="steps">
@@ -262,16 +262,16 @@
         <div class="info">
           <div class="ts">T−7d · una tantum</div>
           <h3>Onboarding libro game · pre-condizione</h3>
-          <p class="desc">Settimana prima della sera: Aaron carica i 2 PDF (Press Start 36MB + Rules 101MB), KB indicizza (1.842 chunks), agente "Arbitro Nanolith" creato. 4 stati: prereq-missing → uploading → indexing → ready. Una sola volta nella vita del libro game.</p>
+          <p class="desc">Settimana prima della sera: Aaron carica i 2 PDF (Press Start 36MB + Rules 101MB), KB indicizza (1.842 chunks), agente "Arbitro Eldoria" creato. 4 stati: prereq-missing → uploading → indexing → ready. Una sola volta nella vita del libro game.</p>
         </div>
       </header>
       <div class="pips"><span class="manapip kb"><span class="badge">0→142</span></span><span class="manapip agent"><span class="badge">0→1</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-game-onboarding.html#s4" loading="lazy" title="Onboarding ready"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-game-onboarding.html"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-game-onboarding.html">↗ Apri</button>
+        <iframe src="librogame-runthrough-game-onboarding.html#s4" loading="lazy" title="Onboarding ready"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-game-onboarding.html"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-game-onboarding.html">↗ Apri</button>
       </div>
-      <div class="foot"><span class="route">/library/nanolith (prereq gate)</span><span class="state-pill">04-ready ✓</span></div>
+      <div class="foot"><span class="route">/library/librogame (prereq gate)</span><span class="state-pill">04-ready ✓</span></div>
     </article>
 
     <article class="step">
@@ -280,7 +280,7 @@
         <div class="info">
           <div class="ts">20:30 · Mobile</div>
           <h3>Apre libreria</h3>
-          <p class="desc">Aaron sblocca il telefono, apre MeepleAI, atterra su /library. Nanolith above-the-fold con badge "📖 libro game".</p>
+          <p class="desc">Aaron sblocca il telefono, apre MeepleAI, atterra su /library. Eldoria above-the-fold con badge "📖 libro game".</p>
         </div>
       </header>
       <div class="pips" aria-label="Entity counts">
@@ -289,9 +289,9 @@
         <span class="manapip session"><span class="badge">0</span></span>
       </div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-library-search.html#s1" loading="lazy" title="Library default grid"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-library-search.html" aria-label="Apri"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-library-search.html">↗ Apri</button>
+        <iframe src="librogame-runthrough-library-search.html#s1" loading="lazy" title="Library default grid"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-library-search.html" aria-label="Apri"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-library-search.html">↗ Apri</button>
       </div>
       <div class="foot"><span class="route">/library</span><span class="state-pill">01-default-grid</span></div>
     </article>
@@ -302,14 +302,14 @@
         <div class="info">
           <div class="ts">20:31</div>
           <h3>Cerca "nano"</h3>
-          <p class="desc">Aaron digita nella search. Live filter, Nanolith unico risultato in 3s. ManaPips lg con kb/chat/session inline.</p>
+          <p class="desc">Aaron digita nella search. Live filter, Eldoria unico risultato in 3s. ManaPips lg con kb/chat/session inline.</p>
         </div>
       </header>
       <div class="pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">8</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-library-search.html#s2" loading="lazy" title="Library search"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-library-search.html#s2"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-library-search.html#s2">↗ Apri</button>
+        <iframe src="librogame-runthrough-library-search.html#s2" loading="lazy" title="Library search"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-library-search.html#s2"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-library-search.html#s2">↗ Apri</button>
       </div>
       <div class="foot"><span class="route">/library?q=nano</span><span class="state-pill">02-search-filtered</span></div>
     </article>
@@ -325,11 +325,11 @@
       </header>
       <div class="pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">8</span></span><span class="manapip agent"><span class="badge">1</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-game-detail.html" loading="lazy" title="Game detail"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-game-detail.html"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-game-detail.html">↗ Apri</button>
+        <iframe src="librogame-runthrough-game-detail.html" loading="lazy" title="Game detail"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-game-detail.html"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-game-detail.html">↗ Apri</button>
       </div>
-      <div class="foot"><span class="route">/library/nanolith</span><span class="state-pill">01-default</span></div>
+      <div class="foot"><span class="route">/library/librogame</span><span class="state-pill">01-default</span></div>
     </article>
 
     <article class="step">
@@ -343,11 +343,11 @@
       </header>
       <div class="pips"><span class="manapip session"><span class="badge">0</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-resume-picker.html#s1" loading="lazy" title="First time"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-resume-picker.html#s1"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-resume-picker.html#s1">↗ Apri</button>
+        <iframe src="librogame-runthrough-resume-picker.html#s1" loading="lazy" title="First time"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-resume-picker.html#s1"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-resume-picker.html#s1">↗ Apri</button>
       </div>
-      <div class="foot"><span class="route">/library/nanolith/play</span><span class="state-pill">01-first-time</span></div>
+      <div class="foot"><span class="route">/library/librogame/play</span><span class="state-pill">01-first-time</span></div>
     </article>
 
     <article class="step">
@@ -361,9 +361,9 @@
       </header>
       <div class="pips"><span class="manapip session"><span class="badge">1</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-setup-wizard.html#s1" loading="lazy" title="Setup step 1"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-setup-wizard.html#s1"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-setup-wizard.html#s1">↗ Apri</button>
+        <iframe src="librogame-runthrough-setup-wizard.html#s1" loading="lazy" title="Setup step 1"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-setup-wizard.html#s1"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-setup-wizard.html#s1">↗ Apri</button>
       </div>
       <div class="foot"><span class="route">…drawer overlay</span><span class="state-pill">01-step1-name</span></div>
     </article>
@@ -379,9 +379,9 @@
       </header>
       <div class="pips"><span class="manapip player"><span class="badge">4</span></span><span class="manapip agent"><span class="badge">1</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-setup-wizard.html#s2" loading="lazy" title="Setup step 2"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-setup-wizard.html#s2"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-setup-wizard.html#s2">↗ Apri</button>
+        <iframe src="librogame-runthrough-setup-wizard.html#s2" loading="lazy" title="Setup step 2"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-setup-wizard.html#s2"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-setup-wizard.html#s2">↗ Apri</button>
       </div>
       <div class="foot"><span class="route">…drawer overlay</span><span class="state-pill">02-step2-players</span></div>
     </article>
@@ -397,9 +397,9 @@
       </header>
       <div class="pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip agent"><span class="badge">1</span></span><span class="manapip player"><span class="badge">4</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-setup-wizard.html#s3" loading="lazy" title="Setup step 3"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-setup-wizard.html#s3"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-setup-wizard.html#s3">↗ Apri</button>
+        <iframe src="librogame-runthrough-setup-wizard.html#s3" loading="lazy" title="Setup step 3"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-setup-wizard.html#s3"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-setup-wizard.html#s3">↗ Apri</button>
       </div>
       <div class="foot"><span class="route">…drawer overlay</span><span class="state-pill">03-step3-confirm</span></div>
     </article>
@@ -415,9 +415,9 @@
       </header>
       <div class="pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">9</span></span><span class="manapip agent"><span class="badge">1</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-setup-chat.html" loading="lazy" title="Setup chat default"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-setup-chat.html"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-setup-chat.html">↗ Apri</button>
+        <iframe src="librogame-runthrough-setup-chat.html" loading="lazy" title="Setup chat default"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-setup-chat.html"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-setup-chat.html">↗ Apri</button>
       </div>
       <div class="foot"><span class="route">…/play/{cmp}?tab=chat</span><span class="state-pill">01-default</span></div>
     </article>
@@ -443,14 +443,14 @@
         <div class="info">
           <div class="ts">21:00 · play shell</div>
           <h3>Play session · paragrafo §289</h3>
-          <p class="desc">Vista runtime default. Story tab con paragrafo IT + glossary pill inline (Voidstone, Reaver). Toolbar: 📷 photo · ⚔️ encounter · 📚 glossary. Chat strip laterale (Tutor live).</p>
+          <p class="desc">Vista runtime default. Story tab con paragrafo IT + glossary pill inline (Voidstone, Goblin). Toolbar: 📷 photo · ⚔️ encounter · 📚 glossary. Chat strip laterale (Tutor live).</p>
         </div>
       </header>
       <div class="pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">12</span></span><span class="manapip event"><span class="badge">3</span></span><span class="manapip toolkit"><span class="badge">34</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-play-session.html#s1" loading="lazy" title="Play session story"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-play-session.html#s1"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-play-session.html#s1">↗ Apri</button>
+        <iframe src="librogame-runthrough-play-session.html#s1" loading="lazy" title="Play session story"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-play-session.html#s1"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-play-session.html#s1">↗ Apri</button>
       </div>
       <div class="foot"><span class="route">…/play/{cmp}</span><span class="state-pill">01-story-tab</span></div>
     </article>
@@ -466,9 +466,9 @@
       </header>
       <div class="pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip event"><span class="badge">3</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-translate-viewer.html" loading="lazy" title="Translate storybook"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-translate-viewer.html"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-translate-viewer.html">↗ Apri</button>
+        <iframe src="librogame-runthrough-translate-viewer.html" loading="lazy" title="Translate storybook"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-translate-viewer.html"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-translate-viewer.html">↗ Apri</button>
       </div>
       <div class="foot"><span class="route">…/play/{cmp}/translate</span><span class="state-pill">storybook</span></div>
     </article>
@@ -479,14 +479,14 @@
         <div class="info">
           <div class="ts">22:30 · J3 encounter photo</div>
           <h3>Encounter Book · foto → cheatsheet on-demand</h3>
-          <p class="desc">Storybook §147 cita "→ Encounter §218 (Reaver Camp)". Aaron fotografa la pagina Encounter Book. Pipeline OCR + parse stats/options/conditions in ≤ 6s. Layout cheatsheet card compatto (no prose). 4 stati: entry-from-story · segmenting · cheatsheet-rendered · resolved-back. NO long-term cache (ephemeral §9.1).</p>
+          <p class="desc">Storybook §147 cita "→ Encounter §218 (Goblin Camp)". Aaron fotografa la pagina Encounter Book. Pipeline OCR + parse stats/options/conditions in ≤ 6s. Layout cheatsheet card compatto (no prose). 4 stati: entry-from-story · segmenting · cheatsheet-rendered · resolved-back. NO long-term cache (ephemeral §9.1).</p>
         </div>
       </header>
       <div class="pips"><span class="manapip event"><span class="badge">+1</span></span><span class="manapip kb"><span class="badge">142</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-encounter-cheatsheet.html#s3" loading="lazy" title="Encounter cheatsheet rendered"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-encounter-cheatsheet.html"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-encounter-cheatsheet.html">↗ Apri</button>
+        <iframe src="librogame-runthrough-encounter-cheatsheet.html#s3" loading="lazy" title="Encounter cheatsheet rendered"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-encounter-cheatsheet.html"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-encounter-cheatsheet.html">↗ Apri</button>
       </div>
       <div class="foot"><span class="route">…/play/{cmp}/encounter</span><span class="state-pill">03-cheatsheet-rendered</span></div>
     </article>
@@ -496,15 +496,15 @@
         <span class="num">11</span>
         <div class="info">
           <div class="ts">22:31 · J3 encounter</div>
-          <h3>Encounter tab · 2 × Reaver</h3>
+          <h3>Encounter tab · 2 × Goblin</h3>
           <p class="desc">Party profana l'altare → spawn encounter §294. Stats parsed dalla foto encounter book (HP 14, AC 12, DMG 2d6). Dice CTA event-color.</p>
         </div>
       </header>
       <div class="pips"><span class="manapip event"><span class="badge">4</span></span><span class="manapip toolkit"><span class="badge">34</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-play-session.html#s2" loading="lazy" title="Encounter tab"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-play-session.html#s2"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-play-session.html#s2">↗ Apri</button>
+        <iframe src="librogame-runthrough-play-session.html#s2" loading="lazy" title="Encounter tab"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-play-session.html#s2"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-play-session.html#s2">↗ Apri</button>
       </div>
       <div class="foot"><span class="route">…/play/{cmp}?tab=encounter</span><span class="state-pill">02-encounter-tab</span></div>
     </article>
@@ -520,9 +520,9 @@
       </header>
       <div class="pips"><span class="manapip chat"><span class="badge">15</span></span><span class="manapip kb"><span class="badge">142</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-play-session.html#s3" loading="lazy" title="Chat overlay"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-play-session.html#s3"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-play-session.html#s3">↗ Apri</button>
+        <iframe src="librogame-runthrough-play-session.html#s3" loading="lazy" title="Chat overlay"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-play-session.html#s3"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-play-session.html#s3">↗ Apri</button>
       </div>
       <div class="foot"><span class="route">…/play/{cmp}?focus=chat</span><span class="state-pill">03-chat-overlay</span></div>
     </article>
@@ -532,15 +532,15 @@
         <span class="num">13</span>
         <div class="info">
           <div class="ts">22:18 · J4 memory</div>
-          <h3>Glossary inline · "Reaver → Razziatore"</h3>
+          <h3>Glossary inline · "Goblin → Razziatore"</h3>
           <p class="desc">Aaron tappa la pill "Razziatrice" nel paragrafo. Sheet glossary editor sale dal basso. Lista esistente (34 termini). Save toolkit-color.</p>
         </div>
       </header>
       <div class="pips"><span class="manapip toolkit"><span class="badge">35</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-play-session.html#s4" loading="lazy" title="Glossary inline"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-play-session.html#s4"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-play-session.html#s4">↗ Apri</button>
+        <iframe src="librogame-runthrough-play-session.html#s4" loading="lazy" title="Glossary inline"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-play-session.html#s4"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-play-session.html#s4">↗ Apri</button>
       </div>
       <div class="foot"><span class="route">…/play/{cmp}?glossary=add</span><span class="state-pill">04-glossary-inline</span></div>
     </article>
@@ -556,9 +556,9 @@
       </header>
       <div class="pips"><span class="manapip toolkit"><span class="badge">35</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-glossary-editor.html" loading="lazy" title="Glossary editor"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-glossary-editor.html"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-glossary-editor.html">↗ Apri</button>
+        <iframe src="librogame-runthrough-glossary-editor.html" loading="lazy" title="Glossary editor"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-glossary-editor.html"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-glossary-editor.html">↗ Apri</button>
       </div>
       <div class="foot"><span class="route">…overlay sheet</span><span class="state-pill">edit-collision</span></div>
     </article>
@@ -581,9 +581,9 @@
         </header>
         <div class="pips"><span class="manapip chat"><span class="badge">16</span></span></div>
         <div class="preview">
-          <iframe src="nanolith-runthrough-setup-chat.html#s2" loading="lazy" title="Low confidence"></iframe>
-          <button class="scrim" data-open="nanolith-runthrough-setup-chat.html#s2"></button>
-          <button class="open-overlay" data-open="nanolith-runthrough-setup-chat.html#s2">↗ Apri</button>
+          <iframe src="librogame-runthrough-setup-chat.html#s2" loading="lazy" title="Low confidence"></iframe>
+          <button class="scrim" data-open="librogame-runthrough-setup-chat.html#s2"></button>
+          <button class="open-overlay" data-open="librogame-runthrough-setup-chat.html#s2">↗ Apri</button>
         </div>
         <div class="foot"><span class="route">…?tab=chat</span><span class="state-pill">02-conf-bassa</span></div>
       </article>
@@ -599,9 +599,9 @@
         </header>
         <div class="pips"><span class="manapip chat"><span class="badge">17</span></span></div>
         <div class="preview">
-          <iframe src="nanolith-runthrough-setup-chat.html#s3" loading="lazy" title="Out of context"></iframe>
-          <button class="scrim" data-open="nanolith-runthrough-setup-chat.html#s3"></button>
-          <button class="open-overlay" data-open="nanolith-runthrough-setup-chat.html#s3">↗ Apri</button>
+          <iframe src="librogame-runthrough-setup-chat.html#s3" loading="lazy" title="Out of context"></iframe>
+          <button class="scrim" data-open="librogame-runthrough-setup-chat.html#s3"></button>
+          <button class="open-overlay" data-open="librogame-runthrough-setup-chat.html#s3">↗ Apri</button>
         </div>
         <div class="foot"><span class="route">…?tab=chat</span><span class="state-pill">03-out-of-ctx</span></div>
       </article>
@@ -617,9 +617,9 @@
         </header>
         <div class="pips"><span class="manapip chat"><span class="badge">10</span></span></div>
         <div class="preview">
-          <iframe src="nanolith-runthrough-quota-credits.html" loading="lazy" title="Quota credits"></iframe>
-          <button class="scrim" data-open="nanolith-runthrough-quota-credits.html"></button>
-          <button class="open-overlay" data-open="nanolith-runthrough-quota-credits.html">↗ Apri</button>
+          <iframe src="librogame-runthrough-quota-credits.html" loading="lazy" title="Quota credits"></iframe>
+          <button class="scrim" data-open="librogame-runthrough-quota-credits.html"></button>
+          <button class="open-overlay" data-open="librogame-runthrough-quota-credits.html">↗ Apri</button>
         </div>
         <div class="foot"><span class="route">…modal + /account/checkout</span><span class="state-pill">quota-raggiunta</span></div>
       </article>
@@ -635,9 +635,9 @@
         </header>
         <div class="pips"><span class="manapip chat"><span class="badge">!</span></span><span class="manapip event"><span class="badge">!</span></span></div>
         <div class="preview">
-          <iframe src="nanolith-runthrough-error-states.html#s3" loading="lazy" title="Error LLM 503"></iframe>
-          <button class="scrim" data-open="nanolith-runthrough-error-states.html"></button>
-          <button class="open-overlay" data-open="nanolith-runthrough-error-states.html">↗ Apri</button>
+          <iframe src="librogame-runthrough-error-states.html#s3" loading="lazy" title="Error LLM 503"></iframe>
+          <button class="scrim" data-open="librogame-runthrough-error-states.html"></button>
+          <button class="open-overlay" data-open="librogame-runthrough-error-states.html">↗ Apri</button>
         </div>
         <div class="foot"><span class="route">trasversale</span><span class="state-pill">stream-timeout · ocr-fail · 503 · seg-fail</span></div>
       </article>
@@ -661,9 +661,9 @@
         </header>
         <div class="pips"><span class="manapip session"><span class="badge">7</span></span><span class="manapip event"><span class="badge">22</span></span><span class="manapip kb"><span class="badge">142</span></span></div>
         <div class="preview">
-          <iframe src="nanolith-runthrough-session-end.html#s2" loading="lazy" title="Victory"></iframe>
-          <button class="scrim" data-open="nanolith-runthrough-session-end.html#s2"></button>
-          <button class="open-overlay" data-open="nanolith-runthrough-session-end.html#s2">↗ Apri</button>
+          <iframe src="librogame-runthrough-session-end.html#s2" loading="lazy" title="Victory"></iframe>
+          <button class="scrim" data-open="librogame-runthrough-session-end.html#s2"></button>
+          <button class="open-overlay" data-open="librogame-runthrough-session-end.html#s2">↗ Apri</button>
         </div>
         <div class="foot"><span class="route">…modal overlay</span><span class="state-pill">02-victory 🏆</span></div>
       </article>
@@ -679,9 +679,9 @@
         </header>
         <div class="pips"><span class="manapip event"><span class="badge">33</span></span></div>
         <div class="preview">
-          <iframe src="nanolith-runthrough-session-end.html#s3" loading="lazy" title="Defeat"></iframe>
-          <button class="scrim" data-open="nanolith-runthrough-session-end.html#s3"></button>
-          <button class="open-overlay" data-open="nanolith-runthrough-session-end.html#s3">↗ Apri</button>
+          <iframe src="librogame-runthrough-session-end.html#s3" loading="lazy" title="Defeat"></iframe>
+          <button class="scrim" data-open="librogame-runthrough-session-end.html#s3"></button>
+          <button class="open-overlay" data-open="librogame-runthrough-session-end.html#s3">↗ Apri</button>
         </div>
         <div class="foot"><span class="route">…modal overlay</span><span class="state-pill">03-defeat 💀</span></div>
       </article>
@@ -697,9 +697,9 @@
         </header>
         <div class="pips"><span class="manapip toolkit"><span class="badge">34</span></span></div>
         <div class="preview">
-          <iframe src="nanolith-runthrough-session-end.html#s4" loading="lazy" title="Cancel"></iframe>
-          <button class="scrim" data-open="nanolith-runthrough-session-end.html#s4"></button>
-          <button class="open-overlay" data-open="nanolith-runthrough-session-end.html#s4">↗ Apri</button>
+          <iframe src="librogame-runthrough-session-end.html#s4" loading="lazy" title="Cancel"></iframe>
+          <button class="scrim" data-open="librogame-runthrough-session-end.html#s4"></button>
+          <button class="open-overlay" data-open="librogame-runthrough-session-end.html#s4">↗ Apri</button>
         </div>
         <div class="foot"><span class="route">…?confirm=abandon</span><span class="state-pill">04-cancelled ⚠</span></div>
       </article>
@@ -732,9 +732,9 @@
       </header>
       <div class="pips"><span class="manapip session"><span class="badge">1</span></span><span class="manapip event"><span class="badge">8</span></span><span class="manapip kb"><span class="badge">142</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-session-end.html#s1" loading="lazy" title="Paused"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-session-end.html#s1"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-session-end.html#s1">↗ Apri</button>
+        <iframe src="librogame-runthrough-session-end.html#s1" loading="lazy" title="Paused"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-session-end.html#s1"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-session-end.html#s1">↗ Apri</button>
       </div>
       <div class="foot"><span class="route">…modal overlay</span><span class="state-pill">01-paused ⏸</span></div>
     </article>
@@ -745,16 +745,16 @@
         <div class="info">
           <div class="ts">domani · 21:00</div>
           <h3>Resume picker · single resume</h3>
-          <p class="desc">Aaron riapre /library/nanolith/play. Hero "Riprendi dove avevi lasciato" con §289, ultima sessione 1g fa, pulsing dot session-color.</p>
+          <p class="desc">Aaron riapre /library/librogame/play. Hero "Riprendi dove avevi lasciato" con §289, ultima sessione 1g fa, pulsing dot session-color.</p>
         </div>
       </header>
       <div class="pips"><span class="manapip session"><span class="badge">1</span></span></div>
       <div class="preview">
-        <iframe src="nanolith-runthrough-resume-picker.html#s2" loading="lazy" title="Single resume"></iframe>
-        <button class="scrim" data-open="nanolith-runthrough-resume-picker.html#s2"></button>
-        <button class="open-overlay" data-open="nanolith-runthrough-resume-picker.html#s2">↗ Apri</button>
+        <iframe src="librogame-runthrough-resume-picker.html#s2" loading="lazy" title="Single resume"></iframe>
+        <button class="scrim" data-open="librogame-runthrough-resume-picker.html#s2"></button>
+        <button class="open-overlay" data-open="librogame-runthrough-resume-picker.html#s2">↗ Apri</button>
       </div>
-      <div class="foot"><span class="route">/library/nanolith/play</span><span class="state-pill">02-single-resume</span></div>
+      <div class="foot"><span class="route">/library/librogame/play</span><span class="state-pill">02-single-resume</span></div>
     </article>
 
   </div>
@@ -764,8 +764,8 @@
      SUMMARY counters totali
      ═══════════════════════════════════════════════════════════ -->
 <section class="summary">
-  <h2>📊 Game night Nanolith · counter totali agente</h2>
-  <p style="color: var(--text-sec); margin: 0 0 var(--s-5);">Stima singola sera con gruppo A. Tier free, agente Nanolith Tutor (DeepSeek IT).</p>
+  <h2>📊 Game night Eldoria · counter totali agente</h2>
+  <p style="color: var(--text-sec); margin: 0 0 var(--s-5);">Stima singola sera con gruppo A. Tier free, agente Game Tutor (DeepSeek IT).</p>
   <div class="grid">
     <div class="stat kb"><div class="v">142</div><div class="l">📄 KB pagine indicizzate</div></div>
     <div class="stat chat"><div class="v">15–17</div><div class="l">💬 Q&A regole (T2 cap)</div></div>

@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MeepleAI — Nanolith Runthrough · Libro Game Onboarding</title>
+<title>MeepleAI — Librogame Runthrough · Libro Game Onboarding</title>
 <!--
-  Mockup: nanolith-runthrough-game-onboarding
+  Mockup: librogame-runthrough-game-onboarding
   Route:  /library/{gameId}  (libro game con prerequisiti non soddisfatti)
   Scope:  Phase A runthrough — gating prerequisiti pre-CTA "Avvia libro game" (N1 hardening)
   Stati:  A · prereq-missing   (3 step todo: PDF upload, KB indexing, agente Tutor)
@@ -307,7 +307,7 @@
 <body>
 
 <header class="top">
-  <h1>Nanolith Runthrough · Libro Game Onboarding</h1>
+  <h1>Librogame Runthrough · Libro Game Onboarding</h1>
   <span class="route">/library/{gameId} · prerequisiti</span>
   <span class="spacer"></span>
   <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
@@ -321,7 +321,7 @@
   <section class="state-section" id="s1" aria-labelledby="sa">
     <span class="label">Stato A · Prerequisiti mancanti</span>
     <h2 id="sa">Game caricato, ma 3 step prima di poter giocare</h2>
-    <p class="desc">Aaron arriva su `/library/{gameId}` di Nanolith (game è in collezione), ma backend rileva: zero PDF caricati, KB vuota, nessun agente associato. Sostituiamo la CTA "Avvia libro game" con un panel stepper che guida l'onboarding. Step bloccanti in ordine: PDF → KB → Agente.</p>
+    <p class="desc">Aaron arriva su `/library/{gameId}` di Eldoria (game è in collezione), ma backend rileva: zero PDF caricati, KB vuota, nessun agente associato. Sostituiamo la CTA "Avvia libro game" con un panel stepper che guida l'onboarding. Step bloccanti in ordine: PDF → KB → Agente.</p>
 
     <div class="frames">
       <div class="phone" role="region" aria-label="Mobile – prereq missing">
@@ -329,14 +329,14 @@
         <div class="phone-sbar"><span>18:20</span><span>📶 🔋 92%</span></div>
         <div class="appbar">
           <button class="back">←</button>
-          <span class="crumbs"><strong>Libreria</strong> · Nanolith</span>
+          <span class="crumbs"><strong>Libreria</strong> · Eldoria</span>
           <button class="right-tool">⋯</button>
         </div>
         <div class="hero">
           <article class="hero-card">
             <div class="hero-cover">
               <span class="nano-mark">📖 libro game</span>
-              <h2>Nanolith</h2>
+              <h2>Eldoria</h2>
               <span class="pub">Mythic Games · 2024</span>
             </div>
             <div class="hero-meta">
@@ -388,17 +388,17 @@
 
       <div class="desktop" role="region" aria-label="Desktop – prereq missing">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame</span></div>
         <div class="appbar">
           <button class="back">←</button>
-          <span class="crumbs"><strong>Libreria</strong> · Nanolith</span>
+          <span class="crumbs"><strong>Libreria</strong> · Eldoria</span>
           <button class="right-tool">⋯</button>
         </div>
         <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-6); overflow-y: auto;">
           <article class="hero-card">
             <div class="hero-cover lg">
               <span class="nano-mark">📖 libro game</span>
-              <h2 style="font-size: var(--fs-4xl);">Nanolith</h2>
+              <h2 style="font-size: var(--fs-4xl);">Eldoria</h2>
               <span class="pub">Mythic Games · 2024 · campaign-driven storybook RPG</span>
             </div>
             <div class="hero-meta">
@@ -439,7 +439,7 @@
               </div>
             </div>
             <p style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin: var(--s-2) 0 0;">
-              💡 Step compatibili con upload server-side parallel — totale ~3 min end-to-end (Nanolith ~140 MB di PDF).
+              💡 Step compatibili con upload server-side parallel — totale ~3 min end-to-end (Eldoria ~140 MB di PDF).
             </p>
           </div>
         </div>
@@ -453,7 +453,7 @@
   <section class="state-section" id="s2" aria-labelledby="sb">
     <span class="label">Stato B · PDF Uploading</span>
     <h2 id="sb">Drag-and-drop attivo — Press Start + Rules in upload</h2>
-    <p class="desc">Aaron clicca "Carica PDF" → drawer/sezione si espande con drop-zone. Multi-file upload concorrente: 2 PDF (Nanolith Press Start ENG.pdf 36MB, Nanolith Rules ENG.pdf 101MB). Auto-detect tipo da nome file. Progress per-file + total bar. EXIF GPS stripped client-side prima dell'upload.</p>
+    <p class="desc">Aaron clicca "Carica PDF" → drawer/sezione si espande con drop-zone. Multi-file upload concorrente: 2 PDF (Eldoria Press Start ENG.pdf 36MB, Eldoria Rules ENG.pdf 101MB). Auto-detect tipo da nome file. Progress per-file + total bar. EXIF GPS stripped client-side prima dell'upload.</p>
 
     <div class="frames">
       <div class="phone" role="region" aria-label="Mobile – pdf uploading" aria-busy="true">
@@ -461,11 +461,11 @@
         <div class="phone-sbar"><span>18:21</span><span>📶 🔋 92%</span></div>
         <div class="appbar">
           <button class="back">←</button>
-          <span class="crumbs"><strong>Nanolith</strong> · Upload PDF…</span>
+          <span class="crumbs"><strong>Eldoria</strong> · Upload PDF…</span>
         </div>
         <div class="hero">
           <article class="hero-card">
-            <div class="hero-cover"><span class="nano-mark">📖 libro game</span><h2>Nanolith</h2><span class="pub">Mythic Games · 2024</span></div>
+            <div class="hero-cover"><span class="nano-mark">📖 libro game</span><h2>Eldoria</h2><span class="pub">Mythic Games · 2024</span></div>
           </article>
         </div>
         <div class="prereq">
@@ -482,7 +482,7 @@
                 <div class="upload-row done">
                   <span class="file-ico">📑</span>
                   <div class="body">
-                    <span class="name">Nanolith Press Start ENG.pdf</span>
+                    <span class="name">Eldoria Press Start ENG.pdf</span>
                     <span class="meta">36 MB · 24 pag · tipo: Press Start</span>
                     <div class="progress-bar"><span class="fill" style="width: 100%;"></span></div>
                   </div>
@@ -491,7 +491,7 @@
                 <div class="upload-row">
                   <span class="file-ico">📕</span>
                   <div class="body">
-                    <span class="name">Nanolith Rules ENG.pdf</span>
+                    <span class="name">Eldoria Rules ENG.pdf</span>
                     <span class="meta">101 MB · 248 pag · tipo: Rules</span>
                     <div class="progress-bar"><span class="fill" style="width: 62%;"></span></div>
                   </div>
@@ -512,8 +512,8 @@
 
       <div class="desktop" role="region" aria-label="Desktop – pdf uploading" aria-busy="true">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/upload</span></div>
-        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Nanolith</strong> · Upload PDF in corso…</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/upload</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Eldoria</strong> · Upload PDF in corso…</span></div>
         <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-6); overflow-y: auto;">
           <div>
             <div class="drop-zone active">
@@ -526,7 +526,7 @@
               <div class="upload-row done">
                 <span class="file-ico">📑</span>
                 <div class="body">
-                  <span class="name">Nanolith Press Start ENG.pdf</span>
+                  <span class="name">Eldoria Press Start ENG.pdf</span>
                   <span class="meta">36 MB · 24 pag · auto-detect: Press Start tutorial · upload 7s</span>
                   <div class="progress-bar"><span class="fill" style="width: 100%;"></span></div>
                 </div>
@@ -535,7 +535,7 @@
               <div class="upload-row">
                 <span class="file-ico">📕</span>
                 <div class="body">
-                  <span class="name">Nanolith Rules ENG.pdf</span>
+                  <span class="name">Eldoria Rules ENG.pdf</span>
                   <span class="meta">101 MB · 248 pag · auto-detect: Rules reference · ETA 12s</span>
                   <div class="progress-bar"><span class="fill" style="width: 62%;"></span></div>
                 </div>
@@ -580,11 +580,11 @@
         <div class="phone-sbar"><span>18:23</span><span>📶 🔋 91%</span></div>
         <div class="appbar">
           <button class="back">←</button>
-          <span class="crumbs"><strong>Nanolith</strong> · Indicizzazione…</span>
+          <span class="crumbs"><strong>Eldoria</strong> · Indicizzazione…</span>
         </div>
         <div class="hero">
           <article class="hero-card">
-            <div class="hero-cover"><span class="nano-mark">📖 libro game</span><h2>Nanolith</h2><span class="pub">Mythic Games · 2024</span></div>
+            <div class="hero-cover"><span class="nano-mark">📖 libro game</span><h2>Eldoria</h2><span class="pub">Mythic Games · 2024</span></div>
           </article>
         </div>
         <div class="prereq">
@@ -633,13 +633,13 @@
 
       <div class="desktop" role="region" aria-label="Desktop – kb indexing" aria-busy="true">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/onboarding?step=index</span></div>
-        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Nanolith</strong> · Indicizzazione in corso…</span><span style="font-family: var(--f-mono); font-size: var(--fs-xs); color: hsl(var(--c-kb));">job-id <strong>idx_7f3a</strong></span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/onboarding?step=index</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Eldoria</strong> · Indicizzazione in corso…</span><span style="font-family: var(--f-mono); font-size: var(--fs-xs); color: hsl(var(--c-kb));">job-id <strong>idx_7f3a</strong></span></div>
         <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-6); overflow-y: auto;">
           <article class="hero-card">
             <div class="hero-cover lg">
               <span class="nano-mark">📖 libro game · indexing</span>
-              <h2 style="font-size: var(--fs-4xl);">Nanolith</h2>
+              <h2 style="font-size: var(--fs-4xl);">Eldoria</h2>
               <span class="pub">Mythic Games · 2024 · 1.842 chunks / 272 pag</span>
             </div>
             <div class="hero-meta" style="grid-template-columns: repeat(3, 1fr);">
@@ -683,7 +683,7 @@
   <section class="state-section" id="s4" aria-labelledby="sd">
     <span class="label">Stato D · Ready · CTA primary attiva</span>
     <h2 id="sd">Tutto pronto — Aaron può avviare la prima sessione</h2>
-    <p class="desc">Prerequisiti completati: 137 MB PDF indicizzati (1.842 chunks), agente "Arbitro Nanolith" creato e linkato. CTA primary session-colored "Avvia libro game" sostituisce lo stepper. Ready meta-chips mostrano metriche di salute KB. Aaron può ora aprire `setup-wizard` per la prima campagna.</p>
+    <p class="desc">Prerequisiti completati: 137 MB PDF indicizzati (1.842 chunks), agente "Arbitro Eldoria" creato e linkato. CTA primary session-colored "Avvia libro game" sostituisce lo stepper. Ready meta-chips mostrano metriche di salute KB. Aaron può ora aprire `setup-wizard` per la prima campagna.</p>
 
     <div class="frames">
       <div class="phone" role="region" aria-label="Mobile – ready">
@@ -691,14 +691,14 @@
         <div class="phone-sbar"><span>18:25</span><span>📶 🔋 90%</span></div>
         <div class="appbar">
           <button class="back">←</button>
-          <span class="crumbs"><strong>Libreria</strong> · Nanolith</span>
+          <span class="crumbs"><strong>Libreria</strong> · Eldoria</span>
           <button class="right-tool">⋯</button>
         </div>
         <div class="hero">
           <article class="hero-card">
             <div class="hero-cover">
               <span class="nano-mark">📖 libro game · pronto</span>
-              <h2>Nanolith</h2>
+              <h2>Eldoria</h2>
               <span class="pub">Mythic Games · 2024</span>
             </div>
             <div class="hero-meta">
@@ -720,7 +720,7 @@
           <div class="ready-meta">
             <span class="chip">✓ 137 MB indicizzati</span>
             <span class="chip">✓ 1.842 chunks</span>
-            <span class="chip">✓ Arbitro Nanolith</span>
+            <span class="chip">✓ Arbitro Eldoria</span>
           </div>
         </div>
         <div class="prereq" style="padding-top: var(--s-2);">
@@ -738,24 +738,24 @@
           </div>
           <div class="step done">
             <span class="ico">✓</span>
-            <div class="body"><div class="row1"><span class="name">Agente Arbitro Nanolith</span><span class="badge">✓</span></div><div class="row2">RulesInterpreter · linked a 2 KB</div></div>
+            <div class="body"><div class="row1"><span class="name">Agente Arbitro Eldoria</span><span class="badge">✓</span></div><div class="row2">RulesInterpreter · linked a 2 KB</div></div>
           </div>
         </div>
       </div>
 
       <div class="desktop" role="region" aria-label="Desktop – ready">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame</span></div>
         <div class="appbar">
           <button class="back">←</button>
-          <span class="crumbs"><strong>Libreria</strong> · Nanolith</span>
+          <span class="crumbs"><strong>Libreria</strong> · Eldoria</span>
           <button class="right-tool">⋯</button>
         </div>
         <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-6); overflow-y: auto;">
           <article class="hero-card">
             <div class="hero-cover lg">
               <span class="nano-mark">📖 libro game · pronto</span>
-              <h2 style="font-size: var(--fs-4xl);">Nanolith</h2>
+              <h2 style="font-size: var(--fs-4xl);">Eldoria</h2>
               <span class="pub">Mythic Games · 2024 · campaign-driven storybook RPG</span>
             </div>
             <div class="hero-meta">
@@ -769,7 +769,7 @@
                 <span class="chip">✓ KB ready · 1.842 chunks</span>
                 <span class="chip">✓ embeddings e5-base</span>
                 <span class="chip">✓ pgvector HNSW</span>
-                <span class="chip">✓ Arbitro Nanolith</span>
+                <span class="chip">✓ Arbitro Eldoria</span>
               </div>
               <p style="margin: 0; color: var(--text-sec); font-size: var(--fs-sm);">
                 Setup completato in <strong>3 min 12 s</strong>. Da ora in poi puoi avviare nuove campagne in 1 click. Storybook e Encounter Book restano fisici — non li carichi mai, li fotograferai pagina per pagina durante il gioco.
@@ -784,13 +784,13 @@
               </span>
               <span style="font-size: 28px;">›</span>
             </button>
-            <button class="action" style="background: var(--bg-card); color: var(--text-sec); border: 1px solid var(--border);" type="button">📒 Apri agente Arbitro Nanolith</button>
+            <button class="action" style="background: var(--bg-card); color: var(--text-sec); border: 1px solid var(--border);" type="button">📒 Apri agente Arbitro Eldoria</button>
             <button class="action" style="background: var(--bg-card); color: var(--text-sec); border: 1px solid var(--border);" type="button">🔍 Esplora knowledge base</button>
             <div class="prereq" style="padding: var(--s-3) 0 0; border-top: 1px solid var(--border-light); margin-top: var(--s-2);">
               <div class="prereq-head"><h3 style="font-size: var(--fs-sm);">✓ Setup completato</h3><span class="counter"><strong>3</strong> / 3</span></div>
               <div class="step done"><span class="ico">✓</span><div class="body"><div class="row1"><span class="name" style="font-size: var(--fs-xs);">PDF</span></div><div class="row2">137 MB · 272 pag</div></div></div>
               <div class="step done"><span class="ico">✓</span><div class="body"><div class="row1"><span class="name" style="font-size: var(--fs-xs);">KB</span></div><div class="row2">1.842 chunks</div></div></div>
-              <div class="step done"><span class="ico">✓</span><div class="body"><div class="row1"><span class="name" style="font-size: var(--fs-xs);">Agente</span></div><div class="row2">Arbitro Nanolith</div></div></div>
+              <div class="step done"><span class="ico">✓</span><div class="body"><div class="row1"><span class="name" style="font-size: var(--fs-xs);">Agente</span></div><div class="row2">Arbitro Eldoria</div></div></div>
             </div>
           </div>
         </div>

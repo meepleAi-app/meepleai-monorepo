@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MeepleAI — Nanolith Runthrough · Setup Chat Panel</title>
+<title>MeepleAI — Librogame Runthrough · Setup Chat Panel</title>
 <!--
-  Mockup: nanolith-runthrough-setup-chat
+  Mockup: librogame-runthrough-setup-chat
   Route:  /library/{gameId}/play/{campaignId}?tab=chat
   Scope:  Phase A runthrough — chat panel laterale per setup pre-sessione (N1 baseline)
   Stati:  default            (Aaron query setup 4 giocatori + risposta IT 5 step + citation Press Start + confidence alta)
           confidence-bassa   (Aaron edge "setup variante 5 giocatori" + disclaimer "non sono sicuro")
           out-of-context     (Aaron chiede setup di Tainted Grail, agente declina con suggestion change game)
           loading            (skeleton bubble agent typing)
-  Persona: Aaron (badsworm@gmail.com), 30 minuti prima dell'arrivo amici, agente "Nanolith Tutor" con KB Press Start.
+  Persona: Aaron (badsworm@gmail.com), 30 minuti prima dell'arrivo amici, agente "Game Tutor" con KB Press Start.
   Vincolo: SMART N1 P95 ≤ 8s, citation accuracy ≥ 90%, confidence badge visibile.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -313,8 +313,8 @@
 <body>
 
 <header class="top">
-  <h1>Nanolith Runthrough · Setup Chat Panel</h1>
-  <span class="route">/library/nanolith/play/{campaignId}?tab=chat</span>
+  <h1>Librogame Runthrough · Setup Chat Panel</h1>
+  <span class="route">/library/librogame/play/{campaignId}?tab=chat</span>
   <span class="spacer"></span>
   <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
 </header>
@@ -327,7 +327,7 @@
   <section class="state-section" aria-labelledby="s1">
     <span class="label">Stato 1 · Default · N1 happy</span>
     <h2 id="s1">Setup 4 giocatori — Risposta IT actionable, confidence alta</h2>
-    <p class="desc">Aaron 30 minuti pre-arrivo amici chiede "come si setupa Nanolith per 4 giocatori?". Risposta IT 5 step, citation Press Start pag.4-7, confidence badge alta (verde). DoD N1: ≥ 4/5 step actionable, citation accuracy ≥ 90%.</p>
+    <p class="desc">Aaron 30 minuti pre-arrivo amici chiede "come si setupa Eldoria per 4 giocatori?". Risposta IT 5 step, citation Press Start pag.4-7, confidence badge alta (verde). DoD N1: ≥ 4/5 step actionable, citation accuracy ≥ 90%.</p>
 
     <div class="frames">
       <div class="phone" role="region" aria-label="Mobile – default chat">
@@ -349,12 +349,12 @@
         </nav>
 
         <div class="conv" role="log" aria-live="polite">
-          <div class="bubble user">come si setupa Nanolith per 4 giocatori?</div>
+          <div class="bubble user">come si setupa Eldoria per 4 giocatori?</div>
 
           <div class="bubble agent">
             <div class="header">
               <span class="avatar" aria-hidden="true">🤖</span>
-              <span class="name">Nanolith Tutor</span>
+              <span class="name">Game Tutor</span>
             </div>
             <p>Per una partita a 4 giocatori, segui questi step:</p>
             <ol>
@@ -392,12 +392,12 @@
 
       <div class="desktop" role="region" aria-label="Desktop – default chat split">
         <span class="frame-label">Desktop · 1440px (split-view)</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234?tab=chat</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234?tab=chat</span></div>
 
         <div class="desktop-body">
           <aside class="desktop-side">
             <div class="game-mini">
-              <div class="nm">🎲 Nanolith</div>
+              <div class="nm">🎲 Eldoria</div>
               <div class="sub">Sera con i ragazzi · §1</div>
             </div>
             <h4>Conversazioni</h4>
@@ -409,12 +409,12 @@
           <div class="desktop-main">
             <div class="session-head">
               <span class="pulse"></span>
-              <div><div class="title">Sera con i ragazzi · Chat regole</div><div class="sub">🎯 Setup pre-sessione · §1 · agente: Nanolith Tutor</div></div>
+              <div><div class="title">Sera con i ragazzi · Chat regole</div><div class="sub">🎯 Setup pre-sessione · §1 · agente: Game Tutor</div></div>
             </div>
             <div class="conv" role="log" aria-live="polite">
-              <div class="bubble user">come si setupa Nanolith per 4 giocatori?</div>
+              <div class="bubble user">come si setupa Eldoria per 4 giocatori?</div>
               <div class="bubble agent">
-                <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
+                <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
                 <p>Per una partita a 4 giocatori, segui questi step:</p>
                 <ol>
                   <li><strong>Tabellone Avalon</strong> al centro del tavolo, lato A in alto.</li>
@@ -476,7 +476,7 @@
         <div class="conv" role="log">
           <div class="bubble user">e per 5 giocatori?</div>
           <div class="bubble agent">
-            <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
+            <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
             <p>Non sono sicuro — il quickstart Press Start copre solo configurazioni 2-4 giocatori. Per varianti 5+ ti suggerisco di:</p>
             <div class="disclaimer">
               <strong>⚠️ Non sono certo.</strong> Controlla pag. 18 del regolamento completo (Rules KB) per la variante "Avventura epica" che potrebbe estendere a 5-6 giocatori.
@@ -501,20 +501,20 @@
 
       <div class="desktop" role="region" aria-label="Desktop – low confidence">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234?tab=chat</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234?tab=chat</span></div>
         <div class="desktop-body">
           <aside class="desktop-side">
             <div class="game-mini">
-              <div class="nm">🎲 Nanolith</div>
+              <div class="nm">🎲 Eldoria</div>
               <div class="sub">Sera con i ragazzi</div>
             </div>
           </aside>
           <div class="desktop-main">
-            <div class="session-head"><span class="pulse"></span><div><div class="title">Chat regole</div><div class="sub">🎯 Setup · agente: Nanolith Tutor</div></div></div>
+            <div class="session-head"><span class="pulse"></span><div><div class="title">Chat regole</div><div class="sub">🎯 Setup · agente: Game Tutor</div></div></div>
             <div class="conv">
-              <div class="bubble user">come si setupa Nanolith per 4 giocatori?</div>
+              <div class="bubble user">come si setupa Eldoria per 4 giocatori?</div>
               <div class="bubble agent" style="opacity: 0.65;">
-                <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
+                <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
                 <p>Per una partita a 4 giocatori… <em>(risposta confidence alta, vedi stato 1)</em></p>
                 <div class="conf-row" style="margin-top: var(--s-2);">
                   <span class="conf-badge alta">🟢 Alta · 0.92</span>
@@ -522,7 +522,7 @@
               </div>
               <div class="bubble user">e per 5 giocatori?</div>
               <div class="bubble agent">
-                <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
+                <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
                 <p>Non sono sicuro — il quickstart Press Start copre solo configurazioni 2-4 giocatori.</p>
                 <div class="disclaimer">
                   <strong>⚠️ Non sono certo.</strong> Controlla pag. 18 del regolamento completo (Rules KB) per la variante "Avventura epica" che potrebbe estendere a 5-6 giocatori.
@@ -570,12 +570,12 @@
         <div class="conv" role="log">
           <div class="bubble user">qual è il setup ottimale di Tainted Grail?</div>
           <div class="bubble agent">
-            <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
-            <p><strong>Non ho informazioni su Tainted Grail nel mio knowledge base.</strong> Il mio scope è il gioco Nanolith (Press Start + Rules). Cosa vuoi fare?</p>
+            <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
+            <p><strong>Non ho informazioni su Tainted Grail nel mio knowledge base.</strong> Il mio scope è il gioco Eldoria (Press Start + Rules). Cosa vuoi fare?</p>
             <div class="out-of-context-actions">
               <button class="action-pill" type="button">🎲 Cambia gioco a Tainted Grail</button>
               <button class="action-pill" type="button">🤖 Cerca un agente Tainted Grail</button>
-              <button class="action-pill" type="button">↩️ Resta su Nanolith</button>
+              <button class="action-pill" type="button">↩️ Resta su Eldoria</button>
             </div>
             <div class="conf-row">
               <span class="conf-badge bassa">🔴 Out of scope · 0.0</span>
@@ -593,24 +593,24 @@
 
       <div class="desktop" role="region" aria-label="Desktop – out of context">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234?tab=chat</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234?tab=chat</span></div>
         <div class="desktop-body">
           <aside class="desktop-side">
-            <div class="game-mini"><div class="nm">🎲 Nanolith</div><div class="sub">Scope agente</div></div>
+            <div class="game-mini"><div class="nm">🎲 Eldoria</div><div class="sub">Scope agente</div></div>
             <h4>KB collegati</h4>
             <div style="font-size: var(--fs-xs); color: var(--text-muted); padding: var(--s-2);">📄 Press Start ✓<br/>📄 Rules ✓<br/><span style="color: hsl(var(--c-danger));">✕ NO Tainted Grail</span></div>
           </aside>
           <div class="desktop-main">
-            <div class="session-head"><span class="pulse"></span><div><div class="title">Chat regole · scope: Nanolith</div><div class="sub">🤖 agente: Nanolith Tutor</div></div></div>
+            <div class="session-head"><span class="pulse"></span><div><div class="title">Chat regole · scope: Eldoria</div><div class="sub">🤖 agente: Game Tutor</div></div></div>
             <div class="conv">
               <div class="bubble user">qual è il setup ottimale di Tainted Grail?</div>
               <div class="bubble agent">
-                <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
-                <p><strong>Non ho informazioni su Tainted Grail nel mio knowledge base.</strong> Il mio scope è il gioco Nanolith (Press Start + Rules). Cosa vuoi fare?</p>
+                <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
+                <p><strong>Non ho informazioni su Tainted Grail nel mio knowledge base.</strong> Il mio scope è il gioco Eldoria (Press Start + Rules). Cosa vuoi fare?</p>
                 <div class="out-of-context-actions">
                   <button class="action-pill">🎲 Cambia gioco a Tainted Grail</button>
                   <button class="action-pill">🤖 Cerca un agente Tainted Grail</button>
-                  <button class="action-pill">↩️ Resta su Nanolith</button>
+                  <button class="action-pill">↩️ Resta su Eldoria</button>
                 </div>
                 <div class="conf-row">
                   <span class="conf-badge bassa">🔴 Out of scope · 0.0</span>
@@ -644,37 +644,37 @@
           <button class="tab" role="tab" aria-selected="false">🧰 Toolbox</button>
         </nav>
         <div class="conv" role="log" aria-live="polite" aria-busy="true">
-          <div class="bubble user">come si setupa Nanolith per 4 giocatori?</div>
+          <div class="bubble user">come si setupa Eldoria per 4 giocatori?</div>
           <div class="bubble agent" aria-label="Agente sta scrivendo">
-            <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
+            <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
             <div class="typing" aria-hidden="true"><span></span><span></span><span></span></div>
             <div class="typing-meta">⏱️ Cerco in 24 pag · 1.8s elapsed (budget 8s)</div>
           </div>
         </div>
         <div class="input-bar">
-          <input type="text" placeholder="Chiedi una regola o setup…" disabled value="come si setupa Nanolith per 4 giocatori?"/>
+          <input type="text" placeholder="Chiedi una regola o setup…" disabled value="come si setupa Eldoria per 4 giocatori?"/>
           <button class="send" aria-label="In corso" disabled style="opacity: 0.5;">⏳</button>
         </div>
       </div>
 
       <div class="desktop" role="region" aria-label="Desktop – loading">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234?tab=chat</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234?tab=chat</span></div>
         <div class="desktop-body">
           <aside class="desktop-side">
-            <div class="game-mini"><div class="nm">🎲 Nanolith</div><div class="sub">Sera con i ragazzi</div></div>
+            <div class="game-mini"><div class="nm">🎲 Eldoria</div><div class="sub">Sera con i ragazzi</div></div>
           </aside>
           <div class="desktop-main">
             <div class="session-head"><span class="pulse"></span><div><div class="title">Chat regole</div><div class="sub">🎯 Streaming risposta · 1.8s elapsed</div></div></div>
             <div class="conv" aria-busy="true">
-              <div class="bubble user">come si setupa Nanolith per 4 giocatori?</div>
+              <div class="bubble user">come si setupa Eldoria per 4 giocatori?</div>
               <div class="bubble agent">
-                <div class="header"><span class="avatar">🤖</span><span class="name">Nanolith Tutor</span></div>
+                <div class="header"><span class="avatar">🤖</span><span class="name">Game Tutor</span></div>
                 <div class="typing"><span></span><span></span><span></span></div>
                 <div class="typing-meta">⏱️ Cerco in 24 pag Press Start · 1.8s / 8s budget · streaming SSE</div>
               </div>
             </div>
-            <div class="input-bar"><input type="text" disabled value="come si setupa Nanolith per 4 giocatori?"/><button class="send" disabled style="opacity: 0.5;">⏳</button></div>
+            <div class="input-bar"><input type="text" disabled value="come si setupa Eldoria per 4 giocatori?"/><button class="send" disabled style="opacity: 0.5;">⏳</button></div>
           </div>
         </div>
       </div>

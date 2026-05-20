@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MeepleAI — Nanolith Runthrough · Play Session Shell</title>
+<title>MeepleAI — Librogame Runthrough · Play Session Shell</title>
 <!--
-  Mockup: nanolith-runthrough-play-session
-  Route:  /library/nanolith/play/{campaignId}
+  Mockup: librogame-runthrough-play-session
+  Route:  /library/librogame/play/{campaignId}
   Scope:  Phase A runthrough — shell runtime durante la sessione game night.
           Tabbed mobile fullscreen / Split-view desktop (left 380px context, right flex content).
           Sostituisce sp6-libro-game-play-session.html (persona Sara → Aaron, IA consolidata).
   Stati:  state-01-story-tab        (paragrafo §214 corrente + photo CTA + chat panel laterale)
           state-02-encounter-tab    (encounter §218 stats nemico + dice CTA + glossary inline)
           state-03-chat-overlay     (query agent in corso, typing + streaming citation)
-          state-04-glossary-inline  (sheet glossary aperto, add term "Reaver")
+          state-04-glossary-inline  (sheet glossary aperto, add term "Goblin")
   UI:     MeepleCard entity refs in context panel + ManaPips canonical header
-  Persona: Aaron (badsworm@gmail.com), §289 Cap 4 "La grotta dei Reaver", gruppo A.
+  Persona: Aaron (badsworm@gmail.com), §289 Cap 4 "La grotta dei Goblin", gruppo A.
   Vincolo SMART A3: paragrafo translate ≤ 6s, Q&A regola ≤ 8s, encounter resolve ≤ 30s.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -236,8 +236,8 @@
 <body>
 
 <header class="top">
-  <h1>Nanolith Runthrough · Play Session Shell</h1>
-  <span class="route">/library/nanolith/play/{campaignId}</span>
+  <h1>Librogame Runthrough · Play Session Shell</h1>
+  <span class="route">/library/librogame/play/{campaignId}</span>
   <span class="spacer"></span>
   <button id="theme-btn">🌗 Tema</button>
 </header>
@@ -248,14 +248,14 @@
   <section class="state-section" aria-labelledby="s1">
     <span class="label">Stato 01 · Story Tab<span class="cmp">PlaySessionShell · StoryView</span></span>
     <h2 id="s1">Paragrafo §289 corrente — photo CTA + chat strip + glossary pill</h2>
-    <p class="desc">Default runtime. Aaron sta leggendo §289 Cap 4 al tavolo. Top breadcrumb sticky con percorso completo. ManaPips header live (kb 142 · chat 12 · session 1 · event 3 · toolkit 34). Glossary pill inline su "Reaver" già tradotto. CTA primary: 📷 fotografa pag successiva.</p>
+    <p class="desc">Default runtime. Aaron sta leggendo §289 Cap 4 al tavolo. Top breadcrumb sticky con percorso completo. ManaPips header live (kb 142 · chat 12 · session 1 · event 3 · toolkit 34). Glossary pill inline su "Goblin" già tradotto. CTA primary: 📷 fotografa pag successiva.</p>
 
     <div class="frames">
       <div class="phone" role="region" aria-label="Mobile · story tab">
         <span class="frame-label">Mobile · 375px</span>
         <div class="phone-sbar"><span>22:14</span><span>📶 🔋 64%</span></div>
         <div class="session-h">
-          <span class="crumbs"><strong>Libreria</strong> · Nanolith · <span class="para">§289</span></span>
+          <span class="crumbs"><strong>Libreria</strong> · Eldoria · <span class="para">§289</span></span>
           <button class="menu">⋯</button>
         </div>
         <div class="header-pips">
@@ -275,10 +275,10 @@
           <div class="para-card">
             <div class="num-row">
               <span class="num">§289</span>
-              <span class="chap">Cap 4 · La grotta dei Reaver</span>
+              <span class="chap">Cap 4 · La grotta dei Goblin</span>
               <span class="lang-badge">IT</span>
             </div>
-            <p class="text">L'aria nella caverna si fa pesante. Davanti a voi, tre <span class="gloss" title="Voidstone → Pietra del Vuoto">Pietre del Vuoto</span> emettono un bagliore violaceo. Il vostro gruppo deve decidere: profanare l'altare e ottenere un'arma <span class="gloss" title="Reaver → Razziatore">Razziatrice</span>, oppure aggirare in silenzio per evitare il combattimento. Tirate Furtività se aggirate (§291), Forza se profanate (§294).</p>
+            <p class="text">L'aria nella caverna si fa pesante. Davanti a voi, tre <span class="gloss" title="Voidstone → Pietra del Vuoto">Pietre del Vuoto</span> emettono un bagliore violaceo. Il vostro gruppo deve decidere: profanare l'altare e ottenere un'arma <span class="gloss" title="Goblin → Razziatore">Razziatrice</span>, oppure aggirare in silenzio per evitare il combattimento. Tirate Furtività se aggirate (§291), Forza se profanate (§294).</p>
           </div>
           <div class="actions">
             <button class="action-btn photo"><span class="em">📷</span>Fotografa pag</button>
@@ -287,7 +287,7 @@
           </div>
           <div class="chat-strip" role="button">
             <div class="ico">💬</div>
-            <div class="info"><div class="ti">Nanolith Tutor</div><div class="sub">Pronto · ultima Q&A 8 min fa · 12 oggi</div></div>
+            <div class="info"><div class="ti">Game Tutor</div><div class="sub">Pronto · ultima Q&A 8 min fa · 12 oggi</div></div>
             <span class="arrow">›</span>
           </div>
         </div>
@@ -295,13 +295,13 @@
 
       <div class="desktop" role="region" aria-label="Desktop · story tab">
         <span class="frame-label">Desktop · 1440px (scaled)</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/abc123</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/abc123</span></div>
         <div class="d-body">
           <aside class="d-side">
             <div class="side-card">
               <h4>Campagna</h4>
               <div class="row"><span class="k">Nome</span><span class="v">Con i ragazzi</span></div>
-              <div class="row"><span class="k">Capitolo</span><span class="v">4 · Grotta Reaver</span></div>
+              <div class="row"><span class="k">Capitolo</span><span class="v">4 · Grotta Goblin</span></div>
               <div class="row"><span class="k">Tempo</span><span class="v">3h 17m</span></div>
             </div>
             <div class="side-card">
@@ -329,7 +329,7 @@
           </aside>
           <div class="d-main">
             <div class="para-card">
-              <div class="num-row"><span class="num">§289</span><span class="chap">Cap 4 · La grotta dei Reaver</span><span class="lang-badge">IT da EN</span></div>
+              <div class="num-row"><span class="num">§289</span><span class="chap">Cap 4 · La grotta dei Goblin</span><span class="lang-badge">IT da EN</span></div>
               <p class="text">L'aria nella caverna si fa pesante. Davanti a voi, tre <span class="gloss">Pietre del Vuoto</span> emettono un bagliore violaceo. Il vostro gruppo deve decidere: profanare l'altare e ottenere un'arma <span class="gloss">Razziatrice</span>, oppure aggirare in silenzio per evitare il combattimento. Tirate Furtività se aggirate (§291), Forza se profanate (§294).</p>
             </div>
             <div class="actions">
@@ -341,7 +341,7 @@
           <div class="d-chat">
             <div class="c-h" style="padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: var(--s-2);">
               <div class="ag" style="width: 28px; height: 28px; border-radius: 50%; background: hsl(var(--c-agent) / 0.18); display: flex; align-items: center; justify-content: center; font-size: 14px;">🤖</div>
-              <span style="flex: 1; font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm);">Nanolith Tutor</span>
+              <span style="flex: 1; font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm);">Game Tutor</span>
               <span class="live">● live</span>
             </div>
             <div class="messages" style="flex: 1; overflow-y: auto; padding: var(--s-3); display: flex; flex-direction: column; gap: var(--s-2);">
@@ -362,14 +362,14 @@
   <!-- STATO 02 · ENCOUNTER TAB -->
   <section class="state-section" aria-labelledby="s2">
     <span class="label">Stato 02 · Encounter Tab<span class="cmp">PlaySessionShell · EncounterView</span></span>
-    <h2 id="s2">Encounter §218 — stats nemico Reaver + dice CTA</h2>
-    <p class="desc">Marco/Giulia/Luca hanno scelto di profanare l'altare. Encounter §294 spawn 2 Reaver. Stats parsed dalla pagina foto (HP/AC/DMG). Dice CTA primary entity=event. ManaPips header: event sale a 4.</p>
+    <h2 id="s2">Encounter §218 — stats nemico Goblin + dice CTA</h2>
+    <p class="desc">Marco/Giulia/Luca hanno scelto di profanare l'altare. Encounter §294 spawn 2 Goblin. Stats parsed dalla pagina foto (HP/AC/DMG). Dice CTA primary entity=event. ManaPips header: event sale a 4.</p>
 
     <div class="frames">
       <div class="phone" role="region" aria-label="Mobile · encounter tab">
         <span class="frame-label">Mobile · 375px</span>
         <div class="phone-sbar"><span>22:31</span><span>📶 🔋 61%</span></div>
-        <div class="session-h"><span class="crumbs"><strong>Nanolith</strong> · <span class="para">§294</span> · encounter</span><button class="menu">⋯</button></div>
+        <div class="session-h"><span class="crumbs"><strong>Eldoria</strong> · <span class="para">§294</span> · encounter</span><button class="menu">⋯</button></div>
         <div class="header-pips">
           <span class="manapip kb"><span class="badge">142</span></span>
           <span class="manapip chat"><span class="badge">14</span></span>
@@ -386,7 +386,7 @@
           <div class="encounter-card">
             <div class="e-head">
               <div class="ico">⚔️</div>
-              <div class="info"><h3 class="ti">2 × Reaver</h3><div class="sub">Encounter §294 · livello 3</div></div>
+              <div class="info"><h3 class="ti">2 × Goblin</h3><div class="sub">Encounter §294 · livello 3</div></div>
             </div>
             <div class="stats-mini">
               <div class="st"><div class="v">14</div><div class="l">HP</div></div>
@@ -394,13 +394,13 @@
               <div class="st"><div class="v">2d6</div><div class="l">DMG</div></div>
             </div>
             <div style="padding: var(--s-2) var(--s-3); background: hsl(var(--c-warning) / 0.08); border: 1px solid hsl(var(--c-warning) / 0.25); border-radius: var(--r-sm); margin-bottom: var(--s-3); font-size: var(--fs-xs); color: var(--text-sec);">
-              <strong style="color: hsl(var(--c-warning));">⚠ Abilità speciale:</strong> al colpo critico, Reaver droppa una <span class="gloss" style="color: hsl(var(--c-toolkit)); text-decoration: underline dotted;">Pietra del Vuoto</span> raccoglibile (vedi §297).
+              <strong style="color: hsl(var(--c-warning));">⚠ Abilità speciale:</strong> al colpo critico, Goblin droppa una <span class="gloss" style="color: hsl(var(--c-toolkit)); text-decoration: underline dotted;">Pietra del Vuoto</span> raccoglibile (vedi §297).
             </div>
             <button class="dice-cta">🎲 Tira iniziativa party (4d20)</button>
           </div>
           <div class="chat-strip">
             <div class="ico">💬</div>
-            <div class="info"><div class="ti">Chiedi al Tutor</div><div class="sub">Es. "il Reaver può attaccare 2 volte?"</div></div>
+            <div class="info"><div class="ti">Chiedi al Tutor</div><div class="sub">Es. "il Goblin può attaccare 2 volte?"</div></div>
             <span class="arrow">›</span>
           </div>
         </div>
@@ -408,7 +408,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop · encounter">
         <span class="frame-label">Desktop · 1440px (scaled)</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/abc123?tab=encounter</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/abc123?tab=encounter</span></div>
         <div class="d-body">
           <aside class="d-side">
             <div class="side-card"><h4>Encounter corrente</h4><div class="row"><span class="k">Paragrafo</span><span class="v">§294</span></div><div class="row"><span class="k">Tipo</span><span class="v">Combat</span></div><div class="row"><span class="k">Difficoltà</span><span class="v">Media</span></div></div>
@@ -421,7 +421,7 @@
           </aside>
           <div class="d-main">
             <div class="encounter-card">
-              <div class="e-head"><div class="ico">⚔️</div><div class="info"><h3 class="ti">2 × Reaver</h3><div class="sub">Encounter §294 · livello 3</div></div></div>
+              <div class="e-head"><div class="ico">⚔️</div><div class="info"><h3 class="ti">2 × Goblin</h3><div class="sub">Encounter §294 · livello 3</div></div></div>
               <div class="stats-mini"><div class="st"><div class="v">14</div><div class="l">HP</div></div><div class="st"><div class="v">12</div><div class="l">AC</div></div><div class="st"><div class="v">2d6</div><div class="l">DMG</div></div></div>
               <div style="padding: var(--s-2) var(--s-3); background: hsl(var(--c-warning) / 0.08); border: 1px solid hsl(var(--c-warning) / 0.25); border-radius: var(--r-sm); margin-bottom: var(--s-3); font-size: var(--fs-sm);"><strong style="color: hsl(var(--c-warning));">⚠ Abilità:</strong> critico → drop Pietra del Vuoto (§297)</div>
               <button class="dice-cta">🎲 Tira iniziativa party (4d20)</button>
@@ -448,24 +448,24 @@
       <div class="phone" role="region" aria-label="Mobile · chat overlay">
         <span class="frame-label">Mobile · 375px</span>
         <div class="phone-sbar"><span>22:33</span><span>📶 🔋 60%</span></div>
-        <div class="session-h"><span class="crumbs"><strong>Nanolith</strong> · <span class="para">§294</span></span><button class="menu">⋯</button></div>
+        <div class="session-h"><span class="crumbs"><strong>Eldoria</strong> · <span class="para">§294</span></span><button class="menu">⋯</button></div>
         <div class="header-pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">15</span></span><span class="manapip event"><span class="badge">4</span></span></div>
         <div class="tabs"><button class="tab" aria-selected="false"><span class="em">📖</span>Story</button><button class="tab" aria-selected="true"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
         <div class="content" style="overflow: hidden; opacity: 0.4;">
           <div class="encounter-card" style="opacity: 0.5;">
-            <div class="e-head"><div class="ico">⚔️</div><div class="info"><h3 class="ti">2 × Reaver</h3></div></div>
+            <div class="e-head"><div class="ico">⚔️</div><div class="info"><h3 class="ti">2 × Goblin</h3></div></div>
           </div>
         </div>
         <div class="chat-overlay" role="dialog" aria-label="Chat Tutor">
           <div class="handle"></div>
           <div class="c-h">
             <div class="ag">🤖</div>
-            <span class="nm">Nanolith Tutor</span>
+            <span class="nm">Game Tutor</span>
             <span class="live">● live · 8s</span>
           </div>
           <div class="messages">
-            <div class="bubble user">Se ho 2 ferite il malus -2 si cumula con quello del Reaver?</div>
-            <div class="bubble agent">I malus di ferita cumulano solo con malus situazionali (oscurità, distanza). Il malus inflitto dal Reaver è considerato condizione attiva, non cumula. Quindi tirate al peggior malus tra i due (−2).
+            <div class="bubble user">Se ho 2 ferite il malus -2 si cumula con quello del Goblin?</div>
+            <div class="bubble agent">I malus di ferita cumulano solo con malus situazionali (oscurità, distanza). Il malus inflitto dal Goblin è considerato condizione attiva, non cumula. Quindi tirate al peggior malus tra i due (−2).
               <div class="citation"><strong>Rules p.94</strong> · §6.3.2 "Malus stacking" · accuracy 96%</div>
               <span class="conf-badge high">● alta · 7.2s</span>
             </div>
@@ -480,14 +480,14 @@
 
       <div class="desktop" role="region" aria-label="Desktop · chat focus">
         <span class="frame-label">Desktop · 1440px (scaled)</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/abc123?focus=chat</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/abc123?focus=chat</span></div>
         <div class="d-body">
           <aside class="d-side">
-            <div class="side-card"><h4>Encounter</h4><div class="row"><span class="k">Paragrafo</span><span class="v">§294</span></div><div class="row"><span class="k">Nemici</span><span class="v">2 × Reaver</span></div></div>
+            <div class="side-card"><h4>Encounter</h4><div class="row"><span class="k">Paragrafo</span><span class="v">§294</span></div><div class="row"><span class="k">Nemici</span><span class="v">2 × Goblin</span></div></div>
           </aside>
           <div class="d-main">
             <div class="encounter-card" style="opacity: 0.4;">
-              <div class="e-head"><div class="ico">⚔️</div><div class="info"><h3 class="ti">2 × Reaver</h3><div class="sub">§294</div></div></div>
+              <div class="e-head"><div class="ico">⚔️</div><div class="info"><h3 class="ti">2 × Goblin</h3><div class="sub">§294</div></div></div>
               <div class="stats-mini"><div class="st"><div class="v">14</div><div class="l">HP</div></div><div class="st"><div class="v">12</div><div class="l">AC</div></div><div class="st"><div class="v">2d6</div><div class="l">DMG</div></div></div>
             </div>
           </div>
@@ -512,14 +512,14 @@
   <!-- STATO 04 · GLOSSARY INLINE SHEET -->
   <section class="state-section" aria-labelledby="s4">
     <span class="label">Stato 04 · Glossary Inline<span class="cmp">PlaySessionShell · GlossarySheet</span></span>
-    <h2 id="s4">Aaron aggiunge "Reaver → Razziatore" al glossario</h2>
+    <h2 id="s4">Aaron aggiunge "Goblin → Razziatore" al glossario</h2>
     <p class="desc">Aaron tappa la pill gloss "Razziatrice" nel paragrafo. Slide-up sheet glossary editor con term + traduzione. Lista esistente (Voidstone, Architect, …) sopra. Save toolkit-color, contatore glossario +1.</p>
 
     <div class="frames">
       <div class="phone" role="region" aria-label="Mobile · glossary">
         <span class="frame-label">Mobile · 375px</span>
         <div class="phone-sbar"><span>22:18</span><span>📶 🔋 63%</span></div>
-        <div class="session-h"><span class="crumbs"><strong>Nanolith</strong> · <span class="para">§289</span> · glossary</span><button class="menu">⋯</button></div>
+        <div class="session-h"><span class="crumbs"><strong>Eldoria</strong> · <span class="para">§289</span> · glossary</span><button class="menu">⋯</button></div>
         <div class="header-pips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip toolkit"><span class="badge">34</span></span><span class="lbl-mini">· +1 in arrivo</span></div>
         <div class="tabs"><button class="tab" aria-selected="true"><span class="em">📖</span>Story</button><button class="tab" aria-selected="false"><span class="em">⚔️</span>Encounter</button><button class="tab" aria-selected="false"><span class="em">📚</span>Glossario</button></div>
         <div class="content" style="opacity: 0.4;">
@@ -534,7 +534,7 @@
           <div class="g-body">
             <div class="gloss-field">
               <label>Termine (EN)</label>
-              <input type="text" value="Reaver" readonly/>
+              <input type="text" value="Goblin" readonly/>
             </div>
             <div class="gloss-field">
               <label>Traduzione (IT)</label>
@@ -554,19 +554,19 @@
 
       <div class="desktop" role="region" aria-label="Desktop · glossary">
         <span class="frame-label">Desktop · 1440px (scaled)</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/abc123?glossary=add</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/abc123?glossary=add</span></div>
         <div class="d-body">
           <aside class="d-side">
             <div class="side-card">
               <h4>Glossario · 34 + 1</h4>
               <div class="gloss-existing"><span class="term">Voidstone</span><span class="trans">Pietra del Vuoto</span></div>
               <div class="gloss-existing"><span class="term">Architect</span><span class="trans">Architetto</span></div>
-              <div class="gloss-existing" style="background: hsl(var(--c-toolkit) / 0.18); border: 1px dashed hsl(var(--c-toolkit) / 0.5);"><span class="term">Reaver</span><span class="trans">Razziatore (nuovo)</span></div>
+              <div class="gloss-existing" style="background: hsl(var(--c-toolkit) / 0.18); border: 1px dashed hsl(var(--c-toolkit) / 0.5);"><span class="term">Goblin</span><span class="trans">Razziatore (nuovo)</span></div>
             </div>
           </aside>
           <div class="d-main">
             <div class="para-card">
-              <div class="num-row"><span class="num">§289</span><span class="chap">Cap 4 · Reaver</span></div>
+              <div class="num-row"><span class="num">§289</span><span class="chap">Cap 4 · Goblin</span></div>
               <p class="text">…tre <span class="gloss">Pietre del Vuoto</span>, un'arma <span class="gloss" style="background: hsl(var(--c-toolkit) / 0.4);">Razziatrice</span>…</p>
             </div>
           </div>
@@ -576,7 +576,7 @@
               <span style="font-family: var(--f-display); font-weight: var(--fw-bold);">Glossary editor</span>
             </div>
             <div style="flex: 1; padding: var(--s-3); display: flex; flex-direction: column; gap: var(--s-3);">
-              <div class="gloss-field"><label>EN</label><input type="text" value="Reaver" readonly/></div>
+              <div class="gloss-field"><label>EN</label><input type="text" value="Goblin" readonly/></div>
               <div class="gloss-field"><label>IT</label><input type="text" value="Razziatore"/></div>
             </div>
             <div class="gloss-actions" style="padding: var(--s-3); border-top: 1px solid var(--border-light); display: flex; gap: var(--s-2);">

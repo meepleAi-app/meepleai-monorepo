@@ -1,0 +1,63 @@
+{
+  "sidebar": {
+    "Dashboard": "sp4-dashboard.html",
+    "Home": "sp4-dashboard.html",
+    "Discover": "sp4-discover.html",
+    "Library": "sp4-library-desktop.html",
+    "Games": "sp4-games-index.html",
+    "Players": "sp4-players-index.html",
+    "Sessions": "sp4-sessions-index.html",
+    "Agents": "sp4-agents-index.html",
+    "Game Nights": "sp4-game-nights-index.html",
+    "Knowledge Base": "sp4-kb-hub.html",
+    "Toolkits": "sp4-hub-toolkits.html",
+    "Notifications": "notifications.html",
+    "Settings": "settings.html",
+    "Profile": "settings.html",
+    "Logout": "sp3-join.html"
+  },
+  "public_topbar": {
+    "Login": "sp3-join.html",
+    "Join": "sp3-join.html",
+    "How it works": "sp3-how-it-works.html",
+    "FAQ": "sp3-faq-enhanced.html",
+    "Legal": "sp3-legal.html",
+    "Terms": "sp3-legal.html",
+    "Privacy": "sp3-legal.html"
+  },
+  "gameplay_topbar": {
+    "Back": "sp4-game-detail.html",
+    "Pause": "librogame-runthrough-resume-picker.html",
+    "Menu": "librogame-runthrough-resume-picker.html",
+    "Chat": "sp4-game-chat-tab.html",
+    "Tutor": "sp4-game-chat-tab.html"
+  },
+  "event_topbar": {
+    "Back": "sp4-game-nights-index.html"
+  },
+  "index_to_detail": {
+    "sp4-games-index.html": "sp4-game-detail.html",
+    "sp4-players-index.html": "sp4-player-detail.html",
+    "sp4-sessions-index.html": "sp4-session-live.html",
+    "sp4-agents-index.html": "sp4-agent-detail.html",
+    "sp4-game-nights-index.html": "sp7-game-night-detail-rsvp.html",
+    "sp4-kb-hub.html": "sp4-kb-detail.html",
+    "sp4-hub-toolkits.html": "sp4-toolkit-detail.html",
+    "sp4-hub-games.html": "sp4-game-detail.html",
+    "sp4-hub-agents.html": "sp4-agent-detail.html",
+    "sp4-discover.html": "sp4-game-detail.html"
+  },
+  "detail_action_keywords": {
+    "avvia libro game": "librogame-runthrough-game-onboarding.html",
+    "play": "librogame-runthrough-game-onboarding.html",
+    "setup": "librogame-runthrough-setup-wizard.html",
+    "new session": "librogame-runthrough-setup-wizard.html",
+    "ai tutor": "sp4-game-chat-tab.html",
+    "citation": "sp4-citation-pdf-viewer.html",
+    "add to library": "sp4-library-desktop.html",
+    "upload pdf": "sp4-upload-wizard-extended.html",
+    "aggiungi gioco": "sp4-add-game-bgg-step.html",
+    "crea game night": "sp7-game-night-create.html",
+    "glossary": "sp6-libro-game-glossary-editor.html"
+  }
+}

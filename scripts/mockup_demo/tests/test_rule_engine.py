@@ -33,3 +33,27 @@ def test_no_match_returns_none_destination():
     decision = resolve_destination(_click(text="Some random text", classes=""))
     assert decision.destination is None
     assert decision.rule == "no-match"
+
+
+def test_index_to_detail():
+    # Click on a card inside sp4-games-index → game detail
+    decision = resolve_destination(_click(
+        text="Catan", classes="game-card", file_name="sp4-games-index.jsx", tag="div"
+    ))
+    assert decision.destination == "sp4-game-detail.html"
+    assert decision.rule == "index-to-detail"
+
+
+def test_detail_action_keyword():
+    decision = resolve_destination(_click(
+        text="Avvia libro game", classes="cta-primary", file_name="sp4-game-detail.jsx", tag="button"
+    ))
+    assert decision.destination == "librogame-runthrough-game-onboarding.html"
+    assert decision.rule == "detail-action-keyword"
+
+
+def test_canonical_takes_priority_over_keyword():
+    # 'Settings' is a canonical sidebar entry, must not match any keyword
+    decision = resolve_destination(_click(text="Settings", classes="sidebar nav-item"))
+    assert decision.destination == "settings.html"
+    assert decision.rule == "canonical-sidebar"

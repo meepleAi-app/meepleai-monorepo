@@ -70,4 +70,28 @@ def resolve_destination(click: Clickable) -> Decision:
     d = _try_canonical(click, "event_topbar", "", "canonical-event-topbar")
     if d:
         return d
+
+    # 5. index-to-detail: file matches a known index, element is card/row/tile
+    file_stem = click.file_path.stem  # 'sp4-games-index'
+    # JSX is sibling of HTML; normalize to the .html name
+    index_html = f"{file_stem}.html"
+    if index_html in _NAV["index_to_detail"]:
+        classes = (click.classes or "").lower()
+        if any(token in classes for token in ("card", "row", "tile", "list-item")):
+            dest = _NAV["index_to_detail"][index_html]
+            return Decision(
+                dest, "index-to-detail", 0.85,
+                f"file '{index_html}' is an index, element has card/row class"
+            )
+
+    # 6. detail-action-keyword: button/CTA text contains a known action keyword
+    text_lower = _norm(click.text)
+    if click.tag in ("button", "a") or "cta" in (click.classes or "").lower():
+        for keyword, dest in _NAV["detail_action_keywords"].items():
+            if keyword in text_lower:
+                return Decision(
+                    dest, "detail-action-keyword", 0.80,
+                    f"text '{click.text}' contains keyword '{keyword}'"
+                )
+
     return Decision(None, "no-match", 0.0, "no rule matched")

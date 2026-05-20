@@ -37,25 +37,25 @@ if [[ "${3:-}" != "--i-mean-it" && "${ENV_NAME:-}" != "prod" ]]; then
 fi
 
 log_info "Terminating active connections to $DATABASE_NAME..."
-psql "$DATABASE_URL_ADMIN" -c "
+psql --dbname="$DATABASE_URL_ADMIN" -c "
   SELECT pg_terminate_backend(pid)
   FROM pg_stat_activity
   WHERE datname = '$DATABASE_NAME' AND pid <> pg_backend_pid();
 " > /dev/null
 
 log_info "Dropping database $DATABASE_NAME..."
-psql "$DATABASE_URL_ADMIN" -c "DROP DATABASE IF EXISTS \"$DATABASE_NAME\";"
+psql --dbname="$DATABASE_URL_ADMIN" -c "DROP DATABASE IF EXISTS \"$DATABASE_NAME\";"
 
 log_info "Recreating database $DATABASE_NAME..."
-psql "$DATABASE_URL_ADMIN" -c "CREATE DATABASE \"$DATABASE_NAME\";"
+psql --dbname="$DATABASE_URL_ADMIN" -c "CREATE DATABASE \"$DATABASE_NAME\";"
 
 log_info "Restoring from $dump_file..."
-pg_restore -d "$DATABASE_URL" --no-owner --no-acl "$dump_file"
+pg_restore --dbname="$DATABASE_URL" --no-owner --no-acl "$dump_file"
 
-restored_count=$(psql "$DATABASE_URL" -t -A -c "SELECT COUNT(*) FROM pgvector_embeddings;" 2>/dev/null || echo "?")
+restored_count=$(psql --dbname="$DATABASE_URL" -t -A -c "SELECT COUNT(*) FROM pgvector_embeddings;" 2>/dev/null || echo "?")
 log_ok "Restore complete. pgvector_embeddings rows: $restored_count"
 
-table_count=$(psql "$DATABASE_URL" -t -A -c "
+table_count=$(psql --dbname="$DATABASE_URL" -t -A -c "
   SELECT COUNT(*) FROM pg_tables WHERE schemaname='public';
 ")
 log_ok "Public tables in restored DB: $table_count"

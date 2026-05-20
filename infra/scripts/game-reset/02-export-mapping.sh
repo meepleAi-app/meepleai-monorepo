@@ -33,11 +33,13 @@ if [[ -f "$csv_file" ]]; then
 fi
 
 log_info "Running pre-export sanity check (vectors without re-link source)..."
-orphans=$(psql "$DATABASE_URL" -t -A -c "
+# NB: vector_documents uses PascalCase columns ("GameId", "Id", "PdfDocumentId") from EF defaults;
+# newer columns added by migrations (shared_game_id) are snake_case. Quote PascalCase identifiers.
+orphans=$(psql --dbname="$DATABASE_URL" -t -A -c "
   SELECT COUNT(DISTINCT pe.game_id)
   FROM pgvector_embeddings pe
   WHERE pe.game_id NOT IN (
-    SELECT vd.game_id FROM vector_documents vd WHERE vd.game_id IS NOT NULL
+    SELECT vd.\"GameId\" FROM vector_documents vd WHERE vd.\"GameId\" IS NOT NULL
     UNION
     SELECT vd.shared_game_id FROM vector_documents vd WHERE vd.shared_game_id IS NOT NULL
   );
@@ -51,37 +53,43 @@ fi
 log_ok "Sanity check recorded: $sanity_file"
 
 log_info "Exporting mapping CSV → $csv_file"
-psql "$DATABASE_URL" -c "\copy (
+# Schema notes (real DB schema, mixed casing):
+#   games:            "Id", "Name", "BggId", "SharedGameId" (PascalCase)
+#   shared_games:     id, title, bgg_id (snake_case)
+#   vector_documents: "Id", "GameId", "PdfDocumentId", "Metadata" (PascalCase) + shared_game_id (snake_case)
+#   pdf_documents:    "Id", "FileName", "FilePath", "Metadata" (PascalCase)
+#   pgvector_embeddings: all snake_case
+psql --dbname="$DATABASE_URL" -c "\copy (
   SELECT
     'game'                       AS source_kind,
-    vd.game_id                   AS old_game_id,
-    g.title                      AS game_title,
-    g.bgg_id,
-    vd.id                        AS vector_document_id,
-    vd.pdf_document_id,
-    pd.file_name                 AS pdf_filename,
-    pd.file_path                 AS pdf_path,
-    pd.metadata->>'sha256'       AS pdf_sha256
+    vd.\"GameId\"                AS old_game_id,
+    g.\"Name\"                   AS game_title,
+    g.\"BggId\"                  AS bgg_id,
+    vd.\"Id\"                    AS vector_document_id,
+    vd.\"PdfDocumentId\"         AS pdf_document_id,
+    pd.\"FileName\"              AS pdf_filename,
+    pd.\"FilePath\"              AS pdf_path,
+    pd.\"Metadata\"::jsonb->>'sha256' AS pdf_sha256
   FROM vector_documents vd
-  LEFT JOIN games g          ON g.id = vd.game_id
-  LEFT JOIN pdf_documents pd ON pd.id = vd.pdf_document_id
-  WHERE vd.game_id IS NOT NULL
+  LEFT JOIN games g          ON g.\"Id\" = vd.\"GameId\"
+  LEFT JOIN pdf_documents pd ON pd.\"Id\" = vd.\"PdfDocumentId\"
+  WHERE vd.\"GameId\" IS NOT NULL
 
   UNION ALL
 
   SELECT
     'shared'                     AS source_kind,
     vd.shared_game_id            AS old_game_id,
-    sg.title,
-    sg.bgg_id,
-    vd.id,
-    vd.pdf_document_id,
-    pd.file_name,
-    pd.file_path,
-    pd.metadata->>'sha256'
+    sg.title                     AS game_title,
+    sg.bgg_id                    AS bgg_id,
+    vd.\"Id\"                    AS vector_document_id,
+    vd.\"PdfDocumentId\"         AS pdf_document_id,
+    pd.\"FileName\"              AS pdf_filename,
+    pd.\"FilePath\"              AS pdf_path,
+    pd.\"Metadata\"::jsonb->>'sha256' AS pdf_sha256
   FROM vector_documents vd
   LEFT JOIN shared_games sg  ON sg.id = vd.shared_game_id
-  LEFT JOIN pdf_documents pd ON pd.id = vd.pdf_document_id
+  LEFT JOIN pdf_documents pd ON pd.\"Id\" = vd.\"PdfDocumentId\"
   WHERE vd.shared_game_id IS NOT NULL
 
   UNION ALL
@@ -95,8 +103,8 @@ psql "$DATABASE_URL" -c "\copy (
     NULL                         AS pdf_document_id,
     NULL, NULL, NULL
   FROM pgvector_embeddings pe
-  LEFT JOIN vector_documents vd ON vd.game_id = pe.game_id OR vd.shared_game_id = pe.game_id
-  WHERE vd.id IS NULL
+  LEFT JOIN vector_documents vd ON vd.\"GameId\" = pe.game_id OR vd.shared_game_id = pe.game_id
+  WHERE vd.\"Id\" IS NULL
   GROUP BY pe.game_id
 ) TO STDOUT WITH CSV HEADER" > "$csv_file"
 

@@ -39,16 +39,21 @@ if [[ ! -f "$expected_csv" ]]; then
 fi
 log_ok "Pre-flight artefacts present"
 
-# Count rows that will be affected
+# Count rows that will be affected across BOTH tables (pgvector_embeddings + vector_documents)
 count_sql="
-SELECT COUNT(*) FROM pgvector_embeddings pe
-JOIN games g ON g.id = pe.game_id
-WHERE g.shared_game_id IS NOT NULL
-  AND pe.game_id <> g.shared_game_id;
+SELECT
+  (SELECT COUNT(*) FROM pgvector_embeddings pe
+   JOIN games g ON g.\"Id\" = pe.game_id
+   WHERE g.\"SharedGameId\" IS NOT NULL
+     AND pe.game_id <> g.\"SharedGameId\")
+  +
+  (SELECT COUNT(*) FROM vector_documents vd
+   JOIN games g ON g.\"Id\" = vd.\"GameId\"
+   WHERE g.\"SharedGameId\" IS NOT NULL);
 "
 
-affected=$(psql "$DATABASE_URL" -t -A -c "$count_sql")
-log_info "Vectors to be re-linked: $affected"
+affected=$(psql --dbname="$DATABASE_URL" -t -A -c "$count_sql")
+log_info "Rows to be re-linked (pgvector_embeddings + vector_documents): $affected"
 
 if [[ "$affected" == "0" ]]; then
   log_ok "No re-link needed (already done or no matching rows). Exiting."
@@ -60,11 +65,11 @@ if [[ "$dry_run" == "true" ]]; then
   log_info "Would execute:"
   cat <<SQL
 UPDATE pgvector_embeddings pe
-SET game_id = g.shared_game_id
+SET game_id = g."SharedGameId"
 FROM games g
-WHERE pe.game_id = g.id
-  AND g.shared_game_id IS NOT NULL
-  AND pe.game_id <> g.shared_game_id;
+WHERE pe.game_id = g."Id"
+  AND g."SharedGameId" IS NOT NULL
+  AND pe.game_id <> g."SharedGameId";
 SQL
   exit 0
 fi
@@ -72,23 +77,40 @@ fi
 # Real run: transactional update
 log_info "Re-linking $affected vectors (transactional UPDATE)..."
 
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+psql --dbname="$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 BEGIN;
 
+-- Relink pgvector_embeddings.game_id (Game.Id -> SharedGame.Id)
 UPDATE pgvector_embeddings pe
-SET game_id = g.shared_game_id
+SET game_id = g."SharedGameId"
 FROM games g
-WHERE pe.game_id = g.id
-  AND g.shared_game_id IS NOT NULL
-  AND pe.game_id <> g.shared_game_id;
+WHERE pe.game_id = g."Id"
+  AND g."SharedGameId" IS NOT NULL
+  AND pe.game_id <> g."SharedGameId";
+
+-- Relink vector_documents: set shared_game_id from games.SharedGameId, null out legacy "GameId".
+-- Necessary for Gate 5 (vector_documents migrated to shared_game_id) to PASS.
+UPDATE vector_documents vd
+SET shared_game_id = g."SharedGameId",
+    "GameId" = NULL
+FROM games g
+WHERE vd."GameId" = g."Id"
+  AND g."SharedGameId" IS NOT NULL;
+
+-- Null out orphan vector_documents.GameId pointing to deleted games (data integrity cleanup).
+-- These rows have stale FKs that would block Gate 5 otherwise.
+UPDATE vector_documents
+SET "GameId" = NULL
+WHERE "GameId" IS NOT NULL
+  AND "GameId" NOT IN (SELECT "Id" FROM games);
 
 COMMIT;
 SQL
 
 # Post-relink verification: count remaining dangling
-dangling=$(psql "$DATABASE_URL" -t -A -c "
+dangling=$(psql --dbname="$DATABASE_URL" -t -A -c "
 SELECT COUNT(*) FROM pgvector_embeddings pe
-WHERE pe.game_id NOT IN (SELECT id FROM games)
+WHERE pe.game_id NOT IN (SELECT \"Id\" FROM games)
   AND pe.game_id NOT IN (SELECT id FROM shared_games);
 ")
 log_info "Vectors with game_id resolving to neither games nor shared_games: $dangling"

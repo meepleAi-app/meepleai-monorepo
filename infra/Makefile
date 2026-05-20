@@ -353,12 +353,18 @@ validate-workflows: ## Validate GitHub Actions workflows — mirrors auto-valida
 
 game-reset-help: ## Show game-reset workflow help
 	@echo "Game entity reset (#1320) — usage:"
-	@echo "  make game-reset-backup ENV=dev              # pg_dump + vector count baseline"
-	@echo "  make game-reset-mapping ENV=dev             # export bridge CSV (requires backup first)"
+	@echo "  make game-reset-backup ENV=dev              # 1. pg_dump + vector count baseline"
+	@echo "  make game-reset-mapping ENV=dev             # 2. export bridge CSV (requires backup)"
+	@echo "  make game-reset-relink ENV=dev              # 3. UPDATE pgvector_embeddings.game_id"
+	@echo "  make game-reset-verify ENV=dev              # 6. run 5 verification gates (post-migration)"
 	@echo "  make game-reset-rollback-rehearse           # disposable docker test of rollback"
+	@echo ""
+	@echo "Full sequence per env: backup -> mapping -> relink (--dry-run first) -> apply migration -> verify"
+	@echo "See infra/scripts/game-reset/runbook-{dev,staging,prod}.md for end-to-end runbooks."
 	@echo ""
 	@echo "For prod, pass IMEANIT=--i-mean-it (production safety guard):"
 	@echo "  make game-reset-backup ENV=prod IMEANIT=--i-mean-it"
+	@echo "  make game-reset-relink ENV=prod EXTRA='--i-mean-it'"
 	@echo ""
 	@echo "Per env, create infra/scripts/game-reset/.env.<ENV> from .env.example."
 
@@ -371,6 +377,16 @@ game-reset-mapping: ## Export mapping CSV (ENV=dev|staging|prod, requires backup
 	@test -n "$(ENV)" || (echo "ENV required: make game-reset-mapping ENV=dev" && exit 64)
 	@test -f scripts/game-reset/.env.$(ENV) || (echo "Missing scripts/game-reset/.env.$(ENV) — copy from .env.example" && exit 66)
 	./scripts/game-reset/02-export-mapping.sh scripts/game-reset/.env.$(ENV) $(IMEANIT)
+
+game-reset-relink: ## Re-link pgvector_embeddings (ENV=dev|staging|prod, requires backup + mapping; pass EXTRA='--dry-run' for preview)
+	@test -n "$(ENV)" || (echo "ENV required: make game-reset-relink ENV=dev" && exit 64)
+	@test -f scripts/game-reset/.env.$(ENV) || (echo "Missing scripts/game-reset/.env.$(ENV) — copy from .env.example" && exit 66)
+	./scripts/game-reset/03-relink-vectors.sh scripts/game-reset/.env.$(ENV) $(EXTRA)
+
+game-reset-verify: ## Run verification gates after EF migration applied (ENV=dev|staging|prod)
+	@test -n "$(ENV)" || (echo "ENV required: make game-reset-verify ENV=dev" && exit 64)
+	@test -f scripts/game-reset/.env.$(ENV) || (echo "Missing scripts/game-reset/.env.$(ENV) — copy from .env.example" && exit 66)
+	./scripts/game-reset/04-verify-gates.sh scripts/game-reset/.env.$(ENV)
 
 game-reset-rollback-rehearse: ## Run disposable docker rollback rehearsal
 	../tests/scripts/game-reset/rehearse-rollback.sh
@@ -386,4 +402,4 @@ game-reset-rollback-rehearse: ## Run disposable docker rollback rehearsal
         sec-scan sec-pentest security-audit test-e2e test-visual test-perf validate-workflows \
         backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show \
         db-snapshot db-snapshot-sanitized db-reset-migrations db-restore-snapshot db-rollback-safetynet \
-        game-reset-help game-reset-backup game-reset-mapping game-reset-rollback-rehearse
+        game-reset-help game-reset-backup game-reset-mapping game-reset-relink game-reset-verify game-reset-rollback-rehearse

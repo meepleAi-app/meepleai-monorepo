@@ -1,5 +1,3 @@
-using Api.BoundedContexts.SessionTracking.Domain.Enums;
-
 namespace Api.BoundedContexts.SessionTracking.Domain.Entities;
 
 /// <summary>
@@ -8,6 +6,8 @@ namespace Api.BoundedContexts.SessionTracking.Domain.Entities;
 /// Iter 1.B — Libro Game Nanolith dogfood demo.
 /// C3 (2026-05-19): <see cref="GameBookId"/> added so the paragraph is anchored
 /// to a specific book; uniqueness is now per (campaign, book, paragraph).
+/// C5 (2026-05-19): Removed <c>PageType</c>; the linked <c>GameBook</c> carries
+/// the role classification instead of an inline enum.
 /// </summary>
 public sealed class TranslatedParagraph
 {
@@ -16,7 +16,6 @@ public sealed class TranslatedParagraph
     public Guid GameBookId { get; private set; }
     public Guid PhotoArtifactId { get; private set; }
     public int ParagraphNumber { get; private set; }
-    public GamebookPageType PageType { get; private set; }
     public string SourceTextEn { get; private set; } = default!;
     public string TranslatedTextIt { get; private set; } = default!;
     // Issue #886: typed as string[] (not IReadOnlyList<string>) because Npgsql maps string[]
@@ -37,7 +36,6 @@ public sealed class TranslatedParagraph
         Guid gameBookId,
         Guid photoArtifactId,
         int paragraphNumber,
-        GamebookPageType pageType,
         string sourceEn,
         string translatedIt,
         IEnumerable<string> appliedTerms,
@@ -65,7 +63,6 @@ public sealed class TranslatedParagraph
             GameBookId = gameBookId,
             PhotoArtifactId = photoArtifactId,
             ParagraphNumber = paragraphNumber,
-            PageType = pageType,
             SourceTextEn = sourceEn.Trim(),
             TranslatedTextIt = translatedIt.Trim(),
             AppliedGlossaryTerms = appliedTerms != null ? appliedTerms.ToArray() : Array.Empty<string>(),

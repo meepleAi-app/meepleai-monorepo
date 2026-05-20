@@ -1,5 +1,4 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
-using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Xunit;
@@ -19,7 +18,7 @@ public class TranslatedParagraphTests
         var terms = new[] { "Goblin", "Nanolith" };
 
         var paragraph = TranslatedParagraph.Create(
-            CampaignId, GameBookId, ArtifactId, 3, GamebookPageType.Storybook,
+            CampaignId, GameBookId, ArtifactId, 3,
             "You see a goblin.", "Vedi un goblin.",
             terms, UserId);
 
@@ -27,7 +26,6 @@ public class TranslatedParagraphTests
         paragraph.GameBookId.Should().Be(GameBookId);
         paragraph.PhotoArtifactId.Should().Be(ArtifactId);
         paragraph.ParagraphNumber.Should().Be(3);
-        paragraph.PageType.Should().Be(GamebookPageType.Storybook);
         paragraph.SourceTextEn.Should().Be("You see a goblin.");
         paragraph.TranslatedTextIt.Should().Be("Vedi un goblin.");
         paragraph.AppliedGlossaryTerms.Should().BeEquivalentTo(terms);
@@ -40,7 +38,7 @@ public class TranslatedParagraphTests
     public void Create_WithEmptyTranslation_Throws()
     {
         Action act = () => TranslatedParagraph.Create(
-            CampaignId, GameBookId, ArtifactId, 1, GamebookPageType.Encounter,
+            CampaignId, GameBookId, ArtifactId, 1,
             "Source text", "",
             Array.Empty<string>(), UserId);
 
@@ -52,7 +50,7 @@ public class TranslatedParagraphTests
     public void Create_WithNoAppliedTerms_DefaultsToEmptyList()
     {
         var paragraph = TranslatedParagraph.Create(
-            CampaignId, GameBookId, ArtifactId, 0, GamebookPageType.Storybook,
+            CampaignId, GameBookId, ArtifactId, 0,
             "Some source text", "Del testo sorgente",
             Array.Empty<string>(), UserId);
 
@@ -70,7 +68,6 @@ public class TranslatedParagraphTests
             gameBookId: bookId,
             photoArtifactId: Guid.NewGuid(),
             paragraphNumber: 147,
-            pageType: GamebookPageType.Storybook,
             sourceEn: "Source",
             translatedIt: "Tradotto",
             appliedTerms: new[] { "term1" },
@@ -83,7 +80,7 @@ public class TranslatedParagraphTests
     public void Create_WithEmptyGameBookId_ThrowsArgumentException()
     {
         Action act = () => TranslatedParagraph.Create(
-            Guid.NewGuid(), Guid.Empty, Guid.NewGuid(), 1, GamebookPageType.Storybook,
+            Guid.NewGuid(), Guid.Empty, Guid.NewGuid(), 1,
             "src", "trad", Array.Empty<string>(), Guid.NewGuid());
 
         act.Should().Throw<ArgumentException>()

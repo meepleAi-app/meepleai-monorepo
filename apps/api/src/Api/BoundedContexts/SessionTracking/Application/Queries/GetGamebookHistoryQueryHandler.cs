@@ -34,7 +34,6 @@ internal sealed class GetGamebookHistoryQueryHandler
             .Select(p => new TranslatedParagraphDto(
                 p.Id,
                 p.ParagraphNumber,
-                p.PageType.ToString(),
                 p.SourceTextEn,
                 p.TranslatedTextIt,
                 p.AppliedGlossaryTerms,

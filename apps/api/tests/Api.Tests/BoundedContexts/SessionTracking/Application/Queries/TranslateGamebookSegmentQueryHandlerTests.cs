@@ -188,7 +188,7 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         var bookId = Guid.NewGuid();
 
         // Build artifact in Segmented state with §47
-        var artifact = GamebookPhotoArtifact.Create(campaign.Id, bookId, $"gamebook-photos/{campaign.Id}/photo1", GamebookPageType.Storybook);
+        var artifact = GamebookPhotoArtifact.Create(campaign.Id, bookId, $"gamebook-photos/{campaign.Id}/photo1");
         artifact.RecordSegments(
             new[] { GamebookSegment.Create(47, "The Hive awakens.", null) },
             "The Hive awakens.");

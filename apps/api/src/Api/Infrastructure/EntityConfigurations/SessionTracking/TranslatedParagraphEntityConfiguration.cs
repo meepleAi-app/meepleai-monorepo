@@ -24,7 +24,6 @@ internal class TranslatedParagraphEntityConfiguration : IEntityTypeConfiguration
         builder.Property(e => e.GameBookId).HasColumnName("game_book_id").IsRequired();
         builder.Property(e => e.PhotoArtifactId).HasColumnName("photo_artifact_id").IsRequired();
         builder.Property(e => e.ParagraphNumber).HasColumnName("paragraph_number").IsRequired();
-        builder.Property(e => e.PageType).HasColumnName("page_type").IsRequired();
         builder.Property(e => e.SourceTextEn).HasColumnName("source_text_en").HasColumnType("text").IsRequired();
         builder.Property(e => e.TranslatedTextIt).HasColumnName("translated_text_it").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();

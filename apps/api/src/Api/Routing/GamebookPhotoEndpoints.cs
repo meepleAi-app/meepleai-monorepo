@@ -3,7 +3,6 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
-using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -39,7 +38,6 @@ internal static class GamebookPhotoEndpoints
         group.MapPost("/gamebook/campaigns/{campaignId:guid}/photos", async (
             Guid campaignId,
             IFormFile file,
-            [FromForm] string pageType,
             [FromForm] Guid gameBookId,
             IMediator mediator,
             HttpContext context,
@@ -52,14 +50,12 @@ internal static class GamebookPhotoEndpoints
                 return Results.BadRequest(new { error = "file is required" });
             if (gameBookId == Guid.Empty)
                 return Results.BadRequest(new { error = "gameBookId is required" });
-            if (!Enum.TryParse<GamebookPageType>(pageType, ignoreCase: true, out var parsedPageType))
-                return Results.BadRequest(new { error = $"invalid pageType '{pageType}'" });
 
             var stream = file.OpenReadStream();
             await using (stream.ConfigureAwait(false))
             {
                 var dto = await mediator.Send(
-                    new UploadGamebookPhotoCommand(campaignId, gameBookId, userId, stream, file.ContentType, parsedPageType),
+                    new UploadGamebookPhotoCommand(campaignId, gameBookId, userId, stream, file.ContentType),
                     ct).ConfigureAwait(false);
 
                 return Results.Created($"/api/v1/gamebook/campaigns/{campaignId}/photos/{dto.Id}", dto);

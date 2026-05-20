@@ -5,7 +5,6 @@ public sealed record GamebookSegmentDto(int ParagraphNumber, string SourceText, 
 public sealed record GamebookPhotoArtifactDto(
     Guid Id,
     Guid CampaignId,
-    string PageType,
     string Status,
     string? OcrFullText,
     IReadOnlyList<GamebookSegmentDto> Segments,

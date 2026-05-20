@@ -10,6 +10,8 @@ namespace Api.BoundedContexts.SessionTracking.Domain.Entities;
 /// Iter 1.B — Libro Game Nanolith dogfood demo.
 /// C4 (2026-05-19): <see cref="GameBookId"/> added so photos are anchored to a specific
 /// book; downstream consumers use the linked <c>GameBook</c> for role classification.
+/// C5 (2026-05-19): Removed <c>PageType</c>; consumers classify roles via the linked
+/// <c>GameBook</c> instead of an inline enum.
 /// </summary>
 public sealed class GamebookPhotoArtifact
 {
@@ -17,7 +19,6 @@ public sealed class GamebookPhotoArtifact
     public Guid CampaignId { get; private set; }
     public Guid GameBookId { get; private set; }
     public string S3Key { get; private set; } = default!;
-    public GamebookPageType PageType { get; private set; }
     public PhotoArtifactStatus Status { get; private set; }
     public string? OcrFullText { get; private set; }
     public IReadOnlyList<GamebookSegment> Segments { get; private set; } = Array.Empty<GamebookSegment>();
@@ -28,7 +29,7 @@ public sealed class GamebookPhotoArtifact
     // EF parameterless constructor
     private GamebookPhotoArtifact() { }
 
-    public static GamebookPhotoArtifact Create(Guid campaignId, Guid gameBookId, string s3Key, GamebookPageType pageType)
+    public static GamebookPhotoArtifact Create(Guid campaignId, Guid gameBookId, string s3Key)
     {
         if (campaignId == Guid.Empty)
             throw new ArgumentException("campaignId required", nameof(campaignId));
@@ -44,7 +45,6 @@ public sealed class GamebookPhotoArtifact
             CampaignId = campaignId,
             GameBookId = gameBookId,
             S3Key = s3Key.Trim(),
-            PageType = pageType,
             Status = PhotoArtifactStatus.Uploaded,
             CreatedAt = now,
             ExpiresAt = now.AddHours(24),

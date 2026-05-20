@@ -141,12 +141,15 @@ under `--prefix` and inserts `storage_operation_outbox` rows for the drainer.
 Idempotent — re-runs with the same `--migration-id` produce 0 enqueued, N skipped.
 
 ```bash
-# Admin bearer token (from admin SSO login, copy bearer from browser
-# devtools after authenticating to /admin)
-export MEEPLEAI_ADMIN_TOKEN="<admin-bearer-token>"
+# Admin session cookie value (NOT a Bearer token):
+# 1. Login to https://meepleai.app/admin via SSO in your browser
+# 2. Open DevTools → Application → Cookies → meepleai.app
+# 3. Copy the VALUE of the `meepleai_session` cookie
+export MEEPLEAI_ADMIN_TOKEN="<meepleai_session-cookie-value>"
 
 # Cloudflare Access service token (required for staging — meepleai.app sits
-# behind CF Access). Create at Cloudflare Zero Trust → Access → Service Tokens.
+# behind CF Access). Create at Cloudflare Zero Trust → Access → Service Tokens
+# and authorize the token in the Access Application policy.
 # Without these the script gets the CF login HTML page instead of JSON.
 export CF_ACCESS_CLIENT_ID="<service-token-id>.access"
 export CF_ACCESS_CLIENT_SECRET="<service-token-secret>"
@@ -353,7 +356,7 @@ docker compose -f repo/infra/compose.staging.yml restart api
 ### Step B.2 — Reverse-move objects (script + admin endpoint)
 
 ```bash
-export MEEPLEAI_ADMIN_TOKEN="<admin-bearer-token>"
+export MEEPLEAI_ADMIN_TOKEN="<meepleai_session-cookie-value>"
 export CF_ACCESS_CLIENT_ID="<service-token-id>.access"
 export CF_ACCESS_CLIENT_SECRET="<service-token-secret>"
 

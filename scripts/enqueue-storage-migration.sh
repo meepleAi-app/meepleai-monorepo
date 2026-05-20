@@ -10,7 +10,7 @@
 # N skipped (the UNIQUE LegacyKey constraint in the outbox dedups).
 #
 # Usage:
-#   MEEPLEAI_ADMIN_TOKEN=...                     # admin bearer (required)
+#   MEEPLEAI_ADMIN_TOKEN=...                     # admin session cookie VALUE (required)
 #   CF_ACCESS_CLIENT_ID=...                      # CF Access service token (optional)
 #   CF_ACCESS_CLIENT_SECRET=...                  # CF Access service secret (optional)
 #   ./scripts/enqueue-storage-migration.sh \
@@ -21,11 +21,17 @@
 #     [--api-url https://meepleai.app] \
 #     [--dry-run]
 #
-# CF Access: when the API sits behind Cloudflare Access (staging.meepleai.app /
-# meepleai.app), set CF_ACCESS_CLIENT_ID + CF_ACCESS_CLIENT_SECRET env vars to
-# pass the service-token headers. Without them you'll get a Cloudflare login
-# HTML page instead of a JSON response. Both vars together; either alone is
-# treated as a config error.
+# Auth mechanism (note: NOT a Bearer token):
+#   The API uses cookie-based session auth — see CookieHelpers.GetSessionCookieName
+#   (default name: `meepleai_session`). Login to /admin via SSO in your browser,
+#   then copy the `meepleai_session` cookie VALUE from DevTools (Application →
+#   Cookies → meepleai.app). The script sends it as `Cookie: meepleai_session=<value>`.
+#
+# CF Access: when the API sits behind Cloudflare Access (meepleai.app), set
+# CF_ACCESS_CLIENT_ID + CF_ACCESS_CLIENT_SECRET env vars to pass the
+# service-token headers. Without them you'll get a Cloudflare login HTML page
+# instead of a JSON response. Both vars together; either alone is treated as
+# a config error.
 #
 # Exit codes:
 #   0 → success (rows enqueued or dry-run completed)
@@ -88,9 +94,11 @@ if ! [[ "$MIGRATION_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-f
     exit 1
 fi
 if [[ -z "${MEEPLEAI_ADMIN_TOKEN:-}" ]]; then
-    echo "ERROR: MEEPLEAI_ADMIN_TOKEN env var is required" >&2
+    echo "ERROR: MEEPLEAI_ADMIN_TOKEN env var is required (session cookie value, not a Bearer token)" >&2
     exit 1
 fi
+# Configurable session cookie name (override only if backend deviates from default).
+SESSION_COOKIE_NAME="${MEEPLEAI_SESSION_COOKIE_NAME:-meepleai_session}"
 
 # CF Access service token: either both vars or neither (config error otherwise).
 CF_ID="${CF_ACCESS_CLIENT_ID:-}"
@@ -146,7 +154,7 @@ EOF
 curl_args=(
     -sS
     -X POST "$API_URL/api/v1/admin/storage/migration/enqueue"
-    -H "Authorization: Bearer $MEEPLEAI_ADMIN_TOKEN"
+    -H "Cookie: ${SESSION_COOKIE_NAME}=${MEEPLEAI_ADMIN_TOKEN}"
     -H "Content-Type: application/json"
     -d "$payload"
     -w "\nHTTP_STATUS:%{http_code}"

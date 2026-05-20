@@ -10,13 +10,16 @@
 # N skipped (rows in FailedPermanent/Reverted are left untouched).
 #
 # Usage:
-#   MEEPLEAI_ADMIN_TOKEN=...                     # admin bearer (required)
+#   MEEPLEAI_ADMIN_TOKEN=...                     # admin session cookie VALUE (required)
 #   CF_ACCESS_CLIENT_ID=...                      # CF Access service token (optional)
 #   CF_ACCESS_CLIENT_SECRET=...                  # CF Access service secret (optional)
 #   ./scripts/reverse-storage-migration.sh \
 #     --migration-id <UUID> \
 #     [--api-url https://meepleai.app] \
 #     [--dry-run]
+#
+# Auth: cookie-based (NOT Bearer). See enqueue-storage-migration.sh for the
+# full token recovery procedure.
 #
 # CF Access: see enqueue-storage-migration.sh for details. Both env vars
 # together; either alone is treated as a config error.
@@ -61,9 +64,10 @@ if ! [[ "$MIGRATION_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-f
     exit 1
 fi
 if [[ -z "${MEEPLEAI_ADMIN_TOKEN:-}" ]]; then
-    echo "ERROR: MEEPLEAI_ADMIN_TOKEN env var is required" >&2
+    echo "ERROR: MEEPLEAI_ADMIN_TOKEN env var is required (session cookie value, not a Bearer token)" >&2
     exit 1
 fi
+SESSION_COOKIE_NAME="${MEEPLEAI_SESSION_COOKIE_NAME:-meepleai_session}"
 
 # CF Access service token: either both vars or neither (config error otherwise).
 CF_ID="${CF_ACCESS_CLIENT_ID:-}"
@@ -103,7 +107,7 @@ EOF
 curl_args=(
     -sS
     -X POST "$API_URL/api/v1/admin/storage/migration/reverse"
-    -H "Authorization: Bearer $MEEPLEAI_ADMIN_TOKEN"
+    -H "Cookie: ${SESSION_COOKIE_NAME}=${MEEPLEAI_ADMIN_TOKEN}"
     -H "Content-Type: application/json"
     -d "$payload"
     -w "\nHTTP_STATUS:%{http_code}"

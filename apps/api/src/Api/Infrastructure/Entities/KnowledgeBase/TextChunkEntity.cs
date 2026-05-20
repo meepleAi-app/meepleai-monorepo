@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 
 namespace Api.Infrastructure.Entities;
 
@@ -39,6 +40,14 @@ public class TextChunkEntity
     // This column is populated by the tsvector_update_text_chunks trigger
     [Column("search_vector")]
     public string? SearchVector { get; set; }
+
+    // Phase D — RAG role-aware: multi-label role classification per chunk
+    public GameBookRole RoleTags { get; private set; } = GameBookRole.None;
+
+    public void AssignRoleTags(GameBookRole tags)
+    {
+        RoleTags = tags;
+    }
 
     // Navigation properties
     public GameEntity Game { get; set; } = default!;

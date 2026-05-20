@@ -46,11 +46,13 @@ StorageLayout:
 
 ```bash
 # 1. Health endpoint reports legacy layout version
-curl https://staging.meepleai.app/health/storage | jq '.data.layout_version'
+curl https://meepleai.app/health/storage | jq '.data.layout_version'
 # Expected: "v1-gameId"
 
-# 2. Drainer pod logs the disabled-mode startup message
-kubectl logs deploy/api-staging | grep "StorageOperationOutbox"
+# 2. Drainer container logs the disabled-mode startup message (SSH to VPS)
+ssh meepleai-staging \
+  'docker compose -f /opt/meepleai/repo/infra/compose.staging.yml logs api --tail 200' \
+  | grep "StorageOperationOutbox"
 # Expected: "started but disabled (StorageLayout:MigrationEnabled=false)"
 
 # 3. Outbox table empty
@@ -85,15 +87,50 @@ aws s3 ls s3://${BUCKET}/pdf_uploads/ --recursive > /tmp/manifest-pre-${BUCKET}.
 
 ### Step 1.2 — Enable drainer flag
 
+Staging runs on **VPS Hetzner** (not Kubernetes). Feature flags are read by
+the API from env vars loaded via `env_file: [./secrets/storage.secret]` in
+`infra/compose.staging.yml`. The `.secret` files are NOT synced by the
+deploy workflow — they live on the VPS at `/opt/meepleai/secrets/` and must
+be edited via SSH.
+
 ```bash
-kubectl set env deploy/api-staging STORAGE_MIGRATION_ENABLED=true
-kubectl rollout restart deploy/api-staging
+# 1. SSH to the staging VPS (operator account)
+ssh meepleai-staging
+
+# 2. Append the migration flag to storage.secret (heredoc avoids quoting bugs)
+cd /opt/meepleai
+sudo tee -a secrets/storage.secret <<'EOF'
+
+# Issue #1314 Phase 1: enable storage-layout-migration drainer.
+# Default (absent var) = false. Remove this block after Phase 4 cleanup.
+StorageLayout__MigrationEnabled=true
+EOF
+
+# 3. Restart api container (env_file is re-read on container restart)
+docker compose -f repo/infra/compose.staging.yml restart api
+
+# 4. Verify the flag is loaded
+docker compose -f repo/infra/compose.staging.yml exec api \
+  printenv StorageLayout__MigrationEnabled
+# Expected: true
 ```
 
-Wait for pod ready:
-```bash
-kubectl rollout status deploy/api-staging --timeout=120s
-```
+Allowed env var values (defined in `apps/api/src/Api/Services/Pdf/StorageLayoutOptions.cs`):
+
+| Variable | Values | Default if absent |
+|---|---|---|
+| `StorageLayout__MigrationEnabled` | `true` / `false` | `false` (drainer dormant) |
+| `StorageLayout__WriteMode` | `Legacy` / `Dual` / `New` | `Legacy` (no behavior change) |
+| `StorageLayout__ReadMode` | `Legacy` / `Dual` / `New` | `Dual` (probe new first, fallback legacy) |
+
+> **Note:** the `appsettings.json` section is `StorageLayout`. The env-var
+> convention uses double underscore (`__`) per .NET IConfiguration. See
+> `infra/secrets/storage.secret.example` for the full template + phase
+> progression comments.
+
+**Rollback Phase 1 (drainer ON → OFF):** SSH back, remove the line from
+`storage.secret`, restart api. Pending rows stay Pending; Sent rows stay
+Sent. No state corruption — the drainer is a no-op when the flag is false.
 
 ### Step 1.3 — Enqueue migration rows
 
@@ -148,7 +185,7 @@ batches must be split.)
 
 ```bash
 # Prometheus / Grafana — storage migration dashboard
-open https://grafana.staging.meepleai.app/d/storage-migration
+open https://grafana.meepleai.app/d/storage-migration
 
 # Or via psql
 psql -c "SELECT status, COUNT(*) FROM storage_operation_outbox GROUP BY status;"
@@ -191,21 +228,24 @@ outbox row stays Pending). Restore from T-zero snapshot if needed.
 ### Step 2.1 — Flip WriteMode
 
 ```bash
-kubectl set env deploy/api-staging \
-  STORAGE_WRITE_MODE=New \
-  STORAGE_READ_MODE=Dual
-kubectl rollout restart deploy/api-staging
+ssh meepleai-staging
+cd /opt/meepleai
+sudo tee -a secrets/storage.secret <<'EOF'
+StorageLayout__WriteMode=New
+StorageLayout__ReadMode=Dual
+EOF
+docker compose -f repo/infra/compose.staging.yml restart api
 ```
 
 ### Step 2.2 — Verification
 
 ```bash
 # Health endpoint reports the new layout
-curl https://staging.meepleai.app/health/storage | jq '.data.layout_version'
+curl https://meepleai.app/health/storage | jq '.data.layout_version'
 # Expected: "v2-categorized"
 
 # Upload a test PDF + verify landing prefix
-curl -X POST -F "file=@test.pdf" https://staging.meepleai.app/api/v1/pdfs/upload
+curl -X POST -F "file=@test.pdf" https://meepleai.app/api/v1/pdfs/upload
 aws s3 ls s3://${BUCKET}/pdfs/ --recursive | grep test.pdf
 # Expected: object exists under pdfs/{resourceKey}/...
 
@@ -232,15 +272,18 @@ ReadMode=Dual.
 ### Step 3.1 — Flip ReadMode
 
 ```bash
-kubectl set env deploy/api-staging STORAGE_READ_MODE=New
-kubectl rollout restart deploy/api-staging
+ssh meepleai-staging
+cd /opt/meepleai
+# Update the existing StorageLayout__ReadMode=Dual line to =New
+sudo sed -i 's/^StorageLayout__ReadMode=.*/StorageLayout__ReadMode=New/' secrets/storage.secret
+docker compose -f repo/infra/compose.staging.yml restart api
 ```
 
 ### Step 3.2 — Monitor for legacy-read attempts
 
 ```bash
 # Counter should stay at 0
-curl https://staging.meepleai.app/metrics | grep storage_legacy_reads_total
+curl https://meepleai.app/metrics | grep storage_legacy_reads_total
 # Expected: 0 or absent
 ```
 
@@ -292,8 +335,10 @@ Implemented in issue #1333 (admin endpoint `POST /api/v1/admin/storage/migration
 ### Step B.1 — Halt new uploads at new layout
 
 ```bash
-kubectl set env deploy/api-staging STORAGE_WRITE_MODE=Legacy
-kubectl rollout restart deploy/api-staging
+ssh meepleai-staging
+cd /opt/meepleai
+sudo sed -i 's/^StorageLayout__WriteMode=.*/StorageLayout__WriteMode=Legacy/' secrets/storage.secret
+docker compose -f repo/infra/compose.staging.yml restart api
 ```
 
 ### Step B.2 — Reverse-move objects (script + admin endpoint)
@@ -330,7 +375,7 @@ manually.
 ### Step B.3 — Verify health endpoint
 
 ```bash
-curl https://staging.meepleai.app/health/storage | jq '.data.layout_version'
+curl https://meepleai.app/health/storage | jq '.data.layout_version'
 # Expected: "v1-gameId" (back to Phase 0 state)
 ```
 

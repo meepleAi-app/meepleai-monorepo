@@ -1,9 +1,10 @@
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameToolkit.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.Services;
+using Api.SharedKernel.Application;
+using Api.SharedKernel.Domain.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -34,20 +35,20 @@ internal class GenerateToolkitFromKbHandler
     private readonly IHybridSearchService _hybridSearchService;
     private readonly ILlmService _llmService;
     private readonly IRagAccessService _ragAccessService;
-    private readonly IGameRepository _gameRepository;
+    private readonly IGameCoreDataProvider _gameCoreData;
     private readonly ILogger<GenerateToolkitFromKbHandler> _logger;
 
     public GenerateToolkitFromKbHandler(
         IHybridSearchService hybridSearchService,
         ILlmService llmService,
         IRagAccessService ragAccessService,
-        IGameRepository gameRepository,
+        IGameCoreDataProvider gameCoreData,
         ILogger<GenerateToolkitFromKbHandler> logger)
     {
         _hybridSearchService = hybridSearchService ?? throw new ArgumentNullException(nameof(hybridSearchService));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
-        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _gameCoreData = gameCoreData ?? throw new ArgumentNullException(nameof(gameCoreData));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -58,11 +59,11 @@ internal class GenerateToolkitFromKbHandler
         ArgumentNullException.ThrowIfNull(command);
 
         // 1. Validate game exists
-        var game = await _gameRepository
-            .GetByIdAsync(command.GameId, cancellationToken)
+        var coreData = await _gameCoreData
+            .GetCoreDataAsync(GameRef.Shared(command.GameId), cancellationToken)
             .ConfigureAwait(false);
 
-        if (game is null)
+        if (coreData is null)
             throw new NotFoundException("Game", command.GameId.ToString());
 
         // 2. Resolve accessible KB card IDs for this user/game
@@ -98,7 +99,7 @@ internal class GenerateToolkitFromKbHandler
             uniqueChunks.Count, command.GameId);
 
         // 5. Build prompts
-        var gameTitle = game.Title.Value;
+        var gameTitle = coreData.Title;
         var userPrompt = BuildUserPrompt(gameTitle, uniqueChunks);
 
         // 6. Call LLM (primary attempt)

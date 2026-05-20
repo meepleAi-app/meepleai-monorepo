@@ -35,13 +35,21 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             ForcePathStyle = false
         };
 
-        // PR 2 introduces StorageLayoutOptions. Default is Legacy write + Dual
-        // read which matches pre-PR-2 behavior, so existing test assertions
-        // (legacy `pdf_uploads/...` prefix) still hold.
+        // PR 2 (#1327) introduced StorageLayoutOptions with dual-read default.
+        // These legacy tests assert exact-prefix behavior (single ListObjectsV2
+        // probe at `pdf_uploads/...`, single DeleteObjectAsync) so we force
+        // ReadMode=Legacy here to preserve the pre-PR-2 contract. Dual-mode
+        // probe ordering + delete-both-layouts is covered by
+        // BlobStorageServiceLayoutTests (#1314 PR 2).
+        var legacyReadOptions = new StorageLayoutOptions
+        {
+            WriteMode = StorageWriteMode.Legacy,
+            ReadMode = StorageReadMode.Legacy,
+        };
         _sut = new S3BlobStorageService(
             _mockS3Client.Object,
             _options,
-            Options.Create(new StorageLayoutOptions()),
+            Options.Create(legacyReadOptions),
             _mockLogger.Object);
     }
 

@@ -78,7 +78,15 @@ public class StorageOperationOutboxEntity
     public DateTime CreatedAt { get; init; }
 
     /// <summary>
-    /// Lifecycle status. One of: Pending | Sent | FailedPermanent.
+    /// Lifecycle status. One of: Pending | Sent | FailedPermanent | Reverted.
+    /// <list type="bullet">
+    /// <item><c>Pending</c> — row inserted, drainer has not yet completed the move.</item>
+    /// <item><c>Sent</c> — drainer completed legacy → new copy + delete successfully.</item>
+    /// <item><c>FailedPermanent</c> — drainer exhausted retries (MaxAttempts=5).</item>
+    /// <item><c>Reverted</c> — operator reversed the migration via #1333 reverse-migration command
+    /// (legacy key restored, new key deleted; outbox row no longer represents an
+    /// in-flight operation but is preserved for audit trail).</item>
+    /// </list>
     /// </summary>
     public string Status { get; set; } = "Pending";
 }

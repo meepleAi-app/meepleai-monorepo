@@ -141,7 +141,16 @@ under `--prefix` and inserts `storage_operation_outbox` rows for the drainer.
 Idempotent — re-runs with the same `--migration-id` produce 0 enqueued, N skipped.
 
 ```bash
+# Admin bearer token (from admin SSO login, copy bearer from browser
+# devtools after authenticating to /admin)
 export MEEPLEAI_ADMIN_TOKEN="<admin-bearer-token>"
+
+# Cloudflare Access service token (required for staging — meepleai.app sits
+# behind CF Access). Create at Cloudflare Zero Trust → Access → Service Tokens.
+# Without these the script gets the CF login HTML page instead of JSON.
+export CF_ACCESS_CLIENT_ID="<service-token-id>.access"
+export CF_ACCESS_CLIENT_SECRET="<service-token-secret>"
+
 MIGRATION_ID=$(uuidgen)
 
 # Dry-run first — counts objects without inserting rows
@@ -345,6 +354,8 @@ docker compose -f repo/infra/compose.staging.yml restart api
 
 ```bash
 export MEEPLEAI_ADMIN_TOKEN="<admin-bearer-token>"
+export CF_ACCESS_CLIENT_ID="<service-token-id>.access"
+export CF_ACCESS_CLIENT_SECRET="<service-token-secret>"
 
 # Dry-run — counts rows that would be reversed, no S3 writes
 ./scripts/reverse-storage-migration.sh \

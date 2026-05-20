@@ -10,13 +10,22 @@
 # N skipped (the UNIQUE LegacyKey constraint in the outbox dedups).
 #
 # Usage:
-#   MEEPLEAI_ADMIN_TOKEN=... ./scripts/enqueue-storage-migration.sh \
+#   MEEPLEAI_ADMIN_TOKEN=...                     # admin bearer (required)
+#   CF_ACCESS_CLIENT_ID=...                      # CF Access service token (optional)
+#   CF_ACCESS_CLIENT_SECRET=...                  # CF Access service secret (optional)
+#   ./scripts/enqueue-storage-migration.sh \
 #     --bucket meepleai-uploads \
 #     --migration-id $(uuidgen) \
 #     [--prefix pdf_uploads/] \
 #     [--category Pdf] \
-#     [--api-url https://staging.meepleai.app] \
+#     [--api-url https://meepleai.app] \
 #     [--dry-run]
+#
+# CF Access: when the API sits behind Cloudflare Access (staging.meepleai.app /
+# meepleai.app), set CF_ACCESS_CLIENT_ID + CF_ACCESS_CLIENT_SECRET env vars to
+# pass the service-token headers. Without them you'll get a Cloudflare login
+# HTML page instead of a JSON response. Both vars together; either alone is
+# treated as a config error.
 #
 # Exit codes:
 #   0 → success (rows enqueued or dry-run completed)
@@ -25,7 +34,7 @@
 
 set -euo pipefail
 
-API_URL="${API_URL:-https://staging.meepleai.app}"
+API_URL="${API_URL:-https://meepleai.app}"
 PREFIX="pdf_uploads/"
 CATEGORY="Pdf"
 DRY_RUN="false"
@@ -83,6 +92,18 @@ if [[ -z "${MEEPLEAI_ADMIN_TOKEN:-}" ]]; then
     exit 1
 fi
 
+# CF Access service token: either both vars or neither (config error otherwise).
+CF_ID="${CF_ACCESS_CLIENT_ID:-}"
+CF_SECRET="${CF_ACCESS_CLIENT_SECRET:-}"
+if [[ -n "$CF_ID" && -z "$CF_SECRET" ]]; then
+    echo "ERROR: CF_ACCESS_CLIENT_ID set but CF_ACCESS_CLIENT_SECRET missing" >&2
+    exit 1
+fi
+if [[ -z "$CF_ID" && -n "$CF_SECRET" ]]; then
+    echo "ERROR: CF_ACCESS_CLIENT_SECRET set but CF_ACCESS_CLIENT_ID missing" >&2
+    exit 1
+fi
+
 # Validate category against enum
 valid_category="false"
 for c in "${ALLOWED_CATEGORIES[@]}"; do
@@ -109,6 +130,7 @@ echo "  migration-id: $MIGRATION_ID"
 echo "  prefix:       $PREFIX"
 echo "  category:     $CATEGORY"
 echo "  dry-run:      $DRY_RUN"
+echo "  cf-access:    $([[ -n "$CF_ID" ]] && echo "service-token (id=${CF_ID:0:8}...)" || echo "none")"
 echo ""
 
 payload=$(cat <<EOF
@@ -121,12 +143,21 @@ payload=$(cat <<EOF
 EOF
 )
 
-response=$(curl -sS \
-    -X POST "$API_URL/api/v1/admin/storage/migration/enqueue" \
-    -H "Authorization: Bearer $MEEPLEAI_ADMIN_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "$payload" \
-    -w "\nHTTP_STATUS:%{http_code}")
+curl_args=(
+    -sS
+    -X POST "$API_URL/api/v1/admin/storage/migration/enqueue"
+    -H "Authorization: Bearer $MEEPLEAI_ADMIN_TOKEN"
+    -H "Content-Type: application/json"
+    -d "$payload"
+    -w "\nHTTP_STATUS:%{http_code}"
+)
+if [[ -n "$CF_ID" ]]; then
+    curl_args+=(
+        -H "CF-Access-Client-Id: $CF_ID"
+        -H "CF-Access-Client-Secret: $CF_SECRET"
+    )
+fi
+response=$(curl "${curl_args[@]}")
 
 http_status=$(echo "$response" | sed -n 's/^HTTP_STATUS://p' | tail -1)
 body=$(echo "$response" | sed '$d')

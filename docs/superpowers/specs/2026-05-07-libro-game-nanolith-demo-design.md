@@ -13,6 +13,8 @@ review-cycle: brainstorming + spec-self-review + sc:spec-panel-applied
 expert-panel-applied: [Wiegers, Adzic, Cockburn, Fowler, Newman, Nygard, Crispin, Doumont]
 ---
 
+> ⚠️ **GENERALIZED 2026-05-19**: This spec assumed Press Start + Rules + Storybook + Encounter as fixed model. The generalized multi-book schema is documented in [2026-05-19 Gamebook Multi-Book Generalization](../../for-developers/specs/2026-05-19-gamebook-multi-book-generalization-design.md). This spec is retained as the Nanolith-specific case study but its hardcoded assumptions are superseded.
+
 > **Naming convention** (per Doumont review, m1):
 > - Le sezioni numeriche (1.1, 2.1, ...) seguono la struttura del documento
 > - I **Goal ID** `N1`-`N4` sono identificatori semantici stabili (referenziati in test, plan, issue tracker)

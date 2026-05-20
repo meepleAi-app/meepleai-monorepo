@@ -67,7 +67,7 @@ app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IAuthService sv
 | DocumentProcessing | PDF upload, extraction, chunking |
 | EntityRelationships | Cross-entity links (EntityLink aggregates) |
 | Gamification | Achievements, badges, leaderboards |
-| GameManagement | Catalog, sessions, FAQs, specs |
+| GameManagement | Catalog, sessions, FAQs, specs, game books (multi-role 1..N per game) |
 | GameToolbox | Card decks, phases, session tool templates |
 | GameToolkit | AI toolkit generation, KB-based suggestions |
 | KnowledgeBase | RAG, AI agents, chat, vector search |

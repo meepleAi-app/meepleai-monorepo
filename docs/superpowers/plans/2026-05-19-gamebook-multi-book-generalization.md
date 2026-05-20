@@ -4,13 +4,22 @@
 
 **Goal:** Generalize the gamebook companion to support any board game with 1..N books of any role combination (tutorial, rules-reference, narrative, encounter, lore, setup), eliminating the hardcoded "Press Start + Rules" + "Storybook + Encounter" assumption inherited from the Nanolith-specific demo.
 
-**Architecture:** Introduce `GameBook` aggregate in `GameManagement` BC with multi-valued `GameBookRole` flag enum. Refactor `SessionTracking` to track per-book progress via new `SessionBookProgress` aggregate. Replace `GamebookPageType` enum with `GameBookId` FK on `TranslatedParagraph` + `GamebookPhotoArtifact`. Add chunk-level `role_tags` to `pdf_document_chunks` + hybrid `RoleClassifierService` (rule + LLM fallback) at ingestion + `IntentClassifierService` at query time + `HybridSearchService` re-ranker boost. Frontend: conditional `BookPicker` (only N>1 narrative books) + per-book resume UI.
+**Architecture:** Introduce `GameBook` aggregate in `GameManagement` BC with multi-valued `GameBookRole` flag enum. Refactor `SessionTracking` to track per-book progress via new `SessionBookProgress` aggregate. Replace `GamebookPageType` enum with `GameBookId` FK on `TranslatedParagraph` + `GamebookPhotoArtifact`. Add chunk-level `role_tags` to `text_chunks` + hybrid `RoleClassifierService` (rule + LLM fallback) at ingestion + `IntentClassifierService` at query time + `HybridSearchService` re-ranker boost. Frontend: conditional `BookPicker` (only N>1 narrative books) + per-book resume UI.
 
 **Tech Stack:** .NET 9 (ASP.NET Minimal APIs + MediatR + FluentValidation + EF Core + pgvector), C# 12, xUnit + Testcontainers, Next.js 16 + React 19 + TypeScript + Vitest + Playwright.
 
 **Depends on:** [#1320 Game Entity Reset](../../for-developers/specs/2026-05-19-game-entity-reset.md) Phase 2 mergiato (provides `GameRef` discriminator + reset schema). This plan opens a feature branch from `main-dev` POST-#1320 Phase 2 land.
 
 **Blocked by:** [#4228 AgentDefinition redesign](../../for-developers/specs/2026-05-19-game-entity-reset.md#out-of-scope-deferred) for FM-23 invariant enforcement (deferred to follow-up plan).
+
+**Codebase post-#1320 reconnaissance** (2026-05-19):
+- `GameRef` value object location: `apps/api/src/Api/SharedKernel/Domain/ValueObjects/GameRef.cs`
+- `MeepleAiDbContext` path: `apps/api/src/Api/Infrastructure/MeepleAiDbContext.cs` (NOT `Infrastructure/Persistence/`)
+- Chunk entity: `TextChunkEntity` at `apps/api/src/Api/Infrastructure/Entities/KnowledgeBase/TextChunkEntity.cs` (NOT `TextChunkEntity`)
+- Chunk EF config: `apps/api/src/Api/Infrastructure/EntityEntityConfigurations/KnowledgeBase/TextChunkEntityConfiguration.cs`
+- Chunk table: `text_chunks` (NOT `text_chunks`)
+- **Gamebook BC NOT refactored to GameRef by #1320** — `GamebookCampaignSession.GameId` is still `Guid` with no FK constraint. Must refactor in **Phase A0** below.
+- Gamebook entities have NO dedicated EF config files (convention-based mapping). Phase A0 introduces explicit config files for clarity.
 
 ---
 
@@ -53,7 +62,7 @@
 - `apps/api/src/Api/BoundedContexts/KnowledgeBase/Application/Services/IntentClassifierService.cs`
 
 **Migrations**:
-- `apps/api/src/Api/Infrastructure/Migrations/<TS>_AddGameBooks.cs` (single consolidated migration: `game_books` + `gamebook_session_book_progress` + `gamebook_translated_paragraphs.game_book_id` + `gamebook_photo_artifacts.game_book_id` + `pdf_document_chunks.role_tags`)
+- `apps/api/src/Api/Infrastructure/Migrations/<TS>_AddGameBooks.cs` (single consolidated migration: `game_books` + `gamebook_session_book_progress` + `gamebook_translated_paragraphs.game_book_id` + `gamebook_photo_artifacts.game_book_id` + `text_chunks.role_tags`)
 
 **Frontend**:
 - `apps/web/src/components/gamebook/BookPicker.tsx`
@@ -90,7 +99,7 @@
 - `apps/api/src/Api/Infrastructure/EntityConfigurations/SessionTracking/GamebookCampaignSessionEntityConfiguration.cs` — remove `Progress` value object mapping; configure `BookProgress` collection navigation
 - `apps/api/src/Api/Infrastructure/EntityConfigurations/SessionTracking/TranslatedParagraphEntityConfiguration.cs` — add `GameBookId` FK
 - `apps/api/src/Api/Infrastructure/EntityConfigurations/SessionTracking/GamebookPhotoArtifactEntityConfiguration.cs` — add `GameBookId` FK
-- `apps/api/src/Api/Infrastructure/Configurations/KnowledgeBase/PdfDocumentChunkEntityConfiguration.cs` — add `RoleTags` column mapping
+- `apps/api/src/Api/Infrastructure/Configurations/KnowledgeBase/TextChunkEntityEntityConfiguration.cs` — add `RoleTags` column mapping
 - `apps/web/src/components/gamebook/PhotoTranslateForm.tsx` (or similar existing photo upload component) — integrate `BookPicker` conditional
 - `apps/web/src/app/library/games/[gameId]/play/page.tsx` (resume entry point) — use `ResumeBooksList` instead of single last paragraph display
 - `apps/web/tests/e2e/libro-game-nanolith.spec.ts` (existing E2E) — update tags from hardcoded to `@gamebook-multi-config`
@@ -153,6 +162,251 @@ cd apps/api/src/Api && dotnet test --filter "Category=Unit" --logger "console;ve
 ```
 
 Expected: all tests PASS. Note baseline test count for end-of-plan comparison.
+
+---
+
+## Phase A0: Gamebook BC alignment to GameRef (Tasks A0.1-A0.4)
+
+> **Rationale**: #1320 Phase 2c refactored ~25 consumers to use `GameRef` discriminator but did NOT touch `GamebookCampaignSession.GameId` (still `Guid` with no FK). Phase A0 closes that gap before introducing `GameBook` entity (which assumes `GameRef`). Also introduces explicit EF config files for 4 gamebook entities (currently convention-based mapping).
+
+### Task A0.1: Create explicit EF config files for 4 gamebook entities (convention → explicit)
+
+**Files:**
+- Create: `apps/api/src/Api/Infrastructure/EntityConfigurations/SessionTracking/GamebookCampaignSessionEntityConfiguration.cs`
+- Create: `apps/api/src/Api/Infrastructure/EntityConfigurations/SessionTracking/TranslatedParagraphEntityConfiguration.cs`
+- Create: `apps/api/src/Api/Infrastructure/EntityConfigurations/SessionTracking/GamebookPhotoArtifactEntityConfiguration.cs`
+- Create: `apps/api/src/Api/Infrastructure/EntityConfigurations/SessionTracking/GamebookGlossaryEntryEntityConfiguration.cs`
+
+- [ ] **Step 1: Inspect current convention-based mappings to capture all column names + indices**
+
+```bash
+grep -n "gamebook_\|translated_paragraphs" apps/api/src/Api/Infrastructure/Migrations/MeepleAiDbContextModelSnapshot.cs | head -40
+```
+
+Record actual column names + indices (snake_case mappings).
+
+- [ ] **Step 2: Implement `GamebookCampaignSessionEntityConfiguration`**
+
+```csharp
+using Api.BoundedContexts.SessionTracking.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace Api.Infrastructure.EntityConfigurations.SessionTracking;
+
+internal class GamebookCampaignSessionEntityConfiguration : IEntityTypeConfiguration<GamebookCampaignSession>
+{
+    public void Configure(EntityTypeBuilder<GamebookCampaignSession> builder)
+    {
+        builder.ToTable("gamebook_campaign_sessions");
+        builder.HasKey(e => e.Id);
+        builder.Property(e => e.Id).HasColumnName("id");
+        builder.Property(e => e.GameId).HasColumnName("game_id").IsRequired();   // refactored in Task A0.2
+        builder.Property(e => e.OwnerUserId).HasColumnName("owner_user_id").IsRequired();
+        builder.Property(e => e.Title).HasColumnName("title").HasMaxLength(120).IsRequired();
+        builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+        builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").IsRequired();
+        builder.Property(e => e.CreatedBy).HasColumnName("created_by").IsRequired();
+        builder.Property(e => e.UpdatedBy).HasColumnName("updated_by");
+        builder.Property(e => e.IsDeleted).HasColumnName("is_deleted").IsRequired();
+        builder.Property(e => e.DeletedAt).HasColumnName("deleted_at");
+
+        builder.OwnsOne(e => e.Progress, p =>
+        {
+            p.Property(x => x.CurrentParagraph).HasColumnName("progress_current_paragraph");
+            p.Property(x => x.History).HasColumnName("progress_history").HasColumnType("integer[]");
+            p.Property(x => x.LastReadAt).HasColumnName("progress_last_read_at");
+        });
+
+        builder.HasIndex(e => new { e.OwnerUserId, e.GameId, e.IsDeleted })
+               .HasDatabaseName("ix_gamebook_campaign_sessions_owner_game");
+        builder.HasQueryFilter(e => !e.IsDeleted);
+    }
+}
+```
+
+> **Note**: do NOT modify `OnModelCreating` in `MeepleAiDbContext.cs` if it already uses `ApplyConfigurationsFromAssembly()` (verified via recon). The new files will be picked up automatically.
+
+- [ ] **Step 3: Repeat pattern for the other 3 entities** (TranslatedParagraph, GamebookPhotoArtifact, GamebookGlossaryEntry)
+
+Use snake_case column names matching `MeepleAiDbContextModelSnapshot.cs` content.
+
+- [ ] **Step 4: Run full test suite to verify zero schema regression**
+
+```bash
+cd apps/api/src/Api && dotnet test --filter "Category=Unit|Category=Integration" -v minimal 2>&1 | tail -10
+```
+
+Expected: all PASS. If migrations differ now that config is explicit, generate a no-op migration (empty Up/Down methods) to align ModelSnapshot.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/api/src/Api/Infrastructure/EntityConfigurations/SessionTracking/*.cs
+git commit -m "refactor(gamebook): make 4 gamebook EF configs explicit (convention → file-based)"
+```
+
+### Task A0.2: Refactor `GamebookCampaignSession.GameId Guid` → `GameRef` discriminator
+
+**Files to modify:**
+- `apps/api/src/Api/BoundedContexts/SessionTracking/Domain/Entities/GamebookCampaignSession.cs`
+- `apps/api/src/Api/Infrastructure/EntityConfigurations/SessionTracking/GamebookCampaignSessionEntityConfiguration.cs`
+- All consumers of `GamebookCampaignSession.GameId` (~3-5 handlers + tests)
+
+- [ ] **Step 1: Identify all consumers**
+
+```bash
+grep -rn "GamebookCampaignSession\b" apps/api/src/Api/ apps/api/tests/Api.Tests/ \
+  | grep "GameId\|\.Create(" | head -20
+```
+
+Record list — these need parameter signature change.
+
+- [ ] **Step 2: Write failing test**
+
+```csharp
+// File: apps/api/tests/Api.Tests/BoundedContexts/SessionTracking/Domain/GamebookCampaignSessionTests.cs
+[Fact]
+public void Create_WithGameRef_StoresAsDiscriminator()
+{
+    var sharedId = Guid.NewGuid();
+    var session = GamebookCampaignSession.Create(
+        gameRef: GameRef.Shared(sharedId),
+        ownerUserId: Guid.NewGuid(),
+        title: "Campagna 1");
+
+    Assert.Equal(GameRefKind.Shared, session.GameRef.Kind);
+    Assert.Equal(sharedId, session.GameRef.Id);
+}
+
+[Fact]
+public void Create_WithPrivateGameRef_StoresAsDiscriminator()
+{
+    var privateId = Guid.NewGuid();
+    var session = GamebookCampaignSession.Create(
+        gameRef: GameRef.Private(privateId),
+        ownerUserId: Guid.NewGuid(),
+        title: "Campagna privata");
+
+    Assert.Equal(GameRefKind.Private, session.GameRef.Kind);
+}
+```
+
+- [ ] **Step 3: Run test → COMPILE FAIL (`GameRef` param not accepted)**
+
+- [ ] **Step 4: Update entity**
+
+```csharp
+// In GamebookCampaignSession.cs:
+public sealed class GamebookCampaignSession
+{
+    public Guid Id { get; private set; }
+    public GameRef GameRef { get; private set; } = default!;  // REPLACES Guid GameId
+    // ... existing fields ...
+
+    public static GamebookCampaignSession Create(GameRef gameRef, Guid ownerUserId, string title)
+    {
+        if (gameRef is null) throw new ArgumentNullException(nameof(gameRef));
+        if (ownerUserId == Guid.Empty) throw new ArgumentException("required", nameof(ownerUserId));
+        if (string.IsNullOrWhiteSpace(title)) throw new ArgumentException("required", nameof(title));
+
+        var now = DateTimeOffset.UtcNow;
+        return new GamebookCampaignSession
+        {
+            Id = Guid.NewGuid(),
+            GameRef = gameRef,
+            OwnerUserId = ownerUserId,
+            Title = title.Trim(),
+            Progress = GamebookProgress.Empty(),
+            CreatedAt = now,
+            UpdatedAt = now,
+            CreatedBy = ownerUserId,
+        };
+    }
+}
+```
+
+- [ ] **Step 5: Update EF config**
+
+Replace:
+```csharp
+builder.Property(e => e.GameId).HasColumnName("game_id").IsRequired();
+```
+
+With:
+```csharp
+builder.OwnsOne(e => e.GameRef, gr =>
+{
+    gr.Property(p => p.Id).HasColumnName("game_ref_id").IsRequired();
+    gr.Property(p => p.Kind).HasColumnName("game_ref_kind").HasConversion<short>().IsRequired();
+});
+```
+
+Update index:
+```csharp
+builder.HasIndex("owner_user_id", "game_ref_kind", "game_ref_id", "is_deleted")
+       .HasDatabaseName("ix_gamebook_campaign_sessions_owner_game_ref");
+// Drop old "ix_gamebook_campaign_sessions_owner_game" index name in migration
+```
+
+- [ ] **Step 6: Generate migration `RefactorGamebookGameIdToGameRef`**
+
+```bash
+cd apps/api/src/Api
+dotnet ef migrations add RefactorGamebookGameIdToGameRef
+```
+
+Review the generated SQL: must include
+1. `ALTER TABLE gamebook_campaign_sessions ADD COLUMN game_ref_id UUID, ADD COLUMN game_ref_kind SMALLINT;`
+2. `UPDATE gamebook_campaign_sessions SET game_ref_id = game_id, game_ref_kind = 0;` (data backfill, assume all existing rows pointed to SharedGame)
+3. `ALTER TABLE gamebook_campaign_sessions ALTER COLUMN game_ref_id SET NOT NULL, ALTER COLUMN game_ref_kind SET NOT NULL, DROP COLUMN game_id;`
+4. Drop old index + add new one
+
+If EF doesn't generate the UPDATE statement automatically, add it manually in the migration's `Up()` method.
+
+- [ ] **Step 7: Update all consumers from Step 1**
+
+For each handler/query consuming `session.GameId`:
+- Replace `session.GameId` with `session.GameRef.Id` (when treating it as plain guid)
+- Or `session.GameRef` (when passing forward)
+- For factory calls: `GamebookCampaignSession.Create(gameId, ...)` → `GamebookCampaignSession.Create(GameRef.Shared(gameId), ...)`
+
+- [ ] **Step 8: Apply migration + run tests**
+
+```bash
+dotnet ef database update
+dotnet test --filter "FullyQualifiedName~SessionTracking" -v minimal 2>&1 | tail -10
+```
+
+Expected: all PASS.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add -u
+git commit -m "refactor(gamebook): refactor GamebookCampaignSession.GameId Guid -> GameRef discriminator (aligns to #1320 Phase 2c)"
+```
+
+### Task A0.3: Verify all gamebook tests + smoke check
+
+- [ ] **Step 1: Run full test suite**
+
+```bash
+cd apps/api/src/Api && dotnet test 2>&1 | tail -10
+```
+
+Expected: all PASS. Note baseline count for end-of-plan comparison.
+
+- [ ] **Step 2: Manual smoke**
+
+```bash
+cd infra && make dev-core
+# Wait API startup
+curl -s http://localhost:8080/health | jq
+# Expected: {"status":"healthy"}
+```
+
+- [ ] **Step 3: Commit only if Step 1+2 found+fixed issues; otherwise skip commit**
 
 ---
 
@@ -618,7 +872,7 @@ git commit -m "feat(gamebook): add IGameBookRepository interface + domain except
 
 **Files:**
 - Create: `apps/api/src/Api/Infrastructure/EntityConfigurations/GameManagement/GameBookEntityConfiguration.cs`
-- Modify: `apps/api/src/Api/Infrastructure/Persistence/MeepleAiDbContext.cs` (add `DbSet<GameBook> GameBooks`)
+- Modify: `apps/api/src/Api/Infrastructure/MeepleAiDbContext.cs` (add `DbSet<GameBook> GameBooks`)
 
 - [ ] **Step 1: Write the EF configuration**
 
@@ -694,7 +948,7 @@ internal class GameBookEntityConfiguration : IEntityTypeConfiguration<GameBook>
 
 - [ ] **Step 2: Add `DbSet<GameBook>` to DbContext**
 
-Modify `apps/api/src/Api/Infrastructure/Persistence/MeepleAiDbContext.cs`:
+Modify `apps/api/src/Api/Infrastructure/MeepleAiDbContext.cs`:
 
 ```csharp
 // Find the existing DbSet declarations for GameManagement BC and add:
@@ -715,7 +969,7 @@ Expected: no errors.
 
 ```bash
 git add apps/api/src/Api/Infrastructure/EntityConfigurations/GameManagement/GameBookEntityConfiguration.cs \
-        apps/api/src/Api/Infrastructure/Persistence/MeepleAiDbContext.cs
+        apps/api/src/Api/Infrastructure/MeepleAiDbContext.cs
 git commit -m "feat(gamebook): add GameBookEntityConfiguration + DbSet mapping"
 ```
 
@@ -798,7 +1052,7 @@ Expected: COMPILE FAIL (`IGameBookRepository` impl missing or DI not registered)
 // File: apps/api/src/Api/BoundedContexts/GameManagement/Infrastructure/Repositories/GameBookRepository.cs
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
-using Api.Infrastructure.Persistence;
+using Api.Infrastructure;
 using Api.SharedKernel.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
@@ -1869,7 +2123,7 @@ git add apps/api/src/Api/BoundedContexts/SessionTracking/Domain/Entities/Session
         apps/api/src/Api/BoundedContexts/SessionTracking/Infrastructure/Repositories/SessionBookProgressRepository.cs \
         apps/api/src/Api/Infrastructure/EntityConfigurations/SessionTracking/SessionBookProgressEntityConfiguration.cs \
         apps/api/src/Api/Infrastructure/Migrations/*_AddSessionBookProgress*.cs \
-        apps/api/src/Api/Infrastructure/Persistence/MeepleAiDbContext.cs \
+        apps/api/src/Api/Infrastructure/MeepleAiDbContext.cs \
         apps/api/tests/Api.Tests/BoundedContexts/SessionTracking/Domain/SessionBookProgressTests.cs
 git commit -m "feat(gamebook): add SessionBookProgress entity + repository + EF migration"
 ```
@@ -2279,16 +2533,16 @@ git commit -m "refactor(gamebook): add nullable FirstSeenBookId to glossary entr
 
 ## Phase D: RAG Role-aware (Tasks D1-D7)
 
-### Task D1: Add `role_tags` column to `pdf_document_chunks`
+### Task D1: Add `role_tags` column to `text_chunks`
 
 **Files to modify:**
-- `apps/api/src/Api/BoundedContexts/KnowledgeBase/Domain/Entities/PdfDocumentChunk.cs` (or equivalent)
-- `apps/api/src/Api/Infrastructure/EntityConfigurations/KnowledgeBase/PdfDocumentChunkEntityConfiguration.cs`
+- `apps/api/src/Api/BoundedContexts/KnowledgeBase/Domain/Entities/TextChunkEntity.cs` (or equivalent)
+- `apps/api/src/Api/Infrastructure/EntityConfigurations/KnowledgeBase/TextChunkEntityEntityConfiguration.cs`
 
 - [ ] **Step 1: Add `RoleTags` property to entity**
 
 ```csharp
-// In PdfDocumentChunk:
+// In TextChunkEntity:
 public GameBookRole RoleTags { get; private set; } = GameBookRole.None;
 
 public void AssignRoleTags(GameBookRole tags)
@@ -2300,21 +2554,21 @@ public void AssignRoleTags(GameBookRole tags)
 - [ ] **Step 2: Update EF config**
 
 ```csharp
-// In PdfDocumentChunkEntityConfiguration:
+// In TextChunkEntityEntityConfiguration:
 builder.Property(e => e.RoleTags)
        .HasColumnName("role_tags")
        .HasConversion<int>()
        .HasDefaultValue(GameBookRole.None)
        .IsRequired();
 builder.HasIndex(e => e.RoleTags)
-       .HasDatabaseName("ix_pdf_document_chunks_role_tags")
+       .HasDatabaseName("ix_text_chunks_role_tags")
        .HasFilter("role_tags != 0");
 ```
 
 - [ ] **Step 3: Generate migration**
 
 ```bash
-dotnet ef migrations add AddRoleTagsToPdfDocumentChunks
+dotnet ef migrations add AddRoleTagsToTextChunkEntitys
 dotnet ef database update
 ```
 
@@ -2322,7 +2576,7 @@ dotnet ef database update
 
 ```bash
 docker compose -f infra/docker-compose.yml exec postgres psql -U meepleai meepleai_dev \
-  -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_name='pdf_document_chunks' AND column_name='role_tags';"
+  -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_name='text_chunks' AND column_name='role_tags';"
 ```
 
 Expected: 1 row with `role_tags integer`.
@@ -2330,7 +2584,7 @@ Expected: 1 row with `role_tags integer`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git commit -m "feat(rag): add role_tags column to pdf_document_chunks for role-aware retrieval"
+git commit -m "feat(rag): add role_tags column to text_chunks for role-aware retrieval"
 ```
 
 ### Task D2: Implement `RoleClassifierService` (rule-based)
@@ -2597,7 +2851,7 @@ git commit -m "feat(rag): add LLM fallback (DeepSeek default) for RoleClassifier
 - [ ] **Step 1: Identify where chunks are persisted post-extraction**
 
 ```bash
-grep -rn "PdfDocumentChunk" apps/api/src/Api/BoundedContexts/KnowledgeBase/Application/Pipeline/ | head -10
+grep -rn "TextChunkEntity" apps/api/src/Api/BoundedContexts/KnowledgeBase/Application/Pipeline/ | head -10
 ```
 
 - [ ] **Step 2: Inject `IRoleClassifierService` into pipeline + invoke classification**
@@ -2631,7 +2885,7 @@ public async Task IngestionPipeline_ClassifiesChunkRolesEndToEnd()
 {
     // Setup pipeline with mock smoldocling returning 2 chunks
     // Run pipeline
-    // Verify pdf_document_chunks rows have role_tags != 0
+    // Verify text_chunks rows have role_tags != 0
 }
 ```
 
@@ -2761,7 +3015,7 @@ public async Task HybridSearch_WithRoleHint_BoostsMatchingChunks()
 - [ ] **Step 5: Modify re-ranker to add `role_match` signal**
 
 ```csharp
-private double ComputeChunkScore(PdfDocumentChunk chunk, SearchQuery query)
+private double ComputeChunkScore(TextChunkEntity chunk, SearchQuery query)
 {
     var baseScore = ComputeSemanticScore(chunk, query)
                   + ComputeBm25Score(chunk, query)
@@ -3424,7 +3678,7 @@ Generalizes the gamebook companion from the Nanolith-specific "2 KB + 2 physical
 - Introduces `GameBook` aggregate in `GameManagement` BC with multi-valued `GameBookRole` flag enum
 - Replaces `GamebookPageType` enum with `GameBookId` FK on `TranslatedParagraph` + `GamebookPhotoArtifact`
 - Refactors `SessionTracking` to track per-book progress via `SessionBookProgress` entity
-- Adds chunk-level `role_tags` to `pdf_document_chunks` + hybrid `RoleClassifierService` at ingestion + `IntentClassifierService` at query time + `HybridSearchService` re-ranker boost
+- Adds chunk-level `role_tags` to `text_chunks` + hybrid `RoleClassifierService` at ingestion + `IntentClassifierService` at query time + `HybridSearchService` re-ranker boost
 - Frontend: conditional `BookPicker` (only when N>1 narrative books) + per-book resume UI
 - Validates model with seed data for Nanolith (4 books), Fighting Fantasy (1 all-in-one), Maracaibo (2 books), 7th Continent (0 books FM-19)
 
@@ -3465,7 +3719,7 @@ EOF
 | §3.1 GameBook aggregate | Task A2 |
 | §3.2 game_books table | Task A4 + A6 |
 | §3.3 SessionTracking refactor schema | Tasks C1-C6 |
-| §3.4 pdf_document_chunks.role_tags | Task D1 |
+| §3.4 text_chunks.role_tags | Task D1 |
 | §4.1 N1+N2 merged | Frontend chat panel (Task E3, implicit — no UI distinction) + Backend retrieval (Tasks D5-D7 query routing) |
 | §4.2 Pre-condizioni generalizzate | Task F1 (seeder enforces new pre-conditions) |
 | §4.3 Seed Nanolith | Task F1 |

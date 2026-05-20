@@ -17,3 +17,10 @@ def test_clickable_has_required_fields(sample_html_path):
         assert it.tag in ("a", "button", "div", "li", "span")
         assert it.line_number > 0
         assert it.snippet  # exact source snippet for later locating
+
+
+def test_extract_jsx_clickables(sample_jsx_path):
+    items = list(extract_clickables(sample_jsx_path))
+    assert any(it.text.strip() == "Dashboard" and it.kind == "jsx" for it in items)
+    assert any(it.text.strip() == "Avvia libro game" and it.on_click_existing is not None for it in items)
+    assert any("game-card" in (it.classes or "") for it in items)

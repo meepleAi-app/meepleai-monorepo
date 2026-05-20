@@ -16,6 +16,13 @@ CLICKABLE_CLASS_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+_JSX_TAG_RE = re.compile(
+    r"<(?P<tag>a|button|div|li|span)\b(?P<attrs>(?:[^>{}]|\{[^}]*\})*)>(?P<inner>[^<{}]*)",
+    re.IGNORECASE | re.DOTALL,
+)
+_JSX_CLASSNAME_RE = re.compile(r'className\s*=\s*"([^"]*)"')
+_JSX_ONCLICK_RE = re.compile(r"onClick\s*=\s*\{([^}]*)\}")
+
 
 @dataclass
 class Clickable:
@@ -67,5 +74,22 @@ def _extract_html(path: Path) -> Iterator[Clickable]:
 
 
 def _extract_jsx(path: Path) -> Iterator[Clickable]:
-    # Implemented in Task 3 (JSX extractor)
-    return iter(())
+    text = path.read_text(encoding="utf-8")
+    for m in _JSX_TAG_RE.finditer(text):
+        tag = m.group("tag").lower()
+        attrs = m.group("attrs") or ""
+        inner = (m.group("inner") or "").strip()
+        cls_match = _JSX_CLASSNAME_RE.search(attrs)
+        classes = cls_match.group(1) if cls_match else None
+        if tag in CLICKABLE_TAGS_HTML or (classes and CLICKABLE_CLASS_PATTERNS.search(classes)):
+            on_click = _JSX_ONCLICK_RE.search(attrs)
+            yield Clickable(
+                file_path=path,
+                tag=tag,
+                line_number=text.count("\n", 0, m.start()) + 1,
+                text=inner,
+                classes=classes,
+                snippet=m.group(0),
+                on_click_existing=on_click.group(1).strip() if on_click else None,
+                kind="jsx",
+            )

@@ -49,6 +49,11 @@ if [[ -z "$MIGRATION_ID" ]]; then
     echo "ERROR: --migration-id is required" >&2
     exit 1
 fi
+# Defense-in-depth: validate UUID format locally (see enqueue script comment).
+if ! [[ "$MIGRATION_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+    echo "ERROR: --migration-id must be a valid UUID" >&2
+    exit 1
+fi
 if [[ -z "${MEEPLEAI_ADMIN_TOKEN:-}" ]]; then
     echo "ERROR: MEEPLEAI_ADMIN_TOKEN env var is required" >&2
     exit 1

@@ -70,6 +70,14 @@ if [[ -z "$MIGRATION_ID" ]]; then
     echo "ERROR: --migration-id is required (use \$(uuidgen))" >&2
     exit 1
 fi
+# Defense-in-depth: validate UUID format locally so a malformed value
+# cannot break the JSON payload or shell-inject the audit log echo
+# (the backend FluentValidation rejects Guid.Empty but accepts any
+# parseable shape — script-side regex is stricter).
+if ! [[ "$MIGRATION_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+    echo "ERROR: --migration-id must be a valid UUID (use \$(uuidgen))" >&2
+    exit 1
+fi
 if [[ -z "${MEEPLEAI_ADMIN_TOKEN:-}" ]]; then
     echo "ERROR: MEEPLEAI_ADMIN_TOKEN env var is required" >&2
     exit 1

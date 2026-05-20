@@ -33,7 +33,7 @@ internal static class PdfSeeder
     /// </summary>
     /// <param name="db">Database context.</param>
     /// <param name="manifest">The loaded seed manifest (used to resolve game-PDF mappings).</param>
-    /// <param name="gameMap">Dictionary mapping BggId to GameEntity.Id, produced by GameSeeder.</param>
+    /// <param name="gameMap">Dictionary mapping BggId to SharedGame.Id, produced by GameSeeder (post-Phase2d: legacy GameEntity bridge removed).</param>
     /// <param name="systemUserId">System/admin user ID used for the UploadedByUserId FK.</param>
     /// <param name="primaryBlob">Primary blob storage service (destination for PDFs).</param>
     /// <param name="seedBlob">Seed blob reader (source bucket for seed PDFs).</param>
@@ -101,22 +101,23 @@ internal static class PdfSeeder
 
             try
             {
-                // Resolve GameEntity.Id from the gameMap built by GameSeeder
+                // Resolve SharedGame.Id from the gameMap built by GameSeeder (post-Phase2d: GameEntity bridge removed).
                 if (!gameMap.TryGetValue(entry.BggId!.Value, out var gameId))
                 {
                     logger.LogWarning(
-                        "PdfSeeder: no GameEntity found for BggId={BggId} ('{Title}'). Skipping blob PDF.",
+                        "PdfSeeder: no SharedGame found for BggId={BggId} ('{Title}'). Skipping blob PDF.",
                         entry.BggId, entry.Title);
                     skipped++;
                     continue;
                 }
 
-                // Resolve the SharedGameId (community-catalog id). PdfDocumentEntity now stores SharedGameId directly
-                // after the 2026-04-19 migration, so this is the key field for both idempotency and persistence.
+                // Validate the SharedGameId exists (identity-mapped lookup post-Phase2d).
+                // PdfDocumentEntity now stores SharedGameId directly after the 2026-04-19 migration,
+                // so this is the key field for both idempotency and persistence.
                 if (!gameIdToSharedId.TryGetValue(gameId, out var sharedGameId))
                 {
                     logger.LogWarning(
-                        "PdfSeeder: no SharedGameId linked to GameEntity {GameId} ('{Title}'). Skipping blob PDF.",
+                        "PdfSeeder: SharedGameId {GameId} ('{Title}') not found in catalog. Skipping blob PDF.",
                         gameId, entry.Title);
                     skipped++;
                     continue;

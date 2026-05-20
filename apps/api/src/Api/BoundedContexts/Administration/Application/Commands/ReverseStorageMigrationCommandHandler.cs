@@ -67,71 +67,91 @@ internal sealed class ReverseStorageMigrationCommandHandler
         var s3Client = s3Storage.S3Client;
         var bucket = s3Storage.Options.BucketName;
 
-        var rows = await _db.StorageOperationOutbox
-            .Where(r => r.MigrationId == request.MigrationId)
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
-
         var reversedFromSent = 0;
         var cancelledFromPending = 0;
         var skipped = 0;
         var failed = 0;
+        var totalRows = 0;
+
+        var totalCount = await _db.StorageOperationOutbox
+            .Where(r => r.MigrationId == request.MigrationId)
+            .CountAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Reverse migration starting: migration={MigrationId}, total rows={Count}, dryRun={DryRun}",
-            request.MigrationId, rows.Count, request.DryRun);
+            request.MigrationId, totalCount, request.DryRun);
 
-        foreach (var row in rows)
+        // Review finding I-1: process rows in fixed-size chunks rather than
+        // loading all into memory. A migration touching millions of objects
+        // would OOM the API pod with a single ToListAsync. Per-chunk
+        // SaveChanges also gives crash-safety: rows already transitioned to
+        // Reverted are persisted even if the next chunk fails mid-iteration.
+        const int chunkSize = 200;
+        for (var offset = 0; offset < totalCount; offset += chunkSize)
         {
-            switch (row.Status)
-            {
-                case "Sent":
-                    if (request.DryRun)
-                    {
-                        reversedFromSent++;
-                        break;
-                    }
-                    try
-                    {
-                        await ReverseSentRowAsync(s3Client, bucket, row, s3Storage.Options.EnableEncryption, cancellationToken).ConfigureAwait(false);
-                        row.Status = "Reverted";
-                        row.LastError = "Reverted by operator";
-                        reversedFromSent++;
-                    }
-#pragma warning disable CA1031 // Service boundary: per-row reverse failures must not abort the batch.
-                    catch (Exception ex)
-                    {
-                        failed++;
-                        errors.Add($"Reverse failed for {row.NewKey}: {ex.Message}");
-                        _logger.LogWarning(ex, "Reverse failed for {NewKey}", row.NewKey);
-                    }
-#pragma warning restore CA1031
-                    break;
+            cancellationToken.ThrowIfCancellationRequested();
 
-                case "Pending":
-                    if (request.DryRun)
-                    {
+            var rows = await _db.StorageOperationOutbox
+                .Where(r => r.MigrationId == request.MigrationId)
+                .OrderBy(r => r.CreatedAt)
+                .Skip(offset)
+                .Take(chunkSize)
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+            foreach (var row in rows)
+            {
+                totalRows++;
+                switch (row.Status)
+                {
+                    case "Sent":
+                        if (request.DryRun)
+                        {
+                            reversedFromSent++;
+                            break;
+                        }
+                        try
+                        {
+                            await ReverseSentRowAsync(s3Client, bucket, row, s3Storage.Options.EnableEncryption, cancellationToken).ConfigureAwait(false);
+                            row.Status = "Reverted";
+                            row.LastError = "Reverted by operator";
+                            reversedFromSent++;
+                        }
+#pragma warning disable CA1031 // Service boundary: per-row reverse failures must not abort the batch.
+                        catch (Exception ex)
+                        {
+                            failed++;
+                            errors.Add($"Reverse failed for {row.NewKey}: {ex.Message}");
+                            _logger.LogWarning(ex, "Reverse failed for {NewKey}", row.NewKey);
+                        }
+#pragma warning restore CA1031
+                        break;
+
+                    case "Pending":
+                        if (request.DryRun)
+                        {
+                            cancelledFromPending++;
+                            break;
+                        }
+                        row.Status = "Reverted";
+                        row.LastError = "Cancelled before drainer picked up";
                         cancelledFromPending++;
                         break;
-                    }
-                    row.Status = "Reverted";
-                    row.LastError = "Cancelled before drainer picked up";
-                    cancelledFromPending++;
-                    break;
 
-                case "Reverted":
-                case "FailedPermanent":
-                    skipped++;
-                    break;
+                    case "Reverted":
+                    case "FailedPermanent":
+                        skipped++;
+                        break;
 
-                default:
-                    skipped++;
-                    break;
+                    default:
+                        skipped++;
+                        break;
+                }
             }
-        }
 
-        if (!request.DryRun)
-        {
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            if (!request.DryRun)
+            {
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
         }
 
         _logger.LogInformation(
@@ -140,7 +160,7 @@ internal sealed class ReverseStorageMigrationCommandHandler
 
         return new ReverseStorageMigrationResult(
             MigrationId: request.MigrationId,
-            TotalRows: rows.Count,
+            TotalRows: totalRows,
             ReversedFromSent: reversedFromSent,
             CancelledFromPending: cancelledFromPending,
             Skipped: skipped,

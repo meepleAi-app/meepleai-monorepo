@@ -4,6 +4,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Moq;
@@ -30,7 +31,7 @@ public sealed class UpsertGlossaryEntryCommandHandlerTests
 
     public UpsertGlossaryEntryCommandHandlerTests()
     {
-        var campaign = GamebookCampaignSession.Create(Guid.NewGuid(), OwnerId, "Test campaign");
+        var campaign = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), OwnerId, "Test campaign");
         _campaignsMock
             .Setup(r => r.GetByIdAsync(CampaignId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(campaign);

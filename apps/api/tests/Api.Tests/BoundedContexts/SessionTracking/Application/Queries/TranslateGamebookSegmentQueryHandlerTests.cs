@@ -7,6 +7,7 @@ using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.Models;
 using Api.Services;
 using Api.Services.LlmClients;
+using Api.SharedKernel.Domain.ValueObjects;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -157,7 +158,7 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         var glossaryRepo = new FakeGlossaryRepo();
 
         var ownerId = Guid.NewGuid();
-        var campaign = GamebookCampaignSession.Create(Guid.NewGuid(), ownerId, "Nanolith Campaign");
+        var campaign = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "Nanolith Campaign");
         campaignRepo.Store.Add(campaign);
 
         // Build artifact in Segmented state with §47

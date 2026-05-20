@@ -2,6 +2,7 @@ using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.SharedKernel.Domain.ValueObjects;
 using MediatR;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Commands;
@@ -19,21 +20,23 @@ public class CreateGamebookCampaignHandler : IRequestHandler<CreateGamebookCampa
 
     public async Task<GamebookCampaignDto> Handle(CreateGamebookCampaignCommand cmd, CancellationToken cancellationToken)
     {
-        var session = GamebookCampaignSession.Create(cmd.GameId, cmd.OwnerUserId, cmd.Title);
+        // A0.2 (#1320): bare Guid cmd.GameId is still a SharedGame reference at the
+        // wire level; wrap into GameRef.Shared until command DTO is updated upstream.
+        var session = GamebookCampaignSession.Create(GameRef.Shared(cmd.GameId), cmd.OwnerUserId, cmd.Title);
         await _repo.AddAsync(session, cancellationToken).ConfigureAwait(false);
         await _repo.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Issue #1292 (AC-6.2): notify gamebook index cache so the new campaign
         // appears within 500ms on the next GET /api/v1/gamebooks for the owner.
         await _mediator.Publish(
-            new GamebookCampaignCreatedDomainEvent(session.Id, session.GameId, session.OwnerUserId),
+            new GamebookCampaignCreatedDomainEvent(session.Id, session.GameRef.Id, session.OwnerUserId),
             cancellationToken).ConfigureAwait(false);
 
         return MapToDto(session);
     }
 
     internal static GamebookCampaignDto MapToDto(GamebookCampaignSession s) => new(
-        s.Id, s.GameId, s.OwnerUserId, s.Title,
+        s.Id, s.GameRef.Id, s.OwnerUserId, s.Title,
         s.Progress.CurrentParagraph, s.Progress.History, s.Progress.LastReadAt,
         s.CreatedAt, s.UpdatedAt);
 }

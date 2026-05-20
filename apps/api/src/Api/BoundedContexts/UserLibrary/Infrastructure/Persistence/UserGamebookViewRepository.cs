@@ -1,5 +1,6 @@
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
@@ -40,19 +41,24 @@ internal sealed class UserGamebookViewRepository : IUserGamebookViewRepository
                          where entry.UserId == userId && entry.SharedGameId != null
                          join shared in _dbContext.SharedGames.AsNoTracking()
                              on entry.SharedGameId equals shared.Id
+                         // A0.2 (#1320): match on owned GameRef columns; constrain Kind=Shared
+                         // because the catalog join only covers shared-game library entries.
                          let hasActiveCampaign = _dbContext.GamebookCampaignSessions
                              .Any(c => c.OwnerUserId == userId
-                                 && c.GameId == entry.SharedGameId!.Value
+                                 && c.GameRef.Kind == GameRefKind.Shared
+                                 && c.GameRef.Id == entry.SharedGameId!.Value
                                  && !c.IsDeleted)
                          where hasActiveCampaign || entry.PrivateGameId != null
                          let latestCampaignUpdate = _dbContext.GamebookCampaignSessions
                              .Where(c => c.OwnerUserId == userId
-                                 && c.GameId == entry.SharedGameId!.Value
+                                 && c.GameRef.Kind == GameRefKind.Shared
+                                 && c.GameRef.Id == entry.SharedGameId!.Value
                                  && !c.IsDeleted)
                              .Max(c => (DateTime?)c.UpdatedAt.UtcDateTime)
                          let sessionsCount = _dbContext.GamebookCampaignSessions
                              .Count(c => c.OwnerUserId == userId
-                                 && c.GameId == entry.SharedGameId!.Value
+                                 && c.GameRef.Kind == GameRefKind.Shared
+                                 && c.GameRef.Id == entry.SharedGameId!.Value
                                  && !c.IsDeleted)
                          let chunkCount = _dbContext.TextChunks
                              .Count(t => t.SharedGameId == entry.SharedGameId!.Value)

@@ -2,6 +2,7 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
 
@@ -35,7 +36,7 @@ public sealed class UpdateGamebookProgressHandlerTests
         var repo = new FakeRepo();
         var handler = new UpdateGamebookProgressHandler(repo);
         var userId = Guid.NewGuid();
-        var session = GamebookCampaignSession.Create(Guid.NewGuid(), userId, "Test Campaign");
+        var session = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), userId, "Test Campaign");
         repo.Store.Add(session);
         return (repo, handler, session);
     }

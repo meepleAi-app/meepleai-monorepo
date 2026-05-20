@@ -22,7 +22,13 @@ internal class GamebookCampaignSessionEntityConfiguration : IEntityTypeConfigura
 
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasColumnName("id");
-        builder.Property(e => e.GameId).HasColumnName("game_id").IsRequired(); // refactored in Task A0.2 → GameRef
+        // A0.2 (#1320): GameRef discriminator (owned value object → 2 scalar columns).
+        // Replaces bare `Guid GameId` to align with the cross-BC GameRef refactor.
+        builder.OwnsOne(e => e.GameRef, gr =>
+        {
+            gr.Property(p => p.Id).HasColumnName("game_ref_id").IsRequired();
+            gr.Property(p => p.Kind).HasColumnName("game_ref_kind").HasConversion<short>().IsRequired();
+        });
         builder.Property(e => e.OwnerUserId).HasColumnName("owner_user_id").IsRequired();
         builder.Property(e => e.Title).HasColumnName("title").HasMaxLength(200).IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
@@ -42,8 +48,13 @@ internal class GamebookCampaignSessionEntityConfiguration : IEntityTypeConfigura
                     (JsonSerializerOptions?)null),
                 v => DeserializeProgress(v));
 
-        builder.HasIndex(e => new { e.OwnerUserId, e.GameId, e.IsDeleted })
-            .HasDatabaseName("ix_gamebook_campaign_sessions_owner_game");
+        // A0.2 (#1320): index over (owner_user_id, game_ref_kind, game_ref_id, is_deleted) is
+        // declared via raw SQL in the migration because composite indexes spanning both the
+        // parent entity (owner_user_id, is_deleted) AND owned-type columns (game_ref_kind,
+        // game_ref_id) cannot be expressed cleanly via HasIndex(...) in EF Core 9 — owned-type
+        // properties are not addressable from the parent EntityTypeBuilder.
+        // The old `ix_gamebook_campaign_sessions_owner_game` index (on game_id) is dropped in
+        // the same migration. See migration RefactorGamebookGameIdToGameRef.
 
         builder.HasQueryFilter(e => !e.IsDeleted);
     }

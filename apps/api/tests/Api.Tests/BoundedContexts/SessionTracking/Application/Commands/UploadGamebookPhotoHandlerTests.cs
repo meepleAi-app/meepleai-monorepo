@@ -5,6 +5,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
 
@@ -75,7 +76,7 @@ public sealed class UploadGamebookPhotoHandlerTests
     }
 
     private static GamebookCampaignSession BuildCampaign(Guid ownerId) =>
-        GamebookCampaignSession.Create(Guid.NewGuid(), ownerId, "Test Campaign");
+        GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "Test Campaign");
 
     // ── Tests ─────────────────────────────────────────────────────────────────
 

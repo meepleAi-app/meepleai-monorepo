@@ -4,6 +4,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
+using Api.SharedKernel.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
 
@@ -100,7 +101,7 @@ public sealed class SegmentGamebookPhotoHandlerTests
     }
 
     private static GamebookCampaignSession BuildCampaign(Guid ownerId) =>
-        GamebookCampaignSession.Create(Guid.NewGuid(), ownerId, "Test Campaign");
+        GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "Test Campaign");
 
     private static GamebookPhotoArtifact BuildArtifact(Guid campaignId) =>
         GamebookPhotoArtifact.Create(campaignId, $"gamebook-photos/{campaignId}/test", GamebookPageType.Storybook);

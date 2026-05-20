@@ -17,7 +17,9 @@ internal sealed class GamebookCampaignSessionRepository : IGamebookCampaignSessi
     public async Task<IReadOnlyList<GamebookCampaignSession>> ListByOwnerAsync(Guid ownerUserId, Guid? gameId, CancellationToken ct = default)
     {
         var q = _db.GamebookCampaignSessions.Where(x => x.OwnerUserId == ownerUserId);
-        if (gameId.HasValue) q = q.Where(x => x.GameId == gameId.Value);
+        // A0.2 (#1320): gameId filter still uses bare Guid at the wire level;
+        // match on GameRef.Id regardless of Kind for backward compatibility.
+        if (gameId.HasValue) q = q.Where(x => x.GameRef.Id == gameId.Value);
         return await q.OrderByDescending(x => x.UpdatedAt).ToListAsync(ct).ConfigureAwait(false);
     }
 

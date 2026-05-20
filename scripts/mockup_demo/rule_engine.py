@@ -18,9 +18,20 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from scripts.mockup_demo.clickable_extractor import Clickable
+from scripts.mockup_demo.fuzzy_heuristic import score_candidates
 
 _DATA = Path(__file__).parent / "data" / "canonical_nav.json"
 _NAV = json.loads(_DATA.read_text(encoding="utf-8"))
+
+_CATALOG: list[str] | None = None
+
+
+def _catalog() -> list[str]:
+    global _CATALOG
+    if _CATALOG is None:
+        mockups_dir = Path(__file__).resolve().parents[2] / "admin-mockups" / "design_files"
+        _CATALOG = sorted(p.name for p in mockups_dir.glob("*.html"))
+    return _CATALOG
 
 
 @dataclass
@@ -93,5 +104,15 @@ def resolve_destination(click: Clickable) -> Decision:
                     dest, "detail-action-keyword", 0.80,
                     f"text '{click.text}' contains keyword '{keyword}'"
                 )
+
+    # 7. fuzzy-heuristic
+    if click.text and len(click.text.strip()) >= 3:
+        scored = score_candidates(click.text, _catalog())
+        if scored and scored[0][1] >= 0.7:
+            dest, score = scored[0]
+            return Decision(
+                dest, "fuzzy-heuristic", score,
+                f"fuzzy match '{click.text}' → '{dest}' (score {score:.2f})"
+            )
 
     return Decision(None, "no-match", 0.0, "no rule matched")

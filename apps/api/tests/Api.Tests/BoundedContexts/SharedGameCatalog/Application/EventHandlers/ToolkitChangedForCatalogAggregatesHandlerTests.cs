@@ -148,10 +148,11 @@ public sealed class ToolkitChangedForCatalogAggregatesHandlerTests
     [Fact]
     public async Task Handle_ToolkitWithSharedGameLinkage_InvalidatesPerGameTag()
     {
-        // Wave A.4 — verify that when a Toolkit is linked through Game.SharedGameId
+        // Wave A.4 — verify that when a Toolkit is linked to a SharedGame
         // the per-game detail cache (`shared-game:{id}`) is also evicted.
+        // Post-Phase2d (#1345): toolkit.GameId IS shared_games.id directly
+        // (no more legacy Game.SharedGameId bridge).
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
-        var sharedGameId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
 
         db.SharedGames.Add(new SharedGameEntity
@@ -165,7 +166,7 @@ public sealed class ToolkitChangedForCatalogAggregatesHandlerTests
         await db.SaveChangesAsync();
 
         var cache = CreateHybridCache();
-        var perGameTag = $"shared-game:{sharedGameId}";
+        var perGameTag = $"shared-game:{gameId}";
 
         await cache.GetOrCreateAsync<string>(
             key: "detail-cache-key",

@@ -505,6 +505,10 @@ internal static class KnowledgeBaseServiceExtensions
         // Phase D (2026-05-19 multi-book gamebook plan): rule-based + LLM-fallback
         // role classifier for ingestion-time text_chunks.role_tags population.
         services.AddScoped<IRoleClassifierService, RoleClassifierService>();
+
+        // Phase D5 (2026-05-19 multi-book gamebook plan): query-time intent classifier
+        // (regex-only, no LLM). Consumed by D6 retrieval boost.
+        services.AddScoped<IIntentClassifierService, IntentClassifierService>();
     }
 
     private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)

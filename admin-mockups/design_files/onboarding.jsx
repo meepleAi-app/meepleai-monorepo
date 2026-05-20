@@ -25,9 +25,9 @@ const AGENTS = [
 ];
 
 const ACTIONS = [
-  { id: 'event',   em: '🎉', title: 'Crea la prima serata', desc: 'Pianifica con amici',  entityClass: 'e-event',  href: 'home.html' },
-  { id: 'library', em: '🎲', title: 'Esplora la library',   desc: 'Vedi i tuoi giochi',   entityClass: 'e-game',   href: 'home.html' },
-  { id: 'chat',    em: '💬', title: 'Chatta con un agente', desc: 'Prova una domanda',     entityClass: 'e-agent',  href: 'home.html' },
+  { id: 'event',   em: '🎉', title: 'Crea la prima serata', desc: 'Pianifica con amici',  entityClass: 'e-event',  href: 'sp4-dashboard.html' },
+  { id: 'library', em: '🎲', title: 'Esplora la library',   desc: 'Vedi i tuoi giochi',   entityClass: 'e-game',   href: 'sp4-dashboard.html' },
+  { id: 'chat',    em: '💬', title: 'Chatta con un agente', desc: 'Prova una domanda',     entityClass: 'e-agent',  href: 'sp4-dashboard.html' },
 ];
 
 // Entity accent per step (1-3)
@@ -370,7 +370,7 @@ function OnboardingApp() {
   }
   function handleBack() { go(step - 1, -1); }
   function handleSkip() { go(4, 1); }
-  function handleHome() { window.location.href = 'home.html'; }
+  function handleHome() { window.location.href = 'sp4-dashboard.html'; }
   function handleChoose(href) { window.location.href = href; }
 
   function toggleGame(id) {

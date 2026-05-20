@@ -68,6 +68,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
+            SharedGameId = gameId,
             FileName = "rulebook.pdf",
             FilePath = "/uploads/rulebook.pdf",
             UploadedByUserId = UserId,
@@ -101,6 +102,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
+            SharedGameId = gameId,
             FileName = "rulebook.pdf",
             FilePath = "/uploads/rulebook.pdf",
             UploadedByUserId = UserId,
@@ -121,25 +123,26 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // SharedGameId resolution: wizard passes SharedGameId, handler resolves to Game.Id
+    // SharedGameId direct resolution (post-Phase2d #1345):
+    // games table is gone; command.GameId IS the SharedGame.Id used for both lookup and PDF FK.
     // ────────────────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Handle_WithSharedGameId_ResolvesToActualGameId()
     {
-        // Arrange
+        // Arrange: SharedGame exists; PDF references it via SharedGameId
         var sharedGameId = Guid.NewGuid();
-        var actualGameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        // Game entity links SharedGameId → actual Game.Id
         _dbContext.SharedGames.Add(new SharedGameEntity
         {
-            Id = actualGameId,
-            Title = "Catan" });
+            Id = sharedGameId,
+            Title = "Catan"
+        });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
-            Id = pdfId,   // PDF references actual Game.Id
+            Id = pdfId,
+            SharedGameId = sharedGameId,
             FileName = "catan.pdf",
             FilePath = "/uploads/catan.pdf",
             UploadedByUserId = UserId,
@@ -148,14 +151,13 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         await _dbContext.SaveChangesAsync();
         SetupDefaultPipelineMocks();
 
-        // Command uses SharedGameId (as the wizard does)
         var command = new LaunchAdminPdfProcessingCommand(
             GameId: sharedGameId, PdfDocumentId: pdfId, LaunchedByUserId: UserId);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert: handler resolved SharedGameId and found the PDF
+        // Assert: handler found SharedGame + PDF directly
         result.Status.Should().Be("processing");
         result.Priority.Should().Be("Admin");
 
@@ -253,6 +255,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
+            SharedGameId = gameId,
             FileName = "spirit-island.pdf",
             FilePath = "/uploads/spirit-island.pdf",
             UploadedByUserId = UserId
@@ -293,6 +296,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
+            SharedGameId = gameId,
             FileName = "everdell.pdf",
             FilePath = "/uploads/everdell.pdf",
             UploadedByUserId = UserId
@@ -348,6 +352,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
+            SharedGameId = gameId,
             FileName = "arkham.pdf",
             FilePath = "/uploads/arkham.pdf",
             UploadedByUserId = UserId

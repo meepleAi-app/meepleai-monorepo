@@ -52,6 +52,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<UserSessionEntity> UserSessions => Set<UserSessionEntity>();
     public DbSet<OAuthAccountEntity> OAuthAccounts => Set<OAuthAccountEntity>(); // AUTH-06
     public DbSet<GameEntity> Games => Set<GameEntity>();
+    public DbSet<BoundedContexts.GameManagement.Domain.Entities.GameBook> GameBooks => Set<BoundedContexts.GameManagement.Domain.Entities.GameBook>(); // Gamebook multi-book generalization (2026-05-19)
     public DbSet<GameSessionEntity> GameSessions => Set<GameSessionEntity>(); // DDD-PHASE2: GameSession aggregate
     public DbSet<PlayRecordEntity> PlayRecords => Set<PlayRecordEntity>(); // ISSUE-3888: Play history tracking
     public DbSet<RecordPlayerEntity> RecordPlayers => Set<RecordPlayerEntity>(); // ISSUE-3888: Play record players

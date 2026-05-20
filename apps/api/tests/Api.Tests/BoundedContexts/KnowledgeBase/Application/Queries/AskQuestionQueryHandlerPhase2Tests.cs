@@ -456,6 +456,8 @@ public class AskQuestionQueryHandlerPhase2Tests
             _mockHouseRuleMatcher.Object,
             _mockPricingEngine.Object,
             _mockTranslationService.Object,
+            // D7: use the real classifier (pure, stateless, no dependencies).
+            new IntentClassifierService(),
             BuildRoutingMonitor(routingOverrides ?? new Api.Configuration.LlmQueryComplexityRoutingOptions()),
             _mockLogger.Object);
 

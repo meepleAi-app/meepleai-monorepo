@@ -232,6 +232,8 @@ public class AskQuestionQueryHandlerSecurityTests
             CreatePermissiveHouseRuleMatcherMock(),
             CreatePermissivePricingEngineMock(),
             CreateNoOpTranslationServiceMock(),
+            // D7: use the real classifier (pure, stateless, no dependencies).
+            new IntentClassifierService(),
             routingOptionsMonitor.Object,
             _mockLogger.Object);
     }

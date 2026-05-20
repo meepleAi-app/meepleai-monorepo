@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -51,6 +52,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly IHouseRuleMatcher _houseRuleMatcher;
     private readonly IPricingEngine _pricingEngine;
     private readonly IGenericTranslationService _genericTranslationService;
+    private readonly IIntentClassifierService _intentClassifier;
     private readonly IOptionsMonitor<LlmQueryComplexityRoutingOptions> _routingOptions;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
 
@@ -71,6 +73,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         IHouseRuleMatcher houseRuleMatcher,
         IPricingEngine pricingEngine,
         IGenericTranslationService genericTranslationService,
+        IIntentClassifierService intentClassifier,
         IOptionsMonitor<LlmQueryComplexityRoutingOptions> routingOptions,
         ILogger<AskQuestionQueryHandler> logger)
     {
@@ -90,6 +93,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _houseRuleMatcher = houseRuleMatcher ?? throw new ArgumentNullException(nameof(houseRuleMatcher));
         _pricingEngine = pricingEngine ?? throw new ArgumentNullException(nameof(pricingEngine));
         _genericTranslationService = genericTranslationService ?? throw new ArgumentNullException(nameof(genericTranslationService));
+        _intentClassifier = intentClassifier ?? throw new ArgumentNullException(nameof(intentClassifier));
         _routingOptions = routingOptions ?? throw new ArgumentNullException(nameof(routingOptions));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -410,6 +414,14 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         float[]? precomputedQueryVector,
         CancellationToken cancellationToken)
     {
+        // Phase D (D7): classify user intent into GameBookRole tag(s) so the hybrid re-ranker
+        // can boost chunks whose role_tags overlap (D6). The classifier is rule-based, sync,
+        // and cheap (~µs); failure modes default to RulesReference.
+        var queryRoleHint = _intentClassifier.ClassifyIntent(query.Question);
+        _logger.LogDebug(
+            "[AskQuestionHandler] Intent classification: Question={Question}, RoleHint={RoleHint}",
+            query.Question, queryRoleHint);
+
         var searchQuery = new SearchQuery(
             GameId: query.GameId,
             Query: query.Question,
@@ -417,7 +429,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             MinScore: 0.55,
             SearchMode: query.SearchMode ?? "hybrid",
             Language: query.Language,
-            QueryVector: precomputedQueryVector // Issue #563: reuse cache-lookup vector when available
+            QueryVector: precomputedQueryVector, // Issue #563: reuse cache-lookup vector when available
+            QueryRoleHint: queryRoleHint // Phase D (D6): bias re-ranker toward role-matching chunks
         );
 
         var searchResults = await _searchQueryHandler.Handle(searchQuery, cancellationToken).ConfigureAwait(false);

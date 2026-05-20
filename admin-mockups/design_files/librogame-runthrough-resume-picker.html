@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MeepleAI — Nanolith Runthrough · Resume Picker</title>
+<title>MeepleAI — Librogame Runthrough · Resume Picker</title>
 <!--
-  Mockup: nanolith-runthrough-resume-picker
-  Route:  /library/{gameId}/play  (gameId = nanolith)
+  Mockup: librogame-runthrough-resume-picker
+  Route:  /library/{gameId}/play  (gameId = librogame)
   Scope:  Phase A runthrough — dispatcher 4 stati di campagna (issue #835/#838)
   Stati:  state-01-first-time      (EmptyFirstTime,  data.length === 0)
           state-02-single-resume   (ResumeHero,      data.length === 1 && !isStale)
@@ -354,8 +354,8 @@
 <body>
 
 <header class="top">
-  <h1>Nanolith Runthrough · Resume Picker (4 stati)</h1>
-  <span class="route">/library/nanolith/play</span>
+  <h1>Librogame Runthrough · Resume Picker (4 stati)</h1>
+  <span class="route">/library/librogame/play</span>
   <span class="spacer"></span>
   <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
 </header>
@@ -369,15 +369,15 @@
   <section class="state-section" aria-labelledby="s1">
     <span class="label">Stato 01 · First Time<span class="cmp">EmptyFirstTime</span></span>
     <h2 id="s1">Mai giocato — Inizia la tua prima campagna</h2>
-    <p class="desc">Aaron apre `/library/nanolith/play` per la prima volta. Nessuna campagna esistente. Onboarding-grade hero + 3 feature card + CTA primary "Inizia campagna".</p>
+    <p class="desc">Aaron apre `/library/librogame/play` per la prima volta. Nessuna campagna esistente. Onboarding-grade hero + 3 feature card + CTA primary "Inizia campagna".</p>
 
     <div class="frames">
       <div class="phone" role="region" aria-label="Mobile – first time">
         <span class="frame-label">Mobile · 375px</span>
         <div class="phone-sbar"><span>20:42</span><span class="ind">📶 🔋 91%</span></div>
         <div class="appbar">
-          <button class="back" aria-label="Torna a Nanolith">←</button>
-          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+          <button class="back" aria-label="Torna a Eldoria">←</button>
+          <span class="crumbs"><strong>Eldoria</strong> · Libro game</span>
         </div>
         <div class="content">
           <div class="first-time">
@@ -409,17 +409,17 @@
               </div>
             </div>
 
-            <button class="cta-primary" type="button">📖 Inizia campagna</button>
+            <button class="cta-primary" type="button" onclick="window.location.href='librogame-runthrough-game-onboarding.html'" /* DEMO-NAV */>📖 Inizia campagna</button>
           </div>
         </div>
       </div>
 
       <div class="desktop" role="region" aria-label="Desktop – first time">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play</span></div>
         <div class="appbar">
           <button class="back">←</button>
-          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+          <span class="crumbs"><strong>Eldoria</strong> · Libro game</span>
         </div>
         <div class="content" style="display: flex; align-items: center; justify-content: center;">
           <div class="first-time" style="padding: var(--s-7);">
@@ -454,7 +454,7 @@
         <div class="phone-sbar"><span>20:42</span><span class="ind">📶 🔋 91%</span></div>
         <div class="appbar">
           <button class="back">←</button>
-          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+          <span class="crumbs"><strong>Eldoria</strong> · Libro game</span>
         </div>
         <div class="content" style="padding: 0;">
           <article class="resume-hero" aria-labelledby="rh1">
@@ -472,7 +472,7 @@
               <span class="num">§289</span>
               <div class="lbl">
                 <div class="v">Ultimo paragrafo letto</div>
-                <div class="s">Capitolo 4 — La grotta dei Reaver</div>
+                <div class="s">Capitolo 4 — La grotta dei Goblin</div>
               </div>
             </div>
 
@@ -483,7 +483,7 @@
             </div>
 
             <div class="resume-actions">
-              <button class="btn-fill" type="button" aria-describedby="rh1">▶ Riprendi</button>
+              <button class="btn-fill" type="button" aria-describedby="rh1" onclick="window.location.href='librogame-runthrough-resume-picker.html'" /* DEMO-NAV */>▶ Riprendi</button>
               <button class="btn-out" type="button">⋯ Opzioni</button>
             </div>
           </article>
@@ -491,17 +491,17 @@
           <div class="secondary-row">
             <span class="ico" aria-hidden="true">+</span>
             <span class="l">Vuoi giocare con un altro gruppo?</span>
-            <button class="link-btn">Nuova campagna</button>
+            <button class="link-btn" onclick="window.location.href='librogame-runthrough-game-onboarding.html'" /* DEMO-NAV */>Nuova campagna</button>
           </div>
         </div>
       </div>
 
       <div class="desktop" role="region" aria-label="Desktop – single resume">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play</span></div>
         <div class="appbar">
           <button class="back">←</button>
-          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+          <span class="crumbs"><strong>Eldoria</strong> · Libro game</span>
         </div>
         <div class="content" style="max-width: 720px; margin: 0 auto;">
           <article class="resume-hero">
@@ -515,7 +515,7 @@
               <span class="num">§289</span>
               <div class="lbl">
                 <div class="v">Ultimo paragrafo letto</div>
-                <div class="s">Capitolo 4 — La grotta dei Reaver</div>
+                <div class="s">Capitolo 4 — La grotta dei Goblin</div>
               </div>
             </div>
             <div class="pips">
@@ -553,7 +553,7 @@
         <div class="phone-sbar"><span>20:42</span><span class="ind">📶 🔋 91%</span></div>
         <div class="appbar">
           <button class="back">←</button>
-          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+          <span class="crumbs"><strong>Eldoria</strong> · Libro game</span>
         </div>
         <div class="content" style="padding: 0;">
           <div class="multi-header">
@@ -610,10 +610,10 @@
 
       <div class="desktop" role="region" aria-label="Desktop – multi campaign">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play</span></div>
         <div class="appbar">
           <button class="back">←</button>
-          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+          <span class="crumbs"><strong>Eldoria</strong> · Libro game</span>
         </div>
         <div class="content" style="padding: 0; max-width: 720px; margin: 0 auto;">
           <div class="multi-header">
@@ -677,7 +677,7 @@
         <div class="phone-sbar"><span>20:42</span><span class="ind">📶 🔋 91%</span></div>
         <div class="appbar">
           <button class="back">←</button>
-          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+          <span class="crumbs"><strong>Eldoria</strong> · Libro game</span>
         </div>
         <div class="content" style="padding: 0;">
           <article class="stale-warning" role="alert" aria-labelledby="sw1">
@@ -695,9 +695,9 @@
             <p class="question">Vuoi riprenderla, archiviarla, o iniziare una nuova campagna pulita?</p>
 
             <div class="stale-actions">
-              <button class="btn-fill" type="button">▶ Riprendi comunque</button>
+              <button class="btn-fill" type="button" onclick="window.location.href='librogame-runthrough-resume-picker.html'" /* DEMO-NAV */>▶ Riprendi comunque</button>
               <button class="btn-out" type="button">📦 Archivia + Nuova campagna</button>
-              <button class="btn-out" type="button">✨ Solo nuova (mantieni archivio)</button>
+              <button class="btn-out" type="button" onclick="window.location.href='librogame-runthrough-play-session.html'" /* DEMO-NAV */>✨ Solo nuova (mantieni archivio)</button>
             </div>
           </article>
         </div>
@@ -705,10 +705,10 @@
 
       <div class="desktop" role="region" aria-label="Desktop – stale warning">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play</span></div>
         <div class="appbar">
           <button class="back">←</button>
-          <span class="crumbs"><strong>Nanolith</strong> · Libro game</span>
+          <span class="crumbs"><strong>Eldoria</strong> · Libro game</span>
         </div>
         <div class="content" style="display: flex; align-items: center; justify-content: center; padding: 0;">
           <article class="stale-warning" role="alert" style="max-width: 480px; margin: 0;">

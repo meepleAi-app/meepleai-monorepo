@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MeepleAI — Nanolith Runthrough · Library Search</title>
+<title>MeepleAI — Librogame Runthrough · Library Search</title>
 <!--
-  Mockup: nanolith-runthrough-library-search
+  Mockup: librogame-runthrough-library-search
   Route:  /library
-  Scope:  Phase A runthrough — entry-point libreria, Aaron cerca/filtra Nanolith.
+  Scope:  Phase A runthrough — entry-point libreria, Aaron cerca/filtra Eldoria.
   UI:     MeepleCard entity="game" variant="grid" + ManaPips canonical cluster
           (8px dot + floating count badge, max 3 visible + overflow "+N").
-  Stati:  state-01-default-grid     (12 giochi, Nanolith con badge libro-game)
+  Stati:  state-01-default-grid     (12 giochi, Eldoria con badge libro-game)
           state-02-search-filtered  ("nano" → 1 risultato + highlight match)
           state-03-empty-no-match   ("zelda" → empty state)
           state-04-filter-librogame (chip "libro game" attivo)
   Persona: Aaron (badsworm@gmail.com), 30 min pre-sera gruppo A (Marco/Giulia/Luca).
-  Vincolo A1: trovare Nanolith ≤ 3 tap / ≤ 5s.
+  Vincolo A1: trovare Eldoria ≤ 3 tap / ≤ 5s.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -165,7 +165,7 @@
 <body>
 
 <header class="top">
-  <h1>Nanolith Runthrough · Library Search</h1>
+  <h1>Librogame Runthrough · Library Search</h1>
   <span class="route">/library</span>
   <span class="spacer"></span>
   <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
@@ -176,8 +176,8 @@
   <!-- STATO 01 · DEFAULT GRID -->
   <section class="state-section" aria-labelledby="s1">
     <span class="label">Stato 01 · Default Grid<span class="cmp">LibraryHub + MeepleCard</span></span>
-    <h2 id="s1">Libreria 12 giochi — Nanolith con badge libro-game</h2>
-    <p class="desc">Aaron loggato apre /library. Grid 12 giochi, Nanolith above-the-fold con badge entity=session "📖 libro-game" + ManaPips canonical (kb 142 · chat 8 · session 0 · agent 1 → +1 overflow). Discoverable in &lt; 3s.</p>
+    <h2 id="s1">Libreria 12 giochi — Eldoria con badge libro-game</h2>
+    <p class="desc">Aaron loggato apre /library. Grid 12 giochi, Eldoria above-the-fold con badge entity=session "📖 libro-game" + ManaPips canonical (kb 142 · chat 8 · session 0 · agent 1 → +1 overflow). Discoverable in &lt; 3s.</p>
 
     <div class="legend" role="group" aria-label="Legenda ManaPips">
       <span class="item"><span class="d kb"></span>kb (pagine indicizzate)</span>
@@ -199,9 +199,9 @@
           <span class="chip">⚔️ Coop</span>
         </div>
         <div class="grid">
-          <article class="mcard highlight" aria-label="Nanolith — libro game">
+          <article class="mcard highlight" aria-label="Eldoria — libro game">
             <div class="cover nano"><span class="corner-badge">📖 libro game</span></div>
-            <div class="body"><h3 class="ti">Nanolith</h3><div class="pub">Side Room · 2024</div></div>
+            <div class="body"><h3 class="ti">Eldoria</h3><div class="pub">Side Room · 2024</div></div>
             <div class="manapips" role="list" aria-label="Entità collegate">
               <span class="manapip kb"      role="listitem" title="kb · 142"><span class="badge">142</span></span>
               <span class="manapip chat"    role="listitem" title="chat · 8"><span class="badge">8</span></span>
@@ -243,7 +243,7 @@
             <div class="appbar"><h2>Libreria · 12 giochi</h2><span class="count">Aaron · badsworm</span></div>
             <div class="search-bar"><div class="search-input"><span class="icon">🔍</span><input placeholder="Cerca…" readonly></div></div>
             <div class="grid desk">
-              <article class="mcard highlight"><div class="cover nano"><span class="corner-badge">📖 libro game</span></div><div class="body"><h3 class="ti">Nanolith</h3><div class="pub">Side Room · 2024</div></div><div class="manapips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">8</span></span><span class="manapip session empty"></span><span class="manapip-overflow">+1</span></div></article>
+              <article class="mcard highlight"><div class="cover nano"><span class="corner-badge">📖 libro game</span></div><div class="body"><h3 class="ti">Eldoria</h3><div class="pub">Side Room · 2024</div></div><div class="manapips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">8</span></span><span class="manapip session empty"></span><span class="manapip-overflow">+1</span></div></article>
               <article class="mcard"><div class="cover gloom"></div><div class="body"><h3 class="ti">Gloomhaven</h3><div class="pub">Cephalofair · 2017</div></div><div class="manapips"><span class="manapip kb"><span class="badge">89</span></span><span class="manapip chat"><span class="badge">3</span></span><span class="manapip session"><span class="badge">1</span></span></div></article>
               <article class="mcard"><div class="cover cata"></div><div class="body"><h3 class="ti">Catan</h3><div class="pub">Kosmos · 1995</div></div><div class="manapips"><span class="manapip kb"><span class="badge">24</span></span></div></article>
               <article class="mcard"><div class="cover ark"></div><div class="body"><h3 class="ti">Arkham Horror</h3><div class="pub">FFG · 2018</div></div><div class="manapips"><span class="manapip kb"><span class="badge">56</span></span><span class="manapip chat"><span class="badge">2</span></span></div></article>
@@ -346,7 +346,7 @@
   <!-- STATO 04 · FILTER LIBRO-GAME -->
   <section class="state-section" aria-labelledby="s4">
     <span class="label">Stato 04 · Filter libro-game<span class="cmp">LibraryFilterChip</span></span>
-    <h2 id="s4">Aaron filtra per "libro game" — solo Nanolith</h2>
+    <h2 id="s4">Aaron filtra per "libro game" — solo Eldoria</h2>
     <p class="desc">Discoverability alternativa: click chip "📖 Libro game". Counter "1 di 12". Chip X per remove.</p>
 
     <div class="frames">
@@ -362,7 +362,7 @@
           <span class="chip">⚔️ Coop</span>
         </div>
         <div class="grid">
-          <article class="mcard highlight"><div class="cover nano"><span class="corner-badge">📖 libro game</span></div><div class="body"><h3 class="ti">Nanolith</h3><div class="pub">Side Room · 2024</div></div><div class="manapips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">8</span></span><span class="manapip session empty"></span><span class="manapip-overflow">+1</span></div></article>
+          <article class="mcard highlight"><div class="cover nano"><span class="corner-badge">📖 libro game</span></div><div class="body"><h3 class="ti">Eldoria</h3><div class="pub">Side Room · 2024</div></div><div class="manapips"><span class="manapip kb"><span class="badge">142</span></span><span class="manapip chat"><span class="badge">8</span></span><span class="manapip session empty"></span><span class="manapip-overflow">+1</span></div></article>
         </div>
         <div style="padding: var(--s-3) var(--s-4); text-align: center; color: var(--text-muted); font-size: var(--fs-xs); font-family: var(--f-mono);">Filtro: solo libro game · 11 esclusi</div>
       </div>
@@ -381,7 +381,7 @@
           <div class="desktop-main">
             <div class="appbar"><h2>Libreria · 1 risultato</h2><span class="count">filtro: libro-game</span></div>
             <div class="grid desk">
-              <article class="mcard highlight"><div class="cover nano"><span class="corner-badge">📖 libro game</span></div><div class="body"><h3 class="ti">Nanolith</h3><div class="pub">Side Room · 2024</div></div><div class="manapips lg"><span class="manapip kb"><span class="badge">142</span></span><span class="lbl kb">kb</span><span class="manapip chat"><span class="badge">8</span></span><span class="lbl chat">chat</span><span class="manapip session empty"></span><span class="lbl session">session</span></div></article>
+              <article class="mcard highlight"><div class="cover nano"><span class="corner-badge">📖 libro game</span></div><div class="body"><h3 class="ti">Eldoria</h3><div class="pub">Side Room · 2024</div></div><div class="manapips lg"><span class="manapip kb"><span class="badge">142</span></span><span class="lbl kb">kb</span><span class="manapip chat"><span class="badge">8</span></span><span class="lbl chat">chat</span><span class="manapip session empty"></span><span class="lbl session">session</span></div></article>
             </div>
           </div>
         </div>

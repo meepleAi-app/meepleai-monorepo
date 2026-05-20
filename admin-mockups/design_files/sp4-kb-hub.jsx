@@ -308,7 +308,7 @@ const HubDefault = ({ onRowAction }) => (
             <EntityChip type="kb" label="Knowledge Base" sm />
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
-            <a href="#" style={{ color: kbColor(), textDecoration: 'none', fontWeight: 600 }}>
+            <a href="#" style={{ color: kbColor(), textDecoration: 'none', fontWeight: 600 }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-play-session.html'; }, 0); /* DEMO-NAV */ }}>
               ↗ Apri scheda game
             </a>
             <span style={{ margin: '0 6px', opacity: .4 }}>·</span>
@@ -329,7 +329,7 @@ const HubDefault = ({ onRowAction }) => (
             background: kbColor(), color: '#fff',
             border: 'none',
             fontFamily: 'var(--f-display)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-          }}>⟳ Re-index all</button>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-kb-detail.html'; }, 0); /* DEMO-NAV */ }}>⟳ Re-index all</button>
         </div>
       </div>
 
@@ -588,7 +588,7 @@ const ReindexModal = ({ onClose }) => {
               </p>
 
               <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={() => setPhase('running')} style={{
+                <button onClick={(e) => { (() => setPhase('running'))(e); setTimeout(() => { window.location.href = 'sp4-kb-detail.html'; }, 0); /* DEMO-NAV */ }} style={{
                   flex: 1, padding: '11px 16px', borderRadius: 'var(--r-md)',
                   background: kbColor(), color: '#fff', border: 'none',
                   fontFamily: 'var(--f-display)', fontSize: 13, fontWeight: 700,
@@ -633,7 +633,7 @@ const ReindexModal = ({ onClose }) => {
               <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--f-mono)' }}>
                 474 / 1,247 chunks · ~3 min rimanenti
               </div>
-              <button onClick={() => setPhase('done')} style={{
+              <button onClick={(e) => { (() => setPhase('done'))(e); setTimeout(() => { window.location.href = 'sp4-kb-detail.html'; }, 0); /* DEMO-NAV */ }} style={{
                 marginTop: 16, padding: '8px 18px', borderRadius: 'var(--r-md)',
                 background: 'var(--bg-muted)', color: 'var(--text-muted)',
                 border: '1px solid var(--border)',
@@ -766,11 +766,11 @@ const RaptorPanel = ({ tier }) => {
               border: '1px solid var(--border)', opacity: 0.5,
               fontFamily: 'var(--f-display)', fontSize: 13, fontWeight: 700,
               cursor: 'not-allowed',
-            }}>
+            }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-kb-detail.html'; }, 0); /* DEMO-NAV */ }}>
               🔒 Rebuild RAPTOR — Upgrade to Pro
             </button>
             <div style={{ textAlign: 'center', marginTop: 10 }}>
-              <a href="#" style={{ fontSize: 11, color: goldColor(), fontWeight: 600 }}>
+              <a href="#" style={{ fontSize: 11, color: goldColor(), fontWeight: 600 }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-discover.html'; }, 0); /* DEMO-NAV */ }}>
                 Scopri piano Pro →
               </a>
             </div>
@@ -1019,7 +1019,7 @@ const App = () => {
           fontSize: 'var(--fs-sm)', color: 'var(--text-muted)',
           fontFamily: 'var(--f-mono)',
         }}>
-          <a href="00-hub.html" style={{ color: kbColor(), fontWeight: 700 }}>← 00-hub.html</a>
+          <a href="00-hub.html" style={{ color: kbColor(), fontWeight: 700 }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }}>← 00-hub.html</a>
           <span>·</span>
           <span>sp4-kb-detail.jsx (single doc detail)</span>
           <span>·</span>

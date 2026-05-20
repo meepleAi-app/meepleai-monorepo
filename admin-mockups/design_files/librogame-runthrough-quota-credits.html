@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--
   ===================================================================
-  Mockup: nanolith-runthrough-quota-credits
-  Route:  /library/nanolith/play/{campaignId}  (modal overlay)
+  Mockup: librogame-runthrough-quota-credits
+  Route:  /library/librogame/play/{campaignId}  (modal overlay)
           + /account/checkout/success (post-payment redirect)
   Scope:  Phase A runthrough — quota chat esaurita (10/giorno free tier)
           durante la sessione game night. Modal blocca chat input,
@@ -115,22 +115,22 @@
       <div class="canvas-controls">
         <div class="control-group" role="radiogroup" aria-label="Filtra step">
           <label>Step</label>
-          <button class="active" data-step="all">Tutti</button>
+          <button class="active" data-step="all" onclick="window.location.href='librogame-runthrough-play-session.html'" /* DEMO-NAV */>Tutti</button>
           <button data-step="1">1</button>
           <button data-step="2">2</button>
           <button data-step="3">3</button>
           <button data-step="4">4</button>
-          <button data-step="soft">Soft</button>
+          <button data-step="soft" onclick="window.location.href='librogame-runthrough-play-session.html'" /* DEMO-NAV */>Soft</button>
         </div>
         <div class="control-group" role="radiogroup" aria-label="Filtra device">
           <label>Device</label>
-          <button class="active" data-frame="both">Entrambi</button>
+          <button class="active" data-frame="both" onclick="window.location.href='librogame-runthrough-play-session.html'" /* DEMO-NAV */>Entrambi</button>
           <button data-frame="mobile">Mobile</button>
-          <button data-frame="desktop">Desktop</button>
+          <button data-frame="desktop" onclick="window.location.href='librogame-runthrough-play-session.html'" /* DEMO-NAV */>Desktop</button>
         </div>
         <div class="control-group" role="radiogroup" aria-label="Tema">
           <label>Tema</label>
-          <button class="active" data-theme-set="light">Light</button>
+          <button class="active" data-theme-set="light" onclick="window.location.href='librogame-runthrough-play-session.html'" /* DEMO-NAV */>Light</button>
           <button data-theme-set="dark">Dark</button>
         </div>
       </div>

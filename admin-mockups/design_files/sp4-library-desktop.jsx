@@ -115,7 +115,7 @@ const LibraryHero = ({ stats, compact }) => (
             border:'1px solid var(--border-strong)',
             fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 700,
             cursor:'pointer',
-          }}>↓ Importa BGG</button>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-add-game-bgg-step.html'; }, 0); /* DEMO-NAV */ }}>↓ Importa BGG</button>
           <button type="button" aria-label="Esporta" style={{
             padding:'9px 12px', borderRadius:'var(--r-md)',
             background:'var(--bg-card)', color:'var(--text)',
@@ -1061,7 +1061,7 @@ const EmptyLibrary = ({ kind, compact }) => {
             background:'var(--bg)', color:'var(--text)',
             border:'1px solid var(--border-strong)',
             fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 700, cursor:'pointer',
-          }}>↓ Importa da BGG</button>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-add-game-bgg-step.html'; }, 0); /* DEMO-NAV */ }}>↓ Importa da BGG</button>
         </div>
         {/* Suggested */}
         <div style={{ width:'100%', maxWidth: 480 }}>

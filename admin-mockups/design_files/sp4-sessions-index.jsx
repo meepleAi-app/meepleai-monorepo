@@ -520,7 +520,7 @@ const SessionCardList = ({ session, compact }) => {
             }}><span aria-hidden="true">▶</span>Riprendi</button>
           )}
           {isAbandoned && (
-            <button type="button" onClick={(e) => e.stopPropagation()} style={{
+            <button type="button" onClick={(e) => { ((e) => e.stopPropagation())(e); setTimeout(() => { window.location.href = 'librogame-runthrough-resume-picker.html'; }, 0); /* DEMO-NAV */ }} style={{
               padding:'6px 12px', borderRadius:'var(--r-md)',
               background:'transparent', color:'var(--text-sec)',
               border:'1px solid var(--border-strong)',
@@ -711,7 +711,7 @@ const EmptyState = ({ kind, filter, compact }) => {
               padding:'7px 14px', borderRadius:'var(--r-md)',
               background: entityHsl('session'), color:'#fff', border:'none',
               fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 800, cursor:'pointer',
-            }}>▶ Avvia live</button>
+            }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-onboarding.html'; }, 0); /* DEMO-NAV */ }}>▶ Avvia live</button>
           )}
           <button type="button" style={{
             padding:'7px 14px', borderRadius:'var(--r-md)',

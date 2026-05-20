@@ -145,7 +145,7 @@
   </a>
   <span style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--bg-muted);font-family:var(--f-mono);color:var(--text-muted);">SP6 · B · Photo upload wizard</span>
   <div class="spacer"></div>
-  <a href="sp6-libro-game-index.html">← A · Index</a>
+  <a href="librogame-runthrough-game-detail.html" /* DEMO-NAV */>← A · Index</a>
 </nav>
 
 <button class="theme-toggle" id="themeToggle">🌗 <span id="themeLabel">Light</span></button>
@@ -411,7 +411,7 @@ function Step1_Default() {
         ))}
       </div>
       <div className="pu-step-footer">
-        <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }}>
+        <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }} onclick="window.location.href='librogame-runthrough-game-detail.html'" /* DEMO-NAV */>
           Continua →
         </button>
       </div>
@@ -657,7 +657,7 @@ function CameraViewfinder({ variant, capturedCount }) {
         <button
           type="button"
           className="pu-cam-side-btn done"
-          style={{ background: capturedCount > 0 ? entityHsl('toolkit') : 'rgba(255,255,255,.15)' }}
+          style={{ background: capturedCount  onclick="window.location.href='sp4-hub-toolkits.html'" /* DEMO-NAV */> 0 ? entityHsl('toolkit') : 'rgba(255,255,255,.15)' }}
           disabled={capturedCount === 0}
         >
           ✓
@@ -685,7 +685,7 @@ function Step2_Denied() {
       <p className="pu-denied-sub">
         MeepleAI non ha accesso alla fotocamera. Abilita i permessi nelle impostazioni del sistema per scattare le pagine.
       </p>
-      <button type="button" className="pu-cta-primary" style={{ background: entityHsl('event') }}>
+      <button type="button" className="pu-cta-primary" style={{ background: entityHsl('event') }} onclick="window.location.href='settings.html'" /* DEMO-NAV */>
         ⚙️ Apri impostazioni
       </button>
       <button type="button" className="pu-cta-ghost">
@@ -788,7 +788,7 @@ function IndexingScreen({ variant }) {
               Riprenderà automaticamente al ripristino. <span style={{ fontFamily: 'var(--f-mono)', fontSize: 10, opacity: 0.7 }}>G1.4</span>
             </div>
           </div>
-          <button type="button" className="pu-offline-btn">Riprova ora</button>
+          <button type="button" className="pu-offline-btn" onclick="window.location.href='librogame-runthrough-game-detail.html'" /* DEMO-NAV */>Riprova ora</button>
         </div>
       )}
 
@@ -846,14 +846,14 @@ function IndexingScreen({ variant }) {
       {isComplete && (
         <div className="pu-step-footer pu-idx-footer">
           <button type="button" className="pu-cta-secondary">Salva e basta</button>
-          <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }}>
+          <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }} onclick="window.location.href='librogame-runthrough-game-onboarding.html'" /* DEMO-NAV */>
             🎯 Inizia sessione →
           </button>
         </div>
       )}
       {isPartial && (
         <div className="pu-step-footer pu-idx-footer">
-          <button type="button" className="pu-cta-secondary">Salta — uso così</button>
+          <button type="button" className="pu-cta-secondary" onclick="window.location.href='librogame-runthrough-game-detail.html'" /* DEMO-NAV */>Salta — uso così</button>
           <button type="button" className="pu-cta-primary" style={{ background: entityHsl('event') }}>
             📷 Riscatta 3 pagine
           </button>
@@ -877,7 +877,7 @@ function CancelModal() {
           Hai già scattato 24 pagine. Se annulli ora, dovrai ricominciare da capo.
         </p>
         <div className="pu-modal-actions">
-          <button type="button" className="pu-cta-secondary">Continua a indicizzare</button>
+          <button type="button" className="pu-cta-secondary" onclick="window.location.href='librogame-runthrough-game-detail.html'" /* DEMO-NAV */>Continua a indicizzare</button>
           <button type="button" className="pu-cta-primary" style={{ background: entityHsl('event') }}>
             Sì, annulla
           </button>
@@ -901,7 +901,7 @@ function DesktopDropFallback({ step, variant }) {
         Su desktop puoi anche caricare foto già scattate.<br/>
         Formati supportati: JPG, PNG, HEIC · Max 50 file
       </p>
-      <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }}>
+      <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }} onclick="window.location.href='librogame-runthrough-game-detail.html'" /* DEMO-NAV */>
         🖼️ Sfoglia file
       </button>
       <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 16 }}>

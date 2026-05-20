@@ -489,7 +489,7 @@ const TabDettagli = ({ rsvpMap, mobile, viewer = 'host', viewerRSVP }) => {
             background:'transparent', border:'1px solid var(--border-strong)',
             color:'var(--text-sec)', fontFamily:'var(--f-display)',
             fontSize: 11, fontWeight: 800, cursor:'pointer',
-          }}>Cambia</button>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-game-nights-index.html'; }, 0); /* DEMO-NAV */ }}>Cambia</button>
         </div>
       )}
     </div>
@@ -947,7 +947,7 @@ const RSVPBottomSheet = ({ confirmed = false }) => (
           color:'hsl(var(--c-success))',
           fontFamily:'var(--f-display)', fontSize: 11, fontWeight: 800, cursor:'pointer',
           flexShrink: 0,
-        }}>Cambia</button>
+        }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-game-nights-index.html'; }, 0); /* DEMO-NAV */ }}>Cambia</button>
       </div>
     )}
   </div>
@@ -1071,7 +1071,7 @@ const CompletedCTA = () => (
       fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 800, cursor:'pointer',
       boxShadow:'0 4px 14px hsl(var(--c-success) / 0.35)',
       display:'inline-flex', alignItems:'center', justifyContent:'center', gap: 8,
-    }}>📊 Registra play record</button>
+    }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-onboarding.html'; }, 0); /* DEMO-NAV */ }}>📊 Registra play record</button>
     <button type="button" style={{
       padding:'10px', borderRadius:'var(--r-md)',
       background:'transparent', border:'1px solid var(--border-strong)',

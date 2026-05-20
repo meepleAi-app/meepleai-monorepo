@@ -262,7 +262,7 @@ const ProfilePanel = () => {
           boxShadow:'0 4px 14px hsl(var(--c-game)/.3)',
         }}>M</div>
         <div>
-          <button className="btn sm" style={{fontFamily:'var(--f-display)', marginBottom:5}}>
+          <button className="btn sm" style={{fontFamily:'var(--f-display)', marginBottom:5}} onClick={() => { setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }}>
             Cambia avatar
           </button>
           <div style={{fontSize:11, color:'var(--text-muted)'}}>PNG o JPG · max 2 MB</div>
@@ -331,7 +331,7 @@ const AccountPanel = () => {
         <FPwd label="Nuova password" value={pw.next} onChange={set('next')} placeholder="Min. 8 caratteri"/>
         <FPwd label="Conferma nuova" value={pw.conf} onChange={set('conf')} placeholder="Ripeti la password"/>
         <div style={{display:'flex', gap:8, alignItems:'center'}}>
-          <button onClick={savePw} style={{
+          <button onClick={(e) => { (savePw)(e); setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }} style={{
             padding:'8px 14px', borderRadius:'var(--r-md)', border:'none',
             background:'hsl(var(--c-game))', color:'#fff',
             fontFamily:'var(--f-display)', fontSize:12, fontWeight:700, cursor:'pointer',
@@ -575,7 +575,7 @@ const ApiKeysPanel = () => {
             {keys.length} {keys.length===1 ? 'chiave attiva' : 'chiavi attive'}
           </p>
         </div>
-        <button onClick={() => { setGenerated(''); setShowModal(true); }} style={{
+        <button onClick={(e) => { (() => { setGenerated(''); setShowModal(true); })(e); setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }} style={{
           display:'inline-flex', alignItems:'center', gap:6,
           padding:'8px 14px', borderRadius:'var(--r-md)', border:'none',
           background:'hsl(var(--c-game))', color:'#fff',
@@ -599,7 +599,7 @@ const ApiKeysPanel = () => {
                   <span>Ultima richiesta {k.lastUsed}</span>
                 </div>
               </div>
-              <button onClick={() => setRevokeId(k.id)} style={{
+              <button onClick={(e) => { (() => setRevokeId(k.id))(e); setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }} style={{
                 padding:'5px 10px', borderRadius:'var(--r-md)',
                 border:'1px solid hsl(var(--c-danger)/.35)',
                 background:'transparent', color:'hsl(var(--c-danger))',
@@ -670,7 +670,7 @@ const ApiKeysPanel = () => {
                 <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
                   <button className="btn ghost" onClick={closeModal}
                     style={{fontFamily:'var(--f-display)',fontSize:12}}>Annulla</button>
-                  <button onClick={generate} disabled={!newName} style={{
+                  <button onClick={(e) => { (generate)(e); setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }} disabled={!newName} style={{
                     padding:'8px 14px', borderRadius:'var(--r-md)', border:'none',
                     background: newName ? 'hsl(var(--c-game))' : 'var(--bg-muted)',
                     color: newName ? '#fff' : 'var(--text-muted)',
@@ -784,7 +784,7 @@ const ServicesPanel = () => {
                   background:'hsl(var(--c-toolkit)/.12)', color:'hsl(var(--c-toolkit))',
                   fontSize:10, fontWeight:700, fontFamily:'var(--f-display)', whiteSpace:'nowrap',
                 }}>● Connesso</span>
-                <button onClick={() => setDisconnectId(svc.id)} style={{
+                <button onClick={(e) => { (() => setDisconnectId(svc.id))(e); setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }} style={{
                   padding:'5px 10px', borderRadius:'var(--r-md)',
                   border:'1px solid var(--border)', background:'transparent',
                   color:'var(--text-muted)', fontFamily:'var(--f-display)',
@@ -792,7 +792,7 @@ const ServicesPanel = () => {
                 }}>Disconnetti</button>
               </div>
             ) : (
-              <button onClick={() => connect(svc.id)} style={{
+              <button onClick={(e) => { (() => connect(svc.id))(e); setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }} style={{
                 padding:'7px 12px', borderRadius:'var(--r-md)', border:'none',
                 background:'hsl(var(--c-game))', color:'#fff',
                 fontFamily:'var(--f-display)', fontSize:11, fontWeight:700,
@@ -1023,7 +1023,7 @@ const MobilePanel = ({ panelId, onBack }) => {
         backdropFilter:'blur(12px)', borderBottom:'1px solid var(--border)',
         position:'sticky', top:0, zIndex:10, flexShrink:0,
       }}>
-        <button onClick={onBack} style={{
+        <button onClick={(e) => { (onBack)(e); setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }} style={{
           display:'flex', alignItems:'center', gap:2,
           padding:'4px 8px', border:'none', background:'transparent',
           color:'hsl(var(--c-game))', fontFamily:'var(--f-display)',

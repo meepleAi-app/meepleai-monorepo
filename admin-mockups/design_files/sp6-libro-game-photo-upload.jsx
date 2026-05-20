@@ -142,7 +142,7 @@ function Step1_Default() {
         <input type="text" placeholder="Cerca un gioco…" readOnly/>
       </div>
       <div className="pu-search-tabs">
-        <span className="pu-search-tab active" style={{ color: entityHsl('game'), borderColor: entityHsl('game') }}>📚 Catalogo</span>
+        <span className="pu-search-tab active" style={{ color: entityHsl('game'), borderColor: entityHsl('game') }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>📚 Catalogo</span>
         <span className="pu-search-tab">🌐 BGG</span>
       </div>
       <div className="pu-game-grid">
@@ -151,7 +151,7 @@ function Step1_Default() {
         ))}
       </div>
       <div className="pu-step-footer">
-        <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }}>
+        <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>
           Continua →
         </button>
       </div>
@@ -172,7 +172,7 @@ function Step1_Searching() {
         <button type="button" className="pu-search-clear">×</button>
       </div>
       <div className="pu-search-tabs">
-        <span className="pu-search-tab active" style={{ color: entityHsl('game'), borderColor: entityHsl('game') }}>📚 Catalogo (0)</span>
+        <span className="pu-search-tab active" style={{ color: entityHsl('game'), borderColor: entityHsl('game') }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>📚 Catalogo (0)</span>
         <span className="pu-search-tab">🌐 BGG (2)</span>
       </div>
       <div className="pu-search-info">
@@ -242,7 +242,7 @@ function Step1_BGGLoading() {
         <input type="text" defaultValue="andor" readOnly/>
       </div>
       <div className="pu-search-tabs">
-        <span className="pu-search-tab">📚 Catalogo</span>
+        <span className="pu-search-tab" onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>📚 Catalogo</span>
         <span className="pu-search-tab active" style={{ color: entityHsl('kb'), borderColor: entityHsl('kb') }}>🌐 BGG</span>
       </div>
       <div className="pu-bgg-loading">
@@ -425,7 +425,7 @@ function Step2_Denied() {
       <p className="pu-denied-sub">
         MeepleAI non ha accesso alla fotocamera. Abilita i permessi nelle impostazioni del sistema per scattare le pagine.
       </p>
-      <button type="button" className="pu-cta-primary" style={{ background: entityHsl('event') }}>
+      <button type="button" className="pu-cta-primary" style={{ background: entityHsl('event') }} onClick={() => { setTimeout(() => { window.location.href = 'settings.html'; }, 0); /* DEMO-NAV */ }}>
         ⚙️ Apri impostazioni
       </button>
       <button type="button" className="pu-cta-ghost">
@@ -528,7 +528,7 @@ function IndexingScreen({ variant }) {
               Riprenderà automaticamente al ripristino. <span style={{ fontFamily: 'var(--f-mono)', fontSize: 10, opacity: 0.7 }}>G1.4</span>
             </div>
           </div>
-          <button type="button" className="pu-offline-btn">Riprova ora</button>
+          <button type="button" className="pu-offline-btn" onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>Riprova ora</button>
         </div>
       )}
 
@@ -586,14 +586,14 @@ function IndexingScreen({ variant }) {
       {isComplete && (
         <div className="pu-step-footer pu-idx-footer">
           <button type="button" className="pu-cta-secondary">Salva e basta</button>
-          <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }}>
+          <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-onboarding.html'; }, 0); /* DEMO-NAV */ }}>
             🎯 Inizia sessione →
           </button>
         </div>
       )}
       {isPartial && (
         <div className="pu-step-footer pu-idx-footer">
-          <button type="button" className="pu-cta-secondary">Salta — uso così</button>
+          <button type="button" className="pu-cta-secondary" onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>Salta — uso così</button>
           <button type="button" className="pu-cta-primary" style={{ background: entityHsl('event') }}>
             📷 Riscatta 3 pagine
           </button>
@@ -617,7 +617,7 @@ function CancelModal() {
           Hai già scattato 24 pagine. Se annulli ora, dovrai ricominciare da capo.
         </p>
         <div className="pu-modal-actions">
-          <button type="button" className="pu-cta-secondary">Continua a indicizzare</button>
+          <button type="button" className="pu-cta-secondary" onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>Continua a indicizzare</button>
           <button type="button" className="pu-cta-primary" style={{ background: entityHsl('event') }}>
             Sì, annulla
           </button>
@@ -641,7 +641,7 @@ function DesktopDropFallback({ step, variant }) {
         Su desktop puoi anche caricare foto già scattate.<br/>
         Formati supportati: JPG, PNG, HEIC · Max 50 file
       </p>
-      <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }}>
+      <button type="button" className="pu-cta-primary" style={{ background: entityHsl('game') }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>
         🖼️ Sfoglia file
       </button>
       <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 16 }}>

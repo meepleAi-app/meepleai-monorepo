@@ -205,7 +205,7 @@ const AgentHero = ({ agent, variant, compact, loading }) => {
             padding:'6px 12px', borderRadius:'var(--r-md)',
             background:'hsl(38, 92%, 50%)', color:'#fff', border:'none',
             fontFamily:'var(--f-display)', fontSize: 11.5, fontWeight: 800, cursor:'pointer',
-          }}>Completa setup →</button>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-setup-wizard.html'; }, 0); /* DEMO-NAV */ }}>Completa setup →</button>
         </div>
       )}
       {variant === 'archived' && (
@@ -223,7 +223,7 @@ const AgentHero = ({ agent, variant, compact, loading }) => {
             padding:'6px 12px', borderRadius:'var(--r-md)',
             background: entityHsl('agent'), color:'#fff', border:'none',
             fontFamily:'var(--f-display)', fontSize: 11.5, fontWeight: 800, cursor:'pointer',
-          }}>↻ Riattiva</button>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-agents-index.html'; }, 0); /* DEMO-NAV */ }}>↻ Riattiva</button>
         </div>
       )}
 
@@ -976,7 +976,7 @@ const SettingsTab = ({ agent, readonly }) => {
             fontSize: 12, fontWeight: 800,
             cursor: readonly ? 'not-allowed' : 'pointer',
             opacity: readonly ? 0.5 : 1,
-          }}>⊘ Archivia</button>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-agents-index.html'; }, 0); /* DEMO-NAV */ }}>⊘ Archivia</button>
           <button type="button" disabled={readonly} style={{
             padding:'7px 14px', borderRadius:'var(--r-md)',
             background:'hsl(var(--c-danger))',
@@ -1171,7 +1171,7 @@ const DesktopNav = () => (
       flex: 1, fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-muted)',
       marginLeft: 22,
     }}>
-      <a href="#" style={{ color:'inherit' }}>Agenti</a>
+      <a href="#" style={{ color:'inherit' }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-agents-index.html'; }, 0); /* DEMO-NAV */ }}>Agenti</a>
       <span aria-hidden="true"> / </span>
       <strong style={{ color:'var(--text-sec)' }}>{AGENT_BASE.title}</strong>
     </div>

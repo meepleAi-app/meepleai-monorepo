@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MeepleAI — Nanolith Runthrough · Error States</title>
+<title>MeepleAI — Librogame Runthrough · Error States</title>
 <!--
-  Mockup: nanolith-runthrough-error-states
+  Mockup: librogame-runthrough-error-states
   Route:  trasversale ai 4 goal (chat N1/N2, photo-translate N3)
   Scope:  Phase A runthrough — gap coverage error states tecnici NON coperti da low-confidence
   Stati:  A · stream-timeout      (chat agente N2: nessun token > 30s · retry/cambia agent/copy)
@@ -313,7 +313,7 @@
 <body>
 
 <header class="top">
-  <h1>Nanolith Runthrough · Error States</h1>
+  <h1>Librogame Runthrough · Error States</h1>
   <span class="route">trasversale · 4 stati</span>
   <span class="spacer"></span>
   <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
@@ -349,7 +349,7 @@
               <span class="dot"></span><span class="dot"></span><span class="dot"></span>
               <span style="margin-left: var(--s-1);">in attesa risposta · 32 s</span>
             </div>
-            <div class="meta"><span class="agent">🤖 Arbitro Nanolith</span> · stream interrotto</div>
+            <div class="meta"><span class="agent">🤖 Arbitro Eldoria</span> · stream interrotto</div>
           </div>
         </div>
         <div class="err-banner warn" role="alert">
@@ -390,7 +390,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – stream timeout">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234?chat=8a3b1c</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234?chat=8a3b1c</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Chat Arbitro</span></div>
         <div style="flex: 1; padding: var(--s-5); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-5); overflow-y: auto;">
           <div class="chat-shell" style="padding: 0; gap: var(--s-3);">
@@ -401,7 +401,7 @@
                 <span class="dot"></span><span class="dot"></span><span class="dot"></span>
                 <span style="margin-left: var(--s-1);">stream bloccato da 32 s</span>
               </div>
-              <div class="meta"><span class="agent">🤖 Arbitro Nanolith</span> · deepseek-chat · TTFB 1.2 s · 12/~80 token attesi</div>
+              <div class="meta"><span class="agent">🤖 Arbitro Eldoria</span> · deepseek-chat · TTFB 1.2 s · 12/~80 token attesi</div>
             </div>
           </div>
           <div class="err-banner warn" style="margin: 0;" role="alert">
@@ -481,7 +481,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – ocr fail">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate?photo=err</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate?photo=err</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · OCR §147 fallito</span></div>
         <div style="flex: 1; padding: var(--s-7); display: flex; gap: var(--s-7); align-items: flex-start;">
           <div class="photo-preview blurred" style="width: 240px;" aria-hidden="true">foto §147 · illeggibile</div>
@@ -571,7 +571,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – llm 503">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234?incident=INC-0234</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234?incident=INC-0234</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Servizio AI in degrado</span></div>
         <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 360px; gap: var(--s-6); overflow-y: auto;">
           <div class="err-banner danger" style="margin: 0;" role="alert">
@@ -646,8 +646,8 @@
               <input id="pn-input" type="text" inputmode="numeric" placeholder="147" value="" autofocus/>
             </div>
             <div class="alt-row" style="display: flex; flex-direction: column; gap: var(--s-2);">
-              <button class="alt-link" type="button">📚 È una pagina di glossario / indice (skip §)</button>
-              <button class="alt-link" type="button">📑 È un range (es. §147-149) — inserisci range</button>
+              <button class="alt-link" type="button" onclick="window.location.href='librogame-runthrough-glossary-editor.html'" /* DEMO-NAV */>📚 È una pagina di glossario / indice (skip §)</button>
+              <button class="alt-link" type="button" onclick="window.location.href='librogame-runthrough-play-session.html'" /* DEMO-NAV */>📑 È un range (es. §147-149) — inserisci range</button>
               <button class="alt-link" type="button">↩ Annulla, è una pagina sbagliata</button>
             </div>
           </div>
@@ -669,7 +669,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – segmentation fail">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/translate?seg=fail</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate?seg=fail</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Segmentazione · nessun § rilevato</span></div>
         <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-6); overflow-y: auto; align-items: start;">
           <div style="display: flex; gap: var(--s-5);">
@@ -695,7 +695,7 @@
               <input id="pn-input-d" type="text" inputmode="numeric" placeholder="147" value="" autofocus/>
             </div>
             <div class="alt-row" style="display: flex; flex-direction: column; gap: var(--s-2);">
-              <button class="alt-link" type="button">📚 Pagina di glossario / indice (skip §, archivia testo solo)</button>
+              <button class="alt-link" type="button" onclick="window.location.href='librogame-runthrough-glossary-editor.html'" /* DEMO-NAV */>📚 Pagina di glossario / indice (skip §, archivia testo solo)</button>
               <button class="alt-link" type="button">📑 È un range (es. §147-149)</button>
               <button class="alt-link" type="button">↩ Annulla — è la pagina sbagliata</button>
             </div>

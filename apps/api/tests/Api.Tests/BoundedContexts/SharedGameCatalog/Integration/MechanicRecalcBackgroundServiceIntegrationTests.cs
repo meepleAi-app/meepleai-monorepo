@@ -156,7 +156,6 @@ public sealed class MechanicRecalcBackgroundServiceIntegrationTests : IAsyncLife
         _dbContext.Set<MechanicAnalysisEntity>().Add(new MechanicAnalysisEntity
         {
             Id = analysisId,
-            SharedGameId = sharedGameId,
             PdfDocumentId = Guid.NewGuid(), // synthetic — no FK in scope for this worker test
             PromptVersion = "mechanic-extractor-v1",
             Status = 2, // Published — matches MechanicAnalysisStatus.Published cast in GetIdsByStatusAsync

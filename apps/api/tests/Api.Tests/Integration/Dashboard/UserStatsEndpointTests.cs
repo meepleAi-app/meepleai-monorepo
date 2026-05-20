@@ -131,7 +131,6 @@ public sealed class UserStatsEndpointTests : IAsyncLifetime
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
-                SharedGameId = sharedGameId,
                 AddedAt = DateTime.UtcNow,
                 TimesPlayed = 0
             });

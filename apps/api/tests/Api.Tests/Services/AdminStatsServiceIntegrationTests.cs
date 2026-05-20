@@ -1,6 +1,7 @@
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
 using Api.Services;
 using Api.Tests.Constants;
@@ -414,13 +415,13 @@ public sealed class AdminStatsServiceIntegrationTests : IDisposable
         await _dbContext.UserSessions.AddRangeAsync(sessions);
 
         // Seed 3 games
-        var games = Enumerable.Range(1, 3).Select(i => new GameEntity
+        var games = Enumerable.Range(1, 3).Select(i => new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = $"Game {i}",
+            Title = $"Game {i}",
             CreatedAt = now.AddDays(-i)
         }).ToList();
-        await _dbContext.Games.AddRangeAsync(games);
+        await _dbContext.SharedGames.AddRangeAsync(games);
 
         // Seed 10 AI request logs (8 success, 2 errors)
         var aiRequests = Enumerable.Range(1, 10).Select(i => new AiRequestLogEntity

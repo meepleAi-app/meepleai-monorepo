@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Services;
@@ -83,10 +84,10 @@ public sealed class KbReindexIntegrationTests : IAsyncLifetime
             PasswordHash = "v1.test-hash",
             CreatedAt = DateTime.UtcNow,
         });
-        _dbContext.Games.Add(new GameEntity
+        _dbContext.SharedGames.Add(new SharedGameEntity
         {
             Id = TestGameId,
-            Name = "SG2 KB Reindex Test Game",
+            Title = "SG2 KB Reindex Test Game",
             CreatedAt = DateTime.UtcNow,
         });
         await _dbContext.SaveChangesAsync(TestCancellationToken);

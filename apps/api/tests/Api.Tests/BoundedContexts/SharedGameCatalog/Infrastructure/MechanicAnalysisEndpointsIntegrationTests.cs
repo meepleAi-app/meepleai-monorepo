@@ -510,7 +510,6 @@ public sealed class MechanicAnalysisEndpointsIntegrationTests : IAsyncLifetime
         var link = new SharedGameDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
             PdfDocumentId = pdfDocumentId,
             DocumentType = 0, // Rulebook
             Version = "1.0",

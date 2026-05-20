@@ -68,7 +68,6 @@ public sealed class QueueStreamEventHandlerEnrichmentTests : IDisposable
         _db.SharedGameDocuments.Add(new SharedGameDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
             PdfDocumentId = pdfDocId,
             DocumentType = 0,
             CreatedAt = DateTime.UtcNow,
@@ -201,7 +200,6 @@ public sealed class QueueStreamEventHandlerEnrichmentTests : IDisposable
         _db.SharedGameDocuments.Add(new SharedGameDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
             PdfDocumentId = pdfDocId,
             DocumentType = 0,
             CreatedAt = DateTime.UtcNow,

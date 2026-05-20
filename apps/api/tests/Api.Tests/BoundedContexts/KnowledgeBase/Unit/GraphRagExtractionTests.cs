@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Services;
 using Api.Services.Pdf;
@@ -288,18 +289,16 @@ public sealed class GraphRagExtractionTests : IDisposable
         // with distinct Id (_gameId) and SharedGameId (_sharedGameId) so the resolver path
         // games.Where(g => g.SharedGameId == pdf.SharedGameId).Select(g => g.Id) is
         // exercised — not collapsed via Guid identity (review feedback on PR #891).
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = _gameId,
-            Name = "Catan",
-            SharedGameId = _sharedGameId,
+            Title = "Catan",
         };
-        _db.Games.Add(game);
+        _db.SharedGames.Add(game);
 
         var pdfDoc = new PdfDocumentEntity
         {
             Id = _pdfDocumentId,
-            SharedGameId = _sharedGameId,
             FileName = "Catan Rules.pdf",
             FilePath = "/fake/path/test.pdf",
             ContentType = "application/pdf",

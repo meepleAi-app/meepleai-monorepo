@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameToolkit.Application.Queries.GetToolkitDetail;
 using Api.BoundedContexts.GameToolkit.Domain.Enums;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Infrastructure.Entities.GameToolkit;
 using Api.Services;
@@ -65,17 +66,17 @@ public class GetToolkitDetailQueryHandlerTests
         return user;
     }
 
-    private static GameEntity SeedGame(
+    private static SharedGameEntity SeedGame(
         Api.Infrastructure.MeepleAiDbContext context,
         string name = "Wingspan",
         Guid? id = null)
     {
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = id ?? Guid.NewGuid(),
-            Name = name,
+            Title = name,
         };
-        context.Set<GameEntity>().Add(game);
+        context.Set<SharedGameEntity>().Add(game);
         return game;
     }
 

@@ -34,20 +34,20 @@ public sealed class GameManagementE2ETests : E2ETestBase
     {
         // Seed a test game for E2E tests (unique name per test instance to avoid duplicate key errors)
         _testGameName = $"E2E Test Game {Guid.NewGuid():N}";
-        var game = new Api.Infrastructure.Entities.GameEntity
+        var game = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = _testGameName,
+            Title = _testGameName,
             MinPlayers = 2,
             MaxPlayers = 4,
-            MinPlayTimeMinutes = 60,
+            PlayingTimeMinutes = 60,
             YearPublished = 2024,
             BggId = null,
             ImageUrl = "https://example.com/image.png",
             CreatedAt = DateTime.UtcNow
         };
 
-        DbContext.Games.Add(game);
+        DbContext.SharedGames.Add(game);
         await DbContext.SaveChangesAsync();
         _testGameId = game.Id;
     }

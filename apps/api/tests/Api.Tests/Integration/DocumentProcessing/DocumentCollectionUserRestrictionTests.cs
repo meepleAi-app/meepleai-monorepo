@@ -1,5 +1,6 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
@@ -51,17 +52,16 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "creator@test.com", DisplayName = "Creator", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "Gloomhaven" };
+        var game = new SharedGameEntity { Id = gameId, Title = "Gloomhaven" };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var collectionId = Guid.NewGuid();
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
-            SharedGameId = gameId,
             Name = "Gloomhaven Campaign Rules",
             Description = "User-created collection",
             CreatedByUserId = userId,
@@ -99,12 +99,12 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "prolific@test.com", DisplayName = "Prolific", Role = "User" };
         var game1Id = Guid.NewGuid();
-        var game1 = new GameEntity { Id = game1Id, Name = "Terraforming Mars" };
+        var game1 = new SharedGameEntity { Id = game1Id, Title = "Terraforming Mars" };
         var game2Id = Guid.NewGuid();
-        var game2 = new GameEntity { Id = game2Id, Name = "Spirit Island" };
+        var game2 = new SharedGameEntity { Id = game2Id, Title = "Spirit Island" };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.AddRange(game1, game2);
+        _dbContext.SharedGames.AddRange(game1, game2);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var collection1 = new DocumentCollectionEntity { Id = Guid.NewGuid(), SharedGameId = game1Id, Name = "TM Collection 1", CreatedByUserId = userId, DocumentsJson = "[]" };
@@ -173,7 +173,6 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
-            SharedGameId = gameId,
             Name = "Pandemic Rules",
             CreatedByUserId = userId,
             DocumentsJson = "[]"
@@ -205,10 +204,10 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
         var user2Id = Guid.NewGuid();
         var user2 = new UserEntity { Id = user2Id, Email = "user2@test.com", DisplayName = "User 2", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "Root" };
+        var game = new SharedGameEntity { Id = gameId, Title = "Root" };
 
         _dbContext!.Users.AddRange(user1, user2);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var user1Collection = new DocumentCollectionEntity { Id = Guid.NewGuid(), SharedGameId = gameId, Name = "User1 Collection", CreatedByUserId = user1Id, DocumentsJson = "[]" };

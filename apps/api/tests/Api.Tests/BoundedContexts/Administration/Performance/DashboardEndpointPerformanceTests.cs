@@ -360,20 +360,18 @@ public class DashboardEndpointPerformanceTests : IAsyncLifetime
         {
             var gameId = Guid.NewGuid();
 
-            var game = new GameEntity
+            var game = new SharedGameEntity
             {
                 Id = gameId,
-                Name = $"Test Game {i}",
+                Title = $"Test Game {i}",
                 MinPlayers = 2,
                 MaxPlayers = 4,
-                MinPlayTimeMinutes = 60,
-                MaxPlayTimeMinutes = 60,
-                YearPublished = 2024,
-                Publisher = "Test Publisher",
+                PlayingTimeMinutes = 60,
+                                YearPublished = 2024,
                 CreatedAt = DateTime.UtcNow
             };
 
-            dbContext.Games.Add(game);
+            dbContext.SharedGames.Add(game);
 
             // Create corresponding SharedGame (FK target for UserLibraryEntry.SharedGameId)
             var sharedGame = new SharedGameEntity

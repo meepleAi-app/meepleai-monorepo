@@ -11,6 +11,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
@@ -408,15 +409,14 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
 
     private async Task CreateTestGameAsync(Guid gameId, string name)
     {
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = gameId,
-            Name = name,
-            Publisher = "Test Publisher",
+            Title = name,
             YearPublished = 2024,
             CreatedAt = DateTime.UtcNow
         };
-        _dbContext!.Games.Add(game);
+        _dbContext!.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
 

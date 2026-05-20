@@ -320,7 +320,6 @@ public sealed class UserLibraryRepositoryIntegrationTests : IAsyncLifetime
         {
             Id = pdfId,
             UploadedByUserId = userId,
-            SharedGameId = gameId,
             UploadedAt = DateTime.UtcNow,
             FilePath = "/test/path.pdf",
             FileName = "test.pdf",
@@ -390,7 +389,6 @@ public sealed class UserLibraryRepositoryIntegrationTests : IAsyncLifetime
         {
             Id = pdfId,
             UploadedByUserId = userId,
-            SharedGameId = gameId,
             UploadedAt = DateTime.UtcNow,
             FilePath = "/test/path.pdf",
             FileName = "test.pdf",

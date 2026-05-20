@@ -241,7 +241,6 @@ public sealed class RaptorPipelineIntegrationTests : IDisposable
         var pdfDoc = new PdfDocumentEntity
         {
             Id = _pdfDocumentId,
-            SharedGameId = sharedGameId,
             FileName = "test.pdf",
             FilePath = "/fake/path/test.pdf",
             ContentType = "application/pdf",

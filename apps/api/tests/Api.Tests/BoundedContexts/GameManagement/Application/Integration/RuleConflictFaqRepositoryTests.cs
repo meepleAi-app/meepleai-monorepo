@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -160,7 +161,7 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
         await _context.SaveChangesAsync(TestCancellationToken);
 
         // Act - Delete game (should cascade to FAQ)
-        _context.Games.Remove(game);
+        _context.SharedGames.Remove(game);
         await _context.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -221,17 +222,16 @@ public sealed class RuleConflictFaqRepositoryTests : IAsyncLifetime
         results[2].UsageCount.Should().Be(10);
     }
 
-    private async Task<GameEntity> CreateTestGameAsync()
+    private async Task<SharedGameEntity> CreateTestGameAsync()
     {
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Test Game",
-            Publisher = "Test Publisher",
+            Title = "Test Game",
             CreatedAt = DateTime.UtcNow
         };
 
-        _context.Games.Add(game);
+        _context.SharedGames.Add(game);
         await _context.SaveChangesAsync(TestCancellationToken);
         return game;
     }

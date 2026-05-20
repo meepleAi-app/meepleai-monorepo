@@ -11,6 +11,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
@@ -291,19 +292,18 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         _dbContext!.Users.Add(testUser);
 
         // Create test game
-        var testGame = new GameEntity
+        var testGame = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Test Game for PDF Upload",
+            Title = "Test Game for PDF Upload",
             BggId = 12345,
             YearPublished = 2024,
             MinPlayers = 2,
             MaxPlayers = 4,
-            MinPlayTimeMinutes = 30,
-            MaxPlayTimeMinutes = 90,
-            CreatedAt = DateTime.UtcNow
+            PlayingTimeMinutes = 30,
+                        CreatedAt = DateTime.UtcNow
         };
-        _dbContext.Games.Add(testGame);
+        _dbContext.SharedGames.Add(testGame);
 
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
@@ -365,7 +365,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     {
         // Clean any existing data from shared database to avoid unique constraint violations
         context.PdfDocuments.RemoveRange(await context.PdfDocuments.ToListAsync(TestContext.Current.CancellationToken));
-        context.Games.RemoveRange(await context.Games.ToListAsync(TestContext.Current.CancellationToken));
+        context.SharedGames.RemoveRange(await context.SharedGames.ToListAsync(TestContext.Current.CancellationToken));
         context.Users.RemoveRange(await context.Users.ToListAsync(TestContext.Current.CancellationToken));
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
@@ -386,23 +386,22 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         return user;
     }
 
-    private static async Task<GameEntity> SeedGameInContextAsync(MeepleAiDbContext context)
+    private static async Task<SharedGameEntity> SeedGameInContextAsync(MeepleAiDbContext context)
     {
         var bggId = RandomNumberGenerator.GetInt32(100000, 1_000_000); // Unique BGG id for test
 
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = $"Test Game {Guid.NewGuid():N}", // Unique name per test
+            Title = $"Test Game {Guid.NewGuid():N}", // Unique name per test
             BggId = bggId,
             YearPublished = 2024,
             MinPlayers = 2,
             MaxPlayers = 4,
-            MinPlayTimeMinutes = 30,
-            MaxPlayTimeMinutes = 90,
-            CreatedAt = DateTime.UtcNow
+            PlayingTimeMinutes = 30,
+                        CreatedAt = DateTime.UtcNow
         };
-        context.Games.Add(game);
+        context.SharedGames.Add(game);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         return game;
     }
@@ -412,7 +411,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var corruptedBytes = CreateCorruptedPdfBytes();
         var formFile = CreateMockFormFile("corrupted.pdf", corruptedBytes);
@@ -444,7 +443,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var textContent = "This is a plain text file, not a PDF"u8.ToArray();
         var formFile = CreateMockFormFile("document.txt", textContent, "text/plain");
@@ -476,7 +475,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var emptyBytes = Array.Empty<byte>();
         var formFile = CreateMockFormFile("empty.pdf", emptyBytes);
@@ -508,7 +507,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         // PDF with header but no trailer (malformed structure)
         var malformedBytes = "%PDF-1.4\nincomplete content without trailer"u8.ToArray();
@@ -540,7 +539,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         // Create PDF just below limit (using shared test constant)
         var nearLimitSize = PdfUploadTestConstants.FileSizes.NearLimit;
@@ -576,7 +575,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         // Create PDF exceeding limit (using shared test constant)
         var overLimitSize = PdfUploadTestConstants.FileSizes.OverLimit;
@@ -610,7 +609,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         // Create large PDF (5MB - within limit but large enough to test large file handling)
         var largePdfSize = 5 * 1024 * 1024;
@@ -647,7 +646,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         const int concurrentUploads = 5;
         var tasks = new List<Task<PdfUploadResult>>();
@@ -697,7 +696,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         const int simultaneousUploads = 10;
         using var barrier = new Barrier(simultaneousUploads);
@@ -939,7 +938,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             await Task.Delay(TestConstants.Timing.SmallDelay, TestCancellationToken); // Simulate processing time
 
             // Transaction B locks game, tries to lock user (potential deadlock)
-            var gameB = await contextB.Games.Where(g => g.Id == testGame.Id).FirstAsync(TestCancellationToken);
+            var gameB = await contextB.SharedGames.Where(g => g.Id == testGame.Id).FirstAsync(TestCancellationToken);
             var userB = await contextB.Users.Where(u => u.Id == testUser.Id).FirstOrDefaultAsync(TestCancellationToken);
 
             // If we get here without deadlock, commit both
@@ -960,7 +959,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Verify database state is consistent after deadlock handling
         await using var verifyContext = providerA.GetRequiredService<MeepleAiDbContext>();
         var userExists = await verifyContext.Users.AnyAsync(u => u.Id == testUser.Id, TestCancellationToken);
-        var gameExists = await verifyContext.Games.AnyAsync(g => g.Id == testGame.Id, TestCancellationToken);
+        var gameExists = await verifyContext.SharedGames.AnyAsync(g => g.Id == testGame.Id, TestCancellationToken);
 
         userExists.Should().BeTrue("user should exist after deadlock resolution");
         gameExists.Should().BeTrue("game should exist after deadlock resolution");
@@ -971,7 +970,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     {
         // Arrange - Use real PostgreSQL for partial failure cleanup test
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var pdfBytes = CreateValidPdfBytes(1024 * 10);
         var formFile = CreateMockFormFile("partial_fail.pdf", pdfBytes);
@@ -1056,7 +1055,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var pdfBytes = CreateValidPdfBytes(1024 * 50); // 50KB
         var formFile = CreateMockFormFile("db_persistence_test.pdf", pdfBytes);
@@ -1093,9 +1092,9 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc.UploadedAt.Should().BeCloseTo(DateTime.UtcNow, TestConstants.Timing.AssertionTolerance);
 
         // Verify relationships loaded correctly (Game loaded separately since .Game nav removed)
-        var linkedGame = await _dbContext.Games.FindAsync(new object[] { testGame.Id }, TestCancellationToken);
+        var linkedGame = await _dbContext.SharedGames.FindAsync(new object[] { testGame.Id }, TestCancellationToken);
         linkedGame.Should().NotBeNull();
-        linkedGame!.Name.Should().Be(testGame.Name);
+        linkedGame!.Title.Should().Be(testGame.Title);
         doc.UploadedBy.Should().NotBeNull();
         doc.UploadedBy!.Email.Should().Be(testUser.Email);
     }
@@ -1106,7 +1105,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var pdfBytes = CreateValidPdfBytes(1024 * 25); // 25KB
         var formFile = CreateMockFormFile("blob_storage_test.pdf", pdfBytes);
@@ -1262,7 +1261,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var pdfBytes = CreateValidPdfBytes(1024 * 30); // 30KB
         var formFile = CreateMockFormFile("result_validation.pdf", pdfBytes);
@@ -1309,7 +1308,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var pdfBytes = CreateValidPdfBytes(1024 * 20);
         var formFile = CreateMockFormFile("idempotency_test.pdf", pdfBytes);
@@ -1351,7 +1350,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var quotaService = _serviceProvider!.GetRequiredService<IPdfUploadQuotaService>();
         var tier = UserTier.Parse(testUser.Tier);

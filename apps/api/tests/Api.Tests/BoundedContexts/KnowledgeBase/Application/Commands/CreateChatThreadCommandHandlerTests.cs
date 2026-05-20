@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
@@ -124,7 +125,7 @@ public sealed class CreateChatThreadCommandHandlerTests
         var sharedGameId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
-        _db.Games.Add(new GameEntity { Id = actualGameId, Name = "Puerto Rico", SharedGameId = sharedGameId });
+        _db.SharedGames.Add(new SharedGameEntity { Id = actualGameId, Title = "Puerto Rico" });
         await _db.SaveChangesAsync();
 
         // Frontend passes sharedGameId (from user_library_entries.shared_game_id)
@@ -148,7 +149,7 @@ public sealed class CreateChatThreadCommandHandlerTests
         var gameId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
-        _db.Games.Add(new GameEntity { Id = gameId, Name = "Catan" });
+        _db.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Catan" });
         await _db.SaveChangesAsync();
 
         var command = new CreateChatThreadCommand(UserId: userId, GameId: gameId, Title: "Chat about Catan");

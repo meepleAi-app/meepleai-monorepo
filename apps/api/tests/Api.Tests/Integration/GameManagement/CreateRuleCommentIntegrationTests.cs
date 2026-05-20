@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -136,19 +137,17 @@ public sealed class CreateRuleCommentIntegrationTests : IAsyncLifetime
 
         // Seed game
         _testGameId = Guid.NewGuid();
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = _testGameId,
-            Name = "Test Game for Comments",
-            Publisher = "Test Publisher",
+            Title = "Test Game for Comments",
             YearPublished = 2024,
             MinPlayers = 2,
             MaxPlayers = 4,
-            MinPlayTimeMinutes = 60,
-            MaxPlayTimeMinutes = 90,
-            CreatedAt = DateTime.UtcNow
+            PlayingTimeMinutes = 60,
+                        CreatedAt = DateTime.UtcNow
         };
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }

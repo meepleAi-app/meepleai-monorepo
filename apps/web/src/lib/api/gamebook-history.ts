@@ -21,10 +21,14 @@ async function ensureOk(res: Response, ctx: string): Promise<Response> {
 // Schema
 // ---------------------------------------------------------------------------
 
+/**
+ * C5 (multi-book generalization 2026-05-19): BE response no longer carries
+ * `pageType` — paragraphs are now keyed by `GameBookId` server-side, with
+ * the FE relying on the picker to scope inputs.
+ */
 export const TranslatedParagraphSchema = z.object({
   id: z.string().uuid(),
   paragraphNumber: z.number().int().min(0),
-  pageType: z.enum(['Storybook', 'Encounter']),
   sourceTextEn: z.string(),
   translatedTextIt: z.string(),
   appliedGlossaryTerms: z

@@ -78,8 +78,19 @@ export async function listMyCampaigns(gameId?: string): Promise<GamebookCampaign
   return parseJson(res, z.array(GamebookCampaignSchema));
 }
 
+/**
+ * Update the current paragraph progress for a campaign, scoped to a specific
+ * GameBook (multi-book generalization, C2).
+ *
+ * The backend persists progress in `SessionBookProgress` indexed by
+ * `(campaignId, gameBookId)`, so the caller MUST identify which book this
+ * update belongs to. When a campaign has only one book the FE can default
+ * `gameBookId` to that single book id; the picker is only shown when 2+
+ * books exist.
+ */
 export async function updateProgress(
   id: string,
+  gameBookId: string,
   currentParagraph: number
 ): Promise<GamebookCampaign> {
   const res = await fetch(
@@ -87,7 +98,7 @@ export async function updateProgress(
     {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentParagraph }),
+      body: JSON.stringify({ gameBookId, currentParagraph }),
       credentials: 'include',
     }
   );
@@ -116,8 +127,6 @@ export async function deleteCampaign(id: string): Promise<void> {
     } catch {
       /* ignore */
     }
-    throw new Error(
-      `Gamebook campaigns API error ${res.status}: ${detail || res.statusText}`
-    );
+    throw new Error(`Gamebook campaigns API error ${res.status}: ${detail || res.statusText}`);
   }
 }

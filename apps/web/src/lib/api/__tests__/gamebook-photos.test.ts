@@ -19,10 +19,13 @@ const validSegment = {
   boundingBox: '10,20,100,50',
 };
 
+// C5 (multi-book generalization 2026-05-19): BE response no longer carries
+// `pageType` — fixture drops it.
+const BOOK_ID = '44444444-4444-4444-a444-444444444444';
+
 const validArtifact = {
   id: PHOTO_ID,
   campaignId: CAMPAIGN_ID,
-  pageType: 'Storybook',
   status: 'Segmented',
   ocrFullText: 'full text here',
   segments: [validSegment],
@@ -107,7 +110,7 @@ describe('gamebook-photos client', () => {
     vi.unstubAllGlobals();
   });
 
-  it('uploadPhoto sends multipart FormData with credentials', async () => {
+  it('uploadPhoto sends multipart FormData with gameBookId and credentials (C4)', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify(validArtifact), {
         status: 201,
@@ -116,7 +119,7 @@ describe('gamebook-photos client', () => {
     );
 
     const file = new File(['bytes'], 'page.jpg', { type: 'image/jpeg' });
-    const result = await uploadPhoto(CAMPAIGN_ID, file, 'Storybook');
+    const result = await uploadPhoto(CAMPAIGN_ID, file, BOOK_ID);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -125,13 +128,16 @@ describe('gamebook-photos client', () => {
     expect(init.method).toBe('POST');
     expect(init.credentials).toBe('include');
     expect(init.body).toBeInstanceOf(FormData);
+    const fd = init.body as FormData;
+    expect(fd.get('gameBookId')).toBe(BOOK_ID);
+    expect(fd.get('pageType')).toBeNull();
     expect(result.id).toBe(PHOTO_ID);
   });
 
   it('uploadPhoto throws on non-2xx', async () => {
     fetchMock.mockResolvedValueOnce(new Response('bad request', { status: 400 }));
     const file = new File(['bytes'], 'page.jpg', { type: 'image/jpeg' });
-    await expect(uploadPhoto(CAMPAIGN_ID, file, 'Storybook')).rejects.toThrow(/400/);
+    await expect(uploadPhoto(CAMPAIGN_ID, file, BOOK_ID)).rejects.toThrow(/400/);
   });
 
   it('segmentPhoto POSTs to the segment sub-resource', async () => {

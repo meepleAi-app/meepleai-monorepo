@@ -83,13 +83,14 @@ describe('gamebook-campaigns client', () => {
     expect(fetchMock.mock.calls[0][0]).toContain(`gameId=${validRow.gameId}`);
   });
 
-  it('updateProgress PUTs new paragraph', async () => {
+  it('updateProgress PUTs new paragraph with gameBookId (C2 multi-book)', async () => {
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(validRow), { status: 200 }));
-    await updateProgress(validRow.id, 50);
+    const gameBookId = '44444444-4444-4444-a444-444444444444';
+    await updateProgress(validRow.id, gameBookId, 50);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain(`/progress`);
     expect(init.method).toBe('PUT');
-    expect(JSON.parse(init.body as string)).toEqual({ currentParagraph: 50 });
+    expect(JSON.parse(init.body as string)).toEqual({ gameBookId, currentParagraph: 50 });
   });
 
   it('throws helpful error on non-2xx', async () => {

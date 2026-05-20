@@ -24,12 +24,17 @@ export function useTranslateSegmentSSE() {
   }, []);
 
   const start = useCallback(
-    (campaignId: string, photoId: string, paragraphNumber: number) => {
+    (campaignId: string, photoId: string, paragraphNumber: number, gameBookId: string) => {
       stop();
       setState(initialState);
+      // C2 (multi-book generalization): `gameBookId` is required so the BE can
+      // scope per-book progress correctly. Callers must derive it from
+      // BookPicker / single-book auto-select.
       const url =
         `${API_BASE}/api/v1/gamebook/campaigns/${encodeURIComponent(campaignId)}/photos/translate` +
-        `?photoId=${encodeURIComponent(photoId)}&paragraphNumber=${paragraphNumber}`;
+        `?photoId=${encodeURIComponent(photoId)}` +
+        `&paragraphNumber=${paragraphNumber}` +
+        `&gameBookId=${encodeURIComponent(gameBookId)}`;
       const es = new EventSource(url, { withCredentials: true });
       sourceRef.current = es;
 

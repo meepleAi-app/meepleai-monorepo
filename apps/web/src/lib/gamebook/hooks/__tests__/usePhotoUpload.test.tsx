@@ -13,11 +13,13 @@ vi.mock('@/lib/gamebook/clientExifStripper');
 
 const CAMPAIGN_ID = '11111111-1111-4111-a111-111111111111';
 const PHOTO_ID = '22222222-2222-4222-a222-222222222222';
+const BOOK_ID = '33333333-3333-4333-a333-333333333333';
 
+// C5 (multi-book generalization 2026-05-19): BE no longer returns `pageType`
+// on `GamebookPhotoArtifactDto`.
 const fakeArtifact: photosApi.GamebookPhotoArtifact = {
   id: PHOTO_ID,
   campaignId: CAMPAIGN_ID,
-  pageType: 'Storybook',
   status: 'Uploaded',
   ocrFullText: null,
   segments: [],
@@ -52,11 +54,11 @@ describe('usePhotoUpload', () => {
       wrapper: makeWrapper(qc),
     });
 
-    result.current.mutate({ file: original, pageType: 'Storybook' });
+    result.current.mutate({ file: original, gameBookId: BOOK_ID });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(stripperApi.stripExif).toHaveBeenCalledWith(original);
-    expect(photosApi.uploadPhoto).toHaveBeenCalledWith(CAMPAIGN_ID, stripped, 'Storybook');
+    expect(photosApi.uploadPhoto).toHaveBeenCalledWith(CAMPAIGN_ID, stripped, BOOK_ID);
     expect(result.current.data?.id).toBe(PHOTO_ID);
   });
 
@@ -73,10 +75,10 @@ describe('usePhotoUpload', () => {
       wrapper: makeWrapper(qc),
     });
 
-    result.current.mutate({ file, pageType: 'Storybook' });
+    result.current.mutate({ file, gameBookId: BOOK_ID });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(photosApi.uploadPhoto).toHaveBeenCalledWith(CAMPAIGN_ID, file, 'Storybook');
+    expect(photosApi.uploadPhoto).toHaveBeenCalledWith(CAMPAIGN_ID, file, BOOK_ID);
   });
 
   it('invalidates gamebook photos query on success', async () => {
@@ -94,7 +96,7 @@ describe('usePhotoUpload', () => {
       wrapper: makeWrapper(qc),
     });
 
-    result.current.mutate({ file, pageType: 'Encounter' });
+    result.current.mutate({ file, gameBookId: BOOK_ID });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(invalidateSpy).toHaveBeenCalledWith(
@@ -114,7 +116,7 @@ describe('usePhotoUpload', () => {
       wrapper: makeWrapper(qc),
     });
 
-    result.current.mutate({ file, pageType: 'Storybook' });
+    result.current.mutate({ file, gameBookId: BOOK_ID });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(photosApi.uploadPhoto).not.toHaveBeenCalled();
@@ -137,7 +139,7 @@ describe('usePhotoUpload', () => {
       wrapper: makeWrapper(qc),
     });
 
-    result.current.mutate({ file, pageType: 'Storybook' });
+    result.current.mutate({ file, gameBookId: BOOK_ID });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(photosApi.uploadPhoto).not.toHaveBeenCalled();
@@ -160,7 +162,7 @@ describe('usePhotoUpload', () => {
       wrapper: makeWrapper(qc),
     });
 
-    result.current.mutate({ file, pageType: 'Storybook' });
+    result.current.mutate({ file, gameBookId: BOOK_ID });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.message).toMatch(/upload failed/);

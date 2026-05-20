@@ -306,7 +306,7 @@ const HubFilters = ({ q, setQ, status, setStatus, sort, setSort, compact, count,
     }}>
       {STATUS_OPTS.map(o => (
         <button key={o.id} role="tab" aria-selected={status === o.id}
-          onClick={()=>setStatus(o.id)}
+          onClick={(e) => { (()=>setStatus(o.id))(e); setTimeout(() => { window.location.href = 'sp4-game-detail.html'; }, 0); /* DEMO-NAV */ }}
           style={{
             padding: compact ? '6px 9px' : '6px 12px',
             border:'none',
@@ -615,7 +615,7 @@ const DesktopPublicNav = () => {
       </div>
       <div style={{ display:'flex', alignItems:'center', gap: 2, marginLeft: 18 }}>
         {items.map(it => (
-          <a key={it.id} href="#" onClick={e=>e.preventDefault()}
+          <a key={it.id} href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp4-games-index.html'; }, 0); /* DEMO-NAV */ }}
             aria-current={it.active ? 'page' : undefined}
             style={{
               padding:'6px 12px', borderRadius:'var(--r-md)',

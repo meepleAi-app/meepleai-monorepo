@@ -689,7 +689,7 @@ const DesktopAuthNav = () => {
       </div>
       <div style={{ display:'flex', alignItems:'center', gap: 2, marginLeft: 18 }}>
         {items.map(it => (
-          <a key={it.id} href="#" onClick={e=>e.preventDefault()}
+          <a key={it.id} href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }}
             aria-current={it.active ? 'page' : undefined}
             style={{
               padding:'6px 12px', borderRadius:'var(--r-md)',

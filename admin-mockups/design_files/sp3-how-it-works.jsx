@@ -272,7 +272,7 @@ const IllusStep1 = () => (
       color: 'var(--text-muted)',
       fontFamily: 'var(--f-display)', fontWeight: 600, fontSize: 12.5,
       cursor: 'pointer',
-    }}>+ Aggiungi gioco</button>
+    }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-add-game-bgg-step.html'; }, 0); /* DEMO-NAV */ }}>+ Aggiungi gioco</button>
   </div>
 );
 
@@ -573,13 +573,13 @@ const HowItWorksBody = ({ isMobile = false }) => {
               borderRadius: 999,
               textDecoration: 'none',
               boxShadow: '0 8px 24px hsl(var(--c-game) / 0.35)',
-            }}>Inizia gratis →</a>
+            }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-onboarding.html'; }, 0); /* DEMO-NAV */ }}>Inizia gratis →</a>
             <div style={{ marginTop: 18, fontSize: 13.5, color: 'var(--text-muted)' }}>
               Hai già un account?{' '}
               <a href="#/login" style={{
                 color: 'hsl(var(--c-game))', fontWeight: 600, textDecoration: 'underline',
                 textDecorationColor: 'hsl(var(--c-game) / 0.4)', textUnderlineOffset: 3,
-              }}>Accedi</a>
+              }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }}>Accedi</a>
             </div>
           </div>
         </div>
@@ -679,7 +679,7 @@ const App = () => {
           }}>Route: /how-it-works · Pagina educativa statica · Riusa HeroGradient da public.jsx</div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'inline-flex', gap: 8 }}>
-          <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          <button onClick={(e) => { (() => setTheme(theme === 'light' ? 'dark' : 'light'))(e); setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }}
             style={{
               padding: '8px 14px', borderRadius: 999,
               border: '1px solid ' + (theme === 'dark' ? 'rgba(224,180,110,0.28)' : 'rgba(180,130,80,0.32)'),

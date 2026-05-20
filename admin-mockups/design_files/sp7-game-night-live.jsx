@@ -558,7 +558,7 @@ const PlannedGamesPane = ({ compact, games = GAMES }) => (
           border:'1px dashed var(--border-strong)',
           fontFamily:'var(--f-display)', fontSize: 11.5, fontWeight: 700,
           cursor:'not-allowed', opacity: 0.7,
-        }}>+ Aggiungi gioco</button>
+        }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-add-game-bgg-step.html'; }, 0); /* DEMO-NAV */ }}>+ Aggiungi gioco</button>
     </div>
   </aside>
 );
@@ -688,7 +688,7 @@ const CurrentGameCard = ({ game, compact }) => {
             fontFamily:'var(--f-mono)', fontSize: 10, fontWeight: 800,
             color: entityHsl('player'), background:'transparent', border:'none',
             cursor:'pointer', padding: 0,
-          }}>Apri roster →</button>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'sp7-game-night-detail-rsvp.html'; }, 0); /* DEMO-NAV */ }}>Apri roster →</button>
         </div>
         <div style={{ display:'flex', gap: 6, flexWrap:'wrap' }}>
           {PLAYERS.map(p => (
@@ -793,7 +793,7 @@ const TransitionPendingPane = ({ from = GAMES[0], to = GAMES[1] }) => (
         background:'transparent', border:'1px solid var(--border-strong)',
         color:'var(--text-sec)',
         fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 700, cursor:'pointer',
-      }}>Salta gioco</button>
+      }} onClick={() => { setTimeout(() => { window.location.href = 'sp7-game-night-detail-rsvp.html'; }, 0); /* DEMO-NAV */ }}>Salta gioco</button>
       <button type="button" style={{
         padding:'13px 18px', borderRadius:'var(--r-md)',
         background:'transparent', border:'1px solid hsl(var(--c-danger) / 0.4)',

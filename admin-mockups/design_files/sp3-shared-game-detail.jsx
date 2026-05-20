@@ -624,7 +624,7 @@ const KBPublicDocItem = ({ kb }) => {
         color:'var(--text-sec)',
         fontFamily:'var(--f-display)', fontSize: 11, fontWeight: 700,
         cursor:'pointer', flexShrink: 0,
-      }}>Apri ↗</button>
+      }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-shared-games.html'; }, 0); /* DEMO-NAV */ }}>Apri ↗</button>
     </article>
   );
 };
@@ -764,7 +764,7 @@ const SharedGameDetailBody = ({ stateOverride, compact }) => {
 
         {isNoContent && (
           <Banner tone="info" action={
-            <a href="#" onClick={e=>e.preventDefault()} style={{
+            <a href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp3-shared-games.html'; }, 0); /* DEMO-NAV */ }} style={{
               padding:'5px 10px', borderRadius:'var(--r-md)',
               background:'hsl(var(--c-info))', color:'#fff',
               fontFamily:'var(--f-display)', fontSize: 11, fontWeight: 700,
@@ -844,7 +844,7 @@ const StickyCTAMobile = () => (
       background:'hsl(var(--c-game))', color:'#fff',
       boxShadow:'0 6px 20px hsl(var(--c-game) / .4)',
       cursor:'pointer',
-    }}>🔒 Accedi per installare</button>
+    }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }}>🔒 Accedi per installare</button>
   </div>
 );
 
@@ -870,7 +870,7 @@ const FloatingCTADesktop = () => (
       border:'none', fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 700,
       cursor:'pointer',
       boxShadow:'0 3px 10px hsl(var(--c-game) / .35)',
-    }}>Accedi →</button>
+    }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }}>Accedi →</button>
   </div>
 );
 
@@ -954,11 +954,11 @@ const DesktopNav = () => (
       flex: 1, fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-muted)',
       marginLeft: 22,
     }}>
-      <a href="#" style={{ color:'inherit' }}>Catalogo</a>
+      <a href="#" style={{ color:'inherit' }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-shared-games.html'; }, 0); /* DEMO-NAV */ }}>Catalogo</a>
       <span aria-hidden="true"> / </span>
       <strong style={{ color:'var(--text-sec)' }}>{GAME.title}</strong>
     </div>
-    <a href="#" onClick={e=>e.preventDefault()} style={{
+    <a href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }} style={{
       padding:'7px 14px', borderRadius:'var(--r-md)',
       color:'#fff', fontSize: 13, fontWeight: 700, fontFamily:'var(--f-display)',
       background:'hsl(var(--c-game))',

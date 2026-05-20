@@ -111,7 +111,7 @@ function OnboardingProgress({ step, onSkip }) {
           );
         })}
       </div>
-      <button className="ob-skip-btn" onClick={onSkip} aria-label="Salta onboarding">
+      <button className="ob-skip-btn" onClick={(e) => { (onSkip)(e); setTimeout(() => { window.location.href = 'onboarding.html'; }, 0); /* DEMO-NAV */ }} aria-label="Salta onboarding">
         Salta
       </button>
     </div>
@@ -195,7 +195,7 @@ function BottomBar({ onBack, onNext, nextLabel = 'Avanti →', nextDisabled = fa
   return (
     <div className="ob-bottom-bar">
       {showBack
-        ? <button className="btn ghost" onClick={onBack}>← Indietro</button>
+        ? <button className="btn ghost" onClick={(e) => { (onBack)(e); setTimeout(() => { window.location.href = 'onboarding.html'; }, 0); /* DEMO-NAV */ }}>← Indietro</button>
         : <span />
       }
       <button
@@ -231,7 +231,7 @@ function WelcomeStep({ userName, onStart, onSkip }) {
           giochi, agenti e prima sessione.
         </p>
         <div className="ob-welcome-actions">
-          <button className="btn primary ob-start-btn" onClick={onStart}>
+          <button className="btn primary ob-start-btn" onClick={(e) => { (onStart)(e); setTimeout(() => { window.location.href = 'librogame-runthrough-game-onboarding.html'; }, 0); /* DEMO-NAV */ }}>
             Inizia il tour →
           </button>
           <button className="btn ghost" onClick={onSkip}>
@@ -330,7 +330,7 @@ function CompleteStep({ onHome }) {
           <span className="ob-gradient-text">Benvenuto!</span>
         </h1>
         <p className="ob-complete-sub">MeepleAI è pronto.<br/>Buon gioco!</p>
-        <button className="btn primary ob-home-btn" onClick={onHome}>
+        <button className="btn primary ob-home-btn" onClick={(e) => { (onHome)(e); setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }}>
           Vai alla home →
         </button>
       </div>
@@ -390,7 +390,7 @@ function OnboardingApp() {
   return (
     <div className={`ob-root ${stepEntityClass}`}>
       {/* Skip link a11y */}
-      <a href="#ob-main" className="ob-skip-link">Vai al contenuto</a>
+      <a href="#ob-main" className="ob-skip-link" onClick={() => { setTimeout(() => { window.location.href = 'onboarding.html'; }, 0); /* DEMO-NAV */ }}>Vai al contenuto</a>
 
       {/* Hub nav */}
       <nav className="hub-nav">
@@ -402,7 +402,7 @@ function OnboardingApp() {
           10 · Onboarding
         </span>
         <div className="spacer" />
-        <a href="00-hub.html">← Hub</a>
+        <a href="00-hub.html" onClick={() => { setTimeout(() => { window.location.href = '00-hub.html'; }, 0); /* DEMO-NAV */ }}>← Hub</a>
       </nav>
 
       {/* Theme toggle */}

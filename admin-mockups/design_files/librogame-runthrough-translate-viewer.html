@@ -474,7 +474,7 @@
             <h3 style="font-family: var(--f-display); font-size: var(--fs-xl); font-weight: var(--fw-bold); margin: 0 0 var(--s-2);">Trascina la foto della pagina qui</h3>
             <p style="color: var(--text-sec); margin: 0 0 var(--s-4); font-size: var(--fs-md);">Oppure scegli da galleria. Formato consigliato: A4 con § visibili.</p>
             <div style="display: flex; gap: var(--s-2);">
-              <button class="btn-sm-fill" style="padding: var(--s-3) var(--s-5); font-size: var(--fs-md);">🖼️ Scegli foto</button>
+              <button class="btn-sm-fill" style="padding: var(--s-3) var(--s-5); font-size: var(--fs-md);" onclick="window.location.href='librogame-runthrough-play-session.html'" /* DEMO-NAV */>🖼️ Scegli foto</button>
               <button class="nav-btn">📷 Usa fotocamera</button>
             </div>
           </div>
@@ -517,7 +517,7 @@
               <span class="ico" style="opacity: 0.4;">○</span><span class="lbl" style="opacity: 0.5;">Segmentazione paragrafi</span><span class="meta">in attesa</span>
             </div>
           </div>
-          <button class="nav-btn" type="button" aria-label="Annulla">✕ Annulla</button>
+          <button class="nav-btn" type="button" aria-label="Annulla" onclick="window.location.href='librogame-runthrough-play-session.html'" /* DEMO-NAV */>✕ Annulla</button>
         </div>
       </div>
 
@@ -569,13 +569,13 @@
           <article class="segment-card" role="button" tabindex="0">
             <div class="pn-row"><span class="pn">§146</span><span class="match exact">Match esatto</span></div>
             <p class="preview">"The hall was silent as the Goblin chieftain rose from his throne. His eyes, hollow as the Voidstone..."</p>
-            <div class="actions"><span class="ocr-conf">🔍 confidence 0.93</span><button class="btn-sm-fill">Traduci</button></div>
+            <div class="actions"><span class="ocr-conf">🔍 confidence 0.93</span><button class="btn-sm-fill" onclick="window.location.href='librogame-runthrough-translate-viewer.html'" /* DEMO-NAV */>Traduci</button></div>
           </article>
 
           <article class="segment-card target" role="button" tabindex="0" aria-current="true">
             <div class="pn-row"><span class="pn">§147</span><span class="match exact">Match esatto · target</span></div>
             <p class="preview">"As Niamh approached the altar, the air grew thick with whispers. The Goblin guards drew their blades, eyes gleaming with bloodlust..."</p>
-            <div class="actions"><span class="ocr-conf">🔍 confidence 0.96</span><button class="btn-sm-fill" autofocus>▶ Traduci §147</button></div>
+            <div class="actions"><span class="ocr-conf">🔍 confidence 0.96</span><button class="btn-sm-fill" autofocus onclick="window.location.href='librogame-runthrough-translate-viewer.html'" /* DEMO-NAV */>▶ Traduci §147</button></div>
           </article>
 
           <article class="segment-card" role="button" tabindex="0">
@@ -602,9 +602,9 @@
               <h2>Paragrafi trovati nella pagina</h2>
               <span class="ocr-quality">📊 OCR 0.91 · 3 segmenti</span>
             </div>
-            <article class="segment-card"><div class="pn-row"><span class="pn">§146</span><span class="match exact">Match esatto</span></div><p class="preview">"The hall was silent as the Goblin chieftain rose from his throne. His eyes, hollow as the Voidstone..."</p><div class="actions"><span class="ocr-conf">🔍 0.93</span><button class="btn-sm-fill">Traduci §146</button></div></article>
+            <article class="segment-card"><div class="pn-row"><span class="pn">§146</span><span class="match exact">Match esatto</span></div><p class="preview">"The hall was silent as the Goblin chieftain rose from his throne. His eyes, hollow as the Voidstone..."</p><div class="actions"><span class="ocr-conf">🔍 0.93</span><button class="btn-sm-fill" onclick="window.location.href='librogame-runthrough-translate-viewer.html'" /* DEMO-NAV */>Traduci §146</button></div></article>
             <article class="segment-card target" aria-current="true"><div class="pn-row"><span class="pn">§147</span><span class="match exact">Match esatto · target</span></div><p class="preview">"As Niamh approached the altar, the air grew thick with whispers. The Goblin guards drew their blades, eyes gleaming with bloodlust..."</p><div class="actions"><span class="ocr-conf">🔍 0.96</span><button class="btn-sm-fill" autofocus>▶ Traduci §147</button></div></article>
-            <article class="segment-card"><div class="pn-row"><span class="pn">§148</span><span class="match partial">Match parziale</span></div><p class="preview">"If you choose to fight, turn to §201. If you flee through the back passage, turn to §189..."</p><div class="actions"><span class="ocr-conf">🔍 0.78</span><button class="btn-sm-fill">Traduci §148</button></div></article>
+            <article class="segment-card"><div class="pn-row"><span class="pn">§148</span><span class="match partial">Match parziale</span></div><p class="preview">"If you choose to fight, turn to §201. If you flee through the back passage, turn to §189..."</p><div class="actions"><span class="ocr-conf">🔍 0.78</span><button class="btn-sm-fill" onclick="window.location.href='librogame-runthrough-translate-viewer.html'" /* DEMO-NAV */>Traduci §148</button></div></article>
           </div>
         </div>
       </div>
@@ -705,9 +705,9 @@
         <div class="viewer-toolbar">
           <button class="nav-btn" aria-label="Paragrafo precedente">← §146</button>
           <div class="a11y-tools">
-            <button class="a11y-btn" aria-label="Riduci font">A−</button>
+            <button class="a11y-btn" aria-label="Riduci font" onclick="window.location.href='librogame-runthrough-play-session.html'" /* DEMO-NAV */>A−</button>
             <button class="a11y-btn" aria-label="Font default">A</button>
-            <button class="a11y-btn" aria-label="Aumenta font">A+</button>
+            <button class="a11y-btn" aria-label="Aumenta font" onclick="window.location.href='librogame-runthrough-play-session.html'" /* DEMO-NAV */>A+</button>
           </div>
           <button class="nav-btn primary">Letto, vai a §148 →</button>
         </div>

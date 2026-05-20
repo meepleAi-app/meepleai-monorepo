@@ -627,14 +627,14 @@ const ListCard = ({ night, mobile }) => {
               background:'transparent', color:'var(--text)',
               border:'1px solid var(--border-strong)',
               fontFamily:'var(--f-display)', fontSize: 11, fontWeight: 800, cursor:'pointer',
-            }}>Vedi summary →</button>
+            }} onClick={() => { setTimeout(() => { window.location.href = 'sp7-game-night-detail-rsvp.html'; }, 0); /* DEMO-NAV */ }}>Vedi summary →</button>
           ) : isCancelled ? (
             <button type="button" style={{
               padding:'6px 12px', borderRadius:'var(--r-md)',
               background:'transparent', color:'var(--text-muted)',
               border:'1px solid var(--border)',
               fontFamily:'var(--f-display)', fontSize: 11, fontWeight: 700, cursor:'pointer',
-            }}>Riprogramma</button>
+            }} onClick={() => { setTimeout(() => { window.location.href = 'sp7-game-night-detail-rsvp.html'; }, 0); /* DEMO-NAV */ }}>Riprogramma</button>
           ) : isOrg ? (
             <button type="button" style={{
               padding:'6px 12px', borderRadius:'var(--r-md)',
@@ -648,7 +648,7 @@ const ListCard = ({ night, mobile }) => {
                 background: entityHsl('toolkit'), color:'#fff', border:'none',
                 fontFamily:'var(--f-display)', fontSize: 11, fontWeight: 800, cursor:'pointer',
                 lineHeight: 1.4,
-              }}>✓ Partecipo</button>
+              }} onClick={() => { setTimeout(() => { window.location.href = 'sp7-game-night-detail-rsvp.html'; }, 0); /* DEMO-NAV */ }}>✓ Partecipo</button>
               <button type="button" style={{
                 padding:'6px 10px', borderRadius:'var(--r-md)',
                 background:'transparent', color:'var(--text-sec)',
@@ -1126,7 +1126,7 @@ const App = () => {
           </div>
         </div>
         <div style={{ flex: 1 }}/>
-        <button type="button" onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+        <button type="button" onClick={(e) => { (() => setTheme(t => t === 'light' ? 'dark' : 'light'))(e); setTimeout(() => { window.location.href = 'sp7-game-night-detail-rsvp.html'; }, 0); /* DEMO-NAV */ }}
           style={{
             padding:'8px 14px', borderRadius:'var(--r-md)',
             background:'var(--bg-card)', border:'1px solid var(--border)',

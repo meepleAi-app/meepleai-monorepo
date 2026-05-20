@@ -23,13 +23,13 @@ function PublicNav({ currentPage, onNav }) {
         <div className="pub-nav-links">
           {links.map(l => (
             <a key={l.id} href="#" className={currentPage === l.id ? 'active' : ''}
-               onClick={e => { e.preventDefault(); onNav(l.id); }}>
+               onClick={(e) => { (e => { e.preventDefault(); onNav(l.id); })(e); setTimeout(() => { window.location.href = 'sp3-how-it-works.html'; }, 0); /* DEMO-NAV */ }}>
               {l.label}
             </a>
           ))}
         </div>
         <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
-        <a href="auth-flow.html" className="btn ghost" style={{ padding: '6px 12px', fontSize: 'var(--fs-sm)' }}>Accedi</a>
+        <a href="auth-flow.html" className="btn ghost" style={{ padding: '6px 12px', fontSize: 'var(--fs-sm)' }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }}>Accedi</a>
         <a href="auth-flow.html" className="btn primary e-game" style={{ padding: '6px 14px', fontSize: 'var(--fs-sm)' }}>Inizia gratis</a>
         {/* hamburger */}
         <button className="ham-btn" onClick={() => setMenuOpen(!menuOpen)}
@@ -42,12 +42,12 @@ function PublicNav({ currentPage, onNav }) {
         <div className="mob-drawer" onClick={() => setMenuOpen(false)}>
           <div className="mob-drawer-inner" onClick={e => e.stopPropagation()}>
             {links.map(l => (
-              <a key={l.id} href="#" onClick={e => { e.preventDefault(); onNav(l.id); setMenuOpen(false); }}>
+              <a key={l.id} href="#" onClick={(e) => { (e => { e.preventDefault(); onNav(l.id); setMenuOpen(false); })(e); setTimeout(() => { window.location.href = 'sp3-how-it-works.html'; }, 0); /* DEMO-NAV */ }}>
                 {l.label}
               </a>
             ))}
             <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '8px 0' }} />
-            <a href="auth-flow.html">Accedi</a>
+            <a href="auth-flow.html" onClick={() => { setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }}>Accedi</a>
             <a href="auth-flow.html" style={{ color: 'hsl(var(--c-game))', fontWeight: 700 }}>Inizia gratis →</a>
           </div>
         </div>
@@ -73,10 +73,10 @@ function HeroSection({ onNav }) {
           traccia le partite, ricorda le house rules. Tutto in un'unica piattaforma.
         </p>
         <div className="hero-ctas">
-          <a href="auth-flow.html" className="btn primary e-game hero-btn">
+          <a href="auth-flow.html" className="btn primary e-game hero-btn" onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-onboarding.html'; }, 0); /* DEMO-NAV */ }}>
             Inizia gratis — è gratuito
           </a>
-          <button className="btn ghost hero-btn" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
+          <button className="btn ghost hero-btn" onClick={(e) => { (() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }))(e); setTimeout(() => { window.location.href = 'sp3-how-it-works.html'; }, 0); /* DEMO-NAV */ }}>
             Vedi come funziona ↓
           </button>
         </div>
@@ -93,7 +93,7 @@ function StatsRow() {
     { v: 'Multi', l: 'Agent system' },
   ];
   return (
-    <div className="pub-wrap stat-row">
+    <div className="pub-wrap stat-row" onClick={() => { setTimeout(() => { window.location.href = 'sp3-how-it-works.html'; }, 0); /* DEMO-NAV */ }}>
       {stats.map(s => (
         <div key={s.l} className="st">
           <div className="v" style={{ color: 'hsl(var(--c-game))' }}>{s.v}</div>
@@ -182,7 +182,7 @@ function FinalCTA() {
         <p style={{ color: 'var(--text-sec)', fontSize: 'var(--fs-lg)', marginBottom: 32, lineHeight: 'var(--lh-body)' }}>
           Inizia gratis, nessuna carta di credito richiesta. Setup in meno di 2 minuti.
         </p>
-        <a href="auth-flow.html" className="btn primary e-game" style={{ fontSize: 'var(--fs-md)', padding: '12px 28px' }}>
+        <a href="auth-flow.html" className="btn primary e-game" style={{ fontSize: 'var(--fs-md)', padding: '12px 28px' }} onClick={() => { setTimeout(() => { window.location.href = 'settings.html'; }, 0); /* DEMO-NAV */ }}>
           Crea il tuo account →
         </a>
       </div>
@@ -483,7 +483,7 @@ function TermsPrivacyPage() {
             </section>
           ))}
           <div style={{ padding: '20px', background: 'var(--bg-muted)', borderRadius: 'var(--r-lg)', borderLeft: '3px solid hsl(var(--c-game))', fontSize: 'var(--fs-sm)', color: 'var(--text-sec)' }}>
-            Domande? Scrivici a <a href="mailto:legal@meepleai.it" style={{ color: 'hsl(var(--c-game))' }}>legal@meepleai.it</a>
+            Domande? Scrivici a <a href="mailto:legal@meepleai.it" style={{ color: 'hsl(var(--c-game))' }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-legal.html'; }, 0); /* DEMO-NAV */ }}>legal@meepleai.it</a>
           </div>
         </main>
       </div>
@@ -568,7 +568,7 @@ function ContactPage() {
                 <span style={{ fontSize: 18, marginTop: 1 }}>✉️</span>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 'var(--fs-sm)', marginBottom: 2 }}>Email diretta</div>
-                  <a href="mailto:ciao@meepleai.it" style={{ color: 'hsl(var(--c-game))', fontSize: 'var(--fs-sm)' }}>ciao@meepleai.it</a>
+                  <a href="mailto:ciao@meepleai.it" style={{ color: 'hsl(var(--c-game))', fontSize: 'var(--fs-sm)' }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-how-it-works.html'; }, 0); /* DEMO-NAV */ }}>ciao@meepleai.it</a>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>

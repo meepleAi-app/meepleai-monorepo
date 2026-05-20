@@ -689,7 +689,7 @@ const ErrorState = ({ onRetry }) => (
     </p>
     <button
       type="button"
-      onClick={onRetry}
+      onClick={(e) => { (onRetry)(e); setTimeout(() => { window.location.href = 'sp3-shared-game-detail.html'; }, 0); /* DEMO-NAV */ }}
       style={{
         padding:'9px 16px',
         borderRadius:'var(--r-md)',
@@ -767,7 +767,7 @@ const PhoneTopNav = () => (
       background:'transparent', border:'1px solid var(--border)',
       color:'var(--text)', fontFamily:'var(--f-display)', fontSize: 11, fontWeight: 700,
       cursor:'pointer',
-    }}>Accedi</button>
+    }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }}>Accedi</button>
   </div>
 );
 
@@ -816,7 +816,7 @@ const SharedGamesMobileScreen = ({ stateOverride }) => {
                 background:'var(--bg-muted)', border:'1px solid var(--border)',
                 color:'var(--text)', fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 700,
                 cursor:'pointer',
-              }}>Carica altri ({Math.max(0, ALL_GAMES.length - f.filtered.length + 8)})</button>
+              }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-shared-game-detail.html'; }, 0); /* DEMO-NAV */ }}>Carica altri ({Math.max(0, ALL_GAMES.length - f.filtered.length + 8)})</button>
             </div>
           )}
         </div>
@@ -872,12 +872,12 @@ const DesktopNav = () => (
         }}>{it.l}</a>
       ))}
     </div>
-    <a href="#" onClick={e=>e.preventDefault()} style={{
+    <a href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }} style={{
       padding:'6px 12px', borderRadius:'var(--r-md)',
       color:'var(--text-sec)', fontSize: 13, fontWeight: 700, fontFamily:'var(--f-display)',
       border:'1px solid var(--border)',
     }}>Accedi</a>
-    <a href="#" onClick={e=>e.preventDefault()} style={{
+    <a href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'librogame-runthrough-game-onboarding.html'; }, 0); /* DEMO-NAV */ }} style={{
       padding:'7px 14px', borderRadius:'var(--r-md)',
       color:'#fff', fontSize: 13, fontWeight: 700, fontFamily:'var(--f-display)',
       background:'hsl(var(--c-game))',

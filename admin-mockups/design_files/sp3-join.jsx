@@ -546,7 +546,7 @@ const JoinForm = ({ stateOverride }) => {
         fontSize: 11, color:'var(--text-muted)',
         fontFamily:'var(--f-mono)', letterSpacing:'.02em',
       }}>
-        Già hai un invito? <a href="#" onClick={e => e.preventDefault()}
+        Già hai un invito? <a href="#" onClick={(e) => { (e => e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }}
           style={{ color:'hsl(var(--c-game))', fontWeight: 700, fontFamily:'var(--f-display)' }}>
           Accedi
         </a>
@@ -607,7 +607,7 @@ const JoinMobileScreen = ({ stateOverride }) => (
         fontSize: 10, color:'var(--text-muted)', fontFamily:'var(--f-mono)',
         letterSpacing:'.04em',
       }}>
-        © 2026 MeepleAI · <a href="#" onClick={e=>e.preventDefault()} style={{ color:'inherit' }}>Privacy</a> · <a href="#" onClick={e=>e.preventDefault()} style={{ color:'inherit' }}>Termini</a>
+        © 2026 MeepleAI · <a href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp3-legal.html'; }, 0); /* DEMO-NAV */ }} style={{ color:'inherit' }}>Privacy</a> · <a href="#" onClick={e=>e.preventDefault()} style={{ color:'inherit' }}>Termini</a>
       </div>
     </div>
   </>
@@ -691,12 +691,12 @@ const DesktopNav = () => (
         }}>{l}</a>
       ))}
     </div>
-    <a href="#" onClick={e=>e.preventDefault()} style={{
+    <a href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }} style={{
       padding:'6px 12px', borderRadius:'var(--r-md)',
       color:'var(--text-sec)', fontSize: 13, fontWeight: 700, fontFamily:'var(--f-display)',
       border:'1px solid var(--border)',
     }}>Accedi</a>
-    <a href="#" onClick={e=>e.preventDefault()} style={{
+    <a href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'librogame-runthrough-game-onboarding.html'; }, 0); /* DEMO-NAV */ }} style={{
       padding:'7px 14px', borderRadius:'var(--r-md)',
       color:'#fff', fontSize: 13, fontWeight: 700, fontFamily:'var(--f-display)',
       background:'hsl(var(--c-game))',

@@ -104,7 +104,7 @@ function StatusPill({ status, indexed, total, onRetry }) {
   }
   if (status === 'error') {
     return (
-      <button className="lg-status-pill" onClick={onRetry} style={{
+      <button className="lg-status-pill" onClick={(e) => { (onRetry)(e); setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }} style={{
         background: entityHsl('event', 0.12),
         color: entityHsl('event'),
         border: 'none', cursor: 'pointer', font: 'inherit',
@@ -251,7 +251,7 @@ function QuotaWidget({ used, total, resetDate, variant = 'normal' }) {
           {isHard ? 'Si resetta il 1° giugno' : `Resetta il 1° giugno`}
         </span>
         {(isSoft || isHard) && (
-          <a href="#" className="lg-quota-buy" style={{ color: entityHsl('event') }}>
+          <a href="#" className="lg-quota-buy" style={{ color: entityHsl('event') }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-quota-credits.html'; }, 0); /* DEMO-NAV */ }}>
             Acquista crediti →
           </a>
         )}
@@ -286,7 +286,7 @@ function HardLimitBanner() {
           background: entityHsl('event'),
           color: '#fff',
         }}
-      >
+       onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-quota-credits.html'; }, 0); /* DEMO-NAV */ }}>
         💎 Crediti
       </a>
     </div>
@@ -388,7 +388,7 @@ function EmptyState({ desktop }) {
       >
         📷 Scatta il primo manuale
       </button>
-      <a href="#" className="lg-empty-link">Come funziona →</a>
+      <a href="#" className="lg-empty-link" onClick={() => { setTimeout(() => { window.location.href = 'sp3-how-it-works.html'; }, 0); /* DEMO-NAV */ }}>Come funziona →</a>
     </div>
   );
 }
@@ -412,7 +412,7 @@ function ErrorState({ onRetry, desktop }) {
       </p>
       <button
         type="button"
-        onClick={onRetry}
+        onClick={(e) => { (onRetry)(e); setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}
         className="lg-error-cta"
         style={{
           background: entityHsl('event'),

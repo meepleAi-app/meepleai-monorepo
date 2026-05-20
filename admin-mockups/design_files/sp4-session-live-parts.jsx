@@ -467,7 +467,7 @@ const PlayerRosterLive = ({ compact }) => {
             border:'1px dashed var(--border-strong)',
             fontFamily:'var(--f-display)', fontSize: 11.5, fontWeight: 700,
             cursor:'not-allowed', opacity: 0.7,
-          }}>+ Aggiungi giocatore</button>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-onboarding.html'; }, 0); /* DEMO-NAV */ }}>+ Aggiungi giocatore</button>
       </div>
     </aside>
   );
@@ -579,7 +579,7 @@ const LiveScoringPanel = ({ emptyTurn, compact }) => {
           marginBottom: 14,
         }}>
           {[1, 5, 10, 20].map(p => (
-            <button key={p} type="button" onClick={() => setVal(v => v + p)}
+            <button key={p} type="button" onClick={(e) => { (() => setVal(v => v + p))(e); setTimeout(() => { window.location.href = 'sp4-session-summary.html'; }, 0); /* DEMO-NAV */ }}
               style={{
                 padding:'5px 10px', borderRadius:'var(--r-pill)',
                 background:'var(--bg-muted)', border:'1px solid var(--border)',

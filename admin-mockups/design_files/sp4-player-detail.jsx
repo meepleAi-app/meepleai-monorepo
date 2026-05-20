@@ -371,7 +371,7 @@ const PlayerHero = ({ player, compact, loading }) => {
               border:'1px solid var(--border-strong)',
               fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 700,
               cursor:'pointer',
-            }}>✎ Modifica</button>
+            }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-players-index.html'; }, 0); /* DEMO-NAV */ }}>✎ Modifica</button>
             <button type="button" aria-label="Condividi profilo" style={{
               padding: compact ? '9px 12px' : '10px 14px', borderRadius:'var(--r-md)',
               background:'transparent', color:'var(--text)',
@@ -395,7 +395,7 @@ const PlayerHero = ({ player, compact, loading }) => {
               border:'1px solid var(--border-strong)',
               fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 700,
               cursor:'pointer',
-            }}>✎ Modifica</button>
+            }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-players-index.html'; }, 0); /* DEMO-NAV */ }}>✎ Modifica</button>
           </>
         )}
       </div>
@@ -542,7 +542,7 @@ const TopGamesCard = () => (
         background:'transparent', border:'1px solid var(--border)',
         color:'var(--text-sec)', fontSize: 11, fontWeight: 700,
         fontFamily:'var(--f-display)', cursor:'pointer',
-      }}>Vedi tutti →</button>
+      }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-players-index.html'; }, 0); /* DEMO-NAV */ }}>Vedi tutti →</button>
     </div>
     <div style={{ display:'flex', flexDirection:'column', gap: 0 }}>
       {PLAYER_TOP_GAMES.map((g, i) => {
@@ -818,7 +818,7 @@ const SessionsTab = ({ player }) => {
           { id:'wins', label:'Vinte', n: PLAYER_SESSIONS.filter(s => s.won === true).length },
           { id:'losses', label:'Perse', n: PLAYER_SESSIONS.filter(s => s.won === false).length },
         ].map(f => (
-          <button key={f.id} type="button" onClick={() => setFilter(f.id)} style={{
+          <button key={f.id} type="button" onClick={(e) => { (() => setFilter(f.id))(e); setTimeout(() => { window.location.href = 'sp4-players-index.html'; }, 0); /* DEMO-NAV */ }} style={{
             padding:'6px 12px', borderRadius:'var(--r-pill)',
             background: filter === f.id ? entityHsl('session') : 'var(--bg-muted)',
             color: filter === f.id ? '#fff' : 'var(--text-sec)',
@@ -966,7 +966,7 @@ const ToolkitItem = ({ tk }) => {
         background:'transparent', border:'1px solid var(--border)',
         color: entityHsl('toolkit'),
         fontFamily:'var(--f-display)', fontSize: 11, fontWeight: 800, cursor:'pointer',
-      }}>Apri ↗</button>
+      }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-players-index.html'; }, 0); /* DEMO-NAV */ }}>Apri ↗</button>
     </article>
   );
 };
@@ -1176,7 +1176,7 @@ const PlayerDetailBody = ({ stateOverride, variant = 'registered', compact, init
             padding:'8px 16px', borderRadius:'var(--r-md)',
             background: entityHsl('player'), color:'#fff', border:'none',
             fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 800, cursor:'pointer',
-          }}>+ Invita {player.title.split(' ')[0]} su MeepleAI</button>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-onboarding.html'; }, 0); /* DEMO-NAV */ }}>+ Invita {player.title.split(' ')[0]} su MeepleAI</button>
         </div>
       );
     }
@@ -1237,7 +1237,7 @@ const DesktopNav = ({ player }) => (
       flex: 1, fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-muted)',
       marginLeft: 22,
     }}>
-      <a href="#" style={{ color:'inherit' }}>Giocatori</a>
+      <a href="#" style={{ color:'inherit' }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-players-index.html'; }, 0); /* DEMO-NAV */ }}>Giocatori</a>
       <span aria-hidden="true"> / </span>
       <strong style={{ color:'var(--text-sec)' }}>{player.title}</strong>
     </div>
@@ -1417,7 +1417,7 @@ const App = () => {
           </div>
         </div>
         <div style={{ flex: 1 }}/>
-        <button type="button" onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+        <button type="button" onClick={(e) => { (() => setTheme(t => t === 'light' ? 'dark' : 'light'))(e); setTimeout(() => { window.location.href = 'sp4-players-index.html'; }, 0); /* DEMO-NAV */ }}
           style={{
             padding:'8px 14px', borderRadius:'var(--r-md)',
             background:'var(--bg-card)', border:'1px solid var(--border)',

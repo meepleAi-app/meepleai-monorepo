@@ -81,5 +81,6 @@ public class GamebookCampaignSessionTests
             title: "Campagna privata");
 
         Assert.Equal(GameRefKind.Private, session.GameRef.Kind);
+        Assert.Equal(privateId, session.GameRef.Id);
     }
 }

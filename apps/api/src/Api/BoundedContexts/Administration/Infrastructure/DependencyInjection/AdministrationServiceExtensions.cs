@@ -173,6 +173,11 @@ internal static class AdministrationServiceExtensions
         services.AddScoped<ISeedLayer, MechanicGoldenSeedLayer>();
         // ADR-051 Sprint 2 / Task 3: Puerto Rico golden claims (75 claims) — BGG tags follow in Task 4.
         services.AddScoped<ISeedLayer, BoundedContexts.SharedGameCatalog.Infrastructure.Seeding.PuertoRicoGoldenSeeder>();
+        // Gamebook multi-book generalization (2026-05-19) Phase F: seeder for Nanolith + FF + Maracaibo.
+        // Registered as itself (no ISeedLayer interface) because orchestrator wiring is deferred —
+        // resolved on-demand from admin endpoints / E2E test fixtures that already know the
+        // SharedGameId + PdfDocument id mappings.
+        services.AddScoped<GameBookSeeder>();
         services.AddScoped<SeedOrchestrator>();
 
         // Issue #3916: AI insights service for personalized dashboard recommendations

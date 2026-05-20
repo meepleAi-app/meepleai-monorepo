@@ -358,7 +358,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.Notification>(); // ISSUE-2053
         modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.NotificationQueueItem>(); // Slack notification queue
         modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.SlackConnection>(); // Slack connection aggregate
-        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.Game>();
+        // NOTE: Game domain aggregate removed by #1320 (P2c) - modelBuilder.Ignore<Game>() no longer needed
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.PlayRecord>(); // ISSUE-3888
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RecordPlayer>(); // ISSUE-3888
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveGameSession>(); // ISSUE-4747

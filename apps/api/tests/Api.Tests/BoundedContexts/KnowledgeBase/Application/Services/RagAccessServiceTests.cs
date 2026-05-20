@@ -62,6 +62,7 @@ public class RagAccessServiceTests
         {
             Id = Guid.NewGuid(),
             UserId = UserId,
+            SharedGameId = GameId,
             OwnershipDeclaredAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync();
@@ -84,6 +85,7 @@ public class RagAccessServiceTests
         {
             Id = Guid.NewGuid(),
             UserId = UserId,
+            SharedGameId = GameId,
             OwnershipDeclaredAt = null
         });
         await db.SaveChangesAsync();
@@ -112,12 +114,14 @@ public class RagAccessServiceTests
             new VectorDocumentEntity
             {
                 Id = completedDocId,
+                SharedGameId = GameId,
                 PdfDocumentId = Guid.NewGuid(),
                 IndexingStatus = "completed"
             },
             new VectorDocumentEntity
             {
                 Id = pendingDocId,
+                SharedGameId = GameId,
                 PdfDocumentId = Guid.NewGuid(),
                 IndexingStatus = "pending"
             });

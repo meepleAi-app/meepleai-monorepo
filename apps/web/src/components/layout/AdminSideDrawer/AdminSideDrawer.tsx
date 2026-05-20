@@ -154,7 +154,7 @@ function NavLink({ item, pathname, onClick, indent = false }: NavLinkProps) {
         'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
         indent ? 'pl-5' : '',
         active
-          ? 'bg-[hsla(25,95%,45%,0.12)] text-[hsl(25,95%,45%)]'
+          ? 'bg-[hsla(25,95%,45%,0.12)] text-[hsl(var(--c-game-text))]'
           : 'text-foreground/70 hover:bg-muted hover:text-foreground',
       ]
         .filter(Boolean)
@@ -303,7 +303,7 @@ export function AdminSideDrawer({ open, onClose }: AdminSideDrawerProps) {
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-semibold truncate">{user?.displayName || 'Admin'}</span>
             <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
-            <span className="text-xs font-medium text-[hsl(25,95%,45%)] capitalize mt-0.5">
+            <span className="text-xs font-medium text-[hsl(var(--c-game-text))] capitalize mt-0.5">
               {user?.role || 'admin'}
             </span>
           </div>
@@ -317,7 +317,7 @@ export function AdminSideDrawer({ open, onClose }: AdminSideDrawerProps) {
               href="/dashboard"
               onClick={onClose}
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors mb-2"
-              style={{ color: '#4ecdc4' }}
+              style={{ color: 'hsl(var(--c-kb-text))' }}
             >
               <ChevronLeft className="h-4 w-4 shrink-0" />
               <span>Torna all&apos;app</span>

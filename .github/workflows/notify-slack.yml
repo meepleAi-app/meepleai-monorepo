@@ -85,6 +85,16 @@ permissions:
   actions: read
   contents: read
 
+# Issue #850 AC-1: explicit concurrency block for AC compliance.
+# This is a reusable workflow (`workflow_call:`) — `github.run_id` keeps each
+# caller invocation in its own group so simultaneous notifications from
+# different parent workflows do NOT serialize. `cancel-in-progress: false`
+# is mandatory: cancelling a Slack notification mid-flight would lose
+# observability signal (failed deploy alert dropped, etc.).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: false
+
 jobs:
   send:
     name: Send Slack Notification

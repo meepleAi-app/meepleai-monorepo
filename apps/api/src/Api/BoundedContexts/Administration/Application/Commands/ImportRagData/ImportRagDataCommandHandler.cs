@@ -84,13 +84,13 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
             manifest.TotalDocuments, request.SnapshotPath);
 
         // ── 2. Build game slug → GameEntity lookup ────────────────────────────
-        var allGames = await _db.Games
+        var allGames = await _db.SharedGames
             .AsNoTracking()
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         var gameBySlug = allGames
-            .GroupBy(g => RagBackupPathHelper.Slugify(g.Name), StringComparer.OrdinalIgnoreCase)
+            .GroupBy(g => RagBackupPathHelper.Slugify(g.Title), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         // ── 3. Import each document ───────────────────────────────────────────
@@ -112,20 +112,7 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     continue;
                 }
 
-                // a.1. Precondition: PdfDocument requires a SharedGameId after the migration.
-                // GameEntity.SharedGameId is nullable (legacy rows may still be unlinked).
-                // Importing without SharedGameId would produce an orphaned PdfDocument
-                // (no SharedGameId and no PrivateGameId), which violates the new invariant.
-                if (game.SharedGameId is null)
-                {
-                    warnings.Add($"Game '{entry.GameSlug}' is not linked to a SharedGame — skipping document {entry.PdfDocumentId} to avoid orphaned import");
-                    _logger.LogWarning(
-                        "ImportRagData: skipping document {PdfDocumentId} — game '{GameSlug}' (Id={GameId}) has no SharedGameId",
-                        entry.PdfDocumentId, entry.GameSlug, game.Id);
-                    skipped++;
-                    continue;
-                }
-
+                // Post-Phase2d: SharedGame.Id is non-nullable; PdfDocument always gets a SharedGameId.
                 // b. Read document metadata.json
                 var metadataPath = $"{entry.Path}/metadata.json";
                 var metadataBytes = await _storage.ReadFileAsync(metadataPath, cancellationToken).ConfigureAwait(false);
@@ -182,8 +169,8 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                 var pdfDocument = new PdfDocumentEntity
                 {
                     Id = pdfDocumentId,
-                    // Guaranteed non-null by guard above (game.SharedGameId is not null).
-                    SharedGameId = game.SharedGameId,
+                    // Guaranteed non-null by guard above (game.Id is not null).
+                    SharedGameId = game.Id,
                     FileName = docInfo.FileName,
                     FilePath = string.Empty,
                     FileSizeBytes = docInfo.FileSizeBytes ?? 0,

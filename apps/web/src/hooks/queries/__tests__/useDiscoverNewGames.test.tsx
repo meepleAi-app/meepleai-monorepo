@@ -18,6 +18,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import type { MockedApiClient } from '@/test-utils/api-client-mock';
+
 import {
   DISCOVER_NEW_GAMES_DEFAULT_LIMIT,
   DISCOVER_NEW_GAMES_STALE_TIME_MS,
@@ -26,15 +28,18 @@ import {
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-vi.mock('@/lib/api/client', () => ({
-  apiClient: {
-    get: vi.fn(),
-  },
+const mockApi = vi.hoisted<MockedApiClient>(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
+  head: vi.fn(),
+  options: vi.fn(),
 }));
+vi.mock('@/lib/api/client', () => ({ apiClient: mockApi }));
 
-import { apiClient } from '@/lib/api/client';
-
-const mockGet = apiClient.get as ReturnType<typeof vi.fn>;
+const mockGet = mockApi.get;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -93,7 +98,7 @@ describe('useDiscoverNewGames — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/catalog/games/new?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/catalog/games/new?limit=10', expect.anything());
   });
 
   it('clamps a limit > 50 to the validator ceiling', async () => {
@@ -103,7 +108,7 @@ describe('useDiscoverNewGames — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/catalog/games/new?limit=50', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/catalog/games/new?limit=50', expect.anything());
   });
 
   it('clamps a non-positive limit to the default', async () => {
@@ -113,7 +118,7 @@ describe('useDiscoverNewGames — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/catalog/games/new?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/catalog/games/new?limit=10', expect.anything());
   });
 });
 

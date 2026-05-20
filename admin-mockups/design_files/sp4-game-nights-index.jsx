@@ -1014,8 +1014,11 @@ const MobileScreen = (props) => (
   </>
 );
 
-const PhoneShell = ({ label, desc, children }) => (
-  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 10 }}>
+const PhoneShell = ({ label, desc, children, conformityMarker }) => (
+  <div
+    style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 10 }}
+    {...(conformityMarker ? { 'data-conformity-screen': conformityMarker } : {})}
+  >
     <div style={{
       fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-sec)',
       textTransform:'uppercase', letterSpacing:'.08em', fontWeight: 700,
@@ -1028,8 +1031,11 @@ const PhoneShell = ({ label, desc, children }) => (
   </div>
 );
 
-const DesktopFrame = ({ label, desc, children }) => (
-  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 12, width:'100%' }}>
+const DesktopFrame = ({ label, desc, children, conformityMarker }) => (
+  <div
+    style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 12, width:'100%' }}
+    {...(conformityMarker ? { 'data-conformity-screen': conformityMarker } : {})}
+  >
     <div style={{
       fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-sec)',
       textTransform:'uppercase', letterSpacing:'.08em', fontWeight: 700,
@@ -1156,7 +1162,8 @@ const App = () => {
         </DesktopFrame>
 
         <DesktopFrame label="Desktop · 06 · Empty"
-          desc="Header normale ma body empty state: icona event 80px + h3 + CTA gradient grande '+ Crea la prima serata'.">
+          desc="Header normale ma body empty state: icona event 80px + h3 + CTA gradient grande '+ Crea la prima serata'."
+          conformityMarker="default-desktop">
           <DesktopScreen initialView="calendar" stateOverride="empty"/>
         </DesktopFrame>
 
@@ -1182,8 +1189,12 @@ const App = () => {
         <div style={{
           display:'flex', flexWrap:'wrap', gap: 32, justifyContent:'center',
         }}>
-          {MOBILE_STATES.map(m => (
-            <PhoneShell key={m.id} label={m.label} desc={m.desc}>
+          {MOBILE_STATES.map((m) => (
+            <PhoneShell
+              key={m.id}
+              label={m.label}
+              desc={m.desc}
+              conformityMarker={m.stateOverride === 'empty' ? 'default-mobile' : undefined}>
               <MobileScreen initialView={m.view} initialRole={m.role}
                 stateOverride={m.stateOverride} drawerDay={m.drawerDay}/>
             </PhoneShell>

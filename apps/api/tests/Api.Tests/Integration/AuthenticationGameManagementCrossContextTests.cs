@@ -4,10 +4,13 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -59,7 +62,6 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
-        services.AddScoped<IGameRepository, GameRepository>();
         services.RemoveAll<Api.BoundedContexts.GameManagement.Domain.Repositories.IGameSessionRepository>();
         services.AddScoped<IGameSessionRepository, GameSessionRepository>();
         services.AddSingleton<TestTimeProvider>(_timeProvider);
@@ -151,7 +153,6 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
         var sessionRepository = ServiceProvider.GetRequiredService<ISessionRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
 
         var user = CreateTestUser("gamer@meepleai.dev", "Test Gamer");
@@ -169,13 +170,8 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         await sessionRepository.AddAsync(session, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Catan"),
-            playerCount: new PlayerCount(3, 4),
-            playTime: new PlayTime(60, 120)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        var gameEntity = CreateGameEntity("Catan");
+        DbContext.SharedGames.Add(gameEntity);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -185,7 +181,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             new SessionPlayer("Alice", 2),
             new SessionPlayer("Bob", 3)
         };
-        var gameSession = new GameSession(Guid.NewGuid(), game.Id, players);
+        var gameSession = new GameSession(Guid.NewGuid(), gameEntity.Id, players);
         gameSession.Start();
 
         await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
@@ -214,7 +210,6 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
         var sessionRepository = ServiceProvider.GetRequiredService<ISessionRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
 
         // Use FakeTimeProvider to control time for expired session test
@@ -238,17 +233,12 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         // Clear change tracker to avoid "already tracked" error when reloading
         DbContext.ChangeTracker.Clear();
 
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Quick Game"),
-            playerCount: new PlayerCount(1, 2),
-            playTime: new PlayTime(15, 30)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        var gameEntity = CreateGameEntity("Quick Game");
+        DbContext.SharedGames.Add(gameEntity);
 
         var gameSession = new GameSession(
             Guid.NewGuid(),
-            game.Id,
+            gameEntity.Id,
             new List<SessionPlayer> { new SessionPlayer("Expired User", 1) }
         );
         gameSession.Start();
@@ -278,7 +268,6 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
         var sessionRepository = ServiceProvider.GetRequiredService<ISessionRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
 
         var userIds = new List<Guid>();
@@ -302,18 +291,13 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         }
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Ticket to Ride"),
-            playerCount: new PlayerCount(2, 5),
-            playTime: new PlayTime(30, 60)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        var gameEntity = CreateGameEntity("Ticket to Ride");
+        DbContext.SharedGames.Add(gameEntity);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
         var players = userNames.Select((name, index) => new SessionPlayer(name, index + 1)).ToList();
-        var gameSession = new GameSession(Guid.NewGuid(), game.Id, players);
+        var gameSession = new GameSession(Guid.NewGuid(), gameEntity.Id, players);
         gameSession.Start();
 
         await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
@@ -341,7 +325,6 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
         var sessionRepository = ServiceProvider.GetRequiredService<ISessionRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
 
         var user = CreateTestUser("revoked@meepleai.dev", "Revoked User");
@@ -358,17 +341,12 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         await sessionRepository.AddAsync(session, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Carcassonne"),
-            playerCount: new PlayerCount(2, 5),
-            playTime: new PlayTime(30, 45)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        var gameEntity = CreateGameEntity("Carcassonne");
+        DbContext.SharedGames.Add(gameEntity);
 
         var gameSession = new GameSession(
             Guid.NewGuid(),
-            game.Id,
+            gameEntity.Id,
             new List<SessionPlayer> { new SessionPlayer("Revoked User", 1) }
         );
         gameSession.Start();
@@ -400,5 +378,15 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
             PasswordHash.Create("SecurePass123!"),
             Role.User
         );
+    }
+
+    private static SharedGameEntity CreateGameEntity(string name, string? publisher = null)
+    {
+        return new SharedGameEntity
+        {
+            Id = Guid.NewGuid(),
+            Title = name,
+            CreatedAt = DateTime.UtcNow
+        };
     }
 }

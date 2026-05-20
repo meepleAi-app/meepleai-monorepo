@@ -40,7 +40,7 @@ export function StaleWarningCard({
     <section
       data-testid="gamebook-resume-stale-warning"
       data-state="state-04-stale-warning"
-      className="max-w-screen-sm mx-auto px-4 py-6"
+      className="max-w-screen-sm lg:max-w-2xl mx-auto px-4 py-6"
     >
       <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Bentornato

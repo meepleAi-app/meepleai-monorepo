@@ -22,7 +22,7 @@ import type { JSX } from 'react';
 
 import clsx from 'clsx';
 
-import { entityHsl } from '@/components/ui/data-display/meeple-card/tokens';
+import { entityHsl, entityHslText } from '@/components/ui/data-display/meeple-card/tokens';
 
 export interface HeroLabels {
   /** Entity pill label for the game itself (e.g. "Game"). */
@@ -107,23 +107,26 @@ function ConnectionPip({
       className={clsx(
         'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.06em] transition-[transform,box-shadow] duration-150',
         'hover:scale-[1.03] hover:shadow-md',
-        isEmpty ? 'border border-dashed opacity-60' : 'border-0'
+        isEmpty ? 'border border-dashed' : 'border-0'
       )}
       style={
         isEmpty
           ? {
               borderColor: entityHsl(entity, 0.4),
-              color: entityHsl(entity),
+              // textColor uses darker variant for AA on light bg (#1094 Real-C-misc):
+              // entityHsl solid + wrapper opacity-60 yields ~2.2:1 catastrophic.
+              // Scope opacity to decorative children only; label full opacity.
+              color: entityHslText(entity),
               backgroundColor: 'transparent',
             }
           : {
               backgroundColor: entityHsl(entity, 0.12),
-              color: entityHsl(entity),
+              color: entityHslText(entity),
             }
       }
     >
       {isEmpty ? (
-        <span aria-hidden="true" className="text-[12px] leading-none">
+        <span aria-hidden="true" className="text-[12px] leading-none opacity-60">
           +
         </span>
       ) : (

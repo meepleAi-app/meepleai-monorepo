@@ -368,6 +368,17 @@ the PR review.
 | `nanolith-runthrough-game-detail.html` | `LibroGameDetailView` | `apps/web/src/components/v2/gamebook/LibroGameDetailView.tsx` | `/library/[gameId]` (libro variant) | done | #1037 | T A V |
 | `nanolith-runthrough-setup-wizard.html` | `CampaignSetupDrawer` | `apps/web/src/components/v2/gamebook/CampaignSetupDrawer.tsx` | `/library/[gameId]` (libro variant — drawer) | done | #1037 | T A V |
 
+### Libro-game checkout flow — `/gamebook` (embedded modal) — 2 components — **Tier M**
+
+> Quota/credits checkout flow triggered from the existing `QuotaWidget`
+> upgrade CTA on `/gamebook`. 100% frontend (no backend, no real Stripe).
+> Pack catalog hardcoded. See spec
+> [`docs/superpowers/specs/2026-05-18-issue-953-gamebook-checkout-modal-design.md`](../../superpowers/specs/2026-05-18-issue-953-gamebook-checkout-modal-design.md).
+
+| Mockup | Component | Path | Route | Status | PR | AC |
+|--------|-----------|------|-------|--------|----|----|
+| `sp6-libro-game-quota-credits.jsx` | `CheckoutModal` (4 step) + `SoftWarningCredits` (toast/modal) | `apps/web/src/components/features/gamebook/{CheckoutModal,SoftWarningCredits}.tsx` | `/gamebook` (embedded) | done | #1291 | T A V |
+
 ## SP6 — Nanolith libro-game gap-coverage (post-storyboard 2026-05-12) — 3 components
 
 > **Added 2026-05-12** post mockup gap analysis: 3 mockup blocker/nice-to-have aggiunti
@@ -435,10 +446,16 @@ the PR review.
 |--------|-----------|------|-------|--------|----|----|
 | `sp7-game-night-detail-rsvp.jsx` | `GameNightAvatar` | `apps/web/src/components/features/game-night-detail/GameNightAvatar.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
 | `sp7-game-night-detail-rsvp.jsx` | `GameNightStatusBadge` | `apps/web/src/components/features/game-night-detail/GameNightStatusBadge.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
-| `sp7-game-night-detail-rsvp.jsx` | `GameNightRsvpRow` | `apps/web/src/components/features/game-night-detail/GameNightRsvpRow.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
-| `sp7-game-night-detail-rsvp.jsx` | `GameNightRsvpActionBar` | `apps/web/src/components/features/game-night-detail/GameNightRsvpActionBar.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
-| `sp7-game-night-detail-rsvp.jsx` | `GameNightDetailHero` | `apps/web/src/components/features/game-night-detail/GameNightDetailHero.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightRsvpRow` | `apps/web/src/components/features/game-night-detail/GameNightRsvpRow.tsx` | `/game-nights/[id]` · `/join/event/[code]` | done | #1171 · #1169 (`mode='public'`) | T A V |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightRsvpActionBar` | `apps/web/src/components/features/game-night-detail/GameNightRsvpActionBar.tsx` | `/game-nights/[id]` · `/join/event/[code]` | done | #1171 · #1169 (`mode='public'` hides Maybe) | T A V |
+| `sp7-game-night-detail-rsvp.jsx` | `GameNightDetailHero` | `apps/web/src/components/features/game-night-detail/GameNightDetailHero.tsx` | `/game-nights/[id]` · `/join/event/[code]` | done | #1171 · #1169 (`mode='public'`) | T A V |
 | `sp7-game-night-detail-rsvp.jsx` | `GameNightCancelledBanner` | `apps/web/src/components/features/game-night-detail/GameNightCancelledBanner.tsx` | `/game-nights/[id]` | done | #1171 | T A V |
+| `sp7-game-night-join-public.jsx` | `PublicRsvpForm` | `apps/web/src/components/features/game-night-detail/PublicRsvpForm.tsx` | `/join/event/[code]` | done | #1169 | T A V |
+| `sp7-game-night-join-public.jsx` | `InvalidTokenError` | `apps/web/src/components/features/game-night-detail/error-states/InvalidTokenError.tsx` | `/join/event/[code]` | done | #1169 | T A V |
+| `sp7-game-night-join-public.jsx` | `ExpiredOrCancelledError` | `apps/web/src/components/features/game-night-detail/error-states/ExpiredOrCancelledError.tsx` | `/join/event/[code]` | done | #1169 | T A V |
+| `sp7-game-night-join-public.jsx` | `RateLimitedError` | `apps/web/src/components/features/game-night-detail/error-states/RateLimitedError.tsx` | `/join/event/[code]` | done | #1169 | T A V |
+| `sp7-game-night-join-public.jsx` | `GenericError` | `apps/web/src/components/features/game-night-detail/error-states/GenericError.tsx` | `/join/event/[code]` | done | #1169 | T A V |
+| `sp7-game-night-join-public.jsx` | `PublicJoinEventView` (orchestrator) | `apps/web/src/app/(public)/join/event/[code]/_components/PublicJoinEventView.tsx` | `/join/event/[code]` | done | #1169 | T A V |
 
 **Deferred (planned follow-up)**:
 - Tabbed surface (Dettagli / Voting / Chat) — `GameNightDetailTabs`, `GameVoteCard`, `VotingTiedResolver`, `GameNightChatStream` — out of AC-H1..H5 scope (mockup lines 600+).
@@ -593,7 +610,7 @@ instead.
 | `/sessions/[id]/{play,notes,players,scoreboard,join}` | `sp4-session-live.html` [partial] | Sub-views |
 | `/sessions/live/[id]` (+ `/agent`, `/photos`, `/players`, `/scores`) | `sp4-session-live.html` + `nanolith-runthrough-session-end.html` | — |
 | `/game-nights` | `sp4-game-nights-index.html` | Tier L pending |
-| `/game-nights/new` | `sp7-game-night-create.html` | — |
+| `/game-nights/new` | `sp7-game-night-create.html` | Tier L+ DONE (PR #1297 components, PR #1302 orchestrator, PR #1305 W4 E2E + a11y + conformity entry); baseline PNGs auto-generated post-merge via bootstrap workflows |
 | `/game-nights/[id]` · `/[id]/edit` | `sp7-game-night-detail-rsvp.html` + `nanolith-game-night-storyboard.html` | Tier M done (PR #1171, RSVP cluster); tabbed/host surfaces pending |
 
 ### Authenticated — Play Records, Toolkit, Gamebook, Agents, KB

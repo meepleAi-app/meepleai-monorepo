@@ -60,10 +60,10 @@ internal sealed class GetRagQualityReportQueryHandler
         var gameIds = topGamesRaw.Select(g => g.GameId).ToList();
 
         // Look up game titles
-        var gameTitles = await _db.Games
+        var gameTitles = await _db.SharedGames
             .Where(g => gameIds.Contains(g.Id))
-            .Select(g => new { g.Id, g.Name })
-            .ToDictionaryAsync(g => g.Id, g => g.Name, cancellationToken)
+            .Select(g => new { g.Id, g.Title })
+            .ToDictionaryAsync(g => g.Id, g => g.Title, cancellationToken)
             .ConfigureAwait(false);
 
         // Count RAPTOR summaries per game

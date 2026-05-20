@@ -50,7 +50,7 @@ export function PageHeader({
           <Link
             href={parentHref!}
             className="inline-flex items-center gap-1 text-sm font-medium"
-            style={{ color: '#4ecdc4' }}
+            style={{ color: 'hsl(var(--c-kb-text))' }}
           >
             <span aria-hidden="true">←</span>
             <span>{parentLabel}</span>
@@ -93,7 +93,7 @@ export function PageHeader({
                 className={cn(
                   'inline-flex items-center gap-1.5 border-b-2 px-3 pb-3 pt-1 text-sm font-medium transition-colors',
                   isActive
-                    ? 'border-[hsl(25,95%,45%)] text-[hsl(25,95%,45%)]'
+                    ? 'border-[hsl(25,95%,45%)] text-[hsl(var(--c-game-text))]'
                     : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'
                 )}
               >

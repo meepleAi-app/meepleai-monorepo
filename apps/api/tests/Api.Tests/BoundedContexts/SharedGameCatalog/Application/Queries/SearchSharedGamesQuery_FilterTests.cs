@@ -60,12 +60,11 @@ public sealed class SearchSharedGamesQuery_FilterTests
         HasKnowledgeBase = false,
     };
 
-    private static GameEntity CreateGame(Guid sharedGameId, int approvalStatus = ApprovedStatus) => new()
+    private static SharedGameEntity CreateGame(Guid sharedGameId, int approvalStatus = ApprovedStatus) => new()
     {
         Id = Guid.NewGuid(),
-        Name = $"Game-{sharedGameId:N}",
-        SharedGameId = sharedGameId,
-        ApprovalStatus = approvalStatus,
+        Title = $"Game-{sharedGameId:N}",
+        Status = 1, 
         CreatedAt = DateTime.UtcNow,
     };
 
@@ -171,7 +170,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         db.SharedGames.AddRange(withToolkit, withoutToolkit);
 
         var game = CreateGame(withToolkit.Id);
-        db.Games.Add(game);
+        db.SharedGames.Add(game);
         db.Toolkits.Add(CreateNonDefaultToolkit(game.Id));
 
         await db.SaveChangesAsync();
@@ -195,7 +194,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         var sg = CreateSharedGame("Default Only");
         db.SharedGames.Add(sg);
         var game = CreateGame(sg.Id);
-        db.Games.Add(game);
+        db.SharedGames.Add(game);
         db.Toolkits.Add(CreateDefaultToolkit(game.Id));
         await db.SaveChangesAsync();
 
@@ -215,7 +214,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         var sg = CreateSharedGame("Draft Game Toolkit");
         db.SharedGames.Add(sg);
         var game = CreateGame(sg.Id, approvalStatus: DraftStatus);
-        db.Games.Add(game);
+        db.SharedGames.Add(game);
         db.Toolkits.Add(CreateNonDefaultToolkit(game.Id));
         await db.SaveChangesAsync();
 
@@ -234,7 +233,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         var withoutToolkit = CreateSharedGame("No Toolkit");
         db.SharedGames.AddRange(withToolkit, withoutToolkit);
         var game = CreateGame(withToolkit.Id);
-        db.Games.Add(game);
+        db.SharedGames.Add(game);
         db.Toolkits.Add(CreateNonDefaultToolkit(game.Id));
         await db.SaveChangesAsync();
 
@@ -274,7 +273,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         var withoutAgent = CreateSharedGame("No Agent");
         db.SharedGames.AddRange(withAgent, withoutAgent);
         var game = CreateGame(withAgent.Id);
-        db.Games.Add(game);
+        db.SharedGames.Add(game);
         db.AgentDefinitions.Add(CreateAgentForGame(game.Id));
         await db.SaveChangesAsync();
 
@@ -293,7 +292,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         var sg = CreateSharedGame("Draft Game Agent");
         db.SharedGames.Add(sg);
         var game = CreateGame(sg.Id, approvalStatus: DraftStatus);
-        db.Games.Add(game);
+        db.SharedGames.Add(game);
         db.AgentDefinitions.Add(CreateAgentForGame(game.Id));
         await db.SaveChangesAsync();
 
@@ -312,7 +311,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         var withoutAgent = CreateSharedGame("No Agent");
         db.SharedGames.AddRange(withAgent, withoutAgent);
         var game = CreateGame(withAgent.Id);
-        db.Games.Add(game);
+        db.SharedGames.Add(game);
         db.AgentDefinitions.Add(CreateAgentForGame(game.Id));
         await db.SaveChangesAsync();
 

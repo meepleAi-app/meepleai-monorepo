@@ -81,6 +81,7 @@ Frontend: cd apps/web && pnpm test:coverage
 ## Checklist
 
 - [ ] Code follows project style guidelines (see [CONTRIBUTING.md](../CONTRIBUTING.md#coding-standards))
+- [ ] **Confirmed this PR's commit list is scoped to its title** (no absorbed/unrelated commits from a sibling branch — see [Branch Hygiene](../CONTRIBUTING.md#-branch-hygiene--before-creating-a-feature-branch) #806)
 - [ ] Self-review of code completed
 - [ ] Comments added for complex logic
 - [ ] Documentation updated (if applicable)
@@ -91,6 +92,25 @@ Frontend: cd apps/web && pnpm test:coverage
 - [ ] **No coverage regressions** (coverage delta ≥0%)
 - [ ] Changes are backwards compatible (or breaking changes documented)
 - [ ] No secrets or API keys committed (see [SECURITY.md](../SECURITY.md))
+
+## Database Migrations (only if this PR adds/modifies EF Core migrations)
+
+<!--
+Issue #1087: the Migration Safety Gate (dev-fast.yml) blocks PRs that introduce
+forbidden patterns per [rollback-runbook section 8.2](../docs/for-developers/operations/rollback-runbook.md#82-forbidden-in-a-single-migration).
+If the gate flags your migration but it is genuinely rollback-safe per section 8.3
+(expand → migrate → contract), add as the FIRST statement of the Up() body:
+
+    migrationBuilder.Sql("-- safe: <rationale explaining the expand/contract sequence>");
+
+The directive is logged as a PR artifact (migration-safety-report.json) and
+requires backend-lead approval via CODEOWNERS.
+-->
+
+- [ ] N/A — no migrations in this PR
+- [ ] Migration is forward-only (no Down() business logic, only schema)
+- [ ] Migration is rollback-safe (previous code version can still run against new schema)
+- [ ] **If `-- safe:` directive used**: rationale references the soak window and the contract-deploy PR (or issue #) that completes the cycle
 
 ## Screenshots/Recordings (if applicable)
 

@@ -34,6 +34,13 @@ export interface GameNightRsvpRowProps {
   readonly isHost?: boolean;
   /** Localized "host" pill label (caller resolves). Defaults to 'host' when isHost && undefined. */
   readonly hostLabel?: string;
+  /**
+   * Render mode (issue #1169). Defaults to `'authenticated'`. In `'public'`
+   * mode the "me" pill is suppressed (no signed-in user can be matched to a
+   * roster entry on the public surface), keeping the row purely read-only
+   * for anonymous viewers.
+   */
+  readonly mode?: 'authenticated' | 'public';
   readonly className?: string;
 }
 
@@ -89,21 +96,27 @@ export function GameNightRsvpRow({
   isMe = false,
   isHost = false,
   hostLabel,
+  mode = 'authenticated',
   className,
 }: GameNightRsvpRowProps): React.JSX.Element {
   const visual = STATUS_VISUALS[status];
+  // In public mode the "me" pill never renders — there is no authenticated
+  // viewer to match against (issue #1169). The `isMe` prop is silently
+  // ignored to keep callers from having to gate the boolean upstream.
+  const resolvedIsMe = mode === 'public' ? false : isMe;
 
   return (
     <div
       data-testid="game-night-rsvp-row"
       data-user-id={userId}
       data-status={status}
-      data-is-me={isMe ? 'true' : 'false'}
+      data-is-me={resolvedIsMe ? 'true' : 'false'}
+      data-mode={mode}
       className={clsx(
         'flex items-center gap-2.5 rounded-md px-3.5 py-2.5',
         visual.dashedBorder
           ? 'border border-dashed border-entity-player/40'
-          : isMe
+          : resolvedIsMe
             ? 'border border-entity-player/30 bg-entity-player/[0.06]'
             : 'border border-border bg-card',
         visual.mutedRow && 'opacity-70',
@@ -115,7 +128,7 @@ export function GameNightRsvpRow({
         label={userName}
         hue={deriveHueFromId(userId)}
         size={32}
-        highlightSelf={isMe}
+        highlightSelf={resolvedIsMe}
       />
 
       <div className="min-w-0 flex-1">
@@ -126,7 +139,7 @@ export function GameNightRsvpRow({
           )}
         >
           <span className="truncate">{userName}</span>
-          {isMe && (
+          {resolvedIsMe && (
             <span
               className={clsx(
                 'shrink-0 rounded-sm bg-entity-player/[0.18] px-1.5 py-0.5',

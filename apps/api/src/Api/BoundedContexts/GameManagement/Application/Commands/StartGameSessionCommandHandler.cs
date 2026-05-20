@@ -5,7 +5,9 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.SharedKernel.Application;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Guards;
@@ -20,18 +22,18 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 internal class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCommand, GameSessionDto>
 {
     private readonly IGameSessionRepository _sessionRepository;
-    private readonly IGameRepository _gameRepository;
+    private readonly IGameCoreDataProvider _gameCoreData;
     private readonly ISessionQuotaService _quotaService;
     private readonly IUnitOfWork _unitOfWork;
 
     public StartGameSessionCommandHandler(
         IGameSessionRepository sessionRepository,
-        IGameRepository gameRepository,
+        IGameCoreDataProvider gameCoreData,
         ISessionQuotaService quotaService,
         IUnitOfWork unitOfWork)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
-        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _gameCoreData = gameCoreData ?? throw new ArgumentNullException(nameof(gameCoreData));
         _quotaService = quotaService ?? throw new ArgumentNullException(nameof(quotaService));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
@@ -62,20 +64,17 @@ internal class StartGameSessionCommandHandler : ICommandHandler<StartGameSession
         }
 
         // Get game to validate existence and player count
-        var game = await _gameRepository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false);
+        var game = await _gameCoreData.GetCoreDataAsync(GameRef.Shared(command.GameId), cancellationToken).ConfigureAwait(false);
         if (game == null)
             throw new NotFoundException("Game", command.GameId.ToString());
 
         // Validate player count against game's limits
         var playerCount = command.Players.Count;
-        if (game.PlayerCount != null)
+        if (playerCount < game.MinPlayers || playerCount > game.MaxPlayers)
         {
-            if (playerCount < game.PlayerCount.Min || playerCount > game.PlayerCount.Max)
-            {
-                throw new ValidationException(
-                    nameof(command.Players),
-                    $"Player count ({playerCount}) must be between {game.PlayerCount.Min} and {game.PlayerCount.Max} for this game");
-            }
+            throw new ValidationException(
+                nameof(command.Players),
+                $"Player count ({playerCount}) must be between {game.MinPlayers} and {game.MaxPlayers} for this game");
         }
 
         // Create SessionPlayer value objects

@@ -25,36 +25,49 @@ public sealed class GamebookPhotoStorageServiceTests
         /// <summary>The last stream bytes passed to StoreAsync (for assertion).</summary>
         public byte[]? LastStoredBytes { get; private set; }
 
-        public Task<BlobStorageResult> StoreAsync(Stream stream, string fileName, string gameId, CancellationToken ct = default)
+        public Task<BlobStorageResult> StoreAsync(Stream stream, string fileName, BlobCategory category, string resourceKey, CancellationToken ct = default)
         {
+            _ = category;
             var ms = new MemoryStream();
             stream.CopyTo(ms);
             LastStoredBytes = ms.ToArray();
             var fileId = Guid.NewGuid().ToString("N");
             _store[fileId] = LastStoredBytes;
-            return Task.FromResult(new BlobStorageResult(true, fileId, $"{gameId}/{fileName}", LastStoredBytes.Length));
+            return Task.FromResult(new BlobStorageResult(true, fileId, $"{resourceKey}/{fileName}", LastStoredBytes.Length));
         }
 
-        public Task<Stream?> RetrieveAsync(string fileId, string gameId, CancellationToken ct = default)
+        public Task<Stream?> RetrieveAsync(string fileId, BlobCategory category, string resourceKey, CancellationToken ct = default)
         {
+            _ = (category, resourceKey);
             if (_store.TryGetValue(fileId, out var bytes))
                 return Task.FromResult<Stream?>(new MemoryStream(bytes));
             return Task.FromResult<Stream?>(null);
         }
 
-        public Task<bool> DeleteAsync(string fileId, string gameId, CancellationToken ct = default)
+        public Task<bool> DeleteAsync(string fileId, BlobCategory category, string resourceKey, CancellationToken ct = default)
         {
+            _ = (category, resourceKey);
             _store.Remove(fileId);
             return Task.FromResult(true);
         }
 
-        public string GetStoragePath(string fileId, string gameId, string fileName) => $"{gameId}/{fileId}/{fileName}";
+        public string GetStoragePath(string fileId, BlobCategory category, string resourceKey, string fileName)
+        {
+            _ = category;
+            return $"{resourceKey}/{fileId}/{fileName}";
+        }
 
-        public Task<bool> ExistsAsync(string fileId, string gameId, CancellationToken cancellationToken = default)
-            => Task.FromResult(_store.ContainsKey(fileId));
+        public Task<bool> ExistsAsync(string fileId, BlobCategory category, string resourceKey, CancellationToken cancellationToken = default)
+        {
+            _ = (category, resourceKey);
+            return Task.FromResult(_store.ContainsKey(fileId));
+        }
 
-        public Task<string?> GetPresignedDownloadUrlAsync(string fileId, string gameId, int? expirySeconds = null)
-            => Task.FromResult<string?>(null);
+        public Task<string?> GetPresignedDownloadUrlAsync(string fileId, BlobCategory category, string resourceKey, int? expirySeconds = null)
+        {
+            _ = (fileId, category, resourceKey, expirySeconds);
+            return Task.FromResult<string?>(null);
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

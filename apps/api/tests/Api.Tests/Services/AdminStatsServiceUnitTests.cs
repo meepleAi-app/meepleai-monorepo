@@ -1,6 +1,7 @@
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
 using Api.Services;
 using Api.Tests.Constants;
@@ -598,13 +599,13 @@ public class AdminStatsServiceUnitTests : IDisposable
         };
         await _dbContext.Users.AddAsync(user);
 
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Test Game",
+            Title = "Test Game",
             CreatedAt = now
         };
-        await _dbContext.Games.AddAsync(game);
+        await _dbContext.SharedGames.AddAsync(game);
 
         // Create PDFs with known page counts
         var pdfs = new[]
@@ -679,19 +680,19 @@ public class AdminStatsServiceUnitTests : IDisposable
         };
         await _dbContext.Users.AddAsync(user);
 
-        var game1 = new GameEntity
+        var game1 = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Game 1",
+            Title = "Game 1",
             CreatedAt = now.AddDays(-10)
         };
-        var game2 = new GameEntity
+        var game2 = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Game 2",
+            Title = "Game 2",
             CreatedAt = now.AddDays(-10)
         };
-        await _dbContext.Games.AddRangeAsync(game1, game2);
+        await _dbContext.SharedGames.AddRangeAsync(game1, game2);
 
         // 5 requests for game1, 3 for game2
         var requests = new List<AiRequestLogEntity>();

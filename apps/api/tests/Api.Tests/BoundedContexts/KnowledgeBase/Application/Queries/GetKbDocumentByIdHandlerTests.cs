@@ -269,7 +269,6 @@ public sealed class GetKbDocumentByIdHandlerTests
             FileName = fileName,
             ProcessingState = processingState,
             DocumentCategory = documentCategory,
-            SharedGameId = sharedGameId,
             PageCount = pageCount,
             UploadedAt = DateTime.UtcNow.AddHours(-1),
             ProcessedAt = processingState == "Ready" ? DateTime.UtcNow : null,

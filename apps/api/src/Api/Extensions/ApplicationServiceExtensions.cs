@@ -10,10 +10,12 @@ using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 using Api.Helpers;
+using Api.Infrastructure;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.Services.Rag;
 using Api.Observability;
+using Api.SharedKernel.Application;
 using FluentValidation;
 
 namespace Api.Extensions;
@@ -42,6 +44,9 @@ internal static class ApplicationServiceExtensions
         // Issue #1185: RuleSpecService migrated to CQRS pattern in GameManagement bounded context
         // Issue #1189: RuleSpec Comment/Diff services migrated to CQRS pattern
         services.AddScoped<Api.BoundedContexts.GameManagement.Domain.Services.RuleSpecDiffDomainService>();
+
+        // Issue #1320: Cross-BC game data resolver (SharedGame + PrivateGame dual-source lookup)
+        services.AddScoped<IGameCoreDataProvider, GameCoreDataProvider>();
 
         // CONFIG-01: Dynamic configuration service (still used by legacy services/helpers)
         services.AddScoped<IConfigurationService, ConfigurationService>();
@@ -108,13 +113,27 @@ internal static class ApplicationServiceExtensions
         return services;
     }
 
-    internal static IServiceCollection AddPdfServices(this IServiceCollection services)
+    internal static IServiceCollection AddPdfServices(this IServiceCollection services, IConfiguration? configuration = null)
     {
         // PDF sub-services (SOLID refactoring - Phase 3)
         services.AddScoped<ITableDetectionService, TableDetectionService>();
         services.AddScoped<ITableCellParser, TableCellParser>();
         services.AddScoped<ITableStructureAnalyzer, TableStructureAnalyzer>();
         services.AddScoped<IPdfMetadataExtractor, PdfMetadataExtractor>();
+
+        // Issue #1314 PR 2: storage layout migration feature flags.
+        // Bound via Options pattern so background services + the blob factory
+        // share a single instance; default values match Phase 0 (deploy infra
+        // with no behavior change — Legacy write, Dual read, migration off).
+        if (configuration is not null)
+        {
+            services.Configure<StorageLayoutOptions>(configuration.GetSection(StorageLayoutOptions.SectionName));
+        }
+        else
+        {
+            services.Configure<StorageLayoutOptions>(_ => { });
+        }
+
         // Issue #2703: Factory pattern for storage provider selection (local or S3)
         services.AddScoped<IBlobStorageService>(sp => BlobStorageServiceFactory.Create(sp));
 

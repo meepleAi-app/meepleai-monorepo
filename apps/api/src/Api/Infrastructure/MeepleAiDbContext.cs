@@ -1,3 +1,4 @@
+using Api.Infrastructure.DomainEventLog;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Administration;
 using Api.Infrastructure.Entities.Authentication;
@@ -15,6 +16,7 @@ using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Pgvector; // Issue #3547: Value converter for float[] → Vector mapping
 
 namespace Api.Infrastructure;
@@ -24,18 +26,21 @@ public class MeepleAiDbContext : DbContext
     private readonly IMediator _mediator;
     private readonly IDomainEventCollector _eventCollector;
     private readonly IDataProtectionProvider? _dataProtectionProvider;
+    private readonly ILogger<MeepleAiDbContext>? _logger;
     private readonly bool _isInMemoryDatabase;
 
     public MeepleAiDbContext(
         DbContextOptions<MeepleAiDbContext> options,
         IMediator mediator,
         IDomainEventCollector eventCollector,
-        IDataProtectionProvider? dataProtectionProvider = null)
+        IDataProtectionProvider? dataProtectionProvider = null,
+        ILogger<MeepleAiDbContext>? logger = null)
         : base(options)
     {
         _mediator = mediator;
         _eventCollector = eventCollector;
         _dataProtectionProvider = dataProtectionProvider;
+        _logger = logger;
 
         // Issue #3578: Detect InMemory provider for unit tests
         // Check extensions to see if InMemory provider is being used
@@ -46,7 +51,6 @@ public class MeepleAiDbContext : DbContext
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<UserSessionEntity> UserSessions => Set<UserSessionEntity>();
     public DbSet<OAuthAccountEntity> OAuthAccounts => Set<OAuthAccountEntity>(); // AUTH-06
-    public DbSet<GameEntity> Games => Set<GameEntity>();
     public DbSet<GameSessionEntity> GameSessions => Set<GameSessionEntity>(); // DDD-PHASE2: GameSession aggregate
     public DbSet<PlayRecordEntity> PlayRecords => Set<PlayRecordEntity>(); // ISSUE-3888: Play history tracking
     public DbSet<RecordPlayerEntity> RecordPlayers => Set<RecordPlayerEntity>(); // ISSUE-3888: Play record players
@@ -57,6 +61,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<RecordScoreEntity> RecordScores => Set<RecordScoreEntity>(); // ISSUE-3888: Play record scores
     public DbSet<LiveGameSessionEntity> LiveGameSessions => Set<LiveGameSessionEntity>(); // ISSUE-4750: Live game sessions
     public DbSet<GameToolkitEntity> GameToolkits => Set<GameToolkitEntity>(); // ISSUE-4753: Game toolkit configs
+    public DbSet<ToolkitVersionEntity> ToolkitVersions => Set<ToolkitVersionEntity>(); // ISSUE-822: Phase 5 marketplace version history
     public DbSet<BoundedContexts.GameToolkit.Domain.Entities.Toolkit> Toolkits => Set<BoundedContexts.GameToolkit.Domain.Entities.Toolkit>(); // ISSUE-5144: Epic B — user toolkit dashboard
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState> ToolkitSessionStates => Set<BoundedContexts.SessionTracking.Domain.Entities.ToolkitSessionState>(); // ISSUE-5148: Epic B5 — toolkit session state
     public DbSet<BoundedContexts.SessionTracking.Domain.Entities.GamebookCampaignSession> GamebookCampaignSessions => Set<BoundedContexts.SessionTracking.Domain.Entities.GamebookCampaignSession>(); // Iter 1.A — Libro Game gamebook campaigns
@@ -89,7 +94,10 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget> UserBudgets => Set<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget>(); // Phase 6: Budget/tier projection
     public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences> UserPreferences => Set<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences>(); // Phase 6: User preferences projection
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
-    // Auth security fixes (hotfix 2026-05-06): SecurityAudit BC immutable event log (I10 prep)
+    // Issue #661: append-only domain-event durability log (atomic with aggregate save)
+    public DbSet<Api.Infrastructure.Entities.DomainEventLog.DomainEventLogEntity> DomainEventLogs
+        => Set<Api.Infrastructure.Entities.DomainEventLog.DomainEventLogEntity>();
+    // Auth security fifs (hotfix 2026-05-06): SecurityAudit BC immutable event log (I10 prep)
     public DbSet<BoundedContexts.SecurityAudit.Infrastructure.Entities.AuditLogEntity> SecurityAuditLogs
         => Set<BoundedContexts.SecurityAudit.Infrastructure.Entities.AuditLogEntity>();
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
@@ -169,6 +177,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameStateSnapshotEntity> GameStateSnapshots => Set<GameStateSnapshotEntity>(); // ISSUE-2403: Sprint 4 - State snapshots
     public DbSet<AiModelConfigurationEntity> AiModelConfigurations => Set<AiModelConfigurationEntity>(); // ISSUE-2512: Auto-configuration pipeline - AI model seed
     public DbSet<LlmSystemConfigEntity> LlmSystemConfigs => Set<LlmSystemConfigEntity>(); // ISSUE-5498: LLM system config in DB
+    public DbSet<IncidentBannerStateEntity> IncidentBannerStates => Set<IncidentBannerStateEntity>(); // Issue #1089: Global incident/status banner singleton
     public DbSet<BadgeEntity> Badges => Set<BadgeEntity>(); // ISSUE-2731: Badge gamification system
     public DbSet<UserBadgeEntity> UserBadges => Set<UserBadgeEntity>(); // ISSUE-2731: User badge awards
     public DbSet<ShareRequestLimitConfigEntity> ShareRequestLimitConfigs => Set<ShareRequestLimitConfigEntity>(); // ISSUE-2730: Rate limit config
@@ -248,6 +257,10 @@ public class MeepleAiDbContext : DbContext
     // Auth security fixes (hotfix 2026-05-06): outbox pattern for idempotent transactional mail (I5 prep)
     public DbSet<BoundedContexts.UserNotifications.Infrastructure.Entities.EmailOutboxEntity> EmailOutbox
         => Set<BoundedContexts.UserNotifications.Infrastructure.Entities.EmailOutboxEntity>();
+
+    // Issue #1314 PR 2: outbox pattern for storage layout migration (legacy → categorized).
+    public DbSet<BoundedContexts.DocumentProcessing.Infrastructure.Entities.StorageOperationOutboxEntity> StorageOperationOutbox
+        => Set<BoundedContexts.DocumentProcessing.Infrastructure.Entities.StorageOperationOutboxEntity>();
 
     // Issue #52: Email template admin management
     public DbSet<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity> EmailTemplates => Set<Api.Infrastructure.Entities.UserNotifications.EmailTemplateEntity>();
@@ -344,7 +357,7 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.Notification>(); // ISSUE-2053
         modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.NotificationQueueItem>(); // Slack notification queue
         modelBuilder.Ignore<BoundedContexts.UserNotifications.Domain.Aggregates.SlackConnection>(); // Slack connection aggregate
-        modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.Game>();
+        // NOTE: Game domain aggregate removed by #1320 (P2c) - modelBuilder.Ignore<Game>() no longer needed
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.PlayRecord>(); // ISSUE-3888
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.RecordPlayer>(); // ISSUE-3888
         modelBuilder.Ignore<BoundedContexts.GameManagement.Domain.Entities.LiveGameSession>(); // ISSUE-4747
@@ -400,24 +413,67 @@ public class MeepleAiDbContext : DbContext
 
     /// <summary>
     /// Saves all changes made in this context to the database and dispatches domain events.
-    /// Domain events are collected by repositories via IDomainEventCollector before SaveChangesAsync.
-    /// After successful save, collected events are dispatched via MediatR.
+    ///
+    /// Issue #661: events that opt in via <see cref="EventTypeRegistry"/> are
+    /// persisted into <c>domain_event_logs</c> ATOMICALLY with the aggregate
+    /// state (single <c>base.SaveChangesAsync</c> call, EF Core transaction).
+    /// Events NOT in the registry continue to flow through MediatR.Publish only —
+    /// zero behavior change for existing in-memory consumers.
+    ///
+    /// Flow:
+    /// 1. <see cref="IDomainEventCollector.PeekEvents"/> — non-destructive snapshot
+    /// 2. Map registered events to <see cref="Entities.DomainEventLog.DomainEventLogEntity"/> rows
+    /// 3. Single <c>base.SaveChangesAsync</c> commits aggregate + log rows atomically
+    /// 4. Drain the collector AFTER successful save (events stay queued on failure)
+    /// 5. Dispatch each event via MediatR; handler failures log ERROR but don't
+    ///    rollback the durable record (it's already committed).
     /// </summary>
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        // Save changes first
+        // Step 1: snapshot events from the collector (non-destructive).
+        // Guard against unconfigured Mock collectors in test code paths that
+        // return null from PeekEvents() (Mock.Of default behavior).
+        var pendingEvents = _eventCollector.PeekEvents() ?? Array.Empty<IDomainEvent>();
+
+        // Step 2: materialize log entities for registered events. Unregistered
+        // events return null from the mapper and are silently skipped — they
+        // still get dispatched via MediatR below.
+        if (pendingEvents.Count > 0)
+        {
+            foreach (var domainEvent in pendingEvents)
+            {
+                var logEntity = DomainEventLogMapper.Map(domainEvent);
+                if (logEntity is not null)
+                {
+                    DomainEventLogs.Add(logEntity);
+                }
+            }
+        }
+
+        // Step 3: single SaveChangesAsync — aggregate state + log rows commit atomically.
         var result = await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Get collected domain events from repositories
-        var events = _eventCollector.GetAndClearEvents();
+        // Step 4: drain the collector ONLY after successful save.
+        _eventCollector.Clear();
 
-        // Dispatch domain events after successful save
-        if (events != null)
+        // Step 5: dispatch via MediatR. The log record is already durable, so a
+        // handler failure here is recoverable (re-process from the log).
+        foreach (var domainEvent in pendingEvents)
         {
-            foreach (var domainEvent in events)
+            try
             {
                 await _mediator.Publish(domainEvent, cancellationToken).ConfigureAwait(false);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            catch (Exception ex)
+            {
+                // AC-13: structured ERROR log preserves the link between the
+                // durable log row and the (failed) downstream handler.
+                _logger?.LogError(ex,
+                    "MediatR.Publish failed for domain event {EventType} (EventId={EventId}); log row already committed",
+                    domainEvent.GetType().Name, domainEvent.EventId);
+            }
+#pragma warning restore CA1031
         }
 
         return result;

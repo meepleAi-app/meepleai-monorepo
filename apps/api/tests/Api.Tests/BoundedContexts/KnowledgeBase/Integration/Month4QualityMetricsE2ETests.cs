@@ -8,6 +8,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
 using Api.Observability;
 using Api.Tests.Infrastructure;
@@ -183,17 +184,16 @@ public sealed class Month4QualityMetricsE2ETests : IAsyncLifetime
         _testUserId = userEntity.Id;
 
         // Create test game
-        var gameEntity = new GameEntity
+        var gameEntity = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Quality Test Game",
+            Title = "Quality Test Game",
             MinPlayers = 2,
             MaxPlayers = 4,
-            MinPlayTimeMinutes = 30,
-            MaxPlayTimeMinutes = 60,
-            CreatedAt = DateTime.UtcNow
+            PlayingTimeMinutes = 30,
+                        CreatedAt = DateTime.UtcNow
         };
-        _dbContext.Games.Add(gameEntity);
+        _dbContext.SharedGames.Add(gameEntity);
         _testGameId = gameEntity.Id;
 
         // Create chat thread

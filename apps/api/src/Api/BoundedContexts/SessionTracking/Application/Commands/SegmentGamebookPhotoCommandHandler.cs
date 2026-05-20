@@ -4,6 +4,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using MediatR;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Commands;
@@ -54,10 +55,32 @@ internal sealed class SegmentGamebookPhotoCommandHandler : IRequestHandler<Segme
                 .Select(p => GamebookSegment.Create(p.Number, p.Text, p.Bbox?.ToString()))
                 .ToList();
             artifact.RecordSegments(segments, ocr.FullText);
+
+            // Issue #833: gamebook OCR metrics.
+            // - confidence: single mean per page (Tesseract returns 0..100; normalise to 0..1 for histogram bucket compat).
+            // - segmentation match quality: "exact" if paragraphs were extracted, "miss" if zero. "partial" is deferred
+            //   until segmentation has a quality classifier (out of scope per spec-panel 2026-05-18).
+            var normalisedConfidence = Math.Clamp(ocr.AverageConfidence / 100.0, 0.0, 1.0);
+            var exactMatches = segments.Count > 0 ? 1L : 0L;
+            var misses = segments.Count == 0 ? 1L : 0L;
+            MeepleAiMetrics.RecordGamebookOcrSegmentation(
+                confidenceScores: new[] { normalisedConfidence },
+                language: "ita",
+                exactMatches: exactMatches,
+                partialMatches: 0,
+                misses: misses);
         }
         catch (Exception ex)
         {
             artifact.MarkFailed($"OCR: {ex.Message}");
+
+            // Issue #833: record OCR failure as a "miss" with zero confidence.
+            MeepleAiMetrics.RecordGamebookOcrSegmentation(
+                confidenceScores: Array.Empty<double>(),
+                language: "ita",
+                exactMatches: 0,
+                partialMatches: 0,
+                misses: 1);
         }
 
         await _photos.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

@@ -109,7 +109,19 @@ export function InvitesTokenPageClient({
 
   // Mutation FSM.
   const respond = useRespondToInvitation({ token });
-  const mutationKind = respond.result?.kind ?? null;
+  // Issue #1169 widened `respond.result.kind` with `'rate-limited'` and
+  // `'invalid-display-name'` for the public /join/event/[code] surface.
+  // The legacy /invites/[token] route doesn't expose displayName entry and
+  // calls into the older `deriveState` that only knows 3 kinds — narrow
+  // here so the type matches the original contract (the new kinds cannot be
+  // produced from this route's single-arg `submit` call site).
+  const rawMutationKind = respond.result?.kind ?? null;
+  const mutationKind: 'success' | 'conflict-state-switch' | 'gone' | null =
+    rawMutationKind === 'success' ||
+    rawMutationKind === 'conflict-state-switch' ||
+    rawMutationKind === 'gone'
+      ? rawMutationKind
+      : null;
   const [lastSubmittedAction, setLastSubmittedAction] = useState<RsvpAction | null>(null);
 
   const handleAccept = useCallback(async (): Promise<void> => {

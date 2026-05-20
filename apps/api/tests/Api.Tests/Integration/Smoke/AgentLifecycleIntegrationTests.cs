@@ -9,6 +9,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Services;
 using Microsoft.AspNetCore.Http;
@@ -98,10 +99,10 @@ public sealed class AgentLifecycleIntegrationTests : IAsyncLifetime
             PasswordHash = "v1.test-hash",
             CreatedAt = DateTime.UtcNow,
         });
-        _dbContext.Games.Add(new GameEntity
+        _dbContext.SharedGames.Add(new SharedGameEntity
         {
             Id = TestGameId,
-            Name = "SG3 Agent Lifecycle Test Game",
+            Title = "SG3 Agent Lifecycle Test Game",
             CreatedAt = DateTime.UtcNow,
         });
 

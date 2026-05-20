@@ -32,6 +32,9 @@ namespace Api.Extensions;
 /// - AccessRequest:         5 req/hour — access request spam prevention (IP-based)
 /// - AdminProviderProbe:   10 req/min  — provider token probes per user (Issue #936)
 /// - AdminProviderProbeGlobal: 60 req/h — provider token probes per provider name (Issue #936)
+/// - GameNightTokenRead:   60 req/min  — public RSVP token lookup per IP (Issue #1169)
+/// - GameNightTokenRespond: 10 req/min — public RSVP submission per IP (Issue #1169)
+/// - UsersSearch:         600 req/min  — authenticated player autocomplete (~10 req/s avg via 1min sliding window, Issue #950 W1-PR2)
 /// </summary>
 internal static class RateLimitingServiceExtensions
 {
@@ -124,6 +127,17 @@ internal static class RateLimitingServiceExtensions
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
 
                 options.AddPolicy("AdminProviderProbeGlobal", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                // Issue #1169: Public game-night RSVP token policies (disabled in tests)
+                options.AddPolicy("GameNightTokenRead", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                options.AddPolicy("GameNightTokenRespond", _ =>
+                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
+
+                // Issue #950 (W1-PR2): authenticated user-search autocomplete (disabled in tests)
+                options.AddPolicy("UsersSearch", _ =>
                     RateLimitPartition.GetNoLimiter<string>("unlimited"));
             });
 
@@ -533,6 +547,77 @@ internal static class RateLimitingServiceExtensions
                     {
                         Window = TimeSpan.FromHours(1),
                         PermitLimit = 60,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 21: GameNightTokenRead - 60 req/min per IP for public RSVP token lookups (Issue #1169)
+            // Public, unauthenticated GET. Bound at the IP level because the
+            // partition key for anonymous traffic is the source IP; legitimate
+            // guest UX is a single read per page load, so 60/min gives ample
+            // headroom for retry/refresh while making enumeration loud.
+            options.AddPolicy("GameNightTokenRead", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"game-night-token-read-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 60,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 22: GameNightTokenRespond - 10 req/min per IP for public RSVP submissions (Issue #1169)
+            // Public, unauthenticated POST. Tighter than the read policy because
+            // each submission mutates state and triggers downstream notifications.
+            // A real guest needs at most a handful of attempts (typo recovery,
+            // accidental re-submit); 10/min leaves comfortable margin while
+            // bounding the cost of token-replay / mass-RSVP scripting.
+            options.AddPolicy("GameNightTokenRespond", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"game-night-token-respond-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 10,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 23: UsersSearch - 600 req/min per authenticated user for player autocomplete (Issue #950 W1-PR2)
+            // Authenticated GET on /api/v1/users/search?q=. Spec §7b.1 / §15 P3 — Nygard
+            // panel flagged user-enumeration risk on an open autocomplete endpoint.
+            //
+            // Cap is 600 req/min sliding across 6 × 10s segments → ~10 req/s AVERAGE
+            // with bursts up to ~100 req per 10s segment. This is intentional: the FE
+            // wizard debounces 250ms client-side (~4 keystrokes/s), so legitimate UX
+            // never hits the average cap; the policy exists to bound scripted
+            // enumeration, not to enforce a strict per-second ceiling.
+            // PR #1294 code review feedback: documented the burst behavior so alert
+            // thresholds and incident runbooks reflect the actual policy, not the
+            // simplified "10 req/s" framing in the PR description.
+            options.AddPolicy("UsersSearch", httpContext =>
+            {
+                var userId = GetUserId(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"users-search-{userId}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 600,
                         SegmentsPerWindow = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,

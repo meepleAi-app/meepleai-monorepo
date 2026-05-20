@@ -30,7 +30,9 @@ public class AddNoteCommandHandlerTests
         var mediatorMock = new Mock<IMediator>();
         var eventCollectorMock = new Mock<Api.SharedKernel.Application.Services.IDomainEventCollector>();
         _contextMock = new Mock<MeepleAiDbContext>(
-            MockBehavior.Loose, options, mediatorMock.Object, eventCollectorMock.Object, null!);
+            // Issue #661: pass null explicitly for the new optional ILogger<MeepleAiDbContext>
+            // 5th param — Castle proxy generator doesn't resolve C# default values.
+            MockBehavior.Loose, options, mediatorMock.Object, eventCollectorMock.Object, null!, null!);
     }
 
     [Fact]

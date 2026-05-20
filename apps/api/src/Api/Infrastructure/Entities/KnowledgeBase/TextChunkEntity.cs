@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Api.Infrastructure.Entities;
@@ -41,6 +42,6 @@ public class TextChunkEntity
     public string? SearchVector { get; set; }
 
     // Navigation properties
-    public GameEntity Game { get; set; } = default!;
+    public SharedGameEntity Game { get; set; } = default!;
     public PdfDocumentEntity PdfDocument { get; set; } = default!;
 }

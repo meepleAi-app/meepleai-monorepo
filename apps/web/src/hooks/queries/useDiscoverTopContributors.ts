@@ -64,7 +64,7 @@ export function useDiscoverTopContributors(
     queryKey: discoverTopContributorsKeys.list(safeLimit),
     queryFn: async () => {
       const response = await apiClient.get<TopUserContributorsResponse>(
-        `/users/top-contributors?limit=${safeLimit}`,
+        `/api/v1/users/top-contributors?limit=${safeLimit}`,
         TopUserContributorsResponseSchema
       );
       return response?.items ?? [];

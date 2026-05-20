@@ -41,6 +41,60 @@ export function entityHsl(entity: MeepleEntityType, alpha?: number): string {
   return `hsl(${c.h}, ${c.s}, ${c.l})`;
 }
 
+/**
+ * Darker text-only variant of entity colors for AA-safe use as text on **light theme** bg.
+ *
+ * ⚠️ **LIGHT THEME ONLY** — this helper returns hardcoded HSL values from
+ * `entityTextOverrides` matching the `:root` block of `design-tokens-canonical.css`.
+ * It does NOT mirror the dark-theme `:root[data-theme="dark"]` overrides (which
+ * shift lightness lighter for dark bg AA). Consumers rendering on dark
+ * surfaces should use the Tailwind utility `text-entity-{entity}-text`
+ * (CSS-var based, theme-aware) or inline `style={{ color: 'hsl(var(--c-{entity}-text))' }}`
+ * instead of calling `entityHslText()` directly.
+ *
+ * The `entityHsl()` solid variant is tuned for "color used as background under
+ * white text" (matches `bg-entity-X` Tailwind utility). When the same entity
+ * color is used as TEXT on a light bg or tinted-fill bg (e.g. ConnectionChip,
+ * badge), the lightness needs to drop ~6-7% to clear AA 4.5:1.
+ *
+ * Mirrors the **light-theme** CSS `--c-{entity}-text` tokens in
+ * `apps/web/src/styles/design-tokens-canonical.css:45` (`--c-game-text`)
+ * and `:46` (`--c-kb-text`). Other entity overrides (toolkit/event/agent/chat/session)
+ * are JS-only as of #1094 Real-C-misc cleanup — no CSS counterpart yet.
+ *
+ * Current consumers (ConnectionChipStripFooter, ConnectionBar) render on
+ * `/sessions` and `/players` light-theme routes; the audit JSON v4 confirms
+ * these specific surfaces are not captured in dark theme. If dark-theme
+ * captures surface in Phase A.live v5, migrate consumers to the Tailwind
+ * utility path (see #1094 follow-up).
+ *
+ * `game`, `kb`, `toolkit`, `event`, `agent`, `chat`, `session` have darker
+ * variants today. `player` and `tool` fall back to `entityHsl()` solid until
+ * violations surface.
+ *
+ * Refs: #1094 Real-C-B (§3.2), Real-C-E (§3.3), Real-C-misc (§3.4).
+ */
+const entityTextOverrides: Partial<Record<MeepleEntityType, { h: number; s: string; l: string }>> =
+  {
+    game: { h: 25, s: '95%', l: '32%' }, // matches --c-game-text light theme (#1094 Real-C-B)
+    kb: { h: 174, s: '60%', l: '28%' }, // matches --c-kb-text light theme (#1094 Real-C-F)
+    toolkit: { h: 142, s: '70%', l: '24%' }, // matches --c-toolkit-text light theme (#1094 Real-C-E)
+    // Phase A.live v4 misc residue (#1094 Real-C-misc cleanup): darker variants for
+    // ConnectionBar/ConnectionPip text on light bg or low-alpha entity-tinted bg.
+    event: { h: 350, s: '89%', l: '32%' }, // ~5.2:1 on #f7f3ee (was l=48% → 3.4:1 fail)
+    agent: { h: 38, s: '92%', l: '24%' }, // ~5.7:1 on #f7f3ee (was l=33% → 3.6:1 fail)
+    chat: { h: 220, s: '80%', l: '38%' }, // ~5.4:1 on #f7f3ee (was l=55% → 3.2:1 fail)
+    session: { h: 240, s: '60%', l: '32%' }, // ~6.0:1 on #f7f3ee (was l=55% → 4.8:1 borderline)
+  };
+
+export function entityHslText(entity: MeepleEntityType, alpha?: number): string {
+  const c = entityTextOverrides[entity] ?? entityColors[entity];
+  if (alpha !== undefined) {
+    return `hsla(${c.h}, ${c.s}, ${c.l}, ${alpha})`;
+  }
+  return `hsl(${c.h}, ${c.s}, ${c.l})`;
+}
+
 export const entityLabel: Record<MeepleEntityType, string> = {
   game: 'Game',
   player: 'Player',

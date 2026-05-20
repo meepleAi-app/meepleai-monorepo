@@ -12,6 +12,7 @@
 | Bake Snapshot | `make seed-index` | `infra/` — raro, indicizza tutti i PDF |
 | Integration | `make tunnel && make integration` | `infra/` — **Git Bash only (Windows)** |
 | Deploy Staging | `make staging` | `infra/` (on server) |
+| Game Reset (#1320) | `make game-reset-help` | `infra/` — workflow help, see [spec](./docs/for-developers/specs/2026-05-19-game-entity-reset.md) |
 | Setup Secrets | `make secrets-setup && make secrets-sync` | `infra/` |
 | Stop / Logs | `make dev-down` / `make logs s=api` | `infra/` |
 | All commands | `make help` | `infra/` |
@@ -146,6 +147,8 @@ git checkout -b feature/issue-{n}-{desc}
 
 If `git branch --show-current` prints `feature/...`, STOP. Run `git checkout main-dev && git pull` first.
 
+See also: [CONTRIBUTING.md § Branch Hygiene](./CONTRIBUTING.md#-branch-hygiene--before-creating-a-feature-branch) for the human-facing version (includes opening-PR checklist + recovery via `git rebase --onto`).
+
 **Commits**: `feat|fix|docs|refactor|test|chore(scope): description`
 
 ### Feature Development Flow
@@ -260,17 +263,19 @@ tests/Api.Tests/          # Backend test suite
 
 ### 🔒 Active Freezes
 
-**Design System De-versioning FREEZE — LIFTED 2026-05-11** (umbrella #1023)
+**Design System De-versioning — COMPLETE 2026-05-18** (umbrella #1023 closed, Stage 3 #1026 closed)
 
-Stage 2 path-migration completed by PR #1032 on 2026-05-11. The unblock condition ("Until Stage 2 path-migration PR lands") is satisfied. Canonical paths are now active:
+All 3 stages shipped (Stage 1 audit #1024 → Stage 2 path-migration #1025/PR #1032 → Stage 3 conformity fixes #1026). Canonical paths are active:
 - Feature compositions → `apps/web/src/components/features/<feature>/`
 - Primitives → `apps/web/src/components/ui/<primitive>/`
 
 The legacy directories `apps/web/src/components/v2/**` and `apps/web/src/components/ui/v2/**` are empty post-codemod; do not re-introduce them.
 
-Stage 3 (#1026) — conformity fixes per cluster — is in progress. New cluster work (`dashboard`, `hub/<entity>`) is **blocked on creation of canonical mockups** in `admin-mockups/design_files/sp4-dashboard.jsx` and `sp4-hub-*.jsx` (raised by spec-panel review 2026-05-13). Reference: [`docs/for-developers/specs/2026-05-11-design-system-deversioning.md`](./docs/for-developers/specs/2026-05-11-design-system-deversioning.md) §12.
+Stage 3 conformity fixes shipped per cluster (player-detail, toolkit-detail BE+FE, discover, dashboard REFACTOR-FORWARD, hub/<entity> 3-routes, game-nights runtime) + DetailPageLayout primitive (PR #1112) cross-cutting. Spec: [`docs/for-developers/specs/2026-05-11-design-system-deversioning.md`](./docs/for-developers/specs/2026-05-11-design-system-deversioning.md).
 
-> **Historical**: SP6 v2 expansion FREEZE (issued 2026-05-06 per [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808), tied to A11y audit [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807)) was **lifted on 2026-05-10** by PR #876 (token redesign — AA-compliant CSS vars + entity Tailwind utilities). Issues #807 and #808 are both CLOSED. Restore A11y CI job (`Frontend - A11y E2E`) to blocking (`continue-on-error: false`) when verified green on `main-dev`.
+**Visual Gate REMOVED 2026-05-20** — the entire mockup/visual-regression test suite (`apps/web/e2e/visual-conformity/`, `visual-migrated/`, `v2-states/`, `visual-mockups/`) was retired along with the 9 supporting workflows (conformity-* / mockup-* / visual-regression-*) and Playwright projects. False-positive rate (locale drift, font flake, mockup-vs-live divergence) outweighed pickup value; replacement = manual designer review on PRs. Issues #1066 (umbrella WS-C) / #1069 (Phase 3) / #1269 (waiver) closed by the removal PR.
+
+> **Historical**: SP6 v2 expansion FREEZE (issued 2026-05-06 per [#808](https://github.com/meepleAi-app/meepleai-monorepo/issues/808), tied to A11y audit [#807](https://github.com/meepleAi-app/meepleai-monorepo/issues/807)) was **lifted on 2026-05-10** by PR #876 (token redesign — AA-compliant CSS vars + entity Tailwind utilities). Issues #807 and #808 are both CLOSED. **A11y CI restore tracked by [#1094](https://github.com/meepleAi-app/meepleai-monorepo/issues/1094)** (OPEN, P2, canonical Phase 0→D plan, ~6-7h): ~159 violation nodes across 13 states remain (entity-token alpha-blend contrast post-DS-15 + session-live/summary ARIA defects). `Frontend - A11y E2E` stays advisory (`continue-on-error: true`) until #1094 Phase D ships. Original blocker #752 closed 2026-05-12 via #876; supersedes #1179 (duplicate); complements (does not substitute) #1015 release-level baseline-diff gating.
 
 **Token Canonicalization** — Tier 1+2+3+4 complete, 0 project-wide violations (2026-05-12, spec [`2026-05-12-token-canonicalization.md`](./docs/for-developers/specs/2026-05-12-token-canonicalization.md)).
 

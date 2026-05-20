@@ -1,7 +1,7 @@
 {
   "$schema": "./state-matrix.schema.json",
-  "generated_at": "2026-05-15T09:22:09.817Z",
-  "total_mockups": 65,
+  "generated_at": "2026-05-18T11:19:47.520Z",
+  "total_mockups": 69,
   "enforced_count": 1,
   "entries": [
     {
@@ -499,6 +499,14 @@
       "enforced": false
     },
     {
+      "mockup_path": "admin-mockups/design_files/sp4-kb-globale.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
       "mockup_path": "admin-mockups/design_files/sp4-kb-hub.html",
       "route": "/library/private/[gameId]/kb",
       "declared_states": [],
@@ -618,6 +626,30 @@
         "not-found",
         "loading"
       ],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-live.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-summary.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
+      "enforced": false
+    },
+    {
+      "mockup_path": "admin-mockups/design_files/sp7-game-night-transition.html",
+      "route": null,
+      "declared_states": [],
+      "covered_states": [],
+      "missing": [],
       "enforced": false
     }
   ]

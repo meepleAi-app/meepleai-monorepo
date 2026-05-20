@@ -80,10 +80,12 @@ describe('SessionDiaryTimeline', () => {
     expect(chatPill.getAttribute('data-active')).toBe('true');
   });
 
-  it('aria-pressed mirrors active state', () => {
+  it('aria-selected mirrors active state — #1094 ARIA fix: role="tab" prohibits aria-pressed', () => {
     render(<SessionDiaryTimeline {...DEFAULT_PROPS} activeFilter="all" />);
     const allPill = document.querySelector('[data-filter="all"]')!;
-    expect(allPill.getAttribute('aria-pressed')).toBe('true');
+    expect(allPill.getAttribute('aria-selected')).toBe('true');
+    // aria-pressed must NOT be present (prohibited on role="tab" per WCAG)
+    expect(allPill.getAttribute('aria-pressed')).toBeNull();
   });
 
   it('fires onFilterChange when a filter pill is clicked', () => {

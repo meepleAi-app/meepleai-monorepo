@@ -19,13 +19,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { KB_CHUNK_DETAIL_STALE_TIME_MS, useKbChunkDetail } from '../useKbChunkDetail';
 
-vi.mock('@/lib/api/client', () => ({
-  apiClient: { get: vi.fn() },
+import type { MockedApiClient } from '@/test-utils/api-client-mock';
+
+const mockApi = vi.hoisted<MockedApiClient>(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
+  head: vi.fn(),
+  options: vi.fn(),
 }));
+vi.mock('@/lib/api/client', () => ({ apiClient: mockApi }));
 
-import { apiClient } from '@/lib/api/client';
-
-const mockGet = apiClient.get as ReturnType<typeof vi.fn>;
+const mockGet = mockApi.get;
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -73,7 +80,7 @@ describe('useKbChunkDetail — happy path', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(mockGet).toHaveBeenCalledWith(
-      `/kb-docs/${DOC_ID}/chunks/${CHUNK_ID}`,
+      `/api/v1/kb-docs/${DOC_ID}/chunks/${CHUNK_ID}`,
       expect.anything()
     );
     expect(result.current.data?.position).toBe(5);

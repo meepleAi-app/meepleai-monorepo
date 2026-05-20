@@ -263,6 +263,8 @@ builder.Services.Configure<RateLimitConfiguration>(builder.Configuration.GetSect
 builder.Services.Configure<FollowUpQuestionsConfiguration>(builder.Configuration.GetSection("FollowUpQuestions")); // CHAT-02
 builder.Services.Configure<RagPromptsConfiguration>(builder.Configuration.GetSection("RagPrompts")); // AI-07.1: RAG prompt templates
 builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSection("HybridCache")); // PERF-05: HybridCache configuration
+builder.Services.Configure<LlmQueryComplexityRoutingOptions>(
+    builder.Configuration.GetSection(LlmQueryComplexityRoutingOptions.SectionName)); // Issue #562: per-call model override by query complexity tier
 builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
 builder.Services.Configure<WeeklyEvaluationConfiguration>(builder.Configuration.GetSection("QualityEvaluation")); // BGAI-042: Weekly evaluation configuration
 builder.Services.Configure<BggImportQueueConfiguration>(builder.Configuration.GetSection("BggImportQueue")); // ISSUE-3541: BGG import queue configuration
@@ -317,6 +319,10 @@ builder.Services.AddHostedService<Api.Infrastructure.BackgroundServices.RagBacku
 // ADR-051 Sprint 2 / Task 8: Mechanic-recalc async pipeline worker (Pending → Running → terminal).
 builder.Services.AddHostedService<Api.Infrastructure.BackgroundServices.MechanicRecalcBackgroundService>();
 
+// Issue #1292 (AC-6.4): warm-up gamebook index cache for dogfood accounts + superadmins
+// 30s after startup. Background fire-and-forget — does NOT block IHost.StartAsync.
+builder.Services.AddHostedService<Api.Observability.GamebookCacheWarmupService>();
+
 // Issue #1449: FluentValidation for CQRS pipeline
 builder.Services.AddFluentValidation();
 
@@ -338,7 +344,7 @@ builder.Services.AddMediatR(cfg =>
 builder.Services.AddVectorSearchServices(builder.Configuration);
 builder.Services.AddDomainServices();
 builder.Services.AddAiServices();
-builder.Services.AddPdfServices();
+builder.Services.AddPdfServices(builder.Configuration);
 builder.Services.AddChatServices();
 builder.Services.AddAdminServices();
 builder.Services.AddBggServices();
@@ -498,6 +504,10 @@ if (builder.Environment.IsDevelopment())
 #endif
 
 var app = builder.Build();
+
+// Issue #1314 PR 2: wire the current-layout-version ObservableGauge once
+// the DI root is built. Idempotent — safe across HotReload restarts.
+Api.Observability.MeepleAiMetrics.RegisterStorageLayoutVersionGauge(app.Services);
 
 #if DEBUG
 if (app.Environment.IsDevelopment())
@@ -794,6 +804,7 @@ v1Api.MapAdminAgentTestEndpoints();     // Admin Agent Auto-Test Suite
 v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
 v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
 v1Api.MapAdminLlmConfigEndpoints();        // Issue #5495: LLM system configuration CRUD
+v1Api.MapStatusBannerEndpoints();          // Issue #1089: Global incident/status banner (public GET + admin GET/PUT)
 if (!app.Environment.IsProduction())
     app.MapAdminSecretsEndpoints();      // Admin secrets management (non-prod only)
 app.MapAdminBulkImportEndpoints();       // Issue #4354: Bulk import endpoint routing

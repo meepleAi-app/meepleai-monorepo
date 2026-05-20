@@ -40,14 +40,11 @@ internal sealed class CreateChatThreadCommandHandler : ICommandHandler<CreateCha
 
         var effectiveGameId = command.PrivateGameId ?? command.GameId;
 
-        // Resolve SharedGameId → games.Id when the frontend passes a shared_game_id
-        // instead of the actual games.Id (which is the FK target for ChatThreads.GameId).
+        // Post-Phase2d: ChatThread.GameId is now equivalent to SharedGame.Id.
         if (effectiveGameId.HasValue)
         {
-            // Single query: direct match preferred, then SharedGameId fallback
-            var resolvedId = await _db.Games
-                .Where(g => g.Id == effectiveGameId.Value || g.SharedGameId == effectiveGameId.Value)
-                .OrderByDescending(g => g.Id == effectiveGameId.Value)
+            var resolvedId = await _db.SharedGames
+                .Where(g => g.Id == effectiveGameId.Value)
                 .Select(g => g.Id)
                 .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false);

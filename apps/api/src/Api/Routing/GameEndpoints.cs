@@ -110,26 +110,8 @@ internal static class GameEndpoints
 
     private static void MapGameManagementEndpoints(RouteGroupBuilder group)
     {
-        // Create game (DDD/CQRS) - Admin/Editor only
-        group.MapPost("/games", HandleCreateGame)
-        .Produces<GameDto>(201)
-        .Produces(400)
-        .Produces(401)
-        .Produces(403)
-        .WithTags("Games", "Admin")
-        .WithSummary("Create a new game")
-        .WithDescription("Creates a new board game in the catalog. Admin or Editor role required. Returns created game with generated ID.");
-
-        // Update game (DDD/CQRS) - Admin/Editor only
-        group.MapPut("/games/{id}", HandleUpdateGame)
-        .Produces<GameDto>(200)
-        .Produces(400)
-        .Produces(401)
-        .Produces(403)
-        .Produces(404)
-        .WithTags("Games", "Admin")
-        .WithSummary("Update an existing game")
-        .WithDescription("Updates board game information. Admin or Editor role required. Partial updates supported.");
+        // NOTE: CreateGame, UpdateGame, PublishGame endpoints removed by #1320 (P2c).
+        // Game catalog management is now done exclusively through SharedGameCatalog BC.
 
         // Upload game image (icon or cover) - Issue #2255
         group.MapPost("/games/upload-image", HandleUploadGameImage)
@@ -142,16 +124,6 @@ internal static class GameEndpoints
         .WithSummary("Upload game image")
         .WithDescription("Uploads game icon or cover image. Admin or Editor role required. Accepts multipart/form-data with file, gameId, and imageType fields.");
 
-        // Publish game to SharedGameCatalog - Issue #3481
-        group.MapPut("/games/{id}/publish", HandlePublishGame)
-        .Produces<GameDto>(200)
-        .Produces(400)
-        .Produces(401)
-        .Produces(403)
-        .Produces(404)
-        .WithTags("Games", "Admin", "SharedGameCatalog")
-        .WithSummary("Publish game to SharedGameCatalog")
-        .WithDescription("Updates game publication status and publishes to SharedGameCatalog. Admin role required.");
     }
 
     private static void MapSessionLifecycleEndpoints(RouteGroupBuilder group)
@@ -412,82 +384,6 @@ internal static class GameEndpoints
         }
 
         return Results.Ok(new { success = true, agents = agentList, count = agentList.Count });
-    }
-
-    private static async Task<IResult> HandleCreateGame(
-        CreateGameRequest request,
-        IMediator mediator,
-        HttpContext context,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        // Auth check
-        var (authorized, _, error) = context.RequireAdminOrEditorSession();
-        if (!authorized) return error!;
-
-        var command = new CreateGameCommand(
-            Title: request.Title,
-            Publisher: request.Publisher,
-            YearPublished: request.YearPublished,
-            MinPlayers: request.MinPlayers,
-            MaxPlayers: request.MaxPlayers,
-            MinPlayTimeMinutes: request.MinPlayTimeMinutes,
-            MaxPlayTimeMinutes: request.MaxPlayTimeMinutes,
-            IconUrl: request.IconUrl,
-            ImageUrl: request.ImageUrl,
-            BggId: request.BggId,
-            SharedGameId: request.SharedGameId // Issue #2373: Link to SharedGameCatalog
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        logger.LogInformation("Created game {GameId} via DDD/CQRS", result.Id);
-        return Results.Created($"/api/v1/games/{result.Id}", result);
-    }
-
-    private static async Task<IResult> HandleUpdateGame(
-        Guid id,
-        UpdateGameRequest request,
-        IMediator mediator,
-        HttpContext context,
-        CancellationToken ct)
-    {
-        // Auth check
-        var (authorized, _, error) = context.RequireAdminOrEditorSession();
-        if (!authorized) return error!;
-
-        var command = new UpdateGameCommand(
-            GameId: id,
-            Title: request.Title,
-            Publisher: request.Publisher,
-            YearPublished: request.YearPublished,
-            MinPlayers: request.MinPlayers,
-            MaxPlayers: request.MaxPlayers,
-            MinPlayTimeMinutes: request.MinPlayTimeMinutes,
-            MaxPlayTimeMinutes: request.MaxPlayTimeMinutes
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        return Results.Ok(result);
-    }
-
-    private static async Task<IResult> HandlePublishGame(
-        Guid id,
-        PublishGameRequest request,
-        IMediator mediator,
-        HttpContext context,
-        CancellationToken ct)
-    {
-        // Auth check - Admin only
-        var (authorized, _, error) = context.RequireAdminSession();
-        if (!authorized) return error!;
-
-        var command = new PublishGameCommand(
-            GameId: id,
-            Status: request.Status
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleStartSession(

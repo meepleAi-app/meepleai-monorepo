@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -94,14 +95,14 @@ public sealed class StrategyPatternRepositoryIntegrationTests : IAsyncLifetime
 
     private async Task SeedTestDataAsync()
     {
-        var game = new Api.Infrastructure.Entities.GameEntity
+        var game = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Chess",
+            Title = "Chess",
             CreatedAt = DateTime.UtcNow
         };
         _gameId = game.Id;
-        _dbContext!.Games.Add(game);
+        _dbContext!.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
 
@@ -312,13 +313,13 @@ public sealed class StrategyPatternRepositoryIntegrationTests : IAsyncLifetime
     public async Task VectorSimilaritySearch_FilteredByGameAndPhase_ReturnsCorrectSubset()
     {
         // Arrange - Create another game
-        var otherGame = new Api.Infrastructure.Entities.GameEntity
+        var otherGame = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Go",
+            Title = "Go",
             CreatedAt = DateTime.UtcNow
         };
-        _dbContext!.Games.Add(otherGame);
+        _dbContext!.SharedGames.Add(otherGame);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var embedding = CreateNormalizedEmbedding(0.5f);

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.RuleConflictFAQs;
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.SharedKernel.Application;
+using Api.SharedKernel.Domain.ValueObjects;
 using FluentValidation;
 
 namespace Api.BoundedContexts.GameManagement.Application.Validators.RuleConflictFAQs;
@@ -10,11 +11,11 @@ namespace Api.BoundedContexts.GameManagement.Application.Validators.RuleConflict
 /// </summary>
 internal sealed class CreateRuleConflictFaqCommandValidator : AbstractValidator<CreateRuleConflictFaqCommand>
 {
-    private readonly IGameRepository _gameRepository;
+    private readonly IGameCoreDataProvider _gameCoreData;
 
-    public CreateRuleConflictFaqCommandValidator(IGameRepository gameRepository)
+    public CreateRuleConflictFaqCommandValidator(IGameCoreDataProvider gameCoreData)
     {
-        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _gameCoreData = gameCoreData ?? throw new ArgumentNullException(nameof(gameCoreData));
 
         RuleFor(x => x.GameId)
             .NotEmpty()
@@ -45,6 +46,7 @@ internal sealed class CreateRuleConflictFaqCommandValidator : AbstractValidator<
 
     private async Task<bool> GameExists(Guid gameId, CancellationToken cancellationToken)
     {
-        return await _gameRepository.ExistsAsync(gameId, cancellationToken).ConfigureAwait(false);
+        var game = await _gameCoreData.GetCoreDataAsync(GameRef.Shared(gameId), cancellationToken).ConfigureAwait(false);
+        return game is not null;
     }
 }

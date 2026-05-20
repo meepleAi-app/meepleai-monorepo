@@ -59,7 +59,7 @@ export function useDiscoverRecentKbDocs(
     queryKey: discoverRecentKbDocsKeys.list(safeLimit),
     queryFn: async () => {
       const response = await apiClient.get<RecentKbDocsResponse>(
-        `/kb-docs/recent?limit=${safeLimit}`,
+        `/api/v1/kb-docs/recent?limit=${safeLimit}`,
         RecentKbDocsResponseSchema
       );
       return response?.items ?? [];

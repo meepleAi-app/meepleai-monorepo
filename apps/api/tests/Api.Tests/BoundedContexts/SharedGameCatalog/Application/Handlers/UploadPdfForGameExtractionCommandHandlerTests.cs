@@ -105,7 +105,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         var expectedFilePath = "wizard-temp/test-file-id/test-document.pdf";
 
         _blobStorageServiceMock
-            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(
                 Success: true,
                 FileId: expectedFileId,
@@ -124,7 +124,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         result.ErrorMessage.Should().BeNull();
 
         _blobStorageServiceMock.Verify(
-            b => b.StoreAsync(It.IsAny<Stream>(), "test-document.pdf", "wizard-temp", It.IsAny<CancellationToken>()),
+            b => b.StoreAsync(It.IsAny<Stream>(), "test-document.pdf", BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -137,7 +137,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         var command = new UploadPdfForGameExtractionCommand(mockPdfFile, userId);
 
         _blobStorageServiceMock
-            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(
                 Success: true,
                 FileId: "large-file-id",
@@ -172,7 +172,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         result.ErrorMessage.Should().Be("No file provided. Please select a PDF file to upload.");
 
         _blobStorageServiceMock.Verify(
-            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -191,7 +191,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         result.ErrorMessage.Should().Be("No file provided. Please select a PDF file to upload.");
 
         _blobStorageServiceMock.Verify(
-            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -213,7 +213,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         result.ErrorMessage.Should().Contain("Maximum size is 50MB");
 
         _blobStorageServiceMock.Verify(
-            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -236,7 +236,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         result.ErrorMessage.Should().Contain(contentType);
 
         _blobStorageServiceMock.Verify(
-            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -257,7 +257,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         result.ErrorMessage.Should().Contain("Missing PDF header signature");
 
         _blobStorageServiceMock.Verify(
-            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -282,7 +282,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         result.ErrorMessage.Should().Contain("Missing EOF marker");
 
         _blobStorageServiceMock.Verify(
-            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -301,7 +301,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         result.ErrorMessage.Should().Contain("File is too small to be a valid PDF");
 
         _blobStorageServiceMock.Verify(
-            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -317,7 +317,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         var command = new UploadPdfForGameExtractionCommand(mockPdfFile, Guid.NewGuid());
 
         _blobStorageServiceMock
-            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(
                 Success: false,
                 FileId: null,
@@ -352,7 +352,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         var command = new UploadPdfForGameExtractionCommand(mockPdfFile, Guid.NewGuid());
 
         _blobStorageServiceMock
-            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
+            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
             .ThrowsAsync(new IOException("Disk full"));
 
         // Act
@@ -387,8 +387,8 @@ public class UploadPdfForGameExtractionCommandHandlerTests
 
         string? capturedFilename = null;
         _blobStorageServiceMock
-            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
-            .Callback<Stream, string, string, CancellationToken>((stream, filename, gameId, ct) =>
+            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
+            .Callback<Stream, string, BlobCategory, string, CancellationToken>((stream, filename, category, resourceKey, ct) =>
             {
                 capturedFilename = filename;
             })
@@ -419,7 +419,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         capturedFilename.Should().Contain("manual");
 
         _blobStorageServiceMock.Verify(
-            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()),
+            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -456,8 +456,8 @@ public class UploadPdfForGameExtractionCommandHandlerTests
 
         string? capturedFilename = null;
         _blobStorageServiceMock
-            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()))
-            .Callback<Stream, string, string, CancellationToken>((stream, filename, gameId, ct) =>
+            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
+            .Callback<Stream, string, BlobCategory, string, CancellationToken>((stream, filename, category, resourceKey, ct) =>
             {
                 capturedFilename = filename;
             })
@@ -486,7 +486,7 @@ public class UploadPdfForGameExtractionCommandHandlerTests
         capturedFilename.Should().EndWith(".pdf");
 
         _blobStorageServiceMock.Verify(
-            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), "wizard-temp", It.IsAny<CancellationToken>()),
+            b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

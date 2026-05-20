@@ -208,13 +208,14 @@ internal class PdfTestFixtureBuilder
             .Setup(b => b.StoreAsync(
                 It.IsAny<Stream>(),
                 It.IsAny<string>(),
+                It.IsAny<BlobCategory>(),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Stream stream, string fileName, string gameId, CancellationToken ct) =>
+            .ReturnsAsync((Stream stream, string fileName, BlobCategory category, string resourceKey, CancellationToken ct) =>
                 new BlobStorageResult(
                     Success: true,
                     FileId: fileId,
-                    FilePath: $"/uploads/{gameId}/{fileName}",
+                    FilePath: $"/uploads/{resourceKey}/{fileName}",
                     FileSizeBytes: stream.Length,
                     ErrorMessage: null));
 
@@ -233,6 +234,7 @@ internal class PdfTestFixtureBuilder
             .Setup(b => b.StoreAsync(
                 It.IsAny<Stream>(),
                 It.IsAny<string>(),
+                It.IsAny<BlobCategory>(),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(

@@ -10,7 +10,7 @@ namespace Api.DevTools.MockImpls;
 
 /// <summary>
 /// In-memory mock of IBlobStorageService. Stores blobs in a ConcurrentDictionary
-/// keyed by "gameId/fileId". For unknown keys (e.g. stale Quartz jobs persisted
+/// keyed by "resourceKey/fileId". For unknown keys (e.g. stale Quartz jobs persisted
 /// in Postgres that reference blobs uploaded in a previous dev session) returns
 /// a minimal valid PDF placeholder instead of null — this prevents the PDF
 /// processing pipeline from crashing on orphaned jobs and is consistent with
@@ -18,37 +18,44 @@ namespace Api.DevTools.MockImpls;
 /// Pre-signed URLs return a synthetic localhost URL.
 /// No external S3/filesystem calls are made.
 /// </summary>
+/// <remarks>
+/// Issue #1314 PR 1: signature refactor — <c>gameId</c> replaced by
+/// <see cref="BlobCategory"/> + <c>resourceKey</c>. Internal key remains
+/// <c>{resourceKey}/{fileId}</c> to preserve behavior (PR 1 is behavior-preserving).
+/// </remarks>
 internal sealed class MockBlobStorageService : IBlobStorageService
 {
     // Minimal valid PDF header — enough to pass file type sniffing and stream reads.
     // The real PDF content does not matter because the PDF extractors are also mocked
     // and ignore the stream bytes entirely.
     private static readonly byte[] PlaceholderPdfBytes =
-        Encoding.ASCII.GetBytes("%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n");
+        Encoding.ASCII.GetBytes("%PDF-1.4\n%âãÏÓ\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n");
 
     private readonly ConcurrentDictionary<string, byte[]> _store = new(StringComparer.Ordinal);
 
-    private static string KeyOf(string gameId, string fileId) => $"{gameId}/{fileId}";
+    private static string KeyOf(string resourceKey, string fileId) => $"{resourceKey}/{fileId}";
 
     /// <inheritdoc />
-    public async Task<BlobStorageResult> StoreAsync(Stream stream, string fileName, string gameId, CancellationToken ct = default)
+    public async Task<BlobStorageResult> StoreAsync(Stream stream, string fileName, BlobCategory category, string resourceKey, CancellationToken ct = default)
     {
+        _ = category; // PR 1 behavior preservation
         using var ms = new MemoryStream();
         await stream.CopyToAsync(ms, ct).ConfigureAwait(false);
         var bytes = ms.ToArray();
         var fileId = $"MOCK-{Guid.NewGuid():N}";
-        _store[KeyOf(gameId, fileId)] = bytes;
+        _store[KeyOf(resourceKey, fileId)] = bytes;
         return new BlobStorageResult(
             Success: true,
             FileId: fileId,
-            FilePath: $"mock://{gameId}/{fileId}/{fileName}",
+            FilePath: $"mock://{resourceKey}/{fileId}/{fileName}",
             FileSizeBytes: bytes.LongLength);
     }
 
     /// <inheritdoc />
-    public Task<Stream?> RetrieveAsync(string fileId, string gameId, CancellationToken ct = default)
+    public Task<Stream?> RetrieveAsync(string fileId, BlobCategory category, string resourceKey, CancellationToken ct = default)
     {
-        if (_store.TryGetValue(KeyOf(gameId, fileId), out var bytes))
+        _ = category; // PR 1 behavior preservation
+        if (_store.TryGetValue(KeyOf(resourceKey, fileId), out var bytes))
         {
             Stream s = new MemoryStream(bytes, writable: false);
             return Task.FromResult<Stream?>(s);
@@ -61,30 +68,36 @@ internal sealed class MockBlobStorageService : IBlobStorageService
     }
 
     /// <inheritdoc />
-    public Task<bool> DeleteAsync(string fileId, string gameId, CancellationToken ct = default)
+    public Task<bool> DeleteAsync(string fileId, BlobCategory category, string resourceKey, CancellationToken ct = default)
     {
+        _ = category; // PR 1 behavior preservation
         // Return true even for unknown keys — the mock semantics are "everything
         // is present", so "delete unknown" is a no-op success.
-        _store.TryRemove(KeyOf(gameId, fileId), out _);
+        _store.TryRemove(KeyOf(resourceKey, fileId), out _);
         return Task.FromResult(true);
     }
 
     /// <inheritdoc />
-    public string GetStoragePath(string fileId, string gameId, string fileName)
-        => $"mock://{gameId}/{fileId}/{fileName}";
+    public string GetStoragePath(string fileId, BlobCategory category, string resourceKey, string fileName)
+    {
+        _ = category; // PR 1 behavior preservation
+        return $"mock://{resourceKey}/{fileId}/{fileName}";
+    }
 
     /// <inheritdoc />
-    public Task<bool> ExistsAsync(string fileId, string gameId, CancellationToken cancellationToken = default)
+    public Task<bool> ExistsAsync(string fileId, BlobCategory category, string resourceKey, CancellationToken cancellationToken = default)
     {
+        _ = (fileId, category, resourceKey, cancellationToken);
         // Everything "exists" in mock mode.
         return Task.FromResult(true);
     }
 
     /// <inheritdoc />
-    public Task<string?> GetPresignedDownloadUrlAsync(string fileId, string gameId, int? expirySeconds = null)
+    public Task<string?> GetPresignedDownloadUrlAsync(string fileId, BlobCategory category, string resourceKey, int? expirySeconds = null)
     {
+        _ = category; // PR 1 behavior preservation
         // Always return a synthetic URL — the mock assumes every blob exists.
         return Task.FromResult<string?>(
-            $"http://localhost/mock-s3/{gameId}/{fileId}?expiry={expirySeconds ?? 3600}");
+            $"http://localhost/mock-s3/{resourceKey}/{fileId}?expiry={expirySeconds ?? 3600}");
     }
 }

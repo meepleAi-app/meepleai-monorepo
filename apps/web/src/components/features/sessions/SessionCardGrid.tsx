@@ -13,7 +13,8 @@
  *   - ScoringInline compact (max 3 visible + overflow)
  *   - Footer: ConnectionChipStripFooter (game/player/chat)
  *
- * Abandoned sessions: reduced opacity (0.7).
+ * Abandoned sessions: dim only decorative elements (accent bar + cover area + OutcomeBadge);
+ * body text retains full opacity for WCAG AA compliance (issue #1221, Real-C-A).
  */
 
 'use client';
@@ -90,20 +91,26 @@ export function SessionCardGrid({
         'group relative flex w-full flex-col overflow-hidden rounded-xl border border-border bg-card text-left',
         'cursor-pointer transition-shadow hover:shadow-md',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        isAbandoned && 'opacity-70',
+        isAbandoned && 'border-border/70',
         className
       )}
     >
-      {/* Top accent bar */}
+      {/* Top accent bar — dimmed when abandoned */}
       <div
         aria-hidden="true"
-        className="absolute left-0 right-0 top-0 z-10 h-[3px] bg-entity-session"
+        className={clsx(
+          'absolute left-0 right-0 top-0 z-10 h-[3px] bg-entity-session',
+          isAbandoned && 'opacity-50'
+        )}
       />
 
-      {/* Cover area */}
+      {/* Cover area — dimmed + desaturated when abandoned */}
       <div
         aria-hidden="true"
-        className="relative flex h-[110px] items-center justify-center bg-entity-session/12 text-[44px]"
+        className={clsx(
+          'relative flex h-[110px] items-center justify-center bg-entity-session/12 text-[44px]',
+          isAbandoned && 'opacity-60 grayscale-[30%]'
+        )}
       >
         <span className="drop-shadow-md">🎯</span>
 

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -78,7 +79,6 @@ public class PdfGameIdResolverTests
         var pdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
             FileName = "x.pdf",
             FilePath = "/tmp/x.pdf",
             UploadedByUserId = Guid.NewGuid(),
@@ -97,11 +97,10 @@ public class PdfGameIdResolverTests
         var sharedGameId = Guid.Parse("33333333-3333-3333-3333-333333333333");
         var gamesId = Guid.Parse("44444444-4444-4444-4444-444444444444");
 
-        db.Games.Add(new GameEntity
+        db.SharedGames.Add(new SharedGameEntity
         {
             Id = gamesId,
-            Name = "Test",
-            SharedGameId = sharedGameId,
+            Title = "Test",
             CreatedAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -109,7 +108,6 @@ public class PdfGameIdResolverTests
         var pdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
             FileName = "x.pdf",
             FilePath = "/tmp/x.pdf",
             UploadedByUserId = Guid.NewGuid(),
@@ -129,11 +127,10 @@ public class PdfGameIdResolverTests
         var sharedGameId = Guid.Parse("66666666-6666-6666-6666-666666666666");
         var gamesId = Guid.Parse("77777777-7777-7777-7777-777777777777");
 
-        db.Games.Add(new GameEntity
+        db.SharedGames.Add(new SharedGameEntity
         {
             Id = gamesId,
-            Name = "Should not be returned",
-            SharedGameId = sharedGameId,
+            Title = "Should not be returned",
             CreatedAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -142,7 +139,6 @@ public class PdfGameIdResolverTests
         {
             Id = Guid.NewGuid(),
             PrivateGameId = privateGameId,
-            SharedGameId = sharedGameId,
             FileName = "x.pdf",
             FilePath = "/tmp/x.pdf",
             UploadedByUserId = Guid.NewGuid(),

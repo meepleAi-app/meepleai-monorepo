@@ -128,11 +128,14 @@ export function ConnectionBar({ pips, labels, className }: ConnectionBarProps): 
     >
       {pips.map(p => {
         const isEmpty = p.count === 0;
+        // Empty pip: NEVER apply opacity to the wrapper — it would dim the
+        // label text and fail WCAG AA (~2.94:1 with opacity-0.6 on entity text).
+        // Instead scope the dim cue to the emoji only (decorative), keep
+        // label at full opacity for AA legibility (#1094 Real-C-misc residue).
         const baseStyle = isEmpty
           ? {
               background: 'transparent',
               border: `1px dashed ${ENTITY_RING_ALPHA[p.entity]}`,
-              opacity: 0.6,
             }
           : {
               background: ENTITY_BG_ALPHA[p.entity],
@@ -158,7 +161,10 @@ export function ConnectionBar({ pips, labels, className }: ConnectionBarProps): 
               color: ENTITY_TEXT[p.entity],
             }}
           >
-            <span aria-hidden="true">{p.emoji}</span>
+            {/* Emoji carries the "empty" dim cue (decorative); label stays full opacity */}
+            <span aria-hidden="true" style={isEmpty ? { opacity: 0.6 } : undefined}>
+              {p.emoji}
+            </span>
             {!isEmpty && (
               <span
                 className="rounded-full px-1.5 py-0 font-extrabold"

@@ -62,7 +62,7 @@ public sealed class WaitlistEndpointsIntegrationTests : IAsyncLifetime
         bool newsletterOptIn = false) => new
         {
             Email = email ?? $"alice-{Guid.NewGuid():N}@example.com",
-            Name = name,
+            Title = name,
             GamePreferenceId = gamePreferenceId,
             GamePreferenceOther = gamePreferenceOther,
             NewsletterOptIn = newsletterOptIn
@@ -237,7 +237,7 @@ public sealed class WaitlistEndpointsIntegrationTests : IAsyncLifetime
         var payload = new
         {
             Email = $"gdpr-{Guid.NewGuid():N}@example.com",
-            Name = "Bob",
+            Title = "Bob",
             GamePreferenceId = "g-azul"
         };
 

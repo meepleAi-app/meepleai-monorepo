@@ -49,7 +49,7 @@ export function useInstallToolkit(): UseMutationResult<
     mutationFn: async ({ toolkitId }) => {
       // apiClient.post returns the parsed body; schema validates wire shape.
       return await apiClient.post<InstallToolkitResponse>(
-        `/toolkits/${toolkitId}/install`,
+        `/api/v1/toolkits/${toolkitId}/install`,
         // Empty body — install endpoint takes no payload.
         undefined,
         InstallToolkitResponseSchema

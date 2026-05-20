@@ -17,7 +17,7 @@ export const alertConfigApi = {
    * Get all alert configurations
    */
   getAll: async (): Promise<AlertConfiguration[]> => {
-    const result = await api.get<AlertConfiguration[]>('/admin/alert-configuration');
+    const result = await api.get<AlertConfiguration[]>('/api/v1/admin/alert-configuration');
     return result || [];
   },
 
@@ -25,14 +25,14 @@ export const alertConfigApi = {
    * Get alert configuration by category
    */
   getByCategory: async (category: AlertConfigCategory): Promise<AlertConfiguration | null> => {
-    return api.get<AlertConfiguration>(`/admin/alert-configuration/${category}`);
+    return api.get<AlertConfiguration>(`/api/v1/admin/alert-configuration/${category}`);
   },
 
   /**
    * Update or create alert configuration
    */
   update: async (data: UpdateAlertConfiguration): Promise<{ message: string }> => {
-    const result = await api.put<{ message: string }>('/admin/alert-configuration', data);
+    const result = await api.put<{ message: string }>('/api/v1/admin/alert-configuration', data);
     if (!result) throw new Error('Failed to update alert configuration');
     return result;
   },

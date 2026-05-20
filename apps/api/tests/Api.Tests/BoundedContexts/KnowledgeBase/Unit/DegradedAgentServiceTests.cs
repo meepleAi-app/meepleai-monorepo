@@ -37,7 +37,6 @@ public class DegradedAgentServiceTests
             YearPublished = "1995",
             Categories = new List<string> { "Strategy", "Economic" },
             Mechanics = new List<string> { "Dice Rolling", "Trading" },
-            Publisher = "Kosmos",
             Designer = "Klaus Teuber"
         };
 

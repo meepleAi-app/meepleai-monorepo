@@ -1,3 +1,4 @@
+using System.Buffers;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure.Entities;
@@ -32,7 +33,7 @@ internal static class PdfSeeder
     /// </summary>
     /// <param name="db">Database context.</param>
     /// <param name="manifest">The loaded seed manifest (used to resolve game-PDF mappings).</param>
-    /// <param name="gameMap">Dictionary mapping BggId to GameEntity.Id, produced by GameSeeder.</param>
+    /// <param name="gameMap">Dictionary mapping BggId to SharedGame.Id, produced by GameSeeder (post-Phase2d: legacy GameEntity bridge removed).</param>
     /// <param name="systemUserId">System/admin user ID used for the UploadedByUserId FK.</param>
     /// <param name="primaryBlob">Primary blob storage service (destination for PDFs).</param>
     /// <param name="seedBlob">Seed blob reader (source bucket for seed PDFs).</param>
@@ -67,13 +68,12 @@ internal static class PdfSeeder
 
         logger.LogInformation("PdfSeeder: processing {Count} blob PDF entries from manifest", pdfEntries.Count);
 
-        // Build a lookup GameEntity.Id → SharedGameId so we can compute the idempotency key below
-        // (after 2026-04-19 migration, PdfDocumentEntity no longer stores GameId; it only stores SharedGameId/PrivateGameId).
-        var gameIdToSharedId = await db.Games
+        // Post-Phase2d: legacy GameEntity is gone; SharedGameId IS what was previously GameId.
+        // The gameIdToSharedId lookup collapses to an identity mapping.
+        var gameIdToSharedId = await db.SharedGames
             .AsNoTracking()
-            .Where(g => g.SharedGameId != null)
-            .Select(g => new { g.Id, g.SharedGameId })
-            .ToDictionaryAsync(g => g.Id, g => g.SharedGameId!.Value, ct)
+            .Select(g => g.Id)
+            .ToDictionaryAsync(id => id, id => id, ct)
             .ConfigureAwait(false);
 
         // Load existing PDF documents for idempotency check (SharedGameId + FileName → ContentHash)
@@ -101,22 +101,23 @@ internal static class PdfSeeder
 
             try
             {
-                // Resolve GameEntity.Id from the gameMap built by GameSeeder
+                // Resolve SharedGame.Id from the gameMap built by GameSeeder (post-Phase2d: GameEntity bridge removed).
                 if (!gameMap.TryGetValue(entry.BggId!.Value, out var gameId))
                 {
                     logger.LogWarning(
-                        "PdfSeeder: no GameEntity found for BggId={BggId} ('{Title}'). Skipping blob PDF.",
+                        "PdfSeeder: no SharedGame found for BggId={BggId} ('{Title}'). Skipping blob PDF.",
                         entry.BggId, entry.Title);
                     skipped++;
                     continue;
                 }
 
-                // Resolve the SharedGameId (community-catalog id). PdfDocumentEntity now stores SharedGameId directly
-                // after the 2026-04-19 migration, so this is the key field for both idempotency and persistence.
+                // Validate the SharedGameId exists (identity-mapped lookup post-Phase2d).
+                // PdfDocumentEntity now stores SharedGameId directly after the 2026-04-19 migration,
+                // so this is the key field for both idempotency and persistence.
                 if (!gameIdToSharedId.TryGetValue(gameId, out var sharedGameId))
                 {
                     logger.LogWarning(
-                        "PdfSeeder: no SharedGameId linked to GameEntity {GameId} ('{Title}'). Skipping blob PDF.",
+                        "PdfSeeder: SharedGameId {GameId} ('{Title}') not found in catalog. Skipping blob PDF.",
                         gameId, entry.Title);
                     skipped++;
                     continue;
@@ -168,7 +169,7 @@ internal static class PdfSeeder
                 // Stream from seed bucket → store into primary blob
                 var stream = await seedBlob.OpenReadAsync(blobKey, ct).ConfigureAwait(false);
                 await using var _ = stream.ConfigureAwait(false);
-                var result = await primaryBlob.StoreAsync(stream, fileName, PdfStorageKey.ForPdf(pdfId), ct).ConfigureAwait(false);
+                var result = await primaryBlob.StoreAsync(stream, fileName, BlobCategory.Pdf, PdfStorageKey.ForPdf(pdfId), ct).ConfigureAwait(false);
 
                 if (!result.Success)
                 {
@@ -272,13 +273,26 @@ internal static class PdfSeeder
         ILogger logger,
         CancellationToken ct)
     {
-        // Best-effort delete from primary blob
+        // Best-effort delete from primary blob.
+        //
+        // filePath shape (S3 + local): "pdf_uploads/{resourceKey}/{fileId}_{sanitizedFileName}".
+        // DeleteAsync expects the bare fileId (without prefix/underscore/filename).
+        // Review finding #3: previously the full filePath was passed as fileId, which
+        // failed PathSecurity.ValidateIdentifier silently — fix below extracts just the
+        // fileId GUID-without-hyphens segment.
         if (!string.IsNullOrEmpty(filePath))
         {
             try
             {
-                // Extract fileId from filePath — use the path segment as-is
-                await primaryBlob.DeleteAsync(filePath, gameIdStr, ct).ConfigureAwait(false);
+                var fileId = ExtractFileIdFromPath(filePath);
+                if (!string.IsNullOrEmpty(fileId))
+                {
+                    await primaryBlob.DeleteAsync(fileId, BlobCategory.Pdf, gameIdStr, ct).ConfigureAwait(false);
+                }
+                else
+                {
+                    logger.LogWarning("PdfSeeder: cannot extract fileId from path '{FilePath}', skipping blob delete", filePath);
+                }
             }
             catch (Exception ex)
             {
@@ -293,5 +307,40 @@ internal static class PdfSeeder
             db.PdfDocuments.Remove(entity);
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
         }
+    }
+
+    private static readonly SearchValues<char> PathSeparators = SearchValues.Create("/\\");
+
+    /// <summary>
+    /// Extracts the bare fileId from a storage path of shape
+    /// <c>pdf_uploads/{resourceKey}/{fileId}_{sanitizedFileName}</c>.
+    /// Returns null if the path does not match the expected layout.
+    /// Exposed as <c>internal</c> for unit testing the null-return branches
+    /// (no path separator, trailing slash, no underscore in segment, leading
+    /// underscore in segment).
+    /// </summary>
+    internal static string? ExtractFileIdFromPath(string filePath)
+    {
+        if (string.IsNullOrEmpty(filePath))
+        {
+            return null;
+        }
+
+        // Platform-independent separators: '/' for S3 + URL-style, '\\' on Windows local FS.
+        var lastSeparator = filePath.AsSpan().LastIndexOfAny(PathSeparators);
+        if (lastSeparator < 0 || lastSeparator == filePath.Length - 1)
+        {
+            return null;
+        }
+
+        var fileName = filePath[(lastSeparator + 1)..];
+        var underscoreIndex = fileName.IndexOf('_', StringComparison.Ordinal);
+        // <= 0 covers: not found (-1) AND leading underscore (= 0 ⇒ empty fileId).
+        if (underscoreIndex <= 0)
+        {
+            return null;
+        }
+
+        return fileName[..underscoreIndex];
     }
 }

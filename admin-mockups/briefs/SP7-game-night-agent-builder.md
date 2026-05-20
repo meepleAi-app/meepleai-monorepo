@@ -394,6 +394,135 @@ US-31: G31.4 (host edit), G31.8 (cancel + notify), G31.9 (reschedule conflicts).
 
 ---
 
+# WAVE 1+ — Estensione issue #487 (game-night runtime)
+
+Tre mockup aggiunti 2026-05-18 per chiudere lo scope residuo della issue [#487](https://github.com/meepleAi-app/meepleai-monorepo/issues/487) (`[Design v1 · B3] Mockup Game Nights`). Gli screen #1-#3 del brief originale sono già coperti da `sp4-game-nights-index` (list desktop+mobile) e `sp7-game-night-create` (planning wizard). I 4 screen residui (#4 Night Live, #5 Transition, #6 Summary, #7 Diary widget) sono distribuiti in 3 file SP7, con il Diary widget embedded come sub-component esportato dentro `sp7-game-night-live.jsx`.
+
+## K — Game Night Live Hub (`sp7-game-night-live`)
+
+**File**: `sp7-game-night-live.{html,jsx}`
+**Route**: `/game-nights/[id]/live`
+**Persona**: Marco (host) durante la serata, desktop al tavolo o tablet. Mobile per quick-jump tra session.
+**Pattern**: 3-pane desktop (sidebar sx games planned 280px | center current game 1fr | sidebar dx diary stream 320px) / Mobile fullscreen swipeable tabs
+
+### Sezioni richieste
+
+- **Top bar live**: title serata + status pulsing `entityHsl('session')` + counter mono kicker "Game 2/3 · 23min elapsed"
+- **Toolbar fissa**: [Pause ⏸] [Transition ➡️] [End night 🛑] con confirmation modal per End
+- **Center pane — Current game card**: cover game + session live link + quick-jump CTA "Apri sessione live →" (link a `/sessions/[id]/live`)
+- **Left pane — Planned games list**: stato per game (✅ completed / 🔴 in-progress pulsing / ⏳ upcoming), tempo stimato vs reale, ordine PlayOrder draggable disabled in live mode
+- **Right pane — Cross-game diary**: stream timeline (riusa pattern `SessionDiaryTimeline` da `sp4-session-live-parts.jsx`, aggregato multi-session)
+- **Diary inline widget** (componente esportato, copre screen #7 brief originale): versione compatta 320×400 embeddable in altri contesti (es. `/game-nights/[id]` detail o sidebar `/sessions/[id]/live`)
+
+### Stati richiesti
+
+| Stato | Descrizione |
+|---|---|
+| `state-01-game-1-in-progress` | Prima session live, diary 5 eventi, 2 game planned upcoming |
+| `state-02-mid-night-game-2` | Game 1 completed (winner banner), Game 2 in-progress, diary 18 eventi |
+| `state-03-transition-pending` | Tra Game 1 e Game 2, current pane mostra "In attesa transition" |
+| `state-04-paused` | Serata in pausa (overlay `entityHsl('agent', 0.1)` = warning), toolbar pause attiva |
+| `state-05-diary-empty` | Inizio serata, diary "Nessun evento ancora · Inizia a giocare!" |
+| `state-06-diary-widget-embedded` | Diary widget 320×400 versione compatta isolata (standalone preview per riuso) |
+| `state-07-mobile-tab-current` | Mobile tab "Current" attivo |
+| `state-08-mobile-tab-planned` | Mobile tab "Planned" attivo |
+| `state-09-mobile-tab-diary` | Mobile tab "Diary" attivo |
+| `state-10-auto-save-toast` | Toast "✓ Auto-salvato" `entityHsl('toolkit', 0.1)` ogni 60s, posizione bottom-right (acceptance criterion #487) |
+
+Desktop variant: 3-pane fisso 280+1fr+320. Mobile variant: tabs swipeable (Current / Planned / Diary).
+
+### Componenti / primitive da riusare
+
+- `ConnectionBar` con pip `[event=1, game=3, session={current_id}, player={confirmed_count}]`
+- `SessionDiaryTimeline` pattern da `sp4-session-live-parts.jsx` (aggregato multi-session)
+- `Drawer` per game-jump bottom sheet mobile
+- `MeepleCard` variant `compact` per planned games list
+- `entityHsl('event')` accent serata, `entityHsl('session')` pulsing per game corrente
+
+### Coverage Gherkin
+
+US-31: G31.11 (live hub navigation), G31.12 (cross-game diary aggregation), G31.13 (auto-save indicator 60s)
+
+---
+
+## L — Game Transition Dialog (`sp7-game-night-transition`)
+
+**File**: `sp7-game-night-transition.{html,jsx}`
+**Route**: modal/overlay aperto da K — no standalone route
+**Persona**: Marco (host) tra game e game, decisione 30-90 sec.
+**Pattern**: Modal centered 600×500 desktop / fullscreen mobile, 2-column split (recap last | preview next)
+
+### Sezioni richieste
+
+- **Header**: "Pronti per il prossimo gioco?" + close X
+- **Left col — Ultimo gioco**: cover small + title + winner banner `entityHsl('event')` + durata effettiva + score finale top-3
+- **Right col — Prossimo gioco**: cover + title + rules quick-glance da KB (3 bullet) + tempo stimato + setup checklist con icone
+- **CTA primary**: "Avvia prossima session →" `entityHsl('session')`
+- **Secondary**: "Salta gioco" / "Termina serata qui"
+
+### Stati richiesti
+
+| Stato | Descrizione |
+|---|---|
+| `state-01-transition-default` | Default 2-col split, recap + preview entrambi popolati |
+| `state-02-rules-loading-skeleton` | KB quick-glance ancora in loading (skeleton 3 righe) |
+| `state-03-rules-load-error` | KB fetch failed, fallback "Rules non disponibili offline" |
+| `state-04-skip-confirm` | Submodal "Saltare? Verrà rimosso dai planned" |
+| `state-05-end-night-confirm` | Submodal "Terminare serata? Andrai al Summary" |
+| `state-06-mobile-fullscreen` | Mobile vertical stack invece di 2-col |
+
+### Componenti / primitive da riusare
+
+- `Drawer` variant `modal` da `03-drawer-variants.html`
+- `ConfirmModal` per submodal skip/end (pattern SP6-B)
+- `MeepleCard` variant `compact` per game preview entrambi i pannelli
+- `entityHsl('event')` winner banner, `entityHsl('session')` CTA primary
+
+### Coverage Gherkin
+
+US-31: G31.14 (transition flow), G31.15 (KB rules preview fallback)
+
+---
+
+## M — Night Summary (`sp7-game-night-summary`)
+
+**File**: `sp7-game-night-summary.{html,jsx}`
+**Route**: `/game-nights/[id]/summary` (post-end final state)
+**Persona**: tutti i partecipanti, post-serata. Mobile primario per share, desktop per archiviazione/review.
+**Pattern**: Full-screen single column scrollable, hero + sections stack
+
+### Sezioni richieste
+
+- **Hero**: title serata + date + total durata + winner banner globale "🏆 MVP della serata: Davide" `entityHsl('event')`
+- **Stats grid**: 4 KPI card mono kicker (totale sessioni, durata, n° eventi diary, winner per gioco)
+- **Cross-game timeline**: `SessionDiaryTimeline` filtered, collapsed by game (expand per dettaglio)
+- **Per-game recap**: 1 row per game con winner + durata + CTA "Vai a session →" link a `/sessions/[id]`
+- **Foto gallery** (placeholder): grid 3×N con add-photo CTA `entityHsl('event', 0.1)` placeholder card
+- **Footer CTA**: [Condividi riepilogo 📤] [Archivia ✓]
+
+### Stati richiesti
+
+| Stato | Descrizione |
+|---|---|
+| `state-01-summary-full` | 3 games completati, 28 diary events, foto 6 |
+| `state-02-summary-no-photos` | Stesso ma foto gallery empty con CTA placeholder "Aggiungi foto" |
+| `state-03-summary-single-game` | Serata 1 game (no transition history, no per-game recap multipli) |
+| `state-04-share-success-toast` | Post-share toast "Link copiato" `entityHsl('toolkit', 0.1)` |
+| `state-05-archived` | Post-archive banner muted `var(--text-muted)` + CTA "Torna alla lista" |
+| `state-06-mobile-single-col` | Mobile vertical stack (default già single col, ma con padding ridotto) |
+
+### Componenti / primitive da riusare
+
+- `SessionDiaryTimeline` mode `collapsed` (filtra per game header expandable)
+- `MeepleCard` variant `compact` per per-game recap rows
+- `entityHsl('event')` hero accent, `entityHsl('toolkit')` per success states (share/archive)
+
+### Coverage Gherkin
+
+US-31: G31.16 (summary aggregation), G31.17 (share riepilogo), G31.18 (archive flow)
+
+---
+
 # WAVE 2 — Agent Builder Flow (US-33)
 
 ## D — Agent Proposals List (`sp7-agent-proposals-list`)
@@ -860,6 +989,9 @@ Buon lavoro. SP7 attiva 3 user story P1 dormant — post-merge si passa allo spr
 | 1 | A `sp7-game-night-create` | ⏳ pending | First della wave |
 | 1 | B `sp7-game-night-detail-rsvp` | ⏳ pending | After A |
 | 1 | C `sp7-game-night-edit` | ⏳ pending | After B |
+| 1+ | K `sp7-game-night-live` | ⏳ pending | Issue #487 — central hub durante serata, embed Diary widget (#7) |
+| 1+ | L `sp7-game-night-transition` | ⏳ pending | Issue #487 — modal recap+preview tra game e game |
+| 1+ | M `sp7-game-night-summary` | ⏳ pending | Issue #487 — recap full-screen post-end |
 | 2 | D `sp7-agent-proposals-list` | ⏳ pending | First della wave 2 |
 | 2 | E `sp7-agent-builder-create` | ⏳ pending | After D |
 | 2 | F `sp7-agent-builder-test` | ⏳ pending | After E |

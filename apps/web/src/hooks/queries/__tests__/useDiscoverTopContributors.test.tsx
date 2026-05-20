@@ -25,15 +25,20 @@ import {
   useDiscoverTopContributors,
 } from '../useDiscoverTopContributors';
 
-vi.mock('@/lib/api/client', () => ({
-  apiClient: {
-    get: vi.fn(),
-  },
+import type { MockedApiClient } from '@/test-utils/api-client-mock';
+
+const mockApi = vi.hoisted<MockedApiClient>(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
+  head: vi.fn(),
+  options: vi.fn(),
 }));
+vi.mock('@/lib/api/client', () => ({ apiClient: mockApi }));
 
-import { apiClient } from '@/lib/api/client';
-
-const mockGet = apiClient.get as ReturnType<typeof vi.fn>;
+const mockGet = mockApi.get;
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -95,7 +100,10 @@ describe('useDiscoverTopContributors — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/users/top-contributors?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/users/top-contributors?limit=10',
+      expect.anything()
+    );
   });
 
   it('clamps an oversize limit to 50', async () => {
@@ -105,7 +113,10 @@ describe('useDiscoverTopContributors — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/users/top-contributors?limit=50', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/users/top-contributors?limit=50',
+      expect.anything()
+    );
   });
 
   it('clamps a sub-1 limit to default 10', async () => {
@@ -115,7 +126,10 @@ describe('useDiscoverTopContributors — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/users/top-contributors?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/users/top-contributors?limit=10',
+      expect.anything()
+    );
   });
 });
 

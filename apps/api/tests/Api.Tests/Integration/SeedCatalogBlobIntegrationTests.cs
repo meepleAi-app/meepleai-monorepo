@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Seeders;
 using Api.Infrastructure.Seeders.Catalog;
 using Api.Infrastructure.Seeders.Catalog.SeedBlob;
@@ -16,7 +17,7 @@ namespace Api.Tests.Integration;
 
 /// <summary>
 /// Lightweight integration test that exercises the full blob-based seeding pipeline
-/// using an in-memory DbContext with realistic SharedGame + GameEntity rows pre-seeded,
+/// using an in-memory DbContext with realistic SharedGame + SharedGameEntity rows pre-seeded,
 /// and mocked blob services. This verifies the contract between GameSeeder (which populates
 /// gameMap) and PdfSeeder (which consumes it), without requiring Testcontainers.
 /// </summary>
@@ -30,8 +31,8 @@ public sealed class SeedCatalogBlobIntegrationTests
     [Fact]
     public async Task PdfSeeder_EndToEndSingleGame_CreatesPdfDocumentLinkedToGameEntity()
     {
-        // Arrange — real in-memory DbContext + pre-seeded GameEntity bridge
-        // (GameSeeder creates both SharedGame + GameEntity in prod; for this test
+        // Arrange — real in-memory DbContext + pre-seeded SharedGameEntity bridge
+        // (GameSeeder creates both SharedGame + SharedGameEntity in prod; for this test
         //  we only care about the bridge row PdfSeeder queries via gameMap)
         using var db = TestDbContextFactory.CreateInMemoryDbContext();
 
@@ -48,13 +49,12 @@ public sealed class SeedCatalogBlobIntegrationTests
             Id = sharedGameId,
             Title = "Mage Knight Board Game",
         });
-        db.Games.Add(new GameEntity
+        db.SharedGames.Add(new SharedGameEntity
         {
             Id = gameEntityId,
-            Name = "Mage Knight Board Game",
+            Title = "Mage Knight Board Game",
             CreatedAt = DateTime.UtcNow,
             BggId = bggId,
-            SharedGameId = sharedGameId,
         });
         await db.SaveChangesAsync();
 
@@ -93,11 +93,7 @@ public sealed class SeedCatalogBlobIntegrationTests
 
         var pdfFileId = Guid.NewGuid();
         _primaryBlob
-            .Setup(x => x.StoreAsync(
-                It.IsAny<Stream>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BlobStorageResult(
                 Success: true,
                 FileId: pdfFileId.ToString(),
@@ -135,7 +131,7 @@ public sealed class SeedCatalogBlobIntegrationTests
 
         // Verify the games bridge row is intact (the backfill migration
         // propagates SharedGameId to pdf_documents.SharedGameId at deploy time).
-        var game = await db.Games.FindAsync(gameEntityId);
+        var game = await db.SharedGames.FindAsync(gameEntityId);
         game.Should().NotBeNull();
     }
 
@@ -154,9 +150,9 @@ public sealed class SeedCatalogBlobIntegrationTests
         db.SharedGames.AddRange(
             new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity { Id = bcSharedId, Title = "Barrage" },
             new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity { Id = mkSharedId, Title = "Mage Knight Board Game" });
-        db.Games.AddRange(
-            new GameEntity { Id = bcGameId, Name = "Barrage", CreatedAt = DateTime.UtcNow, BggId = 251247, SharedGameId = bcSharedId },
-            new GameEntity { Id = mkGameId, Name = "Mage Knight Board Game", CreatedAt = DateTime.UtcNow, BggId = 96848, SharedGameId = mkSharedId });
+        db.SharedGames.AddRange(
+            new SharedGameEntity { Id = bcGameId, Title = "Barrage", CreatedAt = DateTime.UtcNow, BggId = 251247 },
+            new SharedGameEntity { Id = mkGameId, Title = "Mage Knight Board Game", CreatedAt = DateTime.UtcNow, BggId = 96848 });
         await db.SaveChangesAsync();
 
         var manifest = new SeedManifest
@@ -190,9 +186,7 @@ public sealed class SeedCatalogBlobIntegrationTests
             .ReturnsAsync(() => new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
 
         _primaryBlob
-            .Setup(x => x.StoreAsync(
-                It.IsAny<Stream>(), It.IsAny<string>(),
-                It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => new BlobStorageResult(
                 Success: true,
                 FileId: Guid.NewGuid().ToString(),
@@ -213,11 +207,7 @@ public sealed class SeedCatalogBlobIntegrationTests
         pdfs.Should().NotContain(p => p.FileName == "unknown_rulebook.pdf");
 
         // The missing gameMap entry did not cause any blob store call
-        _primaryBlob.Verify(x => x.StoreAsync(
-            It.IsAny<Stream>(),
-            "unknown_rulebook.pdf",
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()),
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), "unknown_rulebook.pdf", It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -235,13 +225,12 @@ public sealed class SeedCatalogBlobIntegrationTests
             Id = sharedGameId,
             Title = "Barrage",
         });
-        db.Games.Add(new GameEntity
+        db.SharedGames.Add(new SharedGameEntity
         {
             Id = gameEntityId,
-            Name = "Barrage",
+            Title = "Barrage",
             CreatedAt = DateTime.UtcNow,
             BggId = 251247,
-            SharedGameId = sharedGameId,
         });
         await db.SaveChangesAsync();
 
@@ -271,9 +260,7 @@ public sealed class SeedCatalogBlobIntegrationTests
         _seedBlob.Setup(x => x.OpenReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
         _primaryBlob
-            .Setup(x => x.StoreAsync(
-                It.IsAny<Stream>(), It.IsAny<string>(),
-                It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => new BlobStorageResult(
                 Success: true,
                 FileId: Guid.NewGuid().ToString(),
@@ -300,9 +287,7 @@ public sealed class SeedCatalogBlobIntegrationTests
         secondRunCount.Should().Be(1, "re-seeding with unchanged hash must not create duplicates");
 
         // StoreAsync invoked exactly once — second call short-circuits on hash match
-        _primaryBlob.Verify(x => x.StoreAsync(
-            It.IsAny<Stream>(), It.IsAny<string>(),
-            It.IsAny<string>(), It.IsAny<CancellationToken>()),
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 }

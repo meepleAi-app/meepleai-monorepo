@@ -25,7 +25,7 @@ internal sealed class GamebookPhotoStorageService : IGamebookPhotoStorage
         {
             var fileName = $"{photoId:N}.jpg";
             var gameId = $"{GameIdPrefix}/{campaignId:N}";
-            var result = await _blob.StoreAsync(stripped, fileName, gameId, cancellationToken).ConfigureAwait(false);
+            var result = await _blob.StoreAsync(stripped, fileName, BlobCategory.GamebookPhoto, gameId, cancellationToken).ConfigureAwait(false);
             if (!result.Success || result.FileId is null)
                 throw new InvalidOperationException($"Photo upload failed: {result.ErrorMessage}");
 
@@ -37,14 +37,14 @@ internal sealed class GamebookPhotoStorageService : IGamebookPhotoStorage
     public async Task<Stream> RetrieveAsync(string storageKey, CancellationToken cancellationToken)
     {
         var (gameId, fileId) = SplitKey(storageKey);
-        var stream = await _blob.RetrieveAsync(fileId, gameId, cancellationToken).ConfigureAwait(false);
+        var stream = await _blob.RetrieveAsync(fileId, BlobCategory.GamebookPhoto, gameId, cancellationToken).ConfigureAwait(false);
         return stream ?? throw new InvalidOperationException($"Photo not found at key '{storageKey}'");
     }
 
     public async Task DeleteAsync(string storageKey, CancellationToken cancellationToken)
     {
         var (gameId, fileId) = SplitKey(storageKey);
-        _ = await _blob.DeleteAsync(fileId, gameId, cancellationToken).ConfigureAwait(false);
+        _ = await _blob.DeleteAsync(fileId, BlobCategory.GamebookPhoto, gameId, cancellationToken).ConfigureAwait(false);
     }
 
     private static (string GameId, string FileId) SplitKey(string storageKey)

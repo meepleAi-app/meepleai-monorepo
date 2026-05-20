@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -116,16 +117,14 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        _dbContext!.Games.Add(new GameEntity
+        _dbContext!.SharedGames.Add(new SharedGameEntity
         {
             Id = gameId,
-            Name = "Gloomhaven",
-            SharedGameId = sharedGameId,
+            Title = "Gloomhaven",
         });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = gameId,
             FileName = "gloomhaven.pdf",
             FilePath = "/uploads/gloomhaven.pdf",
             UploadedByUserId = UserId,
@@ -190,11 +189,10 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         var targetPdfId = Guid.NewGuid();
         var otherPdfId = Guid.NewGuid();
 
-        _dbContext!.Games.Add(new GameEntity { Id = gameId, Name = "Pandemic" });
+        _dbContext!.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Pandemic" });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = targetPdfId,
-            SharedGameId = gameId,
             FileName = "pandemic.pdf",
             FilePath = "/uploads/pandemic.pdf",
             UploadedByUserId = UserId,
@@ -203,7 +201,6 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = otherPdfId,
-            SharedGameId = gameId,
             FileName = "pandemic-expansion.pdf",
             FilePath = "/uploads/pandemic-expansion.pdf",
             UploadedByUserId = UserId,
@@ -282,12 +279,11 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         var gameBId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        _dbContext!.Games.Add(new GameEntity { Id = gameAId, Name = "Game A" });
-        _dbContext.Games.Add(new GameEntity { Id = gameBId, Name = "Game B" });
+        _dbContext!.SharedGames.Add(new SharedGameEntity { Id = gameAId, Title = "Game A" });
+        _dbContext.SharedGames.Add(new SharedGameEntity { Id = gameBId, Title = "Game B" });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = gameBId,
             FileName = "game-b.pdf",
             FilePath = "/uploads/game-b.pdf",
             UploadedByUserId = UserId,
@@ -317,7 +313,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
     {
         // Arrange: game exists but PDF does not
         var gameId = Guid.NewGuid();
-        _dbContext!.Games.Add(new GameEntity { Id = gameId, Name = "Catan" });
+        _dbContext!.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Catan" });
         await _dbContext.SaveChangesAsync();
 
         var handler = CreateHandler(new Mock<IMediator>());

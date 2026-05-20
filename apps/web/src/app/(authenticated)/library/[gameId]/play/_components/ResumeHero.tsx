@@ -33,46 +33,75 @@ export function ResumeHero({ campaign, gameId, onCreateNew }: ResumeHeroProps): 
     <section
       data-testid="gamebook-resume-hero"
       data-state="state-02-single-resume"
-      className="max-w-screen-sm mx-auto px-4 py-6"
+      className="mx-auto px-4 py-6 max-w-screen-sm lg:max-w-6xl lg:grid lg:grid-cols-[380px_minmax(0,1fr)] lg:gap-8"
     >
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Bentornato
-      </p>
-      <article className="overflow-hidden rounded-2xl border border-[var(--c-game)]/30 bg-background shadow-sm">
-        <div className="h-1 bg-[var(--c-game)]" aria-hidden />
-        <div className="px-5 py-5 space-y-4">
-          <header>
-            <h2 className="text-xl font-bold leading-tight">{campaign.title}</h2>
-            <p className="mt-1 text-xs text-muted-foreground">Ultima sessione {lastLabel}</p>
-          </header>
-
-          <div className="flex items-baseline gap-3">
-            <span className="text-4xl font-extrabold tabular-nums text-[var(--c-game)]">
-              §{campaign.currentParagraph}
-            </span>
-            <span className="text-xs text-muted-foreground">ultimo paragrafo letto</span>
-          </div>
-
-          <div className="flex flex-col gap-2">
+      {/* Sidebar — visible only on desktop (lg+).
+          Mockup state-02-desktop-split-view: 380px lista campagne / single-entry preview. */}
+      <aside
+        data-testid="gamebook-resume-hero-sidebar"
+        className="hidden lg:block"
+        aria-label="Elenco campagne"
+      >
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Le tue campagne
+        </p>
+        <ul className="space-y-2">
+          <li>
             <Link
               href={`/library/${gameId}/play/${campaign.id}`}
-              data-testid="gamebook-resume-hero-cta"
-              className="inline-flex items-center justify-center rounded-md bg-[var(--c-game)] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:opacity-95"
+              className="block rounded-lg border border-[var(--c-game)]/40 bg-[var(--c-game)]/5 px-4 py-3 text-sm font-medium text-[var(--c-game)] hover:bg-[var(--c-game)]/10"
+              aria-current="page"
             >
-              Riprendi → §{next}
+              <span className="block truncate font-semibold">{campaign.title}</span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                §{campaign.currentParagraph} · {lastLabel}
+              </span>
             </Link>
-            {onCreateNew && (
-              <button
-                type="button"
-                onClick={onCreateNew}
-                className="rounded-md border border-border bg-background px-5 py-2.5 text-sm font-semibold text-foreground hover:bg-muted"
+          </li>
+        </ul>
+      </aside>
+
+      {/* Main pane — single-resume hero card. Sole content on mobile, right pane on desktop. */}
+      <div data-testid="gamebook-resume-hero-main">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:hidden">
+          Bentornato
+        </p>
+        <article className="overflow-hidden rounded-2xl border border-[var(--c-game)]/30 bg-background shadow-sm">
+          <div className="h-1 bg-[var(--c-game)]" aria-hidden />
+          <div className="px-5 py-5 space-y-4 lg:px-8 lg:py-7">
+            <header>
+              <h2 className="text-xl font-bold leading-tight lg:text-2xl">{campaign.title}</h2>
+              <p className="mt-1 text-xs text-muted-foreground">Ultima sessione {lastLabel}</p>
+            </header>
+
+            <div className="flex items-baseline gap-3">
+              <span className="text-4xl font-extrabold tabular-nums text-[var(--c-game)] lg:text-5xl">
+                §{campaign.currentParagraph}
+              </span>
+              <span className="text-xs text-muted-foreground">ultimo paragrafo letto</span>
+            </div>
+
+            <div className="flex flex-col gap-2 lg:flex-row lg:gap-3">
+              <Link
+                href={`/library/${gameId}/play/${campaign.id}`}
+                data-testid="gamebook-resume-hero-cta"
+                className="inline-flex items-center justify-center rounded-md bg-[var(--c-game)] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:opacity-95"
               >
-                + Nuova campagna
-              </button>
-            )}
+                Riprendi → §{next}
+              </Link>
+              {onCreateNew && (
+                <button
+                  type="button"
+                  onClick={onCreateNew}
+                  className="rounded-md border border-border bg-background px-5 py-2.5 text-sm font-semibold text-foreground hover:bg-muted"
+                >
+                  + Nuova campagna
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      </article>
+        </article>
+      </div>
     </section>
   );
 }

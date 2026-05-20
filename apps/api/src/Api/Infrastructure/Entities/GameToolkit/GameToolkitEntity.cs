@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserLibrary;
 
 namespace Api.Infrastructure.Entities.GameToolkit;
@@ -75,6 +76,6 @@ public class GameToolkitEntity
     public byte[] RowVersion { get; set; } = default!;
 
     // Navigation properties
-    public GameEntity? Game { get; set; }
+    public SharedGameEntity? Game { get; set; }
     public PrivateGameEntity? PrivateGame { get; set; }
 }

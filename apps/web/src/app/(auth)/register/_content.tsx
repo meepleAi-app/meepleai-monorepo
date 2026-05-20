@@ -117,7 +117,12 @@ export function RegisterPageContent() {
         className="min-h-dvh flex items-center justify-center bg-background text-foreground"
         data-testid="register-loading"
       >
-        <div className="animate-pulse">{t('auth.register.loadingMessage')}</div>
+        {/* motion-reduce:animate-none — pairs with reducedMotion:'reduce' in
+            accessibility.spec.ts. Without this, axe captures mid-pulse alpha
+            and produces a spurious 4.09:1 AA fail (#1094 follow-up to #1231) */}
+        <div className="animate-pulse motion-reduce:animate-none">
+          {t('auth.register.loadingMessage')}
+        </div>
       </div>
     );
   }

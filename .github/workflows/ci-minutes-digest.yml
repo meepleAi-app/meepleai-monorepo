@@ -53,11 +53,35 @@ jobs:
           # at 10 pages (1000 runs) to avoid runaway API consumption on busy
           # weeks. The default branch is main; the same query covers all
           # branches/events.
-          gh api \
-            "repos/$REPO/actions/runs?per_page=100&created=>$CUTOFF" \
-            --paginate \
-            --slurp \
-            --jq '[.[].workflow_runs[] | select(.run_started_at != null and .updated_at != null) | {
+          #
+          # Note: `gh api --slurp --jq` was deprecated and now errors out
+          # ("the --slurp option is not supported with --jq or --template").
+          # Workaround: pipe --paginate output through `jq -s` (slurp client-side)
+          # then apply the projection in a second jq pass. See issue #850 AC-5.
+          #
+          # Retry policy: GitHub API occasionally returns HTTP 502/503/504 mid-pagination
+          # (Actions runs endpoint is heavy). Without retry, a single 5xx fails the whole
+          # digest. Exponential backoff: 5s, 10s, 20s (total worst case ~35s + 3 attempts).
+          RETRY_MAX=3
+          for attempt in $(seq 1 $RETRY_MAX); do
+            if gh api \
+                 "repos/$REPO/actions/runs?per_page=100&created=>$CUTOFF" \
+                 --paginate > pages.json 2> gh.err
+            then
+              break
+            fi
+            if [ "$attempt" -eq "$RETRY_MAX" ]; then
+              echo "::error::gh api failed after $RETRY_MAX attempts:"
+              cat gh.err
+              exit 1
+            fi
+            DELAY=$((5 * (2 ** (attempt - 1))))
+            echo "::warning::gh api attempt $attempt failed (likely transient 5xx), retrying in ${DELAY}s..."
+            cat gh.err
+            sleep "$DELAY"
+          done
+
+          jq -s '[.[].workflow_runs[] | select(.run_started_at != null and .updated_at != null) | {
               name: .name,
               workflow_id: .workflow_id,
               conclusion: (.conclusion // "in_progress"),
@@ -68,7 +92,7 @@ jobs:
               run_started_at: .run_started_at,
               updated_at: .updated_at,
               html_url: .html_url
-            }]' > runs.json
+            }]' pages.json > runs.json
 
           TOTAL_RUNS=$(jq 'length' runs.json)
           echo "Fetched $TOTAL_RUNS runs"

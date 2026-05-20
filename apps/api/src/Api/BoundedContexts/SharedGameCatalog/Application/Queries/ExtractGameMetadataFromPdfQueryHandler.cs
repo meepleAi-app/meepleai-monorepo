@@ -168,7 +168,7 @@ internal sealed class ExtractGameMetadataFromPdfQueryHandler : IQueryHandler<Ext
         {
             _logger.LogDebug("[{RequestId}] Retrieving PDF from storage: {FileId}", requestId, fileId);
 
-            var stream = await _blobStorageService.RetrieveAsync(fileId, "wizard-temp", cancellationToken)
+            var stream = await _blobStorageService.RetrieveAsync(fileId, BlobCategory.Pdf, "wizard-temp", cancellationToken)
                 .ConfigureAwait(false);
 
             if (stream == null)

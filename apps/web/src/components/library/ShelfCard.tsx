@@ -243,7 +243,7 @@ export function ShelfCard({
               type="button"
               className={cn(
                 'w-full flex items-center justify-center gap-1',
-                'text-[9px] font-medium text-primary',
+                'text-[9px] font-medium text-entity-game-text',
                 'rounded px-1.5 py-0.5',
                 'border border-primary/30 hover:border-primary/60 hover:bg-primary/10',
                 'transition-colors duration-150'

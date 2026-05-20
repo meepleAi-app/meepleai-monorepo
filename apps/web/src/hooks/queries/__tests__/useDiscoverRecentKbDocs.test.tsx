@@ -24,17 +24,22 @@ import {
   useDiscoverRecentKbDocs,
 } from '../useDiscoverRecentKbDocs';
 
+import type { MockedApiClient } from '@/test-utils/api-client-mock';
+
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-vi.mock('@/lib/api/client', () => ({
-  apiClient: {
-    get: vi.fn(),
-  },
+const mockApi = vi.hoisted<MockedApiClient>(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
+  head: vi.fn(),
+  options: vi.fn(),
 }));
+vi.mock('@/lib/api/client', () => ({ apiClient: mockApi }));
 
-import { apiClient } from '@/lib/api/client';
-
-const mockGet = apiClient.get as ReturnType<typeof vi.fn>;
+const mockGet = mockApi.get;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -95,7 +100,7 @@ describe('useDiscoverRecentKbDocs — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/kb-docs/recent?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/kb-docs/recent?limit=10', expect.anything());
   });
 
   it('clamps a fractional limit downward to integer', async () => {
@@ -106,7 +111,7 @@ describe('useDiscoverRecentKbDocs — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/kb-docs/recent?limit=7', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/kb-docs/recent?limit=7', expect.anything());
   });
 
   it('clamps a NaN limit to the default', async () => {
@@ -116,7 +121,7 @@ describe('useDiscoverRecentKbDocs — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/kb-docs/recent?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/kb-docs/recent?limit=10', expect.anything());
   });
 });
 

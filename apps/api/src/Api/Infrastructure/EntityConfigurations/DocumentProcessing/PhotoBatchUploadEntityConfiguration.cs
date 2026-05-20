@@ -182,6 +182,14 @@ internal sealed class PhotoBatchPageEntityConfiguration
             .HasColumnType("text")
             .IsRequired(false);
 
+        // Issue #747: narrative paragraph numbers stored as PostgreSQL native integer array.
+        // Default '{}' on the migration keeps backfill non-breaking for existing rows.
+        builder.Property(p => p.ParagraphNumbers)
+            .HasColumnName("paragraph_numbers")
+            .HasColumnType("integer[]")
+            .HasDefaultValueSql("'{}'::integer[]")
+            .IsRequired();
+
         builder.Property(p => p.IndexedAt)
             .HasColumnName("indexed_at")
             .IsRequired();
@@ -193,5 +201,12 @@ internal sealed class PhotoBatchPageEntityConfiguration
         builder.HasIndex(p => new { p.PhotoBatchUploadId, p.PageNumber })
             .IsUnique()
             .HasDatabaseName("uq_photo_batch_pages_batch_page");
+
+        // Issue #747: GIN index on paragraph_numbers supports `@> ARRAY[N]` containment
+        // queries used by GetByParagraphNumberAsync. Postgres-only; gracefully ignored
+        // by other providers via EF Core's HasMethod.
+        builder.HasIndex(p => p.ParagraphNumbers)
+            .HasDatabaseName("ix_photo_batch_pages_paragraph_numbers_gin")
+            .HasMethod("gin");
     }
 }

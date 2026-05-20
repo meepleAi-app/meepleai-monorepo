@@ -390,10 +390,66 @@ public partial class DropEmailColumn : Migration
 - **Pre-deploy gate**: confirm zero reads of `email` in last 7 days (log query or feature-flag telemetry).
 - **Rollback-safe within N+1**: still yes — restoring to Deploy N code requires DB restore from §6.2, which is the documented escape hatch.
 
-### 8.4 Enforcement (current state vs target)
+### 8.4 Enforcement (CI gate)
 
-**Current**: policy enforced by code review only.
-**Target** (tracked in [#1087](https://github.com/meepleAi-app/meepleai-monorepo/issues/1087)): CI gate in `staging.yml` that parses migration `.sql` artifacts and fails on `DROP COLUMN|DROP TABLE|ALTER COLUMN.*TYPE` without an explicit `-- safe: deferred-contract` directive.
+**Status**: ✅ live since 2026-05-18 (issue [#1087](https://github.com/meepleAi-app/meepleai-monorepo/issues/1087), PR TBD).
+
+#### How it works
+
+The `Migration Safety Gate` job in [`.github/workflows/dev-fast.yml`](../../../.github/workflows/dev-fast.yml) runs on every PR to `main-dev` that touches:
+
+- `apps/api/src/Api/Infrastructure/Migrations/**/*.cs`, or
+- `infra/scripts/check-migration-safety.py` (the gate itself).
+
+Sequence per run:
+
+1. Restore + build the `Api` project so `dotnet-ef` can introspect the model.
+2. Generate the idempotent migration SQL via `dotnet ef migrations script --idempotent`.
+3. Run [`infra/scripts/check-migration-safety.py`](../../../infra/scripts/check-migration-safety.py), which:
+   - Splits the SQL by `-- Migration: <id>` header into per-migration blocks.
+   - Skips any block with a timestamp strictly older than `--gate-ship-date` (default `20260518`, grandfathering the 25 pre-existing migrations).
+   - Flags each occurrence of the five forbidden patterns from [§8.2](#82-forbidden-in-a-single-migration).
+   - Allows a finding when the same block contains `-- safe: <non-empty rationale>` (see §8.3 expand → migrate → contract).
+4. Uploads `migration-safety-report.json` as a PR artifact (90-day retention) listing every flagged pattern and every directive use, for audit.
+
+Exit codes: `0` = clean, `1` = unsafe pattern without directive (PR blocked), `2` = invocation error.
+
+#### How to author a migration that hits the gate
+
+The directive lives in the **generated SQL**, not in C# comments. Emit it from the migration `Up()` body as the first statement so EF Core inlines it into the script output:
+
+```csharp
+public partial class DropEmailColumn : Migration
+{
+    protected override void Up(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.Sql(
+            "-- safe: drop legacy email column after 7-day soak; expand done in PR #NNN, contract = this PR");
+        migrationBuilder.DropColumn("email", "users");
+    }
+}
+```
+
+Rationale must be **non-empty after trimming**. The parser rejects bare `-- safe:` and `-- safe:   ` (whitespace-only) — see `test_empty_rationale_is_rejected` / `test_whitespace_only_rationale_is_rejected` in [`test_check_migration_safety.py`](../../../infra/scripts/test_check_migration_safety.py).
+
+#### Audit trail
+
+- [`CODEOWNERS`](../../../.github/CODEOWNERS) routes every migration change to backend leads.
+- The PR template ([`pull_request_template.md`](../../../.github/pull_request_template.md)) has a `Database Migrations` checklist with an explicit acknowledgement when the `-- safe:` directive is used.
+- The CI artifact (`migration-safety-report.json`) survives 90 days and captures the exact rationale string used, the migration ID, and the line number — sufficient for the quarterly audit cadence ([#564](https://github.com/meepleAi-app/meepleai-monorepo/issues/564)).
+
+#### Running the gate locally
+
+```bash
+# From the repo root:
+cd apps/api/src/Api
+dotnet ef migrations script --idempotent -o /tmp/migrations.sql
+python ../../../../infra/scripts/check-migration-safety.py \
+    --sql /tmp/migrations.sql \
+    --gate-ship-date 20260518
+```
+
+Exits 0 on clean, 1 on unsafe pattern. Use `--format json` for machine-readable output and `--report <path>` to persist the audit JSON.
 
 ---
 
@@ -645,10 +701,16 @@ The `infra/scripts/dr-walkthrough-reminder.sh` script runs via cron (`0 9 1 1,4,
 This runbook intentionally references work that is **out-of-scope** but adjacent. Tracked as follow-up issues:
 
 - [ ] [#1087](https://github.com/meepleAi-app/meepleai-monorepo/issues/1087) — **CI migration safety gate**: parse SQL artifacts in `staging.yml`, fail on forbidden patterns from §8.2
-- [ ] [#1088](https://github.com/meepleAi-app/meepleai-monorepo/issues/1088) — **Post-mortem template doc**: structured Markdown template at `docs/for-developers/operations/post-mortem-template.md`
+- [x] [#1088](https://github.com/meepleAi-app/meepleai-monorepo/issues/1088) — **Post-mortem template doc**: structured Markdown template at [`post-mortem-template.md`](./post-mortem-template.md) ✅ done
 - [ ] [#1089](https://github.com/meepleAi-app/meepleai-monorepo/issues/1089) — **Status banner FE component**: implement in-app banner (refs §12.3) with admin controls
 
-### 14.3 Post-mortem skeleton (until full template exists)
+### 14.3 Post-mortem template
+
+Use [`post-mortem-template.md`](./post-mortem-template.md) for the canonical structured template (9 sections + storage convention `post-mortems/YYYY-MM-DD-<slug>.md`). Target fill time: < 30 min for a typical P1 incident.
+
+Worked example: [`post-mortems/2026-05-03-wave-b2-agents-backend-missing.md`](./post-mortems/2026-05-03-wave-b2-agents-backend-missing.md) (P2, fix-forward instead of rollback).
+
+Quick skeleton (for in-incident scratchpad before transcribing to the template):
 
 ```markdown
 # Post-mortem — <Incident title> (YYYY-MM-DD)
@@ -664,21 +726,16 @@ One paragraph: what happened, impact, how we fixed it.
 - HH:MM — Smoke validation passed
 
 ## Root cause
-What allowed the broken code to reach prod / staging? Where did the
-review / CI / monitoring gap occur?
+5-whys analysis. What allowed the broken code to reach prod / staging?
 
 ## Resolution
 What action restored service. Reference §6 scenario.
 
-## What went well
-Concrete: list 2-3 things.
-
-## What went poorly
-Concrete: list 2-3 things. No blame.
+## What went well / poorly
+Concrete: 2-3 items each, no blame.
 
 ## Action items
-- [ ] <Concrete, dated, owner-assigned action>
-- [ ] ...
+- [ ] <Concrete, dated, owner-assigned action, priority P1/P2/P3, tracking issue>
 ```
 
 ---

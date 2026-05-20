@@ -1,10 +1,12 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import * as hookModule from '@/lib/gamebook/hooks/useGamebookCampaign';
 import * as mutModule from '@/lib/gamebook/hooks/useUpdateGamebookProgress';
+
+const openChatMock = vi.fn();
 
 vi.mock('next/link', () => ({
   default: ({
@@ -27,8 +29,8 @@ import { GamebookPlayShell } from '../GamebookPlayShell';
 vi.mock('@/lib/gamebook/hooks/useGamebookCampaign');
 vi.mock('@/lib/gamebook/hooks/useUpdateGamebookProgress');
 vi.mock('@/lib/stores/chat-panel-store', () => ({
-  useChatPanelStore: (selector: (s: { open: () => void }) => unknown) =>
-    selector({ open: vi.fn() }),
+  useChatPanelStore: (selector: (s: { open: typeof openChatMock }) => unknown) =>
+    selector({ open: openChatMock }),
 }));
 
 const fakeCampaign = {
@@ -101,5 +103,26 @@ describe('GamebookPlayShell', () => {
     const link = screen.getByTestId('gamebook-open-translate');
     expect(link).toBeInTheDocument();
     expect(link.closest('a')?.href).toContain('/library/g1/play/c1/translate');
+  });
+
+  // Issue #1288 Bug 3 — chat panel preselects game context from active campaign.
+  it('opens chat with gameContext derived from the active campaign', () => {
+    vi.mocked(hookModule.useGamebookCampaign).mockReturnValue({
+      data: fakeCampaign,
+      isLoading: false,
+    } as never);
+
+    wrap(<GamebookPlayShell campaignId="c1" gameId="g1" />);
+
+    fireEvent.click(screen.getByTestId('gamebook-open-chat'));
+
+    expect(openChatMock).toHaveBeenCalledTimes(1);
+    expect(openChatMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'g1',
+        name: 'Campagna #1',
+        kbStatus: 'ready',
+      })
+    );
   });
 });

@@ -353,7 +353,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // Issue #501: Use blob storage with correct GUID format (no hyphens) to match StoreAsync key format
         // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
         var fileId = PdfStorageKey.ForPdf(pdfDoc.Id);
-        var fileStream = await _blobStorageService.RetrieveAsync(fileId, fileId, cancellationToken).ConfigureAwait(false);
+        var fileStream = await _blobStorageService.RetrieveAsync(fileId, BlobCategory.Pdf, fileId, cancellationToken).ConfigureAwait(false);
 
         if (fileStream == null)
         {

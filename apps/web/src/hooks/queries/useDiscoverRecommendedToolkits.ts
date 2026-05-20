@@ -58,7 +58,7 @@ export function useDiscoverRecommendedToolkits(
     queryKey: discoverRecommendedToolkitsKeys.list(safeLimit),
     queryFn: async () => {
       const response = await apiClient.get<RecommendedToolkitsResponse>(
-        `/toolkits/recommended?limit=${safeLimit}`,
+        `/api/v1/toolkits/recommended?limit=${safeLimit}`,
         RecommendedToolkitsResponseSchema
       );
       return response?.items ?? [];

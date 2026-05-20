@@ -8,6 +8,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -85,10 +86,10 @@ public sealed class PdfKbLinkFlowIntegrationTests : IAsyncLifetime
             PasswordHash = "test-hash",
             CreatedAt = DateTime.UtcNow
         });
-        _dbContext.Games.Add(new Api.Infrastructure.Entities.GameEntity
+        _dbContext.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
         {
             Id = TestGameId,
-            Name = "Test Game for KB Link",
+            Title = "Test Game for KB Link",
             CreatedAt = DateTime.UtcNow
         });
         await _dbContext.SaveChangesAsync();

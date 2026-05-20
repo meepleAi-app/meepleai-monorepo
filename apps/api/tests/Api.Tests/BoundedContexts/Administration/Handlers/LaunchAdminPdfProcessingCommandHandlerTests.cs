@@ -4,6 +4,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
@@ -63,11 +64,10 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        _dbContext.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven" });
+        _dbContext.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Gloomhaven" });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = gameId,
             FileName = "rulebook.pdf",
             FilePath = "/uploads/rulebook.pdf",
             UploadedByUserId = UserId,
@@ -97,11 +97,10 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        _dbContext.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven" });
+        _dbContext.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Gloomhaven" });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = gameId,
             FileName = "rulebook.pdf",
             FilePath = "/uploads/rulebook.pdf",
             UploadedByUserId = UserId,
@@ -134,16 +133,13 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         var pdfId = Guid.NewGuid();
 
         // Game entity links SharedGameId → actual Game.Id
-        _dbContext.Games.Add(new GameEntity
+        _dbContext.SharedGames.Add(new SharedGameEntity
         {
             Id = actualGameId,
-            Name = "Catan",
-            SharedGameId = sharedGameId
-        });
+            Title = "Catan" });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
-            Id = pdfId,
-            SharedGameId = actualGameId,   // PDF references actual Game.Id
+            Id = pdfId,   // PDF references actual Game.Id
             FileName = "catan.pdf",
             FilePath = "/uploads/catan.pdf",
             UploadedByUserId = UserId,
@@ -198,13 +194,12 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         var otherGameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        _dbContext.Games.Add(new GameEntity { Id = targetGameId, Name = "Game A" });
-        _dbContext.Games.Add(new GameEntity { Id = otherGameId, Name = "Game B" });
+        _dbContext.SharedGames.Add(new SharedGameEntity { Id = targetGameId, Title = "Game A" });
+        _dbContext.SharedGames.Add(new SharedGameEntity { Id = otherGameId, Title = "Game B" });
         // PDF belongs to otherGameId
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = otherGameId,
             FileName = "other.pdf",
             FilePath = "/uploads/other.pdf",
             UploadedByUserId = UserId
@@ -230,7 +225,7 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        _dbContext.Games.Add(new GameEntity { Id = gameId, Name = "Pandemic" });
+        _dbContext.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Pandemic" });
         await _dbContext.SaveChangesAsync();
 
         var command = new LaunchAdminPdfProcessingCommand(
@@ -254,11 +249,10 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        _dbContext.Games.Add(new GameEntity { Id = gameId, Name = "Spirit Island" });
+        _dbContext.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Spirit Island" });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = gameId,
             FileName = "spirit-island.pdf",
             FilePath = "/uploads/spirit-island.pdf",
             UploadedByUserId = UserId
@@ -295,11 +289,10 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        _dbContext.Games.Add(new GameEntity { Id = gameId, Name = "Everdell" });
+        _dbContext.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Everdell" });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = gameId,
             FileName = "everdell.pdf",
             FilePath = "/uploads/everdell.pdf",
             UploadedByUserId = UserId
@@ -351,11 +344,10 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        _dbContext.Games.Add(new GameEntity { Id = gameId, Name = "Arkham Horror" });
+        _dbContext.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Arkham Horror" });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = gameId,
             FileName = "arkham.pdf",
             FilePath = "/uploads/arkham.pdf",
             UploadedByUserId = UserId

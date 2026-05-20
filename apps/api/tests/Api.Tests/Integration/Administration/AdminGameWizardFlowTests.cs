@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -124,16 +125,14 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        _dbContext!.Games.Add(new GameEntity
+        _dbContext!.SharedGames.Add(new SharedGameEntity
         {
             Id = gameId,
-            Name = gameName,
-            SharedGameId = sharedGameId,
+            Title = gameName,
         });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = gameId,
             FileName = $"{gameName.ToLowerInvariant()}.pdf",
             FilePath = $"/uploads/{gameName.ToLowerInvariant()}.pdf",
             UploadedByUserId = AdminUserId,
@@ -314,12 +313,11 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
         var gameBId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        _dbContext!.Games.Add(new GameEntity { Id = gameAId, Name = "Game A" });
-        _dbContext.Games.Add(new GameEntity { Id = gameBId, Name = "Game B" });
+        _dbContext!.SharedGames.Add(new SharedGameEntity { Id = gameAId, Title = "Game A" });
+        _dbContext.SharedGames.Add(new SharedGameEntity { Id = gameBId, Title = "Game B" });
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = gameBId,
             FileName = "game-b.pdf",
             FilePath = "/uploads/game-b.pdf",
             UploadedByUserId = AdminUserId,

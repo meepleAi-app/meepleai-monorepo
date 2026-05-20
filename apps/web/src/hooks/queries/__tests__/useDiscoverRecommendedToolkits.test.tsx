@@ -24,16 +24,21 @@ import {
   useDiscoverRecommendedToolkits,
 } from '../useDiscoverRecommendedToolkits';
 
+import type { MockedApiClient } from '@/test-utils/api-client-mock';
+
 // Mocks
-vi.mock('@/lib/api/client', () => ({
-  apiClient: {
-    get: vi.fn(),
-  },
+const mockApi = vi.hoisted<MockedApiClient>(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
+  head: vi.fn(),
+  options: vi.fn(),
 }));
+vi.mock('@/lib/api/client', () => ({ apiClient: mockApi }));
 
-import { apiClient } from '@/lib/api/client';
-
-const mockGet = apiClient.get as ReturnType<typeof vi.fn>;
+const mockGet = mockApi.get;
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -91,7 +96,10 @@ describe('useDiscoverRecommendedToolkits — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/toolkits/recommended?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/toolkits/recommended?limit=10',
+      expect.anything()
+    );
   });
 
   it('clamps an oversize limit to 50', async () => {
@@ -101,7 +109,10 @@ describe('useDiscoverRecommendedToolkits — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/toolkits/recommended?limit=50', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/toolkits/recommended?limit=50',
+      expect.anything()
+    );
   });
 
   it('clamps a sub-1 limit to default 10', async () => {
@@ -111,7 +122,10 @@ describe('useDiscoverRecommendedToolkits — limit handling', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGet).toHaveBeenCalledWith('/toolkits/recommended?limit=10', expect.anything());
+    expect(mockGet).toHaveBeenCalledWith(
+      '/api/v1/toolkits/recommended?limit=10',
+      expect.anything()
+    );
   });
 });
 

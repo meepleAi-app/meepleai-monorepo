@@ -547,6 +547,165 @@ public sealed class GameNightInvitationEndpointsTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
+    // ────────────────────────────────────────────────────────────────────
+    // Issue #1169: ResponderDisplayName persistence + validation
+    // ────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RespondByToken_WithDisplayName_PersistsRespondedByName()
+    {
+        // Issue #1169: guest types a name → persisted on the invitation row and
+        // echoed back via the PublicGameNightInvitationDto.RespondedByName.
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(gameNightId, organizerId);
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/v1/game-nights/invitations/{invitation.Token}/respond",
+            new { Response = "Accepted", DisplayName = "Marco" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await response.Content.ReadFromJsonAsync<PublicGameNightInvitationDto>();
+        dto!.RespondedByName.Should().Be("Marco");
+
+        // Verify persistence layer captured the name (round-trip through DB).
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var persisted = await dbContext.GameNightInvitations
+            .AsNoTracking()
+            .FirstAsync(i => i.Id == invitation.Id);
+        persisted.RespondedByName.Should().Be("Marco");
+    }
+
+    [Fact]
+    public async Task RespondByToken_WithoutDisplayName_PersistsNull()
+    {
+        // Issue #1169: omitting DisplayName must leave responded_by_name = NULL.
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(gameNightId, organizerId);
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/v1/game-nights/invitations/{invitation.Token}/respond",
+            new { Response = "Accepted" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await response.Content.ReadFromJsonAsync<PublicGameNightInvitationDto>();
+        dto!.RespondedByName.Should().BeNull();
+
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var persisted = await dbContext.GameNightInvitations
+            .AsNoTracking()
+            .FirstAsync(i => i.Id == invitation.Id);
+        persisted.RespondedByName.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RespondByToken_WithWhitespaceOnlyDisplayName_PersistsNull()
+    {
+        // Whitespace-only is normalized to null at the endpoint (trim) and again
+        // by the aggregate's NormalizeRespondedByName guard.
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(gameNightId, organizerId);
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/v1/game-nights/invitations/{invitation.Token}/respond",
+            new { Response = "Accepted", DisplayName = "   " });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var persisted = await dbContext.GameNightInvitations
+            .AsNoTracking()
+            .FirstAsync(i => i.Id == invitation.Id);
+        persisted.RespondedByName.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RespondByToken_WithDisplayNameOver120Chars_Returns400()
+    {
+        // Issue #1169: payload-level length cap enforced by the endpoint guard
+        // (validation pipeline behavior is not wired for `ICommand` requests
+        // in this codebase — see ICommand : IRequest, no TResponse; MediatR
+        // IPipelineBehavior<TReq, Unit> is not auto-registered). The endpoint
+        // therefore rejects oversize input BEFORE reaching the handler to
+        // guarantee the 400 response without relying on pipeline behaviors.
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(gameNightId, organizerId);
+
+        var tooLongName = new string('A', 121); // 121 chars > MaxRespondedByNameLength (120)
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/v1/game-nights/invitations/{invitation.Token}/respond",
+            new { Response = "Accepted", DisplayName = tooLongName });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        // Persistence must be untouched on validation failure.
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var persisted = await dbContext.GameNightInvitations
+            .AsNoTracking()
+            .FirstAsync(i => i.Id == invitation.Id);
+        persisted.Status.Should().Be("Pending");
+        persisted.RespondedByName.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RespondByToken_DisplayNameIsTrimmedBeforePersistence()
+    {
+        // Leading/trailing whitespace must be stripped so the DB row matches
+        // what the UI will echo back via RespondedByName.
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(gameNightId, organizerId);
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/v1/game-nights/invitations/{invitation.Token}/respond",
+            new { Response = "Accepted", DisplayName = "  Anna  " });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var dto = await response.Content.ReadFromJsonAsync<PublicGameNightInvitationDto>();
+        dto!.RespondedByName.Should().Be("Anna");
+    }
+
+    [Fact]
+    public async Task RespondByToken_SameStateRepeatWithDifferentName_DoesNotOverwriteName()
+    {
+        // Idempotent D2(b) same-state replay: a second Accept must NOT overwrite
+        // the previously persisted display name. The first responder's identity
+        // is the one of record; replays are no-ops.
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(gameNightId, organizerId);
+
+        // First Accept with "Marco"
+        var first = await _client.PostAsJsonAsync(
+            $"/api/v1/game-nights/invitations/{invitation.Token}/respond",
+            new { Response = "Accepted", DisplayName = "Marco" });
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Replay Accept with "Hacker" — no transition, no overwrite.
+        var second = await _client.PostAsJsonAsync(
+            $"/api/v1/game-nights/invitations/{invitation.Token}/respond",
+            new { Response = "Accepted", DisplayName = "Hacker" });
+        second.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var persisted = await dbContext.GameNightInvitations
+            .AsNoTracking()
+            .FirstAsync(i => i.Id == invitation.Id);
+        persisted.RespondedByName.Should().Be("Marco");
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // Original test suite continues below
+    // ────────────────────────────────────────────────────────────────────
+
     [Fact]
     public async Task CreateInvitationByEmail_InvalidEmailFormat_ReturnsValidationError()
     {

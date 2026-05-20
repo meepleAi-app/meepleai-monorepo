@@ -10,10 +10,11 @@
 
 import { Suspense } from 'react';
 
-import { Settings, Gauge, Flag, ShieldCheck } from 'lucide-react';
+import { Settings, Gauge, Flag, ShieldCheck, Megaphone } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
 import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
+import { StatusBannerAdmin } from '@/components/features/status-banner';
 
 import { FeatureFlagsWrapper } from './FeatureFlagsWrapper';
 import { GeneralTab } from './GeneralTab';
@@ -34,6 +35,7 @@ const TABS: readonly HubTab[] = [
     href: '/admin/config?tab=rate-limits',
     icon: <ShieldCheck />,
   },
+  { id: 'banner', label: 'Banner', href: '/admin/config?tab=banner', icon: <Megaphone /> },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -75,6 +77,12 @@ function renderTabContent(tab: TabId) {
       return (
         <Suspense fallback={<TabSkeleton />}>
           <RateLimitsTab />
+        </Suspense>
+      );
+    case 'banner':
+      return (
+        <Suspense fallback={<TabSkeleton />}>
+          <StatusBannerAdmin />
         </Suspense>
       );
     default:

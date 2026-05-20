@@ -695,7 +695,6 @@ public sealed class DiscoverEndpointsIntegrationTests : IAsyncLifetime
             ProcessingState = processingState,
             ProcessedAt = processedAt,
             DocumentCategory = documentCategory,
-            SharedGameId = sharedGameId,
             Language = "en",
             IsActiveForRag = true
         });

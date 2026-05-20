@@ -77,4 +77,26 @@ describe('GameNightRsvpRow', () => {
     const row = screen.getByTestId('game-night-rsvp-row');
     expect(within(row).getByText('×')).toBeInTheDocument();
   });
+
+  describe('mode prop (issue #1169)', () => {
+    it('defaults to data-mode="authenticated" when prop is omitted', () => {
+      render(<GameNightRsvpRow {...baseProps} isMe />);
+      const row = screen.getByTestId('game-night-rsvp-row');
+      expect(row).toHaveAttribute('data-mode', 'authenticated');
+    });
+
+    it('exposes data-mode="public" and forces isMe to false in public mode', () => {
+      render(<GameNightRsvpRow {...baseProps} isMe mode="public" />);
+      const row = screen.getByTestId('game-night-rsvp-row');
+      expect(row).toHaveAttribute('data-mode', 'public');
+      // isMe is silently coerced to false on public surfaces.
+      expect(row).toHaveAttribute('data-is-me', 'false');
+      expect(within(row).queryByText('me')).toBeNull();
+    });
+
+    it('still renders host pill in public mode', () => {
+      render(<GameNightRsvpRow {...baseProps} isHost hostLabel="host" mode="public" />);
+      expect(screen.getByText('host')).toBeInTheDocument();
+    });
+  });
 });

@@ -97,7 +97,7 @@ internal sealed class GameStateExtractor : IGameStateExtractor
             foreach (var image in snapshot.Images)
             {
                 using var stream = await _blobStorageService
-                    .RetrieveAsync(image.StorageKey, gameIdForStorage, ct)
+                    .RetrieveAsync(image.StorageKey, BlobCategory.VisionSnapshot, gameIdForStorage, ct)
                     .ConfigureAwait(false);
 
                 if (stream is null)

@@ -79,7 +79,7 @@ internal class DownloadPdfQueryHandler : IQueryHandler<DownloadPdfQuery, PdfDown
         // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
         var bucketKey = PdfStorageKey.ForPdf(pdf.Id);
         var fileStream = await _blobStorageService
-            .RetrieveAsync(bucketKey, bucketKey, cancellationToken)
+            .RetrieveAsync(bucketKey, BlobCategory.Pdf, bucketKey, cancellationToken)
             .ConfigureAwait(false);
 
         if (fileStream == null)

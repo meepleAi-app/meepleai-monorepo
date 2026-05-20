@@ -72,7 +72,6 @@ public sealed class VectorDocumentRepositoryTests : IClassFixture<SharedTestcont
         string fileName = "test.pdf") => new()
         {
             Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
             PrivateGameId = privateGameId,
             FileName = fileName,
             FilePath = $"/tmp/{fileName}",

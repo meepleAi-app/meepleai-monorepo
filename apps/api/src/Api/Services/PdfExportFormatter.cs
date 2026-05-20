@@ -43,7 +43,7 @@ internal class PdfExportFormatter : IExportFormatter
                 page.PageColor(Colors.White);
                 page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Arial"));
 
-                var gameName = chat.Game?.Name ?? "Unknown Game";
+                var gameName = chat.Game?.Title ?? "Unknown Game";
                 page.Header()
                     .Element(container => ComposeHeader(container, gameName, filteredLogs.Count));
 

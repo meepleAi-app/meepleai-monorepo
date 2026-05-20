@@ -14,7 +14,9 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.Models;
 using Api.Observability;
 using Api.Services;
+using Api.SharedKernel.Application;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -37,7 +39,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     private readonly IAgentSessionRepository _sessionRepository;
     private readonly IAgentDefinitionRepository _definitionRepository;
     private readonly IChatThreadRepository _chatThreadRepository;
-    private readonly IGameRepository _gameRepository;
+    private readonly IGameCoreDataProvider _gameCoreData;
     private readonly ILiveSessionRepository _liveSessionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IRagPromptAssemblyService _ragPromptService;
@@ -65,7 +67,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         IAgentSessionRepository sessionRepository,
         IAgentDefinitionRepository definitionRepository,
         IChatThreadRepository chatThreadRepository,
-        IGameRepository gameRepository,
+        IGameCoreDataProvider gameCoreData,
         ILiveSessionRepository liveSessionRepository,
         IUnitOfWork unitOfWork,
         IRagPromptAssemblyService ragPromptService,
@@ -83,7 +85,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _definitionRepository = definitionRepository ?? throw new ArgumentNullException(nameof(definitionRepository));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
-        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _gameCoreData = gameCoreData ?? throw new ArgumentNullException(nameof(gameCoreData));
         _liveSessionRepository = liveSessionRepository ?? throw new ArgumentNullException(nameof(liveSessionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _ragPromptService = ragPromptService ?? throw new ArgumentNullException(nameof(ragPromptService));
@@ -179,7 +181,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         }
 
         // Resolve game title
-        var game = await _gameRepository.GetByIdAsync(agentSession.GameId, cancellationToken).ConfigureAwait(false);
+        var game = await _gameCoreData.GetCoreDataAsync(GameRef.Shared(agentSession.GameId), cancellationToken).ConfigureAwait(false);
         var gameTitle = game?.Title ?? "Unknown Game";
 
         // Resolve or create ChatThread

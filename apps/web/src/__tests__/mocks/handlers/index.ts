@@ -21,6 +21,8 @@ import { gameNightsHandlers } from './game-nights.handlers';
 import { playersHandlers } from './players.handlers';
 import { notificationsHandlers } from './notifications.handlers';
 import { badgesHandlers } from './badges.handlers';
+import { gamebookHandlers } from './gamebook.handlers';
+import { gamebookGlossaryHandlers } from './gamebook-glossary.handlers';
 
 /**
  * All MSW request handlers
@@ -43,6 +45,8 @@ export const handlers = [
   ...playersHandlers,
   ...notificationsHandlers,
   ...badgesHandlers,
+  ...gamebookHandlers,
+  ...gamebookGlossaryHandlers,
 ];
 
 // Re-export individual handler groups for selective use
@@ -82,3 +86,15 @@ export {
   addNotification,
 } from './notifications.handlers';
 export { badgesHandlers, resetBadgesState } from './badges.handlers';
+export {
+  gamebookHandlers,
+  getCapturedGamebookRequests,
+  resetCapturedGamebookRequests,
+} from './gamebook.handlers';
+export {
+  gamebookGlossaryHandlers,
+  getCapturedGlossaryUpserts,
+  resetCapturedGlossaryUpserts,
+  setUpsertResponder,
+  resetGlossaryResponder,
+} from './gamebook-glossary.handlers';

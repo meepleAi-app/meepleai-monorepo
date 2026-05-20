@@ -103,6 +103,18 @@ describe('LibraryTabs (Wave B.3)', () => {
       expect(screen.getByRole('tab', { name: /con kb/i })).toHaveAttribute('tabindex', '-1');
       expect(screen.getByRole('tab', { name: /in prestito/i })).toHaveAttribute('tabindex', '-1');
     });
+
+    // #1094 Real-C-misc regression guard: active count badge MUST use the
+    // text-entity-game-text variant (live CSS var, theme-aware, AA-safe).
+    // The pre-fix `text-primary` snapshot would fail AA in dark theme.
+    it('active count badge uses text-entity-game-text token (AA contrast) — #1094', () => {
+      const { container } = render(<ControlledLibraryTabs initial="all" />);
+      const counts = container.querySelectorAll('[data-slot="library-tab-count"]');
+      // First tab (active "all") badge should carry text-entity-game-text
+      expect(counts[0].className).toContain('text-entity-game-text');
+      // Inactive tabs should carry text-muted-foreground (the inactive branch)
+      expect(counts[1].className).toContain('text-muted-foreground');
+    });
   });
 
   describe('click activation', () => {

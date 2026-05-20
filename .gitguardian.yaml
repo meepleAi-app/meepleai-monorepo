@@ -1,31 +1,48 @@
 version: 2
 
-# Ignore test files with hardcoded mock credentials (not real secrets)
-# and example/template files with placeholder values
+# Single canonical GitGuardian config (consolidated from legacy .gitguardian.yml — see #1007).
+# Schema v2 — ggshield/GitGuardian GitHub App both consume this file.
+#
+# Convention: glob patterns use `**/` for recursive match (v2 schema supports it).
+# Directory paths trailing `/` match all files under that directory.
+
 ignore-paths:
+  # ── Test files with hardcoded mock credentials (not real secrets) ────────────
   - apps/api/tests/
   - apps/web/src/components/auth/__tests__/
   - apps/web/src/components/ui/v2/strength-meter/
   - apps/web/src/**/__tests__/
   - apps/web/src/**/*.test.tsx
   - apps/web/src/**/*.test.ts
-  # Python service tests: literal stub keys used only to exercise pydantic
+
+  # ── Python service tests: literal stub keys used only to exercise pydantic ───
   # property branches (e.g. `Settings.is_llm_configured`), not real secrets.
-  # Same rationale as the apps/web test exclusions above.
   - apps/orchestration-service/tests/
   - apps/embedding-service/tests/
   - apps/reranker-service/tests/
   - apps/smoldocling-service/tests/
   - apps/unstructured-service/tests/
-  # E2E demo fixtures + smoke scripts: hardcoded test-account credentials (badsworm
-  # demo persona on staging), not production secrets. Same rationale as src test files.
+
+  # ── E2E demo fixtures + smoke scripts ────────────────────────────────────────
+  # Hardcoded test-account credentials (badsworm demo persona on staging),
+  # not production secrets.
   - apps/web/e2e/
   - infra/scripts/demo-smoke-*.sh
-  # Audit reports list UI component paths (e.g. `pwd-input/pwd-input.tsx`)
-  # that GG generic-password detector flags as false positives.
+
+  # ── Audit reports list UI component paths flagged as false positives ─────────
+  # (e.g. `pwd-input/pwd-input.tsx` by GG generic-password detector).
   - docs/for-developers/audits/
+
+  # ── Example/template files with placeholder values ───────────────────────────
   - infra/secrets/*.secret.example
-  # I7 (auth security fixes): blocklist of common passwords used to REJECT
-  # weak choices at registration. The literals are the very strings users
-  # are forbidden from using — by definition not real credentials.
+  - "**/*.example"
+  - "**/*.sample"
+
+  # ── Local-only dev configs (untracked typically, defensive ignore) ───────────
+  - "**/launchSettings.json"
+  - "**/appsettings.Development.json"
+
+  # ── I7 (auth security): blocklist of common passwords used to REJECT weak ─────
+  # choices at registration. The literals are the very strings users are
+  # forbidden from using — by definition not real credentials.
   - apps/api/src/Api/BoundedContexts/Authentication/Domain/Resources/CommonPasswords.txt

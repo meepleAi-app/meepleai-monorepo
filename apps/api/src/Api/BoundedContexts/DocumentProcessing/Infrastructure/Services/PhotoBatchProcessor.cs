@@ -32,6 +32,7 @@ internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
     private readonly IPhotoPreprocessor _preprocessor;
     private readonly IDocumentChunker _chunker;
     private readonly IKnowledgeBaseIndexer _kbIndexer;
+    private readonly IParagraphNumberExtractor _paragraphExtractor;
     private readonly IUnitOfWork _uow;
     private readonly int _maxParallelism;
     private readonly ILogger<PhotoBatchProcessor> _logger;
@@ -45,6 +46,7 @@ internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
         IPhotoPreprocessor preprocessor,
         IDocumentChunker chunker,
         IKnowledgeBaseIndexer kbIndexer,
+        IParagraphNumberExtractor paragraphExtractor,
         IUnitOfWork uow,
         IConfiguration config,
         ILogger<PhotoBatchProcessor> logger)
@@ -54,6 +56,7 @@ internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
         _preprocessor = preprocessor;
         _chunker = chunker;
         _kbIndexer = kbIndexer;
+        _paragraphExtractor = paragraphExtractor;
         _uow = uow;
         _maxParallelism = config.GetValue<int?>("PhotoBatch:MaxParallelism") ?? 4;
         _logger = logger;
@@ -130,7 +133,7 @@ internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
         CancellationToken ct)
     {
         // 1. Retrieve blob from storage.
-        var stream = await _blob.RetrieveAsync(descriptor.BlobKey, gameIdString, ct).ConfigureAwait(false);
+        var stream = await _blob.RetrieveAsync(descriptor.BlobKey, BlobCategory.PhotoBatch, gameIdString, ct).ConfigureAwait(false);
         if (stream is null)
         {
             _logger.LogWarning(
@@ -151,7 +154,27 @@ internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
         // 3. Preprocess image via OCR service (IO-parallel, outside mutex).
         var preprocessed = await _preprocessor.PreprocessAsync(imageData, ct).ConfigureAwait(false);
 
-        // 4. Create page entity.
+        // 4. Extract narrative paragraph numbers from OCR text (issue #747 PR-C).
+        //    Blank pages return [] without invoking the regex pipeline. Failure here
+        //    is silent (logged warning) so a noisy OCR page cannot abort the batch —
+        //    the page is still stored without paragraph metadata, and queries fall
+        //    back to either the page-number lookup or semantic search.
+        var paragraphNumbers = Array.Empty<int>();
+        if (!preprocessed.IsBlankPage && !string.IsNullOrWhiteSpace(preprocessed.ExtractedText))
+        {
+            try
+            {
+                paragraphNumbers = _paragraphExtractor.Extract(preprocessed.ExtractedText);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex,
+                    "[PhotoBatchProcessor] Paragraph extraction failed for page {PageNumber} of batch {BatchId} — storing page without paragraph metadata",
+                    descriptor.Index + 1, batch.Id);
+            }
+        }
+
+        // 5. Create page entity.
         var page = PhotoBatchPage.Create(
             batchId: batch.Id,
             pageNumber: descriptor.Index + 1,
@@ -160,9 +183,10 @@ internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
             orientation: preprocessed.DetectedOrientation,
             isBlank: preprocessed.IsBlankPage,
             warnings: preprocessed.Warnings,
-            extractedText: preprocessed.ExtractedText);
+            extractedText: preprocessed.ExtractedText,
+            paragraphNumbers: paragraphNumbers);
 
-        // 5. Chunk + index extracted text into KB (outside mutex — parallel-safe IO).
+        // 6. Chunk + index extracted text into KB (outside mutex — parallel-safe IO).
         //    Skip blank pages and pages with no extracted text.
         //    KB indexing failure is non-fatal: log and continue so page state is still recorded.
         if (!preprocessed.IsBlankPage && !string.IsNullOrWhiteSpace(preprocessed.ExtractedText))
@@ -192,7 +216,7 @@ internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
             }
         }
 
-        // 6. Serialize aggregate state mutations to avoid concurrent list/counter corruption.
+        // 7. Serialize aggregate state mutations to avoid concurrent list/counter corruption.
         await _aggregateMutex.WaitAsync(ct).ConfigureAwait(false);
         try
         {

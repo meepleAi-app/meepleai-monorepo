@@ -1,51 +1,51 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries;
-using Api.BoundedContexts.GameManagement.Domain.Entities;
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.GameManagement.Application.Queries;
 
 /// <summary>
 /// Handles get game by ID query.
+/// Issue #1320 (P2c): Migrated from IGameRepository to IGameCoreDataProvider.
+/// Resolves against SharedGame via IGameCoreDataProvider.
 /// </summary>
 internal class GetGameByIdQueryHandler : IQueryHandler<GetGameByIdQuery, GameDto?>
 {
-    private readonly IGameRepository _gameRepository;
+    private readonly IGameCoreDataProvider _gameCoreData;
 
-    public GetGameByIdQueryHandler(IGameRepository gameRepository)
+    public GetGameByIdQueryHandler(IGameCoreDataProvider gameCoreData)
     {
-        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _gameCoreData = gameCoreData ?? throw new ArgumentNullException(nameof(gameCoreData));
     }
 
     public async Task<GameDto?> Handle(GetGameByIdQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        // Resolve against BOTH Game.Id and Game.SharedGameId — the frontend
-        // library flow exposes the SharedGameId as user-facing gameId, which
-        // otherwise produces a spurious 404 on /games/{id}/agents and siblings.
-        // See IGameRepository.GetByIdOrSharedGameIdAsync for rationale.
-        var game = await _gameRepository
-            .GetByIdOrSharedGameIdAsync(query.GameId, cancellationToken)
+        var coreData = await _gameCoreData
+            .GetCoreDataAsync(GameRef.Shared(query.GameId), cancellationToken)
             .ConfigureAwait(false);
 
-        return game != null ? MapToDto(game) : null;
+        return coreData != null ? MapToDto(query.GameId, coreData) : null;
     }
 
-    private static GameDto MapToDto(Game game)
+    private static GameDto MapToDto(Guid id, GameCoreData coreData)
     {
         return new GameDto(
-            Id: game.Id,
-            Title: game.Title.Value,
-            Publisher: game.Publisher?.Name,
-            YearPublished: game.YearPublished?.Value,
-            MinPlayers: game.PlayerCount?.Min,
-            MaxPlayers: game.PlayerCount?.Max,
-            MinPlayTimeMinutes: game.PlayTime?.MinMinutes,
-            MaxPlayTimeMinutes: game.PlayTime?.MaxMinutes,
-            BggId: game.BggId,
-            CreatedAt: game.CreatedAt
+            Id: id,
+            Title: coreData.Title,
+            Publisher: null,
+            YearPublished: coreData.YearPublished,
+            MinPlayers: coreData.MinPlayers,
+            MaxPlayers: coreData.MaxPlayers,
+            MinPlayTimeMinutes: coreData.PlayingTimeMinutes,
+            MaxPlayTimeMinutes: coreData.PlayingTimeMinutes,
+            BggId: coreData.BggId,
+            CreatedAt: DateTime.UtcNow,
+            ImageUrl: coreData.ImageUrl
         );
     }
 }

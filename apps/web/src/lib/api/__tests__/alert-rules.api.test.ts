@@ -54,7 +54,7 @@ describe('alertRulesApi', () => {
 
       const result = await alertRulesApi.getAll();
 
-      expect(mockGet).toHaveBeenCalledWith('/admin/alert-rules');
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/alert-rules');
       expect(result).toEqual(mockRules);
     });
 
@@ -82,7 +82,7 @@ describe('alertRulesApi', () => {
 
       const result = await alertRulesApi.getById('rule-1');
 
-      expect(mockGet).toHaveBeenCalledWith('/admin/alert-rules/rule-1');
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/alert-rules/rule-1');
       expect(result).toEqual(mockRule);
     });
 
@@ -109,7 +109,7 @@ describe('alertRulesApi', () => {
 
       const result = await alertRulesApi.create(createData);
 
-      expect(mockPost).toHaveBeenCalledWith('/admin/alert-rules', createData);
+      expect(mockPost).toHaveBeenCalledWith('/api/v1/admin/alert-rules', createData);
       expect(result).toEqual(mockResponse);
     });
 
@@ -138,7 +138,7 @@ describe('alertRulesApi', () => {
 
       await alertRulesApi.update('rule-1', updateData);
 
-      expect(mockPut).toHaveBeenCalledWith('/admin/alert-rules/rule-1', updateData);
+      expect(mockPut).toHaveBeenCalledWith('/api/v1/admin/alert-rules/rule-1', updateData);
     });
   });
 
@@ -148,7 +148,7 @@ describe('alertRulesApi', () => {
 
       await alertRulesApi.delete('rule-1');
 
-      expect(mockDelete).toHaveBeenCalledWith('/admin/alert-rules/rule-1');
+      expect(mockDelete).toHaveBeenCalledWith('/api/v1/admin/alert-rules/rule-1');
     });
   });
 
@@ -158,7 +158,7 @@ describe('alertRulesApi', () => {
 
       await alertRulesApi.toggle('rule-1');
 
-      expect(mockPatch).toHaveBeenCalledWith('/admin/alert-rules/rule-1/toggle', {});
+      expect(mockPatch).toHaveBeenCalledWith('/api/v1/admin/alert-rules/rule-1/toggle', {});
     });
   });
 
@@ -178,7 +178,7 @@ describe('alertRulesApi', () => {
 
       const result = await alertRulesApi.getTemplates();
 
-      expect(mockGet).toHaveBeenCalledWith('/admin/alert-templates');
+      expect(mockGet).toHaveBeenCalledWith('/api/v1/admin/alert-templates');
       expect(result).toEqual(mockTemplates);
     });
 
@@ -198,7 +198,7 @@ describe('alertRulesApi', () => {
 
       const result = await alertRulesApi.testAlert('HighCPU', 'slack');
 
-      expect(mockPost).toHaveBeenCalledWith('/admin/alert-test', {
+      expect(mockPost).toHaveBeenCalledWith('/api/v1/admin/alert-test', {
         alertType: 'HighCPU',
         channel: 'slack',
       });

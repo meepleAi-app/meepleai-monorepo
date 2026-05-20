@@ -84,11 +84,9 @@ internal static class GameSeeder
                         logger.LogDebug("SharedGame '{GameName}' already exists, skipping", entry.Title);
                     }
 
-                    // Ensure GameEntity bridge exists and record in map
-                    var existingBridge = await EnsureGameEntityBridgeAsync(db, existing, entry, systemUserId, ct)
-                        .ConfigureAwait(false);
+                    // Post-Phase2d: gameMap now stores SharedGame.Id directly (no GameEntity bridge)
                     if (entry.BggId is > 0)
-                        gameMap[entry.BggId.Value] = existingBridge.Id;
+                        gameMap[entry.BggId.Value] = existing.Id;
 
                     skippedCount++;
                     continue;
@@ -126,11 +124,9 @@ internal static class GameSeeder
                     await db.SaveChangesAsync(ct).ConfigureAwait(false);
                 }
 
-                // Create GameEntity bridge
-                var bridge = await EnsureGameEntityBridgeAsync(db, sharedGame, entry, systemUserId, ct)
-                    .ConfigureAwait(false);
+                // Post-Phase2d: gameMap now stores SharedGame.Id directly (no GameEntity bridge)
                 if (entry.BggId is > 0)
-                    gameMap[entry.BggId.Value] = bridge.Id;
+                    gameMap[entry.BggId.Value] = sharedGame.Id;
 
                 seededCount++;
                 logger.LogInformation("Seeded SharedGame: {GameName} ({Language})", entry.Title, entry.Language);
@@ -150,56 +146,6 @@ internal static class GameSeeder
 
         logger.LogInformation("GameSeeder completed: {Seeded} seeded, {Skipped} skipped", seededCount, skippedCount);
         return gameMap;
-    }
-
-    private static async Task<GameEntity> EnsureGameEntityBridgeAsync(
-        MeepleAiDbContext db,
-        SharedGameEntity sharedGame,
-        SeedManifestGame entry,
-        Guid systemUserId,
-        CancellationToken ct)
-    {
-        // Check by SharedGameId relationship first (fastest path)
-        var existingBridge = await db.Games
-            .FirstOrDefaultAsync(g => g.SharedGameId == sharedGame.Id, ct)
-            .ConfigureAwait(false);
-
-        if (existingBridge != null)
-            return existingBridge;
-
-        // Check by Name (the IX_games_Name unique constraint column) to prevent
-        // duplicate key violations when DB is pre-populated from a snapshot restore
-        var bridgeByName = await db.Games
-            .FirstOrDefaultAsync(g => g.Name == sharedGame.Title, ct)
-            .ConfigureAwait(false);
-
-        if (bridgeByName != null)
-            return bridgeByName;
-
-        var bridge = new GameEntity
-        {
-            Id = Guid.NewGuid(),
-            Name = sharedGame.Title,
-            CreatedAt = DateTime.UtcNow,
-            YearPublished = sharedGame.YearPublished,
-            MinPlayers = sharedGame.MinPlayers,
-            MaxPlayers = sharedGame.MaxPlayers,
-            MinPlayTimeMinutes = sharedGame.PlayingTimeMinutes,
-            MaxPlayTimeMinutes = sharedGame.PlayingTimeMinutes,
-            BggId = sharedGame.BggId,
-            ImageUrl = sharedGame.ImageUrl,
-            IconUrl = sharedGame.ThumbnailUrl,
-            Language = entry.Language,
-            VersionType = "base",
-            VersionNumber = "1.0",
-            SharedGameId = sharedGame.Id,
-            IsPublished = true,
-            ApprovalStatus = (int)GameStatus.Published
-        };
-
-        db.Games.Add(bridge);
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
-        return bridge;
     }
 
     private static SharedGameEntity CreateFromBggData(

@@ -25,6 +25,12 @@ namespace Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 /// </remarks>
 internal sealed class GameNightInvitation : AggregateRoot<Guid>
 {
+    /// <summary>
+     /// Maximum length of <see cref="RespondedByName"/>. Aligned with EF column
+     /// width and FluentValidation rule on the endpoint DTO. Issue #1169.
+     /// </summary>
+    public const int MaxRespondedByNameLength = 120;
+
     public string Token { get; private set; }
     public Guid GameNightId { get; private set; }
     public string Email { get; private set; }
@@ -32,6 +38,18 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
     public DateTimeOffset ExpiresAt { get; private set; }
     public DateTimeOffset? RespondedAt { get; private set; }
     public Guid? RespondedByUserId { get; private set; }
+
+    /// <summary>
+    /// Optional display name typed by the guest at RSVP time. Decoupled from
+    /// <see cref="RespondedByUserId"/>: an anonymous guest (no cookie auth) can
+    /// still leave a name, and an authenticated user may RSVP "on behalf of"
+    /// (e.g., for their partner) under a different display name than their
+    /// account profile. Null when the guest skipped the field or the response
+    /// was made by a system flow that did not collect a name.
+    /// Issue #1169.
+    /// </summary>
+    public string? RespondedByName { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; }
     public Guid CreatedBy { get; private set; }
 
@@ -48,6 +66,7 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         DateTimeOffset expiresAt,
         DateTimeOffset? respondedAt,
         Guid? respondedByUserId,
+        string? respondedByName,
         DateTimeOffset createdAt,
         Guid createdBy) : base(id)
     {
@@ -58,6 +77,7 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         ExpiresAt = expiresAt;
         RespondedAt = respondedAt;
         RespondedByUserId = respondedByUserId;
+        RespondedByName = respondedByName;
         CreatedAt = createdAt;
         CreatedBy = createdBy;
     }
@@ -101,6 +121,7 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
             expiresAt: expiresAt,
             respondedAt: null,
             respondedByUserId: null,
+            respondedByName: null,
             createdAt: utcNow,
             createdBy: createdBy);
 
@@ -116,6 +137,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
 
     /// <summary>
     /// Reconstitutes an invitation from persistence data. Skips invariant checks.
+    /// <paramref name="respondedByName"/> is optional and defaults to null so
+    /// pre-#1169 callers (and tests that pre-date the column) compile unchanged.
     /// </summary>
     internal static GameNightInvitation Reconstitute(
         Guid id,
@@ -127,7 +150,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         DateTimeOffset? respondedAt,
         Guid? respondedByUserId,
         DateTimeOffset createdAt,
-        Guid createdBy)
+        Guid createdBy,
+        string? respondedByName = null)
     {
         return new GameNightInvitation(
             id: id,
@@ -138,6 +162,7 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
             expiresAt: expiresAt,
             respondedAt: respondedAt,
             respondedByUserId: respondedByUserId,
+            respondedByName: respondedByName,
             createdAt: createdAt,
             createdBy: createdBy);
     }
@@ -147,17 +172,28 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
     /// Pending→Accepted returns <c>true</c>; Accepted→Accepted no-ops returns <c>false</c>;
     /// Declined throws (caller maps to 409); Expired/Cancelled throws (caller maps to 410).
     /// </summary>
-    public bool Accept(Guid? userId, DateTimeOffset utcNow)
+    /// <param name="userId">Optional responder identity (cookie-authenticated only).</param>
+    /// <param name="utcNow">Clock reading used for the transition timestamp.</param>
+    /// <param name="respondedByName">
+    /// Optional guest-supplied display name (issue #1169). Trimmed and capped at
+    /// <see cref="MaxRespondedByNameLength"/> chars. Null/whitespace becomes null
+    /// (treated as "anonymous"). Only persisted when the call transitions state
+    /// (idempotent same-state replays do not overwrite a prior name).
+    /// </param>
+    public bool Accept(Guid? userId, DateTimeOffset utcNow, string? respondedByName = null)
     {
-        return Respond(GameNightInvitationStatus.Accepted, userId, utcNow);
+        return Respond(GameNightInvitationStatus.Accepted, userId, utcNow, respondedByName);
     }
 
     /// <summary>
     /// Declines the invitation. Idempotent (D2 b) — symmetric to <see cref="Accept"/>.
     /// </summary>
-    public bool Decline(Guid? userId, DateTimeOffset utcNow)
+    /// <param name="userId">Optional responder identity (cookie-authenticated only).</param>
+    /// <param name="utcNow">Clock reading used for the transition timestamp.</param>
+    /// <param name="respondedByName">Optional guest-supplied display name (issue #1169).</param>
+    public bool Decline(Guid? userId, DateTimeOffset utcNow, string? respondedByName = null)
     {
-        return Respond(GameNightInvitationStatus.Declined, userId, utcNow);
+        return Respond(GameNightInvitationStatus.Declined, userId, utcNow, respondedByName);
     }
 
     /// <summary>
@@ -202,7 +238,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
     private bool Respond(
         GameNightInvitationStatus desired,
         Guid? userId,
-        DateTimeOffset utcNow)
+        DateTimeOffset utcNow,
+        string? respondedByName = null)
     {
         // Terminal lifecycle states block all responses (caller maps to 410).
         if (Status == GameNightInvitationStatus.Cancelled ||
@@ -219,7 +256,7 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
                 "Cannot respond to invitation: it has expired.");
         }
 
-        // Idempotent same-response (D2 b): no transition, no event.
+        // Idempotent same-response (D2 b): no transition, no event, no name overwrite.
         if (Status == desired)
         {
             return false;
@@ -235,6 +272,7 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         Status = desired;
         RespondedAt = utcNow;
         RespondedByUserId = userId;
+        RespondedByName = NormalizeRespondedByName(respondedByName);
 
         AddDomainEvent(new GameNightInvitationRespondedEvent(
             gameNightInvitationId: Id,
@@ -244,5 +282,26 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
             respondedByUserId: userId));
 
         return true;
+    }
+
+    /// <summary>
+    /// Trims and caps the guest-supplied display name. Whitespace-only and
+    /// empty values become null so downstream consumers do not need to
+    /// distinguish "" from "no name given". Defense-in-depth against
+    /// validators that have been bypassed (the FluentValidation rule on the
+    /// command is still the primary gate, so length overflow there returns
+    /// 400 before reaching the aggregate).
+    /// </summary>
+    private static string? NormalizeRespondedByName(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var trimmed = raw.Trim();
+        return trimmed.Length <= MaxRespondedByNameLength
+            ? trimmed
+            : trimmed[..MaxRespondedByNameLength];
     }
 }

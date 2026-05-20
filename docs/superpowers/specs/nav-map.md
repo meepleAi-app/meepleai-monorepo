@@ -119,1545 +119,1548 @@ Fill in the Destination column. Use `OUT_OF_SCOPE` to apply no-op policy.
 
 | File | Selector | Button text | Destination | Rationale |
 |---|---|---|---|---|
-| `00-hub.html` | `a:L120:Desktop` | Desktop | `TODO` | no rule matched |
-| `00-hub.html` | `a:L121:Drawer` | Drawer | `TODO` | no rule matched |
-| `00-hub.html` | `a:L122:Tokens` | Tokens | `TODO` | no rule matched |
-| `00-hub.html` | `a:L124:Auth` | Auth | `TODO` | no rule matched |
-| `00-hub.html` | `button:L131:🌗` | 🌗 | `TODO` | no rule matched |
-| `00-hub.html` | `div:L142:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L150:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L158:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L166:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L174:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L182:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L190:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L198:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L206:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L214:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L222:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L230:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L238:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L246:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L254:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L262:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L270:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L278:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L286:` |  | `TODO` | no rule matched |
-| `00-hub.html` | `a:L294:` |  | `TODO` | no rule matched |
-| `01-screens.html` | `a:L371:` |  | `TODO` | no rule matched |
-| `01-screens.html` | `a:L375:Desktop →` | Desktop → | `TODO` | no rule matched |
-| `01-screens.html` | `button:L378:🌗` | 🌗 | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `a:L562:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `a:L566:Hub` | Hub | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `a:L567:Drawer →` | Drawer → | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `button:L570:🌗` | 🌗 | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `button:L581:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `button:L585:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `button:L589:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `button:L609:+ Nuovo` | + Nuovo | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L615:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L616:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L618:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L619:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L620:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L621:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L622:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L623:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L624:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L625:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L627:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L628:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L629:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L647:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L648:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L658:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L659:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L660:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L661:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L662:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L664:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L665:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L666:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `button:L704:🤖 Chiedi AI` | 🤖 Chiedi AI | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L711:📋 Overview` | 📋 Overview | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L712:📄 KB` | 📄 KB | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L713:🤖 Agenti` | 🤖 Agenti | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L714:💬 Chat` | 💬 Chat | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L717:📊 Stats` | 📊 Stats | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L718:📜 Storico` | 📜 Storico | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `button:L844:🤖 Chiedi AI` | 🤖 Chiedi AI | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L853:` |  | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `button:L936:✕` | ✕ | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L939:📋 Live` | 📋 Live | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L941:🕒 Timeline` | 🕒 Timeline | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `button:L967:▶️ Riprendi` | ▶️ Riprendi | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `button:L968:📊` | 📊 | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `button:L969:↗️` | ↗️ | `TODO` | no rule matched |
-| `02-desktop-patterns.html` | `div:L988:` |  | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `a:L264:` |  | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `a:L267:← Desktop` | ← Desktop | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `a:L268:Hub` | Hub | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `a:L269:Tokens →` | Tokens → | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L272:🌗` | 🌗 | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L298:✕` | ✕ | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L313:▶️ Riprendi` | ▶️ Riprendi | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L314:📊` | 📊 | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L335:✕` | ✕ | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L357:💬 Chat` | 💬 Chat | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L358:🔄` | 🔄 | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L365:↕ Toggle expand` | ↕ Toggle expand | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L382:✕` | ✕ | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L401:🔄 Reindex` | 🔄 Reindex | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L402:⬇️` | ⬇️ | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L403:👁️` | 👁️ | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L422:✕` | ✕ | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L440:💬 Continua` | 💬 Continua | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L441:📦` | 📦 | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L471:✕` | ✕ | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L492:📊 Confronta` | 📊 Confronta | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L493:↗️` | ↗️ | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L549:📊 Stats dettaglio` | 📊 Stats dettaglio | `TODO` | no rule matched |
-| `03-drawer-variants.html` | `button:L550:✕` | ✕ | `TODO` | no rule matched |
-| `04-design-system.html` | `a:L388:Desktop` | Desktop | `TODO` | no rule matched |
-| `04-design-system.html` | `a:L389:Drawer` | Drawer | `TODO` | no rule matched |
-| `04-design-system.html` | `a:L390:Tokens` | Tokens | `TODO` | no rule matched |
-| `04-design-system.html` | `a:L391:Dark` | Dark | `TODO` | no rule matched |
-| `04-design-system.html` | `button:L394:🌗` | 🌗 | `TODO` | no rule matched |
-| `04-design-system.html` | `a:L397:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `a:L398:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `a:L399:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `a:L400:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `a:L401:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `a:L402:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `a:L403:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `a:L404:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `div:L471:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `div:L528:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `div:L535:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `div:L542:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `div:L554:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `button:L571:Small` | Small | `TODO` | no rule matched |
-| `04-design-system.html` | `button:L572:Medium` | Medium | `TODO` | no rule matched |
-| `04-design-system.html` | `button:L573:Large` | Large | `TODO` | no rule matched |
-| `04-design-system.html` | `button:L579:Md` | Md | `TODO` | no rule matched |
-| `04-design-system.html` | `button:L580:Lg` | Lg | `TODO` | no rule matched |
-| `04-design-system.html` | `button:L581:Xl` | Xl | `TODO` | no rule matched |
-| `04-design-system.html` | `button:L582:2xl` | 2xl | `TODO` | no rule matched |
-| `04-design-system.html` | `div:L594:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `button:L595:Primary action` | Primary action | `TODO` | no rule matched |
-| `04-design-system.html` | `button:L596:Secondary` | Secondary | `TODO` | no rule matched |
-| `04-design-system.html` | `button:L597:Ghost` | Ghost | `TODO` | no rule matched |
-| `04-design-system.html` | `div:L603:` |  | `TODO` | no rule matched |
-| `04-design-system.html` | `div:L629:Type ·` | Type · | `TODO` | no rule matched |
-| `04-design-system.html` | `div:L630:Status ·` | Status · | `TODO` | no rule matched |
-| `04-design-system.html` | `div:L631:Turn ·` | Turn · | `TODO` | no rule matched |
-| `05-dark-mode.html` | `a:L369:Desktop` | Desktop | `TODO` | no rule matched |
-| `05-dark-mode.html` | `a:L370:Drawer` | Drawer | `TODO` | no rule matched |
-| `05-dark-mode.html` | `a:L371:Tokens` | Tokens | `TODO` | no rule matched |
-| `05-dark-mode.html` | `a:L372:Dark` | Dark | `TODO` | no rule matched |
-| `05-dark-mode.html` | `button:L375:🌗` | 🌗 | `TODO` | no rule matched |
-| `05-dark-mode.html` | `button:L388:☀️ Light only` | ☀️ Light only | `TODO` | no rule matched |
-| `05-dark-mode.html` | `button:L389:◐ Split view` | ◐ Split view | `TODO` | no rule matched |
-| `05-dark-mode.html` | `button:L390:🌙 Dark only` | 🌙 Dark only | `TODO` | no rule matched |
-| `05-dark-mode.html` | `div:L432:` |  | `TODO` | no rule matched |
-| `05-dark-mode.html` | `div:L450:` |  | `TODO` | no rule matched |
-| `05-dark-mode.html` | `button:L489:↑` | ↑ | `TODO` | no rule matched |
-| `05-dark-mode.html` | `button:L513:↑` | ↑ | `TODO` | no rule matched |
-| `05-dark-mode.html` | `span:L541:Info` | Info | `TODO` | no rule matched |
-| `05-dark-mode.html` | `span:L542:Stats` | Stats | `TODO` | no rule matched |
-| `05-dark-mode.html` | `span:L543:Docs` | Docs | `TODO` | no rule matched |
-| `05-dark-mode.html` | `span:L564:Info` | Info | `TODO` | no rule matched |
-| `05-dark-mode.html` | `span:L565:Stats` | Stats | `TODO` | no rule matched |
-| `05-dark-mode.html` | `span:L566:Docs` | Docs | `TODO` | no rule matched |
-| `05-dark-mode.html` | `button:L600:Crea sessione` | Crea sessione | `TODO` | no rule matched |
-| `05-dark-mode.html` | `button:L601:Annulla` | Annulla | `TODO` | no rule matched |
-| `05-dark-mode.html` | `button:L625:Crea sessione` | Crea sessione | `TODO` | no rule matched |
-| `05-dark-mode.html` | `button:L626:Annulla` | Annulla | `TODO` | no rule matched |
-| `auth-flow.html` | `a:L114:` |  | `TODO` | no rule matched |
-| `auth-flow.html` | `button:L125:🌗` | 🌗 | `TODO` | no rule matched |
-| `auth-flow.jsx` | `button:L139:{p.icon}` | {p.icon} | `TODO` | no rule matched |
-| `auth-flow.jsx` | `button:L228:{children}` | {children} | `TODO` | no rule matched |
-| `auth-flow.jsx` | `button:L614:Cambia email` | Cambia email | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L217:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `div:L250:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L271:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L272:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L293:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L294:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L311:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L312:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L329:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L330:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L347:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L348:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L365:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L366:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L383:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L384:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L401:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L402:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L419:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L420:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `div:L431:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L452:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L453:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L470:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L471:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L488:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L489:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L506:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L507:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L524:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L525:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L542:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L543:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L560:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L561:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L585:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L586:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L603:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L604:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L621:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L622:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L639:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L640:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L665:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L666:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L683:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L684:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L701:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L702:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `div:L715:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L736:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L737:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L754:` |  | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L755:↗ Apri` | ↗ Apri | `TODO` | no rule matched |
-| `librogame-game-night-storyboard.html` | `button:L781:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L390:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L408:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L410:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L414:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L427:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L436:🔢 §218 manuale` | 🔢 §218 manuale | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L437:↩ Salta encounter` | ↩ Salta encounter | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L446:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L448:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L452:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L466:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L474:🔢 Inserisci §218 manualmente` | 🔢 Inserisci §218 manualmente | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L475:↩ Salta encounter (rischio: re` | ↩ Salta encounter (rischio: regole inven | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L496:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L504:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L507:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L510:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L513:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L516:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L520:✕ Annulla` | ✕ Annulla | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L527:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L534:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L535:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L536:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L537:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L538:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L540:✕ Annulla` | ✕ Annulla | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L560:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L562:📷` | 📷 | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L565:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L583:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L591:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L599:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L609:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L613:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L620:🔄 Rifotografa` | 🔄 Rifotografa | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L622:✓ Risolvi →` | ✓ Risolvi → | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L630:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L632:📷` | 📷 | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L636:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L654:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L662:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L670:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L681:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L685:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L692:✓ Risolvi e torna a §147 →` | ✓ Risolvi e torna a §147 → | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L693:🔄 Rifotografa` | 🔄 Rifotografa | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L714:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L716:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L726:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L731:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L736:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L743:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L757:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L759:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L769:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L774:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L779:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `div:L784:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-encounter-cheatsheet.html` | `button:L791:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L319:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L337:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L339:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L365:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L369:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L373:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L387:+ nota dogfood` | + nota dogfood | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L394:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L412:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L413:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L414:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L439:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L441:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L455:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L459:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L463:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L478:+ nota dogfood` | + nota dogfood | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L485:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L494:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L495:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L496:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L525:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L527:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L545:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L546:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `div:L554:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L568:+ nota dogfood` | + nota dogfood | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L575:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L590:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L591:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L592:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `div:L602:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L631:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L633:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `div:L644:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `div:L648:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L650:📑 È un range (es. §147-149) —` | 📑 È un range (es. §147-149) — inserisci  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L651:↩ Annulla, è una pagina sbagli` | ↩ Annulla, è una pagina sbagliata | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L654:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L666:+ nota dogfood` | + nota dogfood | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L673:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `div:L693:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `div:L697:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L699:📑 È un range (es. §147-149)` | 📑 È un range (es. §147-149) | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L700:↩ Annulla — è la pagina sbagli` | ↩ Annulla — è la pagina sbagliata | `TODO` | no rule matched |
-| `librogame-runthrough-error-states.html` | `button:L702:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L344:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L367:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `div:L396:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L404:Info` | Info | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L405:AI Chat` | AI Chat | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L406:Toolbox` | Toolbox | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `div:L410:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L438:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `div:L483:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L506:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `div:L510:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `div:L519:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L530:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `div:L542:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L562:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `div:L565:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L570:← Libreria` | ← Libreria | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L571:🔄 Riprova` | 🔄 Riprova | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L579:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `div:L583:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L588:← Libreria` | ← Libreria | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L589:🔄 Riprova` | 🔄 Riprova | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L612:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `div:L615:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L620:← Libreria` | ← Libreria | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L621:+ Aggiungi al catalogo` | + Aggiungi al catalogo | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L629:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `div:L633:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L638:← Libreria` | ← Libreria | `TODO` | no rule matched |
-| `librogame-runthrough-game-detail.html` | `button:L639:+ Aggiungi al catalogo` | + Aggiungi al catalogo | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L313:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L331:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L333:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L393:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L395:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L463:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `div:L482:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `div:L491:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L516:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `div:L526:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `div:L535:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L582:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L637:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L693:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L695:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `div:L712:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L713:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L750:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L752:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L780:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L787:📒 Apri agente Arbitro Eldoria` | 📒 Apri agente Arbitro Eldoria | `TODO` | no rule matched |
-| `librogame-runthrough-game-onboarding.html` | `button:L788:🔍 Esplora knowledge base` | 🔍 Esplora knowledge base | `TODO` | no rule matched |
-| `librogame-runthrough-glossary-editor.html` | `button:L207:🌗` | 🌗 | `TODO` | no rule matched |
-| `librogame-runthrough-glossary-editor.html` | `div:L220:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-library-search.html` | `button:L171:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `librogame-runthrough-library-search.html` | `button:L272:×` | × | `TODO` | no rule matched |
-| `librogame-runthrough-library-search.html` | `button:L295:×` | × | `TODO` | no rule matched |
-| `librogame-runthrough-library-search.html` | `a:L299:cancella ricerca` | cancella ricerca | `TODO` | no rule matched |
-| `librogame-runthrough-library-search.html` | `button:L317:×` | × | `TODO` | no rule matched |
-| `librogame-runthrough-library-search.html` | `button:L322:🌐 Sfoglia catalogo` | 🌐 Sfoglia catalogo | `TODO` | no rule matched |
-| `librogame-runthrough-library-search.html` | `button:L333:×` | × | `TODO` | no rule matched |
-| `librogame-runthrough-library-search.html` | `button:L338:🌐 Sfoglia catalogo` | 🌐 Sfoglia catalogo | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L242:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L259:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L270:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L271:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L272:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L275:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L276:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L284:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L285:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L286:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L301:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L303:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L304:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L305:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L307:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L314:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L331:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L332:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L336:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L337:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L338:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L354:➤` | ➤ | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L372:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L381:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L382:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L383:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L386:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L399:🎲 Tira iniziativa party (4d20)` | 🎲 Tira iniziativa party (4d20) | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L414:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L414:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L414:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L414:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L415:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L416:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L417:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L418:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L419:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L423:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L427:🎲 Tira iniziativa party (4d20)` | 🎲 Tira iniziativa party (4d20) | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L451:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L453:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L453:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L453:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L455:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L474:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L476:➤` | ➤ | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L486:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L486:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L486:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L489:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L505:➤` | ➤ | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L522:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L524:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L524:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L524:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L526:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L527:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L549:Annulla` | Annulla | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L550:📚 Salva termine` | 📚 Salva termine | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L560:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L568:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `div:L569:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L583:Annulla` | Annulla | `TODO` | no rule matched |
-| `librogame-runthrough-play-session.html` | `button:L584:📚 Salva` | 📚 Salva | `TODO` | no rule matched |
-| `librogame-runthrough-quota-credits.html` | `button:L118:Tutti` | Tutti | `TODO` | no rule matched |
-| `librogame-runthrough-quota-credits.html` | `button:L119:1` | 1 | `TODO` | no rule matched |
-| `librogame-runthrough-quota-credits.html` | `button:L120:2` | 2 | `TODO` | no rule matched |
-| `librogame-runthrough-quota-credits.html` | `button:L121:3` | 3 | `TODO` | no rule matched |
-| `librogame-runthrough-quota-credits.html` | `button:L122:4` | 4 | `TODO` | no rule matched |
-| `librogame-runthrough-quota-credits.html` | `button:L123:Soft` | Soft | `TODO` | no rule matched |
-| `librogame-runthrough-quota-credits.html` | `button:L127:Entrambi` | Entrambi | `TODO` | no rule matched |
-| `librogame-runthrough-quota-credits.html` | `button:L128:Mobile` | Mobile | `TODO` | no rule matched |
-| `librogame-runthrough-quota-credits.html` | `button:L129:Desktop` | Desktop | `TODO` | no rule matched |
-| `librogame-runthrough-quota-credits.html` | `button:L133:Light` | Light | `TODO` | no rule matched |
-| `librogame-runthrough-quota-credits.html` | `button:L134:Dark` | Dark | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L360:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L379:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L412:📖 Inizia campagna` | 📖 Inizia campagna | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L421:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L434:📖 Inizia campagna` | 📖 Inizia campagna | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L456:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L486:▶ Riprendi` | ▶ Riprendi | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L487:⋯ Opzioni` | ⋯ Opzioni | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L491:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L494:Nuova campagna` | Nuova campagna | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L503:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L527:▶ Riprendi` | ▶ Riprendi | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L528:⋯ Opzioni` | ⋯ Opzioni | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L531:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L534:Nuova campagna` | Nuova campagna | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L555:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L566:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L579:▶ Riprendi` | ▶ Riprendi | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L580:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L585:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L598:▶ Riprendi` | ▶ Riprendi | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L599:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L604:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L615:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L625:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L635:▶ Riprendi` | ▶ Riprendi | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L636:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L640:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L650:▶ Riprendi` | ▶ Riprendi | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L651:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L655:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L679:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L688:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L689:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L690:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L691:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L692:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L698:▶ Riprendi comunque` | ▶ Riprendi comunque | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L699:📦 Archivia + Nuova campagna` | 📦 Archivia + Nuova campagna | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L700:✨ Solo nuova (mantieni archivi` | ✨ Solo nuova (mantieni archivio) | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L710:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L718:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L719:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L720:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L721:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `div:L722:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L726:▶ Riprendi comunque` | ▶ Riprendi comunque | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L727:📦 Archivia + Nuova campagna` | 📦 Archivia + Nuova campagna | `TODO` | no rule matched |
-| `librogame-runthrough-resume-picker.html` | `button:L728:✨ Solo nuova (mantieni archivi` | ✨ Solo nuova (mantieni archivio) | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L227:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L248:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L257:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L267:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L268:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L269:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L270:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L282:Riepilogo` | Riepilogo | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L283:Riprendi più tardi →` | Riprendi più tardi → | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L293:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L301:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L304:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L305:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L306:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L307:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L311:Riepilogo dettagliato` | Riepilogo dettagliato | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L311:Riprendi più tardi →` | Riprendi più tardi → | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L331:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L341:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L342:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L343:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L344:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L348:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L349:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L350:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L351:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L362:📤 Condividi` | 📤 Condividi | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L363:📖 Nuova campagna →` | 📖 Nuova campagna → | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L373:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L383:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L384:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L385:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L389:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L390:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L391:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L392:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L396:📤 Condividi outcome` | 📤 Condividi outcome | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L396:📖 Nuova campagna →` | 📖 Nuova campagna → | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L416:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L430:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L431:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L432:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L433:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L437:Termina campagna` | Termina campagna | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L438:⟲ Riprendi dal checkpoint` | ⟲ Riprendi dal checkpoint | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L448:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L459:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L460:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L461:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `div:L462:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L465:Termina campagna` | Termina campagna | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L465:⟲ Riprendi dal checkpoint` | ⟲ Riprendi dal checkpoint | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L485:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L513:Annulla` | Annulla | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L514:Conferma e archivia` | Conferma e archivia | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L524:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L537:Annulla` | Annulla | `TODO` | no rule matched |
-| `librogame-runthrough-session-end.html` | `button:L537:Conferma e archivia` | Conferma e archivia | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L319:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L346:💬 Chat` | 💬 Chat | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L347:📖 Storybook` | 📖 Storybook | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L348:🧰 Toolbox` | 🧰 Toolbox | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `div:L367:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `div:L371:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L374:👍` | 👍 | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L375:📋 Copia` | 📋 Copia | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L376:🔁` | 🔁 | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `div:L382:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L383:Componenti necessari?` | Componenti necessari? | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L384:Chi inizia?` | Chi inizia? | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L389:↑` | ↑ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `div:L426:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `div:L430:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L433:👍 Utile` | 👍 Utile | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L434:📋 Copia` | 📋 Copia | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L435:🔁 Rigenera` | 🔁 Rigenera | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `div:L440:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L441:Componenti necessari?` | Componenti necessari? | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L442:Chi inizia?` | Chi inizia? | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L443:Regola dadi neri` | Regola dadi neri | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L447:↑` | ↑ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L472:💬 Chat` | 💬 Chat | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L473:📖 Storybook` | 📖 Storybook | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L474:🧰 Toolbox` | 🧰 Toolbox | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `div:L484:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `div:L487:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L490:📖 Rules KB` | 📖 Rules KB | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L491:🔁` | 🔁 | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L498:↑` | ↑ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `div:L519:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `div:L530:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `div:L533:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L536:📖 Rules KB` | 📖 Rules KB | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L537:🔁 Rigenera` | 🔁 Rigenera | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L544:↑` | ↑ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L566:💬 Chat` | 💬 Chat | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L567:📖 Storybook` | 📖 Storybook | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L568:🧰 Toolbox` | 🧰 Toolbox | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L576:🎲 Cambia gioco a Tainted Grail` | 🎲 Cambia gioco a Tainted Grail | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L577:🤖 Cerca un agente Tainted Grai` | 🤖 Cerca un agente Tainted Grail | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L578:↩️ Resta su Eldoria` | ↩️ Resta su Eldoria | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `div:L580:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L583:👍 Honest` | 👍 Honest | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L590:↑` | ↑ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L611:🎲 Cambia gioco a Tainted Grail` | 🎲 Cambia gioco a Tainted Grail | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L612:🤖 Cerca un agente Tainted Grai` | 🤖 Cerca un agente Tainted Grail | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L613:↩️ Resta su Eldoria` | ↩️ Resta su Eldoria | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `div:L615:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L617:👍 Honest answer` | 👍 Honest answer | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L621:↑` | ↑ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L642:💬 Chat` | 💬 Chat | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L643:📖 Storybook` | 📖 Storybook | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L644:🧰 Toolbox` | 🧰 Toolbox | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L656:⏳` | ⏳ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-chat.html` | `button:L677:⏳` | ⏳ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L234:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L258:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L291:Annulla` | Annulla | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L292:Avanti →` | Avanti → | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L306:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L322:Annulla` | Annulla | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L322:Avanti →` | Avanti → | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L342:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L358:×` | × | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L363:×` | × | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L368:×` | × | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L383:← Indietro` | ← Indietro | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L384:Avanti →` | Avanti → | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L395:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L405:×` | × | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L406:×` | × | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L407:×` | × | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L411:← Indietro` | ← Indietro | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L411:Avanti →` | Avanti → | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L431:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `div:L439:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `div:L446:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `div:L447:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `div:L448:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `div:L449:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L461:← Indietro` | ← Indietro | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L462:📖 Inizia sessione` | 📖 Inizia sessione | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L473:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `div:L481:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `div:L482:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `div:L483:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `div:L484:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `div:L485:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L489:← Indietro` | ← Indietro | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L489:📖 Inizia sessione` | 📖 Inizia sessione | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L509:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L528:Annulla` | Annulla | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L529:Avanti →` | Avanti → | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L540:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L554:Annulla` | Annulla | `TODO` | no rule matched |
-| `librogame-runthrough-setup-wizard.html` | `button:L554:Avanti →` | Avanti → | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L418:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L436:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L438:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L456:🖼️` | 🖼️ | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L457:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L458:🔄` | 🔄 | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L467:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L469:✕` | ✕ | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L477:🖼️ Scegli foto` | 🖼️ Scegli foto | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L478:📷 Usa fotocamera` | 📷 Usa fotocamera | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L499:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L507:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L510:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L513:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L516:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L520:✕ Annulla` | ✕ Annulla | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L527:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L534:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L535:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L536:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L537:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L539:✕ Annulla` | ✕ Annulla | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L559:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L561:📷` | 📷 | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L570:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L572:Traduci` | Traduci | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L576:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L578:▶ Traduci §147` | ▶ Traduci §147 | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L582:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L584:Traduci` | Traduci | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L592:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L592:📷` | 📷 | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L605:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L605:Traduci §146` | Traduci §146 | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L606:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L606:▶ Traduci §147` | ▶ Traduci §147 | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L607:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L607:Traduci §148` | Traduci §148 | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L626:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L636:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L648:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `div:L660:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L687:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L689:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L706:← §146` | ← §146 | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L708:A−` | A− | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L709:A` | A | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L710:A+` | A+ | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L712:Letto, vai a §148 →` | Letto, vai a §148 → | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L719:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L719:⋯` | ⋯ | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L733:← §146` | ← §146 | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L737:A−` | A− | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L737:A` | A | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L737:A+` | A+ | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L738:🌗` | 🌗 | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L741:Letto, vai a §148 →` | Letto, vai a §148 → | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L759:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L769:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L774:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L779:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L792:←` | ← | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L805:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L806:` |  | `TODO` | no rule matched |
-| `librogame-runthrough-translate-viewer.html` | `button:L807:` |  | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L39:🔍` | 🔍 | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L40:🔔` | 🔔 | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L71:` |  | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L72:` |  | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L73:` |  | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L74:` |  | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L75:` |  | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L89:` |  | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L136:{a}` | {a} | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L294:✕` | ✕ | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L298:` |  | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L308:{f.lb}` | {f.lb} | `TODO` | no rule matched |
-| `mobile-app.jsx` | `div:L587:` |  | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L630:{f}` | {f} | `TODO` | no rule matched |
-| `mobile-app.jsx` | `div:L636:` |  | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L663:{f}` | {f} | `TODO` | no rule matched |
-| `mobile-app.jsx` | `div:L671:` |  | `TODO` | no rule matched |
-| `mobile-app.jsx` | `div:L696:` |  | `TODO` | no rule matched |
-| `mobile-app.jsx` | `div:L739:` |  | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L776:📊` | 📊 | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L777:🧰` | 🧰 | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L778:✕` | ✕ | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L854:Gallery (3 phones)` | Gallery (3 phones) | `TODO` | no rule matched |
-| `mobile-app.jsx` | `button:L858:Focus (1 phone)` | Focus (1 phone) | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L129:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `div:L144:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `div:L145:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `div:L146:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `div:L147:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `div:L148:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L151:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L152:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L153:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L154:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `div:L170:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `div:L171:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `div:L172:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L175:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L176:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L177:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L182:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `div:L200:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `div:L201:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L204:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L205:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L206:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L207:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L232:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L233:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L234:` |  | `TODO` | no rule matched |
-| `nanolith-nav-bottom-mobile.html` | `button:L235:` |  | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `button:L166:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `button:L184:💬` | 💬 | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `button:L209:✕` | ✕ | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `div:L223:` |  | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `button:L225:➤` | ➤ | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `div:L227:` |  | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `button:L260:✕` | ✕ | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `div:L274:` |  | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `button:L276:➤` | ➤ | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `div:L278:` |  | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `button:L293:✕` | ✕ | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `div:L302:` |  | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `button:L304:➤` | ➤ | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `button:L330:✕` | ✕ | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `div:L337:` |  | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `button:L339:➤` | ➤ | `TODO` | no rule matched |
-| `nanolith-nav-chat-panel.html` | `div:L341:` |  | `TODO` | no rule matched |
-| `nanolith-nav-topbar.html` | `button:L133:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `nanolith-nav-topbar.html` | `button:L155:` |  | `TODO` | no rule matched |
-| `nanolith-nav-topbar.html` | `button:L177:` |  | `TODO` | no rule matched |
-| `nanolith-nav-topbar.html` | `button:L202:` |  | `TODO` | no rule matched |
-| `nanolith-nav-topbar.html` | `button:L209:` |  | `TODO` | no rule matched |
-| `nanolith-nav-topbar.html` | `button:L231:` |  | `TODO` | no rule matched |
-| `nanolith-nav-topbar.html` | `button:L235:` |  | `TODO` | no rule matched |
-| `nanolith-nav-topbar.html` | `button:L243:✕` | ✕ | `TODO` | no rule matched |
-| `notifications.html` | `a:L83:` |  | `TODO` | no rule matched |
-| `notifications.html` | `a:L89:Auth` | Auth | `TODO` | no rule matched |
-| `notifications.html` | `button:L95:🌗` | 🌗 | `TODO` | no rule matched |
-| `notifications.jsx` | `button:L91:←` | ← | `TODO` | no rule matched |
-| `notifications.jsx` | `button:L111:⋯` | ⋯ | `TODO` | no rule matched |
-| `notifications.jsx` | `button:L235:{notif.cta}` | {notif.cta} | `TODO` | no rule matched |
-| `notifications.jsx` | `button:L242:Archivia` | Archivia | `TODO` | no rule matched |
-| `notifications.jsx` | `button:L249:Segna letto` | Segna letto | `TODO` | no rule matched |
-| `notifications.jsx` | `button:L319:×` | × | `TODO` | no rule matched |
-| `notifications.jsx` | `button:L336:{notif.cta}` | {notif.cta} | `TODO` | no rule matched |
-| `notifications.jsx` | `button:L346:Archivia notifica` | Archivia notifica | `TODO` | no rule matched |
-| `notifications.jsx` | `button:L370:` |  | `TODO` | no rule matched |
-| `notifications.jsx` | `button:L421:Controlla impostazioni notific` | Controlla impostazioni notifiche | `TODO` | no rule matched |
-| `onboarding.jsx` | `button:L114:Salta` | Salta | `TODO` | no rule matched |
-| `onboarding.jsx` | `button:L125:` |  | `TODO` | no rule matched |
-| `onboarding.jsx` | `div:L153:` |  | `TODO` | no rule matched |
-| `onboarding.jsx` | `button:L159:` |  | `TODO` | no rule matched |
-| `onboarding.jsx` | `button:L177:` |  | `TODO` | no rule matched |
-| `onboarding.jsx` | `button:L198:← Indietro` | ← Indietro | `TODO` | no rule matched |
-| `onboarding.jsx` | `button:L201:{nextLabel}` | {nextLabel} | `TODO` | no rule matched |
-| `onboarding.jsx` | `button:L234:Inizia il tour →` | Inizia il tour → | `TODO` | no rule matched |
-| `onboarding.jsx` | `button:L237:Salta, esploro da solo` | Salta, esploro da solo | `TODO` | no rule matched |
-| `onboarding.jsx` | `button:L333:Vai alla home →` | Vai alla home → | `TODO` | no rule matched |
-| `onboarding.jsx` | `a:L393:Vai al contenuto` | Vai al contenuto | `TODO` | no rule matched |
-| `onboarding.jsx` | `a:L397:` |  | `TODO` | no rule matched |
-| `onboarding.jsx` | `button:L409:🌗` | 🌗 | `TODO` | no rule matched |
-| `public.html` | `button:L241:` |  | `TODO` | no rule matched |
-| `public.jsx` | `a:L17:` |  | `TODO` | no rule matched |
-| `public.jsx` | `a:L25:Prodotto` | Prodotto | `TODO` | no rule matched |
-| `public.jsx` | `a:L25:Prezzi` | Prezzi | `TODO` | no rule matched |
-| `public.jsx` | `a:L25:Chi siamo` | Chi siamo | `TODO` | no rule matched |
-| `public.jsx` | `a:L25:Contatti` | Contatti | `TODO` | no rule matched |
-| `public.jsx` | `a:L33:Inizia gratis` | Inizia gratis | `TODO` | no rule matched |
-| `public.jsx` | `button:L35:` |  | `TODO` | no rule matched |
-| `public.jsx` | `a:L45:Prodotto` | Prodotto | `TODO` | no rule matched |
-| `public.jsx` | `a:L45:Prezzi` | Prezzi | `TODO` | no rule matched |
-| `public.jsx` | `a:L45:Chi siamo` | Chi siamo | `TODO` | no rule matched |
-| `public.jsx` | `a:L45:Contatti` | Contatti | `TODO` | no rule matched |
-| `public.jsx` | `a:L51:Inizia gratis →` | Inizia gratis → | `TODO` | no rule matched |
-| `public.jsx` | `a:L76:Inizia gratis — è gratuito` | Inizia gratis — è gratuito | `TODO` | no rule matched |
-| `public.jsx` | `button:L79:Vedi come funziona ↓` | Vedi come funziona ↓ | `TODO` | no rule matched |
-| `public.jsx` | `div:L96:{stats.map(s => (` | {stats.map(s => ( | `TODO` | no rule matched |
-| `public.jsx` | `a:L185:Crea il tuo account →` | Crea il tuo account → | `TODO` | no rule matched |
-| `public.jsx` | `a:L225:{tier.cta}` | {tier.cta} | `TODO` | no rule matched |
-| `public.jsx` | `button:L259:` |  | `TODO` | no rule matched |
-| `public.jsx` | `button:L446:{t === 'terms' ? 'Termini' : '` | {t === 'terms' ? 'Termini' : 'Privacy'} | `TODO` | no rule matched |
-| `public.jsx` | `a:L458:{s.title}` | {s.title} | `TODO` | no rule matched |
-| `public.jsx` | `a:L486:legal@meepleai.it` | legal@meepleai.it | `TODO` | no rule matched |
-| `public.jsx` | `button:L556:Invia messaggio →` | Invia messaggio → | `TODO` | no rule matched |
-| `public.jsx` | `div:L564:` |  | `TODO` | no rule matched |
-| `public.jsx` | `a:L571:ciao@meepleai.it` | ciao@meepleai.it | `TODO` | no rule matched |
-| `public.jsx` | `div:L583:` |  | `TODO` | no rule matched |
-| `public.jsx` | `a:L591:` |  | `TODO` | no rule matched |
-| `public.jsx` | `a:L640:{lk.l}` | {lk.l} | `TODO` | no rule matched |
-| `settings.html` | `a:L122:` |  | `TODO` | no rule matched |
-| `settings.html` | `a:L131:Auth` | Auth | `TODO` | no rule matched |
-| `settings.html` | `button:L136:🌗` | 🌗 | `TODO` | no rule matched |
-| `settings.jsx` | `button:L161:{label}` | {label} | `TODO` | no rule matched |
-| `settings.jsx` | `button:L183:Annulla` | Annulla | `TODO` | no rule matched |
-| `settings.jsx` | `button:L186:Salva modifiche` | Salva modifiche | `TODO` | no rule matched |
-| `settings.jsx` | `button:L224:Annulla` | Annulla | `TODO` | no rule matched |
-| `settings.jsx` | `button:L226:{confirmLabel}` | {confirmLabel} | `TODO` | no rule matched |
-| `settings.jsx` | `button:L265:Cambia avatar` | Cambia avatar | `TODO` | no rule matched |
-| `settings.jsx` | `button:L334:Aggiorna password` | Aggiorna password | `TODO` | no rule matched |
-| `settings.jsx` | `button:L578:+ Nuova chiave` | + Nuova chiave | `TODO` | no rule matched |
-| `settings.jsx` | `button:L602:Revoca` | Revoca | `TODO` | no rule matched |
-| `settings.jsx` | `button:L671:Annulla` | Annulla | `TODO` | no rule matched |
-| `settings.jsx` | `button:L673:Genera` | Genera | `TODO` | no rule matched |
-| `settings.jsx` | `button:L699:Chiudi` | Chiudi | `TODO` | no rule matched |
-| `settings.jsx` | `button:L787:Disconnetti` | Disconnetti | `TODO` | no rule matched |
-| `settings.jsx` | `button:L795:Connetti` | Connetti | `TODO` | no rule matched |
-| `settings.jsx` | `button:L876:` |  | `TODO` | no rule matched |
-| `settings.jsx` | `button:L983:` |  | `TODO` | no rule matched |
-| `settings.jsx` | `button:L1026:‹ Indietro` | ‹ Indietro | `TODO` | no rule matched |
-| `sp3-accept-invite.jsx` | `button:L285:{loading && (` | {loading && ( | `TODO` | no rule matched |
-| `sp3-accept-invite.jsx` | `button:L314:{children}` | {children} | `TODO` | no rule matched |
-| `sp3-accept-invite.jsx` | `button:L498:Aggiungi al calendario (.ics)` | Aggiungi al calendario (.ics) | `TODO` | no rule matched |
-| `sp3-accept-invite.jsx` | `a:L534:Torna alla home →` | Torna alla home → | `TODO` | no rule matched |
-| `sp3-accept-invite.jsx` | `button:L542:Ho cambiato idea, accetta l'in` | Ho cambiato idea, accetta l'invito | `TODO` | no rule matched |
-| `sp3-accept-invite.jsx` | `a:L585:Torna alla home` | Torna alla home | `TODO` | no rule matched |
-| `sp3-accept-invite.jsx` | `button:L878:` |  | `TODO` | no rule matched |
-| `sp3-faq-enhanced.jsx` | `button:L243:✕` | ✕ | `TODO` | no rule matched |
-| `sp3-faq-enhanced.jsx` | `button:L274:` |  | `TODO` | no rule matched |
-| `sp3-faq-enhanced.jsx` | `button:L352:` |  | `TODO` | no rule matched |
-| `sp3-faq-enhanced.jsx` | `button:L408:` |  | `TODO` | no rule matched |
-| `sp3-faq-enhanced.jsx` | `a:L495:Contattaci →` | Contattaci → | `TODO` | no rule matched |
-| `sp3-faq-enhanced.jsx` | `a:L677:Contattaci →` | Contattaci → | `TODO` | no rule matched |
-| `sp3-faq-enhanced.jsx` | `button:L772:←` | ← | `TODO` | no rule matched |
-| `sp3-faq-enhanced.jsx` | `a:L831:Catalogo` | Catalogo | `TODO` | no rule matched |
-| `sp3-faq-enhanced.jsx` | `button:L905:` |  | `TODO` | no rule matched |
-| `sp3-how-it-works.jsx` | `a:L567:Inizia gratis →` | Inizia gratis → | `TODO` | no rule matched |
-| `sp3-how-it-works.jsx` | `button:L682:{theme === 'light' ? '🌙 Dark'` | {theme === 'light' ? '🌙 Dark' : '☀️ Ligh | `TODO` | no rule matched |
-| `sp3-join.jsx` | `button:L162:` |  | `TODO` | no rule matched |
-| `sp3-join.jsx` | `button:L289:{loading &&` | {loading && | `TODO` | no rule matched |
-| `sp3-join.jsx` | `a:L687:{l}` | {l} | `TODO` | no rule matched |
-| `sp3-join.jsx` | `a:L699:Inizia gratis` | Inizia gratis | `TODO` | no rule matched |
-| `sp3-join.jsx` | `button:L824:` |  | `TODO` | no rule matched |
-| `sp3-legal.jsx` | `a:L133:` |  | `TODO` | no rule matched |
-| `sp3-legal.jsx` | `a:L383:` |  | `TODO` | no rule matched |
-| `sp3-legal.jsx` | `a:L399:Vai al modulo contatto →` | Vai al modulo contatto → | `TODO` | no rule matched |
-| `sp3-legal.jsx` | `a:L432:{p}` | {p} | `TODO` | no rule matched |
-| `sp3-legal.jsx` | `button:L534:{theme === 'light' ? '🌙 Dark'` | {theme === 'light' ? '🌙 Dark' : '☀️ Ligh | `TODO` | no rule matched |
-| `sp3-library-public.jsx` | `button:L334:‹` | ‹ | `TODO` | no rule matched |
-| `sp3-library-public.jsx` | `button:L335:›` | › | `TODO` | no rule matched |
-| `sp3-library-public.jsx` | `button:L482:` |  | `TODO` | no rule matched |
-| `sp3-library-public.jsx` | `a:L548:Crea account gratis` | Crea account gratis | `TODO` | no rule matched |
-| `sp3-library-public.jsx` | `a:L562:Hai già un account?` | Hai già un account? | `TODO` | no rule matched |
-| `sp3-library-public.jsx` | `button:L716:{theme === 'light' ? '🌙 Dark'` | {theme === 'light' ? '🌙 Dark' : '☀️ Ligh | `TODO` | no rule matched |
-| `sp3-shared-game-detail.jsx` | `button:L351:` |  | `TODO` | no rule matched |
-| `sp3-shared-game-detail.jsx` | `button:L621:Apri ↗` | Apri ↗ | `TODO` | no rule matched |
-| `sp3-shared-game-detail.jsx` | `a:L767:Docs autore →` | Docs autore → | `TODO` | no rule matched |
-| `sp3-shared-game-detail.jsx` | `button:L840:🔒 Accedi per installare` | 🔒 Accedi per installare | `TODO` | no rule matched |
-| `sp3-shared-game-detail.jsx` | `button:L867:Accedi →` | Accedi → | `TODO` | no rule matched |
-| `sp3-shared-game-detail.jsx` | `button:L893:←` | ← | `TODO` | no rule matched |
-| `sp3-shared-game-detail.jsx` | `button:L901:↗` | ↗ | `TODO` | no rule matched |
-| `sp3-shared-game-detail.jsx` | `a:L957:Catalogo` | Catalogo | `TODO` | no rule matched |
-| `sp3-shared-game-detail.jsx` | `a:L961:Accedi / Registrati` | Accedi / Registrati | `TODO` | no rule matched |
-| `sp3-shared-game-detail.jsx` | `button:L1031:` |  | `TODO` | no rule matched |
-| `sp3-shared-games.jsx` | `button:L645:↺ Reset filtri` | ↺ Reset filtri | `TODO` | no rule matched |
-| `sp3-shared-games.jsx` | `button:L690:Riprova` | Riprova | `TODO` | no rule matched |
-| `sp3-shared-games.jsx` | `button:L814:Carica altri ({Math.max(0, ALL` | Carica altri ({Math.max(0, ALL_GAMES.len | `TODO` | no rule matched |
-| `sp3-shared-games.jsx` | `a:L867:{it.l}` | {it.l} | `TODO` | no rule matched |
-| `sp3-shared-games.jsx` | `a:L880:Inizia gratis` | Inizia gratis | `TODO` | no rule matched |
-| `sp3-shared-games.jsx` | `button:L931:←` | ← | `TODO` | no rule matched |
-| `sp3-shared-games.jsx` | `button:L938:{p}` | {p} | `TODO` | no rule matched |
-| `sp3-shared-games.jsx` | `button:L947:→` | → | `TODO` | no rule matched |
-| `sp3-shared-games.jsx` | `button:L1016:` |  | `TODO` | no rule matched |
-| `sp4-add-game-bgg-step.jsx` | `button:L91:✕` | ✕ | `TODO` | no rule matched |
-| `sp4-add-game-bgg-step.jsx` | `button:L101:{tab}` | {tab} | `TODO` | no rule matched |
-| `sp4-add-game-bgg-step.jsx` | `button:L277:Annulla` | Annulla | `TODO` | no rule matched |
-| `sp4-add-game-bgg-step.jsx` | `button:L358:` |  | `TODO` | no rule matched |
-| `sp4-add-game-bgg-step.jsx` | `button:L470:` |  | `TODO` | no rule matched |
-| `sp4-add-game-bgg-step.jsx` | `button:L483:Annulla` | Annulla | `TODO` | no rule matched |
-| `sp4-add-game-bgg-step.jsx` | `button:L579:` |  | `TODO` | no rule matched |
-| `sp4-add-game-bgg-step.jsx` | `button:L591:` |  | `TODO` | no rule matched |
-| `sp4-add-game-bgg-step.jsx` | `button:L679:` |  | `TODO` | no rule matched |
-| `sp4-add-game-bgg-step.jsx` | `button:L832:` |  | `TODO` | no rule matched |
-| `sp4-add-game-bgg-step.jsx` | `a:L972:` |  | `TODO` | no rule matched |
-| `sp4-add-game-pdf-dedup.jsx` | `button:L179:{children}` | {children} | `TODO` | no rule matched |
-| `sp4-add-game-pdf-dedup.jsx` | `button:L197:{children}` | {children} | `TODO` | no rule matched |
-| `sp4-add-game-pdf-dedup.jsx` | `button:L981:` |  | `TODO` | no rule matched |
-| `sp4-add-game-pdf-dedup.jsx` | `a:L1007:← Torna al hub` | ← Torna al hub | `TODO` | no rule matched |
-| `sp4-add-game-pdf-dedup.jsx` | `a:L1237:← Torna a 00-hub.html` | ← Torna a 00-hub.html | `TODO` | no rule matched |
-| `sp4-agent-detail.jsx` | `button:L222:↻ Riattiva` | ↻ Riattiva | `TODO` | no rule matched |
-| `sp4-agent-detail.jsx` | `button:L330:` |  | `TODO` | no rule matched |
-| `sp4-agent-detail.jsx` | `button:L338:⋯` | ⋯ | `TODO` | no rule matched |
-| `sp4-agent-detail.jsx` | `button:L372:` |  | `TODO` | no rule matched |
-| `sp4-agent-detail.jsx` | `button:L480:` |  | `TODO` | no rule matched |
-| `sp4-agent-detail.jsx` | `button:L616:⋯` | ⋯ | `TODO` | no rule matched |
-| `sp4-agent-detail.jsx` | `button:L857:` |  | `TODO` | no rule matched |
-| `sp4-agent-detail.jsx` | `button:L972:⊘ Archivia` | ⊘ Archivia | `TODO` | no rule matched |
-| `sp4-agent-detail.jsx` | `button:L980:🗑 Elimina (richiede conferma)` | 🗑 Elimina (richiede conferma) | `TODO` | no rule matched |
-| `sp4-agent-detail.jsx` | `button:L1029:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-agent-detail.jsx` | `button:L1202:←` | ← | `TODO` | no rule matched |
-| `sp4-agent-detail.jsx` | `button:L1211:⋯` | ⋯ | `TODO` | no rule matched |
-| `sp4-agent-detail.jsx` | `button:L1293:` |  | `TODO` | no rule matched |
-| `sp4-agents-index.jsx` | `button:L383:✕` | ✕ | `TODO` | no rule matched |
-| `sp4-agents-index.jsx` | `button:L481:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-agents-index.jsx` | `a:L652:Attivi` | Attivi | `TODO` | no rule matched |
-| `sp4-agents-index.jsx` | `a:L652:Archiviati` | Archiviati | `TODO` | no rule matched |
-| `sp4-agents-index.jsx` | `a:L652:Più recenti` | Più recenti | `TODO` | no rule matched |
-| `sp4-agents-index.jsx` | `a:L652:Alfabetico` | Alfabetico | `TODO` | no rule matched |
-| `sp4-agents-index.jsx` | `a:L652:Più usati` | Più usati | `TODO` | no rule matched |
-| `sp4-agents-index.jsx` | `button:L686:←` | ← | `TODO` | no rule matched |
-| `sp4-agents-index.jsx` | `button:L694:🔍` | 🔍 | `TODO` | no rule matched |
-| `sp4-agents-index.jsx` | `button:L719:` |  | `TODO` | no rule matched |
-| `sp4-agents-index.jsx` | `button:L811:` |  | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L391:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L414:×` | × | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L418:📝 Snippet` | 📝 Snippet | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L419:📄 PDF originale` | 📄 PDF originale | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L437:Chiudi` | Chiudi | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L449:×` | × | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L452:📝 Snippet` | 📝 Snippet | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L453:📄 PDF originale` | 📄 PDF originale | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L466:Chiudi` | Chiudi | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L490:×` | × | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L493:📝 Snippet` | 📝 Snippet | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L494:📄 PDF originale` | 📄 PDF originale | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L498:← Prev` | ← Prev | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L500:Next →` | Next → | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L517:Chiudi` | Chiudi | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L529:×` | × | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L532:📝 Snippet` | 📝 Snippet | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L533:📄 PDF originale` | 📄 PDF originale | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L537:← Prev (p.11)` | ← Prev (p.11) | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L539:Next (p.13) →` | Next (p.13) → | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L558:Chiudi` | Chiudi | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L582:×` | × | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L585:📝 Snippet` | 📝 Snippet | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L586:📄 PDF originale` | 📄 PDF originale | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `div:L589:` |  | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `a:L593:📤 Carica il mio PDF` | 📤 Carica il mio PDF | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L599:Chiudi` | Chiudi | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L611:×` | × | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L614:📝 Snippet` | 📝 Snippet | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L615:📄 PDF originale` | 📄 PDF originale | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `div:L618:` |  | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `a:L622:📤 Carica il mio PDF di Wingspa` | 📤 Carica il mio PDF di Wingspan | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L628:Chiudi` | Chiudi | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L652:×` | × | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L655:📝 Snippet` | 📝 Snippet | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L656:📄 PDF originale` | 📄 PDF originale | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L670:Chiudi` | Chiudi | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L682:×` | × | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L685:📝 Snippet` | 📝 Snippet | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L686:📄 PDF originale` | 📄 PDF originale | `TODO` | no rule matched |
-| `sp4-citation-pdf-viewer.html` | `button:L700:Chiudi` | Chiudi | `TODO` | no rule matched |
-| `sp4-dashboard.jsx` | `a:L191:{viewAllLabel || 'Vedi tutto'}` | {viewAllLabel \|\| 'Vedi tutto'} | `TODO` | no rule matched |
-| `sp4-dashboard.jsx` | `a:L228:{cta}` | {cta} | `TODO` | no rule matched |
-| `sp4-dashboard.jsx` | `a:L257:` |  | `TODO` | no rule matched |
-| `sp4-dashboard.jsx` | `a:L309:` |  | `TODO` | no rule matched |
-| `sp4-dashboard.jsx` | `a:L362:` |  | `TODO` | no rule matched |
-| `sp4-dashboard.jsx` | `a:L483:` |  | `TODO` | no rule matched |
-| `sp4-dashboard.jsx` | `button:L580:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-dashboard.jsx` | `button:L741:☰` | ☰ | `TODO` | no rule matched |
-| `sp4-dashboard.jsx` | `button:L749:🔔` | 🔔 | `TODO` | no rule matched |
-| `sp4-dashboard.jsx` | `button:L774:` |  | `TODO` | no rule matched |
-| `sp4-dashboard.jsx` | `button:L864:` |  | `TODO` | no rule matched |
-| `sp4-discover.jsx` | `button:L375:Vedi tutti →` | Vedi tutti → | `TODO` | no rule matched |
-| `sp4-discover.jsx` | `button:L526:` |  | `TODO` | no rule matched |
-| `sp4-discover.jsx` | `button:L551:{f.em &&` | {f.em && | `TODO` | no rule matched |
-| `sp4-discover.jsx` | `button:L726:×` | × | `TODO` | no rule matched |
-| `sp4-discover.jsx` | `button:L750:Reimposta` | Reimposta | `TODO` | no rule matched |
-| `sp4-discover.jsx` | `button:L926:Mostra tutti` | Mostra tutti | `TODO` | no rule matched |
-| `sp4-discover.jsx` | `button:L996:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-discover.jsx` | `button:L1001:Vai alla libreria` | Vai alla libreria | `TODO` | no rule matched |
-| `sp4-discover.jsx` | `button:L1062:←` | ← | `TODO` | no rule matched |
-| `sp4-discover.jsx` | `button:L1227:🌗 {theme === 'light' ? 'Light'` | 🌗 {theme === 'light' ? 'Light' : 'Dark'} | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L377:🌗 Tema` | 🌗 Tema | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `div:L417:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `div:L421:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L424:👍` | 👍 | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L425:📋` | 📋 | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L426:🔁` | 🔁 | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `div:L432:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L434:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L435:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L440:↑` | ↑ | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L461:🧙 Tutor` | 🧙 Tutor | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L462:⚖️ Arbitro` | ⚖️ Arbitro | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `div:L502:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `div:L506:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L509:👍 Utile` | 👍 Utile | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L510:📋 Copia` | 📋 Copia | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L511:🔁 Rigenera` | 🔁 Rigenera | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `div:L517:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L519:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L520:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L521:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L522:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L527:↑` | ↑ | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `div:L567:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `div:L571:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L574:📖 Apri FAQ` | 📖 Apri FAQ | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L575:🔁` | 🔁 | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L582:↑` | ↑ | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L598:🧙 Tutor` | 🧙 Tutor | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L599:⚖️ Arbitro` | ⚖️ Arbitro | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `div:L626:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `div:L631:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L634:📖 Apri FAQ` | 📖 Apri FAQ | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L635:🔁 Rigenera` | 🔁 Rigenera | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L640:↑` | ↑ | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L673:🎲 Cambia gioco a Tainted Grail` | 🎲 Cambia gioco a Tainted Grail | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L674:🤖 Cerca un agente Tainted Grai` | 🤖 Cerca un agente Tainted Grail | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L675:↩️ Resta su Wingspan` | ↩️ Resta su Wingspan | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `div:L677:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L680:👍 Honest` | 👍 Honest | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L687:↑` | ↑ | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L710:🧙 Tutor` | 🧙 Tutor | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L711:⚖️ Arbitro` | ⚖️ Arbitro | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L728:🎲 Cambia gioco a Tainted Grail` | 🎲 Cambia gioco a Tainted Grail | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L729:🤖 Cerca un agente Tainted Grai` | 🤖 Cerca un agente Tainted Grail | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L730:↩️ Resta su Wingspan` | ↩️ Resta su Wingspan | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `div:L732:` |  | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L734:👍 Honest answer` | 👍 Honest answer | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L738:↑` | ↑ | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L775:⏳` | ⏳ | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L791:🧙 Tutor` | 🧙 Tutor | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L792:⚖️ Arbitro` | ⚖️ Arbitro | `TODO` | no rule matched |
-| `sp4-game-chat-tab.html` | `button:L814:⏳` | ⏳ | `TODO` | no rule matched |
-| `sp4-game-detail.jsx` | `button:L261:✎ Modifica` | ✎ Modifica | `TODO` | no rule matched |
-| `sp4-game-detail.jsx` | `button:L268:↗` | ↗ | `TODO` | no rule matched |
-| `sp4-game-detail.jsx` | `button:L286:👀 Vedi simili` | 👀 Vedi simili | `TODO` | no rule matched |
-| `sp4-game-detail.jsx` | `button:L293:↗` | ↗ | `TODO` | no rule matched |
-| `sp4-game-detail.jsx` | `button:L332:` |  | `TODO` | no rule matched |
-| `sp4-game-detail.jsx` | `button:L436:+ Aggiungi` | + Aggiungi | `TODO` | no rule matched |
-| `sp4-game-detail.jsx` | `button:L718:↑ Invia` | ↑ Invia | `TODO` | no rule matched |
-| `sp4-game-detail.jsx` | `button:L860:Apri ↗` | Apri ↗ | `TODO` | no rule matched |
-| `sp4-game-detail.jsx` | `button:L924:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-game-detail.jsx` | `button:L1089:←` | ← | `TODO` | no rule matched |
-| `sp4-game-detail.jsx` | `button:L1098:⋯` | ⋯ | `TODO` | no rule matched |
-| `sp4-game-detail.jsx` | `button:L1179:` |  | `TODO` | no rule matched |
-| `sp4-game-nights-index.jsx` | `button:L242:` |  | `TODO` | no rule matched |
-| `sp4-game-nights-index.jsx` | `button:L441:‹` | ‹ | `TODO` | no rule matched |
-| `sp4-game-nights-index.jsx` | `button:L450:›` | › | `TODO` | no rule matched |
-| `sp4-game-nights-index.jsx` | `button:L625:Vedi summary →` | Vedi summary → | `TODO` | no rule matched |
-| `sp4-game-nights-index.jsx` | `button:L632:Riprogramma` | Riprogramma | `TODO` | no rule matched |
-| `sp4-game-nights-index.jsx` | `button:L639:Modifica` | Modifica | `TODO` | no rule matched |
-| `sp4-game-nights-index.jsx` | `button:L646:✓ Partecipo` | ✓ Partecipo | `TODO` | no rule matched |
-| `sp4-game-nights-index.jsx` | `button:L652:Forse` | Forse | `TODO` | no rule matched |
-| `sp4-game-nights-index.jsx` | `button:L810:×` | × | `TODO` | no rule matched |
-| `sp4-game-nights-index.jsx` | `button:L904:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-game-nights-index.jsx` | `button:L991:←` | ← | `TODO` | no rule matched |
-| `sp4-game-nights-index.jsx` | `button:L1000:⋯` | ⋯ | `TODO` | no rule matched |
-| `sp4-game-nights-index.jsx` | `button:L1129:🌗 {theme === 'light' ? 'Light'` | 🌗 {theme === 'light' ? 'Light' : 'Dark'} | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `button:L368:✕` | ✕ | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `button:L385:Tutti` | Tutti | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `button:L385:Posseduti` | Posseduti | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `button:L385:Wishlist` | Wishlist | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `button:L385:Ultima partita` | Ultima partita | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `button:L385:Rating` | Rating | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `button:L385:Titolo A-Z` | Titolo A-Z | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `button:L385:Anno` | Anno | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `button:L432:{v.icon}` | {v.icon} | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `button:L535:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `a:L767:Titolo A-Z` | Titolo A-Z | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `a:L767:Anno` | Anno | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `a:L767:Partite` | Partite | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `a:L767:KB Docs` | KB Docs | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `button:L808:←` | ← | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `button:L816:＋` | ＋ | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `button:L841:` |  | `TODO` | no rule matched |
-| `sp4-games-index.jsx` | `button:L933:` |  | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `button:L319:✕` | ✕ | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `button:L332:Tutti` | Tutti | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `button:L332:Featured` | Featured | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `button:L332:Nuovi` | Nuovi | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `button:L332:Top 100` | Top 100 | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `button:L332:Popolarità` | Popolarità | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `button:L332:Rating` | Rating | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `button:L332:Titolo A-Z` | Titolo A-Z | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `button:L332:Invocations` | Invocations | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `button:L436:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `a:L589:Rating` | Rating | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `a:L589:Titolo A-Z` | Titolo A-Z | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `a:L589:Invocations` | Invocations | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `a:L589:Installazioni` | Installazioni | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `a:L589:Featured` | Featured | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `a:L589:Modelli LLM` | Modelli LLM | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `button:L630:←` | ← | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `button:L638:＋` | ＋ | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `button:L663:` |  | `TODO` | no rule matched |
-| `sp4-hub-agents.jsx` | `button:L753:` |  | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `button:L292:✕` | ✕ | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `button:L308:Tutti` | Tutti | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `button:L308:Featured` | Featured | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `button:L308:Nuovi` | Nuovi | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `button:L308:Top 100` | Top 100 | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `button:L308:Popolarità` | Popolarità | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `button:L308:Rating` | Rating | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `button:L308:Titolo A-Z` | Titolo A-Z | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `button:L308:Anno` | Anno | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `button:L460:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `a:L618:Rating` | Rating | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `a:L618:Titolo A-Z` | Titolo A-Z | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `a:L618:Anno` | Anno | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `a:L618:Installazioni` | Installazioni | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `a:L618:Featured` | Featured | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `a:L618:Nuovi 2022+` | Nuovi 2022+ | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `a:L618:Chi siamo` | Chi siamo | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `button:L661:←` | ← | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `button:L669:⋯` | ⋯ | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `button:L693:` |  | `TODO` | no rule matched |
-| `sp4-hub-games.jsx` | `button:L786:` |  | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `button:L316:✕` | ✕ | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `button:L329:Tutti` | Tutti | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `button:L329:Featured` | Featured | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `button:L329:Nuovi` | Nuovi | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `button:L329:Top 100` | Top 100 | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `button:L329:Popolarità` | Popolarità | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `button:L329:Rating` | Rating | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `button:L329:Titolo A-Z` | Titolo A-Z | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `button:L329:Uses` | Uses | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `button:L433:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `a:L586:Rating` | Rating | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `a:L586:Titolo A-Z` | Titolo A-Z | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `a:L586:Uses` | Uses | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `a:L586:Installazioni` | Installazioni | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `a:L586:Featured` | Featured | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `a:L586:Strumenti totali` | Strumenti totali | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `button:L627:←` | ← | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `button:L635:＋` | ＋ | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `button:L660:` |  | `TODO` | no rule matched |
-| `sp4-hub-toolkits.jsx` | `button:L750:` |  | `TODO` | no rule matched |
-| `sp4-kb-detail.jsx` | `button:L369:×` | × | `TODO` | no rule matched |
-| `sp4-kb-detail.jsx` | `button:L646:← Lista` | ← Lista | `TODO` | no rule matched |
-| `sp4-kb-detail.jsx` | `button:L694:` |  | `TODO` | no rule matched |
-| `sp4-kb-detail.jsx` | `button:L748:` |  | `TODO` | no rule matched |
-| `sp4-kb-detail.jsx` | `button:L754:` |  | `TODO` | no rule matched |
-| `sp4-kb-detail.jsx` | `button:L856:↻ Riprova OCR` | ↻ Riprova OCR | `TODO` | no rule matched |
-| `sp4-kb-detail.jsx` | `button:L861:⬆ Re-upload` | ⬆ Re-upload | `TODO` | no rule matched |
-| `sp4-kb-detail.jsx` | `a:L1006:KB` | KB | `TODO` | no rule matched |
-| `sp4-kb-detail.jsx` | `button:L1033:←` | ← | `TODO` | no rule matched |
-| `sp4-kb-detail.jsx` | `button:L1042:⋯` | ⋯ | `TODO` | no rule matched |
-| `sp4-kb-detail.jsx` | `button:L1178:🌗 {theme === 'light' ? 'Light'` | 🌗 {theme === 'light' ? 'Light' : 'Dark'} | `TODO` | no rule matched |
-| `sp4-kb-globale.jsx` | `button:L156:{icon &&` | {icon && | `TODO` | no rule matched |
-| `sp4-kb-globale.jsx` | `a:L789:carica altri 7 →` | carica altri 7 → | `TODO` | no rule matched |
-| `sp4-kb-globale.jsx` | `button:L918:` |  | `TODO` | no rule matched |
-| `sp4-kb-globale.jsx` | `button:L1019:{s}` | {s} | `TODO` | no rule matched |
-| `sp4-kb-globale.jsx` | `button:L1342:✕` | ✕ | `TODO` | no rule matched |
-| `sp4-kb-globale.jsx` | `button:L1534:` |  | `TODO` | no rule matched |
-| `sp4-kb-globale.jsx` | `button:L2015:✕` | ✕ | `TODO` | no rule matched |
-| `sp4-kb-globale.jsx` | `button:L2061:` |  | `TODO` | no rule matched |
-| `sp4-kb-globale.jsx` | `button:L2087:↑` | ↑ | `TODO` | no rule matched |
-| `sp4-kb-globale.jsx` | `button:L2609:{dark ? '☀️ Light' : '🌙 Dark'}` | {dark ? '☀️ Light' : '🌙 Dark'} | `TODO` | no rule matched |
-| `sp4-kb-globale.jsx` | `a:L2638:↗ vs. sp4-kb-hub (per-game)` | ↗ vs. sp4-kb-hub (per-game) | `TODO` | no rule matched |
-| `sp4-kb-globale.jsx` | `a:L2756:← 00-hub.html` | ← 00-hub.html | `TODO` | no rule matched |
-| `sp4-kb-globale.jsx` | `a:L2758:sp4-kb-hub.jsx · KB per-game (` | sp4-kb-hub.jsx · KB per-game (#913) | `TODO` | no rule matched |
-| `sp4-kb-hub.jsx` | `a:L311:↗ Apri scheda game` | ↗ Apri scheda game | `TODO` | no rule matched |
-| `sp4-kb-hub.jsx` | `button:L327:⟳ Re-index all` | ⟳ Re-index all | `TODO` | no rule matched |
-| `sp4-kb-hub.jsx` | `button:L467:` |  | `TODO` | no rule matched |
-| `sp4-kb-hub.jsx` | `button:L591:⟳ Re-index` | ⟳ Re-index | `TODO` | no rule matched |
-| `sp4-kb-hub.jsx` | `button:L597:Annulla` | Annulla | `TODO` | no rule matched |
-| `sp4-kb-hub.jsx` | `button:L636:Simulate done →` | Simulate done → | `TODO` | no rule matched |
-| `sp4-kb-hub.jsx` | `button:L660:Chiudi` | Chiudi | `TODO` | no rule matched |
-| `sp4-kb-hub.jsx` | `button:L763:🔒 Rebuild RAPTOR — Upgrade to` | 🔒 Rebuild RAPTOR — Upgrade to Pro | `TODO` | no rule matched |
-| `sp4-kb-hub.jsx` | `a:L773:Scopri piano Pro →` | Scopri piano Pro → | `TODO` | no rule matched |
-| `sp4-kb-hub.jsx` | `button:L893:Annulla` | Annulla | `TODO` | no rule matched |
-| `sp4-kb-hub.jsx` | `button:L924:{dark ? '☀️ Light' : '🌙 Dark'}` | {dark ? '☀️ Light' : '🌙 Dark'} | `TODO` | no rule matched |
-| `sp4-kb-hub.jsx` | `a:L1022:← 00-hub.html` | ← 00-hub.html | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L112:↓ Importa BGG` | ↓ Importa BGG | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L119:↗` | ↗ | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L157:` |  | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L295:{v.icon}` | {v.icon} | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L396:` |  | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L486:` |  | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L594:✕` | ✕ | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L617:Reset` | Reset | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L696:{selected ? '✓' : ''}` | {selected ? '✓' : ''} | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L711:⋯` | ⋯ | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L762:{selected ? '✓' : ''}` | {selected ? '✓' : ''} | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L924:` |  | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L935:✕` | ✕ | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L964:›` | › | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `a:L995:{DS.byId[a.ref]?.title || a.re` | {DS.byId[a.ref]?.title \|\| a.ref} | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L1059:↓ Importa da BGG` | ↓ Importa da BGG | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L1207:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-library-desktop.jsx` | `button:L1459:` |  | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L368:✎ Modifica` | ✎ Modifica | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L375:↗` | ↗ | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L392:✎ Modifica` | ✎ Modifica | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L445:` |  | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L540:Vedi tutti →` | Vedi tutti → | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L665:↗` | ↗ | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L821:🏆 Vittoria` | 🏆 Vittoria | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L821:Sconfitta` | Sconfitta | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L821:In corso` | In corso | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L821:Tutte` | Tutte | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L821:Vinte` | Vinte | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L821:Perse` | Perse | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L964:Apri ↗` | Apri ↗ | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L1104:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L1271:←` | ← | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L1280:⋯` | ⋯ | `TODO` | no rule matched |
-| `sp4-player-detail.jsx` | `button:L1420:🌗 {theme === 'light' ? 'Light'` | 🌗 {theme === 'light' ? 'Light' : 'Dark'} | `TODO` | no rule matched |
-| `sp4-players-index.jsx` | `button:L86:` |  | `TODO` | no rule matched |
-| `sp4-players-index.jsx` | `button:L143:{f}
-                {active &&` | {f}
-                {active && | `TODO` | no rule matched |
-| `sp4-players-index.jsx` | `button:L354:{v.cta}` | {v.cta} | `TODO` | no rule matched |
-| `sp4-players-index.jsx` | `button:L541:{theme === 'light' ? '🌙 Dark'` | {theme === 'light' ? '🌙 Dark' : '☀️ Ligh | `TODO` | no rule matched |
-| `sp4-session-live-parts.jsx` | `button:L203:←` | ← | `TODO` | no rule matched |
-| `sp4-session-live-parts.jsx` | `button:L252:` |  | `TODO` | no rule matched |
-| `sp4-session-live-parts.jsx` | `button:L260:⋯` | ⋯ | `TODO` | no rule matched |
-| `sp4-session-live-parts.jsx` | `button:L377:` |  | `TODO` | no rule matched |
-| `sp4-session-live-parts.jsx` | `button:L554:−` | − | `TODO` | no rule matched |
-| `sp4-session-live-parts.jsx` | `button:L582:+{p}` | +{p} | `TODO` | no rule matched |
-| `sp4-session-live-parts.jsx` | `button:L611:Annulla` | Annulla | `TODO` | no rule matched |
-| `sp4-session-live.jsx` | `button:L218:🎙` | 🎙 | `TODO` | no rule matched |
-| `sp4-session-live.jsx` | `button:L291:+` | + | `TODO` | no rule matched |
-| `sp4-session-live.jsx` | `button:L479:Pausa lunga · esci salvando` | Pausa lunga · esci salvando | `TODO` | no rule matched |
-| `sp4-session-live.jsx` | `button:L566:Annulla` | Annulla | `TODO` | no rule matched |
-| `sp4-session-live.jsx` | `button:L590:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-session-live.jsx` | `button:L716:` |  | `TODO` | no rule matched |
-| `sp4-session-summary-parts.jsx` | `button:L169:` |  | `TODO` | no rule matched |
-| `sp4-session-summary-parts.jsx` | `button:L175:Archivia incompleta` | Archivia incompleta | `TODO` | no rule matched |
-| `sp4-session-summary-parts.jsx` | `button:L214:` |  | `TODO` | no rule matched |
-| `sp4-session-summary-parts.jsx` | `button:L222:⋯` | ⋯ | `TODO` | no rule matched |
-| `sp4-session-summary.jsx` | `button:L143:` |  | `TODO` | no rule matched |
-| `sp4-session-summary.jsx` | `button:L231:` |  | `TODO` | no rule matched |
-| `sp4-session-summary.jsx` | `button:L245:+` | + | `TODO` | no rule matched |
-| `sp4-session-summary.jsx` | `button:L262:{open ? '▴ Comprimi' : '▾ Espa` | {open ? '▴ Comprimi' : '▾ Espandi'} | `TODO` | no rule matched |
-| `sp4-session-summary.jsx` | `button:L337:{t}` | {t} | `TODO` | no rule matched |
-| `sp4-session-summary.jsx` | `button:L521:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-session-summary.jsx` | `button:L560:←` | ← | `TODO` | no rule matched |
-| `sp4-session-summary.jsx` | `button:L646:` |  | `TODO` | no rule matched |
-| `sp4-sessions-index.jsx` | `button:L346:` |  | `TODO` | no rule matched |
-| `sp4-sessions-index.jsx` | `button:L420:{v.icon}` | {v.icon} | `TODO` | no rule matched |
-| `sp4-sessions-index.jsx` | `button:L523:Riprendi o archivia` | Riprendi o archivia | `TODO` | no rule matched |
-| `sp4-sessions-index.jsx` | `button:L710:▶ Avvia live` | ▶ Avvia live | `TODO` | no rule matched |
-| `sp4-sessions-index.jsx` | `button:L774:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-sessions-index.jsx` | `button:L974:` |  | `TODO` | no rule matched |
-| `sp4-toolkit-detail.jsx` | `button:L294:` |  | `TODO` | no rule matched |
-| `sp4-toolkit-detail.jsx` | `button:L382:` |  | `TODO` | no rule matched |
-| `sp4-toolkit-detail.jsx` | `button:L613:` |  | `TODO` | no rule matched |
-| `sp4-toolkit-detail.jsx` | `button:L683:` |  | `TODO` | no rule matched |
-| `sp4-toolkit-detail.jsx` | `button:L821:✎ Modifica note` | ✎ Modifica note | `TODO` | no rule matched |
-| `sp4-toolkit-detail.jsx` | `button:L970:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp4-toolkit-detail.jsx` | `button:L1202:←` | ← | `TODO` | no rule matched |
-| `sp4-toolkit-detail.jsx` | `button:L1211:⋯` | ⋯ | `TODO` | no rule matched |
-| `sp4-toolkit-detail.jsx` | `button:L1337:🌗 {theme === 'light' ? 'Light'` | 🌗 {theme === 'light' ? 'Light' : 'Dark'} | `TODO` | no rule matched |
-| `sp4-upload-wizard-extended.jsx` | `button:L68:{dark ? '☀️' : '🌙'} {dark ? 'L` | {dark ? '☀️' : '🌙'} {dark ? 'Light' : 'D | `TODO` | no rule matched |
-| `sp4-upload-wizard-extended.jsx` | `button:L513:Annulla` | Annulla | `TODO` | no rule matched |
-| `sp4-upload-wizard-extended.jsx` | `button:L677:Annulla` | Annulla | `TODO` | no rule matched |
-| `sp6-libro-game-glossary-editor.jsx` | `button:L53:‹` | ‹ | `TODO` | no rule matched |
-| `sp6-libro-game-glossary-editor.jsx` | `button:L227:×` | × | `TODO` | no rule matched |
-| `sp6-libro-game-index.html` | `a:L146:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-index.html` | `button:L154:🌗` | 🌗 | `TODO` | no rule matched |
-| `sp6-libro-game-index.jsx` | `button:L107:⚠️ Errore · Riprova` | ⚠️ Errore · Riprova | `TODO` | no rule matched |
-| `sp6-libro-game-index.jsx` | `div:L225:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-index.jsx` | `a:L254:Acquista crediti →` | Acquista crediti → | `TODO` | no rule matched |
-| `sp6-libro-game-index.jsx` | `a:L282:💎 Crediti` | 💎 Crediti | `TODO` | no rule matched |
-| `sp6-libro-game-index.jsx` | `div:L299:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-index.jsx` | `a:L391:Come funziona →` | Come funziona → | `TODO` | no rule matched |
-| `sp6-libro-game-index.jsx` | `button:L413:🔄 Riprova` | 🔄 Riprova | `TODO` | no rule matched |
-| `sp6-libro-game-index.jsx` | `button:L521:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-index.jsx` | `a:L557:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `a:L143:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `a:L148:← A · Index` | ← A · Index | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L151:🌗` | 🌗 | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L318:←` | ← | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L359:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L414:Continua →` | Continua → | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L432:×` | × | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L455:×` | × | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L467:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L474:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L481:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L545:×` | × | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L550:⚡` | ⚡ | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L644:🖼️` | 🖼️ | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L645:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L657:0 ? entityHsl('toolkit') : 'rg` | 0 ? entityHsl('toolkit') : 'rgba(255,255 | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L688:⚙️ Apri impostazioni` | ⚙️ Apri impostazioni | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L691:🖼️ Carica dalla galleria` | 🖼️ Carica dalla galleria | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L734:📷 Riscatta` | 📷 Riscatta | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L791:Riprova ora` | Riprova ora | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L848:Salva e basta` | Salva e basta | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L849:🎯 Inizia sessione →` | 🎯 Inizia sessione → | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L856:Salta — uso così` | Salta — uso così | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L857:📷 Riscatta 3 pagine` | 📷 Riscatta 3 pagine | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L880:Continua a indicizzare` | Continua a indicizzare | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L881:Sì, annulla` | Sì, annulla | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `button:L904:🖼️ Sfoglia file` | 🖼️ Sfoglia file | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.html` | `a:L908:Invia link al telefono` | Invia link al telefono | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L58:←` | ← | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `span:L145:📚 Catalogo` | 📚 Catalogo | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `span:L146:🌐 BGG` | 🌐 BGG | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L154:Continua →` | Continua → | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L172:×` | × | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `span:L175:📚 Catalogo (0)` | 📚 Catalogo (0) | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `span:L176:🌐 BGG (2)` | 🌐 BGG (2) | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L195:×` | × | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L207:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L214:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L221:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `span:L245:📚 Catalogo` | 📚 Catalogo | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `span:L246:🌐 BGG` | 🌐 BGG | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `div:L257:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L285:×` | × | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L290:⚡` | ⚡ | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `div:L383:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L384:🖼️` | 🖼️ | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L385:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L397:✓` | ✓ | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L428:⚙️ Apri impostazioni` | ⚙️ Apri impostazioni | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L431:🖼️ Carica dalla galleria` | 🖼️ Carica dalla galleria | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L474:📷 Riscatta` | 📷 Riscatta | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L531:Riprova ora` | Riprova ora | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L588:Salva e basta` | Salva e basta | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L589:🎯 Inizia sessione →` | 🎯 Inizia sessione → | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L596:Salta — uso così` | Salta — uso così | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L597:📷 Riscatta 3 pagine` | 📷 Riscatta 3 pagine | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L620:Continua a indicizzare` | Continua a indicizzare | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L621:Sì, annulla` | Sì, annulla | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `button:L644:🖼️ Sfoglia file` | 🖼️ Sfoglia file | `TODO` | no rule matched |
-| `sp6-libro-game-photo-upload.jsx` | `a:L648:Invia link al telefono` | Invia link al telefono | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L172:⋯` | ⋯ | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L247:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L261:⏸` | ⏸ | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L392:🎙` | 🎙 | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L573:{s}` | {s} | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L616:{m}` | {m} | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L675:← § prec.` | ← § prec. | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L689:⛶` | ⛶ | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L727:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L832:⏸️ Continua senza traduzione` | ⏸️ Continua senza traduzione | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L875:← § prec.` | ← § prec. | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L881:A− A A+` | A− A A+ | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L887:⛶` | ⛶ | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L913:← § prec.` | ← § prec. | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L939:{n}` | {n} | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L1096:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-play-session.jsx` | `button:L1266:+ Aggiungi` | + Aggiungi | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `button:L104:×` | × | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L129:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L133:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L150:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `button:L151:💎 Acquista 100 crediti (€5)` | 💎 Acquista 100 crediti (€5) | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `button:L159:⏸️ Continua senza traduzione` | ⏸️ Continua senza traduzione | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `a:L162:Cosa sono i crediti? →` | Cosa sono i crediti? → | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `a:L235:Privacy & GDPR →` | Privacy & GDPR → | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `button:L243:Continua →` | Continua → | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L291:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `span:L295:VISA` | VISA | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L299:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L331:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L335:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L339:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L345:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L360:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `button:L361:{isLoading ? (` | {isLoading ? ( | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `a:L381:← Torna ai pacchetti` | ← Torna ai pacchetti | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L422:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L423:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L427:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L431:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L436:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L440:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L446:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `button:L447:🎯 Torna al gioco →` | 🎯 Torna al gioco → | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `a:L454:Vedi ricevuta · email a sara@…` | Vedi ricevuta · email a sara@… | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `button:L481:Acquista crediti ora` | Acquista crediti ora | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `button:L488:Ok, continua` | Ok, continua | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `div:L504:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `button:L515:Acquista crediti` | Acquista crediti | `TODO` | no rule matched |
-| `sp6-libro-game-quota-credits.jsx` | `button:L522:Ok` | Ok | `TODO` | no rule matched |
-| `sp6-libro-game-resume-state.html` | `button:L241:🌗` | 🌗 | `TODO` | no rule matched |
-| `sp6-libro-game-resume-state.html` | `div:L253:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-resume-state.jsx` | `button:L118:‹` | ‹ | `TODO` | no rule matched |
-| `sp6-libro-game-resume-state.jsx` | `button:L395:Come funziona la prima session` | Come funziona la prima sessione → | `TODO` | no rule matched |
-| `sp6-libro-game-resume-state.jsx` | `button:L554:Vedi tutti →` | Vedi tutti → | `TODO` | no rule matched |
-| `sp6-libro-game-resume-state.jsx` | `button:L788:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-resume-state.jsx` | `button:L927:+ Nuova campagna` | + Nuova campagna | `TODO` | no rule matched |
-| `sp6-libro-game-resume-state.jsx` | `button:L1043:Modifica →` | Modifica → | `TODO` | no rule matched |
-| `sp6-libro-game-resume-state.jsx` | `button:L1096:Vedi tutti →` | Vedi tutti → | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L85:←` | ← | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L87:⋯` | ⋯ | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L96:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L97:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L98:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L101:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L193:Mostra EN intanto →` | Mostra EN intanto → | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L219:📷 Scansiona il libro` | 📷 Scansiona il libro | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L220:🐛 Segnala link errato` | 🐛 Segnala link errato | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `div:L238:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L239:← {navPrev}` | ← {navPrev} | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L240:Letto, vai a {navNext} →` | Letto, vai a {navNext} → | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `div:L244:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L246:IT` | IT | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L247:EN` | EN | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L248:IT + EN` | IT + EN | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `div:L253:` |  | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L255:A−` | A− | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L256:A` | A | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L257:A+` | A+ | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L260:≡` | ≡ | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L261:≡` | ≡ | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L262:≡` | ≡ | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L265:☀` | ☀ | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L266:🌙` | 🌙 | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `button:L267:📜` | 📜 | `TODO` | no rule matched |
-| `sp6-libro-game-translation-viewer.jsx` | `div:L272:` |  | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L98:←` | ← | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L219:‹` | ‹ | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L228:›` | › | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L248:{cell.day}
-              {isWa` | {cell.day}
-              {isWarning && ! | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L367:Cambia` | Cambia | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L413:↻ Riprogramma` | ↻ Riprogramma | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L418:Ignora — non si sovrappone` | Ignora — non si sovrappone | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L568:×` | × | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L599:×` | × | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L627:−` | − | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L760:` |  | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L794:` |  | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L831:` |  | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1092:← Indietro` | ← Indietro | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1128:×` | × | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1137:Bozza` | Bozza | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1328:Cosa` | Cosa | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1328:2h` | 2h | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1328:3h` | 3h | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1328:4h` | 4h | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1328:Giornata` | Giornata | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1328:Casa host` | Casa host | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1328:Casa membro` | Casa membro | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1328:Indirizzo` | Indirizzo | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1328:Online · TTS` | Online · TTS | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1328:Vengo` | Vengo | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1328:Forse` | Forse | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1328:No` | No | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `div:L1451:{steps.map(s => (` | {steps.map(s => ( | `TODO` | no rule matched |
-| `sp7-game-night-create.jsx` | `button:L1548:` |  | `TODO` | no rule matched |
-| `sp7-game-night-detail-rsvp.jsx` | `button:L218:` |  | `TODO` | no rule matched |
-| `sp7-game-night-detail-rsvp.jsx` | `button:L266:` |  | `TODO` | no rule matched |
-| `sp7-game-night-detail-rsvp.jsx` | `button:L446:✕ Cancella` | ✕ Cancella | `TODO` | no rule matched |
-| `sp7-game-night-detail-rsvp.jsx` | `button:L487:Cambia` | Cambia | `TODO` | no rule matched |
-| `sp7-game-night-detail-rsvp.jsx` | `button:L822:＋` | ＋ | `TODO` | no rule matched |
-| `sp7-game-night-detail-rsvp.jsx` | `button:L873:` |  | `TODO` | no rule matched |
-| `sp7-game-night-detail-rsvp.jsx` | `button:L884:` |  | `TODO` | no rule matched |
-| `sp7-game-night-detail-rsvp.jsx` | `button:L895:` |  | `TODO` | no rule matched |
-| `sp7-game-night-detail-rsvp.jsx` | `button:L944:Cambia` | Cambia | `TODO` | no rule matched |
-| `sp7-game-night-detail-rsvp.jsx` | `button:L1075:📅 Crea il rematch` | 📅 Crea il rematch | `TODO` | no rule matched |
-| `sp7-game-night-detail-rsvp.jsx` | `button:L1141:←` | ← | `TODO` | no rule matched |
-| `sp7-game-night-detail-rsvp.jsx` | `button:L1150:↗` | ↗ | `TODO` | no rule matched |
-| `sp7-game-night-detail-rsvp.jsx` | `button:L1431:` |  | `TODO` | no rule matched |
-| `sp7-game-night-join-public.jsx` | `button:L164:Cambia risposta` | Cambia risposta | `TODO` | no rule matched |
-| `sp7-game-night-join-public.jsx` | `button:L190:{submitting ? 'Invio risposta…` | {submitting ? 'Invio risposta…' : 'Confe | `TODO` | no rule matched |
-| `sp7-game-night-join-public.jsx` | `button:L207:Non posso` | Non posso | `TODO` | no rule matched |
-| `sp7-game-night-join-public.jsx` | `button:L235:Richiedi un nuovo invito` | Richiedi un nuovo invito | `TODO` | no rule matched |
-| `sp7-game-night-join-public.jsx` | `button:L279:Crea account` | Crea account | `TODO` | no rule matched |
-| `sp7-game-night-join-public.jsx` | `button:L297:Pending — empty form` | Pending — empty form | `TODO` | no rule matched |
-| `sp7-game-night-join-public.jsx` | `button:L297:Submitting` | Submitting | `TODO` | no rule matched |
-| `sp7-game-night-join-public.jsx` | `button:L297:Already responded as` | Already responded as  | `TODO` | no rule matched |
-| `sp7-game-night-join-public.jsx` | `button:L297:410 Gone (expired)` | 410 Gone (expired) | `TODO` | no rule matched |
-| `sp7-game-night-join-public.jsx` | `button:L297:429 Rate-limited` | 429 Rate-limited | `TODO` | no rule matched |
-| `sp7-game-night-live.jsx` | `button:L254:←` | ← | `TODO` | no rule matched |
-| `sp7-game-night-live.jsx` | `button:L687:Apri roster →` | Apri roster → | `TODO` | no rule matched |
-| `sp7-game-night-live.jsx` | `button:L791:Salta gioco` | Salta gioco | `TODO` | no rule matched |
-| `sp7-game-night-live.jsx` | `button:L797:Termina serata` | Termina serata | `TODO` | no rule matched |
-| `sp7-game-night-live.jsx` | `button:L1088:↗` | ↗ | `TODO` | no rule matched |
-| `sp7-game-night-live.jsx` | `button:L1197:` |  | `TODO` | no rule matched |
-| `sp7-game-night-live.jsx` | `button:L1204:Pausa lunga · salva e chiudi` | Pausa lunga · salva e chiudi | `TODO` | no rule matched |
-| `sp7-game-night-live.jsx` | `button:L1443:` |  | `TODO` | no rule matched |
-| `sp7-game-night-summary.jsx` | `button:L579:` |  | `TODO` | no rule matched |
-| `sp7-game-night-summary.jsx` | `button:L756:` |  | `TODO` | no rule matched |
-| `sp7-game-night-summary.jsx` | `a:L825:← Torna alla lista` | ← Torna alla lista | `TODO` | no rule matched |
-| `sp7-game-night-summary.jsx` | `button:L1020:` |  | `TODO` | no rule matched |
-| `sp7-game-night-transition.jsx` | `button:L299:↻ Riprova` | ↻ Riprova | `TODO` | no rule matched |
-| `sp7-game-night-transition.jsx` | `button:L305:Procedi senza` | Procedi senza | `TODO` | no rule matched |
-| `sp7-game-night-transition.jsx` | `button:L498:Annulla` | Annulla | `TODO` | no rule matched |
-| `sp7-game-night-transition.jsx` | `button:L538:×` | × | `TODO` | no rule matched |
-| `sp7-game-night-transition.jsx` | `button:L555:` |  | `TODO` | no rule matched |
-| `sp7-game-night-transition.jsx` | `button:L562:` |  | `TODO` | no rule matched |
-| `sp7-game-night-transition.jsx` | `button:L843:` |  | `TODO` | no rule matched |
+| `00-hub.html` | `a:L120:Desktop` | Desktop | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L121:Drawer` | Drawer | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L122:Tokens` | Tokens | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L124:Auth` | Auth | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `button:L131:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `div:L142:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L150:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L158:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L166:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L174:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L182:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L190:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L198:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L206:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L214:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L222:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L230:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L238:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L246:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L254:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L262:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L270:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L278:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L286:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `00-hub.html` | `a:L294:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `01-screens.html` | `a:L371:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `01-screens.html` | `a:L375:Desktop →` | Desktop → | `OUT_OF_SCOPE` | no rule matched  |
+| `01-screens.html` | `button:L378:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `a:L562:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `a:L566:Hub` | Hub | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `a:L567:Drawer →` | Drawer → | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `button:L570:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `button:L581:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `button:L585:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `button:L589:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `button:L609:+ Nuovo` | + Nuovo | `03-drawer-variants.html` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L615:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L616:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L618:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L619:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L620:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L621:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L622:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L623:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L624:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L625:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L627:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L628:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L629:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L647:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L648:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L658:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L659:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L660:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L661:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L662:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L664:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L665:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L666:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `button:L704:🤖 Chiedi AI` | 🤖 Chiedi AI | `03-drawer-variants.html` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L711:📋 Overview` | 📋 Overview | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L712:📄 KB` | 📄 KB | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L713:🤖 Agenti` | 🤖 Agenti | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L714:💬 Chat` | 💬 Chat | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L717:📊 Stats` | 📊 Stats | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L718:📜 Storico` | 📜 Storico | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `button:L844:🤖 Chiedi AI` | 🤖 Chiedi AI | `03-drawer-variants.html` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L853:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `button:L936:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L939:📋 Live` | 📋 Live | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L941:🕒 Timeline` | 🕒 Timeline | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `button:L967:▶️ Riprendi` | ▶️ Riprendi | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `02-desktop-patterns.html` | `button:L968:📊` | 📊 | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `button:L969:↗️` | ↗️ | `OUT_OF_SCOPE` | no rule matched  |
+| `02-desktop-patterns.html` | `div:L988:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `a:L264:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `a:L267:← Desktop` | ← Desktop | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `a:L268:Hub` | Hub | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `a:L269:Tokens →` | Tokens → | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L272:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L298:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L313:▶️ Riprendi` | ▶️ Riprendi | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `03-drawer-variants.html` | `button:L314:📊` | 📊 | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L335:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L357:💬 Chat` | 💬 Chat | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L358:🔄` | 🔄 | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L365:↕ Toggle expand` | ↕ Toggle expand | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L382:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L401:🔄 Reindex` | 🔄 Reindex | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L402:⬇️` | ⬇️ | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L403:👁️` | 👁️ | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L422:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L440:💬 Continua` | 💬 Continua | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L441:📦` | 📦 | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L471:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L492:📊 Confronta` | 📊 Confronta | `04-design-system.html` | no rule matched  |
+| `03-drawer-variants.html` | `button:L493:↗️` | ↗️ | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L549:📊 Stats dettaglio` | 📊 Stats dettaglio | `OUT_OF_SCOPE` | no rule matched  |
+| `03-drawer-variants.html` | `button:L550:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `a:L388:Desktop` | Desktop | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `a:L389:Drawer` | Drawer | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `a:L390:Tokens` | Tokens | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `a:L391:Dark` | Dark | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `button:L394:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `a:L397:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `a:L398:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `a:L399:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `a:L400:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `a:L401:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `a:L402:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `a:L403:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `a:L404:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `div:L471:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `div:L528:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `div:L535:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `div:L542:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `div:L554:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `button:L571:Small` | Small | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `button:L572:Medium` | Medium | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `button:L573:Large` | Large | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `button:L579:Md` | Md | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `button:L580:Lg` | Lg | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `button:L581:Xl` | Xl | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `button:L582:2xl` | 2xl | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `div:L594:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `button:L595:Primary action` | Primary action | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `button:L596:Secondary` | Secondary | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `button:L597:Ghost` | Ghost | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `div:L603:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `div:L629:Type ·` | Type · | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `div:L630:Status ·` | Status · | `OUT_OF_SCOPE` | no rule matched  |
+| `04-design-system.html` | `div:L631:Turn ·` | Turn · | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `a:L369:Desktop` | Desktop | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `a:L370:Drawer` | Drawer | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `a:L371:Tokens` | Tokens | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `a:L372:Dark` | Dark | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `button:L375:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `button:L388:☀️ Light only` | ☀️ Light only | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `button:L389:◐ Split view` | ◐ Split view | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `button:L390:🌙 Dark only` | 🌙 Dark only | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `div:L432:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `div:L450:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `button:L489:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `button:L513:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `span:L541:Info` | Info | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `span:L542:Stats` | Stats | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `span:L543:Docs` | Docs | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `span:L564:Info` | Info | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `span:L565:Stats` | Stats | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `span:L566:Docs` | Docs | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `button:L600:Crea sessione` | Crea sessione | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `button:L601:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `button:L625:Crea sessione` | Crea sessione | `OUT_OF_SCOPE` | no rule matched  |
+| `05-dark-mode.html` | `button:L626:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `auth-flow.html` | `a:L114:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `auth-flow.html` | `button:L125:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `auth-flow.jsx` | `button:L139:{p.icon}` | {p.icon} | `OUT_OF_SCOPE` | no rule matched  |
+| `auth-flow.jsx` | `button:L228:{children}` | {children} | `OUT_OF_SCOPE` | no rule matched  |
+| `auth-flow.jsx` | `button:L614:Cambia email` | Cambia email | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L217:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `div:L250:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L271:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L272:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L293:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L294:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L311:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L312:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L329:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L330:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L347:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L348:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L365:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L366:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L383:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L384:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L401:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L402:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L419:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L420:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `div:L431:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L452:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L453:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L470:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L471:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L488:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L489:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L506:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L507:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L524:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L525:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L542:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L543:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L560:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L561:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L585:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L586:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L603:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L604:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L621:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L622:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L639:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L640:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L665:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L666:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L683:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L684:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L701:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L702:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `div:L715:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L736:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L737:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L754:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L755:↗ Apri` | ↗ Apri | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-game-night-storyboard.html` | `button:L781:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L390:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L408:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L410:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L414:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L427:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L436:🔢 §218 manuale` | 🔢 §218 manuale | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L437:↩ Salta encounter` | ↩ Salta encounter | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L446:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L448:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L452:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L466:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L474:🔢 Inserisci §218 manualmente` | 🔢 Inserisci §218 manualmente | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L475:↩ Salta encounter (rischio: re` | ↩ Salta encounter (rischio: regole inven | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L496:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L504:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L507:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L510:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L513:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L516:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L520:✕ Annulla` | ✕ Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L527:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L534:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L535:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L536:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L537:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L538:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L540:✕ Annulla` | ✕ Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L560:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L562:📷` | 📷 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L565:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L583:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L591:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L599:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L609:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L613:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L620:🔄 Rifotografa` | 🔄 Rifotografa | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L622:✓ Risolvi →` | ✓ Risolvi → | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L630:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L632:📷` | 📷 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L636:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L654:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L662:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L670:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L681:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L685:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L692:✓ Risolvi e torna a §147 →` | ✓ Risolvi e torna a §147 → | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L693:🔄 Rifotografa` | 🔄 Rifotografa | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L714:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L716:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L726:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L731:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L736:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L743:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L757:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L759:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L769:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L774:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L779:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `div:L784:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-encounter-cheatsheet.html` | `button:L791:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L319:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L337:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L339:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L365:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L369:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L373:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L387:+ nota dogfood` | + nota dogfood | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L394:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L412:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L413:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L414:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L439:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L441:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L455:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L459:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L463:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L478:+ nota dogfood` | + nota dogfood | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L485:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L494:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L495:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L496:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L525:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L527:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L545:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L546:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `div:L554:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L568:+ nota dogfood` | + nota dogfood | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L575:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L590:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L591:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L592:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `div:L602:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L631:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L633:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `div:L644:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `div:L648:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L650:📑 È un range (es. §147-149) —` | 📑 È un range (es. §147-149) — inserisci  | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L651:↩ Annulla, è una pagina sbagli` | ↩ Annulla, è una pagina sbagliata | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L654:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L666:+ nota dogfood` | + nota dogfood | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L673:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `div:L693:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `div:L697:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L699:📑 È un range (es. §147-149)` | 📑 È un range (es. §147-149) | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L700:↩ Annulla — è la pagina sbagli` | ↩ Annulla — è la pagina sbagliata | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-error-states.html` | `button:L702:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L344:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L367:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `div:L396:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L404:Info` | Info | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L405:AI Chat` | AI Chat | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L406:Toolbox` | Toolbox | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `div:L410:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L438:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `div:L483:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L506:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `div:L510:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `div:L519:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L530:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `div:L542:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L562:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `div:L565:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L570:← Libreria` | ← Libreria | `sp4-library-desktop.html` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L571:🔄 Riprova` | 🔄 Riprova | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L579:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `div:L583:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L588:← Libreria` | ← Libreria | `sp4-library-desktop.html` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L589:🔄 Riprova` | 🔄 Riprova | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L612:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `div:L615:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L620:← Libreria` | ← Libreria | `sp4-library-desktop.html` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L621:+ Aggiungi al catalogo` | + Aggiungi al catalogo | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L629:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `div:L633:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L638:← Libreria` | ← Libreria | `sp4-library-desktop.html` | no rule matched  |
+| `librogame-runthrough-game-detail.html` | `button:L639:+ Aggiungi al catalogo` | + Aggiungi al catalogo | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L313:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L331:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L333:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L393:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L395:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L463:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `div:L482:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `div:L491:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L516:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `div:L526:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `div:L535:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L582:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L637:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L693:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L695:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `div:L712:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L713:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L750:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L752:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L780:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L787:📒 Apri agente Arbitro Eldoria` | 📒 Apri agente Arbitro Eldoria | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-game-onboarding.html` | `button:L788:🔍 Esplora knowledge base` | 🔍 Esplora knowledge base | `sp4-kb-hub.html` | no rule matched  |
+| `librogame-runthrough-glossary-editor.html` | `button:L207:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-glossary-editor.html` | `div:L220:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-library-search.html` | `button:L171:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-library-search.html` | `button:L272:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-library-search.html` | `button:L295:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-library-search.html` | `a:L299:cancella ricerca` | cancella ricerca | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-library-search.html` | `button:L317:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-library-search.html` | `button:L322:🌐 Sfoglia catalogo` | 🌐 Sfoglia catalogo | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-library-search.html` | `button:L333:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-library-search.html` | `button:L338:🌐 Sfoglia catalogo` | 🌐 Sfoglia catalogo | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L242:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L259:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L270:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L271:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L272:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L275:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L276:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L284:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L285:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L286:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L301:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L303:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L304:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L305:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L307:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L314:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L331:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L332:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L336:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L337:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L338:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L354:➤` | ➤ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L372:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L381:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L382:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L383:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L386:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L399:🎲 Tira iniziativa party (4d20)` | 🎲 Tira iniziativa party (4d20) | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L414:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L414:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L414:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L414:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L415:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L416:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L417:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L418:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L419:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L423:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L427:🎲 Tira iniziativa party (4d20)` | 🎲 Tira iniziativa party (4d20) | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L451:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L453:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L453:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L453:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L455:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L474:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L476:➤` | ➤ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L486:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L486:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L486:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L489:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L505:➤` | ➤ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L522:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L524:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L524:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L524:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L526:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L527:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L549:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L550:📚 Salva termine` | 📚 Salva termine | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L560:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L568:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `div:L569:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L583:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-play-session.html` | `button:L584:📚 Salva` | 📚 Salva | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-quota-credits.html` | `button:L118:Tutti` | Tutti | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-quota-credits.html` | `button:L119:1` | 1 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-quota-credits.html` | `button:L120:2` | 2 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-quota-credits.html` | `button:L121:3` | 3 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-quota-credits.html` | `button:L122:4` | 4 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-quota-credits.html` | `button:L123:Soft` | Soft | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-quota-credits.html` | `button:L127:Entrambi` | Entrambi | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-quota-credits.html` | `button:L128:Mobile` | Mobile | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-quota-credits.html` | `button:L129:Desktop` | Desktop | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-quota-credits.html` | `button:L133:Light` | Light | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-quota-credits.html` | `button:L134:Dark` | Dark | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L360:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L379:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L412:📖 Inizia campagna` | 📖 Inizia campagna | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L421:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L434:📖 Inizia campagna` | 📖 Inizia campagna | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L456:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L486:▶ Riprendi` | ▶ Riprendi | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L487:⋯ Opzioni` | ⋯ Opzioni | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L491:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L494:Nuova campagna` | Nuova campagna | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L503:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L527:▶ Riprendi` | ▶ Riprendi | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L528:⋯ Opzioni` | ⋯ Opzioni | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L531:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L534:Nuova campagna` | Nuova campagna | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L555:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L566:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L579:▶ Riprendi` | ▶ Riprendi | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L580:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L585:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L598:▶ Riprendi` | ▶ Riprendi | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L599:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L604:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L615:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L625:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L635:▶ Riprendi` | ▶ Riprendi | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L636:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L640:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L650:▶ Riprendi` | ▶ Riprendi | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L651:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L655:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L679:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L688:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L689:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L690:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L691:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L692:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L698:▶ Riprendi comunque` | ▶ Riprendi comunque | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L699:📦 Archivia + Nuova campagna` | 📦 Archivia + Nuova campagna | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L700:✨ Solo nuova (mantieni archivi` | ✨ Solo nuova (mantieni archivio) | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L710:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L718:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L719:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L720:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L721:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `div:L722:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L726:▶ Riprendi comunque` | ▶ Riprendi comunque | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L727:📦 Archivia + Nuova campagna` | 📦 Archivia + Nuova campagna | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-resume-picker.html` | `button:L728:✨ Solo nuova (mantieni archivi` | ✨ Solo nuova (mantieni archivio) | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L227:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L248:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L257:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L267:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L268:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L269:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L270:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L282:Riepilogo` | Riepilogo | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L283:Riprendi più tardi →` | Riprendi più tardi → | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L293:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L301:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L304:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L305:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L306:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L307:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L311:Riepilogo dettagliato` | Riepilogo dettagliato | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L311:Riprendi più tardi →` | Riprendi più tardi → | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L331:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L341:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L342:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L343:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L344:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L348:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L349:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L350:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L351:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L362:📤 Condividi` | 📤 Condividi | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L363:📖 Nuova campagna →` | 📖 Nuova campagna → | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L373:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L383:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L384:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L385:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L389:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L390:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L391:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L392:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L396:📤 Condividi outcome` | 📤 Condividi outcome | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L396:📖 Nuova campagna →` | 📖 Nuova campagna → | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L416:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L430:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L431:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L432:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L433:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L437:Termina campagna` | Termina campagna | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L438:⟲ Riprendi dal checkpoint` | ⟲ Riprendi dal checkpoint | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L448:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L459:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L460:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L461:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `div:L462:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L465:Termina campagna` | Termina campagna | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L465:⟲ Riprendi dal checkpoint` | ⟲ Riprendi dal checkpoint | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L485:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L513:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L514:Conferma e archivia` | Conferma e archivia | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L524:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L537:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-session-end.html` | `button:L537:Conferma e archivia` | Conferma e archivia | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L319:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L346:💬 Chat` | 💬 Chat | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L347:📖 Storybook` | 📖 Storybook | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L348:🧰 Toolbox` | 🧰 Toolbox | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `div:L367:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `div:L371:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L374:👍` | 👍 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L375:📋 Copia` | 📋 Copia | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L376:🔁` | 🔁 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `div:L382:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L383:Componenti necessari?` | Componenti necessari? | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L384:Chi inizia?` | Chi inizia? | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L389:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `div:L426:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `div:L430:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L433:👍 Utile` | 👍 Utile | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L434:📋 Copia` | 📋 Copia | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L435:🔁 Rigenera` | 🔁 Rigenera | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `div:L440:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L441:Componenti necessari?` | Componenti necessari? | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L442:Chi inizia?` | Chi inizia? | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L443:Regola dadi neri` | Regola dadi neri | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L447:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L472:💬 Chat` | 💬 Chat | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L473:📖 Storybook` | 📖 Storybook | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L474:🧰 Toolbox` | 🧰 Toolbox | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `div:L484:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `div:L487:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L490:📖 Rules KB` | 📖 Rules KB | `sp4-kb-hub.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L491:🔁` | 🔁 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L498:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `div:L519:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `div:L530:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `div:L533:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L536:📖 Rules KB` | 📖 Rules KB | `sp4-kb-hub.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L537:🔁 Rigenera` | 🔁 Rigenera | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L544:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L566:💬 Chat` | 💬 Chat | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L567:📖 Storybook` | 📖 Storybook | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L568:🧰 Toolbox` | 🧰 Toolbox | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L576:🎲 Cambia gioco a Tainted Grail` | 🎲 Cambia gioco a Tainted Grail | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L577:🤖 Cerca un agente Tainted Grai` | 🤖 Cerca un agente Tainted Grail | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L578:↩️ Resta su Eldoria` | ↩️ Resta su Eldoria | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `div:L580:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L583:👍 Honest` | 👍 Honest | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L590:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L611:🎲 Cambia gioco a Tainted Grail` | 🎲 Cambia gioco a Tainted Grail | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L612:🤖 Cerca un agente Tainted Grai` | 🤖 Cerca un agente Tainted Grail | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L613:↩️ Resta su Eldoria` | ↩️ Resta su Eldoria | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `div:L615:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L617:👍 Honest answer` | 👍 Honest answer | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L621:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L642:💬 Chat` | 💬 Chat | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L643:📖 Storybook` | 📖 Storybook | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L644:🧰 Toolbox` | 🧰 Toolbox | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L656:⏳` | ⏳ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-chat.html` | `button:L677:⏳` | ⏳ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L234:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L258:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L291:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L292:Avanti →` | Avanti → | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L306:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L322:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L322:Avanti →` | Avanti → | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L342:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L358:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L363:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L368:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L383:← Indietro` | ← Indietro | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L384:Avanti →` | Avanti → | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L395:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L405:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L406:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L407:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L411:← Indietro` | ← Indietro | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L411:Avanti →` | Avanti → | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L431:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `div:L439:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `div:L446:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `div:L447:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `div:L448:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `div:L449:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L461:← Indietro` | ← Indietro | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L462:📖 Inizia sessione` | 📖 Inizia sessione | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L473:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `div:L481:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `div:L482:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `div:L483:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `div:L484:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `div:L485:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L489:← Indietro` | ← Indietro | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L489:📖 Inizia sessione` | 📖 Inizia sessione | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L509:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L528:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L529:Avanti →` | Avanti → | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L540:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L554:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-setup-wizard.html` | `button:L554:Avanti →` | Avanti → | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L418:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L436:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L438:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L456:🖼️` | 🖼️ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L457:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L458:🔄` | 🔄 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L467:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L469:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L477:🖼️ Scegli foto` | 🖼️ Scegli foto | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L478:📷 Usa fotocamera` | 📷 Usa fotocamera | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L499:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L507:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L510:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L513:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L516:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L520:✕ Annulla` | ✕ Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L527:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L534:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L535:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L536:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L537:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L539:✕ Annulla` | ✕ Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L559:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L561:📷` | 📷 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L570:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L572:Traduci` | Traduci | `librogame-runthrough-translate-viewer.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L576:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L578:▶ Traduci §147` | ▶ Traduci §147 | `librogame-runthrough-translate-viewer.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L582:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L584:Traduci` | Traduci | `librogame-runthrough-translate-viewer.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L592:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L592:📷` | 📷 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L605:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L605:Traduci §146` | Traduci §146 | `librogame-runthrough-translate-viewer.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L606:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L606:▶ Traduci §147` | ▶ Traduci §147 | `librogame-runthrough-translate-viewer.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L607:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L607:Traduci §148` | Traduci §148 | `librogame-runthrough-translate-viewer.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L626:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L636:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L648:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `div:L660:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L687:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L689:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L706:← §146` | ← §146 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L708:A−` | A− | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L709:A` | A | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L710:A+` | A+ | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L712:Letto, vai a §148 →` | Letto, vai a §148 → | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L719:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L719:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L733:← §146` | ← §146 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L737:A−` | A− | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L737:A` | A | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L737:A+` | A+ | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L738:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L741:Letto, vai a §148 →` | Letto, vai a §148 → | `librogame-runthrough-play-session.html` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L759:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L769:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L774:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L779:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L792:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L805:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L806:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `librogame-runthrough-translate-viewer.html` | `button:L807:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L39:🔍` | 🔍 | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L40:🔔` | 🔔 | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L71:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L72:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L73:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L74:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L75:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L89:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L136:{a}` | {a} | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L294:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L298:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L308:{f.lb}` | {f.lb} | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `div:L587:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L630:{f}` | {f} | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `div:L636:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L663:{f}` | {f} | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `div:L671:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `div:L696:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `div:L739:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L776:📊` | 📊 | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L777:🧰` | 🧰 | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L778:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L854:Gallery (3 phones)` | Gallery (3 phones) | `OUT_OF_SCOPE` | no rule matched  |
+| `mobile-app.jsx` | `button:L858:Focus (1 phone)` | Focus (1 phone) | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L129:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `div:L144:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `div:L145:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `div:L146:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `div:L147:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `div:L148:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L151:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L152:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L153:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L154:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `div:L170:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `div:L171:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `div:L172:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L175:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L176:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L177:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L182:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `div:L200:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `div:L201:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L204:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L205:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L206:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L207:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L232:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L233:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L234:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-bottom-mobile.html` | `button:L235:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `button:L166:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `button:L184:💬` | 💬 | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `button:L209:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `div:L223:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `button:L225:➤` | ➤ | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `div:L227:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `button:L260:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `div:L274:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `button:L276:➤` | ➤ | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `div:L278:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `button:L293:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `div:L302:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `button:L304:➤` | ➤ | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `button:L330:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `div:L337:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `button:L339:➤` | ➤ | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-chat-panel.html` | `div:L341:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-topbar.html` | `button:L133:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-topbar.html` | `button:L155:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-topbar.html` | `button:L177:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-topbar.html` | `button:L202:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-topbar.html` | `button:L209:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-topbar.html` | `button:L231:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-topbar.html` | `button:L235:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `nanolith-nav-topbar.html` | `button:L243:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `notifications.html` | `a:L83:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `notifications.html` | `a:L89:Auth` | Auth | `settings.html` | no rule matched  |
+| `notifications.html` | `button:L95:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `notifications.jsx` | `button:L91:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `notifications.jsx` | `button:L111:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `notifications.jsx` | `button:L235:{notif.cta}` | {notif.cta} | `OUT_OF_SCOPE` | no rule matched  |
+| `notifications.jsx` | `button:L242:Archivia` | Archivia | `settings.html` | no rule matched  |
+| `notifications.jsx` | `button:L249:Segna letto` | Segna letto | `settings.html` | no rule matched  |
+| `notifications.jsx` | `button:L319:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `notifications.jsx` | `button:L336:{notif.cta}` | {notif.cta} | `OUT_OF_SCOPE` | no rule matched  |
+| `notifications.jsx` | `button:L346:Archivia notifica` | Archivia notifica | `settings.html` | no rule matched  |
+| `notifications.jsx` | `button:L370:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `notifications.jsx` | `button:L421:Controlla impostazioni notific` | Controlla impostazioni notifiche | `notifications.html` | no rule matched  |
+| `onboarding.jsx` | `button:L114:Salta` | Salta | `onboarding.html` | no rule matched  |
+| `onboarding.jsx` | `button:L125:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `onboarding.jsx` | `div:L153:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `onboarding.jsx` | `button:L159:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `onboarding.jsx` | `button:L177:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `onboarding.jsx` | `button:L198:← Indietro` | ← Indietro | `onboarding.html` | no rule matched  |
+| `onboarding.jsx` | `button:L201:{nextLabel}` | {nextLabel} | `OUT_OF_SCOPE` | no rule matched  |
+| `onboarding.jsx` | `button:L234:Inizia il tour →` | Inizia il tour → | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `onboarding.jsx` | `button:L237:Salta, esploro da solo` | Salta, esploro da solo | `onboarding.html` | no rule matched  |
+| `onboarding.jsx` | `button:L333:Vai alla home →` | Vai alla home → | `sp4-dashboard.html` | no rule matched  |
+| `onboarding.jsx` | `a:L393:Vai al contenuto` | Vai al contenuto | `onboarding.html` | no rule matched  |
+| `onboarding.jsx` | `a:L397:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `onboarding.jsx` | `button:L409:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `public.html` | `button:L241:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `public.jsx` | `a:L17:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `public.jsx` | `a:L25:Prodotto` | Prodotto | `sp3-how-it-works.html` | no rule matched  |
+| `public.jsx` | `a:L25:Prezzi` | Prezzi | `sp3-how-it-works.html` | no rule matched  |
+| `public.jsx` | `a:L25:Chi siamo` | Chi siamo | `sp3-how-it-works.html` | no rule matched  |
+| `public.jsx` | `a:L25:Contatti` | Contatti | `sp3-how-it-works.html` | no rule matched  |
+| `public.jsx` | `a:L33:Inizia gratis` | Inizia gratis | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `public.jsx` | `button:L35:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `public.jsx` | `a:L45:Prodotto` | Prodotto | `sp3-how-it-works.html` | no rule matched  |
+| `public.jsx` | `a:L45:Prezzi` | Prezzi | `sp3-how-it-works.html` | no rule matched  |
+| `public.jsx` | `a:L45:Chi siamo` | Chi siamo | `sp3-how-it-works.html` | no rule matched  |
+| `public.jsx` | `a:L45:Contatti` | Contatti | `sp3-how-it-works.html` | no rule matched  |
+| `public.jsx` | `a:L51:Inizia gratis →` | Inizia gratis → | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `public.jsx` | `a:L76:Inizia gratis — è gratuito` | Inizia gratis — è gratuito | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `public.jsx` | `button:L79:Vedi come funziona ↓` | Vedi come funziona ↓ | `sp3-how-it-works.html` | no rule matched  |
+| `public.jsx` | `div:L96:{stats.map(s => (` | {stats.map(s => ( | `sp3-how-it-works.html` | no rule matched  |
+| `public.jsx` | `a:L185:Crea il tuo account →` | Crea il tuo account → | `settings.html` | no rule matched  |
+| `public.jsx` | `a:L225:{tier.cta}` | {tier.cta} | `OUT_OF_SCOPE` | no rule matched  |
+| `public.jsx` | `button:L259:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `public.jsx` | `button:L446:{t === 'terms' ? 'Termini' : '` | {t === 'terms' ? 'Termini' : 'Privacy'} | `OUT_OF_SCOPE` | no rule matched  |
+| `public.jsx` | `a:L458:{s.title}` | {s.title} | `OUT_OF_SCOPE` | no rule matched  |
+| `public.jsx` | `a:L486:legal@meepleai.it` | legal@meepleai.it | `sp3-legal.html` | no rule matched  |
+| `public.jsx` | `button:L556:Invia messaggio →` | Invia messaggio → | `OUT_OF_SCOPE` | no rule matched  |
+| `public.jsx` | `div:L564:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `public.jsx` | `a:L571:ciao@meepleai.it` | ciao@meepleai.it | `sp3-how-it-works.html` | no rule matched  |
+| `public.jsx` | `div:L583:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `public.jsx` | `a:L591:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `public.jsx` | `a:L640:{lk.l}` | {lk.l} | `OUT_OF_SCOPE` | no rule matched  |
+| `settings.html` | `a:L122:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `settings.html` | `a:L131:Auth` | Auth | `sp4-dashboard.html` | no rule matched  |
+| `settings.html` | `button:L136:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `settings.jsx` | `button:L161:{label}` | {label} | `OUT_OF_SCOPE` | no rule matched  |
+| `settings.jsx` | `button:L183:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `settings.jsx` | `button:L186:Salva modifiche` | Salva modifiche | `OUT_OF_SCOPE` | no rule matched  |
+| `settings.jsx` | `button:L224:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `settings.jsx` | `button:L226:{confirmLabel}` | {confirmLabel} | `OUT_OF_SCOPE` | no rule matched  |
+| `settings.jsx` | `button:L265:Cambia avatar` | Cambia avatar | `sp4-dashboard.html` | no rule matched  |
+| `settings.jsx` | `button:L334:Aggiorna password` | Aggiorna password | `sp4-dashboard.html` | no rule matched  |
+| `settings.jsx` | `button:L578:+ Nuova chiave` | + Nuova chiave | `sp4-dashboard.html` | no rule matched  |
+| `settings.jsx` | `button:L602:Revoca` | Revoca | `sp4-dashboard.html` | no rule matched  |
+| `settings.jsx` | `button:L671:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `settings.jsx` | `button:L673:Genera` | Genera | `sp4-dashboard.html` | no rule matched  |
+| `settings.jsx` | `button:L699:Chiudi` | Chiudi | `OUT_OF_SCOPE` | no rule matched  |
+| `settings.jsx` | `button:L787:Disconnetti` | Disconnetti | `sp4-dashboard.html` | no rule matched  |
+| `settings.jsx` | `button:L795:Connetti` | Connetti | `sp4-dashboard.html` | no rule matched  |
+| `settings.jsx` | `button:L876:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `settings.jsx` | `button:L983:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `settings.jsx` | `button:L1026:‹ Indietro` | ‹ Indietro | `sp4-dashboard.html` | no rule matched  |
+| `sp3-accept-invite.jsx` | `button:L285:{loading && (` | {loading && ( | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-accept-invite.jsx` | `button:L314:{children}` | {children} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-accept-invite.jsx` | `button:L498:Aggiungi al calendario (.ics)` | Aggiungi al calendario (.ics) | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-accept-invite.jsx` | `a:L534:Torna alla home →` | Torna alla home → | `sp4-dashboard.html` | no rule matched  |
+| `sp3-accept-invite.jsx` | `button:L542:Ho cambiato idea, accetta l'in` | Ho cambiato idea, accetta l'invito | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-accept-invite.jsx` | `a:L585:Torna alla home` | Torna alla home | `sp4-dashboard.html` | no rule matched  |
+| `sp3-accept-invite.jsx` | `button:L878:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-faq-enhanced.jsx` | `button:L243:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-faq-enhanced.jsx` | `button:L274:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-faq-enhanced.jsx` | `button:L352:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-faq-enhanced.jsx` | `button:L408:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-faq-enhanced.jsx` | `a:L495:Contattaci →` | Contattaci → | `sp3-faq-enhanced.html` | no rule matched  |
+| `sp3-faq-enhanced.jsx` | `a:L677:Contattaci →` | Contattaci → | `sp3-faq-enhanced.html` | no rule matched  |
+| `sp3-faq-enhanced.jsx` | `button:L772:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-faq-enhanced.jsx` | `a:L831:Catalogo` | Catalogo | `sp3-faq-enhanced.html` | no rule matched  |
+| `sp3-faq-enhanced.jsx` | `button:L905:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-how-it-works.jsx` | `a:L567:Inizia gratis →` | Inizia gratis → | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `sp3-how-it-works.jsx` | `button:L682:{theme === 'light' ? '🌙 Dark'` | {theme === 'light' ? '🌙 Dark' : '☀️ Ligh | `sp3-join.html` | no rule matched  |
+| `sp3-join.jsx` | `button:L162:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-join.jsx` | `button:L289:{loading &&` | {loading && | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-join.jsx` | `a:L687:{l}` | {l} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-join.jsx` | `a:L699:Inizia gratis` | Inizia gratis | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `sp3-join.jsx` | `button:L824:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-legal.jsx` | `a:L133:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-legal.jsx` | `a:L383:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-legal.jsx` | `a:L399:Vai al modulo contatto →` | Vai al modulo contatto → | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-legal.jsx` | `a:L432:{p}` | {p} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-legal.jsx` | `button:L534:{theme === 'light' ? '🌙 Dark'` | {theme === 'light' ? '🌙 Dark' : '☀️ Ligh | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-library-public.jsx` | `button:L334:‹` | ‹ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-library-public.jsx` | `button:L335:›` | › | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-library-public.jsx` | `button:L482:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-library-public.jsx` | `a:L548:Crea account gratis` | Crea account gratis | `settings.html` | no rule matched  |
+| `sp3-library-public.jsx` | `a:L562:Hai già un account?` | Hai già un account? | `settings.html` | no rule matched  |
+| `sp3-library-public.jsx` | `button:L716:{theme === 'light' ? '🌙 Dark'` | {theme === 'light' ? '🌙 Dark' : '☀️ Ligh | `sp3-shared-game-detail.html` | no rule matched  |
+| `sp3-shared-game-detail.jsx` | `button:L351:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-shared-game-detail.jsx` | `button:L621:Apri ↗` | Apri ↗ | `sp3-shared-games.html` | no rule matched  |
+| `sp3-shared-game-detail.jsx` | `a:L767:Docs autore →` | Docs autore → | `sp3-shared-games.html` | no rule matched  |
+| `sp3-shared-game-detail.jsx` | `button:L840:🔒 Accedi per installare` | 🔒 Accedi per installare | `sp3-join.html` | no rule matched  |
+| `sp3-shared-game-detail.jsx` | `button:L867:Accedi →` | Accedi → | `sp3-join.html` | no rule matched  |
+| `sp3-shared-game-detail.jsx` | `button:L893:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-shared-game-detail.jsx` | `button:L901:↗` | ↗ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-shared-game-detail.jsx` | `a:L957:Catalogo` | Catalogo | `sp3-shared-games.html` | no rule matched  |
+| `sp3-shared-game-detail.jsx` | `a:L961:Accedi / Registrati` | Accedi / Registrati | `sp3-join.html` | no rule matched  |
+| `sp3-shared-game-detail.jsx` | `button:L1031:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-shared-games.jsx` | `button:L645:↺ Reset filtri` | ↺ Reset filtri | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-shared-games.jsx` | `button:L690:Riprova` | Riprova | `sp3-shared-game-detail.html` | no rule matched  |
+| `sp3-shared-games.jsx` | `button:L814:Carica altri ({Math.max(0, ALL` | Carica altri ({Math.max(0, ALL_GAMES.len | `sp3-shared-game-detail.html` | no rule matched  |
+| `sp3-shared-games.jsx` | `a:L867:{it.l}` | {it.l} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-shared-games.jsx` | `a:L880:Inizia gratis` | Inizia gratis | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `sp3-shared-games.jsx` | `button:L931:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-shared-games.jsx` | `button:L938:{p}` | {p} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-shared-games.jsx` | `button:L947:→` | → | `OUT_OF_SCOPE` | no rule matched  |
+| `sp3-shared-games.jsx` | `button:L1016:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-bgg-step.jsx` | `button:L91:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-bgg-step.jsx` | `button:L101:{tab}` | {tab} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-bgg-step.jsx` | `button:L277:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-bgg-step.jsx` | `button:L358:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-bgg-step.jsx` | `button:L470:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-bgg-step.jsx` | `button:L483:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-bgg-step.jsx` | `button:L579:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-bgg-step.jsx` | `button:L591:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-bgg-step.jsx` | `button:L679:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-bgg-step.jsx` | `button:L832:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-bgg-step.jsx` | `a:L972:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-pdf-dedup.jsx` | `button:L179:{children}` | {children} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-pdf-dedup.jsx` | `button:L197:{children}` | {children} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-pdf-dedup.jsx` | `button:L981:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-add-game-pdf-dedup.jsx` | `a:L1007:← Torna al hub` | ← Torna al hub | `sp4-dashboard.html` | no rule matched  |
+| `sp4-add-game-pdf-dedup.jsx` | `a:L1237:← Torna a 00-hub.html` | ← Torna a 00-hub.html | `sp4-dashboard.html` | no rule matched  |
+| `sp4-agent-detail.jsx` | `button:L222:↻ Riattiva` | ↻ Riattiva | `sp4-agents-index.html` | no rule matched  |
+| `sp4-agent-detail.jsx` | `button:L330:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agent-detail.jsx` | `button:L338:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agent-detail.jsx` | `button:L372:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agent-detail.jsx` | `button:L480:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agent-detail.jsx` | `button:L616:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agent-detail.jsx` | `button:L857:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agent-detail.jsx` | `button:L972:⊘ Archivia` | ⊘ Archivia | `sp4-agents-index.html` | no rule matched  |
+| `sp4-agent-detail.jsx` | `button:L980:🗑 Elimina (richiede conferma)` | 🗑 Elimina (richiede conferma) | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agent-detail.jsx` | `button:L1029:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agent-detail.jsx` | `button:L1202:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agent-detail.jsx` | `button:L1211:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agent-detail.jsx` | `button:L1293:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agents-index.jsx` | `button:L383:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agents-index.jsx` | `button:L481:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agents-index.jsx` | `a:L652:Attivi` | Attivi | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-agents-index.jsx` | `a:L652:Archiviati` | Archiviati | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-agents-index.jsx` | `a:L652:Più recenti` | Più recenti | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-agents-index.jsx` | `a:L652:Alfabetico` | Alfabetico | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-agents-index.jsx` | `a:L652:Più usati` | Più usati | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-agents-index.jsx` | `button:L686:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agents-index.jsx` | `button:L694:🔍` | 🔍 | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agents-index.jsx` | `button:L719:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-agents-index.jsx` | `button:L811:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L391:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L414:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L418:📝 Snippet` | 📝 Snippet | `sp4-game-detail.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L419:📄 PDF originale` | 📄 PDF originale | `sp4-citation-pdf-viewer.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L437:Chiudi` | Chiudi | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L449:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L452:📝 Snippet` | 📝 Snippet | `sp4-game-detail.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L453:📄 PDF originale` | 📄 PDF originale | `sp4-citation-pdf-viewer.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L466:Chiudi` | Chiudi | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L490:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L493:📝 Snippet` | 📝 Snippet | `sp4-game-detail.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L494:📄 PDF originale` | 📄 PDF originale | `sp4-citation-pdf-viewer.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L498:← Prev` | ← Prev | `sp4-game-detail.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L500:Next →` | Next → | `sp4-game-detail.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L517:Chiudi` | Chiudi | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L529:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L532:📝 Snippet` | 📝 Snippet | `sp4-game-detail.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L533:📄 PDF originale` | 📄 PDF originale | `sp4-citation-pdf-viewer.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L537:← Prev (p.11)` | ← Prev (p.11) | `sp4-game-detail.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L539:Next (p.13) →` | Next (p.13) → | `sp4-game-detail.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L558:Chiudi` | Chiudi | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L582:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L585:📝 Snippet` | 📝 Snippet | `sp4-game-detail.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L586:📄 PDF originale` | 📄 PDF originale | `sp4-citation-pdf-viewer.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `div:L589:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `a:L593:📤 Carica il mio PDF` | 📤 Carica il mio PDF | `sp4-citation-pdf-viewer.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L599:Chiudi` | Chiudi | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L611:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L614:📝 Snippet` | 📝 Snippet | `sp4-game-detail.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L615:📄 PDF originale` | 📄 PDF originale | `sp4-citation-pdf-viewer.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `div:L618:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `a:L622:📤 Carica il mio PDF di Wingspa` | 📤 Carica il mio PDF di Wingspan | `sp4-citation-pdf-viewer.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L628:Chiudi` | Chiudi | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L652:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L655:📝 Snippet` | 📝 Snippet | `sp4-game-detail.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L656:📄 PDF originale` | 📄 PDF originale | `sp4-citation-pdf-viewer.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L670:Chiudi` | Chiudi | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L682:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L685:📝 Snippet` | 📝 Snippet | `sp4-game-detail.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L686:📄 PDF originale` | 📄 PDF originale | `sp4-citation-pdf-viewer.html` | no rule matched  |
+| `sp4-citation-pdf-viewer.html` | `button:L700:Chiudi` | Chiudi | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-dashboard.jsx` | `a:L191:{viewAllLabel || 'Vedi tutto'}` | {viewAllLabel \|\| 'Vedi tutto'} | `OUT_OF_SCOPE` | no rule matched |
+| `sp4-dashboard.jsx` | `a:L228:{cta}` | {cta} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-dashboard.jsx` | `a:L257:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-dashboard.jsx` | `a:L309:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-dashboard.jsx` | `a:L362:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-dashboard.jsx` | `a:L483:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-dashboard.jsx` | `button:L580:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-dashboard.jsx` | `button:L741:☰` | ☰ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-dashboard.jsx` | `button:L749:🔔` | 🔔 | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-dashboard.jsx` | `button:L774:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-dashboard.jsx` | `button:L864:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-discover.jsx` | `button:L375:Vedi tutti →` | Vedi tutti → | `sp4-game-detail.html` | no rule matched  |
+| `sp4-discover.jsx` | `button:L526:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-discover.jsx` | `button:L551:{f.em &&` | {f.em && | `sp4-game-detail.html` | no rule matched  |
+| `sp4-discover.jsx` | `button:L726:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-discover.jsx` | `button:L750:Reimposta` | Reimposta | `sp4-game-detail.html` | no rule matched  |
+| `sp4-discover.jsx` | `button:L926:Mostra tutti` | Mostra tutti | `sp4-game-detail.html` | no rule matched  |
+| `sp4-discover.jsx` | `button:L996:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-discover.jsx` | `button:L1001:Vai alla libreria` | Vai alla libreria | `sp4-library-desktop.html` | no rule matched  |
+| `sp4-discover.jsx` | `button:L1062:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-discover.jsx` | `button:L1227:🌗 {theme === 'light' ? 'Light'` | 🌗 {theme === 'light' ? 'Light' : 'Dark'} | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L377:🌗 Tema` | 🌗 Tema | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `div:L417:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `div:L421:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L424:👍` | 👍 | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L425:📋` | 📋 | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L426:🔁` | 🔁 | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `div:L432:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L434:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L435:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L440:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L461:🧙 Tutor` | 🧙 Tutor | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L462:⚖️ Arbitro` | ⚖️ Arbitro | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `div:L502:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `div:L506:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L509:👍 Utile` | 👍 Utile | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L510:📋 Copia` | 📋 Copia | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L511:🔁 Rigenera` | 🔁 Rigenera | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `div:L517:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L519:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L520:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L521:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L522:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L527:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `div:L567:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `div:L571:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L574:📖 Apri FAQ` | 📖 Apri FAQ | `sp3-faq-enhanced.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L575:🔁` | 🔁 | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L582:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L598:🧙 Tutor` | 🧙 Tutor | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L599:⚖️ Arbitro` | ⚖️ Arbitro | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `div:L626:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `div:L631:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L634:📖 Apri FAQ` | 📖 Apri FAQ | `sp3-faq-enhanced.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L635:🔁 Rigenera` | 🔁 Rigenera | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L640:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L673:🎲 Cambia gioco a Tainted Grail` | 🎲 Cambia gioco a Tainted Grail | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L674:🤖 Cerca un agente Tainted Grai` | 🤖 Cerca un agente Tainted Grail | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L675:↩️ Resta su Wingspan` | ↩️ Resta su Wingspan | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `div:L677:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L680:👍 Honest` | 👍 Honest | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L687:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L710:🧙 Tutor` | 🧙 Tutor | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L711:⚖️ Arbitro` | ⚖️ Arbitro | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L728:🎲 Cambia gioco a Tainted Grail` | 🎲 Cambia gioco a Tainted Grail | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L729:🤖 Cerca un agente Tainted Grai` | 🤖 Cerca un agente Tainted Grail | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L730:↩️ Resta su Wingspan` | ↩️ Resta su Wingspan | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `div:L732:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L734:👍 Honest answer` | 👍 Honest answer | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L738:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L775:⏳` | ⏳ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L791:🧙 Tutor` | 🧙 Tutor | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L792:⚖️ Arbitro` | ⚖️ Arbitro | `sp4-game-detail.html` | no rule matched  |
+| `sp4-game-chat-tab.html` | `button:L814:⏳` | ⏳ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-detail.jsx` | `button:L261:✎ Modifica` | ✎ Modifica | `sp4-game-chat-tab.html` | no rule matched  |
+| `sp4-game-detail.jsx` | `button:L268:↗` | ↗ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-detail.jsx` | `button:L286:👀 Vedi simili` | 👀 Vedi simili | `sp4-game-chat-tab.html` | no rule matched  |
+| `sp4-game-detail.jsx` | `button:L293:↗` | ↗ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-detail.jsx` | `button:L332:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-detail.jsx` | `button:L436:+ Aggiungi` | + Aggiungi | `sp4-game-chat-tab.html` | no rule matched  |
+| `sp4-game-detail.jsx` | `button:L718:↑ Invia` | ↑ Invia | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-detail.jsx` | `button:L860:Apri ↗` | Apri ↗ | `sp4-game-chat-tab.html` | no rule matched  |
+| `sp4-game-detail.jsx` | `button:L924:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-detail.jsx` | `button:L1089:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-detail.jsx` | `button:L1098:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-detail.jsx` | `button:L1179:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-nights-index.jsx` | `button:L242:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-nights-index.jsx` | `button:L441:‹` | ‹ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-nights-index.jsx` | `button:L450:›` | › | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-nights-index.jsx` | `button:L625:Vedi summary →` | Vedi summary → | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp4-game-nights-index.jsx` | `button:L632:Riprogramma` | Riprogramma | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp4-game-nights-index.jsx` | `button:L639:Modifica` | Modifica | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp4-game-nights-index.jsx` | `button:L646:✓ Partecipo` | ✓ Partecipo | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp4-game-nights-index.jsx` | `button:L652:Forse` | Forse | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp4-game-nights-index.jsx` | `button:L810:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-nights-index.jsx` | `button:L904:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-nights-index.jsx` | `button:L991:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-nights-index.jsx` | `button:L1000:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-game-nights-index.jsx` | `button:L1129:🌗 {theme === 'light' ? 'Light'` | 🌗 {theme === 'light' ? 'Light' : 'Dark'} | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp4-games-index.jsx` | `button:L368:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-games-index.jsx` | `button:L385:Tutti` | Tutti | `sp4-game-detail.html` | no rule matched  |
+| `sp4-games-index.jsx` | `button:L385:Posseduti` | Posseduti | `sp4-game-detail.html` | no rule matched  |
+| `sp4-games-index.jsx` | `button:L385:Wishlist` | Wishlist | `sp4-game-detail.html` | no rule matched  |
+| `sp4-games-index.jsx` | `button:L385:Ultima partita` | Ultima partita | `sp4-game-detail.html` | no rule matched  |
+| `sp4-games-index.jsx` | `button:L385:Rating` | Rating | `sp4-game-detail.html` | no rule matched  |
+| `sp4-games-index.jsx` | `button:L385:Titolo A-Z` | Titolo A-Z | `sp4-game-detail.html` | no rule matched  |
+| `sp4-games-index.jsx` | `button:L385:Anno` | Anno | `sp4-game-detail.html` | no rule matched  |
+| `sp4-games-index.jsx` | `button:L432:{v.icon}` | {v.icon} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-games-index.jsx` | `button:L535:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-games-index.jsx` | `a:L767:Titolo A-Z` | Titolo A-Z | `sp4-game-detail.html` | no rule matched  |
+| `sp4-games-index.jsx` | `a:L767:Anno` | Anno | `sp4-game-detail.html` | no rule matched  |
+| `sp4-games-index.jsx` | `a:L767:Partite` | Partite | `sp4-game-detail.html` | no rule matched  |
+| `sp4-games-index.jsx` | `a:L767:KB Docs` | KB Docs | `sp4-kb-hub.html` | no rule matched  |
+| `sp4-games-index.jsx` | `button:L808:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-games-index.jsx` | `button:L816:＋` | ＋ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-games-index.jsx` | `button:L841:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-games-index.jsx` | `button:L933:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-agents.jsx` | `button:L319:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-agents.jsx` | `button:L332:Tutti` | Tutti | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-hub-agents.jsx` | `button:L332:Featured` | Featured | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-hub-agents.jsx` | `button:L332:Nuovi` | Nuovi | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-hub-agents.jsx` | `button:L332:Top 100` | Top 100 | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-hub-agents.jsx` | `button:L332:Popolarità` | Popolarità | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-hub-agents.jsx` | `button:L332:Rating` | Rating | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-hub-agents.jsx` | `button:L332:Titolo A-Z` | Titolo A-Z | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-hub-agents.jsx` | `button:L332:Invocations` | Invocations | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-hub-agents.jsx` | `button:L436:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-agents.jsx` | `a:L589:Rating` | Rating | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-hub-agents.jsx` | `a:L589:Titolo A-Z` | Titolo A-Z | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-hub-agents.jsx` | `a:L589:Invocations` | Invocations | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-hub-agents.jsx` | `a:L589:Installazioni` | Installazioni | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-hub-agents.jsx` | `a:L589:Featured` | Featured | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-hub-agents.jsx` | `a:L589:Modelli LLM` | Modelli LLM | `sp4-agent-detail.html` | no rule matched  |
+| `sp4-hub-agents.jsx` | `button:L630:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-agents.jsx` | `button:L638:＋` | ＋ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-agents.jsx` | `button:L663:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-agents.jsx` | `button:L753:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-games.jsx` | `button:L292:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-games.jsx` | `button:L308:Tutti` | Tutti | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `button:L308:Featured` | Featured | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `button:L308:Nuovi` | Nuovi | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `button:L308:Top 100` | Top 100 | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `button:L308:Popolarità` | Popolarità | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `button:L308:Rating` | Rating | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `button:L308:Titolo A-Z` | Titolo A-Z | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `button:L308:Anno` | Anno | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `button:L460:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-games.jsx` | `a:L618:Rating` | Rating | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `a:L618:Titolo A-Z` | Titolo A-Z | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `a:L618:Anno` | Anno | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `a:L618:Installazioni` | Installazioni | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `a:L618:Featured` | Featured | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `a:L618:Nuovi 2022+` | Nuovi 2022+ | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `a:L618:Chi siamo` | Chi siamo | `sp4-game-detail.html` | no rule matched  |
+| `sp4-hub-games.jsx` | `button:L661:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-games.jsx` | `button:L669:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-games.jsx` | `button:L693:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-games.jsx` | `button:L786:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `button:L316:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `button:L329:Tutti` | Tutti | `sp4-toolkit-detail.html` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `button:L329:Featured` | Featured | `sp4-toolkit-detail.html` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `button:L329:Nuovi` | Nuovi | `sp4-toolkit-detail.html` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `button:L329:Top 100` | Top 100 | `sp4-toolkit-detail.html` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `button:L329:Popolarità` | Popolarità | `sp4-toolkit-detail.html` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `button:L329:Rating` | Rating | `sp4-toolkit-detail.html` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `button:L329:Titolo A-Z` | Titolo A-Z | `sp4-toolkit-detail.html` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `button:L329:Uses` | Uses | `sp4-toolkit-detail.html` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `button:L433:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `a:L586:Rating` | Rating | `sp4-toolkit-detail.html` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `a:L586:Titolo A-Z` | Titolo A-Z | `sp4-toolkit-detail.html` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `a:L586:Uses` | Uses | `sp4-toolkit-detail.html` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `a:L586:Installazioni` | Installazioni | `sp4-toolkit-detail.html` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `a:L586:Featured` | Featured | `sp4-toolkit-detail.html` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `a:L586:Strumenti totali` | Strumenti totali | `sp4-toolkit-detail.html` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `button:L627:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `button:L635:＋` | ＋ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `button:L660:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-hub-toolkits.jsx` | `button:L750:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-detail.jsx` | `button:L369:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-detail.jsx` | `button:L646:← Lista` | ← Lista | `sp4-kb-hub.html` | no rule matched  |
+| `sp4-kb-detail.jsx` | `button:L694:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-detail.jsx` | `button:L748:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-detail.jsx` | `button:L754:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-detail.jsx` | `button:L856:↻ Riprova OCR` | ↻ Riprova OCR | `sp4-kb-hub.html` | no rule matched  |
+| `sp4-kb-detail.jsx` | `button:L861:⬆ Re-upload` | ⬆ Re-upload | `sp4-kb-hub.html` | no rule matched  |
+| `sp4-kb-detail.jsx` | `a:L1006:KB` | KB | `sp4-kb-hub.html` | no rule matched  |
+| `sp4-kb-detail.jsx` | `button:L1033:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-detail.jsx` | `button:L1042:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-detail.jsx` | `button:L1178:🌗 {theme === 'light' ? 'Light'` | 🌗 {theme === 'light' ? 'Light' : 'Dark'} | `sp4-kb-hub.html` | no rule matched  |
+| `sp4-kb-globale.jsx` | `button:L156:{icon &&` | {icon && | `sp4-kb-hub.html` | no rule matched  |
+| `sp4-kb-globale.jsx` | `a:L789:carica altri 7 →` | carica altri 7 → | `sp4-kb-hub.html` | no rule matched  |
+| `sp4-kb-globale.jsx` | `button:L918:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-globale.jsx` | `button:L1019:{s}` | {s} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-globale.jsx` | `button:L1342:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-globale.jsx` | `button:L1534:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-globale.jsx` | `button:L2015:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-globale.jsx` | `button:L2061:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-globale.jsx` | `button:L2087:↑` | ↑ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-globale.jsx` | `button:L2609:{dark ? '☀️ Light' : '🌙 Dark'}` | {dark ? '☀️ Light' : '🌙 Dark'} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-globale.jsx` | `a:L2638:↗ vs. sp4-kb-hub (per-game)` | ↗ vs. sp4-kb-hub (per-game) | `sp4-dashboard.html` | no rule matched  |
+| `sp4-kb-globale.jsx` | `a:L2756:← 00-hub.html` | ← 00-hub.html | `sp4-dashboard.html` | no rule matched  |
+| `sp4-kb-globale.jsx` | `a:L2758:sp4-kb-hub.jsx · KB per-game (` | sp4-kb-hub.jsx · KB per-game (#913) | `sp4-dashboard.html` | no rule matched  |
+| `sp4-kb-hub.jsx` | `a:L311:↗ Apri scheda game` | ↗ Apri scheda game | `librogame-runthrough-play-session.html` | no rule matched  |
+| `sp4-kb-hub.jsx` | `button:L327:⟳ Re-index all` | ⟳ Re-index all | `sp4-kb-detail.html` | no rule matched  |
+| `sp4-kb-hub.jsx` | `button:L467:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-hub.jsx` | `button:L591:⟳ Re-index` | ⟳ Re-index | `sp4-kb-detail.html` | no rule matched  |
+| `sp4-kb-hub.jsx` | `button:L597:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-hub.jsx` | `button:L636:Simulate done →` | Simulate done → | `sp4-kb-detail.html` | no rule matched  |
+| `sp4-kb-hub.jsx` | `button:L660:Chiudi` | Chiudi | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-hub.jsx` | `button:L763:🔒 Rebuild RAPTOR — Upgrade to` | 🔒 Rebuild RAPTOR — Upgrade to Pro | `sp4-kb-detail.html` | no rule matched  |
+| `sp4-kb-hub.jsx` | `a:L773:Scopri piano Pro →` | Scopri piano Pro → | `sp4-discover.html` | no rule matched  |
+| `sp4-kb-hub.jsx` | `button:L893:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-hub.jsx` | `button:L924:{dark ? '☀️ Light' : '🌙 Dark'}` | {dark ? '☀️ Light' : '🌙 Dark'} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-kb-hub.jsx` | `a:L1022:← 00-hub.html` | ← 00-hub.html | `sp4-dashboard.html` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L112:↓ Importa BGG` | ↓ Importa BGG | `sp4-add-game-bgg-step.html` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L119:↗` | ↗ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L157:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L295:{v.icon}` | {v.icon} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L396:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L486:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L594:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L617:Reset` | Reset | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L696:{selected ? '✓' : ''}` | {selected ? '✓' : ''} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L711:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L762:{selected ? '✓' : ''}` | {selected ? '✓' : ''} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L924:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L935:✕` | ✕ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L964:›` | › | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-library-desktop.jsx` | `a:L995:{DS.byId[a.ref]?.title || a.re` | {DS.byId[a.ref]?.title \|\| a.ref} | `OUT_OF_SCOPE` | no rule matched |
+| `sp4-library-desktop.jsx` | `button:L1059:↓ Importa da BGG` | ↓ Importa da BGG | `sp4-add-game-bgg-step.html` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L1207:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-library-desktop.jsx` | `button:L1459:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L368:✎ Modifica` | ✎ Modifica | `sp4-players-index.html` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L375:↗` | ↗ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L392:✎ Modifica` | ✎ Modifica | `sp4-players-index.html` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L445:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L540:Vedi tutti →` | Vedi tutti → | `sp4-players-index.html` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L665:↗` | ↗ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L821:🏆 Vittoria` | 🏆 Vittoria | `sp4-players-index.html` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L821:Sconfitta` | Sconfitta | `sp4-players-index.html` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L821:In corso` | In corso | `sp4-players-index.html` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L821:Tutte` | Tutte | `sp4-players-index.html` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L821:Vinte` | Vinte | `sp4-players-index.html` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L821:Perse` | Perse | `sp4-players-index.html` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L964:Apri ↗` | Apri ↗ | `sp4-players-index.html` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L1104:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L1271:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L1280:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-player-detail.jsx` | `button:L1420:🌗 {theme === 'light' ? 'Light'` | 🌗 {theme === 'light' ? 'Light' : 'Dark'} | `sp4-players-index.html` | no rule matched  |
+| `sp4-players-index.jsx` | `button:L86:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-players-index.jsx` | `button:L143:{f} {active &&` | {f} {active && | `OUT_OF_SCOPE` | no rule matched |
+| `sp4-players-index.jsx` | `button:L354:{v.cta}` | {v.cta} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-players-index.jsx` | `button:L541:{theme === 'light' ? '🌙 Dark'` | {theme === 'light' ? '🌙 Dark' : '☀️ Ligh | `sp4-player-detail.html` | no rule matched  |
+| `sp4-session-live-parts.jsx` | `button:L203:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-live-parts.jsx` | `button:L252:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-live-parts.jsx` | `button:L260:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-live-parts.jsx` | `button:L377:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-live-parts.jsx` | `button:L554:−` | − | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-live-parts.jsx` | `button:L582:+{p}` | +{p} | `sp4-session-summary.html` | no rule matched  |
+| `sp4-session-live-parts.jsx` | `button:L611:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-live.jsx` | `button:L218:🎙` | 🎙 | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-live.jsx` | `button:L291:+` | + | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-live.jsx` | `button:L479:Pausa lunga · esci salvando` | Pausa lunga · esci salvando | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-live.jsx` | `button:L566:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-live.jsx` | `button:L590:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-live.jsx` | `button:L716:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-summary-parts.jsx` | `button:L169:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-summary-parts.jsx` | `button:L175:Archivia incompleta` | Archivia incompleta | `sp4-sessions-index.html` | no rule matched  |
+| `sp4-session-summary-parts.jsx` | `button:L214:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-summary-parts.jsx` | `button:L222:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-summary.jsx` | `button:L143:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-summary.jsx` | `button:L231:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-summary.jsx` | `button:L245:+` | + | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-summary.jsx` | `button:L262:{open ? '▴ Comprimi' : '▾ Espa` | {open ? '▴ Comprimi' : '▾ Espandi'} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-summary.jsx` | `button:L337:{t}` | {t} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-summary.jsx` | `button:L521:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-summary.jsx` | `button:L560:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-session-summary.jsx` | `button:L646:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-sessions-index.jsx` | `button:L346:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-sessions-index.jsx` | `button:L420:{v.icon}` | {v.icon} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-sessions-index.jsx` | `button:L523:Riprendi o archivia` | Riprendi o archivia | `librogame-runthrough-resume-picker.html` | no rule matched  |
+| `sp4-sessions-index.jsx` | `button:L710:▶ Avvia live` | ▶ Avvia live | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `sp4-sessions-index.jsx` | `button:L774:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-sessions-index.jsx` | `button:L974:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-toolkit-detail.jsx` | `button:L294:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-toolkit-detail.jsx` | `button:L382:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-toolkit-detail.jsx` | `button:L613:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-toolkit-detail.jsx` | `button:L683:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-toolkit-detail.jsx` | `button:L821:✎ Modifica note` | ✎ Modifica note | `sp4-hub-toolkits.html` | no rule matched  |
+| `sp4-toolkit-detail.jsx` | `button:L970:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-toolkit-detail.jsx` | `button:L1202:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-toolkit-detail.jsx` | `button:L1211:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-toolkit-detail.jsx` | `button:L1337:🌗 {theme === 'light' ? 'Light'` | 🌗 {theme === 'light' ? 'Light' : 'Dark'} | `sp4-hub-toolkits.html` | no rule matched  |
+| `sp4-upload-wizard-extended.jsx` | `button:L68:{dark ? '☀️' : '🌙'} {dark ? 'L` | {dark ? '☀️' : '🌙'} {dark ? 'Light' : 'D | `sp4-game-detail.html` | no rule matched  |
+| `sp4-upload-wizard-extended.jsx` | `button:L513:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `sp4-upload-wizard-extended.jsx` | `button:L677:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-glossary-editor.jsx` | `button:L53:‹` | ‹ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-glossary-editor.jsx` | `button:L227:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-index.html` | `a:L146:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-index.html` | `button:L154:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-index.jsx` | `button:L107:⚠️ Errore · Riprova` | ⚠️ Errore · Riprova | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-index.jsx` | `div:L225:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-index.jsx` | `a:L254:Acquista crediti →` | Acquista crediti → | `librogame-runthrough-quota-credits.html` | no rule matched  |
+| `sp6-libro-game-index.jsx` | `a:L282:💎 Crediti` | 💎 Crediti | `librogame-runthrough-quota-credits.html` | no rule matched  |
+| `sp6-libro-game-index.jsx` | `div:L299:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-index.jsx` | `a:L391:Come funziona →` | Come funziona → | `sp3-how-it-works.html` | no rule matched  |
+| `sp6-libro-game-index.jsx` | `button:L413:🔄 Riprova` | 🔄 Riprova | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-index.jsx` | `button:L521:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-index.jsx` | `a:L557:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `a:L143:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `a:L148:← A · Index` | ← A · Index | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L151:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L318:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L359:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L414:Continua →` | Continua → | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L432:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L455:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L467:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L474:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L481:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L545:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L550:⚡` | ⚡ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L644:🖼️` | 🖼️ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L645:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L657:0 ? entityHsl('toolkit') : 'rg` | 0 ? entityHsl('toolkit') : 'rgba(255,255 | `sp4-hub-toolkits.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L688:⚙️ Apri impostazioni` | ⚙️ Apri impostazioni | `settings.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L691:🖼️ Carica dalla galleria` | 🖼️ Carica dalla galleria | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L734:📷 Riscatta` | 📷 Riscatta | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L791:Riprova ora` | Riprova ora | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L848:Salva e basta` | Salva e basta | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L849:🎯 Inizia sessione →` | 🎯 Inizia sessione → | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L856:Salta — uso così` | Salta — uso così | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L857:📷 Riscatta 3 pagine` | 📷 Riscatta 3 pagine | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L880:Continua a indicizzare` | Continua a indicizzare | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L881:Sì, annulla` | Sì, annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `button:L904:🖼️ Sfoglia file` | 🖼️ Sfoglia file | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.html` | `a:L908:Invia link al telefono` | Invia link al telefono | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L58:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `span:L145:📚 Catalogo` | 📚 Catalogo | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `span:L146:🌐 BGG` | 🌐 BGG | `sp4-add-game-bgg-step.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L154:Continua →` | Continua → | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L172:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `span:L175:📚 Catalogo (0)` | 📚 Catalogo (0) | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `span:L176:🌐 BGG (2)` | 🌐 BGG (2) | `sp4-add-game-bgg-step.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L195:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L207:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L214:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L221:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `span:L245:📚 Catalogo` | 📚 Catalogo | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `span:L246:🌐 BGG` | 🌐 BGG | `sp4-add-game-bgg-step.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `div:L257:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L285:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L290:⚡` | ⚡ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `div:L383:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L384:🖼️` | 🖼️ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L385:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L397:✓` | ✓ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L428:⚙️ Apri impostazioni` | ⚙️ Apri impostazioni | `settings.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L431:🖼️ Carica dalla galleria` | 🖼️ Carica dalla galleria | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L474:📷 Riscatta` | 📷 Riscatta | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L531:Riprova ora` | Riprova ora | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L588:Salva e basta` | Salva e basta | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L589:🎯 Inizia sessione →` | 🎯 Inizia sessione → | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L596:Salta — uso così` | Salta — uso così | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L597:📷 Riscatta 3 pagine` | 📷 Riscatta 3 pagine | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L620:Continua a indicizzare` | Continua a indicizzare | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L621:Sì, annulla` | Sì, annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `button:L644:🖼️ Sfoglia file` | 🖼️ Sfoglia file | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-photo-upload.jsx` | `a:L648:Invia link al telefono` | Invia link al telefono | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L172:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L247:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L261:⏸` | ⏸ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L392:🎙` | 🎙 | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L573:{s}` | {s} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L616:{m}` | {m} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L675:← § prec.` | ← § prec. | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L689:⛶` | ⛶ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L727:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L832:⏸️ Continua senza traduzione` | ⏸️ Continua senza traduzione | `librogame-runthrough-translate-viewer.html` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L875:← § prec.` | ← § prec. | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L881:A− A A+` | A− A A+ | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L887:⛶` | ⛶ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L913:← § prec.` | ← § prec. | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L939:{n}` | {n} | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L1096:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-play-session.jsx` | `button:L1266:+ Aggiungi` | + Aggiungi | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `button:L104:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L129:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L133:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L150:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `button:L151:💎 Acquista 100 crediti (€5)` | 💎 Acquista 100 crediti (€5) | `librogame-runthrough-quota-credits.html` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `button:L159:⏸️ Continua senza traduzione` | ⏸️ Continua senza traduzione | `librogame-runthrough-translate-viewer.html` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `a:L162:Cosa sono i crediti? →` | Cosa sono i crediti? → | `librogame-runthrough-quota-credits.html` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `a:L235:Privacy & GDPR →` | Privacy & GDPR → | `sp3-legal.html` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `button:L243:Continua →` | Continua → | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L291:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `span:L295:VISA` | VISA | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L299:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L331:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L335:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L339:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L345:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L360:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `button:L361:{isLoading ? (` | {isLoading ? ( | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `a:L381:← Torna ai pacchetti` | ← Torna ai pacchetti | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L422:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L423:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L427:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L431:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L436:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L440:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L446:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `button:L447:🎯 Torna al gioco →` | 🎯 Torna al gioco → | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `a:L454:Vedi ricevuta · email a sara@…` | Vedi ricevuta · email a sara@… | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `button:L481:Acquista crediti ora` | Acquista crediti ora | `librogame-runthrough-quota-credits.html` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `button:L488:Ok, continua` | Ok, continua | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `div:L504:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `button:L515:Acquista crediti` | Acquista crediti | `librogame-runthrough-quota-credits.html` | no rule matched  |
+| `sp6-libro-game-quota-credits.jsx` | `button:L522:Ok` | Ok | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-resume-state.html` | `button:L241:🌗` | 🌗 | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-resume-state.html` | `div:L253:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-resume-state.jsx` | `button:L118:‹` | ‹ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-resume-state.jsx` | `button:L395:Come funziona la prima session` | Come funziona la prima sessione → | `sp4-sessions-index.html` | no rule matched  |
+| `sp6-libro-game-resume-state.jsx` | `button:L554:Vedi tutti →` | Vedi tutti → | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-resume-state.jsx` | `button:L788:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-resume-state.jsx` | `button:L927:+ Nuova campagna` | + Nuova campagna | `librogame-runthrough-game-onboarding.html` | no rule matched  |
+| `sp6-libro-game-resume-state.jsx` | `button:L1043:Modifica →` | Modifica → | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-resume-state.jsx` | `button:L1096:Vedi tutti →` | Vedi tutti → | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L85:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L87:⋯` | ⋯ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L96:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L97:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L98:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L101:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L193:Mostra EN intanto →` | Mostra EN intanto → | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L219:📷 Scansiona il libro` | 📷 Scansiona il libro | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L220:🐛 Segnala link errato` | 🐛 Segnala link errato | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `div:L238:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L239:← {navPrev}` | ← {navPrev} | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L240:Letto, vai a {navNext} →` | Letto, vai a {navNext} → | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `div:L244:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L246:IT` | IT | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L247:EN` | EN | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L248:IT + EN` | IT + EN | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `div:L253:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L255:A−` | A− | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L256:A` | A | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L257:A+` | A+ | `librogame-runthrough-game-detail.html` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L260:≡` | ≡ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L261:≡` | ≡ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L262:≡` | ≡ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L265:☀` | ☀ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L266:🌙` | 🌙 | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `button:L267:📜` | 📜 | `OUT_OF_SCOPE` | no rule matched  |
+| `sp6-libro-game-translation-viewer.jsx` | `div:L272:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L98:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L219:‹` | ‹ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L228:›` | › | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L248:{cell.day} {isWa` | {cell.day} {isWarning && ! | `OUT_OF_SCOPE` | no rule matched |
+| `sp7-game-night-create.jsx` | `button:L367:Cambia` | Cambia | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L413:↻ Riprogramma` | ↻ Riprogramma | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L418:Ignora — non si sovrappone` | Ignora — non si sovrappone | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L568:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L599:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L627:−` | − | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L760:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L794:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L831:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1092:← Indietro` | ← Indietro | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1128:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1137:Bozza` | Bozza | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1328:Cosa` | Cosa | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1328:2h` | 2h | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1328:3h` | 3h | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1328:4h` | 4h | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1328:Giornata` | Giornata | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1328:Casa host` | Casa host | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1328:Casa membro` | Casa membro | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1328:Indirizzo` | Indirizzo | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1328:Online · TTS` | Online · TTS | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1328:Vengo` | Vengo | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1328:Forse` | Forse | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1328:No` | No | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `div:L1451:{steps.map(s => (` | {steps.map(s => ( | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-create.jsx` | `button:L1548:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-detail-rsvp.jsx` | `button:L218:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-detail-rsvp.jsx` | `button:L266:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-detail-rsvp.jsx` | `button:L446:✕ Cancella` | ✕ Cancella | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-detail-rsvp.jsx` | `button:L487:Cambia` | Cambia | `sp4-game-nights-index.html` | no rule matched  |
+| `sp7-game-night-detail-rsvp.jsx` | `button:L822:＋` | ＋ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-detail-rsvp.jsx` | `button:L873:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-detail-rsvp.jsx` | `button:L884:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-detail-rsvp.jsx` | `button:L895:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-detail-rsvp.jsx` | `button:L944:Cambia` | Cambia | `sp4-game-nights-index.html` | no rule matched  |
+| `sp7-game-night-detail-rsvp.jsx` | `button:L1075:📅 Crea il rematch` | 📅 Crea il rematch | `sp4-game-nights-index.html` | no rule matched  |
+| `sp7-game-night-detail-rsvp.jsx` | `button:L1141:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-detail-rsvp.jsx` | `button:L1150:↗` | ↗ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-detail-rsvp.jsx` | `button:L1431:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-join-public.jsx` | `button:L164:Cambia risposta` | Cambia risposta | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp7-game-night-join-public.jsx` | `button:L190:{submitting ? 'Invio risposta…` | {submitting ? 'Invio risposta…' : 'Confe | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-join-public.jsx` | `button:L207:Non posso` | Non posso | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp7-game-night-join-public.jsx` | `button:L235:Richiedi un nuovo invito` | Richiedi un nuovo invito | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp7-game-night-join-public.jsx` | `button:L279:Crea account` | Crea account | `settings.html` | no rule matched  |
+| `sp7-game-night-join-public.jsx` | `button:L297:Pending — empty form` | Pending — empty form | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp7-game-night-join-public.jsx` | `button:L297:Submitting` | Submitting | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-join-public.jsx` | `button:L297:Already responded as` | Already responded as  | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp7-game-night-join-public.jsx` | `button:L297:410 Gone (expired)` | 410 Gone (expired) | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp7-game-night-join-public.jsx` | `button:L297:429 Rate-limited` | 429 Rate-limited | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp7-game-night-live.jsx` | `button:L254:←` | ← | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-live.jsx` | `button:L687:Apri roster →` | Apri roster → | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp7-game-night-live.jsx` | `button:L791:Salta gioco` | Salta gioco | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp7-game-night-live.jsx` | `button:L797:Termina serata` | Termina serata | `sp7-game-night-detail-rsvp.html` | no rule matched  |
+| `sp7-game-night-live.jsx` | `button:L1088:↗` | ↗ | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-live.jsx` | `button:L1197:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-live.jsx` | `button:L1204:Pausa lunga · salva e chiudi` | Pausa lunga · salva e chiudi | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-live.jsx` | `button:L1443:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-summary.jsx` | `button:L579:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-summary.jsx` | `button:L756:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-summary.jsx` | `a:L825:← Torna alla lista` | ← Torna alla lista | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-summary.jsx` | `button:L1020:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-transition.jsx` | `button:L299:↻ Riprova` | ↻ Riprova | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-transition.jsx` | `button:L305:Procedi senza` | Procedi senza | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-transition.jsx` | `button:L498:Annulla` | Annulla | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-transition.jsx` | `button:L538:×` | × | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-transition.jsx` | `button:L555:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-transition.jsx` | `button:L562:` |  | `OUT_OF_SCOPE` | no rule matched  |
+| `sp7-game-night-transition.jsx` | `button:L843:` |  | `OUT_OF_SCOPE` | no rule matched  |
+
+## Classification summary
+
+- OUT_OF_SCOPE (auto): 1109
+- Plausible destination (auto): 429
+- Remaining TODO: 0
+- Auto-resolved by rule engine: 104

@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 namespace Api.Infrastructure.Entities;
 
 /// <summary>
@@ -26,6 +27,6 @@ public class GameSessionEntity
     public string PlayersJson { get; set; } = "[]";
 
     // Navigation properties
-    public GameEntity Game { get; set; } = null!;
+    public SharedGameEntity Game { get; set; } = null!;
     public UserEntity? CreatedByUser { get; set; }
 }

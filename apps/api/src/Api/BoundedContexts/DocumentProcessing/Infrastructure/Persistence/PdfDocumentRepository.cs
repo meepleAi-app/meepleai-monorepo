@@ -47,9 +47,9 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
 
         if (entities.Count == 0)
         {
-            var resolvedPrivateGameIds = await DbContext.Games
+            var resolvedPrivateGameIds = await DbContext.SharedGames
                 .AsNoTracking()
-                .Where(g => g.SharedGameId == gameId)
+                .Where(g => g.Id == gameId)
                 .Select(g => g.Id)
                 .ToListAsync(cancellationToken).ConfigureAwait(false);
 

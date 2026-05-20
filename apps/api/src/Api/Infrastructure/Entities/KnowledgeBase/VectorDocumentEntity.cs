@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 namespace Api.Infrastructure.Entities;
 
 /// <summary>
@@ -30,6 +31,6 @@ public class VectorDocumentEntity
     public Guid? SharedGameId { get; set; }
 
     // Navigation properties
-    public GameEntity Game { get; set; } = default!;
+    public SharedGameEntity Game { get; set; } = default!;
     public PdfDocumentEntity PdfDocument { get; set; } = default!;
 }

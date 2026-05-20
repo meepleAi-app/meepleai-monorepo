@@ -42,15 +42,15 @@ internal sealed class LaunchAdminPdfProcessingCommandHandler
 
         // Resolve GameId: the wizard passes SharedGameId, but PdfDocuments reference games.Id
         var resolvedGameId = command.GameId;
-        var gameExistsDirectly = await _dbContext.Games
+        var gameExistsDirectly = await _dbContext.SharedGames
             .AnyAsync(g => g.Id == command.GameId, cancellationToken)
             .ConfigureAwait(false);
 
         if (!gameExistsDirectly)
         {
             // The wizard uses SharedGameId in the URL - resolve to the actual Game.Id
-            var game = await _dbContext.Games
-                .FirstOrDefaultAsync(g => g.SharedGameId == command.GameId, cancellationToken)
+            var game = await _dbContext.SharedGames
+                .FirstOrDefaultAsync(g => g.Id == command.GameId, cancellationToken)
                 .ConfigureAwait(false);
 
             if (game is not null)

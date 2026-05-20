@@ -54,7 +54,7 @@ internal class GetGamePdfsQueryHandler : IRequestHandler<GetGamePdfsQuery, List<
                 p.SharedGameId == request.GameId ||
                 // Resolve via games: p.PrivateGameId points to a games row whose SharedGameId == request.GameId
                 // (catches PDFs uploaded against any games row linked to the same shared catalog entry)
-                _db.Games.Any(g => g.Id == p.PrivateGameId && g.SharedGameId == request.GameId) ||
+                _db.SharedGames.Any(g => g.Id == p.PrivateGameId && g.Id == request.GameId) ||
                 // Owned private games
                 (ownedPrivateGameId != null && p.PrivateGameId == ownedPrivateGameId))
             .OrderByDescending(p => p.UploadedAt)

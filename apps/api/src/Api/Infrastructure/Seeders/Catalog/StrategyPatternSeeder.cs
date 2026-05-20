@@ -36,9 +36,9 @@ internal static class StrategyPatternSeeder
 
         foreach (var (gameName, patterns) in GameStrategyPatterns)
         {
-            var game = await db.Games
+            var game = await db.SharedGames
                 .AsNoTracking()
-                .FirstOrDefaultAsync(g => g.Name == gameName, cancellationToken)
+                .FirstOrDefaultAsync(g => g.Title == gameName, cancellationToken)
                 .ConfigureAwait(false);
 
             if (game == null)

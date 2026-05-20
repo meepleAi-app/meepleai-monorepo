@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 namespace Api.Infrastructure.Entities;
 
 /// <summary>
@@ -19,5 +20,5 @@ public class AgentSessionEntity
     // Navigation properties
     public GameSessionEntity GameSession { get; set; } = default!;
     public UserEntity User { get; set; } = default!;
-    public GameEntity Game { get; set; } = default!;
+    public SharedGameEntity Game { get; set; } = default!;
 }

@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.Authentication;
 
 namespace Api.Infrastructure.Entities.GameManagement;
@@ -16,7 +17,7 @@ public class LiveGameSessionEntity
     // Game Association (Optional - free-form sessions have null GameId)
     public Guid? GameId { get; set; }
     public string GameName { get; set; } = default!;
-    public GameEntity? Game { get; set; }
+    public SharedGameEntity? Game { get; set; }
     public Guid? ToolkitId { get; set; }
 
     // Ownership & Permissions

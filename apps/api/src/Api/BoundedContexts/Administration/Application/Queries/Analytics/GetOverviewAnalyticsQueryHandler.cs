@@ -28,7 +28,7 @@ internal class GetOverviewAnalyticsQueryHandler : IQueryHandler<GetOverviewAnaly
         var totalUsers = await _db.Set<UserEntity>().AsNoTracking()
             .CountAsync(cancellationToken).ConfigureAwait(false);
 
-        var totalGames = await _db.Set<GameEntity>().AsNoTracking()
+        var totalGames = await _db.SharedGames.AsNoTracking()
             .CountAsync(cancellationToken).ConfigureAwait(false);
 
         var totalDocuments = await _db.Set<PdfDocumentEntity>().AsNoTracking()

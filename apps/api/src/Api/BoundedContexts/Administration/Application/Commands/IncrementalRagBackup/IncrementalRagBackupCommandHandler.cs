@@ -71,7 +71,7 @@ internal sealed class IncrementalRagBackupCommandHandler
                 .ConfigureAwait(false);
 
             // ── 3. Export document bundle to "latest" snapshot ────────────────
-            var gameName = vectorDoc.Game?.Name ?? "unknown-game";
+            var gameName = vectorDoc.Game?.Title ?? "unknown-game";
             var pdfDoc = vectorDoc.PdfDocument;
 
             await _exportService.ExportDocumentBundleAsync(

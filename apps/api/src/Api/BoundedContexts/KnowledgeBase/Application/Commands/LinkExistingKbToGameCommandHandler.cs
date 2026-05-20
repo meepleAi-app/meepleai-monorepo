@@ -62,10 +62,10 @@ internal class LinkExistingKbToGameCommandHandler
         if (!isOwner && !isShared)
             throw new ForbiddenException("Cannot link a PDF you don't own");
 
-        // 3. Resolve target GameId (may be SharedGame ID → games.Id)
-        var targetGameId = await _db.Games
+        // Post-Phase2d: TargetGameId is a SharedGame.Id directly.
+        var targetGameId = await _db.SharedGames
             .AsNoTracking()
-            .Where(g => g.Id == command.TargetGameId || g.SharedGameId == command.TargetGameId)
+            .Where(g => g.Id == command.TargetGameId)
             .Select(g => g.Id)
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 

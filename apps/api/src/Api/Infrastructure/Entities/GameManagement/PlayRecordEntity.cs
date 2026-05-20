@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.Authentication;
 
 namespace Api.Infrastructure.Entities.GameManagement;
@@ -13,7 +14,7 @@ public class PlayRecordEntity
     // Game Association (Optional)
     public Guid? GameId { get; set; }
     public string GameName { get; set; } = default!;
-    public GameEntity? Game { get; set; }
+    public SharedGameEntity? Game { get; set; }
 
     // Ownership & Permissions
     public Guid CreatedByUserId { get; set; }

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
@@ -675,7 +676,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS)
-        await SaveTextChunksForHybridSearchAsync(pdfGuid, pdfDoc, allDocumentChunks, db, cancellationToken).ConfigureAwait(false);
+        await SaveTextChunksForHybridSearchAsync(pdfGuid, pdfDoc, allDocumentChunks, db, scope, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -724,6 +725,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         PdfDocumentEntity pdfDoc,
         List<DocumentChunkInput> allDocumentChunks,
         MeepleAiDbContext db,
+        IServiceScope scope,
         CancellationToken cancellationToken)
     {
         // Delete existing chunks
@@ -754,6 +756,15 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 ElementType = chunk.ElementType
             })
             .ToList();
+
+        // Phase D4: classify chunks by GameBookRole before persistence so
+        // text_chunks.role_tags is populated on insert. Resolved from the local
+        // async scope (background task lifetime != original HTTP request scope).
+        var roleClassifier = scope.ServiceProvider
+            .GetService<Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService>();
+        await TextChunkRoleClassifier.AssignRoleTagsAsync(
+            roleClassifier, textChunkEntities, allDocumentChunks, _logger, cancellationToken)
+            .ConfigureAwait(false);
 
         db.TextChunks.AddRange(textChunkEntities);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

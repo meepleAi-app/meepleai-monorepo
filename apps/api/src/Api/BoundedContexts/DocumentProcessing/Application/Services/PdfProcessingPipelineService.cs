@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
@@ -39,6 +40,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private readonly IFeatureFlagService? _featureFlagService;
     private readonly ILanguageDetector _languageDetector;
     private readonly IChunkTranslationService _chunkTranslationService;
+    // Phase D4 (gamebook multi-book): optional role classifier for tagging chunks at ingest.
+    // Optional so unit tests that pre-date Phase D continue to compile without updates.
+    private readonly IRoleClassifierService? _roleClassifier;
 
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
@@ -55,7 +59,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IRaptorIndexer? raptorIndexer = null,
         IEntityExtractor? entityExtractor = null,
         IVectorStoreAdapter? vectorStore = null,
-        IFeatureFlagService? featureFlagService = null)
+        IFeatureFlagService? featureFlagService = null,
+        IRoleClassifierService? roleClassifier = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
@@ -72,6 +77,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _entityExtractor = entityExtractor;
         _vectorStore = vectorStore;
         _featureFlagService = featureFlagService;
+        _roleClassifier = roleClassifier;
     }
 
     public async Task ProcessAsync(
@@ -643,6 +649,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 ElementType = chunk.ElementType
             })
             .ToList();
+
+        // Phase D4: classify chunks by GameBookRole (Tutorial/RulesReference/Narrative/etc.)
+        // before persistence so the role_tags column is populated on insert.
+        await TextChunkRoleClassifier.AssignRoleTagsAsync(
+            _roleClassifier, textChunkEntities, chunks, _logger, cancellationToken)
+            .ConfigureAwait(false);
 
         _db.TextChunks.AddRange(textChunkEntities);
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

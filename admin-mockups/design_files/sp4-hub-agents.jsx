@@ -26,6 +26,18 @@
 const { useState, useEffect, useMemo } = React;
 const DS = window.DS;
 
+/* DEMO-NAV-DYNAMIC: label/id → destination lookup for dynamic nav iterators */
+const DEMO_NAV_DEST = {
+  'Home': 'sp4-dashboard.html', 'home': 'sp4-dashboard.html',
+  'Dashboard': 'sp4-dashboard.html', 'dashboard': 'sp4-dashboard.html',
+  'Hub': 'sp4-hub-games.html', 'hub': 'sp4-hub-games.html',
+  'Libreria': 'sp4-library-desktop.html', 'library': 'sp4-library-desktop.html',
+  'Giochi': 'sp4-games-index.html', 'games': 'sp4-games-index.html',
+  'Agenti': 'sp4-agents-index.html', 'agents': 'sp4-agents-index.html',
+  'Sessioni': 'sp4-sessions-index.html', 'sessions': 'sp4-sessions-index.html',
+  'Toolkit': 'sp4-hub-toolkits.html', 'toolkit': 'sp4-hub-toolkits.html',
+};
+
 const entityHsl = (type, alpha) => {
   const c = DS.EC[type] || DS.EC.agent;
   return alpha !== undefined
@@ -586,7 +598,7 @@ const DesktopAuthNav = () => {
       </div>
       <div style={{ display:'flex', alignItems:'center', gap: 2, marginLeft: 18 }}>
         {items.map(it => (
-          <a key={it.id} href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp4-agents-index.html'; }, 0); /* DEMO-NAV */ }}
+          <a key={it.id} href="#" onClick={(e) => { e.preventDefault(); const dest = DEMO_NAV_DEST[it.label] || DEMO_NAV_DEST[it.id]; if (dest) setTimeout(() => { window.location.href = dest; }, 0); /* DEMO-NAV-DYNAMIC */ }}
             aria-current={it.active ? 'page' : undefined}
             style={{
               padding:'6px 12px', borderRadius:'var(--r-md)',

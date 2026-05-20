@@ -1,6 +1,7 @@
 /* MeepleAI — Public marketing page components
    React 18 UMD + Babel standalone
-   Requires: tokens.css, components.css */
+   Requires: tokens.css, components.css
+   DEMO-NAV-HINTS: sp3-library-public.html sp3-shared-games.html sp3-join.html */
 
 // ─── NAV ────────────────────────────────────────────────────────────────────
 function PublicNav({ currentPage, onNav }) {

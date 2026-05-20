@@ -3,6 +3,7 @@
    Pagina pubblica per richiedere accesso all'alpha privata. Form waitlist
    (email, nome, gioco preferito, newsletter) con 5 stati: default, submitting,
    success, error, already-on-list. Riusa AuthCard/InputField/PwdInput/SuccessCard
+   DEMO-NAV-HINTS: sp3-accept-invite.html sp3-how-it-works.html sp3-faq-enhanced.html
    pattern; introduce GamePreferenceSelect (top 10 + Altro).
 
    Caricato da sp3-join.html via Babel standalone, stessa tecnica di auth-flow.jsx. */

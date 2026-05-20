@@ -1,6 +1,7 @@
 /* MeepleAI SP4 wave 2 — Schermata #2 / 3 — main app
    Imports parts from sp4-session-live-parts.jsx (window.LiveSessionParts1)
    This file: tools rail / chat / notes / overlays / state harness / frames
+   DEMO-NAV-HINTS: sp4-session-summary.html sp4-sessions-index.html sp4-dashboard.html
 */
 
 const { useState: useState2, useEffect: useEffect2, useRef: useRef2, useMemo: useMemo2 } = React;

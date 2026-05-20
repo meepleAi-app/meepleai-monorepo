@@ -3,6 +3,7 @@
    File: admin-mockups/design_files/sp4-kb-detail.{html,jsx}
    Pattern desktop: Split-view (sx meta+search+chunks list scrollable · dx preview chunk full).
    Palette --c-kb (teal). Document detail singolo (no index).
+   DEMO-NAV-HINTS: sp4-citation-pdf-viewer.html
 
    v2 nuovi (per impl post-merge):
    - KbHeader              → apps/web/src/components/ui/v2/kb-header/

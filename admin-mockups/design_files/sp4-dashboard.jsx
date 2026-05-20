@@ -41,6 +41,23 @@
 const { useState, useEffect, useMemo } = React;
 const DS = window.DS;
 
+/* DEMO-NAV-DYNAMIC: label/id → destination lookup for dynamic nav iterators */
+const DEMO_NAV_DEST = {
+  'Home': 'sp4-dashboard.html', 'Dashboard': 'sp4-dashboard.html',
+  'hub': 'sp4-dashboard.html', 'Hub': 'sp4-dashboard.html',
+  'dashboard': 'sp4-dashboard.html',
+  'Libreria': 'sp4-library-desktop.html', 'library': 'sp4-library-desktop.html',
+  'Giochi': 'sp4-games-index.html', 'games': 'sp4-games-index.html',
+  'Agenti': 'sp4-agents-index.html', 'agents': 'sp4-agents-index.html',
+  'Sessioni': 'sp4-sessions-index.html', 'sessions': 'sp4-sessions-index.html',
+  'Toolkit': 'sp4-hub-toolkits.html', 'toolkit': 'sp4-hub-toolkits.html',
+  'Serate': 'sp4-game-nights-index.html',
+  'Conoscenza': 'sp4-kb-hub.html',
+  'Notifiche': 'notifications.html',
+  'Impostazioni': 'settings.html', 'Profilo': 'settings.html',
+  'Esci': 'sp3-join.html',
+};
+
 const entityHsl = (type, alpha) => {
   const c = DS.EC[type] || DS.EC.game;
   return alpha !== undefined
@@ -188,7 +205,7 @@ const DashboardSection = ({ entity, icon, title, count, viewAllHref, viewAllLabe
       )}
       <div style={{ flex: 1 }}/>
       {viewAllHref && (
-        <a href={viewAllHref} onClick={e=>e.preventDefault()} style={{
+        <a href={viewAllHref} onClick={(e) => { e.preventDefault(); const m = viewAllHref.match(/([\w\-]+\.html)/); if (m) setTimeout(() => { window.location.href = m[1]; }, 0); }} style={{
           padding:'4px 8px', borderRadius:'var(--r-sm)',
           color: entityHsl(entity),
           fontFamily:'var(--f-display)', fontSize: compact ? 11 : 12, fontWeight: 700,
@@ -630,27 +647,27 @@ const DashboardBody = ({ stateOverride, compact }) => {
         ) : (
           <>
             <DashboardSection entity="game" icon="🎲" title="Giochi" count={KPI.games}
-              viewAllHref="/library" viewAllLabel="Vedi libreria" compact={compact}>
+              viewAllHref="sp4-library-desktop.html" viewAllLabel="Vedi libreria" compact={compact}>
               <GamesCarousel items={games} compact={compact}/>
             </DashboardSection>
 
             <DashboardSection entity="player" icon="👤" title="Gruppo di gioco" count={players.length + (isEmpty ? 0 : 3)}
-              viewAllHref="/players" viewAllLabel="Tutti i giocatori" compact={compact}>
+              viewAllHref="sp4-players-index.html" viewAllLabel="Tutti i giocatori" compact={compact}>
               <PlayersAvatarList items={players} compact={compact}/>
             </DashboardSection>
 
             <DashboardSection entity="agent" icon="🤖" title="Agenti AI" count={agents.length}
-              viewAllHref="/agents" viewAllLabel="Tutti" compact={compact}>
+              viewAllHref="sp4-agents-index.html" viewAllLabel="Tutti" compact={compact}>
               <AgentsGrid items={agents} compact={compact}/>
             </DashboardSection>
 
             <DashboardSection entity="session" icon="🎯" title="Sessioni" count={sessions.length}
-              viewAllHref="/sessions" viewAllLabel="Tutte" compact={compact}>
+              viewAllHref="sp4-sessions-index.html" viewAllLabel="Tutte" compact={compact}>
               <SessionsTimeline items={sessions} compact={compact}/>
             </DashboardSection>
 
             <DashboardSection entity="event" icon="📅" title="Prossime serate" count={events.length}
-              viewAllHref="/game-nights" viewAllLabel="Calendario" compact={compact} fullWidth>
+              viewAllHref="sp4-game-nights-index.html" viewAllLabel="Calendario" compact={compact} fullWidth>
               <EventsList items={events} compact={compact}/>
             </DashboardSection>
           </>
@@ -689,7 +706,7 @@ const DesktopAuthNav = () => {
       </div>
       <div style={{ display:'flex', alignItems:'center', gap: 2, marginLeft: 18 }}>
         {items.map(it => (
-          <a key={it.id} href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }}
+          <a key={it.id} href="#" onClick={(e) => { e.preventDefault(); const dest = DEMO_NAV_DEST[it.label] || DEMO_NAV_DEST[it.id]; if (dest) setTimeout(() => { window.location.href = dest; }, 0); /* DEMO-NAV-DYNAMIC */ }}
             aria-current={it.active ? 'page' : undefined}
             style={{
               padding:'6px 12px', borderRadius:'var(--r-md)',

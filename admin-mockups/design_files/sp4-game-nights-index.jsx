@@ -2,6 +2,7 @@
    Route: /game-nights
    File: admin-mockups/design_files/sp4-game-nights-index.{html,jsx}
    Pattern: Toggle Calendar / List view (header switch). Palette --c-event con gradient event→session.
+   DEMO-NAV-HINTS: sp7-game-night-create.html sp7-game-night-detail-rsvp.html
 
    v2 nuovi (per impl post-merge):
    - GameNightsHeader      → apps/web/src/components/ui/v2/game-nights-header/

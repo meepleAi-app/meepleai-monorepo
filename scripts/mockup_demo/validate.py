@@ -22,6 +22,30 @@ _HREF_RE = re.compile(r'href\s*=\s*"([^"#][^"]*\.html)"', re.IGNORECASE)
 _LOCATION_RE = re.compile(r"window\.location\.(?:href|replace)\s*=?\s*\(?\s*['\"]([^'\"]+\.html)['\"]")
 # onclick="window.location.href='x.html'"
 _ONCLICK_RE = re.compile(r'onclick\s*=\s*"[^"]*?([\w\-]+\.html)', re.IGNORECASE)
+# DEMO-NAV-DYNAMIC: string literals in DEMO_NAV_DEST objects: 'x.html' or "x.html"
+_NAVDEST_RE = re.compile(r"DEMO_NAV_DEST\s*=\s*\{[^}]*\}", re.DOTALL)
+# DEMO-NAV-HINTS: explicit .html filenames listed in a comment hint
+_NAVHINTS_RE = re.compile(r"DEMO-NAV-HINTS\s*:(.*?)(?:\*/|$)", re.DOTALL)
+
+_HTML_STR_RE = re.compile(r"['\"]([a-zA-Z0-9_\-]+\.html)['\"]")
+_HTML_WORD_RE = re.compile(r"\b([a-zA-Z0-9][a-zA-Z0-9_\-]*\.html)\b")
+
+
+def _scan_jsx(text_jsx: str, targets: set[str]) -> None:
+    """Scan a JSX/JS file for navigation targets using all strategies."""
+    for rx in (_HREF_RE, _LOCATION_RE, _ONCLICK_RE):
+        for m in rx.finditer(text_jsx):
+            targets.add(m.group(1))
+    # Extract destinations from DEMO_NAV_DEST lookup tables (dynamic nav iterators)
+    for block_match in _NAVDEST_RE.finditer(text_jsx):
+        block = block_match.group(0)
+        for m in _HTML_STR_RE.finditer(block):
+            targets.add(m.group(1))
+    # Extract destinations from DEMO-NAV-HINTS comments
+    for hint_match in _NAVHINTS_RE.finditer(text_jsx):
+        hint_text = hint_match.group(1)
+        for m in _HTML_WORD_RE.finditer(hint_text):
+            targets.add(m.group(1))
 
 
 def extract_targets(path: Path) -> set[str]:
@@ -34,10 +58,12 @@ def extract_targets(path: Path) -> set[str]:
     if path.suffix == ".html":
         jsx = path.with_suffix(".jsx")
         if jsx.exists():
-            text_jsx = jsx.read_text(encoding="utf-8")
-            for rx in (_HREF_RE, _LOCATION_RE, _ONCLICK_RE):
-                for m in rx.finditer(text_jsx):
-                    targets.add(m.group(1))
+            _scan_jsx(jsx.read_text(encoding="utf-8"), targets)
+        # Also scan *-parts.jsx companions (e.g. sp4-session-live-parts.jsx for sp4-session-live.html)
+        stem = path.stem
+        parts_jsx = path.parent / f"{stem}-parts.jsx"
+        if parts_jsx.exists():
+            _scan_jsx(parts_jsx.read_text(encoding="utf-8"), targets)
     return targets
 
 

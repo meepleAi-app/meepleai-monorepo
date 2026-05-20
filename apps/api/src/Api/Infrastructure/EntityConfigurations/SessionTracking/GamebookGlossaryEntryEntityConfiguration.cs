@@ -23,6 +23,7 @@ internal class GamebookGlossaryEntryEntityConfiguration : IEntityTypeConfigurati
         builder.Property(e => e.TermEn).HasColumnName("term_en").HasMaxLength(200).IsRequired();
         builder.Property(e => e.TermIt).HasColumnName("term_it").HasMaxLength(200).IsRequired();
         builder.Property(e => e.Source).HasColumnName("source").IsRequired();
+        builder.Property(e => e.FirstSeenBookId).HasColumnName("first_seen_book_id");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").IsRequired();
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").IsRequired();

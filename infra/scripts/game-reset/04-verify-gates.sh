@@ -21,7 +21,7 @@ run_gate() {
   local expected="$3"
   local got
 
-  got=$(psql "$DATABASE_URL" -t -A -c "$sql")
+  got=$(psql --dbname="$DATABASE_URL" -t -A -c "$sql")
   if [[ "$got" == "$expected" ]]; then
     log_ok "GATE PASS: $name (got=$got, expected=$expected)"
     pass=$((pass+1))
@@ -34,7 +34,7 @@ run_gate() {
 log_info "Running verification gates..."
 
 # Gate 1: games table no longer exists
-got=$(psql "$DATABASE_URL" -t -A -c "
+got=$(psql --dbname="$DATABASE_URL" -t -A -c "
 SELECT COUNT(*) FROM pg_tables WHERE schemaname='public' AND tablename='games';
 ")
 if [[ "$got" == "0" ]]; then
@@ -58,7 +58,7 @@ if [[ ! -f "$expected_count_file" ]]; then
   log_warn "No baseline count file: $expected_count_file. Skipping gate 3."
 else
   expected=$(cat "$expected_count_file" | tr -d '[:space:]')
-  got=$(psql "$DATABASE_URL" -t -A -c "SELECT COUNT(*) FROM pgvector_embeddings;")
+  got=$(psql --dbname="$DATABASE_URL" -t -A -c "SELECT COUNT(*) FROM pgvector_embeddings;")
   if [[ "$got" == "$expected" ]]; then
     log_ok "GATE PASS: vector count unchanged ($got)"
     pass=$((pass+1))
@@ -69,7 +69,7 @@ else
 fi
 
 # Gate 4: HNSW index on vector column is valid (not invalidated)
-got=$(psql "$DATABASE_URL" -t -A -c "
+got=$(psql --dbname="$DATABASE_URL" -t -A -c "
 SELECT COUNT(*) FROM pg_class c
 JOIN pg_index i ON i.indexrelid = c.oid
 WHERE c.relname LIKE '%pgvector_embeddings%vector%' AND i.indisvalid = true;
@@ -82,9 +82,10 @@ else
   fail=$((fail+1))
 fi
 
-# Gate 5: vector_documents.shared_game_id populated, vector_documents.game_id is null
+# Gate 5: vector_documents.shared_game_id populated, vector_documents.GameId is null
+# Note: column GameId is PascalCase per EF Core default conventions
 run_gate "vector_documents migrated to shared_game_id" "
-SELECT COUNT(*) FROM vector_documents WHERE game_id IS NOT NULL;
+SELECT COUNT(*) FROM vector_documents WHERE \"GameId\" IS NOT NULL;
 " "0"
 
 # Gate 6: no Game aggregate references remain in code (run from script location, not DB)

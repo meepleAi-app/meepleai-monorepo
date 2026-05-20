@@ -24,7 +24,7 @@ if [[ -f "$dump_file" ]]; then
 fi
 
 log_info "Dumping $DATABASE_NAME → $dump_file"
-pg_dump "$DATABASE_URL" -Fc --no-owner --no-acl -f "$dump_file"
+pg_dump --dbname="$DATABASE_URL" -Fc --no-owner --no-acl -f "$dump_file"
 
 dump_size=$(stat -c '%s' "$dump_file" 2>/dev/null || stat -f '%z' "$dump_file")
 if [[ "$dump_size" -lt 1024 ]]; then
@@ -34,7 +34,7 @@ fi
 log_ok "Dump created: $dump_file ($(numfmt --to=iec --suffix=B "$dump_size" 2>/dev/null || echo "${dump_size}B"))"
 
 log_info "Recording baseline vector count → $count_file"
-psql "$DATABASE_URL" -t -A -c "SELECT COUNT(*) FROM pgvector_embeddings;" > "$count_file"
+psql --dbname="$DATABASE_URL" -t -A -c "SELECT COUNT(*) FROM pgvector_embeddings;" > "$count_file"
 
 count=$(cat "$count_file")
 log_ok "Baseline vector count: $count"

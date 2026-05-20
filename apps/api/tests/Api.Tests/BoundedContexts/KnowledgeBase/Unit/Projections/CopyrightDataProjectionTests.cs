@@ -135,6 +135,7 @@ public class CopyrightDataProjectionTests
         {
             Id = docId,
             UploadedByUserId = uploaderId,
+            SharedGameId = gameId,
             FileName = "rules.pdf",
             FilePath = "/uploads/rules.pdf",
             LicenseType = (int)LicenseType.CreativeCommons,
@@ -310,6 +311,7 @@ public class CopyrightDataProjectionTests
         {
             Id = Guid.NewGuid(),
             UserId = userId,
+            SharedGameId = gameId,
             OwnershipDeclaredAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync();
@@ -398,6 +400,7 @@ public class CopyrightDataProjectionTests
         {
             Id = Guid.NewGuid(),
             UserId = userId,
+            SharedGameId = ownedGameId,
             OwnershipDeclaredAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync();

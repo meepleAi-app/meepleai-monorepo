@@ -105,6 +105,7 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
             FileName = "rulebook.pdf",
             FilePath = "/uploads/rulebook.pdf",
             UploadedByUserId = UserId,
+            SharedGameId = GameId,
             ProcessingPriority = "Admin",
         });
         await _dbContext.SaveChangesAsync();

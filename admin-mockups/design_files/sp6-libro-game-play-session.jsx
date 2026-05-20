@@ -677,7 +677,7 @@ const ParagraphStateDefault = () => (
         background: 'transparent', border: '1px solid var(--border)',
         color: 'var(--text-sec)', fontFamily: 'var(--f-display)',
         fontSize: 12, fontWeight: 700, cursor: 'pointer',
-      }}>← § prec.</button>
+      }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>← § prec.</button>
       <button type="button" style={{
         flex: 1, padding: '8px 10px', borderRadius: 'var(--r-md)',
         background: entityHsl('kb', 0.1),
@@ -835,7 +835,7 @@ const ParagraphStateQuota = () => (
           color: 'var(--text-sec)', borderRadius: 'var(--r-md)',
           fontFamily: 'var(--f-display)', fontSize: 12, fontWeight: 700,
           cursor: 'pointer',
-        }}>⏸️ Continua senza traduzione</button>
+        }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-translate-viewer.html'; }, 0); /* DEMO-NAV */ }}>⏸️ Continua senza traduzione</button>
       </div>
     </div>
   </>
@@ -877,7 +877,7 @@ const ParagraphStateEmpty = () => (
         background: 'transparent', border: '1px solid var(--border)',
         color: 'var(--text-sec)', fontFamily: 'var(--f-display)',
         fontSize: 12, fontWeight: 700,
-      }}>← § prec.</button>
+      }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>← § prec.</button>
       <button type="button" disabled style={{
         flex: 1, padding: '8px 10px', borderRadius: 'var(--r-md)',
         background: 'transparent', border: '1px solid var(--border)',
@@ -915,7 +915,7 @@ const ParagraphStateLoading = () => (
         background: 'transparent', border: '1px solid var(--border)',
         color: 'var(--text-sec)', fontFamily: 'var(--f-display)',
         fontSize: 12, fontWeight: 700,
-      }}>← § prec.</button>
+      }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>← § prec.</button>
       <button type="button" disabled style={{
         flex: 1, padding: '8px 10px', borderRadius: 'var(--r-md)',
         background: entityHsl('kb', 0.1),
@@ -1267,7 +1267,7 @@ const DesktopGameContext = () => (
           background: 'transparent', border: 'none',
           color: entityHsl('agent'),
           fontFamily: 'var(--f-display)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-        }}>+ Aggiungi</button>
+        }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>+ Aggiungi</button>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {[

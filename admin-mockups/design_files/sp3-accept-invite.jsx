@@ -531,7 +531,7 @@ const DeclinedShell = ({ inv = INVITE, onUndo }) => (
       Nessun problema — ti aspettiamo per la prossima serata.
     </p>
     <div style={{ display:'flex', flexDirection:'column', gap: 8, width:'100%' }}>
-      <a href="#" onClick={e => e.preventDefault()} style={{
+      <a href="#" onClick={(e) => { (e => e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }} style={{
         display:'inline-flex', alignItems:'center', justifyContent:'center',
         padding:'10px 14px', borderRadius:'var(--r-md)',
         background:'var(--bg-muted)', color:'var(--text)',
@@ -582,7 +582,7 @@ const InviteBody = ({ stateOverride }) => {
         </p>
         <div style={{ display:'flex', flexDirection:'column', gap: 8 }}>
           <PrimaryBtn onClick={() => {}}>✉ Contatta {INVITE.hostName}</PrimaryBtn>
-          <a href="#" onClick={e=>e.preventDefault()} style={{
+          <a href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }} style={{
             display:'inline-flex', alignItems:'center', justifyContent:'center',
             padding:'9px 14px', borderRadius:'var(--r-md)',
             color:'var(--text-muted)', fontSize: 12,
@@ -667,7 +667,7 @@ const InviteBody = ({ stateOverride }) => {
           fontSize: 11, color:'var(--text-muted)', lineHeight: 1.55,
           margin:'12px 0 0', textAlign:'center',
         }}>
-          Hai già un account? <a href="#" onClick={e=>e.preventDefault()} style={{
+          Hai già un account? <a href="#" onClick={(e) => { (e=>e.preventDefault())(e); setTimeout(() => { window.location.href = 'sp3-join.html'; }, 0); /* DEMO-NAV */ }} style={{
             color:'hsl(var(--c-game))', fontWeight: 600, textDecoration:'none',
           }}>Accedi</a> per accettare in 1 click.
         </p>

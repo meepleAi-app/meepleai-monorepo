@@ -153,13 +153,13 @@ function Step1QuotaRaggiunta() {
           className="qc-cta-primary"
           style={{ background: entityHsl('event') }}
           aria-label="Acquista 100 crediti per 5 euro"
-        >
+         onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-quota-credits.html'; }, 0); /* DEMO-NAV */ }}>
           💎 Acquista 100 crediti (€5)
         </button>
-        <button type="button" className="qc-cta-outline">
+        <button type="button" className="qc-cta-outline" onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-translate-viewer.html'; }, 0); /* DEMO-NAV */ }}>
           ⏸️ Continua senza traduzione
         </button>
-        <a href="#" className="qc-footer-link">
+        <a href="#" className="qc-footer-link" onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-quota-credits.html'; }, 0); /* DEMO-NAV */ }}>
           Cosa sono i crediti? →
         </a>
       </div>
@@ -232,7 +232,7 @@ function Step2PackPicker({ selectedId = 'starter' }) {
       <div className="qc-disclaimer">
         I crediti non scadono. La quota free di 50 paragrafi si resetta automaticamente ogni mese.
         {' '}
-        <a href="#" style={{ color: entityHsl('toolkit'), textDecoration: 'underline' }}>Privacy & GDPR →</a>
+        <a href="#" style={{ color: entityHsl('toolkit'), textDecoration: 'underline' }} onClick={() => { setTimeout(() => { window.location.href = 'sp3-legal.html'; }, 0); /* DEMO-NAV */ }}>Privacy & GDPR →</a>
       </div>
 
       <div className="qc-step-footer qc-step2-footer">
@@ -245,7 +245,7 @@ function Step2PackPicker({ selectedId = 'starter' }) {
           className="qc-cta-primary"
           style={{ background: entityHsl('toolkit'), opacity: selectedId ? 1 : 0.5 }}
           disabled={!selectedId}
-        >
+         onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>
           Continua →
         </button>
       </div>
@@ -292,7 +292,7 @@ function CheckoutForm({ variant = 'filled' }) {
             <span className="qc-pay-value" style={{ fontFamily: 'var(--f-mono)' }}>
               •••• •••• •••• 4242
             </span>
-            <span className="qc-card-brand" aria-hidden="true">VISA</span>
+            <span className="qc-card-brand" aria-hidden="true" onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>VISA</span>
           </div>
         </div>
 
@@ -368,7 +368,7 @@ function CheckoutForm({ variant = 'filled' }) {
             cursor: isLoading ? 'wait' : 'pointer',
           }}
           aria-busy={isLoading || undefined}
-        >
+         onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>
           {isLoading ? (
             <>
               <span className="qc-spinner" aria-hidden="true"/>
@@ -378,7 +378,7 @@ function CheckoutForm({ variant = 'filled' }) {
             <>Paga €5</>
           )}
         </button>
-        <a href="#" className="qc-footer-link">← Torna ai pacchetti</a>
+        <a href="#" className="qc-footer-link" onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>← Torna ai pacchetti</a>
       </div>
     </div>
   );
@@ -448,7 +448,7 @@ function Step4Success() {
           type="button"
           className="qc-cta-primary"
           style={{ background: entityHsl('session') }}
-        >
+         onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>
           🎯 Torna al gioco →
         </button>
         <a href="#" className="qc-footer-link">Vedi ricevuta · email a sara@…</a>
@@ -482,10 +482,10 @@ function SoftWarning4750({ desktop }) {
                 type="button"
                 className="qc-cta-primary qc-cta-soft"
                 style={{ background: entityHsl('toolkit') }}
-              >
+               onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-quota-credits.html'; }, 0); /* DEMO-NAV */ }}>
                 Acquista crediti ora
               </button>
-              <button type="button" className="qc-cta-outline qc-cta-soft">
+              <button type="button" className="qc-cta-outline qc-cta-soft" onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>
                 Ok, continua
               </button>
             </div>
@@ -516,7 +516,7 @@ function SoftWarning4750({ desktop }) {
           type="button"
           className="qc-cta-primary qc-cta-soft"
           style={{ background: entityHsl('toolkit') }}
-        >
+         onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-quota-credits.html'; }, 0); /* DEMO-NAV */ }}>
           Acquista crediti
         </button>
         <button type="button" className="qc-cta-outline qc-cta-soft">

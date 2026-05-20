@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MeepleAI — Nanolith Runthrough · Game Detail</title>
+<title>MeepleAI — Librogame Runthrough · Game Detail</title>
 <!--
-  Mockup: nanolith-runthrough-game-detail
-  Route:  /library/{gameId}  (gameId = nanolith)
+  Mockup: librogame-runthrough-game-detail
+  Route:  /library/{gameId}  (gameId = librogame)
   Scope:  Phase A runthrough — gating page con CTA primary "Avvia libro game"
   Stati:  default · loading · error · not-found
-  Persona: Aaron (badsworm@gmail.com), superadmin, ha Nanolith in collection,
-          KB Press Start + Rules indicizzati, agente "Nanolith Tutor" creato.
+  Persona: Aaron (badsworm@gmail.com), superadmin, ha Eldoria in collection,
+          KB Press Start + Rules indicizzati, agente "Game Tutor" creato.
 -->
 <!--
   @route /library/{gameId}
@@ -337,8 +337,8 @@
 
 <!-- ───────────── Top header & theme toggle ───────────── -->
 <header class="top">
-  <h1>Nanolith Runthrough · Game Detail</h1>
-  <span class="route">/library/nanolith</span>
+  <h1>Librogame Runthrough · Game Detail</h1>
+  <span class="route">/library/librogame</span>
   <span class="spacer"></span>
   <span class="theme-tog">
     <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
@@ -349,13 +349,13 @@
 
   <!-- ═══════════════════════════════════════════════════════════
        STATO 1 · DEFAULT (game caricato + CTA "Avvia libro game")
-       Quando: Aaron clicca "Nanolith" da `/library`, atterra qui.
+       Quando: Aaron clicca "Eldoria" da `/library`, atterra qui.
        Goal A2: il CTA primary deve essere discoverable above-the-fold.
        ═══════════════════════════════════════════════════════════ -->
   <section class="state-section" aria-labelledby="s1">
     <span class="label">Stato 1 · Default</span>
     <h2 id="s1">Game caricato — CTA "Avvia libro game" prominente</h2>
-    <p class="desc">Aaron è loggato, Nanolith è in collezione, KB indicizzato. Sopra-la-fold: hero + CTA primary entity=session. Tabs Info/AI Chat/Toolbox/Toolkit. Mobile-first.</p>
+    <p class="desc">Aaron è loggato, Eldoria è in collezione, KB indicizzato. Sopra-la-fold: hero + CTA primary entity=session. Tabs Info/AI Chat/Toolbox/Toolkit. Mobile-first.</p>
 
     <div class="frames">
       <!-- Mobile 375px -->
@@ -365,7 +365,7 @@
 
         <div class="appbar">
           <button class="back" aria-label="Torna alla libreria">←</button>
-          <span class="crumbs"><strong>Libreria</strong> · Nanolith</span>
+          <span class="crumbs"><strong>Libreria</strong> · Eldoria</span>
         </div>
 
         <div class="hero">
@@ -373,7 +373,7 @@
             <div class="hero-cover">
               <span class="nano-mark">In collezione · 142 pag KB</span>
               <div>
-                <h2>Nanolith</h2>
+                <h2>Eldoria</h2>
                 <span class="pub">Side Room Studios · 2024</span>
               </div>
             </div>
@@ -386,7 +386,7 @@
             <div class="conn-bar" role="list" aria-label="Entità collegate">
               <span class="pip kb" role="listitem" aria-label="142 pagine indicizzate">📄 142</span>
               <span class="pip chat" role="listitem" aria-label="8 conversazioni">💬 8</span>
-              <span class="pip agent" role="listitem" aria-label="Nanolith Tutor agente">🤖 Tutor</span>
+              <span class="pip agent" role="listitem" aria-label="Game Tutor agente">🤖 Tutor</span>
               <span class="pip player" role="listitem" aria-label="Party 4 personaggi">👤 4</span>
               <span class="pip session empty" role="listitem" aria-label="Nessuna sessione attiva">🎯 0</span>
             </div>
@@ -394,7 +394,7 @@
         </div>
 
         <div class="cta-primary-zone">
-          <button class="cta-primary" type="button" aria-label="Avvia modalità libro game per Nanolith">
+          <button class="cta-primary" type="button" aria-label="Avvia modalità libro game per Eldoria" onclick="window.location.href='librogame-runthrough-game-onboarding.html'" /* DEMO-NAV */>
             📖 Avvia libro game
           </button>
           <p class="cta-sub">Tutorial setup · Q&A regole · Traduzione storybook</p>
@@ -402,9 +402,9 @@
 
         <nav class="tabs" role="tablist" aria-label="Sezioni del gioco">
           <button class="tab" role="tab" aria-selected="true">Info</button>
-          <button class="tab" role="tab" aria-selected="false">AI Chat</button>
+          <button class="tab" role="tab" aria-selected="false" onclick="window.location.href='librogame-runthrough-game-onboarding.html'" /* DEMO-NAV */>AI Chat</button>
           <button class="tab" role="tab" aria-selected="false">Toolbox</button>
-          <button class="tab" role="tab" aria-selected="false">Toolkit</button>
+          <button class="tab" role="tab" aria-selected="false" onclick="window.location.href='sp4-hub-toolkits.html'" /* DEMO-NAV */>Toolkit</button>
         </nav>
 
         <div class="tab-panel" role="tabpanel">
@@ -415,14 +415,14 @@
           <div class="kb-status">
             <span class="ico">📄</span>
             <div>
-              <div class="lbl">Nanolith Press Start ENG.pdf</div>
+              <div class="lbl">Eldoria Press Start ENG.pdf</div>
               <div class="sub">36 MB · 24 pag · indicizzato 100%</div>
             </div>
           </div>
           <div class="kb-status">
             <span class="ico">📄</span>
             <div>
-              <div class="lbl">Nanolith Rules ENG.pdf</div>
+              <div class="lbl">Eldoria Rules ENG.pdf</div>
               <div class="sub">101 MB · 118 pag · indicizzato 100%</div>
             </div>
           </div>
@@ -432,11 +432,11 @@
       <!-- Desktop 1440px (scaled 0.5) -->
       <div class="desktop" role="region" aria-label="Desktop 1440px – default" data-conformity-screen="default-desktop">
         <span class="frame-label">Desktop · 1440px (scale)</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame</span></div>
 
         <div class="appbar">
           <button class="back" aria-label="Torna alla libreria">←</button>
-          <span class="crumbs"><strong>Libreria</strong> · Nanolith</span>
+          <span class="crumbs"><strong>Libreria</strong> · Eldoria</span>
         </div>
 
         <div class="desktop-body">
@@ -461,7 +461,7 @@
               <div class="hero-cover" style="aspect-ratio: 12/4;">
                 <span class="nano-mark">In collezione · 142 pag KB</span>
                 <div>
-                  <h2>Nanolith</h2>
+                  <h2>Eldoria</h2>
                   <span class="pub">Side Room Studios · 2024 · campagna narrativa-tattica</span>
                 </div>
               </div>
@@ -526,7 +526,7 @@
 
       <div class="desktop" role="region" aria-busy="true" aria-label="Desktop – loading">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs">Caricamento…</span></div>
         <div class="desktop-body">
           <aside class="desktop-side">
@@ -567,7 +567,7 @@
           <h3>Impossibile caricare il gioco</h3>
           <p class="msg">Si è verificato un errore di rete. Controlla la connessione e riprova.</p>
           <div class="actions">
-            <button class="btn-out" type="button">← Libreria</button>
+            <button class="btn-out" type="button" onclick="window.location.href='sp4-library-desktop.html'" /* DEMO-NAV */>← Libreria</button>
             <button class="btn-fill" type="button">🔄 Riprova</button>
           </div>
         </div>
@@ -575,7 +575,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – error">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Libreria</strong> · Errore</span></div>
         <div class="desktop-body">
           <aside class="desktop-side"></aside>
@@ -602,7 +602,7 @@
   <section class="state-section" aria-labelledby="s4">
     <span class="label">Stato 4 · Not Found</span>
     <h2 id="s4">Gioco non in collezione</h2>
-    <p class="desc">Edge case del runthrough Phase A: precondizione mancante (Nanolith non in collection di Aaron). Aborta presto con istruzioni di recovery.</p>
+    <p class="desc">Edge case del runthrough Phase A: precondizione mancante (Eldoria non in collection di Aaron). Aborta presto con istruzioni di recovery.</p>
 
     <div class="frames">
       <div class="phone" role="region" aria-label="Mobile – not found">
@@ -614,25 +614,25 @@
         </div>
         <div class="empty-card">
           <div class="icon">🎲</div>
-          <h3>Nanolith non in collezione</h3>
+          <h3>Eldoria non in collezione</h3>
           <p class="msg">Questo gioco non è ancora nella tua libreria. Puoi aggiungerlo dal catalogo pubblico per accedere alla modalità libro game.</p>
           <div class="actions">
             <button class="btn-out" type="button">← Libreria</button>
-            <button class="btn-fill" type="button">+ Aggiungi al catalogo</button>
+            <button class="btn-fill" type="button" onclick="window.location.href='librogame-runthrough-game-onboarding.html'" /* DEMO-NAV */>+ Aggiungi al catalogo</button>
           </div>
         </div>
       </div>
 
       <div class="desktop" role="region" aria-label="Desktop – not found">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Libreria</strong> · 404</span></div>
         <div class="desktop-body">
           <aside class="desktop-side"></aside>
           <div class="desktop-main" style="display: flex; align-items: center; justify-content: center;">
             <div class="empty-card" style="max-width: 480px; margin: 0;">
               <div class="icon">🎲</div>
-              <h3>Nanolith non in collezione</h3>
+              <h3>Eldoria non in collezione</h3>
               <p class="msg">Questo gioco non è ancora nella tua libreria. Puoi aggiungerlo dal catalogo pubblico per accedere alla modalità libro game.</p>
               <div class="actions">
                 <button class="btn-out" type="button">← Libreria</button>

@@ -178,7 +178,7 @@ const SummaryHeroPodium = ({ variant = 'default', compact }) => {
             border:'1px solid var(--border-strong)',
             fontFamily:'var(--f-display)', fontSize: 12.5, fontWeight: 700,
             cursor:'pointer',
-          }}>Archivia incompleta</button>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-sessions-index.html'; }, 0); /* DEMO-NAV */ }}>Archivia incompleta</button>
         </div>
       </div>
     );

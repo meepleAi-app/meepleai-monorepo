@@ -239,14 +239,14 @@ function NotificationItem({ notif, selected, onClick, onArchive, onMarkRead }) {
                   border: 'none', cursor: 'pointer', fontFamily: 'var(--f-display)',
                 }}>{notif.cta}</button>
               )}
-              <button onClick={e => { e.stopPropagation(); onArchive?.(notif.id); }} style={{
+              <button onClick={(e) => { (e => { e.stopPropagation(); onArchive?.(notif.id); })(e); setTimeout(() => { window.location.href = 'settings.html'; }, 0); /* DEMO-NAV */ }} style={{
                 padding: '3px 9px', fontSize: 10, fontWeight: 700,
                 borderRadius: 'var(--r-sm)',
                 background: 'var(--bg-muted)', color: 'var(--text-muted)',
                 border: 'none', cursor: 'pointer', fontFamily: 'var(--f-display)',
               }}>Archivia</button>
               {!notif.read && (
-                <button onClick={e => { e.stopPropagation(); onMarkRead?.(notif.id); }} style={{
+                <button onClick={(e) => { (e => { e.stopPropagation(); onMarkRead?.(notif.id); })(e); setTimeout(() => { window.location.href = 'settings.html'; }, 0); /* DEMO-NAV */ }} style={{
                   padding: '3px 9px', fontSize: 10, fontWeight: 700,
                   borderRadius: 'var(--r-sm)',
                   background: 'var(--bg-muted)', color: 'var(--text-muted)',
@@ -348,7 +348,7 @@ function NotificationDetail({ notif, onClose }) {
           background: 'transparent', color: 'var(--text-muted)',
           border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', cursor: 'pointer',
           fontSize: 12, fontWeight: 600, fontFamily: 'var(--f-display)',
-        }}>Archivia notifica</button>
+        }} onClick={() => { setTimeout(() => { window.location.href = 'settings.html'; }, 0); /* DEMO-NAV */ }}>Archivia notifica</button>
       </div>
     </div>
   );
@@ -424,7 +424,7 @@ function EmptyState() {
         border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
         cursor: 'pointer', fontSize: 12, fontWeight: 700,
         fontFamily: 'var(--f-display)',
-      }}>Controlla impostazioni notifiche</button>
+      }} onClick={() => { setTimeout(() => { window.location.href = 'notifications.html'; }, 0); /* DEMO-NAV */ }}>Controlla impostazioni notifiche</button>
     </div>
   );
 }

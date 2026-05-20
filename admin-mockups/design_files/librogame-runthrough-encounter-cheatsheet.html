@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MeepleAI — Nanolith Runthrough · Encounter Book Cheatsheet</title>
+<title>MeepleAI — Librogame Runthrough · Encounter Book Cheatsheet</title>
 <!--
-  Mockup: nanolith-runthrough-encounter-cheatsheet
+  Mockup: librogame-runthrough-encounter-cheatsheet
   Route:  /library/{gameId}/play/{campaignId}/encounter
   Scope:  Phase A runthrough — pipeline foto Encounter Book → OCR → cheatsheet card on-demand (N3 + §9.1)
   Stati:  A · entry-from-story  (paragrafo Storybook §147 chiama "→ Encounter §218", CTA "Apri Encounter Book")
@@ -384,8 +384,8 @@
 <body>
 
 <header class="top">
-  <h1>Nanolith Runthrough · Encounter Book Cheatsheet</h1>
-  <span class="route">/library/nanolith/play/{campaignId}/encounter</span>
+  <h1>Librogame Runthrough · Encounter Book Cheatsheet</h1>
+  <span class="route">/library/librogame/play/{campaignId}/encounter</span>
   <span class="spacer"></span>
   <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
 </header>
@@ -398,7 +398,7 @@
   <section class="state-section" id="s1" aria-labelledby="sa">
     <span class="label">Stato A · Entry from Story</span>
     <h2 id="sa">Storybook chiama Encounter — Aaron sta per scattare</h2>
-    <p class="desc">Durante lettura paragrafo Storybook §147, riferimento "→ Encounter §218 (Reaver Camp)" rilevato. Layout differente da translate-viewer: card story-context con excerpt, CTA event-colored, secondary actions skip/manual entry. Encounter NON è linked da KB indicizzato (Encounter Book è cartaceo on-demand, fresh OCR per ogni call).</p>
+    <p class="desc">Durante lettura paragrafo Storybook §147, riferimento "→ Encounter §218 (Goblin Camp)" rilevato. Layout differente da translate-viewer: card story-context con excerpt, CTA event-colored, secondary actions skip/manual entry. Encounter NON è linked da KB indicizzato (Encounter Book è cartaceo on-demand, fresh OCR per ogni call).</p>
 
     <div class="frames">
       <div class="phone" role="region" aria-label="Mobile – entry from story">
@@ -419,7 +419,7 @@
             <div class="ref-callout">
               <span class="ico">⚔️</span>
               <div class="l">
-                <strong>→ Encounter §218 · Reaver Camp</strong>
+                <strong>→ Encounter §218 · Goblin Camp</strong>
                 <span>Servono stats e opzioni — fotografa l'Encounter Book</span>
               </div>
             </div>
@@ -433,7 +433,7 @@
             <span>›</span>
           </button>
           <div class="secondary-actions">
-            <button type="button">🔢 §218 manuale</button>
+            <button type="button" onclick="window.location.href='librogame-runthrough-play-session.html'" /* DEMO-NAV */>🔢 §218 manuale</button>
             <button type="button">↩ Salta encounter</button>
           </div>
         </div>
@@ -441,7 +441,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – entry from story">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/encounter?from=147&to=218</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/encounter?from=147&to=218</span></div>
         <div class="appbar">
           <button class="back">←</button>
           <span class="crumbs"><strong>Sera con i ragazzi</strong> · §147 → Encounter Book §218</span>
@@ -457,7 +457,7 @@
             <div class="ref-callout">
               <span class="ico">⚔️</span>
               <div class="l">
-                <strong>→ Encounter §218 · Reaver Camp</strong>
+                <strong>→ Encounter §218 · Goblin Camp</strong>
                 <span>Encounter Book è cartaceo. Le stats, opzioni e condizioni vittoria/sconfitta vanno fotografate adesso. La card sarà valida solo per questa sessione.</span>
               </div>
             </div>
@@ -471,7 +471,7 @@
               </span>
               <span>›</span>
             </button>
-            <button class="nav-btn">🔢 Inserisci §218 manualmente</button>
+            <button class="nav-btn" onclick="window.location.href='librogame-runthrough-play-session.html'" /* DEMO-NAV */>🔢 Inserisci §218 manualmente</button>
             <button class="nav-btn">↩ Salta encounter (rischio: regole inventate)</button>
             <p style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin: var(--s-2) 0 0;">Encounter Book non viene salvato long-term: copyright + ephemeralità (vedi spec §9.1).</p>
           </div>
@@ -523,7 +523,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – segmenting encounter" aria-busy="true">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/encounter?to=218</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/encounter?to=218</span></div>
         <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Encounter §218 — analisi…</span></div>
         <div style="flex: 1; padding: var(--s-7); display: flex; gap: var(--s-7); align-items: flex-start;">
           <div class="photo-preview encounter-tinted" style="width: 280px; flex-shrink: 0;"><span class="scan"></span></div>
@@ -549,7 +549,7 @@
        ═══════════════════════════════════════════════════════════ -->
   <section class="state-section" id="s3" aria-labelledby="sc">
     <span class="label">Stato C · Cheatsheet Rendered</span>
-    <h2 id="sc">Card compatta pronta — Reaver §218</h2>
+    <h2 id="sc">Card compatta pronta — Goblin §218</h2>
     <p class="desc">Layout strutturato (no prose narrative): enemy header con icon + nome + §, grid 4 stats (HP/ATK/DEF/MOV), options-list 3 scelte con dice roll inline (1d6+, ≥ threshold), conditions win/lose split-card. Parse confidence badge per cluster. NO long-term cache: card scompare alla chiusura sessione.</p>
 
     <div class="frames">
@@ -565,7 +565,7 @@
           <div class="enemy-card">
             <div class="head">
               <span class="ico">⚔️</span>
-              <span class="name">Reaver Scout (×3)</span>
+              <span class="name">Goblin Scout (×3)</span>
               <span class="pn">§218</span>
             </div>
             <div class="stats">
@@ -608,7 +608,7 @@
           <div class="conditions">
             <div class="cond-card win">
               <span class="l">🏆 Vittoria</span>
-              <span class="v">Riduci tutti i Reaver a 0 HP — drop: <strong>Voidstone × 2</strong></span>
+              <span class="v">Riduci tutti i Goblin a 0 HP — drop: <strong>Voidstone × 2</strong></span>
             </div>
             <div class="cond-card lose">
               <span class="l">💀 Sconfitta</span>
@@ -618,17 +618,17 @@
         </div>
         <div class="cheatsheet-toolbar">
           <button class="nav-btn secondary">🔄 Rifotografa</button>
-          <button class="nav-btn">📒 Glossario</button>
+          <button class="nav-btn" onclick="window.location.href='librogame-runthrough-glossary-editor.html'" /* DEMO-NAV */>📒 Glossario</button>
           <button class="nav-btn primary">✓ Risolvi →</button>
         </div>
       </div>
 
       <div class="desktop" role="region" aria-label="Desktop – cheatsheet rendered">
         <span class="frame-label">Desktop · 1440px</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/encounter?to=218</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/encounter?to=218</span></div>
         <div class="appbar">
           <button class="back">←</button>
-          <span class="crumbs"><strong>Sera con i ragazzi</strong> · ⚔️ Encounter §218 · Reaver Camp</span>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · ⚔️ Encounter §218 · Goblin Camp</span>
           <button class="right-tool">📷</button>
         </div>
         <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 360px; gap: var(--s-6); overflow-y: auto;">
@@ -636,7 +636,7 @@
             <div class="enemy-card">
               <div class="head">
                 <span class="ico">⚔️</span>
-                <span class="name">Reaver Scout (×3)</span>
+                <span class="name">Goblin Scout (×3)</span>
                 <span class="pn">§218</span>
               </div>
               <div class="stats">
@@ -680,7 +680,7 @@
           <div style="display: flex; flex-direction: column; gap: var(--s-3);">
             <div class="cond-card win">
               <span class="l">🏆 Vittoria</span>
-              <span class="v">Riduci tutti i Reaver a 0 HP — drop: <strong>Voidstone × 2</strong>, esperienza +50</span>
+              <span class="v">Riduci tutti i Goblin a 0 HP — drop: <strong>Voidstone × 2</strong>, esperienza +50</span>
             </div>
             <div class="cond-card lose">
               <span class="l">💀 Sconfitta</span>
@@ -691,7 +691,7 @@
             </div>
             <button class="nav-btn primary" style="margin-top: auto;">✓ Risolvi e torna a §147 →</button>
             <button class="nav-btn secondary">🔄 Rifotografa</button>
-            <button class="nav-btn">📒 Apri glossario</button>
+            <button class="nav-btn" onclick="window.location.href='librogame-runthrough-glossary-editor.html'" /* DEMO-NAV */>📒 Apri glossario</button>
           </div>
         </div>
       </div>
@@ -719,7 +719,7 @@
           <div class="outcome-banner">
             <div class="head">
               <span class="badge">Vittoria</span>
-              <span class="title">Reaver Camp · §218</span>
+              <span class="title">Goblin Camp · §218</span>
             </div>
             <div class="roll-result">⚔️ Attacca subito · tiro <strong>5</strong> ≥ 4 · successo</div>
             <div class="consequences">
@@ -752,7 +752,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop – resolved defeat (alt branch)">
         <span class="frame-label">Desktop · 1440px · Defeat branch (alternate)</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/cmp-1234/encounter?to=218&outcome=defeat</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/encounter?to=218&outcome=defeat</span></div>
         <div class="appbar">
           <button class="back">←</button>
           <span class="crumbs"><strong>Sera con i ragazzi</strong> · §218 → §241 (imboscata)</span>
@@ -762,7 +762,7 @@
           <div class="outcome-banner defeat">
             <div class="head">
               <span class="badge">Imboscata</span>
-              <span class="title">Reaver Camp · §218 · tentativo attacco fallito</span>
+              <span class="title">Goblin Camp · §218 · tentativo attacco fallito</span>
             </div>
             <div class="roll-result">⚔️ Attacca subito · tiro <strong>2</strong> &lt; 4 · fallimento → imboscata</div>
             <div class="consequences">
@@ -778,7 +778,7 @@
               </div>
               <div class="conseq-row">
                 <span class="ico">💎</span>
-                <span class="l"><strong>Drop</strong><span>Nessuno (Reaver ancora vivi)</span></span>
+                <span class="l"><strong>Drop</strong><span>Nessuno (Goblin ancora vivi)</span></span>
                 <span class="delta">—</span>
               </div>
               <div class="conseq-row">

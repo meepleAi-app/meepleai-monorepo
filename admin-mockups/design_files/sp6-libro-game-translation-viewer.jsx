@@ -201,7 +201,7 @@ function PartialBody() {
         fontWeight: 700,
         fontSize: 13,
         cursor: 'pointer',
-      }}>
+      }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>
         Mostra EN intanto →
       </button>
     </div>
@@ -215,9 +215,9 @@ function NotFoundBody({ pnum = '§299' }) {
       <h2>{pnum} non trovato</h2>
       <p>Questo paragrafo non esiste in <em>Tainted Grail</em>. Probabilmente è un riferimento errato o un typo.</p>
       <div className="actions">
-        <button className="nav-btn primary">← Torna al play</button>
+        <button className="nav-btn primary" onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-onboarding.html'; }, 0); /* DEMO-NAV */ }}>← Torna al play</button>
         <button className="nav-btn">📷 Scansiona il libro</button>
-        <button className="nav-btn ghost">🐛 Segnala link errato</button>
+        <button className="nav-btn ghost" onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>🐛 Segnala link errato</button>
       </div>
     </div>
   );
@@ -236,25 +236,25 @@ function BottomControls({
     <div className="tv-bottom">
       {/* Row 1 — navigazione paragrafi */}
       <div className="row">
-        <button className="nav-btn ghost">← {navPrev}</button>
+        <button className="nav-btn ghost" onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>← {navPrev}</button>
         <button className="nav-btn primary">Letto, vai a {navNext} →</button>
       </div>
 
       {/* Toggle modes IT / EN / IT+EN */}
       <div className="row center">
         <div className="seg" role="tablist" aria-label="Modalità lingua">
-          <button className={mode==='IT'?'active':''} onClick={() => onMode('IT')}>IT</button>
+          <button className={mode==='IT'?'active':''} onClick={(e) => { (() => onMode('IT'))(e); setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>IT</button>
           <button className={mode==='EN'?'active':''} onClick={() => onMode('EN')}>EN</button>
-          <button className={mode==='SBS'?'active':''} onClick={() => onMode('SBS')}>IT + EN</button>
+          <button className={mode==='SBS'?'active':''} onClick={(e) => { (() => onMode('SBS'))(e); setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>IT + EN</button>
         </div>
       </div>
 
       {/* Row 2 — reading aids: font · line · theme */}
       <div className="row aids">
         <div className="seg" aria-label="Dimensione testo">
-          <button className={fs==='sm'?'active':''} onClick={()=>onFs('sm')} title="A− 24px / 18pt">A−</button>
+          <button className={fs==='sm'?'active':''} onClick={(e) => { (()=>onFs('sm'))(e); setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }} title="A− 24px / 18pt">A−</button>
           <button className={fs==='md'?'active':''} onClick={()=>onFs('md')} title="A 26px / 20pt default">A</button>
-          <button className={fs==='lg'?'active':''} onClick={()=>onFs('lg')} title="A+ 32px / 24pt lettura distante">A+</button>
+          <button className={fs==='lg'?'active':''} onClick={(e) => { (()=>onFs('lg'))(e); setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }} title="A+ 32px / 24pt lettura distante">A+</button>
         </div>
         <div className="seg" aria-label="Interlinea">
           <button className={lh==='tight'?'active':''} onClick={()=>onLh('tight')} title="1.4">≡<sub style={{fontSize:9}}>1.4</sub></button>

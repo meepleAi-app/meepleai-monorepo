@@ -1004,7 +1004,7 @@ function App() {
           6 stati · entità <strong style={{ color: kbHsl() }}>KB</strong> (teal) ·
           notifica errore su <strong style={{ color: eventHsl() }}>--c-event</strong>.
           <br/>
-          <a href="00-hub.html" style={{ color: kbHsl(), textDecoration: 'underline', fontSize: 12 }}>← Torna al hub</a>
+          <a href="00-hub.html" style={{ color: kbHsl(), textDecoration: 'underline', fontSize: 12 }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }}>← Torna al hub</a>
         </p>
 
         {/* ════════════════════════════════════════════════
@@ -1237,7 +1237,7 @@ function App() {
           <a href="00-hub.html" style={{
             color: kbHsl(), fontFamily: 'var(--f-mono)', fontSize: 11,
             fontWeight: 700, textDecoration: 'underline',
-          }}>← Torna a 00-hub.html</a>
+          }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }}>← Torna a 00-hub.html</a>
           <span style={{
             fontFamily: 'var(--f-mono)', fontSize: 10, color: 'var(--text-muted)',
             fontWeight: 600,

@@ -161,7 +161,7 @@ function PublicRsvpFormSurface({ state, invitation }) {
       <section style={{ padding: 16, borderRadius: 8, border: '1px solid var(--border-light)', background: 'var(--bg-card)' }}>
         <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15 }}>Hai già risposto</h2>
         <p style={{ margin: '6px 0 12px', color: 'var(--text-muted)', fontSize: 13 }}>Hai confermato come "Marco".</p>
-        <button style={{ padding: '8px 14px', border: '1px solid var(--border-medium)', borderRadius: 6, background: 'var(--bg-muted)', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Cambia risposta</button>
+        <button style={{ padding: '8px 14px', border: '1px solid var(--border-medium)', borderRadius: 6, background: 'var(--bg-muted)', cursor: 'pointer', fontWeight: 600, fontSize: 13 }} onClick={() => { setTimeout(() => { window.location.href = 'sp7-game-night-detail-rsvp.html'; }, 0); /* DEMO-NAV */ }}>Cambia risposta</button>
       </section>
     );
   }
@@ -217,7 +217,7 @@ function PublicRsvpFormSurface({ state, invitation }) {
             fontSize: 14,
             opacity: submitting ? 0.7 : 1,
           }}
-        >
+         onClick={() => { setTimeout(() => { window.location.href = 'sp7-game-night-detail-rsvp.html'; }, 0); /* DEMO-NAV */ }}>
           Non posso
         </button>
       </div>
@@ -232,7 +232,7 @@ function ErrorSurface({ state }) {
         <div style={{ fontSize: 32, marginBottom: 12 }}>⌛</div>
         <h1 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 800 }}>Invito scaduto</h1>
         <p style={{ margin: '0 0 16px', color: 'var(--text-muted)', fontSize: 13 }}>Questo invito non è più valido. Chiedi all'organizzatore di rimandartelo.</p>
-        <button style={{ padding: '10px 16px', borderRadius: 6, background: 'var(--c-toolkit)', color: 'white', border: 'none', fontWeight: 700 }}>Richiedi un nuovo invito</button>
+        <button style={{ padding: '10px 16px', borderRadius: 6, background: 'var(--c-toolkit)', color: 'white', border: 'none', fontWeight: 700 }} onClick={() => { setTimeout(() => { window.location.href = 'sp7-game-night-detail-rsvp.html'; }, 0); /* DEMO-NAV */ }}>Richiedi un nuovo invito</button>
       </section>
     );
   }
@@ -276,7 +276,7 @@ function StateView({ state }) {
               <aside style={{ borderTop: '1px solid var(--border-light)', background: 'var(--bg-muted)', padding: 16 }}>
                 <h2 style={{ margin: 0, fontWeight: 800, fontSize: 13 }}>Vuoi tenere traccia delle tue serate?</h2>
                 <p style={{ margin: '4px 0 10px', fontSize: 11, color: 'var(--text-muted)' }}>Crea un account gratuito per gestire i tuoi inviti, vedere le statistiche e ricevere promemoria.</p>
-                <button style={{ padding: '8px 14px', borderRadius: 6, background: 'var(--c-toolkit)', color: 'white', border: 'none', fontWeight: 700, fontSize: 12 }}>Crea account</button>
+                <button style={{ padding: '8px 14px', borderRadius: 6, background: 'var(--c-toolkit)', color: 'white', border: 'none', fontWeight: 700, fontSize: 12 }} onClick={() => { setTimeout(() => { window.location.href = 'settings.html'; }, 0); /* DEMO-NAV */ }}>Crea account</button>
               </aside>
             ) : null}
           </article>
@@ -296,7 +296,7 @@ function Root() {
         {STATES.map(s => (
           <button
             key={s.id}
-            onClick={() => setActive(s.id)}
+            onClick={(e) => { (() => setActive(s.id))(e); setTimeout(() => { window.location.href = 'librogame-runthrough-game-onboarding.html'; }, 0); /* DEMO-NAV */ }}
             style={{
               padding: '6px 12px',
               borderRadius: 6,

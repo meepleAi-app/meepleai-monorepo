@@ -136,8 +136,14 @@ jobs:
         env:
           CI: true
 
+      # Issue #1315 — `always()` so the artifact uploads even when SOME tests
+      # in the bootstrap step fail. Bootstrapping is independent per spec file:
+      # one flaky spec shouldn't strand the baselines of the 30 other specs
+      # that completed successfully. The downstream review still sees only the
+      # PNGs that were actually generated; failing specs leave no snapshot.
       - name: Upload visual-migrated bootstrapped baselines
         if: |
+          always() &&
           github.event_name == 'workflow_dispatch' && inputs.mode == 'bootstrap' &&
           (inputs.project_filter == 'both' || inputs.project_filter == 'visual-migrated')
         uses: actions/upload-artifact@v7
@@ -149,6 +155,7 @@ jobs:
 
       - name: Upload v2-states bootstrapped baselines
         if: |
+          always() &&
           github.event_name == 'workflow_dispatch' && inputs.mode == 'bootstrap' &&
           (inputs.project_filter == 'both' || inputs.project_filter == 'v2-states')
         uses: actions/upload-artifact@v7

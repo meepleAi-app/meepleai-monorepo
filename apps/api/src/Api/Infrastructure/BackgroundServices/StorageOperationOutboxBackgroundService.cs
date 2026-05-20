@@ -135,7 +135,16 @@ internal sealed class StorageOperationOutboxBackgroundService : BackgroundServic
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
+        // PERF-06: DbContext defaults to NoTracking globally. Drainer must
+        // opt into tracking so the success-path mutations on `row.Status`,
+        // `row.SentAt`, `row.AttemptCount`, `row.LastError` reach the DB
+        // through SaveChanges. Without this, SaveChanges silently no-ops
+        // (catch-path still works because it touches `dbContext.Entry(row)`,
+        // which forces the entity into the change tracker as Modified).
+        // Discovered during the Phase 1 rollout on 2026-05-20: drainer kept
+        // moving objects on S3 but the outbox rows stayed Pending forever.
         var due = await dbContext.StorageOperationOutbox
+            .AsTracking()
             .Where(e => e.Status == "Pending" && e.ScheduledAt <= now)
             .OrderBy(e => e.ScheduledAt)
             .Take(BatchSize)

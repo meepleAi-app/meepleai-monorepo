@@ -1,7 +1,8 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.RuleConflictFAQs;
 using Api.BoundedContexts.GameManagement.Application.Validators.RuleConflictFAQs;
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.SharedKernel.Application;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentValidation.TestHelper;
 using Moq;
@@ -12,17 +13,21 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Validators.RuleCo
 /// <summary>
 /// Unit tests for CreateRuleConflictFaqCommandValidator.
 /// Issue #3966: Validator tests for FAQ creation.
+/// Issue #1320 (P2c): Migrated from IGameRepository to IGameCoreDataProvider.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public sealed class CreateRuleConflictFaqCommandValidatorTests
 {
-    private readonly Mock<IGameRepository> _gameRepositoryMock;
+    private readonly Mock<IGameCoreDataProvider> _gameCoreDataMock;
     private readonly CreateRuleConflictFaqCommandValidator _validator;
+
+    private static GameCoreData MakeCoreData(string title = "Test Game") =>
+        GameCoreData.Create(title, 2020, 2, 4, 60, 10);
 
     public CreateRuleConflictFaqCommandValidatorTests()
     {
-        _gameRepositoryMock = new Mock<IGameRepository>();
-        _validator = new CreateRuleConflictFaqCommandValidator(_gameRepositoryMock.Object);
+        _gameCoreDataMock = new Mock<IGameCoreDataProvider>();
+        _validator = new CreateRuleConflictFaqCommandValidator(_gameCoreDataMock.Object);
     }
 
     [Fact]
@@ -30,8 +35,9 @@ public sealed class CreateRuleConflictFaqCommandValidatorTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        _gameRepositoryMock.Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MakeCoreData());
 
         var command = new CreateRuleConflictFaqCommand(
             GameId: gameId,
@@ -73,8 +79,9 @@ public sealed class CreateRuleConflictFaqCommandValidatorTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        _gameRepositoryMock.Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GameCoreData?)null);
 
         var command = new CreateRuleConflictFaqCommand(
             GameId: gameId,
@@ -97,8 +104,9 @@ public sealed class CreateRuleConflictFaqCommandValidatorTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        _gameRepositoryMock.Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MakeCoreData());
 
         var command = new CreateRuleConflictFaqCommand(
             GameId: gameId,
@@ -124,8 +132,9 @@ public sealed class CreateRuleConflictFaqCommandValidatorTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        _gameRepositoryMock.Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MakeCoreData());
 
         var command = new CreateRuleConflictFaqCommand(
             GameId: gameId,
@@ -148,8 +157,9 @@ public sealed class CreateRuleConflictFaqCommandValidatorTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        _gameRepositoryMock.Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MakeCoreData());
 
         var longPattern = new string('a', 201); // 201 chars > 200 max
         var command = new CreateRuleConflictFaqCommand(
@@ -176,8 +186,9 @@ public sealed class CreateRuleConflictFaqCommandValidatorTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        _gameRepositoryMock.Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MakeCoreData());
 
         var command = new CreateRuleConflictFaqCommand(
             GameId: gameId,
@@ -200,8 +211,9 @@ public sealed class CreateRuleConflictFaqCommandValidatorTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        _gameRepositoryMock.Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MakeCoreData());
 
         var longResolution = new string('a', 2001); // 2001 chars > 2000 max
         var command = new CreateRuleConflictFaqCommand(
@@ -229,8 +241,9 @@ public sealed class CreateRuleConflictFaqCommandValidatorTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        _gameRepositoryMock.Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MakeCoreData());
 
         var command = new CreateRuleConflictFaqCommand(
             GameId: gameId,
@@ -256,8 +269,9 @@ public sealed class CreateRuleConflictFaqCommandValidatorTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        _gameRepositoryMock.Setup(r => r.ExistsAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MakeCoreData());
 
         var command = new CreateRuleConflictFaqCommand(
             GameId: gameId,

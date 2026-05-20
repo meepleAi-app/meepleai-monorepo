@@ -3,9 +3,7 @@ using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Application.IntegrationEvents;
-using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Events;
-using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
@@ -27,6 +25,7 @@ namespace Api.Tests.Integration.DomainEvents;
 /// Tests complete flow: Entity raises event → UnitOfWork commits → EventDispatcher → Handlers execute.
 /// Uses Testcontainers for real database event dispatching.
 /// Issue #2307: Week 3 Integration Tests + Visual Snapshots
+/// Issue #1320 (P2c): Removed Game aggregate usage; events constructed directly.
 /// </summary>
 [Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
@@ -40,6 +39,8 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
     private IServiceProvider _serviceProvider = null!;
 
     private readonly SemaphoreSlim _handlerLock = new(1, 1);
+
+    private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public DomainEventDispatcherIntegrationTests(SharedTestcontainersFixture fixture)
     {
@@ -86,46 +87,34 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
     /// <summary>
     /// Test: Single event raised → handler executes after commit
-    /// Pattern: Entity.RaiseDomainEvent() → SaveChangesAsync() → Handler.HandleAsync()
+    /// Pattern: Entity seeded + event injected → SaveChangesAsync() → Handler.HandleAsync()
     /// </summary>
     [Fact]
     public async Task SaveChangesAsync_WithSingleEvent_ShouldDispatchAndCreateAuditLog()
     {
-        // Arrange - Create game that raises GameCreatedEvent
-        var game = new Game(
-            id: Guid.NewGuid(),
-            title: new GameTitle("Wingspan"),
-            publisher: new Publisher("Stonemaier Games"),
-            yearPublished: new YearPublished(2019),
-            playerCount: new PlayerCount(1, 5),
-            playTime: new PlayTime(40, 70)
-        );
+        // Arrange — seed GameEntity and inject GameCreatedEvent directly
+        var gameId = Guid.NewGuid();
+        const string gameName = "Wingspan";
 
-        game.DomainEvents.Should().HaveCount(1);
-        game.DomainEvents.Should().ContainSingle(e => e is GameCreatedEvent);
-
-        // Map to persistence entity
-        var gameEntity = MapGameToEntity(game);
+        var gameEntity = CreateGameEntity(gameId, gameName, "Stonemaier Games");
         _dbContext.Games.Add(gameEntity);
 
-        // Collect domain events before save
-        _eventCollector.CollectEventsFrom(game);
-        game.ClearDomainEvents();
+        _eventCollector.Collect(new GameCreatedEvent(gameId, gameName));
 
         // Act - SaveChangesAsync should dispatch events
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert - Audit log created by GameCreatedEventHandler
         var auditLogs = await _dbContext.AuditLogs
             .Where(a => a.Resource == "GameCreatedEvent")
-            .ToListAsync();
+            .ToListAsync(TestCancellationToken);
 
         auditLogs.Should().HaveCount(1);
         var auditLog = auditLogs[0];
         auditLog.Action.Should().Contain("GameCreatedEvent");
         auditLog.Result.Should().Be("Success");
         auditLog.Details.Should().Contain("GameId");
-        auditLog.Details.Should().Contain(game.Id.ToString());
+        auditLog.Details.Should().Contain(gameId.ToString());
     }
 
     /// <summary>
@@ -165,13 +154,13 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
         user.ClearDomainEvents();
 
         // Act
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert - Two audit logs created in order
         var auditLogs = await _dbContext.AuditLogs
             .Where(a => a.Resource == "PasswordChangedEvent")
             .OrderBy(a => a.CreatedAt)
-            .ToListAsync();
+            .ToListAsync(TestCancellationToken);
 
         auditLogs.Should().HaveCount(2);
         auditLogs[0].UserId.Should().Be(user.Id);
@@ -190,31 +179,27 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GameCreated_ShouldTriggerWorkflowIntegrationHandler()
     {
-        // Arrange
-        var game = new Game(
-            id: Guid.NewGuid(),
-            title: new GameTitle("Terraforming Mars"),
-            publisher: new Publisher("FryxGames")
-        );
+        // Arrange — seed GameEntity and inject GameCreatedEvent directly
+        var gameId = Guid.NewGuid();
+        const string gameName = "Terraforming Mars";
 
-        var gameEntity = MapGameToEntity(game);
+        var gameEntity = CreateGameEntity(gameId, gameName, "FryxGames");
         _dbContext.Games.Add(gameEntity);
 
-        _eventCollector.CollectEventsFrom(game);
-        game.ClearDomainEvents();
+        _eventCollector.Collect(new GameCreatedEvent(gameId, gameName));
 
         // Act - SaveChangesAsync triggers:
         // 1. GameCreatedEvent → GameCreatedEventHandler
         // 2. GameCreatedEventHandler publishes GameCreatedIntegrationEvent
         // 3. GameCreatedIntegrationEvent → GameCreatedIntegrationEventHandler
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert - Audit log from domain event handler
         var auditLog = await _dbContext.AuditLogs
-            .FirstOrDefaultAsync(a => a.Resource == "GameCreatedEvent");
+            .FirstOrDefaultAsync(a => a.Resource == "GameCreatedEvent", TestCancellationToken);
 
         auditLog.Should().NotBeNull();
-        auditLog!.Details.Should().Contain(game.Id.ToString());
+        auditLog!.Details.Should().Contain(gameId.ToString());
 
         // Integration event handler logs (check via logger, not DB)
         // In real scenario, would verify n8n workflow triggered
@@ -229,12 +214,13 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task MultipleContextEvents_ShouldAllDispatchInSameTransaction()
     {
-        // Arrange - Create game and user in same transaction
-        var game = new Game(
-            id: Guid.NewGuid(),
-            title: new GameTitle("Gloomhaven"),
-            publisher: new Publisher("Cephalofair Games")
-        );
+        // Arrange — seed GameEntity and inject GameCreatedEvent directly
+        var gameId = Guid.NewGuid();
+        const string gameName = "Gloomhaven";
+
+        var gameEntity = CreateGameEntity(gameId, gameName, "Cephalofair Games");
+        _dbContext.Games.Add(gameEntity);
+        _eventCollector.Collect(new GameCreatedEvent(gameId, gameName));
 
         var user = new User(
             id: Guid.NewGuid(),
@@ -244,25 +230,19 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
             role: Role.User
         );
 
-        // Add both entities
-        _dbContext.Games.Add(MapGameToEntity(game));
         _dbContext.Users.Add(MapUserToEntity(user));
-
-        // Collect events from both aggregates
-        _eventCollector.CollectEventsFrom(game);
         _eventCollector.CollectEventsFrom(user);
-        game.ClearDomainEvents();
         user.ClearDomainEvents();
 
         // Act - Single transaction, multiple events
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert - Audit logs from both contexts (game and user)
         var gameAudit = await _dbContext.AuditLogs
-            .FirstOrDefaultAsync(a => a.Resource == "GameCreatedEvent");
+            .FirstOrDefaultAsync(a => a.Resource == "GameCreatedEvent", TestCancellationToken);
 
         gameAudit.Should().NotBeNull();
-        gameAudit!.Details.Should().Contain(game.Id.ToString());
+        gameAudit!.Details.Should().Contain(gameId.ToString());
     }
 
     #endregion
@@ -280,30 +260,26 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
         // catch and log exceptions rather than propagating them.
         // In a system with failing handlers, the transaction would rollback.
 
-        // Arrange
-        var game = new Game(
-            id: Guid.NewGuid(),
-            title: new GameTitle("Azul"),
-            publisher: new Publisher("Plan B Games")
-        );
+        // Arrange — seed GameEntity and inject GameCreatedEvent directly
+        var gameId = Guid.NewGuid();
+        const string gameName = "Azul";
 
-        var gameEntity = MapGameToEntity(game);
+        var gameEntity = CreateGameEntity(gameId, gameName, "Plan B Games");
         _dbContext.Games.Add(gameEntity);
 
-        _eventCollector.CollectEventsFrom(game);
-        game.ClearDomainEvents();
+        _eventCollector.Collect(new GameCreatedEvent(gameId, gameName));
 
         // Act - SaveChangesAsync executes without throwing
         // (handlers log errors but don't propagate exceptions)
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert - Game entity persisted (handlers don't prevent save)
-        var savedGame = await _dbContext.Games.FindAsync(game.Id);
+        var savedGame = await _dbContext.Games.FindAsync(new object[] { gameId }, TestCancellationToken);
         savedGame.Should().NotBeNull();
 
         // Audit log still created despite handler errors
         var auditLog = await _dbContext.AuditLogs
-            .FirstOrDefaultAsync(a => a.Resource == "GameCreatedEvent");
+            .FirstOrDefaultAsync(a => a.Resource == "GameCreatedEvent", TestCancellationToken);
         auditLog.Should().NotBeNull();
     }
 
@@ -314,39 +290,34 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task EventCollector_WithConcurrentCollections_ShouldBeThreadSafe()
     {
-        // Arrange - Create multiple games concurrently
-        var games = Enumerable.Range(0, 10)
-            .Select(i => new Game(
-                id: Guid.NewGuid(),
-                title: new GameTitle($"Concurrent Game {i}"),
-                publisher: new Publisher("Test Publisher")
-            ))
+        // Arrange — create 10 games with events injected directly
+        var gameData = Enumerable.Range(0, 10)
+            .Select(i => (Id: Guid.NewGuid(), Name: $"Concurrent Game {i}"))
             .ToList();
 
         // Act - Collect events concurrently
-        var tasks = games.Select(async game =>
+        var tasks = gameData.Select(async g =>
         {
 #pragma warning disable CA5394 // Random is fine for test concurrency simulation
             await Task.Delay(Random.Shared.Next(10, 50)); // Simulate concurrent load
 #pragma warning restore CA5394
-            _eventCollector.CollectEventsFrom(game);
-            game.ClearDomainEvents();
+            _eventCollector.Collect(new GameCreatedEvent(g.Id, g.Name));
         });
 
         await Task.WhenAll(tasks);
 
         // Add entities and save
-        foreach (var game in games)
+        foreach (var (id, name) in gameData)
         {
-            _dbContext.Games.Add(MapGameToEntity(game));
+            _dbContext.Games.Add(CreateGameEntity(id, name, "Test Publisher"));
         }
 
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert - All events dispatched
         var auditLogs = await _dbContext.AuditLogs
             .Where(a => a.Resource == "GameCreatedEvent")
-            .ToListAsync();
+            .ToListAsync(TestCancellationToken);
 
         auditLogs.Should().HaveCount(10);
     }
@@ -358,32 +329,26 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task PartialHandlerFailure_ShouldNotPreventOtherHandlers()
     {
-        // Arrange - Create game with multiple events
-        var game = new Game(
-            id: Guid.NewGuid(),
-            title: new GameTitle("7 Wonders"),
-            publisher: new Publisher("Repos Production")
-        );
+        // Arrange — seed GameEntity and inject GameLinkedToBggEvent directly
+        var gameId = Guid.NewGuid();
+        const string gameName = "7 Wonders";
+        const int bggId = 68448;
+        const string bggMetadata = "BGG Metadata";
 
-        game.ClearDomainEvents();
-        game.LinkToBgg(68448, "BGG Metadata");
-
-        // Two events: GameCreatedEvent (from constructor) + GameLinkedToBggEvent
-        game.DomainEvents.Should().HaveCount(1);
-
-        var gameEntity = MapGameToEntity(game);
+        var gameEntity = CreateGameEntity(gameId, gameName, "Repos Production");
+        gameEntity.BggId = bggId;
+        gameEntity.BggMetadata = bggMetadata;
         _dbContext.Games.Add(gameEntity);
 
-        _eventCollector.CollectEventsFrom(game);
-        game.ClearDomainEvents();
+        _eventCollector.Collect(new GameLinkedToBggEvent(gameId, bggId));
 
         // Act - All handlers execute independently
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        // Assert - Audit logs from both events
+        // Assert - Audit log from GameLinkedToBggEvent
         var auditLogs = await _dbContext.AuditLogs
             .Where(a => a.Resource == "GameLinkedToBggEvent")
-            .ToListAsync();
+            .ToListAsync(TestCancellationToken);
 
         auditLogs.Should().HaveCount(1);
         auditLogs[0].Details.Should().Contain("68448");
@@ -393,23 +358,14 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
     #region Helper Methods
 
-    private static GameEntity MapGameToEntity(Game game)
+    private static GameEntity CreateGameEntity(Guid id, string name, string? publisher = null)
     {
         return new GameEntity
         {
-            Id = game.Id,
-            Name = game.Title.Value,
-            Publisher = game.Publisher?.ToString(),
-            YearPublished = game.YearPublished?.Value,
-            MinPlayers = game.PlayerCount?.Min,
-            MaxPlayers = game.PlayerCount?.Max,
-            MinPlayTimeMinutes = game.PlayTime?.MinMinutes,
-            MaxPlayTimeMinutes = game.PlayTime?.MaxMinutes,
-            BggId = game.BggId,
-            BggMetadata = game.BggMetadata,
-            IconUrl = game.IconUrl,
-            ImageUrl = game.ImageUrl,
-            CreatedAt = game.CreatedAt
+            Id = id,
+            Name = name,
+            Publisher = publisher,
+            CreatedAt = DateTime.UtcNow
         };
     }
 

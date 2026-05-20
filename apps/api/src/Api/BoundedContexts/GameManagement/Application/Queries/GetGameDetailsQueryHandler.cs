@@ -1,34 +1,39 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries;
-using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.SharedKernel.Application;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.GameManagement.Application.Queries;
 
 /// <summary>
 /// Handles get game details query with extended metadata and statistics.
+/// Issue #1320 (P2c): Migrated from IGameRepository to IGameCoreDataProvider.
 /// </summary>
 internal class GetGameDetailsQueryHandler : IQueryHandler<GetGameDetailsQuery, GameDetailsDto?>
 {
-    private readonly IGameRepository _gameRepository;
+    private readonly IGameCoreDataProvider _gameCoreData;
     private readonly IGameSessionRepository _sessionRepository;
 
     public GetGameDetailsQueryHandler(
-        IGameRepository gameRepository,
+        IGameCoreDataProvider gameCoreData,
         IGameSessionRepository sessionRepository)
     {
-        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _gameCoreData = gameCoreData ?? throw new ArgumentNullException(nameof(gameCoreData));
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
     }
 
     public async Task<GameDetailsDto?> Handle(GetGameDetailsQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
-        var game = await _gameRepository.GetByIdAsync(query.GameId, cancellationToken).ConfigureAwait(false);
 
-        if (game == null)
+        var coreData = await _gameCoreData
+            .GetCoreDataAsync(GameRef.Shared(query.GameId), cancellationToken)
+            .ConfigureAwait(false);
+
+        if (coreData == null)
             return null;
 
         // Get play statistics from sessions
@@ -43,27 +48,27 @@ internal class GetGameDetailsQueryHandler : IQueryHandler<GetGameDetailsQuery, G
             .Select(s => s.CompletedAt)
             .FirstOrDefault();
 
-        return MapToDetailsDto(game, totalSessionsPlayed > 0 ? totalSessionsPlayed : null, lastPlayedAt);
+        return MapToDetailsDto(query.GameId, coreData, totalSessionsPlayed > 0 ? totalSessionsPlayed : null, lastPlayedAt);
     }
 
-    private static GameDetailsDto MapToDetailsDto(Game game, int? totalSessions, DateTime? lastPlayed)
+    private static GameDetailsDto MapToDetailsDto(Guid id, GameCoreData coreData, int? totalSessions, DateTime? lastPlayed)
     {
         return new GameDetailsDto(
-            Id: game.Id,
-            Title: game.Title.Value,
-            Publisher: game.Publisher?.Name,
-            YearPublished: game.YearPublished?.Value,
-            MinPlayers: game.PlayerCount?.Min,
-            MaxPlayers: game.PlayerCount?.Max,
-            MinPlayTimeMinutes: game.PlayTime?.MinMinutes,
-            MaxPlayTimeMinutes: game.PlayTime?.MaxMinutes,
-            BggId: game.BggId,
-            BggMetadata: game.BggMetadata,
-            CreatedAt: game.CreatedAt,
-            SupportsSolo: game.SupportsSolo,
+            Id: id,
+            Title: coreData.Title,
+            Publisher: null,
+            YearPublished: coreData.YearPublished,
+            MinPlayers: coreData.MinPlayers,
+            MaxPlayers: coreData.MaxPlayers,
+            MinPlayTimeMinutes: coreData.PlayingTimeMinutes,
+            MaxPlayTimeMinutes: coreData.PlayingTimeMinutes,
+            BggId: coreData.BggId,
+            BggMetadata: null,
+            CreatedAt: DateTime.UtcNow,
+            SupportsSolo: coreData.MinPlayers == 1,
             TotalSessionsPlayed: totalSessions,
             LastPlayedAt: lastPlayed,
-            SharedGameId: game.SharedGameId
+            ImageUrl: coreData.ImageUrl
         );
     }
 }

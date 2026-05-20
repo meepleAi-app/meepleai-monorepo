@@ -30,6 +30,20 @@ internal sealed class DomainEventCollector : IDomainEventCollector
     }
 
     /// <summary>
+    /// Directly enqueues a single domain event.
+    /// See <see cref="IDomainEventCollector.Collect"/>.
+    /// </summary>
+    public void Collect(IDomainEvent domainEvent)
+    {
+        ArgumentNullException.ThrowIfNull(domainEvent);
+
+        lock (_lock)
+        {
+            _collectedEvents.Add(domainEvent);
+        }
+    }
+
+    /// <summary>
     /// Gets all collected events and clears the collection.
     /// Called by DbContext after successful save.
     /// </summary>

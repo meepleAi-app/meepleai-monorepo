@@ -4,7 +4,9 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
@@ -16,18 +18,18 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
 internal class CreatePlayRecordCommandHandler : ICommandHandler<CreatePlayRecordCommand, Guid>
 {
     private readonly IPlayRecordRepository _recordRepository;
-    private readonly IGameRepository _gameRepository;
+    private readonly IGameCoreDataProvider _gameCoreData;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
 
     public CreatePlayRecordCommandHandler(
         IPlayRecordRepository recordRepository,
-        IGameRepository gameRepository,
+        IGameCoreDataProvider gameCoreData,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider)
     {
         _recordRepository = recordRepository ?? throw new ArgumentNullException(nameof(recordRepository));
-        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _gameCoreData = gameCoreData ?? throw new ArgumentNullException(nameof(gameCoreData));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
@@ -39,10 +41,11 @@ internal class CreatePlayRecordCommandHandler : ICommandHandler<CreatePlayRecord
         // Validate game exists if GameId provided
         if (command.GameId.HasValue)
         {
-            var gameExists = await _gameRepository.ExistsAsync(command.GameId.Value, cancellationToken)
+            var game = await _gameCoreData
+                .GetCoreDataAsync(GameRef.Shared(command.GameId.Value), cancellationToken)
                 .ConfigureAwait(false);
 
-            if (!gameExists)
+            if (game is null)
                 throw new NotFoundException("Game", command.GameId.Value.ToString());
         }
 

@@ -17,6 +17,14 @@ public interface IDomainEventCollector
     void CollectEventsFrom(IAggregateRoot aggregate);
 
     /// <summary>
+    /// Directly enqueues a single domain event.
+    /// Use this when the event must be fired without an aggregate root —
+    /// e.g. integration tests that construct events from raw persistence
+    /// entities rather than from a deleted domain aggregate (issue #1320).
+    /// </summary>
+    void Collect(IDomainEvent domainEvent);
+
+    /// <summary>
     /// Gets all collected events and clears the collection.
     /// Called by DbContext after successful save.
     /// </summary>

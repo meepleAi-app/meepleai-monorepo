@@ -3,6 +3,7 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
@@ -10,6 +11,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -58,7 +60,6 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();
-        services.AddScoped<IGameRepository, GameRepository>();
         services.RemoveAll<Api.BoundedContexts.GameManagement.Domain.Repositories.IGameSessionRepository>();
         services.AddScoped<IGameSessionRepository, GameSessionRepository>();
         services.AddScoped<IChatThreadRepository, ChatThreadRepository>();
@@ -148,7 +149,6 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
         var sessionRepository = ServiceProvider.GetRequiredService<ISessionRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
         var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
@@ -164,13 +164,8 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Step 3: Browse games
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Catan"),
-            playerCount: new PlayerCount(3, 4),
-            playTime: new PlayTime(60, 120)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        var gameEntity = CreateGameEntity("Catan");
+        _dbContext.Games.Add(gameEntity);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Step 4: Start game session
@@ -180,7 +175,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
             new SessionPlayer("Alice", 2),
             new SessionPlayer("Bob", 3)
         };
-        var gameSession = new GameSession(Guid.NewGuid(), game.Id, players);
+        var gameSession = new GameSession(Guid.NewGuid(), gameEntity.Id, players);
         gameSession.Start();
         await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
@@ -189,7 +184,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         var chatThread = new ChatThread(
             Guid.NewGuid(),
             user.Id,
-            game.Id,
+            gameEntity.Id,
             "Catan Setup Questions"
         );
         chatThread.AddUserMessage("How many resources do I start with?");
@@ -229,7 +224,6 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
         var sessionRepository = ServiceProvider.GetRequiredService<ISessionRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
         var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
@@ -247,25 +241,20 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
             users.Add(user);
         }
 
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Pandemic Legacy"),
-            playerCount: new PlayerCount(2, 4),
-            playTime: new PlayTime(60, 90)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        var gameEntity = CreateGameEntity("Pandemic Legacy");
+        _dbContext!.Games.Add(gameEntity);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 
         // Act - Shared game session + individual chat threads
         var players = userNames.Select((name, idx) => new SessionPlayer(name, idx + 1)).ToList();
-        var gameSession = new GameSession(Guid.NewGuid(), game.Id, players);
+        var gameSession = new GameSession(Guid.NewGuid(), gameEntity.Id, players);
         gameSession.Start();
         await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
 
         foreach (var user in users)
         {
-            var thread = new ChatThread(Guid.NewGuid(), user.Id, game.Id, $"{user.DisplayName}'s Questions");
+            var thread = new ChatThread(Guid.NewGuid(), user.Id, gameEntity.Id, $"{user.DisplayName}'s Questions");
             thread.AddUserMessage("Individual question");
             await chatThreadRepository.AddAsync(thread, TestCancellationToken);
         }
@@ -297,7 +286,6 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
         var sessionRepository = ServiceProvider.GetRequiredService<ISessionRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var gameSessionRepository = ServiceProvider.GetRequiredService<IGameSessionRepository>();
         var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
 
@@ -309,27 +297,22 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         var session = new Session(Guid.NewGuid(), user.Id, sessionToken, TestConstants.Timing.VeryShortTimeout);
         await sessionRepository.AddAsync(session, TestCancellationToken);
 
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Quick Game"),
-            playerCount: new PlayerCount(1, 2),
-            playTime: new PlayTime(15, 30)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        var gameEntity = CreateGameEntity("Quick Game");
+        _dbContext!.Games.Add(gameEntity);
 
         var gameSession = new GameSession(
             Guid.NewGuid(),
-            game.Id,
+            gameEntity.Id,
             new List<SessionPlayer> { new SessionPlayer("Expiring User", 1) }
         );
         gameSession.Start();
         await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
 
-        var chatThread = new ChatThread(Guid.NewGuid(), user.Id, game.Id, "Quick Questions");
+        var chatThread = new ChatThread(Guid.NewGuid(), user.Id, gameEntity.Id, "Quick Questions");
         chatThread.AddUserMessage("Quick question");
         chatThread.AddAssistantMessage("Quick answer");
         await chatThreadRepository.AddAsync(chatThread, TestCancellationToken);
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Wait for session expiration
         await Task.Delay(TestConstants.Timing.MediumTimeout);
@@ -357,5 +340,16 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
             PasswordHash.Create("SecurePass123!"),
             Role.User
         );
+    }
+
+    private static GameEntity CreateGameEntity(string name, string? publisher = null)
+    {
+        return new GameEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Publisher = publisher,
+            CreatedAt = DateTime.UtcNow
+        };
     }
 }

@@ -28,7 +28,7 @@ internal static class GameManagementServiceExtensions
     public static IServiceCollection AddGameManagementContext(this IServiceCollection services)
     {
         // Register repositories
-        services.AddScoped<IGameRepository, GameRepository>();
+        // NOTE: IGameRepository removed by #1320 (P2c) — Game aggregate deleted.
         services.AddScoped<IGameSessionRepository, GameSessionRepository>();
         services.AddScoped<IGameSessionStateRepository, GameSessionStateRepository>(); // ISSUE-2403
         services.AddScoped<IPlayRecordRepository, PlayRecordRepository>(); // ISSUE-3889

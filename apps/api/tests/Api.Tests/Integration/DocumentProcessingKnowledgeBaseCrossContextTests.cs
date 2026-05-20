@@ -6,14 +6,11 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
-using Api.BoundedContexts.GameManagement.Domain.Entities;
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
-using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
-using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -59,7 +56,6 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IGameRepository, GameRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
         services.AddScoped<IVectorDocumentRepository, VectorDocumentRepository>();
         services.AddScoped<IChatThreadRepository, ChatThreadRepository>();
@@ -179,25 +175,19 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         await ResetDatabaseAsync();
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var pdfRepository = ServiceProvider.GetRequiredService<IPdfDocumentRepository>();
 
         var user = CreateTestUser("uploader@meepleai.dev", "Document Uploader");
         await userRepository.AddAsync(user, TestCancellationToken);
 
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Gloomhaven"),
-            playerCount: new PlayerCount(1, 4),
-            playTime: new PlayTime(90, 150)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        var gameEntity = CreateGameEntity("Gloomhaven");
+        _dbContext!.Games.Add(gameEntity);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
         var pdfDocument = new PdfDocument(
             Guid.NewGuid(),
-            game.Id,
+            gameEntity.Id,
             new FileName("gloomhaven-rules.pdf"),
             "/uploads/gloomhaven-rules.pdf",
             new FileSize(5 * 1024 * 1024),
@@ -210,7 +200,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         // Assert
         var loadedDocument = await pdfRepository.GetByIdAsync(pdfDocument.Id, TestCancellationToken);
         loadedDocument.Should().NotBeNull();
-        loadedDocument!.GameId.Should().Be(game.Id);
+        loadedDocument!.GameId.Should().Be(gameEntity.Id);
         loadedDocument.UploadedByUserId.Should().Be(user.Id);
         loadedDocument.ProcessingState.ToString().Should().Be("Pending");
         loadedDocument.FileName.Value.Should().Be("gloomhaven-rules.pdf");
@@ -223,26 +213,20 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         await ResetDatabaseAsync();
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var pdfRepository = ServiceProvider.GetRequiredService<IPdfDocumentRepository>();
         var vectorRepository = ServiceProvider.GetRequiredService<IVectorDocumentRepository>();
 
         var user = CreateTestUser("processor@meepleai.dev", "PDF Processor");
         await userRepository.AddAsync(user, TestCancellationToken);
 
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Scythe"),
-            playerCount: new PlayerCount(1, 5),
-            playTime: new PlayTime(90, 120)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        var gameEntity = CreateGameEntity("Scythe");
+        _dbContext!.Games.Add(gameEntity);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Complete workflow
         var pdfDocument = new PdfDocument(
             Guid.NewGuid(),
-            game.Id,
+            gameEntity.Id,
             new FileName("scythe-rules.pdf"),
             "/uploads/scythe-rules.pdf",
             new FileSize(4 * 1024 * 1024),
@@ -264,7 +248,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
 
         var vectorDoc = new VectorDocument(
             Guid.NewGuid(),
-            game.Id,
+            gameEntity.Id,
             pdfDocument.Id,
             language: "en",
             totalChunks: 15
@@ -282,7 +266,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
 
         var loadedVectorDoc = await vectorRepository.GetByIdAsync(vectorDoc.Id, TestCancellationToken);
         loadedVectorDoc.Should().NotBeNull();
-        loadedVectorDoc!.GameId.Should().Be(game.Id);
+        loadedVectorDoc!.GameId.Should().Be(gameEntity.Id);
         loadedVectorDoc.PdfDocumentId.Should().Be(pdfDocument.Id);
         loadedVectorDoc.TotalChunks.Should().Be(15);
     }
@@ -294,7 +278,6 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         await ResetDatabaseAsync();
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var pdfRepository = ServiceProvider.GetRequiredService<IPdfDocumentRepository>();
         var vectorRepository = ServiceProvider.GetRequiredService<IVectorDocumentRepository>();
         var chatThreadRepository = ServiceProvider.GetRequiredService<IChatThreadRepository>();
@@ -302,17 +285,12 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         var user = CreateTestUser("raguser@meepleai.dev", "RAG User");
         await userRepository.AddAsync(user, TestCancellationToken);
 
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Pandemic"),
-            playerCount: new PlayerCount(2, 4),
-            playTime: new PlayTime(45, 60)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
+        var gameEntity = CreateGameEntity("Pandemic");
+        _dbContext!.Games.Add(gameEntity);
 
         var pdfDocument = new PdfDocument(
             Guid.NewGuid(),
-            game.Id,
+            gameEntity.Id,
             new FileName("pandemic-rules.pdf"),
             "/uploads/pandemic-rules.pdf",
             new FileSize(3 * 1024 * 1024),
@@ -324,13 +302,13 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
 
         var vectorDoc = new VectorDocument(
             Guid.NewGuid(),
-            game.Id,
+            gameEntity.Id,
             pdfDocument.Id,
             language: "en",
             totalChunks: 12
         );
         await vectorRepository.AddAsync(vectorDoc, TestCancellationToken);
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Clear tracker to avoid conflicts
         _dbContext.ChangeTracker.Clear();
@@ -345,7 +323,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         var chatThread = new ChatThread(
             Guid.NewGuid(),
             user.Id,
-            game.Id,
+            gameEntity.Id,
             "Pandemic Outbreak Questions"
         );
         chatThread.AddUserMessage("What happens during an outbreak?");
@@ -360,10 +338,10 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         // Assert
         var loadedThread = await chatThreadRepository.GetByIdAsync(chatThread.Id, TestCancellationToken);
         loadedThread.Should().NotBeNull();
-        loadedThread!.GameId.Should().Be(game.Id);
+        loadedThread!.GameId.Should().Be(gameEntity.Id);
         loadedThread.MessageCount.Should().Be(2);
 
-        var gameVectors = await vectorRepository.GetByGameIdAsync(game.Id, TestCancellationToken);
+        var gameVectors = await vectorRepository.GetByGameIdAsync(gameEntity.Id, TestCancellationToken);
         gameVectors.Should().ContainSingle();
         gameVectors[0].Metadata.Should().Contain("outbreak");
     }
@@ -375,7 +353,6 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         await ResetDatabaseAsync();
 
         var userRepository = ServiceProvider.GetRequiredService<IUserRepository>();
-        var gameRepository = ServiceProvider.GetRequiredService<IGameRepository>();
         var pdfRepository = ServiceProvider.GetRequiredService<IPdfDocumentRepository>();
 
         var user1 = CreateTestUser("user1@meepleai.dev", "User One");
@@ -383,20 +360,15 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         await userRepository.AddAsync(user1, TestCancellationToken);
         await userRepository.AddAsync(user2, TestCancellationToken);
 
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Terraforming Mars"),
-            playerCount: new PlayerCount(1, 5),
-            playTime: new PlayTime(120, 180)
-        );
-        await gameRepository.AddAsync(game, TestCancellationToken);
-        await _dbContext!.SaveChangesAsync(TestCancellationToken);
+        var gameEntity = CreateGameEntity("Terraforming Mars");
+        _dbContext!.Games.Add(gameEntity);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 
         // Act - Both users upload documents
         var pdf1 = new PdfDocument(
             Guid.NewGuid(),
-            game.Id,
+            gameEntity.Id,
             new FileName("tm-base-rules.pdf"),
             "/uploads/tm-base.pdf",
             new FileSize(6 * 1024 * 1024),
@@ -407,7 +379,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
 
         var pdf2 = new PdfDocument(
             Guid.NewGuid(),
-            game.Id,
+            gameEntity.Id,
             new FileName("tm-expansions.pdf"),
             "/uploads/tm-exp.pdf",
             new FileSize(8 * 1024 * 1024),
@@ -444,5 +416,16 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
             PasswordHash.Create("SecurePass123!"),
             Role.User
         );
+    }
+
+    private static GameEntity CreateGameEntity(string name, string? publisher = null)
+    {
+        return new GameEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Publisher = publisher,
+            CreatedAt = DateTime.UtcNow
+        };
     }
 }

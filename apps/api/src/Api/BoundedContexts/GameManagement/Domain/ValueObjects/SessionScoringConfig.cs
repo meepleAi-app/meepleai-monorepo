@@ -60,19 +60,6 @@ internal sealed class SessionScoringConfig : ValueObject
     }
 
     /// <summary>
-    /// Creates scoring configuration from a game's metadata.
-    /// Falls back to default if game has no scoring metadata.
-    /// Future: Extract from game.ScoringMetadata when schema is defined.
-    /// </summary>
-    public static SessionScoringConfig CreateFromGame(Entities.Game game)
-    {
-        ArgumentNullException.ThrowIfNull(game);
-
-        // Future enhancement: Extract from game.ScoringMetadata when available
-        return CreateDefault();
-    }
-
-    /// <summary>
     /// Checks if a dimension is enabled in this configuration.
     /// </summary>
     public bool HasDimension(string dimension) =>

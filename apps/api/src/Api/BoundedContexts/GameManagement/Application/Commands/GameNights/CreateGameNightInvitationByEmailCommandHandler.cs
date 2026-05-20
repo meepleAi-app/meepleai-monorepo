@@ -4,7 +4,9 @@ using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 
@@ -26,7 +28,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
     private readonly IGameNightInvitationRepository _invitationRepository;
     private readonly IGameNightEventRepository _gameNightRepository;
     private readonly IUserRepository _userRepository;
-    private readonly IGameRepository _gameRepository;
+    private readonly IGameCoreDataProvider _gameCoreData;
     private readonly IGameNightEmailService _emailService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IConfiguration _configuration;
@@ -36,7 +38,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
         IGameNightInvitationRepository invitationRepository,
         IGameNightEventRepository gameNightRepository,
         IUserRepository userRepository,
-        IGameRepository gameRepository,
+        IGameCoreDataProvider gameCoreData,
         IGameNightEmailService emailService,
         IUnitOfWork unitOfWork,
         IConfiguration configuration,
@@ -45,7 +47,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
         _invitationRepository = invitationRepository ?? throw new ArgumentNullException(nameof(invitationRepository));
         _gameNightRepository = gameNightRepository ?? throw new ArgumentNullException(nameof(gameNightRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
-        _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
+        _gameCoreData = gameCoreData ?? throw new ArgumentNullException(nameof(gameCoreData));
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -130,10 +132,10 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
         var gameNames = new List<string>(capacity: gameNight.GameIds.Count);
         foreach (var gameId in gameNight.GameIds)
         {
-            var game = await _gameRepository.GetByIdAsync(gameId, cancellationToken).ConfigureAwait(false);
+            var game = await _gameCoreData.GetCoreDataAsync(GameRef.Shared(gameId), cancellationToken).ConfigureAwait(false);
             if (game is not null)
             {
-                gameNames.Add(game.Title.Value);
+                gameNames.Add(game.Title);
             }
         }
 

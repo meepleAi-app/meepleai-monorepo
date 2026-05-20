@@ -97,17 +97,52 @@ kubectl rollout status deploy/api-staging --timeout=120s
 
 ### Step 1.3 — Enqueue migration rows
 
-Run the enumerator script (TODO: provide `scripts/enqueue-storage-migration.sh`
-that lists `pdf_uploads/*` and POSTs to an admin endpoint that calls
-`IStorageOperationOutboxService.EnqueueAsync` per row).
+Implemented in issue #1333 (admin endpoint `POST /api/v1/admin/storage/migration/enqueue`
++ `scripts/enqueue-storage-migration.sh`). The script enumerates S3 objects
+under `--prefix` and inserts `storage_operation_outbox` rows for the drainer.
+
+Idempotent — re-runs with the same `--migration-id` produce 0 enqueued, N skipped.
 
 ```bash
+export MEEPLEAI_ADMIN_TOKEN="<admin-bearer-token>"
+MIGRATION_ID=$(uuidgen)
+
+# Dry-run first — counts objects without inserting rows
 ./scripts/enqueue-storage-migration.sh \
   --bucket ${BUCKET} \
-  --migration-id $(uuidgen) \
-  --prefix pdf_uploads/
-# Output: "Enqueued N migration rows under migration <UUID>"
+  --migration-id $MIGRATION_ID \
+  --prefix pdf_uploads/ \
+  --category Pdf \
+  --dry-run
+
+# Apply
+./scripts/enqueue-storage-migration.sh \
+  --bucket ${BUCKET} \
+  --migration-id $MIGRATION_ID \
+  --prefix pdf_uploads/ \
+  --category Pdf
+
+# Output:
+# {
+#   "migrationId": "<UUID>",
+#   "totalObjects": 113,
+#   "enqueued": 113,
+#   "skipped": 0,
+#   "failed": 0,
+#   ...
+# }
 ```
+
+For non-PDF prefixes (session photos, vision snapshots, etc.) re-invoke with
+the matching `--category` value and prefix:
+
+```bash
+./scripts/enqueue-storage-migration.sh --bucket ${BUCKET} --migration-id $MIGRATION_ID \
+  --prefix pdf_uploads/session-photos- --category SessionPhoto
+```
+
+(One invocation per category — the enumerator is single-prefix; cross-category
+batches must be split.)
 
 ### Step 1.4 — Monitor progress
 
@@ -251,6 +286,9 @@ aws s3 rm s3://${BUCKET}/_trash/${DATE}/pdf_uploads/ --recursive
 **When**: Phase 2 detected as broken AND Phase 1 already complete (new objects
 exist at categorized prefixes).
 
+Implemented in issue #1333 (admin endpoint `POST /api/v1/admin/storage/migration/reverse`
++ `scripts/reverse-storage-migration.sh`).
+
 ### Step B.1 — Halt new uploads at new layout
 
 ```bash
@@ -258,16 +296,52 @@ kubectl set env deploy/api-staging STORAGE_WRITE_MODE=Legacy
 kubectl rollout restart deploy/api-staging
 ```
 
-### Step B.2 — Reverse-move objects
+### Step B.2 — Reverse-move objects (script + admin endpoint)
 
-Run the inverse of Phase 1 (script TBD: `scripts/reverse-storage-migration.sh`):
-list each categorized prefix and `aws s3 mv` back to `pdf_uploads/`.
+```bash
+export MEEPLEAI_ADMIN_TOKEN="<admin-bearer-token>"
+
+# Dry-run — counts rows that would be reversed, no S3 writes
+./scripts/reverse-storage-migration.sh \
+  --migration-id <UUID-from-step-1.3> \
+  --dry-run
+
+# Apply (interactive — requires typing 'reverse' to confirm)
+./scripts/reverse-storage-migration.sh \
+  --migration-id <UUID-from-step-1.3>
+
+# Output:
+# {
+#   "migrationId": "<UUID>",
+#   "totalRows": 113,
+#   "reversedFromSent": 100,
+#   "cancelledFromPending": 13,
+#   "skipped": 0,
+#   "failed": 0,
+#   ...
+# }
+```
+
+For each `Sent` row the script copies `NewKey → LegacyKey` then deletes `NewKey`;
+for each `Pending` row it transitions the outbox `Status` to `Reverted` so the
+drainer skips the row. `FailedPermanent` rows are NOT auto-reverted — investigate
+manually.
 
 ### Step B.3 — Verify health endpoint
 
 ```bash
 curl https://staging.meepleai.app/health/storage | jq '.data.layout_version'
 # Expected: "v1-gameId" (back to Phase 0 state)
+```
+
+### Step B.4 — Audit trail
+
+```bash
+psql -c "SELECT status, COUNT(*) FROM storage_operation_outbox \
+         WHERE migration_id = '<UUID>' GROUP BY status;"
+# Expected after full reverse:
+#   Reverted: <total>
+#   FailedPermanent: 0 (else: manual investigation)
 ```
 
 ---

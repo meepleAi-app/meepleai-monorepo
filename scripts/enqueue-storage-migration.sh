@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# Storage layout migration — Phase 1 enqueue (issue #1333).
+#
+# Wrapper around POST /api/v1/admin/storage/migration/enqueue. Enumerates
+# S3 objects under --prefix and inserts storage_operation_outbox rows so
+# the StorageOperationOutboxBackgroundService drainer can move them to the
+# new categorized layout (issue #1314 PR 2).
+#
+# Idempotent: re-running with the same --migration-id produces 0 enqueued,
+# N skipped (the UNIQUE LegacyKey constraint in the outbox dedups).
+#
+# Usage:
+#   MEEPLEAI_ADMIN_TOKEN=... ./scripts/enqueue-storage-migration.sh \
+#     --bucket meepleai-uploads \
+#     --migration-id $(uuidgen) \
+#     [--prefix pdf_uploads/] \
+#     [--category Pdf] \
+#     [--api-url https://staging.meepleai.app] \
+#     [--dry-run]
+#
+# Exit codes:
+#   0 → success (rows enqueued or dry-run completed)
+#   1 → validation failure (missing flags, invalid category)
+#   2 → API error (4xx/5xx from admin endpoint)
+
+set -euo pipefail
+
+API_URL="${API_URL:-https://staging.meepleai.app}"
+PREFIX="pdf_uploads/"
+CATEGORY="Pdf"
+DRY_RUN="false"
+BUCKET=""
+MIGRATION_ID=""
+
+ALLOWED_CATEGORIES=("Pdf" "SessionPhoto" "GameImage" "VisionSnapshot" "GamebookPhoto" "PhotoBatch")
+
+usage() {
+    sed -n '2,22p' "$0" >&2
+    exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --bucket)
+            [[ $# -lt 2 ]] && { echo "--bucket needs a value" >&2; exit 1; }
+            BUCKET="$2"; shift 2 ;;
+        --migration-id)
+            [[ $# -lt 2 ]] && { echo "--migration-id needs a value" >&2; exit 1; }
+            MIGRATION_ID="$2"; shift 2 ;;
+        --prefix)
+            [[ $# -lt 2 ]] && { echo "--prefix needs a value" >&2; exit 1; }
+            PREFIX="$2"; shift 2 ;;
+        --category)
+            [[ $# -lt 2 ]] && { echo "--category needs a value" >&2; exit 1; }
+            CATEGORY="$2"; shift 2 ;;
+        --api-url)
+            [[ $# -lt 2 ]] && { echo "--api-url needs a value" >&2; exit 1; }
+            API_URL="$2"; shift 2 ;;
+        --dry-run) DRY_RUN="true"; shift ;;
+        -h|--help) usage ;;
+        *) echo "Unknown flag: $1" >&2; usage ;;
+    esac
+done
+
+if [[ -z "$BUCKET" ]]; then
+    echo "ERROR: --bucket is required" >&2
+    exit 1
+fi
+if [[ -z "$MIGRATION_ID" ]]; then
+    echo "ERROR: --migration-id is required (use \$(uuidgen))" >&2
+    exit 1
+fi
+if [[ -z "${MEEPLEAI_ADMIN_TOKEN:-}" ]]; then
+    echo "ERROR: MEEPLEAI_ADMIN_TOKEN env var is required" >&2
+    exit 1
+fi
+
+# Validate category against enum
+valid_category="false"
+for c in "${ALLOWED_CATEGORIES[@]}"; do
+    [[ "$CATEGORY" == "$c" ]] && valid_category="true"
+done
+if [[ "$valid_category" != "true" ]]; then
+    echo "ERROR: invalid --category '$CATEGORY'. Allowed: ${ALLOWED_CATEGORIES[*]}" >&2
+    exit 1
+fi
+
+# Validate prefix ends with /
+case "$PREFIX" in
+    */) ;;
+    *)
+        echo "ERROR: --prefix must end with '/' (got '$PREFIX')" >&2
+        exit 1
+        ;;
+esac
+
+echo "Storage migration enqueue:"
+echo "  api-url:      $API_URL"
+echo "  bucket:       $BUCKET"
+echo "  migration-id: $MIGRATION_ID"
+echo "  prefix:       $PREFIX"
+echo "  category:     $CATEGORY"
+echo "  dry-run:      $DRY_RUN"
+echo ""
+
+payload=$(cat <<EOF
+{
+  "migrationId": "$MIGRATION_ID",
+  "legacyPrefix": "$PREFIX",
+  "category": "$CATEGORY",
+  "dryRun": $DRY_RUN
+}
+EOF
+)
+
+response=$(curl -sS \
+    -X POST "$API_URL/api/v1/admin/storage/migration/enqueue" \
+    -H "Authorization: Bearer $MEEPLEAI_ADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$payload" \
+    -w "\nHTTP_STATUS:%{http_code}")
+
+http_status=$(echo "$response" | sed -n 's/^HTTP_STATUS://p' | tail -1)
+body=$(echo "$response" | sed '$d')
+
+if [[ "$http_status" != "200" ]]; then
+    echo "ERROR: API returned HTTP $http_status" >&2
+    echo "$body" >&2
+    exit 2
+fi
+
+echo "Response:"
+echo "$body" | jq '.'
+echo ""
+echo "Next steps:"
+echo "  1. Verify drainer is enabled: kubectl get pods -l app=api -o yaml | grep STORAGE_MIGRATION_ENABLED"
+echo "  2. Monitor progress: psql -c \"SELECT status, COUNT(*) FROM storage_operation_outbox WHERE migration_id = '$MIGRATION_ID' GROUP BY status;\""
+echo "  3. Grafana: $API_URL/grafana/d/storage-migration"

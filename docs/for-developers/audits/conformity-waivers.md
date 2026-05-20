@@ -52,3 +52,9 @@ the AC-C.5.7 weekly summary at
 
 <!-- New entries appended below by conformity-debt-issue.yml. The most recent
      month appears first by reading order once a few months accumulate. -->
+
+## 2026-05
+
+| Date | PR | Routes | Expiry | Waiver key | Reason (excerpt) |
+|------|-----|--------|--------|------------|-------------------|
+| 2026-05-20 | [#1334](https://github.com/meepleAi-app/meepleai-monorepo/pull/1334) | `library,library-game-detail` | 2026-06-17 | `b2ab0a398ff89137` | PR scope is a single CI workflow YAML change (.github/workflows/visual-regression-migrated.yml upload-artifact if-block) |

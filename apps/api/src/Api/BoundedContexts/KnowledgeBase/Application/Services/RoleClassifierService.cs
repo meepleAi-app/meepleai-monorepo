@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Services;
@@ -129,16 +132,117 @@ internal class RoleClassifierService : IRoleClassifierService
         return result;
     }
 
-    // STUB — D3 will replace with a real LLM-driven implementation.
-    // Returning RulesReference is the safest default because most ambiguous
-    // chunks in a board-game manual are rules-related body text under generic headings.
-    private Task<IReadOnlyList<GameBookRole>> ClassifyViaLlmAsync(
+    private const string LlmSystemPrompt =
+        """
+        Classify each board game manual chunk by role. Valid labels:
+        tutorial, rulesreference, narrative, encounter, lore, setup.
+        Multi-label allowed. Output ONLY a JSON array of arrays (one inner array per chunk in order).
+        Example: [["tutorial","setup"],["rulesreference"],["narrative"]]
+        """;
+
+    // D3: LLM fallback for ambiguous chunks (no heading match).
+    // System prompt instructs JSON array-of-arrays output; on parse failure
+    // we degrade gracefully to RulesReference per chunk (safe default for manuals).
+    private async Task<IReadOnlyList<GameBookRole>> ClassifyViaLlmAsync(
         IReadOnlyList<ChunkInput> chunks,
         CancellationToken cancellationToken)
     {
-        _ = _llmService; // Injected for D3; not yet used in D2 stub.
-        _ = cancellationToken;
-        return Task.FromResult<IReadOnlyList<GameBookRole>>(
-            chunks.Select(_ => GameBookRole.RulesReference).ToList());
+        if (chunks.Count == 0)
+        {
+            return Array.Empty<GameBookRole>();
+        }
+
+        var userPrompt = BuildUserPrompt(chunks);
+
+        try
+        {
+            var response = await _llmService.GenerateCompletionAsync(
+                LlmSystemPrompt,
+                userPrompt,
+                RequestSource.RagClassification,
+                cancellationToken).ConfigureAwait(false);
+
+            if (!response.Success || string.IsNullOrWhiteSpace(response.Response))
+            {
+                _logger.LogWarning(
+                    "Role classifier LLM fallback returned no usable content (success={Success}); defaulting {Count} chunks to RulesReference",
+                    response.Success,
+                    chunks.Count);
+                return DefaultAll(chunks.Count);
+            }
+
+            return ParseLlmResponse(response.Response, chunks.Count);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+#pragma warning disable CA1031 // Do not catch general exception types — LLM faults must NOT block ingestion; degrade to safe default.
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogWarning(
+                ex,
+                "Role classifier LLM fallback failed; defaulting {Count} chunks to RulesReference",
+                chunks.Count);
+            return DefaultAll(chunks.Count);
+        }
     }
+
+    private static string BuildUserPrompt(IReadOnlyList<ChunkInput> chunks)
+    {
+        var sb = new StringBuilder();
+        for (var i = 0; i < chunks.Count; i++)
+        {
+            var bodyPreview = chunks[i].BodyText.Length <= 200
+                ? chunks[i].BodyText
+                : chunks[i].BodyText.AsSpan(0, 200).ToString();
+            sb.Append(CultureInfo.InvariantCulture, $"Chunk {i}: heading='{chunks[i].HeadingPath}' body='{bodyPreview}'");
+            sb.AppendLine();
+        }
+        return sb.ToString();
+    }
+
+    private static IReadOnlyList<GameBookRole> ParseLlmResponse(string content, int expectedCount)
+    {
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<string[][]>(content) ?? Array.Empty<string[]>();
+            var result = new GameBookRole[expectedCount];
+            for (var i = 0; i < expectedCount; i++)
+            {
+                if (i >= parsed.Length)
+                {
+                    result[i] = GameBookRole.RulesReference;
+                    continue;
+                }
+
+                var roles = GameBookRole.None;
+                foreach (var label in parsed[i])
+                {
+                    roles |= ParseLabel(label);
+                }
+                result[i] = roles == GameBookRole.None ? GameBookRole.RulesReference : roles;
+            }
+            return result;
+        }
+        catch (Exception ex) when (ex is JsonException or ArgumentException)
+        {
+            return DefaultAll(expectedCount);
+        }
+    }
+
+    private static GameBookRole ParseLabel(string label) => label?.ToLowerInvariant() switch
+    {
+        "tutorial" => GameBookRole.Tutorial,
+        "rulesreference" or "rules" or "reference" => GameBookRole.RulesReference,
+        "narrative" => GameBookRole.Narrative,
+        "encounter" => GameBookRole.Encounter,
+        "lore" => GameBookRole.Lore,
+        "setup" => GameBookRole.Setup,
+        _ => GameBookRole.None,
+    };
+
+    private static GameBookRole[] DefaultAll(int count) =>
+        Enumerable.Repeat(GameBookRole.RulesReference, count).ToArray();
 }

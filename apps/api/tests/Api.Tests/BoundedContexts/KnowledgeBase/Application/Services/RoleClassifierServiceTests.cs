@@ -54,4 +54,32 @@ public class RoleClassifierServiceTests
         result.Should().HaveCount(1);
         result[0].HasFlag(GameBookRole.Narrative).Should().BeTrue();
     }
+
+    [Fact]
+    public async Task ClassifyAsync_AmbiguousChunk_FallsBackToLlm()
+    {
+        _llmServiceMock
+            .Setup(x => x.GenerateCompletionAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                RequestSource.RagClassification,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("[[\"tutorial\",\"setup\"]]"));
+
+        var classifier = CreateSut();
+        var chunk = new ChunkInput("Random Notes", "To start the game, ...");
+
+        var result = await classifier.ClassifyAsync(new[] { chunk }, TestContext.Current.CancellationToken);
+
+        result.Should().HaveCount(1);
+        result[0].HasFlag(GameBookRole.Tutorial).Should().BeTrue();
+        result[0].HasFlag(GameBookRole.Setup).Should().BeTrue();
+        _llmServiceMock.Verify(
+            x => x.GenerateCompletionAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                RequestSource.RagClassification,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }

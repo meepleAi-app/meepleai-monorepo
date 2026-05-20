@@ -52,3 +52,9 @@ the AC-C.5.7 weekly summary at
 
 <!-- New entries appended below by conformity-debt-issue.yml. The most recent
      month appears first by reading order once a few months accumulate. -->
+
+## 2026-05
+
+| Date | PR | Routes | Expiry | Waiver key | Reason (excerpt) |
+|------|-----|--------|--------|------------|-------------------|
+| 2026-05-20 | [#1338](https://github.com/meepleAi-app/meepleai-monorepo/pull/1338) | `library,library-game-detail` | 2026-06-17 | `c843002686c030cf` | PR scope is pure-data baseline PNG additions under apps/web/e2e/v2-states/game-night-create.spec.ts-snapshots/; no UI or |

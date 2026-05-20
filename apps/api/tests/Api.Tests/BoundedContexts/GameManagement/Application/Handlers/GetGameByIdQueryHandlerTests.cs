@@ -1,47 +1,55 @@
-using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Queries;
-using Api.BoundedContexts.GameManagement.Domain.Entities;
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
-using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
+using Api.SharedKernel.Application;
+using Api.SharedKernel.Domain.ValueObjects;
 using Moq;
 using Xunit;
 using FluentAssertions;
 using Api.Tests.Constants;
+using Api.Infrastructure;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
 /// <summary>
 /// Comprehensive tests for GetGameByIdQueryHandler.
 /// Tests single game retrieval and DTO mapping.
+/// Issue #1320 (P2c): Migrated from IGameRepository to IGameCoreDataProvider + SharedGames EF.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class GetGameByIdQueryHandlerTests
 {
-    private readonly Mock<IGameRepository> _gameRepositoryMock;
+    private readonly Mock<IGameCoreDataProvider> _gameCoreDataMock;
     private readonly GetGameByIdQueryHandler _handler;
+
+    private static GameCoreData MakeCoreData(
+        string title = "Test Game",
+        int yearPublished = 1995,
+        int minPlayers = 3,
+        int maxPlayers = 4,
+        int playingTimeMinutes = 60,
+        int? bggId = null,
+        string? imageUrl = null) =>
+        GameCoreData.Create(title, yearPublished, minPlayers, maxPlayers, playingTimeMinutes, 10,
+            imageUrl: imageUrl, bggId: bggId);
 
     public GetGameByIdQueryHandlerTests()
     {
-        _gameRepositoryMock = new Mock<IGameRepository>();
-        _handler = new GetGameByIdQueryHandler(_gameRepositoryMock.Object);
+        _gameCoreDataMock = new Mock<IGameCoreDataProvider>();
+
+        // Inject a stub MeepleAiDbContext — not needed by the handler but satisfies DI if constructor requires it.
+        // GetGameByIdQueryHandler only uses IGameCoreDataProvider.
+        _handler = new GetGameByIdQueryHandler(_gameCoreDataMock.Object);
     }
+
     [Fact]
     public async Task Handle_ExistingGame_ReturnsMappedDto()
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var game = new GameBuilder()
-            .WithId(gameId)
-            .WithTitle("Catan")
-            .WithPublisher("Kosmos")
-            .WithYearPublished(1995)
-            .WithPlayerCount(3, 4)
-            .WithPlayTime(60, 120)
-            .Build();
+        var coreData = MakeCoreData("Catan", 1995, 3, 4, 90);
 
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
 
         var query = new GetGameByIdQuery(gameId);
 
@@ -50,50 +58,17 @@ public class GetGameByIdQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(gameId);
+        result!.Id.Should().Be(gameId);
         result.Title.Should().Be("Catan");
-        result.Publisher.Should().Be("Kosmos");
         result.YearPublished.Should().Be(1995);
         result.MinPlayers.Should().Be(3);
         result.MaxPlayers.Should().Be(4);
-        result.MinPlayTimeMinutes.Should().Be(60);
-        result.MaxPlayTimeMinutes.Should().Be(120);
+        result.MinPlayTimeMinutes.Should().Be(90);
+        result.MaxPlayTimeMinutes.Should().Be(90);
 
-        _gameRepositoryMock.Verify(
-            r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()),
+        _gameCoreDataMock.Verify(
+            r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()),
             Times.Once);
-    }
-
-    [Fact]
-    public async Task Handle_MinimalGame_ReturnsDtoWithNullOptionalFields()
-    {
-        // Arrange
-        var gameId = Guid.NewGuid();
-        var game = new GameBuilder()
-            .WithId(gameId)
-            .WithTitle("Chess")
-            .Build();
-
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
-
-        var query = new GetGameByIdQuery(gameId);
-
-        // Act
-        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Id.Should().Be(gameId);
-        result.Title.Should().Be("Chess");
-        result.Publisher.Should().BeNull();
-        result.YearPublished.Should().BeNull();
-        result.MinPlayers.Should().BeNull();
-        result.MaxPlayers.Should().BeNull();
-        result.MinPlayTimeMinutes.Should().BeNull();
-        result.MaxPlayTimeMinutes.Should().BeNull();
-        result.BggId.Should().BeNull();
     }
 
     [Fact]
@@ -101,15 +76,11 @@ public class GetGameByIdQueryHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var game = new GameBuilder()
-            .WithId(gameId)
-            .WithTitle("Pandemic")
-            .WithBggLink(30549, "{\"rating\":7.6}")
-            .Build();
+        var coreData = MakeCoreData("Pandemic", bggId: 30549);
 
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
 
         var query = new GetGameByIdQuery(gameId);
 
@@ -118,7 +89,7 @@ public class GetGameByIdQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.BggId.Should().Be(30549);
+        result!.BggId.Should().Be(30549);
     }
 
     [Fact]
@@ -126,16 +97,11 @@ public class GetGameByIdQueryHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var game = new GameBuilder()
-            .WithId(gameId)
-            .WithTitle("Wingspan")
-            .WithAllDetails() // Sets all properties
-            .WithBggLink(266192)
-            .Build();
+        var coreData = MakeCoreData("Wingspan", 2019, 1, 5, 70, bggId: 266192);
 
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
 
         var query = new GetGameByIdQuery(gameId);
 
@@ -144,23 +110,23 @@ public class GetGameByIdQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.Publisher.Should().NotBeNull();
-        result.YearPublished.Should().NotBeNull();
+        result!.YearPublished.Should().NotBeNull();
         result.MinPlayers.Should().NotBeNull();
         result.MaxPlayers.Should().NotBeNull();
         result.MinPlayTimeMinutes.Should().NotBeNull();
         result.MaxPlayTimeMinutes.Should().NotBeNull();
         result.BggId.Should().NotBeNull();
     }
+
     [Fact]
     public async Task Handle_NonExistentGame_ReturnsNull()
     {
         // Arrange
         var gameId = Guid.NewGuid();
 
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Game?)null);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GameCoreData?)null);
 
         var query = new GetGameByIdQuery(gameId);
 
@@ -170,8 +136,8 @@ public class GetGameByIdQueryHandlerTests
         // Assert
         result.Should().BeNull();
 
-        _gameRepositoryMock.Verify(
-            r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()),
+        _gameCoreDataMock.Verify(
+            r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -181,9 +147,9 @@ public class GetGameByIdQueryHandlerTests
         // Arrange
         var gameId = Guid.Empty;
 
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Game?)null);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GameCoreData?)null);
 
         var query = new GetGameByIdQuery(gameId);
 
@@ -193,22 +159,20 @@ public class GetGameByIdQueryHandlerTests
         // Assert
         result.Should().BeNull();
     }
+
     [Fact]
-    public async Task Handle_WithCancellationToken_PassesToRepository()
+    public async Task Handle_WithCancellationToken_PassesToProvider()
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var game = new GameBuilder()
-            .WithId(gameId)
-            .WithTitle("Test Game")
-            .Build();
+        var coreData = MakeCoreData("Test Game");
 
         using var cts = new CancellationTokenSource();
         var cancellationToken = cts.Token;
 
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, cancellationToken))
-            .ReturnsAsync(game);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), cancellationToken))
+            .ReturnsAsync(coreData);
 
         var query = new GetGameByIdQuery(gameId);
 
@@ -217,24 +181,21 @@ public class GetGameByIdQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        _gameRepositoryMock.Verify(
-            r => r.GetByIdOrSharedGameIdAsync(gameId, cancellationToken),
+        _gameCoreDataMock.Verify(
+            r => r.GetCoreDataAsync(GameRef.Shared(gameId), cancellationToken),
             Times.Once);
     }
+
     [Fact]
-    public async Task Handle_PreservesCreatedAt()
+    public async Task Handle_ReturnsCreatedAtNotDefault()
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var createdAt = DateTime.UtcNow.AddDays(-30);
-        var game = new GameBuilder()
-            .WithId(gameId)
-            .WithTitle("Old Game")
-            .Build();
+        var coreData = MakeCoreData("Old Game");
 
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdOrSharedGameIdAsync(gameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
+        _gameCoreDataMock
+            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(coreData);
 
         var query = new GetGameByIdQuery(gameId);
 
@@ -243,41 +204,6 @@ public class GetGameByIdQueryHandlerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.CreatedAt.Should().NotBe(default(DateTime));
-        result.CreatedAt.Should().Be(game.CreatedAt);
-    }
-
-    [Fact]
-    public async Task Handle_LooksUpBySharedGameIdWhenDirectIdMisses()
-    {
-        // Regression for chat-panel 404 bug: the frontend library exposes
-        // SharedGameId as user-facing gameId. The handler must delegate to
-        // GetByIdOrSharedGameIdAsync so the repository can resolve either
-        // identifier. Previously the handler called GetByIdAsync (PK only)
-        // which returned null and caused /games/{id}/agents to 404.
-        var sharedGameId = Guid.NewGuid();
-        var resolvedGameId = Guid.NewGuid();
-        var game = new GameBuilder()
-            .WithId(resolvedGameId)
-            .WithTitle("Agricola")
-            .Build();
-
-        _gameRepositoryMock
-            .Setup(r => r.GetByIdOrSharedGameIdAsync(sharedGameId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(game);
-
-        var query = new GetGameByIdQuery(sharedGameId);
-
-        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
-
-        result.Should().NotBeNull();
-        result.Id.Should().Be(resolvedGameId);
-        result.Title.Should().Be("Agricola");
-
-        _gameRepositoryMock.Verify(
-            r => r.GetByIdOrSharedGameIdAsync(sharedGameId, It.IsAny<CancellationToken>()),
-            Times.Once);
+        result!.CreatedAt.Should().NotBe(default(DateTime));
     }
 }
-
-

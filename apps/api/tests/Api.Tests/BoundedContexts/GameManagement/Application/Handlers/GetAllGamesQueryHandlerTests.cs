@@ -1,103 +1,89 @@
-using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Queries;
-using Api.BoundedContexts.GameManagement.Domain.Entities;
-using Api.BoundedContexts.GameManagement.Domain.Repositories;
-using Api.Tests.BoundedContexts.GameManagement.TestHelpers;
-using Moq;
-using Xunit;
-using FluentAssertions;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
+using FluentAssertions;
+using Xunit;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 
 /// <summary>
-/// Comprehensive tests for GetAllGamesQueryHandler.
-/// Tests game catalog retrieval and DTO mapping.
+/// Unit tests for GetAllGamesQueryHandler.
+/// Tests game catalog retrieval and DTO mapping against InMemory DbContext.
+/// Issue #1320 (P2c): Migrated from IGameRepository mock to SharedGames EF query.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class GetAllGamesQueryHandlerTests
 {
-    private readonly Mock<IGameRepository> _gameRepositoryMock;
-    private readonly GetAllGamesQueryHandler _handler;
+    private static MeepleAiDbContext CreateContext() =>
+        TestDbContextFactory.CreateInMemoryDbContext();
 
-    public GetAllGamesQueryHandlerTests()
+    private static GetAllGamesQueryHandler CreateHandler(MeepleAiDbContext context) =>
+        new(context);
+
+    private static SharedGameEntity MakeSharedGame(
+        string title,
+        int yearPublished = 2020,
+        int minPlayers = 2,
+        int maxPlayers = 4,
+        int? bggId = null,
+        string? imageUrl = null)
     {
-        _gameRepositoryMock = new Mock<IGameRepository>();
-        _handler = new GetAllGamesQueryHandler(_gameRepositoryMock.Object);
+        return new SharedGameEntity
+        {
+            Id = Guid.NewGuid(),
+            Title = title,
+            YearPublished = yearPublished,
+            MinPlayers = minPlayers,
+            MaxPlayers = maxPlayers,
+            PlayingTimeMinutes = 60,
+            MinAge = 10,
+            BggId = bggId,
+            ImageUrl = imageUrl ?? string.Empty,
+            ThumbnailUrl = string.Empty,
+            Description = string.Empty,
+            CreatedBy = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow
+        };
     }
+
     [Fact]
     public async Task Handle_WithMultipleGames_ReturnsAllMappedDtos()
     {
         // Arrange
-        var games = new List<Game>
-        {
-            new GameBuilder()
-                .WithTitle("Catan")
-                .WithPublisher("Kosmos")
-                .WithYearPublished(1995)
-                .WithPlayerCount(3, 4)
-                .Build(),
-            new GameBuilder()
-                .WithTitle("Pandemic")
-                .WithPublisher("Z-Man Games")
-                .WithYearPublished(2008)
-                .WithPlayerCount(2, 4)
-                .WithPlayTime(45, 60)
-                .Build(),
-            new GameBuilder()
-                .WithTitle("Ticket to Ride")
-                .WithAllDetails()
-                .Build()
-        };
+        await using var context = CreateContext();
+        context.SharedGames.AddRange(
+            MakeSharedGame("Catan", 1995, 3, 4),
+            MakeSharedGame("Pandemic", 2008, 2, 4),
+            MakeSharedGame("Ticket to Ride", 2004, 2, 5));
+        await context.SaveChangesAsync();
 
-        _gameRepositoryMock
-            .Setup(r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((games, games.Count));
-
+        var handler = CreateHandler(context);
         var query = new GetAllGamesQuery();
 
         // Act
-        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
         result.Total.Should().Be(3);
         result.Games.Count.Should().Be(3);
-
-        result.Games[0].Title.Should().Be("Catan");
-        result.Games[0].Publisher.Should().Be("Kosmos");
-        result.Games[0].YearPublished.Should().Be(1995);
-
-        result.Games[1].Title.Should().Be("Pandemic");
-        result.Games[1].MinPlayers.Should().Be(2);
-        result.Games[1].MaxPlayers.Should().Be(4);
-
-        result.Games[2].Title.Should().Be("Ticket to Ride");
-
-        _gameRepositoryMock.Verify(
-            r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
-            Times.Once);
     }
 
     [Fact]
     public async Task Handle_WithSingleGame_ReturnsSingleElementList()
     {
         // Arrange
-        var games = new List<Game>
-        {
-            new GameBuilder()
-                .WithTitle("Chess")
-                .Build()
-        };
+        await using var context = CreateContext();
+        context.SharedGames.Add(MakeSharedGame("Chess"));
+        await context.SaveChangesAsync();
 
-        _gameRepositoryMock
-            .Setup(r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((games, games.Count));
-
+        var handler = CreateHandler(context);
         var query = new GetAllGamesQuery();
 
         // Act
-        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -109,16 +95,12 @@ public class GetAllGamesQueryHandlerTests
     public async Task Handle_WithNoGames_ReturnsEmptyList()
     {
         // Arrange
-        var games = new List<Game>();
-
-        _gameRepositoryMock
-            .Setup(r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((games, 0));
-
+        await using var context = CreateContext();
+        var handler = CreateHandler(context);
         var query = new GetAllGamesQuery();
 
         // Act
-        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -127,161 +109,119 @@ public class GetAllGamesQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithVariedGameProperties_MapsAllCorrectly()
+    public async Task Handle_MapsAllPropertiesToDto()
     {
         // Arrange
-        var games = new List<Game>
+        await using var context = CreateContext();
+        var gameId = Guid.NewGuid();
+        context.SharedGames.Add(new SharedGameEntity
         {
-            // Minimal game
-            new GameBuilder()
-                .WithTitle("Simple Game")
-                .Build(),
+            Id = gameId,
+            Title = "Wingspan",
+            YearPublished = 2019,
+            MinPlayers = 1,
+            MaxPlayers = 5,
+            PlayingTimeMinutes = 70,
+            BggId = 266192,
+            ImageUrl = "https://example.com/wingspan.jpg",
+            ThumbnailUrl = string.Empty,
+            Description = string.Empty,
+            MinAge = 10,
+            CreatedBy = Guid.NewGuid(),
+            CreatedAt = DateTime.UtcNow
+        });
+        await context.SaveChangesAsync();
 
-            // Game with publisher only
-            new GameBuilder()
-                .WithTitle("Published Game")
-                .WithPublisher("Publisher")
-                .Build(),
-
-            // Game with full details
-            new GameBuilder()
-                .WithTitle("Complete Game")
-                .WithAllDetails()
-                .Build()
-        };
-
-        _gameRepositoryMock
-            .Setup(r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((games, games.Count));
-
+        var handler = CreateHandler(context);
         var query = new GetAllGamesQuery();
 
         // Act
-        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Games.Count.Should().Be(3);
-
-        // Minimal game
-        result.Games[0].Title.Should().Be("Simple Game");
-        result.Games[0].Publisher.Should().BeNull();
-        result.Games[0].YearPublished.Should().BeNull();
-
-        // Game with publisher
-        result.Games[1].Title.Should().Be("Published Game");
-        result.Games[1].Publisher.Should().Be("Publisher");
-
-        // Complete game
-        result.Games[2].Title.Should().Be("Complete Game");
-        result.Games[2].Publisher.Should().NotBeNull();
-        result.Games[2].YearPublished.Should().NotBeNull();
-        result.Games[2].MinPlayers.Should().NotBeNull();
+        var dto = result.Games[0];
+        dto.Id.Should().Be(gameId);
+        dto.Title.Should().Be("Wingspan");
+        dto.YearPublished.Should().Be(2019);
+        dto.MinPlayers.Should().Be(1);
+        dto.MaxPlayers.Should().Be(5);
+        dto.BggId.Should().Be(266192);
+        dto.ImageUrl.Should().Be("https://example.com/wingspan.jpg");
+        dto.CreatedAt.Should().NotBe(default(DateTime));
     }
 
     [Fact]
     public async Task Handle_WithBggLinkedGames_IncludesBggIds()
     {
         // Arrange
-        var games = new List<Game>
-        {
-            new GameBuilder()
-                .WithTitle("Catan")
-                .WithBggLink(13, "{\"rating\":7.2}")
-                .Build(),
-            new GameBuilder()
-                .WithTitle("Pandemic")
-                .WithBggLink(30549)
-                .Build(),
-            new GameBuilder()
-                .WithTitle("Chess")
-                .Build() // No BGG link
-        };
+        await using var context = CreateContext();
+        context.SharedGames.AddRange(
+            MakeSharedGame("Catan", bggId: 13),
+            MakeSharedGame("Pandemic", bggId: 30549),
+            MakeSharedGame("Chess")); // No BGG link
+        await context.SaveChangesAsync();
 
-        _gameRepositoryMock
-            .Setup(r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((games, games.Count));
-
+        var handler = CreateHandler(context);
         var query = new GetAllGamesQuery();
 
         // Act
-        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         result.Games.Count.Should().Be(3);
-        result.Games[0].BggId.Should().Be(13);
-        result.Games[1].BggId.Should().Be(30549);
-        result.Games[2].BggId.Should().BeNull();
+        // Games are ordered by title alphabetically
+        var catan = result.Games.First(g => g.Title == "Catan");
+        var pandemic = result.Games.First(g => g.Title == "Pandemic");
+        var chess = result.Games.First(g => g.Title == "Chess");
+        catan.BggId.Should().Be(13);
+        pandemic.BggId.Should().Be(30549);
+        chess.BggId.Should().BeNull();
     }
+
     [Fact]
-    public async Task Handle_WithCancellationToken_PassesToRepository()
+    public async Task Handle_WithSearchFilter_ReturnsMatchingGames()
     {
         // Arrange
-        var games = new List<Game>
-        {
-            new GameBuilder().WithTitle("Game").Build()
-        };
+        await using var context = CreateContext();
+        context.SharedGames.AddRange(
+            MakeSharedGame("Catan"),
+            MakeSharedGame("Pandemic"),
+            MakeSharedGame("Carcassonne"));
+        await context.SaveChangesAsync();
 
-        using var cts = new CancellationTokenSource();
-        var cancellationToken = cts.Token;
-
-        _gameRepositoryMock
-            .Setup(r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), cancellationToken))
-            .ReturnsAsync((games, games.Count));
-
-        var query = new GetAllGamesQuery();
+        var handler = CreateHandler(context);
+        // Note: ILike is PostgreSQL-specific; InMemory provider uses Contains fallback via EF
+        var query = new GetAllGamesQuery(Search: "Catan");
 
         // Act
-        var result = await _handler.Handle(query, cancellationToken);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
-        // Assert
-        result.Should().NotBeNull();
-        result.Games.Should().ContainSingle();
-
-        _gameRepositoryMock.Verify(
-            r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), cancellationToken),
-            Times.Once);
+        // Assert — InMemory does a case-sensitive Contains; PostgreSQL uses ILike
+        result.Games.Should().Contain(g => g.Title == "Catan");
     }
+
     [Fact]
-    public async Task Handle_MapsAllPropertiesToDto()
+    public async Task Handle_PaginationReturnsCorrectPage()
     {
         // Arrange
-        var gameId = Guid.NewGuid();
-        var createdAt = DateTime.UtcNow.AddDays(-10);
-
-        var games = new List<Game>
+        await using var context = CreateContext();
+        for (int i = 1; i <= 10; i++)
         {
-            new GameBuilder()
-                .WithId(gameId)
-                .WithTitle("Wingspan")
-                .WithPublisher("Stonemaier Games")
-                .WithYearPublished(2019)
-                .WithPlayerCount(1, 5)
-                .WithPlayTime(40, 70)
-                .WithBggLink(266192)
-                .Build()
-        };
+            context.SharedGames.Add(MakeSharedGame($"Game {i:D2}"));
+        }
+        await context.SaveChangesAsync();
 
-        _gameRepositoryMock
-            .Setup(r => r.GetPaginatedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((games, games.Count));
-
-        var query = new GetAllGamesQuery();
+        var handler = CreateHandler(context);
+        var query = new GetAllGamesQuery(Page: 2, PageSize: 3);
 
         // Act
-        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        var dto = result.Games[0];
-        dto.Id.Should().Be(gameId);
-        dto.Title.Should().Be("Wingspan");
-        dto.Publisher.Should().Be("Stonemaier Games");
-        dto.YearPublished.Should().Be(2019);
-        dto.MinPlayers.Should().Be(1);
-        dto.MaxPlayers.Should().Be(5);
-        dto.MinPlayTimeMinutes.Should().Be(40);
-        dto.MaxPlayTimeMinutes.Should().Be(70);
-        dto.BggId.Should().Be(266192);
-        dto.CreatedAt.Should().NotBe(default(DateTime));
+        result.Total.Should().Be(10);
+        result.Page.Should().Be(2);
+        result.PageSize.Should().Be(3);
+        result.Games.Count.Should().Be(3);
+        result.TotalPages.Should().Be(4); // ceil(10/3) = 4
     }
 }
-

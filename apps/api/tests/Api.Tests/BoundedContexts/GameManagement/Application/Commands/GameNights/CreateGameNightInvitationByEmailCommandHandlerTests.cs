@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Application;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -31,7 +32,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
     private readonly Mock<IGameNightInvitationRepository> _invitationRepoMock = new();
     private readonly Mock<IGameNightEventRepository> _gameNightRepoMock = new();
     private readonly Mock<IUserRepository> _userRepoMock = new();
-    private readonly Mock<IGameRepository> _gameRepoMock = new();
+    private readonly Mock<IGameCoreDataProvider> _gameCoreDataMock = new();
     private readonly Mock<IGameNightEmailService> _emailServiceMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly FakeTimeProvider _timeProvider = new(UtcNow);
@@ -50,7 +51,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
             _invitationRepoMock.Object,
             _gameNightRepoMock.Object,
             _userRepoMock.Object,
-            _gameRepoMock.Object,
+            _gameCoreDataMock.Object,
             _emailServiceMock.Object,
             _unitOfWorkMock.Object,
             configuration,
@@ -211,7 +212,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
             _invitationRepoMock.Object,
             _gameNightRepoMock.Object,
             _userRepoMock.Object,
-            _gameRepoMock.Object,
+            _gameCoreDataMock.Object,
             _emailServiceMock.Object,
             _unitOfWorkMock.Object,
             configuration,

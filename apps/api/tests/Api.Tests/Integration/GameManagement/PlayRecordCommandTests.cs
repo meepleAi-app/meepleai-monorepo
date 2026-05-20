@@ -1,8 +1,6 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
-using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
-using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -14,7 +12,6 @@ using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
@@ -54,7 +51,6 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
         services.AddScoped<IPlayRecordRepository, PlayRecordRepository>();
-        services.AddScoped<IGameRepository, GameRepository>();
         services.AddSingleton<TimeProvider>(_timeProvider);
 
         _serviceProvider = services.BuildServiceProvider();
@@ -84,12 +80,12 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     public async Task CreatePlayRecordCommand_WithCatalogGame_CreatesSuccessfully()
     {
         // Arrange
-        var game = await CreateTestGameAsync();
+        var (gameId, gameTitle) = await CreateTestGameAsync();
         var userId = await SeedTestUserAsync();
         var command = new CreatePlayRecordCommand(
             userId,
-            game.Id,
-            game.Title.Value,
+            gameId,
+            gameTitle,
             _timeProvider.UtcNow.AddDays(-1),
             PlayRecordVisibility.Private);
 
@@ -102,8 +98,8 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var record = await db.PlayRecords.FirstOrDefaultAsync(r => r.Id == recordId, TestCancellationToken);
         record.Should().NotBeNull();
-        record!.GameId.Should().Be(game.Id);
-        record.GameName.Should().Be(game.Title.Value);
+        record!.GameId.Should().Be(gameId);
+        record.GameName.Should().Be(gameTitle);
         record.CreatedByUserId.Should().Be(userId);
     }
 
@@ -328,20 +324,27 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
     #region Helper Methods
 
-    private async Task<Game> CreateTestGameAsync()
+    /// <summary>
+    /// Seeds a GameEntity row directly via MeepleAiDbContext (IGameRepository removed by #1320 P2c).
+    /// Returns (Id, Title) tuple for use by play-record commands.
+    /// </summary>
+    private async Task<(Guid Id, string Title)> CreateTestGameAsync()
     {
-        var game = new Game(
-            Guid.NewGuid(),
-            new GameTitle("Test Game"),
-            new Publisher("Test Publisher"));
+        var id = Guid.NewGuid();
+        const string title = "Test Game";
 
-        var repository = ServiceProvider.GetRequiredService<IGameRepository>();
-        await repository.AddAsync(game, TestCancellationToken);
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        db.Games.Add(new GameEntity
+        {
+            Id = id,
+            Name = title,
+            Publisher = "Test Publisher",
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync(TestCancellationToken);
 
-        var unitOfWork = ServiceProvider.GetRequiredService<IUnitOfWork>();
-        await unitOfWork.SaveChangesAsync(TestCancellationToken);
-
-        return game;
+        return (id, title);
     }
 
     /// <summary>
@@ -384,13 +387,13 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
     private async Task<Guid> CreateTestRecordAsync()
     {
-        var game = await CreateTestGameAsync();
+        var (gameId, gameTitle) = await CreateTestGameAsync();
         var userId = await SeedTestUserAsync();
 
         var command = new CreatePlayRecordCommand(
             userId,
-            game.Id,
-            game.Title.Value,
+            gameId,
+            gameTitle,
             _timeProvider.UtcNow.AddHours(-1),
             PlayRecordVisibility.Private);
 

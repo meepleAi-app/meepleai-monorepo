@@ -6,11 +6,14 @@ namespace Api.BoundedContexts.SessionTracking.Domain.Entities;
 /// Immutable history record of a translated gamebook paragraph.
 /// Once created, no mutations are allowed — append-only pattern.
 /// Iter 1.B — Libro Game Nanolith dogfood demo.
+/// C3 (2026-05-19): <see cref="GameBookId"/> added so the paragraph is anchored
+/// to a specific book; uniqueness is now per (campaign, book, paragraph).
 /// </summary>
 public sealed class TranslatedParagraph
 {
     public Guid Id { get; private set; }
     public Guid CampaignId { get; private set; }
+    public Guid GameBookId { get; private set; }
     public Guid PhotoArtifactId { get; private set; }
     public int ParagraphNumber { get; private set; }
     public GamebookPageType PageType { get; private set; }
@@ -31,6 +34,7 @@ public sealed class TranslatedParagraph
 
     public static TranslatedParagraph Create(
         Guid campaignId,
+        Guid gameBookId,
         Guid photoArtifactId,
         int paragraphNumber,
         GamebookPageType pageType,
@@ -41,6 +45,8 @@ public sealed class TranslatedParagraph
     {
         if (campaignId == Guid.Empty)
             throw new ArgumentException("campaignId required", nameof(campaignId));
+        if (gameBookId == Guid.Empty)
+            throw new ArgumentException("gameBookId required", nameof(gameBookId));
         if (photoArtifactId == Guid.Empty)
             throw new ArgumentException("photoArtifactId required", nameof(photoArtifactId));
         if (paragraphNumber < 0)
@@ -56,6 +62,7 @@ public sealed class TranslatedParagraph
         {
             Id = Guid.NewGuid(),
             CampaignId = campaignId,
+            GameBookId = gameBookId,
             PhotoArtifactId = photoArtifactId,
             ParagraphNumber = paragraphNumber,
             PageType = pageType,

@@ -226,6 +226,7 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         paragraphRepo.Store.Should().HaveCount(1, "one TranslatedParagraph should be persisted");
         var persisted = paragraphRepo.Store[0];
         persisted.CampaignId.Should().Be(campaign.Id);
+        persisted.GameBookId.Should().Be(bookId);
         persisted.PhotoArtifactId.Should().Be(artifact.Id);
         persisted.ParagraphNumber.Should().Be(47);
         persisted.SourceTextEn.Should().Be("The Hive awakens.");

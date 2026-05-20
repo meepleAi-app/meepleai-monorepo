@@ -21,6 +21,7 @@ internal class TranslatedParagraphEntityConfiguration : IEntityTypeConfiguration
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasColumnName("id");
         builder.Property(e => e.CampaignId).HasColumnName("campaign_id").IsRequired();
+        builder.Property(e => e.GameBookId).HasColumnName("game_book_id").IsRequired();
         builder.Property(e => e.PhotoArtifactId).HasColumnName("photo_artifact_id").IsRequired();
         builder.Property(e => e.ParagraphNumber).HasColumnName("paragraph_number").IsRequired();
         builder.Property(e => e.PageType).HasColumnName("page_type").IsRequired();
@@ -39,7 +40,13 @@ internal class TranslatedParagraphEntityConfiguration : IEntityTypeConfiguration
             .HasColumnType("text[]")
             .IsRequired();
 
-        builder.HasIndex(e => new { e.CampaignId, e.ParagraphNumber })
-            .HasDatabaseName("ix_translated_paragraphs_campaign_paragraph");
+        // C3 (2026-05-19): per-book uniqueness — a paragraph number is unique within
+        // (campaign, book), not globally per campaign, because a campaign can now
+        // span multiple books (e.g. Press Start + Rules + Encounter).
+        // Supersedes the previous non-unique (campaign_id, paragraph_number) index
+        // which was dropped in the AddGameBookIdToTranslatedParagraph migration.
+        builder.HasIndex(e => new { e.CampaignId, e.GameBookId, e.ParagraphNumber })
+            .IsUnique()
+            .HasDatabaseName("ux_translated_paragraphs_campaign_book_paragraph");
     }
 }

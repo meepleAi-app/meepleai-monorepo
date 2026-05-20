@@ -139,7 +139,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
                 .ToList();
 
             var paragraph = TranslatedParagraph.Create(
-                query.CampaignId, query.PhotoId, query.ParagraphNumber, artifact.PageType,
+                query.CampaignId, query.GameBookId, query.PhotoId, query.ParagraphNumber, artifact.PageType,
                 segment.SourceText, translatedIt, appliedTerms, query.CallerUserId);
 
             await _paragraphs.AddAsync(paragraph, cancellationToken).ConfigureAwait(false);

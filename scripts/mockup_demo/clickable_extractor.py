@@ -17,11 +17,34 @@ CLICKABLE_CLASS_PATTERNS = re.compile(
 )
 
 _JSX_TAG_RE = re.compile(
-    r"<(?P<tag>a|button|div|li|span)\b(?P<attrs>(?:[^>{}]|\{[^}]*\})*)>(?P<inner>[^<{}]*)",
+    r"<(?P<tag>a|button|div|li|span)\b"
+    r"(?P<attrs>(?:[^>{}]|\{(?:[^{}]|\{[^}]*\})*\})*)"
+    r">(?P<inner>[^<]*)",
     re.IGNORECASE | re.DOTALL,
 )
 _JSX_CLASSNAME_RE = re.compile(r'className\s*=\s*"([^"]*)"')
 _JSX_ONCLICK_RE = re.compile(r"onClick\s*=\s*\{([^}]*)\}")
+
+# Matches label values in navItem/tab array literals, e.g. { id:'x', label:'Giochi' }
+_JSX_LABEL_IN_ARRAY_RE = re.compile(r"label\s*:\s*['\"]([^'\"]+)['\"]")
+# Matches JSX expressions that reference a label property: {it.label}, {item.label}, etc.
+_JSX_LABEL_EXPR_RE = re.compile(r"^\{[a-z_]\w*\.label\}$", re.IGNORECASE)
+
+
+def _extract_jsx_label_values(file_text: str, match_pos: int) -> list[str]:
+    """Return label values from the nearest preceding array literal that contains label: '...' entries.
+
+    When a JSX element has text ``{it.label}`` the actual labels come from an array
+    defined just before the ``.map(it => ...)`` call.  We scan backwards from the
+    match position to find the nearest block that contains ``label: 'X'`` entries
+    and return those values.  Empty list if nothing found.
+    """
+    preceding = file_text[:match_pos]
+    labels = _JSX_LABEL_IN_ARRAY_RE.findall(preceding)
+    if not labels:
+        return []
+    # The nearest labels are at the end — take up to the last 12 (one navItems block)
+    return labels[-12:]
 
 
 @dataclass
@@ -83,13 +106,30 @@ def _extract_jsx(path: Path) -> Iterator[Clickable]:
         classes = cls_match.group(1) if cls_match else None
         if tag in CLICKABLE_TAGS_HTML or (classes and CLICKABLE_CLASS_PATTERNS.search(classes)):
             on_click = _JSX_ONCLICK_RE.search(attrs)
-            yield Clickable(
-                file_path=path,
-                tag=tag,
-                line_number=text.count("\n", 0, m.start()) + 1,
-                text=inner,
-                classes=classes,
-                snippet=m.group(0),
-                on_click_existing=on_click.group(1).strip() if on_click else None,
-                kind="jsx",
-            )
+            line_number = text.count("\n", 0, m.start()) + 1
+            on_click_str = on_click.group(1).strip() if on_click else None
+            # Expand JSX label expressions like {it.label} → one Clickable per resolved label
+            if _JSX_LABEL_EXPR_RE.match(inner):
+                labels = _extract_jsx_label_values(text, m.start())
+                for label in labels:
+                    yield Clickable(
+                        file_path=path,
+                        tag=tag,
+                        line_number=line_number,
+                        text=label,
+                        classes=classes,
+                        snippet=m.group(0),
+                        on_click_existing=on_click_str,
+                        kind="jsx",
+                    )
+            else:
+                yield Clickable(
+                    file_path=path,
+                    tag=tag,
+                    line_number=line_number,
+                    text=inner,
+                    classes=classes,
+                    snippet=m.group(0),
+                    on_click_existing=on_click_str,
+                    kind="jsx",
+                )

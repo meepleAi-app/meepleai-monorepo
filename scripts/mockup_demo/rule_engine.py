@@ -47,14 +47,20 @@ def _norm(s: str) -> str:
 
 
 def _try_canonical(
-    click: Clickable, table_key: str, class_hint: str, rule_name: str
+    click: Clickable,
+    table_key: str,
+    class_hints: tuple[str, ...] | str,
+    rule_name: str,
 ) -> Decision | None:
     table = _NAV[table_key]
     text = _norm(click.text)
+    if isinstance(class_hints, str):
+        class_hints = (class_hints,) if class_hints else ()
+    classes_lower = (click.classes or "").lower()
     for key, dest in table.items():
-        if _norm(key) == text and (
-            not class_hint or class_hint in (click.classes or "").lower()
-        ):
+        if _norm(key) != text:
+            continue
+        if not class_hints or any(h in classes_lower for h in class_hints):
             return Decision(
                 dest,
                 rule_name,
@@ -65,22 +71,29 @@ def _try_canonical(
 
 
 def resolve_destination(click: Clickable) -> Decision:
-    # 1. canonical sidebar
-    d = _try_canonical(click, "sidebar", "nav", "canonical-sidebar")
+    # 1. canonical sidebar (with nav/side/menu class hint)
+    d = _try_canonical(click, "sidebar", ("nav", "side", "menu"), "canonical-sidebar")
     if d:
         return d
+    # 1b. canonical sidebar loose: sp4-* file context (sidebar with inline styles, no className)
+    if click.file_path.name.startswith("sp4-"):
+        d = _try_canonical(click, "sidebar", "", "canonical-sidebar")
+        if d:
+            return d
     # 2. canonical public topbar
     d = _try_canonical(click, "public_topbar", "", "canonical-public-topbar")
     if d:
         return d
-    # 3. canonical gameplay topbar
-    d = _try_canonical(click, "gameplay_topbar", "", "canonical-gameplay-topbar")
-    if d:
-        return d
-    # 4. canonical event topbar
-    d = _try_canonical(click, "event_topbar", "", "canonical-event-topbar")
-    if d:
-        return d
+    # 3. canonical gameplay topbar - sp6/librogame context
+    if any(click.file_path.name.startswith(p) for p in ("sp6-", "librogame-")):
+        d = _try_canonical(click, "gameplay_topbar", "", "canonical-gameplay-topbar")
+        if d:
+            return d
+    # 4. canonical event topbar - sp7 context
+    if click.file_path.name.startswith("sp7-"):
+        d = _try_canonical(click, "event_topbar", "", "canonical-event-topbar")
+        if d:
+            return d
 
     # 5. index-to-detail: file matches a known index, element is card/row/tile
     file_stem = click.file_path.stem  # 'sp4-games-index'

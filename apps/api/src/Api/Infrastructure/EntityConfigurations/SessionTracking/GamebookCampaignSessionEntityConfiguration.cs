@@ -1,6 +1,4 @@
-using System.Text.Json;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
-using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,10 +7,11 @@ namespace Api.Infrastructure.EntityConfigurations.SessionTracking;
 /// <summary>
 /// EF Core configuration for GamebookCampaignSession.
 /// Uses direct domain entity mapping (no separate persistence entity).
-/// Maps the GamebookProgress value object to a single jsonb column via System.Text.Json.
 /// Phase A0.1 (2026-05-19): moved from BoundedContexts/SessionTracking/Infrastructure/Persistence/Configurations
 /// to canonical Infrastructure/EntityConfigurations location to align with the rest of the codebase.
-/// Iter 1.A — Libro Game Nanolith dogfood demo.
+/// C2 (2026-05-19): the per-campaign progress value object was removed; per-book progress now
+/// lives in <see cref="SessionBookProgress"/> (one row per campaign+book pair). The legacy
+/// <c>progress</c> jsonb column on this table is dropped in migration <c>RemoveGamebookProgressVO</c>.
 /// </summary>
 internal class GamebookCampaignSessionEntityConfiguration : IEntityTypeConfiguration<GamebookCampaignSession>
 {
@@ -38,16 +37,6 @@ internal class GamebookCampaignSessionEntityConfiguration : IEntityTypeConfigura
         builder.Property(e => e.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
         builder.Property(e => e.DeletedAt).HasColumnName("deleted_at");
 
-        builder.Property(e => e.Progress)
-            .HasColumnName("progress")
-            .HasColumnType("jsonb")
-            .IsRequired()
-            .HasConversion(
-                v => JsonSerializer.Serialize(
-                    new ProgressDto(v.CurrentParagraph, v.History.ToArray(), v.LastReadAt),
-                    (JsonSerializerOptions?)null),
-                v => DeserializeProgress(v));
-
         // A0.2 (#1320): index over (owner_user_id, game_ref_kind, game_ref_id, is_deleted) is
         // declared via raw SQL in the migration because composite indexes spanning both the
         // parent entity (owner_user_id, is_deleted) AND owned-type columns (game_ref_kind,
@@ -58,13 +47,4 @@ internal class GamebookCampaignSessionEntityConfiguration : IEntityTypeConfigura
 
         builder.HasQueryFilter(e => !e.IsDeleted);
     }
-
-    private static GamebookProgress DeserializeProgress(string json)
-    {
-        var dto = JsonSerializer.Deserialize<ProgressDto>(json)
-            ?? new ProgressDto(0, Array.Empty<int>(), DateTimeOffset.UtcNow);
-        return GamebookProgress.Create(dto.CurrentParagraph, dto.History);
-    }
-
-    private sealed record ProgressDto(int CurrentParagraph, int[] History, DateTimeOffset LastReadAt);
 }

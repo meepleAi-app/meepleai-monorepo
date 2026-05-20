@@ -1,4 +1,3 @@
-using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.SessionTracking.Domain.Entities;
@@ -9,7 +8,6 @@ public sealed class GamebookCampaignSession
     public GameRef GameRef { get; private set; } = default!; // A0.2 (#1320): replaces bare Guid GameId
     public Guid OwnerUserId { get; private set; }
     public string Title { get; private set; } = default!;
-    public GamebookProgress Progress { get; private set; } = default!;
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public Guid CreatedBy { get; private set; }
@@ -35,18 +33,21 @@ public sealed class GamebookCampaignSession
             GameRef = gameRef,
             OwnerUserId = ownerUserId,
             Title = title.Trim(),
-            Progress = GamebookProgress.Empty(),
             CreatedAt = now,
             UpdatedAt = now,
             CreatedBy = ownerUserId,
         };
     }
 
-    public void UpdateProgress(int currentParagraph)
+    // C2 (Gamebook multi-book generalization, spec 2026-05-19): UpdateProgress() and
+    // the Progress VO were removed. Per-book progress is now tracked in the
+    // SessionBookProgress entity (Task C1) — one row per (campaign, book) pair.
+    // Mutate progress via ISessionBookProgressRepository instead of this aggregate.
+
+    public void Touch(Guid updatedBy)
     {
-        Progress = GamebookProgress.Create(currentParagraph, Progress.History);
         UpdatedAt = DateTimeOffset.UtcNow;
-        UpdatedBy = OwnerUserId;
+        UpdatedBy = updatedBy;
     }
 
     public void Rename(string newTitle, Guid updatedBy)

@@ -17,6 +17,6 @@ public class ListMyGamebookCampaignsHandler : IRequestHandler<ListMyGamebookCamp
     public async Task<IReadOnlyList<GamebookCampaignDto>> Handle(ListMyGamebookCampaignsQuery q, CancellationToken cancellationToken)
     {
         var sessions = await _repo.ListByOwnerAsync(q.CallerUserId, q.GameId, cancellationToken).ConfigureAwait(false);
-        return sessions.Select(CreateGamebookCampaignHandler.MapToDto).ToList();
+        return sessions.Select(s => CreateGamebookCampaignHandler.MapToDto(s, progress: null)).ToList();
     }
 }

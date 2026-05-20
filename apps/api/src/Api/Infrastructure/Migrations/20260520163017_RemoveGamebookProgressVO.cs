@@ -1,0 +1,31 @@
+﻿using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace Api.Infrastructure.Migrations
+{
+    /// <inheritdoc />
+    public partial class RemoveGamebookProgressVO : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropColumn(
+                name: "progress",
+                schema: "session_tracking",
+                table: "gamebook_campaign_sessions");
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.AddColumn<string>(
+                name: "progress",
+                schema: "session_tracking",
+                table: "gamebook_campaign_sessions",
+                type: "jsonb",
+                nullable: false,
+                defaultValue: "");
+        }
+    }
+}

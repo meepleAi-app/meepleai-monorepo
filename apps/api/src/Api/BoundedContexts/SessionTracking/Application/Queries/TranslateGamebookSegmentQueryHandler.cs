@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -21,6 +22,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
     private readonly IGamebookPhotoArtifactRepository _photos;
     private readonly ITranslatedParagraphRepository _paragraphs;
     private readonly IGamebookGlossaryRepository _glossary;
+    private readonly ISessionBookProgressRepository _progress;
     private readonly ILlmService _llm;
     private readonly ILogger<TranslateGamebookSegmentQueryHandler> _logger;
 
@@ -29,15 +31,24 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         IGamebookPhotoArtifactRepository photos,
         ITranslatedParagraphRepository paragraphs,
         IGamebookGlossaryRepository glossary,
+        ISessionBookProgressRepository progress,
         ILlmService llm,
         ILogger<TranslateGamebookSegmentQueryHandler> logger)
     {
-        _campaigns = campaigns ?? throw new ArgumentNullException(nameof(campaigns));
-        _photos = photos ?? throw new ArgumentNullException(nameof(photos));
-        _paragraphs = paragraphs ?? throw new ArgumentNullException(nameof(paragraphs));
-        _glossary = glossary ?? throw new ArgumentNullException(nameof(glossary));
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(campaigns);
+        ArgumentNullException.ThrowIfNull(photos);
+        ArgumentNullException.ThrowIfNull(paragraphs);
+        ArgumentNullException.ThrowIfNull(glossary);
+        ArgumentNullException.ThrowIfNull(progress);
+        ArgumentNullException.ThrowIfNull(llm);
+        ArgumentNullException.ThrowIfNull(logger);
+        _campaigns = campaigns;
+        _photos = photos;
+        _paragraphs = paragraphs;
+        _glossary = glossary;
+        _progress = progress;
+        _llm = llm;
+        _logger = logger;
     }
 
     public async IAsyncEnumerable<TranslateChunk> Handle(
@@ -134,8 +145,25 @@ internal sealed class TranslateGamebookSegmentQueryHandler
             await _paragraphs.AddAsync(paragraph, cancellationToken).ConfigureAwait(false);
             await _paragraphs.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            // Advance current paragraph in campaign
-            campaign.UpdateProgress(query.ParagraphNumber);
+            // C2 (2026-05-19): advance per-book progress via SessionBookProgress.
+            // LastLocation format follows the "§N" paragraph-marker convention.
+            var location = string.Create(
+                CultureInfo.InvariantCulture,
+                $"§{query.ParagraphNumber}");
+            var existingProgress = await _progress
+                .GetByCampaignAndBookAsync(query.CampaignId, query.GameBookId, cancellationToken)
+                .ConfigureAwait(false);
+            if (existingProgress is null)
+            {
+                var fresh = SessionBookProgress.Create(query.CampaignId, query.GameBookId, location);
+                await _progress.AddAsync(fresh, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                existingProgress.UpdateLocation(location);
+                await _progress.UpdateAsync(existingProgress, cancellationToken).ConfigureAwait(false);
+            }
+            campaign.Touch(query.CallerUserId);
             await _campaigns.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             yield return new TranslateChunk(string.Empty, IsComplete: true, paragraph.Id, appliedTerms);

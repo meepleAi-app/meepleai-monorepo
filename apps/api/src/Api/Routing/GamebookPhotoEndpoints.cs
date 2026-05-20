@@ -109,6 +109,7 @@ internal static class GamebookPhotoEndpoints
             Guid campaignId,
             [FromQuery] Guid photoId,
             [FromQuery] int paragraphNumber,
+            [FromQuery] Guid gameBookId,
             IMediator mediator,
             HttpContext context,
             ILogger<Program> logger,
@@ -122,7 +123,8 @@ internal static class GamebookPhotoEndpoints
             context.Response.Headers["Cache-Control"] = "no-cache";
             context.Response.Headers["Connection"] = "keep-alive";
 
-            var query = new TranslateGamebookSegmentQuery(campaignId, photoId, paragraphNumber, userId);
+            // C2 (2026-05-19): gameBookId scopes the per-book progress update.
+            var query = new TranslateGamebookSegmentQuery(campaignId, photoId, paragraphNumber, userId, gameBookId);
 
             try
             {

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
@@ -32,11 +33,58 @@ public class CreateGamebookCampaignHandler : IRequestHandler<CreateGamebookCampa
             new GamebookCampaignCreatedDomainEvent(session.Id, session.GameRef.Id, session.OwnerUserId),
             cancellationToken).ConfigureAwait(false);
 
-        return MapToDto(session);
+        return MapToDto(session, progress: null);
     }
 
-    internal static GamebookCampaignDto MapToDto(GamebookCampaignSession s) => new(
-        s.Id, s.GameRef.Id, s.OwnerUserId, s.Title,
-        s.Progress.CurrentParagraph, s.Progress.History, s.Progress.LastReadAt,
-        s.CreatedAt, s.UpdatedAt);
+    /// <summary>
+    /// Maps a campaign session and an optional per-book progress row to the legacy DTO shape.
+    /// C2 (2026-05-19): the Progress VO was removed from <see cref="GamebookCampaignSession"/>.
+    /// Per-book progress now lives in <see cref="SessionBookProgress"/>. Callers that
+    /// know the relevant book id can pass the corresponding <paramref name="progress"/>
+    /// to populate <see cref="GamebookCampaignDto.CurrentParagraph"/>/<see cref="GamebookCampaignDto.History"/>;
+    /// when <c>null</c>, the DTO emits default zero/empty values. The DTO shape itself
+    /// is preserved for backward compatibility with the FE until Phase E.
+    /// </summary>
+    internal static GamebookCampaignDto MapToDto(GamebookCampaignSession s, SessionBookProgress? progress)
+    {
+        var currentParagraph = 0;
+        IReadOnlyList<int> history = Array.Empty<int>();
+        var lastReadAt = s.UpdatedAt;
+
+        if (progress is not null)
+        {
+            currentParagraph = ParseParagraph(progress.LastLocation);
+            history = ParseHistory(progress.HistoryJson);
+            lastReadAt = progress.LastVisitedAt;
+        }
+
+        return new GamebookCampaignDto(
+            s.Id, s.GameRef.Id, s.OwnerUserId, s.Title,
+            currentParagraph, history, lastReadAt,
+            s.CreatedAt, s.UpdatedAt);
+    }
+
+    private static int ParseParagraph(string location)
+    {
+        // SessionBookProgress.LastLocation format: "§N" (paragraph marker). Accept
+        // either with or without the § prefix to stay tolerant of future formats.
+        var trimmed = location.AsSpan().TrimStart('§').TrimStart();
+        return int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var paragraph)
+            ? paragraph
+            : 0;
+    }
+
+    private static IReadOnlyList<int> ParseHistory(string historyJson)
+    {
+        try
+        {
+            var raw = System.Text.Json.JsonSerializer.Deserialize<List<string>>(historyJson)
+                      ?? new List<string>();
+            return raw.Select(ParseParagraph).Where(p => p > 0).ToList();
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return Array.Empty<int>();
+        }
+    }
 }

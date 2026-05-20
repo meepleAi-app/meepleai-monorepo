@@ -8,6 +8,7 @@ public sealed class UpdateGamebookProgressValidator : AbstractValidator<UpdateGa
     {
         RuleFor(x => x.CampaignId).NotEmpty();
         RuleFor(x => x.CallerUserId).NotEmpty();
+        RuleFor(x => x.GameBookId).NotEqual(Guid.Empty);
         RuleFor(x => x.CurrentParagraph).GreaterThanOrEqualTo(0);
     }
 }

@@ -29,6 +29,6 @@ public class RenameGamebookCampaignHandler : IRequestHandler<RenameGamebookCampa
         session.Rename(cmd.Title, cmd.CallerUserId);
         await _repo.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return CreateGamebookCampaignHandler.MapToDto(session);
+        return CreateGamebookCampaignHandler.MapToDto(session, progress: null);
     }
 }

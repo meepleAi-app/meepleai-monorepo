@@ -23,6 +23,6 @@ public class GetGamebookCampaignHandler : IRequestHandler<GetGamebookCampaignQue
         if (session.OwnerUserId != q.CallerUserId)
             throw new ConflictException("Forbidden");
 
-        return CreateGamebookCampaignHandler.MapToDto(session);
+        return CreateGamebookCampaignHandler.MapToDto(session, progress: null);
     }
 }

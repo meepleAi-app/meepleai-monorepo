@@ -60,6 +60,27 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
+    private sealed class FakeProgressRepo : ISessionBookProgressRepository
+    {
+        public List<SessionBookProgress> Store { get; } = new();
+
+        public Task<SessionBookProgress?> GetByCampaignAndBookAsync(Guid campaignSessionId, Guid gameBookId, CancellationToken cancellationToken)
+            => Task.FromResult(Store.FirstOrDefault(p =>
+                p.CampaignSessionId == campaignSessionId && p.GameBookId == gameBookId));
+
+        public Task<IReadOnlyList<SessionBookProgress>> ListByCampaignAsync(Guid campaignSessionId, CancellationToken cancellationToken)
+            => Task.FromResult<IReadOnlyList<SessionBookProgress>>(
+                Store.Where(p => p.CampaignSessionId == campaignSessionId).ToList());
+
+        public Task AddAsync(SessionBookProgress progress, CancellationToken cancellationToken)
+        {
+            Store.Add(progress);
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(SessionBookProgress progress, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
     private sealed class FakeGlossaryRepo : IGamebookGlossaryRepository
     {
         public List<GamebookGlossaryEntry> Store { get; } = new();
@@ -137,12 +158,14 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         FakeArtifactRepo artifactRepo,
         FakeParagraphRepo paragraphRepo,
         FakeGlossaryRepo glossaryRepo,
+        FakeProgressRepo progressRepo,
         ILlmService? llm = null) =>
         new(
             campaignRepo,
             artifactRepo,
             paragraphRepo,
             glossaryRepo,
+            progressRepo,
             llm ?? new FakeLlmService(),
             NullLogger<TranslateGamebookSegmentQueryHandler>.Instance);
 
@@ -156,6 +179,7 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         var artifactRepo = new FakeArtifactRepo();
         var paragraphRepo = new FakeParagraphRepo();
         var glossaryRepo = new FakeGlossaryRepo();
+        var progressRepo = new FakeProgressRepo();
 
         var ownerId = Guid.NewGuid();
         var campaign = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "Nanolith Campaign");
@@ -172,9 +196,10 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         var glossaryEntry = GamebookGlossaryEntry.Create(campaign.Id, "Hive", "Alveare", GlossarySource.AutoBootstrap, ownerId);
         glossaryRepo.Store.Add(glossaryEntry);
 
-        var handler = BuildHandler(campaignRepo, artifactRepo, paragraphRepo, glossaryRepo);
+        var handler = BuildHandler(campaignRepo, artifactRepo, paragraphRepo, glossaryRepo, progressRepo);
 
-        var query = new TranslateGamebookSegmentQuery(campaign.Id, artifact.Id, 47, ownerId);
+        var bookId = Guid.NewGuid();
+        var query = new TranslateGamebookSegmentQuery(campaign.Id, artifact.Id, 47, ownerId, bookId);
 
         // Act — collect all streamed chunks
         var chunks = new List<TranslateChunk>();
@@ -207,7 +232,11 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         persisted.TranslatedTextIt.Should().Be("L'Alveare si risveglia.");
         persisted.AppliedGlossaryTerms.Should().Contain("Hive");
 
-        // Assert campaign progress advanced
-        campaign.Progress.CurrentParagraph.Should().Be(47);
+        // C2 (2026-05-19): per-book progress advanced via SessionBookProgress.
+        progressRepo.Store.Should().HaveCount(1);
+        var progressRow = progressRepo.Store[0];
+        progressRow.CampaignSessionId.Should().Be(campaign.Id);
+        progressRow.GameBookId.Should().Be(bookId);
+        progressRow.LastLocation.Should().Be("§47");
     }
 }

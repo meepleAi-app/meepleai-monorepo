@@ -6,6 +6,7 @@ namespace Api.BoundedContexts.SessionTracking.Application.Commands;
 
 public sealed record UploadGamebookPhotoCommand(
     Guid CampaignId,
+    Guid GameBookId,
     Guid CallerUserId,
     Stream PhotoStream,
     string ContentType,

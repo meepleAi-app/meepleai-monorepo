@@ -36,7 +36,7 @@ internal sealed class UploadGamebookPhotoCommandHandler : IRequestHandler<Upload
         var storageKey = await _storage.UploadAsync(
             cmd.PhotoStream, cmd.ContentType, cmd.CampaignId, photoId, cancellationToken).ConfigureAwait(false);
 
-        var artifact = GamebookPhotoArtifact.Create(cmd.CampaignId, storageKey, cmd.PageType);
+        var artifact = GamebookPhotoArtifact.Create(cmd.CampaignId, cmd.GameBookId, storageKey, cmd.PageType);
 
         await _photos.AddAsync(artifact, cancellationToken).ConfigureAwait(false);
         await _photos.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

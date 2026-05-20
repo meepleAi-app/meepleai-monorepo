@@ -23,6 +23,7 @@ internal class GamebookPhotoArtifactEntityConfiguration : IEntityTypeConfigurati
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasColumnName("id");
         builder.Property(e => e.CampaignId).HasColumnName("campaign_id").IsRequired();
+        builder.Property(e => e.GameBookId).HasColumnName("game_book_id").IsRequired();
         builder.Property(e => e.S3Key).HasColumnName("s3_key").HasMaxLength(500).IsRequired();
         builder.Property(e => e.PageType).HasColumnName("page_type").IsRequired();
         builder.Property(e => e.Status).HasColumnName("status").IsRequired();

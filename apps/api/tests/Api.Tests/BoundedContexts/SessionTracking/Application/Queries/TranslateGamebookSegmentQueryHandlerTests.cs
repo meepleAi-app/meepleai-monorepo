@@ -185,8 +185,10 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         var campaign = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "Nanolith Campaign");
         campaignRepo.Store.Add(campaign);
 
+        var bookId = Guid.NewGuid();
+
         // Build artifact in Segmented state with §47
-        var artifact = GamebookPhotoArtifact.Create(campaign.Id, $"gamebook-photos/{campaign.Id}/photo1", GamebookPageType.Storybook);
+        var artifact = GamebookPhotoArtifact.Create(campaign.Id, bookId, $"gamebook-photos/{campaign.Id}/photo1", GamebookPageType.Storybook);
         artifact.RecordSegments(
             new[] { GamebookSegment.Create(47, "The Hive awakens.", null) },
             "The Hive awakens.");
@@ -198,7 +200,6 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
 
         var handler = BuildHandler(campaignRepo, artifactRepo, paragraphRepo, glossaryRepo, progressRepo);
 
-        var bookId = Guid.NewGuid();
         var query = new TranslateGamebookSegmentQuery(campaign.Id, artifact.Id, 47, ownerId, bookId);
 
         // Act — collect all streamed chunks

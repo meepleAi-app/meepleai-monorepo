@@ -104,7 +104,7 @@ public sealed class SegmentGamebookPhotoHandlerTests
         GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "Test Campaign");
 
     private static GamebookPhotoArtifact BuildArtifact(Guid campaignId) =>
-        GamebookPhotoArtifact.Create(campaignId, $"gamebook-photos/{campaignId}/test", GamebookPageType.Storybook);
+        GamebookPhotoArtifact.Create(campaignId, Guid.NewGuid(), $"gamebook-photos/{campaignId}/test", GamebookPageType.Storybook);
 
     // ── Tests ─────────────────────────────────────────────────────────────────
 

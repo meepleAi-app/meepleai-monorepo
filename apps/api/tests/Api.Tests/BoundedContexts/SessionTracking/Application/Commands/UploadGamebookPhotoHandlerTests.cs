@@ -91,6 +91,7 @@ public sealed class UploadGamebookPhotoHandlerTests
 
         var cmd = new UploadGamebookPhotoCommand(
             campaign.Id,
+            Guid.NewGuid(),
             ownerId,
             new MemoryStream(new byte[] { 0xFF, 0xD8 }), // fake JPEG bytes
             "image/jpeg",
@@ -121,6 +122,7 @@ public sealed class UploadGamebookPhotoHandlerTests
         var cmd = new UploadGamebookPhotoCommand(
             Guid.NewGuid(),
             Guid.NewGuid(),
+            Guid.NewGuid(),
             new MemoryStream(),
             "image/jpeg",
             GamebookPageType.Encounter);
@@ -144,6 +146,7 @@ public sealed class UploadGamebookPhotoHandlerTests
 
         var cmd = new UploadGamebookPhotoCommand(
             campaign.Id,
+            Guid.NewGuid(),
             differentCallerId,
             new MemoryStream(),
             "image/jpeg",

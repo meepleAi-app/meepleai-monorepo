@@ -9,15 +9,17 @@ using Xunit;
 public class GamebookPhotoArtifactTests
 {
     private static readonly Guid CampaignId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    private static readonly Guid GameBookId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
     [Fact]
     public void Create_WithValidInputs_StartsAsUploaded()
     {
         var before = DateTimeOffset.UtcNow;
 
-        var artifact = GamebookPhotoArtifact.Create(CampaignId, "s3://bucket/photo.jpg", GamebookPageType.Storybook);
+        var artifact = GamebookPhotoArtifact.Create(CampaignId, GameBookId, "s3://bucket/photo.jpg", GamebookPageType.Storybook);
 
         artifact.CampaignId.Should().Be(CampaignId);
+        artifact.GameBookId.Should().Be(GameBookId);
         artifact.S3Key.Should().Be("s3://bucket/photo.jpg");
         artifact.PageType.Should().Be(GamebookPageType.Storybook);
         artifact.Status.Should().Be(PhotoArtifactStatus.Uploaded);
@@ -31,9 +33,18 @@ public class GamebookPhotoArtifactTests
     }
 
     [Fact]
+    public void Create_WithEmptyGameBookId_Throws()
+    {
+        Action act = () => GamebookPhotoArtifact.Create(CampaignId, Guid.Empty, "s3://bucket/photo.jpg", GamebookPageType.Storybook);
+
+        act.Should().Throw<ArgumentException>()
+            .WithParameterName("gameBookId");
+    }
+
+    [Fact]
     public void RecordSegments_FromUploaded_TransitionsToSegmented()
     {
-        var artifact = GamebookPhotoArtifact.Create(CampaignId, "s3://bucket/photo.jpg", GamebookPageType.Encounter);
+        var artifact = GamebookPhotoArtifact.Create(CampaignId, GameBookId, "s3://bucket/photo.jpg", GamebookPageType.Encounter);
         var segments = new[]
         {
             GamebookSegment.Create(1, "You enter the dark cave.", null),
@@ -50,7 +61,7 @@ public class GamebookPhotoArtifactTests
     [Fact]
     public void RecordSegments_FromSegmented_Throws()
     {
-        var artifact = GamebookPhotoArtifact.Create(CampaignId, "s3://bucket/photo.jpg", GamebookPageType.Storybook);
+        var artifact = GamebookPhotoArtifact.Create(CampaignId, GameBookId, "s3://bucket/photo.jpg", GamebookPageType.Storybook);
         artifact.RecordSegments(new[] { GamebookSegment.Create(1, "Text", null) }, "Text");
 
         Action act = () => artifact.RecordSegments(new[] { GamebookSegment.Create(2, "More text", null) }, "More text");
@@ -62,7 +73,7 @@ public class GamebookPhotoArtifactTests
     [Fact]
     public void MarkFailed_FromAnyState_RecordsReason()
     {
-        var artifact = GamebookPhotoArtifact.Create(CampaignId, "s3://bucket/photo.jpg", GamebookPageType.Storybook);
+        var artifact = GamebookPhotoArtifact.Create(CampaignId, GameBookId, "s3://bucket/photo.jpg", GamebookPageType.Storybook);
 
         artifact.MarkFailed("OCR service timeout");
 

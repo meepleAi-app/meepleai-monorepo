@@ -40,6 +40,7 @@ internal static class GamebookPhotoEndpoints
             Guid campaignId,
             IFormFile file,
             [FromForm] string pageType,
+            [FromForm] Guid gameBookId,
             IMediator mediator,
             HttpContext context,
             CancellationToken ct) =>
@@ -49,6 +50,8 @@ internal static class GamebookPhotoEndpoints
             if (!TryGetUserId(context, session, out var userId)) return Results.Unauthorized();
             if (file is null || file.Length == 0)
                 return Results.BadRequest(new { error = "file is required" });
+            if (gameBookId == Guid.Empty)
+                return Results.BadRequest(new { error = "gameBookId is required" });
             if (!Enum.TryParse<GamebookPageType>(pageType, ignoreCase: true, out var parsedPageType))
                 return Results.BadRequest(new { error = $"invalid pageType '{pageType}'" });
 
@@ -56,7 +59,7 @@ internal static class GamebookPhotoEndpoints
             await using (stream.ConfigureAwait(false))
             {
                 var dto = await mediator.Send(
-                    new UploadGamebookPhotoCommand(campaignId, userId, stream, file.ContentType, parsedPageType),
+                    new UploadGamebookPhotoCommand(campaignId, gameBookId, userId, stream, file.ContentType, parsedPageType),
                     ct).ConfigureAwait(false);
 
                 return Results.Created($"/api/v1/gamebook/campaigns/{campaignId}/photos/{dto.Id}", dto);

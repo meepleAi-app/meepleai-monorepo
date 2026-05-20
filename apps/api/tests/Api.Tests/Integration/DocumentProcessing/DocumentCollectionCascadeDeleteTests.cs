@@ -1,5 +1,6 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
@@ -58,21 +59,20 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         };
 
         var gameId = Guid.NewGuid();
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = gameId,
-            Name = "Catan"
+            Title = "Catan"
         };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var collection1Id = Guid.NewGuid();
         var collection1 = new DocumentCollectionEntity
         {
             Id = collection1Id,
-            SharedGameId = gameId,
             Name = "Catan Rules Collection",
             Description = "Official rules and expansions",
             CreatedByUserId = userId,
@@ -83,7 +83,6 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         var collection2 = new DocumentCollectionEntity
         {
             Id = collection2Id,
-            SharedGameId = gameId,
             Name = "Catan FAQ Collection",
             CreatedByUserId = userId,
             DocumentsJson = "[]"
@@ -93,7 +92,7 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act - Delete game (should cascade to collections)
-        _dbContext.Games.Remove(game);
+        _dbContext.SharedGames.Remove(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert - Collections are deleted via cascade
@@ -103,7 +102,7 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
 
         remainingCollections.Should().BeEmpty();
 
-        var deletedGame = await _dbContext.Games.FindAsync(gameId);
+        var deletedGame = await _dbContext.SharedGames.FindAsync(gameId);
         deletedGame.Should().BeNull();
     }
 
@@ -121,21 +120,20 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         };
 
         var gameId = Guid.NewGuid();
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = gameId,
-            Name = "Wingspan"
+            Title = "Wingspan"
         };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var collectionId = Guid.NewGuid();
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
-            SharedGameId = gameId,
             Name = "Wingspan Rules",
             CreatedByUserId = userId,
             DocumentsJson = "[]"
@@ -165,7 +163,7 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act - Delete game (cascades to collection, which cascades to junction)
-        _dbContext.Games.Remove(game);
+        _dbContext.SharedGames.Remove(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert - No orphaned collections or junctions
@@ -198,21 +196,20 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         };
 
         var gameId = Guid.NewGuid();
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = gameId,
-            Name = "Azul"
+            Title = "Azul"
         };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var collectionId = Guid.NewGuid();
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
-            SharedGameId = gameId,
             Name = "Azul Collection",
             CreatedByUserId = userId,
             DocumentsJson = "[]"
@@ -225,9 +222,9 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert - Game remains
-        var remainingGame = await _dbContext.Games.FindAsync(gameId);
+        var remainingGame = await _dbContext.SharedGames.FindAsync(gameId);
         remainingGame.Should().NotBeNull();
-        remainingGame!.Name.Should().Be("Azul");
+        remainingGame!.Title.Should().Be("Azul");
     }
 
     [Fact]
@@ -235,21 +232,21 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
     {
         // Arrange
         var gameId = Guid.NewGuid();
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = gameId,
-            Name = "7 Wonders"
+            Title = "7 Wonders"
         };
 
-        _dbContext!.Games.Add(game);
+        _dbContext!.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act - Delete game with no collections
-        _dbContext.Games.Remove(game);
+        _dbContext.SharedGames.Remove(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert
-        var deletedGame = await _dbContext.Games.FindAsync(gameId);
+        var deletedGame = await _dbContext.SharedGames.FindAsync(gameId);
         deletedGame.Should().BeNull();
     }
 }

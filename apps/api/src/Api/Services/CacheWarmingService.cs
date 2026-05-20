@@ -268,7 +268,7 @@ internal class CacheWarmingService : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        var gameIds = await dbContext.Games
+        var gameIds = await dbContext.SharedGames
             .Select(g => g.Id)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 

@@ -7,6 +7,7 @@ using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
@@ -92,12 +93,12 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task SaveChangesAsync_WithSingleEvent_ShouldDispatchAndCreateAuditLog()
     {
-        // Arrange — seed GameEntity and inject GameCreatedEvent directly
+        // Arrange — seed SharedGameEntity and inject GameCreatedEvent directly
         var gameId = Guid.NewGuid();
         const string gameName = "Wingspan";
 
         var gameEntity = CreateGameEntity(gameId, gameName, "Stonemaier Games");
-        _dbContext.Games.Add(gameEntity);
+        _dbContext.SharedGames.Add(gameEntity);
 
         _eventCollector.Collect(new GameCreatedEvent(gameId, gameName));
 
@@ -179,12 +180,12 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GameCreated_ShouldTriggerWorkflowIntegrationHandler()
     {
-        // Arrange — seed GameEntity and inject GameCreatedEvent directly
+        // Arrange — seed SharedGameEntity and inject GameCreatedEvent directly
         var gameId = Guid.NewGuid();
         const string gameName = "Terraforming Mars";
 
         var gameEntity = CreateGameEntity(gameId, gameName, "FryxGames");
-        _dbContext.Games.Add(gameEntity);
+        _dbContext.SharedGames.Add(gameEntity);
 
         _eventCollector.Collect(new GameCreatedEvent(gameId, gameName));
 
@@ -214,12 +215,12 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task MultipleContextEvents_ShouldAllDispatchInSameTransaction()
     {
-        // Arrange — seed GameEntity and inject GameCreatedEvent directly
+        // Arrange — seed SharedGameEntity and inject GameCreatedEvent directly
         var gameId = Guid.NewGuid();
         const string gameName = "Gloomhaven";
 
         var gameEntity = CreateGameEntity(gameId, gameName, "Cephalofair Games");
-        _dbContext.Games.Add(gameEntity);
+        _dbContext.SharedGames.Add(gameEntity);
         _eventCollector.Collect(new GameCreatedEvent(gameId, gameName));
 
         var user = new User(
@@ -260,12 +261,12 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
         // catch and log exceptions rather than propagating them.
         // In a system with failing handlers, the transaction would rollback.
 
-        // Arrange — seed GameEntity and inject GameCreatedEvent directly
+        // Arrange — seed SharedGameEntity and inject GameCreatedEvent directly
         var gameId = Guid.NewGuid();
         const string gameName = "Azul";
 
         var gameEntity = CreateGameEntity(gameId, gameName, "Plan B Games");
-        _dbContext.Games.Add(gameEntity);
+        _dbContext.SharedGames.Add(gameEntity);
 
         _eventCollector.Collect(new GameCreatedEvent(gameId, gameName));
 
@@ -274,7 +275,7 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert - Game entity persisted (handlers don't prevent save)
-        var savedGame = await _dbContext.Games.FindAsync(new object[] { gameId }, TestCancellationToken);
+        var savedGame = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
         savedGame.Should().NotBeNull();
 
         // Audit log still created despite handler errors
@@ -309,7 +310,7 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
         // Add entities and save
         foreach (var (id, name) in gameData)
         {
-            _dbContext.Games.Add(CreateGameEntity(id, name, "Test Publisher"));
+            _dbContext.SharedGames.Add(CreateGameEntity(id, name, "Test Publisher"));
         }
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
@@ -329,7 +330,7 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task PartialHandlerFailure_ShouldNotPreventOtherHandlers()
     {
-        // Arrange — seed GameEntity and inject GameLinkedToBggEvent directly
+        // Arrange — seed SharedGameEntity and inject GameLinkedToBggEvent directly
         var gameId = Guid.NewGuid();
         const string gameName = "7 Wonders";
         const int bggId = 68448;
@@ -337,8 +338,8 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
         var gameEntity = CreateGameEntity(gameId, gameName, "Repos Production");
         gameEntity.BggId = bggId;
-        gameEntity.BggMetadata = bggMetadata;
-        _dbContext.Games.Add(gameEntity);
+        gameEntity.BggRawData = bggMetadata;
+        _dbContext.SharedGames.Add(gameEntity);
 
         _eventCollector.Collect(new GameLinkedToBggEvent(gameId, bggId));
 
@@ -358,13 +359,12 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
     #region Helper Methods
 
-    private static GameEntity CreateGameEntity(Guid id, string name, string? publisher = null)
+    private static SharedGameEntity CreateGameEntity(Guid id, string name, string? publisher = null)
     {
-        return new GameEntity
+        return new SharedGameEntity
         {
             Id = id,
-            Name = name,
-            Publisher = publisher,
+            Title = name,
             CreatedAt = DateTime.UtcNow
         };
     }

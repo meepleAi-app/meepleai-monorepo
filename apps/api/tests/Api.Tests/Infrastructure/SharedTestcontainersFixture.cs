@@ -11,6 +11,7 @@ using StackExchange.Redis;
 using Xunit;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 
 namespace Api.Tests.Infrastructure;
@@ -942,23 +943,12 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     //
     // Notes on entity model:
     //   - PdfDocumentEntity.GameId is FK to legacy `games` table (GameEntity), not SharedGame.
-    //     We seed BOTH a GameEntity and a SharedGameEntity with the SAME Id so PDF FK is satisfied
+    //     We seed BOTH a SharedGameEntity and a SharedGameEntity with the SAME Id so PDF FK is satisfied
     //     while UserLibraryEntry can reference SharedGameId.
     //   - VectorDocumentEntity has a UNIQUE constraint on PdfDocumentId — at most one row per PDF.
     //     The `vectorCount` parameter is interpreted as the ChunkCount on that single row;
     //     `vectorCount == 0` means "no VectorDocument row at all" (KB not ready).
     // ============================================================================
-
-    private static GameEntity CreateGameRow(Guid gameId, string title)
-    {
-        return new GameEntity
-        {
-            Id = gameId,
-            Name = title,
-            CreatedAt = DateTime.UtcNow,
-            SharedGameId = gameId
-        };
-    }
 
     private static Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity CreateSharedGameRow(
         Guid gameId, string title, Guid createdBy)
@@ -998,7 +988,6 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         return new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = gameId,
             UploadedByUserId = uploadedBy,
             FileName = fileName,
             FilePath = $"/test/{fileName}",
@@ -1017,7 +1006,6 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
             Id = Guid.NewGuid(),
             PdfDocumentId = pdfId,
             GameId = gameId,
-            SharedGameId = gameId,
             ChunkCount = chunkCount,
             TotalCharacters = chunkCount * 500,
             IndexingStatus = "completed",
@@ -1028,7 +1016,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// Seeds a user + a shared game (with parallel GameEntity row) + a UserLibraryEntry +
+    /// Seeds a user + a shared game (with parallel SharedGameEntity row) + a UserLibraryEntry +
     /// 1 indexed PDF + 1 VectorDocument with ChunkCount=<paramref name="vectorCount"/>.
     /// Used for Session Flow v2.1 tests where KB must be ready.
     /// </summary>
@@ -1041,13 +1029,12 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         var pdfId = Guid.NewGuid();
 
         db.Users.Add(CreateUserRow(userId));
-        db.Games.Add(CreateGameRow(gameId, "SF21 Test Game"));
+        
         db.SharedGames.Add(CreateSharedGameRow(gameId, "SF21 Test Game", userId));
         db.UserLibraryEntries.Add(new Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            SharedGameId = gameId,
             AddedAt = DateTime.UtcNow
         });
         db.PdfDocuments.Add(CreatePdfRow(pdfId, gameId, userId, "rules.pdf", "Ready"));
@@ -1078,13 +1065,12 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        db.Games.Add(CreateGameRow(gameId, "SF21 Second Game"));
+        
         db.SharedGames.Add(CreateSharedGameRow(gameId, "SF21 Second Game", userId));
         db.UserLibraryEntries.Add(new Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            SharedGameId = gameId,
             AddedAt = DateTime.UtcNow
         });
         db.PdfDocuments.Add(CreatePdfRow(pdfId, gameId, userId, "rules2.pdf", "Ready"));
@@ -1112,13 +1098,12 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         var pdfId = Guid.NewGuid();
 
         db.Users.Add(CreateUserRow(userId));
-        db.Games.Add(CreateGameRow(gameId, "SF21 NoKB Game"));
+        
         db.SharedGames.Add(CreateSharedGameRow(gameId, "SF21 NoKB Game", userId));
         db.UserLibraryEntries.Add(new Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            SharedGameId = gameId,
             AddedAt = DateTime.UtcNow
         });
         db.PdfDocuments.Add(CreatePdfRow(pdfId, gameId, userId, "rules.pdf", "Extracting"));
@@ -1148,7 +1133,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         var dummyUserId = Guid.NewGuid();
 
         db.Users.Add(CreateUserRow(dummyUserId));
-        db.Games.Add(CreateGameRow(gameId, "SF21 Seeded Game"));
+        
         db.SharedGames.Add(CreateSharedGameRow(gameId, "SF21 Seeded Game", dummyUserId));
         db.PdfDocuments.Add(CreatePdfRow(pdfId, gameId, dummyUserId, "rules.pdf", "Ready"));
 
@@ -1173,7 +1158,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         var dummyUserId = Guid.NewGuid();
 
         db.Users.Add(CreateUserRow(dummyUserId));
-        db.Games.Add(CreateGameRow(gameId, "SF21 Mixed Game"));
+        
         db.SharedGames.Add(CreateSharedGameRow(gameId, "SF21 Mixed Game", dummyUserId));
 
         for (int i = 0; i < indexedCount; i++)

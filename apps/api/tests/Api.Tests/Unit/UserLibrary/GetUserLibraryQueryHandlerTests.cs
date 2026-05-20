@@ -79,7 +79,6 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = gameId,
             FileName = "rules.pdf",
             FilePath = "/pdfs/rules.pdf",
             FileSizeBytes = 1024,

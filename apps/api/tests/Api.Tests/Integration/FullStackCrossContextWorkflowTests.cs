@@ -12,6 +12,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -165,7 +166,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
 
         // Step 3: Browse games
         var gameEntity = CreateGameEntity("Catan");
-        _dbContext.Games.Add(gameEntity);
+        _dbContext.SharedGames.Add(gameEntity);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Step 4: Start game session
@@ -242,7 +243,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         }
 
         var gameEntity = CreateGameEntity("Pandemic Legacy");
-        _dbContext!.Games.Add(gameEntity);
+        _dbContext!.SharedGames.Add(gameEntity);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 
@@ -298,7 +299,7 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         await sessionRepository.AddAsync(session, TestCancellationToken);
 
         var gameEntity = CreateGameEntity("Quick Game");
-        _dbContext!.Games.Add(gameEntity);
+        _dbContext!.SharedGames.Add(gameEntity);
 
         var gameSession = new GameSession(
             Guid.NewGuid(),
@@ -342,13 +343,12 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         );
     }
 
-    private static GameEntity CreateGameEntity(string name, string? publisher = null)
+    private static SharedGameEntity CreateGameEntity(string name, string? publisher = null)
     {
-        return new GameEntity
+        return new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = name,
-            Publisher = publisher,
+            Title = name,
             CreatedAt = DateTime.UtcNow
         };
     }

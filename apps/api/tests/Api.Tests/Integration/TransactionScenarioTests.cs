@@ -1,5 +1,6 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.Authentication;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -186,8 +187,8 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
     #region Optimistic Concurrency Conflict
 
     /// <summary>
-    /// Issue #2709: This test requires RowVersion property on GameEntity for optimistic locking.
-    /// GameEntity currently doesn't have [Timestamp] RowVersion, so EF Core cannot detect
+    /// Issue #2709: This test requires RowVersion property on SharedGameEntity for optimistic locking.
+    /// SharedGameEntity currently doesn't have [Timestamp] RowVersion, so EF Core cannot detect
     /// concurrent modifications. Skip until RowVersion is added in a future migration.
     /// </summary>
     [Fact(Skip = "Requires RowVersion concurrency token on GameEntity - see Issue #2709")]
@@ -195,16 +196,16 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
     {
         // Arrange - Create a game that will be updated concurrently
         var gameId = Guid.NewGuid();
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = gameId,
-            Name = "Original Title",
+            Title = "Original Title",
             MinPlayers = 2,
             MaxPlayers = 4,
             YearPublished = 2020
         };
 
-        _dbContext!.Games.Add(game);
+        _dbContext!.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 
@@ -216,12 +217,12 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
         var context2 = scope2.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Context1 loads game
-        var game1 = await context1.Games.FindAsync(new object[] { gameId }, TestCancellationToken);
-        game1!.Name = "Updated by Context 1";
+        var game1 = await context1.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
+        game1!.Title = "Updated by Context 1";
 
         // Context2 loads same game
-        var game2 = await context2.Games.FindAsync(new object[] { gameId }, TestCancellationToken);
-        game2!.Name = "Updated by Context 2";
+        var game2 = await context2.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
+        game2!.Title = "Updated by Context 2";
 
         // Context1 saves first (succeeds)
         await context1.SaveChangesAsync(TestCancellationToken);
@@ -250,9 +251,9 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
         var game1Id = Guid.NewGuid();
         var game2Id = Guid.NewGuid();
 
-        _dbContext!.Games.AddRange(
-            new GameEntity { Id = game1Id, Name = "Game 1", MinPlayers = 2, MaxPlayers = 4, YearPublished = 2020 },
-            new GameEntity { Id = game2Id, Name = "Game 2", MinPlayers = 2, MaxPlayers = 6, YearPublished = 2021 }
+        _dbContext!.SharedGames.AddRange(
+            new SharedGameEntity { Id = game1Id, Title = "Game 1", MinPlayers = 2, MaxPlayers = 4, YearPublished = 2020 },
+            new SharedGameEntity { Id = game2Id, Title = "Game 2", MinPlayers = 2, MaxPlayers = 6, YearPublished = 2021 }
         );
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
@@ -272,14 +273,14 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
 
                     await using var transaction = await ctx.Database.BeginTransactionAsync(TestCancellationToken);
 
-                    var g1 = await ctx.Games.FindAsync(new object[] { game1Id }, TestCancellationToken);
-                    g1!.Name = "Updated Game 1 by Tx1";
+                    var g1 = await ctx.SharedGames.FindAsync(new object[] { game1Id }, TestCancellationToken);
+                    g1!.Title = "Updated Game 1 by Tx1";
                     await ctx.SaveChangesAsync(TestCancellationToken);
 
                     await Task.Delay(50, TestCancellationToken); // Introduce timing for potential deadlock
 
-                    var g2 = await ctx.Games.FindAsync(new object[] { game2Id }, TestCancellationToken);
-                    g2!.Name = "Updated Game 2 by Tx1";
+                    var g2 = await ctx.SharedGames.FindAsync(new object[] { game2Id }, TestCancellationToken);
+                    g2!.Title = "Updated Game 2 by Tx1";
                     await ctx.SaveChangesAsync(TestCancellationToken);
 
                     await transaction.CommitAsync(TestCancellationToken);
@@ -307,14 +308,14 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
 
                     await using var transaction = await ctx.Database.BeginTransactionAsync(TestCancellationToken);
 
-                    var g2 = await ctx.Games.FindAsync(new object[] { game2Id }, TestCancellationToken);
-                    g2!.Name = "Updated Game 2 by Tx2";
+                    var g2 = await ctx.SharedGames.FindAsync(new object[] { game2Id }, TestCancellationToken);
+                    g2!.Title = "Updated Game 2 by Tx2";
                     await ctx.SaveChangesAsync(TestCancellationToken);
 
                     await Task.Delay(50, TestCancellationToken); // Introduce timing for potential deadlock
 
-                    var g1 = await ctx.Games.FindAsync(new object[] { game1Id }, TestCancellationToken);
-                    g1!.Name = "Updated Game 1 by Tx2";
+                    var g1 = await ctx.SharedGames.FindAsync(new object[] { game1Id }, TestCancellationToken);
+                    g1!.Title = "Updated Game 1 by Tx2";
                     await ctx.SaveChangesAsync(TestCancellationToken);
 
                     await transaction.CommitAsync(TestCancellationToken);
@@ -357,10 +358,10 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
             CreatedAt = DateTime.UtcNow
         };
 
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = gameId,
-            Name = "Scope Test Game",
+            Title = "Scope Test Game",
             MinPlayers = 2,
             MaxPlayers = 4,
             YearPublished = 2022
@@ -369,7 +370,6 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
         var pdf = new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = gameId,
             FileName = "scope_test.pdf",
             FilePath = "/path/scope_test.pdf",
             FileSizeBytes = 1000000,
@@ -382,7 +382,7 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         _dbContext.PdfDocuments.Add(pdf);
@@ -394,7 +394,7 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
         _dbContext.ChangeTracker.Clear();
 
         var persistedUser = await _dbContext.Users.FindAsync(new object[] { userId }, TestCancellationToken);
-        var persistedGame = await _dbContext.Games.FindAsync(new object[] { gameId }, TestCancellationToken);
+        var persistedGame = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
         var persistedPdf = await _dbContext.PdfDocuments
             .Include(p => p.UploadedBy)
             .FirstOrDefaultAsync(p => p.Id == pdfId, TestCancellationToken);
@@ -406,7 +406,7 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
         // Verify FK relationships
         persistedPdf!.SharedGameId.Should().Be(gameId);
         persistedPdf.UploadedByUserId.Should().Be(userId);
-        persistedGame!.Name.Should().Be("Scope Test Game");
+        persistedGame!.Title.Should().Be("Scope Test Game");
         persistedPdf.UploadedBy.Should().NotBeNull();
         persistedPdf.UploadedBy!.Email.Should().Be("scope@test.com");
     }

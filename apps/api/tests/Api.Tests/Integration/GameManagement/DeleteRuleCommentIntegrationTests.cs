@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -137,15 +138,14 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
 
         // Seed game
         _testGameId = Guid.NewGuid();
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = _testGameId,
-            Name = "Test Game for Delete",
-            Publisher = "Test Publisher",
+            Title = "Test Game for Delete",
             YearPublished = 2024,
             CreatedAt = DateTime.UtcNow
         };
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }

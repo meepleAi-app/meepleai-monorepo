@@ -234,14 +234,14 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
         var gameId = Guid.NewGuid();
         var gameName = $"Test Game {Guid.NewGuid():N}";
 
-        // Create GameEntity first to satisfy PdfDocument FK constraint
-        var gameEntity = new GameEntity
+        // Create SharedGameEntity first to satisfy PdfDocument FK constraint
+        var gameEntity = new SharedGameEntity
         {
             Id = gameId,
-            Name = gameName,
+            Title = gameName,
             CreatedAt = DateTime.UtcNow
         };
-        _dbContext.Games.Add(gameEntity);
+        _dbContext.SharedGames.Add(gameEntity);
 
         // Create SharedGameEntity directly (avoids reflection issues)
         var sharedGameEntity = new SharedGameEntity
@@ -277,7 +277,7 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
     /// </summary>
     private async Task<PdfDocumentEntity> CreateTestPdfDocumentAsync(Guid sharedGameId)
     {
-        // Use SharedGame's ID directly (SharedGame ID matches GameEntity ID)
+        // Use SharedGame's ID directly (SharedGame ID matches SharedGameEntity ID)
         var pdfDoc = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),

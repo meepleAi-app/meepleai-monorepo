@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
 using Api.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
@@ -85,10 +86,10 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
     public async Task Handle_WithPdfUploads_ReturnsPdfEvents()
     {
         // Arrange
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Test Game",
+            Title = "Test Game",
             MinPlayers = 2,
             MaxPlayers = 4
         };
@@ -100,7 +101,7 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
             Role = "user",
             CreatedAt = DateTime.UtcNow
         };
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         _dbContext.Users.Add(user);
 
         var pdf = new PdfDocumentEntity
@@ -342,14 +343,14 @@ public sealed class GetRecentActivityQueryHandlerTests : IDisposable
         };
         _dbContext.Users.Add(user);
 
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Catan",
+            Title = "Catan",
             MinPlayers = 3,
             MaxPlayers = 4
         };
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
 
         var pdf = new PdfDocumentEntity
         {

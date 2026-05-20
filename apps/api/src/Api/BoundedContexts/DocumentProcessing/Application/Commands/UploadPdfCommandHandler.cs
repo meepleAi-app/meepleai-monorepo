@@ -138,7 +138,7 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
                     p.FileName,
                     p.ProcessingState,
                     p.SharedGameId,
-                    GameName = _db.Games.Where(g => g.Id == p.SharedGameId).Select(g => g.Name).FirstOrDefault(),
+                    GameName = _db.SharedGames.Where(g => g.Id == p.SharedGameId).Select(g => g.Title).FirstOrDefault(),
                     TotalChunks = _db.VectorDocuments.Where(vd => vd.PdfDocumentId == p.Id).Select(vd => (int?)vd.ChunkCount).FirstOrDefault()
                 })
                 .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
@@ -212,7 +212,7 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
                 p.FileName,
                 p.ProcessingState,
                 p.SharedGameId,
-                GameName = _db.Games.Where(g => g.Id == p.SharedGameId).Select(g => g.Name).FirstOrDefault(),
+                GameName = _db.SharedGames.Where(g => g.Id == p.SharedGameId).Select(g => g.Title).FirstOrDefault(),
                 TotalChunks = _db.VectorDocuments.Where(vd => vd.PdfDocumentId == p.Id).Select(vd => (int?)vd.ChunkCount).FirstOrDefault()
             })
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
@@ -474,7 +474,7 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             }
 
             // Step 1: direct games.Id match (local or legacy path)
-            var existingGame = await _db.Games
+            var existingGame = await _db.SharedGames
                 .FirstOrDefaultAsync(g => g.Id == parsedGameId, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -483,8 +483,8 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             // multiple rows share the same SharedGameId — e.g. different version/language entries)
             if (existingGame == null)
             {
-                existingGame = await _db.Games
-                    .Where(g => g.SharedGameId == parsedGameId)
+                existingGame = await _db.SharedGames
+                    .Where(g => g.Id == parsedGameId)
                     .OrderBy(g => g.CreatedAt)
                     .FirstOrDefaultAsync(cancellationToken)
                     .ConfigureAwait(false);
@@ -492,40 +492,9 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
 
             if (existingGame == null)
             {
-                // Fallback: check shared_games catalog and auto-create games entry
-                var sharedGame = await _db.SharedGames
-                    .Where(sg => sg.Id == parsedGameId && !sg.IsDeleted)
-                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-
-                if (sharedGame == null)
-                {
-                    return (false, "Game not found. Please select a valid game before uploading.", null);
-                }
-
-                // Auto-create a games entry linked to the shared game
-                existingGame = new GameEntity
-                {
-                    Id = Guid.NewGuid(),
-                    Name = sharedGame.Title,
-                    SharedGameId = sharedGame.Id,
-                    BggId = sharedGame.BggId,
-                    ImageUrl = sharedGame.ImageUrl,
-                    IconUrl = sharedGame.ThumbnailUrl,
-                    MinPlayers = sharedGame.MinPlayers,
-                    MaxPlayers = sharedGame.MaxPlayers,
-                    MinPlayTimeMinutes = sharedGame.PlayingTimeMinutes,
-                    MaxPlayTimeMinutes = sharedGame.PlayingTimeMinutes,
-                    YearPublished = sharedGame.YearPublished,
-                    Language = sharedGame.RulesLanguage,
-                    CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
-                };
-
-                _db.Games.Add(existingGame);
-                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-                _logger.LogInformation(
-                    "Auto-created game {GameId} from shared game {SharedGameId} ({Title}) for PDF upload",
-                    existingGame.Id, sharedGame.Id, sharedGame.Title);
+                // Post-Phase2d: the legacy `games` auto-create path is gone. The PDF must reference
+                // an existing shared_games row (which is what `existingGame` is now).
+                return (false, "Game not found. Please select a valid game before uploading.", null);
             }
 
             _logger.LogInformation("Using existing game {GameId} for PDF upload (matched by {InputId})",
@@ -542,43 +511,25 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
                 return (false, "Game name is required when using metadata.", null);
             }
 
-            // Search for existing game with same characteristics
-            var existingGame = await _db.Games
-                .Where(g =>
-                    g.Name == metadata.GameName &&
-                    g.VersionType == metadata.VersionType &&
-                    g.Language == metadata.Language &&
-                    g.VersionNumber == metadata.VersionNumber)
+            // Post-Phase2d: VersionType/Language/VersionNumber are gone with GameEntity.
+            // Match by Title only against shared_games.
+            var existingGame = await _db.SharedGames
+                .Where(g => g.Title == metadata.GameName && !g.IsDeleted)
                 .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
             if (existingGame != null)
             {
                 _logger.LogInformation(
-                    "Found existing game {GameId} for {GameName} ({VersionType}, {Language}, v{Version})",
-                    existingGame.Id, metadata.GameName, metadata.VersionType, metadata.Language, metadata.VersionNumber);
+                    "Found existing shared game {GameId} for {GameName}",
+                    existingGame.Id, metadata.GameName);
 
                 return (true, null, existingGame.Id);
             }
 
-            // Create new game
-            var newGame = new GameEntity
-            {
-                Id = Guid.NewGuid(),
-                Name = metadata.GameName,
-                VersionType = metadata.VersionType,
-                Language = metadata.Language,
-                VersionNumber = metadata.VersionNumber,
-                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
-            };
-
-            _db.Games.Add(newGame);
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "Created new game {GameId} for {GameName} ({VersionType}, {Language}, v{Version})",
-                newGame.Id, metadata.GameName, metadata.VersionType, metadata.Language, metadata.VersionNumber);
-
-            return (true, null, newGame.Id);
+            // Post-Phase2d: auto-create of a SharedGame from minimal metadata is not supported
+            // (SharedGameEntity has many required fields not present in PdfUploadMetadata).
+            // Callers must pre-create the shared game via the catalog import flow.
+            return (false, $"Game '{metadata.GameName}' not found in catalog. Please import it first via the catalog flow.", null);
         }
 
         // Neither gameId nor metadata provided
@@ -637,10 +588,10 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
 
             if (resolvedGameId.HasValue)
             {
-                resolvedSharedGameId = await _db.Games
+                resolvedSharedGameId = await _db.SharedGames
                     .AsNoTracking()
                     .Where(g => g.Id == resolvedGameId.Value)
-                    .Select(g => g.SharedGameId)
+                    .Select(g => g.Id)
                     .FirstOrDefaultAsync(cancellationToken)
                     .ConfigureAwait(false);
             }

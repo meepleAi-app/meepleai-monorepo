@@ -11,6 +11,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -181,7 +182,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         await userRepository.AddAsync(user, TestCancellationToken);
 
         var gameEntity = CreateGameEntity("Gloomhaven");
-        _dbContext!.Games.Add(gameEntity);
+        _dbContext!.SharedGames.Add(gameEntity);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -220,7 +221,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         await userRepository.AddAsync(user, TestCancellationToken);
 
         var gameEntity = CreateGameEntity("Scythe");
-        _dbContext!.Games.Add(gameEntity);
+        _dbContext!.SharedGames.Add(gameEntity);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Complete workflow
@@ -286,7 +287,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         await userRepository.AddAsync(user, TestCancellationToken);
 
         var gameEntity = CreateGameEntity("Pandemic");
-        _dbContext!.Games.Add(gameEntity);
+        _dbContext!.SharedGames.Add(gameEntity);
 
         var pdfDocument = new PdfDocument(
             Guid.NewGuid(),
@@ -361,7 +362,7 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         await userRepository.AddAsync(user2, TestCancellationToken);
 
         var gameEntity = CreateGameEntity("Terraforming Mars");
-        _dbContext!.Games.Add(gameEntity);
+        _dbContext!.SharedGames.Add(gameEntity);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
         _dbContext.ChangeTracker.Clear();
 
@@ -418,13 +419,12 @@ public sealed class DocumentProcessingKnowledgeBaseCrossContextTests : IAsyncLif
         );
     }
 
-    private static GameEntity CreateGameEntity(string name, string? publisher = null)
+    private static SharedGameEntity CreateGameEntity(string name, string? publisher = null)
     {
-        return new GameEntity
+        return new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = name,
-            Publisher = publisher,
+            Title = name,
             CreatedAt = DateTime.UtcNow
         };
     }

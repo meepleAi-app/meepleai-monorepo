@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameToolkit.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Application.EventHandlers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -153,12 +154,11 @@ public sealed class ToolkitChangedForCatalogAggregatesHandlerTests
         var sharedGameId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
 
-        db.Games.Add(new GameEntity
+        db.SharedGames.Add(new SharedGameEntity
         {
             Id = gameId,
-            Name = "G",
+            Title = "G",
             CreatedAt = DateTime.UtcNow,
-            SharedGameId = sharedGameId,
         });
         var toolkit = Toolkit.CreateDefault(gameId);
         db.Toolkits.Add(toolkit);
@@ -204,12 +204,11 @@ public sealed class ToolkitChangedForCatalogAggregatesHandlerTests
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         var gameId = Guid.NewGuid();
 
-        db.Games.Add(new GameEntity
+        db.SharedGames.Add(new SharedGameEntity
         {
             Id = gameId,
-            Name = "Private G",
+            Title = "Private G",
             CreatedAt = DateTime.UtcNow,
-            SharedGameId = null,
         });
         var toolkit = Toolkit.CreateDefault(gameId);
         db.Toolkits.Add(toolkit);

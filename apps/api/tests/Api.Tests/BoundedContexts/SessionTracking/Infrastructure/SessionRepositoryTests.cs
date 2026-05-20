@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
@@ -41,10 +42,10 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
     private async Task<Guid> CreateTestGameAsync()
     {
         var gameId = Guid.NewGuid();
-        DbContext.Games.Add(new Api.Infrastructure.Entities.GameEntity
+        DbContext.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
         {
             Id = gameId,
-            Name = $"Test Game {gameId:N}",
+            Title = $"Test Game {gameId:N}",
             CreatedAt = DateTime.UtcNow
         });
         await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);

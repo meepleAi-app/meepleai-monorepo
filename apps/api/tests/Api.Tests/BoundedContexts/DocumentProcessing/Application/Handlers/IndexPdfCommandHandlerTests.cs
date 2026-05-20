@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Configuration;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Tests.Constants;
@@ -578,7 +579,6 @@ public class IndexPdfCommandHandlerTests
         return new PdfDocumentEntity
         {
             Id = id,
-            SharedGameId = gameId,
             FileName = "test.pdf",
             FilePath = "/uploads/test.pdf",
             FileSizeBytes = 1024,
@@ -670,17 +670,16 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange — SharedGame PDF has null PrivateGameId, only SharedGameId set.
         // text_chunks.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
-        // We seed a matching GameEntity so the resolver can map SharedGameId → games.Id.
+        // We seed a matching SharedGameEntity so the resolver can map SharedGameId → games.Id.
         using var context = CreateFreshDbContext();
         var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var sharedGameId = Guid.NewGuid();
         var gamesId = Guid.NewGuid();
-        await context.Games.AddAsync(new GameEntity
+        await context.SharedGames.AddAsync(new SharedGameEntity
         {
             Id = gamesId,
-            Name = "Shared Game Mirror",
-            SharedGameId = sharedGameId,
+            Title = "Shared Game Mirror",
             CreatedAt = DateTime.UtcNow
         });
 
@@ -689,7 +688,6 @@ public class IndexPdfCommandHandlerTests
         {
             Id = pdfId,
             PrivateGameId = null,
-            SharedGameId = sharedGameId,
             FileName = "shared-game-rules.pdf",
             FilePath = "/uploads/shared-game-rules.pdf",
             FileSizeBytes = 2048,

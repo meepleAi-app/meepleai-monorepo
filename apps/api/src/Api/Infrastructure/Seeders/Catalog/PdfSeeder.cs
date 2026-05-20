@@ -68,13 +68,12 @@ internal static class PdfSeeder
 
         logger.LogInformation("PdfSeeder: processing {Count} blob PDF entries from manifest", pdfEntries.Count);
 
-        // Build a lookup GameEntity.Id → SharedGameId so we can compute the idempotency key below
-        // (after 2026-04-19 migration, PdfDocumentEntity no longer stores GameId; it only stores SharedGameId/PrivateGameId).
-        var gameIdToSharedId = await db.Games
+        // Post-Phase2d: legacy GameEntity is gone; SharedGameId IS what was previously GameId.
+        // The gameIdToSharedId lookup collapses to an identity mapping.
+        var gameIdToSharedId = await db.SharedGames
             .AsNoTracking()
-            .Where(g => g.SharedGameId != null)
-            .Select(g => new { g.Id, g.SharedGameId })
-            .ToDictionaryAsync(g => g.Id, g => g.SharedGameId!.Value, ct)
+            .Select(g => g.Id)
+            .ToDictionaryAsync(id => id, id => id, ct)
             .ConfigureAwait(false);
 
         // Load existing PDF documents for idempotency check (SharedGameId + FileName → ContentHash)

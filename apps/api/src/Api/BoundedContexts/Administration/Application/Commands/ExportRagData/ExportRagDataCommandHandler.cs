@@ -95,7 +95,7 @@ internal sealed class ExportRagDataCommandHandler : IRequestHandler<ExportRagDat
 #pragma warning disable CA1031 // Service boundary: export must continue on individual document errors
             try
             {
-                var gameName = vectorDoc.Game?.Name ?? "unknown-game";
+                var gameName = vectorDoc.Game?.Title ?? "unknown-game";
                 var gameSlug = RagBackupPathHelper.Slugify(gameName);
                 var pdfDoc = vectorDoc.PdfDocument;
 

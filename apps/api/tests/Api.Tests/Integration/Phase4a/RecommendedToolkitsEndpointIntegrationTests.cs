@@ -4,6 +4,7 @@ using System.Text.Json;
 using Api.BoundedContexts.GameToolkit.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
@@ -270,13 +271,13 @@ public sealed class RecommendedToolkitsEndpointIntegrationTests : IAsyncLifetime
         DateTime createdAt)
     {
         // GameToolkitEntity.GameId references the "games" table (GameEntity).
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = $"Game for {name}",
+            Title = $"Game for {name}",
             CreatedAt = DateTime.UtcNow,
         };
-        dbContext.Games.Add(game);
+        dbContext.SharedGames.Add(game);
         await dbContext.SaveChangesAsync();
 
         var toolkitId = Guid.NewGuid();

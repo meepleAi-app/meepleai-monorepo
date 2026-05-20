@@ -5,6 +5,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -78,15 +79,15 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
             CreatedAt = DateTime.UtcNow
         };
 
-        var game = new Api.Infrastructure.Entities.GameEntity
+        var game = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
         {
             Id = TestGameId,
-            Name = "Test Game for PDF Processing",
+            Title = "Test Game for PDF Processing",
             CreatedAt = DateTime.UtcNow
         };
 
         _dbContext!.Set<UserEntity>().Add(user);
-        _dbContext.Set<Api.Infrastructure.Entities.GameEntity>().Add(game);
+        _dbContext.Set<Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity>().Add(game);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
 
@@ -671,14 +672,14 @@ public sealed class PdfPipelineIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var game2Id = Guid.NewGuid();
-        var game2 = new Api.Infrastructure.Entities.GameEntity
+        var game2 = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
         {
             Id = game2Id,
-            Name = "Another Game",
+            Title = "Another Game",
             CreatedAt = DateTime.UtcNow
         };
 
-        _dbContext!.Set<Api.Infrastructure.Entities.GameEntity>().Add(game2);
+        _dbContext!.Set<Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity>().Add(game2);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var game1Pdf = new PdfDocument(

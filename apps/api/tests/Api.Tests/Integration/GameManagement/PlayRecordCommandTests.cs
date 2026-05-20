@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -325,7 +326,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
     #region Helper Methods
 
     /// <summary>
-    /// Seeds a GameEntity row directly via MeepleAiDbContext (IGameRepository removed by #1320 P2c).
+    /// Seeds a SharedGameEntity row directly via MeepleAiDbContext (IGameRepository removed by #1320 P2c).
     /// Returns (Id, Title) tuple for use by play-record commands.
     /// </summary>
     private async Task<(Guid Id, string Title)> CreateTestGameAsync()
@@ -335,11 +336,10 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
         using var scope = ServiceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        db.Games.Add(new GameEntity
+        db.SharedGames.Add(new SharedGameEntity
         {
             Id = id,
-            Name = title,
-            Publisher = "Test Publisher",
+            Title = title,
             CreatedAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync(TestCancellationToken);

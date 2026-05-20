@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -87,10 +88,10 @@ public sealed class RenameChatSessionIntegrationTests : IAsyncLifetime
             PasswordHash = "v1.test-hash",
             CreatedAt = DateTime.UtcNow,
         });
-        _dbContext.Games.Add(new GameEntity
+        _dbContext.SharedGames.Add(new SharedGameEntity
         {
             Id = TestGameId,
-            Name = "SG4 Rename Test Game",
+            Title = "SG4 Rename Test Game",
             CreatedAt = DateTime.UtcNow,
         });
         await _dbContext.SaveChangesAsync(TestCancellationToken);

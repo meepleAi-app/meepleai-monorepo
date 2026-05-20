@@ -8,6 +8,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
 using Api.Services.Exceptions;
 using Api.Services.Pdf;
@@ -144,32 +145,29 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
 
         // Seed game
         var gameId = Guid.NewGuid();
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = gameId,
-            Name = "Test Game for Delete",
-            Publisher = "Test Publisher",
+            Title = "Test Game for Delete",
             YearPublished = 2024,
             MinPlayers = 2,
             MaxPlayers = 4,
-            MinPlayTimeMinutes = 60,
-            MaxPlayTimeMinutes = 90,
-            CreatedAt = DateTime.UtcNow
+            PlayingTimeMinutes = 60,
+                        CreatedAt = DateTime.UtcNow
         };
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
 
     private async Task<Guid> CreateTestPdfAsync(string name = "Test.pdf", bool withVectorDoc = false)
     {
-        var gameId = (await _dbContext!.Games.FirstAsync()).Id;
+        var gameId = (await _dbContext!.SharedGames.FirstAsync()).Id;
         var userId = (await _dbContext.Users.FirstAsync()).Id;
 
         var pdfDoc = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = gameId,
             UploadedByUserId = userId,
             FileName = name,
             FilePath = $"/test/{name}",
@@ -207,7 +205,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         // Clear all data
         _dbContext!.VectorDocuments.RemoveRange(_dbContext.VectorDocuments);
         _dbContext.PdfDocuments.RemoveRange(_dbContext.PdfDocuments);
-        _dbContext.Games.RemoveRange(_dbContext.Games);
+        _dbContext.SharedGames.RemoveRange(_dbContext.SharedGames);
         _dbContext.Users.RemoveRange(_dbContext.Users);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 

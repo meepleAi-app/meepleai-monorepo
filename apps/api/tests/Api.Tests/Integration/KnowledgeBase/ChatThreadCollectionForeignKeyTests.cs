@@ -1,5 +1,6 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
@@ -51,11 +52,9 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         // doubles as PK on both rows so the existing ChatThread.GameId references
         // to `games` keep working alongside the FK on shared_games.
         var sharedGame = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity { Id = gameId, Title = "Gloomhaven" };
-        var game = new GameEntity { Id = gameId, Name = "Gloomhaven" };
 
         _dbContext!.Users.Add(user);
         _dbContext.SharedGames.Add(sharedGame);
-        _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var threadId = Guid.NewGuid();
@@ -72,7 +71,6 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
-            SharedGameId = gameId,
             Name = "Gloomhaven Collection",
             CreatedByUserId = userId,
             DocumentsJson = "[]"
@@ -113,11 +111,9 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         var user = new UserEntity { Id = userId, Email = "user@test.com", DisplayName = "User", Role = "User" };
         var gameId = Guid.NewGuid();
         var sharedGame = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity { Id = gameId, Title = "Wingspan" };
-        var game = new GameEntity { Id = gameId, Name = "Wingspan" };
 
         _dbContext!.Users.Add(user);
         _dbContext.SharedGames.Add(sharedGame);
-        _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var threadId = Guid.NewGuid();
@@ -134,7 +130,6 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
-            SharedGameId = gameId,
             Name = "Wingspan Expansions",
             CreatedByUserId = userId,
             DocumentsJson = "[]"
@@ -173,16 +168,14 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         // Arrange - Complex cascade: SharedGame → Collection → Junction (ChatThread remains).
         // DocumentCollection.SharedGameId FKs to shared_games with CASCADE (see
         // DocumentCollectionEntityConfiguration), so removing the SharedGame
-        // triggers the chain. The GameEntity row is incidental here.
+        // triggers the chain. The SharedGameEntity row is incidental here.
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "user@test.com", DisplayName = "User", Role = "User" };
         var gameId = Guid.NewGuid();
         var sharedGame = new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity { Id = gameId, Title = "Azul" };
-        var game = new GameEntity { Id = gameId, Name = "Azul" };
 
         _dbContext!.Users.Add(user);
         _dbContext.SharedGames.Add(sharedGame);
-        _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var threadId = Guid.NewGuid();
@@ -200,7 +193,7 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act - Delete SharedGame (SharedGame → Collection → Junction cascade).
-        // Note: GameEntity is left intact; ChatThread.GameId references `games`
+        // Note: SharedGameEntity is left intact; ChatThread.GameId references `games`
         // and is NOT part of the cascade chain (deliberately decoupled).
         _dbContext.SharedGames.Remove(sharedGame);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);

@@ -25,7 +25,7 @@ internal class EntityValidator : IEntityValidator
     {
         var exists = entityType switch
         {
-            EntityType.Game => await _context.Games
+            EntityType.Game => await _context.SharedGames
                 .AnyAsync(g => g.Id == entityId, cancellationToken)
                 .ConfigureAwait(false),
 

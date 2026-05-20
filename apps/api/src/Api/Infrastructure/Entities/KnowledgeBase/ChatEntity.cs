@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 namespace Api.Infrastructure.Entities;
 
 public class ChatEntity
@@ -13,6 +14,6 @@ public class ChatEntity
     public DateTime? LastMessageAt { get; set; }
 
     public UserEntity User { get; set; } = default!;
-    public GameEntity Game { get; set; } = default!;
+    public SharedGameEntity Game { get; set; } = default!;
     public ICollection<ChatLogEntity> Logs { get; set; } = new List<ChatLogEntity>();
 }

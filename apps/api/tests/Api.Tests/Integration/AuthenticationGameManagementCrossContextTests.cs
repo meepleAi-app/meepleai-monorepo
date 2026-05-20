@@ -10,6 +10,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -170,7 +171,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var gameEntity = CreateGameEntity("Catan");
-        DbContext.Games.Add(gameEntity);
+        DbContext.SharedGames.Add(gameEntity);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -233,7 +234,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         DbContext.ChangeTracker.Clear();
 
         var gameEntity = CreateGameEntity("Quick Game");
-        DbContext.Games.Add(gameEntity);
+        DbContext.SharedGames.Add(gameEntity);
 
         var gameSession = new GameSession(
             Guid.NewGuid(),
@@ -291,7 +292,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var gameEntity = CreateGameEntity("Ticket to Ride");
-        DbContext.Games.Add(gameEntity);
+        DbContext.SharedGames.Add(gameEntity);
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -341,7 +342,7 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var gameEntity = CreateGameEntity("Carcassonne");
-        DbContext.Games.Add(gameEntity);
+        DbContext.SharedGames.Add(gameEntity);
 
         var gameSession = new GameSession(
             Guid.NewGuid(),
@@ -379,13 +380,12 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         );
     }
 
-    private static GameEntity CreateGameEntity(string name, string? publisher = null)
+    private static SharedGameEntity CreateGameEntity(string name, string? publisher = null)
     {
-        return new GameEntity
+        return new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = name,
-            Publisher = publisher,
+            Title = name,
             CreatedAt = DateTime.UtcNow
         };
     }

@@ -122,7 +122,7 @@ internal sealed partial class ReportGeneratorService
 
     private async Task<GameMetric?> GetGameMetricsAsync(CancellationToken ct)
     {
-        return await _dbContext.Games
+        return await _dbContext.SharedGames
             .GroupBy(g => 1)
             .Select(g => new GameMetric(
                 g.Count(),

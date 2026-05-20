@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Seeders;
 using Api.Infrastructure.Seeders.Catalog;
 using Api.Infrastructure.Seeders.Catalog.SeedBlob;
@@ -126,7 +127,7 @@ public sealed class PdfSeederBlobTests
         // Post-migration (2026-04-19): PdfSeeder resolves GameEntity.SharedGameId → PDF.SharedGameId.
         // Use gameId as both GameEntity.Id and SharedGameId so assertions remain on a single Guid.
         db.Users.Add(new UserEntity { Id = userId, Email = "system@test.com", PasswordHash = "hash" });
-        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven", SharedGameId = gameId });
+        db.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Gloomhaven" });
         await db.SaveChangesAsync();
 
         // Act
@@ -193,11 +194,10 @@ public sealed class PdfSeederBlobTests
         // Pre-seed an existing document with matching hash.
         // Post-migration: GameEntity.SharedGameId drives PdfSeeder resolution.
         db.Users.Add(new UserEntity { Id = userId, Email = "system@test.com", PasswordHash = "hash" });
-        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven", SharedGameId = gameId });
+        db.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Gloomhaven" });
         db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = gameId,
             FileName = "gloomhaven.pdf",
             FilePath = "/old/path",
             ContentHash = "samehash",
@@ -245,11 +245,10 @@ public sealed class PdfSeederBlobTests
 
         // Pre-seed with old hash. Post-migration: GameEntity.SharedGameId drives PdfSeeder resolution.
         db.Users.Add(new UserEntity { Id = userId, Email = "system@test.com", PasswordHash = "hash" });
-        db.Games.Add(new GameEntity { Id = gameId, Name = "Gloomhaven", SharedGameId = gameId });
+        db.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Gloomhaven" });
         db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = oldDocId,
-            SharedGameId = gameId,
             FileName = "gloomhaven.pdf",
             FilePath = "/old/path",
             FileSizeBytes = 100,

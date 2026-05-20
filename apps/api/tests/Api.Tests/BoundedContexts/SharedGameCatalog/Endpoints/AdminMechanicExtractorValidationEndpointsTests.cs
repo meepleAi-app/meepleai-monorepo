@@ -569,7 +569,6 @@ public sealed class AdminMechanicExtractorValidationEndpointsTests : IAsyncLifet
         var claim = new MechanicGoldenClaimEntity
         {
             Id = claimId,
-            SharedGameId = sharedGameId,
             Section = (int)MechanicSection.Mechanics,
             Statement = "Each player begins with five resource tokens.",
             ExpectedPage = 3,
@@ -599,7 +598,6 @@ public sealed class AdminMechanicExtractorValidationEndpointsTests : IAsyncLifet
         var analysis = new MechanicAnalysisEntity
         {
             Id = analysisId,
-            SharedGameId = sharedGameId,
             PdfDocumentId = Guid.NewGuid(),
             PromptVersion = "mechanic-extractor-v1",
             Status = status,

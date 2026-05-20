@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 namespace Api.Infrastructure.Entities;
 
 /// <summary>
@@ -17,5 +18,5 @@ public class RuleConflictFAQEntity
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation property
-    public GameEntity? Game { get; set; }
+    public SharedGameEntity? Game { get; set; }
 }

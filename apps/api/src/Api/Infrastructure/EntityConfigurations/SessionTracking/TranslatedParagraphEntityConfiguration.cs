@@ -2,14 +2,17 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence.Configurations;
+namespace Api.Infrastructure.EntityConfigurations.SessionTracking;
 
 /// <summary>
 /// EF Core configuration for TranslatedParagraph.
 /// Uses direct domain entity mapping (no separate persistence entity).
+/// Append-only immutable history record — no UpdateAt/UpdatedBy audit columns.
+/// Phase A0.1 (2026-05-19): moved from BoundedContexts/SessionTracking/Infrastructure/Persistence/Configurations
+/// to canonical Infrastructure/EntityConfigurations location to align with the rest of the codebase.
 /// Iter 1.B — Libro Game Nanolith dogfood demo.
 /// </summary>
-internal sealed class TranslatedParagraphConfiguration : IEntityTypeConfiguration<TranslatedParagraph>
+internal class TranslatedParagraphEntityConfiguration : IEntityTypeConfiguration<TranslatedParagraph>
 {
     public void Configure(EntityTypeBuilder<TranslatedParagraph> builder)
     {
@@ -33,7 +36,8 @@ internal sealed class TranslatedParagraphConfiguration : IEntityTypeConfiguratio
         // element converter that cannot be composed with the entity-level converter.
         builder.Property(e => e.AppliedGlossaryTerms)
             .HasColumnName("applied_glossary_terms")
-            .HasColumnType("text[]");
+            .HasColumnType("text[]")
+            .IsRequired();
 
         builder.HasIndex(e => new { e.CampaignId, e.ParagraphNumber })
             .HasDatabaseName("ix_translated_paragraphs_campaign_paragraph");

@@ -4,14 +4,17 @@ using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence.Configurations;
+namespace Api.Infrastructure.EntityConfigurations.SessionTracking;
 
 /// <summary>
 /// EF Core configuration for GamebookCampaignSession.
 /// Uses direct domain entity mapping (no separate persistence entity).
+/// Maps the GamebookProgress value object to a single jsonb column via System.Text.Json.
+/// Phase A0.1 (2026-05-19): moved from BoundedContexts/SessionTracking/Infrastructure/Persistence/Configurations
+/// to canonical Infrastructure/EntityConfigurations location to align with the rest of the codebase.
 /// Iter 1.A — Libro Game Nanolith dogfood demo.
 /// </summary>
-internal sealed class GamebookCampaignSessionConfiguration : IEntityTypeConfiguration<GamebookCampaignSession>
+internal class GamebookCampaignSessionEntityConfiguration : IEntityTypeConfiguration<GamebookCampaignSession>
 {
     public void Configure(EntityTypeBuilder<GamebookCampaignSession> builder)
     {
@@ -19,7 +22,7 @@ internal sealed class GamebookCampaignSessionConfiguration : IEntityTypeConfigur
 
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasColumnName("id");
-        builder.Property(e => e.GameId).HasColumnName("game_id").IsRequired();
+        builder.Property(e => e.GameId).HasColumnName("game_id").IsRequired(); // refactored in Task A0.2 → GameRef
         builder.Property(e => e.OwnerUserId).HasColumnName("owner_user_id").IsRequired();
         builder.Property(e => e.Title).HasColumnName("title").HasMaxLength(200).IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
@@ -32,6 +35,7 @@ internal sealed class GamebookCampaignSessionConfiguration : IEntityTypeConfigur
         builder.Property(e => e.Progress)
             .HasColumnName("progress")
             .HasColumnType("jsonb")
+            .IsRequired()
             .HasConversion(
                 v => JsonSerializer.Serialize(
                     new ProgressDto(v.CurrentParagraph, v.History.ToArray(), v.LastReadAt),

@@ -1,18 +1,20 @@
 using System.Text.Json;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
-using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence.Configurations;
+namespace Api.Infrastructure.EntityConfigurations.SessionTracking;
 
 /// <summary>
 /// EF Core configuration for GamebookPhotoArtifact.
 /// Uses direct domain entity mapping (no separate persistence entity).
+/// Maps the IReadOnlyList&lt;GamebookSegment&gt; collection to a single jsonb column via System.Text.Json.
+/// Phase A0.1 (2026-05-19): moved from BoundedContexts/SessionTracking/Infrastructure/Persistence/Configurations
+/// to canonical Infrastructure/EntityConfigurations location to align with the rest of the codebase.
 /// Iter 1.B — Libro Game Nanolith dogfood demo.
 /// </summary>
-internal sealed class GamebookPhotoArtifactConfiguration : IEntityTypeConfiguration<GamebookPhotoArtifact>
+internal class GamebookPhotoArtifactEntityConfiguration : IEntityTypeConfiguration<GamebookPhotoArtifact>
 {
     public void Configure(EntityTypeBuilder<GamebookPhotoArtifact> builder)
     {
@@ -32,6 +34,7 @@ internal sealed class GamebookPhotoArtifactConfiguration : IEntityTypeConfigurat
         builder.Property(e => e.Segments)
             .HasColumnName("segments")
             .HasColumnType("jsonb")
+            .IsRequired()
             .HasConversion(
                 v => JsonSerializer.Serialize(
                     v.Select(s => new SegmentDto(s.ParagraphNumber, s.SourceText, s.BoundingBox)).ToArray(),

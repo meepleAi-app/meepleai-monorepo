@@ -5,13 +5,24 @@ Helpers for issue #1320 (game entity reset). See parent spec:
 
 ## Sequence
 
-| Phase | Script | When |
+| Step | Script | When |
 |---|---|---|
-| Pre-flight | `01-backup.sh` | Before any destructive operation |
-| Mapping export | `02-export-mapping.sh` | After backup, before DROP |
-| Drop + reset | (in Phase 3 implementation plan) | After Phase 2 code is merged |
-| Re-link vectors | (in Phase 3 implementation plan) | After EF migration applied |
-| Rollback | `99-rollback.sh` | Emergency only |
+| 1. Pre-flight | `01-backup.sh` | Before any destructive operation |
+| 2. Mapping export | `02-export-mapping.sh` | After backup, before relink |
+| 3. **Re-link** | **`03-relink-vectors.sh`** | After mapping, BEFORE EF migration (idempotent + dry-run) |
+| 4. Apply migration | `dotnet ef database update` or service deploy | After relink — drops the `games` table |
+| 5. **Verify** | **`04-verify-gates.sh`** | After EF migration applied — 5 measurable gates |
+| 99. Rollback | `99-rollback.sh` | Emergency only |
+
+## Phase 3 — Full reset sequence per environment
+
+End-to-end runbooks with sign-off gates:
+
+- [`runbook-dev.md`](./runbook-dev.md) — rehearsal on local docker postgres
+- [`runbook-staging.md`](./runbook-staging.md) — staging maintenance window with #releases notice
+- [`runbook-prod.md`](./runbook-prod.md) — production with mandatory `--i-mean-it` + 24h advance notice + off-machine backup
+
+**Critical sequencing**: relink (Step 3) runs BEFORE the EF migration (Step 4) so that consumers (Phase 2c convention `game_id` is `SharedGame.Id`) read correct values from the first request after deploy. Original spec §4 had the reverse order; spec-panel review reversed it to eliminate the race condition.
 
 ## Setup
 

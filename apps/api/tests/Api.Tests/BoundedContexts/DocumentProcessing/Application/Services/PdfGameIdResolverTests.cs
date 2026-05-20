@@ -14,8 +14,10 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Services;
 
 /// <summary>
 /// Unit tests for <see cref="PdfGameIdResolver"/>.
-/// Verifies FK-correct resolution of <c>text_chunks.GameId</c> from a <see cref="PdfDocumentEntity"/>:
-/// private path returns PrivateGameId; shared path looks up <c>games.Id</c> via SharedGameId.
+/// Verifies resolution of <c>text_chunks.GameId</c> from a <see cref="PdfDocumentEntity"/>:
+/// private path returns PrivateGameId; shared path returns SharedGameId directly.
+/// Post-Phase2d (#1345): legacy <c>games</c> table is gone; no lookup needed — resolver
+/// returns the PDF's SharedGameId/PrivateGameId directly.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "DocumentProcessing")]
@@ -72,42 +74,16 @@ public class PdfGameIdResolverTests
     }
 
     [Fact]
-    public async Task ResolveAsync_SharedGameWithoutMatchingGamesRow_ReturnsNull()
+    public async Task ResolveAsync_SharedGameIdSet_ReturnsSharedGameId()
     {
-        using var db = CreateDbContext();
-        var sharedGameId = Guid.Parse("22222222-2222-2222-2222-222222222222");
-        var pdf = new PdfDocumentEntity
-        {
-            Id = Guid.NewGuid(),
-            FileName = "x.pdf",
-            FilePath = "/tmp/x.pdf",
-            UploadedByUserId = Guid.NewGuid(),
-            ProcessingState = "Ready"
-        };
-
-        var result = await PdfGameIdResolver.ResolveAsync(db, pdf, TestContext.Current.CancellationToken);
-
-        result.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task ResolveAsync_SharedGameWithMatchingGamesRow_ReturnsGamesId()
-    {
+        // Post-Phase2d (#1345): resolver returns SharedGameId directly, no DB lookup.
         using var db = CreateDbContext();
         var sharedGameId = Guid.Parse("33333333-3333-3333-3333-333333333333");
-        var gamesId = Guid.Parse("44444444-4444-4444-4444-444444444444");
-
-        db.SharedGames.Add(new SharedGameEntity
-        {
-            Id = gamesId,
-            Title = "Test",
-            CreatedAt = DateTime.UtcNow
-        });
-        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var pdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
+            SharedGameId = sharedGameId,
             FileName = "x.pdf",
             FilePath = "/tmp/x.pdf",
             UploadedByUserId = Guid.NewGuid(),
@@ -116,7 +92,7 @@ public class PdfGameIdResolverTests
 
         var result = await PdfGameIdResolver.ResolveAsync(db, pdf, TestContext.Current.CancellationToken);
 
-        result.Should().Be(gamesId);
+        result.Should().Be(sharedGameId);
     }
 
     [Fact]
@@ -125,20 +101,12 @@ public class PdfGameIdResolverTests
         using var db = CreateDbContext();
         var privateGameId = Guid.Parse("55555555-5555-5555-5555-555555555555");
         var sharedGameId = Guid.Parse("66666666-6666-6666-6666-666666666666");
-        var gamesId = Guid.Parse("77777777-7777-7777-7777-777777777777");
-
-        db.SharedGames.Add(new SharedGameEntity
-        {
-            Id = gamesId,
-            Title = "Should not be returned",
-            CreatedAt = DateTime.UtcNow
-        });
-        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var pdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
             PrivateGameId = privateGameId,
+            SharedGameId = sharedGameId,
             FileName = "x.pdf",
             FilePath = "/tmp/x.pdf",
             UploadedByUserId = Guid.NewGuid(),

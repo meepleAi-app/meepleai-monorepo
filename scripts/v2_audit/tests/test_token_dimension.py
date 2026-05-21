@@ -34,6 +34,23 @@ def test_text_white_without_paired_bg_is_minor():
     assert any("text-white" in f.description for f in minor)
 
 
+def test_eslint_disable_next_line_is_not_critical(tmp_path):
+    """Line-level `eslint-disable-next-line` is a justified per-line exemption,
+    NOT a file-level disable. Must not trigger Critical token finding."""
+    f = tmp_path / "X.tsx"
+    f.write_text(
+        'export const X = () => (\n'
+        '  {/* eslint-disable-next-line local/no-hardcoded-color-utility */}\n'
+        '  <div className="bg-white" />\n'
+        ');',
+        encoding="utf-8",
+    )
+    comp = ComponentSnapshot(path=f, tailwind_tokens={"bg-white"})
+    findings = list(audit_tokens(comp, file_text=f.read_text(), route="/x"))
+    critical = [f for f in findings if f.severity == "critical"]
+    assert len(critical) == 0, f"Line-level disable should not trigger Critical, got: {[f.description for f in critical]}"
+
+
 def test_text_white_with_entity_bg_no_finding():
     comp = ComponentSnapshot(
         path=Path("X.tsx"),

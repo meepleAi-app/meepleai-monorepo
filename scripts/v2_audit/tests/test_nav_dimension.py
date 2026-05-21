@@ -220,12 +220,13 @@ def test_singular_player_routes_to_plural():
     assert _mockup_to_route("sp4-player-detail.html") == "/players/[id]"
 
 
-def test_librogame_runthrough_maps_to_games_detail():
-    """librogame-runthrough-*.html maps to /games/[id] since librogame play flow is subsumed there."""
+def test_librogame_runthrough_is_planned_returns_none():
+    """librogame-runthrough-*.html is in _PLANNED_DESTS (architectural divergence,
+    no production route maps cleanly). Returns None → emitted as Important LOW."""
     from scripts.v2_audit.nav_dimension import _mockup_to_route
-    assert _mockup_to_route("librogame-runthrough-game-onboarding.html") == "/games/[id]"
-    assert _mockup_to_route("librogame-runthrough-setup-wizard.html") == "/games/[id]"
-    assert _mockup_to_route("librogame-runthrough-play-session.html") == "/games/[id]"
+    assert _mockup_to_route("librogame-runthrough-game-onboarding.html") is None
+    assert _mockup_to_route("librogame-runthrough-setup-wizard.html") is None
+    assert _mockup_to_route("librogame-runthrough-play-session.html") is None
 
 
 def test_planned_destination_returns_none():

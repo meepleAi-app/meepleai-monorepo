@@ -26,6 +26,26 @@ _PLANNED_DESTS = frozenset({
     # Returning None causes the audit to emit IMPORTANT LOW-confidence (unmappable)
     # instead of CRITICAL (missing Link), avoiding false positives.
     "sp7-game-night-detail-rsvp",
+    # Librogame mockups: the gameplay flow has architectural divergence between
+    # mockups (which assume every page links to /library/[gameId]/play/*) and
+    # real Next.js architecture (which segregates this concern — only the
+    # /library/[gameId]/play route family hosts gameplay). Tracked as planned
+    # integration; emit Important LOW (unmappable) instead of Critical to
+    # surface as architectural note rather than missing-link bug.
+    "librogame-runthrough-game-onboarding",
+    "librogame-runthrough-game-detail",
+    "librogame-runthrough-setup-wizard",
+    "librogame-runthrough-resume-picker",
+    "librogame-runthrough-play-session",
+    "librogame-runthrough-encounter-cheatsheet",
+    "librogame-runthrough-session-end",
+    "librogame-runthrough-translate-viewer",
+    "librogame-runthrough-glossary-editor",
+    "librogame-runthrough-error-states",
+    "librogame-runthrough-setup-chat",
+    "librogame-runthrough-library-search",
+    "librogame-runthrough-quota-credits",
+    "librogame-game-night-storyboard",
 })
 
 
@@ -53,22 +73,8 @@ def _mockup_to_route(mockup_dest: str) -> str | None:
         # Fix: sp4-player-detail must map to plural /players/[id] (real route),
         # not /player/[id] produced by the sp4-(\w+)-detail regex.
         "sp4-player-detail": "/players/[id]",
-        # Fix: librogame play routes — the gameplay flow is currently subsumed
-        # under /games/[id]; the /library/[gameId]/play/* routes don't exist yet.
-        "librogame-runthrough-game-onboarding": "/games/[id]",
-        "librogame-runthrough-game-detail": "/games/[id]",
-        "librogame-runthrough-setup-wizard": "/games/[id]",
-        "librogame-runthrough-resume-picker": "/games/[id]",
-        "librogame-runthrough-play-session": "/games/[id]",
-        "librogame-runthrough-encounter-cheatsheet": "/games/[id]",
-        "librogame-runthrough-session-end": "/games/[id]",
-        "librogame-runthrough-translate-viewer": "/games/[id]",
-        "librogame-runthrough-glossary-editor": "/games/[id]",
-        "librogame-runthrough-error-states": "/games/[id]",
-        "librogame-runthrough-setup-chat": "/games/[id]",
-        "librogame-runthrough-library-search": "/games/[id]",
-        "librogame-runthrough-quota-credits": "/games/[id]",
-        "librogame-game-night-storyboard": "/games/[id]",
+        # Librogame mockups are now handled by _PLANNED_DESTS above (return None →
+        # Important LOW unmappable instead of Critical missing-link).
     }
     if name in KNOWN:
         return KNOWN[name]

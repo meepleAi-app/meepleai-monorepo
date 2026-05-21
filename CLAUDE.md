@@ -261,7 +261,8 @@ tests/Api.Tests/          # Backend test suite
 
 ## Known Flaky Tests
 
-Tests confirmed failing on `main-dev` baseline independently of any specific PR. Triage tracked in #1349.
+Tests confirmed failing on `main-dev` baseline independently of any specific PR.
+Triage history: #1349 (closed, Phase 2d carryover) → #1422 (2026-05-21, 12 SharedGameId/PDF cluster resolved).
 
 | Test | File | First observed | Reason | Action |
 |---|---|---|---|---|
@@ -269,6 +270,9 @@ Tests confirmed failing on `main-dev` baseline independently of any specific PR.
 | `Handle_EmptyGuid_ReturnsNull` | `Api.Tests` | #1341 baseline | Pre-existing | Document |
 | `Handle_WithSearchFilter_ReturnsMatchingGames` | `Api.Tests` | #1341 baseline | EF Core InMemory provider does not support `ILike` (Postgres-specific) | Integration test only — exclude from unit suite |
 | `*_S3Storage_*` (2 tests) | `Api.Tests` | #1341 baseline | Mock verification timing / strict mode mismatch | Document |
+
+**Resolved in #1422 (2026-05-21)**: 12 undocumented SharedGameId/PDF cluster failures triaged and cleared.
+Root cause: regression from PR #1345/#1347 (Phase 2d delete `GameEntity` + drop `games` table, 2026-05-20). Test fixtures still relied on the dropped `pdf_documents.GameId` column → handlers filtering on `SharedGameId` returned 0 items. Resolution: **11 fixed** via fixture drift correction (add `SharedGameId` to `PdfDocumentEntity`/`TextChunkEntity` setups + `Publisher = "Kosmos"` on `DegradedAgentContext` full-metadata test) + **1 deleted** (`Handle_WithSharedGameId_ResolvesToActualGameId` — Post-Phase 2d the resolver step in `CreateChatThreadCommandHandler:46-54` is a degenerate identity lookup; cross-table resolution no longer exists).
 
 **Policy**: PRs MUST NOT cause the unit-test fail count to grow above this baseline. The CI `Backend Fast` job is non-required while these are pending fixes; a future cleanup will either fix the root cause (e.g., switch ILike test to integration) or skip with `[Trait("Skip", "<issue#>")]`.
 

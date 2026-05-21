@@ -53,6 +53,7 @@ public sealed class SharedGameRagIntegrationTests
         {
             Id = Guid.NewGuid(),
             GameId = gameId,
+            SharedGameId = sharedGameId,
             PdfDocumentId = pdfDocId,
             Content = "Roll two dice and move your piece.",
             ChunkIndex = 0,

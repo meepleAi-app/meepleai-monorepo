@@ -299,6 +299,7 @@ public sealed class GraphRagExtractionTests : IDisposable
         var pdfDoc = new PdfDocumentEntity
         {
             Id = _pdfDocumentId,
+            SharedGameId = _gameId,
             FileName = "Catan Rules.pdf",
             FilePath = "/fake/path/test.pdf",
             ContentType = "application/pdf",

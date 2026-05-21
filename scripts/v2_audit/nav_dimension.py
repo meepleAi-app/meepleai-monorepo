@@ -118,7 +118,11 @@ def audit_nav(
     mock: MockupSnapshot,
     route: str,
 ) -> Iterator[Finding]:
-    comp_hrefs = comp.link_hrefs | comp.router_calls | _collect_route_tree_hrefs(route)
+    # comp_hrefs used for MINOR "extra link" check — component-declared only
+    comp_hrefs = comp.link_hrefs | comp.router_calls
+    # extended_hrefs adds route-tree scan to suppress CRITICAL false positives only
+    route_tree_hrefs = _collect_route_tree_hrefs(route)
+    extended_hrefs = comp_hrefs | route_tree_hrefs
     mapped_destinations = {}  # route → mockup_dest
     unmappable = []
 
@@ -129,15 +133,15 @@ def audit_nav(
         else:
             unmappable.append(dest)
 
-    # Critical: mockup destination not present in component
+    # Critical: mockup destination not present in component or route tree
     for expected_route, mockup_dest in mapped_destinations.items():
-        if expected_route not in comp_hrefs:
+        if expected_route not in extended_hrefs:
             # Allow prefix/superset matching (e.g. /games matches /games/X)
             matched = any(
                 h == expected_route
                 or h.startswith(expected_route + "/")
                 or expected_route.startswith(h + "/")
-                for h in comp_hrefs
+                for h in extended_hrefs
             )
             if not matched:
                 yield Finding(
@@ -150,7 +154,7 @@ def audit_nav(
                     evidence={
                         "expected_route": expected_route,
                         "mockup_dest": mockup_dest,
-                        "component_hrefs": sorted(comp_hrefs),
+                        "component_hrefs": sorted(extended_hrefs),
                     },
                 )
 
@@ -166,7 +170,8 @@ def audit_nav(
             evidence={"mockup_dest": dest},
         )
 
-    # Minor: extra component links not in mockup
+    # Minor: extra component links not in mockup (component-declared hrefs only,
+    # not route-tree hrefs, to avoid flooding with cross-route navigation noise)
     mapped_routes = set(mapped_destinations.keys())
     for href in comp_hrefs:
         if href not in mapped_routes and not any(

@@ -1,8 +1,8 @@
 # V2 Component Audit Report
 
 **Total components audited:** 70
-**Total findings:** 4350
-**Main report:** 49 (Critical: 16 · Important: 17 · Minor: 16)
+**Total findings:** 4345
+**Main report:** 44 (Critical: 11 · Important: 17 · Minor: 16)
 **Manual review queue:** 4301
 
 ## Findings by Route
@@ -12,11 +12,7 @@
 - **[CRITICAL]** `AgentDangerZone.tsx, AgentSettingsForm.tsx, ChatHistoryTimeline.tsx, KbDocList.tsx, PersonaCard.tsx, SystemPromptViewer.tsx` (nav): Missing Link to /library/[gameId]/play/setup-wizard (mockup: librogame-runthrough-setup-wizard.html)
   - `expected_route`: `/library/[gameId]/play/setup-wizard`
   - `mockup_dest`: `librogame-runthrough-setup-wizard.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `AgentDangerZone.tsx, AgentSettingsForm.tsx, ChatHistoryTimeline.tsx, KbDocList.tsx, PersonaCard.tsx, SystemPromptViewer.tsx` (nav): Missing Link to /agents (mockup: sp4-agents-index.html)
-  - `expected_route`: `/agents`
-  - `mockup_dest`: `sp4-agents-index.html`
-  - `component_hrefs`: `[]`
+  - `component_hrefs`: `['/agents', '/agents/${agentId}/archive', '/agents/${agentId}/chat', '/agents/${agentId}/unarchive', '/library/${safeAgent.gameId}/play/setup-wizard']`
 - **[IMPORTANT]** `AgentDangerZone.tsx` (tokens): Hardcoded color utility: bg-white
   - `token`: `bg-white`
 - **[MINOR]** `KbDocList.tsx` (tokens): Unpaired text-white (no colored bg on same element)
@@ -28,10 +24,6 @@
 
 ### Route `/game-nights`
 
-- **[CRITICAL]** `CalendarDayCell.tsx, CalendarMonthGrid.tsx, DayDetailDrawer.tsx, FilterPillBar.tsx, GameNightListCard.tsx, GameNightsHeader.tsx, PlayerAvatars.tsx, StatusPill.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
-  - `expected_route`: `/game-nights/[id]/detail-rsvp`
-  - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
-  - `component_hrefs`: `[]`
 - **[IMPORTANT]** `DayDetailDrawer.tsx` (structural): Missing heading: <h1>
   - `missing`: `h1`
   - `mockup_headings`: `['h1', 'h2', 'h3']`
@@ -46,20 +38,12 @@
 - **[CRITICAL]** `GameNightAvatar.tsx, GameNightCancelledBanner.tsx, GameNightStatusBadge.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
   - `expected_route`: `/library/[gameId]/play/game-onboarding`
   - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
+  - `component_hrefs`: `['/game-nights', '/game-nights/${_nightId}', '/game-nights/${_nightId}/summary', '/game-nights/${id}', '/game-nights/new', '/sessions/${sessionId}']`
 
 ### Route `/games/[id]`
 
 - **[CRITICAL]** `GameDetailHero.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\game-detail\GameDetailHero.tsx`
-- **[CRITICAL]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Missing Link to /games/[id]/chat (mockup: sp4-game-chat-tab.html)
-  - `expected_route`: `/games/[id]/chat`
-  - `mockup_dest`: `sp4-game-chat-tab.html`
-  - `component_hrefs`: `['doc.href', 'viewAllHref']`
-- **[CRITICAL]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Missing Link to /games (mockup: sp4-games-index.html)
-  - `expected_route`: `/games`
-  - `mockup_dest`: `sp4-games-index.html`
-  - `component_hrefs`: `['doc.href', 'viewAllHref']`
 - **[MINOR]** `GameDetailHero.tsx` (tokens): Unpaired text-white (no colored bg on same element)
   - `token`: `text-white`
 - **[MINOR]** `GameDetailSessionsRail.tsx` (tokens): Unpaired text-white (no colored bg on same element)
@@ -80,20 +64,20 @@
 - **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /settings (mockup: settings.html)
   - `expected_route`: `/settings`
   - `mockup_dest`: `settings.html`
-  - `component_hrefs`: `['/', '/contact']`
-- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `['/', '/contact']`
+  - `component_hrefs`: `['/', '/contact', '/register']`
 - **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
   - `expected_route`: `/game-nights/[id]/detail-rsvp`
   - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
-  - `component_hrefs`: `['/', '/contact']`
-- **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /contact
-  - `component_href`: `/contact`
-  - `mapped_routes`: `['/game-nights/[id]/detail-rsvp', '/library/[gameId]/play/game-onboarding', '/settings']`
+  - `component_hrefs`: `['/', '/contact', '/register']`
+- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
+  - `expected_route`: `/library/[gameId]/play/game-onboarding`
+  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
+  - `component_hrefs`: `['/', '/contact', '/register']`
 - **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /
   - `component_href`: `/`
+  - `mapped_routes`: `['/game-nights/[id]/detail-rsvp', '/library/[gameId]/play/game-onboarding', '/settings']`
+- **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /contact
+  - `component_href`: `/contact`
   - `mapped_routes`: `['/game-nights/[id]/detail-rsvp', '/library/[gameId]/play/game-onboarding', '/settings']`
 
 ### Route `/library`
@@ -112,25 +96,21 @@
 - **[CRITICAL]** `EmptyPlayers.tsx, PlayersFiltersInline.tsx, PlayersHero.tsx, PlayersResultsGrid.tsx` (nav): Missing Link to /player/[id] (mockup: sp4-player-detail.html)
   - `expected_route`: `/player/[id]`
   - `mockup_dest`: `sp4-player-detail.html`
-  - `component_hrefs`: `[]`
+  - `component_hrefs`: `['/agents', '/players', '/players/', '/players/${item.id}', '/players/${safePlayerId}${qs ? ']`
 
 ### Route `/sessions`
 
 - **[CRITICAL]** `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
   - `expected_route`: `/library/[gameId]/play/game-onboarding`
   - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
+  - `component_hrefs`: `['${pathname}${buildQuery({ dialog: val })}', '${pathname}${buildQuery({ diary: val })}', '${pathname}${buildQuery({ mtab: val })}', '${pathname}${buildQuery({ search: next || null })}', '${pathname}${buildQuery({ status: null, search: null })}', '${pathname}${buildQuery({ status: val })}', '${pathname}${buildQuery({ tab: val })}', '${pathname}${buildQuery({ theme: val })}', '${pathname}${buildQuery({ view: val })}', '/sessions', '/sessions/${item.id}', '/sessions/${session.id}', '/sessions/${sessionId}/live', '/sessions/${sessionId}/play', '/sessions/${targetSessionId}', '/sessions/live/${sessionId}', '/sessions/new']`
 - **[CRITICAL]** `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Missing Link to /library/[gameId]/play/resume-picker (mockup: librogame-runthrough-resume-picker.html)
   - `expected_route`: `/library/[gameId]/play/resume-picker`
   - `mockup_dest`: `librogame-runthrough-resume-picker.html`
-  - `component_hrefs`: `[]`
+  - `component_hrefs`: `['${pathname}${buildQuery({ dialog: val })}', '${pathname}${buildQuery({ diary: val })}', '${pathname}${buildQuery({ mtab: val })}', '${pathname}${buildQuery({ search: next || null })}', '${pathname}${buildQuery({ status: null, search: null })}', '${pathname}${buildQuery({ status: val })}', '${pathname}${buildQuery({ tab: val })}', '${pathname}${buildQuery({ theme: val })}', '${pathname}${buildQuery({ view: val })}', '/sessions', '/sessions/${item.id}', '/sessions/${session.id}', '/sessions/${sessionId}/live', '/sessions/${sessionId}/play', '/sessions/${targetSessionId}', '/sessions/live/${sessionId}', '/sessions/new']`
 
 ### Route `/sessions/[id]`
 
-- **[CRITICAL]** `AchievementsCarousel.tsx, ChatHighlights.tsx, Confetti.tsx, ConnectionBar.tsx, PhotosGallery.tsx, PlayAgainCta.tsx, ScoringBreakdownTable.tsx, SessionDiaryTimeline.tsx, SessionKpiGrid.tsx, SessionShareCard.tsx, SessionSummaryHero.tsx` (nav): Missing Link to /sessions (mockup: sp4-sessions-index.html)
-  - `expected_route`: `/sessions`
-  - `mockup_dest`: `sp4-sessions-index.html`
-  - `component_hrefs`: `[]`
 - **[IMPORTANT]** `SessionKpiGrid.tsx` (structural): Missing heading: <h1>
   - `missing`: `h1`
   - `mockup_headings`: `['h1', 'h3']`
@@ -199,7 +179,7 @@
 - **[CRITICAL]** `ActionLogTimeline.tsx, ConnectionLostBanner.tsx, DesktopBody.tsx, LiveAgentChat.tsx, LiveScoringPanel.tsx, LiveSessionNotes.tsx, LiveTopBar.tsx, MobileBody.tsx, PlayerRosterLive.tsx, RightColumnTabs.tsx, SessionToolsRail.tsx, TurnIndicator.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
   - `expected_route`: `/library/[gameId]/play/game-onboarding`
   - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
+  - `component_hrefs`: `['${pathname}${buildQuery({ dialog: val })}', '${pathname}${buildQuery({ mtab: val })}', '${pathname}${buildQuery({ tab: val })}', '/sessions']`
 - **[MINOR]** `LiveTopBar.tsx` (structural): Missing semantic landmark: <aside>
   - `missing`: `aside`
   - `mockup_landmarks`: `['aside', 'header']`

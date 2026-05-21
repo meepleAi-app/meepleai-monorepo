@@ -121,10 +121,9 @@ internal static class ApplicationServiceExtensions
         services.AddScoped<ITableStructureAnalyzer, TableStructureAnalyzer>();
         services.AddScoped<IPdfMetadataExtractor, PdfMetadataExtractor>();
 
-        // Issue #1314 PR 2: storage layout migration feature flags.
-        // Bound via Options pattern so background services + the blob factory
-        // share a single instance; default values match Phase 0 (deploy infra
-        // with no behavior change — Legacy write, Dual read, migration off).
+        // Issue #1314 PR 2 + #1399 Phase 4 cleanup: only the MigrationEnabled
+        // toggle remains on StorageLayoutOptions, driving the outbox drainer.
+        // Bound via Options pattern so the background service can resolve it.
         if (configuration is not null)
         {
             services.Configure<StorageLayoutOptions>(configuration.GetSection(StorageLayoutOptions.SectionName));

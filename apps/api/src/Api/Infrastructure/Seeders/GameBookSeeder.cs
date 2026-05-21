@@ -194,6 +194,10 @@ internal class GameBookSeeder
         }
 
         // 2. Idempotency guard — skip if Nanolith GameBooks already exist.
+        // SeedNanolithAsync uses a single SaveChangesAsync (atomic insert of 4 books),
+        // so a count >0 means a full prior seed (no partial-state edge case to recover).
+        // If SeedNanolithAsync is ever refactored to per-book saves, change this guard
+        // to `existing.Count == 4` and re-seed missing entries instead of full-skipping.
         var existing = await _repo
             .ListByGameRefAsync(GameRef.Shared(nanolith.Id), ownerUserId: null, cancellationToken)
             .ConfigureAwait(false);
@@ -225,7 +229,13 @@ internal class GameBookSeeder
 
         if (pressStart is null || rules is null)
         {
-            _logger.LogInformation(
+            // Warning level: this is an "AC-scoped seed prerequisite missing" signal
+            // (Nanolith is in catalog but its PDFs were not uploaded by PdfSeeder).
+            // Easy to miss in non-dev logs at Information level, so escalate.
+            // FileName substring match (`press`, `start`, `rule`) is brittle to renames —
+            // future PDF named `start-here-guide.pdf` would steal a slot. Tracked for a
+            // manifest-driven lookup follow-up.
+            _logger.LogWarning(
                 "[GameBookSeeder] Nanolith PDFs not ready (pressStart={HasPressStart}, rules={HasRules}) — skipping; re-run after PDF ingestion completes.",
                 pressStart is not null, rules is not null);
             return;

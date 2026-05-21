@@ -65,6 +65,7 @@ public class GetGamePdfsQueryHandlerTests
         var pdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
+            SharedGameId = gameId,
             FileName = "TestRules.pdf",
             FilePath = "/test/path.pdf",
             FileSizeBytes = 1_000_000,
@@ -99,6 +100,7 @@ public class GetGamePdfsQueryHandlerTests
         var pdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
+            SharedGameId = sharedGameId,
             FileName = "SharedRules.pdf",
             FilePath = "/test/shared.pdf",
             FileSizeBytes = 500_000,
@@ -166,6 +168,7 @@ public class GetGamePdfsQueryHandlerTests
         _db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
+            SharedGameId = sharedGameId,
             FileName = "ItExpansionRules.pdf",
             FilePath = "/tmp/it.pdf",
             FileSizeBytes = 200,
@@ -197,6 +200,7 @@ public class GetGamePdfsQueryHandlerTests
         var olderPdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
+            SharedGameId = sharedGameId,
             FileName = "OlderRules.pdf",
             FilePath = "/test/older.pdf",
             FileSizeBytes = 100_000,
@@ -207,6 +211,7 @@ public class GetGamePdfsQueryHandlerTests
         var newerPdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
+            SharedGameId = sharedGameId,
             FileName = "NewerRules.pdf",
             FilePath = "/test/newer.pdf",
             FileSizeBytes = 200_000,

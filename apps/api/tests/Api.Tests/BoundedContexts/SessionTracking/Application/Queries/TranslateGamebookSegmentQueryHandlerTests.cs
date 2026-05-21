@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -163,6 +164,18 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
             => Task.FromResult(LlmCompletionResult.CreateSuccess(string.Empty));
     }
 
+    /// <summary>
+    /// Fake guard that always confirms ownership. The handler delegates ownership
+    /// enforcement to this collaborator after Issue #1415, so unit tests for the
+    /// handler's translation/persistence path use a no-op guard. Authorization
+    /// semantics are covered by CampaignOwnershipGuardTests + integration tests.
+    /// </summary>
+    private sealed class AlwaysOwnedGuard : ICampaignOwnershipGuard
+    {
+        public Task AssertOwnedByAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken)
+            => Task.CompletedTask;
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static TranslateGamebookSegmentQueryHandler BuildHandler(
@@ -171,7 +184,8 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         FakeParagraphRepo paragraphRepo,
         FakeGlossaryRepo glossaryRepo,
         FakeProgressRepo progressRepo,
-        ILlmService? llm = null) =>
+        ILlmService? llm = null,
+        ICampaignOwnershipGuard? ownershipGuard = null) =>
         new(
             campaignRepo,
             artifactRepo,
@@ -179,6 +193,7 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
             glossaryRepo,
             progressRepo,
             llm ?? new FakeLlmService(),
+            ownershipGuard ?? new AlwaysOwnedGuard(),
             NullLogger<TranslateGamebookSegmentQueryHandler>.Instance);
 
     // ── Tests ─────────────────────────────────────────────────────────────────

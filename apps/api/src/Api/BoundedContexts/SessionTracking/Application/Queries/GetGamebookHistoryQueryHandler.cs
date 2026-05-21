@@ -26,7 +26,7 @@ internal sealed class GetGamebookHistoryQueryHandler
             ?? throw new NotFoundException($"Campaign {query.CampaignId} not found");
 
         if (campaign.OwnerUserId != query.CallerUserId)
-            throw new ConflictException("Forbidden");
+            throw new ForbiddenException("Forbidden");
 
         var paragraphs = await _paragraphs.ListByCampaignAsync(query.CampaignId, cancellationToken).ConfigureAwait(false);
 

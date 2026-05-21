@@ -78,8 +78,6 @@ public sealed class GetGamebookCampaignHandlerTests
 
         dto.GameRefId.Should().Be(sharedGameId);
         dto.GameRefKind.Should().Be((int)GameRefKind.Shared);
-        // Legacy alias preserved.
-        dto.GameId.Should().Be(sharedGameId);
     }
 
     [Fact]
@@ -98,7 +96,6 @@ public sealed class GetGamebookCampaignHandlerTests
 
         dto.GameRefId.Should().Be(privateGameId);
         dto.GameRefKind.Should().Be((int)GameRefKind.Private);
-        dto.GameId.Should().Be(privateGameId);
     }
 
     [Fact]
@@ -162,9 +159,10 @@ public sealed class GetGamebookCampaignHandlerTests
     }
 
     [Fact]
-    public async Task Handle_CallerIsNotOwner_ThrowsConflictException()
+    public async Task Handle_CallerIsNotOwner_ThrowsForbiddenException()
     {
-        // Arrange
+        // Issue #1404: ownership failures must map to HTTP 403, not 409, so external
+        // clients can distinguish authorization failures from real conflicts.
         var (campaigns, _, handler) = BuildSut();
         var ownerId = Guid.NewGuid();
         var otherUserId = Guid.NewGuid();
@@ -176,6 +174,6 @@ public sealed class GetGamebookCampaignHandlerTests
         var act = async () => await handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
-        await act.Should().ThrowAsync<ConflictException>();
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 }

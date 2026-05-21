@@ -37,7 +37,8 @@ vi.mock('@/lib/stores/chat-panel-store', () => ({
 
 const fakeCampaign = {
   id: 'c1',
-  gameId: 'g1',
+  gameRefId: 'g1',
+  gameRefKind: 0,
   ownerUserId: 'u1',
   title: 'Campagna #1',
   currentParagraph: 47,

@@ -249,6 +249,7 @@ public sealed class PdfSeederBlobTests
         db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = oldDocId,
+            SharedGameId = gameId,
             FileName = "gloomhaven.pdf",
             FilePath = "/old/path",
             FileSizeBytes = 100,

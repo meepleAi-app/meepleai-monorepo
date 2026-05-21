@@ -100,6 +100,31 @@ public class ImpersonateUserCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_CallerIsNotAdmin_ThrowsForbiddenException()
+    {
+        // Issue #1416: role-based authorization failures must map to HTTP 403,
+        // not 409. The handler's adminLevel < 3 guard rejects non-admin callers
+        // before any target-side checks.
+        var callerId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+
+        var regularUser = CreateTestUser(callerId, "user@test.com", "user");
+
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(callerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(regularUser);
+
+        var command = new ImpersonateUserCommand(targetId, callerId, "Trying to impersonate without admin role");
+
+        // Act
+        var act = async () => await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<ForbiddenException>()
+            .WithMessage("*Only admins or SuperAdmins can impersonate users*");
+    }
+
+    [Fact]
     public async Task Handle_TargetIsAdmin_ThrowsForbiddenException()
     {
         // Arrange

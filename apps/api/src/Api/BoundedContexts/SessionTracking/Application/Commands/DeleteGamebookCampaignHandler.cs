@@ -34,7 +34,7 @@ public class DeleteGamebookCampaignHandler : IRequestHandler<DeleteGamebookCampa
             ?? throw new NotFoundException($"Campaign {cmd.CampaignId} not found");
 
         if (session.OwnerUserId != cmd.CallerUserId)
-            throw new ConflictException("Only owner can delete campaign");
+            throw new ForbiddenException("Only owner can delete campaign");
 
         // Issue #1394: SessionBookProgress rows have no FK cascade to the campaign,
         // so we must explicitly purge orphans before the unit-of-work flush. The

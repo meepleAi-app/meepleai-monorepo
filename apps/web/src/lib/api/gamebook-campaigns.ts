@@ -18,15 +18,32 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 export const GamebookCampaignSchema = z.object({
   id: z.string().uuid(),
-  /**
-   * Legacy alias for `gameRefId`, kept for backward compatibility with callers
-   * that haven't migrated to the discriminator (#1392). Always equal to `gameRefId`.
-   */
-  gameId: z.string().uuid(),
   /** Issue #1392: discriminator-aware ref id (SharedGame or PrivateGame, see `gameRefKind`). */
   gameRefId: z.string().uuid(),
-  /** Issue #1392: discriminator, 0 = Shared, 1 = Private. Mirrors backend `GameRefKind`. */
-  gameRefKind: z.number().int().min(0).max(1),
+  /**
+   * Issue #1392 + #1406: discriminator mirroring backend `GameRefKind`. Known
+   * values are 0 = Shared, 1 = Private. The schema is intentionally widened to
+   * accept any nonnegative integer so that a BE-side enum extension (e.g. a
+   * future 2 = Hybrid) does not hard-break the play page with a generic Zod
+   * error. Unknown values fall back to Shared (0) and emit a one-shot warning
+   * so the schema drift surfaces in production logs — the FE then renders the
+   * conservative shared-catalog flow rather than crashing.
+   */
+  gameRefKind: z
+    .number()
+    .int()
+    .nonnegative()
+    .transform(value => {
+      if (value !== 0 && value !== 1) {
+        if (typeof console !== 'undefined') {
+          console.warn(
+            `[gamebook-campaigns] unknown GameRefKind=${value}; falling back to Shared (0). FE schema may need updating.`
+          );
+        }
+        return 0;
+      }
+      return value;
+    }),
   ownerUserId: z.string().uuid(),
   title: z.string().min(1).max(200),
   currentParagraph: z.number().int().min(0),

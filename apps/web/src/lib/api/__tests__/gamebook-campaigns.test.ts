@@ -13,8 +13,8 @@ import {
 // Valid v4 UUIDs: position 14 = [1-8], position 19 = [89ab]
 const validRow = {
   id: '11111111-1111-4111-a111-111111111111',
-  gameId: '22222222-2222-4222-a222-222222222222',
-  // Issue #1392: gameRefId/gameRefKind mirror the new BE discriminator fields.
+  // Issue #1392 / #1405: gameRefId/gameRefKind are the canonical BE discriminator
+  // fields. The legacy `gameId` alias was removed in #1405.
   gameRefId: '22222222-2222-4222-a222-222222222222',
   gameRefKind: 0, // Shared
   ownerUserId: '33333333-3333-4333-a333-333333333333',
@@ -46,13 +46,36 @@ describe('GamebookCampaignSchema', () => {
     expect(parsed.gameRefKind).toBe(0);
   });
 
-  it('rejects gameRefKind out of range', () => {
-    expect(() => GamebookCampaignSchema.parse({ ...validRow, gameRefKind: 2 })).toThrow();
-  });
-
   it('parses Private discriminator', () => {
     const parsed = GamebookCampaignSchema.parse({ ...validRow, gameRefKind: 1 });
     expect(parsed.gameRefKind).toBe(1);
+  });
+
+  it('falls back to Shared and warns on unknown gameRefKind (issue #1406)', () => {
+    // Schema is widened from min(0).max(1) to nonnegative() so a future BE-side
+    // enum extension (e.g. 2 = Hybrid) does not hard-break the play page. The
+    // unknown value is normalized to Shared (0) and a console.warn surfaces the
+    // drift so the FE schema can be updated.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const parsed = GamebookCampaignSchema.parse({ ...validRow, gameRefKind: 2 });
+      expect(parsed.gameRefKind).toBe(0);
+      expect(warnSpy).toHaveBeenCalledOnce();
+      expect(warnSpy.mock.calls[0][0]).toMatch(/unknown GameRefKind=2/);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('rejects negative gameRefKind', () => {
+    // nonnegative() still rejects negatives — the fallback only applies to
+    // forward-compatible enum extensions, not to malformed payloads.
+    expect(() => GamebookCampaignSchema.parse({ ...validRow, gameRefKind: -1 })).toThrow();
+  });
+
+  it('rejects non-integer gameRefKind', () => {
+    // .int() still rejects fractional values.
+    expect(() => GamebookCampaignSchema.parse({ ...validRow, gameRefKind: 0.5 })).toThrow();
   });
 });
 
@@ -76,7 +99,7 @@ describe('gamebook-campaigns client', () => {
       })
     );
 
-    const result = await createCampaign({ gameId: validRow.gameId, title: validRow.title });
+    const result = await createCampaign({ gameId: validRow.gameRefId, title: validRow.title });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
@@ -84,7 +107,7 @@ describe('gamebook-campaigns client', () => {
     expect(init.method).toBe('POST');
     expect(init.credentials).toBe('include');
     expect(JSON.parse(init.body as string)).toEqual({
-      gameId: validRow.gameId,
+      gameId: validRow.gameRefId,
       title: validRow.title,
     });
     expect(result.id).toBe(validRow.id);
@@ -99,8 +122,8 @@ describe('gamebook-campaigns client', () => {
 
   it('listMyCampaigns appends gameId query when provided', async () => {
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([validRow]), { status: 200 }));
-    await listMyCampaigns(validRow.gameId);
-    expect(fetchMock.mock.calls[0][0]).toContain(`gameId=${validRow.gameId}`);
+    await listMyCampaigns(validRow.gameRefId);
+    expect(fetchMock.mock.calls[0][0]).toContain(`gameId=${validRow.gameRefId}`);
   });
 
   it('updateProgress PUTs new paragraph with gameBookId (C2 multi-book)', async () => {

@@ -192,5 +192,43 @@ internal static partial class MeepleAiMetrics
             new TagList { { "campaign_id_hash", campaignIdHash } });
     }
 
+    /// <summary>
+    /// Counter for ownership/authorization failures during gamebook translation requests.
+    /// Labels: reason (forbidden = wrong owner, not_found = missing campaign).
+    /// Issue #1415.
+    /// </summary>
+    public static readonly Counter<long> GamebookTranslationAuthzFailuresTotal = Meter.CreateCounter<long>(
+        name: "meepleai.gamebook.translation_authz_failures_total",
+        unit: "failures",
+        description: "Total ownership/authorization failures during gamebook translation by reason (forbidden/not_found)");
+
+    /// <summary>
+    /// Counter for DB preflight timeouts in the campaign ownership guard.
+    /// Increments when the 2-second timeout in <c>CampaignOwnershipGuard.AssertOwnedByAsync</c> trips.
+    /// Issue #1415.
+    /// </summary>
+    public static readonly Counter<long> GamebookTranslationPreflightTimeoutTotal = Meter.CreateCounter<long>(
+        name: "meepleai.gamebook.translation_preflight_timeout_total",
+        unit: "timeouts",
+        description: "Total preflight DB timeouts in the campaign ownership guard");
+
+    /// <summary>
+    /// Records an ownership/authorization failure observed during gamebook translation.
+    /// Issue #1415.
+    /// </summary>
+    /// <param name="reason">"forbidden" (wrong owner) or "not_found" (missing campaign)</param>
+    public static void RecordGamebookTranslationAuthzFailure(string reason)
+    {
+        GamebookTranslationAuthzFailuresTotal.Add(1, new TagList { { "reason", reason } });
+    }
+
+    /// <summary>
+    /// Records a preflight DB timeout in the campaign ownership guard. Issue #1415.
+    /// </summary>
+    public static void RecordGamebookTranslationPreflightTimeout()
+    {
+        GamebookTranslationPreflightTimeoutTotal.Add(1);
+    }
+
     #endregion
 }

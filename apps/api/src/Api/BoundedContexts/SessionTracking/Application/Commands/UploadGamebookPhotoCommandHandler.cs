@@ -29,7 +29,7 @@ internal sealed class UploadGamebookPhotoCommandHandler : IRequestHandler<Upload
             ?? throw new NotFoundException($"Campaign {cmd.CampaignId} not found");
 
         if (campaign.OwnerUserId != cmd.CallerUserId)
-            throw new ConflictException("Caller is not the campaign owner");
+            throw new ForbiddenException("Caller is not the campaign owner");
 
         // Pre-compute a photoId for use as the storage path component
         var photoId = Guid.NewGuid();

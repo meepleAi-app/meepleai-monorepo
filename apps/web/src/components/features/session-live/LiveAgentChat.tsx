@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -122,7 +121,7 @@ export function LiveAgentChat({
                 {!isOwn && <span className="text-xs text-muted-foreground">{msg.senderName}</span>}
                 <div
                   className={`max-w-[85%] rounded-lg px-3 py-1.5 text-sm ${
-                    isOwn ? 'bg-card text-slate-100' : 'bg-card text-slate-200'
+                    isOwn ? 'bg-card text-foreground' : 'bg-card text-foreground'
                   } ${isPrivate ? 'border border-amber-700/40' : ''}`}
                 >
                   {msg.content}
@@ -150,8 +149,8 @@ export function LiveAgentChat({
               onClick={() => setVisibility('shared')}
               className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
                 visibility === 'shared'
-                  ? 'bg-slate-600 text-slate-100'
-                  : 'text-muted-foreground hover:text-slate-300'
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {labels.visibilityShared}
@@ -163,7 +162,7 @@ export function LiveAgentChat({
               className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
                 visibility === 'private'
                   ? 'bg-amber-700/60 text-amber-100'
-                  : 'text-muted-foreground hover:text-slate-300'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {labels.visibilityPrivate}
@@ -179,18 +178,18 @@ export function LiveAgentChat({
             aria-label={labels.inputAriaLabel}
             placeholder={labels.inputAriaLabel}
             className="min-w-0 flex-1 rounded-lg border border-border/60 bg-card
-              px-3 py-2 text-sm text-slate-200 placeholder-slate-500
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+              px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           <button
             type="submit"
             aria-label={labels.sendAriaLabel}
             disabled={!inputValue.trim()}
             className="flex shrink-0 items-center justify-center rounded-lg border
-              border-border/60 bg-card px-3 py-2 text-slate-200
-              transition-colors hover:bg-slate-600
+              border-border/60 bg-card px-3 py-2 text-foreground
+              transition-colors hover:bg-muted
               disabled:cursor-not-allowed disabled:opacity-40
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Send className="h-4 w-4" aria-hidden="true" />
           </button>

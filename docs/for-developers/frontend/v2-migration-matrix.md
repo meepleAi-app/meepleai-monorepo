@@ -239,25 +239,25 @@ the PR review.
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-session-live-parts.jsx` | `LiveTopBar` | `apps/web/src/components/features/session-live/LiveTopBar.tsx` | `/sessions/[id]/live` | done | TBD | T A V | — |
-| `sp4-session-live-parts.jsx` | `TurnIndicator` | `apps/web/src/components/features/session-live/TurnIndicator.tsx` | `/sessions/[id]/live` | done | TBD | T A M V | — |
-| `sp4-session-live-parts.jsx` | `PlayerRosterLive` | `apps/web/src/components/features/session-live/PlayerRosterLive.tsx` | `/sessions/[id]/live` | done | TBD | T A V | — |
-| `sp4-session-live-parts.jsx` | `LiveScoringPanel` | `apps/web/src/components/features/session-live/LiveScoringPanel.tsx` | `/sessions/[id]/live` | done | TBD | T A V | — |
-| `sp4-session-live-parts.jsx` | `ActionLogTimeline` | `apps/web/src/components/features/session-live/ActionLogTimeline.tsx` | `/sessions/[id]/live` | done | TBD | T A V | — |
-| `sp4-session-live-parts.jsx` | `DesktopBody` | `apps/web/src/components/features/session-live/DesktopBody.tsx` | `/sessions/[id]/live` | done | TBD | T A V | — |
-| `sp4-session-live-parts.jsx` | `MobileBody` | `apps/web/src/components/features/session-live/MobileBody.tsx` | `/sessions/[id]/live` | done | TBD | T A V | — |
+| `sp4-session-live-parts.jsx` | `LiveTopBar` | `apps/web/src/components/features/session-live/LiveTopBar.tsx` | `/sessions/[id]/live` | done | TBD | T A V | #1377 |
+| `sp4-session-live-parts.jsx` | `TurnIndicator` | `apps/web/src/components/features/session-live/TurnIndicator.tsx` | `/sessions/[id]/live` | done | TBD | T A M V | #1377 |
+| `sp4-session-live-parts.jsx` | `PlayerRosterLive` | `apps/web/src/components/features/session-live/PlayerRosterLive.tsx` | `/sessions/[id]/live` | done | TBD | T A V | #1377 |
+| `sp4-session-live-parts.jsx` | `LiveScoringPanel` | `apps/web/src/components/features/session-live/LiveScoringPanel.tsx` | `/sessions/[id]/live` | done | TBD | T A V | #1377 |
+| `sp4-session-live-parts.jsx` | `ActionLogTimeline` | `apps/web/src/components/features/session-live/ActionLogTimeline.tsx` | `/sessions/[id]/live` | done | TBD | T A V | #1377 |
+| `sp4-session-live-parts.jsx` | `DesktopBody` | `apps/web/src/components/features/session-live/DesktopBody.tsx` | `/sessions/[id]/live` | done | TBD | T A V | #1377 |
+| `sp4-session-live-parts.jsx` | `MobileBody` | `apps/web/src/components/features/session-live/MobileBody.tsx` | `/sessions/[id]/live` | done | TBD | T A M V | #1377 |
 
 #### Interactions sub-PR (6 interactive + 2 lazy dialogs — PR #750)
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-session-live.jsx` | `SessionToolsRail` | `apps/web/src/components/features/session-live/SessionToolsRail.tsx` | `/sessions/[id]/live` | done | #750 | T A V | — |
-| `sp4-session-live.jsx` | `LiveAgentChat` | `apps/web/src/components/features/session-live/LiveAgentChat.tsx` | `/sessions/[id]/live` | done | #750 | T A V | — |
-| `sp4-session-live.jsx` | `LiveSessionNotes` | `apps/web/src/components/features/session-live/LiveSessionNotes.tsx` | `/sessions/[id]/live` | done | #750 | T A V | — |
-| `sp4-session-live.jsx` | `RightColumnTabs` | `apps/web/src/components/features/session-live/RightColumnTabs.tsx` | `/sessions/[id]/live` | done | #750 | T A V | — |
-| `sp4-session-live.jsx` | `ConnectionLostBanner` | `apps/web/src/components/features/session-live/ConnectionLostBanner.tsx` | `/sessions/[id]/live` | done | #750 | T A V | — |
-| `sp4-session-live.jsx` | `PauseOverlay` (lazy) | `apps/web/src/components/features/session-live/PauseOverlay.tsx` | `/sessions/[id]/live` | done | #750 | T A V dialog | — |
-| `sp4-session-live.jsx` | `EndgameDialog` (lazy) | `apps/web/src/components/features/session-live/EndgameDialog.tsx` | `/sessions/[id]/live` | done | #750 | T A V dialog | — |
+| `sp4-session-live.jsx` | `SessionToolsRail` | `apps/web/src/components/features/session-live/SessionToolsRail.tsx` | `/sessions/[id]/live` | done | #750 | T A V | #1377 |
+| `sp4-session-live.jsx` | `LiveAgentChat` | `apps/web/src/components/features/session-live/LiveAgentChat.tsx` | `/sessions/[id]/live` | done | #750 | T A V | #1377 |
+| `sp4-session-live.jsx` | `LiveSessionNotes` | `apps/web/src/components/features/session-live/LiveSessionNotes.tsx` | `/sessions/[id]/live` | done | #750 | T A V | #1377 |
+| `sp4-session-live.jsx` | `RightColumnTabs` | `apps/web/src/components/features/session-live/RightColumnTabs.tsx` | `/sessions/[id]/live` | done | #750 | T A V | #1377 |
+| `sp4-session-live.jsx` | `ConnectionLostBanner` | `apps/web/src/components/features/session-live/ConnectionLostBanner.tsx` | `/sessions/[id]/live` | done | #750 | T A V | #1377 |
+| `sp4-session-live.jsx` | `PauseOverlay` (lazy) | `apps/web/src/components/features/session-live/PauseOverlay.tsx` | `/sessions/[id]/live` | done | #750 | T A V dialog | #1377 |
+| `sp4-session-live.jsx` | `EndgameDialog` (lazy) | `apps/web/src/components/features/session-live/EndgameDialog.tsx` | `/sessions/[id]/live` | done | #750 | T A V dialog | #1377 |
 
 ### Session summary — `/sessions/[id]` — 11 components — **Tier M-L**
 

@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * PlayerRosterLive — Wave D.2 Foundation sub-PR (Issue #746).
  *
@@ -72,7 +71,7 @@ export function PlayerRosterLive({
     <div data-slot="player-roster-live" className="flex flex-col gap-2">
       {!compact && (
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-200">{labels.title}</h3>
+          <h3 className="text-sm font-semibold text-foreground">{labels.title}</h3>
           <span className="text-xs text-muted-foreground">{labels.playerCountResolved}</span>
         </div>
       )}
@@ -103,10 +102,10 @@ export function PlayerRosterLive({
                   aria-label={player.isOnline ? labels.onlineLabel : labels.offlineLabel}
                   className={[
                     'h-2 w-2 shrink-0 rounded-full',
-                    player.isOnline ? 'bg-emerald-400' : 'bg-slate-600',
+                    player.isOnline ? 'bg-emerald-400' : 'bg-muted',
                   ].join(' ')}
                 />
-                <span className="truncate text-xs font-medium text-slate-200">{player.name}</span>
+                <span className="truncate text-xs font-medium text-foreground">{player.name}</span>
                 <span className="shrink-0 text-xs text-muted-foreground">
                   {roleLabel(player.role, labels)}
                 </span>
@@ -114,7 +113,7 @@ export function PlayerRosterLive({
 
               {/* Right: score + kick */}
               <div className="flex shrink-0 items-center gap-2">
-                <span className="tabular-nums text-xs font-semibold text-slate-200">
+                <span className="tabular-nums text-xs font-semibold text-foreground">
                   {player.score}
                 </span>
                 {/* Host-only: kick button (own player excluded) */}

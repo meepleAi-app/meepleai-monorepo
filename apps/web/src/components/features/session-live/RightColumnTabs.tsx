@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -112,11 +111,11 @@ export function RightColumnTabs({
               onKeyDown={e => handleKeyDown(e, tab)}
               className={`flex-1 px-3 py-2.5 text-sm font-medium transition-colors
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset
-                focus-visible:ring-slate-400
+                focus-visible:ring-ring
                 ${
                   isActive
-                    ? 'border-b-2 border-border text-slate-100'
-                    : 'text-muted-foreground hover:text-slate-300'
+                    ? 'border-b-2 border-border text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
             >
               {tabLabels[tab]}

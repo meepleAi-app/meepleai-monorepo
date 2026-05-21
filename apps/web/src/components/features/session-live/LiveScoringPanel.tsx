@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * LiveScoringPanel — Wave D.2 Foundation sub-PR (Issue #746).
  *
@@ -67,7 +66,7 @@ export function LiveScoringPanel({
 
   return (
     <div data-slot="live-scoring-panel" className="flex flex-col gap-2">
-      {!compact && <h3 className="text-sm font-semibold text-slate-200">{labels.title}</h3>}
+      {!compact && <h3 className="text-sm font-semibold text-foreground">{labels.title}</h3>}
 
       <ul role="list" className="flex flex-col gap-1" aria-label={labels.title}>
         {sorted.map((entry, idx) => {
@@ -106,7 +105,7 @@ export function LiveScoringPanel({
                 >
                   #{idx + 1}
                 </span>
-                <span className="truncate text-xs font-medium text-slate-200">
+                <span className="truncate text-xs font-medium text-foreground">
                   {entry.playerName}
                   {isViewer && (
                     // eslint-disable-next-line meepleai/no-inline-hsl-v2 -- TODO #807-followup: session light-text variant in Tailwind arbitrary class; no light-text entity token exists
@@ -134,8 +133,8 @@ export function LiveScoringPanel({
                     aria-disabled={onScoreUpdate == null ? 'true' : undefined}
                     onClick={() => onScoreUpdate?.(entry.playerId, -1)}
                     className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground
-                      hover:bg-card hover:text-slate-200 focus-visible:outline-none
-                      focus-visible:ring-1 focus-visible:ring-slate-500
+                      hover:bg-card hover:text-foreground focus-visible:outline-none
+                      focus-visible:ring-1 focus-visible:ring-ring
                       aria-disabled:cursor-not-allowed aria-disabled:opacity-40"
                   >
                     –
@@ -144,7 +143,7 @@ export function LiveScoringPanel({
                 <span
                   aria-label={scoreLabel}
                   className="min-w-[2rem] text-center tabular-nums text-sm font-bold
-                    text-slate-100"
+                    text-foreground"
                 >
                   {entry.score}
                 </span>
@@ -155,8 +154,8 @@ export function LiveScoringPanel({
                     aria-disabled={onScoreUpdate == null ? 'true' : undefined}
                     onClick={() => onScoreUpdate?.(entry.playerId, +1)}
                     className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground
-                      hover:bg-card hover:text-slate-200 focus-visible:outline-none
-                      focus-visible:ring-1 focus-visible:ring-slate-500
+                      hover:bg-card hover:text-foreground focus-visible:outline-none
+                      focus-visible:ring-1 focus-visible:ring-ring
                       aria-disabled:cursor-not-allowed aria-disabled:opacity-40"
                   >
                     +

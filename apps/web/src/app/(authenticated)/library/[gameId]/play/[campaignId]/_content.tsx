@@ -20,9 +20,14 @@ export function Content({
   const router = useRouter();
   // Issue #1392: derive the GameRef discriminator from the campaign DTO so
   // private-game campaigns route correctly (the BE now emits gameRefKind).
-  // Fallback to Shared + route gameId while the campaign is still loading —
-  // BookPicker gracefully renders an empty list for unknown gameIds.
-  const { data: campaign } = useGamebookCampaign(campaignId);
+  // Fallback to Shared + route gameId while the campaign is still loading.
+  // On fetch errors (e.g. deleted campaign) we log + still render the shell
+  // with the route-gameId fallback to avoid a hard crash — the picker copy
+  // surfaces the empty state to the user.
+  const { data: campaign, isError, error } = useGamebookCampaign(campaignId);
+  if (isError && process.env.NODE_ENV !== 'production') {
+    console.warn('[gamebook] campaign fetch failed, using route-gameId fallback', error);
+  }
   const gameRef: GameRef = useMemo(() => {
     if (campaign) {
       return {

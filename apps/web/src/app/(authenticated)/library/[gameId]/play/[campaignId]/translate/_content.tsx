@@ -20,7 +20,10 @@ export function Content({
   gameId: string;
   campaignId: string;
 }): ReactElement {
-  const { data: campaign } = useGamebookCampaign(campaignId);
+  const { data: campaign, isError, error } = useGamebookCampaign(campaignId);
+  if (isError && process.env.NODE_ENV !== 'production') {
+    console.warn('[gamebook] campaign fetch failed, using route-gameId fallback', error);
+  }
   const gameRef: GameRef = useMemo(() => {
     if (campaign) {
       return {

@@ -6,7 +6,7 @@
 **Tracking issue**: TBD
 **Type**: Domain refactor (assorbito da [#1320 Game Entity Reset](./2026-05-19-game-entity-reset.md) Phase 2)
 **Depends on**: [#1320 Game Entity Reset](./2026-05-19-game-entity-reset.md) (must land first or jointly)
-**Blocked by**: [#4228 AgentDefinition redesign](./2026-05-19-game-entity-reset.md#out-of-scope-deferred) per invariante `AgentDefinition.kb_links` (vedi §3)
+**Blocked by**: [#4228 AgentDefinition redesign](./2026-05-19-game-entity-reset.md#8-out-of-scope-deferred) per invariante `AgentDefinition.kb_links` (vedi §3)
 
 ---
 

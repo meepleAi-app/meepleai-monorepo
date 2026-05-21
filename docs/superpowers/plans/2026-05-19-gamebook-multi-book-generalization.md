@@ -10,7 +10,7 @@
 
 **Depends on:** [#1320 Game Entity Reset](../../for-developers/specs/2026-05-19-game-entity-reset.md) Phase 2 mergiato (provides `GameRef` discriminator + reset schema). This plan opens a feature branch from `main-dev` POST-#1320 Phase 2 land.
 
-**Blocked by:** [#4228 AgentDefinition redesign](../../for-developers/specs/2026-05-19-game-entity-reset.md#out-of-scope-deferred) for FM-23 invariant enforcement (deferred to follow-up plan).
+**Blocked by:** [#4228 AgentDefinition redesign](../../for-developers/specs/2026-05-19-game-entity-reset.md#8-out-of-scope-deferred) for FM-23 invariant enforcement (deferred to follow-up plan).
 
 **Codebase post-#1320 reconnaissance** (2026-05-19):
 - `GameRef` value object location: `apps/api/src/Api/SharedKernel/Domain/ValueObjects/GameRef.cs`

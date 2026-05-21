@@ -1,9 +1,9 @@
 # V2 Component Audit Report
 
 **Total components audited:** 70
-**Total findings:** 4345
-**Main report:** 44 (Critical: 11 · Important: 17 · Minor: 16)
-**Manual review queue:** 4301
+**Total findings:** 4314
+**Main report:** 34 (Critical: 11 · Important: 7 · Minor: 16)
+**Manual review queue:** 4280
 
 ## Findings by Route
 
@@ -61,13 +61,13 @@
 
 ### Route `/join/event/[code]`
 
-- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /settings (mockup: settings.html)
-  - `expected_route`: `/settings`
-  - `mockup_dest`: `settings.html`
-  - `component_hrefs`: `['/', '/contact', '/register']`
 - **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
   - `expected_route`: `/game-nights/[id]/detail-rsvp`
   - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
+  - `component_hrefs`: `['/', '/contact', '/register']`
+- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /settings (mockup: settings.html)
+  - `expected_route`: `/settings`
+  - `mockup_dest`: `settings.html`
   - `component_hrefs`: `['/', '/contact', '/register']`
 - **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
   - `expected_route`: `/library/[gameId]/play/game-onboarding`
@@ -82,10 +82,6 @@
 
 ### Route `/library`
 
-- **[IMPORTANT]** `RecentActivityRail.tsx` (structural): Missing heading: <h1>
-  - `missing`: `h1`
-  - `mockup_headings`: `['h1', 'h2', 'h3']`
-  - `component_headings`: `['h2']`
 - **[MINOR]** `RecentActivityRail.tsx` (structural): Missing semantic landmark: <article>
   - `missing`: `article`
   - `mockup_landmarks`: `['article', 'aside']`
@@ -100,69 +96,33 @@
 
 ### Route `/sessions`
 
-- **[CRITICAL]** `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `['${pathname}${buildQuery({ dialog: val })}', '${pathname}${buildQuery({ diary: val })}', '${pathname}${buildQuery({ mtab: val })}', '${pathname}${buildQuery({ search: next || null })}', '${pathname}${buildQuery({ status: null, search: null })}', '${pathname}${buildQuery({ status: val })}', '${pathname}${buildQuery({ tab: val })}', '${pathname}${buildQuery({ theme: val })}', '${pathname}${buildQuery({ view: val })}', '/sessions', '/sessions/${item.id}', '/sessions/${session.id}', '/sessions/${sessionId}/live', '/sessions/${sessionId}/play', '/sessions/${targetSessionId}', '/sessions/live/${sessionId}', '/sessions/new']`
 - **[CRITICAL]** `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Missing Link to /library/[gameId]/play/resume-picker (mockup: librogame-runthrough-resume-picker.html)
   - `expected_route`: `/library/[gameId]/play/resume-picker`
   - `mockup_dest`: `librogame-runthrough-resume-picker.html`
   - `component_hrefs`: `['${pathname}${buildQuery({ dialog: val })}', '${pathname}${buildQuery({ diary: val })}', '${pathname}${buildQuery({ mtab: val })}', '${pathname}${buildQuery({ search: next || null })}', '${pathname}${buildQuery({ status: null, search: null })}', '${pathname}${buildQuery({ status: val })}', '${pathname}${buildQuery({ tab: val })}', '${pathname}${buildQuery({ theme: val })}', '${pathname}${buildQuery({ view: val })}', '/sessions', '/sessions/${item.id}', '/sessions/${session.id}', '/sessions/${sessionId}/live', '/sessions/${sessionId}/play', '/sessions/${targetSessionId}', '/sessions/live/${sessionId}', '/sessions/new']`
+- **[CRITICAL]** `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
+  - `expected_route`: `/library/[gameId]/play/game-onboarding`
+  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
+  - `component_hrefs`: `['${pathname}${buildQuery({ dialog: val })}', '${pathname}${buildQuery({ diary: val })}', '${pathname}${buildQuery({ mtab: val })}', '${pathname}${buildQuery({ search: next || null })}', '${pathname}${buildQuery({ status: null, search: null })}', '${pathname}${buildQuery({ status: val })}', '${pathname}${buildQuery({ tab: val })}', '${pathname}${buildQuery({ theme: val })}', '${pathname}${buildQuery({ view: val })}', '/sessions', '/sessions/${item.id}', '/sessions/${session.id}', '/sessions/${sessionId}/live', '/sessions/${sessionId}/play', '/sessions/${targetSessionId}', '/sessions/live/${sessionId}', '/sessions/new']`
 
 ### Route `/sessions/[id]`
 
-- **[IMPORTANT]** `SessionKpiGrid.tsx` (structural): Missing heading: <h1>
-  - `missing`: `h1`
-  - `mockup_headings`: `['h1', 'h3']`
-  - `component_headings`: `[]`
-- **[IMPORTANT]** `ScoringBreakdownTable.tsx` (structural): Missing heading: <h1>
-  - `missing`: `h1`
-  - `mockup_headings`: `['h1', 'h3']`
-  - `component_headings`: `[]`
-- **[IMPORTANT]** `ConnectionBar.tsx` (structural): Missing heading: <h1>
-  - `missing`: `h1`
-  - `mockup_headings`: `['h1', 'h3']`
-  - `component_headings`: `[]`
-- **[IMPORTANT]** `AchievementsCarousel.tsx` (structural): Missing heading: <h1>
-  - `missing`: `h1`
-  - `mockup_headings`: `['h1', 'h3']`
-  - `component_headings`: `['h3']`
-- **[IMPORTANT]** `SessionDiaryTimeline.tsx` (structural): Missing heading: <h1>
-  - `missing`: `h1`
-  - `mockup_headings`: `['h1', 'h2', 'h3']`
-  - `component_headings`: `['h3']`
 - **[IMPORTANT]** `SessionDiaryTimeline.tsx` (structural): Missing heading: <h2>
   - `missing`: `h2`
-  - `mockup_headings`: `['h1', 'h2', 'h3']`
-  - `component_headings`: `['h3']`
-- **[IMPORTANT]** `PhotosGallery.tsx` (structural): Missing heading: <h1>
-  - `missing`: `h1`
   - `mockup_headings`: `['h1', 'h2', 'h3']`
   - `component_headings`: `['h3']`
 - **[IMPORTANT]** `PhotosGallery.tsx` (structural): Missing heading: <h2>
   - `missing`: `h2`
   - `mockup_headings`: `['h1', 'h2', 'h3']`
   - `component_headings`: `['h3']`
-- **[IMPORTANT]** `ChatHighlights.tsx` (structural): Missing heading: <h1>
-  - `missing`: `h1`
-  - `mockup_headings`: `['h1', 'h2', 'h3']`
-  - `component_headings`: `['h3']`
 - **[IMPORTANT]** `ChatHighlights.tsx` (structural): Missing heading: <h2>
   - `missing`: `h2`
   - `mockup_headings`: `['h1', 'h2', 'h3']`
   - `component_headings`: `['h3']`
-- **[IMPORTANT]** `SessionShareCard.tsx` (structural): Missing heading: <h1>
-  - `missing`: `h1`
-  - `mockup_headings`: `['h1', 'h2', 'h3']`
-  - `component_headings`: `['h3', 'h4']`
 - **[IMPORTANT]** `SessionShareCard.tsx` (structural): Missing heading: <h2>
   - `missing`: `h2`
   - `mockup_headings`: `['h1', 'h2', 'h3']`
   - `component_headings`: `['h3', 'h4']`
-- **[IMPORTANT]** `PlayAgainCta.tsx` (structural): Missing heading: <h1>
-  - `missing`: `h1`
-  - `mockup_headings`: `['h1', 'h2', 'h3']`
-  - `component_headings`: `['h3']`
 - **[IMPORTANT]** `PlayAgainCta.tsx` (structural): Missing heading: <h2>
   - `missing`: `h2`
   - `mockup_headings`: `['h1', 'h2', 'h3']`
@@ -1609,10 +1569,8 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `GameDetailHero.tsx` (props): Mockup accesses 'wins' but no matching prop in component
 - [IMPORTANT] `GameDetailHero.tsx` (props): Mockup accesses 'year' but no matching prop in component
 - [MINOR] `GameDetailTabsAnimated.tsx` (structural): Missing semantic landmark: <article>
-- [IMPORTANT] `GameDetailTabsAnimated.tsx` (structural): Missing heading: <h1>
 - [MINOR] `GameDetailTabsAnimated.tsx` (props): No TS interface for props (cannot auto-audit)
 - [MINOR] `GameDetailKpiCards.tsx` (structural): Missing semantic landmark: <article>
-- [IMPORTANT] `GameDetailKpiCards.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `GameDetailKpiCards.tsx` (props): Mockup accesses '03' but no matching prop in component
 - [IMPORTANT] `GameDetailKpiCards.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `GameDetailKpiCards.tsx` (props): Mockup accesses '1' but no matching prop in component
@@ -1698,7 +1656,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `GameDetailKpiCards.tsx` (props): Mockup accesses 'wins' but no matching prop in component
 - [IMPORTANT] `GameDetailKpiCards.tsx` (props): Mockup accesses 'year' but no matching prop in component
 - [MINOR] `GameDetailFaqList.tsx` (structural): Missing semantic landmark: <article>
-- [IMPORTANT] `GameDetailFaqList.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `GameDetailFaqList.tsx` (props): Mockup accesses '03' but no matching prop in component
 - [IMPORTANT] `GameDetailFaqList.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `GameDetailFaqList.tsx` (props): Mockup accesses '1' but no matching prop in component
@@ -1784,7 +1741,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `GameDetailFaqList.tsx` (props): Mockup accesses 'wins' but no matching prop in component
 - [IMPORTANT] `GameDetailFaqList.tsx` (props): Mockup accesses 'year' but no matching prop in component
 - [MINOR] `GameDetailRulesAccordion.tsx` (structural): Missing semantic landmark: <article>
-- [IMPORTANT] `GameDetailRulesAccordion.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `GameDetailRulesAccordion.tsx` (props): Mockup accesses '03' but no matching prop in component
 - [IMPORTANT] `GameDetailRulesAccordion.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `GameDetailRulesAccordion.tsx` (props): Mockup accesses '1' but no matching prop in component
@@ -1870,7 +1826,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `GameDetailRulesAccordion.tsx` (props): Mockup accesses 'wins' but no matching prop in component
 - [IMPORTANT] `GameDetailRulesAccordion.tsx` (props): Mockup accesses 'year' but no matching prop in component
 - [MINOR] `GameDetailSessionsRail.tsx` (structural): Missing semantic landmark: <article>
-- [IMPORTANT] `GameDetailSessionsRail.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `GameDetailSessionsRail.tsx` (props): Mockup accesses '03' but no matching prop in component
 - [IMPORTANT] `GameDetailSessionsRail.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `GameDetailSessionsRail.tsx` (props): Mockup accesses '1' but no matching prop in component
@@ -1955,7 +1910,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `GameDetailSessionsRail.tsx` (props): Mockup accesses 'wins' but no matching prop in component
 - [IMPORTANT] `GameDetailSessionsRail.tsx` (props): Mockup accesses 'year' but no matching prop in component
 - [MINOR] `GameDetailAgentsList.tsx` (structural): Missing semantic landmark: <article>
-- [IMPORTANT] `GameDetailAgentsList.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `GameDetailAgentsList.tsx` (props): Mockup accesses '03' but no matching prop in component
 - [IMPORTANT] `GameDetailAgentsList.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `GameDetailAgentsList.tsx` (props): Mockup accesses '1' but no matching prop in component
@@ -2041,7 +1995,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `GameDetailAgentsList.tsx` (props): Mockup accesses 'wins' but no matching prop in component
 - [IMPORTANT] `GameDetailAgentsList.tsx` (props): Mockup accesses 'year' but no matching prop in component
 - [MINOR] `GameDetailKbDocList.tsx` (structural): Missing semantic landmark: <article>
-- [IMPORTANT] `GameDetailKbDocList.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `GameDetailKbDocList.tsx` (props): Mockup accesses '03' but no matching prop in component
 - [IMPORTANT] `GameDetailKbDocList.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `GameDetailKbDocList.tsx` (props): Mockup accesses '1' but no matching prop in component
@@ -2358,7 +2311,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `LibraryHeroDesktop.tsx` (props): Mockup accesses 'year' but no matching prop in component
 - [MINOR] `LibraryTabs.tsx` (structural): Missing semantic landmark: <article>
 - [MINOR] `LibraryTabs.tsx` (structural): Missing semantic landmark: <aside>
-- [IMPORTANT] `LibraryTabs.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `LibraryTabs.tsx` (structural): Missing heading: <h2>
 - [IMPORTANT] `LibraryTabs.tsx` (props): Mockup accesses '0' but no matching prop in component
 - [IMPORTANT] `LibraryTabs.tsx` (props): Mockup accesses '05' but no matching prop in component
@@ -2443,7 +2395,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `LibraryTabs.tsx` (props): Mockup accesses 'year' but no matching prop in component
 - [MINOR] `LibraryHybridGrid.tsx` (structural): Missing semantic landmark: <article>
 - [MINOR] `LibraryHybridGrid.tsx` (structural): Missing semantic landmark: <aside>
-- [IMPORTANT] `LibraryHybridGrid.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `LibraryHybridGrid.tsx` (structural): Missing heading: <h2>
 - [IMPORTANT] `LibraryHybridGrid.tsx` (props): Mockup accesses '0' but no matching prop in component
 - [IMPORTANT] `LibraryHybridGrid.tsx` (props): Mockup accesses '05' but no matching prop in component
@@ -2527,7 +2478,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `LibraryHybridGrid.tsx` (props): Mockup accesses 'year' but no matching prop in component
 - [MINOR] `BulkSelectionBar.tsx` (structural): Missing semantic landmark: <article>
 - [MINOR] `BulkSelectionBar.tsx` (structural): Missing semantic landmark: <aside>
-- [IMPORTANT] `BulkSelectionBar.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `BulkSelectionBar.tsx` (structural): Missing heading: <h2>
 - [IMPORTANT] `BulkSelectionBar.tsx` (props): Mockup accesses '0' but no matching prop in component
 - [IMPORTANT] `BulkSelectionBar.tsx` (props): Mockup accesses '05' but no matching prop in component
@@ -2756,7 +2706,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [CRITICAL] `PlayersFiltersInline.tsx` (structural): Missing semantic landmark: <header>
 - [CRITICAL] `PlayersFiltersInline.tsx` (structural): Missing semantic landmark: <main>
 - [CRITICAL] `PlayersFiltersInline.tsx` (structural): Missing semantic landmark: <section>
-- [IMPORTANT] `PlayersFiltersInline.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `PlayersFiltersInline.tsx` (structural): Missing heading: <h2>
 - [IMPORTANT] `PlayersFiltersInline.tsx` (props): Mockup accesses '005em' but no matching prop in component
 - [IMPORTANT] `PlayersFiltersInline.tsx` (props): Mockup accesses '015em' but no matching prop in component
@@ -2815,7 +2764,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [CRITICAL] `PlayersResultsGrid.tsx` (structural): Missing semantic landmark: <header>
 - [CRITICAL] `PlayersResultsGrid.tsx` (structural): Missing semantic landmark: <main>
 - [CRITICAL] `PlayersResultsGrid.tsx` (structural): Missing semantic landmark: <section>
-- [IMPORTANT] `PlayersResultsGrid.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `PlayersResultsGrid.tsx` (structural): Missing heading: <h2>
 - [IMPORTANT] `PlayersResultsGrid.tsx` (props): Mockup accesses '005em' but no matching prop in component
 - [IMPORTANT] `PlayersResultsGrid.tsx` (props): Mockup accesses '015em' but no matching prop in component
@@ -2874,7 +2822,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [CRITICAL] `EmptyPlayers.tsx` (structural): Missing semantic landmark: <header>
 - [CRITICAL] `EmptyPlayers.tsx` (structural): Missing semantic landmark: <main>
 - [CRITICAL] `EmptyPlayers.tsx` (structural): Missing semantic landmark: <section>
-- [IMPORTANT] `EmptyPlayers.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `EmptyPlayers.tsx` (props): Mockup accesses '005em' but no matching prop in component
 - [IMPORTANT] `EmptyPlayers.tsx` (props): Mockup accesses '015em' but no matching prop in component
 - [IMPORTANT] `EmptyPlayers.tsx` (props): Mockup accesses '01em' but no matching prop in component
@@ -2997,7 +2944,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `SessionsHero.tsx` (props): Mockup accesses 'when' but no matching prop in component
 - [IMPORTANT] `SessionsHero.tsx` (props): Mockup accesses 'winner' but no matching prop in component
 - [MINOR] `SessionsFilters.tsx` (structural): Missing semantic landmark: <article>
-- [IMPORTANT] `SessionsFilters.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `SessionsFilters.tsx` (structural): Missing heading: <h2>
 - [IMPORTANT] `SessionsFilters.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `SessionsFilters.tsx` (props): Mockup accesses '1' but no matching prop in component
@@ -3062,7 +3008,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `SessionsFilters.tsx` (props): Mockup accesses 'when' but no matching prop in component
 - [IMPORTANT] `SessionsFilters.tsx` (props): Mockup accesses 'winner' but no matching prop in component
 - [MINOR] `SessionCardList.tsx` (structural): Missing semantic landmark: <article>
-- [IMPORTANT] `SessionCardList.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `SessionCardList.tsx` (structural): Missing heading: <h2>
 - [IMPORTANT] `SessionCardList.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `SessionCardList.tsx` (props): Mockup accesses '1' but no matching prop in component
@@ -3128,7 +3073,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `SessionCardList.tsx` (props): Mockup accesses 'when' but no matching prop in component
 - [IMPORTANT] `SessionCardList.tsx` (props): Mockup accesses 'winner' but no matching prop in component
 - [MINOR] `SessionCardGrid.tsx` (structural): Missing semantic landmark: <article>
-- [IMPORTANT] `SessionCardGrid.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `SessionCardGrid.tsx` (structural): Missing heading: <h2>
 - [IMPORTANT] `SessionCardGrid.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `SessionCardGrid.tsx` (props): Mockup accesses '1' but no matching prop in component
@@ -3194,7 +3138,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `SessionCardGrid.tsx` (props): Mockup accesses 'when' but no matching prop in component
 - [IMPORTANT] `SessionCardGrid.tsx` (props): Mockup accesses 'winner' but no matching prop in component
 - [MINOR] `EmptySessions.tsx` (structural): Missing semantic landmark: <article>
-- [IMPORTANT] `EmptySessions.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `EmptySessions.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `EmptySessions.tsx` (props): Mockup accesses '1' but no matching prop in component
 - [IMPORTANT] `EmptySessions.tsx` (props): Mockup accesses '12' but no matching prop in component
@@ -3259,7 +3202,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `EmptySessions.tsx` (props): Mockup accesses 'when' but no matching prop in component
 - [IMPORTANT] `EmptySessions.tsx` (props): Mockup accesses 'winner' but no matching prop in component
 - [MINOR] `OutcomeBadge.tsx` (structural): Missing semantic landmark: <article>
-- [IMPORTANT] `OutcomeBadge.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `OutcomeBadge.tsx` (structural): Missing heading: <h2>
 - [IMPORTANT] `OutcomeBadge.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `OutcomeBadge.tsx` (props): Mockup accesses '1' but no matching prop in component
@@ -3322,7 +3264,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `OutcomeBadge.tsx` (props): Mockup accesses 'when' but no matching prop in component
 - [IMPORTANT] `OutcomeBadge.tsx` (props): Mockup accesses 'winner' but no matching prop in component
 - [MINOR] `ScoringInline.tsx` (structural): Missing semantic landmark: <article>
-- [IMPORTANT] `ScoringInline.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `ScoringInline.tsx` (structural): Missing heading: <h2>
 - [IMPORTANT] `ScoringInline.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `ScoringInline.tsx` (props): Mockup accesses '1' but no matching prop in component
@@ -3387,7 +3328,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `ScoringInline.tsx` (props): Mockup accesses 'when' but no matching prop in component
 - [IMPORTANT] `ScoringInline.tsx` (props): Mockup accesses 'winner' but no matching prop in component
 - [MINOR] `ConnectionChipStripFooter.tsx` (structural): Missing semantic landmark: <article>
-- [IMPORTANT] `ConnectionChipStripFooter.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `ConnectionChipStripFooter.tsx` (structural): Missing heading: <h2>
 - [IMPORTANT] `ConnectionChipStripFooter.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `ConnectionChipStripFooter.tsx` (props): Mockup accesses '1' but no matching prop in component
@@ -3914,7 +3854,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `PlayAgainCta.tsx` (props): Mockup accesses 'unlocked' but no matching prop in component
 - [IMPORTANT] `PlayAgainCta.tsx` (props): Mockup accesses 'variant' but no matching prop in component
 - [CRITICAL] `Confetti.tsx` (structural): Missing semantic landmark: <section>
-- [IMPORTANT] `Confetti.tsx` (structural): Missing heading: <h1>
 - [IMPORTANT] `Confetti.tsx` (structural): Missing heading: <h2>
 - [IMPORTANT] `Confetti.tsx` (props): Mockup accesses '06' but no matching prop in component
 - [IMPORTANT] `Confetti.tsx` (props): Mockup accesses '1' but no matching prop in component

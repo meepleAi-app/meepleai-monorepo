@@ -1,10 +1,14 @@
 """Structural dimension audit: semantic landmarks + heading hierarchy."""
 from __future__ import annotations
 from typing import Iterator
+import functools
+import re
+from pathlib import Path
 
 from scripts.v2_audit.component_inspector import ComponentSnapshot
 from scripts.v2_audit.mockup_inspector import MockupSnapshot
 from scripts.v2_audit.finding import Finding, Severity, Confidence, Dimension
+from scripts.v2_audit.nav_dimension import _route_to_filesystem_path
 
 
 # Landmarks considered Critical if missing
@@ -14,6 +18,31 @@ _KEY_HEADINGS = {"h1", "h2"}
 # Threshold: if component is missing more than 60% of mockup landmarks,
 # mark all findings LOW confidence (component may be a legit subset)
 _HIGH_DIVERGENCE_PCT = 0.60
+
+_H1_RE = re.compile(r"<h1\b", re.IGNORECASE)
+
+
+@functools.lru_cache(maxsize=None)
+def _route_tree_has_h1(route: str) -> bool:
+    """Return True if any TSX file in the route's filesystem tree contains <h1>.
+
+    Skips test files (.test.tsx, .stories.tsx). Returns False if route folder
+    doesn't exist.
+    """
+    path = _route_to_filesystem_path(route)
+    if path is None:
+        return False
+    for tsx in path.glob("**/*.tsx"):
+        name = tsx.name
+        if name.endswith(".test.tsx") or name.endswith(".stories.tsx"):
+            continue
+        try:
+            text = tsx.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if _H1_RE.search(text):
+            return True
+    return False
 
 
 def audit_structural(
@@ -47,8 +76,13 @@ def audit_structural(
             },
         )
 
+    parent_has_h1 = _route_tree_has_h1(route)
+
     for h in sorted(missing_headings):
         if h in _KEY_HEADINGS:
+            # Suppress h1 finding if parent (page/layout) already has h1 (WCAG: single h1 per page)
+            if h == "h1" and parent_has_h1:
+                continue
             yield Finding(
                 dimension=Dimension.STRUCTURAL,
                 severity=Severity.IMPORTANT,

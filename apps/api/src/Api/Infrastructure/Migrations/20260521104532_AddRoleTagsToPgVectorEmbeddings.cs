@@ -38,6 +38,10 @@ namespace Api.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            // WARNING: dropping the column destroys the denormalized role_tags values.
+            // Re-running Up() restores them by re-backfilling from text_chunks
+            // (the source of truth on which the sync invariant is anchored), but any
+            // ingestion that ran while Up was reverted will have written zeroes.
             migrationBuilder.Sql("""
                 ALTER TABLE IF EXISTS pgvector_embeddings
                 DROP COLUMN IF EXISTS role_tags;

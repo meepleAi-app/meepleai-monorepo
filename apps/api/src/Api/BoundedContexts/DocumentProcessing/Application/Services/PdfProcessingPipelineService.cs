@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
@@ -610,7 +611,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                     language: item.lang,
                     sourceChunkId: tc?.Id,
                     isTranslation: item.isTranslation,
-                    roleTags: (int)(tc?.RoleTags ?? Api.BoundedContexts.GameManagement.Domain.ValueObjects.GameBookRole.None));
+                    roleTags: (int)(tc?.RoleTags ?? GameBookRole.None));
             }).ToList();
 
             await _vectorStore.IndexBatchAsync(embeddingEntities, cancellationToken)

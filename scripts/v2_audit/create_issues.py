@@ -123,7 +123,7 @@ def _create_or_update_issue(title: str, body: str, dry_run: bool) -> str:
              "--title", title,
              "--body", body,
              "--label", "audit-finding",
-             "--label", "frontend",
+             "--label", "area/frontend",
              "--label", "v2-migration"],
             capture_output=True, text=True, check=True, encoding="utf-8",
         )

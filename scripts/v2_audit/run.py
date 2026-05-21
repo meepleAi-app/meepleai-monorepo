@@ -30,10 +30,13 @@ INPUT_SNAPSHOT_PATH = REPO_ROOT / "docs" / "superpowers" / "specs" / "audit-inpu
 
 
 def run_audit(limit: int | None = None, dry_run: bool = False) -> dict:
-    rows = list(parse_matrix(MATRIX_PATH, status_filter="done"))
+    from scripts.v2_audit.matrix_parser import parse_matrix_with_skipped
+    rows, skipped_done_lines = parse_matrix_with_skipped(MATRIX_PATH)
     if limit:
         rows = rows[:limit]
     print(f"Phase A: {len(rows)} done rows to audit")
+    if skipped_done_lines:
+        print(f"Phase A: {len(skipped_done_lines)} done rows SKIPPED by strict parser (see snapshot)")
 
     matrix_drift = []
     valid_rows = []
@@ -116,6 +119,8 @@ def run_audit(limit: int | None = None, dry_run: bool = False) -> dict:
                 "matrix_path": str(MATRIX_PATH.relative_to(REPO_ROOT)),
                 "total_rows": len(rows),
                 "valid_rows": len(valid_rows),
+                "skipped_done_rows": skipped_done_lines,
+                "skipped_done_count": len(skipped_done_lines),
                 "drift": [{"component": c, "path": p} for c, p in matrix_drift],
                 "audited_components": [
                     {"component": r.component, "route": r.route, "path": r.path}

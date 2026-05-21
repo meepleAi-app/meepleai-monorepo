@@ -2,6 +2,21 @@
   "matrix_path": "docs\\for-developers\\frontend\\v2-migration-matrix.md",
   "total_rows": 70,
   "valid_rows": 70,
+  "skipped_done_rows": [
+    "\u00b7 (extension G3) \u00b7 `GamesRecentRail` \u00b7 `apps/web/src/components/features/games/GamesRecentRail.tsx` \u00b7 `/games?tab=*` \u00b7 d",
+    "\u00b7 `sp4-game-chat-tab.html` (G1+G5) \u00b7 `GameChatTabV2 + 11 game-chat components` \u00b7 `apps/web/src/components/features/game-",
+    "\u00b7 `sp4-agent-detail.jsx` \u00b7 `AgentHero` *(was AgentCharacterSheet stub \u2014 renamed per mockup)* \u00b7 `apps/web/src/components/",
+    "\u00b7 `sp4-session-live.jsx` \u00b7 `PauseOverlay` (lazy) \u00b7 `apps/web/src/components/features/session-live/PauseOverlay.tsx` \u00b7 `/",
+    "\u00b7 `sp4-session-live.jsx` \u00b7 `EndgameDialog` (lazy) \u00b7 `apps/web/src/components/features/session-live/EndgameDialog.tsx` \u00b7 ",
+    "\u00b7 `nanolith-runthrough-game-detail.html` \u00b7 `LibroGameDetailView` \u00b7 `apps/web/src/components/v2/gamebook/LibroGameDetailV",
+    "\u00b7 `nanolith-runthrough-setup-wizard.html` \u00b7 `CampaignSetupDrawer` \u00b7 `apps/web/src/components/v2/gamebook/CampaignSetupDr",
+    "\u00b7 `sp6-libro-game-quota-credits.jsx` \u00b7 `CheckoutModal` (4 step) + `SoftWarningCredits` (toast/modal) \u00b7 `apps/web/src/com",
+    "\u00b7 `sp7-game-night-detail-rsvp.jsx` \u00b7 `GameNightRsvpRow` \u00b7 `apps/web/src/components/features/game-night-detail/GameNightR",
+    "\u00b7 `sp7-game-night-detail-rsvp.jsx` \u00b7 `GameNightRsvpActionBar` \u00b7 `apps/web/src/components/features/game-night-detail/Game",
+    "\u00b7 `sp7-game-night-detail-rsvp.jsx` \u00b7 `GameNightDetailHero` \u00b7 `apps/web/src/components/features/game-night-detail/GameNig",
+    "\u00b7 `sp7-game-night-join-public.jsx` \u00b7 `PublicJoinEventView` (orchestrator) \u00b7 `apps/web/src/app/(public)/join/event/[code]"
+  ],
+  "skipped_done_count": 12,
   "drift": [],
   "audited_components": [
     {

@@ -88,32 +88,39 @@ def _collect_findings_by_route() -> dict[str, dict]:
     return by_route
 
 
-def _find_existing_issue(title: str) -> int | None:
-    """Return issue number if an open issue with this title exists, else None."""
+def _find_existing_issue(route: str) -> int | None:
+    """Return issue number of an open audit issue for this route, else None.
+
+    Uses route-stable prefix match `[audit] Route <route>:` to remain idempotent
+    even when the finding count changes between runs.
+    """
+    prefix = f"[audit] Route {route}:"
     try:
-        # gh search needs exact title escaping; use --search with quotes
+        # Search by route prefix (gh search supports substring on title)
         result = subprocess.run(
-            ["gh", "issue", "list", "--state", "open", "--search", title, "--json", "number,title", "--limit", "100"],
+            ["gh", "issue", "list", "--state", "open", "--search", prefix,
+             "--json", "number,title", "--limit", "100"],
             capture_output=True, text=True, check=True, encoding="utf-8",
         )
         issues = json.loads(result.stdout)
         for issue in issues:
-            if issue["title"] == title:
+            if issue["title"].startswith(prefix):
                 return issue["number"]
     except subprocess.CalledProcessError as e:
         print(f"WARN: gh issue list failed: {e.stderr}")
     return None
 
 
-def _create_or_update_issue(title: str, body: str, dry_run: bool) -> str:
-    existing = _find_existing_issue(title)
+def _create_or_update_issue(route: str, title: str, body: str, dry_run: bool) -> str:
+    existing = _find_existing_issue(route)
     if dry_run:
         action = "update" if existing else "create"
         return f"[DRY-RUN] would {action} issue: {title}" + (f" (#{existing})" if existing else "")
 
     if existing:
+        # Also update title in case finding count changed
         subprocess.run(
-            ["gh", "issue", "edit", str(existing), "--body", body],
+            ["gh", "issue", "edit", str(existing), "--title", title, "--body", body],
             check=True, encoding="utf-8",
         )
         return f"Updated #{existing}: {title}"
@@ -148,7 +155,7 @@ def main(argv=None):
 
         title = build_issue_title(route, eligible)
         body = build_issue_body(eligible, mockups=sorted(data["mockups"]))
-        result = _create_or_update_issue(title, body, args.dry_run)
+        result = _create_or_update_issue(route, title, body, args.dry_run)
         print(result)
         created_count += 1
 

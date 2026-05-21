@@ -46,3 +46,39 @@ def parse_matrix(path: Path, status_filter: str | None = "done") -> Iterator[Mat
         )
         if status_filter is None or row.status == status_filter:
             yield row
+
+
+def parse_matrix_with_skipped(path: Path) -> tuple[list[MatrixRow], list[str]]:
+    """Returns (parsed_rows_done, skipped_done_line_summaries).
+
+    Walks the matrix lines twice: once with the strict regex to collect MatrixRow,
+    once with a lenient regex to detect lines that mention `| done |` but didn't
+    match the strict parser. Returns the parsed rows + a list of one-line
+    summaries of skipped rows for diagnostic logging.
+    """
+    text = path.read_text(encoding="utf-8")
+    parsed = []
+    for line in text.splitlines():
+        m = _ROW_RE.match(line.strip())
+        if m and m.group("status").strip() == "done":
+            parsed.append(MatrixRow(
+                mockup=m.group("mockup").strip(),
+                component=m.group("component").strip(),
+                path=m.group("path").strip(),
+                route=m.group("route").strip(),
+                status=m.group("status").strip(),
+                pr=m.group("pr").strip(),
+            ))
+
+    # Find done rows skipped by strict parser
+    skipped = []
+    for line in text.splitlines():
+        if "| done |" not in line:
+            continue
+        if _ROW_RE.match(line.strip()):
+            continue  # successfully parsed
+        # Skipped — record a truncated single-line summary
+        summary = line.strip()[:120].replace("|", "·")
+        skipped.append(summary)
+
+    return parsed, skipped

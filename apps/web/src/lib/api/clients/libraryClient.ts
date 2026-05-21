@@ -137,6 +137,27 @@ export interface LibraryClient {
   getGameDetail(gameId: string): Promise<GameDetailDto>;
   // Game State Management (Issue #2868)
   updateGameState(gameId: string, request: UpdateGameStateRequest): Promise<void>;
+  // Game Agent (Fase 3 consolidation — was direct fetch in 2 consumers)
+  createGameAgent(
+    gameId: string,
+    request: { agentDefinitionId: string; strategyName: string; strategyParameters?: string | null }
+  ): Promise<unknown>;
+  // Game Sessions recording (Fase 3 consolidation — was direct fetch in useGameDetail)
+  recordGameSession(
+    gameId: string,
+    request: {
+      playedAt: string;
+      durationMinutes: number;
+      didWin?: boolean | null;
+      players?: string | null;
+      notes?: string | null;
+    }
+  ): Promise<{ sessionId: string }>;
+  // Custom PDF upload (Fase 3 consolidation — was direct fetch in addGameWizardStore)
+  uploadCustomGamePdf(
+    gameId: string,
+    request: { pdfUrl: string; fileSizeBytes: number; originalFileName: string }
+  ): Promise<unknown>;
   // Agent Configuration (Issue #2518)
   getAgentConfig(gameId: string): Promise<AgentConfigDto | null>;
   updateAgentConfig(gameId: string, request: UpdateAgentConfigRequest): Promise<AgentConfigDto>;
@@ -395,12 +416,59 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
     },
 
     /**
-     * Update game state (Nuovo/InPrestito/Wishlist/Owned) (Issue #2868)
+     * Update game state (Nuovo/InPrestito/Wishlist/Owned) (Issue #2868).
+     * Consolidated under PATCH /library/games/{id} — state fields piggy-back on
+     * the entry update body (NewState/StateNotes). Server applies the state
+     * transition then updates entry fields in a single round-trip.
      * @param gameId - Game UUID to update
      * @param request - New state and optional notes
      */
     async updateGameState(gameId: string, request: UpdateGameStateRequest): Promise<void> {
-      await httpClient.put(`/api/v1/library/games/${gameId}/state`, request);
+      await httpClient.patch(`/api/v1/library/games/${gameId}`, request);
+    },
+
+    /**
+     * Create a per-game AI agent (Fase 3 consolidation).
+     * POST /api/v1/library/games/{gameId}/agent
+     */
+    async createGameAgent(
+      gameId: string,
+      request: { agentDefinitionId: string; strategyName: string; strategyParameters?: string | null }
+    ): Promise<unknown> {
+      return httpClient.post<unknown>(`/api/v1/library/games/${gameId}/agent`, request);
+    },
+
+    /**
+     * Record a played game session (Fase 3 consolidation).
+     * POST /api/v1/library/games/{gameId}/sessions
+     */
+    async recordGameSession(
+      gameId: string,
+      request: {
+        playedAt: string;
+        durationMinutes: number;
+        didWin?: boolean | null;
+        players?: string | null;
+        notes?: string | null;
+      }
+    ): Promise<{ sessionId: string }> {
+      const result = await httpClient.post<{ sessionId: string }>(
+        `/api/v1/library/games/${gameId}/sessions`,
+        request
+      );
+      if (!result) throw new Error('Failed to record game session');
+      return result;
+    },
+
+    /**
+     * Upload a custom PDF rulebook URL (Fase 3 consolidation).
+     * POST /api/v1/library/games/{gameId}/pdf
+     */
+    async uploadCustomGamePdf(
+      gameId: string,
+      request: { pdfUrl: string; fileSizeBytes: number; originalFileName: string }
+    ): Promise<unknown> {
+      return httpClient.post<unknown>(`/api/v1/library/games/${gameId}/pdf`, request);
     },
 
     /**

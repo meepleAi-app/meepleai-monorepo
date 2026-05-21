@@ -6,6 +6,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { api } from '@/lib/api';
 import { useGameDetailStore } from '@/lib/stores/game-detail-store';
 
 export const GAME_DETAIL_QUERY_KEY = (gameId: string) => ['game-detail', gameId] as const;
@@ -153,16 +154,11 @@ export function useRecordGameSession(gameId: string) {
 
   return useMutation({
     mutationFn: async (payload: RecordSessionPayload) => {
-      const response = await fetch(`/api/v1/library/games/${gameId}/sessions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...payload,
-          playedAt: payload.playedAt.toISOString(),
-        }),
+      // Fase 3 consolidation — was direct fetch, now routed via libraryClient
+      const result = await api.library.recordGameSession(gameId, {
+        ...payload,
+        playedAt: payload.playedAt.toISOString(),
       });
-      if (!response.ok) throw new Error('Failed to record session');
-      const result = (await response.json()) as { sessionId: string };
       return result.sessionId;
     },
     onMutate: async () => {

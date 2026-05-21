@@ -17,6 +17,7 @@ import { Spinner } from '@/components/loading';
 import { Card } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
+import { api } from '@/lib/api';
 
 interface ConfigAgentStepProps {
   gameId: string;
@@ -57,27 +58,17 @@ export function ConfigAgentStep({
 
     setIsCreating(true);
     try {
-      // Issue #5: Create agent via API
-      const response = await fetch(`/api/v1/library/games/${gameId}/agent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          agentDefinitionId,
-          strategyName,
-          strategyParameters: null,
-        }),
+      // Issue #5: Create agent via API (Fase 3 consolidation — was direct fetch)
+      await api.library.createGameAgent(gameId, {
+        agentDefinitionId,
+        strategyName,
+        strategyParameters: null,
       });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Failed' }));
-        throw new Error(error.message || 'Creazione agente fallita');
-      }
 
       toast.success('Agente creato con successo!');
       onComplete();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Errore sconosciuto';
+      const message = err instanceof Error ? err.message : 'Creazione agente fallita';
       toast.error(`Errore: ${message}`);
     } finally {
       setIsCreating(false);

@@ -10,10 +10,15 @@ public record AddGameToLibraryRequest(
 
 /// <summary>
 /// Request body for updating a library entry.
+/// Consolidates entry fields (Notes/IsFavorite) and state transitions
+/// (NewState/StateNotes). All fields are optional; only the provided ones
+/// are applied. Previously NewState/StateNotes lived in PUT /library/games/{id}/state.
 /// </summary>
 public record UpdateLibraryEntryRequest(
     string? Notes = null,
-    bool? IsFavorite = null
+    bool? IsFavorite = null,
+    string? NewState = null,
+    string? StateNotes = null
 );
 
 /// <summary>
@@ -44,7 +49,11 @@ public record UpdateLibraryShareRequest(
 );
 
 /// <summary>
-/// Request body for updating game state.
+/// Request body for updating game session state (GameSessionState entity, distinct
+/// from UserLibrary game state — used by `GameEndpoints.HandleUpdateGameState`).
+/// Kept here for namespace resolution: GameEndpoints lives in the same `Api.Routing`
+/// namespace and resolves this record without `using`. Models/Requests has a
+/// distinct `UpdateGameStateRequest` with `JsonDocument NewState`.
 /// </summary>
 public record UpdateGameStateRequest(
     string NewState,

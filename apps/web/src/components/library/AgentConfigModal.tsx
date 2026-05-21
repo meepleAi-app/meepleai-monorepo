@@ -43,6 +43,7 @@ import { Slider } from '@/components/ui/primitives/slider';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import { useAgentConfig, useUpdateAgentConfig, agentConfigKeys } from '@/hooks/queries';
 import {
+  api,
   MODEL_OPTIONS,
   PERSONALITY_OPTIONS,
   DETAIL_LEVEL_OPTIONS,
@@ -159,28 +160,18 @@ export function AgentConfigModal({ isOpen, onClose, gameId, gameTitle }: AgentCo
 
     setIsCreating(true);
     try {
-      const response = await fetch(`/api/v1/library/games/${gameId}/agent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          agentDefinitionId,
-          strategyName,
-          strategyParameters: null,
-        }),
+      await api.library.createGameAgent(gameId, {
+        agentDefinitionId,
+        strategyName,
+        strategyParameters: null,
       });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Failed' }));
-        throw new Error(error.message || 'Creazione agente fallita');
-      }
 
       toast.success(`Agente AI per "${gameTitle}" creato con successo!`);
       // Invalidate agent config cache to refetch
       queryClient.invalidateQueries({ queryKey: agentConfigKeys.byGame(gameId) });
       setMode('edit');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Errore sconosciuto';
+      const message = err instanceof Error ? err.message : 'Creazione agente fallita';
       toast.error(`Errore: ${message}`);
     } finally {
       setIsCreating(false);

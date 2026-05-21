@@ -92,13 +92,13 @@
 
 - **[CRITICAL]** `GameDetailHero.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\game-detail\GameDetailHero.tsx`
-- **[CRITICAL]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Missing Link to /games (mockup: sp4-games-index.html)
-  - `expected_route`: `/games`
-  - `mockup_dest`: `sp4-games-index.html`
-  - `component_hrefs`: `['doc.href', 'viewAllHref']`
 - **[CRITICAL]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Missing Link to /games/[id]/chat (mockup: sp4-game-chat-tab.html)
   - `expected_route`: `/games/[id]/chat`
   - `mockup_dest`: `sp4-game-chat-tab.html`
+  - `component_hrefs`: `['doc.href', 'viewAllHref']`
+- **[CRITICAL]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Missing Link to /games (mockup: sp4-games-index.html)
+  - `expected_route`: `/games`
+  - `mockup_dest`: `sp4-games-index.html`
   - `component_hrefs`: `['doc.href', 'viewAllHref']`
 - **[IMPORTANT]** `GameDetailHero.tsx` (tokens): Hardcoded color utility: bg-amber-700
   - `token`: `bg-amber-700`
@@ -141,6 +141,10 @@
 
 ### Route `/join/event/[code]`
 
+- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /settings (mockup: settings.html)
+  - `expected_route`: `/settings`
+  - `mockup_dest`: `settings.html`
+  - `component_hrefs`: `['/', '/contact']`
 - **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
   - `expected_route`: `/game-nights/[id]/detail-rsvp`
   - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
@@ -149,15 +153,11 @@
   - `expected_route`: `/library/[gameId]/play/game-onboarding`
   - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
   - `component_hrefs`: `['/', '/contact']`
-- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /settings (mockup: settings.html)
-  - `expected_route`: `/settings`
-  - `mockup_dest`: `settings.html`
-  - `component_hrefs`: `['/', '/contact']`
-- **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /contact
-  - `component_href`: `/contact`
-  - `mapped_routes`: `['/game-nights/[id]/detail-rsvp', '/library/[gameId]/play/game-onboarding', '/settings']`
 - **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /
   - `component_href`: `/`
+  - `mapped_routes`: `['/game-nights/[id]/detail-rsvp', '/library/[gameId]/play/game-onboarding', '/settings']`
+- **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /contact
+  - `component_href`: `/contact`
   - `mapped_routes`: `['/game-nights/[id]/detail-rsvp', '/library/[gameId]/play/game-onboarding', '/settings']`
 
 ### Route `/library`

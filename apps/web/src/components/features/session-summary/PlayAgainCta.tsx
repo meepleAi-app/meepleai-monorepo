@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * PlayAgainCta — Wave D.3 v2 component (Issue #756).
  *
@@ -89,6 +88,7 @@ export function PlayAgainCta({
         data-slot="play-again-cta-button"
         data-disabled={disabled || undefined}
         className={clsx(
+          // eslint-disable-next-line local/no-hardcoded-color-utility -- text-white on bg-entity-session CTA button; entity bg is in a separate clsx string
           'inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg px-5 text-sm font-semibold text-white shadow-sm transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           disabled

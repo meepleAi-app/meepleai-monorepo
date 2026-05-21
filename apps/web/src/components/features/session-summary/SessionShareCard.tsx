@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * SessionShareCard — Wave D.3 v2 component (Issue #756).
  *
@@ -99,6 +98,7 @@ function PreviewPodiumCell({ participant, place, theme }: PreviewPodiumCellProps
         </span>
       )}
       <div
+        // eslint-disable-next-line local/no-hardcoded-color-utility -- text-white on style-prop gradient bg (.e-bg pattern); bg is in style prop, not className
         className="flex items-center justify-center rounded-full font-extrabold text-white"
         style={{
           width: size,

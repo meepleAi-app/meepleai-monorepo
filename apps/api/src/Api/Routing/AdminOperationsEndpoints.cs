@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Commands.Operations;
+using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Queries.Operations;
 using Api.Extensions;
 using Api.Infrastructure.Authorization;
@@ -104,6 +105,10 @@ internal static class AdminOperationsEndpoints
             ConfirmationLevel.Level2,
             "Restart API Service",
             "This will restart the API service. All active sessions will be terminated. Estimated downtime: 30-60 seconds."))
+        .Produces<RestartServiceResponseDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
         .WithSummary("Restart API service")
         .WithDescription("Triggers graceful shutdown; orchestrator handles restart. SuperAdmin only, Level 2 confirmation required.");
 
@@ -131,6 +136,11 @@ internal static class AdminOperationsEndpoints
             ConfirmationLevel.Level2,
             "Impersonate User",
             "You will gain full access to this user's account. All actions will be audited."))
+        .Produces<ImpersonateUserResponseDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status409Conflict)
         .WithSummary("Impersonate user")
         .WithDescription("Creates session as target user for debugging. SuperAdmin only, Level 2 confirmation required.");
 

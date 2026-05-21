@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * SessionSummaryHero — Wave D.3 v2 component (Issue #756).
  *
@@ -187,6 +186,7 @@ function PodiumPlace({ entry, tied, podiumPlaceAriaLabel }: PodiumPlaceProps): R
         </span>
       )}
       <div
+        // eslint-disable-next-line local/no-hardcoded-color-utility -- text-white on style-prop gradient bg (.e-bg pattern); bg is in style prop, not className
         className="relative flex items-center justify-center rounded-full font-extrabold text-white"
         style={{
           width: AVATAR_SIZE_PX[place],
@@ -211,6 +211,7 @@ function PodiumPlace({ entry, tied, podiumPlaceAriaLabel }: PodiumPlaceProps): R
         {tied && isWinner && (
           <span
             data-slot="podium-tied-badge"
+            // eslint-disable-next-line local/no-hardcoded-color-utility -- text-white on entity-toolkit bg (style prop); .e-bg pattern
             className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
             style={{
               background: 'var(--color-entity-toolkit)',

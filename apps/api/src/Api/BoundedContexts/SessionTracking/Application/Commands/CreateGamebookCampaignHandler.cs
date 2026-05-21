@@ -60,9 +60,6 @@ public class CreateGamebookCampaignHandler : IRequestHandler<CreateGamebookCampa
 
         return new GamebookCampaignDto(
             s.Id,
-            // Issue #1392: legacy GameId alias kept for backward compat; always
-            // equal to GameRefId until the FE migrates off it.
-            s.GameRef.Id,
             s.GameRef.Id,
             (int)s.GameRef.Kind,
             s.OwnerUserId,

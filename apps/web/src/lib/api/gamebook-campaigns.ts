@@ -18,11 +18,6 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 export const GamebookCampaignSchema = z.object({
   id: z.string().uuid(),
-  /**
-   * Legacy alias for `gameRefId`, kept for backward compatibility with callers
-   * that haven't migrated to the discriminator (#1392). Always equal to `gameRefId`.
-   */
-  gameId: z.string().uuid(),
   /** Issue #1392: discriminator-aware ref id (SharedGame or PrivateGame, see `gameRefKind`). */
   gameRefId: z.string().uuid(),
   /**

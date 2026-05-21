@@ -78,8 +78,6 @@ public sealed class GetGamebookCampaignHandlerTests
 
         dto.GameRefId.Should().Be(sharedGameId);
         dto.GameRefKind.Should().Be((int)GameRefKind.Shared);
-        // Legacy alias preserved.
-        dto.GameId.Should().Be(sharedGameId);
     }
 
     [Fact]
@@ -98,7 +96,6 @@ public sealed class GetGamebookCampaignHandlerTests
 
         dto.GameRefId.Should().Be(privateGameId);
         dto.GameRefKind.Should().Be((int)GameRefKind.Private);
-        dto.GameId.Should().Be(privateGameId);
     }
 
     [Fact]

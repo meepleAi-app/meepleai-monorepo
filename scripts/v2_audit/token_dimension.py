@@ -9,9 +9,13 @@ from scripts.v2_audit.finding import Finding, Severity, Confidence, Dimension
 
 
 # Hardcoded color utility patterns (from CLAUDE.md DS-15 ESLint rule)
+# Aligned with ESLint rule `local/no-hardcoded-color-utility` (DS-15) which
+# forbids ONLY neutral palettes. Hue palettes (red/blue/amber/etc.) are
+# allowed for semantic emphasis. Including them here produces false positives
+# (see PR #1377 issue #1378 closure rationale).
 _HARDCODED_PATTERNS = re.compile(
     r"^(?:bg|text|border|ring|divide|outline|placeholder|caret|accent|decoration)-"
-    r"(?:white|black|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-?\d*$"
+    r"(?:white|black|slate|gray|zinc|neutral|stone)-?\d*$"
 )
 # White exemption: text-white/border-white/ring-white when paired with colored bg
 _WHITE_TOKEN = re.compile(r"^(text|border|ring)-white$")

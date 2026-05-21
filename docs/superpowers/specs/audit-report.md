@@ -1,60 +1,24 @@
 # V2 Component Audit Report
 
 **Total components audited:** 70
-**Total findings:** 4410
-**Main report:** 109 (Critical: 30 · Important: 63 · Minor: 16)
+**Total findings:** 4356
+**Main report:** 55 (Critical: 22 · Important: 17 · Minor: 16)
 **Manual review queue:** 4301
 
 ## Findings by Route
 
 ### Route `/agents/[id]`
 
-- **[CRITICAL]** `AgentDangerZone.tsx, AgentSettingsForm.tsx, ChatHistoryTimeline.tsx, KbDocList.tsx, PersonaCard.tsx, SystemPromptViewer.tsx` (nav): Missing Link to /library/[gameId]/play/setup-wizard (mockup: librogame-runthrough-setup-wizard.html)
-  - `expected_route`: `/library/[gameId]/play/setup-wizard`
-  - `mockup_dest`: `librogame-runthrough-setup-wizard.html`
-  - `component_hrefs`: `[]`
 - **[CRITICAL]** `AgentDangerZone.tsx, AgentSettingsForm.tsx, ChatHistoryTimeline.tsx, KbDocList.tsx, PersonaCard.tsx, SystemPromptViewer.tsx` (nav): Missing Link to /agents (mockup: sp4-agents-index.html)
   - `expected_route`: `/agents`
   - `mockup_dest`: `sp4-agents-index.html`
   - `component_hrefs`: `[]`
-- **[IMPORTANT]** `SystemPromptViewer.tsx` (tokens): Hardcoded color utility: bg-emerald-100
-  - `token`: `bg-emerald-100`
-- **[IMPORTANT]** `SystemPromptViewer.tsx` (tokens): Hardcoded color utility: text-emerald-700
-  - `token`: `text-emerald-700`
-- **[IMPORTANT]** `KbDocList.tsx` (tokens): Hardcoded color utility: bg-rose-50
-  - `token`: `bg-rose-50`
-- **[IMPORTANT]** `KbDocList.tsx` (tokens): Hardcoded color utility: bg-rose-700
-  - `token`: `bg-rose-700`
-- **[IMPORTANT]** `KbDocList.tsx` (tokens): Hardcoded color utility: border-rose-200
-  - `token`: `border-rose-200`
-- **[IMPORTANT]** `KbDocList.tsx` (tokens): Hardcoded color utility: text-rose-700
-  - `token`: `text-rose-700`
-- **[IMPORTANT]** `ChatHistoryTimeline.tsx` (tokens): Hardcoded color utility: bg-rose-50
-  - `token`: `bg-rose-50`
-- **[IMPORTANT]** `ChatHistoryTimeline.tsx` (tokens): Hardcoded color utility: bg-rose-700
-  - `token`: `bg-rose-700`
-- **[IMPORTANT]** `ChatHistoryTimeline.tsx` (tokens): Hardcoded color utility: border-rose-200
-  - `token`: `border-rose-200`
-- **[IMPORTANT]** `ChatHistoryTimeline.tsx` (tokens): Hardcoded color utility: text-rose-700
-  - `token`: `text-rose-700`
-- **[IMPORTANT]** `AgentSettingsForm.tsx` (tokens): Hardcoded color utility: bg-rose-50
-  - `token`: `bg-rose-50`
-- **[IMPORTANT]** `AgentSettingsForm.tsx` (tokens): Hardcoded color utility: bg-rose-700
-  - `token`: `bg-rose-700`
-- **[IMPORTANT]** `AgentSettingsForm.tsx` (tokens): Hardcoded color utility: bg-violet-700
-  - `token`: `bg-violet-700`
-- **[IMPORTANT]** `AgentSettingsForm.tsx` (tokens): Hardcoded color utility: border-rose-200
-  - `token`: `border-rose-200`
-- **[IMPORTANT]** `AgentSettingsForm.tsx` (tokens): Hardcoded color utility: text-rose-700
-  - `token`: `text-rose-700`
+- **[CRITICAL]** `AgentDangerZone.tsx, AgentSettingsForm.tsx, ChatHistoryTimeline.tsx, KbDocList.tsx, PersonaCard.tsx, SystemPromptViewer.tsx` (nav): Missing Link to /library/[gameId]/play/setup-wizard (mockup: librogame-runthrough-setup-wizard.html)
+  - `expected_route`: `/library/[gameId]/play/setup-wizard`
+  - `mockup_dest`: `librogame-runthrough-setup-wizard.html`
+  - `component_hrefs`: `[]`
 - **[IMPORTANT]** `AgentDangerZone.tsx` (tokens): Hardcoded color utility: bg-white
   - `token`: `bg-white`
-- **[IMPORTANT]** `AgentDangerZone.tsx` (tokens): Hardcoded color utility: border-rose-200
-  - `token`: `border-rose-200`
-- **[IMPORTANT]** `AgentDangerZone.tsx` (tokens): Hardcoded color utility: border-rose-300
-  - `token`: `border-rose-300`
-- **[IMPORTANT]** `AgentDangerZone.tsx` (tokens): Hardcoded color utility: text-rose-700
-  - `token`: `text-rose-700`
 - **[MINOR]** `KbDocList.tsx` (tokens): Unpaired text-white (no colored bg on same element)
   - `token`: `text-white`
 - **[MINOR]** `ChatHistoryTimeline.tsx` (tokens): Unpaired text-white (no colored bg on same element)
@@ -100,30 +64,6 @@
   - `expected_route`: `/games`
   - `mockup_dest`: `sp4-games-index.html`
   - `component_hrefs`: `['doc.href', 'viewAllHref']`
-- **[IMPORTANT]** `GameDetailHero.tsx` (tokens): Hardcoded color utility: bg-amber-700
-  - `token`: `bg-amber-700`
-- **[IMPORTANT]** `GameDetailHero.tsx` (tokens): Hardcoded color utility: bg-emerald-700
-  - `token`: `bg-emerald-700`
-- **[IMPORTANT]** `GameDetailTabsAnimated.tsx` (tokens): Hardcoded color utility: bg-amber-700
-  - `token`: `bg-amber-700`
-- **[IMPORTANT]** `GameDetailSessionsRail.tsx` (tokens): Hardcoded color utility: bg-emerald-700
-  - `token`: `bg-emerald-700`
-- **[IMPORTANT]** `GameDetailAgentsList.tsx` (tokens): Hardcoded color utility: bg-violet-100
-  - `token`: `bg-violet-100`
-- **[IMPORTANT]** `GameDetailAgentsList.tsx` (tokens): Hardcoded color utility: bg-violet-700
-  - `token`: `bg-violet-700`
-- **[IMPORTANT]** `GameDetailAgentsList.tsx` (tokens): Hardcoded color utility: border-rose-300
-  - `token`: `border-rose-300`
-- **[IMPORTANT]** `GameDetailAgentsList.tsx` (tokens): Hardcoded color utility: text-rose-700
-  - `token`: `text-rose-700`
-- **[IMPORTANT]** `GameDetailAgentsList.tsx` (tokens): Hardcoded color utility: text-violet-700
-  - `token`: `text-violet-700`
-- **[IMPORTANT]** `GameDetailKbDocList.tsx` (tokens): Hardcoded color utility: bg-sky-100
-  - `token`: `bg-sky-100`
-- **[IMPORTANT]** `GameDetailKbDocList.tsx` (tokens): Hardcoded color utility: bg-sky-700
-  - `token`: `bg-sky-700`
-- **[IMPORTANT]** `GameDetailKbDocList.tsx` (tokens): Hardcoded color utility: text-sky-700
-  - `token`: `text-sky-700`
 - **[MINOR]** `GameDetailHero.tsx` (tokens): Unpaired text-white (no colored bg on same element)
   - `token`: `text-white`
 - **[MINOR]** `GameDetailSessionsRail.tsx` (tokens): Unpaired text-white (no colored bg on same element)
@@ -132,32 +72,32 @@
   - `token`: `text-white`
 - **[MINOR]** `GameDetailKbDocList.tsx` (tokens): Unpaired text-white (no colored bg on same element)
   - `token`: `text-white`
-- **[MINOR]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Component link not in mockup: doc.href
-  - `component_href`: `doc.href`
-  - `mapped_routes`: `['/games', '/games/[id]/chat']`
 - **[MINOR]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Component link not in mockup: viewAllHref
   - `component_href`: `viewAllHref`
+  - `mapped_routes`: `['/games', '/games/[id]/chat']`
+- **[MINOR]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Component link not in mockup: doc.href
+  - `component_href`: `doc.href`
   - `mapped_routes`: `['/games', '/games/[id]/chat']`
 
 ### Route `/join/event/[code]`
 
-- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /settings (mockup: settings.html)
-  - `expected_route`: `/settings`
-  - `mockup_dest`: `settings.html`
+- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
+  - `expected_route`: `/library/[gameId]/play/game-onboarding`
+  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
   - `component_hrefs`: `['/', '/contact']`
 - **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
   - `expected_route`: `/game-nights/[id]/detail-rsvp`
   - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
   - `component_hrefs`: `['/', '/contact']`
-- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
+- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /settings (mockup: settings.html)
+  - `expected_route`: `/settings`
+  - `mockup_dest`: `settings.html`
   - `component_hrefs`: `['/', '/contact']`
-- **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /
-  - `component_href`: `/`
-  - `mapped_routes`: `['/game-nights/[id]/detail-rsvp', '/library/[gameId]/play/game-onboarding', '/settings']`
 - **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /contact
   - `component_href`: `/contact`
+  - `mapped_routes`: `['/game-nights/[id]/detail-rsvp', '/library/[gameId]/play/game-onboarding', '/settings']`
+- **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /
+  - `component_href`: `/`
   - `mapped_routes`: `['/game-nights/[id]/detail-rsvp', '/library/[gameId]/play/game-onboarding', '/settings']`
 
 ### Route `/library`
@@ -182,13 +122,13 @@
 
 - **[CRITICAL]** `SessionsHero.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\sessions\SessionsHero.tsx`
-- **[CRITICAL]** `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
 - **[CRITICAL]** `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Missing Link to /library/[gameId]/play/resume-picker (mockup: librogame-runthrough-resume-picker.html)
   - `expected_route`: `/library/[gameId]/play/resume-picker`
   - `mockup_dest`: `librogame-runthrough-resume-picker.html`
+  - `component_hrefs`: `[]`
+- **[CRITICAL]** `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
+  - `expected_route`: `/library/[gameId]/play/game-onboarding`
+  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
   - `component_hrefs`: `[]`
 
 ### Route `/sessions/[id]`
@@ -266,62 +206,14 @@
 
 ### Route `/sessions/[id]/live`
 
-- **[CRITICAL]** `LiveTopBar.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
-  - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\LiveTopBar.tsx`
-- **[CRITICAL]** `PlayerRosterLive.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
-  - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\PlayerRosterLive.tsx`
-- **[CRITICAL]** `LiveScoringPanel.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
-  - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\LiveScoringPanel.tsx`
-- **[CRITICAL]** `ActionLogTimeline.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
-  - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\ActionLogTimeline.tsx`
 - **[CRITICAL]** `DesktopBody.tsx` (structural): Missing semantic landmark: <header>
   - `missing`: `header`
   - `mockup_landmarks`: `['aside', 'header']`
   - `component_landmarks`: `['aside', 'main']`
-- **[CRITICAL]** `SessionToolsRail.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
-  - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\SessionToolsRail.tsx`
-- **[CRITICAL]** `LiveAgentChat.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
-  - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\LiveAgentChat.tsx`
-- **[CRITICAL]** `LiveSessionNotes.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
-  - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\LiveSessionNotes.tsx`
-- **[CRITICAL]** `RightColumnTabs.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
-  - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\RightColumnTabs.tsx`
 - **[CRITICAL]** `ActionLogTimeline.tsx, ConnectionLostBanner.tsx, DesktopBody.tsx, LiveAgentChat.tsx, LiveScoringPanel.tsx, LiveSessionNotes.tsx, LiveTopBar.tsx, MobileBody.tsx, PlayerRosterLive.tsx, RightColumnTabs.tsx, SessionToolsRail.tsx, TurnIndicator.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
   - `expected_route`: `/library/[gameId]/play/game-onboarding`
   - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
   - `component_hrefs`: `[]`
-- **[IMPORTANT]** `LiveTopBar.tsx` (tokens): Hardcoded color utility: bg-rose-700
-  - `token`: `bg-rose-700`
-- **[IMPORTANT]** `LiveTopBar.tsx` (tokens): Hardcoded color utility: text-amber-300
-  - `token`: `text-amber-300`
-- **[IMPORTANT]** `LiveTopBar.tsx` (tokens): Hardcoded color utility: text-emerald-300
-  - `token`: `text-emerald-300`
-- **[IMPORTANT]** `LiveTopBar.tsx` (tokens): Hardcoded color utility: text-slate-100
-  - `token`: `text-slate-100`
-- **[IMPORTANT]** `PlayerRosterLive.tsx` (tokens): Hardcoded color utility: text-rose-500
-  - `token`: `text-rose-500`
-- **[IMPORTANT]** `PlayerRosterLive.tsx` (tokens): Hardcoded color utility: text-slate-200
-  - `token`: `text-slate-200`
-- **[IMPORTANT]** `LiveScoringPanel.tsx` (tokens): Hardcoded color utility: text-amber-300
-  - `token`: `text-amber-300`
-- **[IMPORTANT]** `LiveScoringPanel.tsx` (tokens): Hardcoded color utility: text-slate-100
-  - `token`: `text-slate-100`
-- **[IMPORTANT]** `LiveScoringPanel.tsx` (tokens): Hardcoded color utility: text-slate-200
-  - `token`: `text-slate-200`
-- **[IMPORTANT]** `ActionLogTimeline.tsx` (tokens): Hardcoded color utility: text-slate-200
-  - `token`: `text-slate-200`
-- **[IMPORTANT]** `SessionToolsRail.tsx` (tokens): Hardcoded color utility: text-slate-200
-  - `token`: `text-slate-200`
-- **[IMPORTANT]** `SessionToolsRail.tsx` (tokens): Hardcoded color utility: text-slate-300
-  - `token`: `text-slate-300`
-- **[IMPORTANT]** `LiveAgentChat.tsx` (tokens): Hardcoded color utility: placeholder-slate-500
-  - `token`: `placeholder-slate-500`
-- **[IMPORTANT]** `LiveAgentChat.tsx` (tokens): Hardcoded color utility: text-slate-200
-  - `token`: `text-slate-200`
-- **[IMPORTANT]** `LiveSessionNotes.tsx` (tokens): Hardcoded color utility: placeholder-slate-500
-  - `token`: `placeholder-slate-500`
-- **[IMPORTANT]** `LiveSessionNotes.tsx` (tokens): Hardcoded color utility: text-slate-200
-  - `token`: `text-slate-200`
 - **[MINOR]** `LiveTopBar.tsx` (structural): Missing semantic landmark: <aside>
   - `missing`: `aside`
   - `mockup_landmarks`: `['aside', 'header']`

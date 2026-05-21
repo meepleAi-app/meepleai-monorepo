@@ -15,14 +15,16 @@ namespace Api.Tests.Unit.Services;
 public sealed class StorageLayoutOptionsTests
 {
     [Fact]
-    public void Defaults_AreSafeForPhase0Deploy()
+    public void Defaults_MatchPhase4SteadyState()
     {
-        // Phase 0 invariant: a fresh deploy must not trigger any migration
-        // behavior. Defaults are Legacy write + Dual read + migration off.
+        // Phase 4 cleanup (2026-05-21): after the staging migration completed
+        // end-to-end, defaults flipped from Legacy/Dual to New/New. A fresh
+        // deploy now starts at the steady-state new-categorized layout; the
+        // migration drainer remains opt-in.
         var options = new StorageLayoutOptions();
 
-        options.WriteMode.Should().Be(StorageWriteMode.Legacy);
-        options.ReadMode.Should().Be(StorageReadMode.Dual);
+        options.WriteMode.Should().Be(StorageWriteMode.New);
+        options.ReadMode.Should().Be(StorageReadMode.New);
         options.MigrationEnabled.Should().BeFalse();
     }
 

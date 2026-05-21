@@ -41,11 +41,6 @@ export const STEP_2_AUDIT_ROWS: AuditRow[] = [
     path: 'components/collection/CollectionGameGrid.tsx',
   },
   {
-    componentName: 'MeeplePlaylistCard',
-    bc: 'GameManagement',
-    path: 'components/playlists/MeeplePlaylistCard.tsx',
-  },
-  {
     componentName: 'MeepleSessionCard',
     bc: 'SessionTracking',
     path: 'components/session/MeepleSessionCard.tsx',

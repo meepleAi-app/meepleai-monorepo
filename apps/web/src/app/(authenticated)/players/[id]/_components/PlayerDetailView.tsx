@@ -2,7 +2,7 @@
  * PlayerDetailView — Wave 3 (Issue #683) orchestrator for `/players/[id]`.
  *
  * Tier M route — single hook + linear 4-state FSM.
- * Mirrors Wave C.1 GameDetailViewV2 pattern adapted for the player detail surface.
+ * Mirrors Wave C.1 GameDetailView pattern adapted for the player detail surface.
  *
  *   - `usePlayerStatistics()` TanStack hook (single call — current user only;
  *     v1 schema carryover: playerId from URL slug is decorative, decoded as

@@ -1,5 +1,5 @@
 /**
- * /shared-games — client body (V2, Wave A.3b, Issue #596).
+ * /shared-games — client body (Issue #596).
  *
  * Owns:
  *   - i18n resolution (one `useTranslation()` call → all labels resolved upfront)
@@ -35,8 +35,8 @@ import { useSharedGames } from '@/hooks/useSharedGames';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useUrlHashState } from '@/hooks/useUrlHashState';
 import {
-  type GameCategoryV2,
-  type PagedSharedGamesV2,
+  type GameCategory,
+  type PagedSharedGames,
   type TopContributor,
 } from '@/lib/api/shared-games';
 import {
@@ -82,9 +82,9 @@ function parseStateOverride(raw: string | null): SharedGamesGridState | undefine
 }
 
 export interface SharedGamesPageClientProps {
-  readonly initial: PagedSharedGamesV2 | null;
+  readonly initial: PagedSharedGames | null;
   readonly contributors: readonly TopContributor[];
-  readonly categories: readonly GameCategoryV2[];
+  readonly categories: readonly GameCategory[];
 }
 
 function chipsSerialize(chips: readonly ChipKey[]): string | null {

@@ -1,5 +1,5 @@
 /**
- * Barrel export for /sessions/[id] summary v2 components (Wave D.3, Issue #756).
+ * Barrel export for /sessions/[id] summary feature components (Wave D.3, Issue #756).
  *
  * Single import point for the orchestrator SessionSummaryView and E2E specs.
  * All components are pure (no `useTranslation`) — labels injected by the

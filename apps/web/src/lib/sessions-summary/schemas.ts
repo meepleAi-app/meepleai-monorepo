@@ -16,7 +16,7 @@
  * Used by:
  *   - `apps/web/src/lib/sessions-summary/visual-test-fixture.ts`
  *   - `apps/web/src/lib/sessions-summary/fsm.ts` (cell input)
- *   - `apps/web/src/components/v2/session-summary/AchievementsCarousel.tsx` (Task 2)
+ *   - `apps/web/src/components/features/session-summary/AchievementsCarousel.tsx` (Task 2)
  *   - `apps/web/src/hooks/queries/useSessionAchievements.ts` (Task 1.1, Task 3)
  */
 

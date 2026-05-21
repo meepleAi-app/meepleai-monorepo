@@ -8,7 +8,7 @@ import { SearchOverlay } from '@/components/layout/SearchOverlay';
 import { SideDrawer } from '@/components/layout/SideDrawer/SideDrawer';
 
 import { SessionBanner } from './SessionBanner';
-import { TopBarV2 } from './TopBarV2';
+import { TopBar } from './TopBar';
 
 interface DesktopShellProps {
   children: ReactNode;
@@ -20,7 +20,7 @@ export function DesktopShell({ children }: DesktopShellProps) {
 
   return (
     <div className="min-h-dvh flex flex-col bg-[var(--bg)]">
-      <TopBarV2
+      <TopBar
         onHamburgerClick={() => setDrawerOpen(true)}
         onSearchClick={() => setSearchOpen(true)}
       />

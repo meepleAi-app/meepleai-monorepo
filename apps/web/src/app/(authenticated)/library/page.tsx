@@ -1,10 +1,10 @@
 /**
  * User Library Page
- * Issue #574 — Wave B.3 v2 brownfield migration
+ * Issue #574 — Wave B.3 brownfield migration
  *
- * Renders LibraryHubV2 (responsive single-tree: hero + tabs + toolbar +
+ * Renders LibraryHub (responsive single-tree: hero + tabs + toolbar +
  * LibraryHybridGrid + RecentActivityRail). Mobile/desktop responsive
- * behaviour lives inside the v2 components themselves, mirroring Wave
+ * behaviour lives inside the feature components themselves, mirroring Wave
  * B.1 (`/games?tab=library`) and Wave B.2 (`/agents`) pattern.
  *
  * MiniNav tabs + ActionBar are registered by layout.tsx via LibraryNavConfig.

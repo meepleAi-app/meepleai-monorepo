@@ -7,7 +7,7 @@
  *
  * Phase 1 contract (locked by AC-7):
  *   No backend endpoint `GET /api/v1/library/activity` exists yet, so the
- *   orchestrator (LibraryHubV2) ALWAYS passes `items={[]}`. The component
+ *   orchestrator (LibraryHub) ALWAYS passes `items={[]}`. The component
  *   renders the placeholder copy "Activity feed prossimamente". A loading
  *   variant (`isLoading`) renders 3 skeleton lines so the sidebar reserves
  *   space and avoids layout shift if/when the endpoint lands in Phase 2.

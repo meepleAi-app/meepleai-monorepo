@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * /faq — public FAQ page (V2, Wave A.1, Issue #583).
+ * /faq — public FAQ page (Issue #583).
  *
  * Migrated from v1 (legacy Accordion + 4 hardcoded categories) to v2 with:
  *   - FAQSearchBar pill input with hash-driven query (?#q=...)

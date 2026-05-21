@@ -1,5 +1,5 @@
 /**
- * Barrel for /game-nights v2 components (SP4 #1170 commit 2).
+ * Barrel for /game-nights feature components (SP4 #1170 commit 2).
  *
  * Components are pure-presentational; orchestrator (Commit 3) resolves
  * i18n via `useTranslations` and passes labels through props.

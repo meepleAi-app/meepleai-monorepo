@@ -6,7 +6,7 @@
  *
  * Pure component (mirror Wave B.2 AgentsHero):
  *   labels and stats injected via props — no `useTranslation` import. The
- *   orchestrator (LibraryHubV2) owns i18n resolution and passes resolved
+ *   orchestrator (LibraryHub) owns i18n resolution and passes resolved
  *   strings down. This keeps the component renderable without IntlProvider in
  *   tests and storybook.
  *

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 
 import { DashboardSection } from './DashboardSection';
+import { EmptySection } from './EmptySection';
 
 export interface PlayerEntry {
   readonly name: string;
@@ -30,13 +31,13 @@ export interface PlayersAvatarListProps {
   readonly onEmptyCtaClick?: (sectionId: string, ctaHref: string) => void;
 }
 
-const AVATAR_TINTS = [
-  'bg-[hsl(var(--c-player)/0.18)] text-[hsl(var(--c-player))]',
-  'bg-[hsl(var(--c-game)/0.18)] text-[hsl(var(--c-game))]',
-  'bg-[hsl(var(--c-toolkit)/0.18)] text-[hsl(var(--c-toolkit))]',
-  'bg-[hsl(var(--c-event)/0.18)] text-[hsl(var(--c-event))]',
-  'bg-[hsl(var(--c-agent)/0.18)] text-[hsl(var(--c-agent))]',
-];
+/** Deterministic gradient from player colorIndex (matches mockup `grad(h,s)`). */
+function avatarGradient(seed: number): string {
+  const h = Math.abs(seed) % 360;
+  const h2 = (h + 340) % 360;
+  const h3 = (h + 30) % 360;
+  return `linear-gradient(135deg, hsl(${h}, 60%, 55%), hsl(${h2}, 40%, 30%) 60%, hsl(${h3}, 50%, 40%))`;
+}
 
 export function PlayersAvatarList({
   players,
@@ -46,49 +47,57 @@ export function PlayersAvatarList({
   onEmptyCtaClick,
 }: PlayersAvatarListProps) {
   const visible = players.slice(0, 5);
+  const totalShown = Math.max(totalCount, visible.length);
 
   return (
     <DashboardSection
       sectionId="players"
-      icon="👥"
+      entity="player"
+      icon="👤"
       title={labels.title}
-      count={totalCount}
+      count={totalShown}
       viewAllLabel={labels.viewAllLabel}
       viewAllHref={labels.viewAllHref}
       onViewAllClick={onViewAllClick}
     >
       {visible.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-3 py-6 text-center">
-          <span aria-hidden="true" className="text-3xl">
-            👥
-          </span>
-          <p className="text-sm text-muted-foreground">{labels.emptyTitle}</p>
-          <Link
-            href={labels.emptyCtaHref}
-            onClick={() => onEmptyCtaClick?.('players', labels.emptyCtaHref)}
-            className="mt-1 inline-flex items-center rounded-lg bg-foreground px-3 py-1.5 font-bold font-[Quicksand] text-xs text-background"
-          >
-            {labels.emptyCta}
-          </Link>
-        </div>
+        <EmptySection
+          entity="player"
+          icon="👤"
+          message={labels.emptyTitle}
+          cta={labels.emptyCta}
+          ctaHref={labels.emptyCtaHref}
+          onCtaClick={() => onEmptyCtaClick?.('players', labels.emptyCtaHref)}
+        />
       ) : (
-        <div className="flex items-center gap-2 overflow-hidden">
-          <div className="flex -space-x-2">
-            {visible.map(p => (
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {visible.map(p => (
+            <Link
+              key={p.name}
+              href="/players"
+              data-slot="dashboard-player-avatar"
+              title={p.name}
+              className="flex flex-col items-center gap-1 no-underline"
+            >
               <div
-                key={p.name}
-                title={p.name}
-                data-slot="dashboard-player-avatar"
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-card font-bold font-[Quicksand] text-xs ${AVATAR_TINTS[p.colorIndex % AVATAR_TINTS.length]}`}
+                aria-hidden="true"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-card font-quicksand text-sm font-extrabold text-[#fff] sm:h-[52px] sm:w-[52px] sm:text-base"
+                style={{
+                  background: avatarGradient(p.colorIndex),
+                  boxShadow: '0 2px 8px hsl(var(--c-player) / 0.25)',
+                }}
               >
                 {p.initials}
               </div>
-            ))}
-          </div>
-          <div className="ml-2 inline-flex items-center rounded-full bg-muted/60 px-2 py-1 font-mono text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">
+              <div className="max-w-[50px] truncate font-quicksand text-[10px] font-bold text-foreground sm:max-w-[60px]">
+                {p.name.split(' ')[0]}
+              </div>
+            </Link>
+          ))}
+          <div className="ml-auto flex items-center font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
             {labels.countTemplate
               .replace('{visible}', String(visible.length))
-              .replace('{total}', String(Math.max(totalCount, visible.length)))}
+              .replace('{total}', String(totalShown))}
           </div>
         </div>
       )}

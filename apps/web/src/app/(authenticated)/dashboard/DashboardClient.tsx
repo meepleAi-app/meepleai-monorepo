@@ -8,8 +8,9 @@
  * Events) in a responsive grid (mobile stacked, desktop 2×2 + Events full-width
  * row). Players are derived from `useActiveSessions` (no list endpoint).
  *
- * Pattern: pure orchestrator, no business logic. Each section is a sibling
- * route-private component under `_components/sections/`.
+ * Pixel-faithful to admin-mockups/design_files/sp4-dashboard.jsx — handles
+ * default / empty / loading / error states. Hero edge-to-edge with internal
+ * padding; sections grid padded 16/32px (mobile/desktop).
  */
 
 'use client';
@@ -27,9 +28,11 @@ import { trackEvent } from '@/lib/analytics/track-event';
 
 import { DashboardHero, type DashboardHeroKpi } from './_components/DashboardHero';
 import { AgentsCompactGrid } from './_components/sections/AgentsCompactGrid';
+import { ErrorBanner } from './_components/sections/ErrorBanner';
 import { EventsList, type EventListItem } from './_components/sections/EventsList';
 import { GamesCarousel } from './_components/sections/GamesCarousel';
 import { PlayersAvatarList, type PlayerEntry } from './_components/sections/PlayersAvatarList';
+import { SectionSkeleton } from './_components/sections/SectionSkeleton';
 import {
   SessionsTimeline,
   type SessionTimelineItem,
@@ -72,6 +75,38 @@ export function DashboardClient(): ReactElement {
   const agentsQuery = useAgents();
   const eventsQuery = useUpcomingGameNights();
   const statsQuery = useLibraryStats();
+
+  // ── Aggregate loading / error state ───────────────────────────────────────
+  const isInitialLoading =
+    gamesQuery.isLoading &&
+    sessionsQuery.isLoading &&
+    agentsQuery.isLoading &&
+    eventsQuery.isLoading &&
+    statsQuery.isLoading;
+
+  const hasAnyData =
+    (gamesQuery.data?.games?.length ?? 0) > 0 ||
+    (sessionsQuery.data?.sessions?.length ?? 0) > 0 ||
+    (agentsQuery.data?.length ?? 0) > 0 ||
+    (eventsQuery.data?.length ?? 0) > 0 ||
+    (statsQuery.data?.totalGames ?? 0) > 0;
+
+  const hasAnyError =
+    Boolean(gamesQuery.isError) ||
+    Boolean(sessionsQuery.isError) ||
+    Boolean(agentsQuery.isError) ||
+    Boolean(eventsQuery.isError) ||
+    Boolean(statsQuery.isError);
+
+  const showErrorBanner = !isInitialLoading && hasAnyError && !hasAnyData;
+
+  const handleRetry = useCallback(() => {
+    gamesQuery.refetch();
+    sessionsQuery.refetch();
+    agentsQuery.refetch();
+    eventsQuery.refetch();
+    statsQuery.refetch();
+  }, [gamesQuery, sessionsQuery, agentsQuery, eventsQuery, statsQuery]);
 
   // ── Derive Players from sessions (no list endpoint per AC0 Path C) ───────
   const players = useMemo<ReadonlyArray<PlayerEntry>>(() => {
@@ -123,9 +158,8 @@ export function DashboardClient(): ReactElement {
     () => ({
       games: statsQuery.data?.totalGames ?? 0,
       sessions: sessionsQuery.data?.total ?? undefined,
-      // Hours-played and win-rate not yet exposed by useLibraryStats — fallback.
-      hoursPlayed: undefined,
-      winRate: undefined,
+      hoursPlayed: undefined, // not yet exposed by backend
+      winRate: undefined, // not yet exposed by backend
     }),
     [statsQuery.data, sessionsQuery.data]
   );
@@ -151,11 +185,14 @@ export function DashboardClient(): ReactElement {
     kpiWinRate: t('pages.dashboard.hero.kpiWinRate'),
   };
 
+  const errorLabels = {
+    title: t('pages.dashboard.error.title'),
+    message: t('pages.dashboard.error.message'),
+    retry: t('pages.dashboard.error.retry'),
+  };
+
   return (
-    <main
-      data-slot="dashboard-client"
-      className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-4 sm:gap-5 sm:px-6 sm:py-6"
-    >
+    <main data-slot="dashboard-client" className="flex w-full flex-col">
       <DashboardHero
         userName={user?.displayName ?? user?.email ?? t('pages.dashboard.hero.guestName')}
         kpi={kpi}
@@ -164,94 +201,109 @@ export function DashboardClient(): ReactElement {
 
       <div
         data-slot="dashboard-sections-grid"
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4"
+        className="grid grid-cols-1 gap-3 px-4 py-3.5 pb-16 sm:grid-cols-2 sm:gap-4 sm:px-8 sm:py-6"
       >
-        <GamesCarousel
-          games={gamesQuery.data?.games ?? []}
-          totalCount={statsQuery.data?.totalGames ?? 0}
-          labels={{
-            title: t('pages.dashboard.sections.games.title'),
-            viewAllLabel: t('pages.dashboard.sections.games.viewAll'),
-            viewAllHref: '/library',
-            emptyTitle: t('pages.dashboard.sections.games.emptyTitle'),
-            emptyCta: t('pages.dashboard.sections.games.emptyCta'),
-            emptyCtaHref: '/library/add',
-          }}
-          onViewAllClick={handleSectionViewAll}
-          onEmptyCtaClick={handleEmptyCta}
-        />
+        {isInitialLoading ? (
+          <>
+            <SectionSkeleton bodyMinHeight={160} />
+            <SectionSkeleton bodyMinHeight={160} />
+            <SectionSkeleton bodyMinHeight={160} />
+            <SectionSkeleton bodyMinHeight={160} />
+            <SectionSkeleton bodyMinHeight={120} fullWidth />
+          </>
+        ) : showErrorBanner ? (
+          <ErrorBanner labels={errorLabels} onRetry={handleRetry} />
+        ) : (
+          <>
+            <GamesCarousel
+              games={gamesQuery.data?.games ?? []}
+              totalCount={statsQuery.data?.totalGames ?? 0}
+              labels={{
+                title: t('pages.dashboard.sections.games.title'),
+                viewAllLabel: t('pages.dashboard.sections.games.viewAll'),
+                viewAllHref: '/library',
+                emptyTitle: t('pages.dashboard.sections.games.emptyTitle'),
+                emptyCta: t('pages.dashboard.sections.games.emptyCta'),
+                emptyCtaHref: '/library/add',
+              }}
+              onViewAllClick={handleSectionViewAll}
+              onEmptyCtaClick={handleEmptyCta}
+            />
 
-        <PlayersAvatarList
-          players={players}
-          totalCount={players.length}
-          labels={{
-            title: t('pages.dashboard.sections.players.title'),
-            viewAllLabel: t('pages.dashboard.sections.players.viewAll'),
-            viewAllHref: '/players',
-            countTemplate: t('pages.dashboard.sections.players.countTemplate'),
-            emptyTitle: t('pages.dashboard.sections.players.emptyTitle'),
-            emptyCta: t('pages.dashboard.sections.players.emptyCta'),
-            emptyCtaHref: '/players',
-          }}
-          onViewAllClick={handleSectionViewAll}
-          onEmptyCtaClick={handleEmptyCta}
-        />
+            <PlayersAvatarList
+              players={players}
+              totalCount={players.length}
+              labels={{
+                title: t('pages.dashboard.sections.players.title'),
+                viewAllLabel: t('pages.dashboard.sections.players.viewAll'),
+                viewAllHref: '/players',
+                countTemplate: t('pages.dashboard.sections.players.countTemplate'),
+                emptyTitle: t('pages.dashboard.sections.players.emptyTitle'),
+                emptyCta: t('pages.dashboard.sections.players.emptyCta'),
+                emptyCtaHref: '/players',
+              }}
+              onViewAllClick={handleSectionViewAll}
+              onEmptyCtaClick={handleEmptyCta}
+            />
 
-        <AgentsCompactGrid
-          agents={agentsQuery.data ?? []}
-          labels={{
-            title: t('pages.dashboard.sections.agents.title'),
-            viewAllLabel: t('pages.dashboard.sections.agents.viewAll'),
-            viewAllHref: '/agents',
-            statusActive: t('pages.dashboard.sections.agents.statusActive'),
-            statusIdle: t('pages.dashboard.sections.agents.statusIdle'),
-            emptyTitle: t('pages.dashboard.sections.agents.emptyTitle'),
-            emptyCta: t('pages.dashboard.sections.agents.emptyCta'),
-            emptyCtaHref: '/hub/agents',
-          }}
-          onViewAllClick={handleSectionViewAll}
-          onEmptyCtaClick={handleEmptyCta}
-        />
+            <AgentsCompactGrid
+              agents={agentsQuery.data ?? []}
+              labels={{
+                title: t('pages.dashboard.sections.agents.title'),
+                viewAllLabel: t('pages.dashboard.sections.agents.viewAll'),
+                viewAllHref: '/agents',
+                statusActive: t('pages.dashboard.sections.agents.statusActive'),
+                statusIdle: t('pages.dashboard.sections.agents.statusIdle'),
+                callsTemplate: t('pages.dashboard.sections.agents.callsTemplate'),
+                emptyTitle: t('pages.dashboard.sections.agents.emptyTitle'),
+                emptyCta: t('pages.dashboard.sections.agents.emptyCta'),
+                emptyCtaHref: '/hub/agents',
+              }}
+              onViewAllClick={handleSectionViewAll}
+              onEmptyCtaClick={handleEmptyCta}
+            />
 
-        <SessionsTimeline
-          sessions={sessionItems}
-          totalCount={sessionsQuery.data?.total ?? 0}
-          labels={{
-            title: t('pages.dashboard.sections.sessions.title'),
-            liveBadge: t('pages.dashboard.sections.sessions.liveBadge'),
-            viewAllLabel: t('pages.dashboard.sections.sessions.viewAll'),
-            viewAllHref: '/sessions',
-            playerCountTemplate: t('pages.dashboard.sections.sessions.playerCountTemplate'),
-            minutesTemplate: t('pages.dashboard.sections.sessions.minutesTemplate'),
-            emptyTitle: t('pages.dashboard.sections.sessions.emptyTitle'),
-            emptyCta: t('pages.dashboard.sections.sessions.emptyCta'),
-            emptyCtaHref: '/sessions/new',
-            statusLabels: {
-              live: t('pages.dashboard.sections.sessions.statusLive'),
-              completed: t('pages.dashboard.sections.sessions.statusCompleted'),
-              paused: t('pages.dashboard.sections.sessions.statusPaused'),
-              setup: t('pages.dashboard.sections.sessions.statusSetup'),
-              abandoned: t('pages.dashboard.sections.sessions.statusAbandoned'),
-            },
-          }}
-          onViewAllClick={handleSectionViewAll}
-          onEmptyCtaClick={handleEmptyCta}
-        />
+            <SessionsTimeline
+              sessions={sessionItems}
+              totalCount={sessionsQuery.data?.total ?? 0}
+              labels={{
+                title: t('pages.dashboard.sections.sessions.title'),
+                liveBadge: t('pages.dashboard.sections.sessions.liveBadge'),
+                viewAllLabel: t('pages.dashboard.sections.sessions.viewAll'),
+                viewAllHref: '/sessions',
+                playerCountTemplate: t('pages.dashboard.sections.sessions.playerCountTemplate'),
+                minutesTemplate: t('pages.dashboard.sections.sessions.minutesTemplate'),
+                emptyTitle: t('pages.dashboard.sections.sessions.emptyTitle'),
+                emptyCta: t('pages.dashboard.sections.sessions.emptyCta'),
+                emptyCtaHref: '/sessions/new',
+                statusLabels: {
+                  live: t('pages.dashboard.sections.sessions.statusLive'),
+                  completed: t('pages.dashboard.sections.sessions.statusCompleted'),
+                  paused: t('pages.dashboard.sections.sessions.statusPaused'),
+                  setup: t('pages.dashboard.sections.sessions.statusSetup'),
+                  abandoned: t('pages.dashboard.sections.sessions.statusAbandoned'),
+                },
+              }}
+              onViewAllClick={handleSectionViewAll}
+              onEmptyCtaClick={handleEmptyCta}
+            />
 
-        <EventsList
-          events={eventItems}
-          labels={{
-            title: t('pages.dashboard.sections.events.title'),
-            viewAllLabel: t('pages.dashboard.sections.events.viewAll'),
-            viewAllHref: '/game-nights',
-            participantsTemplate: t('pages.dashboard.sections.events.participantsTemplate'),
-            emptyTitle: t('pages.dashboard.sections.events.emptyTitle'),
-            emptyCta: t('pages.dashboard.sections.events.emptyCta'),
-            emptyCtaHref: '/game-nights/new',
-          }}
-          onViewAllClick={handleSectionViewAll}
-          onEmptyCtaClick={handleEmptyCta}
-        />
+            <EventsList
+              events={eventItems}
+              labels={{
+                title: t('pages.dashboard.sections.events.title'),
+                viewAllLabel: t('pages.dashboard.sections.events.viewAll'),
+                viewAllHref: '/game-nights',
+                participantsTemplate: t('pages.dashboard.sections.events.participantsTemplate'),
+                emptyTitle: t('pages.dashboard.sections.events.emptyTitle'),
+                emptyCta: t('pages.dashboard.sections.events.emptyCta'),
+                emptyCtaHref: '/game-nights/new',
+              }}
+              onViewAllClick={handleSectionViewAll}
+              onEmptyCtaClick={handleEmptyCta}
+            />
+          </>
+        )}
       </div>
     </main>
   );

@@ -1,7 +1,7 @@
 /**
  * GamesLibraryView — Wave B.1 (Issue #633) orchestrator for `/games?tab=library`.
  *
- * Composes the 4 v2 components introduced in Commit 2 with:
+ * Composes the 4 feature components introduced in Commit 2 with:
  *   - `useLibrary` TanStack hook (real fetch, cached 2min staleTime)
  *   - i18n labels resolved upfront via a single `useTranslation()`
  *   - 4 derivation pipelines (filterByStatus → matchQuery → sortLibraryEntries

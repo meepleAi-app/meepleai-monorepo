@@ -916,7 +916,7 @@ export function useLibraryGameDetail(
         // The detail page must render for ANY shared_game so the user can
         // see metadata and click "Aggiungi alla libreria". The sentinel
         // libraryEntryId === '' signals heroVariant === 'community' downstream
-        // (GameDetailViewV2 uses truthy check on libraryEntryId).
+        // (GameDetailView uses truthy check on libraryEntryId).
         if (!sharedGame) {
           // Genuine not-found: neither library entry nor catalog record.
           return null;

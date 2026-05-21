@@ -4,7 +4,7 @@
  * Mirrors Wave B.1 GamesLibraryView tests: stub `useAgents` + `next/navigation`
  * search params + i18n via IntlProvider seeded with the actual `pages.agents.*`
  * keys from `it.json`. The orchestrator is the only stateful piece — the 4
- * v2 components (AgentsHero, AgentFilters, AgentsResultsGrid, EmptyAgents) are
+ * feature components (AgentsHero, AgentFilters, AgentsResultsGrid, EmptyAgents) are
  * pure label-driven (covered separately).
  *
  * Contract under test (spec §3.4 + plan §5.1):

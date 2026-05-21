@@ -1,5 +1,5 @@
 /**
- * Agent Detail Page — Wave C.2 v2 brownfield migration (Issue #581).
+ * Agent Detail Page — Wave C.2 brownfield migration (Issue #581).
  *
  * CONVERTED: server component → client thin shell (mirror Wave C.1 pattern).
  *
@@ -14,7 +14,7 @@
  * AFTER (Wave C.2 client thin shell):
  *   - `useParams` for agentId (pre-hydration safe normalization)
  *   - agentId normalized to string|null (NEVER undefined or 'undefined' string)
- *   - delegates entirely to AgentDetailViewV2 orchestrator
+ *   - delegates entirely to AgentDetailView orchestrator
  *   - No server-side data fetching, no notFound(), no generateMetadata
  *
  * Phase 0.5 contract sez. 2.1 — agentId normalization:
@@ -24,14 +24,14 @@
  * AgentCharacterSheet legacy component is no longer used here (kept as
  * deprecated for backward compat in components/agent/AgentCharacterSheet.tsx).
  *
- * Refs #581 (Wave C umbrella — /agents/[id] v2 brownfield).
+ * Refs #581 (Wave C umbrella — /agents/[id] brownfield).
  */
 
 'use client';
 
 import { useParams } from 'next/navigation';
 
-import { AgentDetailViewV2 } from './_components/AgentDetailViewV2';
+import { AgentDetailView } from './_components/AgentDetailView';
 
 export default function AgentPage() {
   const params = useParams<{ id: string }>();
@@ -42,5 +42,5 @@ export default function AgentPage() {
   const rawId = params?.id;
   const agentId = typeof rawId === 'string' && rawId.length > 0 ? rawId : null;
 
-  return <AgentDetailViewV2 agentId={agentId} />;
+  return <AgentDetailView agentId={agentId} />;
 }

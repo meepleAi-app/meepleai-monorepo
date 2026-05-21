@@ -58,7 +58,6 @@ import {
   createGameNightBggClient,
   createTierClient,
   createSessionInviteClient,
-  createPlaylistsClient,
   createWishlistClient,
   createPlayRecordsClient,
   createFeatureFlagsClient,
@@ -110,7 +109,6 @@ import {
   type GameNightBggClient,
   type TierClient,
   type SessionInviteClient,
-  type PlaylistsClient,
   type WishlistClient,
   type PlayRecordsClient,
   type FeatureFlagsClient,
@@ -326,9 +324,6 @@ export interface ApiClient {
   /** Session Invites (Game Night Improvvisata) */
   sessionInvites: SessionInviteClient;
 
-  /** Game Night Playlists — Gap Closure */
-  playlists: PlaylistsClient;
-
   /** Wishlist */
   wishlist: WishlistClient;
 
@@ -456,7 +451,6 @@ export function createApiClient(config?: ApiClientConfig): ApiClient {
     gameNightBgg: createGameNightBggClient({ httpClient }), // Game Night Improvvisata
     tiers: createTierClient({ httpClient }), // Game Night Improvvisata — Tier & Usage
     sessionInvites: createSessionInviteClient({ httpClient }), // Game Night Improvvisata — Session Invites
-    playlists: createPlaylistsClient({ httpClient }), // Gap Closure — Playlists
     wishlist: createWishlistClient({ httpClient }), // Wishlist
     playRecords: createPlayRecordsClient({ httpClient }), // Play Records
     featureFlags: createFeatureFlagsClient({ httpClient }), // User Feature Flags

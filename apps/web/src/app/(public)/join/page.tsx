@@ -1,5 +1,5 @@
 /**
- * /join — public Alpha-program waitlist enrollment (V2, Wave A.2, Issue #589).
+ * /join — public Alpha-program waitlist enrollment (Issue #589).
  *
  * Server component shell — exports `metadata` for SEO/social cards (IT) and
  * renders the client body inside a Suspense boundary. We avoid a nested

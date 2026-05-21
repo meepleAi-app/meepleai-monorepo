@@ -51,7 +51,7 @@
  * Gate A (ICU plural): all label strings resolved here via `useTranslation().t()`
  *   with `valuesOrDefault`. Pure components receive pre-resolved strings.
  *
- * Gate C (MeepleCard fit): all 11 v2 components DIVERGE per Task 2 audit.
+ * Gate C (MeepleCard fit): all 11 feature components DIVERGE per Task 2 audit.
  *
  * Pattern blueprint: Wave D.2 SessionLiveView orchestrator (read+write+lazy).
  * D.3 differs in: 4-hook compose (vs 1-hook D.2 Foundation), brownfield FORK

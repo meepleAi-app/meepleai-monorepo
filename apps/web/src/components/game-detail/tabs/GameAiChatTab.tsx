@@ -2,23 +2,22 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { GameChatTabV2 } from '@/components/features/game-chat';
+import { GameChatTab } from '@/components/features/game-chat';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 import type { GameTabProps } from './types';
 
 /**
- * AI Chat tab — V2 (G1+G5).
+ * AI Chat tab (G1+G5).
  *
- * Sostituisce il vecchio summary panel V1 con un chat-in-game inline diretto:
- * l'utente Alpha durante una serata di gioco apre il tab e può chattare
- * subito, senza aprire drawer separati.
+ * Chat-in-game inline diretto: l'utente Alpha durante una serata di gioco
+ * apre il tab e può chattare subito, senza aprire drawer separati.
  *
  * Stati:
  *   - isNotInLibrary → empty state (aggiungi alla libreria)
  *   - no KB → empty state (carica PDF)
- *   - KB ready/processing → <GameChatTabV2/> inline
+ *   - KB ready/processing → <GameChatTab/> inline
  *
  * Spec: docs/superpowers/specs/2026-05-09-game-chat-tab-v1-g5-design.md
  * Issue: #915
@@ -67,10 +66,10 @@ export function GameAiChatTab({ gameId, variant, isNotInLibrary }: GameTabProps)
     );
   }
 
-  // ---- Stato 3: KB ready or processing → chat V2 inline ----
+  // ---- Stato 3: KB ready or processing → chat inline ----
   return (
     <div role="tabpanel" aria-labelledby="game-tab-aiChat" className="flex h-full flex-col">
-      <GameChatTabV2 gameId={gameId} gameTitle={gameDetail?.title ?? 'Gioco'} gameIcon="🎲" />
+      <GameChatTab gameId={gameId} gameTitle={gameDetail?.title ?? 'Gioco'} gameIcon="🎲" />
     </div>
   );
 }

@@ -18,7 +18,7 @@ import { useSearchParams } from 'next/navigation';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { useTranslation } from '@/hooks/useTranslation';
-import { searchSharedGames, type SharedGameV2 } from '@/lib/api/shared-games';
+import { searchSharedGames, type SharedGame } from '@/lib/api/shared-games';
 
 import { PhotoUploader } from './PhotoUploader';
 
@@ -29,7 +29,7 @@ type Step = 'pick-game' | 'upload';
 // ── Sub-component: game picker ────────────────────────────────────────────────
 
 interface GamePickerProps {
-  onSelect: (game: SharedGameV2) => void;
+  onSelect: (game: SharedGame) => void;
 }
 
 function GamePicker({ onSelect }: GamePickerProps): JSX.Element {
@@ -147,7 +147,7 @@ export function GamebookUploadClient(): JSX.Element {
   const [gameId, setGameId] = useState<string | null>(initialGameId);
   const [gameTitle, setGameTitle] = useState<string | null>(null);
 
-  const handleGameSelect = useCallback((game: SharedGameV2) => {
+  const handleGameSelect = useCallback((game: SharedGame) => {
     setGameId(game.id);
     setGameTitle(game.title);
     setStep('upload');

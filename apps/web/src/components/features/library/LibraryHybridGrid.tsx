@@ -7,7 +7,7 @@
  *
  * Single-handler click contract:
  *   The grid never decides toggle vs drill-into. It just calls
- *   `onCardClick(entry.id)` and the orchestrator (`LibraryHubV2`) dispatches
+ *   `onCardClick(entry.id)` and the orchestrator (`LibraryHub`) dispatches
  *   based on `selectionMode`:
  *     - browse → push detail route
  *     - select → toggle membership in `selected` Set

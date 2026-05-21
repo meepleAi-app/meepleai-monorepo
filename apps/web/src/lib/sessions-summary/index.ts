@@ -2,7 +2,7 @@
  * Barrel re-exports for `/sessions/[id]` summary lib (Wave D.3).
  *
  * Consumed by:
- *   - 11 v2 components in `apps/web/src/components/v2/session-summary/` (Task 2)
+ *   - 11 feature components in `apps/web/src/components/features/session-summary/` (Task 2)
  *   - Orchestrator `SessionSummaryView.tsx` (Task 3)
  *   - E2E specs in `apps/web/e2e/` (Task 4)
  */

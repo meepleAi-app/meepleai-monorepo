@@ -2,7 +2,7 @@
  * NewGameNightContent — client-side orchestrator for `/game-nights/new`.
  *
  * Issue #950 W3 Commit 3. Spec §11 AC-O.1 through AC-O.5:
- *   - O.1: GameNightCreateWizard composed with all 6 v2 components
+ *   - O.1: GameNightCreateWizard composed with all 6 feature components
  *   - O.2: page.tsx swaps the legacy form for this wizard
  *   - O.3: URL `?step=N` sync (URL → reducer on mount; reducer → URL on goToStep)
  *   - O.4: Autosave hook + restore + clear-on-success

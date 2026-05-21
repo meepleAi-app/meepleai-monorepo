@@ -1,7 +1,7 @@
 /**
  * Wave C.1 (Issue #581) — `/games/[id]` v2 component family barrel.
  *
- * Centralised re-exports so `GameDetailViewV2` (Task 3) and downstream
+ * Centralised re-exports so `GameDetailView` (Task 3) and downstream
  * page-clients can import from `@/components/features/game-detail` without churning
  * deep paths.
  */

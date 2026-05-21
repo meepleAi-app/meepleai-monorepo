@@ -6,7 +6,7 @@
  * in CI → the surface stays in `loading` forever → no screenshot.
  *
  * **Contract**: when env var `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1'`
- * is baked into the build, the orchestrator (LibraryHubV2) substitutes the
+ * is baked into the build, the orchestrator (LibraryHub) substitutes the
  * fixture for the real fetch and renders deterministic entries.
  *
  * **Production safety**: production builds do NOT set the env var. The

@@ -191,7 +191,7 @@ describe('isUnifiedNavItemActive', () => {
     const library = UNIFIED_NAV_ITEMS.find(item => item.id === 'library')!;
     expect(isUnifiedNavItemActive(library, '/library')).toBe(true);
     expect(isUnifiedNavItemActive(library, '/library/private')).toBe(true);
-    expect(isUnifiedNavItemActive(library, '/library/proposals')).toBe(true);
+    expect(isUnifiedNavItemActive(library, '/library/wishlist')).toBe(true);
   });
 
   it('matches prefix for chat', () => {

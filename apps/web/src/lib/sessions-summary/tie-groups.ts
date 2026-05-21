@@ -25,8 +25,8 @@
  *     the actual `ParticipantDto` schema.
  *
  * Used by:
- *   - `apps/web/src/components/v2/session-summary/SummaryHeroPodium.tsx` (Task 2)
- *   - `apps/web/src/components/v2/session-summary/ScoringBreakdownTable.tsx` (Task 2)
+ *   - `apps/web/src/components/features/session-summary/SummaryHeroPodium.tsx` (Task 2)
+ *   - `apps/web/src/components/features/session-summary/ScoringBreakdownTable.tsx` (Task 2)
  *   - `apps/web/src/app/(authenticated)/sessions/[id]/_components/SessionSummaryView.tsx` (Task 3)
  */
 

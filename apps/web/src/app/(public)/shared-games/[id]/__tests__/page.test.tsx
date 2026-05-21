@@ -21,7 +21,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { SharedGameDetailV2, TopContributor } from '@/lib/api/shared-games';
+import type { SharedGameDetail, TopContributor } from '@/lib/api/shared-games';
 import { t } from '@/test-utils/test-i18n';
 
 // Single source of truth for SSR metadata fallbacks (Wave A.4 / Issue #617).
@@ -65,7 +65,7 @@ vi.mock('../page-client', () => ({
     contributors,
   }: {
     id: string;
-    detail: SharedGameDetailV2;
+    detail: SharedGameDetail;
     contributors: readonly TopContributor[];
   }) => (
     <div
@@ -101,7 +101,7 @@ const mockNotFound = notFound as ReturnType<typeof vi.fn>;
 
 const SAMPLE_ID = '11111111-1111-1111-1111-111111111111';
 
-const SAMPLE_DETAIL: SharedGameDetailV2 = {
+const SAMPLE_DETAIL: SharedGameDetail = {
   id: SAMPLE_ID,
   bggId: 13,
   title: 'Catan',

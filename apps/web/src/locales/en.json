@@ -1815,6 +1815,7 @@
           "viewAll": "All",
           "statusActive": "Active",
           "statusIdle": "Idle",
+          "callsTemplate": "{count} call",
           "emptyTitle": "No active AI agents.",
           "emptyCta": "Explore /hub/agents"
         },
@@ -1840,6 +1841,11 @@
           "emptyTitle": "No game nights planned.",
           "emptyCta": "+ Plan a night"
         }
+      },
+      "error": {
+        "title": "Unable to load dashboard",
+        "message": "A network error occurred. Check your connection and try again.",
+        "retry": "Retry"
       }
     },
     "toolkitDetail": {

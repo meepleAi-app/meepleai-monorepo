@@ -1,5 +1,5 @@
 /**
- * /shared-games — public catalog index (V2, Wave A.3b, Issue #596).
+ * /shared-games — public catalog index (Issue #596).
  *
  * Server component shell — exports SEO metadata + ISR `revalidate = 60`
  * (aligned with backend HybridCache TTL, see Wave A.3a spec §3.6) and seeds
@@ -23,8 +23,8 @@ import {
   getCategories,
   getTopContributors,
   searchSharedGames,
-  type GameCategoryV2,
-  type PagedSharedGamesV2,
+  type GameCategory,
+  type PagedSharedGames,
   type TopContributor,
 } from '@/lib/api/shared-games';
 
@@ -47,15 +47,15 @@ export const metadata: Metadata = {
 };
 
 interface SsrInitialData {
-  readonly initial: PagedSharedGamesV2 | null;
+  readonly initial: PagedSharedGames | null;
   readonly contributors: readonly TopContributor[];
-  readonly categories: readonly GameCategoryV2[];
+  readonly categories: readonly GameCategory[];
 }
 
 async function loadInitialData(): Promise<SsrInitialData> {
-  let initial: PagedSharedGamesV2 | null = null;
+  let initial: PagedSharedGames | null = null;
   let contributors: readonly TopContributor[] = [];
-  let categories: readonly GameCategoryV2[] = [];
+  let categories: readonly GameCategory[] = [];
 
   try {
     const [gamesResult, contributorsResult, categoriesResult] = await Promise.allSettled([

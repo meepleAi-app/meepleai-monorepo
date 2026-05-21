@@ -1,5 +1,5 @@
 /**
- * AgentDetailViewV2 — Wave C.2 (Issue #581) orchestrator.
+ * AgentDetailView — Wave C.2 (Issue #581) orchestrator.
  *
  * Phase 0.5 contract enforced (docs/frontend/contracts/agents-id-hooks.md):
  *   - agentId normalized to string|null at page boundary (NEVER undefined)
@@ -73,7 +73,7 @@ function parseStateOverride(raw: string | null): StateOverride | null {
 
 // ─── Props ─────────────────────────────────────────────────────────────────
 
-export interface AgentDetailViewV2Props {
+export interface AgentDetailViewProps {
   /**
    * Normalized agentId from URL params.
    * MUST be string | null — NEVER undefined or the string 'undefined'.
@@ -267,14 +267,14 @@ function mapSettingsState(
 // ─── Main orchestrator ───────────────────────────────────────────────────────
 
 /**
- * AgentDetailViewV2 — orchestrator for /agents/[id] v2 surface.
+ * AgentDetailView — orchestrator for /agents/[id] v2 surface.
  *
  * Accepts `agentId: string | null` (normalized at page boundary by page.tsx).
  * Never accepts undefined — page.tsx is responsible for the normalization:
  *   const rawId = params?.id;
  *   const agentId = typeof rawId === 'string' && rawId.length > 0 ? rawId : null;
  */
-export function AgentDetailViewV2({ agentId }: AgentDetailViewV2Props): ReactElement {
+export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();

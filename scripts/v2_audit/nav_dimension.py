@@ -12,9 +12,11 @@ For extra component routes not in mockup: MINOR.
 """
 from __future__ import annotations
 from typing import Iterator
+import functools
 import re
+from pathlib import Path
 
-from scripts.v2_audit.component_inspector import ComponentSnapshot
+from scripts.v2_audit.component_inspector import ComponentSnapshot, inspect_component
 from scripts.v2_audit.mockup_inspector import MockupSnapshot
 from scripts.v2_audit.finding import Finding, Severity, Confidence, Dimension
 
@@ -67,12 +69,60 @@ def _mockup_to_route(mockup_dest: str) -> str | None:
     return None
 
 
+_ROUTE_GROUPS = ("(authenticated)", "(public)")
+_REPO_ROOT_OVERRIDE: Path | None = None  # test seam
+
+
+def _route_to_filesystem_path(route: str) -> Path | None:
+    """Map a Next.js route to its filesystem folder under apps/web/src/app/.
+
+    Tries route groups `(authenticated)` and `(public)` first, then root-level
+    fallback. Returns None if no matching folder exists.
+    """
+    repo_root = _REPO_ROOT_OVERRIDE or Path(__file__).resolve().parents[2]
+    app_dir = repo_root / "apps" / "web" / "src" / "app"
+    rel = route.lstrip("/")
+    for group in _ROUTE_GROUPS:
+        candidate = app_dir / group / rel
+        if candidate.exists() and candidate.is_dir():
+            return candidate
+    direct = app_dir / rel
+    if direct.exists() and direct.is_dir():
+        return direct
+    return None
+
+
+@functools.lru_cache(maxsize=None)
+def _collect_route_tree_hrefs(route: str) -> frozenset[str]:
+    """Aggregate Link hrefs + router calls from all TSX files in the route folder.
+
+    Skips test files (.test.tsx, .stories.tsx). Returns frozenset for cache safety.
+    Empty frozenset if route folder doesn't exist.
+    """
+    path = _route_to_filesystem_path(route)
+    if path is None:
+        return frozenset()
+    hrefs: set[str] = set()
+    for tsx in path.glob("**/*.tsx"):
+        name = tsx.name
+        if name.endswith(".test.tsx") or name.endswith(".stories.tsx"):
+            continue
+        snap = inspect_component(tsx)
+        hrefs |= snap.link_hrefs
+        hrefs |= snap.router_calls
+    return frozenset(hrefs)
+
+
 def audit_nav(
     comp: ComponentSnapshot,
     mock: MockupSnapshot,
     route: str,
 ) -> Iterator[Finding]:
+    # comp_hrefs used for MINOR "extra link" check — component-declared only
     comp_hrefs = comp.link_hrefs | comp.router_calls
+    # extended_hrefs adds route-tree scan to suppress CRITICAL false positives only
+    route_tree_hrefs = _collect_route_tree_hrefs(route)
+    extended_hrefs = comp_hrefs | route_tree_hrefs
     mapped_destinations = {}  # route → mockup_dest
     unmappable = []
 
@@ -83,15 +133,15 @@ def audit_nav(
         else:
             unmappable.append(dest)
 
-    # Critical: mockup destination not present in component
+    # Critical: mockup destination not present in component or route tree
     for expected_route, mockup_dest in mapped_destinations.items():
-        if expected_route not in comp_hrefs:
+        if expected_route not in extended_hrefs:
             # Allow prefix/superset matching (e.g. /games matches /games/X)
             matched = any(
                 h == expected_route
                 or h.startswith(expected_route + "/")
                 or expected_route.startswith(h + "/")
-                for h in comp_hrefs
+                for h in extended_hrefs
             )
             if not matched:
                 yield Finding(
@@ -104,7 +154,7 @@ def audit_nav(
                     evidence={
                         "expected_route": expected_route,
                         "mockup_dest": mockup_dest,
-                        "component_hrefs": sorted(comp_hrefs),
+                        "component_hrefs": sorted(extended_hrefs),
                     },
                 )
 
@@ -120,7 +170,8 @@ def audit_nav(
             evidence={"mockup_dest": dest},
         )
 
-    # Minor: extra component links not in mockup
+    # Minor: extra component links not in mockup (component-declared hrefs only,
+    # not route-tree hrefs, to avoid flooding with cross-route navigation noise)
     mapped_routes = set(mapped_destinations.keys())
     for href in comp_hrefs:
         if href not in mapped_routes and not any(

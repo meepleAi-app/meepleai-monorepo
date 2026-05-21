@@ -46,13 +46,36 @@ describe('GamebookCampaignSchema', () => {
     expect(parsed.gameRefKind).toBe(0);
   });
 
-  it('rejects gameRefKind out of range', () => {
-    expect(() => GamebookCampaignSchema.parse({ ...validRow, gameRefKind: 2 })).toThrow();
-  });
-
   it('parses Private discriminator', () => {
     const parsed = GamebookCampaignSchema.parse({ ...validRow, gameRefKind: 1 });
     expect(parsed.gameRefKind).toBe(1);
+  });
+
+  it('falls back to Shared and warns on unknown gameRefKind (issue #1406)', () => {
+    // Schema is widened from min(0).max(1) to nonnegative() so a future BE-side
+    // enum extension (e.g. 2 = Hybrid) does not hard-break the play page. The
+    // unknown value is normalized to Shared (0) and a console.warn surfaces the
+    // drift so the FE schema can be updated.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const parsed = GamebookCampaignSchema.parse({ ...validRow, gameRefKind: 2 });
+      expect(parsed.gameRefKind).toBe(0);
+      expect(warnSpy).toHaveBeenCalledOnce();
+      expect(warnSpy.mock.calls[0][0]).toMatch(/unknown GameRefKind=2/);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('rejects negative gameRefKind', () => {
+    // nonnegative() still rejects negatives — the fallback only applies to
+    // forward-compatible enum extensions, not to malformed payloads.
+    expect(() => GamebookCampaignSchema.parse({ ...validRow, gameRefKind: -1 })).toThrow();
+  });
+
+  it('rejects non-integer gameRefKind', () => {
+    // .int() still rejects fractional values.
+    expect(() => GamebookCampaignSchema.parse({ ...validRow, gameRefKind: 0.5 })).toThrow();
   });
 });
 

@@ -70,6 +70,8 @@ export interface AgentHeroProps {
   readonly avatar: string;
   readonly persona: string | null;
   readonly meta: AgentHeroMeta;
+  /** Back button CTA — only rendered when provided */
+  readonly ctaBack?: () => void;
   /** 'Avvia chat' CTA — only rendered when provided (active variant) */
   readonly ctaPlay?: () => void;
   /** 'Continua setup' CTA — only rendered when provided (draft variant) */
@@ -89,6 +91,7 @@ export function AgentHero(props: AgentHeroProps): ReactElement {
     avatar,
     persona,
     meta,
+    ctaBack,
     ctaPlay,
     ctaSetup,
     ctaUnarchive,
@@ -112,6 +115,21 @@ export function AgentHero(props: AgentHeroProps): ReactElement {
       data-variant={variant}
       className={clsx('relative bg-background', className)}
     >
+      {/* Back button */}
+      {ctaBack ? (
+        <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3 sm:px-8">
+          <button
+            type="button"
+            onClick={ctaBack}
+            aria-label={labels.backAriaLabel}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 font-display text-[12px] font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span aria-hidden="true">←</span>
+            {labels.back}
+          </button>
+        </div>
+      ) : null}
+
       {/* Draft banner */}
       {variant === 'draft' ? (
         <div

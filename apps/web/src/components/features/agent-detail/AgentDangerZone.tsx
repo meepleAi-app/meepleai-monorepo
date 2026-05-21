@@ -70,7 +70,7 @@ export function AgentDangerZone(props: AgentDangerZoneProps): ReactElement | nul
         {labels.dangerZoneTitle}
       </h3>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-rose-200 bg-white px-4 py-4 dark:border-rose-900/30 dark:bg-rose-950/20">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-rose-200 bg-card px-4 py-4 dark:border-rose-900/30 dark:bg-rose-950/20">
         <div>
           <p className="font-display text-[13px] font-bold text-foreground">
             {labels.archiveConfirmTitle}

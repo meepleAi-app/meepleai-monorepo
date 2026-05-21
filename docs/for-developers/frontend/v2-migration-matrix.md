@@ -198,13 +198,13 @@ the PR review.
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-agent-detail.jsx` | `AgentHero` *(was AgentCharacterSheet stub — renamed per mockup)* | `apps/web/src/components/features/agent-detail/AgentHero.tsx` | `/agents/[id]` | done | #711 | T A M V | — |
-| `sp4-agent-detail.jsx` | `PersonaCard` | `apps/web/src/components/features/agent-detail/PersonaCard.tsx` | `/agents/[id]` | done | #711 | T A V | — |
-| `sp4-agent-detail.jsx` | `SystemPromptViewer` | `apps/web/src/components/features/agent-detail/SystemPromptViewer.tsx` | `/agents/[id]` | done | #711 | T A V | — |
-| `sp4-agent-detail.jsx` | `KbDocList` | `apps/web/src/components/features/agent-detail/KbDocList.tsx` | `/agents/[id]` | done | #711 | T A V | — |
-| `sp4-agent-detail.jsx` | `ChatHistoryTimeline` | `apps/web/src/components/features/agent-detail/ChatHistoryTimeline.tsx` | `/agents/[id]` | done | #711 | T A M V | — |
-| `sp4-agent-detail.jsx` | `AgentSettingsForm` | `apps/web/src/components/features/agent-detail/AgentSettingsForm.tsx` | `/agents/[id]` | done | #711 | T A V | — |
-| `sp4-agent-detail.jsx` | `AgentDangerZone` | `apps/web/src/components/features/agent-detail/AgentDangerZone.tsx` | `/agents/[id]` | done | #711 | T A V | — |
+| `sp4-agent-detail.jsx` | `AgentHero` *(was AgentCharacterSheet stub — renamed per mockup)* | `apps/web/src/components/features/agent-detail/AgentHero.tsx` | `/agents/[id]` | done | #711 | T A M V | #1381 |
+| `sp4-agent-detail.jsx` | `PersonaCard` | `apps/web/src/components/features/agent-detail/PersonaCard.tsx` | `/agents/[id]` | done | #711 | T A V | #1381 |
+| `sp4-agent-detail.jsx` | `SystemPromptViewer` | `apps/web/src/components/features/agent-detail/SystemPromptViewer.tsx` | `/agents/[id]` | done | #711 | T A V | #1381 |
+| `sp4-agent-detail.jsx` | `KbDocList` | `apps/web/src/components/features/agent-detail/KbDocList.tsx` | `/agents/[id]` | done | #711 | T A V | #1381 |
+| `sp4-agent-detail.jsx` | `ChatHistoryTimeline` | `apps/web/src/components/features/agent-detail/ChatHistoryTimeline.tsx` | `/agents/[id]` | done | #711 | T A M V | #1381 |
+| `sp4-agent-detail.jsx` | `AgentSettingsForm` | `apps/web/src/components/features/agent-detail/AgentSettingsForm.tsx` | `/agents/[id]` | done | #711 | T A V | #1381 |
+| `sp4-agent-detail.jsx` | `AgentDangerZone` | `apps/web/src/components/features/agent-detail/AgentDangerZone.tsx` | `/agents/[id]` | done | #711 | T A V | #1381 |
 
 ### Library — `/library` — 5 components — **Tier S**
 

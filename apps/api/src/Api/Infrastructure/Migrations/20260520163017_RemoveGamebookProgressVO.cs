@@ -25,7 +25,9 @@ namespace Api.Infrastructure.Migrations
                 table: "gamebook_campaign_sessions",
                 type: "jsonb",
                 nullable: false,
-                defaultValue: "");
+                // Issue #1393: '' is not valid jsonb syntax — PostgreSQL rejects it with
+                // "invalid input syntax for type json". '{}' is the canonical empty-object literal.
+                defaultValue: "{}");
         }
     }
 }

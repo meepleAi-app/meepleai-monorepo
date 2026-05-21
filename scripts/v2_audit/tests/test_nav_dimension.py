@@ -161,3 +161,49 @@ def test_collect_route_tree_hrefs_missing_route(tmp_path, monkeypatch):
 
     hrefs = nav_dimension._collect_route_tree_hrefs("/no-such-route")
     assert hrefs == frozenset()
+
+
+def test_audit_nav_uses_route_tree_hrefs_to_satisfy_mockup(tmp_path, monkeypatch):
+    """Mockup destination satisfied by route-tree href → no critical finding."""
+    from scripts.v2_audit import nav_dimension
+    from scripts.v2_audit.component_inspector import ComponentSnapshot
+    from scripts.v2_audit.mockup_inspector import MockupSnapshot
+
+    monkeypatch.setattr(
+        nav_dimension,
+        "_collect_route_tree_hrefs",
+        lambda r: frozenset({"/sessions"}),
+    )
+
+    comp = ComponentSnapshot(path=Path("X.tsx"), link_hrefs=set())
+    mock = MockupSnapshot(
+        path=Path("y.html"),
+        link_destinations={"sp4-sessions-index.html"},
+    )
+
+    findings = list(nav_dimension.audit_nav(comp, mock, route="/sessions/[id]"))
+    critical = [f for f in findings if f.severity == "critical"]
+    assert len(critical) == 0, f"Expected 0 critical findings, got: {[f.description for f in critical]}"
+
+
+def test_audit_nav_emits_critical_when_route_tree_empty(tmp_path, monkeypatch):
+    """When neither component nor route tree has the href, emit critical."""
+    from scripts.v2_audit import nav_dimension
+    from scripts.v2_audit.component_inspector import ComponentSnapshot
+    from scripts.v2_audit.mockup_inspector import MockupSnapshot
+
+    monkeypatch.setattr(
+        nav_dimension,
+        "_collect_route_tree_hrefs",
+        lambda r: frozenset(),
+    )
+
+    comp = ComponentSnapshot(path=Path("X.tsx"), link_hrefs=set())
+    mock = MockupSnapshot(
+        path=Path("y.html"),
+        link_destinations={"sp4-sessions-index.html"},
+    )
+
+    findings = list(nav_dimension.audit_nav(comp, mock, route="/somewhere"))
+    critical = [f for f in findings if f.severity == "critical"]
+    assert len(critical) >= 1

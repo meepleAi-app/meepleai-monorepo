@@ -29,7 +29,7 @@ internal sealed class UpsertGlossaryEntryCommandHandler
             ?? throw new NotFoundException($"Campaign {cmd.CampaignId} not found");
 
         if (campaign.OwnerUserId != cmd.CallerUserId)
-            throw new ConflictException("Forbidden");
+            throw new ForbiddenException("Forbidden");
 
         var existing = await _glossary.GetByIdAsync(cmd.EntryId, cancellationToken).ConfigureAwait(false);
 

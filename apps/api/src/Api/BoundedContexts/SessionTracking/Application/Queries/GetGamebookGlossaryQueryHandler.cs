@@ -26,7 +26,7 @@ internal sealed class GetGamebookGlossaryQueryHandler
             ?? throw new NotFoundException($"Campaign {query.CampaignId} not found");
 
         if (campaign.OwnerUserId != query.CallerUserId)
-            throw new ConflictException("Forbidden");
+            throw new ForbiddenException("Forbidden");
 
         var entries = await _glossary.ListByCampaignAsync(query.CampaignId, cancellationToken).ConfigureAwait(false);
 

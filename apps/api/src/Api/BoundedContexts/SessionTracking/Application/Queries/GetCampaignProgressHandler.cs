@@ -42,7 +42,7 @@ public class GetCampaignProgressHandler : IRequestHandler<GetCampaignProgressQue
             ?? throw new NotFoundException($"Campaign {request.CampaignId} not found");
 
         if (session.OwnerUserId != request.CallerUserId)
-            throw new ConflictException("Forbidden");
+            throw new ForbiddenException("Forbidden");
 
         var progressRows = await _progress.ListByCampaignAsync(session.Id, cancellationToken).ConfigureAwait(false);
         if (progressRows.Count == 0)

@@ -124,15 +124,16 @@ public sealed class GetCampaignProgressHandlerTests
     }
 
     [Fact]
-    public async Task Handle_CallerIsNotOwner_ThrowsConflictException()
+    public async Task Handle_CallerIsNotOwner_ThrowsForbiddenException()
     {
+        // Issue #1404: ownership failures must map to HTTP 403, not 409.
         var (_, _, _, h, session) = BuildSut();
         var differentUser = Guid.NewGuid();
         var query = new GetCampaignProgressQuery(session.Id, differentUser);
 
         var act = async () => await h.Handle(query, CancellationToken.None);
 
-        await act.Should().ThrowAsync<ConflictException>();
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 
     [Fact]

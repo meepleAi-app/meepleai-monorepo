@@ -37,7 +37,7 @@ internal sealed class BootstrapGamebookGlossaryCommandHandler
             ?? throw new NotFoundException($"Campaign {cmd.CampaignId} not found");
 
         if (campaign.OwnerUserId != cmd.CallerUserId)
-            throw new ConflictException("Caller is not the campaign owner");
+            throw new ForbiddenException("Caller is not the campaign owner");
 
         // Idempotent: if glossary already has entries, return existing without re-bootstrapping
         var existing = await _glossary.ListByCampaignAsync(cmd.CampaignId, cancellationToken).ConfigureAwait(false);

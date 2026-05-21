@@ -1,8 +1,10 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.Infrastructure;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Api.Infrastructure.Seeders;
@@ -154,5 +156,82 @@ internal class GameBookSeeder
 
         await _uow.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         _logger.LogInformation("Seeded {Count} Maracaibo GameBooks", books.Length);
+    }
+
+    /// <summary>
+    /// Issue #1389: orchestration wrapper invoked by <c>CatalogSeedLayer</c> after
+    /// <c>CatalogSeeder</c> and <c>PdfSeeder</c> have run. Resolves the Nanolith
+    /// <c>SharedGameId</c> by title, locates the Press Start + Rules PDF documents
+    /// uploaded by <c>PdfSeeder</c>, then delegates to <see cref="SeedNanolithAsync"/>.
+    /// Skips gracefully (log + return) when any prerequisite is missing — the
+    /// orchestration is best-effort and must never fail the whole seed pipeline.
+    /// Idempotent: returns immediately if Nanolith GameBooks are already present.
+    /// </summary>
+    /// <param name="db">Database context for the SharedGame + PdfDocument lookups.</param>
+    /// <param name="adminUserId">System/admin user used as <c>createdBy</c>.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    public async Task SeedNanolithIfReadyAsync(
+        MeepleAiDbContext db,
+        Guid adminUserId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(db);
+
+        // 1. Resolve Nanolith SharedGame by title (catalog manifest has bggId=null so
+        //    we cannot use the BGG-id index).
+        var nanolith = await db.SharedGames
+            .AsNoTracking()
+            .Where(g => !g.IsDeleted && g.Title == "Nanolith")
+            .Select(g => new { g.Id })
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (nanolith is null)
+        {
+            _logger.LogInformation(
+                "[GameBookSeeder] Nanolith not present in catalog — skipping (run CatalogSeeder first to populate it).");
+            return;
+        }
+
+        // 2. Idempotency guard — skip if Nanolith GameBooks already exist.
+        var existing = await _repo
+            .ListByGameRefAsync(GameRef.Shared(nanolith.Id), ownerUserId: null, cancellationToken)
+            .ConfigureAwait(false);
+        if (existing.Count > 0)
+        {
+            _logger.LogDebug(
+                "[GameBookSeeder] Nanolith already has {Count} GameBook(s) — skipping idempotently.",
+                existing.Count);
+            return;
+        }
+
+        // 3. Resolve the two KB-backed PDFs (Press Start tutorial + Rules reference).
+        //    Nanolith has bggId=null so PdfSeeder may not have processed any PDFs for it;
+        //    we degrade gracefully if either is missing (the seed pipeline must not block
+        //    on optional dogfood assets).
+        var pdfs = await db.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.SharedGameId == nanolith.Id)
+            .Select(p => new { p.Id, p.FileName })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var pressStart = pdfs.FirstOrDefault(p =>
+            p.FileName?.Contains("press", StringComparison.OrdinalIgnoreCase) == true
+            || p.FileName?.Contains("start", StringComparison.OrdinalIgnoreCase) == true);
+
+        var rules = pdfs.FirstOrDefault(p =>
+            p.FileName?.Contains("rule", StringComparison.OrdinalIgnoreCase) == true);
+
+        if (pressStart is null || rules is null)
+        {
+            _logger.LogInformation(
+                "[GameBookSeeder] Nanolith PDFs not ready (pressStart={HasPressStart}, rules={HasRules}) — skipping; re-run after PDF ingestion completes.",
+                pressStart is not null, rules is not null);
+            return;
+        }
+
+        await SeedNanolithAsync(nanolith.Id, pressStart.Id, rules.Id, adminUserId, cancellationToken)
+            .ConfigureAwait(false);
     }
 }

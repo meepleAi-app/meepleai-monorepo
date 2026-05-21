@@ -584,10 +584,22 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             await _vectorStore.DeleteByVectorDocumentIdAsync(vectorDoc.Id, cancellationToken)
                 .ConfigureAwait(false);
 
-            // Build Embedding domain objects and bulk-insert via pgvector COPY
+            // Build Embedding domain objects and bulk-insert via pgvector COPY.
+            // Issue #1391: text_chunks rows were saved earlier in the pipeline with role_tags
+            // populated by TextChunkRoleClassifier. We load them now (one query) to denormalize
+            // role_tags + source_chunk_id into pgvector_embeddings so semantic-mode searches
+            // can apply the role-match boost without joining the parent table.
+            var textChunkLookup = await _db.TextChunks
+                .Where(tc => tc.PdfDocumentId == pdfDoc.Id)
+                .Select(tc => new { tc.Id, tc.ChunkIndex, tc.RoleTags })
+                .ToDictionaryAsync(tc => tc.ChunkIndex, cancellationToken)
+                .ConfigureAwait(false);
+
             var modelName = _embeddingService.GetModelName();
             var embeddingEntities = translatedChunks.Select((item, i) =>
-                new KbEntities.Embedding(
+            {
+                textChunkLookup.TryGetValue(i, out var tc);
+                return new KbEntities.Embedding(
                     id: Guid.NewGuid(),
                     vectorDocumentId: vectorDoc.Id,
                     textContent: item.chunk.Text,
@@ -596,8 +608,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                     chunkIndex: i,
                     pageNumber: Math.Max(1, item.chunk.Page),
                     language: item.lang,
-                    isTranslation: item.isTranslation))
-                .ToList();
+                    sourceChunkId: tc?.Id,
+                    isTranslation: item.isTranslation,
+                    roleTags: (int)(tc?.RoleTags ?? Api.BoundedContexts.GameManagement.Domain.ValueObjects.GameBookRole.None));
+            }).ToList();
 
             await _vectorStore.IndexBatchAsync(embeddingEntities, cancellationToken)
                 .ConfigureAwait(false);

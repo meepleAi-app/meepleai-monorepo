@@ -43,7 +43,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         // pgvector <=> returns cosine distance (0 = identical, 2 = opposite).
         // Similarity = 1 - distance.
         var sql = $"""
-            SELECT id, vector_document_id, text_content, model, chunk_index, page_number,
+            SELECT id, vector_document_id, text_content, model, chunk_index, page_number, role_tags,
                    1 - (vector <=> @queryVector) AS similarity
             FROM {TableName}
             WHERE game_id = @gameId
@@ -90,6 +90,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     var model = reader.GetString(3);
                     var chunkIndex = reader.GetInt32(4);
                     var pageNumber = reader.GetInt32(5);
+                    // Issue #1391: denormalized role_tags (mirrors text_chunks.role_tags).
+                    var roleTags = reader.GetInt32(6);
 
                     // Use placeholder vector for search results (actual vector not needed by callers)
                     var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
@@ -100,7 +102,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         vector: placeholderVector,
                         model: model,
                         chunkIndex: chunkIndex,
-                        pageNumber: Math.Max(1, pageNumber));
+                        pageNumber: Math.Max(1, pageNumber),
+                        roleTags: roleTags);
 
                     results.Add(embedding);
                 }
@@ -131,7 +134,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
 
         // Build SQL with IN clause for multiple game_ids
         var sql = $"""
-            SELECT id, vector_document_id, text_content, model, chunk_index, page_number,
+            SELECT id, vector_document_id, text_content, model, chunk_index, page_number, role_tags,
                    1 - (vector <=> @queryVector) AS similarity
             FROM {TableName}
             WHERE game_id = ANY(@gameIds)
@@ -178,6 +181,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     var model = reader.GetString(3);
                     var chunkIndex = reader.GetInt32(4);
                     var pageNumber = reader.GetInt32(5);
+                    var roleTags = reader.GetInt32(6);
 
                     var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
                     var embedding = new Embedding(
@@ -187,7 +191,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         vector: placeholderVector,
                         model: model,
                         chunkIndex: chunkIndex,
-                        pageNumber: Math.Max(1, pageNumber));
+                        pageNumber: Math.Max(1, pageNumber),
+                        roleTags: roleTags);
 
                     results.Add(embedding);
                 }
@@ -243,8 +248,10 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         // Use COPY for efficient bulk insert via Npgsql binary import
         var npgsqlConnection = (NpgsqlConnection)connection;
 
+        // Issue #1391: role_tags appended after is_translation in the COPY column list
+        // to keep the binary import in sync with PgVectorEmbeddingEntity + EnsureCollectionExistsAsync.
         var writer = await npgsqlConnection.BeginBinaryImportAsync(
-            $"COPY {TableName} (id, vector_document_id, game_id, text_content, vector, model, chunk_index, page_number, created_at, lang, source_chunk_id, is_translation) FROM STDIN (FORMAT BINARY)",
+            $"COPY {TableName} (id, vector_document_id, game_id, text_content, vector, model, chunk_index, page_number, created_at, lang, source_chunk_id, is_translation, role_tags) FROM STDIN (FORMAT BINARY)",
             cancellationToken).ConfigureAwait(false);
         await using (writer.ConfigureAwait(false))
         {
@@ -277,6 +284,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                 else
                     await writer.WriteNullAsync(cancellationToken).ConfigureAwait(false);
                 await writer.WriteAsync(embedding.IsTranslation, NpgsqlDbType.Boolean, cancellationToken).ConfigureAwait(false);
+
+                // Issue #1391: denormalized RoleTags (mirrors text_chunks.role_tags for SourceChunkId).
+                await writer.WriteAsync(embedding.RoleTags, NpgsqlDbType.Integer, cancellationToken).ConfigureAwait(false);
             }
 
             await writer.CompleteAsync(cancellationToken).ConfigureAwait(false);
@@ -375,7 +385,10 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english', text_content)) STORED,
                     lang VARCHAR(5) NOT NULL DEFAULT 'en',
                     source_chunk_id UUID NULL,
-                    is_translation BOOLEAN NOT NULL DEFAULT false
+                    is_translation BOOLEAN NOT NULL DEFAULT false,
+                    -- Issue #1391: denormalized from text_chunks.role_tags so semantic-mode
+                    -- hybrid search can boost role-matching chunks without joining.
+                    role_tags INTEGER NOT NULL DEFAULT 0
                 )
                 """;
             await tableCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
@@ -467,6 +480,26 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                 END $$
                 """;
             await langColCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        // Issue #1391: add role_tags column if table was created before this fix.
+        // Sync invariant — same column added by AddRoleTagsToPgVectorEmbeddings EF migration.
+        var roleTagsColCmd = (NpgsqlCommand)connection.CreateCommand();
+        await using (roleTagsColCmd.ConfigureAwait(false))
+        {
+            roleTagsColCmd.CommandText = $"""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = '{TableName}' AND column_name = 'role_tags'
+                    ) THEN
+                        ALTER TABLE {TableName}
+                        ADD COLUMN role_tags INTEGER NOT NULL DEFAULT 0;
+                    END IF;
+                END $$
+                """;
+            await roleTagsColCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation(

@@ -64,7 +64,7 @@ internal sealed class ImpersonateUserCommandHandler
         };
         if (adminLevel < 3)
         {
-            throw new ConflictException("Only admins or SuperAdmins can impersonate users");
+            throw new ForbiddenException("Only admins or SuperAdmins can impersonate users");
         }
 
         // Verify target user exists

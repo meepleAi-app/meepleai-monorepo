@@ -102,7 +102,7 @@ export function PlayerRosterLive({
                   aria-label={player.isOnline ? labels.onlineLabel : labels.offlineLabel}
                   className={[
                     'h-2 w-2 shrink-0 rounded-full',
-                    player.isOnline ? 'bg-emerald-400' : 'bg-slate-600',
+                    player.isOnline ? 'bg-emerald-400' : 'bg-muted',
                   ].join(' ')}
                 />
                 <span className="truncate text-xs font-medium text-foreground">{player.name}</span>

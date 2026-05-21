@@ -43,4 +43,14 @@ internal class SessionBookProgressRepository : ISessionBookProgressRepository
         _db.SessionBookProgresses.Update(progress);
         return Task.CompletedTask;
     }
+
+    public async Task DeleteByCampaignAsync(Guid campaignSessionId, CancellationToken cancellationToken)
+    {
+        var rows = await _db.SessionBookProgresses
+            .Where(p => p.CampaignSessionId == campaignSessionId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (rows.Count == 0) return;
+        _db.SessionBookProgresses.RemoveRange(rows);
+    }
 }

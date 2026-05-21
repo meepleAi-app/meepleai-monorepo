@@ -128,7 +128,6 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
             _sut = new S3BlobStorageService(
                 _s3Client,
                 _options,
-                Microsoft.Extensions.Options.Options.Create(new StorageLayoutOptions()),
                 logger);
 
             // Quick smoke test to verify S3 connectivity

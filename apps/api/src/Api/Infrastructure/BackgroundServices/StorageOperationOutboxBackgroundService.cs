@@ -87,9 +87,11 @@ internal sealed class StorageOperationOutboxBackgroundService : BackgroundServic
             MaxAttempts);
 
         // Announce active layout version once per drainer lifecycle (PR 2 obs spec).
+        // Issue #1399: label is now hardcoded to the steady-state value since
+        // the dynamic WriteMode/ReadMode toggles were removed in Phase 4.
         MeepleAiMetrics.StorageLayoutVersionAnnouncementsTotal.Add(
             1,
-            new KeyValuePair<string, object?>("layout_version", _layoutOptions.LayoutVersionLabel));
+            new KeyValuePair<string, object?>("layout_version", MeepleAiMetrics.CurrentLayoutVersionLabel));
 
         while (!stoppingToken.IsCancellationRequested)
         {

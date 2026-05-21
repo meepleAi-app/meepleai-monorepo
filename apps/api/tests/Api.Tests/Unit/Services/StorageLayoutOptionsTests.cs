@@ -6,57 +6,25 @@ using Xunit;
 namespace Api.Tests.Unit.Services;
 
 /// <summary>
-/// Tests for <see cref="StorageLayoutOptions"/> (issue #1314 PR 2).
-/// Verifies default values for Phase 0 deploy + configuration binding +
-/// <see cref="StorageLayoutOptions.LayoutVersionLabel"/> derivation.
+/// Tests for <see cref="StorageLayoutOptions"/>.
+///
+/// Issue #1314 PR 2 introduced WriteMode/ReadMode/LayoutVersionLabel for the
+/// 5-phase rollout. Issue #1399 (Phase 4 cleanup) removed those properties
+/// after the staging migration converged on the "v2-categorized" layout.
+/// Only the <see cref="StorageLayoutOptions.MigrationEnabled"/> toggle remains.
 /// </summary>
 [Trait("Category", "Unit")]
-[Trait("Issue", "1314")]
+[Trait("Issue", "1399")]
 public sealed class StorageLayoutOptionsTests
 {
     [Fact]
-    public void Defaults_MatchPhase4SteadyState()
+    public void Defaults_MigrationEnabled_IsFalse()
     {
-        // Phase 4 cleanup (2026-05-21): after the staging migration completed
-        // end-to-end, defaults flipped from Legacy/Dual to New/New. A fresh
-        // deploy now starts at the steady-state new-categorized layout; the
-        // migration drainer remains opt-in.
+        // The drainer is opt-in by default so a fresh deploy does not start
+        // moving blobs without an explicit operator flip.
         var options = new StorageLayoutOptions();
 
-        options.WriteMode.Should().Be(StorageWriteMode.New);
-        options.ReadMode.Should().Be(StorageReadMode.New);
         options.MigrationEnabled.Should().BeFalse();
-    }
-
-    [Fact]
-    public void LayoutVersionLabel_DerivesFromWriteMode()
-    {
-        new StorageLayoutOptions { WriteMode = StorageWriteMode.Legacy }
-            .LayoutVersionLabel.Should().Be("v1-gameId");
-        new StorageLayoutOptions { WriteMode = StorageWriteMode.Dual }
-            .LayoutVersionLabel.Should().Be("v1-gameId-migrating");
-        new StorageLayoutOptions { WriteMode = StorageWriteMode.New }
-            .LayoutVersionLabel.Should().Be("v2-categorized");
-    }
-
-    [Theory]
-    [InlineData("Legacy", StorageWriteMode.Legacy)]
-    [InlineData("Dual", StorageWriteMode.Dual)]
-    [InlineData("New", StorageWriteMode.New)]
-    internal void ConfigBinding_WriteModeFromStringValue(string configValue, StorageWriteMode expected)
-    {
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["StorageLayout:WriteMode"] = configValue,
-                ["StorageLayout:ReadMode"] = "Dual",
-                ["StorageLayout:MigrationEnabled"] = "false",
-            })
-            .Build();
-
-        var bound = config.GetSection(StorageLayoutOptions.SectionName).Get<StorageLayoutOptions>();
-        bound.Should().NotBeNull();
-        bound!.WriteMode.Should().Be(expected);
     }
 
     [Fact]
@@ -72,5 +40,20 @@ public sealed class StorageLayoutOptionsTests
         var bound = config.GetSection(StorageLayoutOptions.SectionName).Get<StorageLayoutOptions>();
         bound.Should().NotBeNull();
         bound!.MigrationEnabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ConfigBinding_MigrationEnabledFalse_WhenStringFalse()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["StorageLayout:MigrationEnabled"] = "false",
+            })
+            .Build();
+
+        var bound = config.GetSection(StorageLayoutOptions.SectionName).Get<StorageLayoutOptions>();
+        bound.Should().NotBeNull();
+        bound!.MigrationEnabled.Should().BeFalse();
     }
 }

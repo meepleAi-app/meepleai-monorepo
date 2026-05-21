@@ -2,7 +2,6 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Api.Services.Pdf;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Moq;
 using System.Net;
 using Xunit;
@@ -35,21 +34,13 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             ForcePathStyle = false
         };
 
-        // PR 2 (#1327) introduced StorageLayoutOptions with dual-read default.
-        // These legacy tests assert exact-prefix behavior (single ListObjectsV2
-        // probe at `pdf_uploads/...`, single DeleteObjectAsync) so we force
-        // ReadMode=Legacy here to preserve the pre-PR-2 contract. Dual-mode
-        // probe ordering + delete-both-layouts is covered by
-        // BlobStorageServiceLayoutTests (#1314 PR 2).
-        var legacyReadOptions = new StorageLayoutOptions
-        {
-            WriteMode = StorageWriteMode.Legacy,
-            ReadMode = StorageReadMode.Legacy,
-        };
+        // Issue #1399 (Phase 4 cleanup): StorageLayoutOptions no longer drives
+        // write/read branching — the service always operates on the categorized
+        // "v2" layout (BlobCategory.Pdf → "pdfs/" prefix). The ctor lost the
+        // IOptions<StorageLayoutOptions> parameter as part of that simplification.
         _sut = new S3BlobStorageService(
             _mockS3Client.Object,
             _options,
-            Options.Create(legacyReadOptions),
             _mockLogger.Object);
     }
 
@@ -90,7 +81,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         _mockS3Client.Verify(x => x.PutObjectAsync(
             It.Is<PutObjectRequest>(r =>
                 r.BucketName == "test-bucket" &&
-                r.Key.Contains("pdf_uploads/game123/") &&
+                r.Key.Contains("pdfs/game123/") &&
                 r.ContentType == "application/pdf" &&
                 r.ServerSideEncryptionMethod == ServerSideEncryptionMethod.AES256),
             It.IsAny<CancellationToken>()), Times.Once);
@@ -130,7 +121,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             HttpStatusCode = HttpStatusCode.OK,
             S3Objects = new List<S3Object>
             {
-                new() { Key = $"pdf_uploads/{gameId}/{fileId}_test.pdf" }
+                new() { Key = $"pdfs/{gameId}/{fileId}_test.pdf" }
             }
         };
 
@@ -160,7 +151,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         _mockS3Client.Verify(x => x.ListObjectsV2Async(
             It.Is<ListObjectsV2Request>(r =>
                 r.BucketName == "test-bucket" &&
-                r.Prefix == $"pdf_uploads/{gameId}/{fileId}_" &&
+                r.Prefix == $"pdfs/{gameId}/{fileId}_" &&
                 r.MaxKeys == 1),
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -202,7 +193,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             HttpStatusCode = HttpStatusCode.OK,
             S3Objects = new List<S3Object>
             {
-                new() { Key = $"pdf_uploads/{gameId}/{fileId}_test.pdf" }
+                new() { Key = $"pdfs/{gameId}/{fileId}_test.pdf" }
             }
         };
 
@@ -235,7 +226,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             HttpStatusCode = HttpStatusCode.OK,
             S3Objects = new List<S3Object>
             {
-                new() { Key = $"pdf_uploads/{gameId}/{fileId}_test.pdf" }
+                new() { Key = $"pdfs/{gameId}/{fileId}_test.pdf" }
             }
         };
 
@@ -263,7 +254,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         _mockS3Client.Verify(x => x.DeleteObjectAsync(
             It.Is<DeleteObjectRequest>(r =>
                 r.BucketName == "test-bucket" &&
-                r.Key == $"pdf_uploads/{gameId}/{fileId}_test.pdf"),
+                r.Key == $"pdfs/{gameId}/{fileId}_test.pdf"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -308,7 +299,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         var result = _sut.GetStoragePath(fileId, BlobCategory.Pdf, gameId, fileName);
 
         // Assert
-        result.Should().Be($"pdf_uploads/{gameId}/{fileId}_test.pdf");
+        result.Should().Be($"pdfs/{gameId}/{fileId}_test.pdf");
     }
 
     [Fact]
@@ -337,7 +328,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             HttpStatusCode = HttpStatusCode.OK,
             S3Objects = new List<S3Object>
             {
-                new() { Key = $"pdf_uploads/{gameId}/{fileId}_test.pdf" }
+                new() { Key = $"pdfs/{gameId}/{fileId}_test.pdf" }
             }
         };
 
@@ -398,14 +389,14 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         // Arrange
         var fileId = "file123";
         var gameId = "game123";
-        var expectedUrl = "https://test-bucket.s3.amazonaws.com/pdf_uploads/game123/file123_test.pdf?presigned=true";
+        var expectedUrl = "https://test-bucket.s3.amazonaws.com/pdfs/game123/file123_test.pdf?presigned=true";
 
         var listResponse = new ListObjectsV2Response
         {
             HttpStatusCode = HttpStatusCode.OK,
             S3Objects = new List<S3Object>
             {
-                new() { Key = $"pdf_uploads/{gameId}/{fileId}_test.pdf" }
+                new() { Key = $"pdfs/{gameId}/{fileId}_test.pdf" }
             }
         };
 
@@ -428,7 +419,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         _mockS3Client.Verify(x => x.GetPreSignedURLAsync(
             It.Is<GetPreSignedUrlRequest>(r =>
                 r.BucketName == "test-bucket" &&
-                r.Key == $"pdf_uploads/{gameId}/{fileId}_test.pdf" &&
+                r.Key == $"pdfs/{gameId}/{fileId}_test.pdf" &&
                 r.Verb == HttpVerb.GET)),
             Times.Once);
     }
@@ -476,7 +467,7 @@ public sealed class S3BlobStorageServiceTests : IDisposable
             HttpStatusCode = HttpStatusCode.OK,
             S3Objects = new List<S3Object>
             {
-                new() { Key = $"pdf_uploads/{gameId}/{fileId}_test.pdf" }
+                new() { Key = $"pdfs/{gameId}/{fileId}_test.pdf" }
             }
         };
 

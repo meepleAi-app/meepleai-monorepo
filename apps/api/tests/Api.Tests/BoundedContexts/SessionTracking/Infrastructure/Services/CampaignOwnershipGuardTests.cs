@@ -105,4 +105,60 @@ public sealed class CampaignOwnershipGuardTests
         _campaignsMock.Verify(c => c.GetByIdAsync(campaign.Id, It.IsAny<CancellationToken>()),
             Times.Exactly(2));
     }
+
+    [Fact]
+    public async Task AssertOwnedByAsync_RepositoryHangsBeyondTimeout_ThrowsTimeoutException()
+    {
+        // Issue #1415 code review fix verification: when the DB call exceeds the
+        // configured preflight timeout, the guard MUST throw TimeoutException (which
+        // maps to HTTP 504 by ApiExceptionHandlerMiddleware) AND must increment the
+        // preflight_timeout metric counter. The dedicated timeoutCts approach ensures
+        // this signal is recorded even if the caller token cancels at the same time.
+        var campaignId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        _campaignsMock.Setup(c => c.GetByIdAsync(campaignId, It.IsAny<CancellationToken>()))
+            .Returns<Guid, CancellationToken>(async (_, ct) =>
+            {
+                // Hang until the linked CTS cancels (will happen when timeoutCts fires).
+                await Task.Delay(Timeout.Infinite, ct);
+                return null;
+            });
+
+        // Use internal-ctor with a fast 50ms timeout instead of the production 2s default
+        // so this test runs in milliseconds rather than seconds.
+        var guard = new CampaignOwnershipGuard(
+            _campaignsMock.Object,
+            _accessorMock.Object,
+            preflightTimeout: TimeSpan.FromMilliseconds(50));
+
+        await Assert.ThrowsAsync<TimeoutException>(() =>
+            guard.AssertOwnedByAsync(campaignId, userId, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task AssertOwnedByAsync_CallerCancelsBeforeTimeout_PropagatesOperationCanceled()
+    {
+        // The reverse of the timeout test: when ONLY the caller's token cancels (and the
+        // preflight timeout has NOT elapsed), the guard must NOT convert the
+        // OperationCanceledException into a TimeoutException — caller cancellation is a
+        // legitimate client signal, not a server-side timeout.
+        var campaignId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        _campaignsMock.Setup(c => c.GetByIdAsync(campaignId, It.IsAny<CancellationToken>()))
+            .Returns<Guid, CancellationToken>(async (_, ct) =>
+            {
+                await Task.Delay(Timeout.Infinite, ct);
+                return null;
+            });
+
+        var guard = new CampaignOwnershipGuard(
+            _campaignsMock.Object,
+            _accessorMock.Object,
+            preflightTimeout: TimeSpan.FromSeconds(10)); // long timeout — caller cancels first
+
+        using var callerCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+
+        await Assert.ThrowsAsync<TaskCanceledException>(() =>
+            guard.AssertOwnedByAsync(campaignId, userId, callerCts.Token));
+    }
 }

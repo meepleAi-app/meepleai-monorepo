@@ -190,7 +190,7 @@ internal static class GamebookPhotoEndpoints
                 logger.LogWarning(ex,
                     "Forbidden mid-stream for campaign {CampaignId} (headers already flushed)",
                     campaignId);
-                await EmitSseErrorAsync(context, code: "FORBIDDEN", message: ex.Message, ct).ConfigureAwait(false);
+                await EmitSseErrorAsync(context, code: "FORBIDDEN", message: ex.Message).ConfigureAwait(false);
             }
             catch (NotFoundException ex)
             {
@@ -198,14 +198,14 @@ internal static class GamebookPhotoEndpoints
                 logger.LogWarning(ex,
                     "NotFound mid-stream for campaign {CampaignId} (headers already flushed)",
                     campaignId);
-                await EmitSseErrorAsync(context, code: "NOT_FOUND", message: ex.Message, ct).ConfigureAwait(false);
+                await EmitSseErrorAsync(context, code: "NOT_FOUND", message: ex.Message).ConfigureAwait(false);
             }
 #pragma warning disable CA1031
             catch (Exception ex)
             {
                 // Branch 5: unknown — log Error, preserve current SSE error event shape
                 logger.LogError(ex, "Error in gamebook translate stream campaign {CampaignId}", campaignId);
-                await EmitSseErrorAsync(context, code: "INTERNAL_ERROR", message: ex.Message, ct).ConfigureAwait(false);
+                await EmitSseErrorAsync(context, code: "INTERNAL_ERROR", message: ex.Message).ConfigureAwait(false);
             }
 #pragma warning restore CA1031
 
@@ -230,14 +230,22 @@ internal static class GamebookPhotoEndpoints
     /// middleware can no longer rewrite the HTTP status code). Swallows any nested
     /// I/O exception that arises from the client having disconnected mid-write.
     /// </summary>
-    private static async Task EmitSseErrorAsync(HttpContext context, string code, string message, CancellationToken ct)
+    /// <remarks>
+    /// Intentionally uses <see cref="CancellationToken.None"/> for the write: we are
+    /// already in an error path emitted as a best-effort to the client; honoring the
+    /// caller's (possibly cancelled) token would throw <see cref="OperationCanceledException"/>
+    /// before any byte is written, which would be swallowed by the bare <c>catch</c>
+    /// below and silently drop the error event. Best-effort write semantics give the
+    /// client a chance to see the error code if its connection is still alive.
+    /// </remarks>
+    private static async Task EmitSseErrorAsync(HttpContext context, string code, string message)
     {
         try
         {
             var errorJson = System.Text.Json.JsonSerializer.Serialize(
                 new { error = message, code }, SseJsonOptions);
-            await context.Response.WriteAsync($"data: {errorJson}\n\n", ct).ConfigureAwait(false);
-            await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+            await context.Response.WriteAsync($"data: {errorJson}\n\n", CancellationToken.None).ConfigureAwait(false);
+            await context.Response.Body.FlushAsync(CancellationToken.None).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch

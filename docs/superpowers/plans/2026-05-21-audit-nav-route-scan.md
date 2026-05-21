@@ -31,7 +31,23 @@ No new modules. All changes contained in nav_dimension.
 
 - [ ] **Step 1: Write the failing test.**
 
-Append to `scripts/v2_audit/tests/test_nav_dimension.py`:
+First, add an autouse fixture at the top of `scripts/v2_audit/tests/test_nav_dimension.py` (after the imports, before the first test) to prevent `lru_cache` pollution across tests:
+
+```python
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _clear_route_tree_hrefs_cache():
+    """Clear lru_cache between tests to prevent cross-test pollution."""
+    yield
+    from scripts.v2_audit import nav_dimension
+    nav_dimension._collect_route_tree_hrefs.cache_clear()
+```
+
+(If `import pytest` is already at the top, just add the fixture.)
+
+Then append the actual tests:
 
 ```python
 def test_route_to_filesystem_path_authenticated(tmp_path, monkeypatch):
@@ -90,7 +106,9 @@ Expected: FAIL with `AttributeError: module 'scripts.v2_audit.nav_dimension' has
 
 - [ ] **Step 3: Implement helper.**
 
-Add to `scripts/v2_audit/nav_dimension.py` at module-level (after `_NAV` loading, before `_try_canonical`):
+First, add `from pathlib import Path` to the imports at the top of `scripts/v2_audit/nav_dimension.py` if not already present (verify with `head -10 scripts/v2_audit/nav_dimension.py`).
+
+Then add to `scripts/v2_audit/nav_dimension.py` at module-level (after `_NAV` loading, before `_try_canonical`):
 
 ```python
 _ROUTE_GROUPS = ("(authenticated)", "(public)")
@@ -128,7 +146,7 @@ Expected: 3 PASS.
 ```bash
 python -m pytest scripts/v2_audit/tests/test_nav_dimension.py -v
 ```
-Expected: 9 PASS (6 existing + 3 new).
+Expected: 6 PASS (3 existing + 3 new).
 
 - [ ] **Step 6: Commit.**
 
@@ -229,7 +247,7 @@ Expected: FAIL with `AttributeError: ... has no attribute '_collect_route_tree_h
 
 - [ ] **Step 3: Implement helper.**
 
-Add `import functools` at the top of `scripts/v2_audit/nav_dimension.py` (after existing imports). Then add the function right after `_route_to_filesystem_path`:
+Add `import functools` at the top of `scripts/v2_audit/nav_dimension.py` (after existing imports — should already include `from pathlib import Path` from Task 1 Step 3). Then add the function right after `_route_to_filesystem_path`:
 
 ```python
 @functools.lru_cache(maxsize=None)
@@ -265,7 +283,7 @@ Expected: 3 PASS.
 ```bash
 python -m pytest scripts/v2_audit/tests/test_nav_dimension.py -v
 ```
-Expected: 12 PASS (6 original + 3 from Task 1 + 3 from Task 2).
+Expected: 9 PASS (3 original + 3 from Task 1 + 3 from Task 2).
 
 - [ ] **Step 6: Commit.**
 
@@ -380,7 +398,7 @@ Expected: 2 PASS.
 ```bash
 python -m pytest scripts/v2_audit/tests/test_nav_dimension.py -v
 ```
-Expected: 14 PASS (6 original + 3 from Task 1 + 3 from Task 2 + 2 from Task 3).
+Expected: 11 PASS (3 original + 3 from Task 1 + 3 from Task 2 + 2 from Task 3).
 
 Some of the 6 original tests may now fail if their synthetic routes happen to match real folders on disk. If so, debug:
 - Run `python -c "from scripts.v2_audit.nav_dimension import _collect_route_tree_hrefs; print(_collect_route_tree_hrefs('/x'))"` to see what real folder maps to `/x`.
@@ -408,7 +426,7 @@ Re-run full suite. Confirm 14 PASS.
 ```bash
 python -m pytest scripts/v2_audit/tests/ -v 2>&1 | tail -3
 ```
-Expected: 44 PASS (36 prior + 8 new across Tasks 1-3).
+Expected: 44 PASS (36 prior in full suite + 8 new across Tasks 1-3).
 
 - [ ] **Step 8: Commit.**
 
@@ -446,7 +464,13 @@ If `M > 20`:
   ```bash
   python -c "from scripts.v2_audit.nav_dimension import _route_to_filesystem_path; print(_route_to_filesystem_path('/sessions/[id]/live'))"
   ```
-- If the folder DOES exist but the href isn't being picked up, check whether the page.tsx uses `<Link>` (regex-detectable) vs `router.push()` (also detectable) vs custom navigation (not detectable). Document the residual case in PR body if appropriate.
+- If the folder DOES exist but the href isn't being picked up, check whether the page.tsx uses `<Link>` (regex-detectable) vs `router.push()` (also detectable) vs custom navigation (not detectable, e.g., Button with onClick calling a custom hook).
+
+**Decision rule:**
+- If ALL residual findings (M − 20) are confirmed undetectable navigation patterns (custom hooks, dynamic href computation, conditional rendering): document each in the PR body's "Residual SKIP_FP" section and proceed. AC2 considered soft-satisfied.
+- If ANY residual finding represents a GENUINE missing link in the route tree (the link is truly absent and should be added): STOP. Do NOT proceed to Task 5. Open a separate sub-issue tracking the missing link, document it, and escalate to controller. AC2 considered hard-failed.
+
+The distinction matters: SKIP_FP residuals are audit-tool limitations (acceptable), missing-link residuals are real component bugs that this sub-project should not silently merge over.
 
 - [ ] **Step 3: Verify expected drop range — nav findings specifically.**
 
@@ -508,11 +532,15 @@ EOF
 )"
 ```
 
-- [ ] **Step 2: Wait for CI green.**
+- [ ] **Step 2: Capture PR number, wait for CI green.**
+
+Extract the PR number from the URL output of `gh pr create` (Step 1). Alternatively:
 
 ```bash
+PR_NUM=$(gh pr list --head feature/audit-nav-route-scan --json number --jq '.[0].number')
+echo "PR_NUM=$PR_NUM"
 sleep 60
-gh pr checks <PR_NUM>
+gh pr checks $PR_NUM
 ```
 
 If failures occur on unrelated tests (e.g., AdvancedFilterPanel flaky from previous PRs), document but proceed to merge with `--admin`.
@@ -520,7 +548,7 @@ If failures occur on unrelated tests (e.g., AdvancedFilterPanel flaky from previ
 - [ ] **Step 3: Merge.**
 
 ```bash
-gh pr merge <PR_NUM> --squash --delete-branch --admin
+gh pr merge $PR_NUM --squash --delete-branch --admin
 ```
 
 - [ ] **Step 4: Sync local main-dev + cleanup.**

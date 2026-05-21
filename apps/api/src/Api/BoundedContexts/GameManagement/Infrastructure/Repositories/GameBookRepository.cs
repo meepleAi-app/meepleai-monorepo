@@ -58,4 +58,17 @@ internal class GameBookRepository : IGameBookRepository
         _db.GameBooks.Update(book);
         return Task.CompletedTask;
     }
+
+    public async Task<IReadOnlyList<GameBook>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        // Materialize once to keep the IN-clause stable and avoid double enumeration.
+        var idList = ids as IList<Guid> ?? ids.ToList();
+        if (idList.Count == 0) return Array.Empty<GameBook>();
+
+        return await _db.GameBooks
+            .Where(b => idList.Contains(b.Id))
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+    }
 }

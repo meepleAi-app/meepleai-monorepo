@@ -59,9 +59,19 @@ public class CreateGamebookCampaignHandler : IRequestHandler<CreateGamebookCampa
         }
 
         return new GamebookCampaignDto(
-            s.Id, s.GameRef.Id, s.OwnerUserId, s.Title,
-            currentParagraph, history, lastReadAt,
-            s.CreatedAt, s.UpdatedAt);
+            s.Id,
+            // Issue #1392: legacy GameId alias kept for backward compat; always
+            // equal to GameRefId until the FE migrates off it.
+            s.GameRef.Id,
+            s.GameRef.Id,
+            (int)s.GameRef.Kind,
+            s.OwnerUserId,
+            s.Title,
+            currentParagraph,
+            history,
+            lastReadAt,
+            s.CreatedAt,
+            s.UpdatedAt);
     }
 
     private static int ParseParagraph(string location)

@@ -20,6 +20,7 @@ internal static class GamebookCampaignEndpoints
         MapCreateCampaignEndpoint(group);
         MapListCampaignsEndpoint(group);
         MapGetCampaignEndpoint(group);
+        MapGetCampaignProgressEndpoint(group);
         MapUpdateProgressEndpoint(group);
         MapRenameCampaignEndpoint(group);
         MapDeleteCampaignEndpoint(group);
@@ -119,6 +120,40 @@ internal static class GamebookCampaignEndpoints
         .WithTags("Gamebook")
         .WithSummary("Get a gamebook campaign by ID")
         .WithDescription("Returns the gamebook campaign with the specified ID, if it belongs to the authenticated user.")
+        .WithOpenApi();
+    }
+
+    private static void MapGetCampaignProgressEndpoint(RouteGroupBuilder group)
+    {
+        // Issue #1388: per-book progress for the ResumeBooksList on the FE play page.
+        group.MapGet("/gamebook/campaigns/{id:guid}/progress", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var rows = await mediator.Send(
+                new GetCampaignProgressQuery(id, userId), ct
+            ).ConfigureAwait(false);
+
+            return Results.Ok(rows);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<IReadOnlyList<SessionBookProgressDto>>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status409Conflict)
+        .WithTags("Gamebook")
+        .WithSummary("Get per-book progress rows for a gamebook campaign")
+        .WithDescription("Returns one entry per book the authenticated owner has engaged with, sorted by most recent visit first. Orphan progress rows (book deleted) are filtered out.")
         .WithOpenApi();
     }
 

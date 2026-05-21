@@ -1,12 +1,14 @@
 'use client';
 
-import { useCallback, type ReactElement } from 'react';
+import { useCallback, useMemo, type ReactElement } from 'react';
 
 import { useRouter } from 'next/navigation';
 
 import { GamebookPlayShell } from '@/components/features/gamebook';
 import { ResumeBooksList } from '@/components/features/gamebook/ResumeBooksList';
 import { GameRefKind, type GameRef } from '@/lib/api/gamebook';
+import { useCampaignProgress } from '@/lib/gamebook/hooks/useCampaignProgress';
+import { useGamebookCampaign } from '@/lib/gamebook/hooks/useGamebookCampaign';
 
 export function Content({
   campaignId,
@@ -16,22 +18,24 @@ export function Content({
   gameId: string;
 }): ReactElement {
   const router = useRouter();
-  // E3 (multi-book): default discriminator to Shared until the campaign DTO
-  // exposes `GameRef` natively (see _content.tsx in /translate for the same
-  // rationale). Empty-book responses are handled by the picker.
-  const gameRef: GameRef = { id: gameId, kind: GameRefKind.Shared };
+  // Issue #1392: derive the GameRef discriminator from the campaign DTO so
+  // private-game campaigns route correctly (the BE now emits gameRefKind).
+  // Fallback to Shared + route gameId while the campaign is still loading —
+  // BookPicker gracefully renders an empty list for unknown gameIds.
+  const { data: campaign } = useGamebookCampaign(campaignId);
+  const gameRef: GameRef = useMemo(() => {
+    if (campaign) {
+      return {
+        id: campaign.gameRefId,
+        kind: campaign.gameRefKind === 1 ? GameRefKind.Private : GameRefKind.Shared,
+      };
+    }
+    return { id: gameId, kind: GameRefKind.Shared };
+  }, [campaign, gameId]);
 
-  // E2 wiring placeholder: a GET endpoint for per-book `SessionBookProgress`
-  // does not yet exist (deferred Phase F follow-up — query handler + endpoint
-  // pair). Until then we pass an empty progress list so the component renders
-  // its empty-state copy. When the endpoint lands, swap to:
-  //   const { data: progress } = useSessionBookProgress(campaignId);
-  const bookProgress: Array<{
-    bookId: string;
-    bookName: string;
-    lastLocation: string;
-    lastVisitedAt: string;
-  }> = [];
+  // Issue #1388: GET /campaigns/{id}/progress returns one row per book the user
+  // has engaged with, server-side sorted by most-recent visit first.
+  const { data: bookProgress = [] } = useCampaignProgress(campaignId);
 
   const handleResume = useCallback(
     (bookId: string) => {

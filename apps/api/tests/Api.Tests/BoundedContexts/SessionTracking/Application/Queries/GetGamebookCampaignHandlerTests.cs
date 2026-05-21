@@ -63,6 +63,45 @@ public sealed class GetGamebookCampaignHandlerTests
     }
 
     [Fact]
+    public async Task Handle_SharedCampaign_DtoExposesSharedDiscriminator()
+    {
+        // Issue #1392: GamebookCampaignDto must surface GameRef discriminator so
+        // FE callers can stop hardcoding GameRefKind.Shared in client routing.
+        var (campaigns, _, handler) = BuildSut();
+        var userId = Guid.NewGuid();
+        var sharedGameId = Guid.NewGuid();
+        var session = GamebookCampaignSession.Create(GameRef.Shared(sharedGameId), userId, "Shared");
+        campaigns.Store.Add(session);
+        var query = new GetGamebookCampaignQuery(session.Id, userId);
+
+        var dto = await handler.Handle(query, TestContext.Current.CancellationToken);
+
+        dto.GameRefId.Should().Be(sharedGameId);
+        dto.GameRefKind.Should().Be((int)GameRefKind.Shared);
+        // Legacy alias preserved.
+        dto.GameId.Should().Be(sharedGameId);
+    }
+
+    [Fact]
+    public async Task Handle_PrivateCampaign_DtoExposesPrivateDiscriminator()
+    {
+        // Issue #1392: GameRefKind=1 propagates so FE can request the right
+        // book picker variant for private-library campaigns.
+        var (campaigns, _, handler) = BuildSut();
+        var userId = Guid.NewGuid();
+        var privateGameId = Guid.NewGuid();
+        var session = GamebookCampaignSession.Create(GameRef.Private(privateGameId), userId, "Private");
+        campaigns.Store.Add(session);
+        var query = new GetGamebookCampaignQuery(session.Id, userId);
+
+        var dto = await handler.Handle(query, TestContext.Current.CancellationToken);
+
+        dto.GameRefId.Should().Be(privateGameId);
+        dto.GameRefKind.Should().Be((int)GameRefKind.Private);
+        dto.GameId.Should().Be(privateGameId);
+    }
+
+    [Fact]
     public async Task Handle_NoProgressRows_ReturnsZeroParagraphAndEmptyHistory()
     {
         // Arrange

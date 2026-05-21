@@ -18,7 +18,15 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 export const GamebookCampaignSchema = z.object({
   id: z.string().uuid(),
+  /**
+   * Legacy alias for `gameRefId`, kept for backward compatibility with callers
+   * that haven't migrated to the discriminator (#1392). Always equal to `gameRefId`.
+   */
   gameId: z.string().uuid(),
+  /** Issue #1392: discriminator-aware ref id (SharedGame or PrivateGame, see `gameRefKind`). */
+  gameRefId: z.string().uuid(),
+  /** Issue #1392: discriminator, 0 = Shared, 1 = Private. Mirrors backend `GameRefKind`. */
+  gameRefKind: z.number().int().min(0).max(1),
   ownerUserId: z.string().uuid(),
   title: z.string().min(1).max(200),
   currentParagraph: z.number().int().min(0),
@@ -103,6 +111,28 @@ export async function updateProgress(
     }
   );
   return parseJson(res, GamebookCampaignSchema);
+}
+
+/**
+ * Issue #1388: per-book progress rows for the ResumeBooksList on the play page.
+ * Sorted server-side by most recent visit first. Orphan rows (book deleted)
+ * are filtered out by the BE handler.
+ */
+export const SessionBookProgressSchema = z.object({
+  bookId: z.string().uuid(),
+  bookName: z.string(),
+  lastLocation: z.string(),
+  lastVisitedAt: z.string().datetime({ offset: true }),
+});
+
+export type SessionBookProgressRow = z.infer<typeof SessionBookProgressSchema>;
+
+export async function getCampaignProgress(id: string): Promise<SessionBookProgressRow[]> {
+  const res = await fetch(
+    `${API_BASE}/api/v1/gamebook/campaigns/${encodeURIComponent(id)}/progress`,
+    { credentials: 'include' }
+  );
+  return parseJson(res, z.array(SessionBookProgressSchema));
 }
 
 export async function renameCampaign(id: string, title: string): Promise<GamebookCampaign> {

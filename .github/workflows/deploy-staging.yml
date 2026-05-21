@@ -639,6 +639,18 @@ jobs:
             for f in secrets/*.secret; do source "$f" 2>/dev/null; done
             set +a
 
+            # Issue #1399-C: compose.staging.yml uses ${API_IMAGE:?...} and
+            # ${WEB_IMAGE:?...} guards on both services. When only ONE service
+            # is rebuilt this run, the other env var would be unset and the
+            # whole `docker compose up` aborts (even though we pass --no-deps
+            # and only target the changed service). Default both vars to the
+            # staging-latest tag the build job always promotes (lines ~346,
+            # ~356) so the unchanged service keeps pointing at its previous
+            # deploy. The rebuilt service then overrides its var below with
+            # the freshly-pushed digest.
+            export API_IMAGE="${{ env.API_IMAGE }}:staging-latest"
+            export WEB_IMAGE="${{ env.WEB_IMAGE }}:staging-latest"
+
             SERVICES=""
 
             # Pull and tag only changed images

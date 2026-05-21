@@ -535,8 +535,13 @@ export function AgentDetailViewV2({ agentId }: AgentDetailViewV2Props): ReactEle
           lastUsed: safeAgent.lastInvokedAt ?? undefined,
           createdAt: safeAgent.createdAt,
         }}
+        ctaBack={() => router.push('/agents')}
         ctaPlay={variant === 'active' ? () => router.push(`/agents/${agentId}/chat`) : undefined}
-        ctaSetup={variant === 'draft' ? () => router.push(`/agents/${agentId}/setup`) : undefined}
+        ctaSetup={
+          variant === 'draft' && safeAgent.gameId
+            ? () => router.push(`/library/${safeAgent.gameId}/play/setup-wizard`)
+            : undefined
+        }
         ctaUnarchive={
           variant === 'archived' ? () => router.push(`/agents/${agentId}/unarchive`) : undefined
         }

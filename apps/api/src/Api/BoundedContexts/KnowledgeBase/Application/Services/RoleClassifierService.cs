@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Services;
@@ -141,8 +140,11 @@ internal class RoleClassifierService : IRoleClassifierService
         """;
 
     // D3: LLM fallback for ambiguous chunks (no heading match).
-    // System prompt instructs JSON array-of-arrays output; on parse failure
-    // we degrade gracefully to RulesReference per chunk (safe default for manuals).
+    // System prompt instructs JSON array-of-arrays output; we delegate to
+    // ILlmService.GenerateJsonAsync which tolerates prose preamble and markdown
+    // code fences (issue #1395). On unrecoverable parse failures the underlying
+    // service returns null and we degrade gracefully to RulesReference per chunk
+    // (safe default for manuals).
     private async Task<IReadOnlyList<GameBookRole>> ClassifyViaLlmAsync(
         IReadOnlyList<ChunkInput> chunks,
         CancellationToken cancellationToken)
@@ -156,22 +158,21 @@ internal class RoleClassifierService : IRoleClassifierService
 
         try
         {
-            var response = await _llmService.GenerateCompletionAsync(
+            var parsed = await _llmService.GenerateJsonAsync<string[][]>(
                 LlmSystemPrompt,
                 userPrompt,
                 RequestSource.RagClassification,
                 cancellationToken).ConfigureAwait(false);
 
-            if (!response.Success || string.IsNullOrWhiteSpace(response.Response))
+            if (parsed is null || parsed.Length == 0)
             {
                 _logger.LogWarning(
-                    "Role classifier LLM fallback returned no usable content (success={Success}); defaulting {Count} chunks to RulesReference",
-                    response.Success,
+                    "Role classifier LLM fallback returned no usable JSON; defaulting {Count} chunks to RulesReference",
                     chunks.Count);
                 return DefaultAll(chunks.Count);
             }
 
-            return ParseLlmResponse(response.Response, chunks.Count);
+            return MapParsedToRoles(parsed, chunks.Count);
         }
         catch (OperationCanceledException)
         {
@@ -203,33 +204,25 @@ internal class RoleClassifierService : IRoleClassifierService
         return sb.ToString();
     }
 
-    private static IReadOnlyList<GameBookRole> ParseLlmResponse(string content, int expectedCount)
+    private static IReadOnlyList<GameBookRole> MapParsedToRoles(string[][] parsed, int expectedCount)
     {
-        try
+        var result = new GameBookRole[expectedCount];
+        for (var i = 0; i < expectedCount; i++)
         {
-            var parsed = JsonSerializer.Deserialize<string[][]>(content) ?? Array.Empty<string[]>();
-            var result = new GameBookRole[expectedCount];
-            for (var i = 0; i < expectedCount; i++)
+            if (i >= parsed.Length || parsed[i] is null)
             {
-                if (i >= parsed.Length)
-                {
-                    result[i] = GameBookRole.RulesReference;
-                    continue;
-                }
-
-                var roles = GameBookRole.None;
-                foreach (var label in parsed[i])
-                {
-                    roles |= ParseLabel(label);
-                }
-                result[i] = roles == GameBookRole.None ? GameBookRole.RulesReference : roles;
+                result[i] = GameBookRole.RulesReference;
+                continue;
             }
-            return result;
+
+            var roles = GameBookRole.None;
+            foreach (var label in parsed[i])
+            {
+                roles |= ParseLabel(label);
+            }
+            result[i] = roles == GameBookRole.None ? GameBookRole.RulesReference : roles;
         }
-        catch (Exception ex) when (ex is JsonException or ArgumentException)
-        {
-            return DefaultAll(expectedCount);
-        }
+        return result;
     }
 
     private static GameBookRole ParseLabel(string label) => label?.ToLowerInvariant() switch

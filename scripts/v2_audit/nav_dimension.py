@@ -12,9 +12,11 @@ For extra component routes not in mockup: MINOR.
 """
 from __future__ import annotations
 from typing import Iterator
+import functools
 import re
+from pathlib import Path
 
-from scripts.v2_audit.component_inspector import ComponentSnapshot
+from scripts.v2_audit.component_inspector import ComponentSnapshot, inspect_component
 from scripts.v2_audit.mockup_inspector import MockupSnapshot
 from scripts.v2_audit.finding import Finding, Severity, Confidence, Dimension
 
@@ -67,12 +69,56 @@ def _mockup_to_route(mockup_dest: str) -> str | None:
     return None
 
 
+_ROUTE_GROUPS = ("(authenticated)", "(public)")
+_REPO_ROOT_OVERRIDE: Path | None = None  # test seam
+
+
+def _route_to_filesystem_path(route: str) -> Path | None:
+    """Map a Next.js route to its filesystem folder under apps/web/src/app/.
+
+    Tries route groups `(authenticated)` and `(public)` first, then root-level
+    fallback. Returns None if no matching folder exists.
+    """
+    repo_root = _REPO_ROOT_OVERRIDE or Path(__file__).resolve().parents[2]
+    app_dir = repo_root / "apps" / "web" / "src" / "app"
+    rel = route.lstrip("/")
+    for group in _ROUTE_GROUPS:
+        candidate = app_dir / group / rel
+        if candidate.exists() and candidate.is_dir():
+            return candidate
+    direct = app_dir / rel
+    if direct.exists() and direct.is_dir():
+        return direct
+    return None
+
+
+@functools.lru_cache(maxsize=None)
+def _collect_route_tree_hrefs(route: str) -> frozenset[str]:
+    """Aggregate Link hrefs + router calls from all TSX files in the route folder.
+
+    Skips test files (.test.tsx, .stories.tsx). Returns frozenset for cache safety.
+    Empty frozenset if route folder doesn't exist.
+    """
+    path = _route_to_filesystem_path(route)
+    if path is None:
+        return frozenset()
+    hrefs: set[str] = set()
+    for tsx in path.glob("**/*.tsx"):
+        name = tsx.name
+        if name.endswith(".test.tsx") or name.endswith(".stories.tsx"):
+            continue
+        snap = inspect_component(tsx)
+        hrefs |= snap.link_hrefs
+        hrefs |= snap.router_calls
+    return frozenset(hrefs)
+
+
 def audit_nav(
     comp: ComponentSnapshot,
     mock: MockupSnapshot,
     route: str,
 ) -> Iterator[Finding]:
-    comp_hrefs = comp.link_hrefs | comp.router_calls
+    comp_hrefs = comp.link_hrefs | comp.router_calls | _collect_route_tree_hrefs(route)
     mapped_destinations = {}  # route → mockup_dest
     unmappable = []
 

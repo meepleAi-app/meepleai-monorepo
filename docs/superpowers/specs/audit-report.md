@@ -141,6 +141,10 @@
 
 ### Route `/join/event/[code]`
 
+- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
+  - `expected_route`: `/library/[gameId]/play/game-onboarding`
+  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
+  - `component_hrefs`: `['/', '/contact']`
 - **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /settings (mockup: settings.html)
   - `expected_route`: `/settings`
   - `mockup_dest`: `settings.html`
@@ -148,10 +152,6 @@
 - **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
   - `expected_route`: `/game-nights/[id]/detail-rsvp`
   - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
-  - `component_hrefs`: `['/', '/contact']`
-- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
   - `component_hrefs`: `['/', '/contact']`
 - **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /
   - `component_href`: `/`

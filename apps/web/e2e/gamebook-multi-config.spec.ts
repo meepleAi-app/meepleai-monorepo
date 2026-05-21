@@ -16,23 +16,24 @@ import { test, expect } from '@playwright/test';
  *
  *   pnpm test:e2e --grep "@gamebook-multi-config"
  *
- * Most tests are gated behind `test.skip()` until the seed is wired into
- * `CatalogSeedLayer` (deferred in F1+F2+F3 — see GameBookSeeder.cs class
- * doc). Once the orchestrator pass-through is added, flip the
- * `requiresSeededData` flag to `false`.
+ * Issue #1390: flag split now matches actual seed coverage —
+ *   - `requiresNanolithSeed` is `false` because PR #1389 wired Nanolith into
+ *     CatalogSeedLayer via GameBookSeeder.SeedNanolithIfReadyAsync.
+ *   - `requiresExpandedSeed` is still `true` because Fighting Fantasy +
+ *     Maracaibo + 7th Continent are NOT in the catalog manifest and their
+ *     GameBookSeeder paths are not yet invoked by the orchestrator (deferred
+ *     follow-up — manifest entries needed before flipping).
  *
  * Spec: docs/for-developers/specs/2026-05-19-gamebook-multi-book-generalization-design.md
  * Plan: docs/superpowers/plans/2026-05-19-gamebook-multi-book-generalization.md §F4
  */
 
-const requiresSeededData = true; // flip when seed orchestrator wiring lands
+const requiresNanolithSeed = false; // PR #1389 wired SeedNanolithIfReadyAsync into CatalogSeedLayer
+const requiresExpandedSeed = true; // flip when Maracaibo + FF + 7th Continent land in manifest
 
 test.describe('Gamebook multi-config @gamebook-multi-config', () => {
   test('BookPicker visible only when N>1 narrative books (Nanolith)', async ({ page }) => {
-    test.skip(
-      requiresSeededData,
-      'requires seeded Nanolith with 4 GameBooks (Phase F orchestrator wiring deferred)'
-    );
+    test.skip(requiresNanolithSeed, 'requires seeded Nanolith with 4 GameBooks');
 
     await page.goto('/library/games/nanolith/play');
     await page.getByTestId('photo-translate-cta').click();
@@ -45,7 +46,7 @@ test.describe('Gamebook multi-config @gamebook-multi-config', () => {
 
   test('BookPicker hidden when 1 narrative book (Maracaibo)', async ({ page }) => {
     test.skip(
-      requiresSeededData,
+      requiresExpandedSeed,
       'requires seeded Maracaibo with 2 GameBooks (rulebook+story); orchestrator wiring deferred'
     );
 
@@ -59,7 +60,7 @@ test.describe('Gamebook multi-config @gamebook-multi-config', () => {
     page,
   }) => {
     test.skip(
-      requiresSeededData,
+      requiresExpandedSeed,
       'requires seeded Fighting Fantasy + manifest entry (FF not yet in catalog manifests)'
     );
 
@@ -85,7 +86,7 @@ test.describe('Gamebook multi-config @gamebook-multi-config', () => {
     page,
   }) => {
     test.skip(
-      requiresSeededData,
+      requiresExpandedSeed,
       'requires seeded Maracaibo + role-aware query routing (D7 wiring)'
     );
 
@@ -105,7 +106,7 @@ test.describe('Gamebook multi-config @gamebook-multi-config', () => {
 
   test('Case C: 7th Continent — companion disabled when no GameBook (FM-19)', async ({ page }) => {
     test.skip(
-      requiresSeededData,
+      requiresExpandedSeed,
       'requires seeded 7th Continent SharedGame WITHOUT a GameBook (manifest only, no GameBookSeeder call)'
     );
 

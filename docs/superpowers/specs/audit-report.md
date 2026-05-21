@@ -1,8 +1,8 @@
 # V2 Component Audit Report
 
 **Total components audited:** 70
-**Total findings:** 4314
-**Main report:** 26 (Critical: 3 · Important: 7 · Minor: 16)
+**Total findings:** 4313
+**Main report:** 25 (Critical: 2 · Important: 7 · Minor: 16)
 **Manual review queue:** 4288
 
 ## Findings by Route
@@ -31,8 +31,6 @@
 
 ### Route `/games/[id]`
 
-- **[CRITICAL]** `GameDetailHero.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
-  - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\game-detail\GameDetailHero.tsx`
 - **[MINOR]** `GameDetailHero.tsx` (tokens): Unpaired text-white (no colored bg on same element)
   - `token`: `text-white`
 - **[MINOR]** `GameDetailSessionsRail.tsx` (tokens): Unpaired text-white (no colored bg on same element)
@@ -41,11 +39,11 @@
   - `token`: `text-white`
 - **[MINOR]** `GameDetailKbDocList.tsx` (tokens): Unpaired text-white (no colored bg on same element)
   - `token`: `text-white`
-- **[MINOR]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Component link not in mockup: doc.href
-  - `component_href`: `doc.href`
-  - `mapped_routes`: `['/games', '/games/[id]/chat']`
 - **[MINOR]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Component link not in mockup: viewAllHref
   - `component_href`: `viewAllHref`
+  - `mapped_routes`: `['/games', '/games/[id]/chat']`
+- **[MINOR]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Component link not in mockup: doc.href
+  - `component_href`: `doc.href`
   - `mapped_routes`: `['/games', '/games/[id]/chat']`
 
 ### Route `/join/event/[code]`
@@ -3356,8 +3354,8 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `ConnectionChipStripFooter.tsx` (props): Mockup accesses 'view' but no matching prop in component
 - [IMPORTANT] `ConnectionChipStripFooter.tsx` (props): Mockup accesses 'when' but no matching prop in component
 - [IMPORTANT] `ConnectionChipStripFooter.tsx` (props): Mockup accesses 'winner' but no matching prop in component
-- [IMPORTANT] `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Unmappable mockup destination: librogame-runthrough-resume-picker.html
 - [IMPORTANT] `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Unmappable mockup destination: librogame-runthrough-game-onboarding.html
+- [IMPORTANT] `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Unmappable mockup destination: librogame-runthrough-resume-picker.html
 
 ### Route `/sessions/[id]`
 
@@ -4426,6 +4424,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `ConnectionLostBanner.tsx` (props): Mockup accesses 't' but no matching prop in component
 - [IMPORTANT] `ConnectionLostBanner.tsx` (props): Mockup accesses 'tab' but no matching prop in component
 - [IMPORTANT] `ConnectionLostBanner.tsx` (props): Mockup accesses 'text' but no matching prop in component
-- [IMPORTANT] `ActionLogTimeline.tsx, ConnectionLostBanner.tsx, DesktopBody.tsx, LiveAgentChat.tsx, LiveScoringPanel.tsx, LiveSessionNotes.tsx, LiveTopBar.tsx, MobileBody.tsx, PlayerRosterLive.tsx, RightColumnTabs.tsx, SessionToolsRail.tsx, TurnIndicator.tsx` (nav): Unmappable mockup destination: librogame-runthrough-game-onboarding.html
 - [IMPORTANT] `ActionLogTimeline.tsx, ConnectionLostBanner.tsx, DesktopBody.tsx, LiveAgentChat.tsx, LiveScoringPanel.tsx, LiveSessionNotes.tsx, LiveTopBar.tsx, MobileBody.tsx, PlayerRosterLive.tsx, RightColumnTabs.tsx, SessionToolsRail.tsx, TurnIndicator.tsx` (nav): Unmappable mockup destination: sp4-session-summary.html
+- [IMPORTANT] `ActionLogTimeline.tsx, ConnectionLostBanner.tsx, DesktopBody.tsx, LiveAgentChat.tsx, LiveScoringPanel.tsx, LiveSessionNotes.tsx, LiveTopBar.tsx, MobileBody.tsx, PlayerRosterLive.tsx, RightColumnTabs.tsx, SessionToolsRail.tsx, TurnIndicator.tsx` (nav): Unmappable mockup destination: librogame-runthrough-game-onboarding.html
 

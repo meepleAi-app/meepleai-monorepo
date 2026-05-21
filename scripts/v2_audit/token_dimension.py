@@ -20,7 +20,9 @@ _HARDCODED_PATTERNS = re.compile(
 # White exemption: text-white/border-white/ring-white when paired with colored bg
 _WHITE_TOKEN = re.compile(r"^(text|border|ring)-white$")
 _ESLINT_DISABLE_RE = re.compile(
-    r"/\*\s*eslint-disable\b[^*]*local/no-hardcoded-color-utility",
+    # Match file-level `/* eslint-disable ... */` but NOT line-level
+    # `/* eslint-disable-next-line ... */` (which is a justified per-line exemption).
+    r"/\*\s*eslint-disable(?!-next-line)\b[^*]*local/no-hardcoded-color-utility",
     re.IGNORECASE,
 )
 

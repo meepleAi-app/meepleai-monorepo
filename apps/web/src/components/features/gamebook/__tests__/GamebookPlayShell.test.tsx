@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 
 import * as hookModule from '@/lib/gamebook/hooks/useGamebookCampaign';
 import * as mutModule from '@/lib/gamebook/hooks/useUpdateGamebookProgress';
+import * as booksHook from '@/hooks/useGameBooks';
 
 const openChatMock = vi.fn();
 
@@ -28,6 +29,7 @@ import { GamebookPlayShell } from '../GamebookPlayShell';
 
 vi.mock('@/lib/gamebook/hooks/useGamebookCampaign');
 vi.mock('@/lib/gamebook/hooks/useUpdateGamebookProgress');
+vi.mock('@/hooks/useGameBooks');
 vi.mock('@/lib/stores/chat-panel-store', () => ({
   useChatPanelStore: (selector: (s: { open: typeof openChatMock }) => unknown) =>
     selector({ open: openChatMock }),
@@ -55,6 +57,15 @@ beforeEach(() => {
   vi.mocked(mutModule.useUpdateGamebookProgress).mockReturnValue({
     mutate: vi.fn(),
     isPending: false,
+  } as never);
+  // Default mock: no books returned — shell falls back to single-book auto
+  // path with `effectiveBookId === undefined`, which means submit is disabled
+  // but the existing render-only assertions still pass.
+  vi.mocked(booksHook.useGameBooks).mockReturnValue({
+    data: [],
+    isLoading: false,
+    isError: false,
+    error: null,
   } as never);
 });
 

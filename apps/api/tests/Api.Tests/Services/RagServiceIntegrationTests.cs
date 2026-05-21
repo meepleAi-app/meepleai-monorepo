@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
@@ -349,6 +350,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
                 It.IsAny<float>(),
                 It.IsAny<float>(),
                 It.IsAny<double>(),
+                It.IsAny<GameBookRole>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(dummyResults);
     }

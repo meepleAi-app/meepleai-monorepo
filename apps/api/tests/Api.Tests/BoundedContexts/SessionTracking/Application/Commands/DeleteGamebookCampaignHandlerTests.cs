@@ -2,6 +2,7 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Domain.ValueObjects;
 using FluentAssertions;
 using MediatR;
 using Moq;
@@ -44,7 +45,7 @@ public sealed class DeleteGamebookCampaignHandlerTests
         var mediator = new Mock<IMediator>();
         var handler = new DeleteGamebookCampaignHandler(repo, mediator.Object);
         var userId = Guid.NewGuid();
-        var session = GamebookCampaignSession.Create(Guid.NewGuid(), userId, "Doomed Campaign");
+        var session = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), userId, "Doomed Campaign");
         repo.Store.Add(session);
         return (repo, handler, session);
     }

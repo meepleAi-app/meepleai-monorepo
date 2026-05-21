@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.GameToolkit.Application.Commands;
 using Api.BoundedContexts.GameToolkit.Application.DTOs;
 using Api.BoundedContexts.GameToolkit.Domain.Enums;
@@ -188,6 +189,7 @@ public class GenerateToolkitFromKbHandlerTests
                 It.IsAny<string>(), GameId, SearchMode.Hybrid, It.IsAny<int>(),
                 It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
                 It.IsAny<double>(),
+                It.IsAny<GameBookRole>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(chunks);
 
@@ -230,6 +232,7 @@ public class GenerateToolkitFromKbHandlerTests
                 It.IsAny<string>(), GameId, SearchMode.Hybrid, It.IsAny<int>(),
                 It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
                 It.IsAny<double>(),
+                It.IsAny<GameBookRole>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult> { chunk });
     }

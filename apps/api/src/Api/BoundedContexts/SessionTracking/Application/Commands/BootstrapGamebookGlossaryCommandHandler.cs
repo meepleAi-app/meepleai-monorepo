@@ -44,7 +44,7 @@ internal sealed class BootstrapGamebookGlossaryCommandHandler
         if (existing.Count > 0)
             return existing.Select(MapToDto).ToList().AsReadOnly();
 
-        var gameId = campaign.GameId;
+        var gameId = campaign.GameRef.Id;
         var systemPrompt =
             "You are a board game localization expert. " +
             "Return JSON with this exact structure: {\"entries\": [{\"en\": \"...\", \"it\": \"...\"}]}. " +

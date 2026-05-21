@@ -32,10 +32,18 @@ export const GamebookSegmentSchema = z.object({
 
 export type GamebookSegment = z.infer<typeof GamebookSegmentSchema>;
 
+/**
+ * Photo artifact DTO.
+ *
+ * C5 (gamebook multi-book generalization, 2026-05-19): `pageType` was removed
+ * from the BE response — the page bookkeeping now happens via `GameBookId`
+ * on the row (passed on upload, returned on subsequent reads). The FE no
+ * longer needs to discriminate between Storybook / Encounter at the schema
+ * level since the user picks the book up-front via BookPicker.
+ */
 export const GamebookPhotoArtifactSchema = z.object({
   id: z.string().uuid(),
   campaignId: z.string().uuid(),
-  pageType: z.enum(['Storybook', 'Encounter']),
   status: z.enum(['Uploaded', 'Segmented', 'Translated', 'Failed']),
   ocrFullText: z.string().nullable(),
   segments: z
@@ -63,14 +71,22 @@ export type TranslateChunk = z.infer<typeof TranslateChunkSchema>;
 // API functions
 // ---------------------------------------------------------------------------
 
+/**
+ * Upload a photo for a specific GameBook within a campaign.
+ *
+ * C4/C5 (gamebook multi-book generalization, 2026-05-19): the BE now requires
+ * `gameBookId` in the form body (replacing the old `pageType` discriminator).
+ * The caller MUST resolve `gameBookId` up-front via `useGameBooks` +
+ * `BookPicker` (or single-book auto-select).
+ */
 export async function uploadPhoto(
   campaignId: string,
   file: File,
-  pageType: 'Storybook' | 'Encounter'
+  gameBookId: string
 ): Promise<GamebookPhotoArtifact> {
   const fd = new FormData();
   fd.append('file', file);
-  fd.append('pageType', pageType);
+  fd.append('gameBookId', gameBookId);
   const res = await fetch(
     `${API_BASE}/api/v1/gamebook/campaigns/${encodeURIComponent(campaignId)}/photos`,
     { method: 'POST', body: fd, credentials: 'include' }

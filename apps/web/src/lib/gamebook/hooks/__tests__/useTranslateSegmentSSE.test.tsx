@@ -49,6 +49,7 @@ function FakeEventSourceConstructor(
 const CAMPAIGN_ID = '11111111-1111-4111-a111-111111111111';
 const PHOTO_ID = '22222222-2222-4222-a222-222222222222';
 const PARA_ID = '33333333-3333-4333-a333-333333333333';
+const BOOK_ID = '55555555-5555-4555-a555-555555555555';
 
 describe('useTranslateSegmentSSE', () => {
   beforeEach(() => {
@@ -72,7 +73,7 @@ describe('useTranslateSegmentSSE', () => {
   it('accumulates delta chunks', () => {
     const { result } = renderHook(() => useTranslateSegmentSSE());
 
-    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 3));
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 3, BOOK_ID));
 
     act(() => lastInstance!.simulateMessage({ delta: 'Ciao ', isComplete: false }));
     act(() => lastInstance!.simulateMessage({ delta: 'mondo', isComplete: false }));
@@ -84,7 +85,7 @@ describe('useTranslateSegmentSSE', () => {
   it('marks complete and captures paragraphId + appliedTerms on final chunk', () => {
     const { result } = renderHook(() => useTranslateSegmentSSE());
 
-    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 3));
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 3, BOOK_ID));
     act(() => lastInstance!.simulateMessage({ delta: 'Sei in una foresta', isComplete: false }));
     act(() =>
       lastInstance!.simulateMessage({
@@ -105,7 +106,7 @@ describe('useTranslateSegmentSSE', () => {
   it('sets error state on chunk with error field', () => {
     const { result } = renderHook(() => useTranslateSegmentSSE());
 
-    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 1));
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 1, BOOK_ID));
     act(() => lastInstance!.simulateMessage({ error: 'translation_failed' }));
 
     expect(result.current.error).toBe('translation_failed');
@@ -115,7 +116,7 @@ describe('useTranslateSegmentSSE', () => {
   it('sets stream_error on EventSource onerror', () => {
     const { result } = renderHook(() => useTranslateSegmentSSE());
 
-    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 2));
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 2, BOOK_ID));
     act(() => lastInstance!.simulateError());
 
     expect(result.current.error).toBe('stream_error');
@@ -124,7 +125,7 @@ describe('useTranslateSegmentSSE', () => {
   it('stop() closes EventSource', () => {
     const { result } = renderHook(() => useTranslateSegmentSSE());
 
-    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 5));
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 5, BOOK_ID));
     const captured = lastInstance;
     act(() => result.current.stop());
 
@@ -134,10 +135,10 @@ describe('useTranslateSegmentSSE', () => {
   it('resets state on new start() call', () => {
     const { result } = renderHook(() => useTranslateSegmentSSE());
 
-    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 1));
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 1, BOOK_ID));
     act(() => lastInstance!.simulateMessage({ delta: 'old text', isComplete: false }));
 
-    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 2));
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 2, BOOK_ID));
 
     expect(result.current.partialText).toBe('');
     expect(result.current.isComplete).toBe(false);
@@ -147,10 +148,11 @@ describe('useTranslateSegmentSSE', () => {
     renderHook(() => useTranslateSegmentSSE());
     const { result } = renderHook(() => useTranslateSegmentSSE());
 
-    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 7));
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 7, BOOK_ID));
 
     expect(lastInstance?.url).toContain(`/campaigns/${CAMPAIGN_ID}/photos/translate`);
     expect(lastInstance?.url).toContain(`photoId=${PHOTO_ID}`);
     expect(lastInstance?.url).toContain('paragraphNumber=7');
+    expect(lastInstance?.url).toContain(`gameBookId=${BOOK_ID}`);
   });
 });

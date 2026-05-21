@@ -3,7 +3,6 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
-using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -39,7 +38,7 @@ internal static class GamebookPhotoEndpoints
         group.MapPost("/gamebook/campaigns/{campaignId:guid}/photos", async (
             Guid campaignId,
             IFormFile file,
-            [FromForm] string pageType,
+            [FromForm] Guid gameBookId,
             IMediator mediator,
             HttpContext context,
             CancellationToken ct) =>
@@ -49,14 +48,14 @@ internal static class GamebookPhotoEndpoints
             if (!TryGetUserId(context, session, out var userId)) return Results.Unauthorized();
             if (file is null || file.Length == 0)
                 return Results.BadRequest(new { error = "file is required" });
-            if (!Enum.TryParse<GamebookPageType>(pageType, ignoreCase: true, out var parsedPageType))
-                return Results.BadRequest(new { error = $"invalid pageType '{pageType}'" });
+            if (gameBookId == Guid.Empty)
+                return Results.BadRequest(new { error = "gameBookId is required" });
 
             var stream = file.OpenReadStream();
             await using (stream.ConfigureAwait(false))
             {
                 var dto = await mediator.Send(
-                    new UploadGamebookPhotoCommand(campaignId, userId, stream, file.ContentType, parsedPageType),
+                    new UploadGamebookPhotoCommand(campaignId, gameBookId, userId, stream, file.ContentType),
                     ct).ConfigureAwait(false);
 
                 return Results.Created($"/api/v1/gamebook/campaigns/{campaignId}/photos/{dto.Id}", dto);
@@ -109,6 +108,7 @@ internal static class GamebookPhotoEndpoints
             Guid campaignId,
             [FromQuery] Guid photoId,
             [FromQuery] int paragraphNumber,
+            [FromQuery] Guid gameBookId,
             IMediator mediator,
             HttpContext context,
             ILogger<Program> logger,
@@ -122,7 +122,8 @@ internal static class GamebookPhotoEndpoints
             context.Response.Headers["Cache-Control"] = "no-cache";
             context.Response.Headers["Connection"] = "keep-alive";
 
-            var query = new TranslateGamebookSegmentQuery(campaignId, photoId, paragraphNumber, userId);
+            // C2 (2026-05-19): gameBookId scopes the per-book progress update.
+            var query = new TranslateGamebookSegmentQuery(campaignId, photoId, paragraphNumber, userId, gameBookId);
 
             try
             {

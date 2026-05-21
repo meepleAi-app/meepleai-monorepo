@@ -39,6 +39,7 @@ internal static class SessionTrackingServiceExtensions
         services.AddScoped<IGamebookPhotoArtifactRepository, GamebookPhotoArtifactRepository>(); // Iter 1.B
         services.AddScoped<ITranslatedParagraphRepository, TranslatedParagraphRepository>(); // Iter 1.B
         services.AddScoped<IGamebookGlossaryRepository, GamebookGlossaryRepository>(); // Iter 1.B
+        services.AddScoped<ISessionBookProgressRepository, SessionBookProgressRepository>(); // Task C1 — gamebook multi-book generalization
 
         // Register Unit of Work
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

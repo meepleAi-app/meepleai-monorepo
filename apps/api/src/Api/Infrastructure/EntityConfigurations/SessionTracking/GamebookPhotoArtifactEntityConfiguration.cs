@@ -1,18 +1,20 @@
 using System.Text.Json;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
-using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Api.BoundedContexts.SessionTracking.Infrastructure.Persistence.Configurations;
+namespace Api.Infrastructure.EntityConfigurations.SessionTracking;
 
 /// <summary>
 /// EF Core configuration for GamebookPhotoArtifact.
 /// Uses direct domain entity mapping (no separate persistence entity).
+/// Maps the IReadOnlyList&lt;GamebookSegment&gt; collection to a single jsonb column via System.Text.Json.
+/// Phase A0.1 (2026-05-19): moved from BoundedContexts/SessionTracking/Infrastructure/Persistence/Configurations
+/// to canonical Infrastructure/EntityConfigurations location to align with the rest of the codebase.
 /// Iter 1.B — Libro Game Nanolith dogfood demo.
 /// </summary>
-internal sealed class GamebookPhotoArtifactConfiguration : IEntityTypeConfiguration<GamebookPhotoArtifact>
+internal class GamebookPhotoArtifactEntityConfiguration : IEntityTypeConfiguration<GamebookPhotoArtifact>
 {
     public void Configure(EntityTypeBuilder<GamebookPhotoArtifact> builder)
     {
@@ -21,8 +23,8 @@ internal sealed class GamebookPhotoArtifactConfiguration : IEntityTypeConfigurat
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id).HasColumnName("id");
         builder.Property(e => e.CampaignId).HasColumnName("campaign_id").IsRequired();
+        builder.Property(e => e.GameBookId).HasColumnName("game_book_id").IsRequired();
         builder.Property(e => e.S3Key).HasColumnName("s3_key").HasMaxLength(500).IsRequired();
-        builder.Property(e => e.PageType).HasColumnName("page_type").IsRequired();
         builder.Property(e => e.Status).HasColumnName("status").IsRequired();
         builder.Property(e => e.OcrFullText).HasColumnName("ocr_full_text").HasColumnType("text");
         builder.Property(e => e.FailureReason).HasColumnName("failure_reason").HasMaxLength(1000);
@@ -32,6 +34,7 @@ internal sealed class GamebookPhotoArtifactConfiguration : IEntityTypeConfigurat
         builder.Property(e => e.Segments)
             .HasColumnName("segments")
             .HasColumnType("jsonb")
+            .IsRequired()
             .HasConversion(
                 v => JsonSerializer.Serialize(
                     v.Select(s => new SegmentDto(s.ParagraphNumber, s.SourceText, s.BoundingBox)).ToArray(),

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Translation;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
@@ -77,7 +78,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>());
 
         mockHybridSearchService
-            .Setup(h => h.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .Setup(h => h.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
         _searchHandler = new SearchQueryHandler(
@@ -455,6 +456,8 @@ public class AskQuestionQueryHandlerPhase2Tests
             _mockHouseRuleMatcher.Object,
             _mockPricingEngine.Object,
             _mockTranslationService.Object,
+            // D7: use the real classifier (pure, stateless, no dependencies).
+            new IntentClassifierService(),
             BuildRoutingMonitor(routingOverrides ?? new Api.Configuration.LlmQueryComplexityRoutingOptions()),
             _mockLogger.Object);
 

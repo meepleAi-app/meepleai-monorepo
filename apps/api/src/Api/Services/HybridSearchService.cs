@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Helpers;
@@ -26,6 +27,12 @@ internal class HybridSearchService : IHybridSearchService
     // Higher k gives less weight to rank differences, k=60 is empirically optimal
     private const int DefaultRrfK = 60;
 
+    // Phase D (D6): additive boost applied to chunks whose RoleTags overlap with the user
+    // intent's QueryRoleHint. Chosen ~10x the smallest expected RRF contribution (≈ 0.7/(60+10) ≈ 0.01)
+    // so a single matching tag clearly outranks a non-matching peer at the same retrieval rank,
+    // but does not steamroll strong vector+keyword agreement at the top.
+    internal const float RoleMatchBoost = 0.15f;
+
     public HybridSearchService(
         IKeywordSearchService keywordSearchService,
         IEmbeddingService embeddingService,
@@ -49,6 +56,7 @@ internal class HybridSearchService : IHybridSearchService
         float vectorWeight = 0.7f,
         float keywordWeight = 0.3f,
         double keywordMinScore = 0.0,
+        GameBookRole queryRoleHint = GameBookRole.None,
         CancellationToken cancellationToken = default)
     {
         // Issue #1445: Use centralized query validation
@@ -64,8 +72,8 @@ internal class HybridSearchService : IHybridSearchService
         var safeLimit = Math.Min(Math.Max(limit, 1), 100); // Min: 1, Max: 100
 
         _logger.LogInformation(
-            "Hybrid search started: query='{Query}', gameId={GameId}, mode={Mode}, documentFilter={HasFilter}, vectorWeight={VectorWeight}, keywordWeight={KeywordWeight}, limit={Limit}",
-            query, gameId, mode, documentIds != null, vectorWeight, keywordWeight, limit);
+            "Hybrid search started: query='{Query}', gameId={GameId}, mode={Mode}, documentFilter={HasFilter}, vectorWeight={VectorWeight}, keywordWeight={KeywordWeight}, limit={Limit}, roleHint={RoleHint}",
+            query, gameId, mode, documentIds != null, vectorWeight, keywordWeight, limit, queryRoleHint);
 
         try
         {
@@ -75,10 +83,10 @@ internal class HybridSearchService : IHybridSearchService
                     return await SearchSemanticOnlyAsync(query, gameId, safeLimit, documentIds, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Keyword:
-                    return await SearchKeywordOnlyAsync(query, gameId, safeLimit, documentIds, keywordMinScore, cancellationToken).ConfigureAwait(false);
+                    return await SearchKeywordOnlyAsync(query, gameId, safeLimit, documentIds, keywordMinScore, queryRoleHint, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Hybrid:
-                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, documentIds, keywordMinScore, cancellationToken).ConfigureAwait(false);
+                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, documentIds, keywordMinScore, queryRoleHint, cancellationToken).ConfigureAwait(false);
 
                 default:
                     throw new ArgumentException($"Unsupported search mode: {mode}", nameof(mode));
@@ -131,6 +139,8 @@ internal class HybridSearchService : IHybridSearchService
 
     /// <summary>
     /// Performs keyword-only search using PostgreSQL full-text search.
+    /// Phase D (D6): applies the role-match boost on top of the raw ts_rank_cd score when
+    /// <paramref name="queryRoleHint"/> overlaps a chunk's RoleTags.
     /// </summary>
     private async Task<List<HybridSearchResult>> SearchKeywordOnlyAsync(
         string query,
@@ -138,6 +148,7 @@ internal class HybridSearchService : IHybridSearchService
         int limit,
         List<Guid>? documentIds,
         double keywordMinScore,
+        GameBookRole queryRoleHint,
         CancellationToken cancellationToken)
     {
         var keywordResults = await _keywordSearchService.SearchAsync(
@@ -158,27 +169,44 @@ internal class HybridSearchService : IHybridSearchService
             "Keyword search: {TotalResults} results from PostgreSQL, {FilteredResults} after document filter",
             keywordResults.Count, filteredResults.Count);
 
-        return filteredResults.Select((r, index) => new HybridSearchResult
+        // Phase D (D6): build hybrid results then re-rank by role-boosted score.
+        var hybridResults = filteredResults.Select((r, index) =>
         {
-            ChunkId = r.ChunkId,
-            Content = r.Content,
-            PdfDocumentId = r.PdfDocumentId,
-            GameId = r.GameId,
-            ChunkIndex = r.ChunkIndex,
-            PageNumber = r.PageNumber,
-            HybridScore = r.RelevanceScore, // Use keyword score directly as hybrid score
-            VectorScore = null,
-            KeywordScore = r.RelevanceScore,
-            VectorRank = null,
-            KeywordRank = index + 1,
-            MatchedTerms = r.MatchedTerms,
-            Mode = SearchMode.Keyword
+            var roleBoost = ComputeRoleMatchBoost(queryRoleHint, r.RoleTags);
+            return new HybridSearchResult
+            {
+                ChunkId = r.ChunkId,
+                Content = r.Content,
+                PdfDocumentId = r.PdfDocumentId,
+                GameId = r.GameId,
+                ChunkIndex = r.ChunkIndex,
+                PageNumber = r.PageNumber,
+                HybridScore = r.RelevanceScore + roleBoost, // role-aware re-ranking
+                VectorScore = null,
+                KeywordScore = r.RelevanceScore,
+                VectorRank = null,
+                KeywordRank = index + 1,
+                MatchedTerms = r.MatchedTerms,
+                Mode = SearchMode.Keyword,
+                RoleTags = r.RoleTags
+            };
         }).ToList();
+
+        // Re-sort if the role boost actually moved anything (no-op when queryRoleHint == None).
+        if (queryRoleHint != GameBookRole.None)
+        {
+            hybridResults = hybridResults
+                .OrderByDescending(r => r.HybridScore)
+                .ToList();
+        }
+
+        return hybridResults;
     }
 
     /// <summary>
     /// Performs hybrid search combining pgvector semantic and keyword results with RRF fusion.
     /// Vector and keyword searches run in parallel for optimal latency.
+    /// Phase D (D6): role-match boost is applied per chunk during fusion when <paramref name="queryRoleHint"/> is not None.
     /// </summary>
     private async Task<List<HybridSearchResult>> SearchHybridAsync(
         string query,
@@ -188,6 +216,7 @@ internal class HybridSearchService : IHybridSearchService
         float keywordWeight,
         List<Guid>? documentIds,
         double keywordMinScore,
+        GameBookRole queryRoleHint,
         CancellationToken cancellationToken)
     {
         var fetchLimit = Math.Max(limit * 2, 20);
@@ -231,13 +260,15 @@ internal class HybridSearchService : IHybridSearchService
             vectorItems.Length, keywordResults.Count, filteredKeywordResults.Count);
 
         // RRF fusion with both vector AND keyword results
+        // Phase D (D6): queryRoleHint enables role-match boost during fusion.
         var fusedResults = FuseSearchResults(
             vectorItems,
             filteredKeywordResults,
             gameId,
             vectorWeight,
             keywordWeight,
-            _config.RrfConstant ?? DefaultRrfK);
+            _config.RrfConstant ?? DefaultRrfK,
+            queryRoleHint);
 
         var topResults = fusedResults
             .OrderByDescending(r => r.HybridScore)
@@ -321,7 +352,8 @@ internal class HybridSearchService : IHybridSearchService
         Guid gameId,
         float vectorWeight,
         float keywordWeight,
-        int rrfK)
+        int rrfK,
+        GameBookRole queryRoleHint)
     {
         // Build lookup dictionaries for O(1) access by composite chunk ID (PdfId_ChunkIndex)
         var vectorLookup = vectorResults
@@ -368,7 +400,14 @@ internal class HybridSearchService : IHybridSearchService
                 keywordRrfScore = keywordItem != null ? keywordWeight / (rrfK + keywordItem.Rank) : 0f;
             }
 
-            var hybridScore = vectorRrfScore + keywordRrfScore;
+            // Phase D (D6): role-match boost — only the keyword side currently carries RoleTags
+            // (pgvector_embeddings table does not store role_tags). When the chunk overlaps the
+            // user's classified intent, apply an additive boost on top of the fused RRF score.
+            var chunkRoleTags = hasKeyword && keywordItem != null
+                ? keywordItem.Result.RoleTags
+                : GameBookRole.None;
+            var roleBoost = ComputeRoleMatchBoost(queryRoleHint, chunkRoleTags);
+            var hybridScore = vectorRrfScore + keywordRrfScore + roleBoost;
 
             // Use data from whichever result has it (prefer vector for metadata consistency)
             var matchedTerms = hasKeyword && keywordItem != null
@@ -410,11 +449,29 @@ internal class HybridSearchService : IHybridSearchService
                 VectorRank = hasVector && vectorItem != null ? vectorItem.Rank : null,
                 KeywordRank = hasKeyword && keywordItem != null ? keywordItem.Rank : null,
                 MatchedTerms = matchedTerms,
-                Mode = SearchMode.Hybrid
+                Mode = SearchMode.Hybrid,
+                RoleTags = chunkRoleTags
             });
         }
 
         return fusedResults;
+    }
+
+    /// <summary>
+    /// Phase D (D6): computes the additive RRF score boost for a chunk based on role overlap.
+    /// Returns <see cref="RoleMatchBoost"/> when <paramref name="queryRoleHint"/> intersects
+    /// <paramref name="chunkRoleTags"/> (both being non-<see cref="GameBookRole.None"/>); otherwise 0.
+    /// Pure function — exposed as <c>internal static</c> for direct unit testing of the re-ranker
+    /// without spinning up pgvector + PostgreSQL FTS infrastructure.
+    /// </summary>
+    internal static float ComputeRoleMatchBoost(GameBookRole queryRoleHint, GameBookRole chunkRoleTags)
+    {
+        if (queryRoleHint == GameBookRole.None || chunkRoleTags == GameBookRole.None)
+        {
+            return 0f;
+        }
+
+        return (chunkRoleTags & queryRoleHint) != GameBookRole.None ? RoleMatchBoost : 0f;
     }
 }
 

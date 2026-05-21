@@ -869,6 +869,7 @@ v1Api.MapUserHandEndpoints();          // My Hand quick-access slots (La Mia Man
 v1Api.MapAchievementEndpoints();       // Achievement system (Issue #3922)
 v1Api.MapGamebookCampaignEndpoints();  // Iter 1.A — Libro Game gamebook campaigns
 v1Api.MapGamebookPhotoEndpoints();    // Iter 1.B — Libro Game photo translate pipeline
+v1Api.MapGameBookEndpoints();          // Phase E1 — GameBook catalog (multi-book generalization)
 
 // Audit & Analytics
 v1Api.MapAuditEndpoints();             // Audit log retrieval & search

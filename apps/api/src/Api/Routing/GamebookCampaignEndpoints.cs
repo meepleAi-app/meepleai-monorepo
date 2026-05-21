@@ -140,7 +140,7 @@ internal static class GamebookCampaignEndpoints
             }
 
             var dto = await mediator.Send(
-                new UpdateGamebookProgressCommand(id, userId, body.CurrentParagraph), ct
+                new UpdateGamebookProgressCommand(id, userId, body.GameBookId, body.CurrentParagraph), ct
             ).ConfigureAwait(false);
 
             return Results.Ok(dto);
@@ -243,8 +243,12 @@ internal static class GamebookCampaignEndpoints
 /// <summary>Request body for creating a new gamebook campaign.</summary>
 public sealed record CreateGamebookCampaignRequest(Guid GameId, string Title);
 
-/// <summary>Request body for updating the current paragraph progress.</summary>
-public sealed record UpdateGamebookProgressRequest(int CurrentParagraph);
+/// <summary>
+/// Request body for updating the current paragraph progress for a specific book.
+/// C2 (2026-05-19): <paramref name="GameBookId"/> added to scope progress per-book
+/// in support of multi-book campaigns (see <c>SessionBookProgress</c>).
+/// </summary>
+public sealed record UpdateGamebookProgressRequest(Guid GameBookId, int CurrentParagraph);
 
 /// <summary>Request body for renaming a gamebook campaign.</summary>
 public sealed record RenameGamebookCampaignRequest(string Title);

@@ -37,7 +37,7 @@ public class DeleteGamebookCampaignHandler : IRequestHandler<DeleteGamebookCampa
         // Issue #1292 (AC-6.2): notify gamebook index cache so the deleted
         // campaign disappears from next GET /api/v1/gamebooks within 500ms.
         await _mediator.Publish(
-            new GamebookCampaignDeletedDomainEvent(session.Id, session.GameId, session.OwnerUserId),
+            new GamebookCampaignDeletedDomainEvent(session.Id, session.GameRef.Id, session.OwnerUserId),
             cancellationToken).ConfigureAwait(false);
     }
 }

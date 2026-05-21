@@ -501,6 +501,14 @@ internal static class KnowledgeBaseServiceExtensions
         // Phase 2 Task 2.3b: Pricing engine — NullPricingEngine stub (always allows).
         // PHASE 3 REPLACE with CreditBasedPricingEngine in Phase 3 Task 3.2.
         services.AddScoped<IPricingEngine, NullPricingEngine>();
+
+        // Phase D (2026-05-19 multi-book gamebook plan): rule-based + LLM-fallback
+        // role classifier for ingestion-time text_chunks.role_tags population.
+        services.AddScoped<IRoleClassifierService, RoleClassifierService>();
+
+        // Phase D5 (2026-05-19 multi-book gamebook plan): query-time intent classifier
+        // (regex-only, no LLM). Consumed by D6 retrieval boost.
+        services.AddScoped<IIntentClassifierService, IntentClassifierService>();
     }
 
     private static void AddChunkingAndRerankingServices(IServiceCollection services, IConfiguration? configuration)

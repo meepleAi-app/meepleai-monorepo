@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -26,6 +27,16 @@ internal class TextChunkEntityConfiguration : IEntityTypeConfiguration<TextChunk
         builder.Property(e => e.ParentChunkId).IsRequired(false);
         builder.Property(e => e.Level).IsRequired().HasDefaultValue<short>(1);
         builder.Property(e => e.ElementType).IsRequired().HasMaxLength(20).HasDefaultValue("NarrativeText");
+
+        // Phase D — RAG role-aware: multi-label role classification (bitflag)
+        builder.Property(e => e.RoleTags)
+               .HasColumnName("role_tags")
+               .HasConversion<int>()
+               .HasDefaultValue(GameBookRole.None)
+               .IsRequired();
+        builder.HasIndex(e => e.RoleTags)
+               .HasDatabaseName("ix_text_chunks_role_tags")
+               .HasFilter("role_tags != 0");
 
         builder.HasIndex(e => e.ParentChunkId);
         builder.HasIndex(e => new { e.PdfDocumentId, e.ChunkIndex }).HasDatabaseName("ix_text_chunks_pdf_chunk_index");

@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using System.ComponentModel.DataAnnotations;
 
 namespace Api.Infrastructure.Entities;
@@ -26,7 +27,7 @@ public class RuleSpecEntity
     [Timestamp]
     public byte[]? RowVersion { get; set; }
 
-    public GameEntity Game { get; set; } = default!;
+    public SharedGameEntity Game { get; set; } = default!;
     public UserEntity? CreatedBy { get; set; }
     public RuleSpecEntity? ParentVersion { get; set; }
     public ICollection<RuleAtomEntity> Atoms { get; set; } = new List<RuleAtomEntity>();

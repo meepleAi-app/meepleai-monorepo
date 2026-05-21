@@ -84,7 +84,7 @@ internal sealed class GetToolkitDetailQueryHandler
         CancellationToken cancellationToken)
     {
         // Issue #1144 — Include(t => t.Game) drives a LEFT JOIN so the marketplace
-        // surface can project Game.Name without a second round-trip. EF emits a
+        // surface can project Game.Title without a second round-trip. EF emits a
         // LEFT JOIN automatically because GameId is nullable.
         var entity = await _context.GameToolkits
             .AsNoTracking()
@@ -182,7 +182,7 @@ internal sealed class GetToolkitDetailQueryHandler
             CurrentVersion: currentVersion,
             // Stage 3 marketplace fields (spec §5.3)
             License: entity.License,
-            GameName: entity.Game?.Name,
+            GameName: entity.Game?.Title,
             SizeBytes: sizeBytes);
 
         var viewerContext = new ViewerContextDto(

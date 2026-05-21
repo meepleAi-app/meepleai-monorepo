@@ -3,6 +3,7 @@
    File: admin-mockups/design_files/sp4-kb-detail.{html,jsx}
    Pattern desktop: Split-view (sx meta+search+chunks list scrollable · dx preview chunk full).
    Palette --c-kb (teal). Document detail singolo (no index).
+   DEMO-NAV-HINTS: sp4-citation-pdf-viewer.html
 
    v2 nuovi (per impl post-merge):
    - KbHeader              → apps/web/src/components/ui/v2/kb-header/
@@ -643,7 +644,7 @@ const ChunkPreview = ({ chunk, kb, mobile, onBack }) => {
         display:'flex', alignItems:'center', gap: 8, flexWrap:'wrap',
       }}>
         {mobile && (
-          <button type="button" onClick={onBack}
+          <button type="button" onClick={(e) => { (onBack)(e); setTimeout(() => { window.location.href = 'sp4-kb-hub.html'; }, 0); /* DEMO-NAV */ }}
             aria-label="Torna alla lista chunks"
             style={{
               padding:'4px 10px', borderRadius:'var(--r-md)',
@@ -857,7 +858,7 @@ const ErrorState = () => (
         padding:'8px 16px', borderRadius:'var(--r-md)',
         background:'hsl(var(--c-danger))', color:'#fff', border:'none',
         fontFamily:'var(--f-display)', fontSize: 12, fontWeight: 800, cursor:'pointer',
-      }}>↻ Riprova OCR</button>
+      }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-kb-hub.html'; }, 0); /* DEMO-NAV */ }}>↻ Riprova OCR</button>
       <button type="button" style={{
         padding:'8px 16px', borderRadius:'var(--r-md)',
         background:'transparent', color:'var(--text)',
@@ -1003,7 +1004,7 @@ const DesktopNav = ({ kb }) => (
       flex: 1, fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-muted)',
       marginLeft: 22,
     }}>
-      <a href="#" style={{ color:'inherit' }}>KB</a>
+      <a href="#" style={{ color:'inherit' }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-kb-hub.html'; }, 0); /* DEMO-NAV */ }}>KB</a>
       <span aria-hidden="true"> / </span>
       <strong style={{ color:'var(--text-sec)' }}>{kb.title}</strong>
     </div>
@@ -1175,7 +1176,7 @@ const App = () => {
           </div>
         </div>
         <div style={{ flex: 1 }}/>
-        <button type="button" onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+        <button type="button" onClick={(e) => { (() => setTheme(t => t === 'light' ? 'dark' : 'light'))(e); setTimeout(() => { window.location.href = 'sp4-kb-hub.html'; }, 0); /* DEMO-NAV */ }}
           style={{
             padding:'8px 14px', borderRadius:'var(--r-md)',
             background:'var(--bg-card)', border:'1px solid var(--border)',

@@ -4740,94 +4740,6 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("email_verifications", (string)null);
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.GameEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(64)
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("ApprovalStatus")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0)
-                        .HasColumnName("approval_status");
-
-                    b.Property<int?>("BggId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("BggMetadata")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("IconUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("icon_url");
-
-                    b.Property<string>("ImageUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)")
-                        .HasColumnName("image_url");
-
-                    b.Property<bool>("IsPublished")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_published")
-                        .HasComputedColumnSql("(approval_status = 2 AND published_at IS NOT NULL)", true);
-
-                    b.Property<string>("Language")
-                        .HasColumnType("text");
-
-                    b.Property<int?>("MaxPlayTimeMinutes")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("MaxPlayers")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("MinPlayTimeMinutes")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("MinPlayers")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<DateTime?>("PublishedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("published_at");
-
-                    b.Property<string>("Publisher")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("SharedGameId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("VersionNumber")
-                        .HasColumnType("text");
-
-                    b.Property<string>("VersionType")
-                        .HasColumnType("text");
-
-                    b.Property<int?>("YearPublished")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.HasIndex("SharedGameId")
-                        .HasDatabaseName("IX_Games_SharedGameId");
-
-                    b.ToTable("games", (string)null);
-                });
-
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightEventEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -9156,9 +9068,6 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("GameEntityId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("GameId")
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
@@ -9184,8 +9093,6 @@ namespace Api.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByUserId");
-
-                    b.HasIndex("GameEntityId");
 
                     b.HasIndex("ParentVersionId");
 
@@ -15082,7 +14989,7 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AgentSessionEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -15192,8 +15099,8 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ChatEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
-                        .WithMany("Chats")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
+                        .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -15255,7 +15162,7 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ChatThreadEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId");
 
@@ -15272,7 +15179,7 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ChunkedUploadSessionEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -15370,16 +15277,6 @@ namespace Api.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Api.Infrastructure.Entities.GameEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "SharedGame")
-                        .WithMany()
-                        .HasForeignKey("SharedGameId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("SharedGame");
-                });
-
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightInvitationEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.GameManagement.GameNightEventEntity", null)
@@ -15413,7 +15310,7 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GamePhaseTemplateEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -15452,7 +15349,7 @@ namespace Api.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -15517,7 +15414,7 @@ namespace Api.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -15639,7 +15536,7 @@ namespace Api.Infrastructure.Migrations
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -15652,7 +15549,7 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameToolkit.GameToolkitEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -15740,7 +15637,7 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.ChatSessionEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -15789,7 +15686,7 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.GameEntityRelationEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -15811,7 +15708,7 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.KnowledgeBase.RaptorSummaryEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -15981,7 +15878,7 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.RuleConflictFAQEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -15992,7 +15889,7 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.RuleSpecCommentEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -16030,11 +15927,7 @@ namespace Api.Infrastructure.Migrations
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", null)
-                        .WithMany("RuleSpecs")
-                        .HasForeignKey("GameEntityId");
-
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -16197,7 +16090,7 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SessionTracking.SessionEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", null)
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", null)
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -16593,7 +16486,7 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.TextChunkEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -16814,7 +16707,7 @@ namespace Api.Infrastructure.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.VectorDocumentEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                    b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -16945,13 +16838,6 @@ namespace Api.Infrastructure.Migrations
             modelBuilder.Entity("Api.Infrastructure.Entities.DocumentProcessing.ProcessingStepEntity", b =>
                 {
                     b.Navigation("LogEntries");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.GameEntity", b =>
-                {
-                    b.Navigation("Chats");
-
-                    b.Navigation("RuleSpecs");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightEventEntity", b =>

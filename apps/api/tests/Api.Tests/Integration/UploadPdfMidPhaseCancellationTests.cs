@@ -277,7 +277,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var pdfBytes = PdfUploadTestHelpers.CreateValidPdfBytes(1024 * 10);
         var formFile = PdfUploadTestHelpers.CreateMockFormFile("mid_db_cancel.pdf", pdfBytes);
@@ -445,7 +445,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var pdfBytes = PdfUploadTestHelpers.CreateValidPdfBytes(1024 * 100);
         var formFile = PdfUploadTestHelpers.CreateMockFormFile("mid_embedding.pdf", pdfBytes);
@@ -489,7 +489,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var pdfBytes = PdfUploadTestHelpers.CreateValidPdfBytes(1024 * 50);
         var formFile = PdfUploadTestHelpers.CreateMockFormFile("mid_vector.pdf", pdfBytes);
@@ -532,7 +532,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var pdfBytes = PdfUploadTestHelpers.CreateValidPdfBytes(1024 * 50);
         var formFile = PdfUploadTestHelpers.CreateMockFormFile("random_cancel.pdf", pdfBytes);
@@ -594,7 +594,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
         // Arrange - Test cancellation at 5 different stages
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.Games.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
         var cancellationTimings = new[] { 10, 50, 100, 200, 500 };
 
@@ -631,7 +631,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
             // Verify no FK violations
             var orphanedCount = await _dbContext.PdfDocuments
                 .Where(d => !_dbContext.Users.Any(u => u.Id == d.UploadedByUserId) ||
-                           (d.SharedGameId != null && !_dbContext.Games.Any(g => g.Id == d.SharedGameId)))
+                           (d.SharedGameId != null && !_dbContext.SharedGames.Any(g => g.Id == d.SharedGameId)))
                 .CountAsync(TestContext.Current.CancellationToken);
             orphanedCount.Should().Be(0, $"no orphaned documents after cancellation at {delayMs}ms");
 
@@ -645,7 +645,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
         // Final verification
         var userStillExists = await _dbContext.Users.AnyAsync(u => u.Id == testUser.Id, TestCancellationToken);
-        var gameStillExists = await _dbContext.Games.AnyAsync(g => g.Id == testGame.Id, TestCancellationToken);
+        var gameStillExists = await _dbContext.SharedGames.AnyAsync(g => g.Id == testGame.Id, TestCancellationToken);
 
         userStillExists.Should().BeTrue("user should survive all cancellation scenarios");
         gameStillExists.Should().BeTrue("game should survive all cancellation scenarios");

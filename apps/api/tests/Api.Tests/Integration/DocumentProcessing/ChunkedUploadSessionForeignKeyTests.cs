@@ -1,5 +1,6 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.Authentication;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
@@ -47,10 +48,10 @@ public class ChunkedUploadSessionForeignKeyTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "uploader@test.com", DisplayName = "Uploader", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "Game" };
+        var game = new SharedGameEntity { Id = gameId, Title = "Game" };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var sessionId = Guid.NewGuid();
@@ -88,10 +89,10 @@ public class ChunkedUploadSessionForeignKeyTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "user@test.com", DisplayName = "User", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "Game" };
+        var game = new SharedGameEntity { Id = gameId, Title = "Game" };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var session = new ChunkedUploadSessionEntity
@@ -113,7 +114,7 @@ public class ChunkedUploadSessionForeignKeyTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act - Delete game (cascades to session)
-        _dbContext.Games.Remove(game);
+        _dbContext.SharedGames.Remove(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Assert - No orphaned sessions
@@ -128,10 +129,10 @@ public class ChunkedUploadSessionForeignKeyTests : IAsyncLifetime
         var userId = Guid.NewGuid();
         var user = new UserEntity { Id = userId, Email = "user@test.com", DisplayName = "User", Role = "User" };
         var gameId = Guid.NewGuid();
-        var game = new GameEntity { Id = gameId, Name = "Game" };
+        var game = new SharedGameEntity { Id = gameId, Title = "Game" };
 
         _dbContext!.Users.Add(user);
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var expiredSession = new ChunkedUploadSessionEntity
@@ -160,7 +161,7 @@ public class ChunkedUploadSessionForeignKeyTests : IAsyncLifetime
         var remainingUser = await _dbContext.Users.FindAsync(userId);
         remainingUser.Should().NotBeNull();
 
-        var remainingGame = await _dbContext.Games.FindAsync(gameId);
+        var remainingGame = await _dbContext.SharedGames.FindAsync(gameId);
         remainingGame.Should().NotBeNull();
     }
 }

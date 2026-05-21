@@ -2,6 +2,7 @@ using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
@@ -58,13 +59,12 @@ public class GetGamePdfsQueryHandlerTests
         var userId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
 
-        var game = new GameEntity { Id = gameId, Name = "Test Game" };
-        _db.Games.Add(game);
+        var game = new SharedGameEntity { Id = gameId, Title = "Test Game" };
+        _db.SharedGames.Add(game);
 
         var pdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = gameId,
             FileName = "TestRules.pdf",
             FilePath = "/test/path.pdf",
             FileSizeBytes = 1_000_000,
@@ -99,7 +99,6 @@ public class GetGamePdfsQueryHandlerTests
         var pdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
             FileName = "SharedRules.pdf",
             FilePath = "/test/shared.pdf",
             FileSizeBytes = 500_000,
@@ -137,18 +136,16 @@ public class GetGamePdfsQueryHandlerTests
         // Two different games rows linked to the same shared game (different version/language)
         var olderGameId = Guid.NewGuid();
         var newerGameId = Guid.NewGuid();
-        _db.Games.Add(new GameEntity
+        _db.SharedGames.Add(new SharedGameEntity
         {
             Id = olderGameId,
-            Name = "Catan (EN base)",
-            SharedGameId = sharedGameId,
+            Title = "Catan (EN base)",
             CreatedAt = DateTime.UtcNow.AddHours(-2)
         });
-        _db.Games.Add(new GameEntity
+        _db.SharedGames.Add(new SharedGameEntity
         {
             Id = newerGameId,
-            Name = "Catan (IT expansion)",
-            SharedGameId = sharedGameId,
+            Title = "Catan (IT expansion)",
             CreatedAt = DateTime.UtcNow.AddHours(-1)
         });
 
@@ -169,7 +166,6 @@ public class GetGamePdfsQueryHandlerTests
         _db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
             FileName = "ItExpansionRules.pdf",
             FilePath = "/tmp/it.pdf",
             FileSizeBytes = 200,
@@ -201,7 +197,6 @@ public class GetGamePdfsQueryHandlerTests
         var olderPdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
             FileName = "OlderRules.pdf",
             FilePath = "/test/older.pdf",
             FileSizeBytes = 100_000,
@@ -212,7 +207,6 @@ public class GetGamePdfsQueryHandlerTests
         var newerPdf = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
             FileName = "NewerRules.pdf",
             FilePath = "/test/newer.pdf",
             FileSizeBytes = 200_000,

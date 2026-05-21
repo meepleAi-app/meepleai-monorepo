@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -140,13 +141,13 @@ internal static class PdfUploadTestHelpers
         userExists.Should().BeTrue($"User {userId} should not be deleted");
 
         // Verify game still exists
-        var gameExists = await context.Games.AnyAsync(g => g.Id == gameId, ct);
+        var gameExists = await context.SharedGames.AnyAsync(g => g.Id == gameId, ct);
         gameExists.Should().BeTrue($"Game {gameId} should not be deleted");
 
         // Verify no orphaned PDF documents (all must have valid FK references)
         var orphanedDocs = await context.PdfDocuments
             .Where(d => !context.Users.Any(u => u.Id == d.UploadedByUserId) ||
-                       (d.SharedGameId != null && !context.Games.Any(g => g.Id == d.SharedGameId)))
+                       (d.SharedGameId != null && !context.SharedGames.Any(g => g.Id == d.SharedGameId)))
             .CountAsync(ct);
 
         orphanedDocs.Should().Be(0, "no PDF documents with broken FK references should exist");
@@ -160,7 +161,7 @@ internal static class PdfUploadTestHelpers
     public static async Task CleanDatabaseAsync(MeepleAiDbContext context, CancellationToken ct = default)
     {
         context.PdfDocuments.RemoveRange(await context.PdfDocuments.ToListAsync(ct));
-        context.Games.RemoveRange(await context.Games.ToListAsync(ct));
+        context.SharedGames.RemoveRange(await context.SharedGames.ToListAsync(ct));
         context.Users.RemoveRange(await context.Users.ToListAsync(ct));
         await context.SaveChangesAsync(ct);
     }
@@ -193,26 +194,25 @@ internal static class PdfUploadTestHelpers
     ///
     /// <para><b>Uniqueness:</b> Uses random BGG ID and GUID in name</para>
     /// </summary>
-    public static async Task<GameEntity> SeedTestGameAsync(
+    public static async Task<SharedGameEntity> SeedTestGameAsync(
         MeepleAiDbContext context,
         string? name = null,
         CancellationToken ct = default)
     {
         var bggId = RandomNumberGenerator.GetInt32(100000, 1_000_000);
 
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = name ?? $"Test Game {Guid.NewGuid():N}",
+            Title = name ?? $"Test Game {Guid.NewGuid():N}",
             BggId = bggId,
             YearPublished = 2024,
             MinPlayers = 2,
             MaxPlayers = 4,
-            MinPlayTimeMinutes = 30,
-            MaxPlayTimeMinutes = 90,
-            CreatedAt = DateTime.UtcNow
+            PlayingTimeMinutes = 30,
+                        CreatedAt = DateTime.UtcNow
         };
-        context.Games.Add(game);
+        context.SharedGames.Add(game);
         await context.SaveChangesAsync(ct);
         return game;
     }

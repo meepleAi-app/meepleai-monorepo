@@ -187,7 +187,7 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
         // Capture DbContext sets once so the LINQ tree closes over stable locals.
         // Soft-delete note: Toolkit / AgentDefinition / VectorDocument do NOT have
         // IsDeleted columns (mirrors A.3a §6 comment in SearchSharedGamesQueryHandler).
-        var ctxGames = _context.Games;
+        var ctxGames = _context.SharedGames;
         var ctxToolkits = _context.Toolkits;
         var ctxAgents = _context.AgentDefinitions;
         var ctxVectors = _context.VectorDocuments;
@@ -210,8 +210,8 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
                     t.OwnerUserId != null &&
                     ctxGames.Any(g =>
                         g.Id == t.GameId &&
-                        g.SharedGameId == gameId &&
-                        g.ApprovalStatus == ApprovedStatus))
+                        g.Id == gameId &&
+                        g.Status == ApprovedStatus))
                 .OrderByDescending(t => t.UpdatedAt)
                 .Take(MaxToolkitPreviews)
                 .Select(t => new PublishedToolkitPreviewDto(
@@ -249,8 +249,8 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
                     EF.Property<Guid?>(a, "_gameId") != null &&
                     ctxGames.Any(g =>
                         g.Id == EF.Property<Guid?>(a, "_gameId") &&
-                        g.SharedGameId == gameId &&
-                        g.ApprovalStatus == ApprovedStatus))
+                        g.Id == gameId &&
+                        g.Status == ApprovedStatus))
                 .OrderByDescending(a => a.UpdatedAt ?? a.CreatedAt)
                 .Take(MaxAgentPreviews)
                 .Select(a => new PublishedAgentPreviewDto(
@@ -313,14 +313,14 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
                     !t.IsDefault &&
                     ctxGames.Any(game =>
                         game.Id == t.GameId &&
-                        game.SharedGameId == g.Id &&
-                        game.ApprovalStatus == ApprovedStatus)),
+                        game.Id == g.Id &&
+                        game.Status == ApprovedStatus)),
                 AgentsCount = ctxAgents.Count(a =>
                     EF.Property<Guid?>(a, "_gameId") != null &&
                     ctxGames.Any(game =>
                         game.Id == EF.Property<Guid?>(a, "_gameId") &&
-                        game.SharedGameId == g.Id &&
-                        game.ApprovalStatus == ApprovedStatus)),
+                        game.Id == g.Id &&
+                        game.Status == ApprovedStatus)),
                 KbsCount = ctxVectors.Count(vd =>
                     vd.SharedGameId == g.Id &&
                     vd.IndexingStatus == "completed"),
@@ -334,8 +334,8 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
                         t.OwnerUserId != null &&
                         ctxGames.Any(game =>
                             game.Id == t.GameId &&
-                            game.SharedGameId == g.Id &&
-                            game.ApprovalStatus == ApprovedStatus))
+                            game.Id == g.Id &&
+                            game.Status == ApprovedStatus))
                     .Select(t => t.OwnerUserId)
                     .Distinct()
                     .Count(),
@@ -348,15 +348,15 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
                         t.CreatedAt >= newCutoff &&
                         ctxGames.Any(game =>
                             game.Id == t.GameId &&
-                            game.SharedGameId == g.Id &&
-                            game.ApprovalStatus == ApprovedStatus)) +
+                            game.Id == g.Id &&
+                            game.Status == ApprovedStatus)) +
                     ctxAgents.Count(a =>
                         EF.Property<Guid?>(a, "_gameId") != null &&
                         a.CreatedAt >= newCutoff &&
                         ctxGames.Any(game =>
                             game.Id == EF.Property<Guid?>(a, "_gameId") &&
-                            game.SharedGameId == g.Id &&
-                            game.ApprovalStatus == ApprovedStatus)) +
+                            game.Id == g.Id &&
+                            game.Status == ApprovedStatus)) +
                     ctxVectors.Count(vd =>
                         vd.SharedGameId == g.Id &&
                         vd.IndexedAt >= newCutoff)

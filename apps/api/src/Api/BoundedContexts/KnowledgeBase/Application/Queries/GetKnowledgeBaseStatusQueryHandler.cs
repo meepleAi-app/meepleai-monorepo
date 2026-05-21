@@ -50,10 +50,10 @@ internal class GetKnowledgeBaseStatusQueryHandler : IQueryHandler<GetKnowledgeBa
             }
             else
             {
-                // Shared catalog games use .Name
-                gameName = await _dbContext.Games
+                // Shared catalog games use .Title
+                gameName = await _dbContext.SharedGames
                     .Where(g => g.Id == query.GameId)
-                    .Select(g => g.Name)
+                    .Select(g => g.Title)
                     .FirstOrDefaultAsync(cancellationToken)
                     .ConfigureAwait(false);
             }

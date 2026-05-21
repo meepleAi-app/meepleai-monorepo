@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -154,7 +155,7 @@ public sealed class ChatThreadRepositoryIntegrationTests : IAsyncLifetime
         if (_dbContext == null) return;
 
         _dbContext.ChatThreads.RemoveRange(_dbContext.ChatThreads);
-        _dbContext.Games.RemoveRange(_dbContext.Games);
+        _dbContext.SharedGames.RemoveRange(_dbContext.SharedGames);
         _dbContext.Users.RemoveRange(_dbContext.Users);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
@@ -239,12 +240,12 @@ public sealed class ChatThreadRepositoryIntegrationTests : IAsyncLifetime
         await CleanDatabaseAsync();
         await EnsureUserExistsAsync(TestUserId1);
 
-        // Seed a GameEntity to satisfy the FK constraint on ChatThread.GameId
+        // Seed a SharedGameEntity to satisfy the FK constraint on ChatThread.GameId
         var gameId = Guid.NewGuid();
-        _dbContext!.Games.Add(new Api.Infrastructure.Entities.GameEntity
+        _dbContext!.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
         {
             Id = gameId,
-            Name = "Test Game for ChatThread FK",
+            Title = "Test Game for ChatThread FK",
             CreatedAt = DateTime.UtcNow
         });
         await _dbContext.SaveChangesAsync(TestCancellationToken);

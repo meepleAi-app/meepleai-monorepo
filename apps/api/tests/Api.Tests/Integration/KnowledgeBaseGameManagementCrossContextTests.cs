@@ -12,6 +12,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -138,7 +139,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         await userRepository.AddAsync(user, TestCancellationToken);
 
         var gameEntity = CreateGameEntity("Wingspan");
-        _dbContext!.Games.Add(gameEntity);
+        _dbContext!.SharedGames.Add(gameEntity);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act
@@ -162,9 +163,9 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         loadedThread.Title.Should().Be("Wingspan Rules Questions");
         loadedThread.MessageCount.Should().Be(2);
 
-        var loadedGameEntity = await _dbContext.Games.FindAsync(new object[] { gameEntity.Id }, TestCancellationToken);
+        var loadedGameEntity = await _dbContext.SharedGames.FindAsync(new object[] { gameEntity.Id }, TestCancellationToken);
         loadedGameEntity.Should().NotBeNull();
-        loadedGameEntity!.Name.Should().Be("Wingspan");
+        loadedGameEntity!.Title.Should().Be("Wingspan");
     }
 
     [Fact]
@@ -181,7 +182,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         await userRepository.AddAsync(user, TestCancellationToken);
 
         var gameEntity = CreateGameEntity("Terraforming Mars");
-        _dbContext!.Games.Add(gameEntity);
+        _dbContext!.SharedGames.Add(gameEntity);
 
         var players = new List<SessionPlayer>
         {
@@ -237,7 +238,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         }
 
         var gameEntity = CreateGameEntity("Gloomhaven");
-        _dbContext!.Games.Add(gameEntity);
+        _dbContext!.SharedGames.Add(gameEntity);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Each user creates their own thread
@@ -281,7 +282,7 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         await userRepository.AddAsync(user, TestCancellationToken);
 
         var gameEntity = CreateGameEntity("Scythe");
-        _dbContext!.Games.Add(gameEntity);
+        _dbContext!.SharedGames.Add(gameEntity);
 
         var gameSession = new GameSession(
             Guid.NewGuid(),
@@ -343,13 +344,12 @@ public sealed class KnowledgeBaseGameManagementCrossContextTests : IAsyncLifetim
         );
     }
 
-    private static GameEntity CreateGameEntity(string name, string? publisher = null)
+    private static SharedGameEntity CreateGameEntity(string name, string? publisher = null)
     {
-        return new GameEntity
+        return new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = name,
-            Publisher = publisher,
+            Title = name,
             CreatedAt = DateTime.UtcNow
         };
     }

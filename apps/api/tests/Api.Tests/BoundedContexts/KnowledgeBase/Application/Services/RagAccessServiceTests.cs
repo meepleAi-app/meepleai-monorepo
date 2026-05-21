@@ -145,7 +145,6 @@ public class RagAccessServiceTests
         db.VectorDocuments.Add(new VectorDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = GameId,
             PdfDocumentId = Guid.NewGuid(),
             IndexingStatus = "completed"
         });

@@ -5,6 +5,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Configuration;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Tests.Constants;
@@ -578,7 +579,6 @@ public class IndexPdfCommandHandlerTests
         return new PdfDocumentEntity
         {
             Id = id,
-            SharedGameId = gameId,
             FileName = "test.pdf",
             FilePath = "/uploads/test.pdf",
             FileSizeBytes = 1024,
@@ -666,21 +666,19 @@ public class IndexPdfCommandHandlerTests
     [Fact]
     [Trait("Category", TestCategories.Unit)]
     [Trait("BoundedContext", "DocumentProcessing")]
-    public async Task Handle_SharedGamePdf_ResolvesGameIdFromGamesTable()
+    public async Task Handle_SharedGamePdf_PropagatesSharedGameIdToChunks()
     {
-        // Arrange — SharedGame PDF has null PrivateGameId, only SharedGameId set.
-        // text_chunks.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
-        // We seed a matching GameEntity so the resolver can map SharedGameId → games.Id.
+        // Arrange — SharedGame PDF has SharedGameId set (PrivateGameId null).
+        // Post-Phase2d (#1345): text_chunks.GameId IS shared_games.id directly
+        // (legacy games table removed; PdfGameIdResolver returns SharedGameId).
         using var context = CreateFreshDbContext();
         var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var sharedGameId = Guid.NewGuid();
-        var gamesId = Guid.NewGuid();
-        await context.Games.AddAsync(new GameEntity
+        await context.SharedGames.AddAsync(new SharedGameEntity
         {
-            Id = gamesId,
-            Name = "Shared Game Mirror",
-            SharedGameId = sharedGameId,
+            Id = sharedGameId,
+            Title = "Test SharedGame",
             CreatedAt = DateTime.UtcNow
         });
 
@@ -728,7 +726,7 @@ public class IndexPdfCommandHandlerTests
         // Assert — indexing succeeds
         result.Success.Should().BeTrue();
 
-        // Assert — text chunks have SharedGameId propagated AND GameId resolved to games.Id
+        // Assert — text chunks have SharedGameId propagated AND GameId == SharedGameId (post-Phase2d)
         var savedChunks = await context.TextChunks
             .Where(tc => tc.PdfDocumentId == pdfId)
             .ToListAsync();
@@ -737,7 +735,7 @@ public class IndexPdfCommandHandlerTests
         savedChunks.Should().AllSatisfy(chunk =>
         {
             chunk.SharedGameId.Should().Be(sharedGameId, "SharedGameId must propagate from PDF to text chunks");
-            chunk.GameId.Should().Be(gamesId, "GameId must resolve to games.Id via SharedGameId (FK to games, not shared_games)");
+            chunk.GameId.Should().Be(sharedGameId, "post-Phase2d: text_chunks.GameId IS shared_games.id (no more legacy games table)");
         });
     }
 

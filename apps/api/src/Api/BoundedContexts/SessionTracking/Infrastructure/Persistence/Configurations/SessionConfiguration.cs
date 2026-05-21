@@ -130,8 +130,8 @@ public class SessionConfiguration : IEntityTypeConfiguration<SessionEntity>
             .HasForeignKey(s => s.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Foreign key to games table (nullable)
-        builder.HasOne<GameEntity>()
+        // FK to shared_games (post-Phase2d: legacy games table dropped, GameId now references shared_games.id)
+        builder.HasOne<Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity>()
             .WithMany()
             .HasForeignKey(s => s.GameId)
             .OnDelete(DeleteBehavior.Restrict);

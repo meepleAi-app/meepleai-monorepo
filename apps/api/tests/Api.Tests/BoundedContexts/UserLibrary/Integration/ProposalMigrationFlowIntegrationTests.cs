@@ -113,7 +113,6 @@ public sealed class ProposalMigrationFlowIntegrationTests : IAsyncLifetime
             Id = _libraryEntryId,
             UserId = _userId,
             PrivateGameId = _privateGameId,
-            SharedGameId = null,
             AddedAt = DateTime.UtcNow
         };
         _dbContext.UserLibraryEntries.Add(libraryEntry);

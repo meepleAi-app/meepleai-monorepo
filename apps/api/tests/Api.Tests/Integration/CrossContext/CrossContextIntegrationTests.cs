@@ -3,6 +3,7 @@ using Api.BoundedContexts.WorkflowIntegration.Application.IntegrationEventHandle
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
@@ -84,12 +85,12 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GameCreated_ShouldDispatchToWorkflowIntegration()
     {
-        // Arrange — seed GameEntity and inject GameCreatedEvent directly
+        // Arrange — seed SharedGameEntity and inject GameCreatedEvent directly
         var gameId = Guid.NewGuid();
         const string gameName = "Catan";
 
         var gameEntity = CreateGameEntity(gameId, gameName, "Catan Studio");
-        _dbContext.Games.Add(gameEntity);
+        _dbContext.SharedGames.Add(gameEntity);
 
         var @event = new GameCreatedEvent(gameId, gameName);
         _eventCollector.Collect(@event);
@@ -107,9 +108,9 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
         auditLog.Details.Should().Contain(gameId.ToString());
 
         // Verify game persisted
-        var savedGame = await _dbContext.Games.FindAsync(new object[] { gameId }, TestCancellationToken);
+        var savedGame = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
         savedGame.Should().NotBeNull();
-        savedGame!.Name.Should().Be(gameName);
+        savedGame!.Title.Should().Be(gameName);
     }
 
     /// <summary>
@@ -119,12 +120,12 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GameLinkedToBgg_ShouldDispatchToWorkflowIntegration()
     {
-        // Arrange — seed GameEntity and inject GameLinkedToBggEvent directly
+        // Arrange — seed SharedGameEntity and inject GameLinkedToBggEvent directly
         var gameId = Guid.NewGuid();
         var gameEntity = CreateGameEntity(gameId, "Wingspan", "Stonemaier Games");
         gameEntity.BggId = 266192;
-        gameEntity.BggMetadata = "Wingspan BGG metadata";
-        _dbContext.Games.Add(gameEntity);
+        gameEntity.BggRawData = "Wingspan BGG metadata";
+        _dbContext.SharedGames.Add(gameEntity);
 
         var @event = new GameLinkedToBggEvent(gameId, 266192);
         _eventCollector.Collect(@event);
@@ -141,10 +142,10 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
         auditLog.Details.Should().Contain(gameId.ToString());
 
         // Verify BGG metadata persisted
-        var savedGame = await _dbContext.Games.FindAsync(new object[] { gameId }, TestCancellationToken);
+        var savedGame = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
         savedGame.Should().NotBeNull();
         savedGame!.BggId.Should().Be(266192);
-        savedGame.BggMetadata.Should().Be("Wingspan BGG metadata");
+        savedGame.BggRawData.Should().Be("Wingspan BGG metadata");
     }
 
     /// <summary>
@@ -164,7 +165,7 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
 
         foreach (var (id, name) in gameData)
         {
-            _dbContext.Games.Add(CreateGameEntity(id, name));
+            _dbContext.SharedGames.Add(CreateGameEntity(id, name));
             _eventCollector.Collect(new GameCreatedEvent(id, name));
         }
 
@@ -184,7 +185,7 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
         });
 
         // Verify all games persisted
-        var savedGames = await _dbContext.Games.ToListAsync(TestCancellationToken);
+        var savedGames = await _dbContext.SharedGames.ToListAsync(TestCancellationToken);
         savedGames.Should().HaveCount(3);
     }
 
@@ -198,16 +199,16 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
         // Arrange - Create and save initial game
         var gameId = Guid.NewGuid();
         var gameEntity = CreateGameEntity(gameId, "Gloomhaven", "Cephalofair Games");
-        _dbContext.Games.Add(gameEntity);
+        _dbContext.SharedGames.Add(gameEntity);
         _eventCollector.Collect(new GameCreatedEvent(gameId, "Gloomhaven"));
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Act - Update game with BGG link (generates new event)
-        var savedGameEntity = await _dbContext.Games.FindAsync(new object[] { gameId }, TestCancellationToken);
+        var savedGameEntity = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
         savedGameEntity.Should().NotBeNull();
 
         savedGameEntity!.BggId = 174430;
-        savedGameEntity.BggMetadata = "Gloomhaven BGG data";
+        savedGameEntity.BggRawData = "Gloomhaven BGG data";
 
         _eventCollector.Collect(new GameLinkedToBggEvent(gameId, 174430));
 
@@ -237,14 +238,14 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
         // Arrange
         var gameId = Guid.NewGuid();
         var gameEntity = CreateGameEntity(gameId, "Test Game With Issues", "Test Publisher");
-        _dbContext.Games.Add(gameEntity);
+        _dbContext.SharedGames.Add(gameEntity);
         _eventCollector.Collect(new GameCreatedEvent(gameId, "Test Game With Issues"));
 
         // Act - SaveChangesAsync executes without throwing (handlers log errors)
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert - Game persisted despite potential handler issues
-        var savedGame = await _dbContext.Games.FindAsync(new object[] { gameId }, TestCancellationToken);
+        var savedGame = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
         savedGame.Should().NotBeNull();
 
         // Audit log still created (handlers are resilient)
@@ -259,13 +260,12 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
 
     #region Helper Methods
 
-    private static GameEntity CreateGameEntity(Guid id, string name, string? publisher = null)
+    private static SharedGameEntity CreateGameEntity(Guid id, string name, string? publisher = null)
     {
-        return new GameEntity
+        return new SharedGameEntity
         {
             Id = id,
-            Name = name,
-            Publisher = publisher,
+            Title = name,
             CreatedAt = DateTime.UtcNow
         };
     }

@@ -264,7 +264,7 @@ const GameHero = ({ game, variant, compact, loading }) => {
               border:'1px solid var(--border-strong)',
               fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 700,
               cursor:'pointer',
-            }}>✎ Modifica</button>
+            }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-game-chat-tab.html'; }, 0); /* DEMO-NAV */ }}>✎ Modifica</button>
             <button type="button" aria-label="Condividi" style={{
               padding: compact ? '9px 12px' : '10px 14px', borderRadius:'var(--r-md)',
               background:'transparent', color:'var(--text)',
@@ -289,7 +289,7 @@ const GameHero = ({ game, variant, compact, loading }) => {
               border:'1px solid var(--border-strong)',
               fontFamily:'var(--f-display)', fontSize: 13, fontWeight: 700,
               cursor:'pointer',
-            }}>👀 Vedi simili</button>
+            }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-game-chat-tab.html'; }, 0); /* DEMO-NAV */ }}>👀 Vedi simili</button>
             <button type="button" aria-label="Condividi" style={{
               padding: compact ? '9px 12px' : '10px 14px', borderRadius:'var(--r-md)',
               background:'transparent', color:'var(--text)',
@@ -438,7 +438,7 @@ const HouseRulesCard = () => {
           background:'transparent', border:'1px solid var(--border)',
           color:'var(--text-sec)', fontSize: 11, fontWeight: 700,
           fontFamily:'var(--f-display)', cursor:'pointer',
-        }}>+ Aggiungi</button>
+        }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-game-chat-tab.html'; }, 0); /* DEMO-NAV */ }}>+ Aggiungi</button>
       </div>
       <div style={{ display:'flex', flexDirection:'column', gap: 0 }}>
         {rules.map((r, i) => (
@@ -862,7 +862,7 @@ const DocItem = ({ kb }) => (
       background:'transparent', border:'1px solid var(--border)',
       color:'var(--text-sec)', fontFamily:'var(--f-display)',
       fontSize: 11, fontWeight: 800, cursor:'pointer',
-    }}>Apri ↗</button>
+    }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-game-chat-tab.html'; }, 0); /* DEMO-NAV */ }}>Apri ↗</button>
   </article>
 );
 
@@ -1058,7 +1058,7 @@ const DesktopNav = () => (
       flex: 1, fontFamily:'var(--f-mono)', fontSize: 11, color:'var(--text-muted)',
       marginLeft: 22,
     }}>
-      <a href="#" style={{ color:'inherit' }}>Giochi</a>
+      <a href="#" style={{ color:'inherit' }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-games-index.html'; }, 0); /* DEMO-NAV */ }}>Giochi</a>
       <span aria-hidden="true"> / </span>
       <strong style={{ color:'var(--text-sec)' }}>{GAME.title}</strong>
     </div>

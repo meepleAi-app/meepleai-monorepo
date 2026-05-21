@@ -3,11 +3,16 @@ namespace Api.Services.Pdf;
 /// <summary>
 /// Feature flags driving the 5-phase storage layout migration (issue #1314 PR 2).
 ///
-/// Default (safe): Legacy + Dual + false → identical behavior to PR 1
-/// (S3 keys under <c>pdf_uploads/{resourceKey}/...</c>, reads attempt both
-/// layouts to support graceful cutover). Phase progression is driven by
-/// flipping these flags in deployed configuration; no code change is
-/// required between phases.
+/// Phase 4 cleanup (2026-05-21): defaults flipped from Legacy/Dual → New/New
+/// after the staging migration completed end-to-end (216 PDFs moved,
+/// pdf_uploads/ empty, Paladins upload validated landing in pdfs/).
+/// The staging overlay flags in <c>infra/secrets/storage.secret</c> are now
+/// redundant but kept until the follow-up cleanup PR removes the
+/// branching code altogether.
+///
+/// Pre-Phase-4 default (safe): Legacy + Dual + false → identical behavior to
+/// PR 1 (S3 keys under <c>pdf_uploads/{resourceKey}/...</c>, reads attempt
+/// both layouts to support graceful cutover).
 /// </summary>
 internal sealed class StorageLayoutOptions
 {
@@ -19,20 +24,21 @@ internal sealed class StorageLayoutOptions
     /// <summary>
     /// Controls the S3 key prefix used by <c>StoreAsync</c> for new uploads.
     /// </summary>
-    public StorageWriteMode WriteMode { get; init; } = StorageWriteMode.Legacy;
+    public StorageWriteMode WriteMode { get; init; } = StorageWriteMode.New;
 
     /// <summary>
     /// Controls the S3 key prefix used by Retrieve/Delete/Exists/GetPresignedDownloadUrl
     /// for existing objects. In <see cref="StorageReadMode.Dual"/> the implementation
     /// tries the new layout first and falls back to the legacy layout on miss.
     /// </summary>
-    public StorageReadMode ReadMode { get; init; } = StorageReadMode.Dual;
+    public StorageReadMode ReadMode { get; init; } = StorageReadMode.New;
 
     /// <summary>
     /// Enables the <c>StorageOperationOutboxBackgroundService</c> drainer.
     /// When false, the background service is registered but exits the loop
-    /// after one tick — useful in dev / test environments and during
-    /// Phase 0 (deploy infra without triggering the migration).
+    /// after one tick — useful in dev / test environments. The outbox table
+    /// + drainer infrastructure are kept for future blob-layout migrations
+    /// (SessionPhoto, GameImage, etc.).
     /// </summary>
     public bool MigrationEnabled { get; init; }
 

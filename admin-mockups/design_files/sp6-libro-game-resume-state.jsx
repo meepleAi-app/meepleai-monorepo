@@ -397,7 +397,7 @@ function State01Mobile() {
           color: 'var(--text-muted)', fontFamily: 'var(--f-display)',
           fontSize: 12, fontWeight: 600, padding: '6px 0', cursor: 'pointer',
           textDecoration: 'underline', textUnderlineOffset: 3,
-        }}>Come funziona la prima sessione →</button>
+        }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-sessions-index.html'; }, 0); /* DEMO-NAV */ }}>Come funziona la prima sessione →</button>
       </div>
       <CostFooter amount="€0,00" sessionCount={0} />
     </PhoneFrame>
@@ -556,7 +556,7 @@ function ResumeHero({ campaign, accent = 'game', daysAgo, stale, sepia }) {
               color: entityHsl('kb'),
               fontFamily: 'var(--f-display)', fontWeight: 600, fontSize: 11,
               cursor: 'pointer', padding: 0,
-            }}>Vedi tutti →</button>
+            }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>Vedi tutti →</button>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {campaign.glossary.map(g => (
@@ -933,7 +933,7 @@ function State02Desktop() {
               color: 'var(--text-sec)',
               fontFamily: 'var(--f-display)', fontWeight: 700, fontSize: 13,
               cursor: 'pointer',
-            }}>+ Nuova campagna</button>
+            }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-onboarding.html'; }, 0); /* DEMO-NAV */ }}>+ Nuova campagna</button>
           </div>
 
           <div style={{
@@ -1045,7 +1045,7 @@ function State02Desktop() {
                     color: entityHsl('player'),
                     fontFamily: 'var(--f-display)', fontWeight: 600, fontSize: 12,
                     cursor: 'pointer',
-                  }}>Modifica →</button>
+                  }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>Modifica →</button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {NANOLITH_PARTY.map(m => (
@@ -1098,7 +1098,7 @@ function State02Desktop() {
                     color: entityHsl('kb'),
                     fontFamily: 'var(--f-display)', fontWeight: 600, fontSize: 12,
                     cursor: 'pointer',
-                  }}>Vedi tutti →</button>
+                  }} onClick={() => { setTimeout(() => { window.location.href = 'librogame-runthrough-game-detail.html'; }, 0); /* DEMO-NAV */ }}>Vedi tutti →</button>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {NANOLITH_GLOSSARY_TOP5.map(g => (

@@ -193,22 +193,21 @@ public class GetAdminOverviewStatsQueryHandlerTests : IDisposable
     {
         for (var i = 0; i < published; i++)
         {
-            _dbContext.Games.Add(new GameEntity
+            _dbContext.SharedGames.Add(new SharedGameEntity
             {
                 Id = Guid.NewGuid(),
-                Name = $"Published Game {i}",
-                IsPublished = true,
-                PublishedAt = DateTime.UtcNow,
+                Title = $"Published Game {i}",
+                Status = 1,
                 CreatedAt = DateTime.UtcNow
             });
         }
         for (var i = 0; i < unpublished; i++)
         {
-            _dbContext.Games.Add(new GameEntity
+            _dbContext.SharedGames.Add(new SharedGameEntity
             {
                 Id = Guid.NewGuid(),
-                Name = $"Unpublished Game {i}",
-                IsPublished = false,
+                Title = $"Unpublished Game {i}",
+                Status = 0, 
                 CreatedAt = DateTime.UtcNow
             });
         }

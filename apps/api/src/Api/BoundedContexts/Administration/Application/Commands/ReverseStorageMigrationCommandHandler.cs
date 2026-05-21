@@ -91,7 +91,13 @@ internal sealed class ReverseStorageMigrationCommandHandler
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            // PERF-06: DbContext defaults to NoTracking globally.
+            // ReverseSentRowAsync + the Pending branch mutate `row.Status`
+            // and `row.LastError` directly; without AsTracking those changes
+            // never reach the DB through SaveChanges. Mirror fix in
+            // StorageOperationOutboxBackgroundService.DrainOnceAsync.
             var rows = await _db.StorageOperationOutbox
+                .AsTracking()
                 .Where(r => r.MigrationId == request.MigrationId)
                 .OrderBy(r => r.CreatedAt)
                 .Skip(offset)

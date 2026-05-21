@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MeepleAI — Nanolith Runthrough · Session End</title>
+<title>MeepleAI — Librogame Runthrough · Session End</title>
 <!--
-  Mockup: nanolith-runthrough-session-end
-  Route:  overlay su /library/nanolith/play/{campaignId}
+  Mockup: librogame-runthrough-session-end
+  Route:  overlay su /library/librogame/play/{campaignId}
   Scope:  Phase A runthrough — net-new flow: fine sessione/campagna.
           Modal bottom-sheet full-height su mobile, modal centrato 560px su desktop.
           Pattern: DR-1 (bottom-sheet) + modal centered overlay.
@@ -221,8 +221,8 @@
 <body>
 
 <header class="top">
-  <h1>Nanolith Runthrough · Session End <span style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin-left: 8px;">[modal overlay]</span></h1>
-  <span class="route">/library/nanolith/play/{campaignId}</span>
+  <h1>Librogame Runthrough · Session End <span style="font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-muted); margin-left: 8px;">[modal overlay]</span></h1>
+  <span class="route">/library/librogame/play/{campaignId}</span>
   <span class="spacer"></span>
   <button id="theme-btn">🌗 Tema</button>
 </header>
@@ -241,7 +241,7 @@
         <div class="phone-sbar"><span>23:47</span><span>📶 🔋 64%</span></div>
         <div class="backdrop">
           <div class="ghost">Capitolo 4 · §289</div>
-          <div class="ghost-para">La grotta dei Reaver</div>
+          <div class="ghost-para">La grotta dei Goblin</div>
         </div>
         <div class="modal-mobile" role="dialog" aria-label="Sessione in pausa">
           <div class="handle"></div>
@@ -280,14 +280,14 @@
           </div>
           <div class="mfooter">
             <button class="btn-out">Riepilogo</button>
-            <button class="btn-fill">Riprendi più tardi →</button>
+            <button class="btn-fill" onclick="window.location.href='librogame-runthrough-resume-picker.html'" /* DEMO-NAV */>Riprendi più tardi →</button>
           </div>
         </div>
       </div>
 
       <div class="desktop" role="region" aria-label="Desktop · paused">
         <span class="frame-label">Desktop · 1440px (scaled)</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/abc123</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/abc123</span></div>
         <div class="backdrop" style="display: flex; align-items: center; justify-content: center;">
           <div class="modal-desktop" role="dialog">
             <button class="close-x">✕</button>
@@ -338,7 +338,7 @@
           <div class="mbody">
             <h3>Highlights campagna</h3>
             <div class="highlights">
-              <div class="hl-row"><span class="when">Cap 2</span><span class="what"><strong>Patto con i Reaver</strong> — scelta narrativa, +1 alleato</span></div>
+              <div class="hl-row"><span class="when">Cap 2</span><span class="what"><strong>Patto con i Goblin</strong> — scelta narrativa, +1 alleato</span></div>
               <div class="hl-row"><span class="when">Cap 4</span><span class="what">Boss <strong>Architetto</strong> sconfitto al 2° tentativo</span></div>
               <div class="hl-row"><span class="when">Cap 6</span><span class="what">Glossario completato · <strong>34 termini</strong></span></div>
               <div class="hl-row"><span class="when">Epil.</span><span class="what"><strong>Finale buono</strong> · ending #2 di 4</span></div>
@@ -360,14 +360,14 @@
           </div>
           <div class="mfooter">
             <button class="btn-out">📤 Condividi</button>
-            <button class="btn-fill success">📖 Nuova campagna →</button>
+            <button class="btn-fill success" onclick="window.location.href='librogame-runthrough-game-onboarding.html'" /* DEMO-NAV */>📖 Nuova campagna →</button>
           </div>
         </div>
       </div>
 
       <div class="desktop" role="region" aria-label="Desktop · victory">
         <span class="frame-label">Desktop · 1440px (scaled)</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/abc123?state=victory</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/abc123?state=victory</span></div>
         <div class="backdrop" style="display: flex; align-items: center; justify-content: center;">
           <div class="modal-desktop">
             <button class="close-x">✕</button>
@@ -380,7 +380,7 @@
             <div class="mbody">
               <h3>Highlights</h3>
               <div class="highlights">
-                <div class="hl-row"><span class="when">Cap 2</span><span class="what"><strong>Patto Reaver</strong> · +1 alleato</span></div>
+                <div class="hl-row"><span class="when">Cap 2</span><span class="what"><strong>Patto Goblin</strong> · +1 alleato</span></div>
                 <div class="hl-row"><span class="when">Cap 4</span><span class="what">Boss <strong>Architetto</strong> sconfitto</span></div>
                 <div class="hl-row"><span class="when">Epil.</span><span class="what"><strong>Finale buono</strong> · ending #2/4</span></div>
               </div>
@@ -435,14 +435,14 @@
           </div>
           <div class="mfooter">
             <button class="btn-out">Termina campagna</button>
-            <button class="btn-fill warning">⟲ Riprendi dal checkpoint</button>
+            <button class="btn-fill warning" onclick="window.location.href='librogame-runthrough-resume-picker.html'" /* DEMO-NAV */>⟲ Riprendi dal checkpoint</button>
           </div>
         </div>
       </div>
 
       <div class="desktop" role="region" aria-label="Desktop · defeat">
         <span class="frame-label">Desktop · 1440px (scaled)</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/abc123?state=defeat</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/abc123?state=defeat</span></div>
         <div class="backdrop" style="display: flex; align-items: center; justify-content: center;">
           <div class="modal-desktop">
             <button class="close-x">✕</button>
@@ -494,7 +494,7 @@
               <span class="ico">🚨</span>
               <div class="info">
                 <strong>Azione irreversibile</strong>
-                Il progresso narrativo verrà archiviato (read-only). Il glossario sarà preservato e riutilizzabile in future campagne Nanolith.
+                Il progresso narrativo verrà archiviato (read-only). Il glossario sarà preservato e riutilizzabile in future campagne Eldoria.
               </div>
             </div>
             <h3>Cosa verrà archiviato</h3>
@@ -518,7 +518,7 @@
 
       <div class="desktop" role="region" aria-label="Desktop · cancelled">
         <span class="frame-label">Desktop · 1440px (scaled)</span>
-        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/nanolith/play/abc123?confirm=abandon</span></div>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/abc123?confirm=abandon</span></div>
         <div class="backdrop" style="display: flex; align-items: center; justify-content: center;">
           <div class="modal-desktop">
             <button class="close-x">✕</button>

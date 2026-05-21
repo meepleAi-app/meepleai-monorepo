@@ -7,6 +7,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
@@ -137,17 +138,16 @@ public sealed class GetSharedGameByIdQueryHandlerCrossBcTests : IAsyncLifetime
         await _repository.AddAsync(sharedGame, TestContext.Current.CancellationToken);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        // 3) GameManagement — GameEntity linked to SharedGame, ApprovalStatus=Approved(2).
+        // 3) GameManagement — SharedGameEntity linked to SharedGame, ApprovalStatus=Approved(2).
         //    NOTE: IsPublished is a computed column — must NOT be set by seeder.
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Catan",
+            Title = "Catan",
             CreatedAt = DateTime.UtcNow,
-            SharedGameId = sharedGame.Id,
-            ApprovalStatus = 2,
+            Status = 1, 
         };
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
 
         // 4) GameToolkit — 2 non-default Toolkits with DISTINCT owners
         //    (uq_toolkits_game_owner unique index on (GameId, OwnerUserId)).

@@ -6,6 +6,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -313,13 +314,8 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
 
         var game1Id = Guid.NewGuid();
         // DocumentCollection.SharedGameId FKs to shared_games (see SeedTestDataAsync).
-        _dbContext.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
-        {
-            Id = game1Id,
-            Title = "Test Game 1 for Ordering",
-        });
-        var game1 = new GameEntity { Id = game1Id, Name = "Test Game 1 for Ordering" };
-        _dbContext.Games.Add(game1);
+        var game1 = new SharedGameEntity { Id = game1Id, Title = "Test Game 1 for Ordering" };
+        _dbContext.SharedGames.Add(game1);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var collection1 = new DocumentCollection(
@@ -334,13 +330,8 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         await Task.Delay(TimeSpan.FromMilliseconds(100), TestCancellationToken); // Ensure different timestamps
 
         var game2Id = Guid.NewGuid();
-        _dbContext.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
-        {
-            Id = game2Id,
-            Title = "Test Game 2 for Ordering",
-        });
-        var game2 = new GameEntity { Id = game2Id, Name = "Test Game 2 for Ordering" };
-        _dbContext!.Games.Add(game2);
+        var game2 = new SharedGameEntity { Id = game2Id, Title = "Test Game 2 for Ordering" };
+        _dbContext!.SharedGames.Add(game2);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var collection2 = new DocumentCollection(
@@ -569,34 +560,23 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         // DocumentCollection.SharedGameId FKs to shared_games (not games), so
         // seed a SharedGameEntity with the same GUID — this satisfies the FK
         // without changing existing test fixture IDs.
-        _dbContext.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
+        var game1 = new SharedGameEntity
         {
             Id = TestGameId1,
-            Title = "Test Game 1",
-        });
-        _dbContext.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
+            Title = "Test Game 1"
+        };
+        var game2 = new SharedGameEntity
         {
             Id = TestGameId2,
-            Title = "Test Game 2",
-        });
-        var game1 = new GameEntity
-        {
-            Id = TestGameId1,
-            Name = "Test Game 1"
+            Title = "Test Game 2"
         };
-        var game2 = new GameEntity
-        {
-            Id = TestGameId2,
-            Name = "Test Game 2"
-        };
-        _dbContext.Games.Add(game1);
-        _dbContext.Games.Add(game2);
+        _dbContext.SharedGames.Add(game1);
+        _dbContext.SharedGames.Add(game2);
 
         // Create test PDF documents
         var testPdf1 = new PdfDocumentEntity
         {
             Id = TestPdfId1,
-            SharedGameId = TestGameId1,
             FileName = "test1.pdf",
             FilePath = "/test/path/test1.pdf",
             FileSizeBytes = 5000,
@@ -607,7 +587,6 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         var testPdf2 = new PdfDocumentEntity
         {
             Id = TestPdfId2,
-            SharedGameId = TestGameId1,
             FileName = "test2.pdf",
             FilePath = "/test/path/test2.pdf",
             FileSizeBytes = 5000,
@@ -622,7 +601,6 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         var testCollection = new Api.Infrastructure.Entities.DocumentCollectionEntity
         {
             Id = new Guid("11111111-1111-1111-1111-111111111111"),
-            SharedGameId = TestGameId1,
             Name = "Test Collection",
             Description = "For repository tests",
             CreatedByUserId = TestUserId,

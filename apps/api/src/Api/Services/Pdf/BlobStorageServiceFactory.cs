@@ -65,12 +65,34 @@ internal static class BlobStorageServiceFactory
         var credentials = new BasicAWSCredentials(options.AccessKey, options.SecretKey);
         var s3Client = new AmazonS3Client(credentials, s3Config);
 
+        // Issue #1357: Cloudflare R2 rejects `x-amz-tagging-directive` with HTTP 501
+        // "not implemented". The AWS SDK adds this header to every CopyObject request
+        // by default (S3MetadataDirective.COPY), blocking the storage-layout-migration
+        // drainer (#1314) against R2 buckets. Stripping it on a BeforeRequestEvent hook
+        // is safe across providers: AWS S3 treats absent + present-with-default-COPY
+        // identically (source object tags are preserved either way), and R2/MinIO/B2
+        // simply stop returning 501.
+        s3Client.BeforeRequestEvent += StripUnsupportedR2Headers;
+
         logger.LogInformation(
             "Initialized S3 storage: endpoint={Endpoint}, bucket={Bucket}, region={Region}, encryption={Encryption}",
             options.Endpoint, options.BucketName, options.Region, options.EnableEncryption);
 
         var layoutOptions = serviceProvider.GetRequiredService<IOptions<StorageLayoutOptions>>();
         return new S3BlobStorageService(s3Client, options, layoutOptions, logger);
+    }
+
+    /// <summary>
+    /// Issue #1357: removes S3 extension headers that Cloudflare R2 does not implement.
+    /// Currently strips <c>x-amz-tagging-directive</c>; extend the allowlist when new
+    /// AWS-only extensions surface in drainer/copy paths.
+    /// </summary>
+    internal static void StripUnsupportedR2Headers(object? sender, RequestEventArgs e)
+    {
+        if (e is WebServiceRequestEventArgs args)
+        {
+            args.Headers.Remove("x-amz-tagging-directive");
+        }
     }
 
     private static IBlobStorageService CreateLocalStorageService(IServiceProvider serviceProvider, IConfiguration config)

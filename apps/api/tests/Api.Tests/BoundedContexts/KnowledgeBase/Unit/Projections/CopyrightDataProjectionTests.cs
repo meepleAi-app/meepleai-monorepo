@@ -134,8 +134,8 @@ public class CopyrightDataProjectionTests
         db.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = docId,
-            SharedGameId = gameId,
             UploadedByUserId = uploaderId,
+            SharedGameId = gameId,
             FileName = "rules.pdf",
             FilePath = "/uploads/rules.pdf",
             LicenseType = (int)LicenseType.CreativeCommons,
@@ -334,7 +334,6 @@ public class CopyrightDataProjectionTests
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            SharedGameId = gameId,
             OwnershipDeclaredAt = null // Not declared
         });
         await db.SaveChangesAsync();
@@ -357,7 +356,6 @@ public class CopyrightDataProjectionTests
         {
             Id = Guid.NewGuid(),
             UserId = ownerId,
-            SharedGameId = gameId,
             OwnershipDeclaredAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync();
@@ -379,7 +377,6 @@ public class CopyrightDataProjectionTests
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            SharedGameId = null,
             PrivateGameId = privateGameId,
             OwnershipDeclaredAt = DateTime.UtcNow
         });

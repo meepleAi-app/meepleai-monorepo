@@ -71,7 +71,7 @@ internal sealed class AddRulebookCommandHandler : ICommandHandler<AddRulebookCom
         var gameId = command.GameId;
 
         // Step 0: Validate game exists and user owns it
-        var game = await _db.Games
+        var game = await _db.SharedGames
             .AsNoTracking()
             .FirstOrDefaultAsync(g => g.Id == gameId, cancellationToken)
             .ConfigureAwait(false);

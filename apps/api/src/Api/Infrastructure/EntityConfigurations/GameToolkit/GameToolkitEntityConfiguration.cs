@@ -56,7 +56,7 @@ internal class GameToolkitEntityConfiguration : IEntityTypeConfiguration<GameToo
         // Concurrency token
         builder.Property(e => e.RowVersion).IsRowVersion();
 
-        // FK to GameEntity (SharedGame) — optional
+        // FK to SharedGameEntity — optional
         builder.HasOne(e => e.Game)
             .WithMany()
             .HasForeignKey(e => e.GameId)

@@ -150,8 +150,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         var gameId = Guid.NewGuid();
 
         // Create game entity first to avoid FK violation
-        var game = new GameEntity { Id = gameId, Name = "Max Docs Test Game" };
-        _dbContext!.Games.Add(game);
+        var game = new SharedGameEntity { Id = gameId, Title = "Max Docs Test Game" };
+        _dbContext!.SharedGames.Add(game);
         _dbContext.SharedGames.Add(BuildSharedGame(gameId, "Max Docs Test Game"));
 
         var docs = new List<InitialDocumentRequest>();
@@ -163,7 +163,6 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             var pdf = new PdfDocumentEntity
             {
                 Id = pdfIds[i],
-                SharedGameId = gameId,
                 FileName = $"doc{i}.pdf",
                 FilePath = $"/test/doc{i}.pdf",
                 FileSizeBytes = 5000,
@@ -193,8 +192,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         var gameId = Guid.NewGuid();
 
         // Create game entity first to avoid FK violation
-        var game = new GameEntity { Id = gameId, Name = "Duplicate Collection Test Game" };
-        _dbContext!.Games.Add(game);
+        var game = new SharedGameEntity { Id = gameId, Title = "Duplicate Collection Test Game" };
+        _dbContext!.SharedGames.Add(game);
         _dbContext.SharedGames.Add(BuildSharedGame(gameId, "Duplicate Collection Test Game"));
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
@@ -217,8 +216,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         var gameId = Guid.NewGuid();
 
         // Create game entity first to avoid FK violation
-        var game = new GameEntity { Id = gameId, Name = "Too Many Docs Test Game" };
-        _dbContext!.Games.Add(game);
+        var game = new SharedGameEntity { Id = gameId, Title = "Too Many Docs Test Game" };
+        _dbContext!.SharedGames.Add(game);
         _dbContext.SharedGames.Add(BuildSharedGame(gameId, "Too Many Docs Test Game"));
 
         var docs = new List<InitialDocumentRequest>();
@@ -232,7 +231,6 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
                 var pdf = new PdfDocumentEntity
                 {
                     Id = id,
-                    SharedGameId = gameId,
                     FileName = $"d{i}.pdf",
                     FilePath = $"/d{i}.pdf",
                     FileSizeBytes = 5000,
@@ -290,14 +288,13 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         var differentGameId = Guid.NewGuid();
 
         // Create game entity first to avoid FK violation
-        var differentGame = new GameEntity { Id = differentGameId, Name = "Different Game" };
-        _dbContext!.Games.Add(differentGame);
+        var differentGame = new SharedGameEntity { Id = differentGameId, Title = "Different Game" };
+        _dbContext!.SharedGames.Add(differentGame);
         _dbContext.SharedGames.Add(BuildSharedGame(differentGameId, "Different Game"));
 
         var pdfForOtherGame = new PdfDocumentEntity
         {
             Id = Guid.NewGuid(),
-            SharedGameId = differentGameId,
             FileName = "other.pdf",
             FilePath = "/other.pdf",
             FileSizeBytes = 5000,
@@ -324,8 +321,8 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         var gameId = Guid.NewGuid();
 
         // Create game entity first to avoid FK violation
-        var game = new GameEntity { Id = gameId, Name = "Rollback Test Game" };
-        _dbContext!.Games.Add(game);
+        var game = new SharedGameEntity { Id = gameId, Title = "Rollback Test Game" };
+        _dbContext!.SharedGames.Add(game);
         _dbContext.SharedGames.Add(BuildSharedGame(gameId, "Rollback Test Game"));
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
@@ -353,12 +350,12 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
         };
         _dbContext!.Users.Add(testUser);
 
-        var testGame = new GameEntity
+        var testGame = new SharedGameEntity
         {
             Id = TestGameId,
-            Name = "Test Game"
+            Title = "Test Game"
         };
-        _dbContext.Games.Add(testGame);
+        _dbContext.SharedGames.Add(testGame);
 
         // Issue #519: PdfDocumentEntity.SharedGameId FK targets shared_games (post-PR#480),
         // so a SharedGameEntity row with the same Id is required to avoid 23503.
@@ -369,7 +366,6 @@ public sealed class CreateDocumentCollectionHandlerIntegrationTests : IAsyncLife
             var pdf = new PdfDocumentEntity
             {
                 Id = pdfId,
-                SharedGameId = TestGameId,
                 FileName = $"test-{pdfId}.pdf",
                 FilePath = $"/test/{pdfId}.pdf",
                 FileSizeBytes = 5000,

@@ -102,10 +102,10 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = GameId,
             FileName = "rulebook.pdf",
             FilePath = "/uploads/rulebook.pdf",
             UploadedByUserId = UserId,
+            SharedGameId = GameId,
             ProcessingPriority = "Admin",
         });
         await _dbContext.SaveChangesAsync();
@@ -118,7 +118,6 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
-            SharedGameId = GameId,
             FileName = "rulebook.pdf",
             FilePath = "/uploads/rulebook.pdf",
             UploadedByUserId = UserId,

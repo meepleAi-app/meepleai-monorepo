@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameToolkit.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Application.EventHandlers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -147,25 +148,25 @@ public sealed class ToolkitChangedForCatalogAggregatesHandlerTests
     [Fact]
     public async Task Handle_ToolkitWithSharedGameLinkage_InvalidatesPerGameTag()
     {
-        // Wave A.4 — verify that when a Toolkit is linked through Game.SharedGameId
+        // Wave A.4 — verify that when a Toolkit is linked to a SharedGame
         // the per-game detail cache (`shared-game:{id}`) is also evicted.
+        // Post-Phase2d (#1345): toolkit.GameId IS shared_games.id directly
+        // (no more legacy Game.SharedGameId bridge).
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
-        var sharedGameId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
 
-        db.Games.Add(new GameEntity
+        db.SharedGames.Add(new SharedGameEntity
         {
             Id = gameId,
-            Name = "G",
+            Title = "G",
             CreatedAt = DateTime.UtcNow,
-            SharedGameId = sharedGameId,
         });
         var toolkit = Toolkit.CreateDefault(gameId);
         db.Toolkits.Add(toolkit);
         await db.SaveChangesAsync();
 
         var cache = CreateHybridCache();
-        var perGameTag = $"shared-game:{sharedGameId}";
+        var perGameTag = $"shared-game:{gameId}";
 
         await cache.GetOrCreateAsync<string>(
             key: "detail-cache-key",
@@ -204,12 +205,11 @@ public sealed class ToolkitChangedForCatalogAggregatesHandlerTests
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         var gameId = Guid.NewGuid();
 
-        db.Games.Add(new GameEntity
+        db.SharedGames.Add(new SharedGameEntity
         {
             Id = gameId,
-            Name = "Private G",
+            Title = "Private G",
             CreatedAt = DateTime.UtcNow,
-            SharedGameId = null,
         });
         var toolkit = Toolkit.CreateDefault(gameId);
         db.Toolkits.Add(toolkit);

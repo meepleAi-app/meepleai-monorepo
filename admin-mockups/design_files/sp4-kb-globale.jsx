@@ -153,7 +153,7 @@ const Btn = ({ children, variant = 'primary', size = 'md', icon, onClick, fullWi
     },
   };
   return (
-    <button onClick={onClick} disabled={disabled} style={{
+    <button onClick={(e) => { (onClick)(e); setTimeout(() => { window.location.href = 'sp4-kb-hub.html'; }, 0); /* DEMO-NAV */ }} disabled={disabled} style={{
       ...sizes[size], ...variants[variant],
       width: fullWidth ? '100%' : 'auto',
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -786,7 +786,7 @@ const KbSearchResultsDesktop = () => {
             textAlign: 'center', padding: '16px 0',
             fontFamily: 'var(--f-mono)', fontSize: 11, color: 'var(--text-muted)',
           }}>
-            mostrati 5 di 12 · <a href="#" style={{ color: kb(), fontWeight: 700 }}>carica altri 7 →</a>
+            mostrati 5 di 12 · <a href="#" style={{ color: kb(), fontWeight: 700 }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-kb-hub.html'; }, 0); /* DEMO-NAV */ }}>carica altri 7 →</a>
           </div>
         </div>
 
@@ -2635,7 +2635,7 @@ const App = () => (
           7 screen states per la KB cross-game di MeepleAI: Home desktop · Search results ·
           Document viewer desktop + mobile · Editor (curator) · Ask the Agent drawer (SSE
           streaming, 4 sub-states) · Empty state. Palette <strong>--c-kb</strong> (teal).
-          {' '}<a href="sp4-kb-hub.html" style={{ color: kb(), fontWeight: 700 }}>↗ vs. sp4-kb-hub (per-game)</a>
+          {' '}<a href="sp4-kb-hub.html" style={{ color: kb(), fontWeight: 700 }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }}>↗ vs. sp4-kb-hub (per-game)</a>
         </p>
         <div style={{
           marginTop: 14,
@@ -2753,7 +2753,7 @@ const App = () => (
         fontSize: 12, color: 'var(--text-muted)',
         fontFamily: 'var(--f-mono)',
       }}>
-        <a href="00-hub.html" style={{ color: kb(), fontWeight: 700 }}>← 00-hub.html</a>
+        <a href="00-hub.html" style={{ color: kb(), fontWeight: 700 }} onClick={() => { setTimeout(() => { window.location.href = 'sp4-dashboard.html'; }, 0); /* DEMO-NAV */ }}>← 00-hub.html</a>
         <span>·</span>
         <a href="sp4-kb-hub.html" style={{ color: 'var(--text-sec)', fontWeight: 600 }}>sp4-kb-hub.jsx · KB per-game (#913)</a>
         <span>·</span>

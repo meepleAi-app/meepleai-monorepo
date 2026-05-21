@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
@@ -41,10 +42,10 @@ public sealed class SharedGameRagIntegrationTests
         var pdfDocId = Guid.NewGuid();
 
         // Seed a game entity to satisfy navigation (InMemory doesn't enforce FK)
-        dbContext.Games.Add(new GameEntity
+        dbContext.SharedGames.Add(new SharedGameEntity
         {
             Id = gameId,
-            Name = "Test Game",
+            Title = "Test Game",
             CreatedAt = DateTime.UtcNow
         });
 
@@ -52,7 +53,6 @@ public sealed class SharedGameRagIntegrationTests
         {
             Id = Guid.NewGuid(),
             GameId = gameId,
-            SharedGameId = sharedGameId,
             PdfDocumentId = pdfDocId,
             Content = "Roll two dice and move your piece.",
             ChunkIndex = 0,
@@ -90,10 +90,10 @@ public sealed class SharedGameRagIntegrationTests
         var sharedGameId = Guid.NewGuid();
         var pdfDocId = Guid.NewGuid();
 
-        dbContext.Games.Add(new GameEntity
+        dbContext.SharedGames.Add(new SharedGameEntity
         {
             Id = gameId,
-            Name = "Adjacent Chunk Test Game",
+            Title = "Adjacent Chunk Test Game",
             CreatedAt = DateTime.UtcNow
         });
 
@@ -104,7 +104,6 @@ public sealed class SharedGameRagIntegrationTests
             {
                 Id = Guid.NewGuid(),
                 GameId = gameId,
-                SharedGameId = sharedGameId,
                 PdfDocumentId = pdfDocId,
                 Content = $"Chunk content for index {i}",
                 ChunkIndex = i,
@@ -260,17 +259,16 @@ public sealed class SharedGameRagIntegrationTests
             // Arrange — seed a user (FK target), game and text chunks with SharedGameId
             await SeedUploaderAsync(TestUploaderUserId);
 
-            _dbContext!.Games.Add(new GameEntity
+            _dbContext!.SharedGames.Add(new SharedGameEntity
             {
                 Id = TestGameId,
-                Name = "Catan for SharedGame RAG Test",
+                Title = "Catan for SharedGame RAG Test",
                 CreatedAt = DateTime.UtcNow
             });
 
             _dbContext.PdfDocuments.Add(new PdfDocumentEntity
             {
                 Id = TestPdfDocId,
-                SharedGameId = TestGameId,
                 FileName = "catan-rules.pdf",
                 FilePath = "/uploads/catan-rules.pdf",
                 FileSizeBytes = 50000,
@@ -289,7 +287,6 @@ public sealed class SharedGameRagIntegrationTests
                 {
                     Id = Guid.NewGuid(),
                     GameId = TestGameId,
-                    SharedGameId = TestSharedGameId,
                     PdfDocumentId = TestPdfDocId,
                     Content = "Each player starts by placing two settlements and two roads on the board.",
                     ChunkIndex = 0,
@@ -301,7 +298,6 @@ public sealed class SharedGameRagIntegrationTests
                 {
                     Id = Guid.NewGuid(),
                     GameId = TestGameId,
-                    SharedGameId = TestSharedGameId,
                     PdfDocumentId = TestPdfDocId,
                     Content = "On your turn you roll two dice to produce resources for all players.",
                     ChunkIndex = 1,
@@ -313,7 +309,6 @@ public sealed class SharedGameRagIntegrationTests
                 {
                     Id = Guid.NewGuid(),
                     GameId = TestGameId,
-                    SharedGameId = TestSharedGameId,
                     PdfDocumentId = TestPdfDocId,
                     Content = "You need ten victory points to win the game of Catan.",
                     ChunkIndex = 2,
@@ -371,10 +366,10 @@ public sealed class SharedGameRagIntegrationTests
             var sharedCatalogId = new Guid("60000000-0000-0000-0000-000000000099");
             var pdfId = Guid.NewGuid();
 
-            _dbContext!.Games.Add(new GameEntity
+            _dbContext!.SharedGames.Add(new SharedGameEntity
             {
                 Id = privateGameId,
-                Name = "Private Game for OR-clause test",
+                Title = "Private Game for OR-clause test",
                 CreatedAt = DateTime.UtcNow
             });
 

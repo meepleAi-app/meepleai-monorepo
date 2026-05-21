@@ -141,7 +141,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
         detail.GetProperty("currentVersion").GetString().Should().Be("0.1.0");
         // Issue #1144 — marketplace extension fields present.
         detail.GetProperty("license").ValueKind.Should().Be(JsonValueKind.Null);
-        // gameName populated via LEFT JOIN on GameEntity seeded inside SeedToolkitAsync.
+        // gameName populated via LEFT JOIN on SharedGameEntity seeded inside SeedToolkitAsync.
         detail.GetProperty("gameName").GetString().Should().Be($"Game for Public Toolkit");
         // sizeBytes = sum of UTF-8 bytes across AgentConfig + tool/template JSONB.
         // All tool/template columns are NULL in this seed → sizeBytes = 0.
@@ -204,7 +204,7 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
         detail.GetProperty("license").GetString().Should().Be("CC BY-SA 4.0");
         // VersionSemver now drives currentVersion (was synthetic "1.0.{int}").
         detail.GetProperty("currentVersion").GetString().Should().Be("2.0.0");
-        // GameName via LEFT JOIN on GameEntity seeded inside SeedToolkitAsync.
+        // GameName via LEFT JOIN on SharedGameEntity seeded inside SeedToolkitAsync.
         detail.GetProperty("gameName").GetString().Should().Be("Game for Marketplace Toolkit");
         // SizeBytes = UTF-8 byte count of the AgentConfig JSONB column. Postgres
         // normalises JSONB (adds whitespace after colons) so we don't assert an
@@ -736,14 +736,14 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
         string? agentConfig = null)
     {
         // GameToolkitEntity.GameId references the "games" table (GameEntity),
-        // NOT SharedGames. Seed a GameEntity row so the FK constraint holds.
-        var game = new GameEntity
+        // NOT SharedGames. Seed a SharedGameEntity row so the FK constraint holds.
+        var game = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = $"Game for {name}",
+            Title = $"Game for {name}",
             CreatedAt = DateTime.UtcNow,
         };
-        dbContext.Games.Add(game);
+        dbContext.SharedGames.Add(game);
         await dbContext.SaveChangesAsync();
 
         var toolkitId = Guid.NewGuid();

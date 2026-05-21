@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using System.ComponentModel.DataAnnotations.Schema;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 
@@ -50,6 +51,6 @@ public class TextChunkEntity
     }
 
     // Navigation properties
-    public GameEntity Game { get; set; } = default!;
+    public SharedGameEntity Game { get; set; } = default!;
     public PdfDocumentEntity PdfDocument { get; set; } = default!;
 }

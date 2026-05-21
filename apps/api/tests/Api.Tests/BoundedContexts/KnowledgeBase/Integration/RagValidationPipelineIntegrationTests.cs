@@ -2,6 +2,7 @@ using System.Threading;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
 using Api.Tests.Infrastructure;
 using Api.Tests.Constants;
@@ -385,14 +386,14 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         };
         _dbContext!.Users.Add(user);
 
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = Guid.NewGuid(),
-            Name = "Test Game",
+            Title = "Test Game",
             CreatedAt = DateTime.UtcNow
         };
         _testGameId = game.Id;
-        _dbContext.Games.Add(game);
+        _dbContext.SharedGames.Add(game);
 
         // Create PdfDocument (FK requirement for VectorDocument)
         var pdfDoc = new PdfDocumentEntity

@@ -43,7 +43,9 @@ public class CitationValidationServiceTests
     }
 
     /// <summary>
-    /// Seeds test data into the given context and returns the IDs
+    /// Seeds test data into the given context and returns the IDs.
+    /// Post-Phase2d (#1345): PDFs must have SharedGameId set so
+    /// CitationValidationService can find them via SharedGameId filter.
     /// </summary>
     private static async Task<(Guid gameId, Guid pdf1Id, Guid pdf2Id)> SeedTestDataAsync(
         MeepleAiDbContext context)

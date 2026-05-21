@@ -5,6 +5,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -73,15 +74,15 @@ public sealed class PdfMetricsIntegrationTests : IAsyncLifetime
             CreatedAt = DateTime.UtcNow
         };
 
-        var game = new GameEntity
+        var game = new SharedGameEntity
         {
             Id = TestGameId,
-            Name = "Test Game for Metrics",
+            Title = "Test Game for Metrics",
             CreatedAt = DateTime.UtcNow
         };
 
         _dbContext!.Set<UserEntity>().Add(user);
-        _dbContext.Set<GameEntity>().Add(game);
+        _dbContext.Set<SharedGameEntity>().Add(game);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
     }
 

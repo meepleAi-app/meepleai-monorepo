@@ -65,7 +65,7 @@ function ThemeToggle() {
     document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light');
   };
   return (
-    <button className="theme-toggle" onClick={toggle} aria-label="Toggle dark mode">
+    <button className="theme-toggle" onClick={(e) => { (toggle)(e); setTimeout(() => { window.location.href = 'sp4-game-detail.html'; }, 0); /* DEMO-NAV */ }} aria-label="Toggle dark mode">
       {dark ? '☀️' : '🌙'} {dark ? 'Light' : 'Dark'}
     </button>
   );

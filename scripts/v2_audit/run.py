@@ -63,16 +63,51 @@ def run_audit(limit: int | None = None, dry_run: bool = False) -> dict:
 
     print("Phase B: running 4 dimension audits per row")
     all_findings = []
+
+    # First pass: extract all snapshots
+    inspections = []  # list of (row, comp_path, mockup_path, comp, mock, comp_text, mockup_text)
     for row, comp_path, mockup_path in valid_rows:
         comp = inspect_component(comp_path)
         mock = inspect_mockup(mockup_path)
         comp_text = comp_path.read_text(encoding="utf-8")
         mockup_text = mockup_path.read_text(encoding="utf-8")
+        inspections.append((row, comp_path, mockup_path, comp, mock, comp_text, mockup_text))
 
-        all_findings.extend(audit_nav(comp, mock, row.route))
+    # Second pass: non-nav dimensions per component (structural, tokens, props)
+    for row, comp_path, mockup_path, comp, mock, comp_text, mockup_text in inspections:
         all_findings.extend(audit_structural(comp, mock, row.route))
         all_findings.extend(audit_tokens(comp, comp_text, row.route))
         all_findings.extend(audit_props(comp, mockup_text, row.route))
+
+    # Third pass: nav dimension aggregated by route
+    from collections import defaultdict
+    from scripts.v2_audit.component_inspector import ComponentSnapshot
+    from scripts.v2_audit.mockup_inspector import MockupSnapshot
+
+    by_route_comps: dict[str, list] = defaultdict(list)
+    by_route_mock_destinations: dict[str, set] = defaultdict(set)
+    by_route_component_names: dict[str, list[str]] = defaultdict(list)
+
+    for row, comp_path, mockup_path, comp, mock, comp_text, mockup_text in inspections:
+        by_route_comps[row.route].append(comp)
+        by_route_mock_destinations[row.route].update(mock.link_destinations)
+        by_route_component_names[row.route].append(comp.path.name)
+
+    for route, comps in by_route_comps.items():
+        # Synthesize an aggregated ComponentSnapshot for the route
+        aggregated = ComponentSnapshot(path=Path(f"<route:{route}>"))
+        for c in comps:
+            aggregated.link_hrefs |= c.link_hrefs
+            aggregated.router_calls |= c.router_calls
+        # Synthesize aggregated MockupSnapshot
+        agg_mock = MockupSnapshot(path=Path(f"<route:{route}>"))
+        agg_mock.link_destinations = by_route_mock_destinations[route]
+
+        # Run nav audit ONCE per route
+        for finding in audit_nav(aggregated, agg_mock, route):
+            # Override the component field with all components in this route
+            finding.component = ", ".join(sorted(set(by_route_component_names[route])))
+            all_findings.append(finding)
 
     INPUT_SNAPSHOT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with INPUT_SNAPSHOT_PATH.open("w", encoding="utf-8", newline="\n") as snap:

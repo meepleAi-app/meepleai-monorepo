@@ -1,61 +1,21 @@
 # V2 Component Audit Report
 
 **Total components audited:** 70
-**Total findings:** 4497
-**Main report:** 184 (Critical: 102 · Important: 63 · Minor: 19)
-**Manual review queue:** 4313
+**Total findings:** 4410
+**Main report:** 109 (Critical: 30 · Important: 63 · Minor: 16)
+**Manual review queue:** 4301
 
 ## Findings by Route
 
 ### Route `/agents/[id]`
 
-- **[CRITICAL]** `PersonaCard.tsx` (nav): Missing Link to /agents (mockup: sp4-agents-index.html)
-  - `expected_route`: `/agents`
-  - `mockup_dest`: `sp4-agents-index.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `PersonaCard.tsx` (nav): Missing Link to /library/[gameId]/play/setup-wizard (mockup: librogame-runthrough-setup-wizard.html)
+- **[CRITICAL]** `AgentDangerZone.tsx, AgentSettingsForm.tsx, ChatHistoryTimeline.tsx, KbDocList.tsx, PersonaCard.tsx, SystemPromptViewer.tsx` (nav): Missing Link to /library/[gameId]/play/setup-wizard (mockup: librogame-runthrough-setup-wizard.html)
   - `expected_route`: `/library/[gameId]/play/setup-wizard`
   - `mockup_dest`: `librogame-runthrough-setup-wizard.html`
   - `component_hrefs`: `[]`
-- **[CRITICAL]** `SystemPromptViewer.tsx` (nav): Missing Link to /agents (mockup: sp4-agents-index.html)
+- **[CRITICAL]** `AgentDangerZone.tsx, AgentSettingsForm.tsx, ChatHistoryTimeline.tsx, KbDocList.tsx, PersonaCard.tsx, SystemPromptViewer.tsx` (nav): Missing Link to /agents (mockup: sp4-agents-index.html)
   - `expected_route`: `/agents`
   - `mockup_dest`: `sp4-agents-index.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `SystemPromptViewer.tsx` (nav): Missing Link to /library/[gameId]/play/setup-wizard (mockup: librogame-runthrough-setup-wizard.html)
-  - `expected_route`: `/library/[gameId]/play/setup-wizard`
-  - `mockup_dest`: `librogame-runthrough-setup-wizard.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `KbDocList.tsx` (nav): Missing Link to /agents (mockup: sp4-agents-index.html)
-  - `expected_route`: `/agents`
-  - `mockup_dest`: `sp4-agents-index.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `KbDocList.tsx` (nav): Missing Link to /library/[gameId]/play/setup-wizard (mockup: librogame-runthrough-setup-wizard.html)
-  - `expected_route`: `/library/[gameId]/play/setup-wizard`
-  - `mockup_dest`: `librogame-runthrough-setup-wizard.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `ChatHistoryTimeline.tsx` (nav): Missing Link to /agents (mockup: sp4-agents-index.html)
-  - `expected_route`: `/agents`
-  - `mockup_dest`: `sp4-agents-index.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `ChatHistoryTimeline.tsx` (nav): Missing Link to /library/[gameId]/play/setup-wizard (mockup: librogame-runthrough-setup-wizard.html)
-  - `expected_route`: `/library/[gameId]/play/setup-wizard`
-  - `mockup_dest`: `librogame-runthrough-setup-wizard.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `AgentSettingsForm.tsx` (nav): Missing Link to /agents (mockup: sp4-agents-index.html)
-  - `expected_route`: `/agents`
-  - `mockup_dest`: `sp4-agents-index.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `AgentSettingsForm.tsx` (nav): Missing Link to /library/[gameId]/play/setup-wizard (mockup: librogame-runthrough-setup-wizard.html)
-  - `expected_route`: `/library/[gameId]/play/setup-wizard`
-  - `mockup_dest`: `librogame-runthrough-setup-wizard.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `AgentDangerZone.tsx` (nav): Missing Link to /agents (mockup: sp4-agents-index.html)
-  - `expected_route`: `/agents`
-  - `mockup_dest`: `sp4-agents-index.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `AgentDangerZone.tsx` (nav): Missing Link to /library/[gameId]/play/setup-wizard (mockup: librogame-runthrough-setup-wizard.html)
-  - `expected_route`: `/library/[gameId]/play/setup-wizard`
-  - `mockup_dest`: `librogame-runthrough-setup-wizard.html`
   - `component_hrefs`: `[]`
 - **[IMPORTANT]** `SystemPromptViewer.tsx` (tokens): Hardcoded color utility: bg-emerald-100
   - `token`: `bg-emerald-100`
@@ -104,39 +64,11 @@
 
 ### Route `/game-nights`
 
-- **[CRITICAL]** `GameNightsHeader.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
-  - `expected_route`: `/game-nights/[id]/detail-rsvp`
-  - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `CalendarMonthGrid.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
-  - `expected_route`: `/game-nights/[id]/detail-rsvp`
-  - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `CalendarDayCell.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
-  - `expected_route`: `/game-nights/[id]/detail-rsvp`
-  - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `GameNightListCard.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
-  - `expected_route`: `/game-nights/[id]/detail-rsvp`
-  - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `DayDetailDrawer.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
-  - `expected_route`: `/game-nights/[id]/detail-rsvp`
-  - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
-  - `component_hrefs`: `[]`
 - **[CRITICAL]** `DayDetailDrawer.tsx` (structural): Missing semantic landmark: <section>
   - `missing`: `section`
   - `mockup_landmarks`: `['article', 'aside', 'header', 'section']`
   - `component_landmarks`: `['aside', 'header']`
-- **[CRITICAL]** `FilterPillBar.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
-  - `expected_route`: `/game-nights/[id]/detail-rsvp`
-  - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `StatusPill.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
-  - `expected_route`: `/game-nights/[id]/detail-rsvp`
-  - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `PlayerAvatars.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
+- **[CRITICAL]** `CalendarDayCell.tsx, CalendarMonthGrid.tsx, DayDetailDrawer.tsx, FilterPillBar.tsx, GameNightListCard.tsx, GameNightsHeader.tsx, PlayerAvatars.tsx, StatusPill.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
   - `expected_route`: `/game-nights/[id]/detail-rsvp`
   - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
   - `component_hrefs`: `[]`
@@ -151,87 +83,23 @@
 
 ### Route `/game-nights/[id]`
 
-- **[CRITICAL]** `GameNightAvatar.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `GameNightStatusBadge.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `GameNightCancelledBanner.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
+- **[CRITICAL]** `GameNightAvatar.tsx, GameNightCancelledBanner.tsx, GameNightStatusBadge.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
   - `expected_route`: `/library/[gameId]/play/game-onboarding`
   - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
   - `component_hrefs`: `[]`
 
 ### Route `/games/[id]`
 
-- **[CRITICAL]** `GameDetailHero.tsx` (nav): Missing Link to /games (mockup: sp4-games-index.html)
-  - `expected_route`: `/games`
-  - `mockup_dest`: `sp4-games-index.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `GameDetailHero.tsx` (nav): Missing Link to /games/[id]/chat (mockup: sp4-game-chat-tab.html)
-  - `expected_route`: `/games/[id]/chat`
-  - `mockup_dest`: `sp4-game-chat-tab.html`
-  - `component_hrefs`: `[]`
 - **[CRITICAL]** `GameDetailHero.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\game-detail\GameDetailHero.tsx`
-- **[CRITICAL]** `GameDetailTabsAnimated.tsx` (nav): Missing Link to /games (mockup: sp4-games-index.html)
+- **[CRITICAL]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Missing Link to /games (mockup: sp4-games-index.html)
   - `expected_route`: `/games`
   - `mockup_dest`: `sp4-games-index.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `GameDetailTabsAnimated.tsx` (nav): Missing Link to /games/[id]/chat (mockup: sp4-game-chat-tab.html)
+  - `component_hrefs`: `['doc.href', 'viewAllHref']`
+- **[CRITICAL]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Missing Link to /games/[id]/chat (mockup: sp4-game-chat-tab.html)
   - `expected_route`: `/games/[id]/chat`
   - `mockup_dest`: `sp4-game-chat-tab.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `GameDetailKpiCards.tsx` (nav): Missing Link to /games (mockup: sp4-games-index.html)
-  - `expected_route`: `/games`
-  - `mockup_dest`: `sp4-games-index.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `GameDetailKpiCards.tsx` (nav): Missing Link to /games/[id]/chat (mockup: sp4-game-chat-tab.html)
-  - `expected_route`: `/games/[id]/chat`
-  - `mockup_dest`: `sp4-game-chat-tab.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `GameDetailFaqList.tsx` (nav): Missing Link to /games (mockup: sp4-games-index.html)
-  - `expected_route`: `/games`
-  - `mockup_dest`: `sp4-games-index.html`
-  - `component_hrefs`: `['viewAllHref']`
-- **[CRITICAL]** `GameDetailFaqList.tsx` (nav): Missing Link to /games/[id]/chat (mockup: sp4-game-chat-tab.html)
-  - `expected_route`: `/games/[id]/chat`
-  - `mockup_dest`: `sp4-game-chat-tab.html`
-  - `component_hrefs`: `['viewAllHref']`
-- **[CRITICAL]** `GameDetailRulesAccordion.tsx` (nav): Missing Link to /games (mockup: sp4-games-index.html)
-  - `expected_route`: `/games`
-  - `mockup_dest`: `sp4-games-index.html`
-  - `component_hrefs`: `['viewAllHref']`
-- **[CRITICAL]** `GameDetailRulesAccordion.tsx` (nav): Missing Link to /games/[id]/chat (mockup: sp4-game-chat-tab.html)
-  - `expected_route`: `/games/[id]/chat`
-  - `mockup_dest`: `sp4-game-chat-tab.html`
-  - `component_hrefs`: `['viewAllHref']`
-- **[CRITICAL]** `GameDetailSessionsRail.tsx` (nav): Missing Link to /games (mockup: sp4-games-index.html)
-  - `expected_route`: `/games`
-  - `mockup_dest`: `sp4-games-index.html`
-  - `component_hrefs`: `['viewAllHref']`
-- **[CRITICAL]** `GameDetailSessionsRail.tsx` (nav): Missing Link to /games/[id]/chat (mockup: sp4-game-chat-tab.html)
-  - `expected_route`: `/games/[id]/chat`
-  - `mockup_dest`: `sp4-game-chat-tab.html`
-  - `component_hrefs`: `['viewAllHref']`
-- **[CRITICAL]** `GameDetailAgentsList.tsx` (nav): Missing Link to /games (mockup: sp4-games-index.html)
-  - `expected_route`: `/games`
-  - `mockup_dest`: `sp4-games-index.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `GameDetailAgentsList.tsx` (nav): Missing Link to /games/[id]/chat (mockup: sp4-game-chat-tab.html)
-  - `expected_route`: `/games/[id]/chat`
-  - `mockup_dest`: `sp4-game-chat-tab.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `GameDetailKbDocList.tsx` (nav): Missing Link to /games (mockup: sp4-games-index.html)
-  - `expected_route`: `/games`
-  - `mockup_dest`: `sp4-games-index.html`
-  - `component_hrefs`: `['doc.href']`
-- **[CRITICAL]** `GameDetailKbDocList.tsx` (nav): Missing Link to /games/[id]/chat (mockup: sp4-game-chat-tab.html)
-  - `expected_route`: `/games/[id]/chat`
-  - `mockup_dest`: `sp4-game-chat-tab.html`
-  - `component_hrefs`: `['doc.href']`
+  - `component_hrefs`: `['doc.href', 'viewAllHref']`
 - **[IMPORTANT]** `GameDetailHero.tsx` (tokens): Hardcoded color utility: bg-amber-700
   - `token`: `bg-amber-700`
 - **[IMPORTANT]** `GameDetailHero.tsx` (tokens): Hardcoded color utility: bg-emerald-700
@@ -258,94 +126,37 @@
   - `token`: `text-sky-700`
 - **[MINOR]** `GameDetailHero.tsx` (tokens): Unpaired text-white (no colored bg on same element)
   - `token`: `text-white`
-- **[MINOR]** `GameDetailFaqList.tsx` (nav): Component link not in mockup: viewAllHref
-  - `component_href`: `viewAllHref`
-  - `mapped_routes`: `['/games', '/games/[id]/chat']`
-- **[MINOR]** `GameDetailRulesAccordion.tsx` (nav): Component link not in mockup: viewAllHref
-  - `component_href`: `viewAllHref`
-  - `mapped_routes`: `['/games', '/games/[id]/chat']`
-- **[MINOR]** `GameDetailSessionsRail.tsx` (nav): Component link not in mockup: viewAllHref
-  - `component_href`: `viewAllHref`
-  - `mapped_routes`: `['/games', '/games/[id]/chat']`
 - **[MINOR]** `GameDetailSessionsRail.tsx` (tokens): Unpaired text-white (no colored bg on same element)
   - `token`: `text-white`
 - **[MINOR]** `GameDetailAgentsList.tsx` (tokens): Unpaired text-white (no colored bg on same element)
   - `token`: `text-white`
-- **[MINOR]** `GameDetailKbDocList.tsx` (nav): Component link not in mockup: doc.href
-  - `component_href`: `doc.href`
-  - `mapped_routes`: `['/games', '/games/[id]/chat']`
 - **[MINOR]** `GameDetailKbDocList.tsx` (tokens): Unpaired text-white (no colored bg on same element)
   - `token`: `text-white`
+- **[MINOR]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Component link not in mockup: doc.href
+  - `component_href`: `doc.href`
+  - `mapped_routes`: `['/games', '/games/[id]/chat']`
+- **[MINOR]** `GameDetailAgentsList.tsx, GameDetailFaqList.tsx, GameDetailHero.tsx, GameDetailKbDocList.tsx, GameDetailKpiCards.tsx, GameDetailRulesAccordion.tsx, GameDetailSessionsRail.tsx, GameDetailTabsAnimated.tsx` (nav): Component link not in mockup: viewAllHref
+  - `component_href`: `viewAllHref`
+  - `mapped_routes`: `['/games', '/games/[id]/chat']`
 
 ### Route `/join/event/[code]`
 
-- **[CRITICAL]** `PublicRsvpForm.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
-  - `expected_route`: `/game-nights/[id]/detail-rsvp`
-  - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `PublicRsvpForm.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `PublicRsvpForm.tsx` (nav): Missing Link to /settings (mockup: settings.html)
-  - `expected_route`: `/settings`
-  - `mockup_dest`: `settings.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `InvalidTokenError.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
-  - `expected_route`: `/game-nights/[id]/detail-rsvp`
-  - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
-  - `component_hrefs`: `['/']`
-- **[CRITICAL]** `InvalidTokenError.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `['/']`
-- **[CRITICAL]** `InvalidTokenError.tsx` (nav): Missing Link to /settings (mockup: settings.html)
-  - `expected_route`: `/settings`
-  - `mockup_dest`: `settings.html`
-  - `component_hrefs`: `['/']`
-- **[CRITICAL]** `ExpiredOrCancelledError.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
+- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
   - `expected_route`: `/game-nights/[id]/detail-rsvp`
   - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
   - `component_hrefs`: `['/', '/contact']`
-- **[CRITICAL]** `ExpiredOrCancelledError.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
+- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
   - `expected_route`: `/library/[gameId]/play/game-onboarding`
   - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
   - `component_hrefs`: `['/', '/contact']`
-- **[CRITICAL]** `ExpiredOrCancelledError.tsx` (nav): Missing Link to /settings (mockup: settings.html)
+- **[CRITICAL]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Missing Link to /settings (mockup: settings.html)
   - `expected_route`: `/settings`
   - `mockup_dest`: `settings.html`
   - `component_hrefs`: `['/', '/contact']`
-- **[CRITICAL]** `RateLimitedError.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
-  - `expected_route`: `/game-nights/[id]/detail-rsvp`
-  - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `RateLimitedError.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `RateLimitedError.tsx` (nav): Missing Link to /settings (mockup: settings.html)
-  - `expected_route`: `/settings`
-  - `mockup_dest`: `settings.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `GenericError.tsx` (nav): Missing Link to /game-nights/[id]/detail-rsvp (mockup: sp7-game-night-detail-rsvp.html)
-  - `expected_route`: `/game-nights/[id]/detail-rsvp`
-  - `mockup_dest`: `sp7-game-night-detail-rsvp.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `GenericError.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `GenericError.tsx` (nav): Missing Link to /settings (mockup: settings.html)
-  - `expected_route`: `/settings`
-  - `mockup_dest`: `settings.html`
-  - `component_hrefs`: `[]`
-- **[MINOR]** `InvalidTokenError.tsx` (nav): Component link not in mockup: /
-  - `component_href`: `/`
-  - `mapped_routes`: `['/game-nights/[id]/detail-rsvp', '/library/[gameId]/play/game-onboarding', '/settings']`
-- **[MINOR]** `ExpiredOrCancelledError.tsx` (nav): Component link not in mockup: /contact
+- **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /contact
   - `component_href`: `/contact`
   - `mapped_routes`: `['/game-nights/[id]/detail-rsvp', '/library/[gameId]/play/game-onboarding', '/settings']`
-- **[MINOR]** `ExpiredOrCancelledError.tsx` (nav): Component link not in mockup: /
+- **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /
   - `component_href`: `/`
   - `mapped_routes`: `['/game-nights/[id]/detail-rsvp', '/library/[gameId]/play/game-onboarding', '/settings']`
 
@@ -362,122 +173,38 @@
 
 ### Route `/players`
 
-- **[CRITICAL]** `PlayersHero.tsx` (nav): Missing Link to /player/[id] (mockup: sp4-player-detail.html)
-  - `expected_route`: `/player/[id]`
-  - `mockup_dest`: `sp4-player-detail.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `PlayersFiltersInline.tsx` (nav): Missing Link to /player/[id] (mockup: sp4-player-detail.html)
-  - `expected_route`: `/player/[id]`
-  - `mockup_dest`: `sp4-player-detail.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `PlayersResultsGrid.tsx` (nav): Missing Link to /player/[id] (mockup: sp4-player-detail.html)
-  - `expected_route`: `/player/[id]`
-  - `mockup_dest`: `sp4-player-detail.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `EmptyPlayers.tsx` (nav): Missing Link to /player/[id] (mockup: sp4-player-detail.html)
+- **[CRITICAL]** `EmptyPlayers.tsx, PlayersFiltersInline.tsx, PlayersHero.tsx, PlayersResultsGrid.tsx` (nav): Missing Link to /player/[id] (mockup: sp4-player-detail.html)
   - `expected_route`: `/player/[id]`
   - `mockup_dest`: `sp4-player-detail.html`
   - `component_hrefs`: `[]`
 
 ### Route `/sessions`
 
-- **[CRITICAL]** `SessionsHero.tsx` (nav): Missing Link to /library/[gameId]/play/resume-picker (mockup: librogame-runthrough-resume-picker.html)
-  - `expected_route`: `/library/[gameId]/play/resume-picker`
-  - `mockup_dest`: `librogame-runthrough-resume-picker.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `SessionsHero.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
 - **[CRITICAL]** `SessionsHero.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\sessions\SessionsHero.tsx`
-- **[CRITICAL]** `SessionsFilters.tsx` (nav): Missing Link to /library/[gameId]/play/resume-picker (mockup: librogame-runthrough-resume-picker.html)
-  - `expected_route`: `/library/[gameId]/play/resume-picker`
-  - `mockup_dest`: `librogame-runthrough-resume-picker.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `SessionsFilters.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
+- **[CRITICAL]** `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
   - `expected_route`: `/library/[gameId]/play/game-onboarding`
   - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
   - `component_hrefs`: `[]`
-- **[CRITICAL]** `SessionCardList.tsx` (nav): Missing Link to /library/[gameId]/play/resume-picker (mockup: librogame-runthrough-resume-picker.html)
+- **[CRITICAL]** `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Missing Link to /library/[gameId]/play/resume-picker (mockup: librogame-runthrough-resume-picker.html)
   - `expected_route`: `/library/[gameId]/play/resume-picker`
   - `mockup_dest`: `librogame-runthrough-resume-picker.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `SessionCardList.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `SessionCardGrid.tsx` (nav): Missing Link to /library/[gameId]/play/resume-picker (mockup: librogame-runthrough-resume-picker.html)
-  - `expected_route`: `/library/[gameId]/play/resume-picker`
-  - `mockup_dest`: `librogame-runthrough-resume-picker.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `SessionCardGrid.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `EmptySessions.tsx` (nav): Missing Link to /library/[gameId]/play/resume-picker (mockup: librogame-runthrough-resume-picker.html)
-  - `expected_route`: `/library/[gameId]/play/resume-picker`
-  - `mockup_dest`: `librogame-runthrough-resume-picker.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `EmptySessions.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `OutcomeBadge.tsx` (nav): Missing Link to /library/[gameId]/play/resume-picker (mockup: librogame-runthrough-resume-picker.html)
-  - `expected_route`: `/library/[gameId]/play/resume-picker`
-  - `mockup_dest`: `librogame-runthrough-resume-picker.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `OutcomeBadge.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `ScoringInline.tsx` (nav): Missing Link to /library/[gameId]/play/resume-picker (mockup: librogame-runthrough-resume-picker.html)
-  - `expected_route`: `/library/[gameId]/play/resume-picker`
-  - `mockup_dest`: `librogame-runthrough-resume-picker.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `ScoringInline.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `ConnectionChipStripFooter.tsx` (nav): Missing Link to /library/[gameId]/play/resume-picker (mockup: librogame-runthrough-resume-picker.html)
-  - `expected_route`: `/library/[gameId]/play/resume-picker`
-  - `mockup_dest`: `librogame-runthrough-resume-picker.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `ConnectionChipStripFooter.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
   - `component_hrefs`: `[]`
 
 ### Route `/sessions/[id]`
 
-- **[CRITICAL]** `SessionSummaryHero.tsx` (nav): Missing Link to /sessions (mockup: sp4-sessions-index.html)
-  - `expected_route`: `/sessions`
-  - `mockup_dest`: `sp4-sessions-index.html`
-  - `component_hrefs`: `[]`
 - **[CRITICAL]** `SessionSummaryHero.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-summary\SessionSummaryHero.tsx`
-- **[CRITICAL]** `SessionKpiGrid.tsx` (nav): Missing Link to /sessions (mockup: sp4-sessions-index.html)
-  - `expected_route`: `/sessions`
-  - `mockup_dest`: `sp4-sessions-index.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `ScoringBreakdownTable.tsx` (nav): Missing Link to /sessions (mockup: sp4-sessions-index.html)
-  - `expected_route`: `/sessions`
-  - `mockup_dest`: `sp4-sessions-index.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `ConnectionBar.tsx` (nav): Missing Link to /sessions (mockup: sp4-sessions-index.html)
-  - `expected_route`: `/sessions`
-  - `mockup_dest`: `sp4-sessions-index.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `AchievementsCarousel.tsx` (nav): Missing Link to /sessions (mockup: sp4-sessions-index.html)
-  - `expected_route`: `/sessions`
-  - `mockup_dest`: `sp4-sessions-index.html`
-  - `component_hrefs`: `[]`
 - **[CRITICAL]** `PhotosGallery.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-summary\PhotosGallery.tsx`
 - **[CRITICAL]** `SessionShareCard.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-summary\SessionShareCard.tsx`
 - **[CRITICAL]** `PlayAgainCta.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-summary\PlayAgainCta.tsx`
+- **[CRITICAL]** `AchievementsCarousel.tsx, ChatHighlights.tsx, Confetti.tsx, ConnectionBar.tsx, PhotosGallery.tsx, PlayAgainCta.tsx, ScoringBreakdownTable.tsx, SessionDiaryTimeline.tsx, SessionKpiGrid.tsx, SessionShareCard.tsx, SessionSummaryHero.tsx` (nav): Missing Link to /sessions (mockup: sp4-sessions-index.html)
+  - `expected_route`: `/sessions`
+  - `mockup_dest`: `sp4-sessions-index.html`
+  - `component_hrefs`: `[]`
 - **[IMPORTANT]** `SessionKpiGrid.tsx` (structural): Missing heading: <h1>
   - `missing`: `h1`
   - `mockup_headings`: `['h1', 'h3']`
@@ -539,46 +266,18 @@
 
 ### Route `/sessions/[id]/live`
 
-- **[CRITICAL]** `LiveTopBar.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
 - **[CRITICAL]** `LiveTopBar.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\LiveTopBar.tsx`
-- **[CRITICAL]** `TurnIndicator.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
-- **[CRITICAL]** `PlayerRosterLive.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
 - **[CRITICAL]** `PlayerRosterLive.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\PlayerRosterLive.tsx`
-- **[CRITICAL]** `LiveScoringPanel.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
 - **[CRITICAL]** `LiveScoringPanel.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\LiveScoringPanel.tsx`
-- **[CRITICAL]** `ActionLogTimeline.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
 - **[CRITICAL]** `ActionLogTimeline.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\ActionLogTimeline.tsx`
-- **[CRITICAL]** `DesktopBody.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
 - **[CRITICAL]** `DesktopBody.tsx` (structural): Missing semantic landmark: <header>
   - `missing`: `header`
   - `mockup_landmarks`: `['aside', 'header']`
   - `component_landmarks`: `['aside', 'main']`
-- **[CRITICAL]** `MobileBody.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
-  - `expected_route`: `/library/[gameId]/play/game-onboarding`
-  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
-  - `component_hrefs`: `[]`
 - **[CRITICAL]** `SessionToolsRail.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\SessionToolsRail.tsx`
 - **[CRITICAL]** `LiveAgentChat.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
@@ -587,6 +286,10 @@
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\LiveSessionNotes.tsx`
 - **[CRITICAL]** `RightColumnTabs.tsx` (tokens): File-level eslint-disable for hardcoded-color-utility
   - `file`: `D:\Repositories\meepleai-monorepo-main\apps\web\src\components\features\session-live\RightColumnTabs.tsx`
+- **[CRITICAL]** `ActionLogTimeline.tsx, ConnectionLostBanner.tsx, DesktopBody.tsx, LiveAgentChat.tsx, LiveScoringPanel.tsx, LiveSessionNotes.tsx, LiveTopBar.tsx, MobileBody.tsx, PlayerRosterLive.tsx, RightColumnTabs.tsx, SessionToolsRail.tsx, TurnIndicator.tsx` (nav): Missing Link to /library/[gameId]/play/game-onboarding (mockup: librogame-runthrough-game-onboarding.html)
+  - `expected_route`: `/library/[gameId]/play/game-onboarding`
+  - `mockup_dest`: `librogame-runthrough-game-onboarding.html`
+  - `component_hrefs`: `[]`
 - **[IMPORTANT]** `LiveTopBar.tsx` (tokens): Hardcoded color utility: bg-rose-700
   - `token`: `bg-rose-700`
 - **[IMPORTANT]** `LiveTopBar.tsx` (tokens): Hardcoded color utility: text-amber-300
@@ -1738,7 +1441,6 @@ LOW-confidence findings — review and promote/demote manually.
 
 ### Route `/game-nights/[id]`
 
-- [IMPORTANT] `GameNightAvatar.tsx` (nav): Unmappable mockup destination: sp4-game-nights-index.html
 - [MINOR] `GameNightAvatar.tsx` (structural): Missing semantic landmark: <aside>
 - [MINOR] `GameNightAvatar.tsx` (structural): Missing semantic landmark: <footer>
 - [CRITICAL] `GameNightAvatar.tsx` (structural): Missing semantic landmark: <header>
@@ -1812,7 +1514,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `GameNightAvatar.tsx` (props): Mockup accesses 'votes' but no matching prop in component
 - [IMPORTANT] `GameNightAvatar.tsx` (props): Mockup accesses 'weight' but no matching prop in component
 - [IMPORTANT] `GameNightAvatar.tsx` (props): Mockup accesses 'yes' but no matching prop in component
-- [IMPORTANT] `GameNightStatusBadge.tsx` (nav): Unmappable mockup destination: sp4-game-nights-index.html
 - [MINOR] `GameNightStatusBadge.tsx` (structural): Missing semantic landmark: <aside>
 - [MINOR] `GameNightStatusBadge.tsx` (structural): Missing semantic landmark: <footer>
 - [CRITICAL] `GameNightStatusBadge.tsx` (structural): Missing semantic landmark: <header>
@@ -1887,7 +1588,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `GameNightStatusBadge.tsx` (props): Mockup accesses 'votes' but no matching prop in component
 - [IMPORTANT] `GameNightStatusBadge.tsx` (props): Mockup accesses 'weight' but no matching prop in component
 - [IMPORTANT] `GameNightStatusBadge.tsx` (props): Mockup accesses 'yes' but no matching prop in component
-- [IMPORTANT] `GameNightCancelledBanner.tsx` (nav): Unmappable mockup destination: sp4-game-nights-index.html
 - [MINOR] `GameNightCancelledBanner.tsx` (structural): Missing semantic landmark: <aside>
 - [MINOR] `GameNightCancelledBanner.tsx` (structural): Missing semantic landmark: <footer>
 - [CRITICAL] `GameNightCancelledBanner.tsx` (structural): Missing semantic landmark: <header>
@@ -1963,6 +1663,7 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `GameNightCancelledBanner.tsx` (props): Mockup accesses 'votes' but no matching prop in component
 - [IMPORTANT] `GameNightCancelledBanner.tsx` (props): Mockup accesses 'weight' but no matching prop in component
 - [IMPORTANT] `GameNightCancelledBanner.tsx` (props): Mockup accesses 'yes' but no matching prop in component
+- [IMPORTANT] `GameNightAvatar.tsx, GameNightCancelledBanner.tsx, GameNightStatusBadge.tsx` (nav): Unmappable mockup destination: sp4-game-nights-index.html
 
 ### Route `/games/[id]`
 
@@ -2713,7 +2414,6 @@ LOW-confidence findings — review and promote/demote manually.
 
 ### Route `/library`
 
-- [IMPORTANT] `LibraryHeroDesktop.tsx` (nav): Unmappable mockup destination: sp4-add-game-bgg-step.html
 - [MINOR] `LibraryHeroDesktop.tsx` (structural): Missing semantic landmark: <article>
 - [MINOR] `LibraryHeroDesktop.tsx` (structural): Missing semantic landmark: <aside>
 - [IMPORTANT] `LibraryHeroDesktop.tsx` (structural): Missing heading: <h2>
@@ -2798,7 +2498,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `LibraryHeroDesktop.tsx` (props): Mockup accesses 'who' but no matching prop in component
 - [IMPORTANT] `LibraryHeroDesktop.tsx` (props): Mockup accesses 'width' but no matching prop in component
 - [IMPORTANT] `LibraryHeroDesktop.tsx` (props): Mockup accesses 'year' but no matching prop in component
-- [IMPORTANT] `LibraryTabs.tsx` (nav): Unmappable mockup destination: sp4-add-game-bgg-step.html
 - [MINOR] `LibraryTabs.tsx` (structural): Missing semantic landmark: <article>
 - [MINOR] `LibraryTabs.tsx` (structural): Missing semantic landmark: <aside>
 - [IMPORTANT] `LibraryTabs.tsx` (structural): Missing heading: <h1>
@@ -2884,7 +2583,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `LibraryTabs.tsx` (props): Mockup accesses 'who' but no matching prop in component
 - [IMPORTANT] `LibraryTabs.tsx` (props): Mockup accesses 'width' but no matching prop in component
 - [IMPORTANT] `LibraryTabs.tsx` (props): Mockup accesses 'year' but no matching prop in component
-- [IMPORTANT] `LibraryHybridGrid.tsx` (nav): Unmappable mockup destination: sp4-add-game-bgg-step.html
 - [MINOR] `LibraryHybridGrid.tsx` (structural): Missing semantic landmark: <article>
 - [MINOR] `LibraryHybridGrid.tsx` (structural): Missing semantic landmark: <aside>
 - [IMPORTANT] `LibraryHybridGrid.tsx` (structural): Missing heading: <h1>
@@ -2969,7 +2667,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `LibraryHybridGrid.tsx` (props): Mockup accesses 'who' but no matching prop in component
 - [IMPORTANT] `LibraryHybridGrid.tsx` (props): Mockup accesses 'width' but no matching prop in component
 - [IMPORTANT] `LibraryHybridGrid.tsx` (props): Mockup accesses 'year' but no matching prop in component
-- [IMPORTANT] `BulkSelectionBar.tsx` (nav): Unmappable mockup destination: sp4-add-game-bgg-step.html
 - [MINOR] `BulkSelectionBar.tsx` (structural): Missing semantic landmark: <article>
 - [MINOR] `BulkSelectionBar.tsx` (structural): Missing semantic landmark: <aside>
 - [IMPORTANT] `BulkSelectionBar.tsx` (structural): Missing heading: <h1>
@@ -3055,7 +2752,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `BulkSelectionBar.tsx` (props): Mockup accesses 'who' but no matching prop in component
 - [IMPORTANT] `BulkSelectionBar.tsx` (props): Mockup accesses 'width' but no matching prop in component
 - [IMPORTANT] `BulkSelectionBar.tsx` (props): Mockup accesses 'year' but no matching prop in component
-- [IMPORTANT] `RecentActivityRail.tsx` (nav): Unmappable mockup destination: sp4-add-game-bgg-step.html
 - [IMPORTANT] `RecentActivityRail.tsx` (props): Mockup accesses '0' but no matching prop in component
 - [IMPORTANT] `RecentActivityRail.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `RecentActivityRail.tsx` (props): Mockup accesses '06' but no matching prop in component
@@ -3137,6 +2833,7 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `RecentActivityRail.tsx` (props): Mockup accesses 'who' but no matching prop in component
 - [IMPORTANT] `RecentActivityRail.tsx` (props): Mockup accesses 'width' but no matching prop in component
 - [IMPORTANT] `RecentActivityRail.tsx` (props): Mockup accesses 'year' but no matching prop in component
+- [IMPORTANT] `BulkSelectionBar.tsx, LibraryHeroDesktop.tsx, LibraryHybridGrid.tsx, LibraryTabs.tsx, RecentActivityRail.tsx` (nav): Unmappable mockup destination: sp4-add-game-bgg-step.html
 
 ### Route `/players`
 
@@ -4410,7 +4107,6 @@ LOW-confidence findings — review and promote/demote manually.
 
 ### Route `/sessions/[id]/live`
 
-- [IMPORTANT] `LiveTopBar.tsx` (nav): Unmappable mockup destination: sp4-session-summary.html
 - [IMPORTANT] `LiveTopBar.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `LiveTopBar.tsx` (props): Mockup accesses '06' but no matching prop in component
 - [IMPORTANT] `LiveTopBar.tsx` (props): Mockup accesses '08' but no matching prop in component
@@ -4453,7 +4149,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `LiveTopBar.tsx` (props): Mockup accesses 'text' but no matching prop in component
 - [IMPORTANT] `LiveTopBar.tsx` (props): Mockup accesses 'v' but no matching prop in component
 - [IMPORTANT] `LiveTopBar.tsx` (props): Mockup accesses 'value' but no matching prop in component
-- [IMPORTANT] `TurnIndicator.tsx` (nav): Unmappable mockup destination: sp4-session-summary.html
 - [MINOR] `TurnIndicator.tsx` (structural): Missing semantic landmark: <aside>
 - [CRITICAL] `TurnIndicator.tsx` (structural): Missing semantic landmark: <header>
 - [IMPORTANT] `TurnIndicator.tsx` (props): Mockup accesses '05' but no matching prop in component
@@ -4497,7 +4192,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `TurnIndicator.tsx` (props): Mockup accesses 'text' but no matching prop in component
 - [IMPORTANT] `TurnIndicator.tsx` (props): Mockup accesses 'v' but no matching prop in component
 - [IMPORTANT] `TurnIndicator.tsx` (props): Mockup accesses 'value' but no matching prop in component
-- [IMPORTANT] `PlayerRosterLive.tsx` (nav): Unmappable mockup destination: sp4-session-summary.html
 - [MINOR] `PlayerRosterLive.tsx` (structural): Missing semantic landmark: <aside>
 - [CRITICAL] `PlayerRosterLive.tsx` (structural): Missing semantic landmark: <header>
 - [IMPORTANT] `PlayerRosterLive.tsx` (props): Mockup accesses '05' but no matching prop in component
@@ -4542,7 +4236,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `PlayerRosterLive.tsx` (props): Mockup accesses 'text' but no matching prop in component
 - [IMPORTANT] `PlayerRosterLive.tsx` (props): Mockup accesses 'v' but no matching prop in component
 - [IMPORTANT] `PlayerRosterLive.tsx` (props): Mockup accesses 'value' but no matching prop in component
-- [IMPORTANT] `LiveScoringPanel.tsx` (nav): Unmappable mockup destination: sp4-session-summary.html
 - [MINOR] `LiveScoringPanel.tsx` (structural): Missing semantic landmark: <aside>
 - [CRITICAL] `LiveScoringPanel.tsx` (structural): Missing semantic landmark: <header>
 - [IMPORTANT] `LiveScoringPanel.tsx` (props): Mockup accesses '05' but no matching prop in component
@@ -4587,7 +4280,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `LiveScoringPanel.tsx` (props): Mockup accesses 'text' but no matching prop in component
 - [IMPORTANT] `LiveScoringPanel.tsx` (props): Mockup accesses 'v' but no matching prop in component
 - [IMPORTANT] `LiveScoringPanel.tsx` (props): Mockup accesses 'value' but no matching prop in component
-- [IMPORTANT] `ActionLogTimeline.tsx` (nav): Unmappable mockup destination: sp4-session-summary.html
 - [MINOR] `ActionLogTimeline.tsx` (structural): Missing semantic landmark: <aside>
 - [CRITICAL] `ActionLogTimeline.tsx` (structural): Missing semantic landmark: <header>
 - [IMPORTANT] `ActionLogTimeline.tsx` (props): Mockup accesses '05' but no matching prop in component
@@ -4632,7 +4324,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `ActionLogTimeline.tsx` (props): Mockup accesses 'text' but no matching prop in component
 - [IMPORTANT] `ActionLogTimeline.tsx` (props): Mockup accesses 'v' but no matching prop in component
 - [IMPORTANT] `ActionLogTimeline.tsx` (props): Mockup accesses 'value' but no matching prop in component
-- [IMPORTANT] `DesktopBody.tsx` (nav): Unmappable mockup destination: sp4-session-summary.html
 - [IMPORTANT] `DesktopBody.tsx` (props): Mockup accesses '05' but no matching prop in component
 - [IMPORTANT] `DesktopBody.tsx` (props): Mockup accesses '06' but no matching prop in component
 - [IMPORTANT] `DesktopBody.tsx` (props): Mockup accesses '08' but no matching prop in component
@@ -4675,7 +4366,6 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `DesktopBody.tsx` (props): Mockup accesses 'text' but no matching prop in component
 - [IMPORTANT] `DesktopBody.tsx` (props): Mockup accesses 'v' but no matching prop in component
 - [IMPORTANT] `DesktopBody.tsx` (props): Mockup accesses 'value' but no matching prop in component
-- [IMPORTANT] `MobileBody.tsx` (nav): Unmappable mockup destination: sp4-session-summary.html
 - [MINOR] `MobileBody.tsx` (structural): Missing semantic landmark: <aside>
 - [CRITICAL] `MobileBody.tsx` (structural): Missing semantic landmark: <header>
 - [IMPORTANT] `MobileBody.tsx` (props): Mockup accesses '05' but no matching prop in component
@@ -4973,4 +4663,5 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `ConnectionLostBanner.tsx` (props): Mockup accesses 't' but no matching prop in component
 - [IMPORTANT] `ConnectionLostBanner.tsx` (props): Mockup accesses 'tab' but no matching prop in component
 - [IMPORTANT] `ConnectionLostBanner.tsx` (props): Mockup accesses 'text' but no matching prop in component
+- [IMPORTANT] `ActionLogTimeline.tsx, ConnectionLostBanner.tsx, DesktopBody.tsx, LiveAgentChat.tsx, LiveScoringPanel.tsx, LiveSessionNotes.tsx, LiveTopBar.tsx, MobileBody.tsx, PlayerRosterLive.tsx, RightColumnTabs.tsx, SessionToolsRail.tsx, TurnIndicator.tsx` (nav): Unmappable mockup destination: sp4-session-summary.html
 

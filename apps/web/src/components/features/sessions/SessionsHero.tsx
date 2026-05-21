@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * SessionsHero — Wave D.1 v2 component (Issue #735).
  *
@@ -55,6 +54,7 @@ export function SessionsHero({ onNewSession, labels, className }: SessionsHeroPr
           onClick={onNewSession}
           aria-label={labels.ctaNew}
           className={clsx(
+            // eslint-disable-next-line local/no-hardcoded-color-utility -- text-white on bg-entity-session (entity-colored CTA); mockup .e-bg pattern; WCAG AA ~6.8:1
             'inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg px-5 text-sm font-semibold text-white shadow-sm',
             'bg-entity-session transition-colors',
             'hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'

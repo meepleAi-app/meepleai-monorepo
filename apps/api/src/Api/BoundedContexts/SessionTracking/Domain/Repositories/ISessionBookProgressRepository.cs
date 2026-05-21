@@ -23,4 +23,14 @@ public interface ISessionBookProgressRepository
 
     Task AddAsync(SessionBookProgress progress, CancellationToken cancellationToken);
     Task UpdateAsync(SessionBookProgress progress, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Issue #1394: stages a delete for every <see cref="SessionBookProgress"/> row tied to the
+    /// given campaign session, eliminating orphans left behind by campaign soft-delete (the
+    /// table has no FK cascade — app-layer integrity, parity with sibling SessionTracking
+    /// entities). The actual flush happens via the campaign repo's <c>SaveChangesAsync</c>
+    /// (unit-of-work pattern), so callers must invoke it AFTER staging the delete to keep
+    /// soft-delete + orphan removal atomic.
+    /// </summary>
+    Task DeleteByCampaignAsync(Guid campaignSessionId, CancellationToken cancellationToken);
 }

@@ -52,6 +52,12 @@ public sealed class ListMyGamebookCampaignsHandlerTests
 
         public Task AddAsync(SessionBookProgress progress, CancellationToken cancellationToken) { Store.Add(progress); return Task.CompletedTask; }
         public Task UpdateAsync(SessionBookProgress progress, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task DeleteByCampaignAsync(Guid campaignSessionId, CancellationToken cancellationToken)
+        {
+            Store.RemoveAll(p => p.CampaignSessionId == campaignSessionId);
+            return Task.CompletedTask;
+        }
     }
 
     [Fact]

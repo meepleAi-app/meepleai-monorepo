@@ -65,6 +65,12 @@ public sealed class UpdateGamebookProgressHandlerTests
             // In-memory entity is mutated in place by UpdateLocation; no-op for the fake.
             return Task.CompletedTask;
         }
+
+        public Task DeleteByCampaignAsync(Guid campaignSessionId, CancellationToken cancellationToken)
+        {
+            Store.RemoveAll(p => p.CampaignSessionId == campaignSessionId);
+            return Task.CompletedTask;
+        }
     }
 
     private static (FakeCampaignRepo campaigns, FakeProgressRepo progress, UpdateGamebookProgressHandler handler, GamebookCampaignSession session) BuildSut()

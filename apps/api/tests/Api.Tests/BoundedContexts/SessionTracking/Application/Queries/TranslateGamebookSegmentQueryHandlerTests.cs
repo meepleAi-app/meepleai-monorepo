@@ -85,6 +85,12 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
         }
 
         public Task UpdateAsync(SessionBookProgress progress, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task DeleteByCampaignAsync(Guid campaignSessionId, CancellationToken cancellationToken)
+        {
+            Store.RemoveAll(p => p.CampaignSessionId == campaignSessionId);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeGlossaryRepo : IGamebookGlossaryRepository

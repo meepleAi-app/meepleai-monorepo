@@ -80,7 +80,7 @@ internal class HybridSearchService : IHybridSearchService
             switch (mode)
             {
                 case SearchMode.Semantic:
-                    return await SearchSemanticOnlyAsync(query, gameId, safeLimit, documentIds, cancellationToken).ConfigureAwait(false);
+                    return await SearchSemanticOnlyAsync(query, gameId, safeLimit, documentIds, queryRoleHint, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Keyword:
                     return await SearchKeywordOnlyAsync(query, gameId, safeLimit, documentIds, keywordMinScore, queryRoleHint, cancellationToken).ConfigureAwait(false);
@@ -108,33 +108,56 @@ internal class HybridSearchService : IHybridSearchService
 
     /// <summary>
     /// Performs vector-only semantic search using pgvector.
+    /// Issue #1391: applies the same role-match boost as the keyword path when
+    /// <paramref name="queryRoleHint"/> overlaps the chunk's denormalized RoleTags
+    /// (pgvector_embeddings now carries role_tags via the AddRoleTagsToPgVectorEmbeddings
+    /// migration + PgVectorStoreAdapter ingestion writes). Re-sorts by HybridScore so
+    /// boosted chunks float to the top instead of staying anchored to the raw vector rank.
     /// </summary>
     private async Task<List<HybridSearchResult>> SearchSemanticOnlyAsync(
         string query,
         Guid gameId,
         int limit,
         List<Guid>? documentIds,
+        GameBookRole queryRoleHint,
         CancellationToken cancellationToken)
     {
         var vectorResults = await ExecuteVectorSearchAsync(
             query, gameId, limit, documentIds, cancellationToken).ConfigureAwait(false);
 
-        return vectorResults.Select((r, index) => new HybridSearchResult
+        var results = vectorResults.Select((r, index) =>
         {
-            ChunkId = $"{r.VectorDocumentId}_{r.ChunkIndex}",
-            Content = r.TextContent,
-            PdfDocumentId = r.VectorDocumentId.ToString(),
-            GameId = gameId,
-            ChunkIndex = r.ChunkIndex,
-            PageNumber = r.PageNumber,
-            HybridScore = 1.0f / (index + 1), // normalized rank score
-            VectorScore = 1.0f / (index + 1),
-            KeywordScore = null,
-            VectorRank = index + 1,
-            KeywordRank = null,
-            MatchedTerms = new List<string>(),
-            Mode = SearchMode.Semantic
+            var chunkRoleTags = (GameBookRole)r.RoleTags;
+            var baseScore = 1.0f / (index + 1); // normalized rank score
+            var roleBoost = ComputeRoleMatchBoost(queryRoleHint, chunkRoleTags);
+            return new HybridSearchResult
+            {
+                ChunkId = $"{r.VectorDocumentId}_{r.ChunkIndex}",
+                Content = r.TextContent,
+                PdfDocumentId = r.VectorDocumentId.ToString(),
+                GameId = gameId,
+                ChunkIndex = r.ChunkIndex,
+                PageNumber = r.PageNumber,
+                HybridScore = baseScore + roleBoost,
+                VectorScore = baseScore,
+                KeywordScore = null,
+                VectorRank = index + 1,
+                KeywordRank = null,
+                MatchedTerms = new List<string>(),
+                Mode = SearchMode.Semantic,
+                RoleTags = chunkRoleTags
+            };
         }).ToList();
+
+        // Re-sort if the role boost actually moved anything (no-op when queryRoleHint == None).
+        if (queryRoleHint != GameBookRole.None)
+        {
+            results = results
+                .OrderByDescending(r => r.HybridScore)
+                .ToList();
+        }
+
+        return results;
     }
 
     /// <summary>

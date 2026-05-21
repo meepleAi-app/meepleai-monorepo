@@ -6,6 +6,7 @@ using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Api.Infrastructure.Seeders;
 
 namespace Api.Infrastructure.Seeders.Catalog;
 
@@ -71,6 +72,24 @@ internal sealed class CatalogSeedLayer : ISeedLayer
         catch (Exception ex)
         {
             context.Logger.LogError(ex, "[Catalog] Badsworm persona seed failed — continuing");
+        }
+
+        // Issue #1389: seed Nanolith multi-book gamebook aggregates after the
+        // CatalogSeeder + PdfSeeder pipeline runs (SharedGames and PdfDocuments must
+        // already exist). Best-effort: failure must not block the seed pipeline.
+        // Idempotent: skipped on subsequent runs if Nanolith GameBooks are present.
+        // Scope limited to Nanolith (already in catalog manifest); Fighting Fantasy and
+        // Maracaibo require a catalog manifest update and remain follow-up.
+        try
+        {
+            var gameBookSeeder = context.Services.GetRequiredService<GameBookSeeder>();
+            await gameBookSeeder
+                .SeedNanolithIfReadyAsync(context.DbContext, context.SystemUserId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            context.Logger.LogError(ex, "[Catalog] GameBookSeeder.SeedNanolithIfReadyAsync failed — continuing");
         }
     }
 }

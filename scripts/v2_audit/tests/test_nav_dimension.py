@@ -93,3 +93,71 @@ def test_route_to_filesystem_path_missing(tmp_path, monkeypatch):
 
     result = nav_dimension._route_to_filesystem_path("/does-not-exist")
     assert result is None
+
+
+def test_collect_route_tree_hrefs_picks_up_layout_link(tmp_path, monkeypatch):
+    """A <Link href> in layout.tsx is included in the route-tree hrefs."""
+    from scripts.v2_audit import nav_dimension
+
+    app_dir = tmp_path / "apps" / "web" / "src" / "app"
+    route_dir = app_dir / "(authenticated)" / "test-route"
+    route_dir.mkdir(parents=True)
+    (route_dir / "layout.tsx").write_text(
+        'import Link from "next/link";\n'
+        'export default function Layout({ children }: { children: React.ReactNode }) {\n'
+        '  return <><Link href="/back">Back</Link>{children}</>;\n'
+        '}\n',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        nav_dimension, "_REPO_ROOT_OVERRIDE", tmp_path, raising=False
+    )
+    nav_dimension._collect_route_tree_hrefs.cache_clear()
+
+    hrefs = nav_dimension._collect_route_tree_hrefs("/test-route")
+    assert "/back" in hrefs
+
+
+def test_collect_route_tree_hrefs_skips_test_files(tmp_path, monkeypatch):
+    """Test files (.test.tsx, .stories.tsx) are not scanned."""
+    from scripts.v2_audit import nav_dimension
+
+    app_dir = tmp_path / "apps" / "web" / "src" / "app"
+    route_dir = app_dir / "(authenticated)" / "some-route"
+    route_dir.mkdir(parents=True)
+    (route_dir / "layout.tsx").write_text(
+        'import Link from "next/link";\nexport default () => <Link href="/real">Real</Link>;\n',
+        encoding="utf-8",
+    )
+    (route_dir / "thing.test.tsx").write_text(
+        'import Link from "next/link";\nexport const Fake = () => <Link href="/fake-from-test">x</Link>;\n',
+        encoding="utf-8",
+    )
+    (route_dir / "thing.stories.tsx").write_text(
+        'import Link from "next/link";\nexport const Story = () => <Link href="/fake-from-story">y</Link>;\n',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        nav_dimension, "_REPO_ROOT_OVERRIDE", tmp_path, raising=False
+    )
+    nav_dimension._collect_route_tree_hrefs.cache_clear()
+
+    hrefs = nav_dimension._collect_route_tree_hrefs("/some-route")
+    assert "/real" in hrefs
+    assert "/fake-from-test" not in hrefs
+    assert "/fake-from-story" not in hrefs
+
+
+def test_collect_route_tree_hrefs_missing_route(tmp_path, monkeypatch):
+    """Non-existent route returns empty frozenset (no crash)."""
+    from scripts.v2_audit import nav_dimension
+
+    monkeypatch.setattr(
+        nav_dimension, "_REPO_ROOT_OVERRIDE", tmp_path, raising=False
+    )
+    nav_dimension._collect_route_tree_hrefs.cache_clear()
+
+    hrefs = nav_dimension._collect_route_tree_hrefs("/no-such-route")
+    assert hrefs == frozenset()

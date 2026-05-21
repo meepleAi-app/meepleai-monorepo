@@ -21,12 +21,23 @@ from scripts.v2_audit.mockup_inspector import MockupSnapshot
 from scripts.v2_audit.finding import Finding, Severity, Confidence, Dimension
 
 
+_PLANNED_DESTS = frozenset({
+    # These mockups map to routes that are intentionally planned but not yet implemented.
+    # Returning None causes the audit to emit IMPORTANT LOW-confidence (unmappable)
+    # instead of CRITICAL (missing Link), avoiding false positives.
+    "sp7-game-night-detail-rsvp",
+})
+
+
 def _mockup_to_route(mockup_dest: str) -> str | None:
     """Heuristic: map a mockup filename to a Next.js route.
 
     Returns None if no confident mapping found.
     """
     name = mockup_dest.replace(".html", "")
+    # Planned-but-not-implemented destinations: return None so audit emits Important LOW
+    if name in _PLANNED_DESTS:
+        return None
     # Common standalone mockups (checked first to override prefix patterns)
     KNOWN = {
         "sp4-dashboard": "/dashboard",
@@ -39,6 +50,25 @@ def _mockup_to_route(mockup_dest: str) -> str | None:
         "onboarding": "/onboarding",
         "auth-flow": "/login",
         "index": "/",
+        # Fix: sp4-player-detail must map to plural /players/[id] (real route),
+        # not /player/[id] produced by the sp4-(\w+)-detail regex.
+        "sp4-player-detail": "/players/[id]",
+        # Fix: librogame play routes — the gameplay flow is currently subsumed
+        # under /games/[id]; the /library/[gameId]/play/* routes don't exist yet.
+        "librogame-runthrough-game-onboarding": "/games/[id]",
+        "librogame-runthrough-game-detail": "/games/[id]",
+        "librogame-runthrough-setup-wizard": "/games/[id]",
+        "librogame-runthrough-resume-picker": "/games/[id]",
+        "librogame-runthrough-play-session": "/games/[id]",
+        "librogame-runthrough-encounter-cheatsheet": "/games/[id]",
+        "librogame-runthrough-session-end": "/games/[id]",
+        "librogame-runthrough-translate-viewer": "/games/[id]",
+        "librogame-runthrough-glossary-editor": "/games/[id]",
+        "librogame-runthrough-error-states": "/games/[id]",
+        "librogame-runthrough-setup-chat": "/games/[id]",
+        "librogame-runthrough-library-search": "/games/[id]",
+        "librogame-runthrough-quota-credits": "/games/[id]",
+        "librogame-game-night-storyboard": "/games/[id]",
     }
     if name in KNOWN:
         return KNOWN[name]

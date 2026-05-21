@@ -15,11 +15,16 @@ def _clear_route_tree_hrefs_cache():
         fn.cache_clear()
 
 
-def test_missing_destination_is_critical():
+def test_missing_destination_is_critical(monkeypatch):
+    # Patch route-tree to empty so we get deterministic results regardless of filesystem.
+    # sp4-sessions-index.html → /sessions, which is NOT in the component's hrefs ({"/games"})
+    # so a CRITICAL finding must be emitted.
+    from scripts.v2_audit import nav_dimension
+    monkeypatch.setattr(nav_dimension, "_collect_route_tree_hrefs", lambda r: frozenset())
     comp = ComponentSnapshot(path=Path("X.tsx"), link_hrefs={"/games"})
     mock = MockupSnapshot(
         path=Path("y.html"),
-        link_destinations={"sp4-games-index.html", "librogame-runthrough-game-onboarding.html"},
+        link_destinations={"sp4-games-index.html", "sp4-sessions-index.html"},
     )
     findings = list(audit_nav(comp, mock, route="/games/[id]"))
     assert any(f.severity == "critical" for f in findings)
@@ -207,3 +212,27 @@ def test_audit_nav_emits_critical_when_route_tree_empty(tmp_path, monkeypatch):
     findings = list(nav_dimension.audit_nav(comp, mock, route="/somewhere"))
     critical = [f for f in findings if f.severity == "critical"]
     assert len(critical) >= 1
+
+
+def test_singular_player_routes_to_plural():
+    """sp4-player-detail.html maps to /players/[id] (real plural route), not /player/[id]."""
+    from scripts.v2_audit.nav_dimension import _mockup_to_route
+    assert _mockup_to_route("sp4-player-detail.html") == "/players/[id]"
+
+
+def test_librogame_runthrough_maps_to_games_detail():
+    """librogame-runthrough-*.html maps to /games/[id] since librogame play flow is subsumed there."""
+    from scripts.v2_audit.nav_dimension import _mockup_to_route
+    assert _mockup_to_route("librogame-runthrough-game-onboarding.html") == "/games/[id]"
+    assert _mockup_to_route("librogame-runthrough-setup-wizard.html") == "/games/[id]"
+    assert _mockup_to_route("librogame-runthrough-play-session.html") == "/games/[id]"
+
+
+def test_planned_destination_returns_none():
+    """sp7-game-night-detail-rsvp.html is intentionally tracked as planned, not implemented yet.
+
+    Returning None makes the audit emit it as 'unmappable' (LOW confidence Important),
+    not as a CRITICAL missing-Link finding.
+    """
+    from scripts.v2_audit.nav_dimension import _mockup_to_route
+    assert _mockup_to_route("sp7-game-night-detail-rsvp.html") is None

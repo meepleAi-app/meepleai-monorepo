@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -24,6 +25,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
     private readonly IGamebookGlossaryRepository _glossary;
     private readonly ISessionBookProgressRepository _progress;
     private readonly ILlmService _llm;
+    private readonly ICampaignOwnershipGuard _ownershipGuard;
     private readonly ILogger<TranslateGamebookSegmentQueryHandler> _logger;
 
     public TranslateGamebookSegmentQueryHandler(
@@ -33,6 +35,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         IGamebookGlossaryRepository glossary,
         ISessionBookProgressRepository progress,
         ILlmService llm,
+        ICampaignOwnershipGuard ownershipGuard,
         ILogger<TranslateGamebookSegmentQueryHandler> logger)
     {
         ArgumentNullException.ThrowIfNull(campaigns);
@@ -41,6 +44,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         ArgumentNullException.ThrowIfNull(glossary);
         ArgumentNullException.ThrowIfNull(progress);
         ArgumentNullException.ThrowIfNull(llm);
+        ArgumentNullException.ThrowIfNull(ownershipGuard);
         ArgumentNullException.ThrowIfNull(logger);
         _campaigns = campaigns;
         _photos = photos;
@@ -48,6 +52,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         _glossary = glossary;
         _progress = progress;
         _llm = llm;
+        _ownershipGuard = ownershipGuard;
         _logger = logger;
     }
 
@@ -67,11 +72,16 @@ internal sealed class TranslateGamebookSegmentQueryHandler
 
         try
         {
+            // Issue #1415: ownership/existence verified via shared guard (single source of
+            // truth across SSE pre-flight + handler). Guard caches positive outcomes in
+            // HttpContext.Items so the subsequent _campaigns.GetByIdAsync below does not
+            // cause a double DB roundtrip on the happy path within the same request.
+            await _ownershipGuard
+                .AssertOwnedByAsync(query.CampaignId, query.CallerUserId, cancellationToken)
+                .ConfigureAwait(false);
+
             var campaign = await _campaigns.GetByIdAsync(query.CampaignId, cancellationToken).ConfigureAwait(false)
                 ?? throw new NotFoundException($"Campaign {query.CampaignId} not found");
-
-            if (campaign.OwnerUserId != query.CallerUserId)
-                throw new ForbiddenException("Forbidden");
 
             var artifact = await _photos.GetByIdAsync(query.PhotoId, cancellationToken).ConfigureAwait(false)
                 ?? throw new NotFoundException($"Photo {query.PhotoId} not found");

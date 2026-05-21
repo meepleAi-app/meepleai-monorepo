@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 /**
  * GameDetailHero - v2 Wave C.1 (Issue #581)
  *
@@ -131,12 +130,15 @@ export function GameDetailHero(props: GameDetailHeroProps): ReactElement {
         />
 
         {/* Title overlay */}
+        {/* eslint-disable-next-line local/no-hardcoded-color-utility -- text-white justified: overlay background is dark (rgba(0,0,0,.6)), inherited by children */}
         <div className="absolute inset-x-0 bottom-0 px-4 pb-4 text-white sm:px-8 sm:pb-5">
           <div className="mb-2 flex flex-wrap items-center gap-2">
+            {/* eslint-disable-next-line local/no-hardcoded-color-utility -- text-white justified: bg-card/20 declared on same className */}
             <span className="inline-flex items-center gap-1.5 rounded-full bg-card/20 px-2.5 py-1 font-mono text-[9px] font-extrabold uppercase tracking-[0.08em] text-white backdrop-blur-md">
               <span aria-hidden="true">🎲</span>
               <span>Game</span>
             </span>
+            {/* eslint-disable-next-line local/no-hardcoded-color-utility -- text-white justified: bg-card/20 declared on same className */}
             <span className="rounded-full bg-card/20 px-2.5 py-1 font-mono text-[9px] font-extrabold uppercase tracking-[0.08em] text-white backdrop-blur-md">
               {variant === 'own' ? labels.ownedBadge : labels.communityBadge}
             </span>
@@ -151,6 +153,7 @@ export function GameDetailHero(props: GameDetailHeroProps): ReactElement {
             ) : null}
           </div>
           <h1
+            // eslint-disable-next-line local/no-hardcoded-color-utility -- text-white justified: overlay background is dark (rgba(0,0,0,.6))
             className="mb-1.5 font-display text-[28px] font-extrabold leading-[1.05] tracking-[-0.02em] text-white sm:text-[40px]"
             style={{ textShadow: '0 2px 12px rgba(0,0,0,.3)' }}
           >
@@ -159,6 +162,7 @@ export function GameDetailHero(props: GameDetailHeroProps): ReactElement {
           {metaParts.length > 0 ? (
             <div
               data-slot="game-detail-hero-meta"
+              // eslint-disable-next-line local/no-hardcoded-color-utility -- text-white/95 justified: overlay background is dark (rgba(0,0,0,.6))
               className="flex flex-wrap items-center gap-x-2.5 gap-y-1 font-mono text-[11px] font-semibold text-white/95 sm:text-[12px]"
             >
               {metaParts.map((part, idx) => (

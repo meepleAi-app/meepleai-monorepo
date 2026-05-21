@@ -164,14 +164,14 @@ the PR review.
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-game-detail.jsx` | `GameDetailHero` | `apps/web/src/components/features/game-detail/GameDetailHero.tsx` | `/games/[id]` | done | #702 | T A M V | — |
-| `sp4-game-detail.jsx` | `GameDetailTabsAnimated` | `apps/web/src/components/features/game-detail/GameDetailTabsAnimated.tsx` | `/games/[id]` | done | #702 | T A M V | — |
-| `sp4-game-detail.jsx` | `GameDetailKpiCards` | `apps/web/src/components/features/game-detail/GameDetailKpiCards.tsx` | `/games/[id]` | done | #702 | T A V | — |
-| `sp4-game-detail.jsx` | `GameDetailFaqList` | `apps/web/src/components/features/game-detail/GameDetailFaqList.tsx` | `/games/[id]` | done | #702 | T A V | — |
-| `sp4-game-detail.jsx` | `GameDetailRulesAccordion` | `apps/web/src/components/features/game-detail/GameDetailRulesAccordion.tsx` | `/games/[id]` | done | #702 | T A M V | — |
-| `sp4-game-detail.jsx` | `GameDetailSessionsRail` | `apps/web/src/components/features/game-detail/GameDetailSessionsRail.tsx` | `/games/[id]` | done | #702 | T A V | — |
-| `sp4-game-detail.jsx` | `GameDetailAgentsList` | `apps/web/src/components/features/game-detail/GameDetailAgentsList.tsx` | `/games/[id]` | done | #702 | T A V | — |
-| `sp4-game-detail.jsx` | `GameDetailKbDocList` | `apps/web/src/components/features/game-detail/GameDetailKbDocList.tsx` | `/games/[id]` | done | #702 | T A V | — |
+| `sp4-game-detail.jsx` | `GameDetailHero` | `apps/web/src/components/features/game-detail/GameDetailHero.tsx` | `/games/[id]` | done | #702 | T A M V | #1396 |
+| `sp4-game-detail.jsx` | `GameDetailTabsAnimated` | `apps/web/src/components/features/game-detail/GameDetailTabsAnimated.tsx` | `/games/[id]` | done | #702 | T A M V | #1396 |
+| `sp4-game-detail.jsx` | `GameDetailKpiCards` | `apps/web/src/components/features/game-detail/GameDetailKpiCards.tsx` | `/games/[id]` | done | #702 | T A V | #1396 |
+| `sp4-game-detail.jsx` | `GameDetailFaqList` | `apps/web/src/components/features/game-detail/GameDetailFaqList.tsx` | `/games/[id]` | done | #702 | T A V | #1396 |
+| `sp4-game-detail.jsx` | `GameDetailRulesAccordion` | `apps/web/src/components/features/game-detail/GameDetailRulesAccordion.tsx` | `/games/[id]` | done | #702 | T A M V | #1396 |
+| `sp4-game-detail.jsx` | `GameDetailSessionsRail` | `apps/web/src/components/features/game-detail/GameDetailSessionsRail.tsx` | `/games/[id]` | done | #702 | T A V | #1396 |
+| `sp4-game-detail.jsx` | `GameDetailAgentsList` | `apps/web/src/components/features/game-detail/GameDetailAgentsList.tsx` | `/games/[id]` | done | #702 | T A V | #1396 |
+| `sp4-game-detail.jsx` | `GameDetailKbDocList` | `apps/web/src/components/features/game-detail/GameDetailKbDocList.tsx` | `/games/[id]` | done | #702 | T A V | #1396 |
 | `sp4-game-chat-tab.html` (G1+G5) | `GameChatTabV2 + 11 game-chat components` | `apps/web/src/components/features/game-chat/` | `/library/games/[id]?tab=aiChat` | done | #918 | T A V | — |
 
 ### Agents index — `/agents` — 4 components — **Tier S**

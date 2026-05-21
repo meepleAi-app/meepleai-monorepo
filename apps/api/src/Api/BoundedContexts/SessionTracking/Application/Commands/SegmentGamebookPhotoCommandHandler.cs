@@ -34,7 +34,7 @@ internal sealed class SegmentGamebookPhotoCommandHandler : IRequestHandler<Segme
             ?? throw new NotFoundException($"Campaign {cmd.CampaignId} not found");
 
         if (campaign.OwnerUserId != cmd.CallerUserId)
-            throw new ConflictException("Caller is not the campaign owner");
+            throw new ForbiddenException("Caller is not the campaign owner");
 
         var artifact = await _photos.GetByIdAsync(cmd.PhotoId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Photo {cmd.PhotoId} not found");

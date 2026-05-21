@@ -28,7 +28,7 @@ public class UpdateGamebookProgressHandler : IRequestHandler<UpdateGamebookProgr
             ?? throw new NotFoundException($"Campaign {cmd.CampaignId} not found");
 
         if (session.OwnerUserId != cmd.CallerUserId)
-            throw new ConflictException("Only owner can update progress");
+            throw new ForbiddenException("Only owner can update progress");
 
         // SessionBookProgress.LastLocation semantic: paragraphs are stored as "§N".
         var location = string.Create(

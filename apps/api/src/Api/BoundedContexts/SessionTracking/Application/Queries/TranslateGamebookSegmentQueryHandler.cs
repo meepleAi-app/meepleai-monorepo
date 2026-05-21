@@ -71,7 +71,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
                 ?? throw new NotFoundException($"Campaign {query.CampaignId} not found");
 
             if (campaign.OwnerUserId != query.CallerUserId)
-                throw new ConflictException("Forbidden");
+                throw new ForbiddenException("Forbidden");
 
             var artifact = await _photos.GetByIdAsync(query.PhotoId, cancellationToken).ConfigureAwait(false)
                 ?? throw new NotFoundException($"Photo {query.PhotoId} not found");

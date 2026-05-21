@@ -131,9 +131,9 @@ public sealed class UploadGamebookPhotoHandlerTests
     }
 
     [Fact]
-    public async Task Handle_CallerNotOwner_ThrowsConflictException()
+    public async Task Handle_CallerNotOwner_ThrowsForbiddenException()
     {
-        // Arrange
+        // Issue #1404: ownership failures must map to HTTP 403, not 409.
         var (handler, campaignRepo, _, _) = BuildSut();
         var ownerId = Guid.NewGuid();
         var differentCallerId = Guid.NewGuid();
@@ -151,6 +151,6 @@ public sealed class UploadGamebookPhotoHandlerTests
         Func<Task> act = () => handler.Handle(cmd, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<ConflictException>();
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 }

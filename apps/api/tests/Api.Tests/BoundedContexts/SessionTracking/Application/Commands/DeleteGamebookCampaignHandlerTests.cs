@@ -121,15 +121,16 @@ public sealed class DeleteGamebookCampaignHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenCallerIsNotOwner_ThrowsConflictException()
+    public async Task Handle_WhenCallerIsNotOwner_ThrowsForbiddenException()
     {
+        // Issue #1404: ownership failures must map to HTTP 403, not 409.
         var (_, _, handler, session) = BuildSut();
         var differentUser = Guid.NewGuid();
         var cmd = new DeleteGamebookCampaignCommand(session.Id, differentUser);
 
         var act = async () => await handler.Handle(cmd, CancellationToken.None);
 
-        await act.Should().ThrowAsync<ConflictException>();
+        await act.Should().ThrowAsync<ForbiddenException>();
         session.IsDeleted.Should().BeFalse();
     }
 
@@ -173,7 +174,7 @@ public sealed class DeleteGamebookCampaignHandlerTests
         var cmd = new DeleteGamebookCampaignCommand(session.Id, differentUser);
 
         var act = async () => await handler.Handle(cmd, CancellationToken.None);
-        await act.Should().ThrowAsync<ConflictException>();
+        await act.Should().ThrowAsync<ForbiddenException>();
 
         progress.DeleteCalls.Should().Be(0);
     }

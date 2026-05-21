@@ -29,7 +29,7 @@ public class GetGamebookCampaignHandler : IRequestHandler<GetGamebookCampaignQue
             ?? throw new NotFoundException($"Campaign {request.CampaignId} not found");
 
         if (session.OwnerUserId != request.CallerUserId)
-            throw new ConflictException("Forbidden");
+            throw new ForbiddenException("Forbidden");
 
         // Load the most-recently-visited per-book progress row so resume returns the
         // user's last reading position (regression fix for PR #1362 code review).

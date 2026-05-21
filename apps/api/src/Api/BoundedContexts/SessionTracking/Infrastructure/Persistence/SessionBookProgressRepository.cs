@@ -25,6 +25,12 @@ internal class SessionBookProgressRepository : ISessionBookProgressRepository
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+    public Task<SessionBookProgress?> GetMostRecentByCampaignAsync(Guid campaignSessionId, CancellationToken cancellationToken)
+        => _db.SessionBookProgresses
+            .Where(p => p.CampaignSessionId == campaignSessionId)
+            .OrderByDescending(p => p.LastVisitedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task AddAsync(SessionBookProgress progress, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(progress);

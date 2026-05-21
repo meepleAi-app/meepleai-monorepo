@@ -11,6 +11,16 @@ public interface ISessionBookProgressRepository
 {
     Task<SessionBookProgress?> GetByCampaignAndBookAsync(Guid campaignSessionId, Guid gameBookId, CancellationToken cancellationToken);
     Task<IReadOnlyList<SessionBookProgress>> ListByCampaignAsync(Guid campaignSessionId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns the most recently visited <see cref="SessionBookProgress"/> for a campaign,
+    /// or <c>null</c> when the campaign has no progress rows yet. "Most recent" = highest
+    /// <see cref="SessionBookProgress.LastVisitedAt"/>. Used by Get/List campaign queries
+    /// to populate the legacy <c>CurrentParagraph</c>/<c>History</c> DTO fields with the
+    /// last book the user was reading.
+    /// </summary>
+    Task<SessionBookProgress?> GetMostRecentByCampaignAsync(Guid campaignSessionId, CancellationToken cancellationToken);
+
     Task AddAsync(SessionBookProgress progress, CancellationToken cancellationToken);
     Task UpdateAsync(SessionBookProgress progress, CancellationToken cancellationToken);
 }

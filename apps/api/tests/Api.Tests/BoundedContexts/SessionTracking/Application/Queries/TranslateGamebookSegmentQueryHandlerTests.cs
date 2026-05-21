@@ -72,6 +72,12 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
             => Task.FromResult<IReadOnlyList<SessionBookProgress>>(
                 Store.Where(p => p.CampaignSessionId == campaignSessionId).ToList());
 
+        public Task<SessionBookProgress?> GetMostRecentByCampaignAsync(Guid campaignSessionId, CancellationToken cancellationToken)
+            => Task.FromResult(Store
+                .Where(p => p.CampaignSessionId == campaignSessionId)
+                .OrderByDescending(p => p.LastVisitedAt)
+                .FirstOrDefault());
+
         public Task AddAsync(SessionBookProgress progress, CancellationToken cancellationToken)
         {
             Store.Add(progress);

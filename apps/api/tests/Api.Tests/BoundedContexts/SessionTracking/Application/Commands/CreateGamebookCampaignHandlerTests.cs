@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.SharedKernel.Domain.ValueObjects;
 using FluentAssertions;
 using MediatR;
 using Moq;
@@ -51,6 +52,10 @@ public sealed class CreateGamebookCampaignHandlerTests
         dto.OwnerUserId.Should().Be(userId);
         dto.CurrentParagraph.Should().Be(0);
         dto.Id.Should().NotBeEmpty();
+        // Issue #1392: DTO must expose GameRef discriminator so FE can
+        // distinguish shared vs private campaigns without hardcoding Shared.
+        dto.GameRefId.Should().Be(gameId);
+        dto.GameRefKind.Should().Be((int)GameRefKind.Shared);
         repo.Store.Should().HaveCount(1);
     }
 

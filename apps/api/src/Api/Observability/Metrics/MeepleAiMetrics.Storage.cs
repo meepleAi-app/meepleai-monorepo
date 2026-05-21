@@ -1,7 +1,8 @@
 // Issue #1314 PR 2: Storage layout migration observability metrics.
-using Api.Services.Pdf;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+// Issue #1399 (2026-05-21): WriteMode/ReadMode branching removed. The gauge
+// now reports the steady-state "v2-categorized" layout (integer 3) with the
+// matching label. The counter/histogram surfaces remain unchanged for the
+// reusable outbox drainer (future SessionPhoto / GameImage migrations).
 using System.Diagnostics.Metrics;
 
 namespace Api.Observability;
@@ -43,53 +44,37 @@ internal static partial class MeepleAiMetrics
         unit: "events",
         description: "Storage-layout version announcement events on drainer startup, tagged by layout_version");
 
-    private static IServiceProvider? _layoutVersionGaugeRoot;
+    /// <summary>
+    /// Human-readable layout version label exposed on the gauge + announcement
+    /// counter. Issue #1399: hardcoded to <c>v2-categorized</c> post-Phase 4
+    /// — the dynamic WriteMode/ReadMode toggles are gone. Kept as a const so
+    /// Prometheus dashboards and the drainer announcement remain symmetric.
+    /// </summary>
+    internal const string CurrentLayoutVersionLabel = "v2-categorized";
+
+    private static bool _layoutVersionGaugeRegistered;
 
     /// <summary>
-    /// Wires the current-layout-version gauge to the application's DI root.
-    /// Must be called once at startup (after <c>BuildServiceProvider</c>) so
-    /// the gauge can resolve <see cref="StorageLayoutOptions"/> at scrape
-    /// time. Idempotent — subsequent calls are ignored.
+    /// Wires the current-layout-version gauge. Idempotent — subsequent calls
+    /// are ignored. Issue #1399: the gauge now reports a constant value (3)
+    /// since the dynamic write/read modes were removed. Kept for dashboard
+    /// backward-compat so existing PromQL queries do not 404.
     /// </summary>
     internal static void RegisterStorageLayoutVersionGauge(IServiceProvider serviceProvider)
     {
-        if (_layoutVersionGaugeRoot is not null)
+        _ = serviceProvider; // Parameter retained for API stability; no longer used.
+        if (_layoutVersionGaugeRegistered)
         {
             return;
         }
-        _layoutVersionGaugeRoot = serviceProvider;
+        _layoutVersionGaugeRegistered = true;
 
-        // ObservableGauge resolves StorageLayoutOptions at scrape time, so a
-        // pod that flips StorageLayout:WriteMode without restart (e.g. via
-        // IOptionsMonitor) would surface the change on the next Prometheus
-        // scrape. As of this writing the application reads options once at
-        // startup, so in practice the gauge value matches the announcement
-        // counter — but the gauge is the correct queryable surface for
-        // "what layout version is active right now in this pod".
         Meter.CreateObservableGauge<int>(
             name: "meepleai.storage.layout.version.current",
-            observeValue: () =>
-            {
-                using var scope = _layoutVersionGaugeRoot!.CreateScope();
-                var options = scope.ServiceProvider.GetRequiredService<IOptions<StorageLayoutOptions>>().Value;
-                return new Measurement<int>(
-                    LayoutVersionToInt(options.WriteMode),
-                    new KeyValuePair<string, object?>("layout_version", options.LayoutVersionLabel));
-            },
+            observeValue: () => new Measurement<int>(
+                3,
+                new KeyValuePair<string, object?>("layout_version", CurrentLayoutVersionLabel)),
             unit: "version",
-            description: "Currently-active storage layout version. 1=v1-gameId, 2=v1-gameId-migrating, 3=v2-categorized");
+            description: "Currently-active storage layout version. Post-#1399 the value is permanently 3 (v2-categorized).");
     }
-
-    /// <summary>
-    /// Stable integer encoding of the layout version. Prometheus does not
-    /// support string-valued gauges, so we expose an int + carry the human
-    /// label as a tag.
-    /// </summary>
-    private static int LayoutVersionToInt(StorageWriteMode mode) => mode switch
-    {
-        StorageWriteMode.Legacy => 1,
-        StorageWriteMode.Dual => 2,
-        StorageWriteMode.New => 3,
-        _ => 0,
-    };
 }

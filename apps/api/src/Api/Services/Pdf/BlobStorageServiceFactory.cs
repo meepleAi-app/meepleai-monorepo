@@ -1,7 +1,6 @@
 using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
-using Microsoft.Extensions.Options;
 using System.Globalization;
 
 namespace Api.Services.Pdf;
@@ -78,8 +77,7 @@ internal static class BlobStorageServiceFactory
             "Initialized S3 storage: endpoint={Endpoint}, bucket={Bucket}, region={Region}, encryption={Encryption}",
             options.Endpoint, options.BucketName, options.Region, options.EnableEncryption);
 
-        var layoutOptions = serviceProvider.GetRequiredService<IOptions<StorageLayoutOptions>>();
-        return new S3BlobStorageService(s3Client, options, layoutOptions, logger);
+        return new S3BlobStorageService(s3Client, options, logger);
     }
 
     /// <summary>
@@ -98,7 +96,6 @@ internal static class BlobStorageServiceFactory
     private static IBlobStorageService CreateLocalStorageService(IServiceProvider serviceProvider, IConfiguration config)
     {
         var logger = serviceProvider.GetRequiredService<ILogger<BlobStorageService>>();
-        var layoutOptions = serviceProvider.GetRequiredService<IOptions<StorageLayoutOptions>>();
-        return new BlobStorageService(config, layoutOptions, logger);
+        return new BlobStorageService(config, logger);
     }
 }

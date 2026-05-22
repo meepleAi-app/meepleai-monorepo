@@ -1,7 +1,7 @@
 /**
  * Connected Services Settings Page (M6 follow-up — Fase 2.4.b)
  *
- * Stub per integrazioni con servizi esterni (Google, Discord, BoardGameGeek).
+ * Stub per integrazioni con servizi esterni (Google, Discord).
  * Source of truth: admin-mockups/design_files/settings.jsx ServicesPanel (line ~780).
  *
  * API constraints: backend non espone ancora endpoint OAuth link/unlink per servizi esterni.
@@ -34,12 +34,6 @@ const SERVICES: readonly Service[] = [
     icon: '💬',
     label: 'Discord',
     description: 'Invia inviti e aggiornamenti al tuo server',
-  },
-  {
-    id: 'bgg',
-    icon: '🎲',
-    label: 'BoardGameGeek',
-    description: 'Importa collezione e sincronizza rating',
   },
 ];
 

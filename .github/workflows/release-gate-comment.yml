@@ -61,7 +61,7 @@ jobs:
           node-version: "20"
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa  # v4
         with:
           version: 9
 
@@ -78,6 +78,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           PR_NUMBER_PR_EVENT: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA_PR_EVENT: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER_DISPATCH: ${{ github.event.inputs.pr_number }}
           CHECK_SUITE_HEAD_SHA: ${{ github.event.check_suite.head_sha }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -87,9 +88,17 @@ jobs:
           case "$EVENT_NAME" in
             pull_request)
               echo "pr_number=$PR_NUMBER_PR_EVENT" >> "$GITHUB_OUTPUT"
-              echo "head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+              echo "head_sha=$PR_HEAD_SHA_PR_EVENT" >> "$GITHUB_OUTPUT"
               ;;
             workflow_dispatch)
+              # Validate dispatched PR number is a positive integer before using in API path.
+              # Without this guard, `gh api repos/.../pulls/$PR_NUMBER_DISPATCH` could be
+              # tricked into resolving an unintended path (e.g. "1234/../../...") on the
+              # GitHub API surface, given the bot token has pull-requests:write.
+              if ! [[ "$PR_NUMBER_DISPATCH" =~ ^[0-9]+$ ]]; then
+                echo "::error::pr_number must be a positive integer, got: $PR_NUMBER_DISPATCH"
+                exit 1
+              fi
               echo "pr_number=$PR_NUMBER_DISPATCH" >> "$GITHUB_OUTPUT"
               # Resolve head SHA for the dispatched PR
               SHA=$(gh api "repos/$REPO_SLUG/pulls/$PR_NUMBER_DISPATCH" --jq '.head.sha')

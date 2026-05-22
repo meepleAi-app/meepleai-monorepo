@@ -109,7 +109,10 @@ export async function runBot({
   };
   const body = formatComment({ failures, meta, gates });
 
-  // 4. Idempotency: find existing bot comment by signature header
+  // 4. Idempotency: find existing bot comment by signature header.
+  // NOTE: per_page=100 only reads the first page. Past 100 comments, the
+  // idempotency lookup may miss an older bot comment and produce a duplicate.
+  // If a release PR routinely exceeds this threshold, switch to octokit.paginate.
   let existingId = null;
   try {
     const comments = await octokit.issues.listComments({
@@ -118,7 +121,14 @@ export async function runBot({
       issue_number: prNumber,
       per_page: 100,
     });
-    const existing = (comments.data ?? []).find((c) => (c.body ?? "").startsWith(SIGNATURE_HEADER));
+    const items = comments.data ?? [];
+    if (items.length >= 100) {
+      console.warn(
+        `[release-gate:comment] warning — listComments returned ${items.length} comments (page-size limit hit); ` +
+        `idempotency may miss older bot comments. Consider octokit.paginate if this recurs.`
+      );
+    }
+    const existing = items.find((c) => (c.body ?? "").startsWith(SIGNATURE_HEADER));
     if (existing) existingId = existing.id;
   } catch (err) {
     // Non-fatal: fall through to create-only branch
@@ -245,6 +255,9 @@ async function main() {
   const token = envOrThrow("GITHUB_TOKEN");
   const { owner, repo } = parseRepo();
   const prNumber = Number(envOrThrow("PR_NUMBER"));
+  if (!Number.isInteger(prNumber) || prNumber <= 0) {
+    throw new Error(`PR_NUMBER must be a positive integer, got: ${process.env.PR_NUMBER}`);
+  }
   const commitSha = process.env.GITHUB_SHA ?? null;
 
   const octokit = new Octokit({ auth: token });

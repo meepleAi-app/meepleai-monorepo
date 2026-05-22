@@ -2332,7 +2332,7 @@
         "metaPlayersSingle": "{count} giocatori",
         "metaDuration": "{minutes} min",
         "metaWeight": "Complessità {value}/5",
-        "metaRating": "BGG {value}",
+        "metaRating": "Community {value}",
         "ctaPlay": "Gioca ora",
         "ctaEdit": "Modifica",
         "ctaShare": "Condividi",
@@ -2371,7 +2371,7 @@
         "specsAge": "Età",
         "specsCategories": "Categorie",
         "specsMechanics": "Meccaniche",
-        "specsBgg": "BGG ID",
+        "specsBgg": "Catalog ID",
         "noDescription": "Nessuna descrizione disponibile per questo gioco."
       },
       "faqs": {

@@ -102,4 +102,28 @@ public static class AuditEventType
     /// action. Metadata JSON: <c>{ "revokedCount": int, "currentSessionPreserved": bool }</c>.
     /// </summary>
     public const string BulkSessionRevoke = "auth.session.bulk_revoke";
+
+    // ── Admin: shared-games taxonomy (#1440) ───────────────────────────
+
+    /// <summary>
+    /// Admin created a new shared-games category.
+    /// Metadata JSON: <c>{ "id": guid, "name": string, "slug": string }</c>.
+    /// ActorUserId = admin.
+    /// </summary>
+    public const string CategoryCreated = "admin.category.created";
+
+    /// <summary>
+    /// Admin updated an existing shared-games category.
+    /// Metadata JSON: <c>{ "id": guid, "name": string }</c>.
+    /// ActorUserId = admin.
+    /// </summary>
+    public const string CategoryUpdated = "admin.category.updated";
+
+    /// <summary>
+    /// Admin deleted a shared-games category. Only allowed when the
+    /// category has zero linked games (AC-4 in #1440 forbids cascade).
+    /// Metadata JSON: <c>{ "id": guid, "name": string }</c>.
+    /// ActorUserId = admin.
+    /// </summary>
+    public const string CategoryDeleted = "admin.category.deleted";
 }

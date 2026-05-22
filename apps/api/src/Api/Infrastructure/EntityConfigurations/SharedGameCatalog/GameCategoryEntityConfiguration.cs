@@ -14,7 +14,11 @@ internal class GameCategoryEntityConfiguration : IEntityTypeConfiguration<GameCa
         builder.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
         builder.Property(e => e.Name).HasColumnName("name").IsRequired().HasMaxLength(100);
         builder.Property(e => e.Slug).HasColumnName("slug").IsRequired().HasMaxLength(100);
+        builder.Property(e => e.Emoji).HasColumnName("emoji").HasMaxLength(16);
+        builder.Property(e => e.Color).HasColumnName("color").HasMaxLength(7);
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired().HasDefaultValueSql("NOW()");
+        builder.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+        builder.Property(e => e.UpdatedBy).HasColumnName("updated_by");
 
         builder.HasIndex(e => e.Name).IsUnique().HasDatabaseName("ix_game_categories_name");
         builder.HasIndex(e => e.Slug).IsUnique().HasDatabaseName("ix_game_categories_slug");

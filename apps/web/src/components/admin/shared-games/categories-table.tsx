@@ -6,40 +6,56 @@ import { useState } from 'react';
 import { PlusIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
+import {
+  useAdminCategories,
+  useCreateAdminCategory,
+  useDeleteAdminCategory,
+  useUpdateAdminCategory,
+} from '@/hooks/queries/useAdminCategories';
+import { AdminCategoriesApiError, type CategoryDto } from '@/lib/api/admin-categories';
 import { logger } from '@/lib/logger';
 
 import { CategoryFormDialog, type CategoryFormValue } from './category-form-dialog';
 import { CategoryRow } from './category-row';
 import { DeleteCategoryConfirm } from './delete-category-confirm';
 
-interface Category {
-  id: string;
-  name: string;
-  emoji: string;
-  gameCount: number;
-  color: string;
+const FALLBACK_EMOJI = '🎲';
+const FALLBACK_COLOR = '#94a3b8';
+
+/**
+ * Derives a URL-friendly slug from the visible name (matches the server-side
+ * pattern `^[a-z0-9]+(?:-[a-z0-9]+)*$` enforced by Create/UpdateGameCategoryCommandValidator).
+ */
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
-const INITIAL_CATEGORIES: Category[] = [
-  { id: '1', name: 'Strategy', emoji: '♟️', gameCount: 42, color: '#3b82f6' },
-  { id: '2', name: 'Party', emoji: '🎉', gameCount: 28, color: '#ec4899' },
-  { id: '3', name: 'Cooperative', emoji: '🤝', gameCount: 19, color: '#10b981' },
-  { id: '4', name: 'Deck Building', emoji: '🃏', gameCount: 15, color: '#8b5cf6' },
-  { id: '5', name: 'Family', emoji: '👨‍👩‍👧‍👦', gameCount: 34, color: '#f59e0b' },
-  { id: '6', name: 'Abstract', emoji: '🔷', gameCount: 12, color: '#06b6d4' },
-  { id: '7', name: 'Thematic', emoji: '🗺️', gameCount: 23, color: '#ef4444' },
-  { id: '8', name: 'Euro', emoji: '🏛️', gameCount: 31, color: '#6366f1' },
-];
+function describeError(err: unknown): string {
+  if (err instanceof AdminCategoriesApiError) {
+    return err.serverMessage;
+  }
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return 'Unknown error';
+}
 
 export function CategoriesTable() {
-  // TODO(#1429 Phase 2): replace `INITIAL_CATEGORIES` + local state with a
-  // TanStack Query hook backed by `GET /api/v1/admin/categories` once the
-  // BE endpoints exist. The handlers below will swap to mutation hooks
-  // (`useMutation` with optimistic updates) rather than direct setState.
-  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
-  const [editing, setEditing] = useState<Category | null>(null);
-  const [deleting, setDeleting] = useState<Category | null>(null);
+  const categoriesQuery = useAdminCategories();
+  const createMutation = useCreateAdminCategory();
+  const updateMutation = useUpdateAdminCategory();
+  const deleteMutation = useDeleteAdminCategory();
+
+  const [editing, setEditing] = useState<CategoryDto | null>(null);
+  const [deleting, setDeleting] = useState<CategoryDto | null>(null);
   const [adding, setAdding] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+
+  const categories = categoriesQuery.data ?? [];
 
   const handleEdit = (id: string) => {
     const category = categories.find(c => c.id === id);
@@ -47,6 +63,7 @@ export function CategoriesTable() {
       logger.warn(`Edit requested for unknown category id=${id}`);
       return;
     }
+    setMutationError(null);
     setEditing(category);
   };
 
@@ -56,38 +73,62 @@ export function CategoriesTable() {
       logger.warn(`Delete requested for unknown category id=${id}`);
       return;
     }
+    setMutationError(null);
     setDeleting(category);
   };
 
   const handleAddCategory = () => {
+    setMutationError(null);
     setAdding(true);
   };
 
-  const handleSaveAdd = (value: CategoryFormValue) => {
-    // Local-state mutation only (Phase 1). Phase 2 will swap this for a
-    // POST /api/v1/admin/categories mutation; the temporary id below is
-    // a client-side placeholder until the server assigns one.
-    const id = `local-${Date.now().toString(36)}`;
-    setCategories(prev => [...prev, { ...value, gameCount: 0, id }]);
-    setAdding(false);
+  const handleSaveAdd = async (value: CategoryFormValue) => {
+    try {
+      await createMutation.mutateAsync({
+        name: value.name,
+        slug: slugify(value.name),
+        emoji: value.emoji,
+        color: value.color,
+      });
+      setAdding(false);
+    } catch (err) {
+      setMutationError(describeError(err));
+    }
   };
 
-  const handleSaveEdit = (value: CategoryFormValue) => {
+  const handleSaveEdit = async (value: CategoryFormValue) => {
     if (editing === null) {
       return;
     }
-    const targetId = editing.id;
-    setCategories(prev => prev.map(c => (c.id === targetId ? { ...c, ...value } : c)));
-    setEditing(null);
+    try {
+      await updateMutation.mutateAsync({
+        id: editing.id,
+        payload: {
+          name: value.name,
+          // The server enforces NOT NULL on slug, so editing.slug is always
+          // a non-empty string. Preserve it across edits (renaming the
+          // visible name should not silently re-slug the row).
+          slug: editing.slug,
+          emoji: value.emoji,
+          color: value.color,
+        },
+      });
+      setEditing(null);
+    } catch (err) {
+      setMutationError(describeError(err));
+    }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deleting === null) {
       return;
     }
-    const targetId = deleting.id;
-    setCategories(prev => prev.filter(c => c.id !== targetId));
-    setDeleting(null);
+    try {
+      await deleteMutation.mutateAsync(deleting.id);
+      setDeleting(null);
+    } catch (err) {
+      setMutationError(describeError(err));
+    }
   };
 
   return (
@@ -107,6 +148,15 @@ export function CategoriesTable() {
           Add Category
         </Button>
       </div>
+
+      {mutationError !== null && (
+        <div
+          role="alert"
+          className="rounded-md border border-red-200 dark:border-red-800 bg-red-50/80 dark:bg-red-900/40 px-4 py-3 text-sm text-red-700 dark:text-red-200"
+        >
+          {mutationError}
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border border-amber-200/50 dark:border-zinc-700/50 rounded-lg overflow-hidden">
@@ -132,13 +182,46 @@ export function CategoriesTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200/50 dark:divide-zinc-700/50">
+              {categoriesQuery.isLoading && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-6 py-8 text-center text-sm text-muted-foreground dark:text-muted-foreground"
+                  >
+                    Loading categories…
+                  </td>
+                </tr>
+              )}
+              {categoriesQuery.isError && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-6 py-8 text-center text-sm text-red-600 dark:text-red-400"
+                    role="alert"
+                  >
+                    Failed to load categories: {describeError(categoriesQuery.error)}
+                  </td>
+                </tr>
+              )}
+              {!categoriesQuery.isLoading &&
+                !categoriesQuery.isError &&
+                categories.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-6 py-8 text-center text-sm text-muted-foreground dark:text-muted-foreground"
+                    >
+                      No categories yet. Click <em>Add Category</em> to create one.
+                    </td>
+                  </tr>
+                )}
               {categories.map(category => (
                 <CategoryRow
                   key={category.id}
                   name={category.name}
-                  emoji={category.emoji}
-                  gameCount={category.gameCount}
-                  color={category.color}
+                  emoji={category.emoji ?? FALLBACK_EMOJI}
+                  gameCount={category.gameCount ?? 0}
+                  color={category.color ?? FALLBACK_COLOR}
                   onEdit={() => handleEdit(category.id)}
                   onDelete={() => handleDelete(category.id)}
                 />
@@ -158,7 +241,13 @@ export function CategoriesTable() {
       <CategoryFormDialog
         open={editing !== null}
         initial={
-          editing ? { color: editing.color, emoji: editing.emoji, name: editing.name } : undefined
+          editing
+            ? {
+                color: editing.color ?? FALLBACK_COLOR,
+                emoji: editing.emoji ?? FALLBACK_EMOJI,
+                name: editing.name,
+              }
+            : undefined
         }
         onClose={() => setEditing(null)}
         onSave={handleSaveEdit}

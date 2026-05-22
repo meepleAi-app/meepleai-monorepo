@@ -86,9 +86,12 @@ async function fetchPrFailures({ octokit, owner, repo, prNumber }) {
 }
 
 async function postSlack({ webhookUrl, payload, fetcher = fetch }) {
-  const delays = [1000, 2000, 4000];
+  // 3 attempts with 1s/2s backoff between retries (no sleep after the final
+  // attempt — that wall-clock is wasted because the loop is about to exit).
+  const delays = [1000, 2000];
   let lastErr = null;
   for (let attempt = 0; attempt < 3; attempt++) {
+    const isLast = attempt === 2;
     try {
       const res = await fetcher(webhookUrl, {
         method: "POST",
@@ -98,14 +101,14 @@ async function postSlack({ webhookUrl, payload, fetcher = fetch }) {
       if (res.ok) return { ok: true, attempt };
       if (res.status === 429 || res.status >= 500) {
         lastErr = new Error(`Slack ${res.status}`);
-        await new Promise((r) => setTimeout(r, delays[attempt]));
+        if (!isLast) await new Promise((r) => setTimeout(r, delays[attempt]));
         continue;
       }
       const body = await res.text().catch(() => "");
       return { ok: false, error: `Slack ${res.status}: ${body.slice(0, 200)}` };
     } catch (err) {
       lastErr = err;
-      await new Promise((r) => setTimeout(r, delays[attempt]));
+      if (!isLast) await new Promise((r) => setTimeout(r, delays[attempt]));
     }
   }
   return { ok: false, error: lastErr?.message ?? "Slack POST failed after 3 retries" };
@@ -117,7 +120,10 @@ async function openStatePr({ octokit, owner, repo, branchName, stateJson, weekIS
   const baseRef = await octokit.git.getRef({ owner, repo, ref: "heads/main-dev" });
   const baseSha = baseRef.data.object.sha;
 
-  // Create branch (fail-soft if it already exists)
+  // Create branch (or reset existing one to current main-dev tip).
+  // Re-running the same week before the previous state PR was merged would
+  // otherwise leave the branch pointing at a stale base; updateRef with
+  // `force: true` ensures we always write from a fresh main-dev tip.
   try {
     await octokit.git.createRef({
       owner,
@@ -127,7 +133,16 @@ async function openStatePr({ octokit, owner, repo, branchName, stateJson, weekIS
     });
   } catch (err) {
     if (err.status !== 422) throw err;
-    // 422 = ref exists; OK, fall through to update
+    // 422 = ref exists; reset it to baseSha so the file commit lands on a
+    // fresh base. force=true is required because the existing branch tip is
+    // unrelated to baseSha (not an ancestor).
+    await octokit.git.updateRef({
+      owner,
+      repo,
+      ref: `heads/${branchName}`,
+      sha: baseSha,
+      force: true,
+    });
   }
 
   // Get current state file SHA on the branch (if present) so we can update it
@@ -283,7 +298,12 @@ async function main() {
     return;
   }
 
-  const webhookUrl = envOrThrow("SLACK_GITNOTIFY_WEBHOOK_URL");
+  // Honor `bot.phase2c.slack_webhook_env` if set; falls back to
+  // SLACK_GITNOTIFY_WEBHOOK_URL otherwise. Indirection lets operators rebind
+  // the channel without code change.
+  const webhookEnvName =
+    gates?.bot?.phase2c?.slack_webhook_env ?? "SLACK_GITNOTIFY_WEBHOOK_URL";
+  const webhookUrl = envOrThrow(webhookEnvName);
   const slackResult = await postSlack({
     webhookUrl,
     payload: { text: digest.slackMessage },

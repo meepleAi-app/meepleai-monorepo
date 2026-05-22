@@ -25,17 +25,23 @@ concurrency:
   group: release-gate-digest
   cancel-in-progress: false
 
+# Default to least-privilege at the workflow level; the digest job re-declares
+# the write permissions it needs (contents:write for the state-branch commit,
+# pull-requests:write for the state PR, issues:write for failure-issue
+# creation). Validate-only steps therefore inherit read-only credentials.
 permissions:
-  contents: write       # for state-file commit on side branch
-  pull-requests: write  # for state PR creation
-  issues: write         # for failure-issue creation
-  checks: read
+  contents: read
 
 jobs:
   digest:
     name: Build and post weekly digest
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write       # for state-file commit on side branch
+      pull-requests: write  # for state PR creation
+      issues: write         # for failure-issue creation
+      checks: read
 
     steps:
       - name: Checkout

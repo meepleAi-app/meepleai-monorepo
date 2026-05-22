@@ -318,4 +318,15 @@ describe("isoWeek — utility", () => {
     // 2025-12-29 (Monday) is in ISO week 1 of 2026 by ISO 8601 rules.
     expect(isoWeek(new Date("2025-12-29T12:00:00Z"))).toBe("2026-W01");
   });
+
+  it("handles year-end without wrap (last week of same calendar year)", () => {
+    // 2026-12-28 Monday is in ISO week 53 of 2026 (Thursday 2026-12-31 stays
+    // in 2026). 2026 has 53 ISO weeks because 2026-01-01 is a Thursday.
+    expect(isoWeek(new Date("2026-12-28T12:00:00Z"))).toBe("2026-W53");
+  });
+
+  it("handles a year with 53 ISO weeks (Thursday on Dec 31)", () => {
+    // 2015 had 53 weeks: 2015-12-31 was a Thursday.
+    expect(isoWeek(new Date("2015-12-31T12:00:00Z"))).toBe("2015-W53");
+  });
 });

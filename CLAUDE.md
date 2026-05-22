@@ -262,21 +262,24 @@ tests/Api.Tests/          # Backend test suite
 ## Known Flaky Tests
 
 Tests confirmed failing on `main-dev` baseline independently of any specific PR.
-Triage history: #1349 (closed, Phase 2d carryover) → #1422 (2026-05-21, 12 SharedGameId/PDF cluster resolved).
+Triage history: #1349 (closed, Phase 2d carryover) → #1422 (2026-05-21, 12 SharedGameId/PDF cluster resolved) → 2026-05-22 (4 baseline failures cleared; S3Storage entry was stale).
+
+_Baseline currently empty._ Re-add a row here if a new pre-existing failure surfaces in `main-dev`.
 
 | Test | File | First observed | Reason | Action |
 |---|---|---|---|---|
-| `Should_Fail_When_GameId_Is_Empty` | `Api.Tests` | #1341 baseline | Pre-existing validator behavior mismatch | Document, do not block CI |
-| `Handle_EmptyGuid_ReturnsNull` | `Api.Tests` | #1341 baseline | Pre-existing | Document |
-| `Handle_WithSearchFilter_ReturnsMatchingGames` | `Api.Tests` | #1341 baseline | EF Core InMemory provider does not support `ILike` (Postgres-specific) | Integration test only — exclude from unit suite |
-| `*_S3Storage_*` (2 tests) | `Api.Tests` | #1341 baseline | Mock verification timing / strict mode mismatch | Document |
+| _(none)_ | | | | |
+
+**Resolved 2026-05-22**: 3 documented baseline failures fixed + 1 stale entry removed.
+- `Should_Fail_When_GameId_Is_Empty` — fixed by adding `Cascade(CascadeMode.Stop)` to `CreateRuleConflictFaqCommandValidator.RuleFor(x => x.GameId)` so the async `GameExists` check (which calls `GameRef.Shared(Guid.Empty)` → `ArgumentException`) is skipped when `NotEmpty()` already failed.
+- `Handle_EmptyGuid_ReturnsNull` (in `GetGameByIdQueryHandlerTests`) — fixed by short-circuiting the handler on `Guid.Empty` before constructing `GameRef.Shared(...)`; the test now also asserts the provider is never consulted. The 4 same-named tests in `DocumentProcessing` were never failing (they mock `repository.GetByIdAsync(Guid)` directly without going through `GameRef`).
+- `Handle_WithSearchFilter_ReturnsMatchingGames` — moved to `Integration/GameManagement/GetAllGamesQueryHandlerIntegrationTests.cs` (Testcontainers Postgres), where `EF.Functions.ILike` translates to SQL `ILIKE`. The Unit class retained the non-search scenarios.
+- `*_S3Storage_*` (2 tests) — entry was stale: all unit tests in `S3BlobStorageServiceTests` pass; the 11 skipped tests in `S3BlobStorageIntegrationTests` only require Docker.
 
 **Resolved in #1422 (2026-05-21)**: 12 undocumented SharedGameId/PDF cluster failures triaged and cleared.
 Root cause: regression from PR #1345/#1347 (Phase 2d delete `GameEntity` + drop `games` table, 2026-05-20). Test fixtures still relied on the dropped `pdf_documents.GameId` column → handlers filtering on `SharedGameId` returned 0 items. Resolution: **11 fixed** via fixture drift correction (add `SharedGameId` to `PdfDocumentEntity`/`TextChunkEntity` setups + `Publisher = "Kosmos"` on `DegradedAgentContext` full-metadata test) + **1 deleted** (`Handle_WithSharedGameId_ResolvesToActualGameId` — Post-Phase 2d the resolver step in `CreateChatThreadCommandHandler:46-54` is a degenerate identity lookup; cross-table resolution no longer exists).
 
-**Policy**: PRs MUST NOT cause the unit-test fail count to grow above this baseline. The CI `Backend Fast` job is non-required while these are pending fixes; a future cleanup will either fix the root cause (e.g., switch ILike test to integration) or skip with `[Trait("Skip", "<issue#>")]`.
-
-When fixing one of these, remove the row from this table in the same PR.
+**Policy**: PRs MUST NOT cause the unit-test fail count to grow above this baseline (currently zero). Future regressions: either fix the root cause or skip with `[Trait("Skip", "<issue#>")]` and add a row here in the same PR.
 
 ## AI Assistant Rules
 

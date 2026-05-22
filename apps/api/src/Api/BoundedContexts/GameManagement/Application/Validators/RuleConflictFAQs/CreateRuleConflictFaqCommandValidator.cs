@@ -18,6 +18,7 @@ internal sealed class CreateRuleConflictFaqCommandValidator : AbstractValidator<
         _gameCoreData = gameCoreData ?? throw new ArgumentNullException(nameof(gameCoreData));
 
         RuleFor(x => x.GameId)
+            .Cascade(CascadeMode.Stop)
             .NotEmpty()
             .WithMessage("GameId is required")
             .MustAsync(GameExists)

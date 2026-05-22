@@ -178,27 +178,9 @@ public class GetAllGamesQueryHandlerTests
         chess.BggId.Should().BeNull();
     }
 
-    [Fact]
-    public async Task Handle_WithSearchFilter_ReturnsMatchingGames()
-    {
-        // Arrange
-        await using var context = CreateContext();
-        context.SharedGames.AddRange(
-            MakeSharedGame("Catan"),
-            MakeSharedGame("Pandemic"),
-            MakeSharedGame("Carcassonne"));
-        await context.SaveChangesAsync();
-
-        var handler = CreateHandler(context);
-        // Note: ILike is PostgreSQL-specific; InMemory provider uses Contains fallback via EF
-        var query = new GetAllGamesQuery(Search: "Catan");
-
-        // Act
-        var result = await handler.Handle(query, TestContext.Current.CancellationToken);
-
-        // Assert — InMemory does a case-sensitive Contains; PostgreSQL uses ILike
-        result.Games.Should().Contain(g => g.Title == "Catan");
-    }
+    // NOTE: Handle_WithSearchFilter_ReturnsMatchingGames lives in
+    // Api.Tests.Integration.GameManagement.GetAllGamesQueryHandlerIntegrationTests
+    // because EF.Functions.ILike is PostgreSQL-specific and InMemory cannot translate it.
 
     [Fact]
     public async Task Handle_PaginationReturnsCorrectPage()

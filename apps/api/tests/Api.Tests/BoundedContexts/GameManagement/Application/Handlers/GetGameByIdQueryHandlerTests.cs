@@ -144,20 +144,18 @@ public class GetGameByIdQueryHandlerTests
     [Fact]
     public async Task Handle_EmptyGuid_ReturnsNull()
     {
-        // Arrange
-        var gameId = Guid.Empty;
-
-        _gameCoreDataMock
-            .Setup(r => r.GetCoreDataAsync(GameRef.Shared(gameId), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((GameCoreData?)null);
-
-        var query = new GetGameByIdQuery(gameId);
+        // Arrange — Guid.Empty is rejected by the handler short-circuit (GameRef.Shared(Guid.Empty)
+        // would throw ArgumentException), so the provider is never consulted.
+        var query = new GetGameByIdQuery(Guid.Empty);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().BeNull();
+        _gameCoreDataMock.Verify(
+            r => r.GetCoreDataAsync(It.IsAny<GameRef>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

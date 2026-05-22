@@ -1,0 +1,21 @@
+{
+  "name": "@meepleai/release-gate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Release-gate classification bot for main-dev → main-staging PRs. See docs/for-developers/specs/2026-05-22-release-gate-spreadsheet.md",
+  "scripts": {
+    "validate": "node validate.mjs",
+    "comment": "node comment.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:dry": "DRY_RUN=1 node comment.mjs"
+  },
+  "dependencies": {
+    "@octokit/rest": "^21.0.2",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

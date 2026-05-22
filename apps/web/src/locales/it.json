@@ -1865,6 +1865,7 @@
           "viewAll": "Tutti",
           "statusActive": "Attivo",
           "statusIdle": "Inattivo",
+          "callsTemplate": "{count} call",
           "emptyTitle": "Nessun agente AI attivo.",
           "emptyCta": "Esplora /hub/agents"
         },
@@ -1890,6 +1891,11 @@
           "emptyTitle": "Nessuna serata gioco pianificata.",
           "emptyCta": "+ Pianifica serata"
         }
+      },
+      "error": {
+        "title": "Impossibile caricare la dashboard",
+        "message": "Si è verificato un errore di rete. Verifica la connessione e riprova.",
+        "retry": "Riprova"
       }
     },
     "toolkitDetail": {

@@ -1,5 +1,5 @@
 /**
- * /join — client body (V2, Wave A.2, Issue #589).
+ * /join — client body (Issue #589).
  *
  * Owns:
  *   - i18n resolution (one `useTranslation()` call → all labels resolved upfront,

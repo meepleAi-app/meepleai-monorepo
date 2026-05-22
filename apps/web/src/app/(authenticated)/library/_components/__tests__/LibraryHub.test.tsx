@@ -1,13 +1,13 @@
 /**
- * Wave B.3 (Issue #574) — LibraryHubV2 orchestrator tests.
+ * Wave B.3 (Issue #574) — LibraryHub orchestrator tests.
  *
  * Mirrors Wave B.1 GamesLibraryView and B.2 AgentsLibraryView tests:
  *   - stub `useLibrary` + `useRemoveGameFromLibrary` + `next/navigation` search
  *     params + i18n via IntlProvider seeded with the actual `pages.library.*`
  *     keys from `it.json`. The orchestrator is the only stateful piece — the 6
- *     v2 components (LibraryHeroDesktop, LibraryTabs, LibraryHybridGrid,
+ *     feature components (LibraryHeroDesktop, LibraryTabs, LibraryHybridGrid,
  *     EmptyLibrary, BulkSelectionBar, RecentActivityRail) are pure label-driven
- *     (covered separately under `components/v2/library/__tests__/`).
+ *     (covered separately under `components/features/library/__tests__/`).
  *
  * Contract under test (spec §3.2 + §4.2):
  *   - 5-state FSM: default | loading | empty | filtered-empty | error
@@ -276,9 +276,9 @@ function paginated(items: UserLibraryEntry[]): PaginatedLibraryResponse {
 }
 
 // Import after mocks declared so module resolution sees the mocked hooks.
-import { LibraryHubV2 } from '../LibraryHubV2';
+import { LibraryHub } from '../LibraryHub';
 
-describe('LibraryHubV2 (Wave B.3)', () => {
+describe('LibraryHub (Wave B.3)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     searchParamsState.value = '';
@@ -298,7 +298,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
   // ─── FSM: default ──────────────────────────────────────────────────────
 
   it('renders Hero + Tabs + Toolbar + HybridGrid + ActivityRail in default state', () => {
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     const root = container.querySelector('[data-slot="library-hub-v2"]');
     expect(root).not.toBeNull();
     expect(root).toHaveAttribute('data-state', 'default');
@@ -311,7 +311,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
   });
 
   it('derives hero stats from entries via deriveHeroStats (6 totalGames, 2 kbReady, 1 wishlist, 1 loaned)', () => {
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     const stats = container.querySelectorAll('[data-slot="library-hero-stat-value"]');
     expect(stats).toHaveLength(4);
     // Order = totalGames, kbReady, wishlist, loaned (per orchestrator §3.2 stat ordering)
@@ -331,7 +331,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
       error: null,
       refetch: vi.fn(),
     });
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     const empty = container.querySelector('[data-slot="library-empty-state"]');
     expect(empty).not.toBeNull();
     expect(empty).toHaveAttribute('data-kind', 'loading');
@@ -348,7 +348,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
       error: new Error('boom'),
       refetch: vi.fn(),
     });
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     const empty = container.querySelector('[data-slot="library-empty-state"]');
     expect(empty).toHaveAttribute('data-kind', 'error');
     expect(screen.getByRole('button', { name: 'Riprova' })).toBeInTheDocument();
@@ -364,7 +364,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
       error: null,
       refetch: vi.fn(),
     });
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     const empty = container.querySelector('[data-slot="library-empty-state"]') as HTMLElement;
     expect(empty).toHaveAttribute('data-kind', 'empty');
     // Scope CTA query to empty state — Hero also renders an "Aggiungi gioco" CTA.
@@ -374,7 +374,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
   // ─── FSM: filtered-empty ───────────────────────────────────────────────
 
   it('renders kind="filtered-empty" EmptyLibrary when search query matches no entries', () => {
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     const search = container.querySelector(
       '[data-slot="library-search-input"]'
     ) as HTMLInputElement;
@@ -388,7 +388,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
 
   it('?state=loading override forces kind="loading" surface (NODE_ENV=test)', () => {
     searchParamsState.value = 'loading';
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     expect(container.querySelector('[data-slot="library-empty-state"]')).toHaveAttribute(
       'data-kind',
       'loading'
@@ -397,7 +397,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
 
   it('?state=empty override forces kind="empty" surface', () => {
     searchParamsState.value = 'empty';
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     expect(container.querySelector('[data-slot="library-empty-state"]')).toHaveAttribute(
       'data-kind',
       'empty'
@@ -406,7 +406,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
 
   it('?state=filtered-empty override forces kind="filtered-empty" surface', () => {
     searchParamsState.value = 'filtered-empty';
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     expect(container.querySelector('[data-slot="library-empty-state"]')).toHaveAttribute(
       'data-kind',
       'filtered-empty'
@@ -415,7 +415,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
 
   it('?state=error override forces kind="error" surface', () => {
     searchParamsState.value = 'error';
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     expect(container.querySelector('[data-slot="library-empty-state"]')).toHaveAttribute(
       'data-kind',
       'error'
@@ -424,7 +424,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
 
   it('ignores unknown ?state= values and falls back to real FSM', () => {
     searchParamsState.value = 'totally-bogus';
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     expect(container.querySelector('[data-slot="library-hybrid-grid"]')).toBeInTheDocument();
     expect(container.querySelector('[data-slot="library-empty-state"]')).not.toBeInTheDocument();
   });
@@ -432,7 +432,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
   // ─── Tab switch (LibraryEntityKey filtering) ───────────────────────────
 
   it('switching to "kb" tab filters grid to entries with hasKb=true (2 cards)', () => {
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     const kbTab = container.querySelector('[data-tab-key="kb"]') as HTMLButtonElement;
     expect(kbTab).not.toBeNull();
     fireEvent.click(kbTab);
@@ -446,13 +446,13 @@ describe('LibraryHubV2 (Wave B.3)', () => {
   // ─── Click dispatcher: browse → router.push ────────────────────────────
 
   it('clicking a card in browse mode navigates to /library/{gameId} via router.push', () => {
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     const firstCard = container.querySelector(
       '[data-slot="library-grid-card"]'
     ) as HTMLButtonElement;
     expect(firstCard).not.toBeNull();
     const entryId = firstCard.getAttribute('data-entry-id');
-    // LibraryHubV2 maps entryId → entry.gameId for navigation (#871 IA refactor).
+    // LibraryHub maps entryId → entry.gameId for navigation (#871 IA refactor).
     // Fixture: entry-N → game-N (see ENTRIES above).
     const gameId = entryId?.replace('entry-', 'game-');
     fireEvent.click(firstCard);
@@ -462,7 +462,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
   // ─── Click dispatcher: select → toggles Set membership ─────────────────
 
   it('in select mode, clicking a card toggles selection (aria-pressed reflects state)', () => {
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     // Enter select mode
     const enterBtn = container.querySelector(
       '[data-slot="library-enter-select-mode"]'
@@ -488,7 +488,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
     const mutateAsync = vi.fn().mockResolvedValue(undefined);
     useRemoveGameFromLibraryMock.mockReturnValue({ mutateAsync, isPending: false });
 
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     // Enter select mode
     fireEvent.click(
       container.querySelector('[data-slot="library-enter-select-mode"]') as HTMLButtonElement
@@ -530,7 +530,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
   // ─── Hero CTA → router.push add-game query ─────────────────────────────
 
   it('clicking hero "Aggiungi gioco" CTA navigates to /library?action=add', () => {
-    const { container } = renderWithIntl(<LibraryHubV2 />);
+    const { container } = renderWithIntl(<LibraryHub />);
     const hero = container.querySelector('[data-slot="library-hero-desktop"]') as HTMLElement;
     const cta = within(hero).getByRole('button', { name: 'Aggiungi gioco' });
     fireEvent.click(cta);
@@ -541,7 +541,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
 
   it('clearFilters CTA from filtered-empty drops ?state= via router.push(pathname)', () => {
     searchParamsState.value = 'filtered-empty';
-    renderWithIntl(<LibraryHubV2 />);
+    renderWithIntl(<LibraryHub />);
     const cta = screen.getByRole('button', { name: 'Cancella filtri' });
     fireEvent.click(cta);
     // Orchestrator should call router.push(pathname) to drop the ?state= override.
@@ -551,7 +551,7 @@ describe('LibraryHubV2 (Wave B.3)', () => {
   // ─── useMiniNavConfig invocation contract ──────────────────────────────
 
   it('registers mini-nav config with breadcrumb + Hub/Wishlist tabs + primaryAction', () => {
-    renderWithIntl(<LibraryHubV2 />);
+    renderWithIntl(<LibraryHub />);
     expect(useMiniNavConfigMock).toHaveBeenCalled();
     const lastCall = useMiniNavConfigMock.mock.calls.at(-1)?.[0] as {
       breadcrumb: string;

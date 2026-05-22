@@ -1,7 +1,7 @@
 /**
  * Wave B.1 (Issue #633) — `/games?tab=library` v2 component barrel.
  *
- * Re-exports the 4 v2 components introduced in Commit 2 plus their public
+ * Re-exports the 4 feature components introduced in Commit 2 plus their public
  * type contracts. Consumed by Commit 3's `GamesLibraryView` orchestrator
  * and `app/(authenticated)/games/page.tsx` wiring.
  *

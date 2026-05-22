@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { Agent } from '@/types/domain';
 
 import { DashboardSection } from './DashboardSection';
+import { EmptySection } from './EmptySection';
 
 export interface AgentsCompactGridLabels {
   readonly title: string;
@@ -12,6 +13,7 @@ export interface AgentsCompactGridLabels {
   readonly viewAllHref: string;
   readonly statusActive: string;
   readonly statusIdle: string;
+  readonly callsTemplate: string;
   readonly emptyTitle: string;
   readonly emptyCta: string;
   readonly emptyCtaHref: string;
@@ -22,6 +24,15 @@ export interface AgentsCompactGridProps {
   readonly labels: AgentsCompactGridLabels;
   readonly onViewAllClick?: (sectionId: string, viewAllHref: string) => void;
   readonly onEmptyCtaClick?: (sectionId: string, ctaHref: string) => void;
+}
+
+/** Deterministic gradient from agent id (matches mockup `grad(h,s)`). */
+function agentGradient(seed: string): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % 360;
+  const h2 = (h + 340) % 360;
+  const h3 = (h + 30) % 360;
+  return `linear-gradient(135deg, hsl(${h}, 70%, 55%), hsl(${h2}, 50%, 30%) 60%, hsl(${h3}, 60%, 40%))`;
 }
 
 export function AgentsCompactGrid({
@@ -35,6 +46,7 @@ export function AgentsCompactGrid({
   return (
     <DashboardSection
       sectionId="agents"
+      entity="agent"
       icon="🤖"
       title={labels.title}
       count={agents.length}
@@ -43,44 +55,60 @@ export function AgentsCompactGrid({
       onViewAllClick={onViewAllClick}
     >
       {top.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-3 py-6 text-center">
-          <span aria-hidden="true" className="text-3xl">
-            🤖
-          </span>
-          <p className="text-sm text-muted-foreground">{labels.emptyTitle}</p>
-          <Link
-            href={labels.emptyCtaHref}
-            onClick={() => onEmptyCtaClick?.('agents', labels.emptyCtaHref)}
-            className="mt-1 inline-flex items-center rounded-lg bg-foreground px-3 py-1.5 font-bold font-[Quicksand] text-xs text-background"
-          >
-            {labels.emptyCta}
-          </Link>
-        </div>
+        <EmptySection
+          entity="agent"
+          icon="🤖"
+          message={labels.emptyTitle}
+          cta={labels.emptyCta}
+          ctaHref={labels.emptyCtaHref}
+          onCtaClick={() => onEmptyCtaClick?.('agents', labels.emptyCtaHref)}
+        />
       ) : (
         <div className="grid grid-cols-2 gap-2">
-          {top.map(a => (
-            <Link
-              key={a.id}
-              href={`/agents/${a.id}`}
-              data-slot="dashboard-agent-card"
-              className="flex items-center gap-2 rounded-lg border border-border bg-card p-2 hover:border-border-strong"
-            >
-              <div
-                aria-hidden="true"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[hsl(var(--c-agent)/0.12)] text-base text-[hsl(var(--c-agent))]"
+          {top.map(a => {
+            const isActive = a.isActive;
+            const statusLabel = isActive ? labels.statusActive : labels.statusIdle;
+            const callsLabel = labels.callsTemplate.replace(
+              '{count}',
+              String(a.invocationCount ?? 0)
+            );
+            const subtitle = a.strategyName ? `${a.strategyName} · ${callsLabel}` : callsLabel;
+
+            return (
+              <Link
+                key={a.id}
+                href={`/agents/${a.id}`}
+                data-slot="dashboard-agent-card"
+                className="flex items-center gap-2 rounded-[10px] border border-border bg-background px-2.5 py-2 transition-colors hover:border-border-strong"
               >
-                🤖
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="line-clamp-1 font-bold font-[Quicksand] text-xs text-foreground">
-                  {a.name}
+                <div
+                  aria-hidden="true"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-base"
+                  style={{
+                    background: agentGradient(a.id),
+                    filter: 'saturate(1.1)',
+                  }}
+                >
+                  <span style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }}>🤖</span>
                 </div>
-                <div className="line-clamp-1 font-mono text-[9px] text-muted-foreground">
-                  {a.isActive ? labels.statusActive : labels.statusIdle}
+                <div className="min-w-0 flex-1">
+                  <div className="line-clamp-1 font-quicksand text-[11px] font-extrabold text-foreground">
+                    {a.name}
+                  </div>
+                  <div className="line-clamp-1 font-mono text-[9px] font-semibold text-muted-foreground">
+                    {subtitle}
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+                <span
+                  aria-label={statusLabel}
+                  className="h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{
+                    background: isActive ? 'hsl(var(--c-toolkit))' : 'var(--text-muted)',
+                  }}
+                />
+              </Link>
+            );
+          })}
         </div>
       )}
     </DashboardSection>

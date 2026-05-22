@@ -3,7 +3,7 @@
  * (SP6 Phase C.1.A Foundation).
  *
  * Consumed by:
- *   - 11 v2 components in `apps/web/src/components/v2/gamebook-upload/` (Phase C.1 Tasks 2/B)
+ *   - 11 feature components in `apps/web/src/components/features/gamebook-upload/` (Phase C.1 Tasks 2/B)
  *   - Orchestrator `GamebookUploadView.tsx` (Phase C.1 Tasks 3/B)
  *   - E2E specs in `apps/web/e2e/` (Phase C.1 Tasks 4/B)
  *   - Phase C.1.B Interactions side-effect modules (camera-capabilities, offline-budget,

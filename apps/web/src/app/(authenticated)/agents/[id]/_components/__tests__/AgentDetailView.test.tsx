@@ -1,12 +1,12 @@
 /**
- * AgentDetailViewV2 integration tests — Wave C.2 (Issue #581).
+ * AgentDetailView integration tests — Wave C.2 (Issue #581).
  *
  * Covers all 10 FSM cells from Phase 0.5 contract sez. 3, plus URL override
  * hatch, visual fixture short-circuit, variant matrix, and the CRITICAL assertion:
  *   useAgentKbDocs MUST NEVER be called with 'undefined', 'null', or '' as gameId
  *   when enabled=true. Cell 10: agent.gameId === null → standalone, fetch never fires.
  *
- * Pattern mirrors Wave C.1 GameDetailViewV2.test.tsx:
+ * Pattern mirrors Wave C.1 GameDetailView.test.tsx:
  *   - vi.mock for hook stubs (not MSW — orchestrator tests stub at hook boundary)
  *   - react-intl IntlProvider with minimal MESSAGES subset
  *   - searchParamsState mutable for URL override simulation
@@ -280,7 +280,7 @@ function assertKbDocsNeverCalledWithBadGameId() {
 
 // ─── Setup & teardown ─────────────────────────────────────────────────────────
 
-import { AgentDetailViewV2 } from '../AgentDetailViewV2';
+import { AgentDetailView } from '../AgentDetailView';
 
 function resetAll() {
   searchParamsState.state = null;
@@ -325,12 +325,12 @@ function resetAll() {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave C.2)', () => {
+describe('AgentDetailView — FSM integration tests (Phase 0.5 contract, Wave C.2)', () => {
   beforeEach(resetAll);
 
   // ─── Cell 1: agentId=null → not-found shell ────────────────────────────────
   it('Cell 1: agentId=null renders not-found shell, KB query NOT called with enabled gameId', () => {
-    renderWithIntl(<AgentDetailViewV2 agentId={null} />);
+    renderWithIntl(<AgentDetailView agentId={null} />);
 
     // Not-found shell
     expect(screen.getByRole('heading', { name: /agente non trovato/i })).toBeInTheDocument();
@@ -355,7 +355,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     const loadingEl = document.querySelector('[data-slot="agent-detail-loading"]');
     expect(loadingEl).toBeInTheDocument();
@@ -381,7 +381,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch,
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     expect(screen.getByRole('heading', { name: /errore di caricamento/i })).toBeInTheDocument();
     const retryBtn = document.querySelector('[data-slot="agent-detail-error-retry"]');
@@ -410,7 +410,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     // Not-found shell (same UI, distinct trigger: success(null) vs null agentId)
     expect(screen.getByRole('heading', { name: /agente non trovato/i })).toBeInTheDocument();
@@ -436,7 +436,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     // Default render: hero present
     const heroEl = document.querySelector('[data-slot="agent-detail-hero"]');
@@ -474,7 +474,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       isLoading: gameId === VALID_GAME_ID,
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     // Before tab change: KB not called with gameId
     const callsBefore = useAgentKbDocsSpy.mock.calls.filter(c => c[0] !== undefined && c[0] !== '');
@@ -509,7 +509,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       isLoading: true,
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     // Navigate to knowledge tab
     act(() => {
@@ -544,7 +544,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch: kbRefetch,
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     act(() => {
       fireEvent.click(document.querySelector('[data-tab-key="knowledge"]')!);
@@ -577,7 +577,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       isSuccess: true,
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     act(() => {
       fireEvent.click(document.querySelector('[data-tab-key="knowledge"]')!);
@@ -618,7 +618,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       isSuccess: true,
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     act(() => {
       fireEvent.click(document.querySelector('[data-tab-key="knowledge"]')!);
@@ -641,7 +641,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     act(() => {
       fireEvent.click(document.querySelector('[data-tab-key="knowledge"]')!);
@@ -685,7 +685,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       isLoading: true,
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     act(() => {
       fireEvent.click(document.querySelector('[data-tab-key="history"]')!);
@@ -718,7 +718,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch: threadsRefetch,
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     act(() => {
       fireEvent.click(document.querySelector('[data-tab-key="history"]')!);
@@ -756,7 +756,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       isSuccess: true,
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     act(() => {
       fireEvent.click(document.querySelector('[data-tab-key="history"]')!);
@@ -784,7 +784,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       isLoading: true,
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     act(() => {
       fireEvent.click(document.querySelector('[data-tab-key="settings"]')!);
@@ -814,7 +814,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       isError: true,
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     act(() => {
       fireEvent.click(document.querySelector('[data-tab-key="settings"]')!);
@@ -844,7 +844,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       isSuccess: true,
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     act(() => {
       fireEvent.click(document.querySelector('[data-tab-key="settings"]')!);
@@ -879,7 +879,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     // Draft banner on hero
     expect(
@@ -911,7 +911,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     expect(document.querySelector('[data-slot="agent-detail-loading"]')).toBeInTheDocument();
     expect(document.querySelector('[data-slot="agent-detail-hero"]')).not.toBeInTheDocument();
@@ -930,7 +930,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     expect(document.querySelector('[data-slot="agent-detail-error"]')).toBeInTheDocument();
     expect(document.querySelector('[data-slot="agent-detail-hero"]')).not.toBeInTheDocument();
@@ -949,7 +949,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     expect(document.querySelector('[data-slot="agent-detail-not-found"]')).toBeInTheDocument();
 
@@ -970,7 +970,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     // Fixture bypasses loading shell — default render
     expect(document.querySelector('[data-slot="agent-detail-loading"]')).not.toBeInTheDocument();
@@ -989,7 +989,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     // Not-found shell rendered — no default render to interact with
     expect(document.querySelector('[data-slot="agent-detail-not-found"]')).toBeInTheDocument();
@@ -1013,7 +1013,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     // Tablist exists
     const tablist = document.querySelector('[role="tablist"]');
@@ -1041,7 +1041,7 @@ describe('AgentDetailViewV2 — FSM integration tests (Phase 0.5 contract, Wave 
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<AgentDetailViewV2 agentId={VALID_AGENT_ID} />);
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
 
     // No draft/archived banners
     expect(

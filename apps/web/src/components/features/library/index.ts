@@ -1,7 +1,7 @@
 /**
  * Wave B.3 (Issue #574) — `/library` v2 component family barrel.
  *
- * Centralised re-exports so `LibraryHubV2` (Commit 3) and downstream
+ * Centralised re-exports so `LibraryHub` (Commit 3) and downstream
  * page-clients can import from `@/components/features/library` without churning
  * deep paths. Each subcomponent owns its own JSDoc — see source files for
  * spec mapping (docs/superpowers/specs/2026-04-30-v2-migration-wave-b-3-library.md).

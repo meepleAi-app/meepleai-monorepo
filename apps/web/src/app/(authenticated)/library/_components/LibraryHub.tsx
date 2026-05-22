@@ -1,5 +1,5 @@
 /**
- * LibraryHubV2 — Wave B.3 (Issue #574) orchestrator for `/library` desktop.
+ * LibraryHub — Wave B.3 (Issue #574) orchestrator for `/library` desktop.
  *
  * Mirrors the Wave B.1 GamesLibraryView and B.2 AgentsLibraryView orchestrator
  * pattern (spec §3.2). Brownfield big-bang replacement of the v1 carousel
@@ -103,7 +103,7 @@ type SurfaceKind = 'default' | 'loading' | 'empty' | 'filtered-empty' | 'error';
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function LibraryHubV2(): ReactElement {
+export function LibraryHub(): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();

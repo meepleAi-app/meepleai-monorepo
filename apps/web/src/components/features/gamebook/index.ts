@@ -1,5 +1,5 @@
 /**
- * Barrel export for /gamebook v2 components (SP6 Phase B Task 2, Issue #788).
+ * Barrel export for /gamebook feature components (SP6 Phase B Task 2, Issue #788).
  *
  * Single import point for the orchestrator GamebookIndexView (Task 3) and
  * E2E specs. All Phase B Task 2 components are pure (no useTranslation) —

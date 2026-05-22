@@ -22,7 +22,7 @@
  *
  * Used by:
  *   - `lib/gamebook-upload/hooks/usePageConfidence.ts` (Phase C.2 Task B)
- *   - `components/v2/gamebook-upload/PageConfidenceBadge.tsx` (Phase C.2 Task B)
+ *   - `components/features/gamebook-upload/PageConfidenceBadge.tsx` (Phase C.2 Task B)
  *   - Orchestrator step3 cell derivation (Phase C.2 Task C)
  */
 

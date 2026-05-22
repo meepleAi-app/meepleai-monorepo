@@ -1,5 +1,5 @@
 /**
- * GameDetailViewV2 integration tests — Wave C.1 (Issue #581).
+ * GameDetailView integration tests — Wave C.1 (Issue #581).
  *
  * Covers all 9 FSM cells from Phase 0.5 contract sez. 3 plus URL override hatch,
  * visual fixture short-circuit, and the CRITICAL assertion:
@@ -289,7 +289,7 @@ function assertAgentsNeverCalledWithBadGameId() {
 
 // ─── Setup & teardown ─────────────────────────────────────────────────────
 
-import { GameDetailViewV2 } from '../GameDetailViewV2';
+import { GameDetailView } from '../GameDetailView';
 
 function resetAll() {
   searchParamsState.value = '';
@@ -317,12 +317,12 @@ function resetAll() {
   mockFixtureData = null;
 }
 
-describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () => {
+describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => {
   beforeEach(resetAll);
 
   // ─── Cell 1: gameId=null → not-found shell, NO sub-hook fetch ──────────
   it('Cell 1: gameId=null renders not-found shell, agents query NOT called with enabled', () => {
-    renderWithIntl(<GameDetailViewV2 gameId={null} />);
+    renderWithIntl(<GameDetailView gameId={null} />);
 
     expect(screen.getByTestId !== undefined, 'RTL available').toBe(true);
     expect(screen.getByRole('heading', { name: /gioco non trovato/i })).toBeInTheDocument();
@@ -346,7 +346,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     // Loading shell has aria-busy and aria-label
     const loadingEl = document.querySelector('[data-slot="game-detail-loading"]');
@@ -371,7 +371,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
       refetch,
     }));
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     expect(screen.getByRole('heading', { name: /errore di caricamento/i })).toBeInTheDocument();
     const retryCta = document.querySelector('[data-slot="game-detail-error-retry"]');
@@ -398,7 +398,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     // Not-found shell: same UI but triggered by success(null), not null gameId
     expect(screen.getByRole('heading', { name: /gioco non trovato/i })).toBeInTheDocument();
@@ -424,7 +424,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
     }));
     useGameAgentsSpy.mockImplementation(() => ({ ...agentsMockState }));
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     // FSM derives 'not-found' from data=null → not-found shell rendered
     expect(document.querySelector('[data-slot="game-detail-not-found"]')).toBeInTheDocument();
@@ -451,7 +451,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     // Default render: hero present
     const heroEl = document.querySelector('[data-slot="game-detail-hero"]');
@@ -491,7 +491,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
       isLoading: opts.enabled ? true : false,
     }));
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     // Before tab change: agents NOT enabled
     const callsBeforeTabChange = useGameAgentsSpy.mock.calls.filter(c => c[0].enabled === true);
@@ -527,7 +527,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
       fetchStatus: 'fetching',
     }));
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     // Click agents tab to trigger render
     act(() => {
@@ -560,7 +560,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
       refetch: agentsRefetch,
     }));
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     // Click agents tab
     act(() => {
@@ -599,7 +599,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
       isSuccess: true,
     }));
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     act(() => {
       fireEvent.click(document.querySelector('[data-tab-key="agents"]')!);
@@ -628,7 +628,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
       isSuccess: true,
     }));
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     act(() => {
       fireEvent.click(document.querySelector('[data-tab-key="agents"]')!);
@@ -652,7 +652,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     expect(document.querySelector('[data-slot="game-detail-loading"]')).toBeInTheDocument();
     expect(document.querySelector('[data-slot="game-detail-hero"]')).not.toBeInTheDocument();
@@ -662,7 +662,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
   it('?state=error URL override → error shell', () => {
     searchParamsState.value = 'error';
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     expect(document.querySelector('[data-slot="game-detail-error"]')).toBeInTheDocument();
     expect(document.querySelector('[data-slot="game-detail-loading"]')).not.toBeInTheDocument();
@@ -672,7 +672,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
   it('?state=not-found URL override → not-found shell', () => {
     searchParamsState.value = 'not-found';
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     expect(document.querySelector('[data-slot="game-detail-not-found"]')).toBeInTheDocument();
   });
@@ -681,7 +681,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
   it('?state=empty URL override → not-found shell (alias)', () => {
     searchParamsState.value = 'empty';
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     expect(document.querySelector('[data-slot="game-detail-not-found"]')).toBeInTheDocument();
   });
@@ -697,7 +697,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     // Invalid override ignored → real state = 'default' → hero renders
     expect(document.querySelector('[data-slot="game-detail-hero"]')).toBeInTheDocument();
@@ -718,7 +718,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
       refetch: vi.fn(),
     }));
 
-    renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     // Fixture should bypass FSM — hero renders with fixture data
     expect(document.querySelector('[data-slot="game-detail-hero"]')).toBeInTheDocument();
@@ -744,7 +744,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
         refetch: vi.fn(),
       }));
 
-      renderWithIntl(<GameDetailViewV2 gameId={gameId} />);
+      renderWithIntl(<GameDetailView gameId={gameId} />);
 
       // Never enabled with bad gameId
       const badCalls = useGameAgentsSpy.mock.calls.filter(
@@ -772,7 +772,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
       isSuccess: true,
     }));
 
-    const { rerender } = renderWithIntl(<GameDetailViewV2 gameId={VALID_GAME_ID} />);
+    const { rerender } = renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     // Click agents tab
     act(() => {
@@ -786,7 +786,7 @@ describe('GameDetailViewV2 — FSM integration tests (Phase 0.5 contract)', () =
     // Re-render (simulating detail refetch completing)
     rerender(
       <IntlProvider locale="it" messages={MESSAGES}>
-        <GameDetailViewV2 gameId={VALID_GAME_ID} />
+        <GameDetailView gameId={VALID_GAME_ID} />
       </IntlProvider>
     );
 

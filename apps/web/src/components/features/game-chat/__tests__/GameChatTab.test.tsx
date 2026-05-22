@@ -21,7 +21,7 @@ vi.mock('@/lib/api', () => ({
 
 import { qaStream } from '@/lib/api/clients/chatClient';
 import { api } from '@/lib/api';
-import { GameChatTabV2 } from '../GameChatTab';
+import { GameChatTab } from '../GameChatTab';
 
 async function* mockStream(events: Array<{ type: number; data: unknown }>) {
   for (const e of events) yield e;
@@ -57,7 +57,7 @@ const oocEvents = [
   { type: 4, data: { confidence: 0.0, Citations: [] } },
 ];
 
-describe('GameChatTabV2', () => {
+describe('GameChatTab', () => {
   beforeEach(() => {
     vi.mocked(qaStream).mockReset();
     vi.mocked(api.chat.getThreadsByGame).mockReset();
@@ -65,13 +65,13 @@ describe('GameChatTabV2', () => {
   });
 
   it('renders empty state with input bar and suggested prompts', () => {
-    render(<GameChatTabV2 gameId="wingspan" />);
+    render(<GameChatTab gameId="wingspan" />);
     expect(screen.getByPlaceholderText(/scrivi/i)).toBeInTheDocument();
   });
 
   it('happy path: ask → user bubble + agent bubble + citation chip + alta badge', async () => {
     vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
-    render(<GameChatTabV2 gameId="wingspan" />);
+    render(<GameChatTab gameId="wingspan" />);
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q?' } });
     fireEvent.click(screen.getByRole('button', { name: /invia/i }));
     await waitFor(() => expect(screen.getByText(/Sì, ogni potere/)).toBeInTheDocument());
@@ -82,7 +82,7 @@ describe('GameChatTabV2', () => {
 
   it('low confidence path: shows disclaimer + bassa badge', async () => {
     vi.mocked(qaStream).mockReturnValueOnce(mockStream(lowConfEvents) as any);
-    render(<GameChatTabV2 gameId="wingspan" />);
+    render(<GameChatTab gameId="wingspan" />);
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'edge?' } });
     fireEvent.click(screen.getByRole('button', { name: /invia/i }));
     await waitFor(() => expect(screen.getByText(/non sono certo/i)).toBeInTheDocument());
@@ -91,7 +91,7 @@ describe('GameChatTabV2', () => {
 
   it('out-of-context path: shows action pills', async () => {
     vi.mocked(qaStream).mockReturnValueOnce(mockStream(oocEvents) as any);
-    render(<GameChatTabV2 gameId="wingspan" />);
+    render(<GameChatTab gameId="wingspan" />);
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'tg?' } });
     fireEvent.click(screen.getByRole('button', { name: /invia/i }));
     await waitFor(() =>
@@ -103,7 +103,7 @@ describe('GameChatTabV2', () => {
 
   it('citation chip click opens CitationModal', async () => {
     vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
-    render(<GameChatTabV2 gameId="wingspan" />);
+    render(<GameChatTab gameId="wingspan" />);
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q?' } });
     fireEvent.click(screen.getByRole('button', { name: /invia/i }));
     await waitFor(() => screen.getByRole('button', { name: /p\. ?12/ }));
@@ -118,7 +118,7 @@ describe('GameChatTabV2', () => {
   it('shows skeleton bubbles while hydrating', () => {
     // Make getThreadsByGame never resolve → isHydrating stays true
     vi.mocked(api.chat.getThreadsByGame).mockReturnValueOnce(new Promise(() => {}));
-    render(<GameChatTabV2 gameId="wingspan" />);
+    render(<GameChatTab gameId="wingspan" />);
     expect(screen.getAllByTestId('chat-bubble-skeleton').length).toBeGreaterThan(0);
   });
 
@@ -137,7 +137,7 @@ describe('GameChatTabV2', () => {
     vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([thread] as any);
     vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
 
-    render(<GameChatTabV2 gameId="wingspan" />);
+    render(<GameChatTab gameId="wingspan" />);
     await waitFor(() => expect(screen.getByText('old historical')).toBeInTheDocument());
 
     // No banner yet (only historical, no new)
@@ -166,7 +166,7 @@ describe('GameChatTabV2', () => {
     };
     vi.mocked(api.chat.getThreadsByGame).mockResolvedValueOnce([thread] as any);
 
-    render(<GameChatTabV2 gameId="wingspan" />);
+    render(<GameChatTab gameId="wingspan" />);
     await waitFor(() => expect(screen.getByText('old only')).toBeInTheDocument());
     expect(screen.queryByRole('note')).not.toBeInTheDocument();
   });

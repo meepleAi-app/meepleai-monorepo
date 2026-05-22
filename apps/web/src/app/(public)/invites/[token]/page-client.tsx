@@ -1,5 +1,5 @@
 /**
- * /invites/[token] — client body (V2, Wave A.5b, Issue #611).
+ * /invites/[token] — client body (Issue #611).
  *
  * Owns:
  *   - i18n resolution via `useTranslation()`

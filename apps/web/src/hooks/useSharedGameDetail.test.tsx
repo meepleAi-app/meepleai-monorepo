@@ -17,7 +17,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { SharedGameDetailV2 } from '@/lib/api/shared-games';
+import type { SharedGameDetail } from '@/lib/api/shared-games';
 
 vi.mock('@/lib/api/shared-games', async orig => {
   const actual = await orig<typeof import('@/lib/api/shared-games')>();
@@ -43,7 +43,7 @@ function createWrapper() {
 
 const SAMPLE_ID = '11111111-1111-1111-1111-111111111111';
 
-const SAMPLE_DETAIL: SharedGameDetailV2 = {
+const SAMPLE_DETAIL: SharedGameDetail = {
   id: SAMPLE_ID,
   bggId: null,
   title: 'Catan',
@@ -136,7 +136,7 @@ describe('useSharedGameDetail (Wave A.4)', () => {
 
   describe('FSM status (Issue #615)', () => {
     it('derives status="default" when data has nested entities', () => {
-      const populated: SharedGameDetailV2 = {
+      const populated: SharedGameDetail = {
         ...SAMPLE_DETAIL,
         toolkitsCount: 2,
         agentsCount: 0,
@@ -199,9 +199,9 @@ describe('useSharedGameDetail (Wave A.4)', () => {
 
     it('derives status="loading" when no data + no error + first fetch in flight', async () => {
       // Slow promise so loading state is observable
-      let resolveFn: (v: SharedGameDetailV2) => void = () => {};
+      let resolveFn: (v: SharedGameDetail) => void = () => {};
       mockGet.mockReturnValue(
-        new Promise<SharedGameDetailV2>(resolve => {
+        new Promise<SharedGameDetail>(resolve => {
           resolveFn = resolve;
         })
       );

@@ -4,7 +4,7 @@
  * Mirrors Wave A.4 page-client tests: stub `useLibrary` + `next/navigation`
  * search params + i18n via IntlProvider seeded with the actual `pages.games.library.*`
  * keys from `it.json`. The orchestrator is the only stateful piece in the
- * surface (4 child v2 components are pure label-driven).
+ * surface (4 child feature components are pure label-driven).
  *
  * Contract under test (spec §3.4 + plan §5.1):
  *   - 5-state FSM: default | loading | empty | filtered-empty | error

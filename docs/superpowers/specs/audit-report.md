@@ -52,11 +52,11 @@
   - `expected_route`: `/settings`
   - `mockup_dest`: `settings.html`
   - `component_hrefs`: `['/', '/contact', '/register']`
-- **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /
-  - `component_href`: `/`
-  - `mapped_routes`: `['/settings']`
 - **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /contact
   - `component_href`: `/contact`
+  - `mapped_routes`: `['/settings']`
+- **[MINOR]** `ExpiredOrCancelledError.tsx, GenericError.tsx, InvalidTokenError.tsx, PublicRsvpForm.tsx, RateLimitedError.tsx` (nav): Component link not in mockup: /
+  - `component_href`: `/`
   - `mapped_routes`: `['/settings']`
 
 ### Route `/library`
@@ -3354,8 +3354,8 @@ LOW-confidence findings — review and promote/demote manually.
 - [IMPORTANT] `ConnectionChipStripFooter.tsx` (props): Mockup accesses 'view' but no matching prop in component
 - [IMPORTANT] `ConnectionChipStripFooter.tsx` (props): Mockup accesses 'when' but no matching prop in component
 - [IMPORTANT] `ConnectionChipStripFooter.tsx` (props): Mockup accesses 'winner' but no matching prop in component
-- [IMPORTANT] `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Unmappable mockup destination: librogame-runthrough-game-onboarding.html
 - [IMPORTANT] `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Unmappable mockup destination: librogame-runthrough-resume-picker.html
+- [IMPORTANT] `ConnectionChipStripFooter.tsx, EmptySessions.tsx, OutcomeBadge.tsx, ScoringInline.tsx, SessionCardGrid.tsx, SessionCardList.tsx, SessionsFilters.tsx, SessionsHero.tsx` (nav): Unmappable mockup destination: librogame-runthrough-game-onboarding.html
 
 ### Route `/sessions/[id]`
 

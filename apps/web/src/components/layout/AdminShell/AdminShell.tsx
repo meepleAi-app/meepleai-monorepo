@@ -5,7 +5,7 @@ import { useState, type ReactNode } from 'react';
 import { DashboardEngineProvider } from '@/components/dashboard';
 import { AdminSideDrawer } from '@/components/layout/AdminSideDrawer/AdminSideDrawer';
 import { SearchOverlay } from '@/components/layout/SearchOverlay';
-import { TopBarV2 } from '@/components/layout/UserShell/TopBarV2';
+import { TopBar } from '@/components/layout/UserShell/TopBar';
 
 interface AdminShellProps {
   children: ReactNode;
@@ -17,7 +17,7 @@ export function AdminShell({ children }: AdminShellProps) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-[var(--bg)]">
-      <TopBarV2
+      <TopBar
         onHamburgerClick={() => setDrawerOpen(true)}
         onSearchClick={() => setSearchOpen(true)}
         adminMode

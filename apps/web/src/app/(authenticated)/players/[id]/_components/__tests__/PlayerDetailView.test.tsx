@@ -4,7 +4,7 @@
  * Strategy: spy mock on usePlayerStatistics + useSearchParams to cover all
  * 4 FSM cells and URL override scenarios.
  *
- * Pattern: mirrors Wave C.1 GameDetailViewV2.test.tsx integration test pattern.
+ * Pattern: mirrors Wave C.1 GameDetailView.test.tsx integration test pattern.
  * data-slot selectors mirror the component contracts from Task 2.
  */
 

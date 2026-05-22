@@ -1,5 +1,5 @@
 /**
- * GameDetailViewV2 — Wave C.1 (Issue #581) orchestrator.
+ * GameDetailView — Wave C.1 (Issue #581) orchestrator.
  *
  * Phase 0.5 contract enforced (docs/frontend/contracts/games-id-hooks.md):
  *   - gameId normalized to string|null at page boundary (NEVER undefined)
@@ -71,7 +71,7 @@ function parseStateOverride(raw: string | null): StateOverride | null {
 
 // ─── Props ─────────────────────────────────────────────────────────────────
 
-export interface GameDetailViewV2Props {
+export interface GameDetailViewProps {
   /**
    * Normalized gameId from URL params.
    * MUST be string | null — NEVER undefined or the string 'undefined'.
@@ -277,14 +277,14 @@ function buildKpiCards(
 // ─── Main orchestrator ─────────────────────────────────────────────────────
 
 /**
- * GameDetailViewV2 — orchestrator for /games/[id] v2 surface.
+ * GameDetailView — orchestrator for /games/[id] v2 surface.
  *
  * Accepts `gameId: string | null` (normalized at page boundary by page.tsx).
  * Never accepts undefined — page.tsx is responsible for the normalization:
  *   const rawId = params?.id;
  *   const gameId = typeof rawId === 'string' && rawId.length > 0 ? rawId : null;
  */
-export function GameDetailViewV2({ gameId }: GameDetailViewV2Props): ReactElement {
+export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();

@@ -253,3 +253,14 @@ bot:
     severity: warning
     owner: unknown
     override_path: exception-comment
+
+  # Phase 2c (#1446) — weekly Slack digest of warning-tier classifications.
+  # Read by scripts/release-gate/build-digest.mjs + lib/digest-builder.mjs.
+  phase2c:
+    enabled: true
+    # Number of consecutive weeks the same `warning`-tier check must appear
+    # before the digest flags it with `:warning:` "suggest reclassify to blocker".
+    escalation_threshold_weeks: 4
+    # Name of the env var bound to the Slack incoming webhook URL. The CLI
+    # reads from `process.env[<this value>]`. Kept indirect for portability.
+    slack_webhook_env: SLACK_GITNOTIFY_WEBHOOK_URL

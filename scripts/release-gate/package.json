@@ -7,9 +7,11 @@
   "scripts": {
     "validate": "node validate.mjs",
     "comment": "node comment.mjs",
+    "digest": "node build-digest.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:dry": "DRY_RUN=1 node comment.mjs"
+    "test:dry": "DRY_RUN=1 node comment.mjs",
+    "digest:dry": "DRY_RUN=1 node build-digest.mjs"
   },
   "dependencies": {
     "@octokit/rest": "^21.0.2",

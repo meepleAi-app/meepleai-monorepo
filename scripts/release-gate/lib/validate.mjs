@@ -105,6 +105,29 @@ export function validateGates(gates) {
     if (!OVERRIDE_PATHS.has(fb.override_path)) {
       errors.push(`bot.fallback_unknown.override_path: must be a valid override_path, got "${fb.override_path}"`);
     }
+
+    // Phase 2c (#1446) — optional sub-key; validate only if present.
+    if (gates.bot.phase2c !== undefined) {
+      const p2c = gates.bot.phase2c;
+      if (!p2c || typeof p2c !== "object") {
+        errors.push("bot.phase2c: must be an object when present");
+      } else {
+        if (p2c.enabled !== undefined && typeof p2c.enabled !== "boolean") {
+          errors.push(`bot.phase2c.enabled: must be boolean when present, got "${typeof p2c.enabled}"`);
+        }
+        if (p2c.escalation_threshold_weeks !== undefined) {
+          const v = p2c.escalation_threshold_weeks;
+          if (!Number.isInteger(v) || v < 1 || v > 52) {
+            errors.push(
+              `bot.phase2c.escalation_threshold_weeks: must be an integer 1..52, got "${v}"`
+            );
+          }
+        }
+        if (p2c.slack_webhook_env !== undefined && typeof p2c.slack_webhook_env !== "string") {
+          errors.push("bot.phase2c.slack_webhook_env: must be a string when present");
+        }
+      }
+    }
   }
 
   return { ok: errors.length === 0, errors };

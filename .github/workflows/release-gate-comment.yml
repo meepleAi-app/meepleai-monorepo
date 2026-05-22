@@ -1,0 +1,121 @@
+name: Release-gate Comment
+
+# Auto-classifies CI failures on release PRs (main-dev → main-staging)
+# and posts/edits a single bot comment with severity + owner + override path.
+#
+# Implementation: scripts/release-gate/comment.mjs
+# Classification table: .github/release-gates.yml
+# Spec: docs/for-developers/specs/2026-05-22-release-gate-spreadsheet.md (issue #1016)
+
+on:
+  pull_request:
+    branches:
+      - main-staging
+      - main
+    types: [opened, synchronize, reopened]
+  check_suite:
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to classify (manual dispatch)"
+        required: true
+        type: string
+
+# Branch-aware concurrency: cancel in-progress run on same PR if a newer one arrives.
+# Safe because every run is idempotent (edits the same signature-keyed comment).
+concurrency:
+  group: release-gate-comment-${{ github.event.pull_request.number || github.event.check_suite.head_branch || github.event.inputs.pr_number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  pull-requests: write
+  issues: write
+  checks: read
+  contents: read
+
+jobs:
+  classify:
+    name: Classify release-PR failures
+    runs-on: ubuntu-latest
+    # Restrict to release PRs (main-staging target) + manual dispatch.
+    # check_suite events fire on every push; filter to release branches only.
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && (github.base_ref == 'main-staging' || github.base_ref == 'main')) ||
+      (github.event_name == 'check_suite' && (github.event.check_suite.head_branch == 'main-staging' || startsWith(github.event.check_suite.head_branch, 'release/')))
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install release-gate deps
+        working-directory: scripts/release-gate
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate .github/release-gates.yml schema
+        working-directory: scripts/release-gate
+        run: node validate.mjs
+
+      - name: Resolve PR number
+        id: pr
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER_PR_EVENT: ${{ github.event.pull_request.number }}
+          PR_NUMBER_DISPATCH: ${{ github.event.inputs.pr_number }}
+          CHECK_SUITE_HEAD_SHA: ${{ github.event.check_suite.head_sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_SLUG: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          case "$EVENT_NAME" in
+            pull_request)
+              echo "pr_number=$PR_NUMBER_PR_EVENT" >> "$GITHUB_OUTPUT"
+              echo "head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+              ;;
+            workflow_dispatch)
+              echo "pr_number=$PR_NUMBER_DISPATCH" >> "$GITHUB_OUTPUT"
+              # Resolve head SHA for the dispatched PR
+              SHA=$(gh api "repos/$REPO_SLUG/pulls/$PR_NUMBER_DISPATCH" --jq '.head.sha')
+              echo "head_sha=$SHA" >> "$GITHUB_OUTPUT"
+              ;;
+            check_suite)
+              # Look up the PR(s) associated with this check_suite's head SHA.
+              # If none, skip gracefully (check_suite ran on a non-PR commit).
+              PR_NUM=$(gh api "repos/$REPO_SLUG/commits/$CHECK_SUITE_HEAD_SHA/pulls" \
+                --jq '.[] | select(.base.ref == "main-staging" or .base.ref == "main") | .number' \
+                | head -n1 || echo "")
+              if [ -z "$PR_NUM" ]; then
+                echo "No release PR associated with $CHECK_SUITE_HEAD_SHA — skipping."
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "pr_number=$PR_NUM" >> "$GITHUB_OUTPUT"
+                echo "head_sha=$CHECK_SUITE_HEAD_SHA" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
+          esac
+
+      - name: Classify and post/edit comment
+        if: steps.pr.outputs.skip != 'true'
+        working-directory: scripts/release-gate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ steps.pr.outputs.head_sha }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+          # GITHUB_STEP_SUMMARY is set by GH Actions automatically.
+        run: node comment.mjs
+        continue-on-error: true

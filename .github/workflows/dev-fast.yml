@@ -239,7 +239,7 @@ jobs:
       - name: Setup Python
         # v5 to match the rest of the repo (ci.yml). Dependabot PR #1240 will
         # bump all setup-python pinned versions in a single PR.
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 

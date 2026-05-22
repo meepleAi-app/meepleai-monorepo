@@ -100,7 +100,11 @@ export function GameChatTab({
       msg.isLowQuality && !showOoc
         ? [
             { label: 'Verifica nel manuale', kind: 'kb' },
-            { label: 'Cerca su BGG', kind: 'external', url: 'https://boardgamegeek.com/' },
+            {
+              label: 'Cerca online',
+              kind: 'external',
+              url: `https://www.google.com/search?q=${encodeURIComponent(`${gameTitle} regole`)}`,
+            },
           ]
         : [];
 

@@ -159,6 +159,62 @@ describe("validateGates (in-memory)", () => {
     expect(result.errors.some((e) => /duplicate/i.test(e))).toBe(true);
   });
 
+  it("accepts a valid bot.phase2c config block (#1446)", () => {
+    const gates = {
+      version: 1,
+      checks: [],
+      bot: {
+        signature_header: "<!-- release-gate-bot:v1 -->",
+        verdict_emoji: { blocker: "X", warning: "X", informational: "X", unknown: "X" },
+        fallback_unknown: { severity: "warning", owner: "unknown", override_path: "exception-comment" },
+        phase2c: {
+          enabled: true,
+          escalation_threshold_weeks: 4,
+          slack_webhook_env: "SLACK_GITNOTIFY_WEBHOOK_URL",
+        },
+      },
+    };
+    const result = validateGates(gates);
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects bot.phase2c.enabled with non-boolean type (#1446)", () => {
+    const gates = {
+      version: 1,
+      checks: [],
+      bot: {
+        signature_header: "<!-- release-gate-bot:v1 -->",
+        verdict_emoji: { blocker: "X", warning: "X", informational: "X", unknown: "X" },
+        fallback_unknown: { severity: "warning", owner: "unknown", override_path: "exception-comment" },
+        phase2c: {
+          enabled: "yes", // wrong type
+        },
+      },
+    };
+    const result = validateGates(gates);
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => /phase2c\.enabled/.test(e))).toBe(true);
+  });
+
+  it("rejects bot.phase2c.escalation_threshold_weeks out of 1..52 range (#1446)", () => {
+    const gates = {
+      version: 1,
+      checks: [],
+      bot: {
+        signature_header: "<!-- release-gate-bot:v1 -->",
+        verdict_emoji: { blocker: "X", warning: "X", informational: "X", unknown: "X" },
+        fallback_unknown: { severity: "warning", owner: "unknown", override_path: "exception-comment" },
+        phase2c: {
+          enabled: true,
+          escalation_threshold_weeks: 100, // > 52
+        },
+      },
+    };
+    const result = validateGates(gates);
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => /escalation_threshold_weeks/.test(e))).toBe(true);
+  });
+
   it("rejects invalid fallback_patterns regex", () => {
     const gates = {
       version: 1,

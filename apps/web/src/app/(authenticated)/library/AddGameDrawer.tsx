@@ -2,14 +2,14 @@
 
 /**
  * AddGameDrawer — Right-side Sheet for adding a game to the personal library
- * Issue #5168 — AddGameDrawer wizard with Step 0 (method choice) + Step 1a (manual form)
- * Issue #5169 — Step 1b: CatalogSearchStep (search shared catalog + add to library)
  *
- * Flow:
+ * Simplified flow (Fase 2 add-flow refactor):
  *   Step 0: Choose method — "Manually" or "From Catalog"
- *   Step 1a (Manual):  Embed UserWizardClient (3-step: game → PDF → agent)
- *   Step 1b (Catalog): CatalogSearchStep → select game → add to library → advance to PDF step
- *   Step 2  (Catalog PDF): UserWizardClient starting at PDF upload (gameId pre-set)
+ *   Step 1a (Manual):  Embed UserWizardClient in compactMode (1-step game creation,
+ *                      PDF/Agent setup deferred to detail-page CTAs)
+ *   Step 1b (Catalog): CatalogSearchStep → select game → addGame to library →
+ *                      close drawer + redirect /library/{gameId}
+ *                      PDF/Agent setup happens on the detail page, not blocking the add.
  *
  * URL integration:
  *   ?action=add         → drawer opens (choice step)
@@ -29,12 +29,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/na
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type DrawerStep = 'choice' | 'manual' | 'catalog' | 'catalog-pdf';
-
-interface CatalogSelection {
-  gameId: string;
-  gameName: string;
-}
+type DrawerStep = 'choice' | 'manual' | 'catalog';
 
 // ─── Step 0: Choice cards ─────────────────────────────────────────────────────
 
@@ -80,7 +75,6 @@ interface AddGameDrawerProps {
 export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
   const router = useRouter();
   const [step, setStep] = useState<DrawerStep>('choice');
-  const [catalogSelection, setCatalogSelection] = useState<CatalogSelection | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -96,23 +90,27 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
         onClose();
         closeTimerRef.current = setTimeout(() => {
           setStep('choice');
-          setCatalogSelection(null);
         }, 300);
       }
     },
     [onClose]
   );
 
-  // Called by CatalogSearchStep after game is successfully added to library
-  const handleCatalogSelect = useCallback((gameId: string, gameName: string) => {
-    setCatalogSelection({ gameId, gameName });
-    setStep('catalog-pdf');
-  }, []);
+  // Called by CatalogSearchStep after game is successfully added to library.
+  // Simplified flow: no longer transitions to a PDF step — close drawer and
+  // jump straight to the game detail page where PDF/Agent CTAs await.
+  const handleCatalogSelect = useCallback(
+    (gameId: string, _gameName: string) => {
+      onClose();
+      router.push(`/library/${gameId}`);
+    },
+    [onClose, router]
+  );
 
   const drawerTitle =
     step === 'manual'
       ? 'Add game manually'
-      : step === 'catalog' || step === 'catalog-pdf'
+      : step === 'catalog'
         ? 'Add from catalog'
         : 'Add a game';
 
@@ -137,7 +135,7 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
                 data-testid="add-game-choice-manual"
                 icon={<PenLine className="h-6 w-6" />}
                 title="Add manually"
-                description="Enter game details yourself and optionally upload the rulebook PDF."
+                description="Enter the game details. You can upload the rulebook and configure the AI agent later from the game detail page."
                 onClick={() => setStep('manual')}
               />
 
@@ -145,39 +143,27 @@ export function AddGameDrawer({ open, onClose }: AddGameDrawerProps) {
                 data-testid="add-game-choice-catalog"
                 icon={<BookOpen className="h-6 w-6" />}
                 title="From shared catalog"
-                description="Search the community catalog and add a game to your personal library."
+                description="Search the community catalog and add a game in one click. Rulebook and AI agent setup come later."
                 onClick={() => setStep('catalog')}
               />
             </div>
           )}
 
-          {/* Step 1a: Manual wizard */}
+          {/* Step 1a: Manual wizard (compact: 1-step game creation only) */}
           {step === 'manual' && (
             <div data-testid="add-game-step-manual">
-              <UserWizardClient onComplete={onClose} onCancel={() => setStep('choice')} />
+              <UserWizardClient
+                compactMode
+                onComplete={onClose}
+                onCancel={() => setStep('choice')}
+              />
             </div>
           )}
 
-          {/* Step 1b: Catalog search */}
+          {/* Step 1b: Catalog search (1-click add → redirect to detail) */}
           {step === 'catalog' && (
             <div data-testid="add-game-step-catalog">
               <CatalogSearchStep onSelect={handleCatalogSelect} onBack={() => setStep('choice')} />
-            </div>
-          )}
-
-          {/* Step 2 (after catalog select): PDF upload wizard */}
-          {step === 'catalog-pdf' && catalogSelection && (
-            <div data-testid="add-game-step-catalog-pdf">
-              <UserWizardClient
-                gameId={catalogSelection.gameId}
-                gameName={catalogSelection.gameName}
-                startAtPdf
-                onComplete={() => {
-                  onClose();
-                  router.push(`/library/${catalogSelection.gameId}`);
-                }}
-                onCancel={() => setStep('catalog')}
-              />
             </div>
           )}
         </div>

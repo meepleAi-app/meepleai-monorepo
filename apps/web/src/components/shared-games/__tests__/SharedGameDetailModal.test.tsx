@@ -11,7 +11,7 @@
  * - FAQ tab (when available)
  * - Errata tab (when available)
  * - Tab visibility based on content
- * - Action buttons (Add to Collection, Share, BGG link)
+ * - Action buttons (Add to Collection, Share)
  *
  * Note: Mocks api module directly due to singleton timing issues with MSW.
  * The api singleton is created at module import time before MSW can intercept.
@@ -543,17 +543,21 @@ describe('SharedGameDetailModal', () => {
       });
     });
 
-    it('shows BGG link when bggId exists', async () => {
+    it('does not render a BGG link even when bggId is present', async () => {
+      // BGG mentions are hidden from user-facing UI (spec 2026-05-22-hide-bgg-user-facing).
+      // The DTO still carries bggId for admin use but the modal must not surface it.
       render(<SharedGameDetailModal {...defaultProps} />);
 
       await waitFor(() => {
-        const bggLink = screen.getByRole('link', { name: /vedi scheda esterna/i });
-        expect(bggLink).toBeInTheDocument();
-        expect(bggLink).toHaveAttribute(
-          'href',
-          expect.stringContaining('boardgamegeek.com/boardgame/13')
-        );
+        expect(
+          screen.queryByRole('link', { name: /vedi scheda esterna/i })
+        ).not.toBeInTheDocument();
       });
+
+      const bggLinks = screen.queryAllByRole('link').filter(el =>
+        (el as HTMLAnchorElement).href.includes('boardgamegeek.com')
+      );
+      expect(bggLinks).toHaveLength(0);
     });
   });
 

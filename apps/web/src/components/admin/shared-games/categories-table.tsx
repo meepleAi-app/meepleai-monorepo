@@ -1,12 +1,16 @@
 /* eslint-disable local/no-hardcoded-color-utility -- admin CRUD chrome: text-white / button color on style-prop colored bg or admin-decorative inline gradient. DS-13c admin scope (--admin-* decision deferred to DS-15). */
 'use client';
 
+import { useState } from 'react';
+
 import { PlusIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
 import { logger } from '@/lib/logger';
 
+import { CategoryFormDialog, type CategoryFormValue } from './category-form-dialog';
 import { CategoryRow } from './category-row';
+import { DeleteCategoryConfirm } from './delete-category-confirm';
 
 interface Category {
   id: string;
@@ -16,31 +20,74 @@ interface Category {
   color: string;
 }
 
-const MOCK_CATEGORIES: Category[] = [
+const INITIAL_CATEGORIES: Category[] = [
   { id: '1', name: 'Strategy', emoji: '♟️', gameCount: 42, color: '#3b82f6' },
   { id: '2', name: 'Party', emoji: '🎉', gameCount: 28, color: '#ec4899' },
   { id: '3', name: 'Cooperative', emoji: '🤝', gameCount: 19, color: '#10b981' },
   { id: '4', name: 'Deck Building', emoji: '🃏', gameCount: 15, color: '#8b5cf6' },
-  { id: '5', name: 'Family', emoji: '👨\u200d👩\u200d👧\u200d👦', gameCount: 34, color: '#f59e0b' },
+  { id: '5', name: 'Family', emoji: '👨‍👩‍👧‍👦', gameCount: 34, color: '#f59e0b' },
   { id: '6', name: 'Abstract', emoji: '🔷', gameCount: 12, color: '#06b6d4' },
   { id: '7', name: 'Thematic', emoji: '🗺️', gameCount: 23, color: '#ef4444' },
   { id: '8', name: 'Euro', emoji: '🏛️', gameCount: 31, color: '#6366f1' },
 ];
 
 export function CategoriesTable() {
+  // TODO(#1429 Phase 2): replace `INITIAL_CATEGORIES` + local state with a
+  // TanStack Query hook backed by `GET /api/v1/admin/categories` once the
+  // BE endpoints exist. The handlers below will swap to mutation hooks
+  // (`useMutation` with optimistic updates) rather than direct setState.
+  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
+  const [editing, setEditing] = useState<Category | null>(null);
+  const [deleting, setDeleting] = useState<Category | null>(null);
+  const [adding, setAdding] = useState(false);
+
   const handleEdit = (id: string) => {
-    // TODO: Implement edit dialog
-    logger.debug(`Edit category: ${id}`);
+    const category = categories.find(c => c.id === id);
+    if (!category) {
+      logger.warn(`Edit requested for unknown category id=${id}`);
+      return;
+    }
+    setEditing(category);
   };
 
   const handleDelete = (id: string) => {
-    // TODO: Implement delete confirmation
-    logger.debug(`Delete category: ${id}`);
+    const category = categories.find(c => c.id === id);
+    if (!category) {
+      logger.warn(`Delete requested for unknown category id=${id}`);
+      return;
+    }
+    setDeleting(category);
   };
 
   const handleAddCategory = () => {
-    // TODO: Implement add category dialog
-    logger.debug('Add category');
+    setAdding(true);
+  };
+
+  const handleSaveAdd = (value: CategoryFormValue) => {
+    // Local-state mutation only (Phase 1). Phase 2 will swap this for a
+    // POST /api/v1/admin/categories mutation; the temporary id below is
+    // a client-side placeholder until the server assigns one.
+    const id = `local-${Date.now().toString(36)}`;
+    setCategories(prev => [...prev, { ...value, gameCount: 0, id }]);
+    setAdding(false);
+  };
+
+  const handleSaveEdit = (value: CategoryFormValue) => {
+    if (editing === null) {
+      return;
+    }
+    const targetId = editing.id;
+    setCategories(prev => prev.map(c => (c.id === targetId ? { ...c, ...value } : c)));
+    setEditing(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleting === null) {
+      return;
+    }
+    const targetId = deleting.id;
+    setCategories(prev => prev.filter(c => c.id !== targetId));
+    setDeleting(null);
   };
 
   return (
@@ -85,7 +132,7 @@ export function CategoriesTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200/50 dark:divide-zinc-700/50">
-              {MOCK_CATEGORIES.map(category => (
+              {categories.map(category => (
                 <CategoryRow
                   key={category.id}
                   name={category.name}
@@ -105,6 +152,25 @@ export function CategoriesTable() {
       <p className="text-xs text-muted-foreground dark:text-muted-foreground italic">
         Note: Drag-to-reorder functionality will be added in a future update
       </p>
+
+      <CategoryFormDialog open={adding} onClose={() => setAdding(false)} onSave={handleSaveAdd} />
+
+      <CategoryFormDialog
+        open={editing !== null}
+        initial={
+          editing ? { color: editing.color, emoji: editing.emoji, name: editing.name } : undefined
+        }
+        onClose={() => setEditing(null)}
+        onSave={handleSaveEdit}
+      />
+
+      <DeleteCategoryConfirm
+        open={deleting !== null}
+        categoryName={deleting?.name ?? ''}
+        gameCount={deleting?.gameCount ?? 0}
+        onClose={() => setDeleting(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

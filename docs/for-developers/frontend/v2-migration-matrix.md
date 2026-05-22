@@ -336,12 +336,19 @@ the PR review.
 | `sp4-discover.jsx` | `RowScroller` | `apps/web/src/components/features/discover/RowScroller.tsx` | `/discover` | pending | — | T A V | — |
 | `sp4-discover.jsx` | `FooterCTA` | `apps/web/src/components/features/discover/FooterCTA.tsx` | `/discover` | pending | — | T A V | — |
 
-## Wave 4 — 4 components (partial — 1/4 routes)
+## Wave 4 — 4 routes + Toolkits/KB extension (D1 ✅ done, G2 ✅ done via SP7, E1/F1 🎨 mockup-ready)
 
 > **Status**: D1 players-index landed via PR #640 mockup batch (2026-05-03).
 > G2 game-night-detail unblocked 2026-05-15 via SP7 mockup (PR #1171 — see
-> "SP7 — Game Night detail RSVP" section). E1 toolkits-index, F1 kb-index
-> still blocked until Claude Design production resumes (post 2026-05-10).
+> "SP7 — Game Night detail RSVP" section). E1 toolkits-index and F1 kb-index
+> mockups delivered post 2026-05-10 with **evolved naming convention**:
+> `sp4-hub-toolkits.jsx` (E1 hub) and `sp4-kb-hub.jsx` + `sp4-kb-globale.jsx`
+> (F1 split into hub + global-search/editor). Original AC filenames
+> (`sp4-toolkits-index.jsx`, `sp4-kb-index.jsx`) were superseded. Component
+> stubs pending creation at implementation time per canonical path
+> `apps/web/src/components/features/{toolkits-index,kb-hub,kb-globale}/`
+> (post DS-15 deversioning — see [`2026-05-11-design-system-deversioning.md`](../specs/2026-05-11-design-system-deversioning.md)).
+> Tracking: #955.
 
 ### Players index — `/players` — 4 components — **Tier S**
 
@@ -351,6 +358,67 @@ the PR review.
 | `sp4-players-index.jsx` | `PlayersFiltersInline` | `apps/web/src/components/features/players/PlayersFiltersInline.tsx` | `/players` | done | #717 | T A V | #1397 |
 | `sp4-players-index.jsx` | `PlayersResultsGrid` | `apps/web/src/components/features/players/PlayersResultsGrid.tsx` | `/players` | done | #717 | T A V | #1397 |
 | `sp4-players-index.jsx` | `EmptyPlayers` | `apps/web/src/components/features/players/EmptyPlayers.tsx` | `/players` | done | #717 | T A V | #1397 |
+
+### Toolkits hub — `/toolkits` (E1) — 7 components — **Tier M**
+
+> Mockup delivered post 2026-05-10 as `sp4-hub-toolkits.jsx` (evolved naming
+> vs original AC `sp4-toolkits-index.jsx`). Mirrors `/players` and `/agents`
+> hub pattern: hero + filter strip + grid. Stubs pending creation at
+> implementation time. Route page already exists at
+> `apps/web/src/app/(authenticated)/toolkits/page.tsx` (placeholder shell).
+
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-hub-toolkits.jsx` | `HubToolkitsHero` | `apps/web/src/components/features/toolkits-index/HubToolkitsHero.tsx` | `/toolkits` | pending | — | T A V | — |
+| `sp4-hub-toolkits.jsx` | `HubFilters` | `apps/web/src/components/features/toolkits-index/HubFilters.tsx` | `/toolkits` | pending | — | T A V | — |
+| `sp4-hub-toolkits.jsx` | `HubToolkitCardGrid` | `apps/web/src/components/features/toolkits-index/HubToolkitCardGrid.tsx` | `/toolkits` | pending | — | T A V | — |
+| `sp4-hub-toolkits.jsx` | `HubToolkitsBody` | `apps/web/src/components/features/toolkits-index/HubToolkitsBody.tsx` | `/toolkits` | pending | — | T A V | — |
+| `sp4-hub-toolkits.jsx` | `HubEmptyFiltered` | `apps/web/src/components/features/toolkits-index/HubEmptyFiltered.tsx` | `/toolkits` | pending | — | T A V | — |
+| `sp4-hub-toolkits.jsx` | `ErrorState` | `apps/web/src/components/features/toolkits-index/ErrorState.tsx` | `/toolkits` | pending | — | T A V | — |
+| `sp4-hub-toolkits.jsx` | `SkeletonCard` | `apps/web/src/components/features/toolkits-index/SkeletonCard.tsx` | `/toolkits` | pending | — | T A V | — |
+
+### KB hub — `/knowledge-base` (F1a) — 8 components — **Tier M**
+
+> Mockup delivered post 2026-05-10 as `sp4-kb-hub.jsx` (F1 split into hub +
+> global-search/editor — see KB globale below). Original AC `sp4-kb-index.jsx`
+> superseded. Stubs pending creation at implementation time. Route page
+> already exists at `apps/web/src/app/(authenticated)/knowledge-base/page.tsx`
+> (placeholder shell). Parallel to KB hub mockup #913 (SG2) — ensure both
+> cover the entry point story.
+
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-kb-hub.jsx` | `KbStatsCard` | `apps/web/src/components/features/kb-hub/KbStatsCard.tsx` | `/knowledge-base` | pending | — | T A V | — |
+| `sp4-kb-hub.jsx` | `PdfRow` | `apps/web/src/components/features/kb-hub/PdfRow.tsx` | `/knowledge-base` | pending | — | T A V | — |
+| `sp4-kb-hub.jsx` | `HubDefault` | `apps/web/src/components/features/kb-hub/HubDefault.tsx` | `/knowledge-base` | pending | — | T A V | — |
+| `sp4-kb-hub.jsx` | `EmptyState` | `apps/web/src/components/features/kb-hub/EmptyState.tsx` | `/knowledge-base` | pending | — | T A V | — |
+| `sp4-kb-hub.jsx` | `ActionsMenu` | `apps/web/src/components/features/kb-hub/ActionsMenu.tsx` | `/knowledge-base` | pending | — | T A V | — |
+| `sp4-kb-hub.jsx` | `ReindexModal` | `apps/web/src/components/features/kb-hub/ReindexModal.tsx` | `/knowledge-base` | pending | — | T A M V | — |
+| `sp4-kb-hub.jsx` | `RaptorPanel` | `apps/web/src/components/features/kb-hub/RaptorPanel.tsx` | `/knowledge-base` | pending | — | T A V | — |
+| `sp4-kb-hub.jsx` | `DeleteDialog` | `apps/web/src/components/features/kb-hub/DeleteDialog.tsx` | `/knowledge-base` | pending | — | T A M V | — |
+
+### KB globale — `/knowledge-base/global` (F1b) — 10 components — **Tier L** ⚠️ Phase 0.5 likely required
+
+> Mockup delivered post 2026-05-10 as `sp4-kb-globale.jsx`. Global search,
+> doc viewer (desktop + mobile), inline editor, and AI drawer (4-state FSM:
+> idle/streaming/completed/error). Route subpath TBD — `/knowledge-base/global`
+> placeholder used; may consolidate under `/knowledge-base/search` or split
+> across `/kb/search`, `/kb/[id]/viewer`, `/kb/[id]/edit` at implementation
+> time. Phase 0.5 sub-hook contract likely required for streaming/citation
+> flow (mirror pattern from `library-id-onboarding-hooks.md`).
+
+| Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
+|--------|-----------|------|-------|--------|----|----|----------|
+| `sp4-kb-globale.jsx` | `HeroSearch` | `apps/web/src/components/features/kb-globale/HeroSearch.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
+| `sp4-kb-globale.jsx` | `KbHomeDesktop` | `apps/web/src/components/features/kb-globale/KbHomeDesktop.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
+| `sp4-kb-globale.jsx` | `KbSearchResultsDesktop` | `apps/web/src/components/features/kb-globale/KbSearchResultsDesktop.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
+| `sp4-kb-globale.jsx` | `FilterAccordion` | `apps/web/src/components/features/kb-globale/FilterAccordion.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
+| `sp4-kb-globale.jsx` | `KbDocViewerDesktop` | `apps/web/src/components/features/kb-globale/KbDocViewerDesktop.tsx` | `/knowledge-base/global` | pending | — | T A M V | — |
+| `sp4-kb-globale.jsx` | `KbDocViewerMobile` | `apps/web/src/components/features/kb-globale/KbDocViewerMobile.tsx` | `/knowledge-base/global` | pending | — | T A M V | — |
+| `sp4-kb-globale.jsx` | `KbEditorDesktop` | `apps/web/src/components/features/kb-globale/KbEditorDesktop.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
+| `sp4-kb-globale.jsx` | `DrawerShell` (+ `DrawerIdle` / `DrawerStreaming` / `DrawerCompleted` / `DrawerError` states) | `apps/web/src/components/features/kb-globale/Drawer*.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
+| `sp4-kb-globale.jsx` | `CitationPill` | `apps/web/src/components/features/kb-globale/CitationPill.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
+| `sp4-kb-globale.jsx` | `KbEmptyState` | `apps/web/src/components/features/kb-globale/KbEmptyState.tsx` | `/knowledge-base/global` | pending | — | T A V | — |
 
 ## SP6 — Nanolith libro-game (Iter 1.B / Iter 4) — 2 components
 

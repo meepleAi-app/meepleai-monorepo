@@ -31,6 +31,9 @@ const DEFAULT_PROPS: GameSearchBarProps = {
   activeTab: 'catalog',
   onTabChange: vi.fn(),
   labels: LABELS,
+  // Phase 2 (spec 2026-05-22): existing tests cover full 2-tab admin flow.
+  // Default off in production; opt-in here to preserve coverage.
+  showBggTab: true,
 };
 
 describe('GameSearchBar', () => {
@@ -178,5 +181,44 @@ describe('GameSearchBar', () => {
     render(<GameSearchBar {...DEFAULT_PROPS} className="extra-class" />);
     const root = document.querySelector('[data-slot="game-search-bar"]');
     expect(root?.classList.contains('extra-class')).toBe(true);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Phase 2 (Spec 2026-05-22): admin-gating of BGG tab
+  // ─────────────────────────────────────────────────────────────────────
+
+  describe('BGG admin-gating', () => {
+    const NON_ADMIN_PROPS: GameSearchBarProps = {
+      ...DEFAULT_PROPS,
+      showBggTab: false,
+    };
+
+    it('hides the BGG tab when showBggTab is false (default)', () => {
+      const { showBggTab: _strip, ...propsWithoutShowBgg } = DEFAULT_PROPS;
+      void _strip;
+      render(<GameSearchBar {...propsWithoutShowBgg} />);
+      const tabs = screen.getAllByRole('tab');
+      expect(tabs).toHaveLength(1);
+      expect(tabs[0]?.textContent).toContain('Catalogo');
+    });
+
+    it('renders only the Catalog tab when showBggTab=false', () => {
+      render(<GameSearchBar {...NON_ADMIN_PROPS} />);
+      const tabs = document.querySelectorAll('[data-slot="game-search-tab"]');
+      expect(tabs).toHaveLength(1);
+      const bgg = Array.from(tabs).find(t => t.getAttribute('data-tab-key') === 'bgg');
+      expect(bgg).toBeUndefined();
+    });
+
+    it('ArrowRight from catalog has no effect when showBggTab=false (single-tab list)', () => {
+      const onTabChange = vi.fn();
+      render(<GameSearchBar {...NON_ADMIN_PROPS} onTabChange={onTabChange} />);
+      const catalog = screen.getByRole('tab');
+      fireEvent.keyDown(catalog, { key: 'ArrowRight' });
+      // useTablistKeyboardNav cycles within available keys; with 1 key it stays.
+      // We assert onTabChange was either NOT called or called with 'catalog' (no-op).
+      const calls = onTabChange.mock.calls.map(c => c[0]);
+      expect(calls.every(k => k === 'catalog')).toBe(true);
+    });
   });
 });

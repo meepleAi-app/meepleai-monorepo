@@ -55,12 +55,17 @@ export interface NoResultsPanelProps {
   readonly query: string;
   /** Click handler for "Crea gioco nuovo" action. */
   readonly onCreateNew: () => void;
-  /** Click handler for "Cerca su BGG" action. */
-  readonly onSearchBgg: () => void;
+  /** Click handler for "Cerca su BGG" action (admin-only, see showBggCard). */
+  readonly onSearchBgg?: () => void;
   /** Click handler for "Indicizza solo per me" action. */
   readonly onAddPrivate: () => void;
   readonly labels: NoResultsPanelLabels;
   readonly className?: string;
+  /**
+   * When true, renders the "Cerca su BoardGameGeek" ActionCard. Default false:
+   * admin-only flow per spec docs/superpowers/specs/2026-05-22-hide-bgg-user-facing-phase-2-design.md.
+   */
+  readonly showBggCard?: boolean;
 }
 
 // game entity colours replaced with Tailwind entity-token classes (P2 #807 Task 6+7+8)
@@ -72,6 +77,7 @@ export function NoResultsPanel({
   onAddPrivate,
   labels,
   className,
+  showBggCard = false,
 }: NoResultsPanelProps): ReactElement {
   return (
     <section
@@ -117,12 +123,14 @@ export function NoResultsPanel({
           description={labels.actionCardCreate.description}
           onClick={onCreateNew}
         />
-        <ActionCard
-          icon={<span>🌐</span>}
-          title={labels.actionCardBgg.title}
-          description={labels.actionCardBgg.description}
-          onClick={onSearchBgg}
-        />
+        {showBggCard && onSearchBgg && (
+          <ActionCard
+            icon={<span>🌐</span>}
+            title={labels.actionCardBgg.title}
+            description={labels.actionCardBgg.description}
+            onClick={onSearchBgg}
+          />
+        )}
         <ActionCard
           icon={<span>🔒</span>}
           title={labels.actionCardPrivate.title}

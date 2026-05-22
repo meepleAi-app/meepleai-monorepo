@@ -61,7 +61,7 @@ async function parseResponse(response: Response, fallback: string): Promise<neve
 }
 
 export async function listAdminCategories(): Promise<CategoryDto[]> {
-  const response = await fetch('/api/v1/admin/categories/', {
+  const response = await fetch('/api/v1/admin/categories', {
     credentials: 'include',
   });
   if (!response.ok) {
@@ -71,7 +71,7 @@ export async function listAdminCategories(): Promise<CategoryDto[]> {
 }
 
 export async function createAdminCategory(payload: CreateCategoryRequest): Promise<CategoryDto> {
-  const response = await fetch('/api/v1/admin/categories/', {
+  const response = await fetch('/api/v1/admin/categories', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },

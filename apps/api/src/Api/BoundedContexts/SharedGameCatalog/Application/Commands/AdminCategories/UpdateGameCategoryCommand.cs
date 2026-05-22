@@ -68,7 +68,11 @@ internal sealed class UpdateGameCategoryCommandHandler : IRequestHandler<UpdateG
 
     public async Task<GameCategoryDto> Handle(UpdateGameCategoryCommand cmd, CancellationToken cancellationToken)
     {
+        // Include SharedGames so we can derive the post-update gameCount
+        // from the in-memory navigation collection — saves a round-trip vs
+        // a second projection query after SaveChangesAsync.
         var entity = await _context.GameCategories
+            .Include(c => c.SharedGames)
             .FirstOrDefaultAsync(c => c.Id == cmd.Id, cancellationToken)
             .ConfigureAwait(false);
 
@@ -108,12 +112,12 @@ internal sealed class UpdateGameCategoryCommandHandler : IRequestHandler<UpdateG
             metadata: $"{{\"id\":\"{entity.Id}\",\"name\":\"{entity.Name}\"}}",
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        var gameCount = await _context.GameCategories
-            .Where(c => c.Id == entity.Id)
-            .Select(c => c.SharedGames.Count)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        return new GameCategoryDto(entity.Id, entity.Name, entity.Slug, entity.Emoji, entity.Color, gameCount);
+        return new GameCategoryDto(
+            entity.Id,
+            entity.Name,
+            entity.Slug,
+            entity.Emoji,
+            entity.Color,
+            entity.SharedGames.Count);
     }
 }

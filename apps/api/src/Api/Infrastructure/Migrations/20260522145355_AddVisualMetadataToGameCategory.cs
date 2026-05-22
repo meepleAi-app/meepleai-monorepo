@@ -55,7 +55,8 @@ VALUES
     (gen_random_uuid(), 'Euro',          'euro',          '🏛️', '#6366f1', NOW())
 ON CONFLICT (name) DO UPDATE
     SET emoji = EXCLUDED.emoji,
-        color = EXCLUDED.color;
+        color = EXCLUDED.color,
+        slug  = EXCLUDED.slug;
 ");
         }
 

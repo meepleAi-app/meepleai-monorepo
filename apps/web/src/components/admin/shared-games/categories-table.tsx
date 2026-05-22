@@ -105,7 +105,10 @@ export function CategoriesTable() {
         id: editing.id,
         payload: {
           name: value.name,
-          slug: editing.slug || slugify(value.name),
+          // The server enforces NOT NULL on slug, so editing.slug is always
+          // a non-empty string. Preserve it across edits (renaming the
+          // visible name should not silently re-slug the row).
+          slug: editing.slug,
           emoji: value.emoji,
           color: value.color,
         },

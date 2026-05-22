@@ -35,12 +35,14 @@ internal static class AdminCategoriesEndpoints
             .WithTags("Admin", "Categories");
 
         categoriesGroup.MapGet("/", HandleGetCategories)
+            .RequireAdminSession()
             .WithName("AdminGetCategories")
             .WithSummary("Admin: list all SharedGame categories with derived gameCount")
             .Produces<List<GameCategoryDto>>()
             .Produces(StatusCodes.Status401Unauthorized);
 
         categoriesGroup.MapPost("/", HandleCreateCategory)
+            .RequireAdminSession()
             .WithName("AdminCreateCategory")
             .WithSummary("Admin: create a new SharedGame category")
             .Produces<GameCategoryDto>(StatusCodes.Status201Created)
@@ -49,6 +51,7 @@ internal static class AdminCategoriesEndpoints
             .Produces(StatusCodes.Status409Conflict);
 
         categoriesGroup.MapPut("/{id:guid}", HandleUpdateCategory)
+            .RequireAdminSession()
             .WithName("AdminUpdateCategory")
             .WithSummary("Admin: update an existing SharedGame category")
             .Produces<GameCategoryDto>()
@@ -58,6 +61,7 @@ internal static class AdminCategoriesEndpoints
             .Produces(StatusCodes.Status409Conflict);
 
         categoriesGroup.MapDelete("/{id:guid}", HandleDeleteCategory)
+            .RequireAdminSession()
             .WithName("AdminDeleteCategory")
             .WithSummary("Admin: delete a SharedGame category (forbidden when gameCount > 0)")
             .Produces(StatusCodes.Status204NoContent)

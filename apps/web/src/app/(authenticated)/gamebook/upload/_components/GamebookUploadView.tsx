@@ -87,6 +87,7 @@ import {
 } from '@/components/features/gamebook';
 import { useBggSearch } from '@/hooks/queries/useBggSearch';
 import { useGames } from '@/hooks/queries/useGames';
+import { useAdminRole } from '@/hooks/useAdminRole';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePhotoBatchStatus } from '@/lib/gamebook/hooks/usePhotoBatchStatus';
 import { usePhotoBatchUpload } from '@/lib/gamebook/hooks/usePhotoBatchUpload';
@@ -160,6 +161,12 @@ export function GamebookUploadView(): ReactElement {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Admin-only BGG integration (spec 2026-05-22 Phase 2):
+  // BGG tab + ActionCard are hidden for non-admin users. Default conservative
+  // (hide during loading to avoid flash-of-bgg).
+  const { isAdminOrAbove, isLoading: isAdminLoading } = useAdminRole();
+  const showBggIntegration = isAdminOrAbove && !isAdminLoading;
 
   // ── URL state SSOT (Foundation: read-only) ──────────────────────────────
   const stepParam = parseStep(searchParams.get('step'));
@@ -829,6 +836,7 @@ export function GamebookUploadView(): ReactElement {
         onCreateNew: handleCreateNew,
         onSearchBgg: handleSearchBgg,
         onAddPrivate: handleAddPrivate,
+        showBggIntegration,
         // Step 2 wiring
         videoStream: streamRef.current,
         streamReady,
@@ -886,6 +894,7 @@ interface CellRenderInput {
   readonly onCreateNew: () => void;
   readonly onSearchBgg: () => void;
   readonly onAddPrivate: () => void;
+  readonly showBggIntegration: boolean;
   // Step 2
   readonly videoStream: MediaStream | null;
   readonly streamReady: boolean;
@@ -966,6 +975,7 @@ function renderCell(input: CellRenderInput): ReactElement {
               onSearchBgg={input.onSearchBgg}
               onAddPrivate={input.onAddPrivate}
               labels={input.noResultsLabels(cell.query)}
+              showBggCard={input.showBggIntegration}
             />
           )}
         />
@@ -1186,6 +1196,7 @@ interface Step1ShellProps {
   readonly onQueryChange: (q: string) => void;
   readonly onTabChange: (tab: GameSearchTab) => void;
   readonly renderResults: () => ReactElement;
+  readonly showBggIntegration: boolean;
 }
 
 function Step1Shell({
@@ -1196,6 +1207,7 @@ function Step1Shell({
   onQueryChange,
   onTabChange,
   renderResults,
+  showBggIntegration,
 }: Step1ShellProps): ReactElement {
   return (
     <section data-slot="step1-shell" className="flex flex-1 flex-col gap-4 px-4 py-6 sm:px-6">
@@ -1206,6 +1218,7 @@ function Step1Shell({
         onTabChange={onTabChange}
         isPending={tabPending}
         labels={searchBarLabels}
+        showBggTab={showBggIntegration}
       />
       <div data-slot="step1-results">{renderResults()}</div>
     </section>

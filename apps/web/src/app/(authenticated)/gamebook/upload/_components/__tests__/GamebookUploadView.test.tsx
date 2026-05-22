@@ -79,6 +79,16 @@ vi.mock('@/hooks/queries/useBggSearch', () => ({
   useBggSearch: (opts: { query: string; enabled?: boolean }) => useBggSearchMock(opts),
 }));
 
+// ─── useAdminRole mock (Phase 2: admin-only BGG integration) ───────────────
+// Spec docs/superpowers/specs/2026-05-22-hide-bgg-user-facing-phase-2-design.md.
+// Default: non-admin user → BGG tab + ActionCard hidden.
+
+const useAdminRoleMock = vi.fn();
+
+vi.mock('@/hooks/useAdminRole', () => ({
+  useAdminRole: () => useAdminRoleMock(),
+}));
+
 // ─── usePhotoBatchUpload + usePhotoBatchStatus mocks ──────────────────────
 
 interface MockMutationResult {
@@ -279,6 +289,16 @@ beforeEach(() => {
     fetchStatus: 'idle',
   });
 
+  // Default admin role: non-admin → BGG hidden.
+  useAdminRoleMock.mockReturnValue({
+    user: null,
+    isSuperAdmin: false,
+    isAdminOrAbove: false,
+    isEditorOrAbove: false,
+    hasRole: () => false,
+    isLoading: false,
+  });
+
   statusQueryResult = {
     data: null,
     isPending: false,
@@ -470,7 +490,16 @@ describe('GamebookUploadView', () => {
     expect(lastCall).toContain('q=gloomhaven');
   });
 
-  it('clicking BGG tab fires router.replace with ?tab=bgg', () => {
+  it('clicking BGG tab fires router.replace with ?tab=bgg (admin only)', () => {
+    // Phase 2 (spec 2026-05-22): BGG tab is admin-gated.
+    useAdminRoleMock.mockReturnValue({
+      user: { id: 'u1', role: 'Admin' },
+      isSuperAdmin: false,
+      isAdminOrAbove: true,
+      isEditorOrAbove: true,
+      hasRole: () => true,
+      isLoading: false,
+    });
     renderView();
     const bggTab = document.querySelector(
       '[data-slot="game-search-tab"][data-tab-key="bgg"]'
@@ -496,7 +525,16 @@ describe('GamebookUploadView', () => {
     expect(lastCall).toContain('gameId=');
   });
 
-  it('NoResultsPanel "Cerca su BGG" action fires router.replace with ?tab=bgg', () => {
+  it('NoResultsPanel "Cerca su BGG" action fires router.replace with ?tab=bgg (admin only)', () => {
+    // Phase 2 (spec 2026-05-22): BGG ActionCard is admin-gated.
+    useAdminRoleMock.mockReturnValue({
+      user: { id: 'u1', role: 'Admin' },
+      isSuperAdmin: false,
+      isAdminOrAbove: true,
+      isEditorOrAbove: true,
+      hasRole: () => true,
+      isLoading: false,
+    });
     searchParamsMap['fixture'] = 'step1-no-results';
     renderView();
     const bggCard = screen.getByText('Cerca su BoardGameGeek');
@@ -1001,5 +1039,71 @@ describe('GamebookUploadView', () => {
       // Banner may not render if dispatch hasn't surfaced yet — accept.
       expect(true).toBe(true);
     }
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Phase 2 (Spec 2026-05-22): admin-only BGG integration
+  // ─────────────────────────────────────────────────────────────────────
+
+  describe('BGG admin-gating', () => {
+    it('hides the BGG tab for non-admin users (default)', () => {
+      renderView();
+      // Tab 'Catalog' is rendered, tab 'BGG' is not.
+      const bggTab = document.querySelector('[data-slot="game-search-tab"][data-tab-key="bgg"]');
+      expect(bggTab).toBeNull();
+      const catalogTab = document.querySelector(
+        '[data-slot="game-search-tab"][data-tab-key="catalog"]'
+      );
+      expect(catalogTab).not.toBeNull();
+    });
+
+    it('shows the BGG tab for admin users (isAdminOrAbove=true)', () => {
+      useAdminRoleMock.mockReturnValue({
+        user: { id: 'u1', role: 'Admin' },
+        isSuperAdmin: false,
+        isAdminOrAbove: true,
+        isEditorOrAbove: true,
+        hasRole: () => true,
+        isLoading: false,
+      });
+      renderView();
+      const bggTab = document.querySelector('[data-slot="game-search-tab"][data-tab-key="bgg"]');
+      expect(bggTab).not.toBeNull();
+    });
+
+    it('hides BGG ActionCard in NoResultsPanel for non-admin users', () => {
+      searchParamsMap['fixture'] = 'step1-no-results';
+      renderView();
+      // NoResultsPanel renders; BGG card label "Cerca su BoardGameGeek" must NOT appear.
+      expect(screen.queryByText('Cerca su BoardGameGeek')).toBeNull();
+    });
+
+    it('shows BGG ActionCard in NoResultsPanel for admin users', () => {
+      useAdminRoleMock.mockReturnValue({
+        user: { id: 'u1', role: 'Admin' },
+        isSuperAdmin: false,
+        isAdminOrAbove: true,
+        isEditorOrAbove: true,
+        hasRole: () => true,
+        isLoading: false,
+      });
+      searchParamsMap['fixture'] = 'step1-no-results';
+      renderView();
+      expect(screen.getByText('Cerca su BoardGameGeek')).toBeTruthy();
+    });
+
+    it('hides BGG tab during admin role loading (conservative default)', () => {
+      useAdminRoleMock.mockReturnValue({
+        user: null,
+        isSuperAdmin: false,
+        isAdminOrAbove: false,
+        isEditorOrAbove: false,
+        hasRole: () => false,
+        isLoading: true,
+      });
+      renderView();
+      const bggTab = document.querySelector('[data-slot="game-search-tab"][data-tab-key="bgg"]');
+      expect(bggTab).toBeNull();
+    });
   });
 });

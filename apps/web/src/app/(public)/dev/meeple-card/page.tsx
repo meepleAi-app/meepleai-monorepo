@@ -1472,12 +1472,6 @@ function EntityFlipShowcase() {
                   kind: 'social',
                   title: 'Social',
                   links: [
-                    {
-                      platform: 'BGG',
-                      handle: 'marcogames',
-                      icon: '🎲',
-                      href: 'https://boardgamegeek.com',
-                    },
                     { platform: 'Twitter', handle: '@marco_games', icon: '🐦' },
                     { platform: 'Discord', handle: 'marco#4242', icon: '💬' },
                   ],

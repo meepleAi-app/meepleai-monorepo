@@ -71,8 +71,14 @@ describe('NoResultsPanel', () => {
     expect(illu?.getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('renders 3 ActionCards', () => {
+  it('renders 2 ActionCards by default (BGG hidden for non-admin)', () => {
     render(<NoResultsPanel {...DEFAULT_PROPS} />);
+    const cards = document.querySelectorAll('[data-slot="action-card"]');
+    expect(cards).toHaveLength(2);
+  });
+
+  it('renders 3 ActionCards when showBggCard=true (admin flow)', () => {
+    render(<NoResultsPanel {...DEFAULT_PROPS} showBggCard />);
     const cards = document.querySelectorAll('[data-slot="action-card"]');
     expect(cards).toHaveLength(3);
   });
@@ -83,8 +89,11 @@ describe('NoResultsPanel', () => {
     expect(screen.getByText('Manuale che non esiste in nessun database')).toBeTruthy();
   });
 
-  it('renders Search BGG action card with correct title and description', () => {
-    render(<NoResultsPanel {...DEFAULT_PROPS} />);
+  it('renders Search BGG action card only when showBggCard=true', () => {
+    const { rerender } = render(<NoResultsPanel {...DEFAULT_PROPS} />);
+    expect(screen.queryByText('Cerca su BoardGameGeek')).toBeNull();
+
+    rerender(<NoResultsPanel {...DEFAULT_PROPS} showBggCard />);
     expect(screen.getByText('Cerca su BoardGameGeek')).toBeTruthy();
     expect(screen.getByText('Fonte ufficiale con metadati completi')).toBeTruthy();
   });
@@ -103,9 +112,9 @@ describe('NoResultsPanel', () => {
     expect(onCreateNew).toHaveBeenCalledOnce();
   });
 
-  it('fires onSearchBgg when BGG action clicked', () => {
+  it('fires onSearchBgg when BGG action clicked (with showBggCard=true)', () => {
     const onSearchBgg = vi.fn();
-    render(<NoResultsPanel {...DEFAULT_PROPS} onSearchBgg={onSearchBgg} />);
+    render(<NoResultsPanel {...DEFAULT_PROPS} onSearchBgg={onSearchBgg} showBggCard />);
     const card = screen.getByLabelText('Cerca su BoardGameGeek');
     fireEvent.click(card);
     expect(onSearchBgg).toHaveBeenCalledOnce();

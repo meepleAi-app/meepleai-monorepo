@@ -38,34 +38,33 @@ After Phase A + Phase A.2 (#943), 5 of 6 originally tolerant assertions are now 
 
 ### Stability evidence at flip time
 
-Workflow event cadence is low (release cycle ~1 PR/month). Streak verification uses **last-run-success + scenario-level pass-rate** instead of pure day-count to avoid vacuous-streak inflation:
+Workflow event cadence is low (release cycle ~1 PR/month). Streak verification uses **last-N-runs conclusion check** (avoids vacuous day-count streak inflation when no PRs are firing):
 
 ```bash
-# 1) Verify last completed workflow_run = success (most recent N=10 runs)
+# Verify last N=10 completed workflow_runs ALL have conclusion = success
 gh run list --workflow="api-smoke.yml" --status=completed \
-   --json conclusion,createdAt --limit 10 \
+   --json conclusion --limit 10 \
    | jq '[.[] | select(.conclusion == "failure")] | length'   # MUST be 0
+```
 
-# 2) Verify scenario-level pass-rate ≥ 95% (47/48 minimum) in the same N runs
-gh run list --workflow="api-smoke.yml" --status=completed \
-   --json databaseId --limit 10 \
-   | jq -r '.[].databaseId' \
-   | xargs -I {} gh run view {} --log 2>/dev/null \
-   | grep -E "(passed|failed)" | sort | uniq -c
+For deeper scenario-level inspection (only when a failure occurs), use the structured jobs API:
+
+```bash
+gh run view <runId> --json jobs \
+   | jq '[.jobs[].steps[] | select(.conclusion=="failure")] | .[].name'
 ```
 
 ### Rollback criteria (post-flip monitoring)
 
 Re-flip to `continue-on-error: true` if **any** of:
 - 2 consecutive workflow failures on `main-staging → main` PRs (excluding cancelled), OR
-- Single failure with root cause = flaky infra (not real regression), OR
-- BGG external dependency outage exceeding 1h SLO
+- Single failure with root cause = flaky infra (not a real regression)
 
 Document the rollback PR + root cause in this README before re-flip.
 
 ### Permanently-tolerant scope
 
-`private-game/07-bgg-search-throttle.bru` stays tolerant `[200, 429, 503]` (BGG external API rate-limits). Out of scope for Phase B gate-flip.
+`private-game/07-bgg-search-throttle.bru` stays tolerant `[200, 429, 503]` (BGG external API rate-limits). Out of scope for Phase B gate-flip — a BGG outage produces a `success` workflow conclusion (the assertion is tolerant by design) and therefore **cannot** trigger a rollback criterion.
 
 ## Refs
 

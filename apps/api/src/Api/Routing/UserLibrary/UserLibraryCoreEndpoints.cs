@@ -54,7 +54,6 @@ internal static class UserLibraryCoreEndpoints
 
         // Game detail endpoints (Epic #2823)
         MapGetGameDetailEndpoint(group);
-        MapUpdateGameStateEndpoint(group);
         MapRecordGameSessionEndpoint(group);
         MapSendLoanReminderEndpoint(group);
 
@@ -312,6 +311,27 @@ internal static class UserLibraryCoreEndpoints
                 return Results.Unauthorized();
             }
 
+            // Step 1: optional state transition (Nuovo/InPrestito/Wishlist/Owned).
+            // Consolidated from former PUT /library/games/{id}/state endpoint.
+            if (!string.IsNullOrWhiteSpace(request.NewState))
+            {
+                try
+                {
+                    await mediator
+                        .Send(new UpdateGameStateCommand(userId, gameId, request.NewState, request.StateNotes), ct)
+                        .ConfigureAwait(false);
+                }
+                catch (NotFoundException ex)
+                {
+                    return Results.NotFound(new { error = ex.Message });
+                }
+                catch (ConflictException ex)
+                {
+                    return Results.Conflict(new { error = ex.Message });
+                }
+            }
+
+            // Step 2: entry fields (Notes/IsFavorite).
             var command = new UpdateLibraryEntryCommand(
                 UserId: userId,
                 GameId: gameId,
@@ -333,9 +353,10 @@ internal static class UserLibraryCoreEndpoints
         .Produces<UserLibraryEntryDto>(200)
         .Produces(401)
         .Produces(404)
+        .Produces(409)
         .WithTags("Library")
         .WithSummary("Update library entry")
-        .WithDescription("Updates notes and/or favorite status for a game in user's library. Returns 404 if game not in library.")
+        .WithDescription("Updates notes, favorite status, and/or game state (Nuovo/InPrestito/Wishlist/Owned) for a game in user's library. Returns 404 if game not in library, 409 for invalid state transitions.")
         .WithOpenApi();
     }
 
@@ -817,50 +838,6 @@ internal static class UserLibraryCoreEndpoints
         .WithTags("Library", "Games")
         .WithSummary("Get game detail")
         .WithDescription("Returns complete game detail with stats, sessions, and checklist for game in user's library.")
-        .WithOpenApi();
-    }
-
-    private static void MapUpdateGameStateEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPut("/library/games/{gameId:guid}/state", async (
-            Guid gameId,
-            [FromBody] UpdateGameStateRequest request,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var command = new UpdateGameStateCommand(userId, gameId, request.NewState, request.StateNotes);
-
-            try
-            {
-                await mediator.Send(command, ct).ConfigureAwait(false);
-                return Results.NoContent();
-            }
-            catch (NotFoundException ex)
-            {
-                return Results.NotFound(new { error = ex.Message });
-            }
-            catch (ConflictException ex)
-            {
-                return Results.Conflict(new { error = ex.Message });
-            }
-        })
-        .RequireAuthenticatedUser()
-        .Produces(204)
-        .Produces(401)
-        .Produces(404)
-        .Produces(409)
-        .WithTags("Library", "Games")
-        .WithSummary("Update game state")
-        .WithDescription("Updates game state (Nuovo/InPrestito/Wishlist/Owned). Returns 409 for invalid transitions.")
         .WithOpenApi();
     }
 

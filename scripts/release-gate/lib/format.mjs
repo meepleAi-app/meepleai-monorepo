@@ -15,6 +15,16 @@ function emojiFor(severity, gates) {
   return ve[severity] ?? "•";
 }
 
+// Escape markdown table cell content. Check run names come from the GitHub
+// Checks API, which any app authorized to create checks can populate — treat
+// them as attacker-influenced external input.
+function escapeCell(value) {
+  return String(value ?? "")
+    .replace(/`/g, "\\`")
+    .replace(/\|/g, "\\|")
+    .replace(/\r?\n/g, " ");
+}
+
 function countBy(failures) {
   // unknown is mutually exclusive from severity buckets so the summary table
   // sums to total = blocker + warning + informational + unknown without double-counting.
@@ -64,10 +74,11 @@ export function formatComment({ failures, meta, gates, error = null }) {
   lines.push("| Check | Severity | Owner | Override path | Notes |");
   lines.push("|---|---|---|---|---|");
   for (const f of failures) {
-    const sev = `${emojiFor(f.severity, gates)} ${f.severity}`;
-    const note = (f.notes ?? "").replace(/\|/g, "\\|");
+    const sev = `${emojiFor(f.severity, gates)} ${escapeCell(f.severity)}`;
+    const note = escapeCell(f.notes ?? "");
     const tag = f.is_unknown ? " 🆕" : "";
-    lines.push(`| \`${f.name}\`${tag} | ${sev} | ${f.owner} | ${f.override_path} | ${note} |`);
+    const name = escapeCell(f.name);
+    lines.push(`| \`${name}\`${tag} | ${sev} | ${escapeCell(f.owner)} | ${escapeCell(f.override_path)} | ${note} |`);
   }
   lines.push("");
 

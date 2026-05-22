@@ -160,6 +160,88 @@ describe("formatActionsSummary — observability (AC-10)", () => {
   });
 });
 
+describe("formatComment — markdown injection defense (AC-5 security)", () => {
+  it("escapes backticks in check_name to prevent code-span breakout", () => {
+    // Adversarial check name: backtick → injected markdown after escape
+    const failures = [
+      {
+        name: "evil`name`with`backticks",
+        conclusion: "failure",
+        severity: "warning",
+        owner: "unknown",
+        override_path: "exception-comment",
+        notes: null,
+        source: "unknown",
+        matched_by: null,
+        is_unknown: true,
+        pre_existing_in_main_dev: false,
+      },
+    ];
+    const md = formatComment({ failures, meta: FIXED_META, gates });
+    expect(md).toContain("evil\\`name\\`with\\`backticks");
+    expect(md).not.toContain("`evil`name`"); // unescaped form must not appear
+  });
+
+  it("escapes pipes in check_name to prevent table-row breakout", () => {
+    const failures = [
+      {
+        name: "evil|cell|injection",
+        conclusion: "failure",
+        severity: "warning",
+        owner: "unknown",
+        override_path: "exception-comment",
+        notes: null,
+        source: "unknown",
+        matched_by: null,
+        is_unknown: true,
+        pre_existing_in_main_dev: false,
+      },
+    ];
+    const md = formatComment({ failures, meta: FIXED_META, gates });
+    expect(md).toContain("evil\\|cell\\|injection");
+  });
+
+  it("collapses newlines in check_name to prevent paragraph breakout", () => {
+    const failures = [
+      {
+        name: "evil\nname\nbreak",
+        conclusion: "failure",
+        severity: "warning",
+        owner: "unknown",
+        override_path: "exception-comment",
+        notes: null,
+        source: "unknown",
+        matched_by: null,
+        is_unknown: true,
+        pre_existing_in_main_dev: false,
+      },
+    ];
+    const md = formatComment({ failures, meta: FIXED_META, gates });
+    // Newlines collapsed to spaces, no row breakout
+    expect(md).not.toMatch(/\| `evil$/m);
+    expect(md).toContain("evil name break");
+  });
+
+  it("escapes pipes in notes (regression for existing behavior)", () => {
+    const failures = [
+      {
+        name: "safe",
+        conclusion: "failure",
+        severity: "warning",
+        owner: "devops",
+        override_path: "exception-comment",
+        notes: "Has | pipe | in | notes",
+        source: "exact",
+        matched_by: "safe",
+        is_unknown: false,
+        pre_existing_in_main_dev: false,
+      },
+    ];
+    const md = formatComment({ failures, meta: FIXED_META, gates });
+    expect(md).toContain("Has \\| pipe \\| in \\| notes");
+  });
+});
+
 describe("formatComment — idempotency anchor (AC-4)", () => {
   it("same input produces stable signature header for matching/editing existing comment", () => {
     const failures1 = makeClassifiedFailures(["Backend - Unit Tests"]);

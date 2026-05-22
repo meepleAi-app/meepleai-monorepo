@@ -22,10 +22,13 @@ on:
         required: true
         type: string
 
-# Branch-aware concurrency: cancel in-progress run on same PR if a newer one arrives.
-# Safe because every run is idempotent (edits the same signature-keyed comment).
+# Concurrency: key on PR number (when available) OR on the head SHA (check_suite).
+# Using head_sha (not head_branch) is critical: two concurrent check_suite.completed
+# events on the same commit (e.g. CodeQL + GitGuardian apps finishing within ms of
+# each other) must share the same concurrency slot, so `cancel-in-progress: true`
+# eliminates the TOCTOU race before two `createComment` calls can fire.
 concurrency:
-  group: release-gate-comment-${{ github.event.pull_request.number || github.event.check_suite.head_branch || github.event.inputs.pr_number || github.ref }}
+  group: release-gate-comment-${{ github.event.pull_request.number || github.event.check_suite.head_sha || github.event.inputs.pr_number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -109,6 +112,7 @@ jobs:
           esac
 
       - name: Classify and post/edit comment
+        id: classify
         if: steps.pr.outputs.skip != 'true'
         working-directory: scripts/release-gate
         env:
@@ -118,4 +122,13 @@ jobs:
           PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
           # GITHUB_STEP_SUMMARY is set by GH Actions automatically.
         run: node comment.mjs
+        # IMPORTANT: continue-on-error means the workflow does NOT fail when the
+        # bot crashes — the fallback comment posted by comment.mjs is the visible
+        # signal (AC-5). The spec mentions "neutral conclusion", but GitHub
+        # Actions does not expose `neutral` at the job level for normal `run:`
+        # steps; the closest behavior is `continue-on-error: true` which yields
+        # `success` on the job summary while still posting the fallback comment
+        # via the bot script itself. Branch protection must NOT include this
+        # workflow as a required status check until a future PR adds a custom
+        # check-run that explicitly sets `conclusion=neutral` via the Checks API.
         continue-on-error: true

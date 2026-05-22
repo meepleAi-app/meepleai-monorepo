@@ -1183,7 +1183,7 @@
         "q5": {
           "question": "Posso aggiungere un gioco non presente nel catalogo?",
           "short": "Durante l'alpha solo gli admin possono aggiungere giochi. Suggerisci nuovi giochi via /contact.",
-          "long": "Durante l'**alpha privata**, l'aggiunta di nuovi giochi al catalogo è ristretta agli admin per garantire qualità delle KB.\n\nPuoi **suggerire un gioco** via `/contact`: indicaci titolo, editore, anno e link BoardGameGeek. Valutiamo le richieste settimanalmente. Post-alpha, gli utenti potranno proporre giochi self-service con approvazione moderata."
+          "long": "Durante l'**alpha privata**, l'aggiunta di nuovi giochi al catalogo è ristretta agli admin per garantire qualità delle KB.\n\nPuoi **suggerire un gioco** via `/contact`: indicaci titolo, editore, anno e un link a un database giochi di riferimento. Valutiamo le richieste settimanalmente. Post-alpha, gli utenti potranno proporre giochi self-service con approvazione moderata."
         },
         "q6": {
           "question": "Come funziona la mia libreria personale?",

@@ -1133,7 +1133,7 @@
         "q5": {
           "question": "Can I add a game that is not in the catalog?",
           "short": "During the alpha only admins can add games. Suggest new games via /contact.",
-          "long": "During the **private alpha**, adding new games to the catalog is restricted to admins to ensure KB quality.\n\nYou can **suggest a game** via `/contact`: send title, publisher, year and BoardGameGeek link. We review requests weekly. Post-alpha, users will be able to propose games self-service with moderated approval."
+          "long": "During the **private alpha**, adding new games to the catalog is restricted to admins to ensure KB quality.\n\nYou can **suggest a game** via `/contact`: send title, publisher, year, and a link to a reference game database. We review requests weekly. Post-alpha, users will be able to propose games self-service with moderated approval."
         },
         "q6": {
           "question": "How does my personal library work?",

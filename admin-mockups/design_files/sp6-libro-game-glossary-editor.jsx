@@ -1,16 +1,56 @@
 /* ===================================================================
    SP6 Libro Game — Glossary Editor (sp6-libro-game-glossary-editor.jsx)
-   Coverage: scenario N3.5 inline pill edit (design doc 2026-05-07).
+   Coverage: scenario N3.5 inline pill edit (design doc 2026-05-07)
+             + spec sezione 1c context-aware glossary (2026-05-23).
    Modal sopra il viewer D translation-viewer quando Aaron tappa una
    glossary pill cliccabile inline al testo del paragrafo §147.
 
-   Stati:
-     state-01-edit-pristine     — Voidstone → Pietra del Vuoto, Salva disabled
-     state-02-edited            — input dirty → "Pietra del Caos", Salva enabled
+   Narrative: "Sera con i ragazzi · Runa di Ardenel · §147"
+   Books esempio: Press Start + Rules Game
+
+   Stati base:
+     state-01-edit-pristine     — Sentinel → soldato di guardia, Salva disabled
+     state-02-edited            — input dirty → "punto di osservazione strategica"
      state-03-save-error        — banner amber + Retry, value preservato
      state-04-collision         — banner red, [Sovrascrivi] + [Cambia traduzione]
      state-01-desktop           — modal centered 480px
-     state-04-desktop-conflict  — modal centered + side panel 200px "Reaver → Razziatore"
+     state-04-desktop-conflict  — modal centered + side panel 200px "Ferrigni → Razziatori"
+
+   ─────────────────────────────────────────────────────────────────────
+   NUOVI sub-screen (sezione 1c context-aware glossary):
+   ─────────────────────────────────────────────────────────────────────
+     state-05-conflict-dialog       — Modal w/ 3-CTA radiogroup, side-by-side
+                                       definitions (esistente vs nuova)
+     state-06-bulk-import-card      — Inline card + multi-select review modal
+     state-07-variant-expansion     — Glossary index term row collapsed/expanded
+     state-08-filter-strip          — Header search + book filter chips +
+                                       "solo con varianti" toggle + context badges
+                                       inline su ogni term row
+
+   ─────────────────────────────────────────────────────────────────────
+   Modello dati GlossaryEntry (proposto, implica schema migration backend):
+   ─────────────────────────────────────────────────────────────────────
+     GlossaryEntry {
+       term: "sentinel",
+       base_definition: "soldato di guardia",          // primary
+       contexts: [
+         { book_id: "press-start", definition: null,    // uses base
+           first_seen: paragraph_id_X },
+         { book_id: "rules-game",
+           definition: "punto di osservazione strategica",  // variant
+           first_seen: paragraph_id_Y }
+       ]
+     }
+
+   Pattern decisions:
+     · context_similarity threshold: 0.85 (server embedding cosine);
+       auto-keep silenzioso se ≥ 0.85, conflict-dialog se < 0.85
+     · bulk-import trigger: ≥3 parole (evita card-fatigue)
+     · default conflict resolution: "Mantieni esistente" (soft, no destructive)
+     · variant deletion: ultima variante non-base eliminata → torna single-context
+
+   Decisione architetturale incidentale (Fowler): schema migration backend
+   su `glossary_entries` per contexts[]. Spec backend separata.
 
    Vincolo FREEZE v2 #807/#808: solo entityHsl(entity, alpha) o token semantici.
    =================================================================== */
@@ -711,6 +751,1055 @@ function ActionRow({ primary, secondary, caption, vertical }) {
 }
 
 /* =====================================================================
+   NUOVO sub-screen 05 — ConflictDialog
+   ─────────────────────────────────────────────────────────────────────
+   OCR trova parola "sentinel" già nel glossario base con definizione
+   "soldato di guardia", ma il nuovo paragrafo §147 di "Rules Game"
+   suggerisce "punto di osservazione strategica" (context_similarity = 0.62
+   < 0.85 threshold → mostra dialog).
+
+   Layout: dialog role="dialog" aria-modal="true"
+           body: definizioni side-by-side (esistente | nuova) con badge book
+           CTA radiogroup verticale (3 opzioni)
+           footer: [Annulla] + [Conferma] (CTA primaria game)
+
+   Default selection: "Mantieni esistente" (soft CTA, evita destructive default).
+   ===================================================================== */
+
+function ConflictDialog({ desktop = false }) {
+  const existingDef = 'soldato di guardia';
+  const newDef = 'punto di osservazione strategica';
+  const similarity = 0.62;
+  const term = 'sentinel';
+
+  const radioOptions = [
+    {
+      id: 'keep',
+      label: 'Mantieni esistente',
+      sublabel: 'Nessun cambiamento — il glossario rimane invariato',
+      isDefault: true,
+    },
+    {
+      id: 'replace',
+      label: 'Sostituisci',
+      sublabel: 'La nuova definizione rimpiazza ovunque la base',
+      accent: 'warning',
+    },
+    {
+      id: 'variant',
+      label: 'Aggiungi variante per Rules Game',
+      sublabel: 'Tieni base + variante book-specific (consigliato)',
+      accent: 'game',
+    },
+  ];
+
+  return (
+    <div style={{
+      position: 'absolute', inset: 0,
+      background: 'rgba(0, 0, 0, 0.55)',
+      backdropFilter: 'blur(3px)',
+      display: 'flex',
+      alignItems: desktop ? 'center' : 'flex-end',
+      justifyContent: 'center',
+      padding: desktop ? 24 : 0,
+      zIndex: 10,
+    }}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="conflict-dialog-title"
+        aria-describedby="conflict-dialog-desc"
+        style={{
+          width: desktop ? 540 : '100%',
+          maxWidth: '100%',
+          height: desktop ? 'auto' : '100%',
+          background: 'var(--bg-card)',
+          borderRadius: desktop ? 'var(--r-2xl)' : 'var(--r-2xl) var(--r-2xl) 0 0',
+          boxShadow: desktop
+            ? '0 24px 60px rgba(0,0,0,.18), 0 8px 16px rgba(0,0,0,.08)'
+            : 'none',
+          border: '1px solid var(--border)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+        {/* Drag handle (mobile sheet) */}
+        {!desktop && (
+          <div style={{
+            display: 'flex', justifyContent: 'center',
+            paddingTop: 8, paddingBottom: 4, flexShrink: 0,
+          }}>
+            <span style={{
+              width: 36, height: 4, borderRadius: 2,
+              background: 'var(--border-strong)', opacity: 0.6,
+            }} />
+          </div>
+        )}
+
+        {/* Header */}
+        <div style={{ padding: desktop ? '20px 24px 14px' : '8px 18px 14px', flexShrink: 0 }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '4px 10px',
+            borderRadius: 'var(--r-pill)',
+            background: entityHsl('event', 0.12),
+            color: entityHsl('event'),
+            fontFamily: 'var(--f-mono)', fontSize: 10, fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+            border: `1px solid ${entityHsl('event', 0.28)}`,
+            marginBottom: 12,
+          }}>
+            <span style={{ fontSize: 11, lineHeight: 1 }}>⚠</span>
+            Conflitto · similarità {similarity.toFixed(2)} &lt; 0.85
+          </div>
+          <h2
+            id="conflict-dialog-title"
+            style={{
+              fontFamily: 'var(--f-display)', fontWeight: 700,
+              fontSize: 20, lineHeight: 1.25, color: 'var(--text)',
+              letterSpacing: '-0.01em', margin: '0 0 4px',
+            }}>
+            La parola "<span style={{ color: entityHsl('kb') }}>{term}</span>" è già nel glossario
+          </h2>
+          <p
+            id="conflict-dialog-desc"
+            style={{
+              margin: 0, fontSize: 13, color: 'var(--text-sec)', lineHeight: 1.5,
+            }}>
+            Le due definizioni sono troppo diverse per fonderle automaticamente.
+            Scegli come procedere.
+          </p>
+        </div>
+
+        {/* Side-by-side definitions */}
+        <div style={{
+          padding: desktop ? '0 24px 14px' : '0 18px 14px',
+          flexShrink: 0,
+        }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: desktop ? '1fr 1fr' : '1fr',
+            gap: 10,
+          }}>
+            {/* Existing */}
+            <div style={{
+              padding: '12px 14px',
+              borderRadius: 'var(--r-md)',
+              border: '1px solid var(--border-light)',
+              background: 'var(--bg-muted)',
+            }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                fontFamily: 'var(--f-mono)', fontSize: 9.5,
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase', letterSpacing: '0.07em',
+                fontWeight: 700, marginBottom: 8,
+              }}>
+                <span>📖</span> Press Start · esistente
+              </div>
+              <div style={{
+                fontFamily: 'var(--f-display)', fontWeight: 600,
+                fontSize: 14, color: 'var(--text)', lineHeight: 1.45,
+              }}>{existingDef}</div>
+              <div style={{
+                marginTop: 8,
+                fontFamily: 'var(--f-mono)', fontSize: 10,
+                color: 'var(--text-muted)',
+              }}>prima vista §72 · usato 3 volte</div>
+            </div>
+            {/* New */}
+            <div style={{
+              padding: '12px 14px',
+              borderRadius: 'var(--r-md)',
+              border: `1.5px solid ${entityHsl('game', 0.42)}`,
+              background: entityHsl('game', 0.06),
+            }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                fontFamily: 'var(--f-mono)', fontSize: 9.5,
+                color: entityHsl('game'),
+                textTransform: 'uppercase', letterSpacing: '0.07em',
+                fontWeight: 700, marginBottom: 8,
+              }}>
+                <span>📖</span> Rules Game · nuova proposta
+              </div>
+              <div style={{
+                fontFamily: 'var(--f-display)', fontWeight: 600,
+                fontSize: 14, color: 'var(--text)', lineHeight: 1.45,
+              }}>{newDef}</div>
+              <div style={{
+                marginTop: 8,
+                fontFamily: 'var(--f-mono)', fontSize: 10,
+                color: 'var(--text-muted)',
+              }}>vista in §147 · primo uso</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Radio group — 3 CTA */}
+        <div
+          role="radiogroup"
+          aria-label="Come risolvere il conflitto"
+          style={{
+            padding: desktop ? '0 24px 14px' : '0 18px 14px',
+            flex: desktop ? 'unset' : 1,
+            overflowY: desktop ? 'visible' : 'auto',
+            display: 'flex', flexDirection: 'column', gap: 8,
+          }}>
+          {radioOptions.map(opt => (
+            <ConflictRadioOption key={opt.id} option={opt} />
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: desktop ? '14px 24px 20px' : '12px 18px 18px',
+          borderTop: '1px solid var(--border-light)',
+          background: 'var(--bg-card)',
+          flexShrink: 0,
+          display: 'flex', gap: 8,
+        }}>
+          <button style={{
+            flex: 1,
+            padding: '11px 18px',
+            borderRadius: 'var(--r-md)',
+            border: '1px solid var(--border-strong)',
+            background: 'transparent',
+            color: 'var(--text-sec)',
+            fontFamily: 'var(--f-display)', fontWeight: 600, fontSize: 14,
+            cursor: 'pointer',
+          }}>Annulla</button>
+          <button style={{
+            flex: 1,
+            padding: '11px 18px',
+            borderRadius: 'var(--r-md)',
+            border: 'none',
+            background: entityHsl('game'),
+            color: '#fff',
+            fontFamily: 'var(--f-display)', fontWeight: 700, fontSize: 14,
+            boxShadow: `0 4px 14px ${entityHsl('game', 0.30)}`,
+            cursor: 'pointer',
+            letterSpacing: '-0.005em',
+          }}>Conferma</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConflictRadioOption({ option }) {
+  const accent = option.accent || 'kb';
+  const isDefault = option.isDefault;
+
+  return (
+    <label style={{
+      display: 'flex', alignItems: 'flex-start', gap: 12,
+      padding: '12px 14px',
+      borderRadius: 'var(--r-md)',
+      border: isDefault
+        ? `1.5px solid ${entityHsl(accent, 0.42)}`
+        : '1px solid var(--border-light)',
+      background: isDefault ? entityHsl(accent, 0.04) : 'var(--bg)',
+      cursor: 'pointer',
+      transition: 'background 120ms var(--ease-out, ease-out)',
+    }}>
+      <span
+        role="radio"
+        aria-checked={isDefault}
+        style={{
+          width: 18, height: 18, borderRadius: '50%',
+          border: `2px solid ${isDefault ? entityHsl(accent) : 'var(--border-strong)'}`,
+          background: 'var(--bg)',
+          flexShrink: 0,
+          marginTop: 2,
+          display: 'inline-flex',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+        {isDefault && (
+          <span style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: entityHsl(accent),
+          }} />
+        )}
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontFamily: 'var(--f-display)', fontWeight: 700,
+          fontSize: 14, color: 'var(--text)', lineHeight: 1.35,
+          marginBottom: 2,
+        }}>
+          {option.label}
+          {isDefault && (
+            <span style={{
+              marginLeft: 8,
+              padding: '1px 7px', borderRadius: 'var(--r-sm)',
+              fontFamily: 'var(--f-mono)', fontSize: 9, fontWeight: 700,
+              background: entityHsl(accent, 0.18),
+              color: entityHsl(accent),
+              textTransform: 'uppercase', letterSpacing: '0.06em',
+              verticalAlign: 'middle',
+            }}>default</span>
+          )}
+        </div>
+        <div style={{
+          fontSize: 12, color: 'var(--text-sec)', lineHeight: 1.5,
+        }}>{option.sublabel}</div>
+      </div>
+    </label>
+  );
+}
+
+/* =====================================================================
+   NUOVO sub-screen 06 — BulkImportCard
+   ─────────────────────────────────────────────────────────────────────
+   OCR trova ≥3 parole nuove (threshold ≥3, NON ≥1 per evitare
+   card-fatigue). Card inline sotto traduzione di §147.
+
+   Layout: inline card sopra il viewer (NO scrim — non bloccante)
+           title "5 nuove parole rilevate"
+           chip preview (5 termini cliccabili)
+           2 CTA: ["Aggiungi tutte" 1-click] / ["Rivedi" → multi-select modal]
+
+   Multi-select modal: per-term checkbox + edit definition inline
+                       role="listbox" aria-multiselectable="true"
+   ===================================================================== */
+
+function BulkImportCard({ variant = 'inline', desktop = false }) {
+  // 5 termini esempio coerenti con narrative "Runa di Ardenel · §147"
+  const newWords = [
+    { term: 'ferrigni', proposedDef: 'razziatori di pietra-ferro' },
+    { term: 'runa', proposedDef: 'simbolo magico inciso' },
+    { term: 'threshold', proposedDef: 'soglia mistica del cerchio' },
+    { term: 'veglia cava', proposedDef: 'spirito dormiente del bosco' },
+    { term: 'ardenel', proposedDef: 'antica casata di custodi' },
+  ];
+
+  if (variant === 'inline') {
+    return <BulkImportInlineCard newWords={newWords} desktop={desktop} />;
+  }
+  return <BulkImportReviewModal newWords={newWords} desktop={desktop} />;
+}
+
+function BulkImportInlineCard({ newWords, desktop }) {
+  return (
+    <div style={{
+      position: 'absolute',
+      left: desktop ? '50%' : 12,
+      right: desktop ? 'auto' : 12,
+      top: desktop ? 'auto' : 'auto',
+      bottom: desktop ? 32 : 32,
+      transform: desktop ? 'translateX(-50%)' : 'none',
+      width: desktop ? 560 : 'auto',
+      maxWidth: '100%',
+      padding: '14px 16px',
+      borderRadius: 'var(--r-lg)',
+      background: 'var(--bg-card)',
+      border: `1.5px solid ${entityHsl('kb', 0.42)}`,
+      boxShadow: '0 16px 40px rgba(0,0,0,.16)',
+      zIndex: 10,
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10,
+      }}>
+        <span style={{
+          width: 30, height: 30, borderRadius: '50%',
+          background: entityHsl('kb', 0.16),
+          color: entityHsl('kb'),
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 15, fontWeight: 800, flexShrink: 0,
+        }}>⊕</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontFamily: 'var(--f-display)', fontWeight: 700, fontSize: 14,
+            color: 'var(--text)', marginBottom: 2,
+          }}>
+            {newWords.length} nuove parole rilevate
+          </div>
+          <div style={{
+            fontFamily: 'var(--f-mono)', fontSize: 10,
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+          }}>
+            in §147 · libro "Runa di Ardenel" · trigger ≥3
+          </div>
+        </div>
+      </div>
+
+      {/* Chip preview */}
+      <div style={{
+        display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12,
+      }}>
+        {newWords.map(w => (
+          <span key={w.term} style={{
+            padding: '4px 10px',
+            borderRadius: 'var(--r-pill)',
+            background: entityHsl('kb', 0.10),
+            color: entityHsl('kb'),
+            fontFamily: 'var(--f-display)', fontSize: 12, fontWeight: 600,
+            border: `1px solid ${entityHsl('kb', 0.24)}`,
+            whiteSpace: 'nowrap',
+          }}>{w.term}</span>
+        ))}
+      </div>
+
+      {/* CTA row */}
+      <div style={{
+        display: 'flex', gap: 8,
+      }}>
+        <button style={{
+          flex: 1,
+          padding: '10px 16px',
+          borderRadius: 'var(--r-md)',
+          border: '1px solid var(--border-strong)',
+          background: 'transparent',
+          color: 'var(--text-sec)',
+          fontFamily: 'var(--f-display)', fontWeight: 600, fontSize: 13,
+          cursor: 'pointer',
+        }}>Rivedi</button>
+        <button style={{
+          flex: 1.4,
+          padding: '10px 16px',
+          borderRadius: 'var(--r-md)',
+          border: 'none',
+          background: entityHsl('kb'),
+          color: '#fff',
+          fontFamily: 'var(--f-display)', fontWeight: 700, fontSize: 13,
+          boxShadow: `0 4px 14px ${entityHsl('kb', 0.30)}`,
+          cursor: 'pointer',
+          letterSpacing: '-0.005em',
+        }}>Aggiungi tutte ({newWords.length})</button>
+      </div>
+    </div>
+  );
+}
+
+function BulkImportReviewModal({ newWords, desktop }) {
+  return (
+    <div style={{
+      position: 'absolute', inset: 0,
+      background: 'rgba(0, 0, 0, 0.55)',
+      backdropFilter: 'blur(3px)',
+      display: 'flex',
+      alignItems: desktop ? 'center' : 'flex-end',
+      justifyContent: 'center',
+      padding: desktop ? 24 : 0,
+      zIndex: 10,
+    }}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bulk-review-title"
+        style={{
+          width: desktop ? 560 : '100%',
+          maxWidth: '100%',
+          height: desktop ? 'auto' : '100%',
+          maxHeight: desktop ? '85vh' : '100%',
+          background: 'var(--bg-card)',
+          borderRadius: desktop ? 'var(--r-2xl)' : 'var(--r-2xl) var(--r-2xl) 0 0',
+          boxShadow: desktop
+            ? '0 24px 60px rgba(0,0,0,.18), 0 8px 16px rgba(0,0,0,.08)'
+            : 'none',
+          border: '1px solid var(--border)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+        {!desktop && (
+          <div style={{
+            display: 'flex', justifyContent: 'center',
+            paddingTop: 8, paddingBottom: 4, flexShrink: 0,
+          }}>
+            <span style={{
+              width: 36, height: 4, borderRadius: 2,
+              background: 'var(--border-strong)', opacity: 0.6,
+            }} />
+          </div>
+        )}
+
+        {/* Header */}
+        <div style={{ padding: desktop ? '20px 24px 14px' : '8px 18px 14px', flexShrink: 0 }}>
+          <h2
+            id="bulk-review-title"
+            style={{
+              fontFamily: 'var(--f-display)', fontWeight: 700,
+              fontSize: 20, lineHeight: 1.25, color: 'var(--text)',
+              letterSpacing: '-0.01em', margin: '0 0 4px',
+            }}>
+            Rivedi le nuove parole
+          </h2>
+          <p style={{
+            margin: 0, fontSize: 13, color: 'var(--text-sec)', lineHeight: 1.5,
+          }}>
+            Spunta le parole da aggiungere al glossario. Puoi editare le
+            definizioni proposte inline.
+          </p>
+        </div>
+
+        {/* List */}
+        <div
+          role="listbox"
+          aria-multiselectable="true"
+          aria-label="Nuove parole da importare"
+          style={{
+            padding: desktop ? '0 24px 14px' : '0 18px 14px',
+            flex: 1,
+            overflowY: 'auto',
+            display: 'flex', flexDirection: 'column', gap: 8,
+          }}>
+          {newWords.map((w, idx) => (
+            <BulkReviewRow key={w.term} word={w} checked={idx !== 2} />
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: desktop ? '14px 24px 20px' : '12px 18px 18px',
+          borderTop: '1px solid var(--border-light)',
+          background: 'var(--bg-card)',
+          flexShrink: 0,
+          display: 'flex', flexDirection: 'column', gap: 10,
+        }}>
+          <div style={{
+            fontFamily: 'var(--f-mono)', fontSize: 10,
+            color: 'var(--text-muted)',
+            textAlign: 'center',
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+          }}>
+            4 di {newWords.length} selezionate
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button style={{
+              flex: 1,
+              padding: '11px 18px',
+              borderRadius: 'var(--r-md)',
+              border: '1px solid var(--border-strong)',
+              background: 'transparent',
+              color: 'var(--text-sec)',
+              fontFamily: 'var(--f-display)', fontWeight: 600, fontSize: 14,
+              cursor: 'pointer',
+            }}>Annulla</button>
+            <button style={{
+              flex: 1,
+              padding: '11px 18px',
+              borderRadius: 'var(--r-md)',
+              border: 'none',
+              background: entityHsl('kb'),
+              color: '#fff',
+              fontFamily: 'var(--f-display)', fontWeight: 700, fontSize: 14,
+              boxShadow: `0 4px 14px ${entityHsl('kb', 0.30)}`,
+              cursor: 'pointer',
+            }}>Aggiungi 4 parole</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BulkReviewRow({ word, checked }) {
+  return (
+    <div
+      role="option"
+      aria-selected={checked}
+      style={{
+        display: 'flex', alignItems: 'flex-start', gap: 12,
+        padding: '11px 12px',
+        borderRadius: 'var(--r-md)',
+        border: checked
+          ? `1.5px solid ${entityHsl('kb', 0.36)}`
+          : '1px solid var(--border-light)',
+        background: checked ? entityHsl('kb', 0.05) : 'var(--bg)',
+      }}>
+      {/* Checkbox */}
+      <span style={{
+        width: 18, height: 18, borderRadius: 'var(--r-sm)',
+        border: `2px solid ${checked ? entityHsl('kb') : 'var(--border-strong)'}`,
+        background: checked ? entityHsl('kb') : 'var(--bg)',
+        flexShrink: 0,
+        marginTop: 2,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        color: '#fff', fontSize: 11, fontWeight: 800,
+      }}>
+        {checked && '✓'}
+      </span>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          marginBottom: 4,
+        }}>
+          <span style={{
+            fontFamily: 'var(--f-display)', fontWeight: 700,
+            fontSize: 14, color: 'var(--text)',
+          }}>{word.term}</span>
+          <span style={{
+            fontFamily: 'var(--f-mono)', fontSize: 9.5,
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+          }}>EN → IT</span>
+        </div>
+        {/* Inline-editable definition */}
+        <div style={{
+          padding: '7px 10px',
+          borderRadius: 'var(--r-sm)',
+          border: '1px solid var(--border-light)',
+          background: 'var(--bg)',
+          fontSize: 12.5, color: 'var(--text-sec)', lineHeight: 1.45,
+          fontFamily: 'var(--f-display)',
+        }}>
+          {word.proposedDef}
+          <span style={{
+            marginLeft: 8,
+            fontFamily: 'var(--f-mono)', fontSize: 9.5,
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+            fontWeight: 700,
+          }}>✏ tap per editare</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================================
+   NUOVO sub-screen 07 — VariantExpansion
+   ─────────────────────────────────────────────────────────────────────
+   Glossary index term row con contexts.length > 1.
+   Default collapsed. Click → expand mostra varianti per book.
+
+   Layout: term row con chevron + term name + base_definition truncated
+           click → aria-expanded="true", row espande mostrando N varianti:
+             · book badge "📖 Press Start" / "📖 Rules Game"
+             · definition specifica (o "(usa base)" se context.definition null)
+             · first_seen link "Vedi paragrafo §X"
+             · delete variant button
+   ===================================================================== */
+
+function VariantExpansionList({ desktop = false }) {
+  return (
+    <div style={{
+      position: 'absolute', inset: 0,
+      background: 'var(--bg)',
+      overflowY: 'auto',
+      padding: desktop ? '16px 28px' : '12px 14px',
+    }}>
+      {/* Page header */}
+      <div style={{
+        marginBottom: 14,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div>
+          <h2 style={{
+            margin: '0 0 2px',
+            fontFamily: 'var(--f-display)', fontWeight: 700,
+            fontSize: 18, color: 'var(--text)',
+          }}>Glossario · Runa di Ardenel</h2>
+          <div style={{
+            fontFamily: 'var(--f-mono)', fontSize: 10,
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+          }}>
+            12 termini · 3 con varianti per book
+          </div>
+        </div>
+      </div>
+
+      {/* List of term rows — 1 collapsed, 1 expanded */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <TermRow
+          term="ferrigni"
+          baseDef="razziatori di pietra-ferro"
+          contextCount={1}
+          expanded={false}
+        />
+        <TermRow
+          term="sentinel"
+          baseDef="soldato di guardia"
+          contextCount={2}
+          expanded={true}
+          variants={[
+            {
+              bookId: 'press-start',
+              bookLabel: 'Press Start',
+              definition: null,
+              firstSeen: '§72',
+            },
+            {
+              bookId: 'rules-game',
+              bookLabel: 'Rules Game',
+              definition: 'punto di osservazione strategica',
+              firstSeen: '§147',
+            },
+          ]}
+        />
+        <TermRow
+          term="runa"
+          baseDef="simbolo magico inciso"
+          contextCount={1}
+          expanded={false}
+        />
+      </div>
+    </div>
+  );
+}
+
+function TermRow({ term, baseDef, contextCount, expanded, variants }) {
+  const hasVariants = contextCount > 1;
+
+  return (
+    <div style={{
+      borderRadius: 'var(--r-lg)',
+      border: expanded
+        ? `1.5px solid ${entityHsl('kb', 0.36)}`
+        : '1px solid var(--border-light)',
+      background: expanded ? entityHsl('kb', 0.04) : 'var(--bg-card)',
+      overflow: 'hidden',
+    }}>
+      {/* Collapsible row header */}
+      <button
+        aria-expanded={expanded}
+        aria-controls={`variants-${term}`}
+        style={{
+          width: '100%',
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '12px 14px',
+          border: 'none', background: 'transparent',
+          textAlign: 'left',
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+        }}>
+        {/* Chevron icon (rotates on expand) */}
+        <span style={{
+          display: 'inline-flex',
+          width: 18, height: 18, flexShrink: 0,
+          alignItems: 'center', justifyContent: 'center',
+          color: 'var(--text-muted)',
+          transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+          transition: 'transform 160ms var(--ease-out, ease-out)',
+          fontSize: 14, fontWeight: 800, lineHeight: 1,
+        }}>›</span>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            display: 'flex', alignItems: 'baseline', gap: 8,
+            marginBottom: 2, flexWrap: 'wrap',
+          }}>
+            <span style={{
+              fontFamily: 'var(--f-display)', fontWeight: 700,
+              fontSize: 15, color: 'var(--text)',
+            }}>{term}</span>
+            {hasVariants && (
+              <span style={{
+                padding: '1px 7px',
+                borderRadius: 'var(--r-sm)',
+                background: entityHsl('game', 0.14),
+                color: entityHsl('game'),
+                fontFamily: 'var(--f-mono)', fontSize: 9.5, fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.06em',
+              }}>{contextCount} varianti</span>
+            )}
+          </div>
+          <div style={{
+            fontSize: 12.5, color: 'var(--text-sec)', lineHeight: 1.4,
+            overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>{baseDef}</div>
+        </div>
+      </button>
+
+      {/* Expanded variants list */}
+      {expanded && variants && (
+        <div
+          id={`variants-${term}`}
+          style={{
+            padding: '4px 14px 14px',
+            borderTop: `1px dashed ${entityHsl('kb', 0.22)}`,
+            display: 'flex', flexDirection: 'column', gap: 8,
+            marginTop: 4,
+          }}>
+          <div style={{
+            fontFamily: 'var(--f-mono)', fontSize: 9.5,
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase', letterSpacing: '0.07em',
+            fontWeight: 700,
+            marginTop: 10, marginBottom: 4,
+          }}>
+            Varianti per libro
+          </div>
+          {variants.map(v => (
+            <VariantRow key={v.bookId} variant={v} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VariantRow({ variant }) {
+  const usesBase = variant.definition == null;
+
+  return (
+    <div style={{
+      padding: '10px 12px',
+      borderRadius: 'var(--r-md)',
+      border: '1px solid var(--border-light)',
+      background: 'var(--bg)',
+      display: 'flex', alignItems: 'flex-start', gap: 10,
+    }}>
+      {/* Book badge */}
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        padding: '3px 9px',
+        borderRadius: 'var(--r-pill)',
+        background: entityHsl('kb', 0.12),
+        color: entityHsl('kb'),
+        fontFamily: 'var(--f-mono)', fontSize: 10, fontWeight: 700,
+        border: `1px solid ${entityHsl('kb', 0.28)}`,
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+      }}>
+        <span>📖</span>{variant.bookLabel}
+      </span>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 13, color: 'var(--text)', lineHeight: 1.45,
+          fontFamily: 'var(--f-display)',
+          fontStyle: usesBase ? 'italic' : 'normal',
+          opacity: usesBase ? 0.7 : 1,
+        }}>
+          {usesBase ? '(usa definizione base)' : variant.definition}
+        </div>
+        <div style={{
+          marginTop: 5,
+          display: 'flex', alignItems: 'center', gap: 10,
+          fontFamily: 'var(--f-mono)', fontSize: 10,
+          color: 'var(--text-muted)',
+        }}>
+          <a href="#" style={{
+            color: entityHsl('game'),
+            textDecoration: 'underline',
+            textDecorationStyle: 'dotted',
+            fontWeight: 700,
+          }}>Vedi paragrafo originale {variant.firstSeen}</a>
+        </div>
+      </div>
+
+      {/* Delete variant */}
+      <button
+        aria-label={`Elimina variante ${variant.bookLabel}`}
+        style={{
+          width: 26, height: 26,
+          borderRadius: 'var(--r-sm)',
+          border: '1px solid var(--border-light)',
+          background: 'transparent',
+          color: 'var(--text-muted)',
+          fontSize: 13, lineHeight: 1, padding: 0,
+          cursor: 'pointer',
+          flexShrink: 0,
+        }}>🗑</button>
+    </div>
+  );
+}
+
+/* =====================================================================
+   NUOVO sub-screen 08 — FilterStrip + ContextBadges
+   ─────────────────────────────────────────────────────────────────────
+   Header glossary index sempre visibile:
+     · search input (term/definition/book)
+     · filter by book chip multi-select
+     · toggle "Solo con varianti"
+   Ogni term row mostra context badges inline (📖 Press Start + 📖 Rules Game).
+   ===================================================================== */
+
+function FilterStripGlossaryIndex({ desktop = false }) {
+  return (
+    <div style={{
+      position: 'absolute', inset: 0,
+      background: 'var(--bg)',
+      overflowY: 'auto',
+      padding: desktop ? '16px 28px' : '12px 14px',
+    }}>
+      <div style={{
+        marginBottom: 14,
+      }}>
+        <h2 style={{
+          margin: '0 0 8px',
+          fontFamily: 'var(--f-display)', fontWeight: 700,
+          fontSize: 18, color: 'var(--text)',
+        }}>Glossario · 12 termini</h2>
+      </div>
+
+      {/* Search input */}
+      <div style={{
+        position: 'relative',
+        marginBottom: 10,
+      }}>
+        <span style={{
+          position: 'absolute',
+          left: 12, top: '50%',
+          transform: 'translateY(-50%)',
+          color: 'var(--text-muted)',
+          fontSize: 14,
+          pointerEvents: 'none',
+        }}>🔍</span>
+        <div
+          role="searchbox"
+          aria-label="Cerca nel glossario"
+          style={{
+            padding: '10px 12px 10px 38px',
+            borderRadius: 'var(--r-md)',
+            border: '1px solid var(--border-light)',
+            background: 'var(--bg-card)',
+            color: 'var(--text-muted)',
+            fontFamily: 'var(--f-display)', fontSize: 13.5,
+          }}>
+          Cerca per termine, definizione, libro…
+        </div>
+      </div>
+
+      {/* Filter chips: book multi-select */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+        marginBottom: 8,
+      }}>
+        <span style={{
+          fontFamily: 'var(--f-mono)', fontSize: 10,
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase', letterSpacing: '0.06em',
+          fontWeight: 700,
+          marginRight: 4,
+        }}>Libri:</span>
+        <FilterChip label="📖 Press Start" active />
+        <FilterChip label="📖 Rules Game" active />
+        <FilterChip label="📖 Encounter Book" />
+      </div>
+
+      {/* Toggle: solo con varianti */}
+      <label style={{
+        display: 'inline-flex', alignItems: 'center', gap: 8,
+        padding: '6px 12px',
+        borderRadius: 'var(--r-pill)',
+        background: entityHsl('game', 0.08),
+        border: `1px solid ${entityHsl('game', 0.28)}`,
+        cursor: 'pointer',
+        marginBottom: 16,
+      }}>
+        <span
+          role="switch"
+          aria-checked="true"
+          style={{
+            width: 28, height: 16, borderRadius: 999,
+            background: entityHsl('game'),
+            position: 'relative',
+            flexShrink: 0,
+          }}>
+          <span style={{
+            position: 'absolute',
+            right: 2, top: 2,
+            width: 12, height: 12, borderRadius: '50%',
+            background: '#fff',
+          }} />
+        </span>
+        <span style={{
+          fontFamily: 'var(--f-display)', fontSize: 12.5, fontWeight: 600,
+          color: entityHsl('game'),
+        }}>Solo con varianti</span>
+      </label>
+
+      {/* Term rows with context badges */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <TermRowWithBadges
+          term="sentinel"
+          baseDef="soldato di guardia"
+          books={['Press Start', 'Rules Game']}
+        />
+        <TermRowWithBadges
+          term="ferrigni"
+          baseDef="razziatori di pietra-ferro"
+          books={['Press Start', 'Rules Game', 'Encounter Book']}
+        />
+        <TermRowWithBadges
+          term="runa"
+          baseDef="simbolo magico inciso"
+          books={['Press Start']}
+        />
+        <TermRowWithBadges
+          term="threshold"
+          baseDef="soglia mistica del cerchio"
+          books={['Rules Game', 'Encounter Book']}
+        />
+      </div>
+    </div>
+  );
+}
+
+function FilterChip({ label, active }) {
+  return (
+    <button style={{
+      padding: '4px 10px',
+      borderRadius: 'var(--r-pill)',
+      border: active
+        ? `1.5px solid ${entityHsl('kb', 0.42)}`
+        : '1px solid var(--border-light)',
+      background: active ? entityHsl('kb', 0.12) : 'var(--bg-card)',
+      color: active ? entityHsl('kb') : 'var(--text-sec)',
+      fontFamily: 'var(--f-display)', fontSize: 12, fontWeight: 600,
+      cursor: 'pointer',
+      whiteSpace: 'nowrap',
+    }}>{label}</button>
+  );
+}
+
+function TermRowWithBadges({ term, baseDef, books }) {
+  const hasMultiContext = books.length > 1;
+
+  return (
+    <div style={{
+      padding: '11px 12px',
+      borderRadius: 'var(--r-lg)',
+      border: '1px solid var(--border-light)',
+      background: 'var(--bg-card)',
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        flexWrap: 'wrap',
+        marginBottom: 4,
+      }}>
+        <span style={{
+          fontFamily: 'var(--f-display)', fontWeight: 700,
+          fontSize: 14, color: 'var(--text)',
+        }}>{term}</span>
+        {/* Context badges inline */}
+        {books.map(book => (
+          <span key={book} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '1px 7px',
+            borderRadius: 'var(--r-sm)',
+            background: entityHsl('kb', 0.10),
+            color: entityHsl('kb'),
+            fontFamily: 'var(--f-mono)', fontSize: 9.5, fontWeight: 700,
+            border: `1px solid ${entityHsl('kb', 0.22)}`,
+            textTransform: 'none', letterSpacing: 0,
+          }}>📖 {book}</span>
+        ))}
+        {hasMultiContext && (
+          <span style={{
+            marginLeft: 'auto',
+            fontFamily: 'var(--f-mono)', fontSize: 9.5,
+            color: entityHsl('game'),
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+            fontWeight: 700,
+          }}>{books.length} varianti</span>
+        )}
+      </div>
+      <div style={{
+        fontSize: 12.5, color: 'var(--text-sec)', lineHeight: 1.4,
+      }}>{baseDef}</div>
+    </div>
+  );
+}
+
+/* =====================================================================
    Phone + Desktop frames
    ===================================================================== */
 
@@ -898,6 +1987,187 @@ function App() {
           <DesktopFrame url="/library/games/nanolith/play/§147">
             <FauxViewerBackdrop withScrim={false} />
             <GlossaryEditorModal variant="collision" desktop withConflictPanel />
+          </DesktopFrame>
+        </StateBlock>
+      )}
+
+      {/* =====================================================================
+          NUOVI sub-screen sezione 1c — context-aware glossary
+          ===================================================================== */}
+
+      {/* 05 · Conflict dialog — context_similarity < 0.85 */}
+      {showState('state-05') && showMobile && (
+        <StateBlock
+          id="state-05-conflict-dialog-mobile"
+          title="05 · Conflict dialog mobile — 'sentinel' già nel glossario · sim 0.62 < 0.85"
+          gherkin="@1c context-similarity threshold"
+          frame="mobile · 375 × 780 · fullscreen sheet"
+        >
+          <div className="gl-frame-caption">
+            Side-by-side: Press Start "soldato di guardia" vs Rules Game "punto di osservazione strategica" · 3 CTA radio · default "Mantieni esistente" (soft, no destructive)
+            <span className="theme-tag">role=radiogroup</span>
+            <span className="theme-tag">sim 0.62 &lt; 0.85</span>
+          </div>
+          <div className="gl-state-grid">
+            <PhoneFrame>
+              <FauxViewerBackdrop />
+              <ConflictDialog />
+            </PhoneFrame>
+          </div>
+        </StateBlock>
+      )}
+
+      {showState('state-05') && showDesktop && (
+        <StateBlock
+          id="state-05-conflict-dialog-desktop"
+          title="05 · Conflict dialog desktop — modal 540px centered"
+          gherkin="@1c context-aware"
+          frame="desktop · 1280 × 720 · centered overlay"
+        >
+          <div className="gl-frame-caption">
+            Definizioni side-by-side in grid 2-col · radio CTA visibili immediate · threshold context_similarity = 0.85 annotato in header
+            <span className="theme-tag">grid 2-col</span>
+          </div>
+          <DesktopFrame url="/library/runa-ardenel/play/§147?glossary=conflict">
+            <FauxViewerBackdrop withScrim={false} />
+            <ConflictDialog desktop />
+          </DesktopFrame>
+        </StateBlock>
+      )}
+
+      {/* 06 · Bulk import card — ≥3 nuove parole rilevate */}
+      {showState('state-06') && showMobile && (
+        <StateBlock
+          id="state-06-bulk-import-inline-mobile"
+          title="06a · Bulk import inline card — 5 nuove parole in §147"
+          gherkin="@1c bulk-import threshold ≥3"
+          frame="mobile · 375 × 780 · inline card sopra viewer"
+        >
+          <div className="gl-frame-caption">
+            Card inline bottom · 5 chip preview (ferrigni, runa, threshold, veglia cava, ardenel) · 2 CTA: "Rivedi" + "Aggiungi tutte (5)" · trigger ≥3 (NO ≥1, evita fatigue)
+            <span className="theme-tag">non-blocking</span>
+            <span className="theme-tag">threshold ≥3</span>
+          </div>
+          <div className="gl-state-grid">
+            <PhoneFrame>
+              <FauxViewerBackdrop withScrim={false} />
+              <BulkImportCard variant="inline" />
+            </PhoneFrame>
+          </div>
+        </StateBlock>
+      )}
+
+      {showState('state-06') && showMobile && (
+        <StateBlock
+          id="state-06-bulk-import-review-mobile"
+          title="06b · Bulk import review modal — multi-select w/ inline edit"
+          gherkin="@1c bulk-import review"
+          frame="mobile · 375 × 780 · fullscreen sheet"
+        >
+          <div className="gl-frame-caption">
+            Click "Rivedi" → modal multi-select · 5 row con checkbox + def inline-editable · listbox aria-multiselectable="true" · footer "Aggiungi 4 parole"
+            <span className="theme-tag">role=listbox</span>
+            <span className="theme-tag">aria-multiselectable</span>
+          </div>
+          <div className="gl-state-grid">
+            <PhoneFrame>
+              <FauxViewerBackdrop />
+              <BulkImportCard variant="review" />
+            </PhoneFrame>
+          </div>
+        </StateBlock>
+      )}
+
+      {showState('state-06') && showDesktop && (
+        <StateBlock
+          id="state-06-bulk-import-desktop"
+          title="06 · Bulk import desktop — inline card centered + review modal"
+          gherkin="@1c bulk-import desktop"
+          frame="desktop · 1280 × 720"
+        >
+          <div className="gl-frame-caption">
+            Card 560px max-width centered bottom · non-blocking · stesso pattern del mobile ma con padding maggiore
+            <span className="theme-tag">light</span>
+          </div>
+          <DesktopFrame url="/library/runa-ardenel/play/§147?glossary=bulk">
+            <FauxViewerBackdrop withScrim={false} />
+            <BulkImportCard variant="inline" desktop />
+          </DesktopFrame>
+        </StateBlock>
+      )}
+
+      {/* 07 · Variant expansion — term row collapsed vs expanded */}
+      {showState('state-07') && showMobile && (
+        <StateBlock
+          id="state-07-variant-expansion-mobile"
+          title="07 · Variant expansion — 'sentinel' con 2 contexts per book"
+          gherkin="@1c contexts.length > 1"
+          frame="mobile · 375 × 780 · glossary index"
+        >
+          <div className="gl-frame-caption">
+            3 term rows: ferrigni (collapsed, 1 context) · sentinel (expanded, 2 varianti per "Press Start" usa-base + "Rules Game" definition specifica) · runa (collapsed) · chevron ruota su expand · aria-expanded + aria-controls
+            <span className="theme-tag">aria-expanded</span>
+            <span className="theme-tag">chevron rotate</span>
+          </div>
+          <div className="gl-state-grid">
+            <PhoneFrame>
+              <VariantExpansionList />
+            </PhoneFrame>
+          </div>
+        </StateBlock>
+      )}
+
+      {showState('state-07') && showDesktop && (
+        <StateBlock
+          id="state-07-variant-expansion-desktop"
+          title="07 · Variant expansion desktop — glossary index w/ expanded row"
+          gherkin="@1c variant deletion"
+          frame="desktop · 1280 × 720 · glossary index"
+        >
+          <div className="gl-frame-caption">
+            Click row → expand varianti per book · ogni variante: book badge "📖 Press Start"/"📖 Rules Game" + definition (o "(usa base)" se null) + link first_seen + delete button · last variant deletion → term torna single-context
+            <span className="theme-tag">variant delete</span>
+          </div>
+          <DesktopFrame url="/library/runa-ardenel/glossary">
+            <VariantExpansionList desktop />
+          </DesktopFrame>
+        </StateBlock>
+      )}
+
+      {/* 08 · Filter strip + context badges */}
+      {showState('state-08') && showMobile && (
+        <StateBlock
+          id="state-08-filter-strip-mobile"
+          title="08 · Filter strip + context badges — glossary index header"
+          gherkin="@1c filter + badges"
+          frame="mobile · 375 × 780 · glossary index"
+        >
+          <div className="gl-frame-caption">
+            Search input "Cerca per termine, definizione, libro…" · filter chips multi-select per book (Press Start + Rules Game attivi, Encounter Book disattivo) · toggle "Solo con varianti" ON · ogni term row mostra context badges inline (📖 Press Start + 📖 Rules Game)
+            <span className="theme-tag">multi-select</span>
+            <span className="theme-tag">role=switch</span>
+          </div>
+          <div className="gl-state-grid">
+            <PhoneFrame>
+              <FilterStripGlossaryIndex />
+            </PhoneFrame>
+          </div>
+        </StateBlock>
+      )}
+
+      {showState('state-08') && showDesktop && (
+        <StateBlock
+          id="state-08-filter-strip-desktop"
+          title="08 · Filter strip desktop — search + chips + toggle + badges inline"
+          gherkin="@1c filter-strip desktop"
+          frame="desktop · 1280 × 720 · glossary index"
+        >
+          <div className="gl-frame-caption">
+            Stesso layout mobile ma con padding orizzontale maggiore · 4 term rows demo con varianti count badge a destra "N varianti" quando books.length &gt; 1
+            <span className="theme-tag">context badges inline</span>
+          </div>
+          <DesktopFrame url="/library/runa-ardenel/glossary?filter=multi-context">
+            <FilterStripGlossaryIndex desktop />
           </DesktopFrame>
         </StateBlock>
       )}

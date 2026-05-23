@@ -19,6 +19,11 @@ import { Octokit } from "@octokit/rest";
 
 import { loadGates, classify } from "./lib/classify.mjs";
 import { formatComment, formatActionsSummary, SIGNATURE_HEADER } from "./lib/format.mjs";
+import {
+  computeVerdict,
+  VERDICT_CHECK_NAME,
+  VERDICT_EXTERNAL_ID,
+} from "./lib/conclusion-override.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
@@ -136,29 +141,65 @@ export async function runBot({
   }
 
   // 5. Post or edit
+  let commentResult = null;
   if (existingId) {
-    await octokit.issues.updateComment({
+    commentResult = await octokit.issues.updateComment({
       owner,
       repo,
       comment_id: existingId,
       body,
     });
   } else {
-    await octokit.issues.createComment({
+    commentResult = await octokit.issues.createComment({
       owner,
       repo,
       issue_number: prNumber,
       body,
     });
   }
+  const commentUrl = commentResult?.data?.html_url ?? null;
 
-  // 6. Observability — GH Actions summary
+  // 6. Phase 2a (#1444) — synthesize the verdict check-run on the head SHA.
+  // Soft-fail per AC-8: any error here logs and continues — the Phase 1
+  // comment posted above is the canonical durable signal.
+  const verdictResult = await publishVerdict({
+    octokit,
+    owner,
+    repo,
+    sha: commitSha,
+    failures,
+    gates,
+    commentUrl,
+    startedAt: started,
+  });
+
+  // 7. Observability — GH Actions summary
   if (appendSummary) {
     appendSummary(formatActionsSummary({
       failures,
       total_checks: checkRuns.length,
       meta,
     }));
+    if (verdictResult.published) {
+      appendSummary(
+        `\n## Release-Gate Verdict (Phase 2a)\n\n` +
+          `- Conclusion: \`${verdictResult.conclusion}\`\n` +
+          `- Check-run id: \`${verdictResult.check_run_id ?? "?"}\`\n` +
+          `- Latency: \`${verdictResult.latency_ms}\` ms\n` +
+          `- Mode: \`${verdictResult.edited ? "updated" : "created"}\`\n`
+      );
+    } else if (verdictResult.reason === "kill-switch-disabled") {
+      appendSummary(`\n## Release-Gate Verdict (Phase 2a)\n\nbot.phase2a.enabled=false → verdict skipped.\n`);
+    } else if (verdictResult.reason === "no-sha") {
+      appendSummary(`\n## Release-Gate Verdict (Phase 2a)\n\nNo head SHA available — verdict skipped.\n`);
+    } else {
+      appendSummary(
+        `\n## Release-Gate Verdict (Phase 2a) — FAILED\n\n` +
+          `- Reason: \`${verdictResult.reason}\`\n` +
+          `- Error: \`${verdictResult.error ?? "n/a"}\`\n` +
+          `- Phase 1 comment was posted; verdict publish is an enhancement.\n`
+      );
+    }
   }
 
   return {
@@ -167,7 +208,103 @@ export async function runBot({
     total_checks: checkRuns.length,
     existing_comment_id: existingId,
     edited: existingId !== null,
+    verdict: verdictResult,
   };
+}
+
+// Phase 2a (#1444) — internal helper. Pure-core (computeVerdict) +
+// imperative-shell (octokit.checks.create). Idempotent via external_id.
+async function publishVerdict({ octokit, owner, repo, sha, failures, gates, commentUrl, startedAt }) {
+  const verdict = computeVerdict({ failures, gates, commentUrl });
+
+  if (!verdict.enabled) {
+    return { published: false, reason: "kill-switch-disabled" };
+  }
+
+  if (!sha) {
+    // Defensive: without a head SHA, the Checks API has nothing to target.
+    // Phase 1 comment is unaffected.
+    return { published: false, reason: "no-sha" };
+  }
+
+  const payload = {
+    owner,
+    repo,
+    name: VERDICT_CHECK_NAME,
+    head_sha: sha,
+    external_id: VERDICT_EXTERNAL_ID,
+    status: "completed",
+    conclusion: verdict.conclusion,
+    completed_at: new Date().toISOString(),
+    output: {
+      title: verdict.title,
+      summary: verdict.summary,
+      text: verdict.text,
+    },
+  };
+
+  // AC-4 idempotency: the Checks API treats external_id as the lookup key on
+  // the same SHA, so re-running the bot updates rather than duplicates. To
+  // keep the implementation minimal, we attempt `checks.create` first; if it
+  // fails with a 422 ("a check with the same external_id already exists"),
+  // we look up the existing run and update it.
+  try {
+    const created = await octokit.checks.create(payload);
+    return {
+      published: true,
+      conclusion: verdict.conclusion,
+      check_run_id: created.data?.id ?? null,
+      edited: false,
+      latency_ms: Date.now() - startedAt,
+    };
+  } catch (err) {
+    // 422 unprocessable typically signals duplicate external_id on the SHA
+    const isDuplicate =
+      err?.status === 422 ||
+      (err?.message && /already exists/i.test(err.message)) ||
+      (err?.message && /duplicate/i.test(err.message));
+    if (isDuplicate) {
+      try {
+        const existing = await octokit.checks.listForRef({
+          owner,
+          repo,
+          ref: sha,
+          check_name: VERDICT_CHECK_NAME,
+          per_page: 100,
+        });
+        const found = (existing.data?.check_runs ?? []).find(
+          (c) => c.external_id === VERDICT_EXTERNAL_ID
+        );
+        if (found) {
+          const updated = await octokit.checks.update({
+            owner,
+            repo,
+            check_run_id: found.id,
+            ...payload,
+          });
+          return {
+            published: true,
+            conclusion: verdict.conclusion,
+            check_run_id: updated.data?.id ?? found.id,
+            edited: true,
+            latency_ms: Date.now() - startedAt,
+          };
+        }
+      } catch (lookupErr) {
+        // AC-8 soft-fail: log and return, comment IS the durable signal.
+        console.error(
+          `[release-gate:verdict] dedup lookup failed after create-422: ${lookupErr.message}`
+        );
+      }
+    }
+    // AC-8 soft-fail on any non-recoverable error.
+    console.error(`[release-gate:verdict] publish failed: ${err.message}`);
+    return {
+      published: false,
+      reason: "publish-error",
+      error: err.message,
+    };
+  }
 }
 
 async function postFallback({

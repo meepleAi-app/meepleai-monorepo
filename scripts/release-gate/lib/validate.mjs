@@ -106,6 +106,18 @@ export function validateGates(gates) {
       errors.push(`bot.fallback_unknown.override_path: must be a valid override_path, got "${fb.override_path}"`);
     }
 
+    // Phase 2a (#1444) — optional sub-key; validate only if present.
+    // Schema is intentionally minimal (just `enabled`) so future Phase 2a
+    // tuning can extend without breaking older release-gates.yml files.
+    if (gates.bot.phase2a !== undefined) {
+      const p2a = gates.bot.phase2a;
+      if (!p2a || typeof p2a !== "object") {
+        errors.push("bot.phase2a: must be an object when present");
+      } else if (p2a.enabled !== undefined && typeof p2a.enabled !== "boolean") {
+        errors.push(`bot.phase2a.enabled: must be boolean when present, got "${typeof p2a.enabled}"`);
+      }
+    }
+
     // Phase 2c (#1446) — optional sub-key; validate only if present.
     if (gates.bot.phase2c !== undefined) {
       const p2c = gates.bot.phase2c;

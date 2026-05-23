@@ -277,3 +277,53 @@ describe("validateGatesFile (file I/O)", () => {
     expect(result.errors).toHaveLength(0);
   });
 });
+
+describe("validateGates — Phase 2a (#1444) schema", () => {
+  function gatesWith(phase2a) {
+    return {
+      version: 1,
+      checks: [
+        {
+          check_name: "X",
+          severity: "warning",
+          owner: "devops",
+          override_path: "exception-comment",
+          pre_existing_in_main_dev: false,
+        },
+      ],
+      bot: {
+        signature_header: "<!-- release-gate-bot:v1 -->",
+        verdict_emoji: { blocker: "X", warning: "X", informational: "X", unknown: "X" },
+        fallback_unknown: { severity: "warning", owner: "unknown", override_path: "exception-comment" },
+        phase2a,
+      },
+    };
+  }
+
+  it("accepts bot.phase2a.enabled=true", () => {
+    const result = validateGates(gatesWith({ enabled: true }));
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts bot.phase2a.enabled=false", () => {
+    const result = validateGates(gatesWith({ enabled: false }));
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts bot.phase2a as an empty object (enabled default-true semantics)", () => {
+    const result = validateGates(gatesWith({}));
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects non-boolean bot.phase2a.enabled", () => {
+    const result = validateGates(gatesWith({ enabled: "yes" }));
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => /bot\.phase2a\.enabled/.test(e))).toBe(true);
+  });
+
+  it("rejects bot.phase2a as a non-object", () => {
+    const result = validateGates(gatesWith("nope"));
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => /bot\.phase2a/.test(e))).toBe(true);
+  });
+});

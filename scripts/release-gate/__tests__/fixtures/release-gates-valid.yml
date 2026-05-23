@@ -46,3 +46,10 @@ bot:
     severity: warning
     owner: unknown
     override_path: exception-comment
+
+  # Phase 2a (#1444) — integration tests in __tests__/integration.test.mjs
+  # expect the verdict to publish (enabled: true). The runtime config in
+  # .github/release-gates.yml pins this to false until the dispatch gate
+  # opens 2026-06-08 — see Phase 2 overview spec.
+  phase2a:
+    enabled: true

@@ -6,7 +6,7 @@
 
 **Architecture:** Workflow ibrido per mockup HTML: (1) engineer prepara brief contestualizzato dalla spec, (2) user esegue Claude Design Web producendo HTML, (3) engineer integra output nel file target (`admin-mockups/design_files/`), valida acceptance criteria via grep + visual inspection, committa. Pattern "extend existing" per `error-states`, `translate-viewer`, `glossary-editor`, `photo-upload` (preserva continuità); pattern "create new" per `chat-fullscreen.html` e `state-matrix.html`.
 
-**Tech Stack:** HTML + CSS (componenti già presenti in `admin-mockups/design_files/components.css`), JSX twins per i mockup principali, design tokens canonici da `tokens.css`. Nessuna build step — i file sono statici. Riuso di pattern da `nanolith-runthrough-*`, `sp6-libro-game-*`, `sp4-citation-pdf-viewer`.
+**Tech Stack:** HTML + CSS (componenti già presenti in `admin-mockups/design_files/components.css`), JSX twins per i mockup principali, design tokens canonici da `tokens.css`. Nessuna build step — i file sono statici. Riuso di pattern da `librogame-runthrough-*`, `sp6-libro-game-*`, `sp4-citation-pdf-viewer`.
 
 **Spec sorgente**: [`docs/superpowers/specs/2026-05-23-mockup-refinement-aaron-core-design.md`](../specs/2026-05-23-mockup-refinement-aaron-core-design.md)
 
@@ -20,10 +20,10 @@
 
 | File | Sezione spec | Cosa cambia |
 |---|---|---|
-| `admin-mockups/design_files/nanolith-runthrough-error-states.html` | 1a | + 6 nuovi stati OCR/AI (ocr-low-confidence, photo-blur-pre-ocr, translation-timeout, source-lang-unknown, network-mid-ocr, quota-exhausted-mid-stream) |
-| `admin-mockups/design_files/nanolith-runthrough-translate-viewer.html` | 1b + 1d | + 4-step loading sequence, reader mode toggle 📖, wake-lock indicator 🔆, contrasto AAA, 3 sub-screen multi-lang (lang-detection-badge, lang-override-modal, manual-input-mode) |
+| `admin-mockups/design_files/librogame-runthrough-error-states.html` | 1a | + 6 nuovi stati OCR/AI (ocr-low-confidence, photo-blur-pre-ocr, translation-timeout, source-lang-unknown, network-mid-ocr, quota-exhausted-mid-stream) |
+| `admin-mockups/design_files/librogame-runthrough-translate-viewer.html` | 1b + 1d | + 4-step loading sequence, reader mode toggle 📖, wake-lock indicator 🔆, contrasto AAA, 3 sub-screen multi-lang (lang-detection-badge, lang-override-modal, manual-input-mode) |
 | `admin-mockups/design_files/sp6-libro-game-photo-upload.html` | 1d | + kebab menu *"Digita manualmente"* entry point per manual-input-mode |
-| `admin-mockups/design_files/nanolith-runthrough-glossary-editor.html` | 1c | + 4 sub-screen (conflict-dialog, bulk-import-card, variant-expansion, filter-strip+context-badges) + commento modello dati `GlossaryEntry` |
+| `admin-mockups/design_files/librogame-runthrough-glossary-editor.html` | 1c | + 4 sub-screen (conflict-dialog, bulk-import-card, variant-expansion, filter-strip+context-badges) + commento modello dati `GlossaryEntry` |
 | `admin-mockups/design_files/sp6-libro-game-glossary-editor.jsx` | 1c | Sync .jsx twin con HTML modificato |
 | `admin-mockups/design_files/sp6-libro-game-translation-viewer.jsx` | 1b + 1d | Sync .jsx twin con HTML modificato |
 | `admin-mockups/MOCKUPS_INDEX.md` | 9 (AC globali) | Aggiornare count (page-mock 48→49, dev-fixture 10→11) + nuovi entry |
@@ -103,14 +103,14 @@ git push -u origin feature/mockup-refinement-aaron-design
 
 ---
 
-## Task 1: Sezione 1a — `nanolith-runthrough-error-states.html` (+ 6 stati)
+## Task 1: Sezione 1a — `librogame-runthrough-error-states.html` (+ 6 stati)
 
 **Files:**
-- Modify: `admin-mockups/design_files/nanolith-runthrough-error-states.html`
+- Modify: `admin-mockups/design_files/librogame-runthrough-error-states.html`
 
 - [ ] **Step 1.1: Read existing file**
 
-Run via Read tool: `admin-mockups/design_files/nanolith-runthrough-error-states.html`
+Run via Read tool: `admin-mockups/design_files/librogame-runthrough-error-states.html`
 
 Identificare:
 - Pattern attuale per le 4 cellule esistenti (stream-timeout, OCR-fail, LLM-503, segmentation-fail)
@@ -123,7 +123,7 @@ Brief da copia-incollare in Claude Design Web:
 
 ```
 Contesto: sto estendendo il mockup HTML esistente
-`admin-mockups/design_files/nanolith-runthrough-error-states.html` aggiungendo
+`admin-mockups/design_files/librogame-runthrough-error-states.html` aggiungendo
 6 nuovi stati di errore al pattern cross-cutting già usato per le 4 celle
 esistenti (stream-timeout, OCR-fail, LLM-503, segmentation-fail).
 
@@ -185,20 +185,20 @@ del grid container. Verifica preservazione delle 4 cellule esistenti.
 
 Run:
 ```bash
-grep -c "ocr-low-confidence\|photo-blur-pre-ocr\|translation-timeout\|source-lang-unknown\|network-mid-ocr\|quota-exhausted-mid-stream" admin-mockups/design_files/nanolith-runthrough-error-states.html
+grep -c "ocr-low-confidence\|photo-blur-pre-ocr\|translation-timeout\|source-lang-unknown\|network-mid-ocr\|quota-exhausted-mid-stream" admin-mockups/design_files/librogame-runthrough-error-states.html
 ```
 
 Expected: `6` (un match per stato).
 
 ```bash
-grep -c "stream-timeout\|OCR-fail\|LLM-503\|segmentation-fail" admin-mockups/design_files/nanolith-runthrough-error-states.html
+grep -c "stream-timeout\|OCR-fail\|LLM-503\|segmentation-fail" admin-mockups/design_files/librogame-runthrough-error-states.html
 ```
 
 Expected: `4` (preservazione cellule esistenti).
 
 - [ ] **Step 1.6: Visual review**
 
-Aprire `admin-mockups/design_files/nanolith-runthrough-error-states.html` nel browser. Verificare:
+Aprire `admin-mockups/design_files/librogame-runthrough-error-states.html` nel browser. Verificare:
 - 10 cellule totali visibili (4 esistenti + 6 nuove)
 - Light + dark toggle funziona su tutte
 - Mobile 375 + desktop 1280 (resize browser)
@@ -207,20 +207,20 @@ Aprire `admin-mockups/design_files/nanolith-runthrough-error-states.html` nel br
 - [ ] **Step 1.7: Commit**
 
 ```bash
-git add admin-mockups/design_files/nanolith-runthrough-error-states.html
+git add admin-mockups/design_files/librogame-runthrough-error-states.html
 git commit -m "feat(mockup): sezione 1a — 6 nuovi stati OCR/AI in error-states (#491-follow-up)"
 ```
 
 ---
 
-## Task 2: Sezione 1b — `nanolith-runthrough-translate-viewer.html` (+ loading multi-step + reader mode + wake-lock)
+## Task 2: Sezione 1b — `librogame-runthrough-translate-viewer.html` (+ loading multi-step + reader mode + wake-lock)
 
 **Files:**
-- Modify: `admin-mockups/design_files/nanolith-runthrough-translate-viewer.html`
+- Modify: `admin-mockups/design_files/librogame-runthrough-translate-viewer.html`
 
 - [ ] **Step 2.1: Read existing file**
 
-Run via Read tool: `admin-mockups/design_files/nanolith-runthrough-translate-viewer.html`
+Run via Read tool: `admin-mockups/design_files/librogame-runthrough-translate-viewer.html`
 
 Identificare:
 - Layout principale (header, body translate, footer)
@@ -231,7 +231,7 @@ Identificare:
 
 ```
 Contesto: estendo il mockup esistente
-`admin-mockups/design_files/nanolith-runthrough-translate-viewer.html` con:
+`admin-mockups/design_files/librogame-runthrough-translate-viewer.html` con:
 A) Loading sequence multi-step
 B) Reader mode toggle
 C) Wake-lock indicator
@@ -300,7 +300,7 @@ Variants viewport:
 Latency targets (commenti HTML head):
 - Step 1 < 2s · Step 2 < 5s · Step 3 < 10s · Step 4 < 2s · Total < 17s
 - Hard timeout 20s totale → trigger `translation-timeout` (vedi
-  nanolith-runthrough-error-states.html)
+  librogame-runthrough-error-states.html)
 
 Light + dark mode. Preservare stato happy-path attuale (foto + paragrafo
 tradotto) come "step finale dopo loading".
@@ -319,19 +319,19 @@ contrasto AAA. Preservare happy-path esistente.
 
 Run:
 ```bash
-grep -c "Caricamento foto\|Sto leggendo\|Sto traducendo\|Cerco parole" admin-mockups/design_files/nanolith-runthrough-translate-viewer.html
+grep -c "Caricamento foto\|Sto leggendo\|Sto traducendo\|Cerco parole" admin-mockups/design_files/librogame-runthrough-translate-viewer.html
 ```
 
 Expected: `4` (un match per label step).
 
 ```bash
-grep -c "reader-mode-enabled\|wake-lock\|max-width.*65ch" admin-mockups/design_files/nanolith-runthrough-translate-viewer.html
+grep -c "reader-mode-enabled\|wake-lock\|max-width.*65ch" admin-mockups/design_files/librogame-runthrough-translate-viewer.html
 ```
 
 Expected: `≥3` (almeno un match per ognuno dei 3 pattern).
 
 ```bash
-grep "prefers-reduced-motion" admin-mockups/design_files/nanolith-runthrough-translate-viewer.html
+grep "prefers-reduced-motion" admin-mockups/design_files/librogame-runthrough-translate-viewer.html
 ```
 
 Expected: almeno 1 occorrenza.
@@ -347,22 +347,22 @@ Browser apre file. Verificare:
 - [ ] **Step 2.7: Commit**
 
 ```bash
-git add admin-mockups/design_files/nanolith-runthrough-translate-viewer.html
+git add admin-mockups/design_files/librogame-runthrough-translate-viewer.html
 git commit -m "feat(mockup): sezione 1b — loading multi-step + reader mode + wake-lock in translate-viewer"
 ```
 
 ---
 
-## Task 3: Sezione 1c — `nanolith-runthrough-glossary-editor.html` + jsx twin (+ 4 sub-screen)
+## Task 3: Sezione 1c — `librogame-runthrough-glossary-editor.html` + jsx twin (+ 4 sub-screen)
 
 **Files:**
-- Modify: `admin-mockups/design_files/nanolith-runthrough-glossary-editor.html`
+- Modify: `admin-mockups/design_files/librogame-runthrough-glossary-editor.html`
 - Modify: `admin-mockups/design_files/sp6-libro-game-glossary-editor.jsx`
 
 - [ ] **Step 3.1: Read existing files**
 
 Run via Read tool su entrambi:
-- `admin-mockups/design_files/nanolith-runthrough-glossary-editor.html`
+- `admin-mockups/design_files/librogame-runthrough-glossary-editor.html`
 - `admin-mockups/design_files/sp6-libro-game-glossary-editor.jsx`
 
 Identificare: layout glossary index attuale, edit/add patterns.
@@ -371,7 +371,7 @@ Identificare: layout glossary index attuale, edit/add patterns.
 
 ```
 Contesto: estendo il mockup esistente
-`admin-mockups/design_files/nanolith-runthrough-glossary-editor.html` (e il
+`admin-mockups/design_files/librogame-runthrough-glossary-editor.html` (e il
 twin jsx `sp6-libro-game-glossary-editor.jsx`) per supportare context-aware
 glossary entries.
 
@@ -449,7 +449,7 @@ diviso.
 
 - [ ] **Step 3.4: Integrate HTML output**
 
-Edit tool su `nanolith-runthrough-glossary-editor.html` per aggiungere 4
+Edit tool su `librogame-runthrough-glossary-editor.html` per aggiungere 4
 sub-screen + commento modello dati.
 
 - [ ] **Step 3.5: Integrate jsx output**
@@ -460,13 +460,13 @@ Edit tool su `sp6-libro-game-glossary-editor.jsx` per sync.
 
 Run:
 ```bash
-grep -c "conflict-dialog\|bulk-import-card\|variant-expansion\|filter-strip" admin-mockups/design_files/nanolith-runthrough-glossary-editor.html
+grep -c "conflict-dialog\|bulk-import-card\|variant-expansion\|filter-strip" admin-mockups/design_files/librogame-runthrough-glossary-editor.html
 ```
 
 Expected: `≥4`.
 
 ```bash
-grep "context_similarity\|0.85\|contexts:" admin-mockups/design_files/nanolith-runthrough-glossary-editor.html
+grep "context_similarity\|0.85\|contexts:" admin-mockups/design_files/librogame-runthrough-glossary-editor.html
 ```
 
 Expected: ≥3 occorrenze.
@@ -489,7 +489,7 @@ Browser apre HTML. Verifica:
 - [ ] **Step 3.8: Commit**
 
 ```bash
-git add admin-mockups/design_files/nanolith-runthrough-glossary-editor.html admin-mockups/design_files/sp6-libro-game-glossary-editor.jsx
+git add admin-mockups/design_files/librogame-runthrough-glossary-editor.html admin-mockups/design_files/sp6-libro-game-glossary-editor.jsx
 git commit -m "feat(mockup): sezione 1c — glossary context-aware (conflict/merge/variants) + jsx sync"
 ```
 
@@ -498,21 +498,21 @@ git commit -m "feat(mockup): sezione 1c — glossary context-aware (conflict/mer
 ## Task 4: Sezione 1d — `translate-viewer.html` (multi-lang) + `photo-upload.html` (entry point manual) + jsx twin
 
 **Files:**
-- Modify: `admin-mockups/design_files/nanolith-runthrough-translate-viewer.html` (estende Task 2)
+- Modify: `admin-mockups/design_files/librogame-runthrough-translate-viewer.html` (estende Task 2)
 - Modify: `admin-mockups/design_files/sp6-libro-game-photo-upload.html`
 - Modify: `admin-mockups/design_files/sp6-libro-game-translation-viewer.jsx`
 
 - [ ] **Step 4.1: Read existing files**
 
 Run via Read tool su:
-- `admin-mockups/design_files/nanolith-runthrough-translate-viewer.html` (post Task 2)
+- `admin-mockups/design_files/librogame-runthrough-translate-viewer.html` (post Task 2)
 - `admin-mockups/design_files/sp6-libro-game-photo-upload.html`
 - `admin-mockups/design_files/sp6-libro-game-translation-viewer.jsx`
 
 - [ ] **Step 4.2: Prepare Claude Design Web brief**
 
 ```
-Contesto: estendo `nanolith-runthrough-translate-viewer.html` (post Task 2
+Contesto: estendo `librogame-runthrough-translate-viewer.html` (post Task 2
 con loading sequence) aggiungendo support per multi-language source +
 manual input fallback. Estendo anche `sp6-libro-game-photo-upload.html`
 con entry-point al manual mode.
@@ -587,7 +587,7 @@ Engineer pause.
 - [ ] **Step 4.4: Integrate HTML/JSX output**
 
 3 file da modificare:
-- `nanolith-runthrough-translate-viewer.html` (+ 3 sub-screen)
+- `librogame-runthrough-translate-viewer.html` (+ 3 sub-screen)
 - `sp6-libro-game-photo-upload.html` (+ kebab menu)
 - `sp6-libro-game-translation-viewer.jsx` (sync)
 
@@ -595,13 +595,13 @@ Engineer pause.
 
 Run:
 ```bash
-grep -c "lang-detection-badge\|lang-override-modal\|manual-input-mode" admin-mockups/design_files/nanolith-runthrough-translate-viewer.html
+grep -c "lang-detection-badge\|lang-override-modal\|manual-input-mode" admin-mockups/design_files/librogame-runthrough-translate-viewer.html
 ```
 
 Expected: `≥3`.
 
 ```bash
-grep -c "EN\|FR\|DE\|ES\|IT" admin-mockups/design_files/nanolith-runthrough-translate-viewer.html
+grep -c "EN\|FR\|DE\|ES\|IT" admin-mockups/design_files/librogame-runthrough-translate-viewer.html
 ```
 
 Expected: ≥5 occorrenze.
@@ -627,7 +627,7 @@ Browser su entrambi i file. Verifica:
 - [ ] **Step 4.7: Commit**
 
 ```bash
-git add admin-mockups/design_files/nanolith-runthrough-translate-viewer.html admin-mockups/design_files/sp6-libro-game-photo-upload.html admin-mockups/design_files/sp6-libro-game-translation-viewer.jsx
+git add admin-mockups/design_files/librogame-runthrough-translate-viewer.html admin-mockups/design_files/sp6-libro-game-photo-upload.html admin-mockups/design_files/sp6-libro-game-translation-viewer.jsx
 git commit -m "feat(mockup): sezione 1d — multi-lang source + manual input fallback + jsx sync"
 ```
 
@@ -825,7 +825,7 @@ git commit -m "feat(mockup): sezione 2 (B11b) — chat-fullscreen page-mock + js
 Run via Read tool su:
 - `admin-mockups/design_files/01-screens.html` (riferimento dev-fixture matrix
   phone-frame grid)
-- `admin-mockups/design_files/nanolith-runthrough-error-states.html` (post
+- `admin-mockups/design_files/librogame-runthrough-error-states.html` (post
   Task 1, riferimento pattern errors)
 
 - [ ] **Step 6.2: Prepare Claude Design Web brief**
@@ -855,7 +855,7 @@ ROUTE × STATI (riempi ogni cell con phone-frame mockup):
 Contenuto per cell (testi IT, no placeholder generici):
 
 A1 (translate empty): icon 📷 + "Fotografa una pagina" + CTA "Apri camera"
-A2 (translate error): riusa pattern nanolith-runthrough-error-states ocr-fail
+A2 (translate error): riusa pattern librogame-runthrough-error-states ocr-fail
 A3 (translate loading): 4-step skeleton (riusa Task 2 sezione 1b)
 A4 (translate permission): 🔒 + "Quota OCR esaurita" + tier badge "Pro" +
    CTA "Esplora piani"
@@ -908,9 +908,9 @@ Empty: icon 96px centrale + gradient bg entity color (color depende dalla
        game-nights/sessions → rose · shared-games/discover → teal ·
        notifications → blue) + tagline IT + primary CTA per uscire.
 
-Error: riuso pattern nanolith-runthrough-error-states (icon + message
+Error: riuso pattern librogame-runthrough-error-states (icon + message
        umano + retry + report-bug). Annota in commento HTML head
-       `<!-- error: see nanolith-runthrough-error-states -->`.
+       `<!-- error: see librogame-runthrough-error-states -->`.
 
 Loading skeleton: 3-row card dimensionato al contenuto reale. Shimmer-sweep
                   gradient. `prefers-reduced-motion` → fallback statico.
@@ -933,7 +933,7 @@ ILLUSTRATION ECONOMY: ~5 illustration uniche riusabili (tema):
 - "compass": shared-games+discover
 
 REUSE TRACE: commento HTML head per ogni pattern che linka all'origine
-(es. `<!-- pattern: see nanolith-runthrough-translate-viewer.html -->`).
+(es. `<!-- pattern: see librogame-runthrough-translate-viewer.html -->`).
 ```
 
 - [ ] **Step 6.3: User executes Claude Design Web**
@@ -1028,6 +1028,29 @@ Edit tool su sezioni rilevanti:
 Edit tool: cambia "Last updated: 2026-05-18" → "Last updated: 2026-05-23"
 (riga ~9).
 
+- [ ] **Step 7.4b: Fix debito naming preesistente nanolith → librogame**
+
+I file `librogame-runthrough-*.html` (13 file) sono elencati erroneamente in
+MOCKUPS_INDEX righe 120-132 come `nanolith-runthrough-*`. Il filesystem ha
+i nomi corretti `librogame-*` (eccezione: `nanolith-nav-{bottom-mobile,
+chat-panel,topbar}.html` esistono come tali).
+
+Run:
+```bash
+grep -c "nanolith-runthrough" admin-mockups/MOCKUPS_INDEX.md
+```
+
+Expected: `13` prima del fix.
+
+Edit tool con `replace_all=true`: `nanolith-runthrough` → `librogame-runthrough`.
+
+Validate:
+```bash
+grep -c "nanolith-runthrough" admin-mockups/MOCKUPS_INDEX.md
+```
+
+Expected: `0` dopo il fix.
+
 - [ ] **Step 7.5: Validate AC via grep**
 
 Run:
@@ -1096,7 +1119,28 @@ esistente:
 > `docs/superpowers/specs/2026-05-23-mockup-refinement-aaron-core-design.md`.
 ```
 
-- [ ] **Step 8.5: Validate AC via grep**
+- [ ] **Step 8.5: Fix debito naming preesistente nanolith → librogame**
+
+Stesso debito di Task 7 Step 7.4b. La matrix ha 15 occorrenze di
+`nanolith-runthrough` da rimappare.
+
+Run:
+```bash
+grep -c "nanolith-runthrough" docs/for-developers/frontend/v2-migration-matrix.md
+```
+
+Expected: `15` prima del fix.
+
+Edit tool con `replace_all=true`: `nanolith-runthrough` → `librogame-runthrough`.
+
+Validate:
+```bash
+grep -c "nanolith-runthrough" docs/for-developers/frontend/v2-migration-matrix.md
+```
+
+Expected: `0` dopo il fix.
+
+- [ ] **Step 8.6: Validate AC via grep**
 
 Run:
 ```bash
@@ -1105,7 +1149,7 @@ grep -c "chat-fullscreen\|state-matrix\|2026-05-23" docs/for-developers/frontend
 
 Expected: ≥3 occorrenze.
 
-- [ ] **Step 8.6: Commit**
+- [ ] **Step 8.7: Commit**
 
 ```bash
 git add docs/for-developers/frontend/v2-migration-matrix.md

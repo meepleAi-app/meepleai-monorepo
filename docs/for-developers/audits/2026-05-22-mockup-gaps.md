@@ -192,10 +192,10 @@ reali** la coverage di stati canonici è disomogenea:
 | Stato | Coverage attuale | Gap principali |
 |---|---|---|
 | **Empty state** | `/library`, `/library/wishlist`, `/discover` ✓ | mancano: `/play-records`, `/editor/agent-proposals`, `/notifications`, `/toolkit/history` |
-| **Error state** | `nanolith-runthrough-error-states` (chat/translate/encounter only) | mancano: `/sessions/live` SSE-disconnect, `/upload` PDF-corrupt, `/games/[id]` no-data |
+| **Error state** | `librogame-runthrough-error-states` (chat/translate/encounter only) | mancano: `/sessions/live` SSE-disconnect, `/upload` PDF-corrupt, `/games/[id]` no-data |
 | **Loading skeleton** | Componenti impl (es. `WishlistSkeleton`), non specificati in mockup | discrepanza spec/impl globale — Wiegers traceability |
 | **Permission-denied** | `auth-flow.html` (login only) | mancano: tier-locked features, suspended-account, expired-session inline |
-| **Network-offline** | `nanolith-runthrough-error-states` parziale | mancano: offline cache per `/library`, `/play-records`, `/notifications` |
+| **Network-offline** | `librogame-runthrough-error-states` parziale | mancano: offline cache per `/library`, `/play-records`, `/notifications` |
 
 **Recommendation**: aprire `[Design v1 · B18] Mockup State Matrix
 (empty/error/loading/permission/offline cross-route)` come fixture di tipo

@@ -42,14 +42,14 @@ Aaron non è isolato. Le actor variations attive influenzano i mockup:
 **Tradurre paragrafo da foto** del libro fisico.
 
 Cluster di mockup critici per il JTBD #1:
-- `nanolith-runthrough-translate-viewer.html` (page-mock)
+- `librogame-runthrough-translate-viewer.html` (page-mock)
 - `sp6-libro-game-photo-upload.html` (camera step)
-- `nanolith-runthrough-glossary-editor.html` (glossary overlay)
+- `librogame-runthrough-glossary-editor.html` (glossary overlay)
 - `sp6-libro-game-translation-viewer.jsx` + `sp6-libro-game-glossary-editor.jsx` (twin jsx)
 
 ### 1.3 Gap identificati (4 aree)
 
-1. **Failure modes OCR/AI puntuali** — `nanolith-runthrough-error-states` copre solo OCR-fail/LLM-503 generici; mancano 6 stati specifici.
+1. **Failure modes OCR/AI puntuali** — `librogame-runthrough-error-states` copre solo OCR-fail/LLM-503 generici; mancano 6 stati specifici.
 2. **Loading + progress durante elaborazione** — mockup attuali non mostrano stato intermedio durante i ~17s di OCR+translate; rischio di hot-reload utente.
 3. **Glossario conflict / merge / context** — modello dati attuale non supporta varianti per book; manca conflict resolution UI e bulk import.
 4. **Multi-language source + manual fallback** — mockup assumono sorgente EN; nessun supporto per FR/DE/ES/IT o per manual text input quando foto fallisce.
@@ -68,7 +68,7 @@ Trade-off accettato: boardgamer game-night gap (B11/B17) restano non coperti; US
 
 ## 2. Section 1a — Failure modes OCR/AI puntuali
 
-**File target**: estensione di `admin-mockups/design_files/nanolith-runthrough-error-states.html` (NO nuovo file — preserva pattern cross-cutting PR #1056).
+**File target**: estensione di `admin-mockups/design_files/librogame-runthrough-error-states.html` (NO nuovo file — preserva pattern cross-cutting PR #1056).
 
 **Route impattata**: `/library/[gameId]/play/[campaignId]/translate`
 
@@ -81,7 +81,7 @@ Trade-off accettato: boardgamer game-night gap (B11/B17) restano non coperti; US
 | `translation-timeout` | AI translate abort dopo 20s | Banner *"Traduzione lenta — riprova o modifica manualmente"* + 2 CTA |
 | `source-lang-unknown` | LLM ritorna `confidence_lang < 0.5` | Dialog *"Lingua non riconosciuta. Conferma:"* + dropdown 5 lingue |
 | `network-mid-ocr` | Loss connection durante upload foto | Banner persistent *"Connessione persa — foto salvata localmente, riprova quando torni online"* |
-| `quota-exhausted-mid-stream` | Token quota termina durante AI translate | Bridge a `nanolith-runthrough-quota-credits` overlay + retain OCR-decoded paragraph come fallback (no token aggiuntivi consumati) |
+| `quota-exhausted-mid-stream` | Token quota termina durante AI translate | Bridge a `librogame-runthrough-quota-credits` overlay + retain OCR-decoded paragraph come fallback (no token aggiuntivi consumati) |
 
 **Pattern decisions**:
 - **Retry granularity**: per `OCR-fail` → retry solo OCR step (foto in cache locale); per `LLM-503` → retry solo AI step (OCR result conservato). MAI retry-from-scratch automatico.
@@ -89,7 +89,7 @@ Trade-off accettato: boardgamer game-night gap (B11/B17) restano non coperti; US
 - **Fallback path**: ogni failure ha minimo 1 fallback non-distruttivo (manual input, save-and-retry, alternative provider). MAI dead-end.
 
 **Acceptance criteria**:
-- [ ] 6 nuove cellule nel `nanolith-runthrough-error-states.html`
+- [ ] 6 nuove cellule nel `librogame-runthrough-error-states.html`
 - [ ] Ogni cellula documenta: trigger condition, recovery action, fallback path
 - [ ] Light + dark mode
 - [ ] MOCKUPS_INDEX resta `component-mock`
@@ -98,7 +98,7 @@ Trade-off accettato: boardgamer game-night gap (B11/B17) restano non coperti; US
 
 ## 3. Section 1b — Loading + progress durante elaborazione
 
-**File target**: estensione di `admin-mockups/design_files/nanolith-runthrough-translate-viewer.html`.
+**File target**: estensione di `admin-mockups/design_files/librogame-runthrough-translate-viewer.html`.
 
 **Loading sequence multi-step** (4 step nominati, non % anonima):
 
@@ -144,7 +144,7 @@ Trade-off accettato: boardgamer game-night gap (B11/B17) restano non coperti; US
 
 ## 4. Section 1c — Glossario conflict / merge / context
 
-**File target**: estensione di `nanolith-runthrough-glossary-editor.html` (component-mock) + twin `sp6-libro-game-glossary-editor.jsx`.
+**File target**: estensione di `librogame-runthrough-glossary-editor.html` (component-mock) + twin `sp6-libro-game-glossary-editor.jsx`.
 
 **Modello dati proposto** (riflesso nei mockup):
 
@@ -191,7 +191,7 @@ GlossaryEntry {
 
 ## 5. Section 1d — Multi-language source + manual fallback
 
-**File target**: estensione di `nanolith-runthrough-translate-viewer.html` + `sp6-libro-game-photo-upload.html` + twin `sp6-libro-game-translation-viewer.jsx`.
+**File target**: estensione di `librogame-runthrough-translate-viewer.html` + `sp6-libro-game-photo-upload.html` + twin `sp6-libro-game-translation-viewer.jsx`.
 
 **Source language model**:
 
@@ -327,7 +327,7 @@ Hero *"Inizia una conversazione"* + 4 quick-starter cards **adattate per agent t
 
 **Empty**: icon 96px centrale + gradient bg entity color + tagline IT route-specific + primary CTA per uscire (mai dead-end).
 
-**Error**: riuso `nanolith-runthrough-error-states` (icon + message umano + retry + report-bug). Annotato in commento HTML head per traceability.
+**Error**: riuso `librogame-runthrough-error-states` (icon + message umano + retry + report-bug). Annotato in commento HTML head per traceability.
 
 **Loading skeleton**: 3-row card dimensionato al contenuto reale (3 game-cards per `/shared-games`, 7-day calendar per `/game-nights`, ecc.). Shimmer-sweep gradient. `prefers-reduced-motion` → fallback statico.
 
@@ -379,7 +379,7 @@ Hero *"Inizia una conversazione"* + 4 quick-starter cards **adattate per agent t
 ## 9. Acceptance criteria globali
 
 - [ ] 6 sezioni mockup-work consegnate (1a, 1b, 1c, 1d, 2, 3)
-- [ ] 3 file modificati: `nanolith-runthrough-error-states.html`, `nanolith-runthrough-translate-viewer.html`, `nanolith-runthrough-glossary-editor.html` + 2 twin jsx aggiornati
+- [ ] 3 file modificati: `librogame-runthrough-error-states.html`, `librogame-runthrough-translate-viewer.html`, `librogame-runthrough-glossary-editor.html` + 2 twin jsx aggiornati
 - [ ] 2 file nuovi: `chat-fullscreen.html`, `state-matrix.html` (+ jsx twins)
 - [ ] `admin-mockups/MOCKUPS_INDEX.md` aggiornato (count: 48 page-mock → 49, 16 component-mock invariato, 10 dev-fixture → 11)
 - [ ] `docs/for-developers/frontend/v2-migration-matrix.md` route mapping aggiornato
@@ -413,4 +413,4 @@ Le seguenti decisioni emergono dal design mockup ma richiedono follow-up impleme
 - [`docs/for-developers/frontend/v2-migration-matrix.md`](../../for-developers/frontend/v2-migration-matrix.md) — route→mockup matrix
 - [`docs/superpowers/specs/2026-05-07-libro-game-nanolith-demo-design.md`](./2026-05-07-libro-game-nanolith-demo-design.md) — Iter 1 design Aaron persona
 - Issue #491 (closure parziale chat full-screen) · #492 (closure false-positive community)
-- PR #1056 (`nanolith-runthrough-error-states` pattern) · PR #551 (`useThreadMessages` hook)
+- PR #1056 (`librogame-runthrough-error-states` pattern) · PR #551 (`useThreadMessages` hook)

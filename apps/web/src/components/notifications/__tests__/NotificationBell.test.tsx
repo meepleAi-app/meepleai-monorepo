@@ -17,23 +17,23 @@ import userEvent from '@testing-library/user-event';
 import { NotificationBell } from '../NotificationBell';
 import { useNotificationStore } from '@/stores/notification/store';
 
-// Mock NotificationCenter to avoid IntlProvider requirement in bell unit tests
+// Mock NotificationCenter Sheet to avoid IntlProvider requirement in bell unit
+// tests; renders a testable marker when open. The bell drives `open` via its
+// internal state. Issue #1453: previously two separate vi.mock() registrations
+// for this path coexisted (one returning null unconditionally, one honoring
+// `open`). vi.mock hoisting deduplicates by path, so the result depended on
+// declaration order — chromatic 17's transitive bundler shuffle exposed it.
 vi.mock('@/components/notifications/NotificationCenter', () => ({
-  NotificationCenter: () => null,
+  NotificationCenter: ({ open }: { open: boolean; onOpenChange: (v: boolean) => void }) =>
+    open ? (
+      <div data-testid="notification-center-mock" role="dialog" aria-label="Notifications" />
+    ) : null,
 }));
 
 // Track if useNotificationSSE was called
 const mockUseNotificationSSE = vi.fn();
 vi.mock('@/hooks/useNotificationSSE', () => ({
   useNotificationSSE: (...args: unknown[]) => mockUseNotificationSSE(...args),
-}));
-
-// Mock NotificationCenter Sheet to isolate bell tests
-vi.mock('@/components/notifications/NotificationCenter', () => ({
-  NotificationCenter: ({ open }: { open: boolean; onOpenChange: (v: boolean) => void }) =>
-    open ? (
-      <div data-testid="notification-center-mock" role="dialog" aria-label="Notifications" />
-    ) : null,
 }));
 
 // Mock store with all selectors

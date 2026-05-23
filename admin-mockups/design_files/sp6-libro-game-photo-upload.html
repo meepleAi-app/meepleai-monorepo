@@ -4,6 +4,23 @@
   Route: /gamebook/upload
   Descrizione: Wizard fotografare manuale: scegli gioco → scatta pagine → indicizzazione.
   Persona: Sara, 32, casual italian gamer / GM al tavolo (mobile-first, camera nativa).
+
+  ─── Task 4 · Sezione 1d update (2026-05-23) — Kebab menu "Digita manualmente" ───
+  Camera step (Step 2) top toolbar ora include kebab menu ⋮ (top-right) con voce primaria
+  "Digita manualmente" che naviga a `librogame-runthrough-translate-viewer.html?mode=manual`.
+
+  Questo è il punto di ingresso #2 della triple-entry discoverability per manual-input-mode:
+    1. CTA "Digita manualmente" in state-F `photo-blur-pre-ocr`
+       (librogame-runthrough-error-states.html sez 1a)
+    2. Kebab menu ⋮ del camera step (qui · sp6-libro-game-photo-upload.html sez 1d) ← THIS FILE
+    3. Empty state card "Libro non a portata? Digita il paragrafo"
+       (librogame-runthrough-translate-viewer.html state-M, sez 1d)
+
+  Cross-ref: vedi state-M `manual-input-mode` in librogame-runthrough-translate-viewer.html
+  per layout completo (textarea max 2000 char + counter + lang dropdown + book ref chip).
+
+  Quando Sara è nel camera step ma non può fotografare (libro non a portata, camera permission
+  negata, foto sempre sfocate) → kebab ⋮ → "Digita manualmente" → translate?mode=manual.
 -->
 <html lang="it" data-theme="light">
 <head>
@@ -155,7 +172,7 @@
     <h1 style="font-size:var(--fs-3xl);margin-bottom:var(--s-2);">SP6 · B · Photo Upload — 3-step wizard</h1>
     <p style="color:var(--text-sec);font-size:var(--fs-md);max-width:760px;margin-bottom:var(--s-7);">
       Step 1 scegli gioco · Step 2 scatta pagine · Step 3 indicizzazione.
-      11 stati totali. Mobile 375 canonical + desktop 1440 (drag-drop fallback).
+      12 stati totali (incl. Task 4 sez 1d kebab "Digita manualmente"). Mobile 375 canonical + desktop 1440 (drag-drop fallback).
     </p>
 
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:32px;">
@@ -264,8 +281,10 @@
    Descrizione: Wizard 3-step per fotografare manuale (scegli gioco → scatta pagine → indicizzazione).
    Persona: Sara, 32, casual italian gamer / GM al tavolo (mobile-first, camera nativa).
 
-   Stati: 11 totali distribuiti su 3 step, vedi STATES array in fondo file.
-   Gherkin coperti: G1.2, G1.3, G1.4, G1.5, G1.6
+   Stati: 12 totali distribuiti su 3 step, vedi STATES array in fondo file.
+   Gherkin coperti: G1.2, G1.3, G1.4, G1.5, G1.6 · TASK4-1d (kebab "Digita manualmente")
+   Task 4 sez 1d (2026-05-23): nuovo state `2-kebab` con kebab menu ⋮ + voce primaria
+   "Digita manualmente" che naviga a `translate-viewer.html?mode=manual` (triple-entry #2).
    =================================================================== */
 
 const { useState, useEffect } = React;
@@ -531,12 +550,15 @@ function Step1_BGGLoading() {
    STEP 2 — Scatta pagine
    ─────────────────────────────────────────────────────────────── */
 
-function CameraViewfinder({ variant, capturedCount }) {
-  // variant: ready | low-light | detection-failed | denied
+function CameraViewfinder({ variant, capturedCount, kebabOpen = false }) {
+  // variant: ready | low-light | detection-failed | denied | kebab-open
   // Real impl: getUserMedia / native file picker
-  const isOk = variant === 'ready';
-  const isLow = variant === 'low-light';
-  const isFailed = variant === 'detection-failed';
+  // kebabOpen: Task 4 sez 1d — mostra menu "Digita manualmente" → ?mode=manual
+  const showKebab = variant === 'kebab-open' || kebabOpen;
+  const effectiveVariant = variant === 'kebab-open' ? 'ready' : variant;
+  const isOk = effectiveVariant === 'ready';
+  const isLow = effectiveVariant === 'low-light';
+  const isFailed = effectiveVariant === 'detection-failed';
 
   return (
     <div className="pu-camera">
@@ -547,7 +569,61 @@ function CameraViewfinder({ variant, capturedCount }) {
           <span aria-hidden="true">📸</span>
           <span style={{ fontVariantNumeric: 'tabular-nums' }}>{capturedCount} / 50</span>
         </div>
-        <button type="button" className="pu-cam-icon" aria-label="Flash">⚡</button>
+        {/* Right cluster: flash + kebab menu (Task 4 sez 1d entry-point #2/3 manual-input) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button type="button" className="pu-cam-icon" aria-label="Flash">⚡</button>
+          <div className="pu-cam-kebab-wrap">
+            <button
+              type="button"
+              className="pu-cam-kebab"
+              aria-label="Altre azioni"
+              aria-haspopup="menu"
+              aria-expanded={showKebab}
+            >
+              ⋮
+            </button>
+            {showKebab && (
+              <div className="pu-cam-kebab-menu" role="menu" aria-label="Altre azioni camera">
+                {/* Primary entry — Task 4 sez 1d manual-input-mode entry-point #2 */}
+                <button
+                  type="button"
+                  className="pu-cam-kebab-item primary shortcut"
+                  role="menuitem"
+                  onClick={() => { window.location.href = 'librogame-runthrough-translate-viewer.html?mode=manual'; /* DEMO-NAV: triple-entry #2 → ?mode=manual */ }}
+                >
+                  <span className="icon">⌨️</span>
+                  <span className="l">
+                    <span className="v">Digita manualmente</span>
+                    <span className="s">Salta foto · vai a ?mode=manual</span>
+                  </span>
+                </button>
+                <div className="pu-cam-kebab-divider" />
+                <button type="button" className="pu-cam-kebab-item" role="menuitem">
+                  <span className="icon">🖼️</span>
+                  <span className="l">
+                    <span className="v">Carica dalla galleria</span>
+                    <span className="s">Scegli foto già scattate</span>
+                  </span>
+                </button>
+                <button type="button" className="pu-cam-kebab-item" role="menuitem">
+                  <span className="icon">⚙️</span>
+                  <span className="l">
+                    <span className="v">Impostazioni camera</span>
+                    <span className="s">Risoluzione · auto-focus</span>
+                  </span>
+                </button>
+                <div className="pu-cam-kebab-divider" />
+                <button type="button" className="pu-cam-kebab-item" role="menuitem">
+                  <span className="icon">❓</span>
+                  <span className="l">
+                    <span className="v">Aiuto</span>
+                    <span className="s">Suggerimenti per foto migliori</span>
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Viewfinder */}
@@ -667,10 +743,12 @@ function CameraViewfinder({ variant, capturedCount }) {
   );
 }
 
-function Step2_Ready()   { return <CameraViewfinder variant="ready" capturedCount={0}/>; }
+function Step2_Ready()    { return <CameraViewfinder variant="ready" capturedCount={0}/>; }
 function Step2_Capturing(){ return <CameraViewfinder variant="ready" capturedCount={8}/>; }
 function Step2_LowLight() { return <CameraViewfinder variant="low-light" capturedCount={3}/>; }
 function Step2_Failed()   { return <CameraViewfinder variant="detection-failed" capturedCount={2}/>; }
+/* Task 4 sez 1d · kebab menu aperto con "Digita manualmente" → ?mode=manual */
+function Step2_KebabOpen(){ return <CameraViewfinder variant="kebab-open" capturedCount={3}/>; }
 
 function Step2_Denied() {
   return (
@@ -925,6 +1003,7 @@ function Screen({ stateId, desktop }) {
   else if (stateId === '2-low-light') content = desktop ? <DesktopDropFallback step={2}/> : <Step2_LowLight/>;
   else if (stateId === '2-failed') content = desktop ? <DesktopDropFallback step={2}/> : <Step2_Failed/>;
   else if (stateId === '2-denied') content = <Step2_Denied/>;
+  else if (stateId === '2-kebab') content = desktop ? <DesktopDropFallback step={2}/> : <Step2_KebabOpen/>;
   else if (stateId === '3-progress') content = <IndexingScreen variant="in-progress"/>;
   else if (stateId === '3-partial') content = <IndexingScreen variant="partial-fail"/>;
   else if (stateId === '3-complete') content = <IndexingScreen variant="complete"/>;
@@ -998,6 +1077,8 @@ const STATES = [
   { id: '2-low-light',   label: 'Step 2 · Light meter low',     step: 2, gherkin: 'G1.3' },
   { id: '2-failed',      label: 'Step 2 · Page detection failed', step: 2, gherkin: 'G1.3' },
   { id: '2-denied',      label: 'Step 2 · Permission denied',   step: 2 },
+  /* Task 4 sez 1d · kebab menu "Digita manualmente" → ?mode=manual (triple-entry #2) */
+  { id: '2-kebab',       label: 'Step 2 · Kebab menu · "Digita manualmente"', step: 2, gherkin: 'TASK4-1d' },
   // Step 3
   { id: '3-progress',    label: 'Step 3 · Indexing 24/50 mixed',step: 3 },
   { id: '3-partial',     label: 'Step 3 · Partial fail (3 retake)', step: 3 },
@@ -1268,6 +1349,51 @@ styleEl.textContent = `
     display: inline-flex; align-items: center; gap: 6px;
     padding: 6px 12px; border-radius: var(--r-pill);
     font-family: var(--f-mono); font-weight: 700; font-size: 12px; color: #fff;
+  }
+
+  /* Kebab menu (Task 4 sez 1d · top-right "Digita manualmente" entry-point #2/3) */
+  .pu-cam-kebab-wrap {
+    position: relative; display: inline-block;
+  }
+  .pu-cam-kebab {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(0,0,0,.5); border: none; color: #fff;
+    cursor: pointer; font-size: 20px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pu-cam-kebab-menu {
+    position: absolute; top: 44px; right: 0;
+    min-width: 240px; padding: 6px;
+    background: rgba(20, 18, 14, 0.96); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: var(--r-md); box-shadow: 0 12px 32px rgba(0,0,0,.5);
+    z-index: 10;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .pu-cam-kebab-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: var(--r-sm);
+    background: transparent; border: none; color: #fff;
+    font-family: var(--f-display); font-weight: var(--fw-semi); font-size: 13px;
+    cursor: pointer; text-align: left; width: 100%;
+  }
+  .pu-cam-kebab-item:hover { background: rgba(255,255,255,.08); }
+  .pu-cam-kebab-item.primary { color: hsl(38 95% 68%); }
+  .pu-cam-kebab-item.primary:hover { background: hsl(38 92% 50% / 0.18); }
+  .pu-cam-kebab-item .icon { font-size: 16px; flex-shrink: 0; }
+  .pu-cam-kebab-item .l { flex: 1; min-width: 0; display: block; }
+  .pu-cam-kebab-item .l .v { display: block; }
+  .pu-cam-kebab-item .l .s {
+    display: block; font-family: var(--f-mono);
+    font-size: 10px; font-weight: var(--fw-reg);
+    color: rgba(255,255,255,.55); margin-top: 2px;
+  }
+  .pu-cam-kebab-item.shortcut::after {
+    content: "→"; color: rgba(255,255,255,.45); font-size: 14px;
+  }
+  .pu-cam-kebab-divider {
+    height: 1px; background: rgba(255,255,255,.1);
+    margin: 4px 8px;
   }
 
   .pu-cam-vf {

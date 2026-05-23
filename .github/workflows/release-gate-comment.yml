@@ -34,7 +34,10 @@ concurrency:
 permissions:
   pull-requests: write
   issues: write
-  checks: read
+  # Phase 2a (#1444): `checks: write` is needed by publishVerdict() to create
+  # the synthesized 'Release-Gate Verdict' check-run on the PR head SHA.
+  # Phase 1 only needed `checks: read` for listForRef().
+  checks: write
   contents: read
 
 jobs:

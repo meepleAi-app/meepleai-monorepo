@@ -254,6 +254,26 @@ bot:
     owner: unknown
     override_path: exception-comment
 
+  # Phase 2a (#1444) — synthesize a single 'Release-Gate Verdict' check on
+  # release PRs. Read by scripts/release-gate/lib/conclusion-override.mjs +
+  # comment.mjs::publishVerdict(). When enabled, the bot posts the comment
+  # AND publishes a check-run via the Checks API:
+  #   - conclusion=success when no blocker/warning failures (informational
+  #     auto-bypassed)
+  #   - conclusion=neutral when warning-only failures
+  #   - conclusion=failure when ≥1 blocker
+  # Reviewers gate on this single check instead of N per-row noise.
+  #
+  # Dispatch gate: stays `false` until Phase 2c (#1446) accumulates 14 days
+  # of clean telemetry — see docs/for-developers/specs/2026-05-22-release-gate-phase2-overview.md.
+  # Earliest enable: 2026-06-08. Flip to `true` then; no code changes needed.
+  #
+  # Default-true semantics: when this sub-key is missing or `enabled` is
+  # absent, the bot defaults to publishing the verdict. We pin `false`
+  # explicitly here to honor the dispatch gate.
+  phase2a:
+    enabled: false
+
   # Phase 2c (#1446) — weekly Slack digest of warning-tier classifications.
   # Read by scripts/release-gate/build-digest.mjs + lib/digest-builder.mjs.
   phase2c:

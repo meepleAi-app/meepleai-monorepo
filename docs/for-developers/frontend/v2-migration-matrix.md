@@ -53,6 +53,14 @@ ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch st
 > da Tier S blanket erroneo a Tier L (3 hook indipendenti). `MOCKUPS_INDEX.md` synced
 > (page-mock 44→46, component-mock 14→15, Total 68→71).
 
+> **Updated 2026-05-23** (Mockup refinement Aaron core + cross-cutting, Phase 1):
+> added `chat-fullscreen.html` (page-mock, `/chat/[threadId]` + `/chat/new`),
+> `state-matrix.html` (dev-fixture, cross-route states 8×5), e estese 4 mockup
+> esistenti per cluster translate (error-states +6 stati, translate-viewer
+> +loading+reader-mode+multi-lang, glossary-editor +context-aware,
+> photo-upload +manual-mode entry). Spec:
+> `docs/superpowers/specs/2026-05-23-mockup-refinement-aaron-core-design.md`.
+
 ## Scope and ground rules
 
 - **In scope**: 83 feature components extracted from `admin-mockups/design_files/sp4-*.jsx`
@@ -127,8 +135,8 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 | `/toolkits/[id]` | **M** | `sp4-toolkit-detail.html` | Toolkit summary + version timeline | pending |
 | `/gamebook` | **M** | `sp6-libro-game-index.html` | Libro-game index: Hero + QuotaWidget + Card grid + EmptyState | ✅ done (SP6 Phase B, PR #792) |
 | `/gamebook/upload` | **L** | `sp4-upload-wizard-extended.html` + `sp6-libro-game-photo-upload.html` | 3-step wizard: game search + camera + indexing — 14-state FSM + camera permission matrix + offline retry | ✅ done (SP6 Phase C, contract PR #794 + Foundation PR #796 + Interactions PR #800) — [`contracts/gamebook-upload-hooks.md`](contracts/gamebook-upload-hooks.md) |
-| `/library/[gameId]/play/[campaignId]/translate` | **S** | `nanolith-runthrough-translate-viewer.html` | Nanolith demo — paragraph translate via chat-stream workaround. Route consolidated from `/library/games/[gameId]/translate` under campaign in IA refactor #871. | ✅ done (SP6 Phase A, PR #790; route refactored in #871) |
-| `/library/[gameId]/play/[campaignId]/encounter` | **S** | `nanolith-runthrough-encounter-cheatsheet.html` | Nanolith dogfood — Encounter Book photo→cheatsheet on-demand (4 stati: entry-from-story · segmenting · cheatsheet-rendered · resolved-back). Ephemeral parse (no long-term cache, §9.1). Single hook `useEncounterParse`, linear FSM. | pending (post-Stage-2 unfreeze) |
+| `/library/[gameId]/play/[campaignId]/translate` | **S** | `librogame-runthrough-translate-viewer.html` | Nanolith demo — paragraph translate via chat-stream workaround. Route consolidated from `/library/games/[gameId]/translate` under campaign in IA refactor #871. | ✅ done (SP6 Phase A, PR #790; route refactored in #871) |
+| `/library/[gameId]/play/[campaignId]/encounter` | **S** | `librogame-runthrough-encounter-cheatsheet.html` | Nanolith dogfood — Encounter Book photo→cheatsheet on-demand (4 stati: entry-from-story · segmenting · cheatsheet-rendered · resolved-back). Ephemeral parse (no long-term cache, §9.1). Single hook `useEncounterParse`, linear FSM. | pending (post-Stage-2 unfreeze) |
 | `/kb/[id]` | **M** | `sp4-kb-detail.html` | KB header + chunks + search | **deferred** — pivot legale 2026-05-10, vedi `2026-05-10-citation-pdf-viewer-design.md` (G4 v3) |
 
 **Anti-pattern**: dispatchare implementation subagent senza Phase 0.5 per route Tier L. Wave C.1 PR #697 ha esattamente questo come root cause (vedi [post-mortem](../specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only)).
@@ -433,8 +441,8 @@ the PR review.
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `nanolith-runthrough-game-detail.html` | `LibroGameDetailView` | `apps/web/src/components/v2/gamebook/LibroGameDetailView.tsx` | `/library/[gameId]` (libro variant) | done | #1037 | T A V | — |
-| `nanolith-runthrough-setup-wizard.html` | `CampaignSetupDrawer` | `apps/web/src/components/v2/gamebook/CampaignSetupDrawer.tsx` | `/library/[gameId]` (libro variant — drawer) | done | #1037 | T A V | — |
+| `librogame-runthrough-game-detail.html` | `LibroGameDetailView` | `apps/web/src/components/v2/gamebook/LibroGameDetailView.tsx` | `/library/[gameId]` (libro variant) | done | #1037 | T A V | — |
+| `librogame-runthrough-setup-wizard.html` | `CampaignSetupDrawer` | `apps/web/src/components/v2/gamebook/CampaignSetupDrawer.tsx` | `/library/[gameId]` (libro variant — drawer) | done | #1037 | T A V | — |
 
 ### Libro-game checkout flow — `/gamebook` (embedded modal) — 2 components — **Tier M**
 
@@ -471,9 +479,9 @@ the PR review.
 
 | Mockup | Component | Tier | Path | Route | Status | PR | AC |
 |--------|-----------|------|------|-------|--------|----|----|
-| `nanolith-runthrough-encounter-cheatsheet.html` | `EncounterCheatsheetView` | **S** | `apps/web/src/components/features/gamebook/EncounterCheatsheetView.tsx` | `/library/[gameId]/play/[campaignId]/encounter` | pending | — | T A M V |
-| `nanolith-runthrough-game-onboarding.html` | `LibroGameOnboardingPanel` | **L** ⚠️ | `apps/web/src/components/features/gamebook/LibroGameOnboardingPanel.tsx` | `/library/[gameId]` (libro variant — prereq gate) | pending | — | T A M V |
-| `nanolith-runthrough-error-states.html` | `GamebookErrorBanner` | **S** (primitive-like) | `apps/web/src/components/features/gamebook/GamebookErrorBanner.tsx` | cross-cutting (chat, translate, encounter) | pending | — | T A V |
+| `librogame-runthrough-encounter-cheatsheet.html` | `EncounterCheatsheetView` | **S** | `apps/web/src/components/features/gamebook/EncounterCheatsheetView.tsx` | `/library/[gameId]/play/[campaignId]/encounter` | pending | — | T A M V |
+| `librogame-runthrough-game-onboarding.html` | `LibroGameOnboardingPanel` | **L** ⚠️ | `apps/web/src/components/features/gamebook/LibroGameOnboardingPanel.tsx` | `/library/[gameId]` (libro variant — prereq gate) | pending | — | T A M V |
+| `librogame-runthrough-error-states.html` | `GamebookErrorBanner` | **S** (primitive-like) | `apps/web/src/components/features/gamebook/GamebookErrorBanner.tsx` | cross-cutting (chat, translate, encounter) | pending | — | T A V |
 
 **Stato di copertura** (4 stati ciascuno, mobile + desktop parity):
 
@@ -643,12 +651,12 @@ instead.
 | `/library/private` · `/add` · `/[id]` | `sp4-add-game-pdf-dedup.html` + `sp4-upload-wizard-extended.html` [partial] | — |
 | `/library/private/[id]/toolkit/configure` | `sp4-toolkit-detail.html` ↻ | — |
 | `/library/proposals` · `/propose` | `sp4-add-game-bgg-step.html` | Ingestion proposta |
-| `/library/[gameId]` | `sp4-game-detail.html` + `nanolith-runthrough-game-detail.html` + `nanolith-runthrough-game-onboarding.html` | IA closes #871 (PR #1037); onboarding gap-coverage 2026-05-12 (pending Stage-2) |
+| `/library/[gameId]` | `sp4-game-detail.html` + `librogame-runthrough-game-detail.html` + `librogame-runthrough-game-onboarding.html` | IA closes #871 (PR #1037); onboarding gap-coverage 2026-05-12 (pending Stage-2) |
 | `/library/[gameId]/agent` | `sp4-agent-detail.html` + `sp4-game-chat-tab.html` | — |
-| `/library/[gameId]/play` | `nanolith-runthrough-resume-picker.html` + `sp6-libro-game-resume-state.html` | Libro-game |
-| `/library/[gameId]/play/[campaignId]` | `nanolith-runthrough-play-session.html` + `sp6-libro-game-index.html` | — |
-| `/library/[gameId]/play/[campaignId]/translate` | `nanolith-runthrough-translate-viewer.html` + `sp6-libro-game-photo-upload.html` | Tier S done (PR #790) |
-| `/library/[gameId]/play/[campaignId]/encounter` | `nanolith-runthrough-encounter-cheatsheet.html` | Tier S pending (BLOCKER §9.1 gap-coverage 2026-05-12) |
+| `/library/[gameId]/play` | `librogame-runthrough-resume-picker.html` + `sp6-libro-game-resume-state.html` | Libro-game |
+| `/library/[gameId]/play/[campaignId]` | `librogame-runthrough-play-session.html` + `sp6-libro-game-index.html` | — |
+| `/library/[gameId]/play/[campaignId]/translate` | `librogame-runthrough-translate-viewer.html` + `sp6-libro-game-photo-upload.html` | Tier S done (PR #790) |
+| `/library/[gameId]/play/[campaignId]/encounter` | `librogame-runthrough-encounter-cheatsheet.html` | Tier S pending (BLOCKER §9.1 gap-coverage 2026-05-12) |
 | `/library/[gameId]/toolbox` · `/toolkit` · `/toolkit/[sessionId]` | `sp4-toolkit-detail.html` ↻ | — |
 
 > **Note**: `/library/v2` decommissionata 2026-05-12 (era demo orfana con SEED hard-coded).
@@ -671,12 +679,12 @@ instead.
 | Route | Mockup | Note |
 |-------|--------|------|
 | `/sessions` | `sp4-sessions-index.html` | — |
-| `/sessions/new` | `nanolith-runthrough-setup-wizard.html` | — |
+| `/sessions/new` | `librogame-runthrough-setup-wizard.html` | — |
 | `/sessions/join` | `sp3-join.html` ↻ | Reuse |
 | `/sessions/[id]` | `sp4-session-summary.html` | Tier M-L done (PR #762) |
 | `/sessions/[id]/live` | `sp4-session-live.html` | Tier L+ pending |
 | `/sessions/[id]/{play,notes,players,scoreboard,join}` | `sp4-session-live.html` [partial] | Sub-views |
-| `/sessions/live/[id]` (+ `/agent`, `/photos`, `/players`, `/scores`) | `sp4-session-live.html` + `nanolith-runthrough-session-end.html` | — |
+| `/sessions/live/[id]` (+ `/agent`, `/photos`, `/players`, `/scores`) | `sp4-session-live.html` + `librogame-runthrough-session-end.html` | — |
 | `/game-nights` | `sp4-game-nights-index.html` | Tier L pending |
 | `/game-nights/new` | `sp7-game-night-create.html` | Tier L+ DONE (PR #1297 components, PR #1302 orchestrator, PR #1305 W4 E2E + a11y + conformity entry); baseline PNGs auto-generated post-merge via bootstrap workflows |
 | `/game-nights/[id]` · `/[id]/edit` | `sp7-game-night-detail-rsvp.html` + `nanolith-game-night-storyboard.html` | Tier M done (PR #1171, RSVP cluster); tabbed/host surfaces pending |
@@ -697,7 +705,7 @@ instead.
 
 | Route | Mockup | Note |
 |-------|--------|------|
-| `/chat` · `/chat/new` · `/chat/[threadId]` | `sp4-game-chat-tab.html` + `nanolith-runthrough-setup-chat.html` + `nanolith-nav-chat-panel.html` | — |
+| `/chat` · `/chat/new` · `/chat/[threadId]` | `chat-fullscreen.html` (page-mock) + `sp4-game-chat-tab.html` + `librogame-runthrough-setup-chat.html` + `nanolith-nav-chat-panel.html` | chat-fullscreen done (#491 partial, 2026-05-23) |
 | `/chat/agents/create` | `sp4-agents-index.html` [partial] | gap dedicato per "create flow" |
 
 ### Power-user / editor (utente avanzato, non admin)
@@ -719,6 +727,13 @@ Routes senza mockup con **alta priorità user-journey** (audit 2026-05-12):
 5. **`/pricing`** — landing commerciale assente
 
 Status di queste 5 lacune è tracciato in `docs/for-developers/audits/2026-05-12-mockup-gaps.md`.
+
+### Cross-route state coverage (dev-fixture)
+
+> `state-matrix.html` (dev-fixture, 2026-05-23) mappa gli stati
+> Empty/Error/Loading/Permission/Offline per 8 route critiche (translate, play, chat,
+> game-nights, sessions/live, shared-games, discover, notifications) — 8×5 = 40 cell.
+> Riferimento cross-cutting per Phase 2/3; non page-level, non sostituisce i page-mock per route.
 
 ## References
 

@@ -15,6 +15,23 @@ elencava 3 route `/library/playlists/*` che non esistono nel codebase).
 **Total gaps confermati**: 9 cluster (di cui 2 da closure false-positive,
 5 nuovi, 2 carry-over dall'audit precedente).
 
+## Status (2026-05-23 update)
+
+**Phase 1 in implementation** (branch `feature/mockup-refinement-aaron-design`):
+- ✅ Closure parziale #491 chat full-screen → mockup `chat-fullscreen.html` creato (Sezione 2)
+- ⚠️ Closure false-positive #492 community follow-up → ancora da riaprire
+  (sezione B11a non in scope Approccio B di questa Phase 1)
+- ✅ Cluster translate Aaron CORE → 4 sezioni 1a/1b/1c/1d implementate
+- ✅ B18 state-matrix cross-route → mockup `state-matrix.html` creato (Sezione 3)
+
+**Spec di riferimento**:
+`docs/superpowers/specs/2026-05-23-mockup-refinement-aaron-core-design.md`
+
+**Out of scope Phase 1** (deferiti a Phase 2/3):
+B11 play-records · B11a community follow-up · B14 editor agent-proposals
+(parcheggiato) · B15 toolkit sub-pages · B16 wishlist · B17 sessions
+sub-pages · nodi architetturali N4/N6/N7.
+
 ## Diff vs audit 2026-05-12
 
 | # | Cluster | Stato 2026-05-12 | Stato 2026-05-22 | Δ |
@@ -215,14 +232,14 @@ reali** la coverage di stati canonici è disomogenea:
 
 ### Issue da riaprire / aprire
 
-1. **Riaprire #492** con scope ridotto (4 screen community) → o aprire B11a
-2. **Riaprire #491** con scope ridotto (3 screen chat full-screen) → o aprire B11b
+1. ⚠️ **Riaprire #492** con scope ridotto (4 screen community) → o aprire B11a — STILL TODO (non in scope Phase 1)
+2. ✅ **Riaprire #491** con scope ridotto (3 screen chat full-screen) → consegnato via `chat-fullscreen.html` (Phase 1, 2026-05-23)
 3. **Aprire B11** `Mockup Play Records` — bloccante US-32
 4. **Aprire B14** `Mockup Editor user-facing (agent proposals)`
 5. **Aprire B15** `Mockup Toolkit sub-pages`
 6. **Aprire B16** `Mockup Library Wishlist standalone` (estensione)
 7. **Aprire B17** `Mockup Sessions sub-pages` (estensione)
-8. **Aprire B18** `Mockup State Matrix cross-route`
+8. ✅ **Aprire B18** `Mockup State Matrix cross-route` → consegnato via `state-matrix.html` (Phase 1, 2026-05-23)
 
 ### Decisioni architetturali (non-mockup)
 

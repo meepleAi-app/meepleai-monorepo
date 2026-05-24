@@ -42,7 +42,7 @@
    4. stream-abort   — message preserved con badge "[interrotto]", cost parziale fatturato
 
    ─── Cross-ref ───
-   - PR#551 useThreadMessages hook → apps/web/src/components/chat/shared/use-thread-messages.ts
+   - PR#551 useThreadMessages hook → apps/web/src/components/chat/shared/useThreadMessages.ts
    - sp4-citation-pdf-viewer.html → citation pill overlay reuse (G4 v3, NO fork)
    - sp4-agent-detail.html → AgentInfoMiniCard pattern compresso
    - nanolith-nav-chat-panel.html → slide-over secondary mode (viewport ≥1024px)

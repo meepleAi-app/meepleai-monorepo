@@ -33,7 +33,7 @@ export function GameDetailCommunityGate(props: GameDetailCommunityGateProps): Re
   const { icon = '📘', title, description, ctaLabel, onAdd, className } = props;
 
   return (
-    <div
+    <section
       data-slot="game-detail-community-gate"
       className={clsx(
         'flex flex-col items-center rounded-2xl border border-dashed border-border-strong bg-card px-6 py-10 text-center',
@@ -58,6 +58,6 @@ export function GameDetailCommunityGate(props: GameDetailCommunityGateProps): Re
       >
         {ctaLabel}
       </button>
-    </div>
+    </section>
   );
 }

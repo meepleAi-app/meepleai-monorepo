@@ -60,10 +60,15 @@ describe('GameDetailCommunityGate (Issue #1465)', () => {
   });
 
   // T5
-  it('uses DS-15 entity-game tokens', () => {
+  it('uses DS-15 entity-game tokens (tinted circle + solid CTA)', () => {
     const { container } = render(<GameDetailCommunityGate {...baseProps} />);
-    expect(container.querySelector('.text-entity-game')).toBeInTheDocument();
-    expect(container.querySelector('.bg-entity-game')).toBeInTheDocument();
+    // Icon circle: tinted background + entity foreground.
+    const circle = container.querySelector('[aria-hidden="true"]');
+    expect(circle).toHaveClass('bg-entity-game/12');
+    expect(circle).toHaveClass('text-entity-game');
+    // CTA: solid entity background.
+    const cta = container.querySelector('[data-slot="game-detail-community-gate-cta"]');
+    expect(cta).toHaveClass('bg-entity-game');
   });
 
   // T6

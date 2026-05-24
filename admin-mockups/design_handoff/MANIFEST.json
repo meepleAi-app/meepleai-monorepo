@@ -1,0 +1,203 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-05-24",
+  "source": "admin-mockups/design_handoff/SCREENS.md",
+  "totalScreens": 71,
+  "phases": [
+    {
+      "id": "01",
+      "name": "Dashboard",
+      "screens": [
+        {
+          "id": 1,
+          "mockFile": "sp4-dashboard",
+          "route": "/dashboard",
+          "endpoint": "GET /api/v1/dashboard?include=...",
+          "priority": "P0",
+          "sprint": 1,
+          "customComponents": ["DashboardHero", "GamesCarousel", "SessionsTimeline", "EventsList", "PlayersAvatarList", "AgentsCompactGrid"],
+          "dataShape": {
+            "recentSessions": "Session[3]",
+            "upcomingGameNights": "GameNightEvent[3]",
+            "topAgents": "Agent[]",
+            "kbIndexingStatus": "Record<gameId, KbState>",
+            "playerGroupActivity": "ActivityFeed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "name": "Game Nights flow (gold scenario)",
+      "screens": [
+        {"id": 2, "mockFile": "sp4-game-nights-index", "route": "/game-nights", "endpoint": "GET /api/v1/game-nights?from=&to=", "priority": "P0", "sprint": 2},
+        {"id": 3, "mockFile": "sp4-game-nights-index (drawer)", "route": "/game-nights?day=2026-03-22", "endpoint": "(filtered same)", "priority": "P0", "sprint": 2, "uiOnly": true},
+        {"id": 4, "mockFile": "sp7-game-night-create", "route": "/game-nights/new", "endpoint": "POST /api/v1/game-nights", "priority": "P0", "sprint": 2, "customComponents": ["StepIndicator", "DateTimePicker", "PlayerInviteList", "GameProposeList"]},
+        {"id": 5, "mockFile": "sp7-game-night-detail-rsvp (host)", "route": "/game-nights/[id]", "endpoint": "GET /api/v1/game-nights/{id}", "priority": "P0", "sprint": 2},
+        {"id": 6, "mockFile": "sp7-game-night-detail-rsvp (invited)", "route": "/game-nights/[id]", "endpoint": "PATCH /api/v1/game-nights/{id}/rsvp", "priority": "P0", "sprint": 2, "variant": "invited"},
+        {"id": 7, "mockFile": "sp7-game-night-transition", "route": "/game-nights/[id]/transition", "endpoint": "modal-only", "priority": "P1", "sprint": 2, "uiOnly": true}
+      ]
+    },
+    {
+      "id": "03",
+      "name": "Players",
+      "screens": [
+        {"id": 8, "mockFile": "sp4-players-index", "route": "/players", "endpoint": "GET /api/v1/players", "priority": "P1", "sprint": 3},
+        {"id": 9, "mockFile": "sp4-player-detail", "route": "/players/[id]", "endpoint": "GET /api/v1/players/{id}?include=stats,games", "priority": "P1", "sprint": 3}
+      ]
+    },
+    {
+      "id": "04",
+      "name": "Library & Games",
+      "screens": [
+        {"id": 10, "mockFile": "sp4-library-desktop", "route": "/library", "endpoint": "GET /api/v1/library?filters=", "priority": "P0", "sprint": 1, "brownfield": true},
+        {"id": 11, "mockFile": "sp4-library-desktop (drawer)", "route": "/library?drawer=filters", "endpoint": "(drawer client)", "priority": "P0", "sprint": 1, "uiOnly": true},
+        {"id": 12, "mockFile": "sp4-games-index", "route": "/games", "endpoint": "GET /api/v1/games", "priority": "P1", "sprint": 1, "brownfield": true},
+        {"id": 13, "mockFile": "sp4-hub-games", "route": "/hub/games", "endpoint": "GET /api/v1/hub/games", "priority": "P2", "sprint": 6},
+        {"id": 14, "mockFile": "sp4-game-detail", "route": "/games/[id]", "endpoint": "GET /api/v1/games/{id}?include=...", "priority": "P0", "sprint": 1, "brownfield": true, "conformityReport": "PILOT_GAP_REPORT.md", "customComponents": ["GameDetailHero", "GameDetailTabsAnimated", "GameDetailSpecsCard", "GameDetailKpiCards", "GameDetailLeaderboard", "GameDetailHouseRulesList", "GameDetailCommunityGate", "ConnectionBar"]},
+        {"id": 15, "mockFile": "sp4-add-game-bgg-step", "route": "/games/new", "endpoint": "POST /api/v1/games", "priority": "P1", "sprint": 1, "customComponents": ["StepIndicator", "UploadZone", "PdfDedupModal"]}
+      ]
+    },
+    {
+      "id": "05",
+      "name": "Knowledge Base",
+      "screens": [
+        {"id": 16, "mockFile": "sp4-kb-detail", "route": "/games/[id]/kb", "endpoint": "GET /api/v1/games/{id}/kb", "priority": "P0", "sprint": 3, "customComponents": ["KbDocList", "UploadZone"]},
+        {"id": 17, "mockFile": "sp4-kb-hub", "route": "/kb/hub", "endpoint": "GET /api/v1/kb/hub", "priority": "P2", "sprint": 6},
+        {"id": 18, "mockFile": "sp4-kb-globale", "route": "/kb", "endpoint": "POST /api/v1/kb/search (SSE)", "priority": "P1", "sprint": 3, "realtime": "SSE", "customComponents": ["SseStream", "CitationExpandedPanel"]},
+        {"id": 19, "mockFile": "sp4-upload-wizard-extended", "route": "/games/[id]/kb/upload", "endpoint": "POST /api/v1/games/{id}/kb/upload", "priority": "P1", "sprint": 3},
+        {"id": 20, "mockFile": "sp4-add-game-pdf-dedup", "route": "(modal)", "endpoint": "POST /api/v1/kb/dedup-check", "priority": "P2", "sprint": 6, "uiOnly": true},
+        {"id": 21, "mockFile": "sp4-citation-pdf-viewer", "route": "/kb/docs/[id]?p=", "endpoint": "GET /api/v1/kb/docs/{id}.pdf", "priority": "P1", "sprint": 3}
+      ]
+    },
+    {
+      "id": "06",
+      "name": "AI Agents",
+      "screens": [
+        {"id": 22, "mockFile": "sp7-library-game-agent", "route": "/library/games/[id]/agent", "endpoint": "POST /api/v1/agents/{id}/query (SSE)", "priority": "P0", "sprint": 3, "realtime": "SSE", "customComponents": ["LibraryGameAgentShell", "HouseRuleDrawer", "SuggestedQueriesRow", "ConfidenceBadge", "ActionChip", "UserBubble", "AgentBubble"]},
+        {"id": 23, "mockFile": "sp7-library-game-agent (HR drawer)", "route": "?drawer=house-rule", "endpoint": "POST /api/v1/games/{id}/house-rules", "priority": "P0", "sprint": 3, "uiOnly": true},
+        {"id": 24, "mockFile": "sp4-game-chat-tab", "route": "/games/[id]?tab=chat", "endpoint": "(variant same API)", "priority": "P1", "sprint": 3, "variant": true},
+        {"id": 25, "mockFile": "chat-fullscreen", "route": "/chat/[id]", "endpoint": "(fullscreen)", "priority": "P2", "sprint": 6},
+        {"id": 26, "mockFile": "sp4-agents-index", "route": "/agents", "endpoint": "GET /api/v1/agents", "priority": "P1", "sprint": 3},
+        {"id": 27, "mockFile": "sp4-hub-agents", "route": "/hub/agents", "endpoint": "GET /api/v1/hub/agents", "priority": "P2", "sprint": 6},
+        {"id": 28, "mockFile": "sp4-agent-detail", "route": "/agents/[id]", "endpoint": "GET /api/v1/agents/{id}?include=...", "priority": "P1", "sprint": 3, "customComponents": ["ChatHistoryTimeline", "PerformanceKpi", "KbDocList"]},
+        {"id": 29, "mockFile": "sp4-toolkit-detail", "route": "/toolkits/[id]", "endpoint": "GET /api/v1/toolkits/{id}", "priority": "P2", "sprint": 6},
+        {"id": 30, "mockFile": "sp4-hub-toolkits", "route": "/hub/toolkits", "endpoint": "GET /api/v1/hub/toolkits", "priority": "P2", "sprint": 6}
+      ]
+    },
+    {
+      "id": "07",
+      "name": "Sessions",
+      "screens": [
+        {"id": 31, "mockFile": "sp4-sessions-index", "route": "/sessions", "endpoint": "GET /api/v1/sessions", "priority": "P1", "sprint": 4},
+        {"id": 32, "mockFile": "sp4-session-live", "route": "/sessions/[id]/live", "endpoint": "WebSocket /sessions/{id}/events", "priority": "P0", "sprint": 4, "realtime": "WebSocket", "customComponents": ["SessionTimer", "EventStream", "ChatPanel", "ScoreCard"]},
+        {"id": 33, "mockFile": "sp4-session-summary", "route": "/sessions/[id]/summary", "endpoint": "GET /api/v1/sessions/{id}/summary", "priority": "P0", "sprint": 4}
+      ]
+    },
+    {
+      "id": "08",
+      "name": "Serata Live",
+      "screens": [
+        {"id": 34, "mockFile": "sp7-game-night-live", "route": "/game-nights/[id]/live", "endpoint": "WebSocket /game-nights/{id}", "priority": "P0", "sprint": 2, "realtime": "WebSocket"},
+        {"id": 35, "mockFile": "sp7-game-night-summary", "route": "/game-nights/[id]/summary", "endpoint": "GET /api/v1/game-nights/{id}/summary", "priority": "P0", "sprint": 2}
+      ]
+    },
+    {
+      "id": "09",
+      "name": "Librogame (SP6)",
+      "screens": [
+        {"id": 36, "mockFile": "sp6-libro-game-index", "route": "/librogame", "endpoint": "GET /api/v1/librogame/library", "priority": "P1", "sprint": 5},
+        {"id": 37, "mockFile": "librogame-runthrough-library-search", "route": "/librogame/search", "endpoint": "GET /api/v1/librogame/search", "priority": "P1", "sprint": 5},
+        {"id": 38, "mockFile": "librogame-runthrough-game-detail", "route": "/librogame/[id]", "endpoint": "GET /api/v1/librogame/{id}", "priority": "P1", "sprint": 5},
+        {"id": 39, "mockFile": "librogame-runthrough-game-onboarding", "route": "/librogame/[id]/onboarding", "endpoint": "(state machine FE)", "priority": "P1", "sprint": 5, "uiOnly": true},
+        {"id": 40, "mockFile": "librogame-game-night-storyboard", "route": "/librogame/[id]/storyboard", "endpoint": "POST /api/v1/librogame/{id}/storyboard", "priority": "P2", "sprint": 6},
+        {"id": 41, "mockFile": "sp6-libro-game-photo-upload", "route": "/librogame/[id]/photo", "endpoint": "POST /api/v1/librogame/{id}/photo", "priority": "P1", "sprint": 5, "customComponents": ["StepIndicator", "ConfidenceBadge"]},
+        {"id": 42, "mockFile": "librogame-runthrough-setup-wizard", "route": "/librogame/[id]/setup", "endpoint": "(FE wizard)", "priority": "P1", "sprint": 5, "uiOnly": true},
+        {"id": 43, "mockFile": "librogame-runthrough-setup-chat", "route": "(same)", "endpoint": "POST /api/v1/agents/setup-chat", "priority": "P1", "sprint": 5},
+        {"id": 44, "mockFile": "librogame-runthrough-resume-picker", "route": "/librogame/resume", "endpoint": "GET /api/v1/librogame/states", "priority": "P1", "sprint": 5},
+        {"id": 45, "mockFile": "librogame-runthrough-play-session", "route": "/librogame/[id]/play", "endpoint": "WebSocket /librogame/{id}", "priority": "P0", "sprint": 5, "realtime": "WebSocket"},
+        {"id": 46, "mockFile": "librogame-runthrough-encounter-cheatsheet", "route": "(overlay)", "endpoint": "POST /api/v1/librogame/{id}/encounter", "priority": "P1", "sprint": 5},
+        {"id": 47, "mockFile": "librogame-runthrough-glossary-editor", "route": "(overlay)", "endpoint": "POST /api/v1/librogame/{id}/glossary", "priority": "P1", "sprint": 5},
+        {"id": 48, "mockFile": "librogame-runthrough-translate-viewer", "route": "(overlay)", "endpoint": "POST /api/v1/translate", "priority": "P1", "sprint": 5},
+        {"id": 49, "mockFile": "librogame-runthrough-quota-credits", "route": "/credits", "endpoint": "GET /api/v1/credits/balance", "priority": "P1", "sprint": 5},
+        {"id": 50, "mockFile": "librogame-runthrough-session-end", "route": "/librogame/[id]/end", "endpoint": "POST /api/v1/librogame/{id}/finalize", "priority": "P1", "sprint": 5},
+        {"id": 51, "mockFile": "librogame-runthrough-error-states", "route": "(reference)", "endpoint": null, "priority": "P3", "sprint": 7, "referenceOnly": true}
+      ]
+    },
+    {
+      "id": "10",
+      "name": "Discover & Account",
+      "screens": [
+        {"id": 52, "mockFile": "sp4-discover", "route": "/discover", "endpoint": "GET /api/v1/discover", "priority": "P2", "sprint": 6, "brownfield": true},
+        {"id": 53, "mockFile": "notifications", "route": "/notifications", "endpoint": "GET /api/v1/notifications", "priority": "P1", "sprint": 6, "customComponents": ["NotificationToast", "NotificationDrawer"]},
+        {"id": 54, "mockFile": "settings", "route": "/settings", "endpoint": "GET /api/v1/user, GET /api/v1/groups/{id}", "priority": "P0", "sprint": 6, "brownfield": true},
+        {"id": 55, "mockFile": "onboarding", "route": "/onboarding", "endpoint": "PATCH /api/v1/user", "priority": "P1", "sprint": 6}
+      ]
+    },
+    {
+      "id": "11",
+      "name": "Pre-auth (public)",
+      "screens": [
+        {"id": 56, "mockFile": "public", "route": "/", "endpoint": "(static + dynamic featured)", "priority": "P1", "sprint": 6},
+        {"id": 57, "mockFile": "sp3-faq-enhanced", "route": "/faq", "endpoint": "(static)", "priority": "P1", "sprint": 6},
+        {"id": 58, "mockFile": "sp3-how-it-works", "route": "/how-it-works", "endpoint": "(static)", "priority": "P1", "sprint": 6},
+        {"id": 59, "mockFile": "sp3-shared-games", "route": "/games (public)", "endpoint": "GET /api/v1/public/games", "priority": "P2", "sprint": 6},
+        {"id": 60, "mockFile": "sp3-shared-game-detail", "route": "/games/[slug] (public)", "endpoint": "GET /api/v1/public/games/{slug}", "priority": "P2", "sprint": 6},
+        {"id": 61, "mockFile": "sp3-library-public", "route": "/groups/[slug]/library", "endpoint": "GET /api/v1/public/groups/{slug}", "priority": "P2", "sprint": 6},
+        {"id": 62, "mockFile": "sp3-join", "route": "/join?token=", "endpoint": "POST /api/v1/invites/{token}/accept", "priority": "P1", "sprint": 6},
+        {"id": 63, "mockFile": "sp3-accept-invite", "route": "/invite?token=", "endpoint": "(same)", "priority": "P1", "sprint": 6},
+        {"id": 64, "mockFile": "sp3-legal", "route": "/terms, /privacy", "endpoint": "(static)", "priority": "P1", "sprint": 6}
+      ]
+    },
+    {
+      "id": "12",
+      "name": "Design System (reference)",
+      "screens": [
+        {"id": 65, "mockFile": "00-hub", "route": "(reference)", "endpoint": null, "priority": "P3", "sprint": 7, "referenceOnly": true},
+        {"id": 66, "mockFile": "01-screens", "route": "(reference)", "endpoint": null, "priority": "P3", "sprint": 7, "referenceOnly": true},
+        {"id": 67, "mockFile": "02-desktop-patterns", "route": "(reference)", "endpoint": null, "priority": "P3", "sprint": 7, "referenceOnly": true},
+        {"id": 68, "mockFile": "03-drawer-variants", "route": "(reference)", "endpoint": null, "priority": "P3", "sprint": 7, "referenceOnly": true},
+        {"id": 69, "mockFile": "04-design-system", "route": "(reference)", "endpoint": null, "priority": "P3", "sprint": 7, "referenceOnly": true},
+        {"id": 70, "mockFile": "05-dark-mode", "route": "(reference)", "endpoint": null, "priority": "P3", "sprint": 7, "referenceOnly": true},
+        {"id": 71, "mockFile": "state-matrix", "route": "(reference)", "endpoint": null, "priority": "P3", "sprint": 7, "referenceOnly": true}
+      ]
+    }
+  ],
+  "sprintRoadmap": [
+    {"sprint": 1, "weeks": "1-2", "focus": "Foundation", "screens": [10, 11, 12, 14, 15], "note": "Foundation primitives already in codebase (tokens, EntityChip, ConnectionBar, MeepleCard, Drawer, Tabs) — Sprint 1 can be skipped to start with Sprint 2 directly"},
+    {"sprint": 2, "weeks": "3-4", "focus": "Game Nights gold scenario", "screens": [2, 3, 4, 5, 6, 7, 34, 35]},
+    {"sprint": 3, "weeks": "5-6", "focus": "AI Agents", "screens": [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 28]},
+    {"sprint": 4, "weeks": "7", "focus": "Sessions", "screens": [31, 32, 33]},
+    {"sprint": 5, "weeks": "8-10", "focus": "Librogame", "screens": [36, 37, 38, 39, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50]},
+    {"sprint": 6, "weeks": "11-12", "focus": "Polish + Pre-auth + Discover", "screens": [13, 27, 29, 30, 40, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64]},
+    {"sprint": 7, "weeks": "13", "focus": "Edge cases + Reference", "screens": [51, 65, 66, 67, 68, 69, 70, 71]}
+  ],
+  "priorityBreakdown": {
+    "P0": 15,
+    "P1": 33,
+    "P2": 13,
+    "P3": 10
+  },
+  "realtimeRequirements": {
+    "WebSocket": [32, 34, 45],
+    "SSE": [18, 22]
+  },
+  "brownfieldScreens": [10, 12, 14, 52, 54],
+  "uiOnlyScreens": [3, 7, 11, 20, 23, 39, 42],
+  "referenceOnlyScreens": [51, 65, 66, 67, 68, 69, 70, 71],
+  "metadata": {
+    "schemaNote": "customComponents arrays are non-exhaustive — populated only for screens documented in SCREENS.md or BACKEND_PROMPTS.md. Full enumeration requires reading each .jsx file individually (deferred to per-screen implementation tasks).",
+    "endpointConvention": "All endpoints follow /api/v1/ prefix per local/api-client-v1-prefix ESLint rule (PR #1229).",
+    "sourceFiles": [
+      "admin-mockups/design_handoff/SCREENS.md",
+      "admin-mockups/design_handoff/BACKEND_PROMPTS.md",
+      "admin-mockups/design_handoff/WIRING_GUIDE.md"
+    ],
+    "relatedAudits": [
+      "admin-mockups/design_handoff/CODEBASE_AUDIT.md",
+      "admin-mockups/design_handoff/SCHEMA_DIFF.md",
+      "admin-mockups/design_handoff/COMPONENTS_AUDIT.md",
+      "admin-mockups/design_handoff/PILOT_GAP_REPORT.md"
+    ]
+  }
+}

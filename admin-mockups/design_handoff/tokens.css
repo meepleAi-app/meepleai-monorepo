@@ -1,21 +1,6 @@
-/* ============================================================================
- * MeepleAI Design Tokens — CANONICAL (mockup-faithful)
- *
- * Single source of truth: admin-mockups/design_files/tokens.css
- * Date imported: 2026-05-12 (DS-1, spec: 2026-05-12-token-canonicalization.md)
- *
- * IMPORTANT — DS-1 transitional state:
- *   This file is the authoritative token source. Legacy tokens in
- *   `globals.css` / `design-tokens.css` / `premium-gaming.css` are now
- *   bridged aliases pointing here (see token-bridge.css).
- *   Bridge layer will be removed in DS-12 once all clusters are migrated.
- *
- * Theming mechanism: [data-theme="light|dark"] attribute on <html>
- * (set by next-themes; SSR default = "light" — mockup convention).
- *
- * Reset / typography base rules from the mockup are OMITTED here to avoid
- * conflicts with globals.css base layer. Only token declarations are kept.
- * ============================================================================ */
+/* MeepleAI Design System v1 — Design Tokens
+   Source of truth for all colors, spacing, type, motion.
+   Light & dark variants via [data-theme] attr on <html>. */
 
 :root {
   /* ─── Entity Colors (HSL triplets for alpha composability) ─── */
@@ -28,23 +13,6 @@
   --c-event:   350 89% 60%;
   --c-toolkit: 142 70% 45%;
   --c-tool:    195 80% 50%;
-
-  /* ─── Entity Color TEXT variants (darker — for AA 4.5:1 text contrast) ─── *
-   * Entity colors above are sized for non-text usage (borders, backgrounds,
-   * decorative accents — pass WCAG AA 3:1 against light surfaces). When
-   * rendered as TEXT on cream/off-white surfaces (#f7f3ee / #f9eee6 / #f1e3d7),
-   * the lightness needs to drop ~13% to clear the AA 4.5:1 text threshold.
-   * Math verified via sRGB linearization + WCAG relative-luminance formula.
-   *   --c-game-text  hsl(25 95% 32%) ≈ #9e3a05 vs #f7f3ee = 6.14:1 ✅
-   *   Refs: #1094 Real-C-B, audit doc §2.5 v3, precedent #2026-05-12-dashboard-contrast.md
-   *
-   * Only --c-game-text is introduced today (covers the 76-node violation cluster
-   * captured by Phase A.live v3). Other entity-text variants will be added on
-   * demand as violations surface for them.
-   */
-  --c-game-text: 25 95% 32%;
-  --c-kb-text:   174 60% 28%; /* Real-C-F: hsl(174 60% 28%) ≈ #1d7268 vs #f7f3ee = 4.95:1 ✅ — replaces hardcoded #4ecdc4 (1.75:1 fail) */
-  --c-toolkit-text: 142 70% 24%; /* Real-C-E gamebook: hsl(142 70% 24%) ≈ #0f5d2b vs #e3f0e8 = ~5.6:1 ✅ — replaces text-entity-toolkit (4.16:1 fail on toolkit/12 bg) */
 
   /* ─── Semantic Colors ─── */
   --c-success: 142 70% 45%;
@@ -59,14 +27,7 @@
   /* ─── Typography ─── */
   --f-display: 'Quicksand', system-ui, sans-serif;
   --f-body:    'Nunito', system-ui, sans-serif;
-  /* Post DS-step 2a (2026-05-24): JetBrains Mono loaded via next/font/google
-   * in app/layout.tsx exposes the `--font-jetbrains-mono` CSS variable.
-   * Bridge it into the canonical `--f-mono` token to make the dependency
-   * explicit (mirrors `--font-quicksand` -> `--f-display` / `--font-nunito`
-   * -> `--f-body` pattern intent). Falls back to ui-monospace if the variable
-   * is not set (e.g. in unit-test setups without next/font hydration).
-   */
-  --f-mono:    var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, monospace;
+  --f-mono:    'JetBrains Mono', ui-monospace, monospace;
 
   --fs-xs:   11px;
   --fs-sm:   12px;
@@ -133,8 +94,7 @@
 }
 
 /* ─── LIGHT THEME (default) ─── */
-:root,
-:root[data-theme="light"] {
+:root, :root[data-theme="light"] {
   --bg:        #f7f3ee;
   --bg-card:   #ffffff;
   --bg-muted:  #efe6d9;
@@ -197,21 +157,34 @@
   --c-toolkit: 142 60% 58%;
   --c-tool:    195 75% 62%;
 
-  /* TEXT variants for dark theme: lighter to clear AA on dark bg.
-   *   --c-game-text  hsl(28 95% 70%) ≈ #fdb775 vs #14100a = 11.2:1 ✅
-   *   --c-kb-text    hsl(174 60% 55%) ≈ #4ecdc4 vs #14100a = 9.87:1 ✅
-   *     (= --c-kb dark value; already AA-safe on dark — the violation
-   *      was solely the light-theme rendering of this dark-shade hex)
-   *   Refs: #1094 Real-C-B + Real-C-F
-   */
-  --c-game-text: 28 95% 70%;
-  --c-kb-text:   174 60% 55%;
-  --c-toolkit-text: 142 60% 72%; /* Real-C-E gamebook dark: lighter variant for AA on dark bg */
-
   color-scheme: dark;
 }
 
-/* ─── Entity utility classes (mockup) ─── */
+/* ─── Reset / Base ─── */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--f-body);
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--fs-base);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background var(--dur-md) var(--ease-out), color var(--dur-md) var(--ease-out);
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--f-display);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
+  margin: 0;
+  line-height: var(--lh-tight);
+}
+button { font-family: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+code, kbd { font-family: var(--f-mono); font-size: 0.9em; }
+
+/* ─── Entity utility classes ─── */
 .e-game    { --e: var(--c-game); }
 .e-player  { --e: var(--c-player); }
 .e-session { --e: var(--c-session); }

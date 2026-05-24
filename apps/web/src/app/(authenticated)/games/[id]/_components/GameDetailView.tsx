@@ -428,7 +428,8 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
       !!gameId &&
       detailQuery.isSuccess &&
       detailQuery.data != null &&
-      detailQuery.data.libraryEntryId != null &&
+      // Truthy check mirrors the variant derivation (libraryEntryId is '' for community).
+      !!detailQuery.data.libraryEntryId &&
       tab === 'stats',
   });
 
@@ -638,29 +639,7 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
             void navigator.share({ title: safeDetail.gameTitle, url: window.location.href });
           }
         }}
-        onAddToLibrary={
-          heroVariant === 'community' && gameId
-            ? () => {
-                if (addToLibrary.isPending) return;
-                addToLibrary.mutate(
-                  { gameId },
-                  {
-                    onSuccess: () => {
-                      toast.success(`${safeDetail.gameTitle} aggiunto alla tua libreria.`);
-                      router.push(`/library/${gameId}`);
-                    },
-                    onError: error => {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : 'Impossibile aggiungere il gioco. Riprova.'
-                      );
-                    },
-                  }
-                );
-              }
-            : undefined
-        }
+        onAddToLibrary={heroVariant === 'community' ? handleAddToLibrary : undefined}
       />
 
       {/* Tab navigation — A11y: role=tablist inside component, role=tabpanel on panels below */}

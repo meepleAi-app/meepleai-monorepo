@@ -843,4 +843,41 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     const infoPanelAfterRerender = document.querySelector('[data-slot="game-detail-panel-info"]');
     expect(infoPanelAfterRerender).toHaveAttribute('hidden');
   });
+
+  // ─── Issue #1466 — Stats tab + community gate ────────────────────────────
+
+  it('Issue #1466: community variant renders GameDetailCommunityGate inside Sessions and Stats panels', () => {
+    detailMockState.data = makeDetail({ libraryEntryId: '' });
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+
+    // Two gates rendered: one inside sessions panel, one inside stats panel.
+    const gates = document.querySelectorAll('[data-slot="game-detail-community-gate"]');
+    expect(gates).toHaveLength(2);
+
+    // The non-locked content must NOT be present in those panels.
+    const sessionsPanel = document.querySelector('[data-slot="game-detail-panel-sessions"]');
+    expect(sessionsPanel?.querySelector('[data-slot="game-detail-sessions-rail"]')).toBeNull();
+  });
+
+  it('Issue #1466: own variant exposes the Stats tab with KpiCards (no gate)', () => {
+    detailMockState.data = makeDetail(); // default own variant
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+
+    // Stats tab button is present and NOT locked
+    const statsTab = document.querySelector('[data-tab-key="stats"]');
+    expect(statsTab).toBeInTheDocument();
+    expect(statsTab).toHaveAttribute('data-locked', 'false');
+
+    // Stats panel exists in the DOM (hidden until clicked, but its content is the own-variant flow,
+    // not the gate).
+    const statsPanel = document.querySelector('[data-slot="game-detail-panel-stats"]');
+    expect(statsPanel).toBeInTheDocument();
+    expect(statsPanel?.querySelector('[data-slot="game-detail-community-gate"]')).toBeNull();
+  });
 });

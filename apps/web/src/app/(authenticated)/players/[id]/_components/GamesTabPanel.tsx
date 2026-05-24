@@ -8,9 +8,10 @@
 
 'use client';
 
-import Link from 'next/link';
 import type { JSX } from 'react';
 import { useMemo } from 'react';
+
+import Link from 'next/link';
 
 export interface GamesTabPanelLabels {
   readonly title: string;
@@ -35,7 +36,7 @@ export function GamesTabPanel({
       Object.entries(gamePlayCounts)
         .filter(([, count]) => count > 0)
         .sort(([, a], [, b]) => b - a),
-    [gamePlayCounts],
+    [gamePlayCounts]
   );
 
   const isEmpty = ranked.length === 0;

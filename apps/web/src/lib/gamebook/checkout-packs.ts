@@ -21,10 +21,32 @@ export interface CheckoutPack {
 }
 
 export const CHECKOUT_PACKS: readonly CheckoutPack[] = [
-  { id: 'starter', name: 'Starter', priceEur: 5, credits: 100, perParagraphEur: 0.05, badge: 'popular' },
+  {
+    id: 'starter',
+    name: 'Starter',
+    priceEur: 5,
+    credits: 100,
+    perParagraphEur: 0.05,
+    badge: 'popular',
+  },
   { id: 'mid', name: 'Mid', priceEur: 20, credits: 500, perParagraphEur: 0.04, badge: null },
   { id: 'pro', name: 'Pro', priceEur: 35, credits: 1000, perParagraphEur: 0.035, badge: 'save' },
 ] as const;
+
+/**
+ * Resolve a {@link CheckoutPack} by id. Since `CheckoutPackId` is the exact
+ * union of `CHECKOUT_PACKS[*].id`, this lookup is total by construction — the
+ * throw is a defensive guard against future config drift (e.g. removing a pack
+ * id from `CHECKOUT_PACKS` without removing the corresponding `CheckoutPackId`
+ * variant).
+ */
+export function getCheckoutPack(id: CheckoutPackId): CheckoutPack {
+  const pack = CHECKOUT_PACKS.find(p => p.id === id);
+  if (!pack) {
+    throw new Error(`Checkout pack "${id}" not found in CHECKOUT_PACKS — config drift`);
+  }
+  return pack;
+}
 
 /**
  * Format EUR value using Italian locale. Integer values render without decimals

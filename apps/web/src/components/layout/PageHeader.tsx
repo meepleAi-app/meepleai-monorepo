@@ -39,16 +39,13 @@ export function PageHeader({
   activeTabId,
   className,
 }: PageHeaderProps) {
-  const showBackLink = Boolean(parentHref && parentLabel);
-  const hasTabs = tabs && tabs.length > 0;
-
   return (
     <div className={cn('w-full', className)}>
-      {/* Back link */}
-      {showBackLink && (
+      {/* Back link — both parentHref and parentLabel must be present */}
+      {parentHref && parentLabel && (
         <div className="mb-1">
           <Link
-            href={parentHref!}
+            href={parentHref}
             className="inline-flex items-center gap-1 text-sm font-medium"
             style={{ color: 'hsl(var(--c-kb-text))' }}
           >
@@ -81,9 +78,9 @@ export function PageHeader({
       </div>
 
       {/* Tabs */}
-      {hasTabs && (
+      {tabs && tabs.length > 0 && (
         <nav className="mt-4 flex gap-0 border-b border-border" aria-label="Page tabs">
-          {tabs!.map(tab => {
+          {tabs.map(tab => {
             const isActive = tab.id === activeTabId;
             return (
               <Link

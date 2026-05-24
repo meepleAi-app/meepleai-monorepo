@@ -27,6 +27,7 @@
 
 import { useMemo, useState, type ReactElement } from 'react';
 
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
@@ -155,13 +156,13 @@ function NotFoundShell({
       </span>
       <h2 className="font-display text-[20px] font-extrabold text-foreground">{title}</h2>
       <p className="max-w-sm text-[14px] text-muted-foreground">{subtitle}</p>
-      <a
+      <Link
         href="/agents"
         data-slot="agent-detail-not-found-cta"
         className="inline-flex items-center gap-1.5 rounded-md border-none bg-violet-700 px-4 py-2.5 font-display text-[13px] font-extrabold text-white shadow-md transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {cta}
-      </a>
+      </Link>
     </div>
   );
 }
@@ -400,7 +401,10 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
   }
 
   // ── Default render — agent data guaranteed non-null (FSM cells 5-10) ───────
-  // TypeScript: effectiveKind === 'default' → real FSM ensures agentData != null
+  // TypeScript: effectiveKind === 'default' → real FSM ensures agentData != null.
+  // The non-null assertion is intentional and safe: every code path that reaches
+  // here has already validated agentData via deriveAgentDetailUiState.
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- FSM invariant
   const safeAgent = agentData!;
 
   // ── Tab config (variant controls locked state) ─────────────────────────────

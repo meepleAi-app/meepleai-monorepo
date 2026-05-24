@@ -9,6 +9,8 @@ export const gamebookCampaignKeys = {
 export function useGamebookCampaign(id: string | undefined) {
   return useQuery<GamebookCampaign>({
     queryKey: id ? gamebookCampaignKeys.detail(id) : ['gamebook', 'campaigns', 'noop'],
+    // `enabled: !!id` guarantees queryFn only runs when id is set.
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- gated by enabled
     queryFn: () => getCampaign(id!),
     enabled: !!id,
   });

@@ -107,9 +107,7 @@ export function ChatMessageBubble({
       </div>
       <div className={cn('flex min-w-0 flex-1 flex-col gap-2', isUser && 'items-end')}>
         <div className="flex items-center gap-2 text-[0.66rem] font-semibold text-[var(--text-muted)]">
-          <span className="font-quicksand font-extrabold text-[var(--text-sec)]">
-            {authorName}
-          </span>
+          <span className="font-quicksand font-extrabold text-[var(--text-sec)]">{authorName}</span>
           <span>· {timestamp}</span>
         </div>
         <div
@@ -133,6 +131,7 @@ export function ChatMessageBubble({
             <div className="mb-2 flex flex-wrap gap-2">
               {imageUrls.map((url, idx) => (
                 <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="block">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- chat image URLs may be blob: URLs (live previews) or arbitrary remote hosts not whitelisted in next.config.js images.domains; using next/image would break either case */}
                   <img
                     src={url}
                     alt={`Immagine ${idx + 1}`}

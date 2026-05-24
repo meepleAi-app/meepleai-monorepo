@@ -112,6 +112,10 @@ export function tryLoadVisualTestFixture(
   variant?: 'pending' | 'accepted' | 'declined'
 ): PublicGameNightInvitation | null {
   if (!IS_VISUAL_TEST_BUILD) return null;
+  // Visual-test fixtures are gated behind a build-time flag (IS_VISUAL_TEST_BUILD)
+  // and the sentinel token is hardcoded in this file; this is dev/CI tooling,
+  // not a real authentication path, so timing-safe comparison is not warranted.
+  // eslint-disable-next-line security/detect-possible-timing-attacks -- visual-test sentinel, not a real auth token
   if (token !== VISUAL_TEST_FIXTURE_TOKEN) return null;
   if (variant === 'accepted') return FIXTURE_ALREADY_ACCEPTED;
   if (variant === 'declined') return FIXTURE_ALREADY_DECLINED;

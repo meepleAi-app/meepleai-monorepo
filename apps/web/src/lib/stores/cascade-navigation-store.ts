@@ -163,7 +163,14 @@ export const useCascadeNavigationStore = create<CascadeNavigationState>()(
           return;
         }
         const stack = [...current.drawerStack];
-        const prev = stack.pop()!;
+        const prev = stack.pop();
+        if (!prev) {
+          // Defensive: the length check above (`drawerStack.length === 0`)
+          // already guarantees the stack is non-empty, but TypeScript can't
+          // preserve that invariant across the copy. Bail out gracefully
+          // instead of crashing the popDrawer action.
+          return;
+        }
         set(
           {
             state: 'drawer',

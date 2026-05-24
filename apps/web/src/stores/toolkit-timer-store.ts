@@ -65,71 +65,71 @@ function clearTimerInterval(gameId: string) {
  * Safe to call multiple times — always returns the same instance.
  */
 export function getTimerStore(gameId: string): UseBoundStore<StoreApi<TimerStore>> {
-  if (!storeRegistry.has(gameId)) {
-    const store = create<TimerStore>()((set, get) => ({
-      totalSeconds: 60,
-      remaining: 60,
-      status: 'idle',
-      autoResetOnTurn: false,
+  const existing = storeRegistry.get(gameId);
+  if (existing) return existing;
 
-      start() {
-        const { status, remaining } = get();
-        if (status === 'running' || remaining <= 0) return;
+  const store = create<TimerStore>()((set, get) => ({
+    totalSeconds: 60,
+    remaining: 60,
+    status: 'idle',
+    autoResetOnTurn: false,
 
-        set({ status: 'running' });
-        clearTimerInterval(gameId); // guard against double-start
+    start() {
+      const { status, remaining } = get();
+      if (status === 'running' || remaining <= 0) return;
 
-        const id = setInterval(() => {
-          const { remaining: rem } = get();
-          if (rem <= 1) {
-            clearTimerInterval(gameId);
-            set({ remaining: 0, status: 'ended' });
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('toolkit:timer-end', { detail: { gameId } }));
-            }
-          } else {
-            set({ remaining: rem - 1 });
+      set({ status: 'running' });
+      clearTimerInterval(gameId); // guard against double-start
+
+      const id = setInterval(() => {
+        const { remaining: rem } = get();
+        if (rem <= 1) {
+          clearTimerInterval(gameId);
+          set({ remaining: 0, status: 'ended' });
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('toolkit:timer-end', { detail: { gameId } }));
           }
-        }, 1000);
+        } else {
+          set({ remaining: rem - 1 });
+        }
+      }, 1000);
 
-        intervalRegistry.set(gameId, id);
-      },
+      intervalRegistry.set(gameId, id);
+    },
 
-      pause() {
-        if (get().status !== 'running') return;
-        clearTimerInterval(gameId);
-        set({ status: 'paused' });
-      },
+    pause() {
+      if (get().status !== 'running') return;
+      clearTimerInterval(gameId);
+      set({ status: 'paused' });
+    },
 
-      reset() {
-        clearTimerInterval(gameId);
-        set(s => ({ remaining: s.totalSeconds, status: 'idle' }));
-      },
+    reset() {
+      clearTimerInterval(gameId);
+      set(s => ({ remaining: s.totalSeconds, status: 'idle' }));
+    },
 
-      setDuration(seconds: number) {
-        clearTimerInterval(gameId);
-        // Clamp: 5 s – 99m59s
-        const clamped = Math.max(5, Math.min(seconds, 5999));
-        set({ totalSeconds: clamped, remaining: clamped, status: 'idle' });
-      },
+    setDuration(seconds: number) {
+      clearTimerInterval(gameId);
+      // Clamp: 5 s – 99m59s
+      const clamped = Math.max(5, Math.min(seconds, 5999));
+      set({ totalSeconds: clamped, remaining: clamped, status: 'idle' });
+    },
 
-      adjustTime(deltaSec: number) {
-        set(s => {
-          const newRemaining = Math.max(0, Math.min(s.remaining + deltaSec, 5999));
-          const newStatus = s.status === 'ended' && newRemaining > 0 ? 'paused' : s.status;
-          return { remaining: newRemaining, status: newStatus };
-        });
-      },
+    adjustTime(deltaSec: number) {
+      set(s => {
+        const newRemaining = Math.max(0, Math.min(s.remaining + deltaSec, 5999));
+        const newStatus = s.status === 'ended' && newRemaining > 0 ? 'paused' : s.status;
+        return { remaining: newRemaining, status: newStatus };
+      });
+    },
 
-      setAutoResetOnTurn(enabled: boolean) {
-        set({ autoResetOnTurn: enabled });
-      },
-    }));
+    setAutoResetOnTurn(enabled: boolean) {
+      set({ autoResetOnTurn: enabled });
+    },
+  }));
 
-    storeRegistry.set(gameId, store);
-  }
-
-  return storeRegistry.get(gameId)!;
+  storeRegistry.set(gameId, store);
+  return store;
 }
 
 /**

@@ -2,17 +2,18 @@
 // Mockup: sp3-shared-game-detail — public detail view for a shared game.
 // Canonically implemented at /shared-games/[id]; this slug-less variant
 // is a legacy mockup route. Redirects to /shared-games until an id is resolved.
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 export default function SharedGameDetailPlaceholderPage() {
   const router = useRouter();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.replace("/shared-games");
+      router.replace('/shared-games');
     }, 2000);
     return () => clearTimeout(timer);
   }, [router]);

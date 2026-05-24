@@ -20,6 +20,8 @@ export function useCampaignProgress(campaignId: string | undefined) {
     queryKey: campaignId
       ? campaignProgressKeys.byCampaign(campaignId)
       : ['gamebook', 'campaigns', 'noop', 'progress'],
+    // `enabled: !!campaignId` guarantees queryFn only runs when campaignId is set.
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- gated by enabled
     queryFn: () => getCampaignProgress(campaignId!),
     enabled: !!campaignId,
   });

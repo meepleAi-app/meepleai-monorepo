@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>LLM Providers &amp; Circuit Breakers · MeepleAI Admin</title>
+<!-- C3 · Platform & Operations → 'providers' (NAV_ID non ancora presente in admin-nav.js;
+     verrà aggiunto nel gruppo "Platform & Operations"). -->
+<!-- @v1 ProviderTable · RoutingChainViz · CircuitBreakerGrid · RotateKeyModal (superadmin) reuse
+     Endpoints: GET /api/v1/admin/providers, /admin/openrouter,
+                /admin/circuit-breakers, /admin/llm/config
+                POST /api/v1/admin/providers/{id}/rotate-key (superadmin)
+     Role: admin (rotate-key/disable = superadmin) -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+<!-- ═══════════════════ INLINED DS (tokens + components + admin-base) ═══════════════════ -->
+<style>
+/* ── tokens.css ─────────────────────────────────────────────────── */
+:root{
+  --c-game:25 95% 45%;--c-player:262 83% 58%;--c-session:240 60% 55%;--c-agent:38 92% 50%;
+  --c-kb:174 60% 40%;--c-chat:220 80% 55%;--c-event:350 89% 60%;--c-toolkit:142 70% 45%;--c-tool:195 80% 50%;
+  --c-success:142 70% 45%;--c-warning:38 92% 50%;--c-danger:350 89% 60%;--c-info:220 80% 55%;
+  --brand:var(--c-game);--brand-fg:hsl(var(--c-game));
+  --f-display:'Quicksand',system-ui,sans-serif;--f-body:'Nunito',system-ui,sans-serif;--f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --fs-xs:11px;--fs-sm:12px;--fs-base:14px;--fs-md:15px;--fs-lg:17px;--fs-xl:20px;--fs-2xl:24px;--fs-3xl:32px;--fs-4xl:40px;
+  --fw-reg:400;--fw-med:500;--fw-semi:600;--fw-bold:700;--fw-ext:800;
+  --lh-tight:1.2;--lh-snug:1.35;--lh-body:1.5;--lh-relax:1.65;
+  --s-0:0;--s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:20px;--s-6:24px;--s-7:32px;--s-8:40px;--s-9:48px;--s-10:64px;
+  --r-xs:4px;--r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:18px;--r-2xl:24px;--r-pill:9999px;
+  --ease-out:cubic-bezier(.16,1,.3,1);--ease-in-out:cubic-bezier(.65,0,.35,1);--ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --dur-xs:120ms;--dur-sm:180ms;--dur-md:280ms;--dur-lg:400ms;--dur-xl:600ms;
+  --z-base:0;--z-sticky:10;--z-nav:20;--z-overlay:50;--z-drawer:51;--z-modal:60;--z-toast:70;--z-tooltip:80;
+}
+:root,:root[data-theme="light"]{
+  --bg:#f7f3ee;--bg-card:#fff;--bg-muted:#efe6d9;--bg-sunken:#ede2d0;--bg-hover:rgba(180,130,80,.06);
+  --text:#2b1f12;--text-sec:#5a4a38;--text-muted:#9a8870;
+  --border:rgba(180,130,80,.18);--border-light:rgba(180,130,80,.1);--border-strong:rgba(180,130,80,.32);
+  --shadow-xs:0 1px 2px rgba(90,60,20,.06);--shadow-sm:0 2px 8px rgba(90,60,20,.08);--shadow-md:0 4px 16px rgba(90,60,20,.1);
+  --shadow-lg:0 12px 36px rgba(90,60,20,.14);--shadow-drawer:0 -8px 32px rgba(90,60,20,.12);
+  --glass-bg:rgba(255,255,255,.88);--glass-border:rgba(255,255,255,.6);color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#14100a;--bg-card:#1e1710;--bg-muted:#241c13;--bg-sunken:#0f0c08;--bg-hover:rgba(255,200,130,.05);
+  --text:#f0e4d2;--text-sec:#c8b896;--text-muted:#8a7860;
+  --border:rgba(224,180,110,.14);--border-light:rgba(224,180,110,.08);--border-strong:rgba(224,180,110,.28);
+  --shadow-xs:0 1px 2px rgba(0,0,0,.3);--shadow-sm:0 2px 8px rgba(0,0,0,.4);--shadow-md:0 4px 16px rgba(0,0,0,.5);
+  --shadow-lg:0 12px 36px rgba(0,0,0,.6);--shadow-drawer:0 -8px 32px rgba(0,0,0,.5);
+  --glass-bg:rgba(30,22,14,.85);--glass-border:rgba(224,180,110,.14);
+  --c-game:28 95% 58%;--c-player:262 75% 70%;--c-session:235 70% 70%;--c-agent:38 92% 62%;--c-kb:174 60% 55%;
+  --c-chat:218 80% 68%;--c-event:350 85% 70%;--c-toolkit:142 60% 58%;--c-tool:195 75% 62%;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{font-family:var(--f-body);background:var(--bg);color:var(--text);font-size:var(--fs-base);line-height:var(--lh-body);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;transition:background var(--dur-md) var(--ease-out),color var(--dur-md) var(--ease-out)}
+h1,h2,h3,h4,h5,h6{font-family:var(--f-display);font-weight:var(--fw-bold);letter-spacing:-.01em;margin:0;line-height:var(--lh-tight)}
+button{font-family:inherit;cursor:pointer}a{color:inherit;text-decoration:none}
+code,kbd{font-family:var(--f-mono);font-size:.9em}
+.e-game{--e:var(--c-game)}.e-player{--e:var(--c-player)}.e-session{--e:var(--c-session)}.e-agent{--e:var(--c-agent)}
+.e-kb{--e:var(--c-kb)}.e-chat{--e:var(--c-chat)}.e-event{--e:var(--c-event)}.e-toolkit{--e:var(--c-toolkit)}.e-tool{--e:var(--c-tool)}
+.e-fg{color:hsl(var(--e))}.e-bg{background:hsl(var(--e));color:#fff}
+.e-tint{background:hsl(var(--e)/.1);color:hsl(var(--e))}.e-ring{box-shadow:0 0 0 2px hsl(var(--e)/.35)}
+
+/* ── components.css (subset) ────────────────────────────────────── */
+.e-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:var(--r-sm);background:hsl(var(--e)/.12);color:hsl(var(--e));font-size:var(--fs-xs);font-weight:var(--fw-bold);font-family:var(--f-display);text-transform:uppercase;letter-spacing:.04em}
+.e-dot{width:8px;height:8px;border-radius:50%;background:hsl(var(--e));flex-shrink:0;display:inline-block}
+.spark{stroke:currentColor;stroke-width:1.5;fill:none}.spark-fill{fill:currentColor;opacity:.14}
+
+/* ── admin-base.css ─────────────────────────────────────────────── */
+.admin-page{background:var(--bg);color:var(--text);min-height:100vh;font-family:var(--f-body);font-size:var(--fs-sm);line-height:1.5}
+.admin-shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.admin-nav{background:var(--bg-card);border-right:1px solid var(--border);padding:16px 0;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.admin-nav-brand{padding:4px 16px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border-light);margin-bottom:12px}
+.admin-nav-brand-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,hsl(var(--c-game)),hsl(var(--c-event)));color:#fff;display:grid;place-items:center;font-family:var(--f-display);font-weight:900;font-size:14px}
+.admin-nav-brand-name{font-family:var(--f-display);font-weight:800;font-size:14px}
+.admin-nav-brand-tag{font-family:var(--f-mono);font-size:9px;font-weight:700;color:hsl(var(--c-event));text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:4px;background:hsl(var(--c-event)/.12);margin-left:auto}
+.admin-nav-group{padding:10px 16px 4px;font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+.admin-nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;color:var(--text-sec);font-family:var(--f-display);font-size:13px;font-weight:600;cursor:pointer;border-left:2px solid transparent;text-decoration:none}
+.admin-nav-item:hover{background:var(--bg-muted);color:var(--text)}
+.admin-nav-item.active{background:hsl(var(--c-event)/.08);color:hsl(var(--c-event));border-left-color:hsl(var(--c-event))}
+.admin-nav-item .em{font-size:14px;opacity:.9}
+.admin-nav-item .count{margin-left:auto;font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700}
+.admin-nav-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border-light);font-family:var(--f-mono);font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:8px}
+.admin-nav-foot .badge{padding:2px 6px;border-radius:4px;background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit));font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+.admin-top{background:var(--bg);border-bottom:1px solid var(--border-light);padding:12px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
+.admin-top h1{font-family:var(--f-display);font-size:20px;font-weight:800;margin:0;line-height:1.2}
+.admin-top .crumbs{font-family:var(--f-mono);font-size:11px;color:var(--text-muted);margin-top:2px}
+.admin-top .spacer{flex:1}.admin-top-actions{display:flex;gap:8px;align-items:center}
+.admin-search{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;width:280px;font-size:12px}
+.admin-search input{flex:1;border:0;background:transparent;color:var(--text);font-family:var(--f-body);font-size:12.5px;outline:0}
+.admin-search kbd{padding:1px 5px;border-radius:4px;background:var(--bg-muted);border:1px solid var(--border);font-family:var(--f-mono);font-size:9px;color:var(--text-muted)}
+.btn-admin{padding:6px 12px;border-radius:6px;font-family:var(--f-display);font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg-card);color:var(--text);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-admin:hover{background:var(--bg-muted)}
+.btn-admin.primary{background:hsl(var(--c-event));border-color:hsl(var(--c-event));color:#fff;box-shadow:0 2px 6px hsl(var(--c-event)/.3)}
+.btn-admin.primary:hover{filter:brightness(1.08)}
+.btn-admin.danger{background:var(--bg-card);border-color:hsl(var(--c-event)/.5);color:hsl(var(--c-event))}
+.btn-admin.success{background:hsl(var(--c-toolkit));border-color:hsl(var(--c-toolkit));color:#fff}
+.btn-admin.ghost{background:transparent;border-color:transparent}
+.btn-admin.icon{padding:6px;width:28px;height:28px;justify-content:center}
+.btn-admin.sm{padding:3px 8px;font-size:11px}
+.btn-admin kbd{padding:1px 4px;border-radius:3px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);font-family:var(--f-mono);font-size:9px;margin-left:4px}
+.btn-admin.primary kbd{background:rgba(0,0,0,.18);border-color:rgba(0,0,0,.25)}
+.admin-kpi{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-height:88px;position:relative}
+.admin-kpi-label{font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.admin-kpi-value{font-family:var(--f-display);font-size:28px;font-weight:800;color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums}
+.admin-kpi-trend{font-family:var(--f-mono);font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px}
+.admin-kpi-trend.up{color:hsl(var(--c-toolkit))}.admin-kpi-trend.down{color:hsl(var(--c-event))}.admin-kpi-trend.flat{color:var(--text-muted)}
+.admin-kpi-spark{position:absolute;right:12px;top:12px;width:70px;height:28px;opacity:.85}
+.admin-kpi.e-tool{border-left:3px solid hsl(var(--c-tool))}
+.admin-kpi.e-chat{border-left:3px solid hsl(var(--c-chat))}
+.admin-kpi.e-event{border-left:3px solid hsl(var(--c-event))}
+.admin-kpi.e-agent{border-left:3px solid hsl(var(--c-agent))}
+.admin-panel{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;overflow:hidden}
+.admin-panel-head{padding:10px 14px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px;background:var(--bg)}
+.admin-panel-head h3{margin:0;font-family:var(--f-display);font-size:13px;font-weight:800}
+.admin-panel-head .meta{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);margin-left:auto}
+.admin-panel-body{padding:14px}
+.admin-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.admin-table th{text-align:left;padding:8px 12px;font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border-light);background:var(--bg);position:sticky;top:0;white-space:nowrap}
+.admin-table td{padding:8px 12px;border-bottom:1px solid var(--border-light);vertical-align:middle}
+.admin-table tr:hover td{background:var(--bg-muted)}
+.admin-table .menu{width:32px;text-align:right}
+.admin-table .menu button{background:transparent;border:0;cursor:pointer;color:var(--text-sec);padding:4px;border-radius:4px}
+.admin-table .menu button:hover{background:var(--bg-muted);color:var(--text)}
+.status-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-family:var(--f-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.status-chip::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.status-chip.healthy{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.healthy::before{background:hsl(var(--c-toolkit));box-shadow:0 0 0 3px hsl(var(--c-toolkit)/.25)}
+.status-chip.warning{background:hsl(38 90% 56%/.14);color:hsl(38 90% 50%)}
+.status-chip.warning::before{background:hsl(38 90% 50%)}
+.status-chip.danger{background:hsl(var(--c-event)/.12);color:hsl(var(--c-event))}
+.status-chip.danger::before{background:hsl(var(--c-event))}
+.status-chip.muted{background:var(--bg-muted);color:var(--text-muted)}
+.status-chip.muted::before{background:var(--text-muted)}
+.status-chip.info{background:hsl(var(--c-chat)/.12);color:hsl(var(--c-chat))}
+.status-chip.info::before{background:hsl(var(--c-chat))}
+.status-chip.running{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.running::before{background:hsl(var(--c-toolkit));animation:admin-pulse 1.4s ease-in-out infinite}
+@keyframes admin-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
+.role-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-family:var(--f-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.role-chip.superadmin{background:hsl(var(--c-event)/.12);color:hsl(var(--c-event))}
+@media (max-width:880px){
+  .admin-mobile-fallback{display:flex !important;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;gap:16px}
+  .admin-mobile-fallback .em{font-size:56px}
+  .admin-mobile-fallback h2{margin:0;font-family:var(--f-display);font-size:20px}
+  .admin-mobile-fallback p{color:var(--text-sec);max-width:320px;margin:0;line-height:1.5}
+  .admin-shell{display:none}
+}
+.admin-mobile-fallback{display:none}
+.admin-body{padding:20px 24px}
+
+/* ── Page-specific ──────────────────────────────────────────────── */
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.head-cluster{display:inline-flex;align-items:center;gap:10px;margin-left:auto}
+.head-cluster .sep{width:1px;height:14px;background:var(--border-light)}
+.sensitive-note{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px}
+.sensitive-note .lock{color:hsl(var(--c-event))}
+
+/* Provider name cell */
+.prov-cell{display:flex;align-items:center;gap:10px}
+.prov-mark{width:26px;height:26px;border-radius:7px;background:hsl(var(--e)/.14);color:hsl(var(--e));display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:13px;flex-shrink:0;border:1px solid hsl(var(--e)/.25)}
+.prov-info{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.prov-name{font-family:var(--f-display);font-weight:800;font-size:13px;color:var(--text);display:inline-flex;align-items:center;gap:6px}
+.prov-name .primary-tag{font-family:var(--f-mono);font-size:9px;color:hsl(var(--c-event));background:hsl(var(--c-event)/.1);padding:1px 5px;border-radius:4px;letter-spacing:.04em;font-weight:700;text-transform:uppercase}
+.prov-host{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);margin-top:1px}
+
+.model-cell{font-family:var(--f-mono);font-size:11.5px;color:var(--text-sec);background:var(--bg-sunken,var(--bg));padding:2px 6px;border-radius:4px;border:1px solid var(--border-light);display:inline-block}
+
+.lat-cell{font-family:var(--f-mono);font-size:11.5px;font-weight:600;color:var(--text);text-align:right}
+.lat-cell.warn{color:hsl(38 90% 50%)}
+.lat-cell .ms{color:var(--text-muted);font-weight:500;font-size:10px;margin-left:1px}
+
+.err-cell{font-family:var(--f-mono);font-size:11.5px;font-weight:600;color:hsl(var(--c-toolkit))}
+.err-cell.warn{color:hsl(38 90% 50%)}
+.err-cell.crit{color:hsl(var(--c-event))}
+
+/* Menu trigger row */
+.row-actions{display:flex;gap:4px;justify-content:flex-end;align-items:center}
+.row-actions .btn-admin.sm{padding:3px 8px;font-size:10.5px}
+.row-actions .btn-admin.sm.danger{}
+.lock-mini{color:hsl(var(--c-event));margin-right:2px}
+
+/* ── Routing chain viz ──────────────────────────────────────────── */
+.routing-body{padding:20px;display:flex;flex-direction:column;gap:20px}
+.routing-chain{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;justify-content:flex-start}
+.rc-node{flex:0 0 auto;min-width:180px;background:var(--bg);border:1px solid hsl(var(--e)/.3);border-left:3px solid hsl(var(--e));border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;position:relative}
+.rc-node .rc-head{display:flex;align-items:center;gap:8px}
+.rc-node .rc-prio{font-family:var(--f-mono);font-size:9px;color:var(--text-muted);background:var(--bg-muted);padding:1px 5px;border-radius:99px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.rc-node .rc-prio.primary{color:hsl(var(--c-event));background:hsl(var(--c-event)/.12)}
+.rc-node .rc-name{font-family:var(--f-display);font-weight:800;font-size:14px;color:var(--text);display:flex;align-items:center;gap:6px;flex:1}
+.rc-node .rc-model{font-family:var(--f-mono);font-size:10.5px;color:hsl(var(--e));font-weight:600}
+.rc-node .rc-meta{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);display:flex;gap:10px;flex-wrap:wrap}
+.rc-node .rc-meta .ok{color:hsl(var(--c-toolkit))}
+.rc-node .rc-meta .warn{color:hsl(38 90% 50%)}
+
+.rc-arrow{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 14px;gap:4px;min-width:130px}
+.rc-arrow .gl{font-family:var(--f-mono);font-size:22px;font-weight:700;color:var(--text-muted);line-height:1}
+.rc-arrow .cond{font-family:var(--f-mono);font-size:10px;color:hsl(38 90% 50%);background:hsl(38 90% 56%/.1);border:1px solid hsl(38 90% 56%/.3);padding:2px 8px;border-radius:99px;white-space:nowrap;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+
+.rc-priority-strip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;background:var(--bg);border:1px solid var(--border-light);border-radius:8px;font-family:var(--f-mono);font-size:11px}
+.rc-priority-strip .k{color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;font-size:9.5px}
+.rc-priority-strip .v{color:var(--text);font-weight:600}
+.rc-priority-strip .sep{color:var(--text-muted);opacity:.5}
+
+/* ── Circuit breaker grid ───────────────────────────────────────── */
+.cb-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:16px}
+.cb-card{background:var(--bg);border:1px solid var(--border-light);border-left:3px solid hsl(var(--e));border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:160px}
+.cb-card .cb-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.cb-card .cb-name{font-family:var(--f-display);font-weight:800;font-size:13px;color:var(--text)}
+.cb-card .cb-state{font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-top:2px}
+.cb-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:auto}
+.cb-stat{display:flex;flex-direction:column;gap:1px}
+.cb-stat .l{font-family:var(--f-mono);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.cb-stat .v{font-family:var(--f-mono);font-size:12px;color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+.cb-stat .v.warn{color:hsl(38 90% 50%)}
+.cb-stat .v.crit{color:hsl(var(--c-event))}
+.cb-stat .v.muted{color:var(--text-muted)}
+.cb-cooldown{display:flex;flex-direction:column;gap:4px;margin-top:2px}
+.cb-cooldown .bar{height:5px;border-radius:99px;background:var(--bg-muted);overflow:hidden;position:relative}
+.cb-cooldown .bar i{position:absolute;left:0;top:0;bottom:0;background:hsl(38 90% 50%);border-radius:99px;animation:cb-shrink 23s linear forwards}
+@keyframes cb-shrink{from{width:100%}to{width:0%}}
+.cb-cooldown .ll{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted)}
+.cb-cooldown .ll .now{color:hsl(38 90% 50%);font-weight:700}
+
+</style>
+</head>
+<body class="admin-page">
+
+  <div class="admin-mobile-fallback">
+    <div class="em">🖥️</div>
+    <h2>Console solo desktop</h2>
+    <p>La console admin è ottimizzata per schermi ≥ 880px. Aprila da desktop.</p>
+  </div>
+
+  <div class="admin-shell">
+    <div data-admin-nav-mount></div>
+
+    <main>
+      <header class="admin-top">
+        <div>
+          <h1>LLM Providers &amp; Circuit Breakers</h1>
+          <div class="crumbs">Admin › Platform &amp; Operations › Providers · 5 provider · aggiornato 14:23:08</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="admin-top-actions">
+          <div class="admin-search"><span>🔍</span><input placeholder="Cerca provider, modello…"/><kbd>⌘K</kbd></div>
+          <button class="btn-admin">⟳ Refresh <kbd>R</kbd></button>
+          <button class="btn-admin">⚙ Config globale</button>
+          <button class="btn-admin icon" title="Tema">🌗</button>
+        </div>
+      </header>
+
+      <div class="admin-body" style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- ────────── 1) KPI strip ────────── -->
+        <section class="kpi-strip">
+          <div class="admin-kpi e-tool">
+            <div class="admin-kpi-label">Provider attivi</div>
+            <div class="admin-kpi-value">4<span style="font-size:14px;color:var(--text-muted);font-weight:600">/5</span></div>
+            <div class="admin-kpi-trend flat">▬ 1 disabilitato · 0 in cooldown</div>
+            <svg class="admin-kpi-spark e-tool" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,14 L8,14 L16,14 L24,14 L32,8 L40,8 L48,8 L56,8 L64,8 L70,8 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,14 L8,14 L16,14 L24,14 L32,8 L40,8 L48,8 L56,8 L64,8 L70,8"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-chat">
+            <div class="admin-kpi-label">Richieste 24h</div>
+            <div class="admin-kpi-value">48.3<span style="font-size:14px;color:var(--text-muted);font-weight:600">k</span></div>
+            <div class="admin-kpi-trend up">▲ 12.4% vs ieri</div>
+            <svg class="admin-kpi-spark e-chat" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,22 L8,20 L16,18 L24,17 L32,14 L40,15 L48,11 L56,9 L64,8 L70,6 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,22 L8,20 L16,18 L24,17 L32,14 L40,15 L48,11 L56,9 L64,8 L70,6"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-event">
+            <div class="admin-kpi-label">Error rate 24h</div>
+            <div class="admin-kpi-value">0.41<span style="font-size:14px;color:var(--text-muted);font-weight:600">%</span></div>
+            <div class="admin-kpi-trend down">▼ -0.12 pts · soglia 1.0%</div>
+            <svg class="admin-kpi-spark e-event" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,8 L8,10 L16,7 L24,12 L32,14 L40,16 L48,18 L56,20 L64,21 L70,22 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,8 L8,10 L16,7 L24,12 L32,14 L40,16 L48,18 L56,20 L64,21 L70,22"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-agent">
+            <div class="admin-kpi-label">Costo 24h</div>
+            <div class="admin-kpi-value">$12.40</div>
+            <div class="admin-kpi-trend up">▲ 8.6% · budget $40/d</div>
+            <svg class="admin-kpi-spark e-agent" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,20 L8,18 L16,17 L24,15 L32,14 L40,13 L48,12 L56,10 L64,9 L70,8 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,20 L8,18 L16,17 L24,15 L32,14 L40,13 L48,12 L56,10 L64,9 L70,8"/>
+            </svg>
+          </div>
+        </section>
+
+        <!-- ────────── 2) Provider table ────────── -->
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <h3>Provider</h3>
+            <span class="status-chip healthy">3 healthy</span>
+            <span class="status-chip warning">1 warn</span>
+            <span class="status-chip muted">1 stopped</span>
+            <div class="head-cluster">
+              <span class="sensitive-note"><span class="lock">🔒</span> Rotate key / Disabilita → richiede conferma (superadmin)</span>
+              <span class="sep"></span>
+              <span class="meta">llm.config rev 27 · last sync 14:22:51</span>
+            </div>
+          </div>
+
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width:22%">Provider</th>
+                <th style="width:11%">Stato</th>
+                <th style="width:18%">Modello default</th>
+                <th style="width:9%;text-align:right">P95 latenza</th>
+                <th style="width:9%;text-align:right">Req 24h</th>
+                <th style="width:8%;text-align:right">Errori</th>
+                <th style="width:13%">Circuit breaker</th>
+                <th style="width:170px;text-align:right">Azioni</th>
+              </tr>
+            </thead>
+            <tbody>
+
+              <tr class="e-tool">
+                <td>
+                  <div class="prov-cell">
+                    <div class="prov-mark">D</div>
+                    <div class="prov-info">
+                      <span class="prov-name">DeepSeek <span class="primary-tag">primary</span></span>
+                      <span class="prov-host">api.deepseek.com · key sk-…f7a2</span>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="status-chip healthy">healthy</span></td>
+                <td><span class="model-cell">deepseek-chat</span></td>
+                <td class="lat-cell">412<span class="ms">ms</span></td>
+                <td class="mono" style="text-align:right">28 144</td>
+                <td class="err-cell" style="text-align:right">0.18%</td>
+                <td><span class="status-chip healthy">closed</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost" title="Config">⚙ Config</button>
+                    <button class="btn-admin sm danger" title="Richiede superadmin · mostra key UNA volta"><span class="lock-mini">🔒</span>⤿ Rotate</button>
+                    <button class="btn-admin sm ghost" title="Più azioni">⋯</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-chat">
+                <td>
+                  <div class="prov-cell">
+                    <div class="prov-mark">O</div>
+                    <div class="prov-info">
+                      <span class="prov-name">OpenRouter</span>
+                      <span class="prov-host">openrouter.ai/api/v1 · key sk-or-…9c4b</span>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="status-chip healthy">healthy</span></td>
+                <td><span class="model-cell">anthropic/claude-3.5-sonnet</span></td>
+                <td class="lat-cell">658<span class="ms">ms</span></td>
+                <td class="mono" style="text-align:right">14 282</td>
+                <td class="err-cell" style="text-align:right">0.32%</td>
+                <td><span class="status-chip healthy">closed</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">⚙ Config</button>
+                    <button class="btn-admin sm danger"><span class="lock-mini">🔒</span>⤿ Rotate</button>
+                    <button class="btn-admin sm ghost">⋯</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-toolkit">
+                <td>
+                  <div class="prov-cell">
+                    <div class="prov-mark">⚛</div>
+                    <div class="prov-info">
+                      <span class="prov-name">OpenAI</span>
+                      <span class="prov-host">api.openai.com/v1 · key sk-…12de</span>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="status-chip warning">latency high</span></td>
+                <td><span class="model-cell">gpt-4o-mini</span></td>
+                <td class="lat-cell warn">1 842<span class="ms">ms</span></td>
+                <td class="mono" style="text-align:right">5 718</td>
+                <td class="err-cell warn" style="text-align:right">2.14%</td>
+                <td><span class="status-chip warning">half-open</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">⚙ Config</button>
+                    <button class="btn-admin sm danger"><span class="lock-mini">🔒</span>⤿ Rotate</button>
+                    <button class="btn-admin sm ghost">⋯</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-agent">
+                <td>
+                  <div class="prov-cell">
+                    <div class="prov-mark">A</div>
+                    <div class="prov-info">
+                      <span class="prov-name">Anthropic</span>
+                      <span class="prov-host">api.anthropic.com · key sk-ant-…58a1</span>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="status-chip healthy">healthy</span></td>
+                <td><span class="model-cell">claude-3.5-sonnet-20241022</span></td>
+                <td class="lat-cell">842<span class="ms">ms</span></td>
+                <td class="mono" style="text-align:right">186</td>
+                <td class="err-cell" style="text-align:right">0.00%</td>
+                <td><span class="status-chip healthy">closed</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">⚙ Config</button>
+                    <button class="btn-admin sm danger"><span class="lock-mini">🔒</span>⤿ Rotate</button>
+                    <button class="btn-admin sm ghost">⋯</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-kb">
+                <td>
+                  <div class="prov-cell">
+                    <div class="prov-mark">L</div>
+                    <div class="prov-info">
+                      <span class="prov-name">Ollama (locale)</span>
+                      <span class="prov-host">localhost:11434 · no key</span>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="status-chip muted">stopped</span></td>
+                <td><span class="model-cell">llama3.1:8b-instruct</span></td>
+                <td class="lat-cell" style="color:var(--text-muted)">—</td>
+                <td class="mono" style="text-align:right;color:var(--text-muted)">0</td>
+                <td class="mono" style="text-align:right;color:var(--text-muted)">—</td>
+                <td><span class="status-chip muted">disabled</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">⚙ Config</button>
+                    <button class="btn-admin sm success">▶ Abilita</button>
+                    <button class="btn-admin sm ghost">⋯</button>
+                  </div>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ────────── 3) Routing chain (fallback) ────────── -->
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <h3>Routing chain · fallback</h3>
+            <span class="status-chip info">3 hops · 1 stand-by</span>
+            <div class="head-cluster">
+              <span class="meta">policy=cost-first · retry budget 3 · jitter 250ms</span>
+              <button class="btn-admin sm ghost">✎ Edita catena</button>
+            </div>
+          </div>
+
+          <div class="routing-body">
+            <div class="routing-chain">
+
+              <div class="rc-node e-tool">
+                <div class="rc-head">
+                  <span class="rc-prio primary">primary · p0</span>
+                </div>
+                <div class="rc-name">⛁ DeepSeek</div>
+                <div class="rc-model">deepseek-chat</div>
+                <div class="rc-meta"><span class="ok">●</span> healthy <span>p95 412 ms</span> <span>err 0.18%</span></div>
+              </div>
+
+              <div class="rc-arrow">
+                <span class="gl">→</span>
+                <span class="cond">on 429 / 5xx / timeout&gt;3s</span>
+              </div>
+
+              <div class="rc-node e-chat">
+                <div class="rc-head">
+                  <span class="rc-prio">fallback · p1</span>
+                </div>
+                <div class="rc-name">⤳ OpenRouter</div>
+                <div class="rc-model">anthropic/claude-3.5-sonnet</div>
+                <div class="rc-meta"><span class="ok">●</span> healthy <span>p95 658 ms</span> <span>err 0.32%</span></div>
+              </div>
+
+              <div class="rc-arrow">
+                <span class="gl">→</span>
+                <span class="cond">on 429 / 5xx / quota</span>
+              </div>
+
+              <div class="rc-node e-toolkit">
+                <div class="rc-head">
+                  <span class="rc-prio">fallback · p2</span>
+                </div>
+                <div class="rc-name">⚛ OpenAI</div>
+                <div class="rc-model">gpt-4o-mini</div>
+                <div class="rc-meta"><span class="warn">●</span> half-open <span>p95 1 842 ms</span> <span class="warn">err 2.14%</span></div>
+              </div>
+
+              <div class="rc-arrow">
+                <span class="gl">→</span>
+                <span class="cond">on circuit open</span>
+              </div>
+
+              <div class="rc-node e-agent">
+                <div class="rc-head">
+                  <span class="rc-prio">stand-by · p3</span>
+                </div>
+                <div class="rc-name">A Anthropic</div>
+                <div class="rc-model">claude-3.5-sonnet</div>
+                <div class="rc-meta"><span class="ok">●</span> healthy <span>p95 842 ms</span> <span>used 0.4%</span></div>
+              </div>
+
+            </div>
+
+            <div class="rc-priority-strip">
+              <span class="k">Priority order</span>
+              <span class="v">deepseek</span>
+              <span class="sep">›</span>
+              <span class="v">openrouter</span>
+              <span class="sep">›</span>
+              <span class="v">openai</span>
+              <span class="sep">›</span>
+              <span class="v">anthropic</span>
+              <span class="sep">·</span>
+              <span class="k">Excluded</span>
+              <span class="v" style="color:var(--text-muted)">ollama-local (stopped)</span>
+              <span class="sep">·</span>
+              <span class="k">Updated</span>
+              <span class="v">2026-05-22 11:08 · <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6c0d0d1e03022c0109091c00090d05420d1c1c">[email&#160;protected]</a></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ────────── 4) Circuit breakers grid ────────── -->
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <h3>Circuit breakers</h3>
+            <span class="status-chip healthy">3 closed</span>
+            <span class="status-chip warning">1 half-open</span>
+            <span class="status-chip muted">1 disabled</span>
+            <div class="head-cluster">
+              <span class="meta">policy: 5 fail in 60s → open · cooldown 30s · half-open probe 1/req</span>
+              <button class="btn-admin sm ghost">⤓ Reset all</button>
+            </div>
+          </div>
+
+          <div class="cb-grid">
+
+            <div class="cb-card e-tool">
+              <div class="cb-head">
+                <div>
+                  <div class="cb-name">DeepSeek</div>
+                  <div class="cb-state">circuit breaker</div>
+                </div>
+                <span class="status-chip healthy">closed</span>
+              </div>
+              <div class="cb-stat-grid">
+                <div class="cb-stat"><span class="l">Fail recenti</span><span class="v">0 / 60s</span></div>
+                <div class="cb-stat"><span class="l">Soglia</span><span class="v">5</span></div>
+                <div class="cb-stat"><span class="l">Ultima apertura</span><span class="v muted">—</span></div>
+                <div class="cb-stat"><span class="l">Reset</span><span class="v muted">n/a</span></div>
+              </div>
+            </div>
+
+            <div class="cb-card e-chat">
+              <div class="cb-head">
+                <div>
+                  <div class="cb-name">OpenRouter</div>
+                  <div class="cb-state">circuit breaker</div>
+                </div>
+                <span class="status-chip healthy">closed</span>
+              </div>
+              <div class="cb-stat-grid">
+                <div class="cb-stat"><span class="l">Fail recenti</span><span class="v">1 / 60s</span></div>
+                <div class="cb-stat"><span class="l">Soglia</span><span class="v">5</span></div>
+                <div class="cb-stat"><span class="l">Ultima apertura</span><span class="v">2026-05-21 22:14</span></div>
+                <div class="cb-stat"><span class="l">Reset</span><span class="v">16h 09m fa</span></div>
+              </div>
+            </div>
+
+            <div class="cb-card e-toolkit">
+              <div class="cb-head">
+                <div>
+                  <div class="cb-name">OpenAI</div>
+                  <div class="cb-state">circuit breaker</div>
+                </div>
+                <span class="status-chip warning">half-open</span>
+              </div>
+              <div class="cb-stat-grid">
+                <div class="cb-stat"><span class="l">Fail recenti</span><span class="v warn">4 / 60s</span></div>
+                <div class="cb-stat"><span class="l">Soglia</span><span class="v">5</span></div>
+                <div class="cb-stat"><span class="l">Ultima apertura</span><span class="v">14:22:45</span></div>
+                <div class="cb-stat"><span class="l">Probe</span><span class="v warn">1/1 in volo</span></div>
+              </div>
+              <div class="cb-cooldown">
+                <div class="bar"><i></i></div>
+                <div class="ll"><span>cooldown</span><span class="now">23s</span></div>
+              </div>
+            </div>
+
+            <div class="cb-card e-agent">
+              <div class="cb-head">
+                <div>
+                  <div class="cb-name">Anthropic</div>
+                  <div class="cb-state">circuit breaker</div>
+                </div>
+                <span class="status-chip healthy">closed</span>
+              </div>
+              <div class="cb-stat-grid">
+                <div class="cb-stat"><span class="l">Fail recenti</span><span class="v">0 / 60s</span></div>
+                <div class="cb-stat"><span class="l">Soglia</span><span class="v">5</span></div>
+                <div class="cb-stat"><span class="l">Ultima apertura</span><span class="v">2026-04-30 09:02</span></div>
+                <div class="cb-stat"><span class="l">Reset</span><span class="v">24g fa</span></div>
+              </div>
+            </div>
+
+            <div class="cb-card e-kb">
+              <div class="cb-head">
+                <div>
+                  <div class="cb-name">Ollama (locale)</div>
+                  <div class="cb-state">circuit breaker</div>
+                </div>
+                <span class="status-chip muted">disabled</span>
+              </div>
+              <div class="cb-stat-grid">
+                <div class="cb-stat"><span class="l">Fail recenti</span><span class="v muted">—</span></div>
+                <div class="cb-stat"><span class="l">Soglia</span><span class="v muted">—</span></div>
+                <div class="cb-stat"><span class="l">Ultima apertura</span><span class="v muted">—</span></div>
+                <div class="cb-stat"><span class="l">Stato</span><span class="v muted">provider off</span></div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="admin-nav.js"></script>
+  <script>renderAdminNav('providers');</script>
+</body>
+</html>

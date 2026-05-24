@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 A7 · Admin Config / Flags · /admin/config</title>
+<!-- @v2 ConfigSection · FlagRow · DirtyStateBar -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .flag-row { display: grid; grid-template-columns: 1fr 160px 120px 110px; gap: 12px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--border-light); font-size: 12.5px; }
+  .flag-row:last-child { border-bottom: 0; }
+  .flag-row .flag-name { font-family: var(--f-mono); font-size: 12px; font-weight: 700; }
+  .flag-row .flag-desc { font-family: var(--f-body); font-size: 11.5px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+  .flag-row.dirty { background: hsl(38 90% 56% / .06); border-left: 3px solid hsl(38 90% 50%); padding-left: 11px; }
+  .env-pill { display: inline-flex; padding: 1px 6px; border-radius: 4px; font-family: var(--f-mono); font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .env-pill.dev { background: var(--bg-muted); color: var(--text-muted); }
+  .env-pill.stg { background: hsl(38 90% 56% / .14); color: hsl(38 90% 50%); }
+  .env-pill.prd { background: hsl(var(--c-event) / .14); color: hsl(var(--c-event)); }
+
+  .dirty-bar {
+    position: sticky; bottom: 0;
+    background: hsl(38 90% 56% / .14);
+    border-top: 2px solid hsl(38 90% 50%);
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 12px;
+    z-index: 40;
+    backdrop-filter: blur(12px);
+  }
+  .dirty-bar .count { font-family: var(--f-display); font-weight: 800; color: hsl(38 90% 40%); }
+</style>
+</head>
+<body class="admin-page">
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2></div>
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+  <main>
+    <header class="admin-top">
+      <div><h1>Config / Feature flags</h1><div class="crumbs">Admin · Config · 47 flags · 3 unsaved changes</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <span class="filter-chip active">env: prd <span class="x">▾</span></span>
+        <button class="btn-admin">📜 Audit log</button>
+      </div>
+    </header>
+
+    <div class="admin-body" style="padding-bottom: 80px">
+
+      <div class="admin-tabs">
+        <button class="admin-tab active">⚙️ General</button>
+        <button class="admin-tab">🚩 Features <span class="count">14</span></button>
+        <button class="admin-tab">🤖 AI <span class="count">8</span></button>
+        <button class="admin-tab">🔗 Integrations <span class="count">12</span></button>
+        <button class="admin-tab">🔒 Security <span class="count">9</span></button>
+      </div>
+
+      <div class="admin-panel">
+        <div class="admin-panel-head"><h3>Features runtime</h3><span class="meta" style="margin-left: auto">last changed by Aaron 2h fa</span></div>
+        <div>
+
+          <div class="flag-row">
+            <div>
+              <div class="flag-name">Features.PdfUpload</div>
+              <div class="flag-desc">Abilita upload PDF utente nella library personale (post-acquisizione gioco)</div>
+            </div>
+            <div class="env-pill prd">prd</div>
+            <div class="admin-toggle on" role="switch" aria-checked="true"></div>
+            <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-align: right">updated<br/>2026-05-12 · Aaron</div>
+          </div>
+
+          <div class="flag-row dirty">
+            <div>
+              <div class="flag-name">Features.AlphaMode</div>
+              <div class="flag-desc">Sblocca UI alpha (nuovo agent builder, librogame v2, RAG hybrid v3) per gli utenti beta</div>
+            </div>
+            <div style="display: flex; gap: 4px">
+              <span class="env-pill dev">dev</span><span class="env-pill stg">stg</span><span class="env-pill prd">prd</span>
+            </div>
+            <div class="admin-toggle on" role="switch" aria-checked="true"></div>
+            <div style="font-family: var(--f-mono); font-size: 10px; color: hsl(38 90% 50%); text-align: right; font-weight: 700">UNSAVED<br/>was OFF</div>
+          </div>
+
+          <div class="flag-row">
+            <div>
+              <div class="flag-name">Features.HouseRuleDrawer</div>
+              <div class="flag-desc">Drawer per definire house-rule quando l'agente risponde con low-confidence (&lt;0.5)</div>
+            </div>
+            <div class="env-pill prd">prd</div>
+            <div class="admin-toggle on" role="switch" aria-checked="true"></div>
+            <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-align: right">updated<br/>2026-04-28</div>
+          </div>
+
+          <div class="flag-row">
+            <div>
+              <div class="flag-name">Features.SsestreamingV2</div>
+              <div class="flag-desc">Server-Sent Events v2 con auto-reconnect e back-pressure handling per chat agent</div>
+            </div>
+            <div style="display: flex; gap: 4px">
+              <span class="env-pill stg">stg</span>
+            </div>
+            <div class="admin-toggle on"></div>
+            <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-align: right">stg-only<br/>canary 20%</div>
+          </div>
+
+          <div class="flag-row dirty">
+            <div>
+              <div class="flag-name">Features.GameNightLiveV2</div>
+              <div class="flag-desc">UI multi-tavolo per Game Night con quick-jump tra session attive contemporanee</div>
+            </div>
+            <div class="env-pill prd">prd</div>
+            <div class="admin-toggle on"></div>
+            <div style="font-family: var(--f-mono); font-size: 10px; color: hsl(38 90% 50%); text-align: right; font-weight: 700">UNSAVED<br/>was OFF</div>
+          </div>
+
+          <div class="flag-row">
+            <div>
+              <div class="flag-name">Features.LibrogameBeta</div>
+              <div class="flag-desc">Modalità gamebook AI (foto manuale → OCR → Q&amp;A) — limited release</div>
+            </div>
+            <div class="env-pill stg">stg</div>
+            <div class="admin-toggle on"></div>
+            <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-align: right">cohort:<br/>beta-12</div>
+          </div>
+
+          <div class="flag-row dirty">
+            <div>
+              <div class="flag-name">Features.NewOnboardingV3</div>
+              <div class="flag-desc">Onboarding rifatto con persona-picker + tour interattivo (vs. checklist statica)</div>
+            </div>
+            <div class="env-pill prd">prd</div>
+            <div class="admin-toggle"></div>
+            <div style="font-family: var(--f-mono); font-size: 10px; color: hsl(38 90% 50%); text-align: right; font-weight: 700">UNSAVED<br/>was ON</div>
+          </div>
+
+          <div class="flag-row">
+            <div>
+              <div class="flag-name">Features.SharedToolkitMarketplace</div>
+              <div class="flag-desc">Marketplace toolkit community con install + rating + reporting (placeholder per Q3)</div>
+            </div>
+            <div class="env-pill dev">dev</div>
+            <div class="admin-toggle"></div>
+            <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-align: right">dev-only<br/>WIP</div>
+          </div>
+
+          <div class="flag-row">
+            <div>
+              <div class="flag-name">Features.AdminImpersonate</div>
+              <div class="flag-desc">Superadmin può aprire sessione utente in lettura (audit log full trace)</div>
+            </div>
+            <div class="env-pill prd">prd</div>
+            <div class="admin-toggle on"></div>
+            <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-align: right">updated<br/>2025-11-08</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Dirty state bar -->
+    <div class="dirty-bar">
+      <span class="em">⚠️</span>
+      <span><span class="count">3 modifiche non salvate</span> · richiesto deploy in prod</span>
+      <div style="margin-left: auto; display: flex; gap: 8px">
+        <button class="btn-admin">↩ Revert</button>
+        <button class="btn-admin">👁 Preview diff</button>
+        <button class="btn-admin primary">✓ Apply changes</button>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="admin-nav.js"></script><script>renderAdminNav('config');</script>
+</body></html>

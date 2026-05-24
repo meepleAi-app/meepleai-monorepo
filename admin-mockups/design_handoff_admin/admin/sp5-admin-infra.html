@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Infrastructure &amp; Containers · MeepleAI Admin</title>
+<!-- C1 · Platform & Operations → 'infra' (NAV_ID non ancora presente in admin-nav.js;
+     verrà aggiunto nel gruppo "Platform & Operations". Per ora la sidebar non ha voce attiva). -->
+<!-- @v1 KPISparkline · LiveEventLog · ConfirmModal (typed-confirm su Restart all) reuse
+     Endpoints: GET /api/v1/admin/docker, /admin/infrastructure,
+                /admin/operations/batch-jobs (+ SSE),
+                POST /admin/operations/restart-service  (role: superadmin) -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+<!-- ═══════════════════ INLINED DS (tokens + components + admin-base) ═══════════════════ -->
+<style>
+/* ── tokens.css ─────────────────────────────────────────────────── */
+:root{
+  --c-game:25 95% 45%;--c-player:262 83% 58%;--c-session:240 60% 55%;--c-agent:38 92% 50%;
+  --c-kb:174 60% 40%;--c-chat:220 80% 55%;--c-event:350 89% 60%;--c-toolkit:142 70% 45%;--c-tool:195 80% 50%;
+  --c-success:142 70% 45%;--c-warning:38 92% 50%;--c-danger:350 89% 60%;--c-info:220 80% 55%;
+  --brand:var(--c-game);--brand-fg:hsl(var(--c-game));
+  --f-display:'Quicksand',system-ui,sans-serif;--f-body:'Nunito',system-ui,sans-serif;--f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --fs-xs:11px;--fs-sm:12px;--fs-base:14px;--fs-md:15px;--fs-lg:17px;--fs-xl:20px;--fs-2xl:24px;--fs-3xl:32px;--fs-4xl:40px;
+  --fw-reg:400;--fw-med:500;--fw-semi:600;--fw-bold:700;--fw-ext:800;
+  --lh-tight:1.2;--lh-snug:1.35;--lh-body:1.5;--lh-relax:1.65;
+  --s-0:0;--s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:20px;--s-6:24px;--s-7:32px;--s-8:40px;--s-9:48px;--s-10:64px;
+  --r-xs:4px;--r-sm:6px;--r-md:10px;--r-lg:14px;--r-xl:18px;--r-2xl:24px;--r-pill:9999px;
+  --ease-out:cubic-bezier(.16,1,.3,1);--ease-in-out:cubic-bezier(.65,0,.35,1);--ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --dur-xs:120ms;--dur-sm:180ms;--dur-md:280ms;--dur-lg:400ms;--dur-xl:600ms;
+  --z-base:0;--z-sticky:10;--z-nav:20;--z-overlay:50;--z-drawer:51;--z-modal:60;--z-toast:70;--z-tooltip:80;
+}
+:root,:root[data-theme="light"]{
+  --bg:#f7f3ee;--bg-card:#fff;--bg-muted:#efe6d9;--bg-sunken:#ede2d0;--bg-hover:rgba(180,130,80,.06);
+  --text:#2b1f12;--text-sec:#5a4a38;--text-muted:#9a8870;
+  --border:rgba(180,130,80,.18);--border-light:rgba(180,130,80,.1);--border-strong:rgba(180,130,80,.32);
+  --shadow-xs:0 1px 2px rgba(90,60,20,.06);--shadow-sm:0 2px 8px rgba(90,60,20,.08);--shadow-md:0 4px 16px rgba(90,60,20,.1);
+  --shadow-lg:0 12px 36px rgba(90,60,20,.14);--shadow-drawer:0 -8px 32px rgba(90,60,20,.12);
+  --glass-bg:rgba(255,255,255,.88);--glass-border:rgba(255,255,255,.6);color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#14100a;--bg-card:#1e1710;--bg-muted:#241c13;--bg-sunken:#0f0c08;--bg-hover:rgba(255,200,130,.05);
+  --text:#f0e4d2;--text-sec:#c8b896;--text-muted:#8a7860;
+  --border:rgba(224,180,110,.14);--border-light:rgba(224,180,110,.08);--border-strong:rgba(224,180,110,.28);
+  --shadow-xs:0 1px 2px rgba(0,0,0,.3);--shadow-sm:0 2px 8px rgba(0,0,0,.4);--shadow-md:0 4px 16px rgba(0,0,0,.5);
+  --shadow-lg:0 12px 36px rgba(0,0,0,.6);--shadow-drawer:0 -8px 32px rgba(0,0,0,.5);
+  --glass-bg:rgba(30,22,14,.85);--glass-border:rgba(224,180,110,.14);
+  --c-game:28 95% 58%;--c-player:262 75% 70%;--c-session:235 70% 70%;--c-agent:38 92% 62%;--c-kb:174 60% 55%;
+  --c-chat:218 80% 68%;--c-event:350 85% 70%;--c-toolkit:142 60% 58%;--c-tool:195 75% 62%;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{font-family:var(--f-body);background:var(--bg);color:var(--text);font-size:var(--fs-base);line-height:var(--lh-body);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;transition:background var(--dur-md) var(--ease-out),color var(--dur-md) var(--ease-out)}
+h1,h2,h3,h4,h5,h6{font-family:var(--f-display);font-weight:var(--fw-bold);letter-spacing:-.01em;margin:0;line-height:var(--lh-tight)}
+button{font-family:inherit;cursor:pointer}a{color:inherit;text-decoration:none}
+code,kbd{font-family:var(--f-mono);font-size:.9em}
+.e-game{--e:var(--c-game)}.e-player{--e:var(--c-player)}.e-session{--e:var(--c-session)}.e-agent{--e:var(--c-agent)}
+.e-kb{--e:var(--c-kb)}.e-chat{--e:var(--c-chat)}.e-event{--e:var(--c-event)}.e-toolkit{--e:var(--c-toolkit)}.e-tool{--e:var(--c-tool)}
+.e-fg{color:hsl(var(--e))}.e-bg{background:hsl(var(--e));color:#fff}
+.e-tint{background:hsl(var(--e)/.1);color:hsl(var(--e))}.e-ring{box-shadow:0 0 0 2px hsl(var(--e)/.35)}
+
+/* ── components.css (subset rilevante) ─────────────────────────── */
+.e-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:var(--r-sm);background:hsl(var(--e)/.12);color:hsl(var(--e));font-size:var(--fs-xs);font-weight:var(--fw-bold);font-family:var(--f-display);text-transform:uppercase;letter-spacing:.04em}
+.e-dot{width:8px;height:8px;border-radius:50%;background:hsl(var(--e));flex-shrink:0;display:inline-block}
+.spark{stroke:currentColor;stroke-width:1.5;fill:none}.spark-fill{fill:currentColor;opacity:.14}
+
+/* ── admin-base.css ─────────────────────────────────────────────── */
+.admin-page{background:var(--bg);color:var(--text);min-height:100vh;font-family:var(--f-body);font-size:var(--fs-sm);line-height:1.5}
+.admin-shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.admin-shell-3col{display:grid;grid-template-columns:240px 1fr 360px;min-height:100vh}
+.admin-nav{background:var(--bg-card);border-right:1px solid var(--border);padding:16px 0;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.admin-nav-brand{padding:4px 16px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border-light);margin-bottom:12px}
+.admin-nav-brand-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,hsl(var(--c-game)),hsl(var(--c-event)));color:#fff;display:grid;place-items:center;font-family:var(--f-display);font-weight:900;font-size:14px}
+.admin-nav-brand-name{font-family:var(--f-display);font-weight:800;font-size:14px}
+.admin-nav-brand-tag{font-family:var(--f-mono);font-size:9px;font-weight:700;color:hsl(var(--c-event));text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:4px;background:hsl(var(--c-event)/.12);margin-left:auto}
+.admin-nav-group{padding:10px 16px 4px;font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+.admin-nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;color:var(--text-sec);font-family:var(--f-display);font-size:13px;font-weight:600;cursor:pointer;border-left:2px solid transparent;text-decoration:none}
+.admin-nav-item:hover{background:var(--bg-muted);color:var(--text)}
+.admin-nav-item.active{background:hsl(var(--c-event)/.08);color:hsl(var(--c-event));border-left-color:hsl(var(--c-event))}
+.admin-nav-item .em{font-size:14px;opacity:.9}
+.admin-nav-item .count{margin-left:auto;font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700}
+.admin-nav-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border-light);font-family:var(--f-mono);font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:8px}
+.admin-nav-foot .badge{padding:2px 6px;border-radius:4px;background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit));font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+.admin-top{background:var(--bg);border-bottom:1px solid var(--border-light);padding:12px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
+.admin-top h1{font-family:var(--f-display);font-size:20px;font-weight:800;margin:0;line-height:1.2}
+.admin-top .crumbs{font-family:var(--f-mono);font-size:11px;color:var(--text-muted);margin-top:2px}
+.admin-top .spacer{flex:1}.admin-top-actions{display:flex;gap:8px;align-items:center}
+.admin-search{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;width:280px;font-size:12px}
+.admin-search input{flex:1;border:0;background:transparent;color:var(--text);font-family:var(--f-body);font-size:12.5px;outline:0}
+.admin-search kbd{padding:1px 5px;border-radius:4px;background:var(--bg-muted);border:1px solid var(--border);font-family:var(--f-mono);font-size:9px;color:var(--text-muted)}
+.btn-admin{padding:6px 12px;border-radius:6px;font-family:var(--f-display);font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg-card);color:var(--text);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-admin:hover{background:var(--bg-muted)}
+.btn-admin.primary{background:hsl(var(--c-event));border-color:hsl(var(--c-event));color:#fff;box-shadow:0 2px 6px hsl(var(--c-event)/.3)}
+.btn-admin.primary:hover{filter:brightness(1.08)}
+.btn-admin.danger{background:var(--bg-card);border-color:hsl(var(--c-event)/.5);color:hsl(var(--c-event))}
+.btn-admin.success{background:hsl(var(--c-toolkit));border-color:hsl(var(--c-toolkit));color:#fff}
+.btn-admin.ghost{background:transparent;border-color:transparent}
+.btn-admin.icon{padding:6px;width:28px;height:28px;justify-content:center}
+.btn-admin.sm{padding:3px 8px;font-size:11px}
+.btn-admin kbd{padding:1px 4px;border-radius:3px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);font-family:var(--f-mono);font-size:9px;margin-left:4px}
+.btn-admin.primary kbd{background:rgba(0,0,0,.18);border-color:rgba(0,0,0,.25)}
+.admin-kpi{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-height:88px;position:relative}
+.admin-kpi-label{font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.admin-kpi-value{font-family:var(--f-display);font-size:28px;font-weight:800;color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums}
+.admin-kpi-trend{font-family:var(--f-mono);font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px}
+.admin-kpi-trend.up{color:hsl(var(--c-toolkit))}.admin-kpi-trend.down{color:hsl(var(--c-event))}.admin-kpi-trend.flat{color:var(--text-muted)}
+.admin-kpi-spark{position:absolute;right:12px;top:12px;width:70px;height:28px;opacity:.85}
+.admin-kpi-icon{position:absolute;right:14px;bottom:12px;font-size:22px;opacity:.35}
+.admin-kpi.e-game{border-left:3px solid hsl(var(--c-game))}.admin-kpi.e-player{border-left:3px solid hsl(var(--c-player))}
+.admin-kpi.e-session{border-left:3px solid hsl(var(--c-session))}.admin-kpi.e-agent{border-left:3px solid hsl(var(--c-agent))}
+.admin-kpi.e-kb{border-left:3px solid hsl(var(--c-kb))}.admin-kpi.e-chat{border-left:3px solid hsl(var(--c-chat))}
+.admin-kpi.e-event{border-left:3px solid hsl(var(--c-event))}.admin-kpi.e-toolkit{border-left:3px solid hsl(var(--c-toolkit))}
+.admin-panel{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;overflow:hidden}
+.admin-panel-head{padding:10px 14px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px;background:var(--bg)}
+.admin-panel-head h3{margin:0;font-family:var(--f-display);font-size:13px;font-weight:800}
+.admin-panel-head .meta{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);margin-left:auto}
+.admin-panel-body{padding:14px}
+.admin-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.admin-table th{text-align:left;padding:8px 12px;font-family:var(--f-mono);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border-light);background:var(--bg);position:sticky;top:0;white-space:nowrap}
+.admin-table th.sort-asc::after{content:' ↑';color:hsl(var(--c-event))}
+.admin-table th.sort-desc::after{content:' ↓';color:hsl(var(--c-event))}
+.admin-table td{padding:8px 12px;border-bottom:1px solid var(--border-light);vertical-align:middle}
+.admin-table tr:hover td{background:var(--bg-muted)}
+.admin-table tr.selected td{background:hsl(var(--c-event)/.06)}
+.admin-table .checkbox{width:32px}.admin-table .menu{width:32px;text-align:right}
+.admin-table .menu button{background:transparent;border:0;cursor:pointer;color:var(--text-sec);padding:4px;border-radius:4px}
+.admin-table .menu button:hover{background:var(--bg-muted);color:var(--text)}
+.status-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-family:var(--f-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.status-chip::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.status-chip.healthy{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.healthy::before{background:hsl(var(--c-toolkit));box-shadow:0 0 0 3px hsl(var(--c-toolkit)/.25)}
+.status-chip.warning{background:hsl(38 90% 56%/.14);color:hsl(38 90% 50%)}
+.status-chip.warning::before{background:hsl(38 90% 50%)}
+.status-chip.danger{background:hsl(var(--c-event)/.12);color:hsl(var(--c-event))}
+.status-chip.danger::before{background:hsl(var(--c-event))}
+.status-chip.muted{background:var(--bg-muted);color:var(--text-muted)}
+.status-chip.muted::before{background:var(--text-muted)}
+.status-chip.info{background:hsl(var(--c-chat)/.12);color:hsl(var(--c-chat))}
+.status-chip.info::before{background:hsl(var(--c-chat))}
+.status-chip.running{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.running::before{background:hsl(var(--c-toolkit));animation:admin-pulse 1.4s ease-in-out infinite}
+@keyframes admin-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
+.role-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-family:var(--f-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.role-chip.superadmin{background:hsl(var(--c-event)/.12);color:hsl(var(--c-event))}
+.role-chip.admin{background:hsl(var(--c-event)/.08);color:hsl(var(--c-event))}
+.role-chip.premium{background:hsl(var(--c-agent)/.14);color:hsl(38 90% 38%)}
+.role-chip.user{background:hsl(var(--c-player)/.1);color:hsl(var(--c-player))}
+.activity-feed{display:flex;flex-direction:column;gap:1px}
+.activity-item{padding:10px 14px;border-bottom:1px solid var(--border-light);display:flex;align-items:flex-start;gap:10px;font-size:12.5px}
+.activity-item:last-child{border-bottom:0}.activity-item:hover{background:var(--bg-muted)}
+.activity-item .em{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:14px;flex-shrink:0}
+.activity-item .body{flex:1;min-width:0}.activity-item .body strong{font-weight:700;color:var(--text)}
+.activity-item .ts{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);flex-shrink:0}
+.alert-banner{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:8px;font-size:12.5px}
+.alert-banner.warning{background:hsl(38 90% 56%/.1);border:1px solid hsl(38 90% 56%/.35);color:var(--text)}
+.alert-banner.danger{background:hsl(var(--c-event)/.08);border:1px solid hsl(var(--c-event)/.35);color:var(--text)}
+.alert-banner.info{background:hsl(var(--c-chat)/.08);border:1px solid hsl(var(--c-chat)/.3);color:var(--text)}
+.alert-banner.success{background:hsl(var(--c-toolkit)/.08);border:1px solid hsl(var(--c-toolkit)/.3);color:var(--text)}
+.alert-banner .em{font-size:18px;flex-shrink:0}
+.alert-banner .title{font-family:var(--f-display);font-weight:800;margin-bottom:2px;font-size:13px}
+.alert-banner .actions{margin-left:auto;display:flex;gap:6px}
+@media (max-width:880px){
+  .admin-mobile-fallback{display:flex !important;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;gap:16px}
+  .admin-mobile-fallback .em{font-size:56px}
+  .admin-mobile-fallback h2{margin:0;font-family:var(--f-display);font-size:20px}
+  .admin-mobile-fallback p{color:var(--text-sec);max-width:320px;margin:0;line-height:1.5}
+  .admin-shell,.admin-shell-3col{display:none}
+}
+.admin-mobile-fallback{display:none}
+.admin-body{padding:20px 24px}.admin-body-grid{display:grid;gap:16px}
+.kbd-hint{display:inline-flex;align-items:center;gap:4px;font-family:var(--f-mono);font-size:10px;color:var(--text-muted)}
+.kbd-hint kbd{padding:1px 5px;border-radius:4px;background:var(--bg-muted);border:1px solid var(--border)}
+
+/* ── Page-specific styles ───────────────────────────────────────── */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+
+.svc-img{font-family:var(--f-mono);font-size:11px;color:var(--text-sec);background:var(--bg-sunken,var(--bg));padding:2px 6px;border-radius:4px;border:1px solid var(--border-light);display:inline-block;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+.svc-name{display:flex;align-items:center;gap:8px}
+.svc-name .dot{width:8px;height:8px;border-radius:50%;background:hsl(var(--e));flex-shrink:0}
+.svc-name strong{font-family:var(--f-display);font-weight:800;font-size:13px;color:var(--text)}
+.svc-name .port{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);margin-left:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.usage-cell{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.usage-cell .bar{width:54px;height:5px;border-radius:99px;background:var(--bg-muted);overflow:hidden;position:relative}
+.usage-cell .bar i{position:absolute;left:0;top:0;bottom:0;background:hsl(var(--e));border-radius:99px;display:block}
+.usage-cell .bar.warn i{background:hsl(38 90% 50%)}
+.usage-cell .bar.crit i{background:hsl(var(--c-event))}
+.usage-cell .val{font-family:var(--f-mono);font-size:11px;color:var(--text);min-width:48px;text-align:right;font-weight:600}
+
+/* Service action group inline */
+.row-actions{display:flex;gap:4px;justify-content:flex-end;align-items:center}
+.row-actions .btn-admin.sm{padding:3px 8px;font-size:10.5px}
+
+/* Live event log */
+.event-log{background:var(--bg-sunken,var(--bg));border-top:1px solid var(--border-light);max-height:300px;overflow-y:auto;font-family:var(--f-mono);font-size:11px}
+.event-log .row{display:grid;grid-template-columns:96px 60px 1fr;gap:12px;padding:5px 14px;border-bottom:1px solid var(--border-light);line-height:1.45;align-items:center}
+.event-log .row:hover{background:var(--bg-muted)}
+.event-log .row:last-child{border-bottom:0}
+.event-log .ts{color:var(--text-muted)}
+.event-log .lvl{font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:10px}
+.event-log .lvl.info{color:hsl(var(--c-chat))}
+.event-log .lvl.warn{color:hsl(38 90% 50%)}
+.event-log .lvl.err{color:hsl(var(--c-event))}
+.event-log .lvl.ok{color:hsl(var(--c-toolkit))}
+.event-log .msg{color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.event-log .msg .k{color:var(--text-muted)}
+.event-log .msg .v-game{color:hsl(var(--c-game));font-weight:700}
+.event-log .msg .v-kb{color:hsl(var(--c-kb));font-weight:700}
+.event-log .msg .v-agent{color:hsl(var(--c-agent));font-weight:700}
+.event-log .msg .v-tool{color:hsl(var(--c-tool));font-weight:700}
+.event-log .msg .v-session{color:hsl(var(--c-session));font-weight:700}
+.event-log .msg .pct{color:hsl(var(--c-toolkit));font-weight:700}
+
+/* Resources bars */
+.res-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+.res-block{display:flex;flex-direction:column;gap:8px}
+.res-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.res-title{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:800;font-size:13px;color:var(--text)}
+.res-title .em-ico{font-size:14px;opacity:.85}
+.res-num{font-family:var(--f-mono);font-size:13px;color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+.res-num .sub{color:var(--text-muted);font-weight:500;font-size:11px;margin-left:4px}
+.res-bar{position:relative;height:14px;border-radius:99px;background:hsl(var(--e)/.12);overflow:hidden}
+.res-bar i{position:absolute;left:0;top:0;bottom:0;background:hsl(var(--e));border-radius:99px}
+.res-bar i.warn{background:hsl(38 90% 50%)}
+.res-foot{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10px;color:var(--text-muted)}
+.res-foot .seg{display:inline-flex;align-items:center;gap:4px}
+.res-foot .seg::before{content:'';width:8px;height:8px;border-radius:2px;background:hsl(var(--e))}
+.res-foot .seg.warn::before{background:hsl(38 90% 50%)}
+.res-foot .seg.muted::before{background:var(--text-muted);opacity:.4}
+
+/* Live header dot */
+.live-pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit));font-family:var(--f-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.live-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:hsl(var(--c-toolkit));animation:admin-pulse 1.4s ease-in-out infinite}
+
+.sensitive-note{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px}
+.sensitive-note .lock{color:hsl(var(--c-event))}
+
+/* Compact panel head right-side cluster */
+.head-cluster{display:inline-flex;align-items:center;gap:10px;margin-left:auto}
+.head-cluster .sep{width:1px;height:14px;background:var(--border-light)}
+</style>
+</head>
+<body class="admin-page">
+
+  <div class="admin-mobile-fallback">
+    <div class="em">🖥️</div>
+    <h2>Console solo desktop</h2>
+    <p>La console admin è ottimizzata per schermi ≥ 880px. Aprila da desktop.</p>
+  </div>
+
+  <div class="admin-shell">
+    <div data-admin-nav-mount></div>
+
+    <main>
+      <header class="admin-top">
+        <div>
+          <h1>Infrastructure &amp; Containers</h1>
+          <div class="crumbs">Admin › Platform &amp; Operations › Infrastructure · aggiornato 14:23:08</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="admin-top-actions">
+          <div class="admin-search"><span>🔍</span><input placeholder="Cerca servizio, container, job…"/><kbd>⌘K</kbd></div>
+          <button class="btn-admin">⟳ Refresh <kbd>R</kbd></button>
+          <button class="btn-admin danger" title="Richiede typed-confirm + ruolo superadmin">⟳ Restart all</button>
+          <button class="btn-admin icon" title="Tema">🌗</button>
+        </div>
+      </header>
+
+      <div class="admin-body" style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- ────────── 1) KPI strip ────────── -->
+        <section class="kpi-strip">
+
+          <div class="admin-kpi e-toolkit">
+            <div class="admin-kpi-label">Container attivi</div>
+            <div class="admin-kpi-value">7<span style="font-size:14px;color:var(--text-muted);font-weight:600">/8</span></div>
+            <div class="admin-kpi-trend flat">▬ 1 stopped · 0 crashed</div>
+            <svg class="admin-kpi-spark e-toolkit" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,18 L8,18 L16,18 L24,18 L32,18 L40,8 L48,8 L56,8 L64,8 L70,8 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,18 L8,18 L16,18 L24,18 L32,18 L40,8 L48,8 L56,8 L64,8 L70,8"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-chat">
+            <div class="admin-kpi-label">CPU media</div>
+            <div class="admin-kpi-value">34<span style="font-size:14px;color:var(--text-muted);font-weight:600">%</span></div>
+            <div class="admin-kpi-trend up">▲ 6.2% vs 1h fa</div>
+            <svg class="admin-kpi-spark e-chat" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,22 L8,20 L16,21 L24,18 L32,15 L40,17 L48,12 L56,14 L64,10 L70,9 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,22 L8,20 L16,21 L24,18 L32,15 L40,17 L48,12 L56,14 L64,10 L70,9"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-kb">
+            <div class="admin-kpi-label">RAM usata</div>
+            <div class="admin-kpi-value">18.4<span style="font-size:14px;color:var(--text-muted);font-weight:600">/32 GB</span></div>
+            <div class="admin-kpi-trend up">▲ 57.5% allocata</div>
+            <svg class="admin-kpi-spark e-kb" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,16 L8,15 L16,14 L24,15 L32,13 L40,12 L48,11 L56,10 L64,11 L70,10 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,16 L8,15 L16,14 L24,15 L32,13 L40,12 L48,11 L56,10 L64,11 L70,10"/>
+            </svg>
+          </div>
+
+          <div class="admin-kpi e-agent">
+            <div class="admin-kpi-label">Batch job in coda</div>
+            <div class="admin-kpi-value">4<span style="font-size:14px;color:var(--text-muted);font-weight:600"> · 2 run</span></div>
+            <div class="admin-kpi-trend down">▼ -3 ultimi 5m</div>
+            <svg class="admin-kpi-spark e-agent" viewBox="0 0 70 28">
+              <path class="spark-fill e-fg" d="M0,4 L8,6 L16,10 L24,12 L32,15 L40,14 L48,17 L56,19 L64,20 L70,22 L70,28 L0,28 Z"/>
+              <path class="spark e-fg" d="M0,4 L8,6 L16,10 L24,12 L32,15 L40,14 L48,17 L56,19 L64,20 L70,22"/>
+            </svg>
+          </div>
+
+        </section>
+
+        <!-- ────────── 2) Servizi (Docker containers) ────────── -->
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <h3>Servizi</h3>
+            <span class="status-chip healthy">6 healthy</span>
+            <span class="status-chip warning">1 warn</span>
+            <span class="status-chip muted">1 stopped</span>
+            <div class="head-cluster">
+              <span class="sensitive-note"><span class="lock">🔒</span> Restart servizio → richiede conferma (superadmin)</span>
+              <span class="sep"></span>
+              <span class="meta">docker · node-01.fra · 8 svc</span>
+              <button class="btn-admin sm ghost" title="Compose YAML">⛁ Compose</button>
+            </div>
+          </div>
+
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th style="width:24%">Servizio</th>
+                <th style="width:13%">Stato</th>
+                <th class="sort-desc" style="width:11%">Uptime</th>
+                <th style="width:11%; text-align:right">CPU</th>
+                <th style="width:13%; text-align:right">RAM</th>
+                <th>Immagine</th>
+                <th style="width:140px; text-align:right">Azioni</th>
+              </tr>
+            </thead>
+            <tbody>
+
+              <tr class="e-chat">
+                <td><div class="svc-name"><span class="dot"></span><strong>meepleai-api</strong><span class="port">:8080</span></div></td>
+                <td><span class="status-chip healthy">healthy</span></td>
+                <td class="mono">12d 4h 17m</td>
+                <td class="num"><div class="usage-cell"><div class="bar"><i style="width:28%"></i></div><span class="val">28%</span></div></td>
+                <td class="num"><div class="usage-cell"><div class="bar"><i style="width:42%"></i></div><span class="val">3.4 GB</span></div></td>
+                <td><span class="svc-img">ghcr.io/meepleai/api:1.8.2</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost" title="Logs">📜 Logs</button>
+                    <button class="btn-admin sm danger" title="Richiede conferma">⟳ Restart</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-kb">
+                <td><div class="svc-name"><span class="dot"></span><strong>embedding-service</strong><span class="port">:9100</span></div></td>
+                <td><span class="status-chip healthy">healthy</span></td>
+                <td class="mono">12d 4h 12m</td>
+                <td class="num"><div class="usage-cell"><div class="bar"><i style="width:52%"></i></div><span class="val">52%</span></div></td>
+                <td class="num"><div class="usage-cell"><div class="bar"><i style="width:68%"></i></div><span class="val">5.1 GB</span></div></td>
+                <td><span class="svc-img">ghcr.io/meepleai/embed-bge-m3:0.4.1</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">📜 Logs</button>
+                    <button class="btn-admin sm danger">⟳ Restart</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-tool">
+                <td><div class="svc-name"><span class="dot"></span><strong>reranker-service</strong><span class="port">:9110</span></div></td>
+                <td><span class="status-chip warning">high latency</span></td>
+                <td class="mono">2d 18h 03m</td>
+                <td class="num"><div class="usage-cell"><div class="bar warn"><i style="width:76%"></i></div><span class="val">76%</span></div></td>
+                <td class="num"><div class="usage-cell"><div class="bar warn"><i style="width:81%"></i></div><span class="val">6.5 GB</span></div></td>
+                <td><span class="svc-img">ghcr.io/meepleai/reranker-bge:0.2.0</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">📜 Logs</button>
+                    <button class="btn-admin sm danger">⟳ Restart</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-kb">
+                <td><div class="svc-name"><span class="dot"></span><strong>postgres</strong><span class="port">:5432</span></div></td>
+                <td><span class="status-chip healthy">healthy</span></td>
+                <td class="mono">42d 11h 56m</td>
+                <td class="num"><div class="usage-cell"><div class="bar"><i style="width:14%"></i></div><span class="val">14%</span></div></td>
+                <td class="num"><div class="usage-cell"><div class="bar"><i style="width:38%"></i></div><span class="val">2.4 GB</span></div></td>
+                <td><span class="svc-img">postgres:16.3-alpine</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">📜 Logs</button>
+                    <button class="btn-admin sm danger">⟳ Restart</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-event">
+                <td><div class="svc-name"><span class="dot"></span><strong>redis</strong><span class="port">:6379</span></div></td>
+                <td><span class="status-chip healthy">healthy</span></td>
+                <td class="mono">42d 11h 56m</td>
+                <td class="num"><div class="usage-cell"><div class="bar"><i style="width:6%"></i></div><span class="val">6%</span></div></td>
+                <td class="num"><div class="usage-cell"><div class="bar"><i style="width:12%"></i></div><span class="val">412 MB</span></div></td>
+                <td><span class="svc-img">redis:7.2-alpine</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">📜 Logs</button>
+                    <button class="btn-admin sm danger">⟳ Restart</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-toolkit">
+                <td><div class="svc-name"><span class="dot"></span><strong>n8n</strong><span class="port">:5678</span></div></td>
+                <td><span class="status-chip healthy">healthy</span></td>
+                <td class="mono">7d 09h 22m</td>
+                <td class="num"><div class="usage-cell"><div class="bar"><i style="width:11%"></i></div><span class="val">11%</span></div></td>
+                <td class="num"><div class="usage-cell"><div class="bar"><i style="width:18%"></i></div><span class="val">620 MB</span></div></td>
+                <td><span class="svc-img">n8nio/n8n:1.62.4</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">📜 Logs</button>
+                    <button class="btn-admin sm danger">⟳ Restart</button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr class="e-agent">
+                <td><div class="svc-name"><span class="dot"></span><strong>smoldocling</strong><span class="port">:9200</span></div></td>
+                <td><span class="status-chip muted">stopped</span></td>
+                <td class="mono" style="color:var(--text-muted)">—</td>
+                <td class="num" style="color:var(--text-muted)">—</td>
+                <td class="num" style="color:var(--text-muted)">—</td>
+                <td><span class="svc-img">ghcr.io/ds4sd/smoldocling:0.9.3</span></td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn-admin sm ghost">📜 Logs</button>
+                    <button class="btn-admin sm success">▶ Start</button>
+                  </div>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ────────── 3) Batch jobs (live event log) ────────── -->
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <h3>Batch jobs <span style="font-family:var(--f-mono);font-weight:500;color:var(--text-muted);font-size:11px;margin-left:6px">/admin/operations/batch-jobs</span></h3>
+            <span class="live-pill">● streaming · SSE</span>
+            <div class="head-cluster">
+              <span class="meta">2 running · 4 queued · 1.4k completed (24h)</span>
+              <button class="btn-admin sm ghost">⏸ Pause stream</button>
+              <button class="btn-admin sm ghost">⤓ Export ndjson</button>
+            </div>
+          </div>
+
+          <div class="event-log" role="log" aria-live="polite">
+            <div class="row">
+              <span class="ts">14:23:08.412</span>
+              <span class="lvl info">INFO</span>
+              <span class="msg">reindex <span class="k">game=</span><span class="v-game">catan</span> <span class="k">stage=</span><span class="v-kb">embed</span> <span class="k">progress=</span><span class="pct">64%</span> <span class="k">batch=</span>128/200 <span class="k">job=</span>job_8f3a21</span>
+            </div>
+            <div class="row">
+              <span class="ts">14:23:07.918</span>
+              <span class="lvl ok">OK</span>
+              <span class="msg">pdf-ingest <span class="k">file=</span>wingspan-rulebook-v3.pdf <span class="k">pages=</span>96 <span class="k">duration=</span>4.812s <span class="k">job=</span>job_8f3a14</span>
+            </div>
+            <div class="row">
+              <span class="ts">14:23:06.204</span>
+              <span class="lvl info">INFO</span>
+              <span class="msg">embedding <span class="k">model=</span><span class="v-agent">bge-m3</span> <span class="k">chunks=</span>1 024 <span class="k">throughput=</span>318/s <span class="k">job=</span>job_8f3a21</span>
+            </div>
+            <div class="row">
+              <span class="ts">14:23:04.871</span>
+              <span class="lvl warn">WARN</span>
+              <span class="msg">reranker <span class="k">latency=</span>1842ms <span class="k">threshold=</span>800ms <span class="k">session=</span><span class="v-session">sess_a14c</span> <span class="k">action=</span>retry-1/3</span>
+            </div>
+            <div class="row">
+              <span class="ts">14:23:02.503</span>
+              <span class="lvl ok">OK</span>
+              <span class="msg">cron-evict <span class="k">expired=</span>312 <span class="k">cache=</span>redis:answers <span class="k">freed=</span>48.2 MB</span>
+            </div>
+            <div class="row">
+              <span class="ts">14:23:01.166</span>
+              <span class="lvl info">INFO</span>
+              <span class="msg">reindex <span class="k">game=</span><span class="v-game">wingspan</span> <span class="k">stage=</span><span class="v-kb">chunk</span> <span class="k">progress=</span><span class="pct">21%</span> <span class="k">job=</span>job_8f3a22</span>
+            </div>
+            <div class="row">
+              <span class="ts">14:22:58.704</span>
+              <span class="lvl ok">OK</span>
+              <span class="msg">tool-sync <span class="k">toolkit=</span><span class="v-tool">bgg-import</span> <span class="k">added=</span>14 <span class="k">updated=</span>3 <span class="k">duration=</span>9.4s</span>
+            </div>
+            <div class="row">
+              <span class="ts">14:22:55.118</span>
+              <span class="lvl info">INFO</span>
+              <span class="msg">n8n-webhook <span class="k">flow=</span>publish-game <span class="k">game=</span><span class="v-game">terraforming-mars</span> <span class="k">status=</span>queued</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ────────── 4) Risorse (disco + memoria) ────────── -->
+        <section class="admin-panel">
+          <div class="admin-panel-head">
+            <h3>Risorse</h3>
+            <div class="head-cluster">
+              <span class="meta">node-01.fra · ext4 · zfs snapshot ogni 6h</span>
+            </div>
+          </div>
+          <div class="admin-panel-body">
+            <div class="res-grid">
+
+              <div class="res-block e-kb">
+                <div class="res-head">
+                  <span class="res-title"><span class="em-ico">💾</span>Disco · /var/lib/docker</span>
+                  <span class="res-num">186.4 <span class="sub">/ 500 GB · 37.3%</span></span>
+                </div>
+                <div class="res-bar">
+                  <i style="width:62%"></i>
+                  <i class="warn" style="left:62%;width:5%"></i>
+                </div>
+                <div class="res-foot">
+                  <span class="seg">images · 72.1 GB</span>
+                  <span class="seg">volumes · 88.6 GB</span>
+                  <span class="seg warn">logs · 25.7 GB</span>
+                  <span class="seg muted">libero · 313.6 GB</span>
+                </div>
+              </div>
+
+              <div class="res-block e-chat">
+                <div class="res-head">
+                  <span class="res-title"><span class="em-ico">🧠</span>Memoria · host</span>
+                  <span class="res-num">18.4 <span class="sub">/ 32 GB · 57.5%</span></span>
+                </div>
+                <div class="res-bar">
+                  <i style="width:57.5%"></i>
+                </div>
+                <div class="res-foot">
+                  <span class="seg">containers · 14.8 GB</span>
+                  <span class="seg">page cache · 2.9 GB</span>
+                  <span class="seg">kernel · 0.7 GB</span>
+                  <span class="seg muted">libero · 13.6 GB</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="admin-nav.js"></script>
+  <script>renderAdminNav('infra');</script>
+</body>
+</html>

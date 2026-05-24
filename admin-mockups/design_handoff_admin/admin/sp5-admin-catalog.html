@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 A6 · Admin Catalog Ingestion · /admin/catalog-ingestion</title>
+<!-- @v2 SyncStatusHero · SyncRunTimeline · LogStream -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .catalog-hero { background: linear-gradient(135deg, hsl(var(--c-toolkit) / .14), hsl(var(--c-game) / .08)); border: 1px solid hsl(var(--c-toolkit) / .25); border-radius: 12px; padding: 20px 24px; display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: center; }
+  .catalog-hero h2 { margin: 0 0 6px; font-family: var(--f-display); font-size: 22px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+  .catalog-hero .stats { display: flex; gap: 20px; font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); margin-top: 6px; flex-wrap: wrap; }
+  .catalog-hero .stat-val { color: var(--text); font-weight: 700; }
+  .catalog-controls { background: var(--bg-card); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .catalog-controls .sf-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .catalog-controls label { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; min-width: 90px; }
+
+  .run-card { padding: 12px 14px; border-bottom: 1px solid var(--border-light); display: grid; grid-template-columns: 32px 1fr 90px 60px 60px 60px 24px; gap: 12px; align-items: center; font-size: 12px; }
+  .run-card:last-child { border-bottom: 0; }
+  .run-card .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .run-card.success .status-dot { background: hsl(var(--c-toolkit)); }
+  .run-card.failed .status-dot { background: hsl(var(--c-event)); }
+  .run-card.running .status-dot { background: hsl(var(--c-kb)); animation: admin-pulse 2s infinite; }
+  .run-card .title { font-family: var(--f-display); font-weight: 700; }
+  .run-card .ts { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .run-card .num { font-family: var(--f-mono); text-align: right; font-weight: 700; }
+  .run-card .num.added { color: hsl(var(--c-toolkit)); }
+  .run-card .num.updated { color: hsl(var(--c-chat)); }
+  .run-card .num.failed { color: hsl(var(--c-event)); }
+</style>
+</head>
+<body class="admin-page">
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2></div>
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+  <main>
+    <header class="admin-top">
+      <div><h1>Catalog ingestion</h1><div class="crumbs">Admin · Catalog · BoardGameGeek sync · last run 14 min fa</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <button class="btn-admin">⤓ Export history</button>
+      </div>
+    </header>
+
+    <div class="admin-body" style="display: flex; flex-direction: column; gap: 16px;">
+
+      <div class="catalog-hero">
+        <div>
+          <h2>🔄 BGG Catalog Sync <span class="status-chip healthy" style="font-size: 11px">Idle</span></h2>
+          <div style="font-size: 13px; color: var(--text-sec); line-height: 1.5">Sincronizzazione automatica da BoardGameGeek API. Cron schedule ogni 6h.</div>
+          <div class="stats">
+            <span>Ultima sync: <span class="stat-val">14 min fa · 2026-05-24 14:08</span></span>
+            <span>Giochi importati totali: <span class="stat-val">4.812</span></span>
+            <span>Next scheduled: <span class="stat-val">17:08</span></span>
+            <span>Provider: <span class="stat-val">BGG API v2</span></span>
+          </div>
+        </div>
+        <div class="catalog-controls">
+          <div class="sf-row"><label>Provider</label><select class="admin-select"><option>BGG API v2</option><option>CSV import</option><option>Manual</option></select></div>
+          <div class="sf-row"><label>Batch size</label><input class="admin-input mono" value="100" style="max-width: 80px"></div>
+          <div class="sf-row"><label>Rate limit</label><input class="admin-input mono" value="60/min" style="max-width: 80px"></div>
+          <div class="sf-row"><label>Auto-retry</label><div class="admin-toggle on"></div></div>
+          <button class="btn-admin primary" style="margin-top: 6px">▶ Run sync now</button>
+        </div>
+      </div>
+
+      <div class="admin-panel">
+        <div class="admin-panel-head">
+          <h3>Sync history · ultime 12 run</h3>
+          <span class="meta" style="margin-left: auto">success rate 91.7%</span>
+        </div>
+        <div style="padding: 0">
+          <div class="run-card" style="background: var(--bg); font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 700">
+            <div></div><div>Run</div><div style="text-align: right">Durata</div><div style="text-align: right">+add</div><div style="text-align: right">~upd</div><div style="text-align: right">✕fail</div><div></div>
+          </div>
+          <div class="run-card success">
+            <div class="status-dot"></div>
+            <div><div class="title">BGG full sync</div><div class="ts">2026-05-24 14:08 · cron · by system</div></div>
+            <div class="num">4m 18s</div>
+            <div class="num added">+12</div>
+            <div class="num updated">~847</div>
+            <div class="num failed">0</div>
+            <div>›</div>
+          </div>
+          <div class="run-card success">
+            <div class="status-dot"></div>
+            <div><div class="title">BGG full sync</div><div class="ts">2026-05-24 08:08 · cron</div></div>
+            <div class="num">3m 52s</div>
+            <div class="num added">+8</div>
+            <div class="num updated">~743</div>
+            <div class="num failed">0</div>
+            <div>›</div>
+          </div>
+          <div class="run-card failed" style="background: hsl(var(--c-event) / .04)">
+            <div class="status-dot"></div>
+            <div><div class="title">BGG full sync</div><div class="ts">2026-05-24 02:08 · cron · timeout BGG API</div></div>
+            <div class="num">6m 02s</div>
+            <div class="num added">+3</div>
+            <div class="num updated">~218</div>
+            <div class="num failed">14</div>
+            <div>›</div>
+          </div>
+          <div class="run-card success">
+            <div class="status-dot"></div>
+            <div><div class="title">Manual import · "Wingspan Antarctic"</div><div class="ts">2026-05-23 16:42 · by Aaron</div></div>
+            <div class="num">2.4s</div>
+            <div class="num added">+1</div>
+            <div class="num updated">~0</div>
+            <div class="num failed">0</div>
+            <div>›</div>
+          </div>
+          <div class="run-card success">
+            <div class="status-dot"></div>
+            <div><div class="title">BGG full sync</div><div class="ts">2026-05-23 14:08 · cron</div></div>
+            <div class="num">4m 02s</div>
+            <div class="num added">+14</div>
+            <div class="num updated">~912</div>
+            <div class="num failed">0</div>
+            <div>›</div>
+          </div>
+          <div class="run-card success">
+            <div class="status-dot"></div>
+            <div><div class="title">CSV bulk · designers-curation-v3.csv</div><div class="ts">2026-05-22 19:14 · by Marco · 142 rows</div></div>
+            <div class="num">8.4s</div>
+            <div class="num added">+142</div>
+            <div class="num updated">~0</div>
+            <div class="num failed">0</div>
+            <div>›</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
+        <div class="admin-panel">
+          <div class="admin-panel-head"><h3>⏳ Queue pending re-sync</h3><span class="meta" style="margin-left: auto">23 items</span></div>
+          <div style="padding: 12px 14px">
+            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px">
+              <div style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; background: var(--bg-muted)"><span>🎲</span><span style="flex:1">Tainted Grail FoA v2.1 errata</span><span style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">priority high</span></div>
+              <div style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px"><span>🎲</span><span style="flex:1">Spirit Island base game pricing</span><span style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">stale 30gg</span></div>
+              <div style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px"><span>🎲</span><span style="flex:1">Brass Birmingham reprint 2026</span><span style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">stale 30gg</span></div>
+              <div style="display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px"><span>🎲</span><span style="flex:1">Ark Nova marine errata</span><span style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">stale 24gg</span></div>
+              <div style="text-align: center; padding: 6px; color: var(--text-muted); font-family: var(--f-mono); font-size: 11px">+ 19 altri in queue</div>
+            </div>
+            <div style="margin-top: 12px; display: flex; gap: 6px"><button class="btn-admin sm">▶ Run pending now</button><button class="btn-admin sm">⏰ Schedule</button></div>
+          </div>
+        </div>
+
+        <div class="admin-panel">
+          <div class="admin-panel-head"><h3>✕ Failed items (last 30gg)</h3><span class="meta" style="margin-left: auto">14 errori</span></div>
+          <div style="padding: 12px 14px">
+            <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px">
+              <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; border-left: 3px solid hsl(var(--c-event)); background: hsl(var(--c-event) / .04)">
+                <span>🎲</span><div style="flex:1"><div style="font-weight: 700">Twilight Imperium 4E</div><div style="font-family: var(--f-mono); font-size: 10px; color: hsl(var(--c-event))">BGG_API_RATE_LIMIT_429 · 4 retry esauriti</div></div>
+                <button class="btn-admin sm">↻</button>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; border-left: 3px solid hsl(var(--c-event)); background: hsl(var(--c-event) / .04)">
+                <span>🎲</span><div style="flex:1"><div style="font-weight: 700">Gloomhaven JOTL</div><div style="font-family: var(--f-mono); font-size: 10px; color: hsl(var(--c-event))">SCHEMA_MISMATCH · expected designers[]</div></div>
+                <button class="btn-admin sm">↻</button>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; border-left: 3px solid hsl(var(--c-event)); background: hsl(var(--c-event) / .04)">
+                <span>🎲</span><div style="flex:1"><div style="font-weight: 700">+ 12 altri errori</div><div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">vedi log completo</div></div>
+              </div>
+            </div>
+            <div style="margin-top: 12px; display: flex; gap: 6px"><button class="btn-admin sm">↻ Retry bulk</button><button class="btn-admin sm">⤓ Export errors</button></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="admin-nav.js"></script><script>renderAdminNav('catalog');</script>
+</body></html>

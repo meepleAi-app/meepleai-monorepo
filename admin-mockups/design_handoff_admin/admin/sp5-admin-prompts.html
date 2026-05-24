@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Prompt Management · MeepleAI Admin</title>
+<!-- D4 · AI Tooling & Data Quality → 'prompts' (NAV_ID non ancora presente in admin-nav.js;
+     verrà aggiunto nel gruppo "AI Tooling & Data Quality"). -->
+<!-- @v1 PromptListFilter · PromptEditor (variable highlight) · PromptPreview · VersionTimeline
+     · ActivateVersionCTA reuse
+     Endpoints: GET/POST/PUT /api/v1/admin/prompts
+                GET /api/v1/admin/prompts/{id}/versions
+                POST /api/v1/admin/prompts/{id}/versions/{v}/activate
+     Role: admin -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+<!-- ═══════════════════ INLINED DS (tokens + components + admin-base) ═══════════════════ -->
+<style>
+/* ── tokens.css ─────────────────────────────────────────────────── */
+:root{
+  --c-game:25 95% 45%;--c-player:262 83% 58%;--c-session:240 60% 55%;--c-agent:38 92% 50%;
+  --c-kb:174 60% 40%;--c-chat:220 80% 55%;--c-event:350 89% 60%;--c-toolkit:142 70% 45%;--c-tool:195 80% 50%;
+  --f-display:'Quicksand',system-ui,sans-serif;--f-body:'Nunito',system-ui,sans-serif;--f-mono:'JetBrains Mono',ui-monospace,monospace;
+  --r-xs:4px;--r-sm:6px;--r-md:10px;--r-lg:14px;--r-pill:9999px;
+  --ease-out:cubic-bezier(.16,1,.3,1);--dur-sm:180ms;
+}
+:root,:root[data-theme="light"]{
+  --bg:#f7f3ee;--bg-card:#fff;--bg-muted:#efe6d9;--bg-sunken:#ede2d0;
+  --text:#2b1f12;--text-sec:#5a4a38;--text-muted:#9a8870;
+  --border:rgba(180,130,80,.18);--border-light:rgba(180,130,80,.1);--border-strong:rgba(180,130,80,.32);
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#14100a;--bg-card:#1e1710;--bg-muted:#241c13;--bg-sunken:#0f0c08;
+  --text:#f0e4d2;--text-sec:#c8b896;--text-muted:#8a7860;
+  --border:rgba(224,180,110,.14);--border-light:rgba(224,180,110,.08);--border-strong:rgba(224,180,110,.28);
+  --c-game:28 95% 58%;--c-player:262 75% 70%;--c-session:235 70% 70%;--c-agent:38 92% 62%;--c-kb:174 60% 55%;
+  --c-chat:218 80% 68%;--c-event:350 85% 70%;--c-toolkit:142 60% 58%;--c-tool:195 75% 62%;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{font-family:var(--f-body);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:700;letter-spacing:-.01em;margin:0;line-height:1.2}
+button{font-family:inherit;cursor:pointer}a{color:inherit;text-decoration:none}
+code,kbd{font-family:var(--f-mono);font-size:.9em}
+.e-game{--e:var(--c-game)}.e-player{--e:var(--c-player)}.e-session{--e:var(--c-session)}.e-agent{--e:var(--c-agent)}
+.e-kb{--e:var(--c-kb)}.e-chat{--e:var(--c-chat)}.e-event{--e:var(--c-event)}.e-toolkit{--e:var(--c-toolkit)}.e-tool{--e:var(--c-tool)}
+.e-fg{color:hsl(var(--e))}.e-bg{background:hsl(var(--e));color:#fff}
+.e-tint{background:hsl(var(--e)/.1);color:hsl(var(--e))}
+
+/* ── admin-base.css ─────────────────────────────────────────────── */
+.admin-page{background:var(--bg);color:var(--text);min-height:100vh;font-family:var(--f-body);font-size:12px;line-height:1.5}
+.admin-shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.admin-nav{background:var(--bg-card);border-right:1px solid var(--border);padding:16px 0;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.admin-nav-brand{padding:4px 16px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border-light);margin-bottom:12px}
+.admin-nav-brand-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,hsl(var(--c-game)),hsl(var(--c-event)));color:#fff;display:grid;place-items:center;font-family:var(--f-display);font-weight:900;font-size:14px}
+.admin-nav-brand-name{font-family:var(--f-display);font-weight:800;font-size:14px}
+.admin-nav-brand-tag{font-family:var(--f-mono);font-size:9px;font-weight:700;color:hsl(var(--c-event));text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:4px;background:hsl(var(--c-event)/.12);margin-left:auto}
+.admin-nav-group{padding:10px 16px 4px;font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+.admin-nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;color:var(--text-sec);font-family:var(--f-display);font-size:13px;font-weight:600;cursor:pointer;border-left:2px solid transparent}
+.admin-nav-item:hover{background:var(--bg-muted);color:var(--text)}
+.admin-nav-item.active{background:hsl(var(--c-event)/.08);color:hsl(var(--c-event));border-left-color:hsl(var(--c-event))}
+.admin-nav-item .em{font-size:14px}
+.admin-nav-item .count{margin-left:auto;font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700}
+.admin-nav-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border-light);font-family:var(--f-mono);font-size:10px;color:var(--text-muted)}
+.admin-top{background:var(--bg);border-bottom:1px solid var(--border-light);padding:12px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:50;backdrop-filter:blur(12px)}
+.admin-top h1{font-family:var(--f-display);font-size:20px;font-weight:800}
+.admin-top .crumbs{font-family:var(--f-mono);font-size:11px;color:var(--text-muted);margin-top:2px}
+.admin-top .spacer{flex:1}.admin-top-actions{display:flex;gap:8px;align-items:center}
+.admin-search{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;width:280px;font-size:12px}
+.admin-search input{flex:1;border:0;background:transparent;color:var(--text);font-family:var(--f-body);font-size:12.5px;outline:0}
+.admin-search kbd{padding:1px 5px;border-radius:4px;background:var(--bg-muted);border:1px solid var(--border);font-family:var(--f-mono);font-size:9px;color:var(--text-muted)}
+.btn-admin{padding:6px 12px;border-radius:6px;font-family:var(--f-display);font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg-card);color:var(--text);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-admin:hover{background:var(--bg-muted)}
+.btn-admin.primary{background:hsl(var(--c-event));border-color:hsl(var(--c-event));color:#fff;box-shadow:0 2px 6px hsl(var(--c-event)/.3)}
+.btn-admin.primary:hover{filter:brightness(1.08)}
+.btn-admin.danger{background:var(--bg-card);border-color:hsl(var(--c-event)/.5);color:hsl(var(--c-event))}
+.btn-admin.success{background:hsl(var(--c-toolkit));border-color:hsl(var(--c-toolkit));color:#fff}
+.btn-admin.ghost{background:transparent;border-color:transparent}
+.btn-admin.icon{padding:6px;width:28px;height:28px;justify-content:center}
+.btn-admin.sm{padding:3px 8px;font-size:11px}
+.btn-admin kbd{padding:1px 4px;border-radius:3px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);font-family:var(--f-mono);font-size:9px;margin-left:4px}
+.btn-admin.primary kbd{background:rgba(0,0,0,.18);border-color:rgba(0,0,0,.25)}
+.admin-panel{background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.admin-panel-head{padding:10px 12px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:8px;background:var(--bg);flex-shrink:0}
+.admin-panel-head h3{margin:0;font-family:var(--f-display);font-size:12.5px;font-weight:800}
+.admin-panel-head .meta{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);margin-left:auto}
+.admin-select,.admin-input,.admin-textarea{width:100%;padding:6px 10px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:var(--f-body);font-size:12.5px}
+.admin-input.mono,.admin-textarea.mono{font-family:var(--f-mono)}
+.admin-tabs{display:flex;gap:0;border-bottom:1px solid var(--border-light);padding:0 14px;background:var(--bg);flex-shrink:0}
+.admin-tab{padding:8px 12px;font-family:var(--f-display);font-size:12px;font-weight:700;color:var(--text-sec);cursor:pointer;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:6px;background:transparent;border-top:0;border-left:0;border-right:0}
+.admin-tab:hover{color:var(--text)}
+.admin-tab.active{color:hsl(var(--c-event));border-bottom-color:hsl(var(--c-event))}
+.admin-tab .count{font-family:var(--f-mono);font-size:9px;background:var(--bg-muted);padding:1px 5px;border-radius:99px;color:var(--text-sec);font-weight:700}
+.admin-tab.active .count{background:hsl(var(--c-event)/.14);color:hsl(var(--c-event))}
+.status-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-family:var(--f-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.status-chip::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.status-chip.healthy{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.healthy::before{background:hsl(var(--c-toolkit));box-shadow:0 0 0 3px hsl(var(--c-toolkit)/.25)}
+.status-chip.warning{background:hsl(38 90% 56%/.14);color:hsl(38 90% 50%)}
+.status-chip.warning::before{background:hsl(38 90% 50%)}
+.status-chip.danger{background:hsl(var(--c-event)/.12);color:hsl(var(--c-event))}
+.status-chip.danger::before{background:hsl(var(--c-event))}
+.status-chip.muted{background:var(--bg-muted);color:var(--text-muted)}
+.status-chip.muted::before{background:var(--text-muted)}
+.status-chip.info{background:hsl(var(--c-chat)/.12);color:hsl(var(--c-chat))}
+.status-chip.info::before{background:hsl(var(--c-chat))}
+.status-chip.running{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.status-chip.running::before{background:hsl(var(--c-toolkit));animation:admin-pulse 1.4s ease-in-out infinite}
+@keyframes admin-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
+@media (max-width:880px){
+  .admin-mobile-fallback{display:flex !important;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center;gap:16px}
+  .admin-mobile-fallback .em{font-size:56px}
+  .admin-mobile-fallback h2{margin:0;font-family:var(--f-display);font-size:20px}
+  .admin-mobile-fallback p{color:var(--text-sec);max-width:320px;margin:0}
+  .admin-shell{display:none}
+}
+.admin-mobile-fallback{display:none}
+.admin-body{padding:16px 20px}
+
+/* ── Page-specific ──────────────────────────────────────────────── */
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* 3-col layout · viewport-fit */
+.prompt-grid{display:grid;grid-template-columns:300px minmax(0,1fr) 360px;gap:14px;align-items:stretch;height:calc(100vh - 78px)}
+.prompt-grid > .admin-panel{height:100%;overflow:hidden}
+
+/* ── LEFT: templates ────────────────────────────────────────────── */
+.tpl-filter{padding:10px 12px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--border-light);background:var(--bg)}
+.tpl-filter .field{display:flex;flex-direction:column;gap:2px}
+.tpl-filter .lbl{font-family:var(--f-mono);font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em}
+.tpl-search{position:relative}
+.tpl-search input{padding-left:28px;font-size:12px;width:100%}
+.tpl-search .ico{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:11px;pointer-events:none}
+
+.tpl-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:6px 6px}
+.tpl-row{padding:9px 10px;border-radius:7px;cursor:pointer;display:flex;flex-direction:column;gap:4px;border:1px solid transparent;margin-bottom:2px}
+.tpl-row:hover{background:var(--bg-muted)}
+.tpl-row.selected{background:hsl(var(--c-event)/.07);border-color:hsl(var(--c-event)/.3);box-shadow:inset 3px 0 0 hsl(var(--c-event))}
+.tpl-row .top{display:flex;align-items:center;gap:6px}
+.tpl-row .nm{font-family:var(--f-display);font-weight:800;font-size:12.5px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tpl-row .kind{font-family:var(--f-mono);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:1px 5px;border-radius:4px;background:hsl(var(--c-chat)/.12);color:hsl(var(--c-chat))}
+.tpl-row .kind.user{background:hsl(var(--c-player)/.12);color:hsl(var(--c-player))}
+.tpl-row .mid{display:flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:10px;color:var(--text-muted)}
+.tpl-row .agent-chip{padding:1px 6px;border-radius:4px;background:hsl(var(--e)/.1);color:hsl(var(--e));font-family:var(--f-mono);font-size:9.5px;font-weight:700;letter-spacing:.02em;border:1px solid hsl(var(--e)/.2)}
+.tpl-row .bot{display:flex;align-items:center;justify-content:space-between;font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted)}
+.tpl-row .ver{font-weight:700;color:var(--text-sec)}
+
+.tpl-foot{padding:8px 12px;border-top:1px solid var(--border-light);background:var(--bg);font-family:var(--f-mono);font-size:9.5px;color:var(--text-muted);display:flex;justify-content:space-between}
+
+/* ── CENTER: editor ─────────────────────────────────────────────── */
+.editor-head{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border-light);background:var(--bg);font-family:var(--f-mono);font-size:11px}
+.editor-head .title{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0}
+.editor-head .title .nm{font-family:var(--f-display);font-weight:800;font-size:14px;color:var(--text)}
+.editor-head .title .sub{font-family:var(--f-mono);font-size:10px;color:var(--text-muted);font-weight:700}
+.editor-head .right{display:flex;align-items:center;gap:6px}
+
+.editor-toolbar{display:flex;align-items:center;gap:6px;padding:8px 14px;border-bottom:1px solid var(--border-light);background:var(--bg);font-family:var(--f-mono);font-size:11px;color:var(--text-muted);flex-shrink:0;flex-wrap:wrap}
+.editor-toolbar .group{display:inline-flex;align-items:center;gap:4px}
+.editor-toolbar .sep{width:1px;height:18px;background:var(--border-light);margin:0 4px}
+.editor-toolbar .btn-admin.sm{padding:2px 7px;font-size:10.5px}
+.editor-toolbar .var-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-family:var(--f-mono);font-size:10px;font-weight:700;background:hsl(var(--c-kb)/.12);color:hsl(var(--c-kb));border:1px solid hsl(var(--c-kb)/.25);cursor:pointer}
+.editor-toolbar .var-pill:hover{background:hsl(var(--c-kb)/.18)}
+.editor-toolbar .spacer{flex:1}
+.editor-toolbar .stats{display:inline-flex;gap:10px;color:var(--text-muted)}
+.editor-toolbar .stats .v{color:var(--text);font-weight:700}
+
+.editor-body{flex:1;overflow:auto;position:relative;background:var(--bg-sunken,var(--bg))}
+.prompt-source{margin:0;padding:18px 22px 12px;font-family:var(--f-mono);font-size:12.5px;line-height:1.7;color:var(--text);white-space:pre-wrap;tab-size:2;caret-color:hsl(var(--c-event));min-height:100%}
+.prompt-source:focus{outline:none}
+.prompt-source .ln{display:inline-block;width:30px;color:var(--text-muted);user-select:none;font-size:10px;text-align:right;padding-right:10px;font-weight:600;opacity:.7}
+
+/* Variable highlight: e-kb tint inline */
+.prompt-source .var{display:inline-flex;align-items:center;padding:0 4px;border-radius:4px;background:hsl(var(--c-kb)/.14);color:hsl(var(--c-kb));border:1px solid hsl(var(--c-kb)/.25);font-weight:700;font-size:11.5px;cursor:pointer}
+.prompt-source .var.opt{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit));border-color:hsl(var(--c-toolkit)/.25)}
+.prompt-source .comment{color:var(--text-muted);font-style:italic;opacity:.85}
+.prompt-source .role{color:hsl(var(--c-event));font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.06em;background:hsl(var(--c-event)/.1);padding:1px 6px;border-radius:4px}
+.prompt-source .str{color:hsl(var(--c-toolkit))}
+.prompt-source .caret-here{display:inline-block;width:1px;height:14px;background:hsl(var(--c-event));margin-left:-1px;vertical-align:-3px;animation:caret-blink 1s steps(1) infinite}
+@keyframes caret-blink{50%{opacity:0}}
+
+.editor-foot{padding:9px 14px;border-top:1px solid var(--border-light);background:var(--bg);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.editor-foot .autosave{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:10.5px;color:var(--text-muted)}
+.editor-foot .autosave .dot{width:7px;height:7px;border-radius:50%;background:hsl(var(--c-agent));animation:admin-pulse 1.4s ease-in-out infinite}
+.editor-foot .autosave .v{color:var(--text);font-weight:700}
+.editor-foot .spacer{flex:1}
+.editor-foot .dirty{font-family:var(--f-mono);font-size:10px;color:hsl(38 90% 50%);font-weight:700}
+
+/* ── RIGHT: preview + versions ──────────────────────────────────── */
+.right-scroll{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+
+.preview-block{padding:12px 14px;border-bottom:1px solid var(--border-light);display:flex;flex-direction:column;gap:8px;background:var(--bg-card)}
+.preview-block h4{font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px}
+.preview-block h4 .ctrl{margin-left:auto;display:inline-flex;gap:4px;align-items:center}
+
+.preview-vars{display:flex;flex-direction:column;gap:4px;padding:8px 10px;background:var(--bg);border:1px solid var(--border-light);border-radius:7px;font-family:var(--f-mono);font-size:10.5px}
+.preview-vars .pv-row{display:grid;grid-template-columns:108px 1fr;gap:8px;align-items:baseline}
+.preview-vars .pv-row .k{color:hsl(var(--c-kb));font-weight:700;font-size:10px}
+.preview-vars .pv-row .v{color:var(--text);font-weight:600;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.preview-rendered{padding:10px 12px;background:var(--bg-sunken,var(--bg));border:1px solid var(--border-light);border-radius:7px;font-family:var(--f-mono);font-size:11px;line-height:1.6;color:var(--text-sec);max-height:170px;overflow-y:auto;white-space:pre-wrap}
+.preview-rendered .injected{background:hsl(var(--c-kb)/.14);color:hsl(var(--c-kb));padding:0 4px;border-radius:3px;font-weight:700;font-style:normal}
+.preview-rendered .injected.opt{background:hsl(var(--c-toolkit)/.12);color:hsl(var(--c-toolkit))}
+.preview-rendered .role{color:hsl(var(--c-event));font-weight:700;text-transform:uppercase;font-size:9px;letter-spacing:.06em;background:hsl(var(--c-event)/.1);padding:1px 5px;border-radius:3px;margin-right:6px}
+
+/* ── Versions timeline ──────────────────────────────────────────── */
+.ver-block{padding:8px 0 12px;display:flex;flex-direction:column;gap:0}
+.ver-block h4{font-family:var(--f-mono);font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding:8px 14px 4px;display:flex;align-items:center;gap:6px}
+.ver-block h4 .count{margin-left:auto;color:var(--text);font-weight:700}
+
+.ver-item{padding:10px 14px;display:grid;grid-template-columns:18px 1fr auto;gap:10px;border-bottom:1px solid var(--border-light);position:relative;align-items:flex-start}
+.ver-item:last-child{border-bottom:0}
+.ver-item .rail{position:relative;display:flex;justify-content:center;padding-top:4px}
+.ver-item .rail::after{content:'';position:absolute;top:18px;bottom:-12px;left:50%;width:2px;background:var(--border-light);transform:translateX(-50%)}
+.ver-item:last-child .rail::after{display:none}
+.ver-item .rail .dot{width:12px;height:12px;border-radius:50%;border:2px solid hsl(var(--c-event));background:var(--bg-card);position:relative;z-index:1}
+.ver-item.active .rail .dot{background:hsl(var(--c-toolkit));border-color:hsl(var(--c-toolkit));box-shadow:0 0 0 3px hsl(var(--c-toolkit)/.2)}
+.ver-item.draft .rail .dot{background:var(--bg-card);border-color:hsl(38 90% 50%)}
+.ver-item.older .rail .dot{background:var(--bg-muted);border-color:var(--border-strong)}
+
+.ver-item .body .v-head{display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap}
+.ver-item .body .v-tag{font-family:var(--f-mono);font-size:11.5px;font-weight:800;color:var(--text);background:var(--bg);padding:1px 6px;border-radius:4px;border:1px solid var(--border-light);letter-spacing:.02em}
+.ver-item.active .body .v-tag{color:hsl(var(--c-toolkit));border-color:hsl(var(--c-toolkit)/.4);background:hsl(var(--c-toolkit)/.08)}
+.ver-item .body .author{font-family:var(--f-mono);font-size:10px;color:var(--text-sec);font-weight:700}
+.ver-item .body .date{font-family:var(--f-mono);font-size:10px;color:var(--text-muted)}
+.ver-item .body .diff{display:inline-flex;align-items:center;gap:6px;margin-top:4px;font-family:var(--f-mono);font-size:10px}
+.ver-item .body .diff .add{color:hsl(var(--c-toolkit));font-weight:700}
+.ver-item .body .diff .rem{color:hsl(var(--c-event));font-weight:700}
+.ver-item .body .diff .sep{color:var(--text-muted)}
+.ver-item .body .msg{font-size:10.5px;color:var(--text-sec);margin-top:3px;line-height:1.4}
+
+.ver-item .right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.ver-item .right .btn-admin.sm{padding:3px 8px;font-size:10.5px}
+.ver-item .right .activate-note{font-family:var(--f-mono);font-size:8.5px;color:var(--text-muted);font-weight:700;display:inline-flex;align-items:center;gap:3px}
+.ver-item .right .activate-note .lock{color:hsl(var(--c-event));font-size:9px}
+</style>
+</head>
+<body class="admin-page">
+
+  <div class="admin-mobile-fallback">
+    <div class="em">🖥️</div>
+    <h2>Console solo desktop</h2>
+    <p>La console admin è ottimizzata per schermi ≥ 880px. Aprila da desktop.</p>
+  </div>
+
+  <div class="admin-shell">
+    <div data-admin-nav-mount></div>
+
+    <main>
+      <header class="admin-top">
+        <div>
+          <h1>Prompt Management</h1>
+          <div class="crumbs">Admin › AI Tooling &amp; Data Quality › Prompts · 18 template · 142 versioni · 14:23:08</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="admin-top-actions">
+          <div class="admin-search"><span>🔍</span><input placeholder="Cerca prompt, variabile, agente…"/><kbd>⌘K</kbd></div>
+          <button class="btn-admin">⟳ Refresh <kbd>R</kbd></button>
+          <button class="btn-admin">⤓ Export JSON</button>
+          <button class="btn-admin primary">＋ Nuovo template</button>
+          <button class="btn-admin icon" title="Tema">🌗</button>
+        </div>
+      </header>
+
+      <div class="admin-body">
+
+        <div class="prompt-grid">
+
+          <!-- ░░░░░░░░░░░ LEFT: Templates ░░░░░░░░░░░ -->
+          <section class="admin-panel">
+            <div class="admin-panel-head">
+              <h3>Template prompt</h3>
+              <span class="status-chip muted">18</span>
+            </div>
+
+            <div class="tpl-filter">
+              <div class="tpl-search">
+                <span class="ico">🔍</span>
+                <input class="admin-input" placeholder="Filtra nome o id…" />
+              </div>
+              <div class="field">
+                <span class="lbl">Agente</span>
+                <select class="admin-select">
+                  <option>Tutti gli agenti</option>
+                  <option selected>Wingspan Rules Bot</option>
+                  <option>Catan Rules Bot</option>
+                  <option>Generic RAG Bot</option>
+                  <option>Mechanic Explainer</option>
+                  <option>Tutor / Onboarding</option>
+                </select>
+              </div>
+              <div class="field">
+                <span class="lbl">Tipo</span>
+                <select class="admin-select">
+                  <option selected>Tutti</option>
+                  <option>system</option>
+                  <option>user</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="tpl-list">
+
+              <!-- SELECTED -->
+              <div class="tpl-row selected">
+                <div class="top">
+                  <span class="nm">RAG answer</span>
+                  <span class="kind">system</span>
+                </div>
+                <div class="mid">
+                  <span class="agent-chip e-chat">Wingspan Rules Bot</span>
+                </div>
+                <div class="bot">
+                  <span class="ver">v2.5 · attiva</span>
+                  <span class="status-chip healthy">attiva</span>
+                </div>
+              </div>
+
+              <div class="tpl-row">
+                <div class="top">
+                  <span class="nm">Setup explainer</span>
+                  <span class="kind user">user</span>
+                </div>
+                <div class="mid">
+                  <span class="agent-chip e-chat">Wingspan Rules Bot</span>
+                </div>
+                <div class="bot">
+                  <span class="ver">v1.8 · attiva</span>
+                  <span class="status-chip healthy">attiva</span>
+                </div>
+              </div>
+
+              <div class="tpl-row">
+                <div class="top">
+                  <span class="nm">Glossary lookup</span>
+                  <span class="kind">system</span>
+                </div>
+                <div class="mid">
+                  <span class="agent-chip e-kb">Generic RAG Bot</span>
+                </div>
+                <div class="bot">
+                  <span class="ver">v3.1 · attiva</span>
+                  <span class="status-chip healthy">attiva</span>
+                </div>
+              </div>
+
+              <div class="tpl-row">
+                <div class="top">
+                  <span class="nm">Rules clarifier</span>
+                  <span class="kind">system</span>
+                </div>
+                <div class="mid">
+                  <span class="agent-chip e-chat">Wingspan Rules Bot</span>
+                </div>
+                <div class="bot">
+                  <span class="ver">v0.4 · draft</span>
+                  <span class="status-chip warning">draft</span>
+                </div>
+              </div>
+
+              <div class="tpl-row">
+                <div class="top">
+                  <span class="nm">Toolkit suggester</span>
+                  <span class="kind user">user</span>
+                </div>
+                <div class="mid">
+                  <span class="agent-chip e-tool">Generic RAG Bot</span>
+                </div>
+                <div class="bot">
+                  <span class="ver">v2.2 · attiva</span>
+                  <span class="status-chip healthy">attiva</span>
+                </div>
+              </div>
+
+              <div class="tpl-row">
+                <div class="top">
+                  <span class="nm">Mechanic extract</span>
+                  <span class="kind">system</span>
+                </div>
+                <div class="mid">
+                  <span class="agent-chip e-agent">Mechanic Explainer</span>
+                </div>
+                <div class="bot">
+                  <span class="ver">v2.4 · attiva</span>
+                  <span class="status-chip healthy">attiva</span>
+                </div>
+              </div>
+
+              <div class="tpl-row">
+                <div class="top">
+                  <span class="nm">Onboarding intro</span>
+                  <span class="kind user">user</span>
+                </div>
+                <div class="mid">
+                  <span class="agent-chip e-player">Tutor / Onboarding</span>
+                </div>
+                <div class="bot">
+                  <span class="ver">v1.2 · attiva</span>
+                  <span class="status-chip healthy">attiva</span>
+                </div>
+              </div>
+
+              <div class="tpl-row" style="opacity:.6">
+                <div class="top">
+                  <span class="nm">Legacy fallback</span>
+                  <span class="kind">system</span>
+                </div>
+                <div class="mid">
+                  <span class="agent-chip e-toolkit">Generic RAG Bot</span>
+                </div>
+                <div class="bot">
+                  <span class="ver">v1.0 · disabilitata</span>
+                  <span class="status-chip muted">off</span>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="tpl-foot">
+              <span>filtrati 7 / 18</span>
+              <span>sort by · updated ↓</span>
+            </div>
+          </section>
+
+          <!-- ░░░░░░░░░░░ CENTER: Editor ░░░░░░░░░░░ -->
+          <section class="admin-panel">
+
+            <div class="editor-head">
+              <div class="title">
+                <span class="nm">RAG answer · system prompt</span>
+                <span class="sub">prompt_rag_ans01 · Wingspan Rules Bot · attiva v2.5 · editing draft v2.6</span>
+              </div>
+              <div class="right">
+                <span class="status-chip warning">unsaved</span>
+                <button class="btn-admin sm">📋 Duplica</button>
+                <button class="btn-admin sm">⤓ Export</button>
+              </div>
+            </div>
+
+            <div class="admin-tabs">
+              <button class="admin-tab active">Edit</button>
+              <button class="admin-tab">Preview</button>
+              <button class="admin-tab">Versioni <span class="count">14</span></button>
+              <button class="admin-tab" style="margin-left:auto">Diff vs v2.5</button>
+            </div>
+
+            <div class="editor-toolbar">
+              <span class="group">
+                <button class="btn-admin sm">＋ Inserisci variabile ▾</button>
+                <span class="var-pill" title="Inserisci">{{context}}</span>
+                <span class="var-pill" title="Inserisci">{{question}}</span>
+                <span class="var-pill" title="Inserisci">{{game.title}}</span>
+                <span class="var-pill" title="Inserisci">{{language}}</span>
+              </span>
+              <span class="sep"></span>
+              <span class="group">
+                <button class="btn-admin sm">⊟ Formatta</button>
+                <button class="btn-admin sm">↪ Riformatta context</button>
+                <button class="btn-admin sm">⟲ Annulla</button>
+              </span>
+              <span class="spacer"></span>
+              <span class="stats">
+                <span>L <span class="v">38</span></span>
+                <span>tok <span class="v">412</span> / 4 096</span>
+                <span>var <span class="v">4 + 1 opt</span></span>
+              </span>
+            </div>
+
+            <div class="editor-body">
+              <pre class="prompt-source" contenteditable="false" spellcheck="false"><span class="ln"> 1</span>  <span class="role">system</span>
+<span class="ln"> 2</span>  Sei il <span class="str">"<span class="var">{{game.title}}</span> Rules Bot"</span>, un assistente esperto del regolamento ufficiale di <span class="var">{{game.title}}</span>.
+<span class="ln"> 3</span>  Rispondi in <span class="var">{{language}}</span> in modo chiaro, conciso e con tono amichevole.
+<span class="ln"> 4</span>
+<span class="ln"> 5</span>  <span class="comment"># Regole d'oro</span>
+<span class="ln"> 6</span>  1. Basa SEMPRE le risposte sui passaggi rilevanti del regolamento forniti nel CONTEXT.
+<span class="ln"> 7</span>  2. Se il CONTEXT non contiene la risposta, dichiaralo esplicitamente — non inventare.
+<span class="ln"> 8</span>  3. Cita la pagina del regolamento alla fine della risposta tra parentesi quadre: [p. N].
+<span class="ln"> 9</span>  4. Se la domanda è ambigua, fai una domanda di chiarimento prima di rispondere.
+<span class="ln">10</span>  5. Mantieni la risposta sotto le 120 parole salvo richiesta esplicita di approfondimento.
+<span class="ln">11</span>
+<span class="ln">12</span>  <span class="comment"># Format</span>
+<span class="ln">13</span>  - Inizia con una frase diretta (no preamboli).
+<span class="ln">14</span>  - Usa elenchi puntati per condizioni o passaggi.
+<span class="ln">15</span>  - <span class="str">**Grassetto**</span> per i termini chiave del gioco.
+<span class="ln">16</span>  - Riferisci le carte / componenti con il loro nome esatto.
+<span class="ln">17</span>
+<span class="ln">18</span>  <span class="comment"># Tone modulation (opzionale)</span>
+<span class="ln">19</span>  Se è stato impostato un tono personalizzato, adatta la risposta a:
+<span class="ln">20</span>  <span class="var opt">{{player.tone?}}</span> (default: <span class="str">"neutro · amichevole"</span>).
+<span class="ln">21</span>
+<span class="ln">22</span>  <span class="role">context</span>
+<span class="ln">23</span>  <span class="var">{{context}}</span>
+<span class="ln">24</span>
+<span class="ln">25</span>  <span class="role">user</span>
+<span class="ln">26</span>  <span class="var">{{question}}</span><span class="caret-here"></span>
+<span class="ln">27</span>
+<span class="ln">28</span>  <span class="comment"># Output guardrails</span>
+<span class="ln">29</span>  - Non rispondere a domande fuori-dominio (es. acquisto, prezzi, classifiche).
+<span class="ln">30</span>  - Se la confidence del retrieval &lt; 0.65, prepara la risposta con: <span class="str">"Su questo</span>
+<span class="ln">31</span>  <span class="str">  punto il regolamento non è chiaro, ma…"</span> e suggerisci una FAQ correlata.</pre>
+            </div>
+
+            <div class="editor-foot">
+              <span class="autosave"><span class="dot"></span>Auto-save in <span class="v">12s</span></span>
+              <span class="dirty">● 4 modifiche non committate</span>
+              <span class="spacer"></span>
+              <button class="btn-admin">⟲ Reset modifiche</button>
+              <button class="btn-admin primary">⤴ Commit versione <kbd>⌘S</kbd></button>
+            </div>
+          </section>
+
+          <!-- ░░░░░░░░░░░ RIGHT: Preview + Versions ░░░░░░░░░░░ -->
+          <aside class="admin-panel">
+            <div class="admin-panel-head">
+              <h3>Anteprima &amp; versioni</h3>
+              <span class="status-chip info">RAG answer</span>
+            </div>
+
+            <div class="right-scroll">
+
+              <div class="preview-block">
+                <h4>
+                  Variabili d'esempio
+                  <span class="ctrl">
+                    <button class="btn-admin sm ghost">✎ Modifica</button>
+                  </span>
+                </h4>
+                <div class="preview-vars">
+                  <div class="pv-row"><span class="k">{{game.title}}</span><span class="v">"Wingspan"</span></div>
+                  <div class="pv-row"><span class="k">{{language}}</span><span class="v">"italiano"</span></div>
+                  <div class="pv-row"><span class="k">{{question}}</span><span class="v">"Quanti uccelli posso giocare per turno?"</span></div>
+                  <div class="pv-row"><span class="k">{{context}}</span><span class="v">3 chunk · 1.4 KB · top-5 reranked</span></div>
+                  <div class="pv-row"><span class="k">{{player.tone?}}</span><span class="v">"neutro · amichevole" (default)</span></div>
+                </div>
+              </div>
+
+              <div class="preview-block">
+                <h4>
+                  Prompt renderizzato
+                  <span class="ctrl">
+                    <button class="btn-admin sm ghost">↻ Refresh</button>
+                  </span>
+                </h4>
+                <div class="preview-rendered"><span class="role">system</span>
+Sei il "<span class="injected">Wingspan</span> Rules Bot", un assistente esperto del regolamento ufficiale di <span class="injected">Wingspan</span>.
+Rispondi in <span class="injected">italiano</span> in modo chiaro, conciso e con tono amichevole.
+
+# Regole d'oro
+1. Basa SEMPRE le risposte sui passaggi rilevanti…
+…
+<span class="role">context</span>
+<span class="injected">wingspan p.4 §Turn Structure: "On your turn, take exactly one of the four actions…" · wingspan p.6 §Play a Bird: "pay food cost shown on card + 1 egg per…"</span>
+
+<span class="role">user</span>
+<span class="injected">Quanti uccelli posso giocare per turno?</span>
+
+# Tone modulation
+<span class="injected opt">neutro · amichevole</span></div>
+              </div>
+
+              <div class="ver-block">
+                <h4>Versioni <span class="count">14 totali · 3 più recenti</span></h4>
+
+                <div class="ver-item draft">
+                  <span class="rail"><span class="dot"></span></span>
+                  <div class="body">
+                    <div class="v-head">
+                      <span class="v-tag">v2.6</span>
+                      <span class="status-chip warning">draft · unsaved</span>
+                    </div>
+                    <span class="author">tu · <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4928283b262709242c2c39252c282067283939">[email&#160;protected]</a></span> · <span class="date">in editing · adesso</span>
+                    <div class="diff"><span class="add">+8</span><span class="sep">/</span><span class="rem">−2</span> <span style="color:var(--text-muted)">· vs v2.5</span></div>
+                    <div class="msg">aggiunto tone-modulation opzionale + guardrail su confidence retrieval &lt; 0.65</div>
+                  </div>
+                  <div class="right">
+                    <button class="btn-admin sm ghost">↻ Scarta</button>
+                  </div>
+                </div>
+
+                <div class="ver-item active">
+                  <span class="rail"><span class="dot"></span></span>
+                  <div class="body">
+                    <div class="v-head">
+                      <span class="v-tag">v2.5</span>
+                      <span class="status-chip healthy">attiva · prod</span>
+                    </div>
+                    <span class="author"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1e7f7f6c71705e737b7b6e727b7f77307f6e6e">[email&#160;protected]</a></span> · <span class="date">oggi 09:14:02</span>
+                    <div class="diff"><span class="add">+12</span><span class="sep">/</span><span class="rem">−4</span> <span style="color:var(--text-muted)">· vs v2.4</span></div>
+                    <div class="msg">refattorizzato regole d'oro + clamp output 120 parole + cita pagina [p. N]</div>
+                  </div>
+                  <div class="right">
+                    <span class="status-chip healthy">live</span>
+                  </div>
+                </div>
+
+                <div class="ver-item older">
+                  <span class="rail"><span class="dot"></span></span>
+                  <div class="body">
+                    <div class="v-head">
+                      <span class="v-tag">v2.4</span>
+                      <span class="status-chip muted">archiviata</span>
+                    </div>
+                    <span class="author"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a0c1c1d2cfcee0cdc5c5d0ccc5c1c98ec1d0d0">[email&#160;protected]</a></span> · <span class="date">6g fa · 18 mag 16:42</span>
+                    <div class="diff"><span class="add">+24</span><span class="sep">/</span><span class="rem">−9</span> <span style="color:var(--text-muted)">· vs v2.3</span></div>
+                    <div class="msg">rimosso preambolo, aggiunto contesto multilingua via {{language}}</div>
+                  </div>
+                  <div class="right">
+                    <button class="btn-admin sm">↑ Attiva</button>
+                    <span class="activate-note"><span class="lock">🔒</span>ConfirmModal</span>
+                  </div>
+                </div>
+
+                <div class="ver-item older">
+                  <span class="rail"><span class="dot"></span></span>
+                  <div class="body">
+                    <div class="v-head">
+                      <span class="v-tag">v2.3</span>
+                      <span class="status-chip muted">archiviata</span>
+                    </div>
+                    <span class="author"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4a272b3829256438253939230a272f2f3a262f2b23642b3a3a">[email&#160;protected]</a></span> · <span class="date">20g fa · 04 mag 11:08</span>
+                    <div class="diff"><span class="add">+6</span><span class="sep">/</span><span class="rem">−1</span> <span style="color:var(--text-muted)">· vs v2.2</span></div>
+                    <div class="msg">tono più amichevole + ammette ignoranza esplicita</div>
+                  </div>
+                  <div class="right">
+                    <button class="btn-admin sm">↑ Attiva</button>
+                    <span class="activate-note"><span class="lock">🔒</span>ConfirmModal</span>
+                  </div>
+                </div>
+
+                <div class="ver-item older">
+                  <span class="rail"><span class="dot"></span></span>
+                  <div class="body">
+                    <div class="v-head">
+                      <span class="v-tag">v2.2</span>
+                      <span class="status-chip muted">archiviata</span>
+                    </div>
+                    <span class="author"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="305d5142535f1e425f434359705d5555405c5551591e514040">[email&#160;protected]</a></span> · <span class="date">38g fa · 16 apr 17:30</span>
+                    <div class="diff"><span class="add">+3</span><span class="sep">/</span><span class="rem">−0</span> <span style="color:var(--text-muted)">· vs v2.1</span></div>
+                    <div class="msg">prima versione con {{context}} structured</div>
+                  </div>
+                  <div class="right">
+                    <button class="btn-admin sm">↑ Attiva</button>
+                    <span class="activate-note"><span class="lock">🔒</span>ConfirmModal</span>
+                  </div>
+                </div>
+
+                <button class="btn-admin sm ghost" style="margin:8px 14px 0;align-self:flex-start;width:max-content">⌄ Mostra altre 9 versioni →</button>
+              </div>
+
+            </div>
+          </aside>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="admin-nav.js"></script>
+  <script>renderAdminNav('prompts');</script>
+</body>
+</html>

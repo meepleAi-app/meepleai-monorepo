@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 A8 · Admin Monitor / Analytics · /admin/monitor</title>
+<!-- @v2 TimeRangePicker · KPISparkline · LiveEventLog · AdminChartPanel reuse -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .kpi-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .admin-kpi.tiny { min-height: 64px; padding: 8px 10px; }
+  .admin-kpi.tiny .admin-kpi-value { font-size: 18px; }
+  .admin-kpi.tiny .admin-kpi-spark { width: 50px; height: 22px; right: 8px; top: 8px; }
+
+  .charts-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .chart-big { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; padding: 14px; height: 240px; display: flex; flex-direction: column; }
+  .chart-big h3 { margin: 0; font-family: var(--f-display); font-size: 13px; font-weight: 800; }
+  .chart-big .sub { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .chart-big svg { flex: 1; width: 100%; margin-top: 10px; }
+
+  .event-log {
+    background: var(--bg-card); border: 1px solid var(--border-light);
+    border-radius: 10px; max-height: 280px; overflow-y: auto;
+    font-family: var(--f-mono); font-size: 11px;
+  }
+  .event-log .row {
+    display: grid; grid-template-columns: 80px 80px 80px 1fr;
+    gap: 10px; padding: 5px 14px; border-bottom: 1px solid var(--border-light);
+    line-height: 1.4;
+  }
+  .event-log .row:hover { background: var(--bg-muted); }
+  .event-log .ts { color: var(--text-muted); }
+  .event-log .lvl { font-weight: 700; }
+  .event-log .lvl.info { color: hsl(var(--c-chat)); }
+  .event-log .lvl.warn { color: hsl(38 90% 50%); }
+  .event-log .lvl.err  { color: hsl(var(--c-event)); }
+  .event-log .lvl.ok   { color: hsl(var(--c-toolkit)); }
+  .event-log .route { color: hsl(var(--c-agent)); }
+
+  .time-pills { display: flex; gap: 4px; padding: 3px; background: var(--bg-muted); border-radius: 6px; }
+  .time-pills button { padding: 4px 10px; background: transparent; border: 0; cursor: pointer; font-family: var(--f-mono); font-size: 11px; font-weight: 700; color: var(--text-sec); border-radius: 4px; }
+  .time-pills button.active { background: hsl(var(--c-event)); color: #fff; }
+</style>
+</head>
+<body class="admin-page">
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2></div>
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+  <main>
+    <header class="admin-top">
+      <div><h1>Monitor &amp; Analytics</h1><div class="crumbs">Admin · Live · refresh ogni 5s · 487 metriche</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <div class="time-pills">
+          <button>1h</button>
+          <button class="active">24h</button>
+          <button>7gg</button>
+          <button>30gg</button>
+          <button>Custom</button>
+        </div>
+        <button class="btn-admin">📈 Open Grafana</button>
+      </div>
+    </header>
+
+    <div class="admin-body" style="display: flex; flex-direction: column; gap: 14px">
+
+      <div class="kpi-strip">
+        <div class="admin-kpi tiny e-chat"><div class="admin-kpi-label">API P95</div><div class="admin-kpi-value">324<span style="font-size:11px;color:var(--text-muted)">ms</span></div>
+          <svg class="admin-kpi-spark" viewBox="0 0 50 22"><polyline points="0,12 8,11 16,14 24,10 32,8 40,9 50,7" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+        </div>
+        <div class="admin-kpi tiny e-kb"><div class="admin-kpi-label">DB P95</div><div class="admin-kpi-value">42<span style="font-size:11px;color:var(--text-muted)">ms</span></div>
+          <svg class="admin-kpi-spark" viewBox="0 0 50 22"><polyline points="0,14 8,13 16,12 24,14 32,11 40,10 50,11" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+        </div>
+        <div class="admin-kpi tiny e-event"><div class="admin-kpi-label">Redis ops/s</div><div class="admin-kpi-value">3.8<span style="font-size:11px;color:var(--text-muted)">k</span></div>
+          <svg class="admin-kpi-spark" viewBox="0 0 50 22"><polyline points="0,16 8,14 16,12 24,10 32,8 40,6 50,5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+        </div>
+        <div class="admin-kpi tiny e-agent"><div class="admin-kpi-label">AI tok/min</div><div class="admin-kpi-value">847<span style="font-size:11px;color:var(--text-muted)">k</span></div>
+          <svg class="admin-kpi-spark" viewBox="0 0 50 22"><polyline points="0,18 8,15 16,14 24,12 32,10 40,9 50,8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+        </div>
+        <div class="admin-kpi tiny e-toolkit"><div class="admin-kpi-label">PDF queue</div><div class="admin-kpi-value">12</div>
+          <svg class="admin-kpi-spark" viewBox="0 0 50 22"><polyline points="0,15 8,18 16,14 24,12 32,15 40,13 50,11" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+        </div>
+        <div class="admin-kpi tiny e-player"><div class="admin-kpi-label">Err rate</div><div class="admin-kpi-value">0.18<span style="font-size:11px;color:var(--text-muted)">%</span></div>
+          <svg class="admin-kpi-spark" viewBox="0 0 50 22"><polyline points="0,16 8,14 16,16 24,14 32,15 40,16 50,15" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+        </div>
+      </div>
+
+      <div class="charts-2x2">
+        <div class="chart-big" style="color: hsl(var(--c-chat))">
+          <h3 style="color: var(--text)">Request rate by endpoint · stacked area · 24h</h3>
+          <div class="sub">Top 5 endpoints · req/min</div>
+          <svg viewBox="0 0 700 160" preserveAspectRatio="none">
+            <polygon points="0,140 50,135 100,128 150,120 200,115 250,118 300,110 350,108 400,105 450,100 500,95 550,90 600,88 650,85 700,82 700,160 0,160" fill="hsl(var(--c-chat) / .3)"/>
+            <polygon points="0,120 50,115 100,108 150,102 200,98 250,100 300,92 350,90 400,86 450,80 500,75 550,70 600,68 650,65 700,62 700,160 0,160" fill="hsl(var(--c-agent) / .3)"/>
+            <polygon points="0,100 50,95 100,88 150,82 200,78 250,80 300,72 350,70 400,66 450,60 500,55 550,50 600,48 650,45 700,42 700,160 0,160" fill="hsl(var(--c-kb) / .3)"/>
+            <polygon points="0,80 50,75 100,68 150,62 200,58 250,60 300,52 350,50 400,46 450,40 500,35 550,30 600,28 650,25 700,22 700,160 0,160" fill="hsl(var(--c-event) / .3)"/>
+          </svg>
+          <div style="margin-top: 6px; display: flex; gap: 10px; font-family: var(--f-mono); font-size: 10px; flex-wrap: wrap">
+            <span style="color: hsl(var(--c-event))">■ /agents/*/query (1.2k)</span>
+            <span style="color: hsl(var(--c-kb))">■ /kb/search (840)</span>
+            <span style="color: hsl(var(--c-agent))">■ /games/* (620)</span>
+            <span style="color: hsl(var(--c-chat))">■ /sessions/* (380)</span>
+          </div>
+        </div>
+
+        <div class="chart-big" style="color: hsl(var(--c-event))">
+          <h3 style="color: var(--text)">Error rate breakdown · by route · 24h</h3>
+          <div class="sub">5 routes con più errori</div>
+          <svg viewBox="0 0 700 160" preserveAspectRatio="none">
+            <g>
+              <rect x="20" y="40" width="100" height="20" fill="hsl(var(--c-event) / .6)" rx="2"/>
+              <text x="130" y="55" fill="var(--text)" font-family="var(--f-mono)" font-size="12">POST /agents/query · 0.84% (1.8k err)</text>
+              <rect x="20" y="68" width="68" height="20" fill="hsl(var(--c-event) / .5)" rx="2"/>
+              <text x="98" y="83" fill="var(--text)" font-family="var(--f-mono)" font-size="12">POST /pdf/upload · 0.52%</text>
+              <rect x="20" y="96" width="42" height="20" fill="hsl(var(--c-event) / .4)" rx="2"/>
+              <text x="72" y="111" fill="var(--text)" font-family="var(--f-mono)" font-size="12">GET /games/* · 0.18%</text>
+              <rect x="20" y="124" width="22" height="20" fill="hsl(var(--c-event) / .3)" rx="2"/>
+              <text x="52" y="139" fill="var(--text)" font-family="var(--f-mono)" font-size="12">POST /sessions · 0.09%</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="chart-big" style="color: hsl(var(--c-player))">
+          <h3 style="color: var(--text)">User signups &amp; session starts · trend 24h</h3>
+          <div class="sub">Signup +148 · session start 4.8k</div>
+          <svg viewBox="0 0 700 160" preserveAspectRatio="none">
+            <polyline points="0,80 50,75 100,70 150,68 200,72 250,65 300,60 350,58 400,52 450,48 500,45 550,42 600,40 650,38 700,35" fill="none" stroke="hsl(var(--c-player))" stroke-width="2"/>
+            <polyline points="0,120 50,115 100,110 150,108 200,105 250,100 300,95 350,92 400,88 450,82 500,78 550,72 600,68 650,62 700,55" fill="none" stroke="hsl(var(--c-session))" stroke-width="2"/>
+          </svg>
+          <div style="margin-top: 4px; display: flex; gap: 12px; font-family: var(--f-mono); font-size: 10px">
+            <span style="color: hsl(var(--c-player))">■ Signup +148</span>
+            <span style="color: hsl(var(--c-session))">■ Session start 4.8k</span>
+          </div>
+        </div>
+
+        <div class="chart-big" style="color: hsl(var(--c-session))">
+          <h3 style="color: var(--text)">Game-session duration · histogram</h3>
+          <div class="sub">Median 87 min · P95 4.2h · 487 sessions chiuse</div>
+          <svg viewBox="0 0 700 160" preserveAspectRatio="none">
+            <g>
+              <rect x="0"   y="120" width="50" height="40" fill="hsl(var(--c-session) / .8)"/>
+              <rect x="55"  y="80"  width="50" height="80" fill="hsl(var(--c-session) / .8)"/>
+              <rect x="110" y="40"  width="50" height="120" fill="hsl(var(--c-session) / .8)"/>
+              <rect x="165" y="20"  width="50" height="140" fill="hsl(var(--c-session))"/>
+              <rect x="220" y="50"  width="50" height="110" fill="hsl(var(--c-session) / .8)"/>
+              <rect x="275" y="80"  width="50" height="80" fill="hsl(var(--c-session) / .8)"/>
+              <rect x="330" y="100" width="50" height="60" fill="hsl(var(--c-session) / .7)"/>
+              <rect x="385" y="110" width="50" height="50" fill="hsl(var(--c-session) / .7)"/>
+              <rect x="440" y="120" width="50" height="40" fill="hsl(var(--c-session) / .6)"/>
+              <rect x="495" y="130" width="50" height="30" fill="hsl(var(--c-session) / .6)"/>
+              <rect x="550" y="135" width="50" height="25" fill="hsl(var(--c-session) / .5)"/>
+              <rect x="605" y="145" width="50" height="15" fill="hsl(var(--c-session) / .4)"/>
+            </g>
+            <g font-family="var(--f-mono)" font-size="9" fill="var(--text-muted)">
+              <text x="25" y="156" text-anchor="middle">15m</text>
+              <text x="80" y="156" text-anchor="middle">30m</text>
+              <text x="135" y="156" text-anchor="middle">60m</text>
+              <text x="190" y="156" text-anchor="middle">90m</text>
+              <text x="245" y="156" text-anchor="middle">2h</text>
+              <text x="355" y="156" text-anchor="middle">3h</text>
+              <text x="465" y="156" text-anchor="middle">4h</text>
+              <text x="630" y="156" text-anchor="middle">8h+</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <div>
+        <div class="admin-panel-head" style="background: var(--bg-card); border: 1px solid var(--border-light); border-bottom: 0; border-radius: 10px 10px 0 0; padding: 10px 14px;">
+          <h3>📡 Live event log <span class="status-chip running info" style="margin-left: 8px">SSE streaming</span></h3>
+          <span class="meta" style="margin-left: auto">487 eventi/min · filter applied: level≥warn</span>
+        </div>
+        <div class="event-log" style="border-top: 0; border-radius: 0 0 10px 10px">
+          <div class="row"><span class="ts">14:23:42</span><span class="lvl ok">OK</span><span class="route">POST /agents/.../query</span><span>200 · 1.32s · agent=a-wingspan · user=u-marco · cost=$0.004</span></div>
+          <div class="row"><span class="ts">14:23:41</span><span class="lvl warn">WARN</span><span class="route">POST /pdf/upload</span><span>OCR low confidence p.47 · doc=d-tg-scan · retry queued</span></div>
+          <div class="row"><span class="ts">14:23:40</span><span class="lvl info">INFO</span><span class="route">SSE /agents/.../stream</span><span>connected · sid=s-7f8a · agent=a-brass-rules</span></div>
+          <div class="row"><span class="ts">14:23:38</span><span class="lvl err">ERROR</span><span class="route">POST /agents/.../query</span><span>500 · LLM timeout 30s · gpt-4o-mini · retry exhausted</span></div>
+          <div class="row"><span class="ts">14:23:37</span><span class="lvl ok">OK</span><span class="route">GET /games/g-wingspan</span><span>200 · 18ms · cached · user=u-davide</span></div>
+          <div class="row"><span class="ts">14:23:36</span><span class="lvl warn">WARN</span><span class="route">SCHED rate-limit-monitor</span><span>IP 82.84.211.17 · 47 req/min · auto-block 15min applied</span></div>
+          <div class="row"><span class="ts">14:23:35</span><span class="lvl info">INFO</span><span class="route">POST /sessions</span><span>created s-spirit-island-3 · 4 players · host=u-marco</span></div>
+          <div class="row"><span class="ts">14:23:34</span><span class="lvl ok">OK</span><span class="route">PATCH /game-nights/.../rsvp</span><span>200 · gn-saturday-3 · u-davide → yes</span></div>
+          <div class="row"><span class="ts">14:23:33</span><span class="lvl info">INFO</span><span class="route">JOB indexer.run</span><span>completed · doc=Wingspan-Oceania-EN · 412 chunks · 13.4s</span></div>
+          <div class="row"><span class="ts">14:23:32</span><span class="lvl warn">WARN</span><span class="route">POST /kb/search</span><span>SmolDocling pool exhausted · degraded mode · 12 in queue</span></div>
+          <div class="row"><span class="ts">14:23:30</span><span class="lvl ok">OK</span><span class="route">POST /auth/login</span><span>200 · u-aaron · 2FA bypassed (superadmin) · ip=… session=… </span></div>
+          <div class="row"><span class="ts">14:23:29</span><span class="lvl err">ERROR</span><span class="route">POST /agents/.../query</span><span>503 · pinecone timeout · index=wingspan-v3</span></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="admin-nav.js"></script><script>renderAdminNav('monitor');</script>
+</body></html>

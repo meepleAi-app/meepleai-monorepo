@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 B4 · Upload avanzato · /upload</title>
+<!-- @v2 UploadDropzone · UploadQueue · ProcessingTimeline · AdminDataTable reuse -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .ua-grid { display: grid; grid-template-columns: 400px 1fr; gap: 14px; align-items: start; }
+  .dropzone-mini { background: var(--bg-card); border: 2px dashed hsl(var(--c-kb) / .4); border-radius: 10px; padding: 24px; text-align: center; }
+  .dropzone-mini .em { font-size: 36px; }
+  .dropzone-mini h3 { margin: 8px 0 4px; font-family: var(--f-display); font-size: 14px; font-weight: 800; }
+  .dropzone-mini .desc { font-size: 11.5px; color: var(--text-sec); margin: 0 0 12px; }
+  .uq-row { padding: 10px 14px; border-bottom: 1px solid var(--border-light); cursor: pointer; }
+  .uq-row:hover { background: var(--bg-muted); }
+  .uq-row.selected { background: hsl(var(--c-kb) / .08); border-left: 3px solid hsl(var(--c-kb)); padding-left: 11px; }
+  .uq-row .name { font-family: var(--f-display); font-weight: 700; font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
+  .uq-row .meta { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .pb { height: 4px; background: var(--bg-muted); border-radius: 999px; overflow: hidden; margin-top: 6px; }
+  .pb .fill { height: 100%; background: hsl(var(--c-kb)); }
+  .pb .fill.ok { background: hsl(var(--c-toolkit)); }
+  .pb .fill.err { background: hsl(var(--c-event)); }
+
+  .ptl { display: flex; flex-direction: column; gap: 1px; }
+  .ptl-step { display: grid; grid-template-columns: 40px 1fr 100px 80px; gap: 12px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border-light); font-size: 12px; }
+  .ptl-step:last-child { border-bottom: 0; }
+  .ptl-step .dot { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 700; }
+  .ptl-step.done .dot { background: hsl(var(--c-toolkit)); color: #fff; }
+  .ptl-step.running .dot { background: hsl(var(--c-kb)); color: #fff; animation: admin-pulse 2s infinite; }
+  .ptl-step.queued .dot { background: var(--bg-muted); color: var(--text-muted); border: 1px solid var(--border); }
+  .ptl-step.error .dot { background: hsl(var(--c-event)); color: #fff; }
+  .ptl-step .stage-name { font-family: var(--f-display); font-weight: 700; }
+  .ptl-step .stage-sub { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); }
+  .ptl-step .latency { font-family: var(--f-mono); font-size: 11px; text-align: right; font-weight: 700; color: var(--text-sec); }
+</style>
+</head>
+<body class="admin-page">
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2></div>
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+  <main>
+    <header class="admin-top">
+      <div><h1>Upload avanzato</h1><div class="crumbs">Tools · Upload · 3 in queue · 47 completed today</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <button class="btn-admin">⚙ Batch settings</button>
+        <button class="btn-admin">📋 History (487)</button>
+        <button class="btn-admin primary">+ Bulk upload</button>
+      </div>
+    </header>
+
+    <div class="admin-body">
+      <div class="ua-grid">
+
+        <!-- Left: dropzone + queue -->
+        <div>
+          <div class="dropzone-mini">
+            <span class="em">📁</span>
+            <h3>Drag &amp; drop</h3>
+            <p class="desc">PDF, EPUB, DOCX · max 200MB per file · batch multi-file</p>
+            <button class="btn-admin primary">Scegli file</button>
+            <div style="margin-top: 12px; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">Hold ⇧ per multi-select · Drop → assign gioco</div>
+          </div>
+
+          <div class="admin-panel" style="margin-top: 14px">
+            <div class="admin-panel-head"><h3>Queue · 3 in corso</h3><button class="btn-admin sm" style="margin-left: auto">⏸ Pausa</button></div>
+            <div>
+              <div class="uq-row selected">
+                <div class="name">📄 Wingspan-Oceania-EN.pdf <span class="status-chip info running" style="margin-left: auto; font-size: 9px">indexing</span></div>
+                <div class="meta">8.4MB · 🎲 Wingspan · started 12s · ETA 14s</div>
+                <div class="pb"><div class="fill" style="width: 58%"></div></div>
+              </div>
+              <div class="uq-row">
+                <div class="name">📄 Brass-Lancashire-EN.pdf <span class="status-chip info running" style="margin-left: auto; font-size: 9px">parsing</span></div>
+                <div class="meta">12.1MB · 🎲 Brass · started 4s</div>
+                <div class="pb"><div class="fill" style="width: 18%"></div></div>
+              </div>
+              <div class="uq-row">
+                <div class="name">📄 TG-Chapter-10.pdf <span class="status-chip warning" style="margin-left: auto; font-size: 9px">queued</span></div>
+                <div class="meta">24.8MB · 🎲 Tainted Grail · waiting slot</div>
+                <div class="pb"><div class="fill" style="width: 0%"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-panel" style="margin-top: 14px">
+            <div class="admin-panel-head"><h3>History · today</h3><span class="meta" style="margin-left: auto">47 done · 2 failed</span></div>
+            <div>
+              <div class="uq-row">
+                <div class="name">📄 Ark-Nova-EN.pdf <span style="margin-left: auto; color: hsl(var(--c-toolkit))">✓</span></div>
+                <div class="meta">524ch · 14.2s · $0.092 · 14:08</div>
+              </div>
+              <div class="uq-row">
+                <div class="name">📄 Spirit-Island-rules.pdf <span style="margin-left: auto; color: hsl(var(--c-toolkit))">✓</span></div>
+                <div class="meta">412ch · 12.8s · $0.087 · 13:52</div>
+              </div>
+              <div class="uq-row">
+                <div class="name">📄 TG-Chapter-9-scan.pdf <span style="margin-left: auto; color: hsl(var(--c-event))">✕</span></div>
+                <div class="meta">OCR_LOW_RES_E14 · 13:48</div>
+              </div>
+              <div class="uq-row" style="color: var(--text-muted); font-style: italic">+ 44 altri completati</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: detail processing -->
+        <div class="admin-panel">
+          <div class="admin-panel-head" style="padding: 12px 16px;">
+            <div>
+              <h3 style="font-size: 15px">📄 Wingspan-Oceania-EN.pdf</h3>
+              <div style="font-family: var(--f-mono); font-size: 11px; color: var(--text-muted); margin-top: 2px">8.4 MB · 42 pages · 🎲 Wingspan · uploaded by Aaron · started 14:23:42</div>
+            </div>
+            <div style="margin-left: auto; display: flex; gap: 6px">
+              <button class="btn-admin sm">⏸ Pause</button>
+              <button class="btn-admin sm">↻ Retry stage</button>
+              <button class="btn-admin sm danger">✕ Cancel</button>
+            </div>
+          </div>
+
+          <div style="padding: 16px 16px 8px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px">
+            <div style="background: var(--bg); border: 1px solid var(--border-light); border-radius: 8px; padding: 10px 12px"><div style="font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em">Stage corrente</div><div style="font-family: var(--f-display); font-size: 14px; font-weight: 800; color: hsl(var(--c-kb)); margin-top: 2px">3 / 5 · Layout</div></div>
+            <div style="background: var(--bg); border: 1px solid var(--border-light); border-radius: 8px; padding: 10px 12px"><div style="font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em">Progress totale</div><div style="font-family: var(--f-display); font-size: 14px; font-weight: 800; margin-top: 2px">58%</div></div>
+            <div style="background: var(--bg); border: 1px solid var(--border-light); border-radius: 8px; padding: 10px 12px"><div style="font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em">ETA</div><div style="font-family: var(--f-display); font-size: 14px; font-weight: 800; margin-top: 2px">14s</div></div>
+            <div style="background: var(--bg); border: 1px solid var(--border-light); border-radius: 8px; padding: 10px 12px"><div style="font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em">Cost stimato</div><div style="font-family: var(--f-display); font-size: 14px; font-weight: 800; margin-top: 2px">$0.087</div></div>
+          </div>
+
+          <div style="padding: 0 16px 16px">
+            <h4 style="margin: 12px 0 8px; font-family: var(--f-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em">Pipeline timeline</h4>
+            <div class="ptl">
+              <div class="ptl-step done">
+                <div class="dot">✓</div>
+                <div><div class="stage-name">1. Upload</div><div class="stage-sub">multipart S3 · ricezione binario</div></div>
+                <div class="stage-sub">6.2 MB/s</div>
+                <div class="latency">6.2s</div>
+              </div>
+              <div class="ptl-step done">
+                <div class="dot">✓</div>
+                <div><div class="stage-name">2. Parse · Unstructured.io</div><div class="stage-sub">1.247 elements · 86 tables · 12 figures</div></div>
+                <div class="stage-sub">v0.18.3</div>
+                <div class="latency">2.1s</div>
+              </div>
+              <div class="ptl-step running">
+                <div class="dot">⟳</div>
+                <div><div class="stage-name">3. Layout · SmolDocling</div><div class="stage-sub">parsing tabelle pag.22-31 · 24/42 done</div></div>
+                <div class="stage-sub" style="color: hsl(var(--c-kb)); font-weight: 700">58%</div>
+                <div class="latency">~5s</div>
+              </div>
+              <div class="ptl-step queued">
+                <div class="dot">⋯</div>
+                <div><div class="stage-name">4. Embed · text-embedding-3-large</div><div class="stage-sub">412 chunks attesi · batch 64</div></div>
+                <div class="stage-sub">in coda</div>
+                <div class="latency">~4s</div>
+              </div>
+              <div class="ptl-step queued">
+                <div class="dot">⋯</div>
+                <div><div class="stage-name">5. Index · Pinecone wingspan-v3</div><div class="stage-sub">412 vector upsert</div></div>
+                <div class="stage-sub">in coda</div>
+                <div class="latency">~0.5s</div>
+              </div>
+            </div>
+
+            <div style="margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+              <div style="padding: 12px; background: var(--bg-muted); border-radius: 6px">
+                <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px">Metadata</div>
+                <dl style="display: grid; grid-template-columns: 100px 1fr; gap: 4px; font-size: 11.5px; margin: 0">
+                  <dt style="color: var(--text-muted)">Lingua</dt><dd style="margin: 0">EN (detected)</dd>
+                  <dt style="color: var(--text-muted)">OCR</dt><dd style="margin: 0">no (text-native PDF)</dd>
+                  <dt style="color: var(--text-muted)">Chunk size</dt><dd style="margin: 0">512 tok</dd>
+                  <dt style="color: var(--text-muted)">Indexer</dt><dd style="margin: 0">v2024.11.18</dd>
+                </dl>
+              </div>
+              <div style="padding: 12px; background: var(--bg-muted); border-radius: 6px">
+                <div style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px">Actions</div>
+                <div style="display: flex; flex-direction: column; gap: 4px">
+                  <button class="btn-admin sm">📥 Download original</button>
+                  <button class="btn-admin sm">👁 View extracted text</button>
+                  <button class="btn-admin sm">↻ Retry failed step</button>
+                  <button class="btn-admin sm danger">🗑 Delete from KB</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="admin-nav.js"></script><script>renderAdminNav('upload');</script>
+</body></html>

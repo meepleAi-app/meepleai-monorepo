@@ -48,6 +48,8 @@ Sintesi del colloquio R1-R10 (dettaglio e razionale in `ADMIN_AUDIT.md §9`). So
 | **R9** | Dark default scoped admin | `[data-theme="dark"]` applicato solo sotto `/admin/*` (§4.3). |
 | **R10** | Sequenza fondamenta → pilota (A1→A2) → ondate; sicurezza track separato | Rollout in §9. |
 
+**Criteri di accettazione (panel — Wiegers).** Ogni decisione con uno stato osservabile è verificabile (R3 = audit as-is e R10 = sequenza di processo non hanno un gate dedicato in questa fase): R1 → nessun ruolo `premium` nel codice, `UserTier.Premium` usato per i gate di subscription; R2 → la sidebar nasconde le voci sopra il ruolo (test per editor/creator/admin/superadmin); R4 → banner di impersonate presente quando `SessionStatusDto` espone l'attore; R5 → modal step-up presente in UI ma behavior in shadow (logga, non blocca) finché §7 non lo rende strict; R7 → un solo path canonico per funzione + ogni redirect verificato (E2E nav); R8 → le chiamate FE usano `/api/v1` (ESLint `local/api-client-v1-prefix`); R9 → E2E: `/admin/*` ha `data-theme="dark"`, il resto resta light.
+
 ## 4. Architettura del consolidamento
 
 > **Principio guida (input utente 2026-05-24): l'estetica prima della struttura.** Dei mockup SP5/surplus conta la **parte estetica da mantenere** — palette/token, layout visivo, density, trattamento visivo dei componenti. L'**Information Architecture e il routing** possono invece **divergere dal mockup** quando il consolidamento lo richiede (es. hub `?tab=` al posto di voci top-level separate). Questo principio risolve D-1 e governa tutte le scelte di §4: re-skin fedele al look, IA libera di consolidare.
@@ -75,6 +77,10 @@ Sintesi del colloquio R1-R10 (dettaglio e razionale in `ADMIN_AUDIT.md §9`). So
 
 > **Decisione presa (input utente 2026-05-24):** per A4 si adotta l'**hub `?tab=` esistente** come canonico (pattern dominante, 9 tab già implementati), con redirect dai duplicati — **non** si moltiplicano le voci top-level del mockup. Razionale: conta l'estetica, non la struttura nav (principio §4). I restanti deconflitti path (B1/B2/B6 fuori da `/admin`, vedi §5) si risolvono **per ondata** nei rispettivi plan, applicando lo stesso principio canonico+redirect.
 
+> **Principio hub-vs-route (panel — Fowler).** Per non ricreare la frammentazione che §1 elimina, il criterio di scelta del pattern è: **hub `?tab=`** quando le viste sono sotto-aspetti della *stessa* entità/dominio (es. AI: agents / rag / quality); **route separata** quando sono entità/domini *distinti* (es. KB ≠ Catalog ≠ Users). Regola: una funzione = un solo pattern; non mescolare hub e route separate per lo stesso dominio.
+
+> **Lifecycle dei redirect (panel — Newman).** I redirect di consolidamento esistenti (#5040) sono `permanent` (308) e quindi cache-ati in modo aggressivo: difficili da revocare. Per i path ancora soggetti a spostamento nelle ondate F2-F6 usare `307` (temporary) finché l'IA non è stabile, promuovendo a `308` solo quando il path canonico è definitivo. ⚠️ **Caso KB**: l'entry #5040 `/admin/pdfs` → `/admin/content?tab=kb` è già `308`; poiché §4.2 rende canonico `/admin/knowledge-base`, **sostituire** quell'entry (`/admin/pdfs` → `/admin/knowledge-base` diretto) anziché aggiungere un secondo 308 in catena — altrimenti si crea `pdfs → content?tab=kb → knowledge-base`, una catena di redirect permanenti difficile da revocare.
+
 ### 4.3 Shell + re-skin
 
 - **Shell ibrida** (decisione colloquio): **sidebar persistente** su desktop (≥lg, breakpoint Tailwind) + **drawer off-canvas** su mobile. Punto di partenza: `apps/web/src/components/layout/AdminShell/AdminShell.tsx` (oggi `TopBar` + `AdminSideDrawer` overlay). Si estende `AdminSideDrawer` a comportamento responsive sidebar↔drawer, **non** si crea una shell nuova.
@@ -87,6 +93,7 @@ Sintesi del colloquio R1-R10 (dettaglio e razionale in `ADMIN_AUDIT.md §9`). So
 - Gate backend **riusati as-is**: `RequireAdminSession()`, `RequireSuperAdminSession()`, `RequireAdminOrEditorSession()`; policy `RequireSuperAdmin`/`RequireAdminOrAbove`/`RequireEditorOrAbove`. Gerarchia `SuperAdmin(4) > Admin(3) > Editor(2) > Creator(1) > User(0)`.
 - **Sidebar filtrata per ruolo**: ogni voce di nav dichiara un `minRole`; la sidebar nasconde le voci sopra il ruolo dell'utente. `editor`/`creator` vedono un sottoinsieme curato (R2). I path `superadmin`-only (es. C2 database-sync, C4 emergency, C6 secrets) restano gated sia in nav sia a livello endpoint.
 - Nessun nuovo meccanismo di gate: per i nuovi endpoint admin si standardizza su quello esistente.
+- ⚠️ **Il filtro nav è presentazionale, NON un boundary di sicurezza (panel — Fowler/Crispin).** Nascondere una voce per ruolo non protegge la route: l'autorizzazione resta sul gate endpoint/page (`RequireRole`/policy server-side). Ogni route gated deve rifiutare l'accesso via URL diretto anche quando la voce nav è nascosta. Il filtro serve solo a ridurre il rumore visivo, non a controllare l'accesso.
 
 ## 5. Mappa schermate (31) — stato FE e path canonico
 
@@ -163,6 +170,8 @@ Hardening tracciato a parte (R3/R4/R5), **non blocca** re-skin/consolidamento. B
 1. **Schema audit** (R3): aggiungere `impersonated_user_id`, `before_json`, `after_json`, `step_up_token_id`; allargare/sostituire `Details` (1024 char). **Prima** disambiguare la doppia entity `AuditLog` (`Administration` usata vs `SecurityAudit`) — verifica tecnica "quale è canonica".
 2. **Impersonate token** (R4): estendere `Session` con `ImpersonatedByUserId` + `ImpersonatedUntil` + lifetime 15min; banner persistente via `SessionStatusDto`.
 3. **Step-up strict** (R5): `LastTotpVerifiedAt` su `Session`; endpoint challenge → `step_up_token`; header `X-StepUp-Token` + validazione; behavior shadow→strict (403 `STEP_UP_REQUIRED`, MaxAge 30→5); coprire trigger (rotate key, emergency shutdown, mass delete >5, change flag prod, promote→superadmin). UI predisposta già in questa fase (R5).
+
+> ⚠️ **Rischio operativo — finestra di falsa sicurezza (panel — Nygard).** Tra "UI-ready" (R5, ora) ed "enforcement strict" (questo punto), l'UI mostra uno step-up che il backend NON enforce (shadow mode): in quella finestra un attore può aggirarlo senza essere bloccato. Mitigazioni: (a) non comunicare lo step-up come garanzia di sicurezza finché non è strict; (b) loggare i tentativi in shadow per misurare l'impatto prima del cutover; (c) dare priorità all'enforcement strict sulle azioni distruttive (mass delete, rotate key, emergency shutdown) anche se il resto resta UI-only più a lungo.
 
 ## 8. Contratto API (FE → path reali, R8)
 

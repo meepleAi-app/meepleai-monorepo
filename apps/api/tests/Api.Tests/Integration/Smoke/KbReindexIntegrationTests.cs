@@ -59,13 +59,15 @@ public sealed class KbReindexIntegrationTests : IAsyncLifetime
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
-        // ReindexGameKbCommandHandler resolves IKbReindexJobRepository at runtime
-        // (Issue #941 / ADR-057 async reindex job). The base collection builder
-        // does not include the KnowledgeBase infrastructure registrations, so we
-        // register the concrete repository here for the smoke test.
+        // ReindexGameKbCommandHandler resolves IKbReindexJobRepository and the
+        // in-process KbReindexChannel queue at runtime (Issue #941 / ADR-057
+        // async reindex job). The base collection builder does not include the
+        // KnowledgeBase infrastructure registrations, so we register both here
+        // for the smoke test (mirrors KnowledgeBaseServiceExtensions:413-414).
         services.AddScoped<
             Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IKbReindexJobRepository,
             Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.KbReindexJobRepository>();
+        services.AddSingleton<Api.BoundedContexts.KnowledgeBase.Application.Channels.KbReindexChannel>();
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();

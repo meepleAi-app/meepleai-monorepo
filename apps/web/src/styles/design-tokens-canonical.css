@@ -162,7 +162,11 @@
 }
 
 /* ─── DARK THEME ─── */
-:root[data-theme="dark"] {
+/* DS: dark tokens apply both on :root (global theme) AND on any container
+   carrying data-theme="dark" (e.g. AdminShell), enabling per-section dark scope
+   without touching <html>. See SP5 F0c plan. */
+:root[data-theme="dark"],
+[data-theme="dark"] {
   --bg:        #14100a;
   --bg-card:   #1e1710;
   --bg-muted:  #241c13;

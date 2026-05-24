@@ -30,4 +30,16 @@ describe('AdminShell', () => {
     expect(screen.getByRole('navigation', { name: /admin sidebar/i })).toBeInTheDocument();
     expect(screen.getByText('page body')).toBeInTheDocument();
   });
+
+  it('scopes the dark theme to the admin shell root', () => {
+    mockUseCurrentUser.mockReturnValue({ data: { id: 'u', email: 'a@b.c', role: 'admin' } });
+    const { container } = render(
+      <AdminShell>
+        <p>body</p>
+      </AdminShell>
+    );
+    const root = container.querySelector('[data-admin-shell]');
+    expect(root).not.toBeNull();
+    expect(root).toHaveAttribute('data-theme', 'dark');
+  });
 });

@@ -21,7 +21,10 @@ type TranslateFn = (id: string) => string;
 
 const DASH = '—' as const;
 
-export function buildSpecsItems(detail: LibraryGameDetail, t: TranslateFn): GameDetailSpecsItem[] {
+export function buildSpecsItems(
+  detail: LibraryGameDetail,
+  t: TranslateFn
+): ReadonlyArray<GameDetailSpecsItem> {
   return [
     {
       key: 'players',

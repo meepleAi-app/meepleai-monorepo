@@ -84,6 +84,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     items: fullItems,
+    title: 'Specifiche',
   },
 };
 
@@ -91,6 +92,7 @@ export const Default: Story = {
 export const WithNullables: Story = {
   args: {
     items: nullCascadeItems,
+    title: 'Specifiche',
   },
 };
 
@@ -98,10 +100,11 @@ export const WithNullables: Story = {
 export const Empty: Story = {
   args: {
     items: [],
+    title: 'Specifiche',
   },
 };
 
-/** i18n override — caller passes custom title (default fallback `'Specifiche'`). */
+/** i18n override — caller passes a different localized title (e.g. EN locale or alternate UX label). */
 export const CustomTitle: Story = {
   args: {
     items: fullItems,
@@ -113,5 +116,6 @@ export const CustomTitle: Story = {
 export const LongDesignerName: Story = {
   args: {
     items: longValueItems,
+    title: 'Specifiche',
   },
 };

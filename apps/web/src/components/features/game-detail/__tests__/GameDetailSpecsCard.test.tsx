@@ -29,13 +29,13 @@ const eightItems: ReadonlyArray<GameDetailSpecsItem> = [
 describe('GameDetailSpecsCard (Issue #1463)', () => {
   // T1
   it('renders one listitem per entry (default 8 items)', () => {
-    render(<GameDetailSpecsCard items={eightItems} />);
+    render(<GameDetailSpecsCard items={eightItems} title="Specifiche" />);
     const items = screen.getAllByRole('listitem');
     expect(items).toHaveLength(8);
   });
 
   it('renders labels and values', () => {
-    render(<GameDetailSpecsCard items={eightItems} />);
+    render(<GameDetailSpecsCard items={eightItems} title="Specifiche" />);
     expect(screen.getByText('Giocatori')).toBeInTheDocument();
     expect(screen.getByText('1–5')).toBeInTheDocument();
     expect(screen.getByText('Rating BGG')).toBeInTheDocument();
@@ -44,7 +44,7 @@ describe('GameDetailSpecsCard (Issue #1463)', () => {
 
   // T2
   it('exposes data-slot and data-spec-key for E2E selectors', () => {
-    const { container } = render(<GameDetailSpecsCard items={eightItems} />);
+    const { container } = render(<GameDetailSpecsCard items={eightItems} title="Specifiche" />);
     expect(container.querySelector('[data-slot="game-detail-specs-card"]')).toBeInTheDocument();
     const itemSlots = container.querySelectorAll('[data-spec-key]');
     expect(itemSlots).toHaveLength(8);
@@ -53,7 +53,7 @@ describe('GameDetailSpecsCard (Issue #1463)', () => {
 
   // T3
   it('renders role=list with aria-label matching title (default)', () => {
-    render(<GameDetailSpecsCard items={eightItems} />);
+    render(<GameDetailSpecsCard items={eightItems} title="Specifiche" />);
     const list = screen.getByRole('list', { name: /specifiche/i });
     expect(list).toBeInTheDocument();
   });
@@ -85,7 +85,7 @@ describe('GameDetailSpecsCard (Issue #1463)', () => {
   });
 
   it('uses DS-15 compliant semantic tokens only (text-foreground / text-muted-foreground)', () => {
-    const { container } = render(<GameDetailSpecsCard items={eightItems} />);
+    const { container } = render(<GameDetailSpecsCard items={eightItems} title="Specifiche" />);
     // Heading uses text-foreground
     const heading = container.querySelector('h3');
     expect(heading).toHaveClass('text-foreground');

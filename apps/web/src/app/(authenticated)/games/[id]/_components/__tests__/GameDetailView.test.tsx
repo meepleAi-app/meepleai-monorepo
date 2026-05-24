@@ -476,6 +476,10 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     const kpiCards = document.querySelector('[data-slot="game-detail-kpi-cards"]');
     expect(kpiCards).toBeInTheDocument();
 
+    // Specs card inside info panel (Issue #1463 — regression guard)
+    const specsCard = document.querySelector('[data-slot="game-detail-specs-card"]');
+    expect(specsCard).toBeInTheDocument();
+
     // Agents panel hidden (tab=info)
     const agentsPanel = document.querySelector('[data-slot="game-detail-panel-agents"]');
     expect(agentsPanel).toBeInTheDocument();

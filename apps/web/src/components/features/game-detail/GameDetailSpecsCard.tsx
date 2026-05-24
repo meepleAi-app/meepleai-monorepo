@@ -19,8 +19,6 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
-const DEFAULT_TITLE = 'Specifiche';
-
 export interface GameDetailSpecsItem {
   readonly key: string;
   readonly label: string;
@@ -29,12 +27,17 @@ export interface GameDetailSpecsItem {
 
 export interface GameDetailSpecsCardProps {
   readonly items: ReadonlyArray<GameDetailSpecsItem>;
-  readonly title?: string;
+  /**
+   * Localized card title (e.g. via `t('pages.gameDetail.info.specsTitle')`).
+   * Required: caller MUST resolve i18n string upstream to keep the component
+   * pure and locale-agnostic (no Italian hardcoded fallback).
+   */
+  readonly title: string;
   readonly className?: string;
 }
 
 export function GameDetailSpecsCard(props: GameDetailSpecsCardProps): ReactElement {
-  const { items, title = DEFAULT_TITLE, className } = props;
+  const { items, title, className } = props;
 
   return (
     <section

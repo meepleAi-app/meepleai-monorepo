@@ -66,8 +66,9 @@ const LABEL: Record<EntityType, string> = {
  *   const t = getEntityToken('game');
  *   <span className={`${t.bgSoft} ${t.text}`}>{t.emoji} {t.label}</span>
  *
- * @see entityHsl — runtime HSL accessor for inline-style use cases
- *   (admin-mockups/design_handoff/DESIGN_TOKENS.md § "Helper TypeScript")
+ * @see {@link entityHsl} (`@/components/ui/data-display/meeple-card/tokens`) —
+ *   runtime HSL accessor for inline-style use cases. Spec reference:
+ *   `admin-mockups/design_handoff/DESIGN_TOKENS.md § "Helper TypeScript"`.
  */
 export function getEntityToken(type: EntityType): EntityToken {
   const k = TAILWIND_KEY[type];

@@ -13,6 +13,9 @@ module.exports = {
       // shadcn/ui semantic tokens also use HSL format
       fontFamily: {
         quicksand: ['var(--font-quicksand)', 'sans-serif'],
+        // Backward compat: `font-inter` className aliased to Nunito post DS-step 2b
+        // (2026-05-24, PR #1462). The legacy --font-inter CSS variable was never
+        // actually defined in layout.tsx — the alias now correctly resolves to Nunito.
         inter: ['var(--font-nunito)', 'sans-serif'],
         // Backward compat: existing font-nunito classes still work
         nunito: ['var(--font-nunito)', 'sans-serif'],

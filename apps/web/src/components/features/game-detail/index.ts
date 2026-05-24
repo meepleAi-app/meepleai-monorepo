@@ -75,3 +75,9 @@ export type {
 } from '@/components/features/game-detail/GameDetailSpecsCard';
 
 export { buildSpecsItems } from '@/components/features/game-detail/buildSpecsItems';
+
+export { GameDetailLeaderboard } from '@/components/features/game-detail/GameDetailLeaderboard';
+export type {
+  GameDetailLeaderboardLabels,
+  GameDetailLeaderboardProps,
+} from '@/components/features/game-detail/GameDetailLeaderboard';

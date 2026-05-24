@@ -26,6 +26,11 @@ export interface GameDetailLeaderboardLabels {
 }
 
 export interface GameDetailLeaderboardProps {
+  /**
+   * Leaderboard rows, already sorted by the backend (#1467: wins desc, then avgScore,
+   * plays, userId). Rank is assigned by array index — row 0 receives the trophy — so the
+   * caller must not re-order or client-side-filter without re-sorting.
+   */
   readonly entries: ReadonlyArray<GameLeaderboardEntry>;
   /** Localized card title, resolved upstream (caller-side i18n). */
   readonly title: string;

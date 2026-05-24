@@ -39,6 +39,7 @@ export interface AdminNavListProps {
   groups: AdminNavGroup[];
   pathname: string;
   onNavigate?: () => void;
+  ariaLabel?: string;
 }
 
 /**
@@ -46,9 +47,9 @@ export interface AdminNavListProps {
  * drawer (AdminSideDrawer) and the desktop sidebar (AdminSidebar, F0b Task 2).
  * Receives already-filtered groups; does not read the user/role itself.
  */
-export function AdminNavList({ groups, pathname, onNavigate }: AdminNavListProps) {
+export function AdminNavList({ groups, pathname, onNavigate, ariaLabel }: AdminNavListProps) {
   return (
-    <nav className="flex flex-col gap-0.5">
+    <nav aria-label={ariaLabel} className="flex flex-col gap-0.5">
       {groups.map(group => (
         <div key={group.id} className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2 px-3 py-1.5 mt-2">

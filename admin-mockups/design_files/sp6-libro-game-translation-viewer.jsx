@@ -4,6 +4,41 @@
    Anchor id su ogni screen wrapper (state-NN-…) + Gherkin tag (G4.4 / G4.7).
    Reading-body: 26px Nunito assoluto, line-height 1.6, max-width 60ch — DEVIAZIONE brief L519.
    prefers-reduced-motion guard ereditato (mai-shimmer / mai-spinner / mai-pulse).
+
+   ─── Task 4 · Sezione 1d update (2026-05-23) — Multi-language source + Manual input ───
+   Nuovi componenti aggiunti (parity con sezione K/L/M in librogame-runthrough-translate-viewer.html):
+     · LangDetectionBadge — header pill post OCR, 3 variants confidence-driven
+         · high   (>0.8)   → badge informativo (no friction)
+         · medium (0.5-0.8)→ tap-to-confirm prima di translate (blocking)
+         · low    (<0.5)   → cross-link state-H source-lang-unknown (error-states.html)
+     · LangOverrideModal — modal radio group 5 lingue v1 (EN·FR·DE·ES·IT)
+         · CTA "Conferma e ritraduci" → re-trigger AI translation (skip OCR cache hit)
+         · OCR result preservato (smoldocling cache key `(photo_hash, page)` invariante)
+     · ManualInputMode — textarea fallback senza foto (?mode=manual query param UI-only)
+         · max 2000 char + counter visibile + lang dropdown pre-filled + book ref chip
+         · Skip step 2 OCR, va a step 3 (AI translate) loading sequence Task 2
+
+   Lingue v1: 🇬🇧 EN · 🇫🇷 FR · 🇩🇪 DE · 🇪🇸 ES · 🇮🇹 IT — copre ~95% libri-game europei.
+   Target lingua: IT fisso v1 (da setting profilo). Target dropdown NON visibile.
+
+   Triple-entry discoverability per manual-input-mode (3 punti di ingresso):
+     1. CTA "Digita manualmente" in state-F `photo-blur-pre-ocr`
+        (librogame-runthrough-error-states.html sez 1a Task 1)
+     2. Kebab menu ⋮ del camera step
+        (sp6-libro-game-photo-upload.html, top-right + voce "Digita manualmente")
+     3. Empty state card "Libro non a portata? Digita il paragrafo"
+        (librogame-runthrough-translate-viewer.html state-M, sez 1d Task 4)
+
+   State tracking nello session model (commento backend):
+     · source_method: "ocr" | "manual"
+     · source_lang: "en" | "fr" | "de" | "es" | "it" (locked dopo conferma utente)
+     · lang_detection_confidence: 0.0-1.0 (solo per source_method=ocr)
+
+   Cross-ref:
+     · state-H source-lang-unknown → librogame-runthrough-error-states.html (sez 1a Task 1)
+     · state-F photo-blur-pre-ocr → librogame-runthrough-error-states.html
+     · state-G loading 4-step → librogame-runthrough-translate-viewer.html (sez 1b Task 2)
+     · kebab "Digita manualmente" → sp6-libro-game-photo-upload.html
 */
 
 const { useState } = React;
@@ -274,6 +309,231 @@ function BottomControls({
           🎙️ Leggi tu <span className="v2">v2</span>
         </span>
       </div>
+    </div>
+  );
+}
+
+/* ────────────────────────── TASK 4 sez 1d — LANG DETECTION + MANUAL INPUT ────────────────────────── */
+
+/* Languages v1: 5 supportate · target IT fisso (NO target dropdown UI) */
+const SUPPORTED_LANGS = [
+  { code: 'EN', flag: '🇬🇧', label: 'English',  sub: 'EN · uk · us' },
+  { code: 'FR', flag: '🇫🇷', label: 'Français', sub: 'FR · fr · be · ca' },
+  { code: 'DE', flag: '🇩🇪', label: 'Deutsch',  sub: 'DE · de · at · ch' },
+  { code: 'ES', flag: '🇪🇸', label: 'Español',  sub: 'ES · es · mx · ar' },
+  { code: 'IT', flag: '🇮🇹', label: 'Italiano', sub: 'IT · it · ch · sm' },
+];
+
+/**
+ * LangDetectionBadge — Header pill post OCR (state K).
+ *
+ * 3 variants confidence-driven:
+ *   - high   (>0.8)   → informativo, no friction (success color)
+ *   - medium (0.5-0.8)→ tap-to-confirm BLOCKING prima di translate (warning color)
+ *   - low    (<0.5)   → cross-link state-H source-lang-unknown (danger color, animated pulse)
+ *
+ * onClick → apre <LangOverrideModal/> (state L).
+ * Cross-ref: state-H in librogame-runthrough-error-states.html (sez 1a Task 1).
+ */
+function LangDetectionBadge({ langCode = 'EN', confidence = 0.92, onClick }) {
+  const lang = SUPPORTED_LANGS.find(l => l.code === langCode) || SUPPORTED_LANGS[0];
+  let variant = 'high';
+  if (confidence < 0.5) variant = 'low';
+  else if (confidence < 0.8) variant = 'medium';
+
+  const ariaLabel = variant === 'high'
+    ? `Sorgente rilevata: ${lang.label} (alta affidabilità ${confidence.toFixed(2)}) — tap per cambiare`
+    : variant === 'medium'
+      ? `Sorgente probabile: ${lang.label} (confidence ${confidence.toFixed(2)}) — conferma o cambia prima di tradurre`
+      : `Lingua non riconosciuta (confidence ${confidence.toFixed(2)}) — scegli manualmente`;
+
+  return (
+    <button
+      type="button"
+      className={`lang-detect-badge ${variant}`}
+      aria-label={ariaLabel}
+      onClick={onClick}
+    >
+      <span className="flag">{variant === 'low' ? '⚠️' : lang.flag}</span>
+      <span>{variant === 'low' ? '?' : lang.code}</span>
+      <span className="conf">{confidence.toFixed(2)}</span>
+    </button>
+  );
+}
+
+/**
+ * LangOverrideModal — Modal radio group (state L).
+ *
+ * Tap sul badge K → modal con 5 lingue v1.
+ * CTA "Conferma e ritraduci" → re-trigger AI translation step 3 (skip step 2 OCR cache hit).
+ * Pre-selected: lingua auto-detected dal badge.
+ *
+ * Behavior:
+ *   - OCR result preservato (smoldocling cache key (photo_hash, page) invariante)
+ *   - Re-translate solo step 3 della loading sequence Task 2
+ *   - Cost: solo DeepSeek (~0,01 €), no smoldocling recompute
+ */
+function LangOverrideModal({
+  selectedCode = 'FR',
+  autoDetectedCode = 'FR',
+  onConfirm = () => {},
+  onCancel = () => {},
+}) {
+  return (
+    <div className="lang-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="lang-modal-title">
+      <div className="lang-modal">
+        <div className="lang-modal-head">
+          <h3 id="lang-modal-title">Lingua sorgente del libro</h3>
+          <p>5 lingue v1 supportate · target IT fisso</p>
+        </div>
+        <div className="lang-modal-body">
+          <ul className="lang-radio-list">
+            {SUPPORTED_LANGS.map(l => {
+              const isSelected = l.code === selectedCode;
+              const isAuto = l.code === autoDetectedCode;
+              return (
+                <li
+                  key={l.code}
+                  className={`lang-radio-item ${isSelected ? 'selected' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-current={isSelected ? 'true' : undefined}
+                >
+                  <span className="flag">{l.flag}</span>
+                  <span className="l">
+                    <span className="v">{l.label}</span>
+                    <span className="s">{l.sub}</span>
+                  </span>
+                  {isAuto && <span className="auto-tag">Auto</span>}
+                  <span className="radio" aria-hidden="true" />
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        <div className="lang-modal-foot">
+          <button className="cta-primary" type="button" autoFocus onClick={onConfirm}>
+            Conferma e ritraduci
+          </button>
+          <button className="cta-secondary" type="button" onClick={onCancel}>
+            Annulla
+          </button>
+          <p className="cache-hint">
+            <strong>✓ OCR preservato</strong> · re-translate solo step 3 (skip OCR cache hit)
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ManualInputMode — Layout fallback senza foto (state M).
+ *
+ * Trigger via query param `?mode=manual` (UI-only, NO sub-route backend).
+ * Triple-entry discoverability:
+ *   1. CTA "Digita manualmente" in state-F photo-blur-pre-ocr (error-states.html)
+ *   2. Kebab menu ⋮ del camera step (sp6-libro-game-photo-upload.html)
+ *   3. Empty state card "Libro non a portata?" (qui · default route /translate)
+ *
+ * Layout: header sticky (title + back + lang dropdown + book ref chip)
+ *       + textarea multiline (max 2000 char + counter visibile bottom-right)
+ *       + CTA "Traduci" → skip step 2 OCR, va a step 3 AI translation (loading state-G)
+ *
+ * State: source_method = "manual", source_lang locked dopo conferma, lang_detection_confidence = null.
+ * Parity: stessi step 3-4 della loading sequence Task 2. Diff = step 2 OCR sostituito da textarea content.
+ */
+function ManualInputMode({
+  initialText = '',
+  initialLang = 'EN',
+  bookRef = 'Runa di Ardenel',
+  maxChars = 2000,
+}) {
+  const [text, setText] = useState(initialText);
+  const [lang, setLang] = useState(initialLang);
+  const langInfo = SUPPORTED_LANGS.find(l => l.code === lang) || SUPPORTED_LANGS[0];
+  const charCount = text.length;
+  const counterClass =
+    charCount > maxChars ? 'over' :
+    charCount > maxChars * 0.9 ? 'warn' : '';
+  const disabled = charCount === 0 || charCount > maxChars;
+
+  return (
+    <div className="manual-input-shell">
+      {/* Header sticky */}
+      <div className="manual-input-head">
+        <div className="title-row">
+          <button className="back" aria-label="Indietro">←</button>
+          <h2>Inserimento manuale</h2>
+          <span className="badge-manual">Manual</span>
+        </div>
+        <div className="meta-row">
+          {/* Lang dropdown pre-filled last-used */}
+          <button className="manual-lang-dropdown" type="button" aria-label={`Lingua sorgente: ${langInfo.label} — cambia`}>
+            <span className="flag">{langInfo.flag}</span>
+            <span>{langInfo.code}</span>
+            <span className="chevron">▾</span>
+          </button>
+          {/* Book ref chip pre-filled current campaign book */}
+          <span className="book-ref-chip" aria-label={`Libro corrente — ${bookRef}`}>
+            <span className="lock">🔒</span>📕 {bookRef}
+          </span>
+        </div>
+      </div>
+
+      {/* Body: textarea + counter + hint */}
+      <div className="manual-input-body">
+        <div className="manual-textarea-shell">
+          <textarea
+            className="manual-textarea"
+            placeholder="Incolla o digita il paragrafo del libro…"
+            aria-label="Testo paragrafo da tradurre"
+            maxLength={maxChars}
+            value={text}
+            onChange={e => setText(e.target.value)}
+          />
+          <span className={`manual-char-counter ${counterClass}`} aria-live="polite" aria-label={`${charCount} caratteri su ${maxChars} massimi`}>
+            {charCount} <span className="max">/ {maxChars}</span>
+          </span>
+        </div>
+        <div className="manual-hint">
+          <strong>💡 Suggerimento:</strong> Incolla esattamente il paragrafo dal libro. Salta step 2 OCR e va direttamente alla traduzione. Glossario applicato in step 4.
+        </div>
+      </div>
+
+      {/* Footer sticky con CTA */}
+      <div className="manual-input-foot">
+        <button className="manual-cta-primary" type="button" disabled={disabled} aria-label="Traduci il testo manuale">
+          <span>Traduci</span><span className="arrow">→</span>
+        </button>
+        <p className="manual-flow-note">
+          <strong>→ step 3 streaming</strong> (skip OCR) · ~10s · 💰 ~0,01 €
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ManualEntryCard — Empty state card (state M entry-point #3 di 3).
+ * Render quando /translate aperto senza foto.
+ * Click → naviga a ?mode=manual.
+ */
+function ManualEntryCard() {
+  return (
+    <div
+      className="manual-empty-card"
+      role="button"
+      tabIndex={0}
+      aria-label="Libro non a portata? Digita il paragrafo manualmente"
+      onClick={() => { window.location.href = 'librogame-runthrough-translate-viewer.html?mode=manual'; /* DEMO-NAV: triple-entry #3 */ }}
+    >
+      <span className="icon">⌨️</span>
+      <div className="l">
+        <span className="v">Libro non a portata?</span>
+        <span className="s">Digita manualmente il paragrafo · skip foto</span>
+      </div>
+      <span className="arrow">›</span>
     </div>
   );
 }
@@ -571,6 +831,209 @@ function AidsSection() {
   );
 }
 
+/* ────────────────────────── TASK 4 SEZ 1d · MULTI-LANG + MANUAL INPUT SECTION ────────────────────────── */
+
+/**
+ * MultiLangSection — Stati K (badge), L (modal), M (manual input).
+ *
+ * Demonstra:
+ *   · 3 variants di LangDetectionBadge (high / medium / low)
+ *   · LangOverrideModal con FR pre-selected (from medium badge)
+ *   · ManualInputMode con textarea pre-filled
+ *   · ManualEntryCard (empty state entry-point #3)
+ *
+ * Lingue v1: 🇬🇧 EN · 🇫🇷 FR · 🇩🇪 DE · 🇪🇸 ES · 🇮🇹 IT.
+ * Cross-ref: librogame-runthrough-translate-viewer.html stati K/L/M (sez 1d Task 4).
+ */
+function MultiLangSection() {
+  const items = [
+    {
+      id: 'state-K1-lang-detect-high',
+      label: 'K.1 · LangDetectionBadge — high confidence (>0.8)',
+      gherkin: '@TASK4-1d badge-high',
+      sub: 'EN 0.92 · informativo · no friction · success color',
+      screen: (
+        <div className="phone-sp6" data-theme="light">
+          <StatusBar />
+          <div className="phone-screen" style={{ background: 'var(--bg)' }}>
+            <div className="tv-topbar">
+              <button className="icon-btn" aria-label="Indietro">←</button>
+              <div className="center">§147</div>
+              <LangDetectionBadge langCode="EN" confidence={0.92} />
+            </div>
+            <div className="tv-body mai-noscroll">
+              <BodyHead pnum="§147" />
+              <ReadingBodyIT fs="md" lh="default" />
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'state-K2-lang-detect-medium',
+      label: 'K.2 · LangDetectionBadge — medium confidence (0.5-0.8)',
+      gherkin: '@TASK4-1d badge-medium',
+      sub: 'FR 0.67 · tap-to-confirm · BLOCKING prima di translate · warning color',
+      screen: (
+        <div className="phone-sp6" data-theme="light">
+          <StatusBar />
+          <div className="phone-screen" style={{ background: 'var(--bg)' }}>
+            <div className="tv-topbar">
+              <button className="icon-btn" aria-label="Indietro">←</button>
+              <div className="center">§147</div>
+              <LangDetectionBadge langCode="FR" confidence={0.67} />
+            </div>
+            <div className="tv-body mai-noscroll">
+              <BodyHead pnum="§147" />
+              <p style={{
+                padding: '20px',
+                fontSize: '14px',
+                color: 'var(--text-sec)',
+                textAlign: 'center',
+                fontStyle: 'italic',
+              }}>
+                ⏸ Traduzione in pausa — tappa il badge per confermare la lingua sorgente prima di procedere.
+              </p>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'state-K3-lang-detect-low',
+      label: 'K.3 · LangDetectionBadge — low confidence (<0.5) · cross-link state-H',
+      gherkin: '@TASK4-1d badge-low',
+      sub: '? 0.31 · cross-link state-H source-lang-unknown (error-states.html sez 1a)',
+      screen: (
+        <div className="phone-sp6" data-theme="light">
+          <StatusBar />
+          <div className="phone-screen" style={{ background: 'var(--bg)' }}>
+            <div className="tv-topbar">
+              <button className="icon-btn" aria-label="Indietro">←</button>
+              <div className="center">§147</div>
+              <LangDetectionBadge langCode="EN" confidence={0.31} />
+            </div>
+            <div className="tv-body mai-noscroll">
+              <p style={{
+                padding: '20px',
+                fontSize: '14px',
+                color: 'var(--text)',
+                textAlign: 'center',
+                lineHeight: 1.55,
+              }}>
+                ⚠️ Lingua non riconosciuta. Devi scegliere manualmente prima di procedere.
+                <br /><br />
+                <span style={{ fontSize: '12px', color: 'hsl(var(--c-kb))', fontFamily: 'var(--f-mono)' }}>
+                  → state-H source-lang-unknown<br/>in <code>librogame-runthrough-error-states.html</code>
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'state-L-lang-override-modal',
+      label: 'L · LangOverrideModal — radio group 5 lingue v1 (EN·FR·DE·ES·IT)',
+      gherkin: '@TASK4-1d modal',
+      sub: 'FR pre-selected (Auto tag) · CTA "Conferma e ritraduci" · OCR preservato (cache hit)',
+      screen: (
+        <div className="phone-sp6" data-theme="light" style={{ position: 'relative' }}>
+          <StatusBar />
+          <div className="phone-screen" style={{ background: 'var(--bg)' }}>
+            <div className="tv-topbar">
+              <button className="icon-btn" aria-label="Indietro">←</button>
+              <div className="center">§147</div>
+              <LangDetectionBadge langCode="FR" confidence={0.67} />
+            </div>
+            <div className="tv-body mai-noscroll" style={{ opacity: 0.4 }}>
+              <BodyHead pnum="§147" />
+            </div>
+            <LangOverrideModal selectedCode="FR" autoDetectedCode="FR" />
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'state-M-manual-input-mode',
+      label: 'M · ManualInputMode — textarea fallback (?mode=manual) · 247/2000 char',
+      gherkin: '@TASK4-1d manual-input',
+      sub: 'No foto · lang dropdown EN pre-filled · book ref chip Runa di Ardenel · counter 247/2000',
+      screen: (
+        <div className="phone-sp6" data-theme="light">
+          <StatusBar />
+          <div className="phone-screen" style={{ background: 'var(--bg)' }}>
+            <ManualInputMode
+              initialText="As Niamh approached the altar, the air grew thick with whispers. The Goblin guards drew their blades, eyes gleaming with bloodlust, while the Voidstone pulsed with sickly light upon the dais."
+              initialLang="EN"
+              bookRef="Runa di Ardenel"
+            />
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'state-M-manual-input-warn',
+      label: 'M · ManualInputMode — counter warn (1856/2000)',
+      gherkin: '@TASK4-1d manual-input-warn',
+      sub: 'DE lang · counter > 90% (yellow warn) · paragrafo lungo',
+      screen: (
+        <div className="phone-sp6" data-theme="light">
+          <StatusBar />
+          <div className="phone-screen" style={{ background: 'var(--bg)' }}>
+            <ManualInputMode
+              initialText={'Als Niamh sich dem Altar näherte, wurde die Luft dicht von Geflüster. Die Goblin-Wachen zogen ihre Klingen, die Augen funkelten vor Blutlust, während der Leerenstein mit krankem Licht auf dem Podest pulsierte. Niamh umklammerte den Schwertgriff fester und fühlte das Echo alter Eide im Stahl schwingen. Sie hatte zwei Möglichkeiten zur Wahl... [paragrafo lungo continua per altre 1400+ caratteri inclusi dettagli combattimento, descrizioni ambientali, e dialogo del capitano Goblin che minaccia la compagnia di avventurieri]'.padEnd(1856, ' ')}
+              initialLang="DE"
+              bookRef="Runa di Ardenel"
+            />
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'state-M-empty-card',
+      label: 'M.3 · ManualEntryCard — empty state (entry-point #3 di 3)',
+      gherkin: '@TASK4-1d empty-card',
+      sub: '/translate aperto senza foto · card "Libro non a portata?" → ?mode=manual',
+      screen: (
+        <div className="phone-sp6" data-theme="light">
+          <StatusBar />
+          <div className="phone-screen" style={{ background: 'var(--bg)' }}>
+            <div className="tv-topbar">
+              <button className="icon-btn" aria-label="Indietro">←</button>
+              <div className="center">§147</div>
+              <button className="icon-btn" aria-label="Altre azioni">⋯</button>
+            </div>
+            <div className="tv-body mai-noscroll" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16 }}>
+              <div style={{ textAlign: 'center', padding: '20px 12px' }}>
+                <div style={{ fontSize: 56, opacity: 0.4, marginBottom: 8 }}>📷</div>
+                <h3 style={{ fontFamily: 'var(--f-display)', fontSize: 18, fontWeight: 700, margin: '0 0 8px' }}>Fotografa il paragrafo</h3>
+                <p style={{ color: 'var(--text-sec)', margin: '0 0 16px', fontSize: 13 }}>OCR + traduzione automatica.</p>
+                <button className="nav-btn primary" type="button" style={{ padding: '10px 20px' }}>📷 Apri fotocamera</button>
+              </div>
+              <ManualEntryCard />
+              <p style={{ fontFamily: 'var(--f-mono)', fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', margin: 0 }}>
+                Entry-point 3 di 3 · vedi state-F error-states + kebab ⋮ camera step
+              </p>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      {items.map(it => (
+        <div className="frame-cell" id={it.id} key={it.id}>
+          <FrameMeta anchor={it.id} gherkin={it.gherkin} label={it.label} sub={it.sub} />
+          {it.screen}
+        </div>
+      ))}
+    </>
+  );
+}
+
 /* ────────────────────────── BOOT ────────────────────────── */
 
 const ReactDOMClient = ReactDOM;
@@ -578,3 +1041,8 @@ ReactDOMClient.createRoot(document.getElementById('mount-mobile')).render(<Mobil
 ReactDOMClient.createRoot(document.getElementById('mount-desktop')).render(<DesktopSection />);
 ReactDOMClient.createRoot(document.getElementById('mount-themes')).render(<ThemesSection />);
 ReactDOMClient.createRoot(document.getElementById('mount-aids')).render(<AidsSection />);
+/* Task 4 sez 1d · mount opzionale per nuova section (host page deve avere <div id="mount-multilang"/>) */
+const multilangMount = document.getElementById('mount-multilang');
+if (multilangMount) {
+  ReactDOMClient.createRoot(multilangMount).render(<MultiLangSection />);
+}

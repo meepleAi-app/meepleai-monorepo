@@ -6,15 +6,25 @@
 <title>MeepleAI — Librogame Runthrough · Error States</title>
 <!--
   Mockup: librogame-runthrough-error-states
-  Route:  trasversale ai 4 goal (chat N1/N2, photo-translate N3)
-  Scope:  Phase A runthrough — gap coverage error states tecnici NON coperti da low-confidence
-  Stati:  A · stream-timeout      (chat agente N2: nessun token > 30s · retry/cambia agent/copy)
-          B · ocr-fail             (foto pagina: OCR conf < 0.3 → testo illeggibile · rifotografa/manuale/cancella)
-          C · llm-503              (provider down · 3 retry exponential backoff · fallback offline regole base)
-          D · segmentation-fail    (OCR ok ma niente § rilevati · inserisci numero § manuale · alt: range)
+  Route:  trasversale ai 4 goal (chat N1/N2, photo-translate N3 — /library/[gameId]/play/[campaignId]/translate)
+  Scope:  Phase A runthrough — error states tecnici puntuali OCR/AI (gap coverage low-confidence)
+  Spec:   docs/superpowers/specs/2026-05-23-mockup-refinement-aaron-core-design.md (sezione 1a)
+  Stati:  A · stream-timeout                (chat agente N2: nessun token > 30s · retry/cambia agent/copy)
+          B · ocr-fail                       (foto pagina: OCR conf < 0.3 → testo illeggibile · rifotografa/manuale/cancella)
+          C · llm-503                        (provider down · 3 retry exponential backoff · fallback offline regole base)
+          D · segmentation-fail              (OCR ok ma niente § rilevati · inserisci numero § manuale · alt: range)
+          E · ocr-low-confidence             (conf 0.5-0.7 · highlight regioni dubbie in giallo · ritocca/procedi)
+          F · photo-blur-pre-ocr             (autofocus < threshold client-side · reject in-camera · zero roundtrip)
+          G · translation-timeout            (AI translate abort > 20s · banner + retry/edit manuale)
+          H · source-lang-unknown            (LLM confidence_lang < 0.5 · dialog conferma lingua · 5 opzioni)
+          I · network-mid-ocr                (loss connection upload · save locale · retry on-reconnect)
+          J · quota-exhausted-mid-stream     (token quota esaurita · bridge a quota-credits overlay · retain OCR text)
   Vincolo: ogni error state mostra (a) cosa è successo in linguaggio Aaron-friendly, (b) cosa NON
-           verrà addebitato (cost transparency), (c) ≥ 2 azioni di recupero, (d) link a "telemetria
-           invia" per dogfood iter feedback. Pattern banner riuso da translate-viewer state-F + extension.
+           verrà addebitato (cost transparency), (c) ≥ 2 azioni di recupero non-distruttive (MAI dead-end),
+           (d) link a "telemetria invia" per dogfood iter feedback. Pattern banner riuso da translate-viewer state-F + extension.
+  Retry granularity: OCR-fail/low-conf → retry solo OCR step (foto in cache); LLM-503/timeout → retry solo AI step.
+                     MAI retry-from-scratch automatico.
+  Confidence threshold: low-confidence default 0.7 (futuro configurabile in /settings/preferences).
   Mobile-first 375px. Desktop 880px.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -302,10 +312,308 @@
     cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
   }
 
+  /* ──────────────────────────────────────────────────────────
+     Stati E–J · extension components
+     ────────────────────────────────────────────────────────── */
+
+  /* State E · OCR low-confidence highlight overlay */
+  .ocr-page-preview {
+    position: relative; width: 100%; max-width: 280px; aspect-ratio: 3/4;
+    background: linear-gradient(180deg, #fdf8f0, #f4ead8);
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: var(--s-3);
+    font-family: var(--f-mono); font-size: 10px; line-height: 1.6;
+    color: #3a2f1e; overflow: hidden;
+    flex-shrink: 0;
+  }
+  .ocr-page-preview .line { display: block; }
+  .ocr-page-preview .line.confident { color: #3a2f1e; }
+  .ocr-page-preview .line.uncertain {
+    background: hsl(var(--c-warning) / 0.32);
+    box-shadow: 0 0 0 2px hsl(var(--c-warning) / 0.55);
+    border-radius: 3px;
+    padding: 0 2px;
+    color: #2a1e07;
+  }
+  .ocr-page-preview .pn {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: 13px;
+    color: hsl(var(--c-kb)); display: block; margin-bottom: var(--s-1);
+  }
+  .ocr-page-preview .legend {
+    position: absolute; bottom: var(--s-2); right: var(--s-2);
+    background: rgba(255,255,255,0.9);
+    padding: 2px var(--s-2); border-radius: var(--r-sm);
+    font-size: 9px; color: var(--text-muted);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .ocr-page-preview .legend .swatch {
+    width: 10px; height: 10px; border-radius: 2px;
+    background: hsl(var(--c-warning) / 0.55);
+  }
+
+  .conf-strip {
+    display: flex; align-items: center; gap: var(--s-2);
+    padding: var(--s-2) var(--s-3); border-radius: var(--r-md);
+    background: hsl(var(--c-warning) / 0.06);
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-sec);
+    margin-bottom: var(--s-3);
+  }
+  .conf-strip .bar {
+    flex: 1; height: 6px; background: var(--bg-muted); border-radius: 999px;
+    overflow: hidden; position: relative;
+  }
+  .conf-strip .bar .fill {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 64%;
+    background: linear-gradient(90deg, hsl(var(--c-danger)), hsl(var(--c-warning)) 50%, hsl(var(--c-success)));
+    border-radius: 999px;
+  }
+  .conf-strip .bar .marker {
+    position: absolute; left: 70%; top: -3px; bottom: -3px; width: 2px;
+    background: var(--text); opacity: 0.4;
+  }
+  .conf-strip .val { font-weight: var(--fw-bold); color: hsl(var(--c-warning)); }
+
+  /* State F · camera viewfinder (pre-OCR client-side reject) */
+  .viewfinder {
+    width: 100%; max-width: 260px; aspect-ratio: 3/4; flex-shrink: 0;
+    background:
+      linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)),
+      repeating-linear-gradient(0deg, transparent, transparent 14px, rgba(0,0,0,0.04) 14px, rgba(0,0,0,0.04) 15px),
+      linear-gradient(135deg, #1f1810, #0e0a06);
+    border-radius: var(--r-md); position: relative;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    filter: blur(3.5px);
+  }
+  .viewfinder::after {
+    content: '';
+    position: absolute; inset: 0;
+    border: 2px dashed hsl(var(--c-danger) / 0.7);
+    border-radius: var(--r-md);
+    filter: none;
+  }
+  .viewfinder .reticle {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(90deg, transparent calc(50% - 1px), hsl(var(--c-danger) / 0.4) 50%, transparent calc(50% + 1px)),
+      linear-gradient(0deg,  transparent calc(50% - 1px), hsl(var(--c-danger) / 0.4) 50%, transparent calc(50% + 1px));
+    filter: none;
+  }
+  .viewfinder .focus-warn {
+    position: absolute; bottom: var(--s-3); left: 50%; transform: translateX(-50%);
+    background: hsl(var(--c-danger));
+    color: #fff; font-family: var(--f-mono); font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    padding: var(--s-1) var(--s-3); border-radius: var(--r-pill);
+    white-space: nowrap; text-transform: uppercase; letter-spacing: 0.06em;
+    filter: none;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .camera-shutter {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--bg-card); border: 4px solid var(--border-strong);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0;
+    opacity: 0.4; pointer-events: none;
+  }
+  .camera-shutter::after {
+    content: ''; width: 48px; height: 48px; border-radius: 50%;
+    background: hsl(var(--c-danger) / 0.4);
+  }
+  .focus-meter {
+    display: flex; align-items: center; gap: var(--s-2);
+    padding: var(--s-2) var(--s-3); border-radius: var(--r-md);
+    background: hsl(var(--c-danger) / 0.08); border: 1px solid hsl(var(--c-danger) / 0.3);
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--text-sec);
+    margin-bottom: var(--s-3);
+  }
+  .focus-meter .bar {
+    flex: 1; height: 8px; background: var(--bg-muted); border-radius: 999px; overflow: hidden;
+    position: relative;
+  }
+  .focus-meter .bar .fill {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 28%;
+    background: hsl(var(--c-danger));
+    border-radius: 999px;
+  }
+  .focus-meter .bar .threshold {
+    position: absolute; left: 60%; top: -3px; bottom: -3px; width: 2px;
+    background: var(--text); opacity: 0.4;
+  }
+  .focus-meter .val { font-weight: var(--fw-bold); color: hsl(var(--c-danger)); }
+
+  /* State H · lang-unknown dialog */
+  .lang-dialog {
+    background: var(--bg-card); border-radius: var(--r-lg);
+    border: 1px solid hsl(var(--c-danger) / 0.4); box-shadow: var(--shadow-lg);
+    padding: var(--s-5); margin: var(--s-4);
+    max-width: 340px;
+  }
+  .lang-dialog .head {
+    display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-3);
+  }
+  .lang-dialog .head .ico {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: hsl(var(--c-danger) / 0.12); color: hsl(var(--c-danger));
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+  }
+  .lang-dialog .head .title {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md);
+  }
+  .lang-dialog .desc {
+    font-size: var(--fs-sm); color: var(--text-sec); margin: 0 0 var(--s-3); line-height: var(--lh-snug);
+  }
+  .lang-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-2);
+    margin-bottom: var(--s-3);
+  }
+  .lang-opt {
+    padding: var(--s-3); border-radius: var(--r-md);
+    background: var(--bg); border: 1.5px solid var(--border);
+    cursor: pointer; text-align: left;
+    display: flex; align-items: center; gap: var(--s-2);
+    font-family: var(--f-display); font-size: var(--fs-sm); color: var(--text);
+  }
+  .lang-opt.selected {
+    background: hsl(var(--c-kb) / 0.08); border-color: hsl(var(--c-kb)); color: hsl(var(--c-kb));
+    font-weight: var(--fw-bold);
+  }
+  .lang-opt .flag { font-size: 18px; flex-shrink: 0; }
+  .lang-opt .meta { display: block; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; font-weight: var(--fw-reg); }
+  .lang-opt.selected .meta { color: hsl(var(--c-kb) / 0.8); }
+
+  /* State I · network offline banner / queue */
+  .net-strip {
+    margin: var(--s-4); padding: var(--s-3) var(--s-4);
+    background: linear-gradient(90deg, hsl(var(--c-danger) / 0.95), hsl(var(--c-danger) / 0.7));
+    color: #fff; border-radius: var(--r-md);
+    display: flex; align-items: center; gap: var(--s-3);
+    font-family: var(--f-display); font-weight: var(--fw-semi); font-size: var(--fs-sm);
+  }
+  .net-strip .pulse {
+    width: 10px; height: 10px; border-radius: 50%; background: #fff; flex-shrink: 0;
+    animation: net-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes net-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.7); opacity: 0.9; }
+    50%      { box-shadow: 0 0 0 8px rgba(255,255,255, 0); opacity: 0.5; }
+  }
+  .net-strip .lbl { flex: 1; }
+  .net-strip .meta {
+    font-family: var(--f-mono); font-size: 10px; opacity: 0.85; font-weight: var(--fw-reg);
+  }
+
+  .queue-card {
+    margin: 0 var(--s-4) var(--s-4); padding: var(--s-3) var(--s-4);
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-md);
+  }
+  .queue-card .head {
+    display: flex; align-items: center; gap: var(--s-2);
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm);
+    margin-bottom: var(--s-2);
+  }
+  .queue-card .head .badge {
+    background: hsl(var(--c-warning) / 0.18); color: hsl(var(--c-warning));
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+  }
+  .queue-item {
+    display: flex; align-items: center; gap: var(--s-2);
+    padding: var(--s-2) 0; border-bottom: 1px dashed var(--border-light);
+    font-size: var(--fs-sm); color: var(--text-sec);
+  }
+  .queue-item:last-child { border-bottom: 0; }
+  .queue-item .thumb {
+    width: 36px; height: 48px; flex-shrink: 0;
+    border-radius: var(--r-sm); background: linear-gradient(135deg, #2a2218, #1a140d);
+    display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.5); font-size: 10px;
+  }
+  .queue-item .info { flex: 1; }
+  .queue-item .info .v { display: block; font-family: var(--f-display); font-weight: var(--fw-semi); color: var(--text); }
+  .queue-item .info .s { display: block; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .queue-item .status {
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold);
+    padding: 2px var(--s-2); border-radius: var(--r-pill);
+  }
+  .queue-item .status.wait { background: hsl(var(--c-warning) / 0.15); color: hsl(var(--c-warning)); }
+  .queue-item .status.ok   { background: hsl(var(--c-success) / 0.15); color: hsl(var(--c-success)); }
+
+  /* State J · quota bridge */
+  .quota-bridge {
+    margin: var(--s-4); padding: var(--s-5); border-radius: var(--r-lg);
+    background: linear-gradient(135deg, hsl(var(--c-warning) / 0.16), hsl(var(--c-danger) / 0.1));
+    border: 1px solid hsl(var(--c-warning) / 0.5);
+  }
+  .quota-bridge .head { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-3); }
+  .quota-bridge .head .ico {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: hsl(var(--c-warning)); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+  }
+  .quota-bridge .head .title {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-lg);
+    color: hsl(var(--c-warning));
+  }
+  .quota-bridge .desc {
+    font-size: var(--fs-sm); color: var(--text); margin: 0 0 var(--s-3); line-height: var(--lh-snug);
+  }
+  .quota-meter {
+    margin-bottom: var(--s-3); padding: var(--s-3); border-radius: var(--r-md);
+    background: rgba(255,255,255,0.4);
+  }
+  .quota-meter .meter-head {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--f-mono); font-size: 10px; color: var(--text-sec); margin-bottom: var(--s-2);
+    text-transform: uppercase; letter-spacing: 0.06em; font-weight: var(--fw-bold);
+  }
+  .quota-meter .meter-head .val { color: hsl(var(--c-danger)); }
+  .quota-meter .bar {
+    height: 8px; background: var(--bg-muted); border-radius: 999px; overflow: hidden;
+    position: relative;
+  }
+  .quota-meter .bar .fill {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+    background: hsl(var(--c-danger));
+    border-radius: 999px;
+  }
+  .fallback-preserve {
+    margin-top: var(--s-3); padding: var(--s-3); border-radius: var(--r-md);
+    background: rgba(255,255,255,0.5); border: 1px dashed hsl(var(--c-success) / 0.4);
+  }
+  .fallback-preserve .lbl {
+    font-family: var(--f-mono); font-size: 10px; font-weight: var(--fw-bold); color: hsl(var(--c-success));
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: var(--s-2);
+    display: flex; align-items: center; gap: var(--s-1);
+  }
+  .fallback-preserve .text {
+    font-family: var(--f-body); font-size: var(--fs-sm); color: var(--text); line-height: var(--lh-snug);
+    font-style: italic;
+  }
+
+  /* Edit-manual textarea (state G fallback) */
+  .manual-edit {
+    margin-top: var(--s-3); padding: var(--s-3); border-radius: var(--r-md);
+    background: var(--bg-card); border: 1px solid var(--border);
+  }
+  .manual-edit .lbl {
+    font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-sm);
+    margin-bottom: var(--s-2); display: block;
+  }
+  .manual-edit textarea {
+    width: 100%; box-sizing: border-box;
+    min-height: 90px; padding: var(--s-3); border: 1px solid var(--border);
+    border-radius: var(--r-sm); background: var(--bg); color: var(--text);
+    font-family: var(--f-body); font-size: var(--fs-sm); line-height: var(--lh-snug);
+    resize: vertical;
+  }
+  .manual-edit textarea:focus {
+    outline: 2px solid hsl(var(--c-warning)); border-color: hsl(var(--c-warning));
+  }
+
   *:focus-visible { outline: 2px solid hsl(var(--c-danger)); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) {
     .retry-strip .pip.try { animation: none; }
     .chat-msg .stalled-dots .dot { animation: none; opacity: 0.7; }
+    .net-strip .pulse { animation: none; }
   }
 </style>
 </head>
@@ -314,7 +622,7 @@
 
 <header class="top">
   <h1>Librogame Runthrough · Error States</h1>
-  <span class="route">trasversale · 4 stati</span>
+  <span class="route">trasversale · 10 stati</span>
   <span class="spacer"></span>
   <button id="theme-btn" type="button" aria-label="Cambia tema">🌗 Tema</button>
 </header>
@@ -703,6 +1011,673 @@
               <span class="ico">→</span>
               <span class="l"><span class="v">Conferma e traduci</span><span class="s">N3 standard · ~6 s · 0,01 €</span></span>
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO E · OCR LOW CONFIDENCE (conf 0.5-0.7 · regioni dubbie)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section warn" id="s5" aria-labelledby="se">
+    <span class="label">Stato E · OCR Low Confidence · 0.5–0.7</span>
+    <h2 id="se">Testo letto, ma alcune parole sono poco chiare</h2>
+    <p class="desc">A metà strada tra OCR-fail (illeggibile) e OCR-ok: confidence aggregata 0.64, ma ≥1 regione sotto soglia 0.7. Aaron vede inline le parole dubbie evidenziate in giallo, può ritoccare la foto (luce migliore) oppure procedere comunque accettando il rischio di errori. Soglia 0.7 (default, futuro configurabile in /settings/preferences).</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – ocr low confidence">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>22:27</span><span>📶 🔋 69%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · Foto §147 · controllo</span>
+          <button class="right-tool">⋯</button>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-3); align-items: center;">
+          <div class="ocr-page-preview" aria-label="Anteprima OCR con regioni dubbie evidenziate">
+            <span class="pn">§ 147</span>
+            <span class="line confident">Il guardiano della soglia</span>
+            <span class="line"><span class="confident">ti osserva con occhi </span><span class="uncertain">ferrigni</span><span class="confident">.</span></span>
+            <span class="line"><span class="confident">"Solo chi possiede la </span><span class="uncertain">runa</span><span class="confident"> potrà</span></span>
+            <span class="line confident">passare oltre", sussurra.</span>
+            <span class="line">&nbsp;</span>
+            <span class="line"><span class="confident">Hai con te la </span><span class="uncertain">Runa di Ardenel</span><span class="confident">?</span></span>
+            <span class="line confident">→ Sì, mostrala (vai a § 152)</span>
+            <span class="line"><span class="confident">→ No, prova a forzare il pa</span><span class="uncertain">ssaggio</span></span>
+            <span class="line confident">&nbsp;&nbsp;&nbsp;(vai a § 198)</span>
+            <span class="legend"><span class="swatch"></span>dubbio</span>
+          </div>
+          <div class="err-banner warn" style="margin: 0; width: 100%;" role="alert">
+            <div class="head"><span class="badge">🔎 0.64</span><span class="title">Testo letto, 4 parole sono poco chiare</span></div>
+            <p class="msg">Confidence media 64% (soglia minima 70%). Le parti evidenziate in giallo potrebbero essere lette male — ho indovinato in base al contesto ma non sono sicuro al 100%.</p>
+            <div class="conf-strip" aria-label="Confidence indicator">
+              <span>conf</span>
+              <span class="bar"><span class="fill"></span><span class="marker" title="soglia 0.70"></span></span>
+              <span class="val">0.64</span>
+            </div>
+            <div class="cost-note">💰 <span><strong>Solo OCR addebitato</strong> · traduzione N3 non ancora partita</span></div>
+            <div class="err-actions">
+              <button class="err-action primary-warn" type="button" autofocus>
+                <span class="ico">📷</span>
+                <span class="l"><span class="v">Ritocca foto</span><span class="s">consigliato · più luce · nuovo OCR gratis</span></span>
+              </button>
+              <button class="err-action" type="button">
+                <span class="ico">⚠</span>
+                <span class="l"><span class="v">Procedi comunque</span><span class="s">accetto rischio errori sulle parole dubbie</span></span>
+              </button>
+              <button class="err-action" type="button">
+                <span class="ico">✏</span>
+                <span class="l"><span class="v">Correggi manualmente</span><span class="s">tap sulle parole gialle per editare</span></span>
+              </button>
+            </div>
+            <div class="err-debug">
+              <span class="lbl">OCR conf</span><span class="v">0.64</span>
+              <span class="lbl">soglia</span><span class="v">0.70</span>
+              <span class="lbl">regioni low</span><span class="v">4 di 32</span>
+              <span class="lbl">tokens</span><span class="v">~210</span>
+            </div>
+          </div>
+        </div>
+        <div class="telemetry">
+          <span>📡 telemetry: ocr_low_confidence · 4 regions</span>
+          <button class="send" type="button">+ nota dogfood</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – ocr low confidence">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate?conf=0.64</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · OCR §147 · 4 regioni dubbie</span></div>
+        <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 320px 1fr; gap: var(--s-6); overflow-y: auto; align-items: start;">
+          <div class="ocr-page-preview" style="max-width: 320px;" aria-label="Anteprima OCR con regioni dubbie">
+            <span class="pn">§ 147</span>
+            <span class="line confident">Il guardiano della soglia ti</span>
+            <span class="line"><span class="confident">osserva con occhi </span><span class="uncertain">ferrigni</span><span class="confident">.</span></span>
+            <span class="line"><span class="confident">"Solo chi possiede la </span><span class="uncertain">runa</span></span>
+            <span class="line confident">potrà passare oltre",</span>
+            <span class="line confident">sussurra.</span>
+            <span class="line">&nbsp;</span>
+            <span class="line"><span class="confident">Hai con te la </span><span class="uncertain">Runa di Ardenel</span><span class="confident">?</span></span>
+            <span class="line confident">→ Sì, mostrala (vai a § 152)</span>
+            <span class="line"><span class="confident">→ No, forza il pa</span><span class="uncertain">ssaggio</span></span>
+            <span class="line confident">&nbsp;&nbsp;&nbsp;(vai a § 198)</span>
+            <span class="legend"><span class="swatch"></span>dubbio · tap per editare</span>
+          </div>
+          <div class="err-banner warn" style="margin: 0;" role="alert">
+            <div class="head"><span class="badge">🔎 0.64</span><span class="title">4 parole con confidence sotto soglia</span></div>
+            <p class="msg">OCR completato (32 token estratti) ma 4 regioni sono sotto la soglia minima 70%. "ferrigni", "runa", "Runa di Ardenel" e "ssaggio" potrebbero essere lette male. Posso procedere con la traduzione N3 accettando il rischio, oppure puoi ritoccare la foto per migliorare la qualità (nuovo OCR gratis: la foto resta in cache).</p>
+            <div class="conf-strip" aria-label="Confidence indicator">
+              <span>conf aggregata</span>
+              <span class="bar"><span class="fill"></span><span class="marker" title="soglia 0.70"></span></span>
+              <span class="val">0.64</span>
+              <span style="margin-left: var(--s-3);">soglia 0.70 · futuro configurabile in /settings/preferences</span>
+            </div>
+            <div class="cost-note">💰 <span><strong>Solo OCR addebitato</strong> · ~0,002 € · traduzione N3 ancora non partita · retry OCR gratis</span></div>
+            <div class="err-actions">
+              <button class="err-action primary-warn" type="button" autofocus><span class="ico">📷</span><span class="l"><span class="v">Ritocca foto (consigliato)</span><span class="s">illumina meglio · nuovo OCR gratis · foto in cache locale</span></span></button>
+              <button class="err-action" type="button"><span class="ico">⚠</span><span class="l"><span class="v">Procedi comunque</span><span class="s">traduco con le parole dubbie così come sono · ~6 s · ~0,01 €</span></span></button>
+              <button class="err-action" type="button"><span class="ico">✏</span><span class="l"><span class="v">Correggi manualmente</span><span class="s">click sulle parole gialle nell'anteprima a sinistra per editare</span></span></button>
+            </div>
+            <div class="err-debug">
+              <span class="lbl">OCR conf</span><span class="v">0.64</span>
+              <span class="lbl">soglia</span><span class="v">0.70</span>
+              <span class="lbl">regioni low</span><span class="v">4 di 32 (12.5%)</span>
+              <span class="lbl">tokens estratti</span><span class="v">~210</span>
+              <span class="lbl">cache foto</span><span class="v">photo_cache_e8a3 · 380 KB</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO F · PHOTO BLUR PRE-OCR (autofocus < threshold · client-side reject)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section warn" id="s6" aria-labelledby="sf">
+    <span class="label">Stato F · Photo Blur · pre-OCR client-side</span>
+    <h2 id="sf">Foto sfocata — rifiutata prima dell'upload</h2>
+    <p class="desc">Reject in-camera client-side: autofocus score &lt; threshold viene rilevato dal browser PRIMA dell'upload server. Zero roundtrip, zero token consumati, zero costo. Aaron vede shutter disabilitato + feedback warning "tieni fermo" — flusso ottimale per UX in piedi al tavolo.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – photo blur pre-OCR">
+        <span class="frame-label">Mobile · 375px (camera viewport)</span>
+        <div class="phone-sbar"><span>22:18</span><span>📶 🔋 70%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · Scatta foto §</span>
+          <button class="right-tool">💡</button>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: var(--s-4); padding: var(--s-4); background: #0a0805;">
+          <div class="viewfinder" aria-label="Viewfinder fotocamera · foto sfocata">
+            <span class="reticle"></span>
+            <span class="focus-warn">⚠ FUORI FUOCO</span>
+          </div>
+          <div class="camera-shutter" aria-label="Shutter disabilitato" aria-disabled="true"></div>
+          <div class="err-banner warn" style="margin: 0; width: 100%;" role="alert">
+            <div class="head"><span class="badge">🌀 Blur</span><span class="title">Tieni fermo il telefono</span></div>
+            <p class="msg">Lo scatto è sfocato. Non lo invio nemmeno — risparmio tempo e costi. Aspetta che il riquadro diventi nitido e riprova.</p>
+            <div class="focus-meter" aria-label="Focus score live">
+              <span>focus</span>
+              <span class="bar"><span class="fill"></span><span class="threshold" title="soglia 0.60"></span></span>
+              <span class="val">0.28</span>
+            </div>
+            <div class="cost-note">💰 <span><strong>Niente addebitato</strong> · reject client-side · 0 byte inviati, 0 token</span></div>
+            <div class="err-actions">
+              <button class="err-action primary-warn" type="button" autofocus>
+                <span class="ico">🔄</span>
+                <span class="l"><span class="v">Riprova</span><span class="s">attendi che il riquadro sia nitido</span></span>
+              </button>
+              <button class="err-action" type="button">
+                <span class="ico">💡</span>
+                <span class="l"><span class="v">Attiva flash</span><span class="s">migliora luce · riduce mosso</span></span>
+              </button>
+              <button class="err-action" type="button">
+                <span class="ico">🔢</span>
+                <span class="l"><span class="v">Salta: inserisci § manuale</span><span class="s">se conosci il paragrafo</span></span>
+              </button>
+              <button class="err-action" type="button" onclick="location.href='/library/librogame/play/cmp-1234/translate?mode=manual'">
+                <span class="ico">⌨</span>
+                <span class="l"><span class="v">Digita manualmente</span><span class="s">trascrivi il paragrafo · skip OCR · vedi translate-viewer state-M</span></span>
+              </button>
+            </div>
+            <div class="err-debug">
+              <span class="lbl">focus</span><span class="v">0.28</span>
+              <span class="lbl">soglia</span><span class="v">0.60</span>
+              <span class="lbl">round-trip</span><span class="v">0 ms (skip server)</span>
+              <span class="lbl">device</span><span class="v">user-agent camera</span>
+            </div>
+          </div>
+        </div>
+        <div class="telemetry">
+          <span>📡 telemetry: photo_blur_reject · client-side</span>
+          <button class="send" type="button">+ nota dogfood</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – photo blur pre-OCR">
+        <span class="frame-label">Desktop · 1440px (preview camera modal)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate?camera=blur</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Scatto rigettato · client-side</span></div>
+        <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 360px 1fr; gap: var(--s-6); overflow-y: auto; align-items: start;">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: var(--s-4); padding: var(--s-4); background: #0a0805; border-radius: var(--r-lg);">
+            <div class="viewfinder" style="max-width: 320px;" aria-label="Viewfinder camera · sfocata">
+              <span class="reticle"></span>
+              <span class="focus-warn">⚠ FUORI FUOCO</span>
+            </div>
+            <div class="camera-shutter" aria-label="Shutter disabilitato" aria-disabled="true"></div>
+            <span style="font-family: var(--f-mono); font-size: var(--fs-xs); color: rgba(255,255,255,0.7);">scatto disabilitato finché focus &lt; 0.60</span>
+          </div>
+          <div class="err-banner warn" style="margin: 0;" role="alert">
+            <div class="head"><span class="badge">🌀 Blur</span><span class="title">Foto sfocata · rifiutata in-camera</span></div>
+            <p class="msg">Lo scatto non supera la soglia di nitidezza (focus 0.28 vs 0.60 minimo). Il browser intercetta la sfocatura via Camera API <code>getCapabilities()</code> e disabilita lo shutter <em>prima</em> di inviare i byte al server. Risultato: zero token consumati, zero costo, nessun roundtrip — ottimo per UX in piedi al tavolo dove la mano trema.</p>
+            <div class="focus-meter" aria-label="Focus score live">
+              <span>focus score live</span>
+              <span class="bar"><span class="fill"></span><span class="threshold" title="soglia 0.60"></span></span>
+              <span class="val">0.28</span>
+              <span style="margin-left: var(--s-3);">soglia 0.60</span>
+            </div>
+            <div class="cost-note">💰 <span><strong>Niente addebitato</strong> · client-side reject · 0 byte inviati, 0 OCR, 0 traduzione</span></div>
+            <div class="err-actions">
+              <button class="err-action primary-warn" type="button" autofocus><span class="ico">🔄</span><span class="l"><span class="v">Riprova</span><span class="s">attendi che il riquadro diventi nitido · shutter si riattiva automatico</span></span></button>
+              <button class="err-action" type="button"><span class="ico">💡</span><span class="l"><span class="v">Attiva flash / torcia</span><span class="s">più luce = focus più rapido · riduce micro-mosso</span></span></button>
+              <button class="err-action" type="button"><span class="ico">🔢</span><span class="l"><span class="v">Salta foto · inserisci § manuale</span><span class="s">bypassa OCR · digita direttamente "§ 147"</span></span></button>
+              <button class="err-action" type="button" onclick="location.href='/library/librogame/play/cmp-1234/translate?mode=manual'"><span class="ico">⌨</span><span class="l"><span class="v">Digita manualmente</span><span class="s">trascrivi il paragrafo completo · vedi state-M manual-input-mode in translate-viewer · skip OCR · entry-point #1 del triple-entry pattern (sez 1d)</span></span></button>
+            </div>
+            <div class="err-debug">
+              <span class="lbl">focus</span><span class="v">0.28</span>
+              <span class="lbl">soglia</span><span class="v">0.60</span>
+              <span class="lbl">round-trip</span><span class="v">0 ms (skip server entirely)</span>
+              <span class="lbl">camera</span><span class="v">user-facing · autofocus continuous</span>
+              <span class="lbl">events</span><span class="v">camera.focuschange listener</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO G · TRANSLATION TIMEOUT (AI translate abort > 20s)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section warn" id="s7" aria-labelledby="sg">
+    <span class="label">Stato G · Translation Timeout · &gt; 20 s</span>
+    <h2 id="sg">Traduzione lenta — riprova o modifica manualmente</h2>
+    <p class="desc">OCR completato con successo (testo pronto), ma la chiamata AI di traduzione si è bloccata oltre 20 s. Distinto dallo Stato A (chat stream-timeout): qui non c'è stream parziale, è una request/response. Aaron ha sempre il testo originale OCR-decoded come fallback non-distruttivo, può ri-tentare o editare la traduzione a mano.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – translation timeout">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>22:42</span><span>📶 🔋 67%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · Traduco §147</span>
+          <button class="right-tool">⋯</button>
+        </div>
+        <div style="flex: 1; overflow-y: auto;">
+          <div class="err-banner warn" role="alert">
+            <div class="head">
+              <span class="badge">⏱ 22 s</span>
+              <span class="title">La traduzione è lenta</span>
+            </div>
+            <p class="msg">Ho aspettato 22 s ma l'AI non ha ancora risposto. Probabile traffico provider. Il testo originale è già pronto qui sotto — puoi tradurlo a mano oppure ritentare.</p>
+            <div class="cost-note">💰 <span><strong>Non addebitato</strong> · request abortita = 0 token traduzione</span></div>
+            <div class="err-actions">
+              <button class="err-action primary-warn" type="button" autofocus>
+                <span class="ico">🔄</span>
+                <span class="l"><span class="v">Riprova traduzione</span><span class="s">stesso testo · nuovo tentativo · ~5 s</span></span>
+              </button>
+              <button class="err-action" type="button">
+                <span class="ico">✏</span>
+                <span class="l"><span class="v">Traduci a mano</span><span class="s">testo originale qui sotto, edita liberamente</span></span>
+              </button>
+              <button class="err-action" type="button">
+                <span class="ico">↩</span>
+                <span class="l"><span class="v">Continua in lingua originale</span><span class="s">salta traduzione, mostra testo OCR</span></span>
+              </button>
+            </div>
+            <div class="err-debug">
+              <span class="lbl">req-id</span><span class="v">tr_e8a3b1c</span>
+              <span class="lbl">timeout</span><span class="v">20.0 s</span>
+              <span class="lbl">model</span><span class="v">openrouter:gemini-pro</span>
+            </div>
+          </div>
+          <div class="manual-edit" style="margin: 0 var(--s-4) var(--s-4);">
+            <label class="lbl" for="manual-tr">Testo originale OCR (puoi tradurre qui)</label>
+            <textarea id="manual-tr" placeholder="Inserisci traduzione…">The guardian of the threshold watches you with iron eyes. "Only the rune-bearer shall pass," he whispers.
+
+Do you have the Rune of Ardenel?
+→ Yes, show it (go to § 152)
+→ No, force the passage (go to § 198)</textarea>
+          </div>
+        </div>
+        <div class="telemetry">
+          <span>📡 telemetry: translation_timeout · 22.4 s</span>
+          <button class="send" type="button">+ nota dogfood</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – translation timeout">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate?req=tr_e8a3b1c&timeout=22.4s</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Traduzione lenta · §147</span></div>
+        <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-6); overflow-y: auto; align-items: start;">
+          <div>
+            <div class="err-banner warn" style="margin: 0;" role="alert">
+              <div class="head"><span class="badge">⏱ 22 s</span><span class="title">AI translate non risponde · request abortita</span></div>
+              <p class="msg">Ho lanciato la traduzione 22.4 s fa, soglia di timeout 20 s superata. La chiamata è stata abortita lato client (AbortController) — niente token consumati. Il testo originale OCR è già pronto e disponibile per editing manuale. Puoi ritentare con un altro provider, scriverla tu, o continuare la sessione in lingua originale.</p>
+              <div class="cost-note">💰 <span><strong>Non addebitato</strong> · AbortController firework · 0 token traduzione · OCR già pagato e conservato</span></div>
+              <div class="err-debug">
+                <span class="lbl">req</span><span class="v">tr_e8a3b1c</span>
+                <span class="lbl">timeout</span><span class="v">20.0 s (cutoff)</span>
+                <span class="lbl">elapsed</span><span class="v">22.4 s (abortito)</span>
+                <span class="lbl">model</span><span class="v">openrouter:gemini-pro</span>
+                <span class="lbl">fallback model</span><span class="v">deepseek-chat (al retry)</span>
+              </div>
+            </div>
+            <div class="manual-edit" style="margin-top: var(--s-4);">
+              <label class="lbl" for="manual-tr-d">Testo OCR originale (EN) · pronto per edit / traduzione manuale</label>
+              <textarea id="manual-tr-d" placeholder="Inserisci la tua traduzione qui…">The guardian of the threshold watches you with iron eyes. "Only the rune-bearer shall pass," he whispers.
+
+Do you have the Rune of Ardenel?
+→ Yes, show it (go to § 152)
+→ No, force the passage (go to § 198)</textarea>
+              <div style="margin-top: var(--s-2); font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);">
+                ✏ edit live · auto-save sessione · markdown supportato
+              </div>
+            </div>
+          </div>
+          <div class="err-actions" style="margin: 0;">
+            <button class="err-action primary-warn" type="button" autofocus><span class="ico">🔄</span><span class="l"><span class="v">Riprova traduzione</span><span class="s">stesso testo · prova provider alternativo · ~5 s · ~0,01 €</span></span></button>
+            <button class="err-action" type="button"><span class="ico">✏</span><span class="l"><span class="v">Traduci a mano</span><span class="s">scrivi nell'area testo a fianco · auto-save</span></span></button>
+            <button class="err-action" type="button"><span class="ico">↩</span><span class="l"><span class="v">Continua in EN</span><span class="s">salta traduzione · prosegui con testo originale OCR</span></span></button>
+            <button class="err-action" type="button"><span class="ico">⏰</span><span class="l"><span class="v">Notificami al ritorno</span><span class="s">push browser appena AI risponde · sessione resta aperta</span></span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO H · SOURCE LANG UNKNOWN (LLM confidence_lang < 0.5)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" id="s8" aria-labelledby="sh">
+    <span class="label">Stato H · Source Lang Unknown · conf &lt; 0.5</span>
+    <h2 id="sh">Non riconosco la lingua del testo — conferma quale</h2>
+    <p class="desc">L'LLM rileva la lingua del testo OCR ma con confidence &lt; 0.5 (sotto soglia critica). Tipico in libro-game multilingua, glossari fantasy con neologismi, o testi misti EN/IT. Dialog blocking con dropdown 5 opzioni (EN, FR, DE, ES, IT). Pattern danger-colored perché richiede input prima di proseguire.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – source lang unknown">
+        <span class="frame-label">Mobile · 375px (dialog overlay)</span>
+        <div class="phone-sbar"><span>22:38</span><span>📶 🔋 68%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · Lingua testo · §147</span>
+          <button class="right-tool">⋯</button>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--s-3); background: hsl(var(--c-danger) / 0.04);">
+          <div class="lang-dialog" role="dialog" aria-modal="true" aria-labelledby="lang-h-title">
+            <div class="head">
+              <span class="ico">🌐</span>
+              <span class="title" id="lang-h-title">Quale lingua è questa?</span>
+            </div>
+            <p class="desc">Confidence lingua 38% (sotto soglia 50%). Il testo OCR contiene neologismi fantasy che confondono l'auto-detect. Conferma tu così procedo con la traduzione corretta.</p>
+            <div class="lang-grid" role="radiogroup" aria-label="Seleziona lingua sorgente">
+              <button class="lang-opt selected" type="button" role="radio" aria-checked="true">
+                <span class="flag">🇬🇧</span>
+                <span><span style="display: block;">English</span><span class="meta">conf 38% · proposta</span></span>
+              </button>
+              <button class="lang-opt" type="button" role="radio" aria-checked="false">
+                <span class="flag">🇮🇹</span>
+                <span><span style="display: block;">Italiano</span><span class="meta">conf 24%</span></span>
+              </button>
+              <button class="lang-opt" type="button" role="radio" aria-checked="false">
+                <span class="flag">🇫🇷</span>
+                <span><span style="display: block;">Français</span><span class="meta">conf 11%</span></span>
+              </button>
+              <button class="lang-opt" type="button" role="radio" aria-checked="false">
+                <span class="flag">🇩🇪</span>
+                <span><span style="display: block;">Deutsch</span><span class="meta">conf 9%</span></span>
+              </button>
+              <button class="lang-opt" type="button" role="radio" aria-checked="false" style="grid-column: span 2;">
+                <span class="flag">🇪🇸</span>
+                <span><span style="display: block;">Español</span><span class="meta">conf 7%</span></span>
+              </button>
+            </div>
+            <div class="cost-note">💰 <span><strong>Solo OCR addebitato</strong> · lang-detect free · traduzione N3 dopo conferma</span></div>
+            <div class="err-actions">
+              <button class="err-action primary" type="button" autofocus>
+                <span class="ico">→</span>
+                <span class="l"><span class="v">Conferma "English"</span><span class="s">e traduci in italiano · ~6 s · ~0,01 €</span></span>
+              </button>
+              <button class="err-action" type="button">
+                <span class="ico">↩</span>
+                <span class="l"><span class="v">Annulla</span><span class="s">salta traduzione, mostra testo OCR così com'è</span></span>
+              </button>
+            </div>
+            <div class="err-debug" style="margin-top: var(--s-3);">
+              <span class="lbl">lang-conf</span><span class="v">0.38</span>
+              <span class="lbl">soglia</span><span class="v">0.50</span>
+              <span class="lbl">tokens</span><span class="v">~210</span>
+            </div>
+          </div>
+        </div>
+        <div class="telemetry">
+          <span>📡 telemetry: source_lang_unknown · 0.38</span>
+          <button class="send" type="button">+ nota dogfood</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – source lang unknown">
+        <span class="frame-label">Desktop · 1440px (modal centrato)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate?lang=unknown</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Conferma lingua sorgente · §147</span></div>
+        <div style="flex: 1; padding: var(--s-6); display: flex; justify-content: center; align-items: flex-start; background: hsl(var(--c-danger) / 0.03);">
+          <div class="lang-dialog" style="max-width: 480px; margin: 0;" role="dialog" aria-modal="true" aria-labelledby="lang-h-title-d">
+            <div class="head">
+              <span class="ico">🌐</span>
+              <span class="title" id="lang-h-title-d">Conferma la lingua del testo originale</span>
+            </div>
+            <p class="desc">L'auto-detect ha restituito "English" con confidence solo 38%, sotto la soglia critica del 50%. Probabile causa: neologismi fantasy (Ardenel, rune-bearer, threshold-guardian) e alternanza inglese arcaico/moderno. Scegli tu la lingua sorgente per procedere con la traduzione N3 verso italiano.</p>
+            <div class="lang-grid" role="radiogroup" aria-label="Seleziona lingua sorgente">
+              <button class="lang-opt selected" type="button" role="radio" aria-checked="true">
+                <span class="flag">🇬🇧</span>
+                <span><span style="display: block;">English</span><span class="meta">conf 38% · proposta auto-detect</span></span>
+              </button>
+              <button class="lang-opt" type="button" role="radio" aria-checked="false">
+                <span class="flag">🇮🇹</span>
+                <span><span style="display: block;">Italiano</span><span class="meta">conf 24%</span></span>
+              </button>
+              <button class="lang-opt" type="button" role="radio" aria-checked="false">
+                <span class="flag">🇫🇷</span>
+                <span><span style="display: block;">Français</span><span class="meta">conf 11%</span></span>
+              </button>
+              <button class="lang-opt" type="button" role="radio" aria-checked="false">
+                <span class="flag">🇩🇪</span>
+                <span><span style="display: block;">Deutsch</span><span class="meta">conf 9%</span></span>
+              </button>
+              <button class="lang-opt" type="button" role="radio" aria-checked="false" style="grid-column: span 2;">
+                <span class="flag">🇪🇸</span>
+                <span><span style="display: block;">Español</span><span class="meta">conf 7%</span></span>
+              </button>
+            </div>
+            <div class="cost-note">💰 <span><strong>Solo OCR addebitato finora</strong> · ~0,002 € · lang-detect gratuito · traduzione N3 parte dopo conferma · ~0,01 €</span></div>
+            <div class="err-actions">
+              <button class="err-action primary" type="button" autofocus><span class="ico">→</span><span class="l"><span class="v">Conferma "English" e traduci</span><span class="s">avvia N3 verso italiano · ~6 s · costo stimato ~0,01 €</span></span></button>
+              <button class="err-action" type="button"><span class="ico">↩</span><span class="l"><span class="v">Annulla traduzione</span><span class="s">mostra testo OCR originale così com'è (no traduzione)</span></span></button>
+              <button class="err-action" type="button"><span class="ico">📖</span><span class="l"><span class="v">Mostra testo OCR</span><span class="s">verifica visivamente prima di scegliere lingua</span></span></button>
+            </div>
+            <div class="err-debug" style="margin-top: var(--s-3);">
+              <span class="lbl">lang-conf top</span><span class="v">0.38 (EN)</span>
+              <span class="lbl">soglia</span><span class="v">0.50</span>
+              <span class="lbl">model</span><span class="v">cld3-language-detector</span>
+              <span class="lbl">tokens</span><span class="v">~210 estratti</span>
+              <span class="lbl">retry-free</span><span class="v">cambia lingua = nuova traduzione gratis</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO I · NETWORK MID-OCR (loss connection · save locale · retry on-reconnect)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" id="s9" aria-labelledby="si">
+    <span class="label">Stato I · Network Loss · mid-OCR</span>
+    <h2 id="si">Connessione persa — foto salvata localmente</h2>
+    <p class="desc">Aaron carica la foto, l'upload parte, poi connessione cellulare drop (treno, cantina, wi-fi instabile). Strategia: persist locale in IndexedDB + queue + retry automatico on-reconnect. Banner persistent top, NO modal blocking (Aaron continua a usare l'app offline: glossario + setup tutorial cached). Pattern danger-colored ma non bloccante.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – network loss mid-OCR">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>22:47</span><span>✈ 🔋 65%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · Offline · 1 in coda</span>
+          <button class="right-tool">⚡</button>
+        </div>
+        <div class="net-strip" role="status" aria-live="polite">
+          <span class="pulse" aria-hidden="true"></span>
+          <span class="lbl">Offline · 1 foto in coda<br/><span class="meta">retry automatico appena torni online</span></span>
+        </div>
+        <div class="queue-card">
+          <div class="head">
+            <span>📥 Foto in upload</span>
+            <span class="badge">1 in attesa</span>
+          </div>
+          <div class="queue-item">
+            <div class="thumb">§147</div>
+            <div class="info">
+              <span class="v">Foto §147</span>
+              <span class="s">salvata locale · 380 KB · in attesa rete</span>
+            </div>
+            <span class="status wait">⏳ attesa</span>
+          </div>
+        </div>
+        <div style="flex: 1; padding: 0 var(--s-4); overflow-y: auto;">
+          <div class="err-banner danger" style="margin: 0;" role="alert">
+            <div class="head">
+              <span class="badge">📶 Offline</span>
+              <span class="title">Niente rete</span>
+            </div>
+            <p class="msg">L'upload della foto si è interrotto a metà. Niente paura: ho salvato lo scatto sul tuo telefono e riprovo da solo appena la rete torna. Puoi continuare a usare l'app offline: il glossario campagna è disponibile.</p>
+            <div class="cost-note">💰 <span><strong>Non addebitato</strong> · upload incompleto = 0 byte ricevuti server-side</span></div>
+            <div class="err-actions">
+              <button class="err-action" type="button" autofocus>
+                <span class="ico">🔄</span>
+                <span class="l"><span class="v">Riprova subito</span><span class="s">forza retry · utile se rete è tornata ora</span></span>
+              </button>
+              <button class="err-action" type="button">
+                <span class="ico">📒</span>
+                <span class="l"><span class="v">Vai a Glossario offline</span><span class="s">32 termini campagna cached · accesso istantaneo</span></span>
+              </button>
+              <button class="err-action" type="button">
+                <span class="ico">🗑</span>
+                <span class="l"><span class="v">Cancella coda</span><span class="s">elimina foto in attesa (irrecuperabile)</span></span>
+              </button>
+            </div>
+            <div class="err-debug">
+              <span class="lbl">err</span><span class="v">net::ERR_NETWORK_CHANGED</span>
+              <span class="lbl">salvato</span><span class="v">IndexedDB · photo_queue_b3a</span>
+              <span class="lbl">retry</span><span class="v">on connectivity-change</span>
+            </div>
+          </div>
+        </div>
+        <div class="telemetry">
+          <span>📡 in attesa retry · telemetry posticipata</span>
+          <button class="send" type="button">+ nota dogfood</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – network loss mid-OCR">
+        <span class="frame-label">Desktop · 1440px</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate?offline=1</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Connessione persa · 1 upload in coda</span></div>
+        <div class="net-strip" style="margin: var(--s-5);" role="status" aria-live="polite">
+          <span class="pulse" aria-hidden="true"></span>
+          <span class="lbl">Connessione persa · 1 foto salvata localmente in attesa retry automatico<br/><span class="meta">net::ERR_NETWORK_CHANGED · 22:47:13 · auto-retry on connectivity-change event</span></span>
+        </div>
+        <div style="flex: 1; padding: 0 var(--s-6) var(--s-6); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-6); overflow-y: auto; align-items: start;">
+          <div class="err-banner danger" style="margin: 0;" role="alert">
+            <div class="head"><span class="badge">📶 Offline</span><span class="title">Upload interrotto · foto in cache locale</span></div>
+            <p class="msg">L'upload della foto §147 si è bloccato a metà del trasferimento (220/380 KB inviati). Ho persistito lo scatto in IndexedDB del browser (chiave <code>photo_queue_b3a</code>) — quando la rete torna, riprende automaticamente da zero senza che tu debba fare nulla. Nel frattempo l'app rimane usabile: glossario campagna, setup tutorial Press Start e stato sessione sono tutti disponibili offline.</p>
+            <div class="cost-note">💰 <span><strong>Non addebitato</strong> · upload parziale (220 KB) scartato server-side · 0 OCR, 0 traduzione</span></div>
+            <div class="err-actions">
+              <button class="err-action" type="button" autofocus><span class="ico">🔄</span><span class="l"><span class="v">Riprova subito</span><span class="s">forza retry manuale · utile se la rete è appena tornata</span></span></button>
+              <button class="err-action" type="button"><span class="ico">📒</span><span class="l"><span class="v">Glossario offline</span><span class="s">32 termini campagna cached · accesso istantaneo</span></span></button>
+              <button class="err-action" type="button"><span class="ico">📋</span><span class="l"><span class="v">Setup tutorial offline</span><span class="s">Press Start completo · 24 pagine cached</span></span></button>
+              <button class="err-action" type="button"><span class="ico">🗑</span><span class="l"><span class="v">Cancella coda</span><span class="s">elimina foto in attesa · azione irrecuperabile</span></span></button>
+            </div>
+            <div class="err-debug">
+              <span class="lbl">err</span><span class="v">net::ERR_NETWORK_CHANGED</span>
+              <span class="lbl">progress</span><span class="v">220/380 KB (57%)</span>
+              <span class="lbl">storage</span><span class="v">IndexedDB · photo_queue_b3a · 380 KB</span>
+              <span class="lbl">retry</span><span class="v">listener navigator.onLine + connectivity-change</span>
+              <span class="lbl">offline-ok</span><span class="v">glossary + tutorial + sessione</span>
+            </div>
+          </div>
+          <div class="queue-card" style="margin: 0;">
+            <div class="head">
+              <span>📥 Coda upload offline</span>
+              <span class="badge">1 in attesa</span>
+            </div>
+            <div class="queue-item">
+              <div class="thumb">§147</div>
+              <div class="info">
+                <span class="v">Foto §147 · pagina libro</span>
+                <span class="s">22:47:08 · 380 KB · salvata IndexedDB · retry auto</span>
+              </div>
+              <span class="status wait">⏳ in coda</span>
+            </div>
+            <div style="margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px dashed var(--border-light); font-size: var(--fs-xs); color: var(--text-muted); font-family: var(--f-mono);">
+              Sessione + paragrafo corrente conservati. Quando rete torna online, l'OCR riparte automatico e ricevi notifica banner.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATO J · QUOTA EXHAUSTED MID-STREAM (token quota termina · bridge a quota-credits · retain OCR text)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="state-section" id="s10" aria-labelledby="sj">
+    <span class="label">Stato J · Quota Exhausted · mid-stream</span>
+    <h2 id="sj">Crediti esauriti durante la traduzione</h2>
+    <p class="desc">La quota token termina mentre l'AI sta traducendo (probabile sessione lunga + glossario fantasy verbose). Bridge a `librogame-runthrough-quota-credits` overlay, ma il testo OCR-decoded resta come fallback non-distruttivo (Aaron NON perde il paragrafo già decodificato, niente token aggiuntivi addebitati per mostrarlo). Pattern danger-colored con tonalità "soft" (warning amber) perché non è un errore tecnico, è un limite di piano.</p>
+
+    <div class="frames">
+      <div class="phone" role="region" aria-label="Mobile – quota exhausted">
+        <span class="frame-label">Mobile · 375px</span>
+        <div class="phone-sbar"><span>22:54</span><span>📶 🔋 64%</span></div>
+        <div class="appbar">
+          <button class="back">←</button>
+          <span class="crumbs"><strong>Sera con i ragazzi</strong> · Crediti finiti</span>
+          <button class="right-tool">⋯</button>
+        </div>
+        <div class="quota-bridge" role="alert">
+          <div class="head">
+            <span class="ico">⚡</span>
+            <span class="title">Crediti finiti mid-traduzione</span>
+          </div>
+          <p class="desc">La traduzione si è fermata a metà — i tuoi crediti del piano "Esploratore" sono esauriti per oggi. Il testo originale del paragrafo è qui sotto: leggilo in lingua originale senza spendere altro, oppure ricarica crediti.</p>
+          <div class="quota-meter">
+            <div class="meter-head"><span>token quota giornaliera</span><span class="val">100% · 8 470 / 8 470</span></div>
+            <div class="bar"><span class="fill"></span></div>
+          </div>
+          <div class="cost-note">💰 <span><strong>Solo OCR + traduzione parziale addebitati</strong> · ~0,008 € · mostrare testo originale = 0 token extra</span></div>
+          <div class="err-actions">
+            <button class="err-action primary-warn" type="button" autofocus>
+              <span class="ico">💎</span>
+              <span class="l"><span class="v">Ricarica crediti</span><span class="s">+5 000 token · 1,99 € · sblocca subito</span></span>
+            </button>
+            <button class="err-action" type="button">
+              <span class="ico">📖</span>
+              <span class="l"><span class="v">Leggi in lingua originale</span><span class="s">testo OCR qui sotto · 0 token extra</span></span>
+            </button>
+            <button class="err-action" type="button">
+              <span class="ico">⏰</span>
+              <span class="l"><span class="v">Aspetta reset domani</span><span class="s">quota si ricarica alle 00:00 · gratis</span></span>
+            </button>
+          </div>
+          <div class="fallback-preserve">
+            <div class="lbl">✓ Testo OCR conservato · 0 token extra</div>
+            <div class="text">"The guardian of the threshold watches you with iron eyes. Only the rune-bearer shall pass…"</div>
+          </div>
+          <div class="err-debug" style="margin-top: var(--s-3);">
+            <span class="lbl">quota</span><span class="v">8470/8470 (100%)</span>
+            <span class="lbl">reset</span><span class="v">00:00 UTC+1</span>
+            <span class="lbl">parziale</span><span class="v">42 / ~210 tokens</span>
+          </div>
+        </div>
+        <div class="telemetry">
+          <span>📡 quota_exhausted · piano esploratore</span>
+          <button class="send" type="button">+ nota dogfood</button>
+        </div>
+      </div>
+
+      <div class="desktop" role="region" aria-label="Desktop – quota exhausted mid-stream">
+        <span class="frame-label">Desktop · 1440px (bridge a quota-credits overlay)</span>
+        <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">meepleai.app/library/librogame/play/cmp-1234/translate?quota=exhausted&plan=explorer</span></div>
+        <div class="appbar"><button class="back">←</button><span class="crumbs"><strong>Sera con i ragazzi</strong> · Quota crediti esaurita · bridge a /credits</span></div>
+        <div style="flex: 1; padding: var(--s-6); display: grid; grid-template-columns: 1fr 380px; gap: var(--s-6); overflow-y: auto; align-items: start;">
+          <div class="quota-bridge" style="margin: 0;" role="alert">
+            <div class="head">
+              <span class="ico">⚡</span>
+              <span class="title">Crediti esauriti mentre traducevo</span>
+            </div>
+            <p class="desc">Hai finito i token del piano "Esploratore" durante la traduzione del §147. Il sistema si è fermato dopo 42 token su ~210 attesi — la quota era a 99.5%, ho preferito non andare in negativo. Il testo OCR è preservato non-distruttivamente nel pannello a destra: puoi continuare a leggere in lingua originale senza spendere altro, oppure ricaricare crediti per riprendere la traduzione automatica.</p>
+            <div class="quota-meter">
+              <div class="meter-head"><span>token quota giornaliera · piano "Esploratore"</span><span class="val">100% · 8 470 / 8 470 consumati</span></div>
+              <div class="bar"><span class="fill"></span></div>
+              <div style="margin-top: var(--s-2); font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); display: flex; justify-content: space-between;">
+                <span>reset automatico · 00:00 UTC+1 (tra 1h 06m)</span>
+                <span>upgrade Adventurer: 50 000 token/giorno · 4,99 €/mese</span>
+              </div>
+            </div>
+            <div class="cost-note">💰 <span><strong>Tracciamento puntuale</strong> · OCR ~0,002 € · traduzione parziale (42 tok) ~0,006 € · totale ~0,008 € · mostrare OCR cached = 0 token extra</span></div>
+            <div class="err-actions">
+              <button class="err-action primary-warn" type="button" autofocus><span class="ico">💎</span><span class="l"><span class="v">Ricarica crediti istant.</span><span class="s">+5 000 token one-shot · 1,99 € · sblocca subito · paga e riprendi</span></span></button>
+              <button class="err-action" type="button"><span class="ico">⭐</span><span class="l"><span class="v">Upgrade piano Adventurer</span><span class="s">50 000 token/giorno · 4,99 €/mese · 6x più capacity</span></span></button>
+              <button class="err-action" type="button"><span class="ico">📖</span><span class="l"><span class="v">Leggi in lingua originale</span><span class="s">testo OCR cached qui a destra · 0 token consumati</span></span></button>
+              <button class="err-action" type="button"><span class="ico">⏰</span><span class="l"><span class="v">Aspetta reset domani</span><span class="s">quota si ricarica alle 00:00 UTC+1 · gratuita · piano resta Esploratore</span></span></button>
+            </div>
+            <div class="err-debug" style="margin-top: var(--s-3);">
+              <span class="lbl">quota</span><span class="v">8 470/8 470 (100%)</span>
+              <span class="lbl">reset</span><span class="v">2026-05-24 00:00 UTC+1</span>
+              <span class="lbl">parziale</span><span class="v">42 / ~210 tokens (20%)</span>
+              <span class="lbl">piano</span><span class="v">Esploratore (free tier · 8 470/giorno)</span>
+              <span class="lbl">cache OCR</span><span class="v">preservato · 0 token extra per render</span>
+            </div>
+          </div>
+          <div class="fallback-preserve" style="margin: 0; padding: var(--s-4);">
+            <div class="lbl">✓ Testo OCR conservato · zero costo aggiuntivo</div>
+            <div class="text">"The guardian of the threshold watches you with iron eyes. 'Only the rune-bearer shall pass,' he whispers.<br/><br/>Do you have the Rune of Ardenel?<br/>→ Yes, show it (go to § 152)<br/>→ No, force the passage (go to § 198)"</div>
+            <div style="margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px dashed hsl(var(--c-success) / 0.35); font-family: var(--f-mono); font-size: 10px; color: var(--text-muted);">
+              Foto + OCR già pagati. Rileggere/copiare/incollare = gratis. Solo la <em>traduzione AI</em> richiede token.
+            </div>
           </div>
         </div>
       </div>

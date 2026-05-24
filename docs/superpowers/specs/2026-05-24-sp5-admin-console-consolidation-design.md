@@ -48,7 +48,7 @@ Sintesi del colloquio R1-R10 (dettaglio e razionale in `ADMIN_AUDIT.md §9`). So
 | **R9** | Dark default scoped admin | `[data-theme="dark"]` applicato solo sotto `/admin/*` (§4.3). |
 | **R10** | Sequenza fondamenta → pilota (A1→A2) → ondate; sicurezza track separato | Rollout in §9. |
 
-**Criteri di accettazione (panel — Wiegers).** Ogni decisione è verificabile: R1 → nessun ruolo `premium` nel codice, `UserTier.Premium` usato per i gate di subscription; R2 → la sidebar nasconde le voci sopra il ruolo (test per editor/creator/admin/superadmin); R4 → banner di impersonate presente quando `SessionStatusDto` espone l'attore; R5 → modal step-up presente in UI ma behavior in shadow (logga, non blocca) finché §7 non lo rende strict; R7 → un solo path canonico per funzione + ogni redirect verificato (E2E nav); R8 → le chiamate FE usano `/api/v1` (ESLint `local/api-client-v1-prefix`); R9 → E2E: `/admin/*` ha `data-theme="dark"`, il resto resta light.
+**Criteri di accettazione (panel — Wiegers).** Ogni decisione con uno stato osservabile è verificabile (R3 = audit as-is e R10 = sequenza di processo non hanno un gate dedicato in questa fase): R1 → nessun ruolo `premium` nel codice, `UserTier.Premium` usato per i gate di subscription; R2 → la sidebar nasconde le voci sopra il ruolo (test per editor/creator/admin/superadmin); R4 → banner di impersonate presente quando `SessionStatusDto` espone l'attore; R5 → modal step-up presente in UI ma behavior in shadow (logga, non blocca) finché §7 non lo rende strict; R7 → un solo path canonico per funzione + ogni redirect verificato (E2E nav); R8 → le chiamate FE usano `/api/v1` (ESLint `local/api-client-v1-prefix`); R9 → E2E: `/admin/*` ha `data-theme="dark"`, il resto resta light.
 
 ## 4. Architettura del consolidamento
 
@@ -79,7 +79,7 @@ Sintesi del colloquio R1-R10 (dettaglio e razionale in `ADMIN_AUDIT.md §9`). So
 
 > **Principio hub-vs-route (panel — Fowler).** Per non ricreare la frammentazione che §1 elimina, il criterio di scelta del pattern è: **hub `?tab=`** quando le viste sono sotto-aspetti della *stessa* entità/dominio (es. AI: agents / rag / quality); **route separata** quando sono entità/domini *distinti* (es. KB ≠ Catalog ≠ Users). Regola: una funzione = un solo pattern; non mescolare hub e route separate per lo stesso dominio.
 
-> **Lifecycle dei redirect (panel — Newman).** I redirect di consolidamento esistenti (#5040) sono `permanent` (308) e quindi cache-ati in modo aggressivo: difficili da revocare. Per i path ancora soggetti a spostamento nelle ondate F2-F6 usare `307` (temporary) finché l'IA non è stabile, promuovendo a `308` solo quando il path canonico è definitivo.
+> **Lifecycle dei redirect (panel — Newman).** I redirect di consolidamento esistenti (#5040) sono `permanent` (308) e quindi cache-ati in modo aggressivo: difficili da revocare. Per i path ancora soggetti a spostamento nelle ondate F2-F6 usare `307` (temporary) finché l'IA non è stabile, promuovendo a `308` solo quando il path canonico è definitivo. ⚠️ **Caso KB**: l'entry #5040 `/admin/pdfs` → `/admin/content?tab=kb` è già `308`; poiché §4.2 rende canonico `/admin/knowledge-base`, **sostituire** quell'entry (`/admin/pdfs` → `/admin/knowledge-base` diretto) anziché aggiungere un secondo 308 in catena — altrimenti si crea `pdfs → content?tab=kb → knowledge-base`, una catena di redirect permanenti difficile da revocare.
 
 ### 4.3 Shell + re-skin
 

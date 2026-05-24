@@ -65,7 +65,9 @@ describe('useGameLeaderboard (#1467)', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toEqual(mockResponse);
-    expect(api.games.getLeaderboard).toHaveBeenCalledWith('game-1', undefined);
+    // After the #1466 `enabled` option destructure, no-options calls forward `{}`
+    // (semantically equivalent to undefined — no since/limit params).
+    expect(api.games.getLeaderboard).toHaveBeenCalledWith('game-1', {});
   });
 
   it('forwards since/limit options to the client', async () => {

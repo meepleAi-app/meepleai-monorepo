@@ -98,6 +98,18 @@ vi.mock('@/hooks/queries/useGameAgents', () => ({
   useGameAgents: (opts: { gameId: string | null; enabled?: boolean }) => useGameAgentsSpy(opts),
 }));
 
+// Issue #1466 — Leaderboard hook mock (Stats tab). Default empty/success; tests
+// focused on FSM/Phase 0.5 do not care about leaderboard data.
+vi.mock('@/lib/domain-hooks/useGameLeaderboard', () => ({
+  useGameLeaderboard: () => ({
+    data: null,
+    isLoading: false,
+    isError: false,
+    isSuccess: true,
+  }),
+  GAME_LEADERBOARD_QUERY_KEY: (gameId: string) => ['game-leaderboard', gameId, null, 10] as const,
+}));
+
 // ─── Visual fixture mock ──────────────────────────────────────────────────
 
 let mockIsVisualTestBuild = false;
@@ -120,6 +132,7 @@ const MESSAGES: Record<string, string> = {
   'pages.gameDetail.tabs.rules': 'Regole',
   'pages.gameDetail.tabs.faqs': 'FAQ',
   'pages.gameDetail.tabs.sessions': 'Sessioni',
+  'pages.gameDetail.tabs.stats': 'Statistiche',
   'pages.gameDetail.tabs.agents': 'Agenti',
   'pages.gameDetail.tabs.documents': 'Documenti',
   'pages.gameDetail.states.loading.ariaLabel': 'Caricamento gioco',
@@ -207,6 +220,21 @@ const MESSAGES: Record<string, string> = {
   'pages.gameDetail.info.specsPublisher': 'Editore',
   'pages.gameDetail.info.specsRatingBgg': 'Rating BGG',
   'pages.gameDetail.info.specsMinutesUnit': 'min',
+  // Issue #1466 — Stats tab (play-KPI + leaderboard + community gate)
+  'pages.gameDetail.stats.winRate': 'Win rate',
+  'pages.gameDetail.stats.timesPlayed': 'Partite',
+  'pages.gameDetail.stats.lastPlayed': 'Ultima',
+  'pages.gameDetail.stats.lastPlayedNever': 'Mai',
+  'pages.gameDetail.stats.lastPlayedDaysAgoUnit': 'g fa',
+  'pages.gameDetail.stats.leaderboardTitle': 'Classifica giocatori',
+  'pages.gameDetail.stats.leaderboardPlays': 'partite',
+  'pages.gameDetail.stats.leaderboardAvg': 'avg',
+  'pages.gameDetail.stats.leaderboardWins': 'vittorie',
+  'pages.gameDetail.stats.leaderboardEmpty': 'Nessuna classifica disponibile',
+  'pages.gameDetail.stats.communityGateTitle': 'Aggiungi alla tua libreria',
+  'pages.gameDetail.stats.communityGateDescription':
+    'Aggiungi questo gioco per sbloccare statistiche e classifica giocatori.',
+  'pages.gameDetail.stats.communityGateCta': '+ Aggiungi a libreria',
 };
 
 function renderWithIntl(ui: ReactElement) {
@@ -814,5 +842,42 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     // Info panel hidden (tab was changed to agents)
     const infoPanelAfterRerender = document.querySelector('[data-slot="game-detail-panel-info"]');
     expect(infoPanelAfterRerender).toHaveAttribute('hidden');
+  });
+
+  // ─── Issue #1466 — Stats tab + community gate ────────────────────────────
+
+  it('Issue #1466: community variant renders GameDetailCommunityGate inside Sessions and Stats panels', () => {
+    detailMockState.data = makeDetail({ libraryEntryId: '' });
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+
+    // Two gates rendered: one inside sessions panel, one inside stats panel.
+    const gates = document.querySelectorAll('[data-slot="game-detail-community-gate"]');
+    expect(gates).toHaveLength(2);
+
+    // The non-locked content must NOT be present in those panels.
+    const sessionsPanel = document.querySelector('[data-slot="game-detail-panel-sessions"]');
+    expect(sessionsPanel?.querySelector('[data-slot="game-detail-sessions-rail"]')).toBeNull();
+  });
+
+  it('Issue #1466: own variant exposes the Stats tab with KpiCards (no gate)', () => {
+    detailMockState.data = makeDetail(); // default own variant
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+
+    // Stats tab button is present and NOT locked
+    const statsTab = document.querySelector('[data-tab-key="stats"]');
+    expect(statsTab).toBeInTheDocument();
+    expect(statsTab).toHaveAttribute('data-locked', 'false');
+
+    // Stats panel exists in the DOM (hidden until clicked, but its content is the own-variant flow,
+    // not the gate).
+    const statsPanel = document.querySelector('[data-slot="game-detail-panel-stats"]');
+    expect(statsPanel).toBeInTheDocument();
+    expect(statsPanel?.querySelector('[data-slot="game-detail-community-gate"]')).toBeNull();
   });
 });

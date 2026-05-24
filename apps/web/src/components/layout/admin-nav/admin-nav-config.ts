@@ -105,7 +105,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         href: '/admin/knowledge-base/mechanic-extractor',
         icon: Wrench,
       },
-      { label: 'A/B Testing', href: '/admin/agents/ab-testing', icon: BarChart2 },
       { label: 'Agent Usage', href: '/admin/agents/usage', icon: BarChart2 },
     ],
   },

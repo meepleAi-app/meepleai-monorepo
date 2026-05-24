@@ -16,6 +16,8 @@ export interface GameLeaderboardOptions {
   since?: string;
   /** Top-N size (1..50, default 10). */
   limit?: number;
+  /** External gating (Issue #1466: lazy fetch only when tab is active). Default true. */
+  enabled?: boolean;
 }
 
 export const GAME_LEADERBOARD_QUERY_KEY = (gameId: string, since?: string, limit?: number) =>
@@ -24,14 +26,15 @@ export const GAME_LEADERBOARD_QUERY_KEY = (gameId: string, since?: string, limit
 /**
  * Fetches the social leaderboard for a game.
  * @param gameId Game ID (GUID format)
- * @param options Optional since/limit filters
+ * @param options Optional since/limit filters; `enabled` for lazy gating (default true).
  */
 export function useGameLeaderboard(gameId: string, options?: GameLeaderboardOptions) {
+  const { enabled = true, ...apiOptions } = options ?? {};
   return useQuery<GameLeaderboardResponse | null, Error>({
-    queryKey: GAME_LEADERBOARD_QUERY_KEY(gameId, options?.since, options?.limit),
-    queryFn: () => api.games.getLeaderboard(gameId, options),
+    queryKey: GAME_LEADERBOARD_QUERY_KEY(gameId, apiOptions.since, apiOptions.limit),
+    queryFn: () => api.games.getLeaderboard(gameId, apiOptions),
     staleTime: 5 * 60 * 1000, // 5 minutes (matches backend cache)
     retry: 2,
-    enabled: !!gameId,
+    enabled: !!gameId && enabled,
   });
 }

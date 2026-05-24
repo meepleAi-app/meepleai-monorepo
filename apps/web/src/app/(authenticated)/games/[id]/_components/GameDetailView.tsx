@@ -28,10 +28,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
   GameDetailAgentsList,
+  GameDetailCommunityGate,
   GameDetailFaqList,
   GameDetailHero,
   GameDetailKbDocList,
   GameDetailKpiCards,
+  GameDetailLeaderboard,
   GameDetailRulesAccordion,
   GameDetailSessionsRail,
   GameDetailSpecsCard,
@@ -52,6 +54,7 @@ import {
   type LibraryGameDetail,
 } from '@/hooks/queries/useLibrary';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useGameLeaderboard } from '@/lib/domain-hooks/useGameLeaderboard';
 import { deriveGameDetailUiState } from '@/lib/games/game-detail-state';
 import {
   IS_VISUAL_TEST_BUILD,
@@ -84,17 +87,101 @@ export interface GameDetailViewProps {
 
 // ─── Tab config ────────────────────────────────────────────────────────────
 
-function buildTabsConfig(t: ReturnType<typeof useTranslation>['t']): ReadonlyArray<{
+/**
+ * Hybrid 7-tab config (Issue #1466): preserves the 6 codebase tabs and adds `stats`
+ * after `sessions` (mockup-required). In `community` variant, `sessions` and `stats`
+ * are locked (require the game to be in the user's library); the locked tab content
+ * renders a <GameDetailCommunityGate>. Other tabs (info/rules/faqs/agents/documents)
+ * remain accessible as public information.
+ */
+function buildTabsConfig(
+  t: ReturnType<typeof useTranslation>['t'],
+  variant: 'own' | 'community'
+): ReadonlyArray<{
   key: TabKey;
   label: string;
+  locked?: boolean;
 }> {
+  const lockedInCommunity = variant === 'community';
   return [
     { key: 'info' as TabKey, label: t('pages.gameDetail.tabs.info') },
     { key: 'rules' as TabKey, label: t('pages.gameDetail.tabs.rules') },
     { key: 'faqs' as TabKey, label: t('pages.gameDetail.tabs.faqs') },
-    { key: 'sessions' as TabKey, label: t('pages.gameDetail.tabs.sessions') },
+    {
+      key: 'sessions' as TabKey,
+      label: t('pages.gameDetail.tabs.sessions'),
+      locked: lockedInCommunity,
+    },
+    {
+      key: 'stats' as TabKey,
+      label: t('pages.gameDetail.tabs.stats'),
+      locked: lockedInCommunity,
+    },
     { key: 'agents' as TabKey, label: t('pages.gameDetail.tabs.agents') },
     { key: 'documents' as TabKey, label: t('pages.gameDetail.tabs.documents') },
+  ];
+}
+
+// ─── Stats-tab KPI builder (Issue #1466) ───────────────────────────────────
+
+/**
+ * Builds the 3 play-stats KPI cards shown above the leaderboard in the Stats tab.
+ * Data source: LibraryGameDetail.winRate / timesPlayed / lastPlayed (already populated).
+ */
+function buildStatsKpiCards(
+  detail: LibraryGameDetail,
+  t: ReturnType<typeof useTranslation>['t']
+): ReadonlyArray<{
+  key: string;
+  label: string;
+  value: string;
+  unit?: string;
+  accent?: 'rating' | 'complexity' | 'players' | 'time';
+  icon?: string;
+}> {
+  const na = t('pages.gameDetail.kpi.notAvailable');
+
+  // Win rate — winRate is already a formatted string from the BE ("60%"), or null.
+  const winRateValue = detail.winRate ?? na;
+
+  // Plays — integer.
+  const playsValue = String(detail.timesPlayed);
+
+  // Last played — render "Nd g fa" if recent, else "Mai" when null.
+  let lastValue: string;
+  let lastUnit: string | undefined;
+  if (detail.lastPlayed == null) {
+    lastValue = t('pages.gameDetail.stats.lastPlayedNever');
+  } else {
+    const lastDate = new Date(detail.lastPlayed);
+    const days = Math.max(0, Math.floor((Date.now() - lastDate.getTime()) / 86400000));
+    lastValue = String(days);
+    lastUnit = t('pages.gameDetail.stats.lastPlayedDaysAgoUnit');
+  }
+
+  return [
+    {
+      key: 'winRate',
+      label: t('pages.gameDetail.stats.winRate'),
+      value: winRateValue,
+      accent: 'rating' as const,
+      icon: '🏆',
+    },
+    {
+      key: 'timesPlayed',
+      label: t('pages.gameDetail.stats.timesPlayed'),
+      value: playsValue,
+      accent: 'players' as const,
+      icon: '🎯',
+    },
+    {
+      key: 'lastPlayed',
+      label: t('pages.gameDetail.stats.lastPlayed'),
+      value: lastValue,
+      unit: lastUnit,
+      accent: 'time' as const,
+      icon: '📅',
+    },
   ];
 }
 
@@ -333,6 +420,18 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
     enabled: !!gameId && detailQuery.isSuccess && detailQuery.data != null && tab === 'agents',
   });
 
+  // Leaderboard hook (Issue #1466 — lazy, gated by parent + tab + own variant).
+  // Only fetches on the Stats tab AND when the game is in the user's library
+  // (libraryEntryId present). Community variant locks the tab → no fetch.
+  const leaderboardQuery = useGameLeaderboard(gameId ?? '', {
+    enabled:
+      !!gameId &&
+      detailQuery.isSuccess &&
+      detailQuery.data != null &&
+      detailQuery.data.libraryEntryId != null &&
+      tab === 'stats',
+  });
+
   // ── Effective detail (fixture takes priority over real data) ─────────────
   const detail = fixture ?? detailQuery.data ?? null;
 
@@ -383,13 +482,15 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
   // fixture branch also guarantees detail != null
   const safeDetail = detail!;
 
-  const tabsConfig = buildTabsConfig(t);
+  const heroVariant: 'own' | 'community' = safeDetail.libraryEntryId ? 'own' : 'community';
+  const isCommunityVariant = heroVariant === 'community';
+
+  const tabsConfig = buildTabsConfig(t, heroVariant);
   const heroMeta = buildHeroMeta(safeDetail);
   const kpiCards = buildKpiCards(safeDetail, t);
+  const statsKpiCards = buildStatsKpiCards(safeDetail, t);
   const specsItems = buildSpecsItems(safeDetail, t);
   const specsTitle = t('pages.gameDetail.info.specsTitle');
-
-  const heroVariant = safeDetail.libraryEntryId ? 'own' : 'community';
   const heroLabels = {
     back: t('pages.gameDetail.hero.back'),
     backAriaLabel: t('pages.gameDetail.hero.backAriaLabel'),
@@ -467,6 +568,37 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
     statusFailed: t('pages.gameDetail.documents.statusFailed'),
     // Template string: component calls .replace('{pages}', ...) etc.
     statsLineTemplate: '{pages} pag · {chunks} chunk · {size}',
+  };
+
+  const statsLeaderboardLabels = {
+    plays: t('pages.gameDetail.stats.leaderboardPlays'),
+    avgScore: t('pages.gameDetail.stats.leaderboardAvg'),
+    wins: t('pages.gameDetail.stats.leaderboardWins'),
+    empty: t('pages.gameDetail.stats.leaderboardEmpty'),
+  };
+
+  const communityGateLabels = {
+    title: t('pages.gameDetail.stats.communityGateTitle'),
+    description: t('pages.gameDetail.stats.communityGateDescription'),
+    cta: t('pages.gameDetail.stats.communityGateCta'),
+  };
+
+  const handleAddToLibrary = (): void => {
+    if (!gameId || addToLibrary.isPending) return;
+    addToLibrary.mutate(
+      { gameId },
+      {
+        onSuccess: () => {
+          toast.success(`${safeDetail.gameTitle} aggiunto alla tua libreria.`);
+          router.push(`/library/${gameId}`);
+        },
+        onError: error => {
+          toast.error(
+            error instanceof Error ? error.message : 'Impossibile aggiungere il gioco. Riprova.'
+          );
+        },
+      }
+    );
   };
 
   const agentsState: AgentsState = deriveAgentsState(
@@ -583,7 +715,7 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
           <GameDetailFaqList faqs={[]} viewAllHref={`/games/${gameId}/faqs`} labels={faqLabels} />
         </div>
 
-        {/* Sessions tab */}
+        {/* Sessions tab — locked in community variant (#1466) */}
         <div
           role="tabpanel"
           id={panelIdFor('sessions')}
@@ -591,12 +723,63 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
           hidden={tab !== 'sessions'}
           data-slot="game-detail-panel-sessions"
         >
-          <GameDetailSessionsRail
-            sessions={recentSessions}
-            viewAllHref={`/games/${gameId}/sessions`}
-            labels={sessionsLabels}
-            onNewSession={() => router.push(`/sessions/new?gameId=${gameId}`)}
-          />
+          {isCommunityVariant ? (
+            <GameDetailCommunityGate
+              title={communityGateLabels.title}
+              description={communityGateLabels.description}
+              ctaLabel={communityGateLabels.cta}
+              onAdd={handleAddToLibrary}
+            />
+          ) : (
+            <GameDetailSessionsRail
+              sessions={recentSessions}
+              viewAllHref={`/games/${gameId}/sessions`}
+              labels={sessionsLabels}
+              onNewSession={() => router.push(`/sessions/new?gameId=${gameId}`)}
+            />
+          )}
+        </div>
+
+        {/* Stats tab — play-KPI + leaderboard; locked in community variant (#1466) */}
+        <div
+          role="tabpanel"
+          id={panelIdFor('stats')}
+          aria-labelledby={tabIdFor('stats')}
+          hidden={tab !== 'stats'}
+          data-slot="game-detail-panel-stats"
+        >
+          {isCommunityVariant ? (
+            <GameDetailCommunityGate
+              title={communityGateLabels.title}
+              description={communityGateLabels.description}
+              ctaLabel={communityGateLabels.cta}
+              onAdd={handleAddToLibrary}
+            />
+          ) : (
+            <div className="flex flex-col gap-6">
+              <GameDetailKpiCards cards={statsKpiCards} />
+              {leaderboardQuery.isLoading ? (
+                <div
+                  data-slot="game-detail-stats-leaderboard-loading"
+                  aria-busy="true"
+                  className="h-40 w-full animate-pulse rounded-2xl bg-muted"
+                />
+              ) : leaderboardQuery.isError ? (
+                <div
+                  data-slot="game-detail-stats-leaderboard-error"
+                  className="rounded-2xl border border-border bg-card p-4 text-center text-[13px] text-muted-foreground"
+                >
+                  {t('pages.gameDetail.states.error.title')}
+                </div>
+              ) : (
+                <GameDetailLeaderboard
+                  entries={leaderboardQuery.data?.entries ?? []}
+                  title={t('pages.gameDetail.stats.leaderboardTitle')}
+                  labels={statsLeaderboardLabels}
+                />
+              )}
+            </div>
+          )}
         </div>
 
         {/* Agents tab — FSM cells 5-9 */}

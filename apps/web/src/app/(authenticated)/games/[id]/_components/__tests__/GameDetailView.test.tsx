@@ -98,6 +98,18 @@ vi.mock('@/hooks/queries/useGameAgents', () => ({
   useGameAgents: (opts: { gameId: string | null; enabled?: boolean }) => useGameAgentsSpy(opts),
 }));
 
+// Issue #1466 — Leaderboard hook mock (Stats tab). Default empty/success; tests
+// focused on FSM/Phase 0.5 do not care about leaderboard data.
+vi.mock('@/lib/domain-hooks/useGameLeaderboard', () => ({
+  useGameLeaderboard: () => ({
+    data: null,
+    isLoading: false,
+    isError: false,
+    isSuccess: true,
+  }),
+  GAME_LEADERBOARD_QUERY_KEY: (gameId: string) => ['game-leaderboard', gameId, null, 10] as const,
+}));
+
 // ─── Visual fixture mock ──────────────────────────────────────────────────
 
 let mockIsVisualTestBuild = false;
@@ -120,6 +132,7 @@ const MESSAGES: Record<string, string> = {
   'pages.gameDetail.tabs.rules': 'Regole',
   'pages.gameDetail.tabs.faqs': 'FAQ',
   'pages.gameDetail.tabs.sessions': 'Sessioni',
+  'pages.gameDetail.tabs.stats': 'Statistiche',
   'pages.gameDetail.tabs.agents': 'Agenti',
   'pages.gameDetail.tabs.documents': 'Documenti',
   'pages.gameDetail.states.loading.ariaLabel': 'Caricamento gioco',
@@ -207,6 +220,21 @@ const MESSAGES: Record<string, string> = {
   'pages.gameDetail.info.specsPublisher': 'Editore',
   'pages.gameDetail.info.specsRatingBgg': 'Rating BGG',
   'pages.gameDetail.info.specsMinutesUnit': 'min',
+  // Issue #1466 — Stats tab (play-KPI + leaderboard + community gate)
+  'pages.gameDetail.stats.winRate': 'Win rate',
+  'pages.gameDetail.stats.timesPlayed': 'Partite',
+  'pages.gameDetail.stats.lastPlayed': 'Ultima',
+  'pages.gameDetail.stats.lastPlayedNever': 'Mai',
+  'pages.gameDetail.stats.lastPlayedDaysAgoUnit': 'g fa',
+  'pages.gameDetail.stats.leaderboardTitle': 'Classifica giocatori',
+  'pages.gameDetail.stats.leaderboardPlays': 'partite',
+  'pages.gameDetail.stats.leaderboardAvg': 'avg',
+  'pages.gameDetail.stats.leaderboardWins': 'vittorie',
+  'pages.gameDetail.stats.leaderboardEmpty': 'Nessuna classifica disponibile',
+  'pages.gameDetail.stats.communityGateTitle': 'Aggiungi alla tua libreria',
+  'pages.gameDetail.stats.communityGateDescription':
+    'Aggiungi questo gioco per sbloccare statistiche e classifica giocatori.',
+  'pages.gameDetail.stats.communityGateCta': '+ Aggiungi a libreria',
 };
 
 function renderWithIntl(ui: ReactElement) {

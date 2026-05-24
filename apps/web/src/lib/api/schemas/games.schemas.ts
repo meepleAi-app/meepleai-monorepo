@@ -55,6 +55,29 @@ export type PaginatedGamesResponse = z.infer<typeof PaginatedGamesResponseSchema
 export const GamesArrayResponseSchema = z.array(GameSchema);
 export type GamesArrayResponse = z.infer<typeof GamesArrayResponseSchema>;
 
+// ========== Game Leaderboard (Issue #1467) ==========
+
+export const GameLeaderboardEntrySchema = z.object({
+  playerId: z.string().uuid(),
+  displayName: z.string(),
+  initials: z.string(),
+  wins: z.number().int().nonnegative(),
+  plays: z.number().int().nonnegative(),
+  avgScore: z.number().nullable(),
+  lastPlayedAt: z.string().datetime({ offset: true }),
+});
+
+export type GameLeaderboardEntry = z.infer<typeof GameLeaderboardEntrySchema>;
+
+export const GameLeaderboardResponseSchema = z.object({
+  gameId: z.string().uuid(),
+  entries: z.array(GameLeaderboardEntrySchema),
+  returnedCount: z.number().int().nonnegative(),
+  since: z.string().datetime({ offset: true }).nullable(),
+});
+
+export type GameLeaderboardResponse = z.infer<typeof GameLeaderboardResponseSchema>;
+
 // ========== Game Sessions ==========
 
 export const SessionPlayerDtoSchema = z.object({

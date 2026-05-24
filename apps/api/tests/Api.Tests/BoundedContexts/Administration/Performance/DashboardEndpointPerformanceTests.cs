@@ -360,20 +360,9 @@ public class DashboardEndpointPerformanceTests : IAsyncLifetime
         {
             var gameId = Guid.NewGuid();
 
-            var game = new SharedGameEntity
-            {
-                Id = gameId,
-                Title = $"Test Game {i}",
-                MinPlayers = 2,
-                MaxPlayers = 4,
-                PlayingTimeMinutes = 60,
-                                YearPublished = 2024,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            dbContext.SharedGames.Add(game);
-
-            // Create corresponding SharedGame (FK target for UserLibraryEntry.SharedGameId)
+            // Post-Phase 2d: GameEntity is gone; a single SharedGameEntity row per Id
+            // is sufficient. The legacy double-add (minimal + full, same gameId) made EF
+            // throw "instance with the same key value is already being tracked".
             var sharedGame = new SharedGameEntity
             {
                 Id = gameId,

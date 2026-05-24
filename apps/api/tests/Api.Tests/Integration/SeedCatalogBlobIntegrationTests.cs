@@ -36,22 +36,16 @@ public sealed class SeedCatalogBlobIntegrationTests
         //  we only care about the bridge row PdfSeeder queries via gameMap)
         using var db = TestDbContextFactory.CreateInMemoryDbContext();
 
-        var gameEntityId = Guid.NewGuid();
+        // Post-Phase 2d: GameEntity is gone; the gameMap entry is now a SharedGameId
+        // directly. PdfSeeder's gameIdToSharedId lookup collapses to an identity map,
+        // so a single SharedGameEntity row is sufficient and assertions must use that
+        // single Id (no longer a separate "sharedGameId" distinct from "gameEntityId").
         var sharedGameId = Guid.NewGuid();
         const int bggId = 96848;
 
-        // PdfSeeder filters Games by `SharedGameId != null` (see Catalog/PdfSeeder.cs#L72),
-        // so the test must mirror what GameSeeder produces in prod: a SharedGameEntity
-        // row linked from GameEntity.SharedGameId. Without it, gameIdToSharedId is empty
-        // and every manifest entry gets skipped → 0 PdfDocumentEntity rows created.
-        db.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
-        {
-            Id = sharedGameId,
-            Title = "Mage Knight Board Game",
-        });
         db.SharedGames.Add(new SharedGameEntity
         {
-            Id = gameEntityId,
+            Id = sharedGameId,
             Title = "Mage Knight Board Game",
             CreatedAt = DateTime.UtcNow,
             BggId = bggId,
@@ -78,8 +72,9 @@ public sealed class SeedCatalogBlobIntegrationTests
             }
         };
 
-        // gameMap is what GameSeeder would produce — BggId → GameEntity.Id
-        var gameMap = new Dictionary<int, Guid> { [bggId] = gameEntityId };
+        // gameMap is what GameSeeder would produce — BggId → SharedGameEntity.Id
+        // (post-Phase 2d, GameEntity is gone and gameId == SharedGameId).
+        var gameMap = new Dictionary<int, Guid> { [bggId] = sharedGameId };
 
         _seedBlob.Setup(x => x.IsConfigured).Returns(true);
         _seedBlob.Setup(x => x.ExistsAsync(
@@ -97,7 +92,7 @@ public sealed class SeedCatalogBlobIntegrationTests
             .ReturnsAsync(new BlobStorageResult(
                 Success: true,
                 FileId: pdfFileId.ToString(),
-                FilePath: $"/blobs/{gameEntityId}/{pdfFileId:N}",
+                FilePath: $"/blobs/{sharedGameId}/{pdfFileId:N}",
                 FileSizeBytes: 4));
 
         // Act
@@ -129,9 +124,8 @@ public sealed class SeedCatalogBlobIntegrationTests
         pdf.ProcessingPriority.Should().Be("Normal");
         pdf.FilePath.Should().NotBeNullOrEmpty();
 
-        // Verify the games bridge row is intact (the backfill migration
-        // propagates SharedGameId to pdf_documents.SharedGameId at deploy time).
-        var game = await db.SharedGames.FindAsync(gameEntityId);
+        // Verify the SharedGameEntity row is intact.
+        var game = await db.SharedGames.FindAsync(sharedGameId);
         game.Should().NotBeNull();
     }
 
@@ -141,15 +135,10 @@ public sealed class SeedCatalogBlobIntegrationTests
         // Arrange — 3 games: 2 in manifest with gameMap, 1 in manifest without
         using var db = TestDbContextFactory.CreateInMemoryDbContext();
 
+        // Post-Phase 2d: GameEntity is gone; one SharedGameEntity per game suffices.
         var bcGameId = Guid.NewGuid();
         var mkGameId = Guid.NewGuid();
-        var bcSharedId = Guid.NewGuid();
-        var mkSharedId = Guid.NewGuid();
 
-        // PdfSeeder requires Game.SharedGameId to be populated — see EndToEndSingleGame test for rationale.
-        db.SharedGames.AddRange(
-            new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity { Id = bcSharedId, Title = "Barrage" },
-            new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity { Id = mkSharedId, Title = "Mage Knight Board Game" });
         db.SharedGames.AddRange(
             new SharedGameEntity { Id = bcGameId, Title = "Barrage", CreatedAt = DateTime.UtcNow, BggId = 251247 },
             new SharedGameEntity { Id = mkGameId, Title = "Mage Knight Board Game", CreatedAt = DateTime.UtcNow, BggId = 96848 });
@@ -217,17 +206,11 @@ public sealed class SeedCatalogBlobIntegrationTests
         // Arrange
         using var db = TestDbContextFactory.CreateInMemoryDbContext();
 
-        var gameEntityId = Guid.NewGuid();
+        // Post-Phase 2d: GameEntity is gone; one SharedGameEntity per game suffices.
         var sharedGameId = Guid.NewGuid();
-        // PdfSeeder requires Game.SharedGameId to be populated — see EndToEndSingleGame test for rationale.
-        db.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
-        {
-            Id = sharedGameId,
-            Title = "Barrage",
-        });
         db.SharedGames.Add(new SharedGameEntity
         {
-            Id = gameEntityId,
+            Id = sharedGameId,
             Title = "Barrage",
             CreatedAt = DateTime.UtcNow,
             BggId = 251247,
@@ -252,7 +235,7 @@ public sealed class SeedCatalogBlobIntegrationTests
                 }
             }
         };
-        var gameMap = new Dictionary<int, Guid> { [251247] = gameEntityId };
+        var gameMap = new Dictionary<int, Guid> { [251247] = sharedGameId };
 
         _seedBlob.Setup(x => x.IsConfigured).Returns(true);
         _seedBlob.Setup(x => x.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

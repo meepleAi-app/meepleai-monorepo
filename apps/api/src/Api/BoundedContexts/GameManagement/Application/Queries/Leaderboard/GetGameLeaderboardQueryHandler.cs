@@ -36,6 +36,13 @@ internal sealed class GetGameLeaderboardQueryHandler : IQueryHandler<GetGameLead
     {
         ArgumentNullException.ThrowIfNull(query);
 
+        // Normalize the optional filter to UTC so the cache key is timezone-stable and the echoed
+        // value serializes with a 'Z' offset (the FE Zod schema requires an offset).
+        if (query.Since.HasValue)
+        {
+            query = query with { Since = DateTime.SpecifyKind(query.Since.Value, DateTimeKind.Utc) };
+        }
+
         // Response varies per caller (visibility scope) and per filter, so the cache key includes both.
         var cacheKey = $"game-leaderboard:{query.GameId}:user:{query.CurrentUserId}:since:{query.Since?.Ticks ?? 0}:limit:{query.Limit}";
 
@@ -114,7 +121,8 @@ internal sealed class GetGameLeaderboardQueryHandler : IQueryHandler<GetGameLead
             Wins = wins,
             Plays = group.Count(),
             AvgScore = pointValues.Count > 0 ? pointValues.Average() : null,
-            LastPlayedAt = group.Max(x => x.SessionDate),
+            // Force UTC kind so System.Text.Json emits a 'Z' offset (the FE Zod schema requires it).
+            LastPlayedAt = DateTime.SpecifyKind(group.Max(x => x.SessionDate), DateTimeKind.Utc),
         };
     }
 

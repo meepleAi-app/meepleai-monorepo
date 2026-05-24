@@ -328,6 +328,11 @@ internal static class GameEndpoints
         CancellationToken ct)
     {
         var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
         var query = new GetGameLeaderboardQuery(id, userId, since, limit ?? 10);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 

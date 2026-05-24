@@ -4,7 +4,9 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Application;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Application.DTOs.Leaderboard;
 using Api.BoundedContexts.GameManagement.Application.Queries;
+using Api.BoundedContexts.GameManagement.Application.Queries.Leaderboard;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
@@ -84,6 +86,16 @@ internal static class GameEndpoints
         .WithTags("Games", "Rules")
         .WithSummary("Get game rule specifications")
         .WithDescription("Returns all rule specification versions for a game. Supports Rules tab in Game Detail Page. Requires authentication.");
+
+        // Get social leaderboard for a game (DDD/CQRS)
+        // Issue #1467: Supports the Stats-tab leaderboard in the Game Detail Page
+        group.MapGet("/games/{id}/leaderboard", HandleGetGameLeaderboard)
+        .RequireAuthenticatedUser()
+        .Produces<GameLeaderboardResponse>(200)
+        .Produces(401)
+        .WithTags("Games")
+        .WithSummary("Get game social leaderboard")
+        .WithDescription("Returns the top registered players ranked by wins across the play records visible to the caller (own records plus records of groups the caller belongs to). Supports ?since= and ?limit= (1..50, default 10). Requires authentication.");
 
         // Get AI agents available for a game
         // Issue #2677: Frontend uses this endpoint for game detail page agent list
@@ -305,6 +317,21 @@ internal static class GameEndpoints
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return result != null ? Results.Ok(result) : Results.NotFound();
+    }
+
+    private static async Task<IResult> HandleGetGameLeaderboard(
+        Guid id,
+        [FromQuery] DateTime? since,
+        [FromQuery] int? limit,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var userId = httpContext.User.GetUserId();
+        var query = new GetGameLeaderboardQuery(id, userId, since, limit ?? 10);
+        var result = await mediator.Send(query, ct).ConfigureAwait(false);
+
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleGetGameRules(

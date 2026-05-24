@@ -988,6 +988,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         return new PdfDocumentEntity
         {
             Id = pdfId,
+            SharedGameId = gameId, // Post-Phase 2d: PdfDocument FKs straight to shared_games via SharedGameId
             UploadedByUserId = uploadedBy,
             FileName = fileName,
             FilePath = $"/test/{fileName}",

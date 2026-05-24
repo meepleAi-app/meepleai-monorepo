@@ -62,6 +62,7 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
+            SharedGameId = gameId, // FK_document_collections_shared_games_SharedGameId (IsRequired)
             Name = "Gloomhaven Campaign Rules",
             Description = "User-created collection",
             CreatedByUserId = userId,
@@ -173,6 +174,7 @@ public class DocumentCollectionUserRestrictionTests : IAsyncLifetime
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
+            SharedGameId = sharedGame.Id, // FK_document_collections_shared_games_SharedGameId (IsRequired)
             Name = "Pandemic Rules",
             CreatedByUserId = userId,
             DocumentsJson = "[]"

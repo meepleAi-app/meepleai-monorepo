@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 
 import { DashboardEngineProvider } from '@/components/dashboard';
+import { AdminSidebar } from '@/components/layout/AdminSidebar/AdminSidebar';
 import { AdminSideDrawer } from '@/components/layout/AdminSideDrawer/AdminSideDrawer';
 import { SearchOverlay } from '@/components/layout/SearchOverlay';
 import { TopBar } from '@/components/layout/UserShell/TopBar';
@@ -23,9 +24,12 @@ export function AdminShell({ children }: AdminShellProps) {
         adminMode
       />
 
-      <main id="main-content" className="flex-1 overflow-y-auto overflow-x-clip">
-        <DashboardEngineProvider>{children}</DashboardEngineProvider>
-      </main>
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        <AdminSidebar />
+        <main id="main-content" className="flex-1 overflow-y-auto overflow-x-clip">
+          <DashboardEngineProvider>{children}</DashboardEngineProvider>
+        </main>
+      </div>
 
       <AdminSideDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />

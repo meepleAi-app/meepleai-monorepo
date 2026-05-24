@@ -47,6 +47,7 @@ export function Stars({ value, showNumeric, ariaLabel, className }: StarsProps):
         </span>
         <span
           aria-hidden="true"
+          // text-amber-500: intentional hue — no semantic star-color token yet; revisit in DS-16
           className="absolute inset-0 overflow-hidden text-base text-amber-500"
           style={{ width: `${percent}%` }}
         >

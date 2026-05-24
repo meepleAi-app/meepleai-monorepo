@@ -114,17 +114,24 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
     {
         await EnsureUserSeededAsync();
 
-        var gameId = Guid.NewGuid();
+        // The optional sharedGameId lets callers reuse a pre-existing SharedGame row
+        // (Handle_WithSharedGameId_… seeds the game externally first). When omitted,
+        // a fresh row is created so the PdfDocument.SharedGameId FK is satisfied.
+        var gameId = sharedGameId ?? Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        _dbContext!.SharedGames.Add(new SharedGameEntity
+        if (sharedGameId is null)
         {
-            Id = gameId,
-            Title = "Gloomhaven",
-        });
-        _dbContext.PdfDocuments.Add(new PdfDocumentEntity
+            _dbContext!.SharedGames.Add(new SharedGameEntity
+            {
+                Id = gameId,
+                Title = "Gloomhaven",
+            });
+        }
+        _dbContext!.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
+            SharedGameId = gameId, // FK_pdf_documents_shared_games_SharedGameId (post-Phase 2d)
             FileName = "gloomhaven.pdf",
             FilePath = "/uploads/gloomhaven.pdf",
             UploadedByUserId = UserId,
@@ -193,6 +200,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = targetPdfId,
+            SharedGameId = gameId, // FK_pdf_documents_shared_games_SharedGameId (post-Phase 2d)
             FileName = "pandemic.pdf",
             FilePath = "/uploads/pandemic.pdf",
             UploadedByUserId = UserId,
@@ -201,6 +209,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = otherPdfId,
+            SharedGameId = gameId, // FK_pdf_documents_shared_games_SharedGameId (post-Phase 2d)
             FileName = "pandemic-expansion.pdf",
             FilePath = "/uploads/pandemic-expansion.pdf",
             UploadedByUserId = UserId,

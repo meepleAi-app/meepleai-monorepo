@@ -122,17 +122,23 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
     {
         await EnsureAdminUserSeededAsync();
 
-        var gameId = Guid.NewGuid();
+        // The optional sharedGameId lets callers (WizardLaunch_WithSharedGameId_…)
+        // reuse a pre-existing SharedGame row. When omitted, a fresh row is created.
+        var gameId = sharedGameId ?? Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        _dbContext!.SharedGames.Add(new SharedGameEntity
+        if (sharedGameId is null)
         {
-            Id = gameId,
-            Title = gameName,
-        });
-        _dbContext.PdfDocuments.Add(new PdfDocumentEntity
+            _dbContext!.SharedGames.Add(new SharedGameEntity
+            {
+                Id = gameId,
+                Title = gameName,
+            });
+        }
+        _dbContext!.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
+            SharedGameId = gameId, // FK_pdf_documents_shared_games_SharedGameId (post-Phase 2d)
             FileName = $"{gameName.ToLowerInvariant()}.pdf",
             FilePath = $"/uploads/{gameName.ToLowerInvariant()}.pdf",
             UploadedByUserId = AdminUserId,
@@ -318,6 +324,7 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
         _dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
+            SharedGameId = gameBId, // PDF appartiene a gameB per IDOR test (FK_pdf_documents_shared_games)
             FileName = "game-b.pdf",
             FilePath = "/uploads/game-b.pdf",
             UploadedByUserId = AdminUserId,

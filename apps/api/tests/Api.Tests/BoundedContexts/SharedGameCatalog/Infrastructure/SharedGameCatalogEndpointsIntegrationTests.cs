@@ -93,13 +93,13 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         };
         dbContext.Set<UserEntity>().Add(user);
 
-        // Seed categories
-        var category = new GameCategoryEntity { Id = Guid.NewGuid(), Name = "Strategy", Slug = "strategy" };
-        dbContext.Set<GameCategoryEntity>().Add(category);
-
-        // Seed mechanics
-        var mechanic = new GameMechanicEntity { Id = Guid.NewGuid(), Name = "Deck Building", Slug = "deck-building" };
-        dbContext.Set<GameMechanicEntity>().Add(mechanic);
+        // Issue #1440: migration `AddVisualMetadataToGameCategory` (2026-05-22) seeds
+        // the eight default categories ("Strategy", "Party", "Cooperative", "Deck Building", …)
+        // and an analogous mechanics seed exists. The previous explicit seeds of
+        // "Strategy" / "Deck Building" here violated the unique constraint on
+        // (name) and (slug) — the migration-seeded rows already cover these names.
+        // GetCategories_ReturnsCategories / GetMechanics_ReturnsMechanics rely on
+        // those rows now.
 
         await dbContext.SaveChangesAsync();
     }

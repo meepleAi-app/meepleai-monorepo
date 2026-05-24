@@ -389,12 +389,12 @@ public class DashboardEndpointPerformanceTests : IAsyncLifetime
 
             dbContext.SharedGames.Add(sharedGame);
 
-            // Add to user's library (GameId setter maps to SharedGameId)
+            // Add to user's library (SharedGameId required by XOR CK_UserLibraryEntry_GameSource; GameId is [Ignore]d by EF)
             var libraryEntry = new UserLibraryEntryEntity
             {
                 Id = Guid.NewGuid(),
                 UserId = _testUserId,
-                GameId = gameId,
+                SharedGameId = gameId,
                 AddedAt = DateTime.UtcNow
             };
 

@@ -234,19 +234,13 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
         var gameId = Guid.NewGuid();
         var gameName = $"Test Game {Guid.NewGuid():N}";
 
-        // Create SharedGameEntity first to satisfy PdfDocument FK constraint
-        var gameEntity = new SharedGameEntity
-        {
-            Id = gameId,
-            Title = gameName,
-            CreatedAt = DateTime.UtcNow
-        };
-        _dbContext.SharedGames.Add(gameEntity);
-
-        // Create SharedGameEntity directly (avoids reflection issues)
+        // Post-game-reset Phase 2d: GameEntity was removed and PdfDocument FKs go
+        // directly to shared_games. Single SharedGameEntity insert is enough; the
+        // earlier double-add (one minimal, one full, same Id) caused EF to throw
+        // "instance with the same key value is already being tracked".
         var sharedGameEntity = new SharedGameEntity
         {
-            Id = gameId, // Same ID as GameEntity
+            Id = gameId,
             Title = gameName,
             YearPublished = 2020,
             Description = "Test game for document repository tests",
@@ -263,7 +257,7 @@ public sealed class SharedGameDocumentRepositoryIntegrationTests : IAsyncLifetim
             CreatedAt = DateTime.UtcNow,
             IsDeleted = false
         };
-        _dbContext.Set<SharedGameEntity>().Add(sharedGameEntity);
+        _dbContext.SharedGames.Add(sharedGameEntity);
         await _dbContext.SaveChangesAsync();
 
         // Return domain model (repository will map from entity)

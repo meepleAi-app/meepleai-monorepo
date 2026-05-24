@@ -131,6 +131,7 @@ public sealed class UserStatsEndpointTests : IAsyncLifetime
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
+                SharedGameId = sharedGameId, // XOR constraint CK_UserLibraryEntry_GameSource
                 AddedAt = DateTime.UtcNow,
                 TimesPlayed = 0
             });

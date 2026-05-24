@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 
+import type { UserRole } from '@/types/auth';
+
 import { ADMIN_NAV_GROUPS } from '../admin-nav-config';
 
-const VALID_ROLES = ['superadmin', 'admin', 'editor', 'user'];
+const VALID_ROLES: UserRole[] = ['superadmin', 'admin', 'editor', 'user'];
 
 describe('ADMIN_NAV_GROUPS', () => {
   it('declares exactly the four groups A, B, C, D in order', () => {

@@ -16,7 +16,12 @@ import { useRouter } from 'next/navigation';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { api } from '@/lib/api';
-import { qaStream, QA_EVENT_TYPES, type InlineCitationMatch, type ContinuationData } from '@/lib/api/clients/chatClient';
+import {
+  qaStream,
+  QA_EVENT_TYPES,
+  type InlineCitationMatch,
+  type ContinuationData,
+} from '@/lib/api/clients/chatClient';
 import type { ChatThreadDto, ChatThreadMessageDto } from '@/lib/api/schemas/chat.schemas';
 import { cn } from '@/lib/utils';
 
@@ -105,13 +110,18 @@ function MessageBubble({
             excludeIndices={new Set(message.inlineCitations?.map(c => c.snippetIndex) ?? [])}
           />
         )}
-        {/* Continue button */}
-        {!isUser && message.continuationToken && onContinue && (
-          <ContinueButton
-            onContinue={() => onContinue(message.continuationToken!)}
-            isLoading={isSending ?? false}
-          />
-        )}
+        {/* Continue button — bind the token to a const so the closure captures
+            a non-null value (TypeScript can't preserve the narrow into the
+            arrow function body). */}
+        {!isUser &&
+          message.continuationToken &&
+          onContinue &&
+          (() => {
+            const token = message.continuationToken;
+            return (
+              <ContinueButton onContinue={() => onContinue(token)} isLoading={isSending ?? false} />
+            );
+          })()}
       </div>
     </div>
   );
@@ -266,18 +276,24 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
             abortController.signal
           )) {
             if (event.type === QA_EVENT_TYPES.TOKEN) {
-              const token = typeof event.data === 'string' ? event.data : ((event.data as { token?: string })?.token ?? '');
+              const token =
+                typeof event.data === 'string'
+                  ? event.data
+                  : ((event.data as { token?: string })?.token ?? '');
               if (token) {
                 appendedContent += token;
                 const content = appendedContent;
                 setMessages(prev =>
-                  prev.map(m => m.id === lastAssistant.id ? { ...m, content, continuationToken: undefined } : m)
+                  prev.map(m =>
+                    m.id === lastAssistant.id ? { ...m, content, continuationToken: undefined } : m
+                  )
                 );
               }
             }
           }
-        } catch { /* handled */ }
-        finally {
+        } catch {
+          /* handled */
+        } finally {
           setIsSending(false);
           qaAbortRef.current = null;
         }
@@ -311,6 +327,10 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
 
       // QA stream path: game context available → use RAG QA streaming
       if (thread?.gameId) {
+        // Capture gameId in a const so the async closure below preserves the
+        // narrow (TypeScript can't keep the `thread?.gameId` narrow alive
+        // across the async IIFE boundary).
+        const gameId = thread.gameId;
         setIsSending(true);
         const assistantMsgId = `assistant-${Date.now()}`;
         setMessages(prev => [
@@ -333,7 +353,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
             await api.chat.addMessage(threadId, { content: text, role: 'user' });
 
             for await (const event of qaStream(
-              { gameId: thread.gameId!, query: text, chatId: threadId, responseStyle: 'concise' },
+              { gameId, query: text, chatId: threadId, responseStyle: 'concise' },
               abortController.signal
             )) {
               switch (event.type) {
@@ -341,7 +361,9 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
                   const data = event.data as { citations: InlineCitationMatch[] };
                   if (data.citations) {
                     setMessages(prev =>
-                      prev.map(m => m.id === assistantMsgId ? { ...m, inlineCitations: data.citations } : m)
+                      prev.map(m =>
+                        m.id === assistantMsgId ? { ...m, inlineCitations: data.citations } : m
+                      )
                     );
                   }
                   break;
@@ -350,16 +372,30 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
                   const data = event.data as ContinuationData;
                   if (data.continuationToken) {
                     setMessages(prev =>
-                      prev.map(m => m.id === assistantMsgId ? { ...m, continuationToken: data.continuationToken } : m)
+                      prev.map(m =>
+                        m.id === assistantMsgId
+                          ? { ...m, continuationToken: data.continuationToken }
+                          : m
+                      )
                     );
                   }
                   break;
                 }
                 case QA_EVENT_TYPES.CITATIONS: {
-                  const data = event.data as { citations?: Array<{ text: string; source: string; page: number; line: number; score: number }> };
+                  const data = event.data as {
+                    citations?: Array<{
+                      text: string;
+                      source: string;
+                      page: number;
+                      line: number;
+                      score: number;
+                    }>;
+                  };
                   if (data.citations) {
                     setMessages(prev =>
-                      prev.map(m => m.id === assistantMsgId ? { ...m, snippets: data.citations } : m)
+                      prev.map(m =>
+                        m.id === assistantMsgId ? { ...m, snippets: data.citations } : m
+                      )
                     );
                   }
                   break;
@@ -527,7 +563,12 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
         )}
 
         {messages.map(msg => (
-          <MessageBubble key={msg.id} message={msg} onContinue={handleContinue} isSending={isSending} />
+          <MessageBubble
+            key={msg.id}
+            message={msg}
+            onContinue={handleContinue}
+            isSending={isSending}
+          />
         ))}
 
         {/* Streaming states */}

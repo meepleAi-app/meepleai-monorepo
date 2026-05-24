@@ -24,6 +24,7 @@
 
 import { useMemo, useState, type ReactElement } from 'react';
 
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
@@ -190,13 +191,13 @@ function NotFoundShell({
       </span>
       <h2 className="font-display text-[20px] font-extrabold text-foreground">{title}</h2>
       <p className="max-w-sm text-[14px] text-muted-foreground">{subtitle}</p>
-      <a
+      <Link
         href="/games"
         data-slot="game-detail-not-found-cta"
         className="inline-flex items-center gap-1.5 rounded-md border-none bg-amber-700 px-4 py-2.5 font-display text-[13px] font-extrabold text-white shadow-md transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {cta}
-      </a>
+      </Link>
     </div>
   );
 }
@@ -379,8 +380,10 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
   }
 
   // ── Default render — detail guaranteed non-null (FSM cells 5-9) ──────────
-  // TypeScript: effectiveKind === 'default' → real FSM ensures detail != null
-  // fixture branch also guarantees detail != null
+  // TypeScript: effectiveKind === 'default' → real FSM ensures detail != null.
+  // The fixture branch also guarantees detail != null. The non-null assertion
+  // is intentional and safe: deriveGameDetailUiState has validated detail.
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- FSM invariant
   const safeDetail = detail!;
 
   const tabsConfig = buildTabsConfig(t);

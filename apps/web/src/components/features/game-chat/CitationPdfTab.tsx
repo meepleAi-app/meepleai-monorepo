@@ -22,11 +22,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ReactElement } from 'react';
 
+import clsx from 'clsx';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-
-import clsx from 'clsx';
 
 import { CitationOwnershipUpsell } from '@/components/features/game-chat/CitationOwnershipUpsell';
 import { useCanViewPdf } from '@/hooks/queries/useCanViewPdf';

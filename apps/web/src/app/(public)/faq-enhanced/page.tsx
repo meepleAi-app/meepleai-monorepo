@@ -1,17 +1,18 @@
 // TODO: implement this route (see docs/superpowers/specs/route-gap-analysis.md)
 // Mockup: sp3-faq-enhanced.jsx — functionality already implemented at /faq.
 // This placeholder exists so nav-map.md routes resolve; redirects to /faq.
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 export default function FaqEnhancedPlaceholderPage() {
   const router = useRouter();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.replace("/faq");
+      router.replace('/faq');
     }, 2000);
     return () => clearTimeout(timer);
   }, [router]);

@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 B1 · Editor · /editor</title>
+<!-- @v2 EditorTree · BlockEditor · PreviewFrame · VersionHistoryPanel -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .editor-shell { display: grid; grid-template-columns: 240px 1fr 320px; gap: 12px; height: calc(100vh - 60px); }
+  .ed-col { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+  .ed-toolbar { padding: 8px 12px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 8px; background: var(--bg); font-size: 12px; }
+
+  .tree-row { padding: 5px 12px 5px 28px; font-size: 12.5px; cursor: pointer; color: var(--text-sec); border-left: 2px solid transparent; }
+  .tree-row:hover { background: var(--bg-muted); color: var(--text); }
+  .tree-row.selected { background: hsl(var(--c-game) / .1); color: hsl(var(--c-game)); border-left-color: hsl(var(--c-game)); font-weight: 700; }
+  .tree-group { padding: 6px 12px; font-family: var(--f-display); font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+  .tree-group .em { font-size: 14px; }
+  .tree-group .count { margin-left: auto; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); font-weight: 600; }
+
+  .editor-body { flex: 1; padding: 24px 40px; overflow-y: auto; font-family: var(--f-body); font-size: 14px; line-height: 1.6; }
+  .editor-body h2.doc-h2 { font-family: var(--f-display); font-size: 22px; font-weight: 800; margin: 24px 0 8px; }
+  .editor-body h3.doc-h3 { font-family: var(--f-display); font-size: 16px; font-weight: 700; margin: 18px 0 4px; }
+  .editor-body p { margin: 0 0 10px; }
+  .editor-body .block-row {
+    border-left: 2px solid transparent;
+    padding-left: 12px; margin-left: -14px;
+    position: relative;
+  }
+  .editor-body .block-row:hover { border-left-color: hsl(var(--c-event) / .4); background: var(--bg-muted); }
+  .editor-body .block-row .ed-handle {
+    position: absolute; left: -36px; top: 4px;
+    opacity: 0;
+    display: flex; gap: 2px;
+  }
+  .editor-body .block-row:hover .ed-handle { opacity: 1; }
+  .editor-body .block-row .ed-handle button { width: 18px; height: 18px; border-radius: 4px; background: transparent; border: 0; color: var(--text-muted); cursor: pointer; font-size: 11px; }
+  .editor-body .block-row.editing { background: hsl(var(--c-event) / .04); border-left-color: hsl(var(--c-event)); }
+  .editor-body .keyword { background: hsl(var(--c-kb) / .14); color: hsl(var(--c-kb)); padding: 0 4px; border-radius: 3px; font-weight: 700; }
+
+  .preview-mini {
+    background: var(--bg);
+    border: 1px solid var(--border-light); border-radius: 8px;
+    padding: 14px;
+    font-size: 11.5px;
+    font-family: var(--f-body);
+    line-height: 1.55;
+    max-height: 280px; overflow-y: auto;
+  }
+  .preview-mini h2 { font-family: var(--f-display); font-size: 14px; font-weight: 700; margin: 8px 0 4px; }
+  .preview-mini h3 { font-family: var(--f-display); font-size: 12px; font-weight: 700; margin: 6px 0 3px; }
+  .preview-mini p { margin: 0 0 6px; }
+
+  .toolbar-btn-grp { display: inline-flex; gap: 1px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 1px; }
+  .toolbar-btn-grp button { padding: 4px 8px; background: transparent; border: 0; cursor: pointer; color: var(--text-sec); font-size: 12px; border-radius: 4px; }
+  .toolbar-btn-grp button:hover { background: var(--bg-muted); color: var(--text); }
+  .toolbar-btn-grp button.active { background: hsl(var(--c-event) / .15); color: hsl(var(--c-event)); }
+</style>
+</head>
+<body class="admin-page">
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2></div>
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+  <main>
+    <header class="admin-top">
+      <div><h1>Content editor</h1><div class="crumbs">Editor · 🎲 Brass Birmingham · Rules · Chapter 2 · v3.2-draft</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <span class="status-chip warning">⚪ Auto-save in 12s</span>
+        <span style="font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)">draft · 14 modifiche dal last commit</span>
+        <button class="btn-admin">👁 Preview</button>
+        <button class="btn-admin">📜 Versions</button>
+        <button class="btn-admin primary">✓ Commit &amp; Publish</button>
+      </div>
+    </header>
+
+    <div class="admin-body" style="padding: 12px 16px;">
+      <div class="editor-shell">
+
+        <!-- Left: tree -->
+        <div class="ed-col">
+          <div class="ed-toolbar">
+            <div class="admin-search" style="width: 100%; padding: 4px 8px;"><span>🔍</span><input placeholder="Filtra tree…"></div>
+          </div>
+          <div style="overflow-y: auto">
+            <div class="tree-group"><span class="em">📖</span> Rules <span class="count">14</span></div>
+            <div class="tree-row">Cap.1 Introduzione</div>
+            <div class="tree-row selected">Cap.2 Setup partita ⚪</div>
+            <div class="tree-row">Cap.3 Turno di gioco</div>
+            <div class="tree-row">Cap.4 Azioni</div>
+            <div class="tree-row">Cap.5 Industria</div>
+            <div class="tree-row">Cap.6 Mercato</div>
+            <div class="tree-row">Cap.7 Punti finali</div>
+            <div class="tree-row" style="color: var(--text-muted)">+ 7 capitoli</div>
+
+            <div class="tree-group"><span class="em">❓</span> FAQ <span class="count">42</span></div>
+            <div class="tree-row">FAQ Setup</div>
+            <div class="tree-row">FAQ Mercato</div>
+            <div class="tree-row">FAQ Edge case</div>
+
+            <div class="tree-group"><span class="em">🎭</span> Scenarios <span class="count">3</span></div>
+            <div class="tree-row">Scenario base</div>
+            <div class="tree-row">Scenario solo</div>
+            <div class="tree-row">Scenario 5p</div>
+
+            <div class="tree-group"><span class="em">📑</span> Glossary <span class="count">87</span></div>
+            <div class="tree-row">A-D termini</div>
+            <div class="tree-row">E-K termini</div>
+            <div class="tree-row" style="color: var(--text-muted)">+ 3 sezioni</div>
+          </div>
+        </div>
+
+        <!-- Center: editor -->
+        <div class="ed-col">
+          <div class="ed-toolbar">
+            <div class="toolbar-btn-grp"><button><strong>B</strong></button><button><em>I</em></button><button><u>U</u></button><button><s>S</s></button></div>
+            <div class="toolbar-btn-grp"><button>H2</button><button class="active">H3</button><button>‹/›</button></div>
+            <div class="toolbar-btn-grp"><button>≡</button><button>⊞</button><button>›</button></div>
+            <div class="toolbar-btn-grp"><button>↶</button><button>↷</button></div>
+            <div style="margin-left: auto; font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">⌘B bold · ⌘K link · ⌘/ commands</div>
+          </div>
+          <div class="editor-body">
+            <h2 class="doc-h2">Capitolo 2 · Setup della partita</h2>
+
+            <div class="block-row">
+              <div class="ed-handle"><button>⠿</button></div>
+              <p>Posiziona il tabellone al centro del tavolo, con il lato <strong>Era del Canale</strong> visibile.
+              Ogni giocatore prende il proprio set di <span class="keyword">tessere industria</span> nel colore scelto e le pone davanti a sé.</p>
+            </div>
+
+            <div class="block-row">
+              <div class="ed-handle"><button>⠿</button></div>
+              <p>Mescola le <span class="keyword">carte luogo</span> (16 carte) e distribuisci 4 carte a ogni giocatore.
+              Le restanti formano il mazzo pesca, da cui si pesca all'inizio di ogni round.</p>
+            </div>
+
+            <div class="block-row editing">
+              <div class="ed-handle"><button>⠿</button><button>+</button></div>
+              <h3 class="doc-h3">Setup per 4 giocatori (consigliato)</h3>
+              <p>In partite a 4 giocatori, il giocatore di sinistra del primo turno parte con <strong>17£</strong> invece di 30£ iniziali. Questo bilancia il vantaggio di prima azione per chi parte secondo.</p>
+              <p style="margin-top: 8px; padding: 8px 12px; background: hsl(var(--c-agent) / .08); border-left: 3px solid hsl(var(--c-agent)); border-radius: 0 6px 6px 0; font-size: 13px; color: var(--text-sec)">
+                💡 <strong>House rule comune:</strong> alcuni gruppi danno 25£ a tutti per evitare squilibri. Vedi Glossary &gt; House rules.
+              </p>
+            </div>
+
+            <div class="block-row">
+              <div class="ed-handle"><button>⠿</button></div>
+              <h3 class="doc-h3">Setup per 3 giocatori</h3>
+              <p>Si rimuovono le tessere "tipo II" dal mazzo industria e si limitano le città disponibili a Birmingham, Coventry, Cannock, Walsall, Wolverhampton, Dudley, Stafford, Stone.</p>
+            </div>
+
+            <div class="block-row">
+              <div class="ed-handle"><button>⠿</button></div>
+              <h3 class="doc-h3">Setup solo</h3>
+              <p>Il gioco solitario richiede l'<em>espansione automa</em>. Vedi <a href="#" style="color: hsl(var(--c-event))">Scenario solo</a> per regole complete.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: preview + metadata + version -->
+        <div class="ed-col">
+          <div class="ed-toolbar"><strong style="font-family: var(--f-display); font-size: 13px">Preview</strong><span class="filter-chip active" style="margin-left:auto">app</span><span class="filter-chip">pdf</span></div>
+          <div style="padding: 12px; flex-shrink: 0">
+            <div class="preview-mini">
+              <h2 style="font-family: var(--f-display); margin: 0 0 6px">Setup della partita</h2>
+              <p>Posiziona il tabellone al centro del tavolo, lato Era del Canale visibile. Ogni giocatore prende le proprie tessere industria…</p>
+              <h3>Setup per 4 giocatori</h3>
+              <p>In partite a 4 giocatori, il giocatore di sinistra del primo turno parte con <strong>17£</strong>.</p>
+              <div style="padding: 6px 8px; background: hsl(var(--c-agent) / .08); border-left: 2px solid hsl(var(--c-agent)); margin-top: 6px; font-size: 10px">💡 House rule: 25£ a tutti</div>
+              <h3>Setup per 3 giocatori</h3>
+              <p>Rimuovi tessere "tipo II"…</p>
+            </div>
+          </div>
+
+          <div style="padding: 0 14px; border-top: 1px solid var(--border-light); padding-top: 12px">
+            <div style="font-family: var(--f-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px">Metadata</div>
+            <dl style="display: grid; grid-template-columns: 80px 1fr; gap: 4px; font-size: 11.5px; margin: 0">
+              <dt style="color: var(--text-muted)">Slug</dt><dd style="margin: 0; font-family: var(--f-mono)">rules/cap-02-setup</dd>
+              <dt style="color: var(--text-muted)">Lingua</dt><dd style="margin: 0">IT</dd>
+              <dt style="color: var(--text-muted)">Tags</dt><dd style="margin: 0; display: flex; gap: 4px; flex-wrap: wrap"><span class="filter-chip" style="padding: 1px 6px; font-size: 10px">setup</span><span class="filter-chip" style="padding: 1px 6px; font-size: 10px">base</span></dd>
+              <dt style="color: var(--text-muted)">Linked</dt><dd style="margin: 0">🧰 Scenario base · 📑 Glossary</dd>
+              <dt style="color: var(--text-muted)">Version</dt><dd style="margin: 0; font-family: var(--f-mono)">v3.2-draft</dd>
+              <dt style="color: var(--text-muted)">Status</dt><dd style="margin: 0"><span class="status-chip warning" style="font-size: 10px">Draft</span></dd>
+            </dl>
+          </div>
+
+          <div style="padding: 12px 14px; border-top: 1px solid var(--border-light); margin-top: 12px">
+            <div style="font-family: var(--f-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px">Recent versions</div>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 11.5px">
+              <div style="display: flex; align-items: center; gap: 6px"><span style="font-family: var(--f-mono); font-size: 10px; color: hsl(38 90% 50%); font-weight: 700">v3.2</span><span style="flex: 1">Setup 4p house rule note</span><span style="color: var(--text-muted)">draft</span></div>
+              <div style="display: flex; align-items: center; gap: 6px"><span style="font-family: var(--f-mono); font-size: 10px; color: hsl(var(--c-toolkit)); font-weight: 700">v3.1</span><span style="flex: 1">Fix typo "Dudley"</span><span style="color: var(--text-muted)">5gg fa</span></div>
+              <div style="display: flex; align-items: center; gap: 6px"><span style="font-family: var(--f-mono); font-size: 10px; color: hsl(var(--c-toolkit)); font-weight: 700">v3.0</span><span style="flex: 1">Aggiunta sezione solo</span><span style="color: var(--text-muted)">22gg</span></div>
+              <div style="display: flex; align-items: center; gap: 6px"><span style="font-family: var(--f-mono); font-size: 10px; color: hsl(var(--c-toolkit)); font-weight: 700">v2.4</span><span style="flex: 1">Setup 3p variant</span><span style="color: var(--text-muted)">2mesi</span></div>
+            </div>
+            <button class="btn-admin sm" style="margin-top: 8px; width: 100%">Vedi tutte (18) →</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+<script src="admin-nav.js"></script><script>renderAdminNav('editor');</script>
+</body></html>

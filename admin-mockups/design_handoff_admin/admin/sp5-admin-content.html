@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 A3 · Admin Content · /admin/content</title>
+<!-- @v2 ModerationQueue · ContentStatusChip · AdminDataTable (reuse) -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .content-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; }
+  .game-cover { width: 36px; height: 36px; border-radius: 6px; display: grid; place-items: center; font-size: 18px; }
+  .mod-row { display: grid; grid-template-columns: 36px 1fr 100px 90px 70px 120px; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border-light); align-items: center; }
+  .mod-row:hover { background: var(--bg-muted); }
+  .flagged { font-size: 12px; }
+  .flag-reason { font-family: var(--f-mono); font-size: 10px; padding: 2px 6px; border-radius: 4px; background: hsl(var(--c-event) / .12); color: hsl(var(--c-event)); }
+  .comment-card { background: var(--bg); border: 1px solid var(--border-light); border-left: 3px solid hsl(var(--c-event)); border-radius: 6px; padding: 12px; margin-bottom: 8px; font-size: 12.5px; }
+  .comment-card .meta { font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); margin-bottom: 4px; }
+  .comment-card .body { line-height: 1.5; color: var(--text); }
+  .comment-card .actions { display: flex; gap: 6px; margin-top: 8px; }
+</style>
+</head>
+<body class="admin-page">
+
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2><p>Moderazione contenuti richiede desktop.</p></div>
+
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+
+  <main>
+    <header class="admin-top">
+      <div><h1>Content moderation</h1><div class="crumbs">Admin · Content · 14 in queue · 3 flag aperti</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <div class="admin-search"><span>🔍</span><input placeholder="Cerca content…"><kbd>⌘K</kbd></div>
+        <button class="btn-admin">⤓ Export queue</button>
+      </div>
+    </header>
+
+    <div class="admin-body">
+
+      <div class="admin-tabs">
+        <button class="admin-tab active">🎲 Games <span class="count">8</span></button>
+        <button class="admin-tab">🧰 Toolkit condivisi <span class="count">4</span></button>
+        <button class="admin-tab">📚 KB docs <span class="count">2</span></button>
+        <button class="admin-tab">💬 Comments flagged <span class="count">3</span></button>
+      </div>
+
+      <!-- Filters -->
+      <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap">
+        <span class="filter-chip active">Status: in review <span class="x">▾</span></span>
+        <span class="filter-chip">Year: tutti <span class="x">▾</span></span>
+        <span class="filter-chip">Designer: tutti <span class="x">▾</span></span>
+        <span class="filter-chip">Rating BGG ≥ 7.0 <span class="x">▾</span></span>
+        <span class="filter-chip">+ Filtro</span>
+      </div>
+
+      <!-- Games moderation queue -->
+      <div class="content-card">
+        <div class="admin-panel-head">
+          <h3>Queue moderazione · 8 giochi in attesa</h3>
+          <div style="margin-left: auto; display: flex; gap: 6px">
+            <button class="btn-admin sm">✓ Approve all</button>
+            <button class="btn-admin sm danger">✕ Reject all</button>
+          </div>
+        </div>
+
+        <div class="mod-row" style="background: var(--bg); font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 700">
+          <div></div><div>Gioco</div><div>Submitted</div><div>Designer</div><div>Rating</div><div>Status</div>
+        </div>
+
+        <div class="mod-row">
+          <div class="game-cover" style="background: linear-gradient(135deg, hsl(28, 84%, 55%), hsl(28, 84%, 35%))">🦅</div>
+          <div>
+            <div style="font-family: var(--f-display); font-weight: 700; font-size: 13px">Wingspan: Antarctic Birds</div>
+            <div style="font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)"><code>g-wingspan-antarctic</code> · expansion · 2026 · 30-50min</div>
+            <div style="margin-top: 4px; display: flex; gap: 6px; align-items: center">
+              <span class="role-chip user">submitted by Elena Parisi</span>
+              <span class="flag-reason">⚠ 1 chunk parsing failed</span>
+            </div>
+          </div>
+          <div style="font-family: var(--f-mono); font-size: 11px">2026-05-22<br/><span style="color: var(--text-muted)">2gg fa</span></div>
+          <div style="font-family: var(--f-display); font-size: 12px">Elizabeth<br/>Hargrave</div>
+          <div style="font-family: var(--f-mono); font-size: 13px; font-weight: 700; color: hsl(var(--c-toolkit))">8.2 ★</div>
+          <div style="display: flex; gap: 4px">
+            <button class="btn-admin sm" title="Preview">👁</button>
+            <button class="btn-admin sm success" title="Approve">✓</button>
+            <button class="btn-admin sm danger" title="Reject">✕</button>
+            <button class="btn-admin sm" title="Request changes">✎</button>
+          </div>
+        </div>
+
+        <div class="mod-row">
+          <div class="game-cover" style="background: linear-gradient(135deg, hsl(348, 78%, 52%), hsl(348, 78%, 32%))">🏰</div>
+          <div>
+            <div style="font-family: var(--f-display); font-weight: 700; font-size: 13px">Brass: Lancashire Reborn</div>
+            <div style="font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)"><code>g-brass-lancashire-r</code> · standalone · 2026 · 60-120min</div>
+          </div>
+          <div style="font-family: var(--f-mono); font-size: 11px">2026-05-20<br/><span style="color: var(--text-muted)">4gg fa</span></div>
+          <div style="font-family: var(--f-display); font-size: 12px">Martin<br/>Wallace</div>
+          <div style="font-family: var(--f-mono); font-size: 13px; font-weight: 700; color: hsl(var(--c-toolkit))">8.7 ★</div>
+          <div style="display: flex; gap: 4px">
+            <button class="btn-admin sm">👁</button>
+            <button class="btn-admin sm success">✓</button>
+            <button class="btn-admin sm danger">✕</button>
+            <button class="btn-admin sm">✎</button>
+          </div>
+        </div>
+
+        <div class="mod-row">
+          <div class="game-cover" style="background: linear-gradient(135deg, hsl(235, 64%, 56%), hsl(262, 83%, 58%))">🌌</div>
+          <div>
+            <div style="font-family: var(--f-display); font-weight: 700; font-size: 13px">Spirit Island: Branch &amp; Claw</div>
+            <div style="font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)"><code>g-spirit-branch-claw</code> · expansion · 2026 · 90-120min</div>
+            <div style="margin-top: 4px"><span class="flag-reason">⚠ duplicate? matches g-spirit-bc-old al 87%</span></div>
+          </div>
+          <div style="font-family: var(--f-mono); font-size: 11px">2026-05-18<br/><span style="color: var(--text-muted)">6gg fa</span></div>
+          <div style="font-family: var(--f-display); font-size: 12px">R. Eric<br/>Reuss</div>
+          <div style="font-family: var(--f-mono); font-size: 13px; font-weight: 700; color: hsl(var(--c-toolkit))">8.6 ★</div>
+          <div style="display: flex; gap: 4px">
+            <button class="btn-admin sm">👁</button>
+            <button class="btn-admin sm success">✓</button>
+            <button class="btn-admin sm danger">✕</button>
+            <button class="btn-admin sm">✎</button>
+          </div>
+        </div>
+
+        <div class="mod-row">
+          <div class="game-cover" style="background: linear-gradient(135deg, hsl(168, 60%, 38%), hsl(142, 54%, 42%))">🦖</div>
+          <div>
+            <div style="font-family: var(--f-display); font-weight: 700; font-size: 13px">Ark Nova: Marine Worlds</div>
+            <div style="font-family: var(--f-mono); font-size: 11px; color: var(--text-muted)"><code>g-ark-nova-marine</code> · expansion · 2026 · 90-150min</div>
+          </div>
+          <div style="font-family: var(--f-mono); font-size: 11px">2026-05-15<br/><span style="color: var(--text-muted)">9gg fa</span></div>
+          <div style="font-family: var(--f-display); font-size: 12px">Mathias<br/>Wigge</div>
+          <div style="font-family: var(--f-mono); font-size: 13px; font-weight: 700; color: hsl(var(--c-toolkit))">8.4 ★</div>
+          <div style="display: flex; gap: 4px">
+            <button class="btn-admin sm">👁</button>
+            <button class="btn-admin sm success">✓</button>
+            <button class="btn-admin sm danger">✕</button>
+            <button class="btn-admin sm">✎</button>
+          </div>
+        </div>
+
+        <div class="mod-row">
+          <div class="game-cover" style="background: var(--bg-muted); color: var(--text-muted)">+4</div>
+          <div style="color: var(--text-muted); font-family: var(--f-display); font-size: 12px">Altri 4 giochi in coda — scroll per vedere</div>
+          <div></div><div></div><div></div><div></div>
+        </div>
+      </div>
+
+      <!-- Comments flagged section (compact) -->
+      <div class="content-card" style="margin-top: 14px">
+        <div class="admin-panel-head">
+          <h3>💬 Commenti segnalati · 3 in queue</h3>
+          <span class="meta" style="margin-left: auto">ultime 48h</span>
+        </div>
+        <div style="padding: 14px">
+          <div class="comment-card">
+            <div class="meta">
+              <strong style="color: var(--text-sec); font-family: var(--f-display)">"Anonimo73"</strong> su <strong style="color: hsl(var(--c-game))">Spirit Island Branch &amp; Claw</strong> · 2026-05-23 19:18 · 🚩 segnalato 4 volte (spam + offensivo)
+            </div>
+            <div class="body">"questo gioco è una sòla! perché lo recensite [REDACTED] è solo riciclato come tutti i giochi made by Stonemaier, andate tutti a [REDACTED]…"</div>
+            <div class="actions">
+              <button class="btn-admin sm success">✓ Approva</button>
+              <button class="btn-admin sm danger">🗑 Rimuovi</button>
+              <button class="btn-admin sm">🔇 Mute autore 7gg</button>
+              <button class="btn-admin sm danger">🚫 Ban autore</button>
+              <button class="btn-admin sm ghost">📋 Copia per report</button>
+            </div>
+          </div>
+
+          <div class="comment-card">
+            <div class="meta">
+              <strong style="color: var(--text-sec); font-family: var(--f-display)">"MarcoSpolverini"</strong> su <strong style="color: hsl(var(--c-game))">Brass Birmingham</strong> · 2026-05-23 11:42 · 🚩 segnalato 2 volte (off-topic + auto-promo)
+            </div>
+            <div class="body">"Per chi vuole imparare Brass, ho fatto un corso completo su Twitch ogni martedì sera, link in bio @MarcoSpolverini, costo 19€/mese ma sconto del 30% se usate il codice…"</div>
+            <div class="actions">
+              <button class="btn-admin sm success">✓ Approva</button>
+              <button class="btn-admin sm danger">🗑 Rimuovi</button>
+              <button class="btn-admin sm">🔇 Mute autore 7gg</button>
+              <button class="btn-admin sm danger">🚫 Ban autore</button>
+            </div>
+          </div>
+
+          <div class="comment-card" style="border-left-color: hsl(38 90% 50%)">
+            <div class="meta">
+              <strong style="color: var(--text-sec); font-family: var(--f-display)">"FedericoVR"</strong> su <strong style="color: hsl(var(--c-game))">Tainted Grail FoA</strong> · 2026-05-22 22:34 · 🚩 segnalato 1 volta (spoiler)
+            </div>
+            <div class="body">"ATTENZIONE SPOILER finale del Capitolo 12: il personaggio di [SPOILER] viene tradito da [SPOILER] alla scena dell'altare e poi…"</div>
+            <div class="actions">
+              <button class="btn-admin sm success">✓ Approva con spoiler-tag</button>
+              <button class="btn-admin sm danger">🗑 Rimuovi</button>
+              <button class="btn-admin sm">✎ Edit spoiler block</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="admin-nav.js"></script><script>renderAdminNav('content');</script>
+</body></html>

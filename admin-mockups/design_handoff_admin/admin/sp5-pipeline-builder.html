@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="it" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SP5 B2 · Pipeline Builder · /pipeline-builder</title>
+<!-- @v2 FlowCanvas · NodePalette · NodeConfigPanel · PipelineTestOutput -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/><link rel="stylesheet" href="components.css"/><link rel="stylesheet" href="admin-base.css"/>
+<style>
+  .pb-shell { display: grid; grid-template-columns: 220px 1fr 300px; gap: 12px; height: calc(100vh - 60px); }
+  .pb-col { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+  .pb-toolbar { padding: 8px 12px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 8px; background: var(--bg); }
+
+  .palette-group { padding: 8px 12px 4px; font-family: var(--f-mono); font-size: 9.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+  .palette-node { padding: 8px 12px; margin: 0 8px 4px; border-radius: 6px; cursor: grab; font-family: var(--f-display); font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+  .palette-node:hover { background: var(--bg-muted); }
+  .palette-node .pn-em { font-size: 16px; }
+  .palette-node.retrieval { color: hsl(var(--c-kb)); border-left: 3px solid hsl(var(--c-kb)); }
+  .palette-node.processing { color: hsl(var(--c-toolkit)); border-left: 3px solid hsl(var(--c-toolkit)); }
+  .palette-node.output { color: hsl(var(--c-agent)); border-left: 3px solid hsl(var(--c-agent)); }
+  .palette-node.integration { color: hsl(var(--c-chat)); border-left: 3px solid hsl(var(--c-chat)); }
+
+  .canvas {
+    flex: 1; position: relative;
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle, var(--border-light) 1px, transparent 1px);
+    background-size: 20px 20px;
+    overflow: auto;
+  }
+  .canvas-inner { position: relative; min-width: 1200px; min-height: 700px; }
+  .node {
+    position: absolute;
+    width: 200px;
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 12px;
+    box-shadow: var(--shadow-md);
+    cursor: grab;
+  }
+  .node.selected { border-color: hsl(var(--c-event)); box-shadow: 0 0 0 3px hsl(var(--c-event) / .2), var(--shadow-md); }
+  .node.error { border-color: hsl(var(--c-event)); }
+  .node .ntype { font-family: var(--f-mono); font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
+  .node .ntype.retrieval { color: hsl(var(--c-kb)); }
+  .node .ntype.processing { color: hsl(var(--c-toolkit)); }
+  .node .ntype.output { color: hsl(var(--c-agent)); }
+  .node .nname { font-family: var(--f-display); font-weight: 800; font-size: 13px; margin-bottom: 4px; }
+  .node .nprops { font-family: var(--f-mono); font-size: 10.5px; color: var(--text-muted); line-height: 1.4; }
+  .node .ndot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted); border: 2px solid var(--bg-card); position: absolute; }
+  .node .ndot.left { left: -5px; top: 50%; transform: translateY(-50%); }
+  .node .ndot.right { right: -5px; top: 50%; transform: translateY(-50%); }
+  .node .ndot.in { background: hsl(var(--c-kb)); }
+  .node .ndot.out { background: hsl(var(--c-agent)); }
+  .node .nstats { display: flex; gap: 8px; font-family: var(--f-mono); font-size: 9.5px; color: var(--text-muted); margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-light); }
+
+  .config-section { padding: 14px; border-bottom: 1px solid var(--border-light); }
+  .config-section h4 { margin: 0 0 8px; font-family: var(--f-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+
+  .test-out { padding: 12px 14px; background: var(--bg-sunken); font-family: var(--f-mono); font-size: 11px; color: var(--text-sec); border-radius: 6px; line-height: 1.6; max-height: 200px; overflow-y: auto; }
+  .test-out .k { color: hsl(var(--c-agent)); }
+  .test-out .s { color: hsl(var(--c-kb)); }
+  .test-out .n { color: hsl(var(--c-event)); }
+</style>
+</head>
+<body class="admin-page">
+<div class="admin-mobile-fallback"><span class="em">🖥️</span><h2>Console solo desktop</h2></div>
+<div class="admin-shell">
+  <div data-admin-nav-mount></div>
+  <main>
+    <header class="admin-top">
+      <div><h1>Pipeline builder</h1><div class="crumbs">Tools · Pipeline · 🤖 Wingspan Rules RAG v3 · 4 nodi · 1 errore</div></div>
+      <div class="spacer"></div>
+      <div class="admin-top-actions">
+        <button class="btn-admin">📋 Templates</button>
+        <button class="btn-admin">↶ Undo</button>
+        <button class="btn-admin">💾 Save draft</button>
+        <button class="btn-admin">▶ Test run</button>
+        <button class="btn-admin primary">🚀 Publish</button>
+      </div>
+    </header>
+
+    <div class="admin-body" style="padding: 12px 16px">
+      <div class="pb-shell">
+
+        <!-- Left: palette -->
+        <div class="pb-col">
+          <div class="pb-toolbar"><strong style="font-family: var(--f-display); font-size: 13px">Palette nodi</strong></div>
+          <div style="overflow-y: auto">
+            <div class="palette-group">Retrieval</div>
+            <div class="palette-node retrieval"><span class="pn-em">🔍</span> Vector search</div>
+            <div class="palette-node retrieval"><span class="pn-em">📑</span> BM25 keyword</div>
+            <div class="palette-node retrieval"><span class="pn-em">🔀</span> Hybrid retriever</div>
+
+            <div class="palette-group">Processing</div>
+            <div class="palette-node processing"><span class="pn-em">📊</span> Rerank</div>
+            <div class="palette-node processing"><span class="pn-em">🧹</span> Dedupe</div>
+            <div class="palette-node processing"><span class="pn-em">✂️</span> Truncate</div>
+            <div class="palette-node processing"><span class="pn-em">🔁</span> Self-correct</div>
+
+            <div class="palette-group">Output</div>
+            <div class="palette-node output"><span class="pn-em">🤖</span> LLM call</div>
+            <div class="palette-node output"><span class="pn-em">📤</span> Stream output</div>
+            <div class="palette-node output"><span class="pn-em">📋</span> JSON schema</div>
+
+            <div class="palette-group">Integrations</div>
+            <div class="palette-node integration"><span class="pn-em">🔧</span> Tool call</div>
+            <div class="palette-node integration"><span class="pn-em">⚡</span> n8n trigger</div>
+            <div class="palette-node integration"><span class="pn-em">📨</span> Webhook</div>
+          </div>
+        </div>
+
+        <!-- Center: canvas -->
+        <div class="pb-col">
+          <div class="pb-toolbar">
+            <strong style="font-family: var(--f-display); font-size: 13px">Wingspan Rules RAG v3</strong>
+            <span style="font-family: var(--f-mono); font-size: 10.5px; color: var(--text-muted)">/pipeline/wingspan-rag-v3</span>
+            <div style="margin-left: auto; display: flex; gap: 6px">
+              <span class="filter-chip">🔍 Zoom 100%</span>
+              <span class="filter-chip">+ Add node</span>
+            </div>
+          </div>
+          <div class="canvas">
+            <div class="canvas-inner">
+              <!-- Edges (SVG) -->
+              <svg style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none">
+                <path d="M 220 130 C 280 130, 280 130, 340 130" stroke="hsl(var(--c-agent))" stroke-width="2" fill="none"/>
+                <path d="M 540 130 C 600 130, 600 130, 660 130" stroke="hsl(var(--c-agent))" stroke-width="2" fill="none"/>
+                <path d="M 540 130 C 600 130, 600 280, 660 280" stroke="hsl(var(--c-event))" stroke-width="2" fill="none" stroke-dasharray="5 5"/>
+                <path d="M 860 130 C 920 130, 920 130, 980 130" stroke="hsl(var(--c-agent))" stroke-width="2" fill="none"/>
+              </svg>
+
+              <!-- Nodes -->
+              <div class="node" style="left: 20px; top: 90px">
+                <span class="ndot in left"></span>
+                <div class="ntype retrieval">Retrieval · entry</div>
+                <div class="nname">Query input</div>
+                <div class="nprops">type: text · max 512 tok</div>
+                <span class="ndot out right"></span>
+              </div>
+
+              <div class="node selected" style="left: 340px; top: 90px">
+                <span class="ndot in left"></span>
+                <div class="ntype retrieval">Hybrid retriever</div>
+                <div class="nname">Vector + BM25</div>
+                <div class="nprops">index: wingspan-v3 · top-k 20<br/>α=0.6 · rerank coh-3.5</div>
+                <div class="nstats"><span>⏱ 1.35s</span><span>💸 $0.0008</span><span>📊 95% hit</span></div>
+                <span class="ndot out right"></span>
+              </div>
+
+              <div class="node" style="left: 660px; top: 90px">
+                <span class="ndot in left"></span>
+                <div class="ntype processing">Rerank</div>
+                <div class="nname">Cohere rerank</div>
+                <div class="nprops">model: rerank-3.5<br/>top-n: 5 · cutoff 0.4</div>
+                <div class="nstats"><span>⏱ 0.4s</span><span>💸 $0.0001</span></div>
+                <span class="ndot out right"></span>
+              </div>
+
+              <div class="node error" style="left: 660px; top: 240px">
+                <span class="ndot in left" style="background: hsl(var(--c-event))"></span>
+                <div class="ntype processing" style="color: hsl(var(--c-event))">⚠ Self-correct</div>
+                <div class="nname">House rule check</div>
+                <div class="nprops" style="color: hsl(var(--c-event))">⚠ Property "ruleStore" missing</div>
+                <span class="ndot out right"></span>
+              </div>
+
+              <div class="node" style="left: 980px; top: 90px">
+                <span class="ndot in left"></span>
+                <div class="ntype output">LLM call</div>
+                <div class="nname">GPT-4o-mini</div>
+                <div class="nprops">temp: 0.2 · max-tok 800<br/>system prompt v3.2</div>
+                <div class="nstats"><span>⏱ 2.7s</span><span>💸 $0.0042</span></div>
+                <span class="ndot out right"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: config + test output -->
+        <div class="pb-col">
+          <div class="pb-toolbar"><strong style="font-family: var(--f-display); font-size: 13px">Config &middot; Hybrid retriever</strong></div>
+          <div style="overflow-y: auto">
+            <div class="config-section">
+              <h4>General</h4>
+              <div class="sf-row" style="display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px"><span class="sf-label" style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase">Node ID</span><input class="admin-input mono" value="n-hybrid-1" style="max-width: none"></div>
+              <div class="sf-row" style="display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px"><span class="sf-label" style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase">Display name</span><input class="admin-input" value="Vector + BM25" style="max-width: none"></div>
+            </div>
+
+            <div class="config-section">
+              <h4>Retrieval params</h4>
+              <div style="display: flex; flex-direction: column; gap: 8px">
+                <div style="display: flex; flex-direction: column; gap: 3px"><span style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">Index name</span><select class="admin-select" style="max-width: none"><option>wingspan-v3</option><option>brass-v2</option><option>tg-foa-v1</option></select></div>
+                <div style="display: flex; flex-direction: column; gap: 3px"><span style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">Top-K</span><input class="admin-input mono" value="20" style="max-width: 100px"></div>
+                <div style="display: flex; flex-direction: column; gap: 3px"><span style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">Alpha (vector vs BM25)</span><input type="range" min="0" max="100" value="60"><span style="font-family: var(--f-mono); font-size: 10px; color: var(--text-muted)">0.60 · pesa più vector</span></div>
+                <div style="display: flex; align-items: center; gap: 8px"><div class="admin-toggle on"></div><span style="font-size: 12px">Auto-rerank</span></div>
+              </div>
+            </div>
+
+            <div class="config-section">
+              <h4>Stats run corrente</h4>
+              <dl style="display: grid; grid-template-columns: 90px 1fr; gap: 4px; font-size: 11.5px; margin: 0">
+                <dt style="color: var(--text-muted); font-family: var(--f-mono)">Latency</dt><dd style="margin: 0; font-family: var(--f-mono); font-weight: 700">1.35s</dd>
+                <dt style="color: var(--text-muted); font-family: var(--f-mono)">Cost / call</dt><dd style="margin: 0; font-family: var(--f-mono); font-weight: 700">$0.0008</dd>
+                <dt style="color: var(--text-muted); font-family: var(--f-mono)">Hit rate</dt><dd style="margin: 0; font-family: var(--f-mono); font-weight: 700; color: hsl(var(--c-toolkit))">95%</dd>
+                <dt style="color: var(--text-muted); font-family: var(--f-mono)">Errors 24h</dt><dd style="margin: 0; font-family: var(--f-mono); font-weight: 700">0</dd>
+              </dl>
+            </div>
+          </div>
+
+          <div style="padding: 12px 14px; border-top: 1px solid var(--border-light)">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px"><strong style="font-family: var(--f-display); font-size: 12px">Test run output</strong><span class="status-chip warning" style="margin-left: auto; font-size: 10px">⚠ 1 node error</span></div>
+            <pre class="test-out">{
+  <span class="k">"query"</span>: <span class="s">"power foresta piena?"</span>,
+  <span class="k">"retrieved"</span>: <span class="n">5</span> chunks,
+  <span class="k">"reranked"</span>: <span class="n">3</span> chunks,
+  <span class="k">"top_score"</span>: <span class="n">0.84</span>,
+  <span class="k">"response"</span>: <span class="s">"Sì, l'azione…"</span>,
+  <span class="k">"confidence"</span>: <span class="n">0.92</span>,
+  <span class="k">"warnings"</span>: [
+    <span class="s">"self-correct node skipped"</span>
+  ],
+  <span class="k">"total_latency"</span>: <span class="n">4.45s</span>,
+  <span class="k">"total_cost"</span>: <span class="s">"$0.0051"</span>
+}</pre>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+<script src="admin-nav.js"></script><script>renderAdminNav('pipeline');</script>
+</body></html>

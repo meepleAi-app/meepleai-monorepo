@@ -34,7 +34,9 @@ import {
   GameDetailKpiCards,
   GameDetailRulesAccordion,
   GameDetailSessionsRail,
+  GameDetailSpecsCard,
   GameDetailTabsAnimated,
+  buildSpecsItems,
   panelIdFor,
   tabIdFor,
   type AgentsState,
@@ -384,6 +386,8 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
   const tabsConfig = buildTabsConfig(t);
   const heroMeta = buildHeroMeta(safeDetail);
   const kpiCards = buildKpiCards(safeDetail, t);
+  const specsItems = buildSpecsItems(safeDetail, t);
+  const specsTitle = t('pages.gameDetail.info.specsTitle');
 
   const heroVariant = safeDetail.libraryEntryId ? 'own' : 'community';
   const heroLabels = {
@@ -547,6 +551,7 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
         >
           <div className="flex flex-col gap-6">
             <GameDetailKpiCards cards={kpiCards} />
+            <GameDetailSpecsCard items={specsItems} title={specsTitle} />
             {/* FAQ inline preview (CTA links to subroute) */}
             <GameDetailFaqList faqs={[]} viewAllHref={`/games/${gameId}/faqs`} labels={faqLabels} />
           </div>

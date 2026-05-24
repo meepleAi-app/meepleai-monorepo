@@ -196,6 +196,17 @@ const MESSAGES: Record<string, string> = {
   'pages.gameDetail.documents.statusProcessing': 'Elaborazione',
   'pages.gameDetail.documents.statusFailed': 'Errore',
   'pages.gameDetail.documents.statsLine': 'statistiche',
+  // Issue #1463 — GameDetailSpecsCard (rendered inline in info tab)
+  'pages.gameDetail.info.specsTitle': 'Specifiche',
+  'pages.gameDetail.info.specsPlayers': 'Giocatori',
+  'pages.gameDetail.info.specsDuration': 'Durata',
+  'pages.gameDetail.info.specsAge': 'Eta',
+  'pages.gameDetail.info.specsComplexity': 'Complessita',
+  'pages.gameDetail.info.specsYear': 'Anno',
+  'pages.gameDetail.info.specsDesigner': 'Designer',
+  'pages.gameDetail.info.specsPublisher': 'Editore',
+  'pages.gameDetail.info.specsRatingBgg': 'Rating BGG',
+  'pages.gameDetail.info.specsMinutesUnit': 'min',
 };
 
 function renderWithIntl(ui: ReactElement) {

@@ -81,3 +81,6 @@ export type {
   GameDetailLeaderboardLabels,
   GameDetailLeaderboardProps,
 } from '@/components/features/game-detail/GameDetailLeaderboard';
+
+export { GameDetailCommunityGate } from '@/components/features/game-detail/GameDetailCommunityGate';
+export type { GameDetailCommunityGateProps } from '@/components/features/game-detail/GameDetailCommunityGate';

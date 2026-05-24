@@ -55,6 +55,20 @@ const LABEL: Record<EntityType, string> = {
   tool: 'Tool',
 };
 
+/**
+ * Returns Tailwind class strings for entity theming (compile-time, ESLint-friendly).
+ *
+ * Use this helper for `className` props. For runtime inline styles
+ * (`style={{ color: ..., background: ... }}`) where you need actual HSL values,
+ * use `entityHsl()` from `@/components/ui/data-display/meeple-card/tokens` instead.
+ *
+ * @example
+ *   const t = getEntityToken('game');
+ *   <span className={`${t.bgSoft} ${t.text}`}>{t.emoji} {t.label}</span>
+ *
+ * @see entityHsl — runtime HSL accessor for inline-style use cases
+ *   (admin-mockups/design_handoff/DESIGN_TOKENS.md § "Helper TypeScript")
+ */
 export function getEntityToken(type: EntityType): EntityToken {
   const k = TAILWIND_KEY[type];
   return {

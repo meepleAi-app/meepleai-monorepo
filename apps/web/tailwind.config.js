@@ -13,11 +13,11 @@ module.exports = {
       // shadcn/ui semantic tokens also use HSL format
       fontFamily: {
         quicksand: ['var(--font-quicksand)', 'sans-serif'],
-        inter: ['var(--font-inter)', 'sans-serif'],
+        inter: ['var(--font-nunito)', 'sans-serif'],
         // Backward compat: existing font-nunito classes still work
-        nunito: ['var(--font-inter)', 'sans-serif'],
+        nunito: ['var(--font-nunito)', 'sans-serif'],
         heading: ['var(--font-quicksand)', 'sans-serif'],
-        body: ['var(--font-inter)', 'sans-serif'],
+        body: ['var(--font-nunito)', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in',

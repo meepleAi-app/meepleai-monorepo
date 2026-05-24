@@ -8,7 +8,7 @@
  * @see https://nextjs.org/docs/app/building-your-application/routing/layouts-and-pages
  */
 
-import { Quicksand, Nunito } from 'next/font/google';
+import { Quicksand, Nunito, JetBrains_Mono } from 'next/font/google';
 
 import { AppProviders } from './providers';
 
@@ -38,6 +38,17 @@ const nunito = Nunito({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800'],
   variable: '--font-nunito',
+  display: 'swap',
+});
+
+// Mockup handoff DS-step 2a (2026-05-24): JetBrains Mono caricato esplicitamente
+// per soddisfare `--f-mono` token (design-tokens-canonical.css) usato in 15+ file
+// (sse parser, log viewer, code blocks, monospace badges). Pre-fix il fallback
+// `ui-monospace`/`SF Mono`/`monospace` veniva applicato silenziosamente.
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-jetbrains-mono',
   display: 'swap',
 });
 
@@ -76,7 +87,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // preference / localStorage. The hint prevents FOUC on first paint.
   return (
     <html lang="it" data-theme="light" suppressHydrationWarning>
-      <body className={`${quicksand.variable} ${nunito.variable}`} suppressHydrationWarning>
+      <body
+        className={`${quicksand.variable} ${nunito.variable} ${jetbrainsMono.variable}`}
+        suppressHydrationWarning
+      >
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

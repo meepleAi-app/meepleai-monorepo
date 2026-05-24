@@ -439,7 +439,10 @@ Una schermata è "fatta" quando tutti questi 9 punti sono soddisfatti (criterio 
 | 4 | (omissione) | Aggiunta DoD 9-point § 14.5 + Sprint cross-ref § 15.5 | Read `WIRING_GUIDE.md` + `SCREENS.md` |
 | 5 | (Step 2c TBD) | **Step 2c — `components.css` handoff: SKIP integrale** (decisione 2026-05-24). Le 9 classi sono ~80% mock-canvas (`.phone`/`.phone-sbar`/`.stage`/`.hub-nav`/`.cover-ph`) o già coperte da Tailwind+MeepleCard (`.btn`/`.card`/`.e-chip`/`.e-dot`). Nessuna utility importata in `src/styles/`. | Read `components.css` (133 righe) |
 | 6 | (Step 4 TBD) | **Step 4 — types entity: SKIP** (decisione 2026-05-24). Tipi BE-driven via OpenAPI Zod (`lib/api/generated/`) + `types/domain.ts`. Nessuna estrazione da `data.js`. Campi UI-only (`Player.color`, `Game.coverGradient`, `Game.coverEmoji`) restano inline nei componenti che li usano (mockup pattern, non BE contract). | Decisione design 2026-05-24 |
+| 7 | "**64** API clients" (errata corrige primaria, off-by-one) | **63** API clients (post Step-1 review filesystem verify) | `ls apps/web/src/lib/api/clients/*.ts \| wc -l` = 63 |
+| 8 | "80+ React Query hooks" (vago) | **88** React Query hooks (preciso) | `ls apps/web/src/hooks/queries/*.ts \| wc -l` = 88 |
+| 9 | "18 BoundedContexts DDD" (multiple references) | **19** BoundedContexts DDD (post Step-1 review filesystem verify — uno dei 19 può essere SharedKernel o BC nuovo non listato in CLAUDE.md memory) | `ls -d apps/api/src/Api/BoundedContexts/*/ \| wc -l` = 19 |
 
 ---
 
-**Generato da Claude Code Opus 4.7 in modalità read-only.** Niente modifiche al codebase. Discussione attesa con maintainer prima di valutare Step 2-3-4. Post-review `/sc:spec-panel` aggiornato 2026-05-24.
+**Generato da Claude Code Opus 4.7 in modalità read-only.** Niente modifiche al codebase. Discussione attesa con maintainer prima di valutare Step 2-3-4. Post-review `/sc:spec-panel` aggiornato 2026-05-24. Step-1 self-review applicata 2026-05-24 PM (vedi `REVIEW_REPORT.md`).

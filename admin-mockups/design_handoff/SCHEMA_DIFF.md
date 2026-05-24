@@ -10,7 +10,7 @@
 
 | Sezione | Entity BE | Confidence | Reasoning |
 |---|---|---|---|
-| § 1 — Game | `SharedGame.cs` (aggregate root **confermato** in `Domain/Aggregates/`) + value objects | 🟡 **LOW-MEDIUM** | Aggregate root location confermata via Glob, ma file non aperto → nomi colonna ipotetici |
+| § 1 — Game | `SharedGame.cs` (aggregate root in `Domain/Aggregates/`) + value objects | 🟢 **HIGH** (post Step-1 review) | **File aperto e verificato spot-check** 2026-05-24 PM — 4 nomi colonna BE corretti (vedi errata § 1 table): YearPublished, ComplexityRating, AverageRating, PlayingTimeMinutes |
 | § 2 — Player | `User.cs` (Auth BC) + `RecordPlayer.cs` + `LiveSessionPlayer.cs` | 🔴 **LOW** | 0 file aperti, mapping inferenziale 100% |
 | § 3 — Session | 4+ entity con "Session" nel nome | 🔴 **LOW** | 0 file aperti, ambiguità struttura BE non risolta |
 | § 4 — Agent | `AgentConfiguration.cs` + family KB BC | 🔴 **LOW** | 0 file aperti |
@@ -63,13 +63,13 @@ Le entity BE sono mappate **multi-aggregato** per ognuna delle 9 entity mockup. 
 | `id` | string `g-azul` | `SharedGame.Id : Guid` | 🔁 (string slug client-side vs Guid BE — _attenzione_: id mockup non sono UUID, sono slug; vedi NOTA-A) |
 | `type` | const `'game'` | _none — implicit by entity_ | 🆕 UI discriminator |
 | `title` | string `'Azul'` | `SharedGame.Title : string` | ✅ |
-| `publisher` | string `'Plan B Games'` | `GamePublisher` (FK or value object) | ⚠️ Probable join FK; verify `SharedGame.Publisher : GamePublisher?` |
-| `year` | number `2017` | `SharedGame.Year : int` | ✅ |
-| `author` | string `'Michael Kiesling'` | `GameDesigner` (FK or value object, many-to-many) | ⚠️ Mockup string singolo, BE many-to-many (`GameDesigner` entity esiste). UI display = first/joined |
-| `players` | string `'2–4'` | `SharedGame.MinPlayers : int` + `SharedGame.MaxPlayers : int` | ⚠️ UI format `'min–max'`, BE due colonne. **Derived** |
-| `duration` | string `'30–45m'` | `SharedGame.MinDurationMinutes : int?` + `MaxDurationMinutes : int?` | ⚠️ Derived. Verify columns exist |
-| `weight` | number `1.77` (BGG complexity) | `SharedGame.Complexity : decimal?` | 🔁 weight → Complexity |
-| `rating` | number `7.8` (BGG rating) | `SharedGame.BggRating : decimal?` (probabile) | ⚠️ Source: BGG sync. Verify column name |
+| `publisher` | string `'Plan B Games'` | `_publishers : List<GamePublisher>` many-to-many nav. property ✅ **verified** (Step-1 spot-check) | ⚠️ Mockup string singolo (UI display first), BE many-to-many embedded collection |
+| `year` | number `2017` | `SharedGame.YearPublished : int` ✅ **verified** (Step-1 spot-check) | 🔁 **ERRATA**: NOT "Year" — corretto `YearPublished` |
+| `author` | string `'Michael Kiesling'` | `_designers : List<GameDesigner>` many-to-many nav. property ✅ **verified** | ⚠️ Mockup string singolo, BE many-to-many. UI display = first/joined |
+| `players` | string `'2–4'` | `SharedGame.MinPlayers : int` + `SharedGame.MaxPlayers : int` ✅ **verified** | ⚠️ UI format `'min–max'`, BE due colonne. **Derived** |
+| `duration` | string `'30–45m'` (range) | `SharedGame.PlayingTimeMinutes : int` ✅ **verified** (single int, **NOT range**) | 🔁 **ERRATA**: NOT "MinDurationMinutes/MaxDurationMinutes" — solo `PlayingTimeMinutes` single. UI deve fakearne il range o cambiare mockup format |
+| `weight` | number `1.77` (BGG complexity) | `SharedGame.ComplexityRating : decimal?` ✅ **verified** | 🔁 **ERRATA**: NOT "Complexity" — corretto `ComplexityRating` |
+| `rating` | number `7.8` (BGG rating) | `SharedGame.AverageRating : decimal?` ✅ **verified** | 🔁 **ERRATA**: NOT "BggRating" — corretto `AverageRating` (generico, può aggregare community + BGG) |
 | `stars` | number `4` (display) | _derived from rating_ | 🧮 UI computed |
 | `cover` | string `linear-gradient(...)` | `SharedGame.CoverImageUrl : string?` OR `CoverGradient : string?` | 🆕 / ⚠️ Mockup usa gradient CSS; BE probabile usa imageUrl (BGG-sync). _Display fallback_ |
 | `coverEmoji` | string `'🔷'` | _none_ | 🆕 UI-only fallback |

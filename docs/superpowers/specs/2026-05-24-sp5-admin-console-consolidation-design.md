@@ -54,7 +54,7 @@ Sintesi del colloquio R1-R10 (dettaglio e razionale in `ADMIN_AUDIT.md §9`). So
 
 ### 4.1 Information Architecture — sidebar a 4 gruppi
 
-31 schermate totali (18 SP5 + 13 surplus) organizzate in 4 gruppi di navigazione. La sorgente di verità della nav è `admin-mockups/design_handoff_admin/admin-nav.js` (già esteso con i gruppi C/D).
+31 schermate totali (18 SP5 + 13 surplus) organizzate in 4 gruppi di navigazione. La sorgente di verità della nav è `admin-mockups/design_handoff_admin/admin/admin-nav.js` (già esteso con i gruppi C/D). ⚠️ La copia a livello root `design_handoff_admin/admin-nav.js` è **parziale/stale** (solo gruppi A+B): non usarla — il canonico è quello in `admin/`.
 
 | Gruppo | Etichetta nav | Schermate | Focus |
 |--------|---------------|-----------|-------|
@@ -213,7 +213,7 @@ A3 Content moderation resta in attesa del BC moderation (fuori scope corrente) �
 - Audit: `admin-mockups/design_handoff_admin/ADMIN_AUDIT.md`
 - Inventario schermate + endpoint: `admin-mockups/design_handoff_admin/SCREENS.md`
 - Prompt-pack surplus: `admin-mockups/design_handoff_admin/SURPLUS_DESIGN_PROMPTS.md`
-- Nav (sorgente di verità gruppi): `admin-mockups/design_handoff_admin/admin-nav.js`
+- Nav (sorgente di verità gruppi): `admin-mockups/design_handoff_admin/admin/admin-nav.js` (la copia a livello root è stale: solo A+B)
 - Mockup HTML: `admin-mockups/design_handoff_admin/admin/sp5-*.html`
 - Token: `admin-mockups/design_handoff_admin/admin/tokens.css` + `admin-base.css`
 - Freeze de-versioning + token canonici: `CLAUDE.md` (§ AI Assistant Rules)

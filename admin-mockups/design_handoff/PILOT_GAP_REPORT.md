@@ -240,23 +240,43 @@ Tutti i 4 deliverable handoff (CODEBASE_AUDIT, SCHEMA_DIFF, COMPONENTS_AUDIT, PI
 
 → **Raccomandazione**: **Opzione C** per chiudere "spec + audit + foundation setup" come 1 deliverable atomico. Le 4 issue di gap closure (5c/5d/5e/5f/5g/5k/5l/5m + 5h/5i/5j) possono essere PR di follow-up dedicati con scope ridotto + review più focused.
 
-## 8. Issue follow-up consigliate (post-merge PR `feature/design-handoff-setup`)
+## 8. Issue follow-up CREATE (2026-05-24)
 
-Per ogni gap, una issue dedicata con scope ridotto:
+✅ **Tutte e 9 le issue sono state aperte sul repo `meepleAi-app/meepleai-monorepo`**:
 
-| # | Issue title | Body | Effort | Priority |
-|---|---|---|---|---|
-| 1 | `feat(game-detail): GameDetailSpecsCard component (sp4-game-detail.jsx gap)` | Vedi § 2.1 | S (45 min) | P1 |
-| 2 | `feat(game-detail): GameDetailHouseRulesList con CRUD operations` | Vedi § 2.2 + decisione § 3.5 #4 (no toggle) | L (90 min) | P1 |
-| 3 | `feat(game-detail): GameDetailCommunityGate + variant routing` | Vedi § 2.4 + decisione § 3.5 #3 (GameDetailView refactor) | M (60 min) | P2 |
-| 4 | `feat(game-detail): GameDetailView refactor — variant prop + stats tab` | Vedi § 5g + divergenza tab list § Header | M (60 min) | P2 |
-| 5 | `feat(api): GetGameLeaderboardQuery + endpoint GET /api/v1/games/{id}/leaderboard` | BE issue separata. Vedi § 3.5 #6 opzione (a) | M (2h BE + tests) | P2 |
-| 6 | `feat(game-detail): GameDetailLeaderboard component (depends on #5)` | Vedi § 2.3 + dependency su #5 issue BE | S (45 min) | P2 |
-| 7 | `refactor(ui/feedback): canonical Stars component (lift from toolkit-detail)` | Vedi § 3.5 #1 | S (20 min) | P3 |
-| 8 | `feat(lib): userHue(userId) deterministic color utility` | Vedi § 3.5 #5 + § 5l | XS (15 min) | P3 |
-| 9 | `feat(game-detail): GameDetailChatTab via chat-unified adapter` | Vedi § 3.5 #2 (tab `agents` semantic match) | S (30 min) | P3 |
+| # | GitHub | Title | Effort | Priority | Status |
+|---|---|---|---|---|---|
+| 1 | [#1463](https://github.com/meepleAi-app/meepleai-monorepo/issues/1463) | `feat(game-detail): GameDetailSpecsCard component (sp4-game-detail.jsx gap)` | S (45 min) | P1 | open |
+| 2 | [#1464](https://github.com/meepleAi-app/meepleai-monorepo/issues/1464) | `feat(game-detail): GameDetailHouseRulesList con CRUD operations (BE shape mismatch)` | L (90 min) | P1 | open |
+| 3 | [#1465](https://github.com/meepleAi-app/meepleai-monorepo/issues/1465) | `feat(game-detail): GameDetailCommunityGate + variant routing` | M (60 min) | P2 | open · depends on #1466 |
+| 4 | [#1466](https://github.com/meepleAi-app/meepleai-monorepo/issues/1466) | `feat(game-detail): GameDetailView refactor — variant prop + stats tab` | M (60 min) | P2 | open |
+| 5 | [#1467](https://github.com/meepleAi-app/meepleai-monorepo/issues/1467) | `feat(api): GetGameLeaderboardQuery + endpoint GET /api/v1/games/{id}/leaderboard` | M (2h BE) | P2 | open |
+| 6 | [#1468](https://github.com/meepleAi-app/meepleai-monorepo/issues/1468) | `feat(game-detail): GameDetailLeaderboard component (depends on BE leaderboard endpoint)` | S (45 min) | P2 | open · depends on #1467 + #1470 |
+| 7 | [#1469](https://github.com/meepleAi-app/meepleai-monorepo/issues/1469) | `refactor(ui/feedback): canonical Stars component (lift from toolkit-detail)` | S (20 min) | P3 | open |
+| 8 | [#1470](https://github.com/meepleAi-app/meepleai-monorepo/issues/1470) | `feat(lib): userHue(userId) deterministic color utility` | XS (15 min) | P3 | open |
+| 9 | [#1471](https://github.com/meepleAi-app/meepleai-monorepo/issues/1471) | `feat(game-detail): GameDetailChatTab via chat-unified adapter` | S (30 min) | P3 | open |
 
-Tutte le 9 issue separate = ~7-8h cumulativi distribuiti su 5-7 PR atomici reviewable.
+**Dependency graph**:
+```
+#1467 (BE leaderboard endpoint) ──► #1468 (Leaderboard FE)
+                                  │
+#1470 (userHue utility)  ─────────┘
+#1466 (GameDetailView refactor) ──► #1465 (CommunityGate integration)
+                                  ├► #1463 (SpecsCard integration in Info tab)
+                                  ├► #1464 (HouseRulesList integration in Info tab)
+                                  ├► #1468 (Leaderboard integration in stats tab)
+                                  └► #1471 (ChatTab integration in agents tab)
+#1469 (Stars canonical) ──────────► usable across game-detail
+```
+
+**Recommended implementation order**:
+1. **Phase 1 — Foundation primitives**: #1470 userHue + #1469 Stars (XS+S, ~35 min parallel)
+2. **Phase 2 — BE work**: #1467 leaderboard endpoint (M, ~2h — può essere parallelo a Phase 1)
+3. **Phase 3 — FE standalone**: #1463 SpecsCard + #1464 HouseRulesList (S+L, ~135 min)
+4. **Phase 4 — Refactor**: #1466 GameDetailView (M, ~60 min) — apre la strada a tutte le integrazioni
+5. **Phase 5 — Integration**: #1465 CommunityGate + #1468 Leaderboard FE + #1471 ChatTab (M+S+S, ~135 min)
+
+Cumulativi: ~7-8h distribuiti in 5-7 PR atomici reviewable.
 
 ---
 

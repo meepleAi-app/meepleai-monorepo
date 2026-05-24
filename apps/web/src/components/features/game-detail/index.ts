@@ -67,3 +67,11 @@ export type {
   GameDetailKbDocListProps,
   GameDetailKbStatus,
 } from '@/components/features/game-detail/GameDetailKbDocList';
+
+export { GameDetailSpecsCard } from '@/components/features/game-detail/GameDetailSpecsCard';
+export type {
+  GameDetailSpecsCardProps,
+  GameDetailSpecsItem,
+} from '@/components/features/game-detail/GameDetailSpecsCard';
+
+export { buildSpecsItems } from '@/components/features/game-detail/buildSpecsItems';

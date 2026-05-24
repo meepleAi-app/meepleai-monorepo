@@ -196,6 +196,17 @@ const MESSAGES: Record<string, string> = {
   'pages.gameDetail.documents.statusProcessing': 'Elaborazione',
   'pages.gameDetail.documents.statusFailed': 'Errore',
   'pages.gameDetail.documents.statsLine': 'statistiche',
+  // Issue #1463 — GameDetailSpecsCard (rendered inline in info tab)
+  'pages.gameDetail.info.specsTitle': 'Specifiche',
+  'pages.gameDetail.info.specsPlayers': 'Giocatori',
+  'pages.gameDetail.info.specsDuration': 'Durata',
+  'pages.gameDetail.info.specsAge': 'Eta',
+  'pages.gameDetail.info.specsComplexity': 'Complessita',
+  'pages.gameDetail.info.specsYear': 'Anno',
+  'pages.gameDetail.info.specsDesigner': 'Designer',
+  'pages.gameDetail.info.specsPublisher': 'Editore',
+  'pages.gameDetail.info.specsRatingBgg': 'Rating BGG',
+  'pages.gameDetail.info.specsMinutesUnit': 'min',
 };
 
 function renderWithIntl(ui: ReactElement) {
@@ -464,6 +475,10 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     // KPI cards inside info panel
     const kpiCards = document.querySelector('[data-slot="game-detail-kpi-cards"]');
     expect(kpiCards).toBeInTheDocument();
+
+    // Specs card inside info panel (Issue #1463 — regression guard)
+    const specsCard = document.querySelector('[data-slot="game-detail-specs-card"]');
+    expect(specsCard).toBeInTheDocument();
 
     // Agents panel hidden (tab=info)
     const agentsPanel = document.querySelector('[data-slot="game-detail-panel-agents"]');

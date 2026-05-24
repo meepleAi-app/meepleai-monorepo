@@ -2322,6 +2322,11 @@
         "specsCategories": "Categories",
         "specsMechanics": "Mechanics",
         "specsBgg": "Catalog ID",
+        "specsPlayers": "Players",
+        "specsDuration": "Duration",
+        "specsComplexity": "Complexity",
+        "specsRatingBgg": "BGG Rating",
+        "specsMinutesUnit": "min",
         "noDescription": "No description available for this game."
       },
       "faqs": {

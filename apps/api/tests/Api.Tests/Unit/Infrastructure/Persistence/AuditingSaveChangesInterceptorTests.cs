@@ -167,6 +167,39 @@ public sealed class AuditingSaveChangesInterceptorTests
     }
 
     #endregion
+
+    #region Navigation collections — child PK capture + no cycle crash
+
+    [Fact]
+    public async Task CapturesNavigationCollection_AsChildPrimaryKeys_WithoutCycleCrash()
+    {
+        var capture = new TestAuditCapture();
+        await using var ctx = TestContextFactory.Create(capture);
+
+        var parentId = Guid.NewGuid();
+        var child1Id = Guid.NewGuid();
+        var child2Id = Guid.NewGuid();
+        var parent = new TestAuditableParent { Id = parentId, Name = "p1" };
+        parent.Children.Add(new TestChild { Id = child1Id, Label = "secret-child-label-1", ParentId = parentId, Parent = parent });
+        parent.Children.Add(new TestChild { Id = child2Id, Label = "secret-child-label-2", ParentId = parentId, Parent = parent });
+        ctx.Parents.Add(parent);
+
+        // Must NOT throw (cycle: parent.Children[n].Parent == parent)
+        await ctx.SaveChangesAsync();
+
+        // The parent's snapshot is captured (children are not [Auditable] so they don't generate their own)
+        var parentSnap = capture.Snapshots.Should().ContainSingle(s => s.EntityType == nameof(TestAuditableParent)).Subject;
+        var afterJson = parentSnap.AfterJson!;
+
+        // Child PKs are present
+        afterJson.Should().Contain(child1Id.ToString());
+        afterJson.Should().Contain(child2Id.ToString());
+        // Child full data is NOT present (only PKs captured, not whole child objects)
+        afterJson.Should().NotContain("secret-child-label-1");
+        afterJson.Should().NotContain("secret-child-label-2");
+    }
+
+    #endregion
 }
 
 // ─── Test doubles ────────────────────────────────────────────────────────────
@@ -199,11 +232,29 @@ internal sealed class TestPlainItem
     public string Value { get; set; } = "";
 }
 
+[Auditable]
+internal sealed class TestAuditableParent
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+    public List<TestChild> Children { get; set; } = new();
+}
+
+internal sealed class TestChild
+{
+    public Guid Id { get; set; }
+    public string Label { get; set; } = "";
+    public Guid ParentId { get; set; }
+    public TestAuditableParent? Parent { get; set; }  // back-reference → would cycle if full-serialized
+}
+
 internal sealed class TestAuditContext : DbContext
 {
     public DbSet<TestAuditableUser> Users => Set<TestAuditableUser>();
     public DbSet<TestAuditableSecretHolder> Secrets => Set<TestAuditableSecretHolder>();
     public DbSet<TestPlainItem> PlainItems => Set<TestPlainItem>();
+    public DbSet<TestAuditableParent> Parents => Set<TestAuditableParent>();
+    public DbSet<TestChild> Children => Set<TestChild>();
 
     public TestAuditContext(DbContextOptions<TestAuditContext> opts) : base(opts) { }
 }

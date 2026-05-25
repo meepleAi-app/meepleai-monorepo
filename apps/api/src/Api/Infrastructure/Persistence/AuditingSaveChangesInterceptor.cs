@@ -2,6 +2,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -37,9 +38,11 @@ public interface IAuditSnapshotSink
 /// </summary>
 /// <remarks>
 /// Works with any DbContext — does not reference MeepleAiDbContext directly.
-/// Only scalar properties are serialised (<see cref="EntityEntry.Properties"/>);
-/// navigation properties (references and collections) are intentionally excluded to
-/// prevent circular-reference serialisation failures and avoid leaking child data.
+/// Scalar properties are serialised (<see cref="EntityEntry.Properties"/>); properties marked
+/// <see cref="SensitiveDataAttribute"/> are redacted. Navigation COLLECTIONS are captured as the
+/// child entities' primary keys only (never the full child objects) — this records ownership
+/// membership while avoiding circular-reference crashes and recursive leakage of child sensitive
+/// data. Navigation REFERENCES (single-entity navigations) are intentionally excluded.
 /// </remarks>
 public sealed class AuditingSaveChangesInterceptor : SaveChangesInterceptor
 {
@@ -65,6 +68,7 @@ public sealed class AuditingSaveChangesInterceptor : SaveChangesInterceptor
     {
         WriteIndented = false,
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        ReferenceHandler = ReferenceHandler.IgnoreCycles,
     };
 
     public AuditingSaveChangesInterceptor(IAuditSnapshotSink sink)
@@ -169,17 +173,34 @@ public sealed class AuditingSaveChangesInterceptor : SaveChangesInterceptor
             dict[p.Metadata.Name] = useOriginal ? p.OriginalValue : p.CurrentValue;
         }
 
-        // Capture navigation collections (e.g. a User's Games) so the audit reflects related-entity
-        // membership. Only the CURRENT value is available for navigations — EF does not track an
-        // "original" collection snapshot — so we capture current regardless of useOriginal.
+        // Capture navigation collections as the CHILD PRIMARY KEYS only (not full child entities).
+        // Rationale: full child serialization (a) risks circular-reference crashes when children hold a
+        // back-reference to the parent, and (b) would leak child [SensitiveData] recursively (redaction
+        // only runs on this entry's own properties). PK capture satisfies "audit what this entity owns"
+        // (e.g. a user's game ownership ids) safely. Reference navigations (entry.References) are NOT
+        // captured — single-entity navigations add circular-reference risk without audit value here.
+        // Only the CURRENT value is available for navigations — EF does not track an "original"
+        // collection snapshot — so we capture current regardless of useOriginal.
+        var dbCtx = entry.Context;
         foreach (var nav in entry.Collections)
         {
-            if (nav.CurrentValue is IEnumerable enumerable && nav.CurrentValue is not string)
+            if (nav.CurrentValue is not IEnumerable children || nav.CurrentValue is string)
+                continue;
+
+            var childKeys = new List<string>();
+            foreach (var child in children)
             {
-                dict[nav.Metadata.Name] = enumerable.Cast<object?>().ToList();
+                if (child is null)
+                    continue;
+                childKeys.Add(ResolvePrimaryKey(dbCtx.Entry(child)));
             }
+            dict[nav.Metadata.Name] = childKeys;
         }
 
+        // Truncate to the payload budget. NOTE for T3 (AuditLoggingBehavior): the returned JSON may carry
+        // "_oversize": true when it still exceeds the budget after collection trimming — per three-amigos
+        // Q2, the caller MUST mark the outbox row Failed (last_error="payload_oversize") rather than
+        // persisting an oversized payload_json.
         var truncated = PayloadTruncator.Truncate(dict, MaxPayloadBytes);
         return JsonSerializer.Serialize(truncated, JsonOpts);
     }

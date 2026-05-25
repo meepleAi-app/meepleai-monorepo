@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Api.Infrastructure.Persistence;
 
@@ -20,6 +21,7 @@ public static class PayloadTruncator
     {
         WriteIndented = false,
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        ReferenceHandler = ReferenceHandler.IgnoreCycles,
     };
 
     public static IDictionary<string, object?> Truncate(IDictionary<string, object?> props, int maxBytes)

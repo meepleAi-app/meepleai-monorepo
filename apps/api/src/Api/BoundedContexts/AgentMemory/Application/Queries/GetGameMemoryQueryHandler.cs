@@ -34,6 +34,7 @@ internal sealed class GetGameMemoryQueryHandler : IQueryHandler<GetGameMemoryQue
         GameId: memory.GameId,
         OwnerId: memory.OwnerId,
         HouseRules: memory.HouseRules.Select(hr => new HouseRuleDto(
+            Id: hr.Id,
             Description: hr.Description,
             AddedAt: hr.AddedAt,
             Source: hr.Source.ToString()

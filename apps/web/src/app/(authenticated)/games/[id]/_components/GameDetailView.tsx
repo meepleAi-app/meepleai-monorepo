@@ -31,6 +31,7 @@ import {
   GameDetailCommunityGate,
   GameDetailFaqList,
   GameDetailHero,
+  GameDetailHouseRulesList,
   GameDetailKbDocList,
   GameDetailKpiCards,
   GameDetailLeaderboard,
@@ -55,6 +56,12 @@ import {
 } from '@/hooks/queries/useLibrary';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useGameLeaderboard } from '@/lib/domain-hooks/useGameLeaderboard';
+import {
+  useAddHouseRule,
+  useGameMemory,
+  useRemoveHouseRule,
+  useUpdateHouseRule,
+} from '@/lib/domain-hooks/useGameMemory';
 import { deriveGameDetailUiState } from '@/lib/games/game-detail-state';
 import {
   IS_VISUAL_TEST_BUILD,
@@ -433,6 +440,20 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
       tab === 'stats',
   });
 
+  // Game memory hooks (Issue #1464 — house rules CRUD). Query gated on info tab + own
+  // variant; mutations stay unconditional (fire only via callbacks).
+  const memoryQuery = useGameMemory(gameId ?? '', {
+    enabled:
+      !!gameId &&
+      detailQuery.isSuccess &&
+      detailQuery.data != null &&
+      !!detailQuery.data.libraryEntryId &&
+      tab === 'info',
+  });
+  const addHouseRule = useAddHouseRule(gameId ?? '');
+  const updateHouseRule = useUpdateHouseRule(gameId ?? '');
+  const removeHouseRule = useRemoveHouseRule(gameId ?? '');
+
   // ── Effective detail (fixture takes priority over real data) ─────────────
   const detail = fixture ?? detailQuery.data ?? null;
 
@@ -584,6 +605,21 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
     cta: t('pages.gameDetail.stats.communityGateCta'),
   };
 
+  const houseRulesLabels = {
+    title: t('pages.gameDetail.houseRules.title'),
+    addCta: t('pages.gameDetail.houseRules.addCta'),
+    addPlaceholder: t('pages.gameDetail.houseRules.addPlaceholder'),
+    addSubmit: t('pages.gameDetail.houseRules.addSubmit'),
+    editLabel: t('pages.gameDetail.houseRules.editLabel'),
+    editSubmit: t('pages.gameDetail.houseRules.editSubmit'),
+    cancel: t('pages.gameDetail.houseRules.cancel'),
+    deleteLabel: t('pages.gameDetail.houseRules.deleteLabel'),
+    deleteConfirmTitle: t('pages.gameDetail.houseRules.deleteConfirmTitle'),
+    deleteConfirmMessage: t('pages.gameDetail.houseRules.deleteConfirmMessage'),
+    deleteConfirm: t('pages.gameDetail.houseRules.deleteConfirm'),
+    empty: t('pages.gameDetail.houseRules.empty'),
+  };
+
   const handleAddToLibrary = (): void => {
     if (!gameId || addToLibrary.isPending) return;
     addToLibrary.mutate(
@@ -665,6 +701,16 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
             <GameDetailSpecsCard items={specsItems} title={specsTitle} />
             {/* FAQ inline preview (CTA links to subroute) */}
             <GameDetailFaqList faqs={[]} viewAllHref={`/games/${gameId}/faqs`} labels={faqLabels} />
+            {/* House rules CRUD (#1464) — own variant only */}
+            {!isCommunityVariant && (
+              <GameDetailHouseRulesList
+                rules={memoryQuery.data?.houseRules ?? []}
+                labels={houseRulesLabels}
+                onAdd={d => addHouseRule.mutate(d)}
+                onUpdate={(ruleId, description) => updateHouseRule.mutate({ ruleId, description })}
+                onDelete={ruleId => removeHouseRule.mutate(ruleId)}
+              />
+            )}
           </div>
         </div>
 

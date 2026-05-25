@@ -48,6 +48,30 @@ internal sealed class GameMemory : AggregateRoot<Guid>
         _houseRules.Add(HouseRule.Create(description, source));
     }
 
+    /// <summary>
+    /// Updates the description of an existing house rule (#1464). Throws when the rule is unknown.
+    /// </summary>
+    public void UpdateHouseRule(Guid ruleId, string newDescription)
+    {
+        if (ruleId == Guid.Empty) throw new ArgumentException("RuleId cannot be empty.", nameof(ruleId));
+        var rule = _houseRules.FirstOrDefault(r => r.Id == ruleId)
+            ?? throw new InvalidOperationException($"House rule {ruleId} not found.");
+        rule.UpdateDescription(newDescription);
+    }
+
+    /// <summary>
+    /// Removes an existing house rule by id (#1464). No-op if the rule is unknown
+    /// (idempotent delete); the caller decides whether to map that to a 404 at the endpoint.
+    /// Returns true when a rule was actually removed.
+    /// </summary>
+    public bool RemoveHouseRule(Guid ruleId)
+    {
+        if (ruleId == Guid.Empty) throw new ArgumentException("RuleId cannot be empty.", nameof(ruleId));
+        var rule = _houseRules.FirstOrDefault(r => r.Id == ruleId);
+        if (rule is null) return false;
+        return _houseRules.Remove(rule);
+    }
+
     public void SetCustomSetup(SetupChecklistData setup)
     {
         CustomSetup = setup ?? throw new ArgumentNullException(nameof(setup));

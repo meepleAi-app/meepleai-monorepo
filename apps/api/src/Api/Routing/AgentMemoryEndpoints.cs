@@ -59,6 +59,22 @@ internal static class AgentMemoryEndpoints
             .Produces(401)
             .WithSummary("Add a house rule");
 
+        // #1464 — Edit/Delete CRUD for house rules.
+        agentMemory.MapPatch("/games/{gameId:guid}/memory/house-rules/{ruleId:guid}", HandleUpdateHouseRule)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(400)
+            .Produces(401)
+            .Produces(404)
+            .WithSummary("Update a house rule's description");
+
+        agentMemory.MapDelete("/games/{gameId:guid}/memory/house-rules/{ruleId:guid}", HandleRemoveHouseRule)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(401)
+            .Produces(404)
+            .WithSummary("Remove a house rule");
+
         agentMemory.MapPost("/games/{gameId:guid}/memory/notes", HandleAddNote)
             .RequireAuthenticatedUser()
             .Produces(204)
@@ -170,6 +186,35 @@ internal static class AgentMemoryEndpoints
         return Results.NoContent();
     }
 
+    private static async Task<IResult> HandleUpdateHouseRule(
+        Guid gameId,
+        Guid ruleId,
+        [FromBody] UpdateHouseRuleRequest request,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var command = new UpdateHouseRuleCommand(gameId, userId, ruleId, request.Description);
+
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleRemoveHouseRule(
+        Guid gameId,
+        Guid ruleId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var command = new RemoveHouseRuleCommand(gameId, userId, ruleId);
+
+        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
     private static async Task<IResult> HandleAddNote(
         Guid gameId,
         [FromBody] AddNoteRequest request,
@@ -259,6 +304,8 @@ internal static class AgentMemoryEndpoints
         string? CustomNotes);
 
     internal record AddHouseRuleRequest(string Description);
+
+    internal record UpdateHouseRuleRequest(string Description);
 
     internal record AddNoteRequest(string Content);
 

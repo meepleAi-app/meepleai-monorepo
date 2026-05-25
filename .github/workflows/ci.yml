@@ -869,11 +869,14 @@ jobs:
   #     gating for PRs that introduce NEW violations. This gate (frontend-a11y)
   #     now blocks on ANY axe AA violation; #1015 will additionally enforce
   #     non-regression at release boundaries.
+  # Build-Once refactor 2026-05-25: consumes upstream build-frontend-a11y
+  # artifact instead of running its own pnpm build with the visual-test
+  # fixture flag (~100s saved).
   frontend-a11y:
     name: Frontend - A11y E2E
     runs-on: ${{ needs.changes.outputs.runner }}
     timeout-minutes: 15
-    needs: changes
+    needs: [changes, build-frontend-a11y]
     # continue-on-error removed in Phase D gate flip (#1094 closure, 2026-05-18).
     # Any axe AA violation now fails CI. Pre-existing test-infrastructure flakes
     # (e.g. timing-sensitive focus assertions, fixture loading timeouts) tracked
@@ -899,15 +902,19 @@ jobs:
         with:
           working-directory: apps/web
 
-      - name: Build App
-        run: pnpm build
-        env:
-          NEXT_PUBLIC_API_BASE: http://localhost:8080
-          # Wave B.1 (#633): enable visual-test fixture so e2e/a11y/games-library.spec.ts
-          # can scan /games?tab=library default + filtered-empty surfaces without a backend.
-          # Constant-folded at build time; STATE_OVERRIDE_ENABLED also unlocks `?state=...`
-          # URL hatch under prod NODE_ENV. Pre-existing accessibility.spec.ts is unaffected.
-          NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED: '1'
+      - name: Download frontend (a11y) artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: frontend-build-a11y-${{ github.run_id }}
+          path: /tmp/
+
+      - name: Extract frontend (a11y) artifact
+        shell: bash
+        working-directory: apps/web
+        run: |
+          echo "📂 Extracting frontend (a11y) build artifact..."
+          tar --use-compress-program='zstd -d' -xf /tmp/frontend-build-a11y.tar.zst
+          echo "✅ Frontend (a11y) artifact extracted"
 
       - name: Setup Test Environment
         run: cp .env.test.example .env.test

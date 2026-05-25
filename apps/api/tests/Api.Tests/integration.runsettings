@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RunSettings>
   <RunConfiguration>
-    <!-- Maximum time for entire test session: 30 minutes -->
-    <TestSessionTimeout>1800000</TestSessionTimeout>
+    <!-- Maximum time for entire test session: 45 minutes.
+         PR #1505 (2026-05-25): raised from 30→45 min. The GameRef fixture-drift
+         cleanup unblocked ~150 previously-failing tests, so each shard now runs
+         ~29-30 min of real work and the old 1_800_000 ms (30 min) session cap
+         aborted the run with exit 134 ("test run timeout of 1800000 milliseconds
+         exceeded") even though every test passed. Kept in sync with the GHA
+         step `timeout-minutes: 45` in ci.yml. -->
+    <TestSessionTimeout>2700000</TestSessionTimeout>
 
     <!-- Results directory -->
     <ResultsDirectory>./TestResults</ResultsDirectory>

@@ -988,6 +988,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         return new PdfDocumentEntity
         {
             Id = pdfId,
+            SharedGameId = gameId, // Post-Phase 2d: PdfDocument FKs straight to shared_games via SharedGameId
             UploadedByUserId = uploadedBy,
             FileName = fileName,
             FilePath = $"/test/{fileName}",
@@ -1035,6 +1036,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         {
             Id = Guid.NewGuid(),
             UserId = userId,
+            SharedGameId = gameId, // XOR constraint CK_UserLibraryEntry_GameSource: exactly one of shared/private game id
             AddedAt = DateTime.UtcNow
         });
         db.PdfDocuments.Add(CreatePdfRow(pdfId, gameId, userId, "rules.pdf", "Ready"));
@@ -1071,6 +1073,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         {
             Id = Guid.NewGuid(),
             UserId = userId,
+            SharedGameId = gameId, // XOR constraint CK_UserLibraryEntry_GameSource: exactly one of shared/private game id
             AddedAt = DateTime.UtcNow
         });
         db.PdfDocuments.Add(CreatePdfRow(pdfId, gameId, userId, "rules2.pdf", "Ready"));
@@ -1104,6 +1107,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         {
             Id = Guid.NewGuid(),
             UserId = userId,
+            SharedGameId = gameId, // XOR constraint CK_UserLibraryEntry_GameSource: exactly one of shared/private game id
             AddedAt = DateTime.UtcNow
         });
         db.PdfDocuments.Add(CreatePdfRow(pdfId, gameId, userId, "rules.pdf", "Extracting"));

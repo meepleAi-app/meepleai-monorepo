@@ -73,6 +73,7 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         var collection1 = new DocumentCollectionEntity
         {
             Id = collection1Id,
+            SharedGameId = gameId, // FK_document_collections_shared_games_SharedGameId (IsRequired)
             Name = "Catan Rules Collection",
             Description = "Official rules and expansions",
             CreatedByUserId = userId,
@@ -83,6 +84,7 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         var collection2 = new DocumentCollectionEntity
         {
             Id = collection2Id,
+            SharedGameId = gameId, // FK_document_collections_shared_games_SharedGameId (IsRequired)
             Name = "Catan FAQ Collection",
             CreatedByUserId = userId,
             DocumentsJson = "[]"
@@ -134,6 +136,7 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
+            SharedGameId = gameId, // FK_document_collections_shared_games_SharedGameId (IsRequired)
             Name = "Wingspan Rules",
             CreatedByUserId = userId,
             DocumentsJson = "[]"
@@ -210,6 +213,7 @@ public class DocumentCollectionCascadeDeleteTests : IAsyncLifetime
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
+            SharedGameId = gameId, // FK_document_collections_shared_games_SharedGameId (IsRequired)
             Name = "Azul Collection",
             CreatedByUserId = userId,
             DocumentsJson = "[]"

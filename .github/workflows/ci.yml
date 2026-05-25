@@ -338,7 +338,12 @@ jobs:
       # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
       # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
       - name: Run Integration Tests
-        timeout-minutes: 30
+        # PR #1505 (2026-05-25): raised from 30→45 minutes. The GameRef
+        # fixture-drift cleanup unblocked ~150 previously-failing tests so
+        # the suite now actually runs to completion (it used to short-circuit
+        # on the first wave of failures at ~25 min). 45 min keeps headroom
+        # for transient Testcontainers churn on the GitHub-hosted runner.
+        timeout-minutes: 45
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
@@ -359,7 +364,14 @@ jobs:
           TEST_REDIS_CONNSTRING: localhost:6379,allowAdmin=true
         run: |
           echo "🧪 Running integration tests - shard: ${{ matrix.shard.name }} (4 parallel threads)..."
-          dotnet test \
+          # PR #1505 (2026-05-25): target tests/Api.Tests/Api.Tests.csproj explicitly.
+          # Without this `dotnet test` walks the solution and also invokes
+          # Api.Analyzers.Tests.dll, which has zero tests matching
+          # Category=Integration → "No test matches the given testcase filter" →
+          # the assembly returns exit 1 (vstest treats no-match-on-non-empty
+          # assembly as an error) → the whole step fails even though
+          # Api.Tests.dll has Passed=N, Failed=0.
+          dotnet test tests/Api.Tests/Api.Tests.csproj \
             --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}" \
             --settings tests/Api.Tests/integration.runsettings \
             --logger "console;verbosity=minimal" \

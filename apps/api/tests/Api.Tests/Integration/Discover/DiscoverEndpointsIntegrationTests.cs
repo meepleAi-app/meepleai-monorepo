@@ -687,6 +687,7 @@ public sealed class DiscoverEndpointsIntegrationTests : IAsyncLifetime
         dbContext.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = id,
+            SharedGameId = sharedGameId, // honor caller-supplied FK (parameter was declared but unused)
             FileName = fileName,
             FilePath = $"/uploads/{id}.pdf",
             FileSizeBytes = 1024,

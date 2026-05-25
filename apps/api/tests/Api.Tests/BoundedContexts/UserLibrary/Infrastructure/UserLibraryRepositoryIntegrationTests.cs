@@ -105,7 +105,7 @@ public sealed class UserLibraryRepositoryIntegrationTests : IAsyncLifetime
             {
                 Id = Guid.NewGuid(),
                 UserId = _testUserId,
-                GameId = games[i].Id,
+                SharedGameId = games[i].Id, // XOR constraint CK_UserLibraryEntry_GameSource (GameId is [Ignore]d by EF)
                 CurrentState = (int)GameStateType.Owned,
                 StateChangedAt = DateTime.UtcNow,
                 AddedAt = DateTime.UtcNow.AddDays(-i - 1)
@@ -121,7 +121,7 @@ public sealed class UserLibraryRepositoryIntegrationTests : IAsyncLifetime
             {
                 Id = Guid.NewGuid(),
                 UserId = _testUserId,
-                GameId = games[i].Id,
+                SharedGameId = games[i].Id, // XOR constraint CK_UserLibraryEntry_GameSource (GameId is [Ignore]d by EF)
                 CurrentState = (int)GameStateType.Wishlist,
                 StateChangedAt = DateTime.UtcNow,
                 AddedAt = DateTime.UtcNow.AddDays(-i - 1)
@@ -206,7 +206,7 @@ public sealed class UserLibraryRepositoryIntegrationTests : IAsyncLifetime
         {
             Id = Guid.NewGuid(),
             UserId = _testUserId,
-            GameId = game.Id,
+            SharedGameId = game.Id, // XOR constraint CK_UserLibraryEntry_GameSource (GameId is [Ignore]d by EF)
             CurrentState = (int)GameStateType.Nuovo,
             StateChangedAt = DateTime.UtcNow,
             AddedAt = DateTime.UtcNow
@@ -246,7 +246,7 @@ public sealed class UserLibraryRepositoryIntegrationTests : IAsyncLifetime
         {
             Id = Guid.NewGuid(),
             UserId = _testUserId,
-            GameId = game.Id,
+            SharedGameId = game.Id, // XOR constraint CK_UserLibraryEntry_GameSource (GameId is [Ignore]d by EF)
             CurrentState = (int)GameStateType.InPrestito,
             StateChangedAt = DateTime.UtcNow,
             StateNotes = "Loaned to John",

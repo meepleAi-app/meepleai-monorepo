@@ -555,6 +555,7 @@ public sealed class MechanicAnalysisLifecycleEndpointsIntegrationTests : IAsyncL
         var analysis = new MechanicAnalysisEntity
         {
             Id = analysisId,
+            SharedGameId = sharedGameId, // FK_mechanic_analyses_shared_games_shared_game_id (param was unused)
             PdfDocumentId = Guid.NewGuid(),
             PromptVersion = "mechanic-extractor-v1",
             Status = status,

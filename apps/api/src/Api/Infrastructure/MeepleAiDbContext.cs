@@ -96,6 +96,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget> UserBudgets => Set<BoundedContexts.BusinessSimulations.Domain.Entities.UserBudget>(); // Phase 6: Budget/tier projection
     public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences> UserPreferences => Set<BoundedContexts.SystemConfiguration.Domain.Entities.UserPreferences>(); // Phase 6: User preferences projection
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
+    public DbSet<AuditOutboxEntity> AuditOutbox => Set<AuditOutboxEntity>(); // SP5 Admin Security S1: audit outbox pattern
     // Issue #661: append-only domain-event durability log (atomic with aggregate save)
     public DbSet<Api.Infrastructure.Entities.DomainEventLog.DomainEventLogEntity> DomainEventLogs
         => Set<Api.Infrastructure.Entities.DomainEventLog.DomainEventLogEntity>();

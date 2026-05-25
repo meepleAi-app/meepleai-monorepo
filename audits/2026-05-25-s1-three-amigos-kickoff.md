@@ -137,4 +137,31 @@ Then the outbox row is marked Failed with last_error="payload_oversize"
 
 ---
 
+## DoD verification log
+
+**Verificato il:** 2026-05-25 · **Branch:** `feature/sp5-admin-security-s1-impl` · **Verificatore:** @DegrassiAaron
+
+Esito complessivo: **7/8 criteri verificati a livello di codice/test**; **criterio 5 (latenza p95 processor) differito** a osservabilità ops (non misurabile in questo ambiente: nessun carico di produzione né load-generator). Il criterio 8 è soddisfatto con una **deviazione di naming documentata**.
+
+| # | Criterio | Status | Verificato il | Evidenza |
+|---|----------|--------|--------------|----------|
+| 1 | Task 0 D-4 report mergiato | ✅ committed | 2026-05-25 | `audits/2026-05-25-audit-log-d4-spike.md` in HEAD (`6b350611b`). Nota: il merge della PR S1 nel branch padre chiude formalmente questo criterio. |
+| 2 | Migration applica pulita (4 colonne + `audit_outbox`) | ✅ | 2026-05-25 | Migration `20260525080310_ExtendAuditLogSchema` aggiunge `before_json`/`after_json`/`impersonated_user_id`/`step_up_token_id` + tabella `audit_outbox` + indici `ix_audit_outbox_status_created_at` / `ix_audit_logs_impersonated_user_id`. Applicata via `MigrateAsync` da 45 integration test Testcontainers senza errori. |
+| 3 | No regression sugli 8 handler `[AuditableAction]` | ✅ | 2026-05-25 | 67/67 test esistenti PASS (ChangeUserRole, DeleteUser, SuspendUser, UpdateUserTier, UpdateUserAiConsent + `AuditOutboxWriteIntegrationTests`). Il relax del constraint `IRequest<TResponse>`→`IBaseRequest` e lo split atomic/best-effort non introducono regressioni. |
+| 4 | Azioni distruttive atomiche con audit | ✅ | 2026-05-25 | `AtomicAuditIntegrationTests` (2: commit-both + rollback-both) + Scenario 1 (delete + Pending outbox) + Scenario 4 (contrasto best-effort). `[AtomicAudit]` su `DeleteUserCommand`; `HandleAtomicAsync` avvolge mutazione+outbox in unica transazione. |
+| 5 | Processor p95 < 10s sotto carico | ⚠️ **DIFFERITO** | — | **Non verificato empiricamente.** Il tool `tools/AuditOutboxLoadGen` previsto dal piano non esiste e non c'è osservazione su dev di 1 settimana. Il design (poll 5s + batch 100 = ~20 row/s sostenuto) supporta il target per il volume admin atteso, ma manca una misura p95 reale. **Follow-up raccomandato:** strumentare un benchmark synthetic o osservare i gauge in staging prima del cutover strict di S3. Non bloccante per il merge S1 (il path è funzionalmente provato dai 45 test). |
+| 6 | Payload truncation (Q2) | ✅ | 2026-05-25 | Scenario 5 (60 BackupCodes → `_truncated` marker, ≤256KB, mutazione committa) + unit test `PayloadTruncator`. |
+| 7 | Idempotency (Q3) | ✅ | 2026-05-25 | Scenario 3 (crash recovery, no duplicati) + `AuditOutboxIdempotencyTests`. Contratto `audit_logs.Id == audit_outbox.Id` + pre-check esistenza batch (variante EF-native dell'`ON CONFLICT`). |
+| 8 | Metriche Prometheus esposte (Q3) | ✅ *(naming deviation)* | 2026-05-25 | 3 ObservableGauge registrati (`RegisterAuditOutboxGauges`) + test MeterListener. **Deviazione:** i nomi seguono la convenzione namespace del codebase `meepleai.*`, quindi l'export Prometheus produce `meepleai_audit_outbox_pending_count`, `meepleai_audit_outbox_pending_oldest_age_seconds`, `meepleai_audit_outbox_failed_count` — **non** i nomi nudi `audit_outbox_pending_count` / `audit_outbox_oldest_pending_age_seconds` indicati in Q3. **Azione Ops:** allineare le alert rule ai nomi effettivi esportati. Aggiunto un terzo gauge (`failed.count`) non previsto da Q3, utile per alert su poison-message. |
+
+### Scoperte durante l'implementazione (da tracciare separatamente — non bloccanti)
+
+1. **`UserRepository.UpdateAsync:205` azzera `BackupCodes`** (`Clear()` + rebuild dal dominio). Combinato con `GetByIdAsync` AsNoTracking→`MapToDomain` che non ri-popola i codici, **ogni `ChangeUserRole`/`SuspendUser` cancella i backup code 2FA dell'utente target.** Potenziale bug pre-esistente, non introdotto da S1. Verificare e aprire issue.
+2. **Doppio path di scrittura `audit_logs`**: `DomainEventHandlerBase.CreateAuditLogAsync` scrive direttamente in `audit_logs` sui domain event (es. `RoleChangedEvent` → `action=DomainEvent.RoleChangedEvent`), in parallelo al path outbox→processor di S1. I due path coesistono; il read endpoint dovrà esserne consapevole (vedi follow-up "Read endpoint merge").
+3. **H1 (review T3b)**: `MeepleAiDbContext.SaveChangesAsync` dispatcha i domain event via `MediatR.Publish` **dentro** `base.SaveChangesAsync`. Se la transazione atomica fa rollback, i side-effect degli event sono già avvenuti. Mitigato con `_eventCollector.Clear()` per-tentativo + vincolo documentato su `[AtomicAudit]`. Fix completo (dispatch post-commit via event outbox durevole) = follow-up.
+
+**S1 code-complete: 2026-05-25 by @DegrassiAaron — 7/8 DoD ✅, criterio 5 differito a ops (vedi sopra).**
+
+---
+
 *Questo documento è il riferimento autoritativo per la DoD di S1. Citarlo dai commit messages di Task 0-4 e dal merge finale di S1.*

@@ -200,11 +200,16 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error importing user at line {LineNumber}", lineNumber);
-                // Surface the exception type and message in the per-line error so the
-                // BulkOperationResult.Errors payload exposes the upstream cause to
-                // operators (and to integration tests that cannot read server logs).
-                // The full stack trace remains in the ILogger output only.
-                errors.Add($"Line {lineNumber}: import failed ({ex.GetType().Name}: {ex.Message})");
+                // Surface ONLY the exception type in the per-line error so operators (and
+                // integration tests that cannot read server logs) get the upstream cause
+                // class without leaking PII or DB-internal details that often live in
+                // ex.Message (e.g. "Unique constraint violation on column email" includes
+                // the column name; ValidationException.Message can carry the offending
+                // value). The full message + stack trace remain in the structured ILogger
+                // output. See unit test
+                // BulkImportUsersCommandHandlerTests.Handle_WhenPerLineImportFails_ShouldNotIncludeEmailInError
+                // which guards both the email-PII and the raw-message leak.
+                errors.Add($"Line {lineNumber}: import failed ({ex.GetType().Name})");
             }
 #pragma warning restore CA1031
         }

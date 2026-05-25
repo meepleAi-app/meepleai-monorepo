@@ -110,6 +110,17 @@ internal static class ApplicationServiceExtensions
         services.AddScoped<AuditService>();
         // AiRequestLogService migrated to CQRS (LogAiRequestCommand)
 
+        // SP5 Admin Security S1 T4: register the audit outbox processor as both a hosted
+        // background service (production drain loop) and a singleton (for integration tests
+        // that invoke RunOnceAsync deterministically without depending on the poll interval).
+        // T4b: register the health tracker singleton consumed by the processor + observable gauges.
+        services.AddSingleton<
+            Api.BoundedContexts.Administration.Infrastructure.Health.IAuditOutboxHealthTracker,
+            Api.BoundedContexts.Administration.Infrastructure.Health.AuditOutboxHealthTracker>();
+        services.AddSingleton<Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs.AuditOutboxProcessor>();
+        services.AddHostedService(sp =>
+            sp.GetRequiredService<Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs.AuditOutboxProcessor>());
+
         return services;
     }
 

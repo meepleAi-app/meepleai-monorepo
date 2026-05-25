@@ -5,6 +5,7 @@ using StackExchange.Redis;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Extensions.Http;
+using Api.BoundedContexts.Administration.Application.Behaviors;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs;
@@ -13,6 +14,7 @@ using Api.BoundedContexts.Administration.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundTasks;
 using Api.Infrastructure.Http;
+using Api.Infrastructure.Persistence;
 using Api.Services;
 using Api.Services.Providers.Probe;
 using Api.Services.Providers.Quota;
@@ -122,8 +124,17 @@ internal static class InfrastructureServiceExtensions
                 ?? configuration.GetConnectionString("Postgres")
                 ?? throw new InvalidOperationException("No PostgreSQL connection string configured");
 
+            // SP5 Admin Security S1 T3: register the audit snapshot sink + interceptor.
+            // Scoped lifetime aligns with the HTTP request lifecycle — one sink per request ensures
+            // snapshots captured by AuditingSaveChangesInterceptor are drained by AuditLoggingBehavior
+            // for the same request without cross-request bleed.
+            services.AddScoped<ScopedAuditSnapshotSink>();
+            services.AddScoped<IAuditSnapshotSink>(sp => sp.GetRequiredService<ScopedAuditSnapshotSink>());
+            services.AddScoped<AuditingSaveChangesInterceptor>();
+
             // PERF-09: Optimize Postgres connection pooling for better throughput
-            services.AddDbContext<MeepleAiDbContext>(options =>
+            // Changed from (options =>) to (sp, options =>) to inject the interceptor.
+            services.AddDbContext<MeepleAiDbContext>((sp, options) =>
             {
                 options.UseNpgsql(connectionString, npgsqlOptions =>
                 {
@@ -149,6 +160,10 @@ internal static class InfrastructureServiceExtensions
 
                 // Query behavior
                 options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking); // PERF-06: Default to no-tracking
+
+                // SP5 Admin Security S1 T3: attach the audit interceptor so every SaveChanges
+                // during an [AuditableAction] command captures entity snapshots into the sink.
+                options.AddInterceptors(sp.GetRequiredService<AuditingSaveChangesInterceptor>());
             });
 
             // Register domain event collector as scoped (per-request lifecycle)

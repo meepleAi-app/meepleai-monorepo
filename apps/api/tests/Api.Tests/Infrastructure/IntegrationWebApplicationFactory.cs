@@ -1,4 +1,6 @@
+using Api.BoundedContexts.Administration.Application.Behaviors;
 using Api.Infrastructure;
+using Api.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -130,6 +132,17 @@ internal static class IntegrationWebApplicationFactory
 
                     services.AddScoped<IDomainEventCollector, DomainEventCollector>();
 
+                    // SP5 Admin Security S1 T3: register the audit snapshot sink + interceptor so that
+                    // AuditLoggingBehavior can resolve ScopedAuditSnapshotSink in HTTP-pipeline integration
+                    // tests. RemoveAll guards against double-registration when the prod path already
+                    // registered them (the "Testing" env guard in AddDatabaseServices skips prod DI).
+                    services.RemoveAll<ScopedAuditSnapshotSink>();
+                    services.RemoveAll<IAuditSnapshotSink>();
+                    services.RemoveAll<AuditingSaveChangesInterceptor>();
+                    services.AddScoped<ScopedAuditSnapshotSink>();
+                    services.AddScoped<IAuditSnapshotSink>(sp => sp.GetRequiredService<ScopedAuditSnapshotSink>());
+                    services.AddScoped<AuditingSaveChangesInterceptor>();
+
                     services.AddDbContext<MeepleAiDbContext>((serviceProvider, options) =>
                     {
                         var configuration = serviceProvider.GetRequiredService<IConfiguration>();
@@ -140,6 +153,8 @@ internal static class IntegrationWebApplicationFactory
                         options.EnableSensitiveDataLogging();
                         options.ConfigureWarnings(warnings =>
                             warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+                        // SP5 Admin Security S1 T3: attach the audit interceptor for HTTP integration tests.
+                        options.AddInterceptors(serviceProvider.GetRequiredService<AuditingSaveChangesInterceptor>());
                     });
                 });
 

@@ -3018,6 +3018,38 @@
         "sidePanelLabel": "Voce in conflitto"
       }
     },
+    "encounter": {
+      "meta": {
+        "title": "Encounter Book | MeepleAI",
+        "description": "Cheatsheet on-demand dell'Encounter Book per la sessione libro game"
+      },
+      "entryStoryMeta": "Storybook · ultimo paragrafo letto",
+      "entryRefTitle": "→ Encounter {paragraph}",
+      "entryRefHint": "Servono stats e opzioni — fotografa l'Encounter Book",
+      "entryCta": "Fotografa Encounter {paragraph}",
+      "entryCtaHint": "card pronta in pochi secondi · nessun salvataggio long-term",
+      "loadingTitle": "Sto analizzando l'encounter",
+      "loadingHint": "Estraggo nome nemico, stats di combattimento e opzioni",
+      "cancel": "Annulla",
+      "optionsTitle": "Le tue opzioni",
+      "conditionsWin": "🏆 Vittoria",
+      "conditionsLoss": "💀 Sconfitta",
+      "parseConfidence": "parse",
+      "lowConfidenceHint": "Affidabilità bassa su alcuni campi — verifica manualmente sull'Encounter Book.",
+      "ephemeralNote": "Card temporanea (solo questa sessione) — l'Encounter Book non viene salvato.",
+      "retake": "🔄 Rifotografa",
+      "glossary": "📒 Glossario",
+      "resolve": "✓ Risolvi →",
+      "errorParseFailed": "Non sono riuscito a leggere l'encounter dalla foto. Riprova o rifotografa la pagina.",
+      "errorNotFound": "Foto o paragrafo non trovati. Rifotografa la pagina dell'Encounter Book.",
+      "errorGeneric": "Qualcosa è andato storto durante l'analisi. Riprova.",
+      "retry": "Riprova",
+      "confidence": {
+        "high": "Affidabilità alta",
+        "medium": "Affidabilità media",
+        "low": "Affidabilità bassa"
+      }
+    },
     "play": {
       "loading": "Caricamento...",
       "pageNumber": "Pagina {num}",

@@ -365,6 +365,12 @@ jobs:
         id: web-tag
         run: echo "tag=$(echo '${{ steps.meta-web.outputs.tags }}' | head -1)" >> $GITHUB_OUTPUT
 
+      # ARM64 native cross-compile (2026-05-25, Onda B): the Dockerfiles pin
+      # their build stages to $BUILDPLATFORM (x64 runner) and cross-compile to
+      # arm64. buildx auto-populates $BUILDPLATFORM/$TARGETARCH from the
+      # `platforms:` value below. setup-qemu-action (above) is still required
+      # for the lightweight runtime stage (apt-get/apk). Heavy build steps now
+      # run native — see docs/for-developers/specs/2026-05-25-ci-arm64-crosscompile-design.md
       - name: Build and Push API Image
         if: needs.detect-changes.outputs.deploy_api == 'true'
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7.1.0

@@ -232,8 +232,9 @@ jobs:
           compression-level: 0
 
   # Frontend: Lint, Typecheck, Test (Unit + E2E subset)
+  # Build moved to upstream `build-frontend` job (Build-Once refactor 2026-05-25).
   frontend:
-    name: Frontend - Build & Test
+    name: Frontend - Lint, Typecheck & Test
     runs-on: ${{ needs.changes.outputs.runner }}
     timeout-minutes: 30
     needs: changes
@@ -289,10 +290,8 @@ jobs:
           NODE_ENV: test
           CI: true
 
-      - name: Build
-        run: pnpm build
-        env:
-          NEXT_PUBLIC_API_BASE: http://localhost:8080
+      # Build step removed (2026-05-25 Build-Once refactor) — moved to upstream
+      # `build-frontend` job. Frontend-bundle-size and e2e consume the artifact.
 
       - name: Upload Coverage
         if: always()

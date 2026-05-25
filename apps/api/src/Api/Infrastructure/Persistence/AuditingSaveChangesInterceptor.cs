@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,13 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Api.Infrastructure.Persistence;
 
+/// <summary>Immutable before/after snapshot of a single audited entity mutation.</summary>
+/// <remarks>
+/// <paramref name="PrimaryKey"/>: for composite primary keys, components are joined with the
+/// separator <c>"|"</c> (see <see cref="AuditingSaveChangesInterceptor.PkSeparator"/>).
+/// Example for a composite (Guid, int) PK: <c>"ab12...|42"</c>. Downstream consumers
+/// (the T4 outbox processor) rely on this convention to parse individual PK components.
+/// </remarks>
 public record AuditSnapshot(
     string EntityType,
     string PrimaryKey,
@@ -35,6 +43,13 @@ public interface IAuditSnapshotSink
 public sealed class AuditingSaveChangesInterceptor : SaveChangesInterceptor
 {
     private readonly IAuditSnapshotSink _sink;
+
+    /// <summary>
+    /// Separator used to encode composite primary keys in <see cref="AuditSnapshot.PrimaryKey"/>.
+    /// Example for a composite (Guid, int) PK: <c>"ab123...|42"</c>. Downstream consumers
+    /// (the T4 outbox processor) rely on this convention to parse individual PK components.
+    /// </summary>
+    internal const string PkSeparator = "|";
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -94,9 +109,14 @@ public sealed class AuditingSaveChangesInterceptor : SaveChangesInterceptor
         if (keyProperties is null or { Count: 0 })
             return "";
 
+        // LIMITATION: For Insert (EntityState.Added) of entities with DB-generated integer PKs
+        // (e.g. `ValueGeneratedOnAdd()` identity columns), CurrentValue here is the CLR default (0).
+        // PK resolution is accurate only when the caller assigns the PK before EF tracking
+        // (e.g. Guid PKs assigned via `Guid.NewGuid()` in factory methods). All current MeepleAI
+        // entities use pre-assigned Guid PKs, so this is not an issue today.
         return keyProperties
             .Select(p => entry.Property(p.Name).CurrentValue?.ToString() ?? "")
-            .Aggregate((a, b) => $"{a}|{b}");
+            .Aggregate((a, b) => $"{a}{PkSeparator}{b}");
     }
 
     private static (string? before, string? after, AuditOperation op) ResolveSnapshotData(
@@ -118,7 +138,7 @@ public sealed class AuditingSaveChangesInterceptor : SaveChangesInterceptor
                 null,
                 AuditOperation.Delete),
 
-            _ => throw new InvalidOperationException(
+            _ => throw new UnreachableException(
                 $"Unexpected EntityState {entry.State} after state guard."),
         };
 

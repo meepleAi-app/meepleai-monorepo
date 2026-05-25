@@ -940,4 +940,18 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
 
     expect(document.querySelector('[data-slot="game-detail-house-rules-list"]')).toBeNull();
   });
+
+  // ─── Issue #1471 — Chat preview in Agents panel regression guard ─────────
+
+  it('Issue #1471: Agents panel contains GameDetailChatTab inline preview', () => {
+    detailMockState.data = makeDetail(); // own variant
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+
+    const agentsPanel = document.querySelector('[data-slot="game-detail-panel-agents"]');
+    expect(agentsPanel).toBeInTheDocument();
+    expect(agentsPanel?.querySelector('[data-slot="game-detail-chat-tab"]')).toBeInTheDocument();
+  });
 });

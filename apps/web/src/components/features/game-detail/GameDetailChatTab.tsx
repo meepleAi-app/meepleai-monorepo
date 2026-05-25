@@ -17,6 +17,7 @@
 import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
+import Link from 'next/link';
 
 export type GameDetailChatRole = 'user' | 'assistant';
 
@@ -55,13 +56,13 @@ export function GameDetailChatTab(props: GameDetailChatTabProps): ReactElement {
     >
       <div className="mb-3.5 flex items-center justify-between gap-3">
         <h3 className="font-display text-[15px] font-extrabold text-foreground">{labels.title}</h3>
-        <a
+        <Link
           href={openHref}
           data-slot="game-detail-chat-tab-open-cta"
           className="rounded-md border border-border bg-transparent px-2.5 py-1 font-display text-[12px] font-extrabold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {labels.openCta}
-        </a>
+        </Link>
       </div>
 
       {rows.length === 0 ? (

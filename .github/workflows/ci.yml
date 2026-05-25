@@ -933,15 +933,19 @@ jobs:
           retention-days: 7
 
   # Frontend bundle-size budget enforcement (Issue #629).
-  # Builds the app and verifies First Load JS for budgeted public routes
-  # against `apps/web/.bundle-budgets.json`. Fails when any route exceeds
+  # Verifies First Load JS for budgeted public routes against
+  # `apps/web/.bundle-budgets.json`. Fails when any route exceeds
   # `budget × (1 + tolerance)` (default 5%). Documented in
   # `docs/frontend/bundle-size-budget.md`.
+  #
+  # Build-Once refactor 2026-05-25: consumes upstream build-frontend artifact
+  # instead of running its own pnpm build (~100s saved). The default-config
+  # build matches what bundle-size budgets target (no a11y fixture flag).
   frontend-bundle-size:
     name: Frontend - Bundle Size
     runs-on: ${{ needs.changes.outputs.runner }}
     timeout-minutes: 15
-    needs: changes
+    needs: [changes, build-frontend]
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
@@ -958,10 +962,19 @@ jobs:
           working-directory: apps/web
           frozen-lockfile: 'true'
 
-      - name: Build App
-        run: pnpm build
-        env:
-          NEXT_PUBLIC_API_BASE: http://localhost:8080
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: frontend-build-${{ github.run_id }}
+          path: /tmp/
+
+      - name: Extract frontend artifact
+        shell: bash
+        working-directory: apps/web
+        run: |
+          echo "📂 Extracting frontend build artifact..."
+          tar --use-compress-program='zstd -d' -xf /tmp/frontend-build.tar.zst
+          echo "✅ Frontend artifact extracted"
 
       - name: Check Bundle Budgets
         run: pnpm bundle:check

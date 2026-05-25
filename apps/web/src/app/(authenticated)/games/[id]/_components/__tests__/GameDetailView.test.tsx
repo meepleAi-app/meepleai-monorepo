@@ -908,4 +908,30 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     expect(statsPanel).toBeInTheDocument();
     expect(statsPanel?.querySelector('[data-slot="game-detail-community-gate"]')).toBeNull();
   });
+
+  // ─── Issue #1464 — House rules CRUD visibility per variant ───────────────
+
+  it('Issue #1464: own variant renders GameDetailHouseRulesList inside Info panel', () => {
+    detailMockState.data = makeDetail(); // own variant
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+
+    const infoPanel = document.querySelector('[data-slot="game-detail-panel-info"]');
+    expect(infoPanel).toBeInTheDocument();
+    expect(
+      infoPanel?.querySelector('[data-slot="game-detail-house-rules-list"]')
+    ).toBeInTheDocument();
+  });
+
+  it('Issue #1464: community variant skips the house-rules list', () => {
+    detailMockState.data = makeDetail({ libraryEntryId: '' });
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+
+    expect(document.querySelector('[data-slot="game-detail-house-rules-list"]')).toBeNull();
+  });
 });

@@ -116,6 +116,9 @@ export function GameDetailHouseRulesList(props: GameDetailHouseRulesListProps): 
             value={addValue}
             onChange={e => setAddValue(e.target.value)}
             placeholder={labels.addPlaceholder}
+            // BE caps description at 2000 chars (AddHouseRuleCommandValidator).
+            maxLength={2000}
+            autoFocus
             data-slot="game-detail-house-rules-add-input"
             className="min-h-[64px] resize-y rounded-md border border-border bg-background p-2 font-mono text-[12px] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
@@ -170,6 +173,8 @@ export function GameDetailHouseRulesList(props: GameDetailHouseRulesListProps): 
                     <textarea
                       value={editValue}
                       onChange={e => setEditValue(e.target.value)}
+                      maxLength={2000}
+                      autoFocus
                       data-slot="game-detail-house-rules-edit-input"
                       className="min-h-[56px] resize-y rounded-md border border-border bg-background p-2 font-mono text-[12px] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />

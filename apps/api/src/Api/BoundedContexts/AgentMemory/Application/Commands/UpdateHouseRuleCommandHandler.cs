@@ -50,7 +50,17 @@ internal sealed class UpdateHouseRuleCommandHandler : ICommandHandler<UpdateHous
         if (memory == null)
             throw new NotFoundException($"GameMemory not found for game {command.GameId}");
 
-        memory.UpdateHouseRule(command.RuleId, command.Description);
+        try
+        {
+            memory.UpdateHouseRule(command.RuleId, command.Description);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+        {
+            // Map the domain "rule not found" sentinel to a typed 404 — explicit and
+            // consistent with RemoveHouseRuleCommandHandler instead of relying on the
+            // middleware's string-match fallback.
+            throw new NotFoundException($"House rule {command.RuleId} not found");
+        }
 
         await _gameMemoryRepo.UpdateAsync(memory, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

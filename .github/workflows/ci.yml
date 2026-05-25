@@ -364,7 +364,14 @@ jobs:
           TEST_REDIS_CONNSTRING: localhost:6379,allowAdmin=true
         run: |
           echo "🧪 Running integration tests - shard: ${{ matrix.shard.name }} (4 parallel threads)..."
-          dotnet test \
+          # PR #1505 (2026-05-25): target tests/Api.Tests/Api.Tests.csproj explicitly.
+          # Without this `dotnet test` walks the solution and also invokes
+          # Api.Analyzers.Tests.dll, which has zero tests matching
+          # Category=Integration → "No test matches the given testcase filter" →
+          # the assembly returns exit 1 (vstest treats no-match-on-non-empty
+          # assembly as an error) → the whole step fails even though
+          # Api.Tests.dll has Passed=N, Failed=0.
+          dotnet test tests/Api.Tests/Api.Tests.csproj \
             --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}" \
             --settings tests/Api.Tests/integration.runsettings \
             --logger "console;verbosity=minimal" \

@@ -713,16 +713,16 @@ jobs:
           printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\nINITIAL_ADMIN_EMAIL=admin@test.local\nINITIAL_ADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
           printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
 
-      - name: Fix dotnet directory permissions
-        run: |
-          if [ -d "/usr/share/dotnet" ]; then
-            sudo chown -R $(whoami) /usr/share/dotnet || true
-          fi
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+      # Use the full composite action (not just setup-dotnet) because
+      # `dotnet ef database update --no-build` (Run Database Migrations step
+      # below) needs Microsoft.EntityFrameworkCore.Design restored into
+      # ~/.nuget/packages/. Design-time tools are NOT part of the bin/obj
+      # artifact from build-backend. Cost: ~30s of cached NuGet restore.
+      - name: Setup Backend (restore NuGet for EF design-time tools)
+        uses: ./.github/actions/setup-backend
         with:
           dotnet-version: '9.0.x'
+          working-directory: apps/api
 
       - name: Download backend artifact
         uses: actions/download-artifact@v7
@@ -734,7 +734,7 @@ jobs:
         shell: bash
         working-directory: apps/api
         run: |
-          echo "📂 Extracting backend build artifact..."
+          echo "📂 Extracting backend build artifact (overwrites any cached bin/obj)..."
           tar --use-compress-program='zstd -d' -xf /tmp/backend-build.tar.zst
           echo "✅ Backend artifact extracted"
 

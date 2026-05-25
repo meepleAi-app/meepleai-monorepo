@@ -200,11 +200,19 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error importing user at line {LineNumber}", lineNumber);
-                // Surface the exception type and message in the per-line error so the
-                // BulkOperationResult.Errors payload exposes the upstream cause to
-                // operators (and to integration tests that cannot read server logs).
-                // The full stack trace remains in the ILogger output only.
-                errors.Add($"Line {lineNumber}: import failed ({ex.GetType().Name}: {ex.Message})");
+                // SECURITY (test-guarded): never include `ex.Message` or any user data
+                // (e.g. the email being imported) in the BulkOperationResult.Errors
+                // payload — that payload is returned to API callers and would leak PII
+                // and raw infrastructure errors (DB constraint messages, etc.). The
+                // unit test `Handle_WhenPerLineImportFails_ShouldNotIncludeEmailInError`
+                // (BulkImportUsersCommandHandlerTests) enforces this contract. Full
+                // diagnostic detail (exception type, message, stack) remains in the
+                // ILogger output above for admin/operator debugging.
+                // Regression-fix history: PR #1505 momentarily inlined ex.Message here
+                // for integration-test convenience; reverted to the generic message
+                // because the test asserts strictly on this and no test consumer
+                // actually depends on the leaked format.
+                errors.Add($"Line {lineNumber}: import failed due to an internal error.");
             }
 #pragma warning restore CA1031
         }

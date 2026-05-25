@@ -991,11 +991,28 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [frontend, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e]
+    needs: [build-backend, build-frontend, build-frontend-a11y, frontend, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e]
     if: always()
     steps:
       - name: Check Status
         run: |
+          # Required upstream build jobs (Build-Once refactor 2026-05-25).
+          # If a build fails, every downstream test job is skipped — the loop
+          # below would then see only 'skipped' results and not flag the failure.
+          # We catch build failures explicitly here.
+          for build_job in build-backend build-frontend build-frontend-a11y; do
+            case "$build_job" in
+              build-backend) result="${{ needs.build-backend.result }}" ;;
+              build-frontend) result="${{ needs.build-frontend.result }}" ;;
+              build-frontend-a11y) result="${{ needs.build-frontend-a11y.result }}" ;;
+            esac
+            # 'skipped' is OK (paths filter excluded that area); 'failure' / 'cancelled' is not.
+            if [ "$result" == "failure" ] || [ "$result" == "cancelled" ]; then
+              echo "❌ CI Failed: upstream build $build_job=$result"
+              exit 1
+            fi
+          done
+
           # Required jobs (block CI)
           # NOTE: frontend-a11y was non-blocking via job-level continue-on-error
           # until Phase D gate flip (#1094 closure, 2026-05-18). It is now in the
@@ -1113,7 +1130,7 @@ jobs:
         || github.base_ref == 'main-staging'
         || github.base_ref == 'main'
       )
-    needs: [changes, frontend, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e, ci-success, deploy-preview]
+    needs: [changes, build-backend, build-frontend, build-frontend-a11y, frontend, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e, ci-success, deploy-preview]
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: failed

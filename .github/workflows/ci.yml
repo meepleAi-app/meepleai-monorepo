@@ -1120,6 +1120,11 @@ jobs:
     # (2026-05-25): removed the pull_request-only guard that silently skipped
     # the job on dispatch runs.
     if: always()
+    # Observability must never break the pipeline it observes (panel review
+    # #1530, Nygard): a transient GitHub API hiccup (rate limit on
+    # listJobsForWorkflowRun) should not surface as a red check. Not in
+    # ci-success needs, so it never gates merge regardless.
+    continue-on-error: true
     permissions:
       pull-requests: write
       actions: read

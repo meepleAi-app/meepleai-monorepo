@@ -28,6 +28,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
   GameDetailAgentsList,
+  GameDetailChatTab,
   GameDetailCommunityGate,
   GameDetailFaqList,
   GameDetailHero,
@@ -605,6 +606,14 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
     cta: t('pages.gameDetail.stats.communityGateCta'),
   };
 
+  const chatTabLabels = {
+    title: t('pages.gameDetail.chat.title'),
+    empty: t('pages.gameDetail.chat.empty'),
+    openCta: t('pages.gameDetail.chat.openCta'),
+    userPrefix: t('pages.gameDetail.chat.userPrefix'),
+    assistantPrefix: t('pages.gameDetail.chat.assistantPrefix'),
+  };
+
   const houseRulesLabels = {
     title: t('pages.gameDetail.houseRules.title'),
     addCta: t('pages.gameDetail.houseRules.addCta'),
@@ -815,7 +824,15 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
           hidden={tab !== 'agents'}
           data-slot="game-detail-panel-agents"
         >
-          <GameDetailAgentsList state={agentsState} labels={agentsLabels} />
+          <div className="flex flex-col gap-6">
+            <GameDetailAgentsList state={agentsState} labels={agentsLabels} />
+            {/* Inline chat preview (#1471) — empty for now; full chat lives at /library/{id}/agent */}
+            <GameDetailChatTab
+              messages={[]}
+              openHref={`/library/${gameId}/agent`}
+              labels={chatTabLabels}
+            />
+          </div>
         </div>
 
         {/* Documents tab */}

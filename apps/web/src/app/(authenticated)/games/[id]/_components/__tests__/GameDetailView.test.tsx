@@ -263,6 +263,12 @@ const MESSAGES: Record<string, string> = {
   'pages.gameDetail.houseRules.deleteConfirmMessage': 'Questa azione non e reversibile.',
   'pages.gameDetail.houseRules.deleteConfirm': 'Elimina',
   'pages.gameDetail.houseRules.empty': 'Nessuna regola',
+  // Issue #1471 — Chat preview (Agents tab)
+  'pages.gameDetail.chat.title': 'Chat',
+  'pages.gameDetail.chat.empty': 'Nessun messaggio',
+  'pages.gameDetail.chat.openCta': 'Apri chat',
+  'pages.gameDetail.chat.userPrefix': 'Tu',
+  'pages.gameDetail.chat.assistantPrefix': 'Agente',
 };
 
 function renderWithIntl(ui: ReactElement) {
@@ -933,5 +939,19 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
     expect(document.querySelector('[data-slot="game-detail-house-rules-list"]')).toBeNull();
+  });
+
+  // ─── Issue #1471 — Chat preview in Agents panel regression guard ─────────
+
+  it('Issue #1471: Agents panel contains GameDetailChatTab inline preview', () => {
+    detailMockState.data = makeDetail(); // own variant
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+
+    const agentsPanel = document.querySelector('[data-slot="game-detail-panel-agents"]');
+    expect(agentsPanel).toBeInTheDocument();
+    expect(agentsPanel?.querySelector('[data-slot="game-detail-chat-tab"]')).toBeInTheDocument();
   });
 });

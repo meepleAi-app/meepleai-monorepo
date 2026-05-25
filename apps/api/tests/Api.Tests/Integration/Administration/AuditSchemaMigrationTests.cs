@@ -166,7 +166,7 @@ public sealed class AuditSchemaMigrationTests : IAsyncLifetime
         }
 
         columns.Should().BeEquivalentTo(
-            ["Id", "created_at", "last_error", "payload_json", "processed_at", "retry_count", "status"],
+            ["id", "created_at", "last_error", "payload_json", "processed_at", "retry_count", "status"],
             because: "audit_outbox must have the expected columns from AuditOutboxEntityConfiguration");
     }
 

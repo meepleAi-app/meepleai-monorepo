@@ -24,15 +24,35 @@ public class AuditOutboxEntity
 
     public void MarkSent(DateTimeOffset now)
     {
+        if (Status == OutboxStatus.Sent)
+        {
+            // Idempotent: at-least-once delivery may re-mark a Sent row.
+            return;
+        }
+        if (Status == OutboxStatus.Failed)
+        {
+            // Retry path: Failed -> Sent is allowed (processor retries a failed row).
+            // We preserve LastError + RetryCount so the operator can see the row failed before succeeding.
+        }
         Status = OutboxStatus.Sent;
         ProcessedAt = now;
     }
 
     public void MarkFailed(string error, DateTimeOffset now)
     {
+        if (Status == OutboxStatus.Sent)
+        {
+            throw new InvalidOperationException(
+                $"Cannot mark a Sent outbox row {Id} as Failed; this would regress a successfully-processed audit. " +
+                "Investigate the caller — likely a race in the processor.");
+        }
+        // Truncate the error message to fit the 2048-char column limit (defense in depth).
+        var truncated = error.Length > 2048
+            ? string.Concat(error.AsSpan(0, 2045), "...")
+            : error;
         Status = OutboxStatus.Failed;
         RetryCount++;
-        LastError = error;
+        LastError = truncated;
         ProcessedAt = now;
     }
 }

@@ -14,7 +14,7 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20260525073904_ExtendAuditLogSchema")]
+    [Migration("20260525080310_ExtendAuditLogSchema")]
     partial class ExtendAuditLogSchema
     {
         /// <inheritdoc />
@@ -3702,7 +3702,8 @@ namespace Api.Infrastructure.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")

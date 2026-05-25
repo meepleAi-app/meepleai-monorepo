@@ -39,7 +39,7 @@ namespace Api.Infrastructure.Migrations
                 name: "audit_outbox",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
                     payload_json = table.Column<string>(type: "jsonb", nullable: false),
                     status = table.Column<int>(type: "integer", nullable: false),
                     retry_count = table.Column<int>(type: "integer", nullable: false),
@@ -49,7 +49,7 @@ namespace Api.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_audit_outbox", x => x.Id);
+                    table.PrimaryKey("PK_audit_outbox", x => x.id);
                 });
 
             migrationBuilder.CreateIndex(

@@ -10,6 +10,7 @@ internal class AuditOutboxEntityConfiguration : IEntityTypeConfiguration<AuditOu
     {
         builder.ToTable("audit_outbox");
         builder.HasKey(e => e.Id);
+        builder.Property(e => e.Id).HasColumnName("id");
         builder.Property(e => e.PayloadJson).HasColumnName("payload_json").HasColumnType("jsonb").IsRequired();
         builder.Property(e => e.Status).HasColumnName("status").IsRequired();
         builder.Property(e => e.RetryCount).HasColumnName("retry_count").IsRequired();

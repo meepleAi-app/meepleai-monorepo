@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Api.BoundedContexts.Administration.Application;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +12,16 @@ internal class AuditService
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<AuditService> _logger;
     private readonly TimeProvider _timeProvider;
+
+    /// <summary>
+    /// JSON options for serializing <see cref="AuditOutboxPayload"/>. PascalCase keys are kept
+    /// intentionally so the T4 processor can round-trip with default JsonSerializer options.
+    /// Null values are omitted to keep payload_json compact.
+    /// </summary>
+    private static readonly JsonSerializerOptions AuditOutboxJsonOptions = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
 
     public AuditService(MeepleAiDbContext db, ILogger<AuditService> logger, TimeProvider? timeProvider = null)
     {
@@ -87,5 +100,34 @@ internal class AuditService
         _logger.LogWarning(
             "Access denied: User {UserId} in scope {UserScope} attempted to access {Resource} requiring scope {RequiredScope}",
             userId, userScope, resource, requiredScope);
+    }
+
+    /// <summary>
+    /// Writes an <see cref="AuditOutboxEntity"/> (Status=Pending) to the audit_outbox table.
+    /// The T4 AuditOutboxProcessor later materializes this into a permanent <see cref="AuditLogEntity"/>.
+    ///
+    /// Resilience: failures are logged and swallowed — audit enqueue must never break business ops (best-effort, T3).
+    /// Atomicity: this is a SEPARATE SaveChanges from the handler's business SaveChanges (T3b will address
+    /// atomic writes for destructive commands via the AtomicAudit pattern).
+    /// </summary>
+    public virtual async Task EnqueueAuditAsync(
+        AuditOutboxPayload payload,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(payload, AuditOutboxJsonOptions);
+            var row = AuditOutboxEntity.CreatePending(json, _timeProvider.GetUtcNow());
+            _db.AuditOutbox.Add(row);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Resilience: audit failures must never break business operations (best-effort, T3)
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(ex,
+                "Failed to enqueue audit outbox row for action {Action} on {Resource}",
+                payload.Action, payload.Resource);
+        }
     }
 }

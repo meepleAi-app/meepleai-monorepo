@@ -276,6 +276,20 @@ describe('EncounterCheatsheetView', () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 
+  it('has no axe violations in the parsing state', async () => {
+    const { container } = render(
+      <EncounterCheatsheetView
+        status="parsing"
+        cheatsheet={null}
+        labels={labels}
+        onParse={noop}
+        onResolve={noop}
+        onCancel={noop}
+      />
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
   it('has no axe violations in the rendered cheatsheet state', async () => {
     const { container } = render(
       <EncounterCheatsheetView

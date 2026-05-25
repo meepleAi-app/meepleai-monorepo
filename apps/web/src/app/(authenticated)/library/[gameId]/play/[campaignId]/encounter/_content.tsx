@@ -74,8 +74,10 @@ export function Content({
     [t, paragraphMarker]
   );
 
+  // `from` is expected as a bare integer ("147"); strip a leading § defensively
+  // so a caller passing "§147" does not render "§§147".
   const storyContext: EncounterStoryContext | null = fromLabel
-    ? { paragraphLabel: `§${fromLabel}`, excerpt: excerpt ?? '' }
+    ? { paragraphLabel: `§${fromLabel.replace(/^§/, '')}`, excerpt: excerpt ?? '' }
     : null;
 
   const status = deriveEncounterStatus(parse.status);

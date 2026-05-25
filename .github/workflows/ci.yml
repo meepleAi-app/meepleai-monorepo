@@ -84,7 +84,9 @@ jobs:
     runs-on: ${{ needs.changes.outputs.runner }}
     needs: changes
     timeout-minutes: 15
-    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call'
+    # Runs when backend OR frontend changes: e2e job needs the API even when
+    # only the frontend changed (it starts the backend to test against).
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call'
     defaults:
       run:
         working-directory: apps/api
@@ -641,10 +643,13 @@ jobs:
 
   # Stage 6: E2E Tests (Critical paths only)
   # Full E2E suite with 4-shard parallel execution runs separately in e2e-tests.yml
+  #
+  # Build-Once refactor 2026-05-25: consumes upstream build-backend +
+  # build-frontend artifacts instead of running its own builds (~7 min saved).
   e2e:
     name: E2E - Critical Paths
     runs-on: ${{ needs.changes.outputs.runner }}
-    needs: changes
+    needs: [changes, build-backend, build-frontend]
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
 
     # Service containers for backend (required for E2E tests)
@@ -719,13 +724,19 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Restore Backend Dependencies
-        working-directory: apps/api/src/Api
-        run: dotnet restore
+      - name: Download backend artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: backend-build-${{ github.run_id }}
+          path: /tmp/
 
-      - name: Build Backend
-        working-directory: apps/api/src/Api
-        run: dotnet build --no-restore --configuration Release
+      - name: Extract backend artifact
+        shell: bash
+        working-directory: apps/api
+        run: |
+          echo "📂 Extracting backend build artifact..."
+          tar --use-compress-program='zstd -d' -xf /tmp/backend-build.tar.zst
+          echo "✅ Backend artifact extracted"
 
       - name: Install EF Core Tools
         run: |
@@ -804,8 +815,19 @@ jobs:
         with:
           working-directory: apps/web
 
-      - name: Build App
-        run: pnpm build
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: frontend-build-${{ github.run_id }}
+          path: /tmp/
+
+      - name: Extract frontend artifact
+        shell: bash
+        working-directory: apps/web
+        run: |
+          echo "📂 Extracting frontend build artifact..."
+          tar --use-compress-program='zstd -d' -xf /tmp/frontend-build.tar.zst
+          echo "✅ Frontend artifact extracted"
 
       - name: Setup Test Environment
         run: cp .env.test.example .env.test

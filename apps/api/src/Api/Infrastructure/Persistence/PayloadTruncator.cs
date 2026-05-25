@@ -17,6 +17,25 @@ public static class PayloadTruncator
     private const int CollectionTrimThreshold = 50;
     private const int CollectionTrimKeep = 10;
 
+    /// <summary>
+    /// Verbatim JSON substring emitted into a snapshot's serialized property bag when the
+    /// truncated payload still exceeds the byte budget. Consumers (e.g. AuditLoggingBehavior)
+    /// detect oversize snapshots via Ordinal substring match against the serialized JSON.
+    ///
+    /// Contract — DO NOT modify the key name, value, or formatting without updating callers:
+    ///   - Dictionary key:   "_oversize"  (literal — not subject to JsonNamingPolicy renaming)
+    ///   - Value:            true         (boolean)
+    ///   - Serialization:    WriteIndented=false → produces "_oversize":true with NO whitespace
+    /// </summary>
+    public const string OversizeMarkerJson = "\"_oversize\":true";
+
+    /// <summary>
+    /// Returns true when the given serialized snapshot JSON contains the oversize marker
+    /// emitted by <see cref="Truncate"/>. Ordinal comparison — case-sensitive.
+    /// </summary>
+    public static bool IsOversizeJson(string? snapshotJson)
+        => snapshotJson is not null && snapshotJson.Contains(OversizeMarkerJson, StringComparison.Ordinal);
+
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         WriteIndented = false,

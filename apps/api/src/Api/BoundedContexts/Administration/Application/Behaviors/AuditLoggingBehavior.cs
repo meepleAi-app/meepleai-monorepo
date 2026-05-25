@@ -6,6 +6,7 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Infrastructure;
 using Api.Infrastructure.Persistence;
 using Api.Services;
+using Api.SharedKernel.Application.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -40,6 +41,13 @@ namespace Api.BoundedContexts.Administration.Application.Behaviors;
 /// delegate on transient connection errors. For destructive admin commands (low frequency, DB-only,
 /// idempotent on rollback) this is acceptable — a rolled-back first attempt leaves no committed state,
 /// and EF retries only on transient connection errors, not on business-logic failures.
+///
+/// Domain-events caveat (atomic path): MeepleAiDbContext.SaveChangesAsync dispatches collected
+/// events via MediatR.Publish INSIDE base.SaveChangesAsync (before our outer Commit). If the outer
+/// transaction subsequently rolls back, event side-effects already happened. To mitigate the retry
+/// case the behavior calls IDomainEventCollector.Clear() at the START of each strategy attempt so a
+/// retried handler does not see stale events from a failed attempt — but it cannot undo dispatches
+/// that already occurred. See [AtomicAudit] doc-comment for the formal constraint.
 /// </summary>
 internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IBaseRequest
@@ -49,19 +57,22 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
     private readonly ScopedAuditSnapshotSink _sink;
     private readonly ILogger<AuditLoggingBehavior<TRequest, TResponse>> _logger;
     private readonly MeepleAiDbContext _dbContext;
+    private readonly IDomainEventCollector _eventCollector;
 
     public AuditLoggingBehavior(
         IHttpContextAccessor httpContextAccessor,
         AuditService auditService,
         ScopedAuditSnapshotSink sink,
         ILogger<AuditLoggingBehavior<TRequest, TResponse>> logger,
-        MeepleAiDbContext dbContext)
+        MeepleAiDbContext dbContext,
+        IDomainEventCollector eventCollector)
     {
         _httpContextAccessor = httpContextAccessor;
         _auditService = auditService;
         _sink = sink;
         _logger = logger;
         _dbContext = dbContext;
+        _eventCollector = eventCollector;
     }
 
     public async Task<TResponse> Handle(
@@ -126,10 +137,13 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
         if (isInMemory)
         {
             // No-transaction path for unit tests only.
+            // Clear sink + collector so a previous test/save in the same scope does not bleed in.
             _sink.Clear();
+            _eventCollector.Clear();
             var result = await next().ConfigureAwait(false);
             var payload = BuildOutboxPayload(
-                auditAttribute, adminUserId, adminEmail, resourceId, ipAddress, userAgent, request, "Success");
+                auditAttribute, adminUserId, resourceId, ipAddress, userAgent,
+                "Success", BuildMetadata(auditAttribute, adminEmail, request));
             await _auditService.EnqueueAuditAtomicAsync(payload, cancellationToken).ConfigureAwait(false);
             _sink.Clear();
             return result;
@@ -143,7 +157,13 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
 
         return await strategy.ExecuteAsync(async () =>
         {
+            // Clear sink AND domain-event collector at the start of EVERY strategy attempt. If the
+            // strategy retries (transient connection error), this ensures the retried handler does
+            // not observe stale snapshots/events from the failed attempt. NOTE: this does NOT undo
+            // MediatR.Publish dispatches that already occurred during the failed attempt's
+            // base.SaveChangesAsync — that's a known constraint of [AtomicAudit] (see attribute doc).
             _sink.Clear();
+            _eventCollector.Clear();
 
             // BeginTransactionAsync opens a real DB transaction. The handler's UoW.SaveChangesAsync
             // flushes the mutation into this tx without committing. EnqueueAuditAtomicAsync then
@@ -161,7 +181,8 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
 
                 // next() returned successfully; sink now contains the mutation snapshots.
                 var txPayload = BuildOutboxPayload(
-                    auditAttribute, adminUserId, adminEmail, resourceId, ipAddress, userAgent, request, "Success");
+                    auditAttribute, adminUserId, resourceId, ipAddress, userAgent,
+                    "Success", BuildMetadata(auditAttribute, adminEmail, request));
 
                 // EnqueueAuditAtomicAsync flushes the outbox row into the open tx — does NOT swallow.
                 // If it throws, the catch block below rolls back.
@@ -236,7 +257,6 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
                 BuildMetadata(auditAttribute, adminEmail, request),
                 ipAddress,
                 userAgent,
-                requestType: typeof(TRequest).Name,
                 cancellationToken).ConfigureAwait(false);
 
             return response;
@@ -254,7 +274,6 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
                 BuildErrorMetadata(auditAttribute, adminEmail, request, ex),
                 ipAddress,
                 userAgent,
-                requestType: typeof(TRequest).Name,
                 cancellationToken).ConfigureAwait(false);
 
             throw;
@@ -335,21 +354,19 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
 
     /// <summary>
     /// Builds the <see cref="AuditOutboxPayload"/> from the current sink state, request context,
-    /// and the given result/details. Shared by both the atomic and best-effort paths.
+    /// and the given <paramref name="result"/>/<paramref name="details"/>. Shared by both the
+    /// atomic and best-effort paths — caller pre-builds the metadata JSON via
+    /// <see cref="BuildMetadata"/> (Success) or <see cref="BuildErrorMetadata"/> (Error).
     /// </summary>
     private AuditOutboxPayload BuildOutboxPayload(
         AuditableActionAttribute attr,
         string? adminUserId,
-        string? adminEmail,
         string? resourceId,
         string? ipAddress,
         string? userAgent,
-        TRequest request,
-        string result)
+        string result,
+        string details)
     {
-        // Atomic path is only invoked on Success (errors propagate before reaching this helper).
-        var details = BuildMetadata(attr, adminEmail, request);
-
         // Drain snapshots from the sink (populated by AuditingSaveChangesInterceptor during next()).
         var snapshotPayloads = _sink.Snapshots
             .Select(s => new AuditSnapshotPayload
@@ -364,13 +381,10 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
 
         // Detect oversize: if PayloadTruncator flagged any snapshot, mark the payload so the
         // T4 processor can MarkFailed with last_error="payload_oversize" instead of persisting
-        // potentially inaccurate truncated data.
-        // "_oversize" is a literal dictionary key set by PayloadTruncator, NOT a C# property name.
-        // JsonNamingPolicy.SnakeCaseLower does NOT rename dictionary keys, so the marker serializes
-        // verbatim as "_oversize":true (no space — WriteIndented=false). This search string is correct.
+        // potentially inaccurate truncated data. Marker contract is owned by PayloadTruncator —
+        // see PayloadTruncator.OversizeMarkerJson for the verbatim string.
         var oversize = snapshotPayloads.Any(s =>
-            (s.BeforeJson != null && s.BeforeJson.Contains("\"_oversize\":true", StringComparison.Ordinal)) ||
-            (s.AfterJson  != null && s.AfterJson.Contains("\"_oversize\":true",  StringComparison.Ordinal)));
+            PayloadTruncator.IsOversizeJson(s.BeforeJson) || PayloadTruncator.IsOversizeJson(s.AfterJson));
 
         return new AuditOutboxPayload
         {
@@ -400,51 +414,12 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
         string details,
         string? ipAddress,
         string? userAgent,
-        string? requestType,
         CancellationToken cancellationToken)
     {
         try
         {
-            // Drain snapshots from the sink (populated by AuditingSaveChangesInterceptor during next()).
-            var snapshotPayloads = _sink.Snapshots
-                .Select(s => new AuditSnapshotPayload
-                {
-                    EntityType = s.EntityType,
-                    PrimaryKey = s.PrimaryKey,
-                    BeforeJson = s.BeforeJson,
-                    AfterJson = s.AfterJson,
-                    Operation = s.Operation.ToString(),
-                })
-                .ToList();
-
-            // Detect oversize: if PayloadTruncator flagged any snapshot, mark the payload so the
-            // T4 processor can MarkFailed with last_error="payload_oversize" instead of persisting
-            // potentially inaccurate truncated data.
-            // "_oversize" is a literal dictionary key set by PayloadTruncator, NOT a C# property name.
-            // JsonNamingPolicy.SnakeCaseLower does NOT rename dictionary keys, so the marker serializes
-            // verbatim as "_oversize":true (no space — WriteIndented=false). This search string is correct.
-            var oversize = snapshotPayloads.Any(s =>
-                (s.BeforeJson != null && s.BeforeJson.Contains("\"_oversize\":true", StringComparison.Ordinal)) ||
-                (s.AfterJson  != null && s.AfterJson.Contains("\"_oversize\":true",  StringComparison.Ordinal)));
-
-            var payload = new AuditOutboxPayload
-            {
-                Action      = attr.Action,
-                Resource    = attr.Resource,
-                UserId      = adminUserId,
-                ResourceId  = resourceId,
-                Result      = result,
-                IpAddress   = ipAddress,
-                UserAgent   = userAgent,
-                RequestType = requestType,
-                Details     = details,
-                Snapshots   = snapshotPayloads,
-                // Populated by S2 (impersonation) / S3 (step-up); null until then.
-                ImpersonatedUserId = null,
-                StepUpTokenId      = null,
-                Timestamp   = DateTimeOffset.UtcNow,
-                Oversize    = oversize,
-            };
+            var payload = BuildOutboxPayload(
+                attr, adminUserId, resourceId, ipAddress, userAgent, result, details);
 
             await _auditService.EnqueueAuditAsync(payload, cancellationToken).ConfigureAwait(false);
         }

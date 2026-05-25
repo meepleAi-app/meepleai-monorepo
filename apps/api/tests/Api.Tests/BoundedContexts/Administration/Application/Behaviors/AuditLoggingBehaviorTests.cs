@@ -454,7 +454,8 @@ public sealed class AuditLoggingBehaviorTests
             _auditServiceMock.Object,
             _sink,
             NullLogger<AuditLoggingBehavior<TRequest, TResponse>>.Instance,
-            _dbContext);
+            _dbContext,
+            new DomainEventCollector());
     }
 }
 

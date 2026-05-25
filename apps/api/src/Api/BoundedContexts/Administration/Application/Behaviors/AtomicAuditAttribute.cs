@@ -20,6 +20,17 @@ namespace Api.BoundedContexts.Administration.Application.Behaviors;
 ///
 /// SP5 Admin Security S1 — Task 3b.
 /// Three-amigos Q1: atomic for destructive, best-effort for the rest.
+///
+/// ⚠ CONSTRAINT — domain events: this attribute is appropriate ONLY for commands whose handler
+/// does NOT publish observable external side-effects through IDomainEventCollector.
+/// Rationale: MeepleAiDbContext.SaveChangesAsync dispatches collected events via MediatR.Publish
+/// INSIDE the same SaveChanges call (after base.SaveChangesAsync, before our outer Commit). If
+/// the outer transaction subsequently rolls back (audit enqueue fails OR NpgsqlRetryingExecutionStrategy
+/// retries on a transient error), the event side-effects already happened and CANNOT be undone.
+/// The behavior calls IDomainEventCollector.Clear() at the start of each execution-strategy attempt
+/// so a retried handler does not see stale events from the failed attempt — but it cannot undo
+/// dispatches that already occurred during the previous SaveChangesAsync. Tracked follow-up:
+/// post-commit dispatch via durable event outbox (see SP5 S1 T3b code review).
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class AtomicAuditAttribute : Attribute { }

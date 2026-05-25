@@ -219,10 +219,12 @@ public sealed class AtomicAuditIntegrationTests : IAsyncLifetime
         await act.Should().ThrowAsync<Exception>(
             because: "audit failure in atomic path must propagate to the caller");
 
-        // Assert 1: user still exists — the mutation was rolled back
+        // Assert 1: user still exists — the mutation was rolled back.
+        // UserEntity is hard-delete by design (no IsDeleted column / no query filter — see
+        // UserEntityConfiguration), so no IgnoreQueryFilters() is needed here. Symmetric with the
+        // happy-path assertion above.
         db.ChangeTracker.Clear();
         var userStillExists = await db.Users
-            .IgnoreQueryFilters()
             .AsNoTracking()
             .AnyAsync(u => u.Id == targetUserId, TestCancellationToken);
         userStillExists.Should().BeTrue(

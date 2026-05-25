@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.Administration.Application;
+using Api.BoundedContexts.Administration.Infrastructure.Health;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,7 @@ internal sealed class AuditOutboxProcessor : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<AuditOutboxProcessor> _logger;
     private readonly TimeProvider _timeProvider;
+    private readonly IAuditOutboxHealthTracker _healthTracker;
     private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(5);
     private const int DefaultBatchSize = 100;
     private const string OversizeFailureReason = "payload_oversize";
@@ -31,10 +33,12 @@ internal sealed class AuditOutboxProcessor : BackgroundService
     public AuditOutboxProcessor(
         IServiceScopeFactory scopeFactory,
         ILogger<AuditOutboxProcessor> logger,
+        IAuditOutboxHealthTracker healthTracker,
         TimeProvider? timeProvider = null)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _healthTracker = healthTracker;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -99,9 +103,28 @@ internal sealed class AuditOutboxProcessor : BackgroundService
             .ConfigureAwait(false);
 
         if (pending.Count == 0)
+        {
+            // Refresh metrics even on empty batches so gauges reflect "nothing Pending"
+            // when the workload truly is idle (and not just a stale snapshot).
+            await UpdateHealthSnapshotAsync(db, cancellationToken).ConfigureAwait(false);
             return 0;
+        }
 
         var now = _timeProvider.GetUtcNow();
+
+        // T4b idempotency pre-check: outbox.Id is the GUID we will use as audit_logs.Id when
+        // materializing. If a prior batch already inserted an audit_logs row for any of these
+        // outbox ids (e.g. operator-triggered Sent→Pending flip, or a partial-commit recovery
+        // scenario), we MUST NOT insert a duplicate. EF-native batch SELECT keeps this readable
+        // and avoids the raw-SQL ON CONFLICT path while preserving the same semantic outcome.
+        var pendingIds = pending.Select(r => r.Id).ToList();
+        var existingAuditIds = await db.AuditLogs
+            .AsNoTracking()
+            .Where(l => pendingIds.Contains(l.Id))
+            .Select(l => l.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var existingAuditIdSet = existingAuditIds.ToHashSet();
 
         // Single transaction for the batch: either all transitions + INSERTs commit, or none.
         // CreateExecutionStrategy is required so the prod NpgsqlRetryingExecutionStrategy can
@@ -128,7 +151,17 @@ internal sealed class AuditOutboxProcessor : BackgroundService
                         continue;
                     }
 
-                    var auditLog = MaterializeAuditLog(payload);
+                    if (existingAuditIdSet.Contains(row.Id))
+                    {
+                        // T4b idempotency: the audit_logs row already exists for this id (the
+                        // outbox.Id == audit_logs.Id contract). Skip the INSERT to avoid a
+                        // duplicate-key violation, but still transition Pending → Sent so the
+                        // outbox is drained.
+                        row.MarkSent(now);
+                        continue;
+                    }
+
+                    var auditLog = MaterializeAuditLog(payload, row.Id);
                     db.AuditLogs.Add(auditLog);
                     row.MarkSent(now);
                 }
@@ -145,8 +178,41 @@ internal sealed class AuditOutboxProcessor : BackgroundService
 
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+
+            // Refresh the health snapshot AFTER the commit so observers see the post-batch
+            // counts (pending may still be > 0 if batchSize was undersized for the backlog).
+            await UpdateHealthSnapshotAsync(db, cancellationToken).ConfigureAwait(false);
+
             return pending.Count;
         }).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Queries audit_outbox aggregate counters and pushes them into the singleton
+    /// <see cref="IAuditOutboxHealthTracker"/>. The ObservableGauges registered in
+    /// <c>MeepleAiMetrics.AuditOutbox</c> read from the tracker on collection, so this
+    /// keeps the metric values aligned with the on-disk reality on every poll.
+    /// </summary>
+    private async Task UpdateHealthSnapshotAsync(MeepleAiDbContext db, CancellationToken cancellationToken)
+    {
+        var pendingCount = await db.AuditOutbox.AsNoTracking()
+            .CountAsync(r => r.Status == OutboxStatus.Pending, cancellationToken)
+            .ConfigureAwait(false);
+        var failedCount = await db.AuditOutbox.AsNoTracking()
+            .CountAsync(r => r.Status == OutboxStatus.Failed, cancellationToken)
+            .ConfigureAwait(false);
+
+        double oldestPendingAgeSeconds = 0;
+        if (pendingCount > 0)
+        {
+            var oldestCreatedAt = await db.AuditOutbox.AsNoTracking()
+                .Where(r => r.Status == OutboxStatus.Pending)
+                .MinAsync(r => r.CreatedAt, cancellationToken)
+                .ConfigureAwait(false);
+            oldestPendingAgeSeconds = (_timeProvider.GetUtcNow() - oldestCreatedAt).TotalSeconds;
+        }
+
+        _healthTracker.RecordSnapshot(pendingCount, oldestPendingAgeSeconds, failedCount);
     }
 
     /// <summary>
@@ -156,13 +222,16 @@ internal sealed class AuditOutboxProcessor : BackgroundService
     /// destructive-command surface (single-aggregate mutations). Composite-mutation
     /// support is tracked as a follow-up for S2/S3.
     /// </summary>
-    private static AuditLogEntity MaterializeAuditLog(AuditOutboxPayload payload)
+    private static AuditLogEntity MaterializeAuditLog(AuditOutboxPayload payload, Guid auditLogId)
     {
         var firstSnapshot = payload.Snapshots.Count > 0 ? payload.Snapshots[0] : null;
 
         return new AuditLogEntity
         {
-            Id = Guid.NewGuid(),
+            // T4b idempotency: audit_logs.Id mirrors the source outbox row Id so a retried
+            // materialization is caught by the pre-INSERT existence check (or, in a future
+            // raw-SQL ON CONFLICT variant, by the PK constraint).
+            Id = auditLogId,
             UserId = TryParseGuid(payload.UserId),
             Action = payload.Action,
             Resource = payload.Resource,

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.BoundedContexts.Administration.Application;
 using Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs;
+using Api.BoundedContexts.Administration.Infrastructure.Health;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
@@ -52,10 +53,11 @@ public sealed class AuditOutboxProcessorIntegrationTests : IAsyncLifetime
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
 
-        // Register the processor as a singleton — same shape as production DI in
-        // ApplicationServiceExtensions.AddAuditAndLogging. The hosted-service wrapper is NOT
+        // Register the processor + health tracker as singletons — same shape as production DI
+        // in ApplicationServiceExtensions.AddAuditAndLogging. The hosted-service wrapper is NOT
         // registered here: we drive the drain explicitly via RunOnceAsync to keep the test
         // deterministic (no dependency on the 5-second poll interval).
+        services.AddSingleton<IAuditOutboxHealthTracker, AuditOutboxHealthTracker>();
         services.AddSingleton<AuditOutboxProcessor>();
 
         _serviceProvider = services.BuildServiceProvider();

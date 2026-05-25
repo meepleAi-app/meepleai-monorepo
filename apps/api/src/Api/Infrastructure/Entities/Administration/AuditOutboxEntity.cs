@@ -12,15 +12,30 @@ public class AuditOutboxEntity
 
     private AuditOutboxEntity() { }
 
-    public static AuditOutboxEntity CreatePending(string payloadJson, DateTimeOffset now)
+    /// <summary>
+    /// Creates a Pending outbox row with the given <paramref name="id"/>. The caller (the
+    /// AuditLoggingBehavior atomic path) generates this id and passes the SAME value as
+    /// <see cref="AuditLogEntity.Id"/> when the processor later materializes the row — this
+    /// is the basis for T4b idempotency: a retried materialization is skipped because the
+    /// destination audit_logs row already exists with this id.
+    /// </summary>
+    public static AuditOutboxEntity CreatePending(Guid id, string payloadJson, DateTimeOffset now)
         => new()
         {
-            Id = Guid.NewGuid(),
+            Id = id,
             PayloadJson = payloadJson,
             Status = OutboxStatus.Pending,
             RetryCount = 0,
             CreatedAt = now,
         };
+
+    /// <summary>
+    /// Convenience overload that generates a fresh Guid. Retained for callers that do not need
+    /// to correlate the outbox row with the materialized audit_logs row (e.g. seed/test fixtures
+    /// for non-idempotency scenarios).
+    /// </summary>
+    public static AuditOutboxEntity CreatePending(string payloadJson, DateTimeOffset now)
+        => CreatePending(Guid.NewGuid(), payloadJson, now);
 
     public void MarkSent(DateTimeOffset now)
     {
@@ -54,6 +69,18 @@ public class AuditOutboxEntity
         RetryCount++;
         LastError = truncated;
         ProcessedAt = now;
+    }
+
+    /// <summary>
+    /// Test-only helper to re-flag a Sent/Failed row as Pending. Used by
+    /// <c>AuditOutboxIdempotencyTests</c> (SP5 S1 T4b step 4) to simulate the retry scenario
+    /// the ON CONFLICT / pre-check idempotency must guard against. NOT for production use —
+    /// the processor never reverts state on its own.
+    /// </summary>
+    internal void MarkPendingForTest()
+    {
+        Status = OutboxStatus.Pending;
+        ProcessedAt = null;
     }
 }
 

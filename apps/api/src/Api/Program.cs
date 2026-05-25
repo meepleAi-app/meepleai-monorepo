@@ -586,6 +586,13 @@ using (var scope = app.Services.CreateScope())
     MeepleAiMetrics.RegisterAutoSaveHealthGauge(tracker);
 }
 
+// SP5 Admin Security S1 T4b: register audit_outbox health gauges (pending, oldest age, failed).
+{
+    var auditOutboxTracker = app.Services
+        .GetRequiredService<Api.BoundedContexts.Administration.Infrastructure.Health.IAuditOutboxHealthTracker>();
+    MeepleAiMetrics.RegisterAuditOutboxGauges(auditOutboxTracker);
+}
+
 // Configure middleware pipeline
 app.ConfigureMiddlewarePipeline(forwardedHeadersEnabled);
 

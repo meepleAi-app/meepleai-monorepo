@@ -183,23 +183,27 @@ public sealed class AuditLoggingBehaviorTests
     [Fact]
     public async Task Should_Include_Snapshots_From_Sink_In_Payload()
     {
-        // Arrange — pre-populate the sink with a fake snapshot
+        // Arrange — the next() delegate records a snapshot into the sink to simulate the
+        // AuditingSaveChangesInterceptor firing during the command's SaveChanges call.
+        // (Pre-loading before Handle() would be cleared by the pre-next() Clear() — Fix 1.)
         SetupHttpContext();
-        _sink.Record(new AuditSnapshot(
-            EntityType: "UserEntity",
-            PrimaryKey: Guid.NewGuid().ToString(),
-            BeforeJson: null,
-            AfterJson: "{\"id\":\"abc\"}",
-            Operation: AuditOperation.Insert));
-
         var behavior = CreateBehavior<TestAuditableCommand, string>();
         var command = new TestAuditableCommand(Guid.NewGuid());
-        RequestHandlerDelegate<string> next = (ct) => Task.FromResult("ok");
+        RequestHandlerDelegate<string> next = (ct) =>
+        {
+            _sink.Record(new AuditSnapshot(
+                EntityType: "UserEntity",
+                PrimaryKey: Guid.NewGuid().ToString(),
+                BeforeJson: null,
+                AfterJson: "{\"id\":\"abc\"}",
+                Operation: AuditOperation.Insert));
+            return Task.FromResult("ok");
+        };
 
         // Act
         await behavior.Handle(command, next, CancellationToken.None);
 
-        // Assert — payload must contain the snapshot
+        // Assert — payload must contain the snapshot recorded during next()
         _auditServiceMock.Verify(
             x => x.EnqueueAuditAsync(
                 It.Is<AuditOutboxPayload>(p =>
@@ -213,18 +217,22 @@ public sealed class AuditLoggingBehaviorTests
     [Fact]
     public async Task Should_Detect_Oversize_Snapshot_In_Payload()
     {
-        // Arrange — pre-populate sink with a snapshot whose AfterJson contains the oversize flag
+        // Arrange — next() records a snapshot with the oversize flag set by PayloadTruncator,
+        // simulating the interceptor firing during the command's SaveChanges.
+        // (Pre-loading before Handle() would be cleared by the pre-next() Clear() — Fix 1.)
         SetupHttpContext();
-        _sink.Record(new AuditSnapshot(
-            EntityType: "UserEntity",
-            PrimaryKey: Guid.NewGuid().ToString(),
-            BeforeJson: null,
-            AfterJson: "{\"field\":\"value\",\"_oversize\":true}",
-            Operation: AuditOperation.Insert));
-
         var behavior = CreateBehavior<TestAuditableCommand, string>();
         var command = new TestAuditableCommand(Guid.NewGuid());
-        RequestHandlerDelegate<string> next = (ct) => Task.FromResult("ok");
+        RequestHandlerDelegate<string> next = (ct) =>
+        {
+            _sink.Record(new AuditSnapshot(
+                EntityType: "UserEntity",
+                PrimaryKey: Guid.NewGuid().ToString(),
+                BeforeJson: null,
+                AfterJson: "{\"field\":\"value\",\"_oversize\":true}",
+                Operation: AuditOperation.Insert));
+            return Task.FromResult("ok");
+        };
 
         // Act
         await behavior.Handle(command, next, CancellationToken.None);
@@ -240,18 +248,63 @@ public sealed class AuditLoggingBehaviorTests
     [Fact]
     public async Task Should_Clear_Sink_After_Draining()
     {
-        // Arrange
+        // Arrange — next() records a snapshot (simulating the interceptor); after Handle() the sink
+        // must be empty so a subsequent command in the same scope sees a clean slate.
         SetupHttpContext();
-        _sink.Record(new AuditSnapshot("UserEntity", Guid.NewGuid().ToString(), null, "{}", AuditOperation.Insert));
-
         var behavior = CreateBehavior<TestAuditableCommand, string>();
-        RequestHandlerDelegate<string> next = (ct) => Task.FromResult("ok");
+        RequestHandlerDelegate<string> next = (ct) =>
+        {
+            _sink.Record(new AuditSnapshot("UserEntity", Guid.NewGuid().ToString(), null, "{}", AuditOperation.Insert));
+            return Task.FromResult("ok");
+        };
 
         // Act
         await behavior.Handle(new TestAuditableCommand(Guid.NewGuid()), next, CancellationToken.None);
 
-        // Assert — sink must be empty after behavior drains it
+        // Assert — sink must be empty after behavior drains it (finally block clears unconditionally)
         _sink.Snapshots.Should().BeEmpty("sink should be cleared after drain to avoid cross-command bleed");
+    }
+
+    [Fact]
+    public async Task Should_Clear_PreHandler_Snapshots_Before_Capturing_Command_Mutations()
+    {
+        // Arrange: pre-load the sink with a "stale" snapshot that simulates an earlier SaveChanges
+        // in the same request (e.g. a session-touch or a prior [AuditableAction] command).
+        // The behavior must clear these before calling next() so they do NOT bleed into THIS command's
+        // audit payload.
+        SetupHttpContext();
+        _sink.Record(new AuditSnapshot("StaleEntity", "stale-pk", null, "{\"x\":1}", AuditOperation.Insert));
+
+        var behavior = CreateBehavior<TestAuditableCommand, string>();
+        var command = new TestAuditableCommand(Guid.NewGuid());
+
+        // The next() delegate records a "real" snapshot — simulating the interceptor firing during
+        // THIS command's SaveChanges.
+        RequestHandlerDelegate<string> next = (ct) =>
+        {
+            _sink.Record(new AuditSnapshot("RealEntity", "real-pk", null, "{\"y\":2}", AuditOperation.Insert));
+            return Task.FromResult("ok");
+        };
+
+        AuditOutboxPayload? capturedPayload = null;
+        _auditServiceMock
+            .Setup(x => x.EnqueueAuditAsync(
+                It.IsAny<AuditOutboxPayload>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<AuditOutboxPayload, CancellationToken>((p, _) => capturedPayload = p);
+
+        // Act
+        await behavior.Handle(command, next, CancellationToken.None);
+
+        // Assert: the enqueued payload contains ONLY the RealEntity snapshot, NOT the StaleEntity one.
+        // This proves _sink.Clear() fired before next() (Fix 1 — sink contamination guard).
+        capturedPayload.Should().NotBeNull();
+        capturedPayload!.Snapshots.Should().ContainSingle(
+            because: "only the snapshot recorded during next() should be in the payload");
+        capturedPayload.Snapshots.Should().Contain(s => s.EntityType == "RealEntity",
+            because: "the command's own SaveChanges snapshot must be present");
+        capturedPayload.Snapshots.Should().NotContain(s => s.EntityType == "StaleEntity",
+            because: "pre-handler snapshots from earlier saves must be discarded by the pre-next() Clear()");
     }
 
     private void SetupHttpContext(Guid? userId = null, string? email = null)

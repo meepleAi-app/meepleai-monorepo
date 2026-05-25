@@ -59,6 +59,11 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
         var (adminUserId, adminEmail, ipAddress, userAgent) = ExtractRequestContext();
         var resourceId = ExtractResourceId(request);
 
+        // The interceptor records into the per-request sink on EVERY SaveChanges. Clear here so we capture
+        // ONLY the snapshots produced by this audited command's mutation — not earlier saves in the same
+        // request (session/cache writes, or a prior [AuditableAction] command in a composite request).
+        _sink.Clear();
+
         try
         {
             var response = await next().ConfigureAwait(false);
@@ -198,13 +203,12 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
             // Detect oversize: if PayloadTruncator flagged any snapshot, mark the payload so the
             // T4 processor can MarkFailed with last_error="payload_oversize" instead of persisting
             // potentially inaccurate truncated data.
+            // "_oversize" is a literal dictionary key set by PayloadTruncator, NOT a C# property name.
+            // JsonNamingPolicy.SnakeCaseLower does NOT rename dictionary keys, so the marker serializes
+            // verbatim as "_oversize":true (no space — WriteIndented=false). This search string is correct.
             var oversize = snapshotPayloads.Any(s =>
                 (s.BeforeJson != null && s.BeforeJson.Contains("\"_oversize\":true", StringComparison.Ordinal)) ||
                 (s.AfterJson  != null && s.AfterJson.Contains("\"_oversize\":true",  StringComparison.Ordinal)));
-
-            // Clear sink after draining — per-request scoped so this is defensive cleanup against
-            // edge-cases where multiple [AuditableAction] commands run within one scope.
-            _sink.Clear();
 
             var payload = new AuditOutboxPayload
             {
@@ -234,6 +238,13 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
             _logger.LogError(ex,
                 "Failed to enqueue audit outbox entry for action {Action} on {Resource} by admin {AdminUserId}",
                 attr.Action, attr.Resource, adminUserId);
+        }
+        finally
+        {
+            // Always clear the sink — even if snapshot mapping/serialization throws (the CA1031 catch
+            // above swallows the error, but Clear() must still fire so stale snapshots don't bleed into
+            // subsequent commands in the same request scope).
+            _sink.Clear();
         }
     }
 }

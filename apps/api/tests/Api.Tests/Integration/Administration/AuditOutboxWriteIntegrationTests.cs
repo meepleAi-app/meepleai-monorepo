@@ -183,6 +183,9 @@ public sealed class AuditOutboxWriteIntegrationTests : IAsyncLifetime
             Role = "editor",
             Tier = "free",
             CreatedAt = DateTime.UtcNow,
+            // Seed an explicit PasswordHash so the [SensitiveData] redaction assertion is unambiguous:
+            // the snapshot must contain "***REDACTED***" and must NOT contain the actual hash value.
+            PasswordHash = "$2a$bcrypt-stub-hash",
         });
         await db.SaveChangesAsync(TestCancellationToken);
         db.ChangeTracker.Clear();
@@ -223,8 +226,14 @@ public sealed class AuditOutboxWriteIntegrationTests : IAsyncLifetime
         userSnapshot!.Operation.Should().Be("Update",
             because: "UpdateAsync modifies an existing row");
         userSnapshot.AfterJson.Should().NotBeNull("AfterJson must be populated for Update operations");
-        userSnapshot.AfterJson.Should().NotContain("***REDACTED***" is null ? "" : "PasswordHash\":\"non-redacted",
-            because: "PasswordHash is marked [SensitiveData] and must be redacted in the snapshot");
+        // Verify [SensitiveData] redaction: the interceptor unconditionally replaces [SensitiveData]
+        // property values with "***REDACTED***" regardless of the actual value. The snapshot must
+        // contain the placeholder and must NOT expose the seeded bcrypt hash.
+        userSnapshot.AfterJson.Should().Contain("***REDACTED***",
+            because: "PasswordHash is marked [SensitiveData] and AuditingSaveChangesInterceptor must " +
+                     "replace it with RedactedPlaceholder (\"***REDACTED***\") unconditionally");
+        userSnapshot.AfterJson.Should().NotContain("bcrypt-stub-hash",
+            because: "the actual PasswordHash value must never appear in the audit snapshot");
     }
 
     [Fact]

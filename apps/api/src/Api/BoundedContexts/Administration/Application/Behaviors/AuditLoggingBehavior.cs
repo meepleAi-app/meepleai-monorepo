@@ -191,7 +191,6 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
                 // Commit both the mutation and the outbox row atomically.
                 await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
 
-                _sink.Clear();
                 return txResult;
             }
             catch
@@ -215,6 +214,12 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
             }
             finally
             {
+                // Always clear the sink — on success, on a retryable failure (the next attempt also
+                // clears at its start), and on a terminal/non-retried failure (where no further
+                // attempt runs). This mirrors the best-effort path's finally and prevents stale
+                // snapshots from bleeding into a subsequent SaveChanges in the same request scope.
+                _sink.Clear();
+
                 if (tx is not null)
                 {
                     await tx.DisposeAsync().ConfigureAwait(false);

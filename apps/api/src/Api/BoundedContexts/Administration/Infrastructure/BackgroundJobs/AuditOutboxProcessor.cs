@@ -91,48 +91,56 @@ internal sealed class AuditOutboxProcessor : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        // FIFO drain by CreatedAt — preserves the order in which AuditLoggingBehavior
-        // enqueued the mutations. Tracking is required so row.MarkSent/MarkFailed state
-        // transitions persist via SaveChanges.
-        var pending = await db.AuditOutbox
-            .AsTracking()
-            .Where(r => r.Status == OutboxStatus.Pending)
-            .OrderBy(r => r.CreatedAt)
-            .Take(batchSize)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        if (pending.Count == 0)
-        {
-            // Refresh metrics even on empty batches so gauges reflect "nothing Pending"
-            // when the workload truly is idle (and not just a stale snapshot).
-            await UpdateHealthSnapshotAsync(db, cancellationToken).ConfigureAwait(false);
-            return 0;
-        }
-
-        var now = _timeProvider.GetUtcNow();
-
-        // T4b idempotency pre-check: outbox.Id is the GUID we will use as audit_logs.Id when
-        // materializing. If a prior batch already inserted an audit_logs row for any of these
-        // outbox ids (e.g. operator-triggered Sent→Pending flip, or a partial-commit recovery
-        // scenario), we MUST NOT insert a duplicate. EF-native batch SELECT keeps this readable
-        // and avoids the raw-SQL ON CONFLICT path while preserving the same semantic outcome.
-        var pendingIds = pending.Select(r => r.Id).ToList();
-        var existingAuditIds = await db.AuditLogs
-            .AsNoTracking()
-            .Where(l => pendingIds.Contains(l.Id))
-            .Select(l => l.Id)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-        var existingAuditIdSet = existingAuditIds.ToHashSet();
-
-        // Single transaction for the batch: either all transitions + INSERTs commit, or none.
-        // CreateExecutionStrategy is required so the prod NpgsqlRetryingExecutionStrategy can
-        // retry the whole batch on transient connection errors. In Testcontainers (no retry
-        // strategy configured) the delegate runs exactly once.
+        // All stateful work (query → mutate → save → commit) runs INSIDE the execution-strategy
+        // delegate. CreateExecutionStrategy is required so the prod NpgsqlRetryingExecutionStrategy
+        // can retry the whole batch on transient connection errors. CRITICAL: the Pending query and
+        // the idempotency pre-check MUST be re-run on every attempt — EF does NOT reset entity state
+        // between retries, so loading tracked rows (carrying their MarkSent/MarkFailed mutations) or
+        // the existence set OUTSIDE the delegate would feed stale state into a retried attempt (a row
+        // mutated to Sent in a failed attempt could then reach MarkFailed → InvalidOperationException,
+        // aborting the whole batch). In Testcontainers (no retry configured) the delegate runs once.
         var strategy = db.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
         {
+            // Start each attempt from clean tracking state so a retry never observes mutations
+            // (or added audit_logs entities) left over from a prior failed attempt.
+            db.ChangeTracker.Clear();
+
+            // FIFO drain by CreatedAt — preserves the order in which AuditLoggingBehavior
+            // enqueued the mutations. Tracking is required so row.MarkSent/MarkFailed state
+            // transitions persist via SaveChanges.
+            var pending = await db.AuditOutbox
+                .AsTracking()
+                .Where(r => r.Status == OutboxStatus.Pending)
+                .OrderBy(r => r.CreatedAt)
+                .Take(batchSize)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            if (pending.Count == 0)
+            {
+                // Refresh metrics even on empty batches so gauges reflect "nothing Pending"
+                // when the workload truly is idle (and not just a stale snapshot).
+                await UpdateHealthSnapshotAsync(db, cancellationToken).ConfigureAwait(false);
+                return 0;
+            }
+
+            var now = _timeProvider.GetUtcNow();
+
+            // T4b idempotency pre-check: outbox.Id is the GUID we will use as audit_logs.Id when
+            // materializing. If a prior batch already inserted an audit_logs row for any of these
+            // outbox ids (e.g. operator-triggered Sent→Pending flip, or a partial-commit recovery
+            // scenario), we MUST NOT insert a duplicate. EF-native batch SELECT keeps this readable
+            // and avoids the raw-SQL ON CONFLICT path while preserving the same semantic outcome.
+            var pendingIds = pending.Select(r => r.Id).ToList();
+            var existingAuditIds = await db.AuditLogs
+                .AsNoTracking()
+                .Where(l => pendingIds.Contains(l.Id))
+                .Select(l => l.Id)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var existingAuditIdSet = existingAuditIds.ToHashSet();
+
             var tx = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
             await using var _ = tx.ConfigureAwait(false);
 

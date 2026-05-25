@@ -13,11 +13,21 @@ public class AuditOutboxEntity
     private AuditOutboxEntity() { }
 
     /// <summary>
-    /// Creates a Pending outbox row with the given <paramref name="id"/>. The caller (the
-    /// AuditLoggingBehavior atomic path) generates this id and passes the SAME value as
-    /// <see cref="AuditLogEntity.Id"/> when the processor later materializes the row — this
-    /// is the basis for T4b idempotency: a retried materialization is skipped because the
-    /// destination audit_logs row already exists with this id.
+    /// Creates a Pending outbox row whose <see cref="Id"/> is generated fresh here. This is the
+    /// production path — <c>AuditService.EnqueueAuditAsync</c> / <c>EnqueueAuditAtomicAsync</c>
+    /// call this overload. The T4b idempotency correlation is established later, by the processor:
+    /// <c>AuditOutboxProcessor</c> materializes the audit_logs row with <c>audit_logs.Id == this.Id</c>,
+    /// so a re-drain of the same outbox row finds the destination row already present and skips the
+    /// re-insert. (The outbox Id is the idempotency key; callers do not pre-correlate it.)
+    /// </summary>
+    public static AuditOutboxEntity CreatePending(string payloadJson, DateTimeOffset now)
+        => CreatePending(Guid.NewGuid(), payloadJson, now);
+
+    /// <summary>
+    /// Overload that accepts an explicit <paramref name="id"/>. Used by tests/seed fixtures that
+    /// need to control the outbox row Id up front (e.g. idempotency tests that re-flag a known row
+    /// Pending and assert no duplicate audit_logs row is produced). Production code uses the
+    /// Id-generating overload above; the processor establishes the audit_logs correlation either way.
     /// </summary>
     public static AuditOutboxEntity CreatePending(Guid id, string payloadJson, DateTimeOffset now)
         => new()
@@ -28,14 +38,6 @@ public class AuditOutboxEntity
             RetryCount = 0,
             CreatedAt = now,
         };
-
-    /// <summary>
-    /// Convenience overload that generates a fresh Guid. Retained for callers that do not need
-    /// to correlate the outbox row with the materialized audit_logs row (e.g. seed/test fixtures
-    /// for non-idempotency scenarios).
-    /// </summary>
-    public static AuditOutboxEntity CreatePending(string payloadJson, DateTimeOffset now)
-        => CreatePending(Guid.NewGuid(), payloadJson, now);
 
     public void MarkSent(DateTimeOffset now)
     {

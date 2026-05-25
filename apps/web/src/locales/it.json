@@ -2269,16 +2269,22 @@
       },
       "sections": {
         "stats": {
-          "title": "Statistiche"
+          "title": "Statistiche",
+          "sessions": "Sessioni",
+          "wins": "Vittorie",
+          "winRate": "Win rate",
+          "achievements": "Achievement"
         },
         "leaderboard": {
           "title": "Classifica",
           "rank": "Posizione #{rank}",
-          "ariaLabel": "Posizione in classifica: {rank}"
+          "ariaLabel": "Posizione in classifica: {rank}",
+          "noRank": "Non ancora classificato"
         },
         "favoriteAgent": {
           "title": "Agente Preferito",
-          "none": "Nessun agente usato ancora"
+          "none": "Nessun agente usato ancora",
+          "ariaLabel": "Apri {agentName}"
         },
         "achievements": {
           "title": "Achievement",

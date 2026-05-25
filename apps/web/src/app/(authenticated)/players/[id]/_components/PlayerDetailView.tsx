@@ -301,10 +301,10 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
 
   const statsLabels = useMemo<PlayerStatsGridLabels>(
     () => ({
-      sessions: t('pages.playerDetail.sections.stats.title'),
-      wins: t('pages.playerDetail.sections.leaderboard.title'),
-      winRate: t('pages.playerDetail.hero.winRate'),
-      achievements: t('pages.playerDetail.sections.achievements.title'),
+      sessions: t('pages.playerDetail.sections.stats.sessions'),
+      wins: t('pages.playerDetail.sections.stats.wins'),
+      winRate: t('pages.playerDetail.sections.stats.winRate'),
+      achievements: t('pages.playerDetail.sections.stats.achievements'),
     }),
     [t]
   );

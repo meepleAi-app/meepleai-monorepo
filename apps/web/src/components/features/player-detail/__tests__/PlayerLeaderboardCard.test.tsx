@@ -2,12 +2,16 @@
  * PlayerLeaderboardCard unit tests — Wave 3 /players/[id] v2 (Task 2)
  *
  * Tests:
- *   1. Renders rank with interpolated label when rank is provided
+ *   1. Renders interpolated rank label when rank is provided
  *   2. Renders noRank text when rank is null
- *   3. data-slot and aria-label attributes are present
+ *   3. Exposes the rank to screen readers via a visually-hidden label
+ *      (NOT via aria-label on a generic <div>, which ARIA 1.2 prohibits)
+ *   4. Passes axe a11y scan when ranked
+ *   5. Passes axe a11y scan when not ranked
  */
 
 import { render, screen } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { describe, it, expect } from 'vitest';
 
 import { PlayerLeaderboardCard } from '../PlayerLeaderboardCard';
@@ -31,10 +35,24 @@ describe('PlayerLeaderboardCard', () => {
     expect(screen.getByText('Not ranked yet')).toBeInTheDocument();
   });
 
-  it('has correct data-slot and aria-label for E2E and a11y', () => {
+  it('exposes the rank to screen readers via a visually-hidden label', () => {
     const { container } = render(<PlayerLeaderboardCard rank={5} labels={labels} />);
     expect(container.querySelector('[data-slot="player-detail-leaderboard"]')).toBeInTheDocument();
-    // The rank element should have aria-label with rank value
-    expect(container.querySelector('[aria-label="Leaderboard position: 5"]')).toBeInTheDocument();
+    // Accessible name lives in a visually-hidden span, not aria-label on a generic <div>
+    // (ARIA 1.2 prohibits naming attributes on generic role; assistive tech ignore them).
+    const srLabel = screen.getByText('Leaderboard position: 5');
+    expect(srLabel).toHaveClass('sr-only');
+  });
+
+  it('passes axe a11y scan when ranked', async () => {
+    const { container } = render(<PlayerLeaderboardCard rank={5} labels={labels} />);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it('passes axe a11y scan when not ranked', async () => {
+    const { container } = render(<PlayerLeaderboardCard rank={null} labels={labels} />);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

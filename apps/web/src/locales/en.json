@@ -2219,16 +2219,22 @@
       },
       "sections": {
         "stats": {
-          "title": "Statistics"
+          "title": "Statistics",
+          "sessions": "Sessions",
+          "wins": "Wins",
+          "winRate": "Win rate",
+          "achievements": "Achievements"
         },
         "leaderboard": {
           "title": "Leaderboard",
           "rank": "Rank #{rank}",
-          "ariaLabel": "Leaderboard position: {rank}"
+          "ariaLabel": "Leaderboard position: {rank}",
+          "noRank": "Not ranked yet"
         },
         "favoriteAgent": {
           "title": "Favourite Agent",
-          "none": "No agent used yet"
+          "none": "No agent used yet",
+          "ariaLabel": "Open {agentName}"
         },
         "achievements": {
           "title": "Achievements",

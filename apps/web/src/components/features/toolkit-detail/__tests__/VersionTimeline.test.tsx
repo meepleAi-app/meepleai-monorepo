@@ -134,6 +134,27 @@ describe('VersionTimeline (Issue #1479)', () => {
     ).toHaveLength(2);
   });
 
+  it('renders 0 connectors for a single version', () => {
+    const { container } = render(
+      <VersionTimeline versions={[threeVersions[0]!]} labels={labels} />
+    );
+    expect(
+      container.querySelectorAll('[data-slot="toolkit-detail-version-connector"]')
+    ).toHaveLength(0);
+  });
+
+  it('renders no changelog list when the changelog is empty', () => {
+    const { container } = render(
+      <VersionTimeline
+        versions={[
+          { version: '1.0.0', publishedAtLabel: '1 mag 2026', changelog: '', isCurrent: true },
+        ]}
+        labels={labels}
+      />
+    );
+    expect(container.querySelector('ul')).not.toBeInTheDocument();
+  });
+
   // T9
   it('uses DS-15 tokens on the item card', () => {
     const { container } = render(<VersionTimeline versions={threeVersions} labels={labels} />);

@@ -304,9 +304,9 @@ the PR review.
 |--------|-----------|------|-------|--------|----|----|----------|
 | `sp4-toolkit-detail.jsx` | `ToolkitSummaryPanel` | `apps/web/src/components/features/toolkit-detail/ToolkitSummaryPanel.tsx` | `/toolkits/[id]` | pending | — | T A V | — |
 | `sp4-toolkit-detail.jsx` | `ToolkitIncludesGrid` | `apps/web/src/components/features/toolkit-detail/ToolkitIncludesGrid.tsx` | `/toolkits/[id]` | pending | — | T A V | — |
-| `sp4-toolkit-detail.jsx` | `VersionTimeline` | `apps/web/src/components/features/toolkit-detail/VersionTimeline.tsx` | `/toolkits/[id]` | pending | — | T A V | — |
-| `sp4-toolkit-detail.jsx` | `RatingBreakdown` | `apps/web/src/components/features/toolkit-detail/RatingBreakdown.tsx` | `/toolkits/[id]` | pending | — | T A V | — |
-| `sp4-toolkit-detail.jsx` | `PromptPreviewBlock` | `apps/web/src/components/features/toolkit-detail/PromptPreviewBlock.tsx` | `/toolkits/[id]` | pending | — | T A V | — |
+| `sp4-toolkit-detail.jsx` | `VersionTimeline` | `apps/web/src/components/features/toolkit-detail/VersionTimeline.tsx` | `/toolkits/[id]` | done | #1531 | T A V | — |
+| `sp4-toolkit-detail.jsx` | `RatingBreakdown` | `apps/web/src/components/features/toolkit-detail/RatingBreakdown.tsx` | `/toolkits/[id]` | done | #1531 | T A V | — |
+| `sp4-toolkit-detail.jsx` | `PromptPreviewBlock` | `apps/web/src/components/features/toolkit-detail/PromptPreviewBlock.tsx` | `/toolkits/[id]` | done | #1531 | T A V | — |
 | `sp4-toolkit-detail.jsx` | `Stars` | `apps/web/src/components/features/toolkit-detail/Stars.tsx` | `/toolkits/[id]` | pending | — | T A V | — |
 
 ### KB detail — `/kb/[id]` — 6 components — **Tier M**

@@ -154,6 +154,19 @@ describe('RatingBreakdown (Issue #1479)', () => {
     expect(screen.getByText('MR')).toBeInTheDocument();
   });
 
+  it('derives two-char initials for a single-word name', () => {
+    render(
+      <RatingBreakdown
+        averageStars={5}
+        totalCount={1}
+        breakdown={{ star1: 0, star2: 0, star3: 0, star4: 0, star5: 1 }}
+        reviews={[review({ id: 'r1', raterDisplayName: 'Mario', raterAvatarUrl: null })]}
+        labels={labels}
+      />
+    );
+    expect(screen.getByText('MA')).toBeInTheDocument();
+  });
+
   // T7
   it('omits the comment paragraph when comment is null', () => {
     render(

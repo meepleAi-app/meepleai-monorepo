@@ -22,6 +22,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Behaviors;
 /// Tests for AuditLoggingBehavior pipeline behavior.
 /// Issue #3691: Audit Log System.
 /// SP5 S1 T3: Updated to assert EnqueueAuditAsync (outbox path) instead of LogAsync.
+/// SP5 S1 T3b: Added atomic-path unit tests (routing to EnqueueAuditAtomicAsync vs EnqueueAuditAsync).
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public sealed class AuditLoggingBehaviorTests
@@ -29,6 +30,7 @@ public sealed class AuditLoggingBehaviorTests
     private readonly Mock<IHttpContextAccessor> _httpContextAccessorMock;
     private readonly Mock<AuditService> _auditServiceMock;
     private readonly ScopedAuditSnapshotSink _sink;
+    private readonly MeepleAiDbContext _dbContext;
 
     public AuditLoggingBehaviorTests()
     {
@@ -37,10 +39,10 @@ public sealed class AuditLoggingBehaviorTests
         var dbOptions = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseInMemoryDatabase($"AuditBehaviorTests_{Guid.NewGuid()}")
             .Options;
-        var dbContext = new MeepleAiDbContext(dbOptions, Mock.Of<IMediator>(), Mock.Of<IDomainEventCollector>());
+        _dbContext = new MeepleAiDbContext(dbOptions, Mock.Of<IMediator>(), Mock.Of<IDomainEventCollector>());
 
         _auditServiceMock = new Mock<AuditService>(
-            dbContext,
+            _dbContext,
             Mock.Of<ILogger<AuditService>>(),
             null!);
 
@@ -336,6 +338,114 @@ public sealed class AuditLoggingBehaviorTests
         _httpContextAccessorMock.Setup(x => x.HttpContext).Returns(context);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────────────────────────
+    // T3b: Atomic-path routing tests
+    // These tests verify that [AtomicAudit] commands route to EnqueueAuditAtomicAsync (not
+    // EnqueueAuditAsync), and that non-atomic [AuditableAction] commands still use EnqueueAuditAsync.
+    // Full atomicity/rollback guarantees are proved by the integration tests (AtomicAuditIntegrationTests).
+    // The InMemory provider doesn't support transactions, but CreateExecutionStrategy() returns a
+    // non-retrying strategy that executes the delegate once without a real transaction — sufficient
+    // for routing assertions here.
+    // ─────────────────────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Should_UseEnqueueAtomicAsync_For_AtomicAudit_Commands()
+    {
+        // Arrange
+        SetupHttpContext();
+        // Make the atomic mock succeed by default (returns CompletedTask)
+        _auditServiceMock
+            .Setup(x => x.EnqueueAuditAtomicAsync(
+                It.IsAny<AuditOutboxPayload>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var behavior = CreateBehavior<TestAtomicAuditableCommand, string>();
+        var command = new TestAtomicAuditableCommand(Guid.NewGuid());
+        RequestHandlerDelegate<string> next = (ct) => Task.FromResult("atomic-ok");
+
+        // Act
+        var result = await behavior.Handle(command, next, CancellationToken.None);
+
+        // Assert: atomic path uses EnqueueAuditAtomicAsync, NOT the best-effort EnqueueAuditAsync
+        result.Should().Be("atomic-ok");
+        _auditServiceMock.Verify(
+            x => x.EnqueueAuditAtomicAsync(
+                It.Is<AuditOutboxPayload>(p =>
+                    p.Action == "AtomicTestAction" &&
+                    p.Resource == "AtomicTestResource" &&
+                    p.Result == "Success"),
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "[AtomicAudit] commands must route to EnqueueAuditAtomicAsync");
+
+        _auditServiceMock.Verify(
+            x => x.EnqueueAuditAsync(
+                It.IsAny<AuditOutboxPayload>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never,
+            "[AtomicAudit] commands must NOT use the best-effort EnqueueAuditAsync path");
+    }
+
+    [Fact]
+    public async Task Should_UseEnqueueAuditAsync_For_NonAtomic_AuditableAction_Commands_RegressionGuard()
+    {
+        // Arrange: regression guard — non-atomic [AuditableAction] command must still use best-effort path
+        SetupHttpContext();
+        var behavior = CreateBehavior<TestAuditableCommand, string>();
+        var command = new TestAuditableCommand(Guid.NewGuid());
+        RequestHandlerDelegate<string> next = (ct) => Task.FromResult("ok");
+
+        // Act
+        await behavior.Handle(command, next, CancellationToken.None);
+
+        // Assert: non-atomic command uses best-effort EnqueueAuditAsync, NOT the atomic variant
+        _auditServiceMock.Verify(
+            x => x.EnqueueAuditAsync(
+                It.IsAny<AuditOutboxPayload>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "non-[AtomicAudit] commands must still use the best-effort EnqueueAuditAsync path");
+
+        _auditServiceMock.Verify(
+            x => x.EnqueueAuditAtomicAsync(
+                It.IsAny<AuditOutboxPayload>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never,
+            "non-[AtomicAudit] commands must NOT call EnqueueAuditAtomicAsync");
+    }
+
+    [Fact]
+    public async Task Should_PropagateException_For_AtomicAudit_Command_WhenHandlerThrows()
+    {
+        // Arrange: for atomic commands, handler exceptions propagate without any audit write.
+        // (No Error audit is written — the transaction rolled back, nothing was committed.)
+        SetupHttpContext();
+        var behavior = CreateBehavior<TestAtomicAuditableCommand, string>();
+        var command = new TestAtomicAuditableCommand(Guid.NewGuid());
+        RequestHandlerDelegate<string> next = (ct) =>
+            throw new InvalidOperationException("atomic handler failure");
+
+        // Act & Assert
+        var act = () => behavior.Handle(command, next, CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("atomic handler failure");
+
+        // No audit row of any kind written when the atomic path fails
+        _auditServiceMock.Verify(
+            x => x.EnqueueAuditAtomicAsync(
+                It.IsAny<AuditOutboxPayload>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never,
+            "atomic path must NOT write an Error audit on failure — the tx rolled back");
+        _auditServiceMock.Verify(
+            x => x.EnqueueAuditAsync(
+                It.IsAny<AuditOutboxPayload>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never,
+            "atomic path must NOT fall back to best-effort audit on failure");
+    }
+
     private AuditLoggingBehavior<TRequest, TResponse> CreateBehavior<TRequest, TResponse>()
         where TRequest : IRequest<TResponse>
     {
@@ -343,12 +453,18 @@ public sealed class AuditLoggingBehaviorTests
             _httpContextAccessorMock.Object,
             _auditServiceMock.Object,
             _sink,
-            NullLogger<AuditLoggingBehavior<TRequest, TResponse>>.Instance);
+            NullLogger<AuditLoggingBehavior<TRequest, TResponse>>.Instance,
+            _dbContext);
     }
 }
 
-// Test commands
+// Test commands for best-effort (non-atomic) path
 [AuditableAction("TestAction", "TestResource", Level = 2)]
 internal record TestAuditableCommand(Guid Id) : IRequest<string>;
 
 internal record NonAuditableCommand(string Data) : IRequest<string>;
+
+// Test command for atomic path — both attributes required
+[AuditableAction("AtomicTestAction", "AtomicTestResource", Level = 2)]
+[AtomicAudit]
+internal record TestAtomicAuditableCommand(Guid Id) : IRequest<string>;

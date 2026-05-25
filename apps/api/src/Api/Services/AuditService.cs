@@ -130,4 +130,29 @@ internal class AuditService
                 payload.Action, payload.Resource);
         }
     }
+
+    /// <summary>
+    /// Atomic-path outbox write: adds the Pending row and flushes via SaveChanges (which, inside an
+    /// open transaction, writes to the transaction but does NOT commit it — commit is the caller's
+    /// responsibility). Any failure propagates to the caller so its enclosing transaction rolls back
+    /// the mutation + this outbox row together.
+    ///
+    /// Unlike <see cref="EnqueueAuditAsync"/> this does NOT swallow exceptions — audit loss on a
+    /// destructive command must fail the whole operation. The caller (AuditLoggingBehavior atomic
+    /// path) wraps this in CreateExecutionStrategy().ExecuteAsync + BeginTransactionAsync so that
+    /// both mutation and audit row are committed atomically or rolled back entirely.
+    ///
+    /// SP5 Admin Security S1 — Task 3b.
+    /// </summary>
+    public virtual async Task EnqueueAuditAtomicAsync(
+        AuditOutboxPayload payload,
+        CancellationToken cancellationToken = default)
+    {
+        var json = JsonSerializer.Serialize(payload, AuditOutboxJsonOptions);
+        var row = AuditOutboxEntity.CreatePending(json, _timeProvider.GetUtcNow());
+        _db.AuditOutbox.Add(row);
+        // SaveChanges flushes the INSERT to the current open transaction; the caller commits.
+        // Exceptions propagate — the enclosing transaction rolls back mutation + outbox row.
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
 }

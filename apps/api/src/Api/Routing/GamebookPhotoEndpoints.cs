@@ -31,6 +31,7 @@ internal static class GamebookPhotoEndpoints
         MapGetGlossaryEndpoint(group);
         MapBootstrapGlossaryEndpoint(group);
         MapUpsertGlossaryEntryEndpoint(group);
+        MapEncounterParseEndpoint(group);
 
         return group;
     }
@@ -373,6 +374,56 @@ internal static class GamebookPhotoEndpoints
         .WithTags("Gamebook")
         .WithSummary("Create or update a glossary entry")
         .WithDescription("If the entry with the given id does not exist, creates a new manual entry. If it exists, updates the Italian translation and sets Source to Manual. Note: TermEn is immutable on update; to rename a term, delete and recreate.")
+        .WithOpenApi();
+    }
+
+    /// <summary>
+    /// Issue #1520 — synchronous, ephemeral encounter cheatsheet parse.
+    /// Unlike the SSE translate flow, this returns a fully-formed
+    /// <see cref="EncounterCheatsheetDto"/> in a single response and persists
+    /// nothing (per §9.1 Encounter Book privacy: card is session-scoped only).
+    /// </summary>
+    private static void MapEncounterParseEndpoint(RouteGroupBuilder group)
+    {
+        group.MapPost("/gamebook/campaigns/{campaignId:guid}/photos/{photoId:guid}/encounter-parse", async (
+            Guid campaignId,
+            Guid photoId,
+            [FromBody] ParseEncounterRequest body,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+            if (!TryGetUserId(context, session, out var userId)) return Results.Unauthorized();
+
+            if (body is null)
+                return Results.BadRequest(new { error = "request body is required" });
+            if (body.ParagraphNumber <= 0)
+                return Results.BadRequest(new { error = "paragraphNumber must be a positive integer" });
+            if (body.GameBookId == Guid.Empty)
+                return Results.BadRequest(new { error = "gameBookId is required" });
+
+            var dto = await mediator.Send(
+                new ParseEncounterQuery(campaignId, photoId, body.ParagraphNumber, userId, body.GameBookId),
+                ct).ConfigureAwait(false);
+
+            return Results.Ok(dto);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<EncounterCheatsheetDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status409Conflict)
+        .WithTags("Gamebook")
+        .WithSummary("Parse an encounter cheatsheet from a gamebook photo segment")
+        .WithDescription(
+            "Extracts a structured cheatsheet (enemies, options, win/loss conditions) " +
+            "from a previously segmented photo's paragraph. Synchronous, ephemeral — " +
+            "no server-side persistence per Encounter Book privacy (§9.1). Returns 409 " +
+            "if the LLM cannot extract a usable structured payload.")
         .WithOpenApi();
     }
 

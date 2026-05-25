@@ -66,21 +66,32 @@ public sealed class VectorDocumentRepositoryTests : IClassFixture<SharedTestcont
     };
 
     private static PdfDocumentEntity CreatePdfDocument(
+        Guid uploadedByUserId,
         Guid? sharedGameId = null,
         Guid? privateGameId = null,
         string processingState = "Ready",
         string fileName = "test.pdf") => new()
         {
             Id = Guid.NewGuid(),
+            SharedGameId = sharedGameId,
             PrivateGameId = privateGameId,
             FileName = fileName,
             FilePath = $"/tmp/{fileName}",
             FileSizeBytes = 100,
             ContentType = "application/pdf",
-            UploadedByUserId = Guid.NewGuid(),
+            UploadedByUserId = uploadedByUserId, // FK_pdf_documents_users_UploadedByUserId requires real users row
             UploadedAt = DateTime.UtcNow,
             ProcessingState = processingState,
         };
+
+    private static UserEntity CreateUser(Guid id) => new()
+    {
+        Id = id,
+        Email = $"test-{id:N}@vector-repo-tests.local",
+        DisplayName = "Vector Repo Test User",
+        Role = "User",
+        CreatedAt = DateTime.UtcNow,
+    };
 
     /// <summary>
     /// TDD regression test: after removing the legacy bridge, resolution via sharedGameId
@@ -92,12 +103,14 @@ public sealed class VectorDocumentRepositoryTests : IClassFixture<SharedTestcont
     {
         // Arrange
         using var seedContext = _fixture.CreateDbContext(_connectionString!);
+        var uploaderId = Guid.NewGuid();
+        seedContext.Set<UserEntity>().Add(CreateUser(uploaderId));
         var sharedGameId = Guid.NewGuid();
         seedContext.SharedGames.Add(CreateSharedGame(sharedGameId));
 
         // Seed two PDFs in "Extracting" state (pipeline in progress → fallback path)
         // so the third fallback (pdfProcessingState) evaluates both predicates.
-        var sharedPdf = CreatePdfDocument(sharedGameId: sharedGameId, processingState: "Extracting", fileName: "shared.pdf");
+        var sharedPdf = CreatePdfDocument(uploaderId, sharedGameId: sharedGameId, processingState: "Extracting", fileName: "shared.pdf");
         seedContext.PdfDocuments.Add(sharedPdf);
         await seedContext.SaveChangesAsync();
 

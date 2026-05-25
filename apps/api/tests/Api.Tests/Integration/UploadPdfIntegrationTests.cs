@@ -198,9 +198,11 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         {
             var blobStorageMock = new Mock<IBlobStorageService>();
             blobStorageMock.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>()!, It.IsAny<BlobCategory>(), It.IsAny<string>()!, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((Stream stream, string fileName, string gameId, CancellationToken ct) =>
+                .ReturnsAsync((Stream stream, string fileName, BlobCategory category, string resourceKey, CancellationToken ct) =>
                 {
-                    var filePath = Path.Combine(_testDataDirectory!, $"{gameId}_{fileName}");
+                    // resourceKey may contain path separators (e.g. "pdfs/{id}"); flatten for the temp filename.
+                    var safeKey = resourceKey.Replace('/', '_').Replace('\\', '_');
+                    var filePath = Path.Combine(_testDataDirectory!, $"{safeKey}_{fileName}");
                     using var fileStream = File.Create(filePath);
                     stream.CopyTo(fileStream);
                     return new BlobStorageResult(true, Guid.NewGuid().ToString(), filePath, stream.Length, null);

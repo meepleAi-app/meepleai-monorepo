@@ -11,9 +11,18 @@
 #              (analyzer girano in CI Release + dev locale Debug)
 #   - Patch 2: --mount=type=cache NuGet → riduce I/O memory pressure
 #   - Patch 3: DOTNET_GCServer=0 → workstation GC (lower peak vs higher throughput)
+#
+# ARM64 cross-compile (2026-05-25, Onda B): the build stage is pinned to
+# $BUILDPLATFORM (the x64 runner) and cross-compiles to ARM64 via
+# `dotnet publish -a $TARGETARCH`. This avoids running dotnet under QEMU
+# emulation (was ~half of the 29-min staging build). The runtime stage stays
+# on the target platform (arm64); it only does apt-get + COPY (light under QEMU).
+# NB: $TARGETARCH is "arm64" for linux/arm64, which `dotnet --arch` accepts
+# directly. We build arm64 ONLY — if amd64 is ever added, map "amd64"→"x64".
 
 # syntax=docker/dockerfile:1.6
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+ARG TARGETARCH
 WORKDIR /src
 
 # Patch 3: workstation GC mode durante build (memory peak ridotto ~30%)
@@ -22,9 +31,10 @@ ENV DOTNET_GCConcurrent=1
 
 COPY apps/api/src/Api/Api.csproj ./apps/api/src/Api/
 
-# Patch 2: NuGet cache mount (BuildKit) → restore reuse cross-build
+# Patch 2: NuGet cache mount (BuildKit) → restore reuse cross-build.
+# -a $TARGETARCH: restore arch-specific (linux-arm64) runtime packages.
 RUN --mount=type=cache,target=/root/.nuget/packages \
-    dotnet restore ./apps/api/src/Api/Api.csproj
+    dotnet restore -a $TARGETARCH ./apps/api/src/Api/Api.csproj
 
 COPY apps/api/src/Api ./apps/api/src/Api
 COPY data ./data
@@ -35,9 +45,10 @@ COPY data ./data
 #          NB: NO --no-restore qui — il publish ha bisogno di project's obj/
 #          (project.assets.json) che NON persiste cross-layer; cache mount copre
 #          solo /root/.nuget/packages. Il restore con cache è veloce comunque.
+# -a $TARGETARCH: cross-compile to ARM64 natively on the x64 build host.
 # GenerateDocumentationFile=false: -10MB image size + minor memory savings.
 RUN --mount=type=cache,target=/root/.nuget/packages \
-    dotnet publish ./apps/api/src/Api/Api.csproj \
+    dotnet publish -a $TARGETARCH ./apps/api/src/Api/Api.csproj \
         -c Release \
         -o /app/publish \
         -p:SkipAnalyzers=true \

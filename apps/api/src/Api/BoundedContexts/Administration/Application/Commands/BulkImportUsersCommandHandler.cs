@@ -200,7 +200,11 @@ internal class BulkImportUsersCommandHandler : ICommandHandler<BulkImportUsersCo
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error importing user at line {LineNumber}", lineNumber);
-                errors.Add($"Line {lineNumber}: import failed due to an internal error.");
+                // Surface the exception type and message in the per-line error so the
+                // BulkOperationResult.Errors payload exposes the upstream cause to
+                // operators (and to integration tests that cannot read server logs).
+                // The full stack trace remains in the ILogger output only.
+                errors.Add($"Line {lineNumber}: import failed ({ex.GetType().Name}: {ex.Message})");
             }
 #pragma warning restore CA1031
         }

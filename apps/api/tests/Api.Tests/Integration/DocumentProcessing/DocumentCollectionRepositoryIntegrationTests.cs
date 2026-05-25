@@ -577,6 +577,7 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         var testPdf1 = new PdfDocumentEntity
         {
             Id = TestPdfId1,
+            SharedGameId = TestGameId1, // FK_pdf_documents_shared_games_SharedGameId (post-Phase 2d)
             FileName = "test1.pdf",
             FilePath = "/test/path/test1.pdf",
             FileSizeBytes = 5000,
@@ -587,6 +588,7 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         var testPdf2 = new PdfDocumentEntity
         {
             Id = TestPdfId2,
+            SharedGameId = TestGameId2, // FK_pdf_documents_shared_games_SharedGameId (post-Phase 2d)
             FileName = "test2.pdf",
             FilePath = "/test/path/test2.pdf",
             FileSizeBytes = 5000,
@@ -601,6 +603,7 @@ public sealed class DocumentCollectionRepositoryIntegrationTests : IAsyncLifetim
         var testCollection = new Api.Infrastructure.Entities.DocumentCollectionEntity
         {
             Id = new Guid("11111111-1111-1111-1111-111111111111"),
+            SharedGameId = TestGameId1, // FK constraint to shared_games (IsRequired in EntityConfiguration)
             Name = "Test Collection",
             Description = "For repository tests",
             CreatedByUserId = TestUserId,

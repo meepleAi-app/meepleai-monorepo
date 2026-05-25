@@ -62,7 +62,10 @@ public sealed class WaitlistEndpointsIntegrationTests : IAsyncLifetime
         bool newsletterOptIn = false) => new
         {
             Email = email ?? $"alice-{Guid.NewGuid():N}@example.com",
-            Title = name,
+            // JoinWaitlistPayload deserialises `Name`, not `Title` — the typo here
+            // meant the payload always sent Name=null, so Post_WithNameOver80Chars
+            // never reached the MaximumLength(80) rule and the endpoint returned 200.
+            Name = name,
             GamePreferenceId = gamePreferenceId,
             GamePreferenceOther = gamePreferenceOther,
             NewsletterOptIn = newsletterOptIn

@@ -71,6 +71,7 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
+            SharedGameId = gameId, // FK_document_collections_shared_games_SharedGameId (IsRequired)
             Name = "Gloomhaven Collection",
             CreatedByUserId = userId,
             DocumentsJson = "[]"
@@ -130,6 +131,7 @@ public class ChatThreadCollectionForeignKeyTests : IAsyncLifetime
         var collection = new DocumentCollectionEntity
         {
             Id = collectionId,
+            SharedGameId = gameId, // FK_document_collections_shared_games_SharedGameId (IsRequired)
             Name = "Wingspan Expansions",
             CreatedByUserId = userId,
             DocumentsJson = "[]"

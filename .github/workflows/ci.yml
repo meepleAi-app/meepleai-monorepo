@@ -74,6 +74,61 @@ jobs:
           echo "runner=ubuntu-latest" >> $GITHUB_OUTPUT
           echo "🏃 Using GitHub-hosted runner"
 
+  # Build .NET solution once and share via artifact across all backend test jobs.
+  # Eliminates ~5× redundant `dotnet build` (was 5 jobs × ~5min each = ~25min CPU).
+  # Pattern: Build Once, Test Many (Fowler). Coverage switches to dotnet-coverage
+  # wrapper (runtime, --no-build friendly) in consumer jobs.
+  # Spec: docs/for-developers/specs/2026-05-25-ci-build-once-test-many.md
+  build-backend:
+    name: Build Backend
+    runs-on: ${{ needs.changes.outputs.runner }}
+    needs: changes
+    timeout-minutes: 15
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call'
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install PDF Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgdiplus
+
+      - name: Setup Backend
+        uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '9.0.x'
+          working-directory: apps/api
+
+      - name: Build Solution (Release)
+        run: dotnet build MeepleAI.Api.sln --no-restore --configuration Release
+
+      - name: Package build artifacts
+        # Tar+zstd preserves symlinks and timestamps; small overhead vs raw upload
+        # but avoids the artifact-v4+ silent permission stripping on bin/ executables.
+        shell: bash
+        run: |
+          echo "📦 Packaging backend build artifacts..."
+          tar --use-compress-program='zstd -3 -T0' \
+              -cf /tmp/backend-build.tar.zst \
+              --exclude='**/TestResults' \
+              --exclude='**/coverage' \
+              src/Api/bin src/Api/obj \
+              src/Api.Analyzers/bin src/Api.Analyzers/obj \
+              tests/Api.Tests/bin tests/Api.Tests/obj \
+              tests/Api.Analyzers.Tests/bin tests/Api.Analyzers.Tests/obj
+          ls -lh /tmp/backend-build.tar.zst
+          echo "✅ Backend artifact packaged"
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-build-${{ github.run_id }}
+          path: /tmp/backend-build.tar.zst
+          retention-days: 1
+          compression-level: 0  # already zstd-compressed
+
   # Frontend: Lint, Typecheck, Test (Unit + E2E subset)
   frontend:
     name: Frontend - Build & Test

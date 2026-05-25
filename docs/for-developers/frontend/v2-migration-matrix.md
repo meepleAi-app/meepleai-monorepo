@@ -136,7 +136,7 @@ Each route is classified by **Tier** (S/M/L) which gates implementation strategy
 | `/gamebook` | **M** | `sp6-libro-game-index.html` | Libro-game index: Hero + QuotaWidget + Card grid + EmptyState | ✅ done (SP6 Phase B, PR #792) |
 | `/gamebook/upload` | **L** | `sp4-upload-wizard-extended.html` + `sp6-libro-game-photo-upload.html` | 3-step wizard: game search + camera + indexing — 14-state FSM + camera permission matrix + offline retry | ✅ done (SP6 Phase C, contract PR #794 + Foundation PR #796 + Interactions PR #800) — [`contracts/gamebook-upload-hooks.md`](contracts/gamebook-upload-hooks.md) |
 | `/library/[gameId]/play/[campaignId]/translate` | **S** | `librogame-runthrough-translate-viewer.html` | Nanolith demo — paragraph translate via chat-stream workaround. Route consolidated from `/library/games/[gameId]/translate` under campaign in IA refactor #871. | ✅ done (SP6 Phase A, PR #790; route refactored in #871) |
-| `/library/[gameId]/play/[campaignId]/encounter` | **S** | `librogame-runthrough-encounter-cheatsheet.html` | Nanolith dogfood — Encounter Book photo→cheatsheet on-demand (4 stati: entry-from-story · segmenting · cheatsheet-rendered · resolved-back). Ephemeral parse (no long-term cache, §9.1). Single hook `useEncounterParse`, linear FSM. | pending (post-Stage-2 unfreeze) |
+| `/library/[gameId]/play/[campaignId]/encounter` | **S** | `librogame-runthrough-encounter-cheatsheet.html` | Nanolith dogfood — Encounter Book photo→cheatsheet on-demand. Ephemeral parse (no long-term cache, §9.1). Hook `useEncounterParse`, FSM idle→parsing→rendered→error. | ✅ done (parse-centric MVP, PR #1525) — state D (resolution/consequences) deferred (no BE command) |
 | `/kb/[id]` | **M** | `sp4-kb-detail.html` | KB header + chunks + search | **deferred** — pivot legale 2026-05-10, vedi `2026-05-10-citation-pdf-viewer-design.md` (G4 v3) |
 
 **Anti-pattern**: dispatchare implementation subagent senza Phase 0.5 per route Tier L. Wave C.1 PR #697 ha esattamente questo come root cause (vedi [post-mortem](../specs/2026-04-26-v2-design-migration.md#34-phase-05--sub-hook-contract-per-tier-l-routes-only)).
@@ -479,13 +479,13 @@ the PR review.
 
 | Mockup | Component | Tier | Path | Route | Status | PR | AC |
 |--------|-----------|------|------|-------|--------|----|----|
-| `librogame-runthrough-encounter-cheatsheet.html` | `EncounterCheatsheetView` | **S** | `apps/web/src/components/features/gamebook/EncounterCheatsheetView.tsx` | `/library/[gameId]/play/[campaignId]/encounter` | pending | — | T A M V |
+| `librogame-runthrough-encounter-cheatsheet.html` | `EncounterCheatsheetView` | **S** | `apps/web/src/components/features/gamebook/EncounterCheatsheetView.tsx` | `/library/[gameId]/play/[campaignId]/encounter` | ✅ done (parse-centric MVP) | #1525 | T A (M unit; V retired) |
 | `librogame-runthrough-game-onboarding.html` | `LibroGameOnboardingPanel` | **L** ⚠️ | `apps/web/src/components/features/gamebook/LibroGameOnboardingPanel.tsx` | `/library/[gameId]` (libro variant — prereq gate) | pending | — | T A M V |
 | `librogame-runthrough-error-states.html` | `GamebookErrorBanner` | **S** (primitive-like) | `apps/web/src/components/features/gamebook/GamebookErrorBanner.tsx` | cross-cutting (chat, translate, encounter) | pending | — | T A V |
 
 **Stato di copertura** (4 stati ciascuno, mobile + desktop parity):
 
-- **`EncounterCheatsheetView`** (BLOCKER · Tier S): entry-from-story / photo-segmenting / cheatsheet-rendered / resolved-back. Ephemeral card (no long-term cache, §9.1 spec). Single hook `useEncounterParse({photoId, paragraphRef})` + linear FSM 5-state. Bundle budget < +50 KB.
+- **`EncounterCheatsheetView`** (✅ done, PR #1525 · Tier S): parse-centric MVP — FSM `idle` (entry CTA + optional story context) / `parsing` / `rendered` (cheatsheet) / `error` (409 parse-failed · 404 not-found · generic + retry). Hook `useEncounterParse(campaignId, photoId)` → `mutate({paragraphNumber, gameBookId})` (consumes BE #1520). Ephemeral (no long-term cache, §9.1); confidence < 0.6 surfaces manual-verification hint. **State D (resolution/consequences) deferred** — no BE encounter-resolution command; "Risolvi" navigates back to the play session.
 - **`LibroGameOnboardingPanel`** (NICE-TO-HAVE · Tier L): prereq-missing / pdf-uploading / kb-indexing / ready. Replace della CTA "Avvia libro game" quando prerequisiti non soddisfatti. Composition: drop-zone + upload-row + index-detail + step-list primitives. Multi-hook ≥3 (`useGamePrerequisites` + `usePdfUpload` + `useKbIndexing`) → Phase 0.5 sub-hook contract OBBLIGATORIA prima di implementation (vedi `contracts/library-id-onboarding-hooks.md` TBD). Bundle budget < +120 KB.
 - **`GamebookErrorBanner`** (NICE-TO-HAVE · Tier S primitive-like): stream-timeout / ocr-fail / llm-503 / segmentation-fail. Trasversale alle 3 route gamebook (chat, translate, encounter). Cost-note "non addebitato" + ≥2 azioni di recupero + telemetry dogfood. Componente "primitive-like" candidato a `components/ui/error-banner/` se generalizzato post-Iter-1.
 
@@ -656,7 +656,7 @@ instead.
 | `/library/[gameId]/play` | `librogame-runthrough-resume-picker.html` + `sp6-libro-game-resume-state.html` | Libro-game |
 | `/library/[gameId]/play/[campaignId]` | `librogame-runthrough-play-session.html` + `sp6-libro-game-index.html` | — |
 | `/library/[gameId]/play/[campaignId]/translate` | `librogame-runthrough-translate-viewer.html` + `sp6-libro-game-photo-upload.html` | Tier S done (PR #790) |
-| `/library/[gameId]/play/[campaignId]/encounter` | `librogame-runthrough-encounter-cheatsheet.html` | Tier S pending (BLOCKER §9.1 gap-coverage 2026-05-12) |
+| `/library/[gameId]/play/[campaignId]/encounter` | `librogame-runthrough-encounter-cheatsheet.html` | Tier S done (PR #1525, parse-centric MVP; state D deferred) |
 | `/library/[gameId]/toolbox` · `/toolkit` · `/toolkit/[sessionId]` | `sp4-toolkit-detail.html` ↻ | — |
 
 > **Note**: `/library/v2` decommissionata 2026-05-12 (era demo orfana con SEED hard-coded).

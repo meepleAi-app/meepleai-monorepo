@@ -8,6 +8,7 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { describe, it, expect, vi } from 'vitest';
 
 import { FavoriteAgentCard } from '../FavoriteAgentCard';
@@ -43,5 +44,18 @@ describe('FavoriteAgentCard', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Open Azul Rules AI' }));
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes axe a11y scan with an agent set', async () => {
+    const { container } = render(
+      <FavoriteAgentCard
+        agentName="Wingspan Rules AI"
+        gameName="Wingspan"
+        onClick={() => {}}
+        labels={labels}
+      />
+    );
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

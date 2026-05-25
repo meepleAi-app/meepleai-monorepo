@@ -9,6 +9,7 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { describe, it, expect, vi } from 'vitest';
 
 import { PlayerHero } from '../PlayerHero';
@@ -78,5 +79,20 @@ describe('PlayerHero', () => {
       />
     );
     expect(screen.queryByRole('button', { name: 'Back to players list' })).not.toBeInTheDocument();
+  });
+
+  it('passes axe a11y scan with full hero data', async () => {
+    const { container } = render(
+      <PlayerHero
+        displayName="Sara Rossi"
+        totalSessions={42}
+        totalWins={28}
+        winRate={0.67}
+        onBack={() => {}}
+        labels={labels}
+      />
+    );
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

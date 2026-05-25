@@ -64,7 +64,9 @@ export function KbStatsCard(props: KbStatsCardProps): ReactElement {
     costHistory,
   } = props;
 
-  const formatNumber = (n: number): string => n.toLocaleString('it-IT');
+  // Locale resolved at runtime (caller decides via IntlProvider); avoids hardcoding it-IT
+  // which renders wrong output for English-locale users.
+  const formatNumber = (n: number): string => n.toLocaleString();
 
   // Metric grid items — only include those with data (P83 graceful hide)
   const metrics: ReadonlyArray<{

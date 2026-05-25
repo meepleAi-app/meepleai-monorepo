@@ -65,6 +65,11 @@ describe('useKbHub (Issue #1481)', () => {
     expect(mockGetUserGameKbStatus).not.toHaveBeenCalled();
   });
 
+  it('useGamePdfs is disabled when gameId is undefined', () => {
+    renderHook(() => useGamePdfs(undefined), { wrapper });
+    expect(mockGetGamePdfs).not.toHaveBeenCalled();
+  });
+
   it('useUserKbStatus fetches when gameId provided', async () => {
     mockGetUserGameKbStatus.mockResolvedValueOnce({
       gameId: GAME_ID,

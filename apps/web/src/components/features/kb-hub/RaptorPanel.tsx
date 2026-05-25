@@ -180,7 +180,7 @@ export function RaptorPanel(props: RaptorPanelProps): ReactElement {
                   <div className="text-[11px] text-muted-foreground">
                     {labels.estimateDescription.replace(
                       '{chunks}',
-                      estimateChunks!.toLocaleString('it-IT')
+                      estimateChunks!.toLocaleString()
                     )}
                   </div>
                 </div>

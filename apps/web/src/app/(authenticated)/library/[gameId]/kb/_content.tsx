@@ -17,6 +17,8 @@
 
 import { useState, type ReactElement } from 'react';
 
+import { toast } from 'sonner';
+
 import {
   ActionsMenu,
   DeleteDialog,
@@ -68,8 +70,9 @@ const STATIC_REINDEX_COST_ROWS: ReadonlyArray<ReindexCostRow> = [
 
 function formatRelativeDate(_iso: string): string {
   // Lightweight relative formatter — production uses date-fns formatDistance().
-  // Replaced with date-fns when wireup expands. For MVP we display the upload date as-is.
-  return new Date(_iso).toLocaleDateString('it-IT');
+  // Replaced with date-fns when wireup expands. For MVP we display the upload date as-is
+  // using the runtime locale (no hardcoded it-IT — caller's IntlProvider drives format).
+  return new Date(_iso).toLocaleDateString();
 }
 
 function formatFileSize(bytes: number): string {
@@ -297,6 +300,9 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
       await reindexMutation.mutateAsync();
       setReindexPhase('done');
     } catch {
+      // Surface the failure to the user; without this the modal closes silently
+      // and the operation appears to vanish.
+      toast.error(t('pages.library.gameDetail.kb.errors.reindexFailed'));
       setReindexOpen(false);
       setReindexPhase('confirm');
     }
@@ -306,8 +312,11 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
     if (!deletePdfTarget) return;
     try {
       await deleteMutation.mutateAsync(deletePdfTarget.id);
-    } finally {
+      // Only dismiss the dialog on success — keep it open on error so the user
+      // sees the failure and can decide to retry or cancel.
       setDeletePdfTarget(null);
+    } catch {
+      toast.error(t('pages.library.gameDetail.kb.errors.deleteFailed'));
     }
   };
 

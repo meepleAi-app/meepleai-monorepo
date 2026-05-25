@@ -87,7 +87,8 @@ export function HubDefault(props: HubDefaultProps): ReactElement {
     className,
   } = props;
 
-  const formatNumber = (n: number): string => n.toLocaleString('it-IT');
+  // Locale resolved at runtime (caller's IntlProvider); avoids hardcoded it-IT divergence.
+  const formatNumber = (n: number): string => n.toLocaleString();
 
   // Build stats strip dynamically — only include available metrics + coverage
   const statsStripItems: ReadonlyArray<{ key: string; icon: string; text: string }> = [

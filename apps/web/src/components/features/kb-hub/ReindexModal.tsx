@@ -205,8 +205,8 @@ export function ReindexModal(props: ReindexModalProps): ReactElement {
             {summary && (
               <div className="text-xs text-muted-foreground">
                 {labels.doneSummaryTemplate
-                  .replace('{chunks}', summary.chunks.toLocaleString('it-IT'))
-                  .replace('{embeddings}', summary.embeddings.toLocaleString('it-IT'))
+                  .replace('{chunks}', summary.chunks.toLocaleString())
+                  .replace('{embeddings}', summary.embeddings.toLocaleString())
                   .replace('{cost}', summary.actualCost)}
               </div>
             )}

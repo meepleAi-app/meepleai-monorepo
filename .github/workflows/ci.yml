@@ -74,9 +74,169 @@ jobs:
           echo "runner=ubuntu-latest" >> $GITHUB_OUTPUT
           echo "🏃 Using GitHub-hosted runner"
 
+  # Build .NET solution once and share via artifact across all backend test jobs.
+  # Eliminates ~5× redundant `dotnet build` (was 5 jobs × ~5min each = ~25min CPU).
+  # Pattern: Build Once, Test Many (Fowler). Coverage switches to dotnet-coverage
+  # wrapper (runtime, --no-build friendly) in consumer jobs.
+  # Spec: docs/for-developers/specs/2026-05-25-ci-build-once-test-many.md
+  build-backend:
+    name: Build Backend
+    runs-on: ${{ needs.changes.outputs.runner }}
+    needs: changes
+    timeout-minutes: 15
+    # Runs when backend OR frontend changes: e2e job needs the API even when
+    # only the frontend changed (it starts the backend to test against).
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call'
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install PDF Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgdiplus
+
+      - name: Setup Backend
+        uses: ./.github/actions/setup-backend
+        with:
+          dotnet-version: '9.0.x'
+          working-directory: apps/api
+
+      - name: Build Solution (Release)
+        run: dotnet build MeepleAI.Api.sln --no-restore --configuration Release
+
+      - name: Package build artifacts
+        # Tar+zstd preserves symlinks and timestamps; small overhead vs raw upload
+        # but avoids the artifact-v4+ silent permission stripping on bin/ executables.
+        shell: bash
+        run: |
+          echo "📦 Packaging backend build artifacts..."
+          tar --use-compress-program='zstd -3 -T0' \
+              -cf /tmp/backend-build.tar.zst \
+              --exclude='**/TestResults' \
+              --exclude='**/coverage' \
+              src/Api/bin src/Api/obj \
+              src/Api.Analyzers/bin src/Api.Analyzers/obj \
+              tests/Api.Tests/bin tests/Api.Tests/obj \
+              tests/Api.Analyzers.Tests/bin tests/Api.Analyzers.Tests/obj
+          ls -lh /tmp/backend-build.tar.zst
+          echo "✅ Backend artifact packaged"
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-build-${{ github.run_id }}
+          path: /tmp/backend-build.tar.zst
+          retention-days: 1
+          compression-level: 0  # already zstd-compressed
+
+  # Build Next.js once with default config (no fixture flag) and share via
+  # artifact. Consumed by `frontend-bundle-size` and `e2e`. NOT used by
+  # `frontend-a11y` which needs NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1
+  # (constant-folded at build time → separate artifact in build-frontend-a11y).
+  # Spec: docs/for-developers/specs/2026-05-25-ci-build-once-test-many.md
+  build-frontend:
+    name: Build Frontend
+    runs-on: ${{ needs.changes.outputs.runner }}
+    needs: changes
+    timeout-minutes: 15
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Build (default config)
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_BASE: http://localhost:8080
+
+      - name: Package frontend build
+        shell: bash
+        run: |
+          echo "📦 Packaging frontend .next/ ..."
+          tar --use-compress-program='zstd -3 -T0' \
+              -cf /tmp/frontend-build.tar.zst \
+              .next
+          ls -lh /tmp/frontend-build.tar.zst
+          echo "✅ Frontend artifact packaged"
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-build-${{ github.run_id }}
+          path: /tmp/frontend-build.tar.zst
+          retention-days: 1
+          compression-level: 0
+
+  # Build Next.js with NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1 for the
+  # a11y suite. Separate from build-frontend because Next.js constant-folds
+  # NEXT_PUBLIC_* env vars at build time — same artifact cannot serve both
+  # configs. Net change: 4× pnpm build → 2× builds (still −50% CPU).
+  build-frontend-a11y:
+    name: Build Frontend (a11y config)
+    runs-on: ${{ needs.changes.outputs.runner }}
+    needs: changes
+    timeout-minutes: 15
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Build (a11y config — visual-test fixture enabled)
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_BASE: http://localhost:8080
+          # Wave B.1 (#633): enable visual-test fixture so e2e/a11y/games-library.spec.ts
+          # can scan /games?tab=library default + filtered-empty surfaces without a backend.
+          # Constant-folded at build time; STATE_OVERRIDE_ENABLED also unlocks `?state=...`
+          # URL hatch under prod NODE_ENV.
+          NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED: '1'
+
+      - name: Package frontend (a11y) build
+        shell: bash
+        run: |
+          echo "📦 Packaging frontend (a11y) .next/ ..."
+          tar --use-compress-program='zstd -3 -T0' \
+              -cf /tmp/frontend-build-a11y.tar.zst \
+              .next
+          ls -lh /tmp/frontend-build-a11y.tar.zst
+          echo "✅ Frontend (a11y) artifact packaged"
+
+      - name: Upload frontend (a11y) artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-build-a11y-${{ github.run_id }}
+          path: /tmp/frontend-build-a11y.tar.zst
+          retention-days: 1
+          compression-level: 0
+
   # Frontend: Lint, Typecheck, Test (Unit + E2E subset)
+  # Build moved to upstream `build-frontend` job (Build-Once refactor 2026-05-25).
   frontend:
-    name: Frontend - Build & Test
+    name: Frontend - Lint, Typecheck & Test
     runs-on: ${{ needs.changes.outputs.runner }}
     timeout-minutes: 30
     needs: changes
@@ -132,10 +292,8 @@ jobs:
           NODE_ENV: test
           CI: true
 
-      - name: Build
-        run: pnpm build
-        env:
-          NEXT_PUBLIC_API_BASE: http://localhost:8080
+      # Build step removed (2026-05-25 Build-Once refactor) — moved to upstream
+      # `build-frontend` job. Frontend-bundle-size and e2e consume the artifact.
 
       - name: Upload Coverage
         if: always()
@@ -147,10 +305,12 @@ jobs:
         continue-on-error: true
 
   # Backend Unit Tests (fast, no service containers needed)
+  # Build-Once refactor 2026-05-25: consumes upstream `build-backend` artifact
+  # instead of running its own restore+build (~4-5 min saved per CI run).
   backend-unit:
     name: Backend - Unit Tests
     runs-on: ${{ needs.changes.outputs.runner }}
-    needs: changes
+    needs: [changes, build-backend]
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
@@ -162,19 +322,29 @@ jobs:
       - name: Install PDF Dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
 
-      - name: Setup Backend
-        uses: ./.github/actions/setup-backend
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
-          working-directory: apps/api
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: backend-build-${{ github.run_id }}
+          path: /tmp/
+
+      - name: Extract backend artifact
+        shell: bash
+        working-directory: apps/api
+        run: |
+          echo "📂 Extracting backend build artifact..."
+          tar --use-compress-program='zstd -d' -xf /tmp/backend-build.tar.zst
+          echo "✅ Backend artifact extracted"
 
       - name: Install dotnet-coverage
         run: |
           dotnet tool install --global dotnet-coverage
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
 
       - name: Run Unit Tests with Coverage
         timeout-minutes: 30
@@ -211,10 +381,16 @@ jobs:
   # / workflow_call (from deploy-staging.yml). Feature PRs against main-dev
   # skip this job to keep wall-clock under 10min on the commit stage. Coverage
   # is regained at the acceptance stage when merging into main-staging.
+  #
+  # Build-Once refactor 2026-05-25: each of 3 shards consumes the upstream
+  # build-backend artifact (~30s download) instead of running its own
+  # dotnet build (~5 min). Coverage switched from coverlet.msbuild (build-time
+  # instrumentation, incompatible with --no-build) to dotnet-coverage wrapper
+  # (runtime profiler), matching the backend-unit pattern.
   backend-integration:
     name: Backend - Integration (${{ matrix.shard.name }})
     runs-on: ${{ needs.changes.outputs.runner }}
-    needs: changes
+    needs: [changes, build-backend]
     if: |
       github.event_name == 'workflow_dispatch'
       || github.event_name == 'workflow_call'
@@ -277,11 +453,29 @@ jobs:
       - name: Install PDF Dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
 
-      - name: Setup Backend
-        uses: ./.github/actions/setup-backend
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
-          working-directory: apps/api
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: backend-build-${{ github.run_id }}
+          path: /tmp/
+
+      - name: Extract backend artifact
+        shell: bash
+        working-directory: apps/api
+        run: |
+          echo "📂 Extracting backend build artifact..."
+          tar --use-compress-program='zstd -d' -xf /tmp/backend-build.tar.zst
+          echo "✅ Backend artifact extracted"
+
+      - name: Install dotnet-coverage
+        run: |
+          dotnet tool install --global dotnet-coverage
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Pre-Test Cleanup
         shell: bash
@@ -329,8 +523,8 @@ jobs:
           psql -h localhost -U postgres -d meepleai_test -c "SHOW max_connections;"
           echo "✅ Default max_connections=100 — connection pools limited via MaxPoolSize in conn strings"
 
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
+      # Build step removed (2026-05-25 Build-Once refactor) — backend binaries
+      # are downloaded from the upstream `build-backend` job artifact above.
 
       # Issue #3102: Exclude tests that use their own Testcontainers - they conflict with CI service containers.
       # - UploadPdfMidPhaseCancellationTests: Uses SharedTestcontainersFixture
@@ -364,6 +558,7 @@ jobs:
           TEST_REDIS_CONNSTRING: localhost:6379,allowAdmin=true
         run: |
           echo "🧪 Running integration tests - shard: ${{ matrix.shard.name }} (4 parallel threads)..."
+          mkdir -p coverage
           # PR #1505 (2026-05-25): target tests/Api.Tests/Api.Tests.csproj explicitly.
           # Without this `dotnet test` walks the solution and also invokes
           # Api.Analyzers.Tests.dll, which has zero tests matching
@@ -371,17 +566,23 @@ jobs:
           # the assembly returns exit 1 (vstest treats no-match-on-non-empty
           # assembly as an error) → the whole step fails even though
           # Api.Tests.dll has Passed=N, Failed=0.
-          dotnet test tests/Api.Tests/Api.Tests.csproj \
-            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}" \
-            --settings tests/Api.Tests/integration.runsettings \
-            --logger "console;verbosity=minimal" \
-            --no-build \
-            --configuration Release \
-            --blame-hang-timeout 5min \
-            --blame-hang-dump-type mini \
-            -p:CollectCoverage=true \
-            -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./coverage/${{ matrix.shard.coverage_file }}
+          #
+          # Build-Once refactor (2026-05-25): switched from coverlet.msbuild
+          # (-p:CollectCoverage=true) to dotnet-coverage wrapper so the tests
+          # can run with --no-build using the upstream build-backend artifact.
+          # Coverlet.msbuild requires build-time instrumentation; dotnet-coverage
+          # is a runtime profiler attached to the dotnet test process.
+          dotnet-coverage collect \
+            "dotnet test tests/Api.Tests/Api.Tests.csproj \
+              --filter \"Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}\" \
+              --settings tests/Api.Tests/integration.runsettings \
+              --logger \"console;verbosity=minimal\" \
+              --no-build \
+              --configuration Release \
+              --blame-hang-timeout 5min \
+              --blame-hang-dump-type mini" \
+            -f cobertura \
+            -o coverage/${{ matrix.shard.coverage_file }}
           echo "✅ Integration tests passed - shard: ${{ matrix.shard.name }}"
 
       - name: Upload Coverage
@@ -442,10 +643,13 @@ jobs:
 
   # Stage 6: E2E Tests (Critical paths only)
   # Full E2E suite with 4-shard parallel execution runs separately in e2e-tests.yml
+  #
+  # Build-Once refactor 2026-05-25: consumes upstream build-backend +
+  # build-frontend artifacts instead of running its own builds (~7 min saved).
   e2e:
     name: E2E - Critical Paths
     runs-on: ${{ needs.changes.outputs.runner }}
-    needs: changes
+    needs: [changes, build-backend, build-frontend]
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
 
     # Service containers for backend (required for E2E tests)
@@ -509,24 +713,30 @@ jobs:
           printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\nINITIAL_ADMIN_EMAIL=admin@test.local\nINITIAL_ADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
           printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
 
-      - name: Fix dotnet directory permissions
-        run: |
-          if [ -d "/usr/share/dotnet" ]; then
-            sudo chown -R $(whoami) /usr/share/dotnet || true
-          fi
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+      # Use the full composite action (not just setup-dotnet) because
+      # `dotnet ef database update --no-build` (Run Database Migrations step
+      # below) needs Microsoft.EntityFrameworkCore.Design restored into
+      # ~/.nuget/packages/. Design-time tools are NOT part of the bin/obj
+      # artifact from build-backend. Cost: ~30s of cached NuGet restore.
+      - name: Setup Backend (restore NuGet for EF design-time tools)
+        uses: ./.github/actions/setup-backend
         with:
           dotnet-version: '9.0.x'
+          working-directory: apps/api
 
-      - name: Restore Backend Dependencies
-        working-directory: apps/api/src/Api
-        run: dotnet restore
+      - name: Download backend artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: backend-build-${{ github.run_id }}
+          path: /tmp/
 
-      - name: Build Backend
-        working-directory: apps/api/src/Api
-        run: dotnet build --no-restore --configuration Release
+      - name: Extract backend artifact
+        shell: bash
+        working-directory: apps/api
+        run: |
+          echo "📂 Extracting backend build artifact (overwrites any cached bin/obj)..."
+          tar --use-compress-program='zstd -d' -xf /tmp/backend-build.tar.zst
+          echo "✅ Backend artifact extracted"
 
       - name: Install EF Core Tools
         run: |
@@ -605,8 +815,19 @@ jobs:
         with:
           working-directory: apps/web
 
-      - name: Build App
-        run: pnpm build
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: frontend-build-${{ github.run_id }}
+          path: /tmp/
+
+      - name: Extract frontend artifact
+        shell: bash
+        working-directory: apps/web
+        run: |
+          echo "📂 Extracting frontend build artifact..."
+          tar --use-compress-program='zstd -d' -xf /tmp/frontend-build.tar.zst
+          echo "✅ Frontend artifact extracted"
 
       - name: Setup Test Environment
         run: cp .env.test.example .env.test
@@ -648,11 +869,14 @@ jobs:
   #     gating for PRs that introduce NEW violations. This gate (frontend-a11y)
   #     now blocks on ANY axe AA violation; #1015 will additionally enforce
   #     non-regression at release boundaries.
+  # Build-Once refactor 2026-05-25: consumes upstream build-frontend-a11y
+  # artifact instead of running its own pnpm build with the visual-test
+  # fixture flag (~100s saved).
   frontend-a11y:
     name: Frontend - A11y E2E
     runs-on: ${{ needs.changes.outputs.runner }}
     timeout-minutes: 15
-    needs: changes
+    needs: [changes, build-frontend-a11y]
     # continue-on-error removed in Phase D gate flip (#1094 closure, 2026-05-18).
     # Any axe AA violation now fails CI. Pre-existing test-infrastructure flakes
     # (e.g. timing-sensitive focus assertions, fixture loading timeouts) tracked
@@ -678,15 +902,19 @@ jobs:
         with:
           working-directory: apps/web
 
-      - name: Build App
-        run: pnpm build
-        env:
-          NEXT_PUBLIC_API_BASE: http://localhost:8080
-          # Wave B.1 (#633): enable visual-test fixture so e2e/a11y/games-library.spec.ts
-          # can scan /games?tab=library default + filtered-empty surfaces without a backend.
-          # Constant-folded at build time; STATE_OVERRIDE_ENABLED also unlocks `?state=...`
-          # URL hatch under prod NODE_ENV. Pre-existing accessibility.spec.ts is unaffected.
-          NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED: '1'
+      - name: Download frontend (a11y) artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: frontend-build-a11y-${{ github.run_id }}
+          path: /tmp/
+
+      - name: Extract frontend (a11y) artifact
+        shell: bash
+        working-directory: apps/web
+        run: |
+          echo "📂 Extracting frontend (a11y) build artifact..."
+          tar --use-compress-program='zstd -d' -xf /tmp/frontend-build-a11y.tar.zst
+          echo "✅ Frontend (a11y) artifact extracted"
 
       - name: Setup Test Environment
         run: cp .env.test.example .env.test
@@ -705,15 +933,19 @@ jobs:
           retention-days: 7
 
   # Frontend bundle-size budget enforcement (Issue #629).
-  # Builds the app and verifies First Load JS for budgeted public routes
-  # against `apps/web/.bundle-budgets.json`. Fails when any route exceeds
+  # Verifies First Load JS for budgeted public routes against
+  # `apps/web/.bundle-budgets.json`. Fails when any route exceeds
   # `budget × (1 + tolerance)` (default 5%). Documented in
   # `docs/frontend/bundle-size-budget.md`.
+  #
+  # Build-Once refactor 2026-05-25: consumes upstream build-frontend artifact
+  # instead of running its own pnpm build (~100s saved). The default-config
+  # build matches what bundle-size budgets target (no a11y fixture flag).
   frontend-bundle-size:
     name: Frontend - Bundle Size
     runs-on: ${{ needs.changes.outputs.runner }}
     timeout-minutes: 15
-    needs: changes
+    needs: [changes, build-frontend]
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
@@ -730,10 +962,19 @@ jobs:
           working-directory: apps/web
           frozen-lockfile: 'true'
 
-      - name: Build App
-        run: pnpm build
-        env:
-          NEXT_PUBLIC_API_BASE: http://localhost:8080
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: frontend-build-${{ github.run_id }}
+          path: /tmp/
+
+      - name: Extract frontend artifact
+        shell: bash
+        working-directory: apps/web
+        run: |
+          echo "📂 Extracting frontend build artifact..."
+          tar --use-compress-program='zstd -d' -xf /tmp/frontend-build.tar.zst
+          echo "✅ Frontend artifact extracted"
 
       - name: Check Bundle Budgets
         run: pnpm bundle:check
@@ -750,11 +991,28 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [frontend, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e]
+    needs: [build-backend, build-frontend, build-frontend-a11y, frontend, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e]
     if: always()
     steps:
       - name: Check Status
         run: |
+          # Required upstream build jobs (Build-Once refactor 2026-05-25).
+          # If a build fails, every downstream test job is skipped — the loop
+          # below would then see only 'skipped' results and not flag the failure.
+          # We catch build failures explicitly here.
+          for build_job in build-backend build-frontend build-frontend-a11y; do
+            case "$build_job" in
+              build-backend) result="${{ needs.build-backend.result }}" ;;
+              build-frontend) result="${{ needs.build-frontend.result }}" ;;
+              build-frontend-a11y) result="${{ needs.build-frontend-a11y.result }}" ;;
+            esac
+            # 'skipped' is OK (paths filter excluded that area); 'failure' / 'cancelled' is not.
+            if [ "$result" == "failure" ] || [ "$result" == "cancelled" ]; then
+              echo "❌ CI Failed: upstream build $build_job=$result"
+              exit 1
+            fi
+          done
+
           # Required jobs (block CI)
           # NOTE: frontend-a11y was non-blocking via job-level continue-on-error
           # until Phase D gate flip (#1094 closure, 2026-05-18). It is now in the
@@ -872,7 +1130,7 @@ jobs:
         || github.base_ref == 'main-staging'
         || github.base_ref == 'main'
       )
-    needs: [changes, frontend, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e, ci-success, deploy-preview]
+    needs: [changes, build-backend, build-frontend, build-frontend-a11y, frontend, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e, ci-success, deploy-preview]
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: failed

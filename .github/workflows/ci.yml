@@ -1043,7 +1043,7 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [build-backend, build-frontend, build-frontend-a11y, frontend, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e]
+    needs: [build-backend, build-frontend, build-frontend-a11y, frontend-lint, frontend-typecheck, frontend-test, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e]
     if: always()
     steps:
       - name: Check Status
@@ -1070,15 +1070,22 @@ jobs:
           # until Phase D gate flip (#1094 closure, 2026-05-18). It is now in the
           # required-jobs list — any axe AA violation fails CI. #1015 (release-
           # level baseline-diff) is complementary, not a substitute.
-          for job in frontend frontend-a11y frontend-bundle-size backend-unit python-tests e2e; do
-            result="${{ needs.frontend.result }}"
+          # Onda A (2026-05-25): 'frontend' was split into frontend-lint,
+          # frontend-typecheck, frontend-test (3-shard matrix). All three are
+          # required gates.
+          for job in frontend-lint frontend-typecheck frontend-test frontend-a11y frontend-bundle-size backend-unit python-tests e2e; do
             case "$job" in
+              frontend-lint) result="${{ needs.frontend-lint.result }}" ;;
+              frontend-typecheck) result="${{ needs.frontend-typecheck.result }}" ;;
+              frontend-test) result="${{ needs.frontend-test.result }}" ;;
               frontend-a11y) result="${{ needs.frontend-a11y.result }}" ;;
               frontend-bundle-size) result="${{ needs.frontend-bundle-size.result }}" ;;
               backend-unit) result="${{ needs.backend-unit.result }}" ;;
               python-tests) result="${{ needs.python-tests.result }}" ;;
               e2e) result="${{ needs.e2e.result }}" ;;
             esac
+            # frontend-test result aggregates the 3-shard matrix: 'success' iff
+            # all shards pass; 'failure' if any shard fails.
             if [ "$result" == "failure" ] || [ "$result" == "cancelled" ]; then
               echo "❌ CI Failed: $job=$result"
               exit 1
@@ -1182,7 +1189,7 @@ jobs:
         || github.base_ref == 'main-staging'
         || github.base_ref == 'main'
       )
-    needs: [changes, build-backend, build-frontend, build-frontend-a11y, frontend, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e, ci-success, deploy-preview]
+    needs: [changes, build-backend, build-frontend, build-frontend-a11y, frontend-lint, frontend-typecheck, frontend-test, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e, ci-success, deploy-preview]
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: failed

@@ -110,6 +110,21 @@ vi.mock('@/lib/domain-hooks/useGameLeaderboard', () => ({
   GAME_LEADERBOARD_QUERY_KEY: (gameId: string) => ['game-leaderboard', gameId, null, 10] as const,
 }));
 
+// Issue #1464 — Game memory hooks (house rules CRUD). Default: no memory, no-op
+// mutations; FSM/Phase 0.5 tests don't exercise the house-rules flow.
+vi.mock('@/lib/domain-hooks/useGameMemory', () => ({
+  useGameMemory: () => ({
+    data: null,
+    isLoading: false,
+    isError: false,
+    isSuccess: true,
+  }),
+  useAddHouseRule: () => ({ mutate: vi.fn() }),
+  useUpdateHouseRule: () => ({ mutate: vi.fn() }),
+  useRemoveHouseRule: () => ({ mutate: vi.fn() }),
+  GAME_MEMORY_QUERY_KEY: (gameId: string) => ['game-memory', gameId] as const,
+}));
+
 // ─── Visual fixture mock ──────────────────────────────────────────────────
 
 let mockIsVisualTestBuild = false;
@@ -235,6 +250,19 @@ const MESSAGES: Record<string, string> = {
   'pages.gameDetail.stats.communityGateDescription':
     'Aggiungi questo gioco per sbloccare statistiche e classifica giocatori.',
   'pages.gameDetail.stats.communityGateCta': '+ Aggiungi a libreria',
+  // Issue #1464 — House rules CRUD (Info tab)
+  'pages.gameDetail.houseRules.title': 'House rules',
+  'pages.gameDetail.houseRules.addCta': '+ Aggiungi',
+  'pages.gameDetail.houseRules.addPlaceholder': 'Scrivi una regola...',
+  'pages.gameDetail.houseRules.addSubmit': 'Salva',
+  'pages.gameDetail.houseRules.editLabel': 'Modifica',
+  'pages.gameDetail.houseRules.editSubmit': 'Aggiorna',
+  'pages.gameDetail.houseRules.cancel': 'Annulla',
+  'pages.gameDetail.houseRules.deleteLabel': 'Elimina',
+  'pages.gameDetail.houseRules.deleteConfirmTitle': 'Elimina house rule?',
+  'pages.gameDetail.houseRules.deleteConfirmMessage': 'Questa azione non e reversibile.',
+  'pages.gameDetail.houseRules.deleteConfirm': 'Elimina',
+  'pages.gameDetail.houseRules.empty': 'Nessuna regola',
 };
 
 function renderWithIntl(ui: ReactElement) {
@@ -879,5 +907,31 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     const statsPanel = document.querySelector('[data-slot="game-detail-panel-stats"]');
     expect(statsPanel).toBeInTheDocument();
     expect(statsPanel?.querySelector('[data-slot="game-detail-community-gate"]')).toBeNull();
+  });
+
+  // ─── Issue #1464 — House rules CRUD visibility per variant ───────────────
+
+  it('Issue #1464: own variant renders GameDetailHouseRulesList inside Info panel', () => {
+    detailMockState.data = makeDetail(); // own variant
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+
+    const infoPanel = document.querySelector('[data-slot="game-detail-panel-info"]');
+    expect(infoPanel).toBeInTheDocument();
+    expect(
+      infoPanel?.querySelector('[data-slot="game-detail-house-rules-list"]')
+    ).toBeInTheDocument();
+  });
+
+  it('Issue #1464: community variant skips the house-rules list', () => {
+    detailMockState.data = makeDetail({ libraryEntryId: '' });
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+
+    expect(document.querySelector('[data-slot="game-detail-house-rules-list"]')).toBeNull();
   });
 });

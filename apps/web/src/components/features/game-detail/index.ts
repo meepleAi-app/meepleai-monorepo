@@ -84,3 +84,9 @@ export type {
 
 export { GameDetailCommunityGate } from '@/components/features/game-detail/GameDetailCommunityGate';
 export type { GameDetailCommunityGateProps } from '@/components/features/game-detail/GameDetailCommunityGate';
+
+export { GameDetailHouseRulesList } from '@/components/features/game-detail/GameDetailHouseRulesList';
+export type {
+  GameDetailHouseRulesListLabels,
+  GameDetailHouseRulesListProps,
+} from '@/components/features/game-detail/GameDetailHouseRulesList';

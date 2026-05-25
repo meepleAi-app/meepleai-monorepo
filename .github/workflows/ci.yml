@@ -233,12 +233,14 @@ jobs:
           retention-days: 1
           compression-level: 0
 
-  # Frontend: Lint, Typecheck, Test (Unit + E2E subset)
-  # Build moved to upstream `build-frontend` job (Build-Once refactor 2026-05-25).
-  frontend:
-    name: Frontend - Lint, Typecheck & Test
+  # Frontend Lint — fast-fail check (~1 min). Independent job so lint
+  # errors abort early without waiting on the 9-min vitest matrix.
+  # Onda A refactor 2026-05-25: split from monolithic 'frontend' job
+  # (was 27.9 min wall-clock, lint+typecheck+test+coverage serialized).
+  frontend-lint:
+    name: Frontend - Lint
     runs-on: ${{ needs.changes.outputs.runner }}
-    timeout-minutes: 30
+    timeout-minutes: 10
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
@@ -256,7 +258,6 @@ jobs:
           working-directory: apps/web
           frozen-lockfile: 'true'
 
-      # Stage 1: Lint + TypeCheck (fail fast)
       - name: Lint
         run: pnpm lint
         # Note: package.json lint script has --max-warnings=15 for security false positives
@@ -280,27 +281,78 @@ jobs:
             audits/2026-05-12-token-violations.md
           retention-days: 14
 
+  # Frontend Typecheck — fast-fail check (~1 min). Independent job for
+  # parallel execution with lint.
+  frontend-typecheck:
+    name: Frontend - Typecheck
+    runs-on: ${{ needs.changes.outputs.runner }}
+    timeout-minutes: 10
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
       - name: Typecheck
         run: pnpm typecheck
 
-      # Stage 3: Frontend Unit Tests (includes integration tests with MSW)
-      # MSW (Mock Service Worker) is configured globally in vitest.setup.tsx
-      # Tests can use MSW to simulate API responses for both unit and integration testing
-      - name: Unit & Integration Tests
-        run: pnpm test:coverage
+  # Frontend Unit Tests — sharded across 3 threads (matches dev-fast.yml pattern).
+  # Pre-Onda-A: 25 min sequential vitest run. Post: ~9 min parallel.
+  # MSW (Mock Service Worker) is configured globally in vitest.setup.tsx —
+  # tests use MSW to simulate API responses for both unit and integration testing.
+  # Coverage: each shard uploads its own coverage with a shard-tagged flag;
+  # codecov merges server-side via the `frontend` flag (parent).
+  frontend-test:
+    name: Frontend - Unit Tests (shard ${{ matrix.shard }}/3)
+    runs-on: ${{ needs.changes.outputs.runner }}
+    timeout-minutes: 15
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Unit & Integration Tests (Vitest shard ${{ matrix.shard }}/3)
+        # Bypass the `pnpm test:coverage` wrapper to forward --shard cleanly.
+        # Vitest 3.x supports deterministic file-level sharding via --shard.
+        # Coverage stays enabled per shard; codecov merges on upload.
+        run: pnpm exec vitest run --shard ${{ matrix.shard }}/3 --coverage
         env:
           NODE_ENV: test
           CI: true
 
-      # Build step removed (2026-05-25 Build-Once refactor) — moved to upstream
-      # `build-frontend` job. Frontend-bundle-size and e2e consume the artifact.
-
-      - name: Upload Coverage
+      - name: Upload Coverage (shard ${{ matrix.shard }})
         if: always()
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2  # v6.0.0
         with:
           files: apps/web/coverage/lcov.info
-          flags: frontend
+          flags: frontend,frontend-shard-${{ matrix.shard }}
           token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
 

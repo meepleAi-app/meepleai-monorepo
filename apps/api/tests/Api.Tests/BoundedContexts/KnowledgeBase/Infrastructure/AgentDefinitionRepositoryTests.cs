@@ -61,6 +61,9 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
 
         // Act
         await repository.AddAsync(agent);
+        // ADR-056: AgentDefinitionRepository.AddAsync only stages the change; the caller
+        // owns the SaveChanges. Without this call the assertion below queries an empty DB.
+        await dbContext.SaveChangesAsync();
 
         // Assert
         var retrieved = await repository.GetByIdAsync(agent.Id);
@@ -77,6 +80,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         var agent = AgentDefinition.Create("UniqueAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         await repository.AddAsync(agent);
+        await dbContext.SaveChangesAsync(); // ADR-056: caller persists
 
         // Act
         var retrieved = await repository.GetByNameAsync("UniqueAgent");
@@ -94,6 +98,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         await repository.AddAsync(AgentDefinition.Create("Agent1", "Desc1", AgentType.RagAgent, AgentDefinitionConfig.Default()));
         await repository.AddAsync(AgentDefinition.Create("Agent2", "Desc2", AgentType.RagAgent, AgentDefinitionConfig.Default()));
+        await dbContext.SaveChangesAsync(); // ADR-056: caller persists
 
         // Act
         var agents = await repository.GetAllAsync();
@@ -115,6 +120,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
 
         await repository.AddAsync(activeAgent);
         await repository.AddAsync(inactiveAgent);
+        await dbContext.SaveChangesAsync(); // ADR-056: caller persists
 
         // Act
         var agents = await repository.GetAllActiveAsync();
@@ -133,6 +139,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
             var arrangeRepo = new AgentDefinitionRepository(arrangeContext, _eventCollectorMock.Object);
             await arrangeRepo.AddAsync(AgentDefinition.Create("SearchableAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
             await arrangeRepo.AddAsync(AgentDefinition.Create("OtherAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
+            await arrangeContext.SaveChangesAsync(); // ADR-056: caller persists
         }
 
         // Act — fresh context avoids tracking conflicts
@@ -153,10 +160,12 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         var agent = AgentDefinition.Create("OriginalName", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
         await repository.AddAsync(agent);
+        await dbContext.SaveChangesAsync(); // ADR-056: caller persists Add
 
         // Act
         agent.UpdateNameAndDescription("UpdatedName", "Updated description");
         await repository.UpdateAsync(agent);
+        await dbContext.SaveChangesAsync(); // ADR-056: caller persists Update
 
         // Assert
         var retrieved = await repository.GetByIdAsync(agent.Id);
@@ -174,6 +183,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
             var arrangeRepo = new AgentDefinitionRepository(arrangeContext, _eventCollectorMock.Object);
             var agent = AgentDefinition.Create("ToDelete", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
             await arrangeRepo.AddAsync(agent);
+            await arrangeContext.SaveChangesAsync(); // ADR-056: caller persists Add
             agentId = agent.Id;
         }
 
@@ -182,6 +192,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         {
             var actRepo = new AgentDefinitionRepository(actContext, _eventCollectorMock.Object);
             await actRepo.DeleteAsync(agentId);
+            await actContext.SaveChangesAsync(); // ADR-056: caller persists Delete
         }
 
         // Assert
@@ -198,6 +209,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
         await repository.AddAsync(AgentDefinition.Create("ExistingAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
+        await dbContext.SaveChangesAsync(); // ADR-056: caller persists
 
         // Act
         var exists = await repository.ExistsAsync("ExistingAgent");
@@ -238,6 +250,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
 
         // Act
         await repository.AddAsync(agent);
+        await dbContext.SaveChangesAsync(); // ADR-056: caller persists
 
         // Assert
         var retrieved = await repository.GetByIdAsync(agent.Id);

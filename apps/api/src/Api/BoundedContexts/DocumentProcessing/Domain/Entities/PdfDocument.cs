@@ -113,6 +113,13 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
             throw new ArgumentException("Sort order cannot be negative", nameof(sortOrder));
 
         GameId = gameId;
+        // Post-Phase 2d (issue #1320 + #1345): GameEntity is gone and the
+        // canonical PdfDocument FK to shared_games is SharedGameId. Repositories
+        // (FindByGameIdAsync, …) filter on SharedGameId, so the legacy ctor
+        // mirrors GameId into SharedGameId to keep them in sync when the caller
+        // is constructing a shared-game PDF. Private-game PDFs go through the
+        // Create() factory which sets sharedGameId/privateGameId explicitly.
+        SharedGameId = gameId;
         FileName = fileName;
         FilePath = filePath;
         FileSize = fileSize;

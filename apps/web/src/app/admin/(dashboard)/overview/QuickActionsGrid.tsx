@@ -21,6 +21,15 @@ interface ActionConfig {
   href?: string;
 }
 
+export interface QuickActionsGridProps {
+  /**
+   * Layout variant.
+   * - `'grid'` (default, retro-compat): 2/3-col card grid for full-width usage.
+   * - `'sidebar'`: vertical compact list for the overview right-sidebar (SP5 F1 A1 mockup `.quick-actions`).
+   */
+  variant?: 'grid' | 'sidebar';
+}
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -79,7 +88,7 @@ const ACTIONS: ActionConfig[] = [
 // Component
 // ============================================================================
 
-export function QuickActionsGrid() {
+export function QuickActionsGrid({ variant = 'grid' }: QuickActionsGridProps = {}) {
   const router = useRouter();
   const [inviteOpen, setInviteOpen] = useState(false);
 
@@ -90,6 +99,37 @@ export function QuickActionsGrid() {
       setInviteOpen(true);
     }
   };
+
+  if (variant === 'sidebar') {
+    return (
+      <>
+        <div
+          className="flex flex-col rounded-2xl border border-border/60 bg-card/70 overflow-hidden"
+          data-testid="quick-actions-sidebar"
+        >
+          {ACTIONS.map(action => (
+            <button
+              key={action.id}
+              data-testid={`quick-action-${action.id}`}
+              onClick={() => handleAction(action)}
+              className="flex items-center gap-3 px-3 py-2.5 text-left bg-transparent border-b border-border/40 last:border-b-0 hover:bg-muted transition-colors"
+            >
+              <span className="shrink-0">{action.icon}</span>
+              <span className="flex flex-col min-w-0">
+                <span className="font-quicksand text-sm font-semibold truncate">
+                  {action.label}
+                </span>
+                <span className="font-nunito text-xs text-muted-foreground truncate">
+                  {action.description}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <InviteUserDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+      </>
+    );
+  }
 
   return (
     <>

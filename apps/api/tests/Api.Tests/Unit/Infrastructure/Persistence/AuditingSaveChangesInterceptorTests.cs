@@ -142,6 +142,31 @@ public sealed class AuditingSaveChangesInterceptorTests
     }
 
     #endregion
+
+    #region SensitiveData redaction
+
+    [Fact]
+    public async Task RedactsSensitiveDataProperty_InSnapshot()
+    {
+        var capture = new TestAuditCapture();
+        await using var ctx = TestContextFactory.Create(capture);
+
+        ctx.Secrets.Add(new TestAuditableSecretHolder
+        {
+            Id = Guid.NewGuid(),
+            Email = "a@x",
+            Secret = "p@ssw0rd-hash"
+        });
+        await ctx.SaveChangesAsync();
+
+        capture.Snapshots.Should().HaveCount(1);
+        var afterJson = capture.Snapshots[0].AfterJson!;
+        afterJson.Should().Contain("a@x");
+        afterJson.Should().NotContain("p@ssw0rd-hash");
+        afterJson.Should().Contain("***REDACTED***");
+    }
+
+    #endregion
 }
 
 // ─── Test doubles ────────────────────────────────────────────────────────────
@@ -159,6 +184,15 @@ internal sealed class TestAuditableUser
     public string Email { get; set; } = "";
 }
 
+[Auditable]
+internal sealed class TestAuditableSecretHolder
+{
+    public Guid Id { get; set; }
+    public string Email { get; set; } = "";
+    [SensitiveData]
+    public string Secret { get; set; } = "";
+}
+
 internal sealed class TestPlainItem
 {
     public Guid Id { get; set; }
@@ -168,6 +202,7 @@ internal sealed class TestPlainItem
 internal sealed class TestAuditContext : DbContext
 {
     public DbSet<TestAuditableUser> Users => Set<TestAuditableUser>();
+    public DbSet<TestAuditableSecretHolder> Secrets => Set<TestAuditableSecretHolder>();
     public DbSet<TestPlainItem> PlainItems => Set<TestPlainItem>();
 
     public TestAuditContext(DbContextOptions<TestAuditContext> opts) : base(opts) { }

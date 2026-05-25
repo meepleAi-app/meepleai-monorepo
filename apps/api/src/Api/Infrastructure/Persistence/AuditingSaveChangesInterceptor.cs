@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
@@ -50,6 +51,15 @@ public sealed class AuditingSaveChangesInterceptor : SaveChangesInterceptor
     /// (the T4 outbox processor) rely on this convention to parse individual PK components.
     /// </summary>
     internal const string PkSeparator = "|";
+
+    /// <summary>
+    /// Placeholder value written into the audit snapshot instead of a property's actual value
+    /// when that property is decorated with <see cref="SensitiveDataAttribute"/>.
+    /// </summary>
+    internal const string RedactedPlaceholder = "***REDACTED***";
+
+    /// <summary>Maximum JSON byte size for a single audit snapshot payload (three-amigos Q2).</summary>
+    private const int MaxPayloadBytes = 256_000;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -145,10 +155,32 @@ public sealed class AuditingSaveChangesInterceptor : SaveChangesInterceptor
     private static string SerializeProperties(EntityEntry entry, bool useOriginal)
     {
         var dict = new Dictionary<string, object?>(StringComparer.Ordinal);
+
         foreach (var p in entry.Properties)
         {
+            // Redact properties marked [SensitiveData] (PropertyInfo is null for shadow properties —
+            // they have no CLR member to carry the attribute, so they are never sensitive by this
+            // mechanism).
+            if (p.Metadata.PropertyInfo?.GetCustomAttribute<SensitiveDataAttribute>() is not null)
+            {
+                dict[p.Metadata.Name] = RedactedPlaceholder;
+                continue;
+            }
             dict[p.Metadata.Name] = useOriginal ? p.OriginalValue : p.CurrentValue;
         }
-        return JsonSerializer.Serialize(dict, JsonOpts);
+
+        // Capture navigation collections (e.g. a User's Games) so the audit reflects related-entity
+        // membership. Only the CURRENT value is available for navigations — EF does not track an
+        // "original" collection snapshot — so we capture current regardless of useOriginal.
+        foreach (var nav in entry.Collections)
+        {
+            if (nav.CurrentValue is IEnumerable enumerable && nav.CurrentValue is not string)
+            {
+                dict[nav.Metadata.Name] = enumerable.Cast<object?>().ToList();
+            }
+        }
+
+        var truncated = PayloadTruncator.Truncate(dict, MaxPayloadBytes);
+        return JsonSerializer.Serialize(truncated, JsonOpts);
     }
 }

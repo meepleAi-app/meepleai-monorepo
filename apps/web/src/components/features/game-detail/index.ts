@@ -90,3 +90,11 @@ export type {
   GameDetailHouseRulesListLabels,
   GameDetailHouseRulesListProps,
 } from '@/components/features/game-detail/GameDetailHouseRulesList';
+
+export { GameDetailChatTab } from '@/components/features/game-detail/GameDetailChatTab';
+export type {
+  GameDetailChatPreviewMessage,
+  GameDetailChatRole,
+  GameDetailChatTabLabels,
+  GameDetailChatTabProps,
+} from '@/components/features/game-detail/GameDetailChatTab';

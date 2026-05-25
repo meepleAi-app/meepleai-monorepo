@@ -263,6 +263,12 @@ const MESSAGES: Record<string, string> = {
   'pages.gameDetail.houseRules.deleteConfirmMessage': 'Questa azione non e reversibile.',
   'pages.gameDetail.houseRules.deleteConfirm': 'Elimina',
   'pages.gameDetail.houseRules.empty': 'Nessuna regola',
+  // Issue #1471 — Chat preview (Agents tab)
+  'pages.gameDetail.chat.title': 'Chat',
+  'pages.gameDetail.chat.empty': 'Nessun messaggio',
+  'pages.gameDetail.chat.openCta': 'Apri chat',
+  'pages.gameDetail.chat.userPrefix': 'Tu',
+  'pages.gameDetail.chat.assistantPrefix': 'Agente',
 };
 
 function renderWithIntl(ui: ReactElement) {

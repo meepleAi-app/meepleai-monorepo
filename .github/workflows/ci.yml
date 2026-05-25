@@ -379,10 +379,16 @@ jobs:
   # / workflow_call (from deploy-staging.yml). Feature PRs against main-dev
   # skip this job to keep wall-clock under 10min on the commit stage. Coverage
   # is regained at the acceptance stage when merging into main-staging.
+  #
+  # Build-Once refactor 2026-05-25: each of 3 shards consumes the upstream
+  # build-backend artifact (~30s download) instead of running its own
+  # dotnet build (~5 min). Coverage switched from coverlet.msbuild (build-time
+  # instrumentation, incompatible with --no-build) to dotnet-coverage wrapper
+  # (runtime profiler), matching the backend-unit pattern.
   backend-integration:
     name: Backend - Integration (${{ matrix.shard.name }})
     runs-on: ${{ needs.changes.outputs.runner }}
-    needs: changes
+    needs: [changes, build-backend]
     if: |
       github.event_name == 'workflow_dispatch'
       || github.event_name == 'workflow_call'
@@ -445,11 +451,29 @@ jobs:
       - name: Install PDF Dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
 
-      - name: Setup Backend
-        uses: ./.github/actions/setup-backend
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
-          working-directory: apps/api
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: backend-build-${{ github.run_id }}
+          path: /tmp/
+
+      - name: Extract backend artifact
+        shell: bash
+        working-directory: apps/api
+        run: |
+          echo "📂 Extracting backend build artifact..."
+          tar --use-compress-program='zstd -d' -xf /tmp/backend-build.tar.zst
+          echo "✅ Backend artifact extracted"
+
+      - name: Install dotnet-coverage
+        run: |
+          dotnet tool install --global dotnet-coverage
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Pre-Test Cleanup
         shell: bash
@@ -497,8 +521,8 @@ jobs:
           psql -h localhost -U postgres -d meepleai_test -c "SHOW max_connections;"
           echo "✅ Default max_connections=100 — connection pools limited via MaxPoolSize in conn strings"
 
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
+      # Build step removed (2026-05-25 Build-Once refactor) — backend binaries
+      # are downloaded from the upstream `build-backend` job artifact above.
 
       # Issue #3102: Exclude tests that use their own Testcontainers - they conflict with CI service containers.
       # - UploadPdfMidPhaseCancellationTests: Uses SharedTestcontainersFixture
@@ -532,6 +556,7 @@ jobs:
           TEST_REDIS_CONNSTRING: localhost:6379,allowAdmin=true
         run: |
           echo "🧪 Running integration tests - shard: ${{ matrix.shard.name }} (4 parallel threads)..."
+          mkdir -p coverage
           # PR #1505 (2026-05-25): target tests/Api.Tests/Api.Tests.csproj explicitly.
           # Without this `dotnet test` walks the solution and also invokes
           # Api.Analyzers.Tests.dll, which has zero tests matching
@@ -539,17 +564,23 @@ jobs:
           # the assembly returns exit 1 (vstest treats no-match-on-non-empty
           # assembly as an error) → the whole step fails even though
           # Api.Tests.dll has Passed=N, Failed=0.
-          dotnet test tests/Api.Tests/Api.Tests.csproj \
-            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}" \
-            --settings tests/Api.Tests/integration.runsettings \
-            --logger "console;verbosity=minimal" \
-            --no-build \
-            --configuration Release \
-            --blame-hang-timeout 5min \
-            --blame-hang-dump-type mini \
-            -p:CollectCoverage=true \
-            -p:CoverletOutputFormat=cobertura \
-            -p:CoverletOutput=./coverage/${{ matrix.shard.coverage_file }}
+          #
+          # Build-Once refactor (2026-05-25): switched from coverlet.msbuild
+          # (-p:CollectCoverage=true) to dotnet-coverage wrapper so the tests
+          # can run with --no-build using the upstream build-backend artifact.
+          # Coverlet.msbuild requires build-time instrumentation; dotnet-coverage
+          # is a runtime profiler attached to the dotnet test process.
+          dotnet-coverage collect \
+            "dotnet test tests/Api.Tests/Api.Tests.csproj \
+              --filter \"Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}\" \
+              --settings tests/Api.Tests/integration.runsettings \
+              --logger \"console;verbosity=minimal\" \
+              --no-build \
+              --configuration Release \
+              --blame-hang-timeout 5min \
+              --blame-hang-dump-type mini" \
+            -f cobertura \
+            -o coverage/${{ matrix.shard.coverage_file }}
           echo "✅ Integration tests passed - shard: ${{ matrix.shard.name }}"
 
       - name: Upload Coverage

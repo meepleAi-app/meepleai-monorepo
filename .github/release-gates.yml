@@ -90,12 +90,52 @@ checks:
     notes: "Documented flaky baseline ~3 failures (see CLAUDE.md Known Flaky Tests). Non-required."
 
   # ─── Frontend (apps/web) ────────────────────────────────────────────────────
+  # DEPRECATED 2026-05-25 (PR #1530): the monolithic 'frontend' job was split
+  # into frontend-lint + frontend-typecheck + frontend-test (3-shard matrix).
+  # Per AC-9, this entry is kept for ≥2 release cycles as a grace period for
+  # in-flight PRs whose check_runs still reference the old name. Remove after
+  # the grace window. The replacements are listed immediately below.
   - check_name: "Frontend - Build & Test"
     severity: blocker
     owner: frontend-dev
     override_path: fix-forward
     pre_existing_in_main_dev: false
-    notes: "Next.js build + Vitest unit. Failure indicates code regression."
+    notes: "DEPRECATED (split into Lint/Typecheck/Unit Tests by #1530). Grace period until ~2026-07."
+
+  - check_name: "Frontend - Lint"
+    severity: blocker
+    owner: frontend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "ESLint (--max-warnings=15) + token-vocabulary inventory. Split from 'Frontend - Build & Test' (#1530)."
+
+  - check_name: "Frontend - Typecheck"
+    severity: blocker
+    owner: frontend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "tsc --noEmit. Split from 'Frontend - Build & Test' (#1530)."
+
+  - check_name: "Frontend - Unit Tests (shard 1/3)"
+    severity: blocker
+    owner: frontend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "Vitest shard 1/3. Split from 'Frontend - Build & Test' (#1530). Also covered by ^Frontend -  fallback."
+
+  - check_name: "Frontend - Unit Tests (shard 2/3)"
+    severity: blocker
+    owner: frontend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "Vitest shard 2/3. Split from 'Frontend - Build & Test' (#1530)."
+
+  - check_name: "Frontend - Unit Tests (shard 3/3)"
+    severity: blocker
+    owner: frontend-dev
+    override_path: fix-forward
+    pre_existing_in_main_dev: false
+    notes: "Vitest shard 3/3. Split from 'Frontend - Build & Test' (#1530)."
 
   - check_name: "Frontend - A11y E2E"
     severity: warning

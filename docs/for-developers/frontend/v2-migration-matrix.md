@@ -396,14 +396,14 @@ the PR review.
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-kb-hub.jsx` | `KbStatsCard` | `apps/web/src/components/features/kb-hub/KbStatsCard.tsx` | `/knowledge-base` | pending | — | T A V | — |
-| `sp4-kb-hub.jsx` | `PdfRow` | `apps/web/src/components/features/kb-hub/PdfRow.tsx` | `/knowledge-base` | pending | — | T A V | — |
-| `sp4-kb-hub.jsx` | `HubDefault` | `apps/web/src/components/features/kb-hub/HubDefault.tsx` | `/knowledge-base` | pending | — | T A V | — |
-| `sp4-kb-hub.jsx` | `EmptyState` | `apps/web/src/components/features/kb-hub/EmptyState.tsx` | `/knowledge-base` | pending | — | T A V | — |
-| `sp4-kb-hub.jsx` | `ActionsMenu` | `apps/web/src/components/features/kb-hub/ActionsMenu.tsx` | `/knowledge-base` | pending | — | T A V | — |
-| `sp4-kb-hub.jsx` | `ReindexModal` | `apps/web/src/components/features/kb-hub/ReindexModal.tsx` | `/knowledge-base` | pending | — | T A M V | — |
-| `sp4-kb-hub.jsx` | `RaptorPanel` | `apps/web/src/components/features/kb-hub/RaptorPanel.tsx` | `/knowledge-base` | pending | — | T A V | — |
-| `sp4-kb-hub.jsx` | `DeleteDialog` | `apps/web/src/components/features/kb-hub/DeleteDialog.tsx` | `/knowledge-base` | pending | — | T A M V | — |
+| `sp4-kb-hub.jsx` | `KbStatsCard` | `apps/web/src/components/features/kb-hub/KbStatsCard.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
+| `sp4-kb-hub.jsx` | `PdfRow` | `apps/web/src/components/features/kb-hub/PdfRow.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
+| `sp4-kb-hub.jsx` | `HubDefault` | `apps/web/src/components/features/kb-hub/HubDefault.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
+| `sp4-kb-hub.jsx` | `EmptyState` | `apps/web/src/components/features/kb-hub/EmptyState.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
+| `sp4-kb-hub.jsx` | `ActionsMenu` | `apps/web/src/components/features/kb-hub/ActionsMenu.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
+| `sp4-kb-hub.jsx` | `ReindexModal` | `apps/web/src/components/features/kb-hub/ReindexModal.tsx` | `/library/[gameId]/kb` | done | #1481 | T A M V | — |
+| `sp4-kb-hub.jsx` | `RaptorPanel` | `apps/web/src/components/features/kb-hub/RaptorPanel.tsx` | `/library/[gameId]/kb` | done | #1481 | T A V | — |
+| `sp4-kb-hub.jsx` | `DeleteDialog` | `apps/web/src/components/features/kb-hub/DeleteDialog.tsx` | `/library/[gameId]/kb` | done | #1481 | T A M V | — |
 
 ### KB globale — `/knowledge-base/global` (F1b) — 10 components — **Tier L** ⚠️ Phase 0.5 likely required
 

@@ -2965,6 +2965,38 @@
         "sidePanelLabel": "Conflicting entry"
       }
     },
+    "encounter": {
+      "meta": {
+        "title": "Encounter Book | MeepleAI",
+        "description": "On-demand Encounter Book cheatsheet for the gamebook session"
+      },
+      "entryStoryMeta": "Storybook · last paragraph read",
+      "entryRefTitle": "→ Encounter {paragraph}",
+      "entryRefHint": "You need stats and options — photograph the Encounter Book",
+      "entryCta": "Photograph Encounter {paragraph}",
+      "entryCtaHint": "card ready in seconds · nothing saved long-term",
+      "loadingTitle": "Analyzing the encounter",
+      "loadingHint": "Extracting enemy name, combat stats and options",
+      "cancel": "Cancel",
+      "optionsTitle": "Your options",
+      "conditionsWin": "🏆 Victory",
+      "conditionsLoss": "💀 Defeat",
+      "parseConfidence": "parse",
+      "lowConfidenceHint": "Low confidence on some fields — verify manually against the Encounter Book.",
+      "ephemeralNote": "Temporary card (this session only) — the Encounter Book is not saved.",
+      "retake": "🔄 Retake photo",
+      "glossary": "📒 Glossary",
+      "resolve": "✓ Resolve →",
+      "errorParseFailed": "I couldn't read the encounter from the photo. Retry or retake the page.",
+      "errorNotFound": "Photo or paragraph not found. Retake the Encounter Book page.",
+      "errorGeneric": "Something went wrong during analysis. Please retry.",
+      "retry": "Retry",
+      "confidence": {
+        "high": "High confidence",
+        "medium": "Medium confidence",
+        "low": "Low confidence"
+      }
+    },
     "play": {
       "loading": "Loading...",
       "pageNumber": "Page {num}",

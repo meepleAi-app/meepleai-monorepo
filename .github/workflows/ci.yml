@@ -338,7 +338,12 @@ jobs:
       # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
       # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
       - name: Run Integration Tests
-        timeout-minutes: 30
+        # PR #1505 (2026-05-25): raised from 30→45 minutes. The GameRef
+        # fixture-drift cleanup unblocked ~150 previously-failing tests so
+        # the suite now actually runs to completion (it used to short-circuit
+        # on the first wave of failures at ~25 min). 45 min keeps headroom
+        # for transient Testcontainers churn on the GitHub-hosted runner.
+        timeout-minutes: 45
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432

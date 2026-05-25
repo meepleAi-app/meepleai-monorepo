@@ -129,6 +129,108 @@ jobs:
           retention-days: 1
           compression-level: 0  # already zstd-compressed
 
+  # Build Next.js once with default config (no fixture flag) and share via
+  # artifact. Consumed by `frontend-bundle-size` and `e2e`. NOT used by
+  # `frontend-a11y` which needs NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1
+  # (constant-folded at build time → separate artifact in build-frontend-a11y).
+  # Spec: docs/for-developers/specs/2026-05-25-ci-build-once-test-many.md
+  build-frontend:
+    name: Build Frontend
+    runs-on: ${{ needs.changes.outputs.runner }}
+    needs: changes
+    timeout-minutes: 15
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Build (default config)
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_BASE: http://localhost:8080
+
+      - name: Package frontend build
+        shell: bash
+        run: |
+          echo "📦 Packaging frontend .next/ ..."
+          tar --use-compress-program='zstd -3 -T0' \
+              -cf /tmp/frontend-build.tar.zst \
+              .next
+          ls -lh /tmp/frontend-build.tar.zst
+          echo "✅ Frontend artifact packaged"
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-build-${{ github.run_id }}
+          path: /tmp/frontend-build.tar.zst
+          retention-days: 1
+          compression-level: 0
+
+  # Build Next.js with NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1 for the
+  # a11y suite. Separate from build-frontend because Next.js constant-folds
+  # NEXT_PUBLIC_* env vars at build time — same artifact cannot serve both
+  # configs. Net change: 4× pnpm build → 2× builds (still −50% CPU).
+  build-frontend-a11y:
+    name: Build Frontend (a11y config)
+    runs-on: ${{ needs.changes.outputs.runner }}
+    needs: changes
+    timeout-minutes: 15
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Frontend
+        uses: ./.github/actions/setup-frontend
+        with:
+          node-version: '20'
+          pnpm-version: '10'
+          working-directory: apps/web
+          frozen-lockfile: 'true'
+
+      - name: Build (a11y config — visual-test fixture enabled)
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_BASE: http://localhost:8080
+          # Wave B.1 (#633): enable visual-test fixture so e2e/a11y/games-library.spec.ts
+          # can scan /games?tab=library default + filtered-empty surfaces without a backend.
+          # Constant-folded at build time; STATE_OVERRIDE_ENABLED also unlocks `?state=...`
+          # URL hatch under prod NODE_ENV.
+          NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED: '1'
+
+      - name: Package frontend (a11y) build
+        shell: bash
+        run: |
+          echo "📦 Packaging frontend (a11y) .next/ ..."
+          tar --use-compress-program='zstd -3 -T0' \
+              -cf /tmp/frontend-build-a11y.tar.zst \
+              .next
+          ls -lh /tmp/frontend-build-a11y.tar.zst
+          echo "✅ Frontend (a11y) artifact packaged"
+
+      - name: Upload frontend (a11y) artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-build-a11y-${{ github.run_id }}
+          path: /tmp/frontend-build-a11y.tar.zst
+          retention-days: 1
+          compression-level: 0
+
   # Frontend: Lint, Typecheck, Test (Unit + E2E subset)
   frontend:
     name: Frontend - Build & Test

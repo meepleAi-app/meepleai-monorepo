@@ -303,10 +303,12 @@ jobs:
         continue-on-error: true
 
   # Backend Unit Tests (fast, no service containers needed)
+  # Build-Once refactor 2026-05-25: consumes upstream `build-backend` artifact
+  # instead of running its own restore+build (~4-5 min saved per CI run).
   backend-unit:
     name: Backend - Unit Tests
     runs-on: ${{ needs.changes.outputs.runner }}
-    needs: changes
+    needs: [changes, build-backend]
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
     defaults:
       run:
@@ -318,19 +320,29 @@ jobs:
       - name: Install PDF Dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
 
-      - name: Setup Backend
-        uses: ./.github/actions/setup-backend
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
-          working-directory: apps/api
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: backend-build-${{ github.run_id }}
+          path: /tmp/
+
+      - name: Extract backend artifact
+        shell: bash
+        working-directory: apps/api
+        run: |
+          echo "📂 Extracting backend build artifact..."
+          tar --use-compress-program='zstd -d' -xf /tmp/backend-build.tar.zst
+          echo "✅ Backend artifact extracted"
 
       - name: Install dotnet-coverage
         run: |
           dotnet tool install --global dotnet-coverage
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
 
       - name: Run Unit Tests with Coverage
         timeout-minutes: 30

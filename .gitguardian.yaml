@@ -29,6 +29,11 @@ ignore-paths:
   - apps/web/e2e/
   - infra/scripts/demo-smoke-*.sh
 
+  # ── SP4 dataset dev seed: local-only test users (PR #1579) ───────────────────
+  # `seed_password()` default placeholder + per-user emails. Dev/local seed only,
+  # overridable via SEED_SP4_PASSWORD env; never used for production accounts.
+  - infra/scripts/seed-sp4/
+
   # ── Audit reports list UI component paths flagged as false positives ─────────
   # (e.g. `pwd-input/pwd-input.tsx` by GG generic-password detector).
   - docs/for-developers/audits/

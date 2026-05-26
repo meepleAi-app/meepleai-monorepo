@@ -198,10 +198,12 @@ the PR review.
 
 | Mockup | Component | Path | Route | Status | PR | AC | audit_pr |
 |--------|-----------|------|-------|--------|----|----|----------|
-| `sp4-agents-index.jsx` | `AgentsHero` | `apps/web/src/components/features/agents/AgentsHero.tsx` | `/agents` | pending | — | T A M V | — |
-| `sp4-agents-index.jsx` | `AgentFilters` | `apps/web/src/components/features/agents/AgentFilters.tsx` | `/agents` | pending | — | T A V | — |
-| `sp4-agents-index.jsx` | `AgentsResultsGrid` | `apps/web/src/components/features/agents/AgentsResultsGrid.tsx` | `/agents` | pending | — | T A V | — |
-| `sp4-agents-index.jsx` | `EmptyAgents` | `apps/web/src/components/features/agents/EmptyAgents.tsx` | `/agents` | pending | — | T A V | — |
+| `sp4-agents-index.jsx` | `AgentsHero` | `apps/web/src/components/features/agents/AgentsHero.tsx` | `/agents` | done | #637 | T A M V | #1568 |
+| `sp4-agents-index.jsx` | `AgentFilters` | `apps/web/src/components/features/agents/AgentFilters.tsx` | `/agents` | done | #637 | T A V | #1568 |
+| `sp4-agents-index.jsx` | `AgentsResultsGrid` | `apps/web/src/components/features/agents/AgentsResultsGrid.tsx` | `/agents` | done | #637 | T A V | #1568 |
+| `sp4-agents-index.jsx` | `EmptyAgents` | `apps/web/src/components/features/agents/EmptyAgents.tsx` | `/agents` | done | #637 | T A V | #1568 |
+
+> audit_pr #1568: #1522 conformity audit (0% drift) — see [agents-index-gap-report.md](../../../admin-mockups/design_handoff/agents-index-gap-report.md). Components shipped Wave B.2 PR #637; rows were never reconciled from `pending` until this audit.
 
 ### Agent detail — `/agents/[id]` — 7 components — **Tier L** ⚠️ Phase 0.5 required
 

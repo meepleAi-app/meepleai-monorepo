@@ -344,9 +344,10 @@ Effort: ~2-3 h. Annotation richiede leggere ogni `.section` per assegnare `data-
 | 2.1 | 2026-05-26 | `mobile-card-entity-types.html` | `mobile-card-entity--{game,session,agent,chat,kb,player,event}.html` (7) | per-variant, OK |
 | 2.2 | 2026-05-26 | `toolkit-mobile-mockup.html` | `toolkit-mobile--{dice-build,dice-result,quick-log,win-tracker}.html` (4) | per-variant, OK |
 | 2.3 | 2026-05-26 | `us32-play-records-mockups.html` | `play-records--{list,new-step1-game,new-step2-players,new-step3-summary,detail,stats}.html` (6) | per-variant, dark theme preservato, OK |
-| 3 (D) | TBD | `meeple-card-{nav-buttons-mockup,real-app-render,summary-render,visual-test}.html` | TBD | **Pending**: component showcase, modalità `per-component`. Effort separato (file 554–2887 righe). |
+| 3 pilot (D) | 2026-05-26 | `meeple-card-real-app-render.html` | `meeple-card-real-app--{game-catalog,library-game,session,agent,chat,kb,player}-card.html` + `--{minor-variants,comparison-matrix,unused-features}.html` (10) | **per-component** mode, first e2e exercise. 7 entity-card renders + 3 showcase/meta sections. Poster references live BGG cover URLs (now 400) — pre-existing, falls back to gradients. |
+| 3 (D, remaining) | TBD | `meeple-card-{visual-test,nav-buttons-mockup,summary-render}.html` | TBD | **Pending user review** of pilot. ~16 sections. summary-render is meta-heavy (Color System / Feature Matrix / File Architecture are not UI). |
 
-**Totale Wave 1+2 (5 poster, 20 standalone)**: Pilot (1) + Wave 1 (2) + Wave 2.1 (7) + Wave 2.2 (4) + Wave 2.3 (6).
+**Totale Wave 1+2+3pilot (6 poster, 30 standalone)**: Pilot (1) + Wave 1 (2) + Wave 2.1 (7) + Wave 2.2 (4) + Wave 2.3 (6) + Wave 3 pilot (10).
 
 ## Open Questions — Decisions log
 

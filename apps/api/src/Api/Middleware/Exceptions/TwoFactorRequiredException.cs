@@ -28,7 +28,14 @@ public enum TwoFactorRequiredSubcode
     /// retry-after toast; <see cref="TwoFactorRequiredException.RetryAfterSeconds"/>
     /// carries the wait. D-S3-4b.
     /// </summary>
-    LockedOut
+    LockedOut,
+
+    /// <summary>
+    /// A step-up verification attempt failed: the submitted TOTP/backup code was invalid, expired,
+    /// or already used. Distinct from <see cref="StepUpRequired"/> ("you must step up") — this means
+    /// "the step-up you attempted did not succeed". Emitted by the step-up endpoint only. D-S3-4.
+    /// </summary>
+    InvalidCode
 }
 
 /// <summary>
@@ -78,6 +85,7 @@ public sealed class TwoFactorRequiredException : Exception
         TwoFactorRequiredSubcode.StepUpRequired => "step_up_required",
         TwoFactorRequiredSubcode.EnrollRequired => "enroll_required",
         TwoFactorRequiredSubcode.LockedOut => "locked_out",
+        TwoFactorRequiredSubcode.InvalidCode => "invalid_code",
         _ => "step_up_required"   // defensive fallback; should never hit
     };
 }

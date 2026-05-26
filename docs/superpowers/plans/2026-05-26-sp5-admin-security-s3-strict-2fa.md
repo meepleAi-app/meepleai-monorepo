@@ -166,21 +166,23 @@
 
 ## Task 5: Step-up endpoint + DB-backed rate-limit
 
-> **DONE** — commit `240f7c1b5`. Steps 3-4 CANCELED post-T0 (riuso Redis rate-limit/lockout di `TotpService.VerifyCodeAsync`; nessuna nuova tabella né rate-limiter). Acceptance E2E completi S3-4/S3-5 (HTTP + audit_outbox + re-POST del comando bloccato) → T8.
+> **DONE** — commit `240f7c1b5` (T5 base) + Option B refactor (handler/endpoint/middleware/doc) in
+> successive commit. Steps 3-4 stay CANCELED post-T0 (Redis rate-limit/lockout of
+> `TotpService.VerifyCodeAsync` is authoritative). Acceptance E2E for S3-4/S3-5 → T8.
 
-- [x] **Step 1: TDD — scenari S3-4 + S3-5** — coperti a livello handler unit: `StepUpTwoFactorCommandHandlerTests` (success / invalid / lockout / vanished-session / null) + `StepUpTwoFactorCommandValidatorTests` (not-empty + length). 11/11 PASS. Acceptance HTTP+audit_outbox → T8.
+- [x] **Step 1: TDD — scenari S3-4 + S3-5** — handler-unit coverage: `StepUpTwoFactorCommandHandlerTests` (success / invalid / lockout / vanished-session / null / **unavailable**) + `StepUpTwoFactorCommandValidatorTests` (not-empty + length). **12/12 PASS**. Acceptance HTTP + audit_outbox → T8.
 
-- [x] **Step 2: `StepUpTwoFactorCommand` + handler** — delega a `ITotpService.VerifyCodeAsync`; success refresh `LastTotpVerifiedAt` (via `ISessionRepository.UpdateLastTotpVerifiedAtAsync`, atomic ExecuteUpdate) + audit `TwoFactorStepUp`; lockout pre-check (`IsLockedOutAsync`) → 429 + retryAfterSeconds=900 + audit `TwoFactorStepUpLockout`.
+- [x] **Step 2: `StepUpTwoFactorCommand` + handler** — delegates to `ITotpService.VerifyCodeAsync`; on success refreshes `LastTotpVerifiedAt` via `ISessionRepository.UpdateLastTotpVerifiedAtAsync` (atomic `ExecuteUpdate`) + audit `TwoFactorStepUp`; `IsLockedOutAsync` pre-check → outcome `LockedOut` + audit `TwoFactorStepUpLockout`; **try/catch around the TotpService calls → outcome `Unavailable`** (Option B, D-S3-4 store-down failure mode).
 
 - [x] ~~**Step 3: `TwoFactorStepUpAttemptEntity` + migration**~~ — **CANCELED post-T0**: Redis bucket di `TotpService` è authoritative.
 
-- [x] ~~**Step 4: `TwoFactorStepUpRateLimiter`**~~ — **CANCELED post-T0**: riuso rate-limit/lockout di `VerifyCodeAsync`.
+- [x] ~~**Step 4: `TwoFactorStepUpRateLimiter`**~~ — **CANCELED post-T0**: reuses rate-limit/lockout of `VerifyCodeAsync`.
 
-- [x] **Step 5: Endpoint** — public path **`POST /api/v1/auth/2fa/step-up`** (registrato `/auth/2fa/step-up` sul group `v1Api` con prefix `/api/v1`, `Program.cs:714`+`717` → `AuthenticationEndpoints.cs:58` → `TwoFactorEndpoints.cs`) — allineato al contratto D-S3-4. `IMediator.Send` only (CQRS), `EffectiveActor`-gated, mapping Success→200 / InvalidCode→401 / LockedOut→429.
+- [x] **Step 5: Endpoint** — public path **`POST /api/v1/auth/2fa/step-up`** (group prefix `/api/v1` from `Program.cs:714`+`717`). `IMediator.Send` only (CQRS), `EffectiveActor`-gated. **Option B mapping (uniform error vocabulary with the enforcement filter)**: Success → 200 `{ success, lastTotpVerifiedAt }`; InvalidCode → `throw TwoFactorRequiredException(InvalidCode)` → 401 `two_factor_required`/`invalid_code`; LockedOut → `throw TwoFactorRequiredException(LockedOut, 900)` → 401 `…`/`locked_out` + `retryAfterSeconds`; Unavailable → `throw TwoFactorUnavailableException` → 503 `two_factor_unavailable`. All wrapped by `ApiExceptionHandlerMiddleware` (DRY with Flow A).
 
-- [x] **Step 6: Test PASS** — 11/11.
+- [x] **Step 6: Test PASS** — 12/12 unit (handler + validator) + 4/4 middleware (`TwoFactorRequiredException` × 3 subcodes + `TwoFactorUnavailableException` → 503).
 
-- [x] **Step 7: Commit** — `240f7c1b5`.
+- [x] **Step 7: Commit** — `240f7c1b5` (T5 base) + follow-up Option B refactor commit.
 
 ---
 
@@ -202,17 +204,18 @@
 
 ## Task 7: Wire format spec `docs/api/2fa-step-up-protocol.md`
 
-> **DONE** — documents the REAL implementation (Option A), not the contract this plan hypothesized
-> (Option B). The divergence (Flow B uses `two_factor_failed`/`two_factor_locked_out` 429 instead of
-> `two_factor_required`+subcode; no 503) is tracked in doc §7–8 as an open decision for T8.
-> spec-panel critique applied: Wiegers (per-command MaxAge table), Newman/Nygard (replay-guard +
-> 5xx FE rule), Adzic (curl example).
+> **DONE — Option B as-built.** The initial draft (post-T5 commit `249aee74a`) described Option A
+> and tracked the schema asymmetry as an open decision for T8. The user chose **Option B**: the doc
+> was rewritten, and the implementation was aligned — Flow B now reuses the enforcement vocabulary
+> (`two_factor_required` + `subcode` for `invalid_code` / `locked_out`, plus `503
+> two_factor_unavailable` for store-down). spec-panel critique applied: Wiegers (per-command MaxAge
+> table), Newman/Nygard (replay-guard + 5xx FE rule), Adzic (curl example).
 
-- [x] **Step 1: Endpoint contract** — request `{ code }`; 200 `{ success, lastTotpVerifiedAt }` (minimal, not full SessionStatusResponse); 401 `two_factor_failed`; 429 `two_factor_locked_out`. Divergence from the hypothesized contract noted in doc §8.
+- [x] **Step 1: Endpoint contract** — request `{ code }`; 200 `{ success, lastTotpVerifiedAt }` (minimal, not full SessionStatusResponse); 401 `two_factor_required` + `subcode: invalid_code | locked_out` + `WWW-Authenticate: TOTP-StepUp` header; 503 `two_factor_unavailable` (Redis/store-down failure mode).
 
-- [x] **Step 2: `subcode` semantics** — Flow A (enforcement) `step_up_required` / `enroll_required` / `locked_out` → FE-action table; `WWW-Authenticate: TOTP-StepUp` header distinguishes the 2FA-block 401 from a session-expired 401.
+- [x] **Step 2: `subcode` semantics** — unified table across both flows: `step_up_required` / `enroll_required` (Flow A only), `locked_out` (Flow A or B), `invalid_code` (Flow B only) → FE-action mapping. One shared 2FA error vocabulary.
 
-- [x] **Step 3: Cross-link** — doc footer references the plan + audit (D-S3-2/4/4b/5); commit message links the doc.
+- [x] **Step 3: Cross-link** — doc footer references the plan + audit (D-S3-2/4/4b/5).
 
 - [x] **Step 4: Commit**
 

@@ -45,10 +45,31 @@ internal class StepUpTwoFactorCommandHandler : ICommandHandler<StepUpTwoFactorCo
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // D-S3-4b: surface lockout distinctly (429). VerifyCodeAsync also re-checks lockout, so this
+        // D-S3-4b: surface lockout distinctly. VerifyCodeAsync also re-checks lockout, so this
         // pre-check is purely for the client-facing response — there is no security gap if the state
-        // changes between the read and the verify.
-        if (await _totpService.IsLockedOutAsync(command.ActorUserId, cancellationToken).ConfigureAwait(false))
+        // changes between the read and the verify. Both calls hit the Redis-backed TOTP store, so a
+        // backend failure here means 2FA is unavailable (Option B → 503), not an invalid code.
+        bool lockedOut;
+        bool verified;
+        try
+        {
+            lockedOut = await _totpService.IsLockedOutAsync(command.ActorUserId, cancellationToken).ConfigureAwait(false);
+            // Short-circuit when locked out: do not call VerifyCodeAsync (avoids consuming an attempt).
+            verified = !lockedOut
+                && await _totpService.VerifyCodeAsync(command.ActorUserId, command.Code, cancellationToken).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031, S2221 // infrastructure boundary: any TotpService/Redis failure ⇒ 2FA unavailable
+        catch (Exception ex)
+#pragma warning restore CA1031, S2221
+        {
+            _logger.LogError(
+                ex,
+                "Step-up 2FA unavailable for actor {ActorUserId} on session {SessionId}: TOTP backend error",
+                command.ActorUserId, command.SessionId);
+            return new StepUpTwoFactorResult(StepUpOutcome.Unavailable);
+        }
+
+        if (lockedOut)
         {
             await _auditService.LogAsync(
                 command.ActorUserId.ToString(),
@@ -66,7 +87,6 @@ internal class StepUpTwoFactorCommandHandler : ICommandHandler<StepUpTwoFactorCo
             return new StepUpTwoFactorResult(StepUpOutcome.LockedOut, RetryAfterSeconds: LockoutRetryAfterSeconds);
         }
 
-        var verified = await _totpService.VerifyCodeAsync(command.ActorUserId, command.Code, cancellationToken).ConfigureAwait(false);
         if (!verified)
         {
             // VerifyCodeAsync already audited TwoFactorVerify=Failed and tracked the attempt toward

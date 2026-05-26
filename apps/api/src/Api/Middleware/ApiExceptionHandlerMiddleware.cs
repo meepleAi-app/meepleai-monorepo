@@ -98,6 +98,14 @@ internal class ApiExceptionHandlerMiddleware
             return;
         }
 
+        // SP5 S3 — D-S3-4 (Option B): TwoFactorUnavailableException maps to 503 (transient) so the FE
+        // shows a retryable error toast, not a step-up/enroll signal or a generic 500.
+        if (ex is TwoFactorUnavailableException twoFactorUnavailableEx)
+        {
+            await HandleTwoFactorUnavailableAsync(context, twoFactorUnavailableEx).ConfigureAwait(false);
+            return;
+        }
+
         // Determine status code and error type based on exception type
         var (statusCode, errorType, message) = MapExceptionToResponse(ex);
 
@@ -263,6 +271,38 @@ internal class ApiExceptionHandlerMiddleware
             subcode = twoFactorException.SubcodeWire,
             message = twoFactorException.Message,
             retryAfterSeconds = twoFactorException.RetryAfterSeconds,
+            correlationId = context.TraceIdentifier,
+            timestamp = DateTime.UtcNow
+        };
+
+        await context.Response.WriteAsJsonAsync(errorResponse).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Handles <see cref="TwoFactorUnavailableException"/> with HTTP 503 + structured body
+    /// (<c>error="two_factor_unavailable"</c>). Raised by the step-up endpoint when the TOTP store /
+    /// rate-limit backend is unreachable; the FE treats this as a transient error (retryable toast)
+    /// rather than a failed code or a step-up signal. SP5 Admin Security S3 — D-S3-4 (Option B).
+    /// </summary>
+    private async Task HandleTwoFactorUnavailableAsync(
+        HttpContext context,
+        TwoFactorUnavailableException exception)
+    {
+        var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
+
+        MeepleAiMetrics.RecordApiError(
+            exception: exception,
+            httpStatusCode: StatusCodes.Status503ServiceUnavailable,
+            endpoint: endpoint,
+            isUnhandled: false);
+
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        context.Response.ContentType = "application/json";
+
+        var errorResponse = new
+        {
+            error = "two_factor_unavailable",
+            message = exception.Message,
             correlationId = context.TraceIdentifier,
             timestamp = DateTime.UtcNow
         };

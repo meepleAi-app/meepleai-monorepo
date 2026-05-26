@@ -701,6 +701,32 @@ public class ApiExceptionHandlerMiddlewareTests
             "the FE shows a retry-after toast with the wait duration");
     }
 
+    [Fact]
+    public async Task InvokeAsync_TwoFactorUnavailableException_Returns503()
+    {
+        // SP5 S3 — D-S3-4 (Option B): when the TOTP store / rate-limit backend is unreachable, the
+        // step-up cannot complete; the middleware maps it to 503 (transient) rather than a generic
+        // 500, so the FE shows a retryable error toast instead of a failed-code / step-up signal.
+        var exception = new TwoFactorUnavailableException("Two-factor service is temporarily unavailable.");
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw exception,
+            _loggerMock.Object,
+            _environmentMock.Object);
+
+        _httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(_httpContext);
+
+        _httpContext.Response.StatusCode.Should().Be(503);
+
+        _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(_httpContext.Response.Body);
+        var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
+        using var errorResponse = ParseErrorResponse(responseBody);
+
+        errorResponse.RootElement.GetProperty("error").GetString().Should().Be("two_factor_unavailable");
+    }
+
     private static JsonDocument ParseErrorResponse(string responseBody)
     {
         return JsonDocument.Parse(responseBody);

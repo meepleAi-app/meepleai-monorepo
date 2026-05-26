@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Api.Extensions;
 using Api.Helpers;
 using Api.Middleware;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
 using MediatR;
@@ -159,10 +160,13 @@ internal static class TwoFactorEndpoints
         .WithName("Verify2FA")
         .WithTags("Authentication");
 
-        // SP5 Admin Security S3 — T5: step-up re-verification on the CURRENT session. Clears a
-        // step_up_required block from TwoFactorEnforcementBehavior by refreshing LastTotpVerifiedAt.
-        // Does NOT create a new session. The acting admin (EffectiveActor) is verified — during an
-        // impersonation that is the admin, not the target. Wire contract: docs/api/2fa-step-up-protocol.md.
+        // SP5 Admin Security S3 — T5 + Option B: step-up re-verification on the CURRENT session.
+        // Clears a step_up_required block from TwoFactorEnforcementBehavior by refreshing
+        // LastTotpVerifiedAt. Does NOT create a new session. The acting admin (EffectiveActor) is
+        // verified — during an impersonation that is the admin, not the target. All error mapping
+        // delegates to ApiExceptionHandlerMiddleware via TwoFactorRequiredException /
+        // TwoFactorUnavailableException for one shared error vocabulary with the enforcement filter.
+        // Wire contract: docs/api/2fa-step-up-protocol.md.
         group.MapPost("/auth/2fa/step-up", async (
             TwoFactorStepUpRequest request, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
@@ -188,17 +192,22 @@ internal static class TwoFactorEndpoints
                     success = true,
                     lastTotpVerifiedAt = result.LastTotpVerifiedAt
                 }),
-                StepUpOutcome.LockedOut => Results.Json(
-                    new
-                    {
-                        error = "two_factor_locked_out",
-                        message = "Too many failed attempts. Try again later.",
-                        retryAfterSeconds = result.RetryAfterSeconds
-                    },
-                    statusCode: StatusCodes.Status429TooManyRequests),
-                _ => Results.Json(
-                    new { error = "two_factor_failed", message = "Invalid or expired verification code." },
-                    statusCode: StatusCodes.Status401Unauthorized)
+                // The three non-success outcomes are mapped by the middleware to the shared 2FA
+                // error vocabulary (401 two_factor_required + subcode for InvalidCode/LockedOut;
+                // 503 two_factor_unavailable for store-down) so a client speaks the SAME wire format
+                // here as it does for an enforcement-blocked command.
+                StepUpOutcome.LockedOut => throw new TwoFactorRequiredException(
+                    TwoFactorRequiredSubcode.LockedOut,
+                    "Too many failed step-up attempts. Try again later.",
+                    retryAfterSeconds: result.RetryAfterSeconds ?? 900),
+                StepUpOutcome.Unavailable => throw new TwoFactorUnavailableException(
+                    "Two-factor service is temporarily unavailable. Please try again."),
+                StepUpOutcome.InvalidCode => throw new TwoFactorRequiredException(
+                    TwoFactorRequiredSubcode.InvalidCode,
+                    "Invalid or expired verification code."),
+                _ => throw new TwoFactorRequiredException(
+                    TwoFactorRequiredSubcode.InvalidCode,
+                    "Invalid or expired verification code.")
             };
         })
         .RequireAuthorization()
@@ -207,7 +216,7 @@ internal static class TwoFactorEndpoints
         .WithSummary("Step-up 2FA verification on the current session (SP5 S3)")
         .Produces(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized)
-        .Produces(StatusCodes.Status429TooManyRequests);
+        .Produces(StatusCodes.Status503ServiceUnavailable);
     }
 
     private static void MapTwoFactorManagementEndpoints(RouteGroupBuilder group)

@@ -165,4 +165,22 @@ public sealed class StepUpTwoFactorCommandHandlerTests
         var act = async () => await _handler.Handle(null!, CancellationToken.None);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
+
+    [Fact]
+    public async Task Handle_TotpStoreThrows_ReturnsUnavailable()
+    {
+        // S3 Option B / D-S3-4: VerifyCodeAsync is Redis-backed; if the store is unreachable the
+        // step-up cannot complete. The handler surfaces Unavailable (→ endpoint 503), never a false
+        // InvalidCode and never an unhandled 500.
+        _totp.Setup(t => t.IsLockedOutAsync(ActorId, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        _totp.Setup(t => t.VerifyCodeAsync(ActorId, ValidCode, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("totp store unreachable"));
+
+        var result = await _handler.Handle(Command(), CancellationToken.None);
+
+        result.Outcome.Should().Be(StepUpOutcome.Unavailable);
+        result.LastTotpVerifiedAt.Should().BeNull();
+        _sessions.Verify(r => r.UpdateLastTotpVerifiedAtAsync(
+            It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

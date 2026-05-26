@@ -4,14 +4,18 @@ using Api.SharedKernel.Application.Interfaces;
 namespace Api.BoundedContexts.Authentication.Application.Commands.TwoFactor;
 
 /// <summary>
-/// Outcome of a step-up TOTP verification. The endpoint maps these to HTTP:
-/// Success → 200, InvalidCode → 401, LockedOut → 429. SP5 Admin Security S3 — D-S3-4.
+/// Outcome of a step-up TOTP verification. The endpoint maps these to HTTP via the shared 2FA error
+/// vocabulary (SP5 S3 — Option B, aligned with the enforcement filter): Success → 200; InvalidCode →
+/// 401 <c>two_factor_required</c>/<c>invalid_code</c>; LockedOut → 401 <c>…</c>/<c>locked_out</c> +
+/// retryAfterSeconds; Unavailable → 503 <c>two_factor_unavailable</c>.
+/// Wire contract: <c>docs/api/2fa-step-up-protocol.md</c>. SP5 Admin Security S3 — D-S3-4.
 /// </summary>
 internal enum StepUpOutcome
 {
     Success,
     InvalidCode,
-    LockedOut
+    LockedOut,
+    Unavailable
 }
 
 /// <summary>

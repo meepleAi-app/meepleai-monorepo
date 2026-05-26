@@ -9,7 +9,10 @@
 
 Strict 2FA enforcement gates four sensitive admin commands (`ChangeUserRole`, `DeleteUser`,
 `SuspendUser`, `ImpersonationStart`) on a **recent** TOTP verification, tracked per session via
-`LastTotpVerifiedAt`. Two HTTP surfaces make this work:
+`LastTotpVerifiedAt`. Two HTTP surfaces make this work, and they **share one error vocabulary** —
+the same `two_factor_required` + `subcode` body (with the same `WWW-Authenticate` header) is
+returned whether a command was blocked by the enforcement filter or the step-up attempt itself
+failed. The FE only has to learn one error shape.
 
 | Flow | Trigger | Outcome |
 |------|---------|---------|
@@ -44,11 +47,12 @@ block from an ordinary session-expired 401 *without parsing the body*.
 
 **Subcode → FE action:**
 
-| `subcode` | Meaning | FE action |
-|-----------|---------|-----------|
-| `step_up_required` | 2FA enabled, but last TOTP verification is stale/absent for this command's `MaxAgeMinutes` | Open the **step-up modal** → POST Flow B → retry original request |
-| `enroll_required` | The account has no 2FA at all (hard block, D-S3-5) | Route to the **2FA enrollment** flow |
-| `locked_out` | Too many failed step-up attempts | Show a **retry-after toast**; `retryAfterSeconds` carries the wait |
+| `subcode` | Emitted by | Meaning | FE action |
+|-----------|-----------|---------|-----------|
+| `step_up_required` | Flow A | 2FA enabled, but last TOTP verification is stale/absent for this command's `MaxAgeMinutes` | Open the **step-up modal** → POST Flow B → retry original request |
+| `enroll_required` | Flow A | The account has no 2FA at all (hard block, D-S3-5) | Route to the **2FA enrollment** flow |
+| `locked_out` | Flow A *or* Flow B | Too many failed step-up attempts | Show a **retry-after toast**; `retryAfterSeconds` carries the wait |
+| `invalid_code` | Flow B only | The submitted TOTP/backup code was invalid, expired, or already used | Show an inline "wrong code" error in the step-up modal; let the user retry with a fresh code |
 
 `retryAfterSeconds` is non-null **only** for `locked_out`.
 
@@ -83,15 +87,19 @@ target user. The endpoint does **not** create a new session; it only refreshes t
 
 > **Replay guard:** a TOTP code is single-use (used-code tracking inherited from `VerifyCodeAsync`).
 > The FE must submit the **current** code shown by the authenticator; re-submitting an
-> already-accepted code returns `401 two_factor_failed`. Do not auto-retry with the same code.
+> already-accepted code returns `401 two_factor_required` / `subcode: invalid_code`. Do not
+> auto-retry with the same code.
 
 **Responses:**
 
 | Status | Body | When |
 |--------|------|------|
 | `200 OK` | `{ "success": true, "lastTotpVerifiedAt": "2026-05-26T16:02:10.974Z" }` | Code valid → session recency refreshed (ISO-8601 UTC) |
-| `401 Unauthorized` | `{ "error": "two_factor_failed", "message": "Invalid or expired verification code." }` | Code invalid/expired, or the session vanished mid-request |
-| `429 Too Many Requests` | `{ "error": "two_factor_locked_out", "message": "Too many failed attempts. Try again later.", "retryAfterSeconds": 900 }` | Account is locked after repeated failures |
+| `401 Unauthorized` | `{ "error": "two_factor_required", "subcode": "invalid_code", "message": "Invalid or expired verification code.", "retryAfterSeconds": null, "correlationId": "…", "timestamp": "…" }` + header `WWW-Authenticate: TOTP-StepUp realm="meepleai-admin"` | Code invalid/expired/reused, or the session vanished mid-request |
+| `401 Unauthorized` | Same shape with `"subcode": "locked_out"` and `"retryAfterSeconds": 900` + same header | After 5 failed attempts in 5 min — 15-min lockout |
+| `503 Service Unavailable` | `{ "error": "two_factor_unavailable", "message": "Two-factor service is temporarily unavailable. Please try again.", "correlationId": "…", "timestamp": "…" }` | TOTP store / rate-limit backend (Redis or encrypted-secret store) is unreachable. Retryable. |
+
+> Both 401 shapes are identical to a Flow-A 401 — the FE's existing 2FA error handler covers them.
 
 **Example:**
 
@@ -102,8 +110,9 @@ curl -X POST https://api.meepleai.app/api/v1/auth/2fa/step-up \
   -d '{"code":"123456"}'
 
 # 200 → { "success": true, "lastTotpVerifiedAt": "2026-05-26T16:02:10.974Z" }
-# wrong/expired/reused code → 401 { "error": "two_factor_failed", "message": "Invalid or expired verification code." }
-# after 5 failures in 5 min → 429 { "error": "two_factor_locked_out", "retryAfterSeconds": 900 }
+# wrong / expired / reused code → 401 { "error": "two_factor_required", "subcode": "invalid_code", ... }
+# after 5 fails in 5 min       → 401 { ..., "subcode": "locked_out", "retryAfterSeconds": 900 }
+# TOTP store unreachable        → 503 { "error": "two_factor_unavailable", ... }
 ```
 
 ---
@@ -137,9 +146,9 @@ source of truth with login-time `/auth/2fa/verify`:
 
 - **5 attempts / 5 minutes** (Redis token bucket), then **15-minute lockout**.
 - Constant-time comparison + replay-attack guard (used-code tracking) are inherited.
-- The step-up handler performs a read-only `IsLockedOutAsync` pre-check to return the distinct `429`
-  before consuming an attempt; `retryAfterSeconds` is a fixed client hint (900s) — the Redis key TTL
-  is the authoritative wait.
+- The step-up handler performs a read-only `IsLockedOutAsync` pre-check to surface the distinct
+  `locked_out` subcode before consuming an attempt; `retryAfterSeconds: 900` is a fixed client hint
+  — the Redis key TTL is the authoritative wait.
 
 ---
 
@@ -153,39 +162,21 @@ source of truth with login-time `/auth/2fa/verify`:
 
 ---
 
-## 7. Known gaps & future alignment
+## 7. FE handling rules
 
-> Documented honestly so the FE plans around the **current** behavior, not the original design intent.
-
-1. **Error-shape asymmetry between the two flows.** Flow A uses `error: "two_factor_required"` +
-   `subcode`; Flow B uses top-level `error: "two_factor_failed"` / `"two_factor_locked_out"` and
-   returns `429` (not `401`) for lockout. The FE must therefore handle two shapes. The original plan
-   (T7) envisaged Flow B reusing `two_factor_required` + `subcode`; the implementation diverged. See
-   §8 for the rationale and the open decision.
-2. **No `503` for TOTP-store-down.** The plan (D-S3-4) specified a `503 two_factor_unavailable` when
-   the secret store / Redis is unreachable. The current implementation lets that surface as a generic
-   `500`. Tracked as a follow-up. **FE rule:** treat any unexpected `5xx` as a generic, retryable
-   error (show an error toast) — **not** as a step-up or enroll signal; never loop the step-up modal
-   on a `5xx`.
-3. **Minimal 200 body.** Flow B returns `{ success, lastTotpVerifiedAt }`, not the full
-   `SessionStatusResponse` the plan mentioned. The FE only needs the timestamp to know the block is
-   cleared.
-
-## 8. Open decision (for review)
-
-Should Flow B be aligned to the enforcement vocabulary before the strict flip?
-
-- **Option A — keep as built:** distinct shapes are arguably honest (enforcement says *"you must
-  step up"*; step-up says *"your code was wrong"* — different semantics). Document both; FE handles two.
-- **Option B — unify:** Flow B returns `401 { error: "two_factor_required", subcode: "invalid_code" }`
-  and `429 { … subcode: "locked_out" }`, plus the `503`. One vocabulary, smaller FE surface, but a
-  code change to the already-merged-on-branch T5 endpoint.
-
-This document describes **Option A (as built)**. The decision is deferred to the T8 acceptance review.
+1. **`2xx` vs `4xx` vs `5xx`:** treat any unexpected `5xx` other than `503 two_factor_unavailable`
+   as a generic, retryable error toast — **never** loop the step-up modal on a `5xx`. A `503
+   two_factor_unavailable` is also retryable, but specifically a 2FA-backend outage; the modal can
+   stay open with a "service temporarily unavailable, try again" message.
+2. **Minimal 200 body.** Flow B returns `{ success, lastTotpVerifiedAt }`, not the full
+   `SessionStatusResponse`. The FE only needs the timestamp to know the block is cleared and the
+   blocked original request can be retried.
+3. **`WWW-Authenticate` header presence** is sufficient to distinguish a 2FA-related 401 from any
+   ordinary session-expired 401 without parsing the body — useful for a global 401 interceptor.
 
 ---
 
-## 9. Backward compatibility
+## 8. Backward compatibility
 
 The FE currently redirects to `/login` on **any** 401. With `TwoFactorStrictMode=OFF` (merge default)
 Flow A never fires, so nothing changes. When an environment flips the flag *before* the FE step-up

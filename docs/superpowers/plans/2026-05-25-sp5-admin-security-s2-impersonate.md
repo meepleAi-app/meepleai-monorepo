@@ -575,7 +575,7 @@
 
 > Mirror pattern S1 T6. Non-codice ma gate del merge.
 
-- [ ] **Step 1: Per ogni criterio DoD (8 criteri da kickoff doc), esegui la verifica e annota**
+- [x] **Step 1: Per ogni criterio DoD (8 criteri da kickoff doc), esegui la verifica e annota**
 
   | # | Criterio | Comando di verifica |
   |---|----------|--------------------|
@@ -588,11 +588,11 @@
   | 7 | Revoke ≤5s | Scenario S2-4 + latency assertion |
   | 8 | Prometheus gauge | MeterListener test |
 
-- [ ] **Step 2: Compila DoD log nel kickoff doc**
+- [x] **Step 2: Compila DoD log nel kickoff doc**
 
   Aggiungi sezione "DoD verification log" come fatto in S1.
 
-- [ ] **Step 3: Commit DoD log**
+- [x] **Step 3: Commit DoD log**
 
   ```bash
   git commit -m "docs(impersonation): S2 DoD verification log (all 8 criteria green)"

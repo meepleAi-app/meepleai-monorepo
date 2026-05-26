@@ -190,8 +190,8 @@ internal static class PhotoIngestionEndpoints
     private static Guid ExtractUserId(HttpContext httpContext)
     {
         var (authenticated, session, _) = httpContext.TryGetAuthenticatedUser();
-        if (authenticated && session?.User != null)
-            return session.User.Id;
+        if (authenticated && session?.Principal?.Subject != null)
+            return session.Principal!.Subject.Id;
 
         // Fallback: API key auth path (ClaimsPrincipal)
         var claimsUserId = httpContext.User.GetUserId();

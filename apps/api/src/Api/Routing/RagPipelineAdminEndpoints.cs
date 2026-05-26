@@ -55,7 +55,7 @@ internal static class RagPipelineAdminEndpoints
             if (!authorized) return error!;
 
             var query = new GetRagPipelineStrategiesQuery(
-                session!.User!.Id,
+                session!.Principal!.EffectiveActor.Id,
                 search,
                 includeTemplates);
 
@@ -79,7 +79,7 @@ internal static class RagPipelineAdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var query = new GetRagPipelineStrategyByIdQuery(id, session!.User!.Id);
+            var query = new GetRagPipelineStrategyByIdQuery(id, session!.Principal!.EffectiveActor.Id);
             var strategy = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return strategy != null
@@ -111,14 +111,14 @@ internal static class RagPipelineAdminEndpoints
                 request.Description,
                 request.NodesJson,
                 request.EdgesJson,
-                session!.User!.Id,
+                session!.Principal!.EffectiveActor.Id,
                 request.Tags);
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation(
                 "Admin {AdminId} created RAG pipeline strategy {StrategyId}: {Name}",
-                session.User.Id,
+                session.Principal!.EffectiveActor.Id,
                 result.Id,
                 LogSanitizer.Sanitize(result.Name));
 
@@ -151,14 +151,14 @@ internal static class RagPipelineAdminEndpoints
                 request.Description,
                 request.NodesJson,
                 request.EdgesJson,
-                session!.User!.Id,
+                session!.Principal!.EffectiveActor.Id,
                 request.Tags);
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation(
                 "Admin {AdminId} updated RAG pipeline strategy {StrategyId}: {Name}",
-                session.User.Id,
+                session.Principal!.EffectiveActor.Id,
                 result.Id,
                 LogSanitizer.Sanitize(result.Name));
 
@@ -185,12 +185,12 @@ internal static class RagPipelineAdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var command = new DeleteRagPipelineStrategyCommand(id, session!.User!.Id);
+            var command = new DeleteRagPipelineStrategyCommand(id, session!.Principal!.EffectiveActor.Id);
             await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation(
                 "Admin {AdminId} deleted RAG pipeline strategy {StrategyId}",
-                session.User.Id,
+                session.Principal!.EffectiveActor.Id,
                 id);
 
             return Results.NoContent();
@@ -213,7 +213,7 @@ internal static class RagPipelineAdminEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var query = new GetRagPipelineStrategyByIdQuery(id, session!.User!.Id);
+            var query = new GetRagPipelineStrategyByIdQuery(id, session!.Principal!.EffectiveActor.Id);
             var strategy = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (strategy == null)
@@ -276,14 +276,14 @@ internal static class RagPipelineAdminEndpoints
                 imported.Description,
                 imported.NodesJson,
                 imported.EdgesJson,
-                session!.User!.Id,
+                session!.Principal!.EffectiveActor.Id,
                 imported.Tags);
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation(
                 "Admin {AdminId} imported RAG pipeline strategy {StrategyId}: {Name}",
-                session.User.Id,
+                session.Principal!.EffectiveActor.Id,
                 result.Id,
                 LogSanitizer.Sanitize(result.Name));
 
@@ -323,7 +323,7 @@ internal static class RagPipelineAdminEndpoints
 
             logger.LogInformation(
                 "Admin {AdminId} testing RAG pipeline: query='{Query}'",
-                session!.User!.Id,
+                session!.Principal!.EffectiveActor.Id,
                 LogSanitizer.Sanitize(request.TestQuery));
 
             // Execute test command to get event stream
@@ -333,7 +333,7 @@ internal static class RagPipelineAdminEndpoints
                 var command = new TestRagPipelineCommand(
                     request.PipelineDefinition,
                     request.TestQuery,
-                    session.User.Id);
+                    session.Principal!.EffectiveActor.Id);
 
                 eventStream = await mediator.Send(command, ct).ConfigureAwait(false);
             }

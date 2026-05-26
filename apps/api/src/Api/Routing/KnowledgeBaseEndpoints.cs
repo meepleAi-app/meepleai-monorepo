@@ -202,7 +202,7 @@ internal static class KnowledgeBaseEndpoints
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
         logger.LogDebug("GetKnowledgeBaseStatus for game {GameId} by user {UserId}",
-            gameId, session!.User!.Id);
+            gameId, session!.Principal!.Subject.Id);
 
         var query = new GetKnowledgeBaseStatusQuery(gameId);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -237,7 +237,7 @@ internal static class KnowledgeBaseEndpoints
 
         logger.LogInformation(
             "KnowledgeBase search request from user {UserId} for game {GameId}: {Query}",
-            session!.User!.Id, gameId, req.query);
+            session!.Principal!.Subject.Id, gameId, req.query);
 
         var query = new SearchQuery(
             GameId: gameId,
@@ -246,8 +246,8 @@ internal static class KnowledgeBaseEndpoints
             MinScore: req.minScore ?? 0.55,
             SearchMode: req.searchMode ?? "hybrid",
             Language: req.language ?? "en",
-            UserId: session!.User!.Id,
-            UserRole: session.User!.Role
+            UserId: session!.Principal!.Subject.Id,
+            UserRole: session.Principal!.EffectiveActor.Role
         );
 
         var results = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -276,7 +276,7 @@ internal static class KnowledgeBaseEndpoints
             req.gameId, req.query?.Substring(0, Math.Min(50, req.query?.Length ?? 0)));
 
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        logger.LogDebug("[KnowledgeBase.Ask] Session retrieved - UserId: {UserId}", session?.User?.Id);
+        logger.LogDebug("[KnowledgeBase.Ask] Session retrieved - UserId: {UserId}", session?.Principal?.Subject?.Id);
 
         if (!Guid.TryParse(req.gameId, out var gameId))
         {
@@ -293,15 +293,15 @@ internal static class KnowledgeBaseEndpoints
 
         logger.LogInformation(
             "[KnowledgeBase.Ask] Q&A request from user {UserId} for game {GameId}: {Query}",
-            session!.User!.Id, gameId, req.query);
+            session!.Principal!.Subject.Id, gameId, req.query);
 
         var query = new AskQuestionQuery(
             GameId: gameId,
             Question: req.query!,  // Already validated by QueryValidator above
             Language: req.language ?? "en",
             BypassCache: req.bypassCache ?? false,
-            UserId: session!.User!.Id,
-            UserRole: session.User!.Role
+            UserId: session!.Principal!.Subject.Id,
+            UserRole: session.Principal!.EffectiveActor.Role
         );
 
         logger.LogDebug("[KnowledgeBase.Ask] Sending AskQuestionQuery to mediator...");
@@ -339,7 +339,7 @@ internal static class KnowledgeBaseEndpoints
         const int MAX_SKIP = 10000;
 
         var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
-        if (session?.User?.Id is not Guid userId)
+        if (session?.Principal?.Subject?.Id is not Guid userId)
         {
             logger.LogWarning("GetMyChatHistory called without valid session");
             return Results.Unauthorized();
@@ -395,7 +395,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct = default)
     {
         var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
-        if (session?.User?.Id is not Guid userId)
+        if (session?.Principal?.Subject?.Id is not Guid userId)
         {
             return Results.Unauthorized();
         }
@@ -434,10 +434,10 @@ internal static class KnowledgeBaseEndpoints
             return Results.NotFound(new { error = "Thread not found" });
         }
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         if (result.UserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             return Results.Forbid();
         }
@@ -455,7 +455,7 @@ internal static class KnowledgeBaseEndpoints
 
         if (gameId.HasValue)
         {
-            var userId = session!.User!.Id;
+            var userId = session!.Principal!.Subject.Id;
             var query = new GetChatThreadsByGameQuery(gameId.Value, userId);
             var results = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(new { threads = results, count = results.Count });
@@ -474,7 +474,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation("Creating chat thread for user {UserId}, game {GameId}", userId, req.GameId);
 
@@ -486,7 +486,7 @@ internal static class KnowledgeBaseEndpoints
             InitialMessage: req.InitialMessage,
             AgentId: req.AgentId,
             AgentType: req.AgentType, // Issue #4362
-            UserRole: session.User!.Role,
+            UserRole: session.Principal!.EffectiveActor.Role,
             SelectedKnowledgeBaseIds: req.SelectedKnowledgeBaseIds
         );
 
@@ -502,7 +502,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var command = new DeleteChatThreadCommand(threadId, userId);
         await mediator.Send(command, ct).ConfigureAwait(false);
@@ -520,7 +520,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         // Verify thread ownership before mutation
         var threadQuery = new GetChatThreadByIdQuery(threadId);
@@ -532,7 +532,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning("User {UserId} denied access to close thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -552,7 +552,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         // Verify thread ownership before mutation
         var threadQuery = new GetChatThreadByIdQuery(threadId);
@@ -564,7 +564,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning("User {UserId} denied access to reopen thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -585,7 +585,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         if (string.IsNullOrWhiteSpace(req.Title))
         {
@@ -602,7 +602,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning("User {UserId} denied access to update thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -626,7 +626,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         if (string.IsNullOrWhiteSpace(req.AgentType))
         {
@@ -642,7 +642,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning("User {UserId} denied access to switch agent on thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -673,7 +673,7 @@ internal static class KnowledgeBaseEndpoints
             return Results.BadRequest(new { error = "Content is required" });
         }
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         // Verify thread ownership before mutation
         var threadQuery = new GetChatThreadByIdQuery(threadId);
@@ -685,7 +685,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning("User {UserId} denied access to add message to thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -712,7 +712,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         if (string.IsNullOrWhiteSpace(req.Content))
         {
@@ -737,8 +737,8 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
-        var isAdmin = string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var userId = session!.Principal!.Subject.Id;
+        var isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
         var command = new DeleteMessageCommand(threadId, messageId, userId, isAdmin);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -758,7 +758,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         // Verify thread ownership before export
         var threadQuery = new GetChatThreadByIdQuery(threadId);
@@ -770,7 +770,7 @@ internal static class KnowledgeBaseEndpoints
         }
 
         if (existingThread.UserId != userId &&
-            !string.Equals(session!.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             logger.LogWarning("User {UserId} denied access to export thread {ThreadId} (owner: {OwnerId})",
                 userId, threadId, existingThread.UserId);
@@ -823,7 +823,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var command = new AssembleContextCommand(
             Query: req.Query,
@@ -1004,8 +1004,8 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken cancellationToken)
     {
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session.User!.Id;
-        var userIsAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var userId = session.Principal!.Subject.Id;
+        var userIsAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
         var query = new GetKbDocumentByIdQuery(id, RequestingUserId: userId, UserIsAdmin: userIsAdmin);
         var dto = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(dto);
@@ -1041,8 +1041,8 @@ internal static class KnowledgeBaseEndpoints
         }
 
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-        var userId = session.User!.Id;
-        var isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var userId = session.Principal!.Subject.Id;
+        var isAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
         var query = new GetKbChunksQuery(
             id,
             RequestingUserId: userId,
@@ -1061,9 +1061,9 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken cancellationToken)
     {
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-        var userId = session.User!.Id;
+        var userId = session.Principal!.Subject.Id;
         var isAdmin = string.Equals(
-            session.User!.Role,
+            session.Principal!.EffectiveActor.Role,
             UserRole.Admin.ToString(),
             StringComparison.OrdinalIgnoreCase);
         var query = new GetKbChunkByIdQuery(id, RequestingUserId: userId, ChunkId: chunkId, UserIsAdmin: isAdmin);
@@ -1084,8 +1084,8 @@ internal static class KnowledgeBaseEndpoints
         }
 
         var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-        var userId = session.User!.Id;
-        var isAdmin = string.Equals(session.User!.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+        var userId = session.Principal!.Subject.Id;
+        var isAdmin = string.Equals(session.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
         var query = new SearchKbChunksQuery(id, RequestingUserId: userId, Query: body.Query, Skip: body.Skip ?? 0, Take: body.Take ?? 20, UserIsAdmin: isAdmin);
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
@@ -1111,7 +1111,7 @@ internal static class KnowledgeBaseEndpoints
         var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
 
         var result = await mediator.Send(new LinkExistingKbToGameCommand(
-            UserId: session.User!.Id,
+            UserId: session.Principal!.Subject.Id,
             TargetGameId: gameId,
             SourcePdfDocumentId: request.PdfDocumentId), ct).ConfigureAwait(false);
 
@@ -1128,7 +1128,7 @@ internal static class KnowledgeBaseEndpoints
         CancellationToken ct)
     {
         var session = context.Items[nameof(SessionStatusDto)] as SessionStatusDto;
-        if (session?.User?.Id is not Guid userId)
+        if (session?.Principal?.Subject?.Id is not Guid userId)
         {
             return Results.Unauthorized();
         }

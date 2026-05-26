@@ -95,8 +95,8 @@ public class RequireAdminSessionFilterTests
         context.HttpContext.Items.ContainsKey(nameof(SessionStatusDto)).Should().BeTrue();
         var sessionInContext = context.HttpContext.Items[nameof(SessionStatusDto)] as SessionStatusDto;
         sessionInContext.Should().NotBeNull();
-        sessionInContext!.User!.Role.Should().Be("Admin");
-        sessionInContext!.User!.Id.Should().Be(adminSession.User!.Id);
+        sessionInContext!.Principal!.Subject.Role.Should().Be("Admin");
+        sessionInContext!.Principal!.Subject.Id.Should().Be(adminSession.Principal!.Subject.Id);
     }
 
     [Fact]

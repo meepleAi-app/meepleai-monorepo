@@ -41,7 +41,7 @@ internal static class UserGameKbEndpoints
             if (!authenticated) return error!;
 
             await mediator.Send(new SubmitKbFeedbackCommand(
-                session.User!.Id,
+                session.Principal!.Subject.Id,
                 gameId,
                 request.ChatSessionId,
                 request.MessageId,

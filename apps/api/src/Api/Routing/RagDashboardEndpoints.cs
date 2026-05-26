@@ -128,7 +128,7 @@ internal static class RagDashboardEndpoints
 
         var query = new GetRagConfigQuery
         {
-            UserId = session!.User!.Id,
+            UserId = session!.Principal!.EffectiveActor.Id,
             Strategy = strategy
         };
 
@@ -148,12 +148,12 @@ internal static class RagDashboardEndpoints
 
         logger.LogInformation(
             "User {UserId} saving RAG config for strategy {Strategy}",
-            session!.User!.Id,
+            session!.Principal!.EffectiveActor.Id,
             LogSanitizer.Sanitize(config.ActiveStrategy));
 
         var command = new SaveRagConfigCommand
         {
-            UserId = session.User.Id,
+            UserId = session.Principal!.EffectiveActor.Id,
             Config = config
         };
 
@@ -173,12 +173,12 @@ internal static class RagDashboardEndpoints
 
         logger.LogInformation(
             "User {UserId} resetting RAG config for strategy {Strategy}",
-            session!.User!.Id,
+            session!.Principal!.EffectiveActor.Id,
             LogSanitizer.Sanitize(strategy ?? "all"));
 
         var command = new ResetRagConfigCommand
         {
-            UserId = session.User.Id,
+            UserId = session.Principal!.EffectiveActor.Id,
             Strategy = strategy
         };
 
@@ -293,7 +293,7 @@ internal static class RagDashboardEndpoints
                 return Results.BadRequest(new { error = "GameContext is required" });
 
             var searchResults = await mediator.Send(
-                new SearchGamesQuery(request.GameContext, session!.User!.Id, 5), ct)
+                new SearchGamesQuery(request.GameContext, session!.Principal!.EffectiveActor.Id, 5), ct)
                 .ConfigureAwait(false);
             var gameId = searchResults?.FirstOrDefault()?.Id;
 
@@ -312,7 +312,7 @@ internal static class RagDashboardEndpoints
 
             logger.LogInformation(
                 "Admin {AdminId} running live RAG test for game {GameId}: '{Query}'",
-                session!.User!.Id, gameId, LogSanitizer.Sanitize(request.Query));
+                session!.Principal!.EffectiveActor.Id, gameId, LogSanitizer.Sanitize(request.Query));
 
             var streamQuery = new StreamQaQuery(GameId: gameId.Value.ToString(), Query: request.Query);
 

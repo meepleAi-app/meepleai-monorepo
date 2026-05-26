@@ -192,10 +192,10 @@ internal static class PdfUploadEndpoints
             metadata = parsedMetadata;
         }
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
         var priority = context.Request.Query["priority"].FirstOrDefault();
         // Bug fix: Only allow priority override for admin users to prevent privilege escalation
-        if (priority != null && !string.Equals(session.User.Role, "Admin", StringComparison.OrdinalIgnoreCase))
+        if (priority != null && !string.Equals(session.Principal!.EffectiveActor.Role, "Admin", StringComparison.OrdinalIgnoreCase))
         {
             priority = null;
         }
@@ -249,7 +249,7 @@ internal static class PdfUploadEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation(
             "User {UserId} initializing chunked upload for game {GameId}, file {FileName} ({FileSize} bytes)",
@@ -283,7 +283,7 @@ internal static class PdfUploadEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation("User {UserId} completing chunked upload session {SessionId}", userId, request.SessionId);
 
@@ -322,7 +322,7 @@ internal static class PdfUploadEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var query = new GetChunkedUploadStatusQuery(sessionId, userId);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -344,7 +344,7 @@ internal static class PdfUploadEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
         var form = await context.Request.ReadFormAsync(ct).ConfigureAwait(false);
 
         if (!Guid.TryParse(form["sessionId"].ToString(), out var sessionId))
@@ -412,11 +412,11 @@ internal static class PdfUploadEndpoints
         if (!authenticated) return error!;
 
         // Verify user matches session
-        if (session!.User!.Id != userId)
+        if (session!.Principal!.Subject.Id != userId)
         {
             logger.LogWarning(
                 "User {SessionUserId} attempted to upload PDF as user {RequestedUserId}",
-                session.User.Id, userId);
+                session.Principal!.Subject.Id, userId);
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 

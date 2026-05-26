@@ -128,7 +128,7 @@ internal static class FeatureFlagEndpoints
             if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} toggling feature flag '{Key}' to {Status}",
-                session!.User!.Id, LogSanitizer.Sanitize(key), enabled ? "enabled" : "disabled");
+                session!.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(key), enabled ? "enabled" : "disabled");
 
             // Get the configuration for this feature flag
             var configQuery = new GetConfigByKeyQuery(key, Environment: null);
@@ -144,7 +144,7 @@ internal static class FeatureFlagEndpoints
             var updateCommand = new UpdateConfigValueCommand(
                 ConfigId: config.Id,
                 NewValue: enabled.ToString().ToLowerInvariant(),
-                UpdatedByUserId: session!.User!.Id
+                UpdatedByUserId: session!.Principal!.EffectiveActor.Id
             );
             var updatedConfig = await mediator.Send(updateCommand, ct).ConfigureAwait(false);
 
@@ -185,7 +185,7 @@ internal static class FeatureFlagEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {AdminId} creating feature flag '{Key}'", session!.User!.Id, LogSanitizer.Sanitize(request.Key));
+            logger.LogInformation("Admin {AdminId} creating feature flag '{Key}'", session!.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(request.Key));
 
             // Default to "All" if no environment specified
             var environment = request.Environment ?? "All";
@@ -194,7 +194,7 @@ internal static class FeatureFlagEndpoints
                 Key: request.Key,
                 Value: request.Enabled.ToString().ToLowerInvariant(),
                 ValueType: "bool",
-                CreatedByUserId: session!.User!.Id,
+                CreatedByUserId: session!.Principal!.EffectiveActor.Id,
                 Description: request.Description,
                 Category: "Features",
                 Environment: environment,
@@ -239,11 +239,11 @@ internal static class FeatureFlagEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            var userId = session!.User!.Id.ToString();
+            var userId = session!.Principal!.EffectiveActor.Id.ToString();
 
             logger.LogInformation(
                 "Admin {AdminId} updating feature flag '{Key}' to {Status} (role={Role}, tier={Tier})",
-                session.User.Id, LogSanitizer.Sanitize(key), request.Enabled ? "enabled" : "disabled", LogSanitizer.Sanitize(request.Role), LogSanitizer.Sanitize(request.Tier));
+                session.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(key), request.Enabled ? "enabled" : "disabled", LogSanitizer.Sanitize(request.Role), LogSanitizer.Sanitize(request.Tier));
 
             // Parse optional role
             UserRole? role = null;
@@ -318,11 +318,11 @@ internal static class FeatureFlagEndpoints
                 return Results.BadRequest(new { error = $"Invalid tier '{tier}'. Valid tiers: free, normal, premium" });
             }
 
-            var userId = session!.User!.Id.ToString();
+            var userId = session!.Principal!.EffectiveActor.Id.ToString();
 
             logger.LogInformation(
                 "Admin {AdminId} enabling feature flag '{Key}' for tier {Tier}",
-                session.User.Id, LogSanitizer.Sanitize(key), LogSanitizer.Sanitize(tier));
+                session.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(key), LogSanitizer.Sanitize(tier));
 
             // Use CQRS command to enable the feature for the tier
             var command = new EnableFeatureForTierCommand(key, userTier, userId);
@@ -375,11 +375,11 @@ internal static class FeatureFlagEndpoints
                 return Results.BadRequest(new { error = $"Invalid tier '{tier}'. Valid tiers: free, normal, premium" });
             }
 
-            var userId = session!.User!.Id.ToString();
+            var userId = session!.Principal!.EffectiveActor.Id.ToString();
 
             logger.LogInformation(
                 "Admin {AdminId} disabling feature flag '{Key}' for tier {Tier}",
-                session.User.Id, LogSanitizer.Sanitize(key), LogSanitizer.Sanitize(tier));
+                session.Principal!.EffectiveActor.Id, LogSanitizer.Sanitize(key), LogSanitizer.Sanitize(tier));
 
             // Use CQRS command to disable the feature for the tier
             var command = new DisableFeatureForTierCommand(key, userTier, userId);

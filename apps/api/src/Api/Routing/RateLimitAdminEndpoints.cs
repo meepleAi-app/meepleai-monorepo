@@ -109,11 +109,11 @@ internal static class RateLimitAdminEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} updating rate limit config for tier {Tier}",
-            session!.User!.Id, tier);
+            session!.Principal!.Subject.Id, tier);
 
         var command = new UpdateRateLimitConfigCommand
         {
-            AdminId = session!.User!.Id,
+            AdminId = session!.Principal!.Subject.Id,
             Tier = tier,
             MaxPendingRequests = request.MaxPendingRequests,
             MaxRequestsPerMonth = request.MaxRequestsPerMonth,
@@ -160,11 +160,11 @@ internal static class RateLimitAdminEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} creating rate limit override for user {UserId}",
-            session!.User!.Id, id);
+            session!.Principal!.Subject.Id, id);
 
         var command = new CreateUserRateLimitOverrideCommand
         {
-            AdminId = session!.User!.Id,
+            AdminId = session!.Principal!.Subject.Id,
             UserId = id,
             MaxPendingRequests = request.MaxPendingRequests,
             MaxRequestsPerMonth = request.MaxRequestsPerMonth,
@@ -196,11 +196,11 @@ internal static class RateLimitAdminEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} removing rate limit override for user {UserId}",
-            session!.User!.Id, id);
+            session!.Principal!.Subject.Id, id);
 
         var command = new RemoveUserRateLimitOverrideCommand
         {
-            AdminId = session!.User!.Id,
+            AdminId = session!.Principal!.Subject.Id,
             UserId = id
         };
 

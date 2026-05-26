@@ -453,7 +453,7 @@ internal static class SharedGameCatalogAdminEndpoints
             ),
             PdfDocumentId: request.PdfDocumentId,
             CoverImageUrl: request.CoverImageUrl,
-            RequestedBy: session!.User!.Id
+            RequestedBy: session!.Principal!.Subject.Id
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -469,7 +469,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        var query = new ExtractGameMetadataFromPdfByPdfIdQuery(pdfId, session!.User!.Id);
+        var query = new ExtractGameMetadataFromPdfByPdfIdQuery(pdfId, session!.Principal!.Subject.Id);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
@@ -561,7 +561,7 @@ internal static class SharedGameCatalogAdminEndpoints
             request.ImageUrl,
             request.ThumbnailUrl,
             request.Rules,
-            session!.User!.Id);
+            session!.Principal!.Subject.Id);
 
         try
         {
@@ -587,7 +587,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var (authorized, session, error) = context.RequireAdminOrEditorSession();
         if (!authorized) return error!;
 
-        var command = new SubmitSharedGameForApprovalCommand(id, session!.User!.Id);
+        var command = new SubmitSharedGameForApprovalCommand(id, session!.Principal!.Subject.Id);
 
         try
         {
@@ -609,7 +609,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var command = new ApproveSharedGamePublicationCommand(id, session!.User!.Id);
+        var command = new ApproveSharedGamePublicationCommand(id, session!.Principal!.Subject.Id);
 
         try
         {
@@ -631,7 +631,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var command = new QuickPublishSharedGameCommand(id, session!.User!.Id);
+        var command = new QuickPublishSharedGameCommand(id, session!.Principal!.Subject.Id);
 
         try
         {
@@ -658,7 +658,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var command = new RejectSharedGamePublicationCommand(id, session!.User!.Id, request.Reason);
+        var command = new RejectSharedGamePublicationCommand(id, session!.Principal!.Subject.Id, request.Reason);
 
         try
         {
@@ -702,7 +702,7 @@ internal static class SharedGameCatalogAdminEndpoints
 
         var command = new BatchApproveGamesCommand(
             request.GameIds,
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             request.Note);
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -734,7 +734,7 @@ internal static class SharedGameCatalogAdminEndpoints
 
         var command = new BatchRejectGamesCommand(
             request.GameIds,
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             request.Reason);
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -754,7 +754,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var command = new ArchiveSharedGameCommand(id, session!.User!.Id);
+        var command = new ArchiveSharedGameCommand(id, session!.Principal!.Subject.Id);
 
         try
         {
@@ -896,7 +896,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var command = new UpdateSharedGameFromBggCommand(
             id,
             request.BggId,
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             request.FieldsToUpdate);
 
         try
@@ -1238,7 +1238,7 @@ internal static class SharedGameCatalogAdminEndpoints
             request.Version,
             request.Tags,
             request.SetAsActive,
-            session!.User!.Id);
+            session!.Principal!.Subject.Id);
 
         try
         {
@@ -1300,7 +1300,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var command = new RemoveRagFromSharedGameCommand(id, documentId, session!.User!.Id);
+        var command = new RemoveRagFromSharedGameCommand(id, documentId, session!.Principal!.Subject.Id);
         await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -1347,7 +1347,7 @@ internal static class SharedGameCatalogAdminEndpoints
         var command = new GenerateGameStateTemplateCommand(
             id,
             request.Name,
-            session!.User!.Id,
+            session!.Principal!.Subject.Id,
             request.SetAsActive);
 
         try

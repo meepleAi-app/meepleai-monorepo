@@ -148,7 +148,7 @@ internal static class FinancialLedgerEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation(
             "Admin {AdminId} creating manual ledger entry: {Type} {Amount} {Currency}",
@@ -202,7 +202,7 @@ internal static class FinancialLedgerEndpoints
 
         logger.LogInformation(
             "Admin {AdminId} deleting ledger entry {EntryId}",
-            session!.User!.Id, id);
+            session!.Principal!.Subject.Id, id);
 
         var command = new DeleteLedgerEntryCommand(id);
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);

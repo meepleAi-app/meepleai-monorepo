@@ -50,7 +50,7 @@ internal class SessionAuthenticationMiddleware
                     _logger.LogInformation("[SessionAuth] ValidateSessionQuery completed in {ElapsedMs}ms - IsValid: {IsValid}",
                         stopwatch.ElapsedMilliseconds, result.IsValid);
 
-                    if (result.IsValid && result.User != null)
+                    if (result.IsValid && result.Principal?.Subject != null)
                     {
                         // Store session status in HttpContext.Items for endpoints (DDD DTO format)
                         // Issue #1676 Phase 3: Migrated from ActiveSession to SessionStatusDto
@@ -61,14 +61,14 @@ internal class SessionAuthenticationMiddleware
                         {
                             var claims = new List<Claim>
                             {
-                                new(ClaimTypes.NameIdentifier, result.User.Id.ToString()),
-                                new(ClaimTypes.Email, result.User.Email),
-                                new(ClaimTypes.Role, result.User.Role)
+                                new(ClaimTypes.NameIdentifier, result.Principal!.Subject.Id.ToString()),
+                                new(ClaimTypes.Email, result.Principal!.Subject.Email),
+                                new(ClaimTypes.Role, result.Principal!.Subject.Role)
                             };
 
-                            if (!string.IsNullOrWhiteSpace(result.User.DisplayName))
+                            if (!string.IsNullOrWhiteSpace(result.Principal!.Subject.DisplayName))
                             {
-                                claims.Add(new Claim(ClaimTypes.Name, result.User.DisplayName));
+                                claims.Add(new Claim(ClaimTypes.Name, result.Principal!.Subject.DisplayName));
                             }
 
                             context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "SessionCookie"));

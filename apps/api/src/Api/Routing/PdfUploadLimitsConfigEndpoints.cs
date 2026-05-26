@@ -58,7 +58,7 @@ internal static class PdfUploadLimitsConfigEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation(
             "Admin {UserId} updating PDF upload limits: MaxFileSize={MaxFileSize}, MaxPages={MaxPages}, MaxDocs={MaxDocs}, MimeTypes={MimeTypes}",

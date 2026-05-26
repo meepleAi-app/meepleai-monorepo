@@ -38,7 +38,7 @@ internal static class SlackIntegrationEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var command = new ConnectSlackCommand(session!.User!.Id);
+            var command = new ConnectSlackCommand(session!.Principal!.Subject.Id);
             var oauthUrl = await mediator.Send(command, ct).ConfigureAwait(false);
 
             return Results.Ok(new { url = oauthUrl });
@@ -83,7 +83,7 @@ internal static class SlackIntegrationEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var command = new DisconnectSlackCommand(session!.User!.Id);
+            var command = new DisconnectSlackCommand(session!.Principal!.Subject.Id);
             var success = await mediator.Send(command, ct).ConfigureAwait(false);
 
             return success
@@ -108,7 +108,7 @@ internal static class SlackIntegrationEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var query = new GetSlackConnectionStatusQuery(session!.User!.Id);
+            var query = new GetSlackConnectionStatusQuery(session!.Principal!.Subject.Id);
             var status = await mediator.Send(query, ct).ConfigureAwait(false);
 
             return status != null
@@ -164,7 +164,7 @@ internal static class SlackIntegrationEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var updatedCommand = command with { UserId = session!.User!.Id };
+            var updatedCommand = command with { UserId = session!.Principal!.Subject.Id };
             await mediator.Send(updatedCommand, ct).ConfigureAwait(false);
             return Results.NoContent();
         })

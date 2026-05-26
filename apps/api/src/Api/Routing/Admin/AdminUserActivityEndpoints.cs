@@ -274,12 +274,12 @@ internal static class AdminUserActivityEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} initiating bulk password reset for {Count} users",
-            session!.User!.Id, request.UserIds.Count);
+            session!.Principal!.EffectiveActor.Id, request.UserIds.Count);
 
         var command = new BulkPasswordResetCommand(
             request.UserIds,
             request.NewPassword,
-            session.User!.Id
+            session.Principal!.EffectiveActor.Id
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -297,12 +297,12 @@ internal static class AdminUserActivityEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} initiating bulk role change for {Count} users to role {Role}",
-            session!.User!.Id, request.UserIds.Count, request.NewRole);
+            session!.Principal!.EffectiveActor.Id, request.UserIds.Count, request.NewRole);
 
         var command = new BulkRoleChangeCommand(
             request.UserIds,
             request.NewRole,
-            session.User!.Id
+            session.Principal!.EffectiveActor.Id
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -323,11 +323,11 @@ internal static class AdminUserActivityEndpoints
         var csvContent = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
 
         logger.LogInformation("Admin {AdminId} initiating bulk user import from CSV",
-            session!.User!.Id);
+            session!.Principal!.EffectiveActor.Id);
 
         var command = new BulkImportUsersCommand(
             csvContent,
-            session.User!.Id
+            session.Principal!.EffectiveActor.Id
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -346,7 +346,7 @@ internal static class AdminUserActivityEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} exporting users to CSV with filters: Role={Role}, Search={Search}",
-            session!.User!.Id, role, search);
+            session!.Principal!.EffectiveActor.Id, role, search);
 
         var query = new BulkExportUsersQuery(role, search);
         var csv = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -365,10 +365,10 @@ internal static class AdminUserActivityEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} suspending user {UserId}", session!.User!.Id, id);
+        logger.LogInformation("Admin {AdminId} suspending user {UserId}", session!.Principal!.EffectiveActor.Id, id);
 
-        // Issue #2886: Get admin ID for audit logging (session.User.Id is already Guid)
-        var requesterId = session.User.Id;
+        // Issue #2886: Get admin ID for audit logging (session.Principal!.EffectiveActor.Id is already Guid)
+        var requesterId = session.Principal!.EffectiveActor.Id;
 
         try
         {
@@ -394,10 +394,10 @@ internal static class AdminUserActivityEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} unsuspending user {UserId}", session!.User!.Id, id);
+        logger.LogInformation("Admin {AdminId} unsuspending user {UserId}", session!.Principal!.EffectiveActor.Id, id);
 
-        // Issue #2886: Get admin ID for audit logging (session.User.Id is already Guid)
-        var requesterId = session.User.Id;
+        // Issue #2886: Get admin ID for audit logging (session.Principal!.EffectiveActor.Id is already Guid)
+        var requesterId = session.Principal!.EffectiveActor.Id;
 
         try
         {
@@ -429,13 +429,13 @@ internal static class AdminUserActivityEndpoints
             return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
         }
 
-        logger.LogInformation("Admin {AdminId} unlocking account {UserId}", session!.User!.Id, userId);
+        logger.LogInformation("Admin {AdminId} unlocking account {UserId}", session!.Principal!.EffectiveActor.Id, userId);
 
         try
         {
-            var command = new UnlockAccountCommand(userId, session.User.Id);
+            var command = new UnlockAccountCommand(userId, session.Principal!.EffectiveActor.Id);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
-            logger.LogInformation("Account {UserId} unlocked successfully by admin {AdminId}", userId, session.User.Id);
+            logger.LogInformation("Account {UserId} unlocked successfully by admin {AdminId}", userId, session.Principal!.EffectiveActor.Id);
             return Results.Ok(result);
         }
         catch (NotFoundException ex)
@@ -466,7 +466,7 @@ internal static class AdminUserActivityEndpoints
             return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
         }
 
-        logger.LogInformation("Admin {AdminId} checking lockout status for user {UserId}", session!.User!.Id, userId);
+        logger.LogInformation("Admin {AdminId} checking lockout status for user {UserId}", session!.Principal!.EffectiveActor.Id, userId);
 
         try
         {
@@ -496,7 +496,7 @@ internal static class AdminUserActivityEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} fetching activity for user {UserId}", session!.User!.Id, userId);
+        logger.LogInformation("Admin {AdminId} fetching activity for user {UserId}", session!.Principal!.EffectiveActor.Id, userId);
 
         var query = new Api.BoundedContexts.Administration.Application.Queries.GetUserActivityQuery(
             UserId: userId,
@@ -523,7 +523,7 @@ internal static class AdminUserActivityEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} retrieving library stats for user {UserId}", session!.User!.Id, userId);
+        logger.LogInformation("Admin {AdminId} retrieving library stats for user {UserId}", session!.Principal!.EffectiveActor.Id, userId);
 
         var query = new GetUserLibraryStatsQuery(userId);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -535,7 +535,7 @@ internal static class AdminUserActivityEndpoints
         }
 
         logger.LogInformation("Admin {AdminId} retrieved library stats for user {UserId}: {TotalGames} games, {SessionsPlayed} sessions",
-            session.User.Id, userId, result.TotalGames, result.SessionsPlayed);
+            session.Principal!.EffectiveActor.Id, userId, result.TotalGames, result.SessionsPlayed);
 
         return Results.Ok(result);
     }
@@ -552,7 +552,7 @@ internal static class AdminUserActivityEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} resetting password for user {UserId}",
-            session!.User!.Id, userId);
+            session!.Principal!.EffectiveActor.Id, userId);
 
         try
         {
@@ -560,7 +560,7 @@ internal static class AdminUserActivityEndpoints
             await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Password reset successful for user {UserId} by admin {AdminId}",
-                userId, session.User.Id);
+                userId, session.Principal!.EffectiveActor.Id);
 
             return Results.Ok(new { message = "Password reset successful" });
         }
@@ -588,7 +588,7 @@ internal static class AdminUserActivityEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} sending email to user {UserId}",
-            session!.User!.Id, userId);
+            session!.Principal!.EffectiveActor.Id, userId);
 
         try
         {
@@ -596,12 +596,12 @@ internal static class AdminUserActivityEndpoints
                 userId,
                 request.Subject,
                 request.Body,
-                session.User.Id);
+                session.Principal!.EffectiveActor.Id);
 
             await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Email sent to user {UserId} by admin {AdminId}",
-                userId, session.User.Id);
+                userId, session.Principal!.EffectiveActor.Id);
 
             return Results.Ok(new { message = "Email sent successfully" });
         }
@@ -632,25 +632,25 @@ internal static class AdminUserActivityEndpoints
             return Results.BadRequest(new { error = "Impersonation reason is required (minimum 10 characters)" });
 
         logger.LogWarning("⚠️ SuperAdmin {AdminId} attempting to impersonate user {UserId}, reason: {Reason}",
-            session!.User!.Id, userId, request.Reason);
+            session!.Principal!.EffectiveActor.Id, userId, request.Reason);
 
         try
         {
             var command = new ImpersonateUserCommand(
                 userId,
-                session.User.Id,
+                session.Principal!.EffectiveActor.Id,
                 request.Reason.Trim());
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogWarning("⚠️ Impersonation successful: SuperAdmin {AdminId} → User {UserId}",
-                session.User.Id, userId);
+                session.Principal!.EffectiveActor.Id, userId);
 
             return Results.Ok(result);
         }
         catch (ForbiddenException ex)
         {
-            logger.LogWarning(ex, "Forbidden impersonation attempt by {AdminId} on user {UserId}", session.User.Id, userId);
+            logger.LogWarning(ex, "Forbidden impersonation attempt by {AdminId} on user {UserId}", session.Principal!.EffectiveActor.Id, userId);
             return Results.Json(new { error = "forbidden", message = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
         }
         catch (NotFoundException ex)
@@ -676,18 +676,18 @@ internal static class AdminUserActivityEndpoints
         if (!authorized) return error!;
 
         logger.LogWarning("⚠️ Admin {AdminId} ending impersonation session {SessionId}",
-            session!.User!.Id, request.SessionId);
+            session!.Principal!.EffectiveActor.Id, request.SessionId);
 
         var command = new EndImpersonationCommand(
             request.SessionId,
-            session.User.Id);
+            session.Principal!.EffectiveActor.Id);
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         if (result)
         {
             logger.LogWarning("⚠️ Impersonation ended successfully by Admin {AdminId}",
-                session.User.Id);
+                session.Principal!.EffectiveActor.Id);
             return Results.Ok(new EndImpersonationResponse(true, "Impersonation ended successfully"));
         }
 

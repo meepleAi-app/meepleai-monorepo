@@ -81,7 +81,7 @@ internal static class AdminMechanicExtractorValidationEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var curatorId = session.User!.Id;
+            var curatorId = session.Principal!.Subject.Id;
 
             logger.LogInformation(
                 "Admin {AdminId} creating golden claim for shared game {SharedGameId} (section {Section})",
@@ -222,7 +222,7 @@ internal static class AdminMechanicExtractorValidationEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var actorId = session.User!.Id;
+            var actorId = session.Principal!.Subject.Id;
 
             logger.LogInformation(
                 "Admin {AdminId} overriding certification for mechanic analysis {AnalysisId}",
@@ -259,7 +259,7 @@ internal static class AdminMechanicExtractorValidationEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var actorId = session.User!.Id;
+            var actorId = session.Principal!.Subject.Id;
 
             logger.LogInformation(
                 "Admin {AdminId} enqueueing mass recalculation of mechanic analysis metrics",
@@ -313,7 +313,7 @@ internal static class AdminMechanicExtractorValidationEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var actorId = session.User!.Id;
+            var actorId = session.Principal!.Subject.Id;
 
             logger.LogInformation(
                 "Admin {AdminId} requesting cancellation of MechanicRecalcJob {JobId}",
@@ -403,7 +403,7 @@ internal static class AdminMechanicExtractorValidationEndpoints
             CancellationToken ct) =>
         {
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
-            var actorId = session.User!.Id;
+            var actorId = session.Principal!.Subject.Id;
 
             logger.LogInformation(
                 "Admin {AdminId} updating certification thresholds (coverage={Coverage}, pageTol={PageTol}, bgg={Bgg}, overall={Overall})",

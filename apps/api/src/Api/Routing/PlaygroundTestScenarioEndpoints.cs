@@ -89,7 +89,7 @@ internal static class PlaygroundTestScenarioEndpoints
                     Content = m.Content,
                     DelayMs = m.DelayMs
                 }).ToList(),
-                CreatedBy: session.User!.Id,
+                CreatedBy: session.Principal!.Subject.Id,
                 ExpectedOutcome: req.ExpectedOutcome,
                 AgentDefinitionId: req.AgentDefinitionId,
                 Tags: req.Tags);
@@ -98,7 +98,7 @@ internal static class PlaygroundTestScenarioEndpoints
 
             logger.LogInformation(
                 "Created PlaygroundTestScenario {ScenarioId} by user {UserId}",
-                result.Id, session.User!.Id);
+                result.Id, session.Principal!.Subject.Id);
 
             return Results.Created($"/api/v1/admin/playground/scenarios/{result.Id}", result);
         })
@@ -139,7 +139,7 @@ internal static class PlaygroundTestScenarioEndpoints
 
             logger.LogInformation(
                 "Updated PlaygroundTestScenario {ScenarioId} by user {UserId}",
-                id, session.User!.Id);
+                id, session.Principal!.Subject.Id);
 
             return Results.NoContent();
         })
@@ -167,7 +167,7 @@ internal static class PlaygroundTestScenarioEndpoints
 
             logger.LogInformation(
                 "Deactivated PlaygroundTestScenario {ScenarioId} by user {UserId}",
-                id, session.User!.Id);
+                id, session.Principal!.Subject.Id);
 
             return Results.NoContent();
         })

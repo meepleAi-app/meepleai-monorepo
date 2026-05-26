@@ -381,9 +381,9 @@ internal static class GameEndpoints
         // otherwise never see them.
         if (context.Items.TryGetValue(nameof(SessionStatusDto), out var sessionObj) &&
             sessionObj is SessionStatusDto sessionForAgents &&
-            sessionForAgents.User != null)
+            sessionForAgents.Principal?.Subject != null)
         {
-            var agentConfigQuery = new GetGameAgentConfigQuery(sessionForAgents.User.Id, id);
+            var agentConfigQuery = new GetGameAgentConfigQuery(sessionForAgents.Principal!.Subject.Id, id);
             var agentConfig = await mediator.Send(agentConfigQuery, ct).ConfigureAwait(false);
 
             if (agentConfig != null)
@@ -392,7 +392,7 @@ internal static class GameEndpoints
                 // user+game pair always produces the same ID across requests. This prevents
                 // React Query from treating each response as a cache miss (agent.id is used
                 // as cache key in KnowledgeBaseTab via agentDocumentsKeys.byAgent(agent.id)).
-                var userBytes = sessionForAgents.User.Id.ToByteArray();
+                var userBytes = sessionForAgents.Principal!.Subject.Id.ToByteArray();
                 var gameBytes = id.ToByteArray();
                 var deterministicBytes = new byte[16];
                 for (var i = 0; i < 16; i++)
@@ -411,7 +411,7 @@ internal static class GameEndpoints
                     IsRecentlyUsed: false,
                     IsIdle: false,
                     GameId: id,
-                    CreatedByUserId: sessionForAgents.User.Id));
+                    CreatedByUserId: sessionForAgents.Principal!.Subject.Id));
             }
         }
 
@@ -429,9 +429,9 @@ internal static class GameEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        var userId = session!.User!.Id;
-        var userTier = UserTier.Parse(session.User!.Tier);
-        var userRole = Role.Parse(session.User!.Role);
+        var userId = session!.Principal!.Subject.Id;
+        var userTier = UserTier.Parse(session.Principal!.Subject.Tier);
+        var userRole = Role.Parse(session.Principal!.EffectiveActor.Role);
 
         var command = new StartGameSessionCommand(
             GameId: request.GameId,
@@ -954,7 +954,7 @@ internal static class GameEndpoints
             SessionId: sessionId,
             SuggestionId: request.SuggestionId,
             StateChanges: request.StateChanges,
-            UserId: session.User!.Id
+            UserId: session.Principal!.Subject.Id
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -974,9 +974,9 @@ internal static class GameEndpoints
         Guid? userId = null;
         if (context.Items.TryGetValue(nameof(SessionStatusDto), out var sessionObj) &&
             sessionObj is SessionStatusDto session &&
-            session.User != null)
+            session.Principal?.Subject != null)
         {
-            userId = session.User.Id;
+            userId = session.Principal!.Subject.Id;
         }
 
         var query = new GetSimilarGamesQuery(

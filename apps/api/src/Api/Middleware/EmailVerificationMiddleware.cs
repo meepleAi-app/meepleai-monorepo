@@ -87,10 +87,10 @@ internal class EmailVerificationMiddleware
             // Extract user identity from active session
             var (authenticated, session, _) = context.TryGetActiveSession();
 
-            if (!authenticated || session?.User is null)
+            if (!authenticated || session?.Principal?.Subject is null)
                 return null;
 
-            var user = session.User;
+            var user = session.Principal!.Subject;
 
             // Admin, SuperAdmin, and Editor roles are always exempt from email verification
             if (user.Role.Equals("superadmin", StringComparison.OrdinalIgnoreCase) ||

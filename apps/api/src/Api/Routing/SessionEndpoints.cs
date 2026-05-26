@@ -38,11 +38,11 @@ internal static class SessionEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {AdminId} revoking session {SessionId}", session!.User!.Id, sessionId);
+            logger.LogInformation("Admin {AdminId} revoking session {SessionId}", session!.Principal!.Subject.Id, sessionId);
 
             var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeSessionCommand(
                 sessionId,
-                session!.User!.Id,
+                session!.Principal!.Subject.Id,
                 IsRequestingUserAdmin: true,
                 Reason: "Admin revocation"
             );
@@ -68,7 +68,7 @@ internal static class SessionEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
-            logger.LogInformation("Admin {AdminId} revoking all sessions for user {UserId}", session!.User!.Id, userId);
+            logger.LogInformation("Admin {AdminId} revoking all sessions for user {UserId}", session!.Principal!.Subject.Id, userId);
 
             var command = new Api.BoundedContexts.Authentication.Application.Commands.RevokeAllUserSessionsCommand(userId);
             var count = await mediator.Send(command, ct).ConfigureAwait(false);

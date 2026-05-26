@@ -297,10 +297,10 @@ internal sealed class AuditLoggingBehavior<TRequest, TResponse> : IPipelineBehav
         string? email = null;
 
         if (httpContext.Items.TryGetValue(nameof(SessionStatusDto), out var value)
-            && value is SessionStatusDto { IsValid: true, User: not null } session)
+            && value is SessionStatusDto { IsValid: true, Principal: not null } session)
         {
-            userId = session.User.Id.ToString();
-            email = session.User.Email;
+            userId = session.Principal!.Subject.Id.ToString();
+            email = session.Principal!.Subject.Email;
         }
 
         var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();

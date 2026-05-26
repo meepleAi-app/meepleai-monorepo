@@ -39,7 +39,7 @@ namespace Api.Routing;
 /// - <c>.RequireAuthorization("AdminOnlyPolicy")</c>: Standard ASP.NET authorization middleware policy.
 ///   Used for endpoints registered via MapGroup() with policy-based auth.
 /// Both resolve to the same "admin" role check. RequireAdminSession() is preferred in endpoint handlers
-/// that need the session object for auditing (e.g., session.User.Id for logging).
+/// that need the session object for auditing (e.g., session.Principal!.Subject.Id for logging).
 /// </summary>
 internal static class AuthenticationEndpoints
 {
@@ -231,7 +231,7 @@ internal static class AuthenticationEndpoints
                 return Results.Unauthorized();
             }
 
-            // CQRS: materialize the user DTO via MediatR (replaces inline session.User).
+            // CQRS: materialize the user DTO via MediatR (replaces inline session.Principal?.Subject).
             var user = await mediator
                 .Send(new GetCurrentUserQuery(session.SessionId.Value), ct)
                 .ConfigureAwait(false);
@@ -348,7 +348,7 @@ internal static class AuthenticationEndpoints
             // Use CQRS Command to extend session (default 30 days extension)
             var command = new ExtendSessionCommand(
                 dbSession.Id,
-                session!.User!.Id,
+                session!.Principal!.Subject.Id,
                 ExtensionDuration: null  // Use default from Session.DefaultLifetime
             );
             var response = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -369,7 +369,7 @@ internal static class AuthenticationEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var query = new GetUserSessionsQuery(session!.User!.Id);
+            var query = new GetUserSessionsQuery(session!.Principal!.Subject.Id);
             var sessions = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Json(sessions);
         });
@@ -538,7 +538,7 @@ internal static class AuthenticationEndpoints
             var (authenticated, session, error) = context.TryGetActiveSession();
             if (!authenticated) return error!;
 
-            var userId = session!.User!.Id;
+            var userId = session!.Principal!.Subject.Id;
 
             // Get current session token hash for optional exclusion
             // C1 fix: SessionTokenHasher is the single source of truth — must match Session.TokenHash storage.

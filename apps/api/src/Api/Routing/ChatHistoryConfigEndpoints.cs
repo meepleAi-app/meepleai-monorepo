@@ -56,7 +56,7 @@ internal static class ChatHistoryConfigEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation(
             "Admin {UserId} updating chat history limits: Free={Free}, Normal={Normal}, Premium={Premium}",

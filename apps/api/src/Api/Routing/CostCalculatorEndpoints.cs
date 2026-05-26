@@ -85,7 +85,7 @@ internal static class CostCalculatorEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var command = new SaveCostScenarioCommand(
             request.Name,
@@ -117,7 +117,7 @@ internal static class CostCalculatorEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var userId = session!.User!.Id;
+        var userId = session!.Principal!.Subject.Id;
 
         var query = new GetCostScenariosQuery(
             userId,

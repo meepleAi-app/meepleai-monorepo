@@ -217,7 +217,7 @@ internal static class AdminUserActivityDetailEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        logger.LogInformation("Admin {AdminId} fetching activity for user {UserId}", session!.User!.Id, userId);
+        logger.LogInformation("Admin {AdminId} fetching activity for user {UserId}", session!.Principal!.EffectiveActor.Id, userId);
 
         var query = new Api.BoundedContexts.Administration.Application.Queries.GetUserActivityQuery(
             UserId: userId,
@@ -245,7 +245,7 @@ internal static class AdminUserActivityDetailEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} retrieving details for user {UserId}",
-            session!.User!.Id, userId);
+            session!.Principal!.EffectiveActor.Id, userId);
 
         var query = new Api.BoundedContexts.Authentication.Application.Queries.GetUserByIdQuery(userId);
         var user = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -257,7 +257,7 @@ internal static class AdminUserActivityDetailEndpoints
         }
 
         logger.LogInformation("Admin {AdminId} retrieved details for user {UserId}",
-            session.User.Id, userId);
+            session.Principal!.EffectiveActor.Id, userId);
 
         return Results.Ok(user);
     }
@@ -273,13 +273,13 @@ internal static class AdminUserActivityDetailEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} retrieving role history for user {UserId}",
-            session!.User!.Id, userId);
+            session!.Principal!.EffectiveActor.Id, userId);
 
         var query = new GetUserRoleHistoryQuery(userId);
         var history = await mediator.Send(query, ct).ConfigureAwait(false);
 
         logger.LogInformation("Admin {AdminId} retrieved {Count} role changes for user {UserId}",
-            session.User.Id, history.Count, userId);
+            session.Principal!.EffectiveActor.Id, history.Count, userId);
 
         return Results.Ok(history);
     }
@@ -296,7 +296,7 @@ internal static class AdminUserActivityDetailEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} resetting password for user {UserId}",
-            session!.User!.Id, userId);
+            session!.Principal!.EffectiveActor.Id, userId);
 
         try
         {
@@ -304,7 +304,7 @@ internal static class AdminUserActivityDetailEndpoints
             await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Password reset successful for user {UserId} by admin {AdminId}",
-                userId, session.User.Id);
+                userId, session.Principal!.EffectiveActor.Id);
 
             return Results.Ok(new { message = "Password reset successful" });
         }
@@ -332,7 +332,7 @@ internal static class AdminUserActivityDetailEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} sending email to user {UserId}",
-            session!.User!.Id, userId);
+            session!.Principal!.EffectiveActor.Id, userId);
 
         try
         {
@@ -340,12 +340,12 @@ internal static class AdminUserActivityDetailEndpoints
                 userId,
                 request.Subject,
                 request.Body,
-                session.User.Id);
+                session.Principal!.EffectiveActor.Id);
 
             await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogInformation("Email sent to user {UserId} by admin {AdminId}",
-                userId, session.User.Id);
+                userId, session.Principal!.EffectiveActor.Id);
 
             return Results.Ok(new { message = "Email sent successfully" });
         }
@@ -376,25 +376,25 @@ internal static class AdminUserActivityDetailEndpoints
             return Results.BadRequest(new { error = "Impersonation reason is required (minimum 10 characters)" });
 
         logger.LogWarning("⚠️ SuperAdmin {AdminId} attempting to impersonate user {UserId}, reason: {Reason}",
-            session!.User!.Id, userId, request.Reason);
+            session!.Principal!.EffectiveActor.Id, userId, request.Reason);
 
         try
         {
             var command = new ImpersonateUserCommand(
                 userId,
-                session.User.Id,
+                session.Principal!.EffectiveActor.Id,
                 request.Reason.Trim());
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             logger.LogWarning("⚠️ Impersonation successful: SuperAdmin {AdminId} → User {UserId}",
-                session.User.Id, userId);
+                session.Principal!.EffectiveActor.Id, userId);
 
             return Results.Ok(result);
         }
         catch (ForbiddenException ex)
         {
-            logger.LogWarning(ex, "Forbidden impersonation attempt by {AdminId} on user {UserId}", session.User.Id, userId);
+            logger.LogWarning(ex, "Forbidden impersonation attempt by {AdminId} on user {UserId}", session.Principal!.EffectiveActor.Id, userId);
             return Results.Json(new { error = "forbidden", message = ex.Message }, statusCode: StatusCodes.Status403Forbidden);
         }
         catch (NotFoundException ex)
@@ -420,18 +420,18 @@ internal static class AdminUserActivityDetailEndpoints
         if (!authorized) return error!;
 
         logger.LogWarning("⚠️ Admin {AdminId} ending impersonation session {SessionId}",
-            session!.User!.Id, request.SessionId);
+            session!.Principal!.EffectiveActor.Id, request.SessionId);
 
         var command = new EndImpersonationCommand(
             request.SessionId,
-            session.User.Id);
+            session.Principal!.EffectiveActor.Id);
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         if (result)
         {
             logger.LogWarning("⚠️ Impersonation ended successfully by Admin {AdminId}",
-                session.User.Id);
+                session.Principal!.EffectiveActor.Id);
             return Results.Ok(new EndImpersonationResponse(true, "Impersonation ended successfully"));
         }
 

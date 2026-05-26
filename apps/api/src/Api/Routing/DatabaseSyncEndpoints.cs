@@ -121,7 +121,7 @@ internal static class DatabaseSyncEndpoints
             if (!await mediator.Send(new IsFeatureEnabledQuery("Features.DatabaseSync"), ct).ConfigureAwait(false))
                 return Results.Json(new { error = "Database sync feature is disabled" }, statusCode: 403);
 
-            var command = new ApplyMigrationsCommand(request.Direction, request.Confirmation, session!.User!.Id);
+            var command = new ApplyMigrationsCommand(request.Direction, request.Confirmation, session!.Principal!.Subject.Id);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
@@ -178,7 +178,7 @@ internal static class DatabaseSyncEndpoints
             if (!await mediator.Send(new IsFeatureEnabledQuery("Features.DatabaseSync"), ct).ConfigureAwait(false))
                 return Results.Json(new { error = "Database sync feature is disabled" }, statusCode: 403);
 
-            var command = new SyncTableDataCommand(name, request.Direction, request.Confirmation, session!.User!.Id);
+            var command = new SyncTableDataCommand(name, request.Direction, request.Confirmation, session!.Principal!.Subject.Id);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })

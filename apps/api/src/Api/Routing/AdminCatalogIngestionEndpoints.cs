@@ -27,7 +27,7 @@ internal static class AdminCatalogIngestionEndpoints
             if (!authorized) return error!;
 
             var result = await mediator.Send(
-                new ImportGamesFromExcelCommand(file, session!.User!.Id), ct).ConfigureAwait(false);
+                new ImportGamesFromExcelCommand(file, session!.Principal!.Subject.Id), ct).ConfigureAwait(false);
 
             return Results.Ok(result);
         })
@@ -53,7 +53,7 @@ internal static class AdminCatalogIngestionEndpoints
             if (!authorized) return error!;
 
             var result = await mediator.Send(
-                new EnqueueEnrichmentCommand(request.SharedGameIds, session!.User!.Id), ct).ConfigureAwait(false);
+                new EnqueueEnrichmentCommand(request.SharedGameIds, session!.Principal!.Subject.Id), ct).ConfigureAwait(false);
 
             return Results.Ok(result);
         })
@@ -76,7 +76,7 @@ internal static class AdminCatalogIngestionEndpoints
             if (!authorized) return error!;
 
             var result = await mediator.Send(
-                new EnqueueAllSkeletonsCommand(session!.User!.Id), ct).ConfigureAwait(false);
+                new EnqueueAllSkeletonsCommand(session!.Principal!.Subject.Id), ct).ConfigureAwait(false);
 
             return Results.Ok(result);
         })
@@ -189,7 +189,7 @@ internal static class AdminCatalogIngestionEndpoints
             if (!authorized) return error!;
 
             var result = await mediator.Send(
-                new ConfirmExcelImportCommand(request, session!.User!.Id), ct).ConfigureAwait(false);
+                new ConfirmExcelImportCommand(request, session!.Principal!.Subject.Id), ct).ConfigureAwait(false);
 
             return Results.Ok(result);
         })
@@ -213,7 +213,7 @@ internal static class AdminCatalogIngestionEndpoints
             if (!authorized) return error!;
 
             var success = await mediator.Send(
-                new AssignBggIdCommand(request.SharedGameId, request.BggId, session!.User!.Id), ct)
+                new AssignBggIdCommand(request.SharedGameId, request.BggId, session!.Principal!.Subject.Id), ct)
                 .ConfigureAwait(false);
 
             return success

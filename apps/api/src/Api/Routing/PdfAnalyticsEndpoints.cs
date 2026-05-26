@@ -39,7 +39,7 @@ internal static class PdfAnalyticsEndpoints
         var (authorized, session, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var userRole = session.User?.Role ?? "Admin";
+        var userRole = session.Principal?.Subject?.Role ?? "Admin";
 
         var query = new GetPdfAnalyticsQuery(
             TimeRangeDays: Math.Clamp(days, 1, 365),

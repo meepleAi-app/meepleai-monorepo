@@ -51,7 +51,7 @@ internal static class BudgetEndpoints
         if (!authenticated) return error!;
 
         // Self-access only: users can only view their own budget
-        if (session!.User!.Id != userId)
+        if (session!.Principal!.Subject.Id != userId)
         {
             return Results.Forbid();
         }

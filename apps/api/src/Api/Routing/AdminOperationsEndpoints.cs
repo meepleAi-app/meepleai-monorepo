@@ -94,7 +94,7 @@ internal static class AdminOperationsEndpoints
 
             var command = new RestartServiceCommand(
                 ServiceName: request.ServiceName,
-                AdminUserId: session!.User!.Id
+                AdminUserId: session!.Principal!.Subject.Id
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -124,7 +124,7 @@ internal static class AdminOperationsEndpoints
 
             var command = new ImpersonateUserCommand(
                 TargetUserId: request.TargetUserId,
-                AdminUserId: session!.User!.Id,
+                AdminUserId: session!.Principal!.Subject.Id,
                 Reason: "Operations panel impersonation"
             );
 
@@ -156,7 +156,7 @@ internal static class AdminOperationsEndpoints
 
             var command = new Administration.Application.Commands.EndImpersonationCommand(
                 SessionId: request.SessionId,
-                AdminUserId: session!.User!.Id
+                AdminUserId: session!.Principal!.Subject.Id
             );
 
             var success = await mediator.Send(command, ct).ConfigureAwait(false);

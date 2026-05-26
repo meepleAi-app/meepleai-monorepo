@@ -21,7 +21,7 @@ internal static class UserUsageEndpoints
         {
             // Session validated by RequireSessionFilter
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-            var userId = session!.User!.Id;
+            var userId = session!.Principal!.Subject.Id;
 
             var query = new GetUserUsageQuery(userId);
             var usage = await mediator.Send(query, ct).ConfigureAwait(false);

@@ -52,7 +52,7 @@ internal static class RagExecutionAdminEndpoints
 
             logger.LogInformation(
                 "Admin {AdminId} replaying RAG execution {ExecutionId}",
-                session!.User!.Id,
+                session!.Principal!.EffectiveActor.Id,
                 id);
 
             IAsyncEnumerable<RagPipelineTestEvent> eventStream;
@@ -60,7 +60,7 @@ internal static class RagExecutionAdminEndpoints
             {
                 var command = new ReplayRagExecutionCommand(
                     id,
-                    session.User.Id,
+                    session.Principal!.EffectiveActor.Id,
                     request?.Strategy,
                     request?.TopK,
                     request?.Model,
@@ -148,7 +148,7 @@ The replay result is automatically persisted as a new execution linked to the or
 
             logger.LogInformation(
                 "Admin {AdminId} comparing executions {Exec1} and {Exec2}",
-                session!.User!.Id,
+                session!.Principal!.EffectiveActor.Id,
                 request.ExecutionIds[0],
                 request.ExecutionIds[1]);
 
@@ -157,7 +157,7 @@ The replay result is automatically persisted as a new execution linked to the or
                 var query = new CompareRagExecutionsQuery(
                     request.ExecutionIds[0],
                     request.ExecutionIds[1],
-                    session.User.Id);
+                    session.Principal!.EffectiveActor.Id);
 
                 var comparison = await mediator.Send(query, ct).ConfigureAwait(false);
                 return Results.Ok(comparison);

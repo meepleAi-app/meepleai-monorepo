@@ -1,9 +1,11 @@
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Commands;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Enums;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.Administration.Application.Commands;
@@ -31,17 +33,20 @@ internal sealed class ImpersonationStartCommandHandler
     private readonly IUserRepository _userRepository;
     private readonly IMediator _mediator;
     private readonly TimeProvider _timeProvider;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<ImpersonationStartCommandHandler> _logger;
 
     public ImpersonationStartCommandHandler(
         IUserRepository userRepository,
         IMediator mediator,
         TimeProvider timeProvider,
+        IHttpContextAccessor httpContextAccessor,
         ILogger<ImpersonationStartCommandHandler> logger)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -116,13 +121,20 @@ internal sealed class ImpersonationStartCommandHandler
         // requester (actor); ImpersonatedUntil caps the lifetime to DurationMinutes (D-S2-4).
         // No more magic-string IpAddress="impersonated" — the dual-principal columns carry the
         // impersonation state explicitly.
+        //
+        // SP5 S3 spike §5: inherit the actor's LastTotpVerifiedAt into the new impersonate
+        // session. The impersonation MaxAge clock starts from the actor's most recent TOTP
+        // verification — semantically correct (the admin's step-up gates impersonate behavior,
+        // not the target's enrollment).
         var impersonatedUntil = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(command.DurationMinutes);
+        var actorLastTotpVerifiedAt = ExtractCallerLastTotpVerifiedAt();
         var createSessionCommand = new CreateSessionCommand(
             UserId: command.TargetUserId,
             IpAddress: null,
             UserAgent: $"Impersonation by superadmin {requester.DisplayName ?? requester.Email.Value}",
             ImpersonatedByUserId: command.RequestingUserId,
-            ImpersonatedUntil: impersonatedUntil);
+            ImpersonatedUntil: impersonatedUntil,
+            LastTotpVerifiedAt: actorLastTotpVerifiedAt);
 
         var sessionResponse = await _mediator.Send(createSessionCommand, cancellationToken)
             .ConfigureAwait(false);
@@ -140,5 +152,32 @@ internal sealed class ImpersonationStartCommandHandler
             ImpersonatedUserId: command.TargetUserId,
             ImpersonatedUntil: impersonatedUntil,
             ExpiresAt: sessionResponse.ExpiresAt);
+    }
+
+    /// <summary>
+    /// Reads the acting admin's <c>LastTotpVerifiedAt</c> from the current request's session
+    /// (HttpContext-populated by <c>SessionAuthenticationMiddleware</c>). Returns null when no
+    /// session is in scope (defensive; the endpoint is gated by <c>RequireSuperAdmin</c> so this
+    /// path is normally unreachable) or when the actor has no recorded TOTP verification.
+    ///
+    /// SP5 S3 spike §5: enables the new impersonate session to inherit the actor's TOTP recency
+    /// so the strict <c>TwoFactorEnforcementBehavior</c> can gate subsequent commands without a
+    /// separate step-up.
+    /// </summary>
+    private DateTime? ExtractCallerLastTotpVerifiedAt()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext is null)
+        {
+            return null;
+        }
+
+        if (httpContext.Items.TryGetValue(nameof(SessionStatusDto), out var value)
+            && value is SessionStatusDto { IsValid: true } sessionStatus)
+        {
+            return sessionStatus.LastTotpVerifiedAt;
+        }
+
+        return null;
     }
 }

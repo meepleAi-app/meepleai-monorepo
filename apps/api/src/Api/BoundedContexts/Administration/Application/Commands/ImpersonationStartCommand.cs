@@ -41,7 +41,10 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
     Level = 2,
     UserIdSource = AuditUserIdSource.ResourceId)]
 [AtomicAudit]
-[RequireTwoFactor(Reason = "Impersonate other user; HIGH RISK — full target-user session granted.")]
+// SP5 S3 — D-S3-7: tighter 5-min TOTP recency for impersonation (vs the 30-min default for
+// DeleteUser/ChangeRole/Suspend). Impersonation grants a full target-user session, so it
+// warrants the freshest step-up.
+[RequireTwoFactor(MaxAgeMinutes = 5, Reason = "Impersonate other user; HIGH RISK — full target-user session granted.")]
 internal record ImpersonationStartCommand(
     Guid TargetUserId,
     Guid RequestingUserId,

@@ -892,6 +892,7 @@ v1Api.MapAdminAgentAnalyticsEndpoints(); // Issue #4653: Agents analytics for Ad
 v1Api.MapAdminAnalyticsEndpoints();      // Admin analytics: overview, chat, PDF, model performance, MAU
 v1Api.MapAdminOperationsEndpoints();   // Issue #3696: Operations - Service Control Panel
 v1Api.MapAdminImpersonationEndpoints(); // SP5 S2: consolidated impersonation API (start/end/revoke/active)
+v1Api.MapAdminTwoFactorComplianceEndpoints(); // SP5 S3 T6: admin 2FA compliance sweep (GET /admin/users/no-2fa)
 v1Api.MapAdminCategoriesEndpoints();   // Issue #1440: SharedGame categories CRUD
 v1Api.MapAdminInfrastructureEndpoints(); // AI Infrastructure Dashboard: service status, config, restart
 v1Api.MapDatabaseSyncEndpoints();     // Database sync admin panel

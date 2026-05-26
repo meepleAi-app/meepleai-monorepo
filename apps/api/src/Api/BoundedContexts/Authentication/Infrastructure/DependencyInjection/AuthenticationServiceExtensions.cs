@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Application.Configuration;
 using Api.BoundedContexts.Authentication.Application.Services;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -39,6 +40,11 @@ internal static class AuthenticationServiceExtensions
         // Used by StagingAccessMiddleware (active only when ASPNETCORE_ENVIRONMENT=Staging).
         services.AddMemoryCache();
         services.AddSingleton<IStagingAccessGuard, StagingAccessGuard>();
+
+        // SP5 Admin Security S3 — D-S3-1: typed wrapper around the "TwoFactor:StrictMode"
+        // dynamic config flag, consumed by TwoFactorEnforcementBehavior (T4) without per-test
+        // IConfigurationService setup. Scoped because IConfigurationService is scoped.
+        services.AddScoped<ITwoFactorEnforcementConfiguration, TwoFactorEnforcementConfiguration>();
 
         // MediatR handlers are auto-registered via assembly scanning in Program.cs
 

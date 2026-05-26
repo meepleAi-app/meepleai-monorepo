@@ -45,5 +45,11 @@ internal record SessionStatusDto(
     // Carries the subject + actor ids so the middleware can attribute the audit row.
     bool WasImpersonationAutoEnded = false,
     Guid? ImpersonationSubjectUserId = null,
-    Guid? ImpersonationActorUserId = null
+    Guid? ImpersonationActorUserId = null,
+    // SP5 S3 D-S3-3: TOTP recency, read by TwoFactorEnforcementBehavior strict path against
+    // per-command MaxAgeMinutes. Null on (a) password-only login pre-S3, (b) sessions whose
+    // step-up window has not been refreshed, (c) impersonate sessions where the actor had no
+    // verification at the time of impersonation start (rare — ImpersonationStart is itself
+    // [RequireTwoFactor(MaxAgeMinutes=5)] so a fresh value is expected to flow in).
+    DateTime? LastTotpVerifiedAt = null
 );

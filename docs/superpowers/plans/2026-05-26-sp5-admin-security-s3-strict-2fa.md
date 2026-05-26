@@ -107,15 +107,11 @@
 
 ## Task 2: `TwoFactorRequiredException` + ExceptionFilter
 
-- [ ] **Step 1: TDD — unit test su ExceptionFilter mapping**
-
-- [ ] **Step 2: Crea `TwoFactorRequiredException`** in `SharedKernel.Domain.Exceptions` con `Subcode` enum (`StepUpRequired`, `EnrollRequired`, `LockedOut`).
-
-- [ ] **Step 3: Estendi il global exception filter** per mappare → 401 + body `{ error, subcode }` + header `WWW-Authenticate: TOTP-StepUp realm="meepleai-admin"`.
-
-- [ ] **Step 4: Test PASS**
-
-- [ ] **Step 5: Commit**
+- [x] **Step 1: TDD — unit test su ExceptionFilter mapping** — 3 tests in `ApiExceptionHandlerMiddlewareTests` covering StepUpRequired/EnrollRequired/LockedOut subcodes
+- [x] **Step 2: Crea `TwoFactorRequiredException`** — placed in `apps/api/src/Api/Middleware/Exceptions/` (existing convention; NotFoundException/ForbiddenException already live there) with `TwoFactorRequiredSubcode` enum (`StepUpRequired`, `EnrollRequired`, `LockedOut`) + optional `RetryAfterSeconds` for LockedOut + `SubcodeWire` snake_case projection.
+- [x] **Step 3: Estendi il global exception filter** — `HandleTwoFactorRequiredAsync` in `ApiExceptionHandlerMiddleware`: 401 + body `{ error: "two_factor_required", subcode, message, retryAfterSeconds?, correlationId, timestamp }` + `WWW-Authenticate: TOTP-StepUp realm="meepleai-admin"` header per RFC 7235.
+- [x] **Step 4: Test PASS** — 38/38 unit tests verdi (3 nuovi + 35 esistenti)
+- [x] **Step 5: Commit**
 
 ---
 

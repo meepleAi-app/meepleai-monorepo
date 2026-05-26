@@ -89,6 +89,15 @@ internal class ApiExceptionHandlerMiddleware
             return;
         }
 
+        // SP5 Admin Security S3 — D-S3-2: TwoFactorRequiredException maps to 401 + structured
+        // body (error + subcode + optional retryAfterSeconds) + WWW-Authenticate header so the
+        // FE can distinguish step-up-required from session-invalid 401 and open the right modal.
+        if (ex is TwoFactorRequiredException twoFactorEx)
+        {
+            await HandleTwoFactorRequiredAsync(context, twoFactorEx).ConfigureAwait(false);
+            return;
+        }
+
         // Determine status code and error type based on exception type
         var (statusCode, errorType, message) = MapExceptionToResponse(ex);
 
@@ -217,6 +226,43 @@ internal class ApiExceptionHandlerMiddleware
             message = glossaryCollisionException.Message,
             collidingEntryId = glossaryCollisionException.CollidingEntryId,
             collidingTermEn = glossaryCollisionException.CollidingTermEn,
+            correlationId = context.TraceIdentifier,
+            timestamp = DateTime.UtcNow
+        };
+
+        await context.Response.WriteAsJsonAsync(errorResponse).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Handles <see cref="TwoFactorRequiredException"/> with HTTP 401 + structured body
+    /// (<c>error="two_factor_required"</c>, <c>subcode</c>, optional <c>retryAfterSeconds</c>)
+    /// + <c>WWW-Authenticate: TOTP-StepUp realm="meepleai-admin"</c> header. The FE consumes
+    /// the <c>subcode</c> to route to step-up modal / enroll prompt / locked-out toast.
+    /// SP5 Admin Security S3 — D-S3-2 + spec <c>docs/api/2fa-step-up-protocol.md</c>.
+    /// </summary>
+    private async Task HandleTwoFactorRequiredAsync(
+        HttpContext context,
+        TwoFactorRequiredException twoFactorException)
+    {
+        var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
+
+        MeepleAiMetrics.RecordApiError(
+            exception: twoFactorException,
+            httpStatusCode: StatusCodes.Status401Unauthorized,
+            endpoint: endpoint,
+            isUnhandled: false);   // handled by design (security gate, not a bug)
+
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        context.Response.ContentType = "application/json";
+        // RFC 7235 challenge header — distinguishes step-up requirement from password auth 401.
+        context.Response.Headers["WWW-Authenticate"] = "TOTP-StepUp realm=\"meepleai-admin\"";
+
+        var errorResponse = new
+        {
+            error = "two_factor_required",
+            subcode = twoFactorException.SubcodeWire,
+            message = twoFactorException.Message,
+            retryAfterSeconds = twoFactorException.RetryAfterSeconds,
             correlationId = context.TraceIdentifier,
             timestamp = DateTime.UtcNow
         };

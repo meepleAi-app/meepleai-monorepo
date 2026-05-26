@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
+import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
 import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
 import {
   agentToHubItem,
+  chatToHubItem,
   kbDocToHubItem,
   libraryEntryToHubItem,
   sessionToHubItem,
@@ -228,5 +230,54 @@ describe('sessionToHubItem', () => {
   it('returns undefined subtitle when there is no winner', () => {
     const result = sessionToHubItem({ ...baseSession, winnerName: null });
     expect(result.subtitle).toBeUndefined();
+  });
+});
+
+const baseChat: ChatSessionSummaryDto = {
+  id: '00000000-0000-0000-0000-0000000000e1',
+  userId: '00000000-0000-0000-0000-000000000099',
+  gameId: '00000000-0000-0000-0000-0000000000aa',
+  gameTitle: 'Catan',
+  agentId: '00000000-0000-0000-0000-0000000000b1',
+  agentType: 'Tutor',
+  agentName: 'Catan Tutor',
+  title: 'How does the longest road work?',
+  messageCount: 8,
+  lastMessagePreview: 'The road must consist of...',
+  createdAt: '2026-04-22T10:00:00Z',
+  lastMessageAt: '2026-04-22T10:15:00Z',
+  isArchived: false,
+};
+
+describe('chatToHubItem', () => {
+  it('maps a ChatSessionSummaryDto to a ChatHubItem with entity="chat"', () => {
+    const result = chatToHubItem(baseChat);
+    expect(result.entity).toBe('chat');
+    expect(result.id).toBe(baseChat.id);
+    expect(result.title).toBe('How does the longest road work?');
+    expect(result.subtitle).toBe('Catan');
+    expect(result.gameName).toBe('Catan');
+    expect(result.messageCount).toBe(8);
+    expect(result.href).toBe(`/chats/${baseChat.id}`);
+  });
+
+  it('prefers lastMessageAt over createdAt for updatedAt', () => {
+    const result = chatToHubItem(baseChat);
+    expect(result.updatedAt).toBe('2026-04-22T10:15:00Z');
+  });
+
+  it('falls back to createdAt when lastMessageAt is null', () => {
+    const result = chatToHubItem({ ...baseChat, lastMessageAt: null });
+    expect(result.updatedAt).toBe('2026-04-22T10:00:00Z');
+  });
+
+  it('uses agentName as subtitle when gameTitle is null', () => {
+    const result = chatToHubItem({ ...baseChat, gameTitle: null });
+    expect(result.subtitle).toBe('Catan Tutor');
+  });
+
+  it('uses a short-id fallback title when title is null', () => {
+    const result = chatToHubItem({ ...baseChat, title: null });
+    expect(result.title).toBe('Chat 00000000');
   });
 });

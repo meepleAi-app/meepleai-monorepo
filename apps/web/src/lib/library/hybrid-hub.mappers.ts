@@ -15,10 +15,17 @@
  */
 
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
+import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
 import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
-import type { AgentHubItem, GameHubItem, KbHubItem, SessionHubItem } from './hybrid-hub.types';
+import type {
+  AgentHubItem,
+  ChatHubItem,
+  GameHubItem,
+  KbHubItem,
+  SessionHubItem,
+} from './hybrid-hub.types';
 
 /**
  * KbDoc — greenfield FE interface for the cross-game user KB listing.
@@ -94,5 +101,18 @@ export function sessionToHubItem(session: GameSessionDto): SessionHubItem {
     gameName: undefined,
     status: session.status,
     playerCount: session.playerCount,
+  };
+}
+
+export function chatToHubItem(chat: ChatSessionSummaryDto): ChatHubItem {
+  return {
+    id: chat.id,
+    entity: 'chat',
+    title: chat.title ?? `Chat ${chat.id.slice(0, 8)}`,
+    subtitle: chat.gameTitle ?? chat.agentName ?? undefined,
+    updatedAt: chat.lastMessageAt ?? chat.createdAt,
+    href: `/chats/${chat.id}`,
+    gameName: chat.gameTitle ?? undefined,
+    messageCount: chat.messageCount,
   };
 }

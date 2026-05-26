@@ -14,14 +14,20 @@ a **6-tab hybrid hub** surfacing all the user's entities (games, agents, KB docs
 sessions, chats) in one grid + an activity sidebar.
 
 ### Dispatch strategy
-3 implementation phases after this contract merges:
-- **Phase 1 (Foundation)** — `HybridHubItem` union + per-entity mappers +
-  `LibraryEntityKey` 3→6 expansion + `LibraryTabs`/`LibraryHybridGrid` prop
-  adaptation + unit tests. No new network calls (uses existing hooks).
+3 FE phases + 3 BE work items, intertwined (see §10 for issue tracking):
+- **Phase 1 (Foundation) — FE-only, NO BE dependency** — `HybridHubItem` union +
+  per-entity mappers + `LibraryEntityKey` 3→6 expansion (single SSOT in the
+  domain) + `LibraryTabs`/`LibraryHybridGrid` prop adaptation + unit tests. **Can
+  start immediately**, in parallel with BE work. → **#1591**
+- **BE-1 / BE-2 / BE-3** — backend prerequisites for Phase 2 (kb tab + agents
+  scope) and Phase 3 (activity rail). See §6 resolved questions + §10. →
+  **#1588 / #1589 / #1590**
 - **Phase 2 (Surface)** — multi-query orchestration in `LibraryHub` + Hero
   enrichment (badge/subtitle/4 stat chips/Importa BGG+Esporta) + `CrossEntityFilters`.
-- **Phase 3 (Advanced)** — `AdvancedFiltersDrawer` (standalone reusable) +
-  `RecentActivityRail` cross-entity population.
+  Depends on BE-1 (kb tab) and BE-2 (agents tab); games/sessions/chat parts are
+  unblocked and can land first. → **#1592**
+- **Phase 3 (Advanced)** — `AdvancedFiltersDrawer` (standalone reusable, no BE
+  dep) + `RecentActivityRail` cross-entity (depends on BE-3). → **#1593**
 
 ### Why a contract first
 Wave B.3 reduced scope to ship fast (decision C2+C3). Re-expanding touches the
@@ -128,7 +134,7 @@ away, the state filters just move from tabs to chips.
 | Sessions | `useActiveSessions(limit)` | `GET /sessions/active` | `PaginatedSessionsResponse` | ✅ reuse |
 | Chats | `useRecentChatSessions(limit)` | `api.chatSessions.getRecent` | `ChatSession[]` | ✅ reuse |
 | KB (per-game) | `useUserKbStatus(gameId)` / `useGamePdfs(gameId)` | per-game | `GamePdfDto[]` | ⚠️ per-game only — see Q1 |
-| KB (global) | `useUserKbDocs()` | TBD | `KbDoc[]` | ❌ greenfield (blocks on Q1) |
+| KB (global) | `useUserKbDocs()` | `GET /kb-docs?userId` (BE-1) | `KbDoc[]` | ❌ greenfield → **BE-1 #1588** |
 | Union + mappers | `lib/library/hybrid-hub.{types,mappers}.ts` | — | `HybridHubItem` | ❌ greenfield |
 | 6-tab key | expand `LibraryEntityKey` | — | type | ❌ greenfield |
 
@@ -139,7 +145,7 @@ LibraryHub
  ├─ useAgents()           → agents[]  → agentToHubItem
  ├─ useActiveSessions()   → sessions[]→ sessionToHubItem
  ├─ useRecentChatSessions()→ chats[]  → chatToHubItem
- ├─ useUserKbDocs()       → kb[]      → kbDocToHubItem        (greenfield, Q1)
+ ├─ useUserKbDocs()       → kb[]      → kbDocToHubItem        (greenfield, via BE-1 #1588)
  ├─ useLibraryActivity()  → activity[] (RecentActivityRail)
  └─ useMemo: merge all → filter by tab+query → sort by sortKey → HybridHubItem[]
 ```
@@ -167,27 +173,52 @@ client-side global pagination (it would require the Q2 aggregated endpoint).
 | `AdvancedFiltersDrawer` | **greenfield, standalone reusable**: `{open,onClose,sections[],activeFilters,onApply,entityScope}` | reusable for /games, /agents future |
 | `RecentActivityRail` | populate cross-entity (Q3) + Shortcuts section | currently library-only activity |
 
-## §6. Open questions (MUST resolve before Phase 1/2 dispatch)
+## §6. Resolved questions (panel decisions 2026-05-26 — see §10 for issue tracking)
 
-1. **KB global hook** — `useKbHub` is per-game (`useGamePdfs(gameId)`). The hub
-   needs *all* the user's KB docs. Is there a `GET /kb-docs?userId` or must we
-   add one? **Coordinate with #1482 (kb-globale)** — likely shares the same
-   greenfield `useUserKbDocs` + BE cross-game query. ⛔ blocks the `kb` tab.
-2. **Aggregated endpoint** — client-side 6-query fan-out (zero BE, 6 round-trips,
-   TanStack-cached) vs new `GET /library/hub` (1 payload, BE CQRS work). v1 =
-   client-side with per-source cap (~20) in `all` + full pagination in the single
-   tabs (see §4 merge cardinality); measure, add the endpoint only if perf demands
-   or global cross-entity pagination becomes a requirement.
-3. **Activity feed scope** — `useLibraryActivity` emits library events only
-   (added/state-changed/removed/session-recorded). Cross-entity timeline (agent
-   created, chat started) needs BE `domain_event_logs` projection extension, or
-   keep library-scoped for v1?
-4. **CrossEntityFilters facets** — which dimensions per entity? Games have state
-   (`Owned/Wishlist/InPrestito` + `with-KB`, inherited from the ex-`loaned`/`kb`
-   tabs)/rating/players; agents have type/active; sessions have status. A shared
-   facet set vs entity-conditional facets (drives `AdvancedFiltersDrawer` sections).
-5. **RBAC / visibility** — any entity-type the user shouldn't see in their own
-   hub? (Assumed no — all owned by the user — but confirm for shared/loaned games.)
+Resolved via a socratic spec panel grounded in BE exploration (Fowler / Newman /
+Hohpe / Nygard / Wiegers). Each decision is verified against real `.NET` code
+(`file:line` references live in the linked issue bodies).
+
+1. **KB global hook** — ✅ **Resolved**: new endpoint `GET /kb-docs?userId`
+   (list cross-game per-user, paginated, filters `PdfDocumentEntity` by
+   `UploadedByUserId` — the field exists). FE hook `useUserKbDocs()` greenfield.
+   **Distinct from #1482's semantic search** (search ≠ list); they share infra,
+   not the endpoint, so #1585 is no longer coupled to #1482's delivery.
+   → **BE-1 #1588**.
+2. **Aggregated endpoint** — ✅ **Resolved**: client-side fan-out (zero BE work).
+   6 parallel queries TanStack-cached, cap ~20/source in `all` (cross-entity
+   dashboard), full pagination in the single tabs (see §4 merge cardinality).
+   Evidence supporting the decision: `GET /dashboard` V1 was the mega-aggregate
+   precedent — and is deprecated; degradazione parziale > tutto-o-niente on a
+   6-source surface. Re-evaluate only if a measured perf problem or global
+   cross-entity pagination becomes a requirement.
+3. **Activity feed scope** — ✅ **Resolved (forward-only)**: extend
+   `EventTypeRegistry` to register domain events from Agent / Chat / KB /
+   Session BCs (in addition to the 2 library events already registered).
+   Generalize the activity endpoint/DTO from `gameId/gameTitle` to
+   `entityType/entityId/title`. **No backfill**: the rail starts empty for
+   pre-deploy entities and populates forward from deploy — acceptable for a
+   "recent activity" rail. The runtime fan-out via `ActivityTimelineService`
+   (Administration BC) was the alternative considered but not chosen (less
+   durable). → **BE-3 #1590**.
+4. **CrossEntityFilters facets** — ✅ **Resolved**: **entity-conditional**
+   facets (per-tab). Each tab exposes only its own filters; the `all` tab keeps
+   only search + sort globals. `AdvancedFiltersDrawer` renders sections per
+   `entityScope`. Reflects the heterogeneous DTO fields (no logical intersection
+   to force-share):
+   - `games`: `state` (`Owned/Wishlist/InPrestito` + `with-KB`, inherited from
+     the ex-`loaned`/`kb` tabs) / rating / players / year / complexity
+   - `agents`: `Type` / `IsActive` / `IsRecentlyUsed`
+   - `sessions`: `Status` / `SessionType` / `Participants.Count`
+   - `kb`: `processingState` / `pageCount`
+   - `chat`: `messageCount`
+5. **RBAC / visibility** — ✅ **Resolved**: almost all entities are properly
+   user-scoped (`GET /library`, KB endpoints, chat-threads, sessions). Loaned
+   and shared games are **not** a hub concern (loaned games stay in the owner's
+   library; `/library/shared/{token}` is a public token-based surface, out of
+   hub scope). **One real finding**: `GET /agents` is *global* (not user-scoped)
+   — the hub's `agents` tab must therefore filter to **agents whose
+   `GameId ∈ caller's library`** ("assistants for my games"). → **BE-2 #1589**.
 
 ## §7. Bundle budget
 Phase 2/3 lazy-split the `AdvancedFiltersDrawer` (Radix Dialog) to keep the
@@ -215,3 +246,27 @@ drawer chunk ≤ +60KB loaded on demand.
 - AC8 — no regression to `/library/wishlist` or MiniNav shell config.
 - AC9 — bulk-selection (archive) available only in the `games` tab; all other tabs
   (incl. `all`) are always `browse` (no `BulkSelectionBar` mounted).
+
+## §10. Implementation plan (issues)
+
+§6 resolutions translate into the following tracked work.
+
+### BE work (prerequisites for the FE phases that depend on them)
+| Item | Goal | Unblocks |
+|---|---|---|
+| **BE-1 #1588** | `GET /kb-docs?userId` (list cross-game per-user, paginated) | `kb` tab in Phase 2 |
+| **BE-2 #1589** | `GET /agents` scoped to caller's library games (`GameId ∈ library`) | `agents` tab in Phase 2 |
+| **BE-3 #1590** | Extend `EventTypeRegistry` (Agent/Chat/KB/Session) + generalize activity endpoint/DTO — forward-only | `RecentActivityRail` in Phase 3 |
+
+### FE phases
+| Phase | Issue | Depends on |
+|---|---|---|
+| **Phase 1 — Foundation** | **#1591** | — (FE-only, **start immediately** in parallel with BE work) |
+| **Phase 2 — Surface** | **#1592** | BE-1 #1588 (kb tab), BE-2 #1589 (agents tab); games/sessions/chat parts unblocked |
+| **Phase 3 — Advanced** | **#1593** | BE-3 #1590 (rail); the `AdvancedFiltersDrawer` is unblocked |
+
+### Critical path
+- **Phase 1 is unblocked now** (FE-only) — open it in parallel with the BE work.
+- The longest path to AC1-AC9 completion runs through **BE-3 → Phase 3 rail**
+  (the `EventTypeRegistry` extension touches 4 bounded contexts and is the
+  largest single BE work item).

@@ -332,6 +332,15 @@ Effort: ~2-3 h. Annotation richiede leggere ogni `.section` per assegnare `data-
 
 - **Visual regression auto** per gli standalone (richiede ripristino del visual gate rimosso — fuori scope, vedi CLAUDE.md § Active Freezes).
 - **Integration con il navigation toolchain** (`build_map.py`/`apply_map.py` per fare anche gli standalone navigabili da `index.html`). Possibile, non urgente.
+- **JS-rendered posters**: `meeple-card-drawer-tabs-mockup.html` rende i phone via `setH('mockup-row', '<div class="mockup-col">...')` runtime (vedi riga ~220). Il parser stdlib del nostro script vede solo il DOM statico iniziale (vuoto). Richiede strategia diversa: Playwright DOM export (post-`renderAll()`) → freeze HTML → split via script statico. Differito a un PR successivo.
+
+### Pilot/Wave run log
+
+| Wave | Date | Poster | Outputs | Notes |
+|---|---|---|---|---|
+| Pilot | 2026-05-26 | `dashboard-new-user-mockup.html` | `dashboard-new-user.html` | merge-sections, 3 phones stacked (per scelta utente — refinement vero-merge differito) |
+| 1 | 2026-05-26 | `mobile-card-layout-mockup.html` | `mobile-card--card-view-focus.html`, `mobile-card--drawer-view.html` | per-variant, OK |
+| 1 (deferred) | — | `meeple-card-drawer-tabs-mockup.html` | — | **Skip**: phone generati via JS runtime, parser statico non li vede. Vedi § Out-of-scope. |
 
 ## Open Questions — Decisions log
 

@@ -8,6 +8,8 @@
 
 **Predecessor:** S1 (PR #1532, commit `fffe55fc7` su `main-dev`). S2 popola `_currentUserService.ImpersonatedUserId` che `AuditLoggingBehavior` legge già. Convenzione: `audit_logs.user_id` = subject, `impersonated_user_id` = actor.
 
+**⚠️ Legacy refactor in scope (scoperto in T0 spike, 2026-05-26):** il codebase ha già un sistema di impersonation (issues #3349/#2890): `ImpersonateUserCommand` + `EndImpersonationCommand` + endpoint `/admin/users/{id}/impersonate` + 3 path che scrivono `audit_logs` direttamente bypassando l'outbox S1. **Decisione utente: refactor in-place + tightening** — rinominare i command esistenti, dismantling delle 3 `_auditLogRepository.AddAsync`, eligibility tightening (admin OR superadmin → superadmin only). Dettagli in `audits/2026-05-26-s2-spike-cluster-classification.md`.
+
 **Out of scope:**
 - ❌ FE banner UI / actor indicator — plan FE separato; il wire format JSON è già pronto in T1.
 - ❌ Cache-backed session invalidation (Redis + LISTEN/NOTIFY) — il SELECT per-request basta; ottimizzazione follow-up.
@@ -45,33 +47,38 @@
 
 ---
 
-## Task 0: Spike — DTO contract + codemod plan
+## Task 0: Spike — Legacy inventory + Principal refactor blueprint ✅ DONE
 
-> **Tipo Task:** spike read-only + design doc. Nessun codice di prodotto; output = il refactor blueprint per T2.
+> **Tipo Task:** spike read-only + design doc. Nessun codice di prodotto; output = il refactor blueprint per T1-T3.
 
-- [ ] **Step 1: Conferma classificazione dei 4 cluster sui 39 call site noti dal three-amigos**
+**Output:** `audits/2026-05-26-s2-spike-cluster-classification.md`
 
-  Per ognuno dei 39 call site identificati (C1 audit-attribution × 6, C2 authorization × 9, C3 resource-ownership × 23, C4 rate-limit × 1), conferma la classificazione leggendo il contesto e annotando la decisione subject vs actor. Output: tabella in `audits/2026-05-25-s2-spike-cluster-classification.md`.
+- [x] **Step 1: Inventory del sistema legacy esistente (#3349/#2890)**
 
-- [ ] **Step 2: Identifica i pattern di estrazione (~355 occorrenze residue)**
+  Scoperto: `ImpersonateUserCommand` + handler + `EndImpersonationCommand` + handler + 2 endpoint already shipped. 3 path scrivono `audit_logs` direttamente via `IAuditLogRepository.AddAsync` bypassando l'outbox S1 (#1534). UserSessionEntity mono-principale, segnalata via hack `IpAddress="impersonated"`. Dettaglio: spike doc §1.
 
-  Le ~355 occorrenze restanti sono pattern di estrazione (`if session?.User == null`, `is SessionStatusDto { IsValid: true, ... }`). Verifica che siano TUTTE coperte da una singola sostituzione meccanica `session.User` → `session.Principal.Subject`. Documenta eventuali pattern fuori-norma nel doc spike.
+- [x] **Step 2: Gap analysis vs 6 decisioni S2 (D-S2-1..6)**
 
-- [ ] **Step 3: Sketch del codemod**
+  Mappata per ogni decisione la differenza tra legacy state e S2 target + il refactor richiesto. Dettaglio: spike doc §2. **Decisione utente: refactor in-place + tightening** (eligibility admin OR superadmin → solo superadmin; dismantling delle 3 `AddAsync`).
 
-  Decidi se usare:
-  - (a) IDE refactor (Rename `User`→`Principal.Subject` via Roslyn) — più sicuro, manuale.
-  - (b) `sed` script sui 79 file — veloce, da verificare con build.
-  - (c) Mix: IDE rename per il rename del campo + manuale per i 15 punti C1+C2 che richiedono `Actor ?? Subject`.
+- [x] **Step 3: Classificazione di tutti i call site funzionali**
 
-  Raccomando **(c)**. Documenta lo script + checklist nello spike doc.
+  Inventario reale di 100 occorrenze concrete di `session.User.X` (la stima iniziale di "39 call site" era off), classificate in 4 cluster:
+  - **Cluster A** (audit/log attribution → EffectiveActor): 58 lines
+  - **Cluster B** (authorization → EffectiveActor): 5 lines
+  - **Cluster C** (resource ownership → Subject): 22 lines
+  - **Cluster D** (rate-limit/quota → Subject): 6 lines
+  - **Special** (AuditLoggingBehavior stays Subject by intent): 4 lines
 
-- [ ] **Step 4: Commit spike doc**
+  + ~294 occorrenze pattern-of-extraction (null check, pattern match) gestibili da codemod Wave 1 meccanico. Dettaglio: spike doc §3.
 
-  ```bash
-  git add audits/2026-05-25-s2-spike-cluster-classification.md
-  git commit -m "docs(impersonation): T0 spike — Principal refactor blueprint (SP5 S2 T0)"
-  ```
+- [x] **Step 4: Codemod plan in 3 Wave**
+
+  Wave 1 mechanical rename (`session.User.X` → `session.Principal.Subject.X`, ~349 occorrenze in 79 file). Wave 2 semantic disambiguation per cluster A+B (63 lines → `EffectiveActor`). Wave 3 legacy handler dismantling. Dettaglio: spike doc §4.
+
+- [x] **Step 5: Commit spike doc + amend kickoff + plan**
+
+  Eseguito nel medesimo commit (atomicità della scoperta + decisione).
 
 ---
 
@@ -257,7 +264,9 @@
 
 ---
 
-## Task 3: `ImpersonationStartCommand` + handler
+## Task 3: Rinomina + riscrivi `ImpersonateUserCommand` → `ImpersonationStartCommand`
+
+> **Refactor in-place** del legacy (Wave 3 dello spike). Effettivamente è rename + handler rewrite + endpoint redirect.
 
 - [ ] **Step 1: TDD — scrivi unit test del handler**
 
@@ -284,21 +293,35 @@
 
   Run → confirm FAIL (command non esiste).
 
-- [ ] **Step 2: Crea il comando + attributi**
+- [ ] **Step 2: Rinomina legacy + applica attributi nuovi**
+
+  Move/rename:
+  - `ImpersonateUserCommand.cs` → `ImpersonationStartCommand.cs`
+  - `ImpersonateUserCommandHandler.cs` → `ImpersonationStartCommandHandler.cs`
+  - `ImpersonateUserCommandValidator.cs` → `ImpersonationStartCommandValidator.cs`
+
+  Aggiorna la signature + decorators:
 
   ```csharp
+  // Legacy:
+  // [RequireTwoFactor(Reason="...")]
+  // internal record ImpersonateUserCommand(Guid TargetUserId, Guid AdminUserId, string Reason) : ICommand<ImpersonateUserResponseDto>;
+
+  // S2:
   [AuditableAction("ImpersonationStarted", "Session", Level = 2)]
   [AtomicAudit]   // la creazione della session DEVE essere audited atomically
   [RequireTwoFactor(Reason = "Impersonate other user; sensitive action.")]
   internal record ImpersonationStartCommand(
       Guid TargetUserId,
-      Guid RequestingUserId,    // dal session principal — l'admin reale
+      Guid RequestingUserId,        // was AdminUserId — rename per consistency with other admin commands
       string Reason,
-      int DurationMinutes = 15
+      int DurationMinutes = 15      // NEW — cap enforced by validator
   ) : ICommand<ImpersonationStartResult>;
 
   internal record ImpersonationStartResult(Guid SessionId, DateTime ImpersonatedUntil);
   ```
+
+  Add to `using` migrations doc: legacy callers that referenced `AdminUserId` as a public-ish field — none expected outside the BC.
 
 - [ ] **Step 3: Crea il validator (FluentValidation)**
 
@@ -309,30 +332,35 @@
   RuleFor(x => x.DurationMinutes).InclusiveBetween(5, 60); // soft range; cap from SystemConfiguration
   ```
 
-- [ ] **Step 4: Implementa il handler**
+- [ ] **Step 4: Riscrivi il handler**
 
-  Eligibility checks (D-S2-1):
-  1. `requester.Role == "superadmin"` else `caller_not_authorized` (403)
-  2. `requester.Id != target.Id` else `cannot_impersonate_self`
-  3. `target.Role != "superadmin"` else `cannot_impersonate_peer_or_higher`
-  4. `target.Status == "Active"` else `target_account_ineligible`
-  5. `target.IsDemoAccount == false` else `target_account_ineligible`
+  Eligibility checks (D-S2-1) — **tightened from legacy**:
+  1. `requester.Role == "superadmin"` else `caller_not_authorized` (403) — **legacy accettava `admin` too; rimuovi il path `adminLevel < 3` (riga 65-68 del legacy)**
+  2. `requester.Id != target.Id` else `cannot_impersonate_self` — **nuovo**, mancava nel legacy
+  3. `target.Role != "superadmin" && target.Role != "admin"` else `cannot_impersonate_peer_or_higher` — il legacy già lo fa (linee 86-93), mantieni
+  4. `target.IsSuspended == false` else `target_account_ineligible` — il legacy lo fa (linee 79-82), mantieni
+  5. `target.IsDemoAccount == false` else `target_account_ineligible` — **nuovo**
+  6. `target.Status != "Banned"` else `target_account_ineligible` — **nuovo** (check `UserEntity.Status` introdotto da Epic #4068)
 
-  Crea `UserSessionEntity`:
+  **Dismantle manuale audit:** rimuovi le 2 `_auditLogRepository.AddAsync` (linee 140-141 del legacy). Il `[AuditableAction]` via `AuditLoggingBehavior` scrive l'outbox row con `user_id=target (subject)`, `impersonated_user_id=requester (actor)`, action `"ImpersonationStarted"`.
+
+  Crea `UserSessionEntity` (NUOVO — sostituisce il `CreateSessionCommand` legacy con `IpAddress="impersonated"` hack):
   ```csharp
   var session = new UserSessionEntity
   {
       Id = Guid.NewGuid(),
-      UserId = target.Id,                          // subject
-      ImpersonatedByUserId = requester.Id,         // actor
-      ImpersonatedUntil = now + cappedDuration,
+      UserId = target.Id,                          // subject (come legacy)
+      ImpersonatedByUserId = requester.Id,         // NEW (T1 column)
+      ImpersonatedUntil = now + cappedDuration,    // NEW (T1 column)
       ExpiresAt = now + cappedDuration,            // mirror per session-expiry logic esistente
       TokenHash = HashSessionToken(generated),
+      IpAddress = httpContext.IpAddress,           // real IP — NO MORE "impersonated" magic string
+      UserAgent = httpContext.UserAgent,           // real UA
       CreatedAt = now,
-      // ... existing fields
+      User = target,
   };
   _dbContext.UserSessions.Add(session);
-  // SaveChanges in pipeline (AtomicAudit handles transaction)
+  // SaveChanges in pipeline ([AtomicAudit] handles transaction)
   ```
 
 - [ ] **Step 5: Errors → exceptions**
@@ -429,7 +457,7 @@
 
 ---
 
-## Task 6: Read endpoints
+## Task 6: Read endpoints + legacy URL redirect
 
 - [ ] **Step 1: `GetActiveImpersonationsQuery` + handler**
 
@@ -442,7 +470,7 @@
 
   Usa l'indice filtrato (T1 step 2).
 
-- [ ] **Step 2: Endpoints**
+- [ ] **Step 2: Endpoints (nuovi)**
 
   ```csharp
   // apps/api/src/Api/Routing/Admin/AdminImpersonationEndpoints.cs
@@ -455,9 +483,22 @@
 
   Tutti gli endpoint usano `IMediator.Send()` (CLAUDE.md CQRS rule).
 
-- [ ] **Step 3: Test integration (smoke)**
+- [ ] **Step 3: Legacy endpoint redirect (1 release cycle)**
 
-- [ ] **Step 4: Commit**
+  In `AdminUserActivityEndpoints.cs`, sostituisci `HandleImpersonateUser` con un 308 Permanent Redirect verso il nuovo endpoint:
+  ```csharp
+  group.MapPost("/admin/users/{userId:guid}/impersonate", (Guid userId) =>
+      Results.Extensions.PermanentRedirect("/api/v1/admin/impersonation/start", preserveMethod: true))
+      .WithSummary("DEPRECATED — use POST /api/v1/admin/impersonation/start");
+  ```
+
+  Lo stesso per `/admin/impersonation/end` (mantieni il path nuovo, sposta il vecchio handler). **Rimuovi entrambi i redirect in un follow-up issue dopo 1 release cycle.**
+
+- [ ] **Step 4: Test integration (smoke)**
+
+  Test che il redirect funzioni + il body POST sopravviva.
+
+- [ ] **Step 5: Commit**
 
 ---
 

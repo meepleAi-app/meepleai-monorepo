@@ -16,7 +16,18 @@ Facilitato come spec-panel three-amigos kickoff (Gregory facilitator; Fowler BE-
 - `[AuditableAction]` + `[AtomicAudit]` + outbox processor → quando l'admin impersona ed esegue un comando distruttivo, l'audit lo cattura naturalmente via il behavior, senza nuove primitives.
 - Convenzione `audit_logs.user_id` = soggetto funzionale, `impersonated_user_id` = attore reale (vedi query forensica in S1 §Sblocco di S2).
 
-**Goal generale S2:** introdurre l'impersonation token + dual-principal in `SessionStatusDto`, con start/end/revoke audited e un gauge operazionale per il kill-switch superadmin.
+## ⚠️ Legacy impersonation system già live (scoperto in T0 spike, 2026-05-26)
+
+Il codebase ha già un'implementazione di impersonation in produzione (issues **#3349 / #2890**):
+- `ImpersonateUserCommand(TargetUserId, AdminUserId, Reason)` + handler
+- Endpoint `POST /admin/users/{userId}/impersonate` (gate `RequireSuperAdminSession`) + `POST /admin/impersonation/end` (`RequireAdminSession`)
+- `EndImpersonationCommand` + handler con `RevokeSessionCommand` interno
+- **3 path duplicate** che scrivono `audit_logs` direttamente via `IAuditLogRepository.AddAsync` bypassando l'outbox S1 (questo è il caso #1534)
+- Sessione mono-principale: `UserSessionEntity.UserId=target`, con `IpAddress="impersonated"` come signal hack
+
+**Decisione utente (2026-05-26): Refactor in-place + tightening.** Manteniamo tutte le 6 decisioni (incluso D-S2-1 superadmin-only) e dismantliamo i 3 manual `AddAsync` in favore di `[AuditableAction]` via behavior. I file legacy vengono rinominati e riscritti in T3 — vedi spike doc `audits/2026-05-26-s2-spike-cluster-classification.md` §4 Wave 3 per il dettaglio.
+
+**Goal generale S2:** integrare l'impersonation esistente con il dual-principal pattern + l'audit outbox di S1; aggiungere expiry cap 15min, revoke kill-switch, e dismantle le 3 scritture audit dirette legacy.
 
 ---
 

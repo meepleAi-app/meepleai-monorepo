@@ -166,23 +166,21 @@
 
 ## Task 5: Step-up endpoint + DB-backed rate-limit
 
-- [ ] **Step 1: TDD — scenari S3-4 + S3-5**
+> **DONE** — commit `240f7c1b5`. Steps 3-4 CANCELED post-T0 (riuso Redis rate-limit/lockout di `TotpService.VerifyCodeAsync`; nessuna nuova tabella né rate-limiter). Acceptance E2E completi S3-4/S3-5 (HTTP + audit_outbox + re-POST del comando bloccato) → T8.
 
-- [ ] **Step 2: `StepUpTwoFactorCommand` + handler**
+- [x] **Step 1: TDD — scenari S3-4 + S3-5** — coperti a livello handler unit: `StepUpTwoFactorCommandHandlerTests` (success / invalid / lockout / vanished-session / null) + `StepUpTwoFactorCommandValidatorTests` (not-empty + length). 11/11 PASS. Acceptance HTTP+audit_outbox → T8.
 
-  Verifica TOTP code (riusa la library 2FA esistente), update `session.LastTotpVerifiedAt`, emit audit `TwoFactorStepUp`.
+- [x] **Step 2: `StepUpTwoFactorCommand` + handler** — delega a `ITotpService.VerifyCodeAsync`; success refresh `LastTotpVerifiedAt` (via `ISessionRepository.UpdateLastTotpVerifiedAtAsync`, atomic ExecuteUpdate) + audit `TwoFactorStepUp`; lockout pre-check (`IsLockedOutAsync`) → 429 + retryAfterSeconds=900 + audit `TwoFactorStepUpLockout`.
 
-- [ ] **Step 3: `TwoFactorStepUpAttemptEntity` + migration**
+- [x] ~~**Step 3: `TwoFactorStepUpAttemptEntity` + migration**~~ — **CANCELED post-T0**: Redis bucket di `TotpService` è authoritative.
 
-  Tabella tracking attempts per rate-limit cross-instance (5/min, lockout 15min).
+- [x] ~~**Step 4: `TwoFactorStepUpRateLimiter`**~~ — **CANCELED post-T0**: riuso rate-limit/lockout di `VerifyCodeAsync`.
 
-- [ ] **Step 4: `TwoFactorStepUpRateLimiter`** — DB counter (pattern `BggRateLimitMiddleware`).
+- [x] **Step 5: Endpoint** — `POST /auth/2fa/step-up` (group prefix; path pubblico finale da confermare in T7 wire-doc), `IMediator.Send` only (CQRS), `EffectiveActor`-gated, mapping Success→200 / InvalidCode→401 / LockedOut→429.
 
-- [ ] **Step 5: Endpoint `POST /api/v1/auth/2fa/step-up`** — `IMediator.Send` only (CQRS).
+- [x] **Step 6: Test PASS** — 11/11.
 
-- [ ] **Step 6: Test PASS**
-
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit** — `240f7c1b5`.
 
 ---
 

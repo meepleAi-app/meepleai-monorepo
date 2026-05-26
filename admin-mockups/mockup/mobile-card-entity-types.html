@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MeepleAI — Card Types nel Layout Mobile</title>
+<!-- Split annotation: see docs/for-developers/specs/2026-05-26-mockup-poster-split.md -->
+<meta name="mockup-split-mode" content="per-variant">
+<meta name="mockup-output-prefix" content="mobile-card-entity">
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* ═══ DESIGN TOKENS ═══ */
@@ -366,7 +369,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   <div class="phone-col">
     <span class="phone-label" style="color:hsl(25,95%,45%);">● Game — Libreria</span>
     <span class="phone-sublabel">MeepleLibraryGameCard · Cover + rating + meta + flip + 6 quick actions</span>
-    <div class="phone">
+    <div class="phone" data-variant="game">
       <div class="sbar"><span class="t">14:32</span><div class="i"><span>📶</span><span>🔋</span></div></div>
       <div class="nav">
         <div class="logo"><div class="d" style="background:hsl(25,95%,45%);">🎲</div> MeepleAI</div>
@@ -441,7 +444,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   <div class="phone-col">
     <span class="phone-label" style="color:hsl(240,60%,55%);">● Session — In Corso</span>
     <span class="phone-sublabel">MeepleSessionCard · No cover, status + giocatori + punteggi + 7 quick actions</span>
-    <div class="phone">
+    <div class="phone" data-variant="session">
       <div class="sbar"><span class="t">14:32</span><div class="i"><span>📶</span><span>🔋</span></div></div>
       <div class="nav">
         <div class="logo"><div class="d" style="background:hsl(240,60%,55%);">🎯</div> MeepleAI</div>
@@ -519,7 +522,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   <div class="phone-col">
     <span class="phone-label" style="color:hsl(38,92%,50%);">● Agent — Attivo</span>
     <span class="phone-sublabel">MeepleAgentCard · No cover, avatar + status + stats grid + 3 quick actions</span>
-    <div class="phone">
+    <div class="phone" data-variant="agent">
       <div class="sbar"><span class="t">14:32</span><div class="i"><span>📶</span><span>🔋</span></div></div>
       <div class="nav">
         <div class="logo"><div class="d" style="background:hsl(38,92%,50%);">🤖</div> MeepleAI</div>
@@ -587,7 +590,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   <div class="phone-col">
     <span class="phone-label" style="color:hsl(220,80%,55%);">● Chat — Attiva</span>
     <span class="phone-sublabel">MeepleChatCard · Preview messaggi + agent info + 5 quick actions</span>
-    <div class="phone">
+    <div class="phone" data-variant="chat">
       <div class="sbar"><span class="t">14:32</span><div class="i"><span>📶</span><span>🔋</span></div></div>
       <div class="nav">
         <div class="logo"><div class="d" style="background:hsl(220,80%,55%);">💬</div> MeepleAI</div>
@@ -663,7 +666,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   <div class="phone-col">
     <span class="phone-label" style="color:hsl(210,40%,55%);">● Document — KB</span>
     <span class="phone-sublabel">MeepleKbCard · File preview + status indexed/processing + 4 quick actions</span>
-    <div class="phone">
+    <div class="phone" data-variant="kb">
       <div class="sbar"><span class="t">14:32</span><div class="i"><span>📶</span><span>🔋</span></div></div>
       <div class="nav">
         <div class="logo"><div class="d" style="background:hsl(210,40%,55%);">📄</div> MeepleAI</div>
@@ -738,7 +741,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   <div class="phone-col">
     <span class="phone-label" style="color:hsl(262,83%,58%);">● Player</span>
     <span class="phone-sublabel">MeeplePlayerCard · Avatar + stats + minimal (no cover, no flip, 2 quick actions)</span>
-    <div class="phone">
+    <div class="phone" data-variant="player">
       <div class="sbar"><span class="t">14:32</span><div class="i"><span>📶</span><span>🔋</span></div></div>
       <div class="nav">
         <div class="logo"><div class="d" style="background:hsl(262,83%,58%);">👥</div> MeepleAI</div>
@@ -806,7 +809,7 @@ h1,h2,h3,h4,h5 { font-family:'Quicksand',sans-serif; }
   <div class="phone-col">
     <span class="phone-label" style="color:hsl(350,89%,60%);">● Event</span>
     <span class="phone-sublabel">MeepleCard event · Banner hero + data/luogo + CTA iscrizione</span>
-    <div class="phone">
+    <div class="phone" data-variant="event">
       <div class="sbar"><span class="t">14:32</span><div class="i"><span>📶</span><span>🔋</span></div></div>
       <div class="nav">
         <div class="logo"><div class="d" style="background:hsl(350,89%,60%);">🎪</div> MeepleAI</div>

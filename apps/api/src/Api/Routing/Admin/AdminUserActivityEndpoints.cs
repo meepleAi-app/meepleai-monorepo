@@ -678,9 +678,9 @@ internal static class AdminUserActivityEndpoints
         logger.LogWarning("⚠️ Admin {AdminId} ending impersonation session {SessionId}",
             session!.Principal!.EffectiveActor.Id, request.SessionId);
 
-        var command = new EndImpersonationCommand(
-            request.SessionId,
-            session.Principal!.EffectiveActor.Id);
+        var command = new ImpersonationEndCommand(
+            SessionId: request.SessionId,
+            RequestingUserId: session.Principal!.EffectiveActor.Id);
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 

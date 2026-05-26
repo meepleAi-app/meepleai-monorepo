@@ -154,9 +154,9 @@ internal static class AdminOperationsEndpoints
             var (authorized, session, error) = context.RequireSuperAdminSession();
             if (!authorized) return error!;
 
-            var command = new Administration.Application.Commands.EndImpersonationCommand(
+            var command = new Administration.Application.Commands.ImpersonationEndCommand(
                 SessionId: request.SessionId,
-                AdminUserId: session!.Principal!.Subject.Id
+                RequestingUserId: session!.Principal!.Subject.Id
             );
 
             var success = await mediator.Send(command, ct).ConfigureAwait(false);

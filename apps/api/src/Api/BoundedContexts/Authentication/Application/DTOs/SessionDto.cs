@@ -38,5 +38,12 @@ internal record SessionStatusDto(
     Principal? Principal,
     DateTime? ExpiresAt,
     DateTime? LastSeenAt,
-    Guid? SessionId = null
+    Guid? SessionId = null,
+    // SP5 S2 D-S2-4: set when a session that EXISTED was an impersonation and is now invalid
+    // because its ImpersonatedUntil window elapsed. The auth middleware uses this to emit a
+    // 401 + "ImpersonationAutoEnded" audit instead of failing open as a plain anonymous request.
+    // Carries the subject + actor ids so the middleware can attribute the audit row.
+    bool WasImpersonationAutoEnded = false,
+    Guid? ImpersonationSubjectUserId = null,
+    Guid? ImpersonationActorUserId = null
 );

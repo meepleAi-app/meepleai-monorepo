@@ -61,11 +61,20 @@ internal class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery,
         // Check if session is valid
         if (!session.IsValid(_timeProvider))
         {
+            // SP5 S2 D-S2-4: distinguish an EXPIRED IMPERSONATION from a plain invalid session.
+            // When the impersonation window (ImpersonatedUntil, mirrored into ExpiresAt) elapsed,
+            // surface the subject/actor ids so the middleware can emit a 401 + ImpersonationAutoEnded
+            // audit. This is read-only — the audit write happens in the middleware, keeping the
+            // query side-effect-free.
+            var wasImpersonationAutoEnded = session.IsImpersonation && session.RevokedAt is null;
             return new SessionStatusDto(
                 IsValid: false,
                 Principal: null,
                 ExpiresAt: session.ExpiresAt,
-                LastSeenAt: session.LastSeenAt
+                LastSeenAt: session.LastSeenAt,
+                WasImpersonationAutoEnded: wasImpersonationAutoEnded,
+                ImpersonationSubjectUserId: wasImpersonationAutoEnded ? session.UserId : null,
+                ImpersonationActorUserId: wasImpersonationAutoEnded ? session.ImpersonatedByUserId : null
             );
         }
 
